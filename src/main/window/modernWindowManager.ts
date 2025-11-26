@@ -484,12 +484,12 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
             'Content-Security-Policy': [
               "default-src 'self';",
               process.env.NODE_ENV !== 'production'
-                ? "script-src 'self' 'unsafe-eval' 'unsafe-inline';"
-                : "script-src 'self' 'unsafe-eval';",
+                ? "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' 'unsafe-inline';"
+                : "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval';",
               "style-src 'self' 'unsafe-inline';",
               "img-src 'self' data: blob: https:;",
               "font-src 'self' data:;",
-              "connect-src 'self' ws: wss: http://localhost:* https://localhost:* https://principle-md.com https://registry.npmjs.org https://api.github.com https://raw.githubusercontent.com https://openrouter.ai;",
+              "connect-src 'self' data: ws: wss: http://localhost:* https://localhost:* https://principle-md.com https://registry.npmjs.org https://api.github.com https://raw.githubusercontent.com https://openrouter.ai;",
               "worker-src 'self' blob:;",
               "media-src 'self';",
               "object-src 'none';",

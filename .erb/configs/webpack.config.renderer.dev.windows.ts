@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import webpack from 'webpack';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
+import CopyWebpackPlugin from 'copy-webpack-plugin';
 import chalk from 'chalk';
 import { execSync, spawn } from 'child_process';
 import ReactRefreshWebpackPlugin from '@pmmmwh/react-refresh-webpack-plugin';
@@ -431,6 +432,16 @@ const configuration: webpack.Configuration = {
         'xml',
       ],
       features: ['!gotoSymbol'],
+    }),
+
+    // Copy ghostty-web WASM file to dist for terminal panel
+    new CopyWebpackPlugin({
+      patterns: [
+        {
+          from: path.resolve(webpackPaths.rootPath, 'node_modules/ghostty-web/ghostty-vt.wasm'),
+          to: path.resolve(webpackPaths.distRendererPath, 'ghostty-vt.wasm'),
+        },
+      ],
     }),
 
     ...htmlPlugins,

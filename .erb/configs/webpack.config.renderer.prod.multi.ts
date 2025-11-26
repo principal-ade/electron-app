@@ -7,6 +7,7 @@ import fs from 'fs';
 import webpack from 'webpack';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
 import MiniCssExtractPlugin from 'mini-css-extract-plugin';
+import CopyWebpackPlugin from 'copy-webpack-plugin';
 import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
 import CssMinimizerPlugin from 'css-minimizer-webpack-plugin';
 import TerserPlugin from 'terser-webpack-plugin';
@@ -492,6 +493,16 @@ const configuration: webpack.Configuration = {
       analyzerMode:
         process.env.OPEN_ANALYZER === 'true' ? 'server' : 'disabled',
       openAnalyzer: process.env.OPEN_ANALYZER === 'true',
+    }),
+
+    // Copy ghostty-web WASM file to dist for terminal panel
+    new CopyWebpackPlugin({
+      patterns: [
+        {
+          from: path.resolve(webpackPaths.rootPath, 'node_modules/ghostty-web/ghostty-vt.wasm'),
+          to: path.resolve(webpackPaths.distRendererPath, 'ghostty-vt.wasm'),
+        },
+      ],
     }),
 
     ...htmlPlugins,

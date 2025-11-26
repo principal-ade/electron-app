@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   ConfigurablePanelLayout,
@@ -6,9 +6,11 @@ import {
 } from '@principal-ade/panels';
 import '@principal-ade/panels/panels.css';
 import { RepositoryPanelProvider, useRepositoryPanelProvider } from '../contexts/RepositoryPanelContext';
-import { panels as terminalPanels } from '@industry-theme/terminal-panel';
+import { panels as industryTerminalPanels } from '@industry-theme/terminal-panel';
+import { panels as ghosttyTerminalPanels } from '@industry-theme/ghostty-terminal-panel';
 import { panels as visualValidationPanels } from '@industry-theme/visual-validation-panel';
 import type { Repository } from '../../shared/types/repository.types';
+import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 
 export interface RepositoryWorkspacePanelFrameworkProps {
   repositoryPath: string;
@@ -22,7 +24,20 @@ const RepositoryWorkspacePanelFrameworkInner: React.FC = () => {
   const { theme } = useTheme();
   const { context, actions, events } = useRepositoryPanelProvider();
 
-  // Get panel components from the panel framework packages
+  // Load terminal implementation preference (default to ghostty for testing)
+  const [terminalImplementation, setTerminalImplementation] = useState<'industry-themed' | 'ghostty'>('ghostty');
+
+  useEffect(() => {
+    const loadPreference = async () => {
+      const prefs = await UserPreferencesService.getPreferences();
+      // Default to 'ghostty' if not set
+      setTerminalImplementation(prefs.terminalImplementation ?? 'ghostty');
+    };
+    loadPreference();
+  }, []);
+
+  // Get panel components from the panel framework packages based on preference
+  const terminalPanels = terminalImplementation === 'ghostty' ? ghosttyTerminalPanels : industryTerminalPanels;
   const TerminalPanelComponent = terminalPanels[0]?.component;
   const VisualValidationPanelComponent = visualValidationPanels[0]?.component;
 
@@ -65,7 +80,7 @@ const RepositoryWorkspacePanelFrameworkInner: React.FC = () => {
         ),
       },
     ],
-    [TerminalPanelComponent, VisualValidationPanelComponent, context, actions, events],
+    [TerminalPanelComponent, VisualValidationPanelComponent, context, actions, events, terminalImplementation],
   );
 
   return (

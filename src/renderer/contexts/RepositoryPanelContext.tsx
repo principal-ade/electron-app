@@ -17,7 +17,7 @@ import type {
   DataSlice,
 } from '@principal-ade/panel-framework-core';
 import { TerminalService } from '../main-process-api/TerminalService';
-import type { TerminalInfo } from '../../shared/main-process-api-interfaces/TerminalService';
+import type { TerminalInfo, TerminalOwnershipStatus, TerminalOwnershipResult } from '../../shared/main-process-api-interfaces/TerminalService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { FileSystemService } from '../main-process-api/FileSystemService';
 import type { FileTree } from '@principal-ai/repository-abstraction';
@@ -33,6 +33,11 @@ interface RepositoryPanelActions extends PanelActions {
   ) => Promise<void>;
   destroyTerminalSession?: (sessionId: string) => Promise<void>;
   readFile?: (filePath: string) => Promise<string>;
+  // Terminal ownership actions
+  checkTerminalOwnership?: (sessionId: string) => Promise<TerminalOwnershipStatus>;
+  claimTerminalOwnership?: (sessionId: string, force?: boolean) => Promise<TerminalOwnershipResult>;
+  releaseTerminalOwnership?: (sessionId: string) => Promise<TerminalOwnershipResult>;
+  refreshTerminal?: (sessionId: string) => Promise<boolean>;
 }
 
 // Extended context for repository panels
@@ -115,6 +120,23 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
       // Clean up all terminal subscriptions
       terminalSubscriptionsRef.current.forEach((unsub) => unsub());
       terminalSubscriptionsRef.current.clear();
+    };
+  }, [events]);
+
+  // Forward terminal ownership lost events to panel event bus
+  useEffect(() => {
+    const unsubscribe = TerminalService.onOwnershipLost((data) => {
+      console.log('[RepositoryPanelProvider] Ownership lost event:', data);
+      events.emit({
+        type: 'terminal:ownershipLost',
+        source: 'repository-panel',
+        timestamp: Date.now(),
+        payload: data,
+      });
+    });
+
+    return () => {
+      unsubscribe();
     };
   }, [events]);
 
@@ -237,6 +259,23 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
           console.error('[RepositoryPanelProvider] Failed to read file:', filePath, error);
           throw error;
         }
+      },
+
+      // Terminal ownership actions
+      checkTerminalOwnership: async (sessionId: string) => {
+        return TerminalService.checkOwnership(sessionId);
+      },
+
+      claimTerminalOwnership: async (sessionId: string, force?: boolean) => {
+        return TerminalService.claimOwnership(sessionId, force);
+      },
+
+      releaseTerminalOwnership: async (sessionId: string) => {
+        return TerminalService.releaseOwnership(sessionId);
+      },
+
+      refreshTerminal: async (sessionId: string) => {
+        return TerminalService.refresh(sessionId);
       },
     }),
     [repositoryPath, terminalContext, events],
