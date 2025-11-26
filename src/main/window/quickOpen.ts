@@ -14,6 +14,7 @@ import {
   getWorkspaceId,
 } from './types';
 import { openRepositoryDashboardWindow } from './modernWindowHandlers';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
 interface QuickOpenItem {
   id: string;
@@ -24,6 +25,8 @@ interface QuickOpenItem {
   localPath?: string;
   isOpen: boolean;
   openWindowId?: number;
+  // Full AlexandriaEntry for repositories (so we can pass complete data when opening)
+  alexandriaEntry?: AlexandriaEntry;
 }
 
 class QuickOpen {
@@ -245,6 +248,7 @@ class QuickOpen {
           localPath: repo.path,
           isOpen: !!openRepo,
           openWindowId: openRepo?.id,
+          alexandriaEntry: repo,
         });
       }
 
@@ -310,19 +314,13 @@ export function setupQuickOpenHandlers(): void {
       } else {
         // Open new window
         if (item.type === 'repository') {
-          // Build AlexandriaEntry from QuickOpenItem (no DB fetch needed!)
-          const repo = {
-            name: item.name,
-            path: item.localPath,
-            remoteUrl: item.remoteUrl,
-            registeredAt: Date.now(),
-            hasViews: false,
-            github: item.description ? { description: item.description } : undefined,
-          };
-
-          // Call directly - no executeJavaScript needed!
-          await openRepositoryDashboardWindow(repo);
-          log.info(`[Quick Open] Opening repository window for ${item.name}`);
+          // Use the full AlexandriaEntry passed from loadItems
+          if (item.alexandriaEntry) {
+            await openRepositoryDashboardWindow(item.alexandriaEntry);
+            log.info(`[Quick Open] Opening repository window for ${item.name}`);
+          } else {
+            log.error(`[Quick Open] No AlexandriaEntry found for repository ${item.name}`);
+          }
         } else if (item.type === 'workspace') {
           // Open workspace window directly from main process
           const {

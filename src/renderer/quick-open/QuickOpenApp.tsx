@@ -5,6 +5,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+
 interface QuickOpenItem {
   id: string;
   type: 'repository' | 'workspace';
@@ -14,6 +16,8 @@ interface QuickOpenItem {
   localPath?: string;
   isOpen: boolean;
   openWindowId?: number;
+  // Full AlexandriaEntry for repositories (passed through to main process when opening)
+  alexandriaEntry?: AlexandriaEntry;
 }
 
 const QuickOpenApp: React.FC = () => {
