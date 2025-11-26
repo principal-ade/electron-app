@@ -537,28 +537,18 @@ export async function openRepositoryDashboardWindow(
     fullObject: repository,
   });
 
-  // Extract owner from github data or parse from name
-  let owner = repository.github?.owner;
-  let repoName = repository.name;
-  let remoteUrl = repository.remoteUrl;
+  // Extract owner from github data only - don't guess or fake it
+  const owner = repository.github?.owner;
+  const repoName = repository.name;
+  const remoteUrl = repository.remoteUrl;
 
-  // No need to parse from githubUrl as it doesn't exist in AlexandriaEntry
-
-  // If still no owner, try to parse from the name (might be in format owner/repo)
-  if (!owner && repository.name.includes('/')) {
-    const parts = repository.name.split('/');
-    owner = parts[0];
-    repoName = parts[1];
-  }
-
-  // Default to 'unknown' if we still couldn't find an owner
-  if (!owner) {
-    owner = 'unknown';
-  }
-
-  // Ensure we have a remoteUrl
-  if (!remoteUrl) {
-    remoteUrl = `https://github.com/${owner}/${repoName}`;
+  // Log if we're missing github data so we can surface this in the UI
+  if (!repository.github) {
+    console.log(
+      '[modernWindowHandlers] Repository missing github data:',
+      repository.name,
+      '- owner and GitHub features will be unavailable',
+    );
   }
 
   // Get current branch if we have a local path

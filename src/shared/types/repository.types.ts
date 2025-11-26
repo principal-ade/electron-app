@@ -84,7 +84,7 @@ export interface Repository {
   // Remote repository identification
   remoteUrl: string; // Primary identifier - the remote URL (normalized)
   vcsType: VCSType; // Version control system type
-  owner: string; // Repository owner/organization
+  owner?: string; // Repository owner/organization (undefined if not from a known VCS)
   name: string; // Repository name
 
   // Local clones of this repository

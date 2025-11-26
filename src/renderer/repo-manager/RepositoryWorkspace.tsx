@@ -127,8 +127,10 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     // UI Mode state - per-repository
     const [uiMode, setUIMode] = useState<'classic' | 'panel-framework'>('classic');
 
-    // Get repository identifier (owner/name)
-    const repoIdentifier = `${repository.owner}/${repository.name}`;
+    // Get repository identifier (owner/name or just name if no owner)
+    const repoIdentifier = repository.owner
+      ? `${repository.owner}/${repository.name}`
+      : repository.name;
 
     // Load UI mode from repository-specific preferences
     useEffect(() => {

@@ -109,7 +109,7 @@ export const RepositoryAvatar: React.FC<RepositoryAvatarProps> = ({
       return (
         <img
           src={repository.avatarUrl}
-          alt={repository.owner}
+          alt={repository.owner || repository.name || 'Repository'}
           style={{
             width: '100%',
             height: '100%',
