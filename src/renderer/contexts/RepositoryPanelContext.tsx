@@ -24,7 +24,7 @@ import type { FileTree } from '@principal-ai/repository-abstraction';
 
 // Extend PanelActions with terminal-specific and file system actions
 interface RepositoryPanelActions extends PanelActions {
-  createTerminalSession?: (options?: { cwd?: string }) => Promise<string>;
+  createTerminalSession?: (options?: { cwd?: string; context?: string }) => Promise<string>;
   writeToTerminal?: (sessionId: string, data: string) => Promise<void>;
   resizeTerminal?: (
     sessionId: string,
@@ -41,6 +41,10 @@ interface RepositoryPanelActions extends PanelActions {
   // MessagePort-based terminal data streaming (high-performance path)
   requestTerminalDataPort?: (sessionId: string) => Promise<RequestDataPortResult>;
   onTerminalPortReady?: (callback: (data: PortReadyData, port: MessagePort) => void) => () => void;
+  // Session-specific data subscription (used by TabbedTerminalPanel)
+  onTerminalData?: (sessionId: string, callback: (data: string) => void) => () => void;
+  // List terminal sessions (used by TabbedTerminalPanel for restoration)
+  listTerminalSessions?: () => Promise<TerminalInfo[]>;
 }
 
 // Extended context for repository panels
@@ -290,6 +294,11 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
 
       listTerminalSessions: async () => {
         return TerminalService.list();
+      },
+
+      // Session-specific data subscription (used by TabbedTerminalPanel)
+      onTerminalData: (sessionId: string, callback: (data: string) => void) => {
+        return TerminalService.onDataForSession(sessionId, callback);
       },
 
       // MessagePort-based terminal data streaming (high-performance path)

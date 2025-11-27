@@ -7,8 +7,8 @@ import {
 import '@principal-ade/panels/panels.css';
 import '@industry-theme/visual-validation-panel/dist/panels.bundle.css';
 import { RepositoryPanelProvider, useRepositoryPanelProvider } from '../contexts/RepositoryPanelContext';
-import { panels as industryTerminalPanels } from '@industry-theme/terminal-panel';
-import { panels as ghosttyTerminalPanels } from '@industry-theme/ghostty-terminal-panel';
+import { TabbedTerminalPanel } from '@industry-theme/terminal-panel';
+import { TabbedGhosttyTerminal } from '@industry-theme/ghostty-terminal-panel';
 import { panels as visualValidationPanels } from '@industry-theme/visual-validation-panel';
 import type { Repository } from '../../shared/types/repository.types';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
@@ -46,12 +46,10 @@ const RepositoryWorkspacePanelFrameworkInner: React.FC = () => {
     return unsubscribe;
   }, []);
 
-  // Get panel components from the panel framework packages based on preference
-  // For ghostty, use the tabbed terminal panel (index 1), for industry-themed use single terminal (index 0)
-  const terminalPanels = terminalImplementation === 'ghostty' ? ghosttyTerminalPanels : industryTerminalPanels;
-  const TerminalPanelComponent = terminalImplementation === 'ghostty'
-    ? terminalPanels[1]?.component  // TabbedGhosttyTerminal
-    : terminalPanels[0]?.component;
+  // Get required props for tabbed terminal panels
+  const terminalContext = (context as { terminalContext?: string }).terminalContext || 'terminal:default';
+  const terminalDirectory = (context as { repositoryPath?: string }).repositoryPath || '/';
+
   const VisualValidationPanelComponent = visualValidationPanels[0]?.component;
 
   // Define all panels using panel framework components
@@ -60,15 +58,22 @@ const RepositoryWorkspacePanelFrameworkInner: React.FC = () => {
       {
         id: 'terminal',
         label: 'Terminal',
-        content: TerminalPanelComponent ? (
-          <TerminalPanelComponent
+        content: terminalImplementation === 'ghostty' ? (
+          <TabbedGhosttyTerminal
             context={context}
             actions={actions}
             events={events}
-            contextPrefix={(context as { terminalContext?: string }).terminalContext}
+            terminalContext={terminalContext}
+            directory={terminalDirectory}
           />
         ) : (
-          <div>Terminal panel not available</div>
+          <TabbedTerminalPanel
+            context={context}
+            actions={actions}
+            events={events}
+            terminalContext={terminalContext}
+            directory={terminalDirectory}
+          />
         ),
       },
       {
@@ -94,7 +99,7 @@ const RepositoryWorkspacePanelFrameworkInner: React.FC = () => {
         ),
       },
     ],
-    [TerminalPanelComponent, VisualValidationPanelComponent, context, actions, events, terminalImplementation],
+    [VisualValidationPanelComponent, context, actions, events, terminalImplementation, terminalContext, terminalDirectory],
   );
 
   return (
