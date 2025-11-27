@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { FolderOpen, Focus, Loader2, Home, AlertTriangle, MoveRight, X, Copy, Check, Trash2 } from 'lucide-react';
+import { FolderOpen, Focus, Loader2, Home, AlertTriangle, MoveRight, X, Copy, Check, Trash2, Plus } from 'lucide-react';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 
 import type { RepositoryCacheData } from '../../services/RepositoryDataCache';
@@ -28,14 +28,31 @@ if (typeof document !== 'undefined') {
   }
 }
 
+export type CardActionMode =
+  | 'workspace'        // Show workspace actions (move, open, remove from workspace, delete)
+  | 'add-to-workspace' // Show "Add to workspace" button only
+  | 'minimal';         // Show only open button
+
 interface LocalProjectCardProps {
   repositoryData: RepositoryCacheData;
   workspace?: Workspace | null;
+  /** Action mode controls which buttons are shown. Defaults to 'workspace' when workspace is provided, 'minimal' otherwise */
+  actionMode?: CardActionMode;
+  /** Custom action handler for add-to-workspace mode */
+  onAddToWorkspace?: (entry: typeof repositoryData.repository) => void;
+  /** Whether an add operation is in progress */
+  isAdding?: boolean;
+  /** Callback when repository is removed from workspace */
+  onRemovedFromWorkspace?: (entry: typeof repositoryData.repository) => void;
 }
 
 export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
   repositoryData,
   workspace,
+  actionMode,
+  onAddToWorkspace,
+  isAdding = false,
+  onRemovedFromWorkspace,
 }) => {
   const { theme } = useTheme();
   const { selectedRepository, setSelectedRepository } = useSelectedRepository();
@@ -189,15 +206,12 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
 
     if (!workspace || !workspace.id) return;
 
-    if (!confirm(`Remove ${entry.name} from workspace "${workspace.name}"?\n\nThis will not delete any files, only remove the repository from this workspace.`)) {
-      return;
-    }
-
     try {
       setIsRemoving(true);
       await WorkspaceService.removeRepositoryFromWorkspace(entry, workspace.id);
 
-      // Events will update all panels automatically - no need for hard reload
+      // Notify parent for immediate UI update
+      onRemovedFromWorkspace?.(entry);
     } catch (error) {
       console.error('Failed to remove repository from workspace:', error);
       alert(`Failed to remove repository: ${error instanceof Error ? error.message : String(error)}`);
@@ -380,214 +394,335 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
 
       {/* Action buttons */}
       <div style={{ display: 'flex', gap: '4px', flexShrink: 0, alignItems: 'center' }}>
-        {/* Location indicator */}
-        {workspace && workspace.suggestedClonePath && isInWorkspaceDirectory !== null && (
-          <div
-            title={
-              isInWorkspaceDirectory
-                ? `In workspace directory: ${workspace.suggestedClonePath}`
-                : `Outside workspace directory`
-            }
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '24px',
-              height: '24px',
-              borderRadius: '4px',
-              backgroundColor: isInWorkspaceDirectory
-                ? `${theme.colors.success || '#10b981'}15`
-                : `${theme.colors.warning || '#f59e0b'}15`,
-              color: isInWorkspaceDirectory
-                ? theme.colors.success || '#10b981'
-                : theme.colors.warning || '#f59e0b',
-            }}
-          >
-            {isInWorkspaceDirectory ? <Home size={14} /> : <AlertTriangle size={14} />}
-          </div>
-        )}
+        {/* Determine effective action mode */}
+        {(() => {
+          const effectiveMode = actionMode ?? (workspace ? 'workspace' : 'minimal');
 
-        {/* Move to workspace button */}
-        {workspace && workspace.suggestedClonePath && isInWorkspaceDirectory === false && (
-          <button
-            type="button"
-            onClick={handleMoveToWorkspace}
-            disabled={isMoving}
-            title={`Move to ${workspace.suggestedClonePath}`}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '6px 10px',
-              gap: '4px',
-              borderRadius: '4px',
-              border: `1px solid ${theme.colors.primary || '#3b82f6'}`,
-              backgroundColor: `${theme.colors.primary || '#3b82f6'}15`,
-              color: theme.colors.primary || '#3b82f6',
-              fontSize: `${theme.fontSizes[0]}px`,
-              fontWeight: theme.fontWeights.medium,
-              cursor: isMoving ? 'wait' : 'pointer',
-              opacity: isMoving ? 0.6 : 1,
-              transition: 'all 0.15s ease',
-            }}
-            onMouseEnter={(event) => {
-              if (!isMoving) {
-                event.currentTarget.style.backgroundColor = `${theme.colors.primary || '#3b82f6'}25`;
-              }
-            }}
-            onMouseLeave={(event) => {
-              event.currentTarget.style.backgroundColor = `${theme.colors.primary || '#3b82f6'}15`;
-            }}
-          >
-            {isMoving ? (
-              <Loader2
-                size={12}
-                style={{
-                  animation: 'spin 1s linear infinite',
+          // Add to workspace mode - just show Add button
+          if (effectiveMode === 'add-to-workspace') {
+            return (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddToWorkspace?.(entry);
                 }}
-              />
-            ) : (
-              <MoveRight size={12} />
-            )}
-            {isMoving ? 'Moving...' : 'Move'}
-          </button>
-        )}
-
-        {/* Open/Focus button */}
-        <button
-          type="button"
-          onClick={handleOpenLocally}
-          title={
-            windowState === 'ready'
-              ? 'Focus window'
-              : windowState === 'opening'
-                ? 'Window is opening...'
-                : 'Open locally'
+                disabled={isAdding}
+                title="Add to workspace"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '6px 10px',
+                  gap: '4px',
+                  borderRadius: '4px',
+                  border: `1px solid ${theme.colors.primary || '#3b82f6'}`,
+                  backgroundColor: `${theme.colors.primary || '#3b82f6'}15`,
+                  color: theme.colors.primary || '#3b82f6',
+                  fontSize: `${theme.fontSizes[0]}px`,
+                  fontWeight: theme.fontWeights.medium,
+                  cursor: isAdding ? 'wait' : 'pointer',
+                  opacity: isAdding ? 0.6 : 1,
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={(event) => {
+                  if (!isAdding) {
+                    event.currentTarget.style.backgroundColor = theme.colors.primary || '#3b82f6';
+                    event.currentTarget.style.color = theme.colors.background;
+                  }
+                }}
+                onMouseLeave={(event) => {
+                  event.currentTarget.style.backgroundColor = `${theme.colors.primary || '#3b82f6'}15`;
+                  event.currentTarget.style.color = theme.colors.primary || '#3b82f6';
+                }}
+              >
+                {isAdding ? (
+                  <Loader2
+                    size={12}
+                    style={{
+                      animation: 'spin 1s linear infinite',
+                    }}
+                  />
+                ) : (
+                  <Plus size={12} />
+                )}
+                {isAdding ? 'Adding...' : 'Add'}
+              </button>
+            );
           }
-          disabled={windowState === 'opening'}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '6px 10px',
-            gap: '4px',
-            borderRadius: '4px',
-            border: `1px solid ${theme.colors.success || '#10b981'}`,
-            backgroundColor: `${theme.colors.success || '#10b981'}15`,
-            color: theme.colors.success || '#10b981',
-            fontSize: `${theme.fontSizes[0]}px`,
-            fontWeight: theme.fontWeights.medium,
-            cursor: windowState === 'opening' ? 'wait' : 'pointer',
-            opacity: windowState === 'opening' ? 0.6 : 1,
-            transition: 'all 0.15s ease',
-          }}
-          onMouseEnter={(event) => {
-            if (windowState !== 'opening') {
-              event.currentTarget.style.backgroundColor = `${theme.colors.success || '#10b981'}25`;
-            }
-          }}
-          onMouseLeave={(event) => {
-            event.currentTarget.style.backgroundColor = `${theme.colors.success || '#10b981'}15`;
-          }}
-        >
-          {windowState === 'ready' ? (
-            <Focus size={12} />
-          ) : windowState === 'opening' ? (
-            <Loader2
-              size={12}
-              style={{
-                animation: 'spin 1s linear infinite',
-              }}
-            />
-          ) : (
-            <FolderOpen size={12} />
-          )}
-          {windowState === 'ready'
-            ? 'Focus'
-            : windowState === 'opening'
-              ? 'Opening...'
-              : 'Open'}
-        </button>
 
-        {/* Remove from workspace button */}
-        {workspace && (
-          <button
-            type="button"
-            onClick={handleRemoveFromWorkspace}
-            disabled={isRemoving}
-            title={`Remove from workspace "${workspace.name}"`}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '28px',
-              height: '28px',
-              padding: 0,
-              borderRadius: '4px',
-              border: 'none',
-              backgroundColor: 'transparent',
-              color: theme.colors.textSecondary,
-              cursor: isRemoving ? 'wait' : 'pointer',
-              opacity: isRemoving ? 0.6 : 1,
-              transition: 'all 0.15s ease',
-            }}
-            onMouseEnter={(event) => {
-              if (!isRemoving) {
-                event.currentTarget.style.backgroundColor = theme.colors.error || '#ef4444';
-                event.currentTarget.style.color = theme.colors.background;
+          // Workspace mode - show all workspace actions
+          if (effectiveMode === 'workspace' && workspace) {
+            return (
+              <>
+                {/* Location indicator */}
+                {workspace.suggestedClonePath && isInWorkspaceDirectory !== null && (
+                  <div
+                    title={
+                      isInWorkspaceDirectory
+                        ? `In workspace directory: ${workspace.suggestedClonePath}`
+                        : `Outside workspace directory`
+                    }
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '4px',
+                      backgroundColor: isInWorkspaceDirectory
+                        ? `${theme.colors.success || '#10b981'}15`
+                        : `${theme.colors.warning || '#f59e0b'}15`,
+                      color: isInWorkspaceDirectory
+                        ? theme.colors.success || '#10b981'
+                        : theme.colors.warning || '#f59e0b',
+                    }}
+                  >
+                    {isInWorkspaceDirectory ? <Home size={14} /> : <AlertTriangle size={14} />}
+                  </div>
+                )}
+
+                {/* Move to workspace button */}
+                {workspace.suggestedClonePath && isInWorkspaceDirectory === false && (
+                  <button
+                    type="button"
+                    onClick={handleMoveToWorkspace}
+                    disabled={isMoving}
+                    title={`Move to ${workspace.suggestedClonePath}`}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '6px 10px',
+                      gap: '4px',
+                      borderRadius: '4px',
+                      border: `1px solid ${theme.colors.primary || '#3b82f6'}`,
+                      backgroundColor: `${theme.colors.primary || '#3b82f6'}15`,
+                      color: theme.colors.primary || '#3b82f6',
+                      fontSize: `${theme.fontSizes[0]}px`,
+                      fontWeight: theme.fontWeights.medium,
+                      cursor: isMoving ? 'wait' : 'pointer',
+                      opacity: isMoving ? 0.6 : 1,
+                      transition: 'all 0.15s ease',
+                    }}
+                    onMouseEnter={(event) => {
+                      if (!isMoving) {
+                        event.currentTarget.style.backgroundColor = `${theme.colors.primary || '#3b82f6'}25`;
+                      }
+                    }}
+                    onMouseLeave={(event) => {
+                      event.currentTarget.style.backgroundColor = `${theme.colors.primary || '#3b82f6'}15`;
+                    }}
+                  >
+                    {isMoving ? (
+                      <Loader2
+                        size={12}
+                        style={{
+                          animation: 'spin 1s linear infinite',
+                        }}
+                      />
+                    ) : (
+                      <MoveRight size={12} />
+                    )}
+                    {isMoving ? 'Moving...' : 'Move'}
+                  </button>
+                )}
+
+                {/* Open/Focus button */}
+                <button
+                  type="button"
+                  onClick={handleOpenLocally}
+                  title={
+                    windowState === 'ready'
+                      ? 'Focus window'
+                      : windowState === 'opening'
+                        ? 'Window is opening...'
+                        : 'Open locally'
+                  }
+                  disabled={windowState === 'opening'}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '6px 10px',
+                    gap: '4px',
+                    borderRadius: '4px',
+                    border: `1px solid ${theme.colors.success || '#10b981'}`,
+                    backgroundColor: `${theme.colors.success || '#10b981'}15`,
+                    color: theme.colors.success || '#10b981',
+                    fontSize: `${theme.fontSizes[0]}px`,
+                    fontWeight: theme.fontWeights.medium,
+                    cursor: windowState === 'opening' ? 'wait' : 'pointer',
+                    opacity: windowState === 'opening' ? 0.6 : 1,
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(event) => {
+                    if (windowState !== 'opening') {
+                      event.currentTarget.style.backgroundColor = `${theme.colors.success || '#10b981'}25`;
+                    }
+                  }}
+                  onMouseLeave={(event) => {
+                    event.currentTarget.style.backgroundColor = `${theme.colors.success || '#10b981'}15`;
+                  }}
+                >
+                  {windowState === 'ready' ? (
+                    <Focus size={12} />
+                  ) : windowState === 'opening' ? (
+                    <Loader2
+                      size={12}
+                      style={{
+                        animation: 'spin 1s linear infinite',
+                      }}
+                    />
+                  ) : (
+                    <FolderOpen size={12} />
+                  )}
+                  {windowState === 'ready'
+                    ? 'Focus'
+                    : windowState === 'opening'
+                      ? 'Opening...'
+                      : 'Open'}
+                </button>
+
+                {/* Remove from workspace button */}
+                <button
+                  type="button"
+                  onClick={handleRemoveFromWorkspace}
+                  disabled={isRemoving}
+                  title={`Remove from workspace "${workspace.name}"`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '28px',
+                    height: '28px',
+                    padding: 0,
+                    borderRadius: '4px',
+                    border: 'none',
+                    backgroundColor: 'transparent',
+                    color: theme.colors.textSecondary,
+                    cursor: isRemoving ? 'wait' : 'pointer',
+                    opacity: isRemoving ? 0.6 : 1,
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(event) => {
+                    if (!isRemoving) {
+                      event.currentTarget.style.backgroundColor = theme.colors.error || '#ef4444';
+                      event.currentTarget.style.color = theme.colors.background;
+                    }
+                  }}
+                  onMouseLeave={(event) => {
+                    event.currentTarget.style.backgroundColor = 'transparent';
+                    event.currentTarget.style.color = theme.colors.textSecondary;
+                  }}
+                >
+                  {isRemoving ? (
+                    <Loader2
+                      size={14}
+                      style={{
+                        animation: 'spin 1s linear infinite',
+                      }}
+                    />
+                  ) : (
+                    <X size={14} />
+                  )}
+                </button>
+
+                {/* Delete Alexandria entry button */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDeleteModal(true);
+                  }}
+                  title="Delete repository entry"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '28px',
+                    height: '28px',
+                    padding: 0,
+                    borderRadius: '4px',
+                    border: 'none',
+                    backgroundColor: 'transparent',
+                    color: theme.colors.textSecondary,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(event) => {
+                    event.currentTarget.style.backgroundColor = theme.colors.error || '#ef4444';
+                    event.currentTarget.style.color = theme.colors.background;
+                  }}
+                  onMouseLeave={(event) => {
+                    event.currentTarget.style.backgroundColor = 'transparent';
+                    event.currentTarget.style.color = theme.colors.textSecondary;
+                  }}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </>
+            );
+          }
+
+          // Minimal mode - only show Open button
+          return (
+            <button
+              type="button"
+              onClick={handleOpenLocally}
+              title={
+                windowState === 'ready'
+                  ? 'Focus window'
+                  : windowState === 'opening'
+                    ? 'Window is opening...'
+                    : 'Open locally'
               }
-            }}
-            onMouseLeave={(event) => {
-              event.currentTarget.style.backgroundColor = 'transparent';
-              event.currentTarget.style.color = theme.colors.textSecondary;
-            }}
-          >
-            {isRemoving ? (
-              <Loader2
-                size={14}
-                style={{
-                  animation: 'spin 1s linear infinite',
-                }}
-              />
-            ) : (
-              <X size={14} />
-            )}
-          </button>
-        )}
-
-        {/* Delete Alexandria entry button */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowDeleteModal(true);
-          }}
-          title="Delete repository entry"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '28px',
-            height: '28px',
-            padding: 0,
-            borderRadius: '4px',
-            border: 'none',
-            backgroundColor: 'transparent',
-            color: theme.colors.textSecondary,
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-          }}
-          onMouseEnter={(event) => {
-            event.currentTarget.style.backgroundColor = theme.colors.error || '#ef4444';
-            event.currentTarget.style.color = theme.colors.background;
-          }}
-          onMouseLeave={(event) => {
-            event.currentTarget.style.backgroundColor = 'transparent';
-            event.currentTarget.style.color = theme.colors.textSecondary;
-          }}
-        >
-          <Trash2 size={14} />
-        </button>
+              disabled={windowState === 'opening'}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '6px 10px',
+                gap: '4px',
+                borderRadius: '4px',
+                border: `1px solid ${theme.colors.success || '#10b981'}`,
+                backgroundColor: `${theme.colors.success || '#10b981'}15`,
+                color: theme.colors.success || '#10b981',
+                fontSize: `${theme.fontSizes[0]}px`,
+                fontWeight: theme.fontWeights.medium,
+                cursor: windowState === 'opening' ? 'wait' : 'pointer',
+                opacity: windowState === 'opening' ? 0.6 : 1,
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(event) => {
+                if (windowState !== 'opening') {
+                  event.currentTarget.style.backgroundColor = `${theme.colors.success || '#10b981'}25`;
+                }
+              }}
+              onMouseLeave={(event) => {
+                event.currentTarget.style.backgroundColor = `${theme.colors.success || '#10b981'}15`;
+              }}
+            >
+              {windowState === 'ready' ? (
+                <Focus size={12} />
+              ) : windowState === 'opening' ? (
+                <Loader2
+                  size={12}
+                  style={{
+                    animation: 'spin 1s linear infinite',
+                  }}
+                />
+              ) : (
+                <FolderOpen size={12} />
+              )}
+              {windowState === 'ready'
+                ? 'Focus'
+                : windowState === 'opening'
+                  ? 'Opening...'
+                  : 'Open'}
+            </button>
+          );
+        })()}
       </div>
 
       {/* Delete confirmation modal */}

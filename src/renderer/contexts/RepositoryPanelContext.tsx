@@ -291,7 +291,10 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
       },
 
       claimTerminalOwnership: async (sessionId: string, force?: boolean) => {
-        return TerminalService.claimOwnership(sessionId, force);
+        console.log(`[RepositoryPanelActions] claimTerminalOwnership called: sessionId=${sessionId}, force=${force}`);
+        const result = await TerminalService.claimOwnership(sessionId, force);
+        console.log(`[RepositoryPanelActions] claimTerminalOwnership result:`, result);
+        return result;
       },
 
       releaseTerminalOwnership: async (sessionId: string) => {
@@ -300,7 +303,15 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
 
       // Listen for ownership lost events
       onOwnershipLost: (callback: (data: { sessionId: string; newOwnerWindowId: number }) => void) => {
-        return TerminalService.onOwnershipLost(callback);
+        console.log('[RepositoryPanelActions] onOwnershipLost: registering callback');
+        const unsubscribe = TerminalService.onOwnershipLost((data) => {
+          console.log('[RepositoryPanelActions] onOwnershipLost: received event from TerminalService:', data);
+          callback(data);
+        });
+        return () => {
+          console.log('[RepositoryPanelActions] onOwnershipLost: unsubscribing');
+          unsubscribe();
+        };
       },
 
       refreshTerminal: async (sessionId: string) => {

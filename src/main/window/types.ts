@@ -22,12 +22,13 @@ export interface WindowFeatures {
 }
 
 /**
- * Primary window type classification for the 3 main window categories
+ * Primary window type classification for the main window categories
  */
 export enum PrimaryWindowType {
   MAIN = 'main',
   REPOSITORY = 'repository',
   WORKSPACE = 'workspace',
+  DEV_WORKSPACE = 'dev-workspace',
   UNKNOWN = 'unknown',
 }
 

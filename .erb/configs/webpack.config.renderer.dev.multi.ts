@@ -53,6 +53,11 @@ const repoManagerEntryPath = path.join(
   'repo-manager',
   'index.tsx',
 );
+const devWorkspaceEntryPath = path.join(
+  webpackPaths.srcRendererPath,
+  'dev-workspace',
+  'index.tsx',
+);
 const legacyEntryPath = path.join(webpackPaths.srcRendererPath, 'index.tsx');
 const alexandriaWorkspaceEntryPath = path.join(
   webpackPaths.srcRendererPath,
@@ -106,6 +111,25 @@ if (fs.existsSync(repoManagerEntryPath)) {
       filename: 'repo-manager.html',
       template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
       chunks: ['repo-manager'],
+      minify: {
+        collapseWhitespace: true,
+        removeAttributeQuotes: true,
+        removeComments: true,
+      },
+      isBrowser: false,
+      isDevelopment: true,
+    }),
+  );
+}
+
+// Register Dev Workspace entry (panel framework window with minimal preload)
+if (fs.existsSync(devWorkspaceEntryPath)) {
+  entryPoints['dev-workspace'] = devWorkspaceEntryPath;
+  htmlPlugins.push(
+    new HtmlWebpackPlugin({
+      filename: 'dev-workspace.html',
+      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
+      chunks: ['dev-workspace'],
       minify: {
         collapseWhitespace: true,
         removeAttributeQuotes: true,
@@ -470,6 +494,8 @@ const configuration: webpack.Configuration = {
       disableDotRule: true,
       rewrites: [
         { from: /^\/principal.html/, to: '/principal.html' },
+        { from: /^\/repo-manager.html/, to: '/repo-manager.html' },
+        { from: /^\/dev-workspace.html/, to: '/dev-workspace.html' },
         {
           from: /^\/alexandria-workspace.html/,
           to: '/alexandria-workspace.html',

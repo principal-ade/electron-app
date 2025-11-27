@@ -29,7 +29,7 @@ import type { FileTree } from '@principal-ai/repository-abstraction';
 
 // Extend PanelActions with terminal and workspace-specific actions
 interface ExtendedPanelActions extends PanelActions {
-  createTerminalSession?: (options?: { cwd?: string }) => Promise<string>;
+  createTerminalSession?: (options?: { cwd?: string; command?: string; context?: string }) => Promise<string>;
   writeToTerminal?: (sessionId: string, data: string) => Promise<void>;
   resizeTerminal?: (
     sessionId: string,
@@ -67,6 +67,26 @@ interface ExtendedPanelActions extends PanelActions {
     reason?: string;
   }>;
   refreshTerminal?: (sessionId: string) => Promise<boolean>;
+  /**
+   * Listen for ownership lost events.
+   * Called when another window takes control of a terminal session.
+   * Returns an unsubscribe function.
+   */
+  onOwnershipLost?: (
+    callback: (data: { sessionId: string; newOwnerWindowId: number }) => void
+  ) => () => void;
+  /**
+   * Subscribe to terminal data for a specific session.
+   * Returns an unsubscribe function.
+   */
+  onTerminalData?: (
+    sessionId: string,
+    callback: (data: string) => void
+  ) => () => void;
+  /**
+   * List all terminal sessions.
+   */
+  listTerminalSessions?: () => Promise<TerminalInfo[]>;
   removeRepositoryFromWorkspace?: (
     repositoryId: string,
     workspaceId: string
@@ -486,22 +506,24 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       },
 
       // Terminal actions
-      createTerminalSession: async (options?: { cwd?: string }) => {
-        if (!terminalContext) {
+      createTerminalSession: async (options?: { cwd?: string; command?: string; context?: string }) => {
+        // Use the provided context (from TabbedTerminalPanel) or fall back to the provider's terminalContext
+        const sessionContext = options?.context || terminalContext;
+        if (!sessionContext) {
           throw new Error(
             'terminalContext is required in PanelProvider to create terminal sessions. ' +
             'Please provide a terminalContext prop to PanelProvider.'
           );
         }
         const cwd = options?.cwd || workspace.path;
-        console.info('[PanelContext] createTerminalSession called with:', {
-          optionsCwd: options?.cwd,
-          workspacePath: workspace.path,
-          finalCwd: cwd,
-          repository: repository?.name,
-          context: terminalContext
-        });
-        const sessionId = await TerminalService.getOrCreate(cwd, terminalContext);
+
+        // Always create a new session - each tab should have its own PTY
+        let sessionId: string;
+        if (options?.command) {
+          sessionId = await TerminalService.createWithCommand(cwd, options.command, sessionContext);
+        } else {
+          sessionId = await TerminalService.create(cwd, sessionContext);
+        }
 
         // Subscribe to this terminal's data channel and forward to panel event bus
         // Only subscribe if we haven't already subscribed to this session
@@ -574,6 +596,10 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
 
       refreshTerminal: async (sessionId: string) => {
         return TerminalService.refresh(sessionId);
+      },
+
+      onOwnershipLost: (callback: (data: { sessionId: string; newOwnerWindowId: number }) => void) => {
+        return TerminalService.onOwnershipLost(callback);
       },
 
       // Session-specific data subscription (used by TabbedTerminalPanel)

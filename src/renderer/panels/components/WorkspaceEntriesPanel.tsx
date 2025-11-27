@@ -6,7 +6,7 @@ import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { WindowService } from '../../main-process-api/WindowService';
 import { FileSystemService } from '../../main-process-api/FileSystemService';
 import { LocalProjectCard } from './LocalProjectCard';
-import { AddRepositoryToWorkspaceModal } from './AddRepositoryToWorkspaceModal';
+import { AddProjectsPanel } from './AddProjectsPanel';
 
 interface WorkspaceEntriesPanelProps {
   selectedWorkspace?: Workspace | null;
@@ -18,7 +18,7 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
   const { theme } = useTheme();
   const [workspaceRepositories, setWorkspaceRepositories] = useState<AlexandriaEntry[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [showAddProjects, setShowAddProjects] = useState(false);
 
   // Local state to track the current workspace data (to handle updates)
   const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(selectedWorkspace || null);
@@ -167,13 +167,6 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
     }));
   }, [selectedWorkspace, workspaceRepositories]);
 
-  // Get current repository IDs for the modal
-  const currentRepositoryIds = useMemo(() => {
-    return workspaceRepositories
-      .map(entry => entry.github?.id)
-      .filter((id): id is string => !!id);
-  }, [workspaceRepositories]);
-
   const baseContainerStyle: React.CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
@@ -246,7 +239,18 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
     );
   }
 
-  // Loading state
+  // Show Add Projects panel when toggled (check this first so loading doesn't interrupt it)
+  if (showAddProjects && currentWorkspace) {
+    return (
+      <AddProjectsPanel
+        workspace={currentWorkspace}
+        initialWorkspaceRepositories={workspaceRepositories}
+        onClose={() => setShowAddProjects(false)}
+      />
+    );
+  }
+
+  // Loading state (only shown when not in add projects view)
   if (loading) {
     return (
       <div style={baseContainerStyle}>
@@ -350,7 +354,7 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
               Open Workspace
             </button>
             <button
-              onClick={() => setShowAddModal(true)}
+              onClick={() => setShowAddProjects(true)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -515,13 +519,6 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
         )}
       </div>
 
-      {/* Add Repository Modal */}
-      <AddRepositoryToWorkspaceModal
-        isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        workspace={currentWorkspace}
-        currentRepositoryIds={currentRepositoryIds}
-      />
     </div>
   );
 };

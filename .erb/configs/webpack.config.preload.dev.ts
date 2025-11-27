@@ -22,11 +22,17 @@ const configuration: webpack.Configuration = {
   // Bundle everything for preload (avoid externals that require runtime require())
   externals: [],
 
-  entry: path.join(webpackPaths.srcWindowPath, 'preload.ts'),
+  entry: {
+    preload: path.join(webpackPaths.srcWindowPath, 'preload.ts'),
+    'preload-dev-workspace': path.join(
+      webpackPaths.srcWindowPath,
+      'preload-dev-workspace.ts',
+    ),
+  },
 
   output: {
     path: webpackPaths.dllPath,
-    filename: 'preload.js',
+    filename: '[name].js',
     library: {
       type: 'umd',
       umdNamedDefine: true,

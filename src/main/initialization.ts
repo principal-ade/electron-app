@@ -67,6 +67,7 @@ import { registerDevSidecarHandlers } from './window/devSidecarHandlers';
 import { registerActIntegrationHandlers } from './services/ipc/act/actIntegrationHandlers';
 import { setupWindowSwitcherHandlers } from './window/windowSwitcher';
 import { setupQuickOpenHandlers } from './window/quickOpen';
+import { registerDevWorkspaceWindowHandlers } from './window/devWorkspaceWindowHandlers';
 
 // let agentSessionEventsHttpBridge: AgentSessionEventsHttpBridge | null = null;
 let principalMCPBridgePort: number | null = null;
@@ -142,6 +143,7 @@ const registerAllIpcHandlers = async () => {
   registerFileSystemIpcHandlers(applicationWindows);
   registerWindowManagerIpcHandlers(applicationWindows);
   registerModernWindowHandlers(); // Register modern window creation handlers
+  registerDevWorkspaceWindowHandlers(); // Register dev-workspace window handlers
   setupWindowSwitcherHandlers(); // Register window switcher handlers
   setupQuickOpenHandlers(); // Register quick open handlers
   //registerStorageHandlers();
