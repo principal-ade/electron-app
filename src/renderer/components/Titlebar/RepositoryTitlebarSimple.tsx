@@ -1,7 +1,8 @@
 import React from 'react';
-import { Layers, Cloud, CloudOff } from 'lucide-react';
+import { Layers, Cloud, CloudOff, Terminal } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { BaseTitlebar } from './BaseTitlebar';
+import { GitSyncStatusIndicator } from './GitSyncStatusIndicator';
 import { RepositoryAvatar } from '../repository-maps/RepositoryAvatar';
 import type { Repository } from '../../../shared/types/repository.types';
 import type { FileTreeSource } from '../../types/file-tree-source';
@@ -15,6 +16,9 @@ export interface RepositoryTitlebarSimpleProps {
   onShowGitChanges?: () => void;
   // UI Mode toggle
   onSwitchToClassic?: () => void;
+  // Terminal implementation toggle
+  terminalImplementation?: 'industry-themed' | 'ghostty';
+  onToggleTerminalImplementation?: () => void;
 }
 
 export const RepositoryTitlebarSimple: React.FC<
@@ -26,6 +30,8 @@ export const RepositoryTitlebarSimple: React.FC<
   selectedSource,
   onShowGitChanges,
   onSwitchToClassic,
+  terminalImplementation,
+  onToggleTerminalImplementation,
 }) => {
   const { theme } = useTheme();
 
@@ -60,11 +66,12 @@ export const RepositoryTitlebarSimple: React.FC<
 
   return (
     <BaseTitlebar confirmBeforeClose={true}>
-      {/* Left: Repository info (same as classic) */}
+      {/* Center: Repository info */}
       <div
         style={{
           position: 'absolute',
-          left: '80px',
+          left: '50%',
+          transform: 'translateX(-50%)',
           display: 'flex',
           alignItems: 'center',
           gap: '12px',
@@ -72,157 +79,184 @@ export const RepositoryTitlebarSimple: React.FC<
           WebkitAppRegion: 'no-drag',
         }}
       >
-        {/* Avatar */}
-        {repository && (
-          <RepositoryAvatar
-            repository={repository}
-            type="owner"
-            size={28}
-            customAvatarUrl={avatarUrl}
-          />
-        )}
+        {/* Avatar - left side */}
+        <div style={{ width: '28px', height: '28px', flexShrink: 0 }}>
+          {repository && (
+            <RepositoryAvatar
+              repository={repository}
+              type="owner"
+              size={28}
+              customAvatarUrl={avatarUrl}
+            />
+          )}
+        </div>
 
-        {/* Repository name and branch */}
-        <span
+        {/* Repository name, branch, and sync status */}
+        <div
           style={{
-            fontSize: `${theme.fontSizes[2]}px`,
-            fontWeight: theme.fontWeights.medium,
-            fontFamily: theme.fonts.body,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '2px',
           }}
         >
+          {/* Repository name and branch */}
           <span
             style={{
-              color: theme.colors.text,
+              fontSize: `${theme.fontSizes[2]}px`,
               fontWeight: theme.fontWeights.medium,
-              cursor: displayOwner ? 'pointer' : 'default',
+              fontFamily: theme.fonts.body,
             }}
-            onClick={() => {
-              if (displayOwner && displayName) {
-                window.open(
-                  `https://github.com/${displayOwner}/${displayName}`,
-                  '_blank',
-                );
-              }
-            }}
-            onMouseEnter={(e) => {
-              if (displayOwner) {
-                e.currentTarget.style.opacity = '0.7';
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.opacity = '1';
-            }}
-            title={
-              displayOwner
-                ? `Open ${displayOwner}/${displayName} on GitHub`
-                : undefined
-            }
           >
-            {displayName}
-          </span>
+            <span
+              style={{
+                color: theme.colors.text,
+                fontWeight: theme.fontWeights.medium,
+                cursor: displayOwner ? 'pointer' : 'default',
+              }}
+              onClick={() => {
+                if (displayOwner && displayName) {
+                  window.open(
+                    `https://github.com/${displayOwner}/${displayName}`,
+                    '_blank',
+                  );
+                }
+              }}
+              onMouseEnter={(e) => {
+                if (displayOwner) {
+                  e.currentTarget.style.opacity = '0.7';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = '1';
+              }}
+              title={
+                displayOwner
+                  ? `Open ${displayOwner}/${displayName} on GitHub`
+                  : undefined
+              }
+            >
+              {displayName}
+            </span>
 
-          {/* Branch and git status */}
-          {selectedSource?.type === 'local' &&
-            selectedSource.metadata?.currentBranch && (
-              <>
-                <span
-                  style={{
-                    color: theme.colors.accent,
-                    fontWeight: theme.fontWeights.medium,
-                    padding: '0 8px',
-                  }}
-                >
-                  on
-                </span>
-                <span
-                  style={{
-                    color: theme.colors.text,
-                    fontWeight: theme.fontWeights.medium,
-                  }}
-                >
-                  {selectedSource.metadata.currentBranch}
-
-                  {/* Uncommitted changes indicator */}
-                  {hasUncommittedChanges && onShowGitChanges && (
-                    <span
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onShowGitChanges();
-                      }}
-                      style={{
-                        display: 'inline-block',
-                        width: '6px',
-                        height: '6px',
-                        borderRadius: '50%',
-                        backgroundColor: theme.colors.warning,
-                        marginLeft: '6px',
-                        verticalAlign: 'middle',
-                        cursor: 'pointer',
-                        transition: 'opacity 0.2s',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.opacity = '0.7';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.opacity = '1';
-                      }}
-                      title="Click to view uncommitted changes"
-                    />
-                  )}
-                </span>
-
-                {/* Remote sync status */}
-                {gitStatus && (
+            {/* Branch */}
+            {selectedSource?.type === 'local' &&
+              selectedSource.metadata?.currentBranch && (
+                <>
                   <span
                     style={{
-                      marginLeft: '8px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      verticalAlign: 'middle',
+                      color: theme.colors.accent,
+                      fontWeight: theme.fontWeights.medium,
+                      padding: '0 8px',
                     }}
                   >
-                    {gitStatus.ahead === 0 && gitStatus.behind === 0 ? (
+                    on
+                  </span>
+                  <span
+                    style={{
+                      color: theme.colors.text,
+                      fontWeight: theme.fontWeights.medium,
+                    }}
+                  >
+                    {selectedSource.metadata.currentBranch}
+
+                    {/* Uncommitted changes indicator */}
+                    {hasUncommittedChanges && onShowGitChanges && (
                       <span
-                        style={{
-                          color: theme.colors.success,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onShowGitChanges();
                         }}
-                      >
-                        <Cloud size={14} />
-                        <span style={{ fontSize: `${theme.fontSizes[1]}px` }}>
-                          Synced
-                        </span>
-                      </span>
-                    ) : (
-                      <span
                         style={{
-                          color: theme.colors.warning,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
+                          display: 'inline-block',
+                          width: '6px',
+                          height: '6px',
+                          borderRadius: '50%',
+                          backgroundColor: theme.colors.warning,
+                          marginLeft: '6px',
+                          verticalAlign: 'middle',
+                          cursor: 'pointer',
+                          transition: 'opacity 0.2s',
                         }}
-                      >
-                        <CloudOff size={14} />
-                        <span style={{ fontSize: `${theme.fontSizes[1]}px` }}>
-                          {gitStatus.ahead > 0 && gitStatus.behind > 0
-                            ? 'Diverged'
-                            : gitStatus.ahead > 0
-                              ? 'Ahead'
-                              : 'Behind'}
-                        </span>
-                      </span>
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.opacity = '0.7';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.opacity = '1';
+                        }}
+                        title="Click to view uncommitted changes"
+                      />
                     )}
                   </span>
+                </>
+              )}
+          </span>
+
+          {/* Remote sync status - below repo name */}
+          {selectedSource?.type === 'local' &&
+            selectedSource.metadata?.currentBranch &&
+            gitStatus && (
+              <span
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: `${theme.fontSizes[0]}px`,
+                }}
+              >
+                {gitStatus.ahead === 0 && gitStatus.behind === 0 ? (
+                  <span
+                    style={{
+                      color: theme.colors.success,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <Cloud size={12} />
+                    <span>Synced</span>
+                  </span>
+                ) : (
+                  <span
+                    style={{
+                      color: theme.colors.warning,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <CloudOff size={12} />
+                    <span>
+                      {gitStatus.ahead > 0 && gitStatus.behind > 0
+                        ? 'Diverged'
+                        : gitStatus.ahead > 0
+                          ? 'Ahead'
+                          : 'Behind'}
+                    </span>
+                  </span>
                 )}
-              </>
+              </span>
             )}
-        </span>
+        </div>
+
+        {/* Git-Sync connectivity indicator - right side, mirrors avatar */}
+        <div style={{ width: '28px', height: '28px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <GitSyncStatusIndicator
+            repositoryPath={
+              selectedSource?.type === 'local'
+                ? selectedSource.location
+                : undefined
+            }
+            branch={
+              selectedSource?.type === 'local'
+                ? selectedSource.metadata?.currentBranch
+                : undefined
+            }
+          />
+        </div>
       </div>
 
-      {/* Right: Only the mode switch */}
+      {/* Right: Terminal toggle and mode switch */}
       <div
         style={{
           position: 'absolute',
@@ -232,6 +266,42 @@ export const RepositoryTitlebarSimple: React.FC<
           gap: '8px',
         }}
       >
+        {/* Terminal Implementation Toggle */}
+        {onToggleTerminalImplementation && (
+          <button
+            onClick={onToggleTerminalImplementation}
+            title={`Switch to ${terminalImplementation === 'ghostty' ? 'Industry-Themed' : 'Ghostty'} terminal`}
+            style={{
+              // @ts-ignore - WebkitAppRegion is not in CSSProperties
+              WebkitAppRegion: 'no-drag',
+              background: theme.colors.backgroundTertiary,
+              border: `1px solid ${theme.colors.border}`,
+              color: theme.colors.textSecondary,
+              cursor: 'pointer',
+              padding: '6px 12px',
+              borderRadius: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.2s',
+              fontSize: `${theme.fontSizes[1]}px`,
+              fontWeight: theme.fontWeights.medium,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+              e.currentTarget.style.borderColor = theme.colors.primary;
+              e.currentTarget.style.color = theme.colors.text;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+              e.currentTarget.style.borderColor = theme.colors.border;
+              e.currentTarget.style.color = theme.colors.textSecondary;
+            }}
+          >
+            <Terminal size={14} />
+            <span>{terminalImplementation === 'ghostty' ? 'Ghostty' : 'Industry'}</span>
+          </button>
+        )}
         {onSwitchToClassic && (
           <button
             onClick={onSwitchToClassic}

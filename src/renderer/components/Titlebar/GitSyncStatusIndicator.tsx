@@ -20,9 +20,9 @@ export const GitSyncStatusIndicator: React.FC<GitSyncStatusIndicatorProps> = ({
     useGitSyncConnection(repositoryPath, branch);
   const [showModal, setShowModal] = useState(false);
 
-  // Don't show indicator if not authenticated
+  // Reserve space even when not authenticated to prevent layout shift
   if (!isAuthenticated) {
-    return null;
+    return <div style={{ width: '100%', height: '100%' }} />;
   }
 
   const Icon = isConnected ? Wifi : WifiOff;
@@ -36,14 +36,14 @@ export const GitSyncStatusIndicator: React.FC<GitSyncStatusIndicatorProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '6px',
+          padding: '0',
           borderRadius: '4px',
           backgroundColor: 'transparent',
           border: 'none',
           cursor: 'pointer',
           transition: 'all 0.2s ease',
-          width: '32px',
-          height: '32px',
+          width: '100%',
+          height: '100%',
           WebkitAppRegion: 'no-drag' as any,
         }}
         onMouseEnter={(e) => {

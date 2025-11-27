@@ -17,7 +17,7 @@ import type {
   DataSlice,
 } from '@principal-ade/panel-framework-core';
 import { TerminalService } from '../main-process-api/TerminalService';
-import type { TerminalInfo, TerminalOwnershipStatus, TerminalOwnershipResult } from '../../shared/main-process-api-interfaces/TerminalService';
+import type { TerminalInfo, TerminalOwnershipStatus, TerminalOwnershipResult, RequestDataPortResult, PortReadyData } from '../../shared/main-process-api-interfaces/TerminalService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { FileSystemService } from '../main-process-api/FileSystemService';
 import type { FileTree } from '@principal-ai/repository-abstraction';
@@ -38,6 +38,9 @@ interface RepositoryPanelActions extends PanelActions {
   claimTerminalOwnership?: (sessionId: string, force?: boolean) => Promise<TerminalOwnershipResult>;
   releaseTerminalOwnership?: (sessionId: string) => Promise<TerminalOwnershipResult>;
   refreshTerminal?: (sessionId: string) => Promise<boolean>;
+  // MessagePort-based terminal data streaming (high-performance path)
+  requestTerminalDataPort?: (sessionId: string) => Promise<RequestDataPortResult>;
+  onTerminalPortReady?: (callback: (data: PortReadyData, port: MessagePort) => void) => () => void;
 }
 
 // Extended context for repository panels
@@ -45,6 +48,7 @@ interface RepositoryPanelContextValue extends PanelContextValue {
   repositoryPath: string;
   repository: RepositoryMetadata | null; // Required by terminal panel
   terminalSessions?: TerminalInfo[];
+  terminalContext?: string; // Context prefix for terminal sessions
   loading: boolean;
 }
 
@@ -186,18 +190,24 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
       },
 
       // Terminal actions
-      createTerminalSession: async (options?: { cwd?: string }) => {
+      createTerminalSession: async (options?: { cwd?: string; context?: string }) => {
         const cwd = options?.cwd || repositoryPath;
+        // Use provided context (e.g., tab ID) or fall back to the default terminalContext
+        // If a tab-specific context is provided, append it to the base context
+        const sessionContext = options?.context
+          ? `${terminalContext}:${options.context}`
+          : terminalContext;
 
         // Check existing sessions before creating
         const existingSessions = await TerminalService.list();
-        const existingSession = existingSessions.find(s => s.context === terminalContext);
+        const existingSession = existingSessions.find(s => s.context === sessionContext);
 
         console.info('[RepositoryPanelProvider] createTerminalSession called with:', {
           optionsCwd: options?.cwd,
+          optionsContext: options?.context,
           repositoryPath,
           finalCwd: cwd,
-          context: terminalContext,
+          context: sessionContext,
           existingSession: existingSession ? {
             id: existingSession.id,
             directory: existingSession.directory,
@@ -205,7 +215,7 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
           } : null,
           allSessions: existingSessions.map(s => ({ id: s.id, directory: s.directory, context: s.context })),
         });
-        const sessionId = await TerminalService.getOrCreate(cwd, terminalContext);
+        const sessionId = await TerminalService.getOrCreate(cwd, sessionContext);
 
         // Subscribe to this terminal's data channel and forward to panel event bus
         if (!terminalSubscriptionsRef.current.has(sessionId)) {
@@ -277,6 +287,19 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
       refreshTerminal: async (sessionId: string) => {
         return TerminalService.refresh(sessionId);
       },
+
+      listTerminalSessions: async () => {
+        return TerminalService.list();
+      },
+
+      // MessagePort-based terminal data streaming (high-performance path)
+      requestTerminalDataPort: async (sessionId: string) => {
+        return TerminalService.requestDataPort(sessionId);
+      },
+
+      onTerminalPortReady: (callback: (data: PortReadyData, port: MessagePort) => void) => {
+        return TerminalService.onPortReady(callback);
+      },
     }),
     [repositoryPath, terminalContext, events],
   );
@@ -320,6 +343,7 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
       repositoryPath,
       repository,
       terminalSessions,
+      terminalContext,
       loading,
 
       // PanelContextValue required properties
@@ -357,7 +381,7 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
         await Promise.all(slicesToRefresh.map((slice) => slice.refresh()));
       },
     }),
-    [repositoryPath, repository, terminalSessions, loading, slices],
+    [repositoryPath, repository, terminalSessions, terminalContext, loading, slices],
   );
 
   // Provider value

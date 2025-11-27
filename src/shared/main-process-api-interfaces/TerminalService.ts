@@ -20,7 +20,8 @@ export enum TerminalAPIEvents {
   CLAIM_OWNERSHIP = 'terminal:claimOwnership',
   RELEASE_OWNERSHIP = 'terminal:releaseOwnership',
   OWNERSHIP_LOST = 'terminal:ownershipLost',
-  PORT_READY = 'terminal:portReady', // NEW: MessagePort ready for direct streaming
+  PORT_READY = 'terminal:portReady', // MessagePort ready for direct streaming
+  REQUEST_DATA_PORT = 'terminal:requestDataPort', // Request a MessagePort for terminal data
 }
 
 export interface TerminalInfo {
@@ -62,6 +63,11 @@ export interface PortReadyData {
   sessionId: string;
   writable: boolean;
   ownershipToken?: string;
+}
+
+export interface RequestDataPortResult {
+  success: boolean;
+  reason?: string;
 }
 
 export interface TerminalAPI {
@@ -110,4 +116,10 @@ export interface TerminalAPI {
   onPortReady: (
     callback: (data: PortReadyData, port: MessagePort) => void,
   ) => () => void;
+  /**
+   * Request a MessagePort for receiving terminal data directly.
+   * The port will be delivered via the PORT_READY event.
+   * This bypasses IPC for high-performance data streaming.
+   */
+  requestDataPort: (sessionId: string) => Promise<RequestDataPortResult>;
 }

@@ -5,6 +5,7 @@ import {
   type PanelDefinitionWithContent,
 } from '@principal-ade/panels';
 import '@principal-ade/panels/panels.css';
+import '@industry-theme/visual-validation-panel/dist/panels.bundle.css';
 import { RepositoryPanelProvider, useRepositoryPanelProvider } from '../contexts/RepositoryPanelContext';
 import { panels as industryTerminalPanels } from '@industry-theme/terminal-panel';
 import { panels as ghosttyTerminalPanels } from '@industry-theme/ghostty-terminal-panel';
@@ -34,11 +35,23 @@ const RepositoryWorkspacePanelFrameworkInner: React.FC = () => {
       setTerminalImplementation(prefs.terminalImplementation ?? 'ghostty');
     };
     loadPreference();
+
+    // Subscribe to preference updates so terminal switches when toggle is clicked
+    const unsubscribe = UserPreferencesService.onPreferencesUpdated((prefs) => {
+      if (prefs.terminalImplementation) {
+        setTerminalImplementation(prefs.terminalImplementation);
+      }
+    });
+
+    return unsubscribe;
   }, []);
 
   // Get panel components from the panel framework packages based on preference
+  // For ghostty, use the tabbed terminal panel (index 1), for industry-themed use single terminal (index 0)
   const terminalPanels = terminalImplementation === 'ghostty' ? ghosttyTerminalPanels : industryTerminalPanels;
-  const TerminalPanelComponent = terminalPanels[0]?.component;
+  const TerminalPanelComponent = terminalImplementation === 'ghostty'
+    ? terminalPanels[1]?.component  // TabbedGhosttyTerminal
+    : terminalPanels[0]?.component;
   const VisualValidationPanelComponent = visualValidationPanels[0]?.component;
 
   // Define all panels using panel framework components
@@ -52,6 +65,7 @@ const RepositoryWorkspacePanelFrameworkInner: React.FC = () => {
             context={context}
             actions={actions}
             events={events}
+            contextPrefix={(context as { terminalContext?: string }).terminalContext}
           />
         ) : (
           <div>Terminal panel not available</div>

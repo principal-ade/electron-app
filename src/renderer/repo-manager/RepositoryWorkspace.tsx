@@ -127,19 +127,23 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     // UI Mode state - per-repository
     const [uiMode, setUIMode] = useState<'classic' | 'panel-framework'>('classic');
 
+    // Terminal implementation state (for panel framework mode)
+    const [terminalImplementation, setTerminalImplementation] = useState<'industry-themed' | 'ghostty'>('ghostty');
+
     // Get repository identifier (owner/name or just name if no owner)
     const repoIdentifier = repository.owner
       ? `${repository.owner}/${repository.name}`
       : repository.name;
 
-    // Load UI mode from repository-specific preferences
+    // Load UI mode and terminal implementation from preferences
     useEffect(() => {
-      const loadUIMode = async () => {
+      const loadPreferences = async () => {
         const prefs = await UserPreferencesService.getPreferences();
         const repoUIState = prefs?.repositoryUIStates?.[repoIdentifier];
         setUIMode(repoUIState?.uiMode ?? 'classic');
+        setTerminalImplementation(prefs?.terminalImplementation ?? 'ghostty');
       };
-      loadUIMode();
+      loadPreferences();
     }, [repoIdentifier]);
 
     // Handle UI mode changes
@@ -169,6 +173,15 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
         },
       });
       setUIMode('classic');
+    };
+
+    // Handle terminal implementation toggle
+    const handleToggleTerminalImplementation = async () => {
+      const newImplementation = terminalImplementation === 'ghostty' ? 'industry-themed' : 'ghostty';
+      await UserPreferencesService.updatePreferences({
+        terminalImplementation: newImplementation,
+      });
+      setTerminalImplementation(newImplementation);
     };
 
     // Search state - TODO: Move to floating search component in bottom-left corner
@@ -2633,6 +2646,8 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
             selectedSource={selectedSource}
             onShowGitChanges={() => focusPanelTab('gitChanges')}
             onSwitchToClassic={handleSwitchToClassic}
+            terminalImplementation={terminalImplementation}
+            onToggleTerminalImplementation={handleToggleTerminalImplementation}
           />
           <RepositoryWorkspacePanelFramework
             key={`panel-framework-${repoIdentifier}`}

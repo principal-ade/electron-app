@@ -35,18 +35,26 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
         borderBottom: `1px solid ${theme.colors.border}`,
         display: 'flex',
         alignItems: 'center',
+        justifyContent: 'space-between',
         fontFamily: theme.fonts.body,
+        position: 'relative',
         // @ts-ignore - WebkitAppRegion is not in CSSProperties
         WebkitAppRegion: 'drag',
       }}
     >
-      {/* Left: Workspace name */}
+      {/* Left spacer for traffic lights on macOS */}
+      <div style={{ width: '80px', flexShrink: 0 }} />
+
+      {/* Center: Workspace name */}
       <div
         style={{
-          marginLeft: '80px', // Position after traffic lights on macOS
+          position: 'absolute',
+          left: '50%',
+          transform: 'translateX(-50%)',
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
-          gap: '12px',
+          gap: '2px',
           // @ts-ignore - WebkitAppRegion is not in CSSProperties
           WebkitAppRegion: 'no-drag',
         }}
@@ -67,7 +75,7 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
         {workspace.description && (
           <span
             style={{
-              fontSize: `${theme.fontSizes[1]}px`,
+              fontSize: `${theme.fontSizes[0]}px`,
               color: theme.colors.textSecondary,
               fontFamily: theme.fonts.body,
               maxWidth: '300px',
