@@ -33,6 +33,7 @@ interface RepositoryPanelActions extends PanelActions {
   ) => Promise<void>;
   destroyTerminalSession?: (sessionId: string) => Promise<void>;
   readFile?: (filePath: string) => Promise<string>;
+  writeFile?: (filePath: string, content: string) => Promise<void>;
   // Terminal ownership actions
   checkTerminalOwnership?: (sessionId: string) => Promise<TerminalOwnershipStatus>;
   claimTerminalOwnership?: (sessionId: string, force?: boolean) => Promise<TerminalOwnershipResult>;
@@ -275,6 +276,15 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
         }
       },
 
+      writeFile: async (filePath: string, content: string) => {
+        try {
+          await FileSystemService.writeFile(filePath, content);
+        } catch (error) {
+          console.error('[RepositoryPanelProvider] Failed to write file:', filePath, error);
+          throw error;
+        }
+      },
+
       // Terminal ownership actions
       checkTerminalOwnership: async (sessionId: string) => {
         return TerminalService.checkOwnership(sessionId);
@@ -286,6 +296,11 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
 
       releaseTerminalOwnership: async (sessionId: string) => {
         return TerminalService.releaseOwnership(sessionId);
+      },
+
+      // Listen for ownership lost events
+      onOwnershipLost: (callback: (data: { sessionId: string; newOwnerWindowId: number }) => void) => {
+        return TerminalService.onOwnershipLost(callback);
       },
 
       refreshTerminal: async (sessionId: string) => {
