@@ -80,7 +80,7 @@ export async function checkDeveloperTools(): Promise<
  * Log available developer tools to console (useful for debugging)
  */
 export async function logAvailableTools(): Promise<void> {
-  console.group('🔧 Developer Tools Availability');
+  console.info('🔧 Developer Tools Availability');
 
   const tools = await checkDeveloperTools();
 
@@ -92,11 +92,9 @@ export async function logAvailableTools(): Promise<void> {
     .filter(([_, info]) => !info.available)
     .map(([name]) => name);
 
-  console.table(available);
+  console.info('Available tools:', available);
 
   if (unavailable.length > 0) {
-    console.log('❌ Unavailable:', unavailable.join(', '));
+    console.info('❌ Unavailable:', unavailable.join(', '));
   }
-
-  console.groupEnd();
 }

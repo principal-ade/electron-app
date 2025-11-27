@@ -3,6 +3,8 @@ import {
   TerminalInfo,
   TerminalOwnershipStatus,
   TerminalOwnershipResult,
+  RequestDataPortResult,
+  PortReadyData,
 } from '../../shared/main-process-api-interfaces/TerminalService';
 
 export class TerminalService {
@@ -114,5 +116,26 @@ export class TerminalService {
     return (
       window.mainProcess.terminal.onOwnershipLost?.(callback) || (() => {})
     );
+  }
+
+  /**
+   * Request a MessagePort for receiving terminal data directly.
+   * This bypasses IPC for high-performance data streaming.
+   * The port will be delivered via the onPortReady callback.
+   */
+  static async requestDataPort(
+    sessionId: string,
+  ): Promise<RequestDataPortResult> {
+    return window.mainProcess.terminal.requestDataPort(sessionId);
+  }
+
+  /**
+   * Listen for MessagePort delivery after requesting via requestDataPort().
+   * The port can be used for direct data streaming from the terminal.
+   */
+  static onPortReady(
+    callback: (data: PortReadyData, port: MessagePort) => void,
+  ): () => void {
+    return window.mainProcess.terminal.onPortReady?.(callback) || (() => {});
   }
 }

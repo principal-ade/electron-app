@@ -217,7 +217,7 @@ export function setupSessionHandlers(
   );
 
   // Get list of active terminals
-  ipcMain.handle(TerminalAPIEvents.LIST, async (event: IpcMainInvokeEvent) => {
+  ipcMain.handle(TerminalAPIEvents.LIST, async (_event: IpcMainInvokeEvent) => {
     const terminals: TerminalInfo[] = Array.from(
       sessionManager.getAllSessions().entries(),
     ).map(([id, session]) => ({

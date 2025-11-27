@@ -8,22 +8,22 @@ export async function cleanupOrphanedTerminals(
   keepSessionIds: string[] = [],
 ): Promise<void> {
   try {
-    console.log('[TerminalCleanup] Checking for orphaned terminal sessions...');
+    console.info('[TerminalCleanup] Checking for orphaned terminal sessions...');
 
     // Get all active terminal sessions
     const sessions = await TerminalService.list();
 
     if (!sessions || sessions.length === 0) {
-      console.log('[TerminalCleanup] No terminal sessions found');
+      console.info('[TerminalCleanup] No terminal sessions found');
       return;
     }
 
-    console.log(`[TerminalCleanup] Found ${sessions.length} terminal sessions`);
+    console.info(`[TerminalCleanup] Found ${sessions.length} terminal sessions`);
 
     // Destroy sessions that aren't in the keep list
     for (const session of sessions) {
       if (!keepSessionIds.includes(session.id)) {
-        console.log(
+        console.info(
           `[TerminalCleanup] Destroying orphaned session: ${session.id}`,
         );
         try {
@@ -35,11 +35,11 @@ export async function cleanupOrphanedTerminals(
           );
         }
       } else {
-        console.log(`[TerminalCleanup] Keeping active session: ${session.id}`);
+        console.info(`[TerminalCleanup] Keeping active session: ${session.id}`);
       }
     }
 
-    console.log('[TerminalCleanup] Cleanup complete');
+    console.info('[TerminalCleanup] Cleanup complete');
   } catch (err) {
     console.error('[TerminalCleanup] Failed to list terminal sessions:', err);
   }

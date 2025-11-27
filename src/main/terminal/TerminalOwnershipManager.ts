@@ -3,7 +3,6 @@ import { TerminalSession, OwnershipCheckResult, OwnershipClaimResult } from './t
 import { TerminalAPIEvents } from '../../shared/main-process-api-interfaces/TerminalService';
 
 export class TerminalOwnershipManager {
-  constructor() {}
 
   // Check ownership status for a session
   checkOwnership(

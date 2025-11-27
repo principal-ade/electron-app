@@ -1,6 +1,12 @@
+export type TerminalPortMessage =
+  | { type: 'WRITE'; data: string }
+  | { type: 'RESIZE'; cols: number; rows: number }
+  | { type: 'DATA'; data: string };
+
 export interface TerminalSession {
   id: string;
-  pty: any; // Changed from pty.IPty to any for optional support
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Importing node-pty types causes module load failures when pty unavailable
+  pty: any;
   directory: string;
   context?: string; // 'principal' | 'dashboard' | 'agent' | etc
   agentSessionId?: string; // Associated AI session

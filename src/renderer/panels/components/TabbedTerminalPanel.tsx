@@ -199,7 +199,7 @@ export const TabbedTerminalPanel = forwardRef<
           setActiveTabId(restoredTabs[0]?.id || null);
           onTabsChange?.(restoredTabs);
 
-          console.log(
+          console.info(
             `[TabbedTerminal] Restored ${restoredTabs.length} tabs from existing sessions`,
           );
         } else if (initialTabs.length > 0) {
@@ -305,13 +305,13 @@ export const TabbedTerminalPanel = forwardRef<
       }
 
       hasInitializedRef.current = true;
-      console.log('[TabbedTerminal] Initializing and restoring sessions...');
+      console.info('[TabbedTerminal] Initializing and restoring sessions...');
       restoreSessions();
 
       return () => {
         // DON'T destroy sessions on unmount - they should persist when panel is swapped
         // Sessions are only destroyed when user explicitly closes a tab
-        console.log(
+        console.info(
           '[TabbedTerminal] Component unmounting, sessions will persist',
         );
       };
@@ -326,7 +326,7 @@ export const TabbedTerminalPanel = forwardRef<
         return;
       }
 
-      console.log(
+      console.info(
         '[TabbedTerminal] showAllTerminals or directory changed, re-filtering sessions',
       );
       restoreSessions();

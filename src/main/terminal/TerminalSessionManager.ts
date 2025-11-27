@@ -17,8 +17,6 @@ export class TerminalSessionManager {
   // MessagePort support
   private sessionPorts: Map<string, MessageChannelMain> = new Map();
 
-  constructor() {}
-
   // Renderer window tracking
   addRendererWindow(window: BrowserWindow): void {
     if (!window || this.rendererWindows.has(window)) {
@@ -58,57 +56,27 @@ export class TerminalSessionManager {
   sendToActiveViewers(sessionId: string, data: string): void {
     const session = this.sessions.get(sessionId);
     if (!session || session.activeViewers.size === 0) {
-      return; // No one viewing, skip IPC entirely
+      return; // No one viewing, skip entirely
     }
 
-    // If MessagePorts are enabled, data flows through ports instead
-    if (terminalConfig.enableMessagePorts) {
-      const channel = this.sessionPorts.get(sessionId);
-      if (channel) {
-        try {
-          // Send data through port1 (which will arrive at port2 in renderer)
-          channel.port1.postMessage({ type: 'DATA', data });
-        } catch (error) {
-          console.warn(
-            `[Terminal] Failed to send data via MessagePort for session ${sessionId}:`,
-            error,
-          );
-          // Fall back to legacy IPC on error
-          this.sendViaLegacyIPC(sessionId, data);
-        }
-        return;
-      }
-    }
-
-    // Legacy IPC path (or fallback)
-    this.sendViaLegacyIPC(sessionId, data);
-  }
-
-  // Legacy IPC method (extracted for reuse)
-  private sendViaLegacyIPC(sessionId: string, data: string): void {
-    const session = this.sessions.get(sessionId);
-    if (!session || session.activeViewers.size === 0) {
+    const channel = this.sessionPorts.get(sessionId);
+    if (!channel) {
+      console.error(
+        `[Terminal] No MessagePort found for session ${sessionId}. Data will be lost. ` +
+        `Active viewers: ${Array.from(session.activeViewers).join(', ')}`,
+      );
       return;
     }
 
-    const sessionChannel = `${TerminalAPIEvents.ON_DATA}:${sessionId}`;
-
-    const viewerIds = Array.from(session.activeViewers);
-    for (const windowId of viewerIds) {
-      const window = BrowserWindow.fromId(windowId);
-      if (window && !window.isDestroyed()) {
-        try {
-          window.webContents.send(sessionChannel, data);
-        } catch (error) {
-          console.warn(
-            `[Terminal] Failed to send data to window ${windowId}:`,
-            error,
-          );
-        }
-      } else {
-        // Window no longer exists, remove from viewers
-        session.activeViewers.delete(windowId);
-      }
+    try {
+      // Send data through port1 (which will arrive at port2 in renderer)
+      channel.port1.postMessage({ type: 'DATA', data });
+    } catch (error) {
+      console.error(
+        `[Terminal] Failed to send data via MessagePort for session ${sessionId}:`,
+        error,
+      );
+      // No fallback - let the error surface so we can debug MessagePort issues
     }
   }
 
@@ -121,7 +89,8 @@ export class TerminalSessionManager {
   getSessionByRepoKey(sessionKey: string): TerminalSession | null {
     const sessionId = this.sessionsByRepo.get(sessionKey);
     if (sessionId && this.sessions.has(sessionId)) {
-      return this.sessions.get(sessionId)!;
+      const session = this.sessions.get(sessionId);
+      return session ?? null;
     }
     return null;
   }
@@ -336,7 +305,7 @@ export class TerminalSessionManager {
 
     this.sessions.delete(sessionId);
     // Clean up repo tracking
-    for (const [repo, sid] of this.sessionsByRepo.entries()) {
+    for (const [repo, sid] of Array.from(this.sessionsByRepo.entries())) {
       if (sid === sessionId) {
         this.sessionsByRepo.delete(repo);
         break;
@@ -361,7 +330,7 @@ export class TerminalSessionManager {
         session.pty.kill();
         // Close MessageChannel if it exists
         this.closeMessageChannel(sessionId);
-      } catch (error) {
+      } catch (_error) {
         // Ignore errors during cleanup
       }
     });
@@ -428,6 +397,7 @@ export class TerminalSessionManager {
       channel.port1.start();
 
       // Listen for messages from renderer (via port2 -> port1)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- MessageChannelMain event type is not exported by Electron
       channel.port1.on('message', (event: any) => {
         this.handlePortMessage(sessionId, event.data);
       });
@@ -454,6 +424,7 @@ export class TerminalSessionManager {
   /**
    * Handle messages received from renderer via MessagePort
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Using TerminalPortMessage type here causes module load failures
   private handlePortMessage(sessionId: string, message: any): void {
     const session = this.sessions.get(sessionId);
     if (!session) {

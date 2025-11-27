@@ -20,7 +20,7 @@ ipcRenderer.on(
   ) => {
     const port = event.ports[0];
     if (port) {
-      console.log(`[TerminalAPI] Received MessagePort for session ${data.sessionId}`);
+      console.info(`[TerminalAPI] Received MessagePort for session ${data.sessionId}`);
       sessionPorts.set(data.sessionId, port);
       port.start(); // Start the port immediately
     } else {
@@ -89,44 +89,34 @@ export const terminalAPI: TerminalAPI = {
   },
 
   // Session-specific data subscription - only receives data for this specific session
-  // Automatically uses MessagePort if available, falls back to legacy IPC
+  // Requires MessagePort - no legacy IPC fallback
   onDataForSession: (sessionId: string, callback: (data: string) => void) => {
-    let portListener: ((event: MessageEvent) => void) | null = null;
-    let usingPort = false;
-
-    // Check if we already have a MessagePort for this session
+    // Check if we have a MessagePort for this session
     const existingPort = sessionPorts.get(sessionId);
-    if (existingPort) {
-      console.log(`[TerminalAPI] Using existing MessagePort for session ${sessionId}`);
-      usingPort = true;
-
-      // Listen for data on the MessagePort
-      portListener = (event: MessageEvent) => {
-        const message = event.data;
-        if (message && message.type === 'DATA') {
-          callback(message.data);
-        }
-      };
-      existingPort.addEventListener('message', portListener);
-
-      // Return cleanup function for port
-      return () => {
-        if (portListener) {
-          existingPort.removeEventListener('message', portListener);
-        }
-      };
+    if (!existingPort) {
+      console.error(
+        `[TerminalAPI] No MessagePort available for session ${sessionId}. ` +
+        `Data subscription will not receive any data. ` +
+        `Available ports: ${Array.from(sessionPorts.keys()).join(', ') || 'none'}`,
+      );
+      // Return a no-op cleanup function
+      return () => {};
     }
 
-    // Fall back to legacy IPC if no MessagePort available yet
-    console.log(`[TerminalAPI] Using legacy IPC for session ${sessionId}`);
-    const channel = `${TerminalAPIEvents.ON_DATA}:${sessionId}`;
-    const ipcListener = (_event: Electron.IpcRendererEvent, data: string) =>
-      callback(data);
-    ipcRenderer.on(channel, ipcListener);
+    console.info(`[TerminalAPI] Using MessagePort for session ${sessionId}`);
 
-    // Return cleanup function for IPC
+    // Listen for data on the MessagePort
+    const portListener = (event: MessageEvent) => {
+      const message = event.data;
+      if (message && message.type === 'DATA') {
+        callback(message.data);
+      }
+    };
+    existingPort.addEventListener('message', portListener);
+
+    // Return cleanup function for port
     return () => {
-      ipcRenderer.removeListener(channel, ipcListener);
+      existingPort.removeEventListener('message', portListener);
     };
   },
 
@@ -226,7 +216,7 @@ export const terminalAPI: TerminalAPI = {
       // The first port in the event.ports array is our MessagePort
       const port = event.ports[0];
       if (port) {
-        console.log('[TerminalAPI] Received MessagePort for session:', data.sessionId);
+        console.info('[TerminalAPI] Received MessagePort for session:', data.sessionId);
         callback(data, port);
       } else {
         console.warn('[TerminalAPI] PORT_READY event received but no port found');
@@ -236,5 +226,9 @@ export const terminalAPI: TerminalAPI = {
     return () => {
       ipcRenderer.removeListener(TerminalAPIEvents.PORT_READY, listener);
     };
+  },
+
+  requestDataPort: async (sessionId: string): Promise<{ success: boolean; reason?: string }> => {
+    return ipcRenderer.invoke(TerminalAPIEvents.REQUEST_DATA_PORT, sessionId);
   },
 };
