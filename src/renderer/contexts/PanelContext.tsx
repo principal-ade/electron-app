@@ -37,6 +37,36 @@ interface ExtendedPanelActions extends PanelActions {
     rows: number
   ) => Promise<void>;
   destroyTerminalSession?: (sessionId: string) => Promise<void>;
+  /**
+   * Request a MessagePort for receiving terminal data directly.
+   * This bypasses IPC for high-performance data streaming.
+   * Returns { success: true } if the port will be delivered via onTerminalPortReady.
+   */
+  requestTerminalDataPort?: (sessionId: string) => Promise<{ success: boolean; reason?: string }>;
+  /**
+   * Register a callback to receive MessagePorts for terminal data streaming.
+   * Call this before requestTerminalDataPort() to ensure you receive the port.
+   * Returns an unsubscribe function.
+   */
+  onTerminalPortReady?: (
+    callback: (data: { sessionId: string; writable: boolean }, port: MessagePort) => void
+  ) => () => void;
+  // Ownership actions
+  checkTerminalOwnership?: (sessionId: string) => Promise<{
+    exists: boolean;
+    ownedByWindowId: number | null;
+    ownedByThisWindow?: boolean;
+    canClaim: boolean;
+  }>;
+  claimTerminalOwnership?: (sessionId: string, force?: boolean) => Promise<{
+    success: boolean;
+    reason?: string;
+  }>;
+  releaseTerminalOwnership?: (sessionId: string) => Promise<{
+    success: boolean;
+    reason?: string;
+  }>;
+  refreshTerminal?: (sessionId: string) => Promise<boolean>;
   removeRepositoryFromWorkspace?: (
     repositoryId: string,
     workspaceId: string
@@ -517,6 +547,43 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
 
         await TerminalService.destroy(sessionId);
         setTerminalSessions((prev) => prev.filter((s) => s.id !== sessionId));
+      },
+
+      // MessagePort-based terminal data streaming (high-performance path)
+      requestTerminalDataPort: async (sessionId: string) => {
+        console.info('[PanelContext] Requesting terminal data port for session:', sessionId);
+        return TerminalService.requestDataPort(sessionId);
+      },
+
+      onTerminalPortReady: (callback) => {
+        return TerminalService.onPortReady(callback);
+      },
+
+      // Terminal ownership actions
+      checkTerminalOwnership: async (sessionId: string) => {
+        return TerminalService.checkOwnership(sessionId);
+      },
+
+      claimTerminalOwnership: async (sessionId: string, force?: boolean) => {
+        return TerminalService.claimOwnership(sessionId, force);
+      },
+
+      releaseTerminalOwnership: async (sessionId: string) => {
+        return TerminalService.releaseOwnership(sessionId);
+      },
+
+      refreshTerminal: async (sessionId: string) => {
+        return TerminalService.refresh(sessionId);
+      },
+
+      // Session-specific data subscription (used by TabbedTerminalPanel)
+      onTerminalData: (sessionId: string, callback: (data: string) => void) => {
+        return TerminalService.onDataForSession(sessionId, callback);
+      },
+
+      // List terminal sessions (used by TabbedTerminalPanel for restoration)
+      listTerminalSessions: async () => {
+        return TerminalService.list();
       },
 
       // Workspace actions

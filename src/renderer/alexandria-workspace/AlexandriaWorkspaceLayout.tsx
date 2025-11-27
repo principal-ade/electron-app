@@ -9,7 +9,7 @@ import {
   FocusIndicator,
 } from '@principal-ade/panel-layouts';
 import { PanelProvider, usePanelProvider } from '../contexts/PanelContext';
-import { panels as terminalPanels } from '@industry-theme/terminal-panel';
+import { TabbedTerminalPanel } from '@industry-theme/terminal-panel';
 import { panels as workspacePanels } from '@industry-theme/alexandria-workspace-panel';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
@@ -147,9 +147,16 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
   }, [events, context]);
 
   // Get panel components
-  const TerminalPanelComponent = terminalPanels[0]?.component;
   const WorkspacePanelComponent = workspacePanels[0]?.component;
   const DocsPanelComponent = docsPanels[0]?.component;
+
+  // Get terminal directory from context
+  const terminalDirectory = context.currentScope.repository?.path ||
+    context.currentScope.workspace?.path ||
+    '/';
+
+  // Create terminal context identifier
+  const terminalContext = `terminal:alexandria:${context.currentScope.workspace?.id || 'default'}`;
 
   // Define panels
   const panels: PanelDefinition[] = useMemo(
@@ -199,7 +206,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
       {
         id: 'terminal',
         label: 'Terminal',
-        content: TerminalPanelComponent ? (
+        content: (
           <div
             style={{
               width: '100%',
@@ -211,30 +218,13 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
             }}
           >
             {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('middle')} />}
-            <TerminalPanelComponent
+            <TabbedTerminalPanel
               context={context}
               actions={actions}
               events={events}
+              terminalContext={terminalContext}
+              directory={terminalDirectory}
             />
-          </div>
-        ) : (
-          <div
-            style={{
-              padding: '16px',
-              backgroundColor: theme.colors.background,
-              color: theme.colors.text,
-              height: '100%',
-              overflow: 'auto',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              position: 'relative',
-            }}
-          >
-            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('middle')} />}
-            <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
-              Terminal panel not available
-            </p>
           </div>
         ),
       },
@@ -281,7 +271,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
         ),
       },
     ],
-    [theme, context, actions, events, TerminalPanelComponent, WorkspacePanelComponent, DocsPanelComponent, isFocused, enableKeyboardShortcuts]
+    [theme, context, actions, events, WorkspacePanelComponent, DocsPanelComponent, isFocused, enableKeyboardShortcuts, terminalContext, terminalDirectory]
   );
 
   return (
