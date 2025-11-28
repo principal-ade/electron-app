@@ -218,7 +218,10 @@ export const AlexandriaWorkspaceApp: React.FC = () => {
 
     // Subscribe to workspace changes to update theme if workspace is edited
     const unsubscribe = WorkspaceService.onWorkspaceChange((event) => {
-      if (event.type === 'updated' && event.workspaceId === workspaceId) {
+      // Check both event.workspaceId and event.workspace?.id since the event
+      // structure varies depending on the event type
+      const eventWorkspaceId = event.workspaceId || event.workspace?.id;
+      if (event.type === 'updated' && eventWorkspaceId === workspaceId) {
         loadWorkspaceTheme();
       }
     });

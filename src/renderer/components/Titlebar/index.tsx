@@ -30,5 +30,8 @@ export type { TerminalTitlebarProps } from './TerminalTitlebar';
 export { AlexandriaWorkspaceTitlebar } from './AlexandriaWorkspaceTitlebar';
 export type { AlexandriaWorkspaceTitlebarProps } from './AlexandriaWorkspaceTitlebar';
 
+export { WorkspaceThemeDropdown } from './WorkspaceThemeDropdown';
+export type { WorkspaceThemeDropdownProps } from './WorkspaceThemeDropdown';
+
 // For backward compatibility with old imports
 export { RepositoryTitlebar as RepoManagerTitlebar } from './RepositoryTitlebar';

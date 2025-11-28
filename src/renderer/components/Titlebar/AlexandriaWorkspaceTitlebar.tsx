@@ -3,6 +3,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 import { Plus, Keyboard } from 'lucide-react';
 import { AddRepositoryToWorkspaceModal } from '../../panels/components/AddRepositoryToWorkspaceModal';
+import { WorkspaceThemeDropdown } from './WorkspaceThemeDropdown';
 
 export interface AlexandriaWorkspaceTitlebarProps {
   workspace: Workspace;
@@ -101,6 +102,12 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
           WebkitAppRegion: 'no-drag',
         }}
       >
+        {/* Theme Toggle */}
+        <WorkspaceThemeDropdown
+          workspaceId={workspace.id}
+          currentTheme={workspace.theme}
+        />
+
         {/* Keyboard Shortcuts Toggle */}
         {onToggleKeyboardShortcuts && (
           <button
