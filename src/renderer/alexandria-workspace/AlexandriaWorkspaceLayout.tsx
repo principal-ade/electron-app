@@ -58,6 +58,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
 
   const [isEditMode, _setIsEditMode] = useState(false);
   const [collapsed, setCollapsed] = useState({ left: false, right: false });
+  const [showAllTerminals, setShowAllTerminals] = useState(false);
 
   // Panel focus management for keyboard shortcuts
   const { focusedPanel, setFocus, isFocused } = usePanelFocus({
@@ -224,6 +225,8 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
               events={events}
               terminalContext={terminalContext}
               directory={terminalDirectory}
+              showAllTerminals={showAllTerminals}
+              onShowAllTerminalsChange={setShowAllTerminals}
             />
           </div>
         ),
@@ -271,7 +274,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
         ),
       },
     ],
-    [theme, context, actions, events, WorkspacePanelComponent, DocsPanelComponent, isFocused, enableKeyboardShortcuts, terminalContext, terminalDirectory]
+    [theme, context, actions, events, WorkspacePanelComponent, DocsPanelComponent, isFocused, enableKeyboardShortcuts, terminalContext, terminalDirectory, showAllTerminals]
   );
 
   return (

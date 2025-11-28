@@ -609,7 +609,17 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
 
       // List terminal sessions (used by TabbedTerminalPanel for restoration)
       listTerminalSessions: async () => {
-        return TerminalService.list();
+        const sessions = await TerminalService.list();
+        // Map to TerminalSessionInfo format (directory -> cwd)
+        return sessions.map((s) => ({
+          id: s.id,
+          pid: 0,
+          cwd: s.directory,
+          shell: '',
+          createdAt: s.createdAt,
+          lastActivity: s.lastActivity,
+          context: s.context,
+        }));
       },
 
       // Workspace actions
