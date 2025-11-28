@@ -19,6 +19,16 @@ export interface StoreViewerOptions {
 }
 
 /**
+ * Options for opening a dev workspace window
+ */
+export interface DevWorkspaceOptions {
+  /** Path to the repository (for terminal working directory) */
+  repositoryPath: string;
+  /** Name to display in window title */
+  repositoryName: string;
+}
+
+/**
  * Request to open local files in an editor window
  */
 export interface OpenLocalFilesRequest {
@@ -151,4 +161,11 @@ export interface WindowAPI {
   onRepositoryWindowsChanged(
     callback: (repoWindows: RepositoryWindowState[]) => void,
   ): void;
+
+  /**
+   * Open a dev workspace window with the panel framework
+   * @param options - Repository path and name
+   * @returns Window ID if successful, null otherwise
+   */
+  openDevWorkspace(options: DevWorkspaceOptions): Promise<{ windowId: number } | null>;
 }

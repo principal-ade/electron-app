@@ -23,8 +23,7 @@ import {
 } from 'lucide-react';
 import { parseGitHubUrl } from '../../shared/utils/githubUrlParser';
 import { PackageLayer } from '@principal-ai/codebase-composition';
-import { RepositoryTitlebar, RepositoryTitlebarSimple } from '../components/Titlebar';
-import { RepositoryWorkspacePanelFramework } from './RepositoryWorkspacePanelFramework';
+import { RepositoryTitlebar } from '../components/Titlebar';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 
 import type {
@@ -124,10 +123,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     const { theme } = useTheme();
     const { registerLayer, unregisterLayer } = useHighlightLayers();
 
-    // UI Mode state - per-repository
-    const [uiMode, setUIMode] = useState<'classic' | 'panel-framework'>('classic');
-
-    // Terminal implementation state (for panel framework mode)
+    // Terminal implementation state
     const [terminalImplementation, setTerminalImplementation] = useState<'industry-themed' | 'ghostty'>('ghostty');
 
     // Get repository identifier (owner/name or just name if no owner)
@@ -135,45 +131,14 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       ? `${repository.owner}/${repository.name}`
       : repository.name;
 
-    // Load UI mode and terminal implementation from preferences
+    // Load terminal implementation from preferences
     useEffect(() => {
       const loadPreferences = async () => {
         const prefs = await UserPreferencesService.getPreferences();
-        const repoUIState = prefs?.repositoryUIStates?.[repoIdentifier];
-        setUIMode(repoUIState?.uiMode ?? 'classic');
         setTerminalImplementation(prefs?.terminalImplementation ?? 'ghostty');
       };
       loadPreferences();
     }, [repoIdentifier]);
-
-    // Handle UI mode changes
-    const handleSwitchToPanelFramework = async () => {
-      const prefs = await UserPreferencesService.getPreferences();
-      await UserPreferencesService.updatePreferences({
-        repositoryUIStates: {
-          ...prefs?.repositoryUIStates,
-          [repoIdentifier]: {
-            ...prefs?.repositoryUIStates?.[repoIdentifier],
-            uiMode: 'panel-framework' as const,
-          },
-        },
-      });
-      setUIMode('panel-framework');
-    };
-
-    const handleSwitchToClassic = async () => {
-      const prefs = await UserPreferencesService.getPreferences();
-      await UserPreferencesService.updatePreferences({
-        repositoryUIStates: {
-          ...prefs?.repositoryUIStates,
-          [repoIdentifier]: {
-            ...prefs?.repositoryUIStates?.[repoIdentifier],
-            uiMode: 'classic' as const,
-          },
-        },
-      });
-      setUIMode('classic');
-    };
 
     // Handle terminal implementation toggle
     const handleToggleTerminalImplementation = async () => {
@@ -2627,37 +2592,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       }),
     );
 
-    // Panel Framework mode - simplified experience
-    if (uiMode === 'panel-framework') {
-      return (
-        <div
-          style={{
-            width: '100vw',
-            height: '100vh',
-            display: 'flex',
-            flexDirection: 'column',
-            backgroundColor: theme.colors.background,
-          }}
-        >
-          <RepositoryTitlebarSimple
-            repository={repository}
-            repositoryOwner={repository.owner}
-            repositoryName={repository.name}
-            selectedSource={selectedSource}
-            onShowGitChanges={() => focusPanelTab('gitChanges')}
-            onSwitchToClassic={handleSwitchToClassic}
-            terminalImplementation={terminalImplementation}
-            onToggleTerminalImplementation={handleToggleTerminalImplementation}
-          />
-          <RepositoryWorkspacePanelFramework
-            key={`panel-framework-${repoIdentifier}`}
-            repositoryPath={selectedSource?.type === 'local' ? selectedSource.location : repoIdentifier}
-            repository={repository}
-          />
-        </div>
-      );
-    }
-
     // Classic mode - full featured experience
     return (
       <div
@@ -2681,7 +2615,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
           onSwitchPanels={handleSwitchPanels}
           onSwitchLeftMiddlePanels={handleSwitchLeftMiddlePanels}
           onShowGitChanges={() => focusPanelTab('gitChanges')}
-          onSwitchToPanelFramework={handleSwitchToPanelFramework}
           showSidebarControls
           sidebarCollapsed={panelCollapsedState.left ?? false}
           onToggleSidebar={() =>

@@ -13,7 +13,7 @@ import { panels as visualValidationPanels } from '@industry-theme/visual-validat
 import type { Repository } from '../../shared/types/repository.types';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 
-export interface RepositoryWorkspacePanelFrameworkProps {
+export interface DevWorkspacePanelFrameworkProps {
   repositoryPath: string;
   repository: Repository;
 }
@@ -21,7 +21,7 @@ export interface RepositoryWorkspacePanelFrameworkProps {
 /**
  * Inner component that uses RepositoryPanelProvider context
  */
-const RepositoryWorkspacePanelFrameworkInner: React.FC = () => {
+const DevWorkspacePanelFrameworkInner: React.FC = () => {
   const { theme } = useTheme();
   const { context, actions, events } = useRepositoryPanelProvider();
 
@@ -156,15 +156,15 @@ const RepositoryWorkspacePanelFrameworkInner: React.FC = () => {
 };
 
 /**
- * Panel Framework version of the Repository Workspace
+ * Panel Framework for Dev Workspace
  *
  * This is a simplified, modern panel system that uses:
  * - Panel framework components from @industry-theme packages
  * - PanelProvider for shared context, actions, and events
  * - ConfigurablePanelLayout for visual layout management
  */
-export const RepositoryWorkspacePanelFramework: React.FC<
-  RepositoryWorkspacePanelFrameworkProps
+export const DevWorkspacePanelFramework: React.FC<
+  DevWorkspacePanelFrameworkProps
 > = ({ repositoryPath, repository }) => {
   // Use the same terminal context format as legacy MultiTerminalPanel
   // Legacy uses: terminal:${owner}/${name}
@@ -191,7 +191,7 @@ export const RepositoryWorkspacePanelFramework: React.FC<
       repository={repositoryMetadata}
       terminalContext={terminalContext}
     >
-      <RepositoryWorkspacePanelFrameworkInner />
+      <DevWorkspacePanelFrameworkInner />
     </RepositoryPanelProvider>
   );
 };

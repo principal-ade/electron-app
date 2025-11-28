@@ -13,7 +13,7 @@ import {
   getRepositoryUrl,
   getWorkspaceId,
 } from './types';
-import { openRepositoryDashboardWindow } from './modernWindowHandlers';
+import { openDevWorkspaceWindow } from './devWorkspaceWindowHandlers';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
 interface QuickOpenItem {
@@ -314,13 +314,12 @@ export function setupQuickOpenHandlers(): void {
       } else {
         // Open new window
         if (item.type === 'repository') {
-          // Use the full AlexandriaEntry passed from loadItems
-          if (item.alexandriaEntry) {
-            await openRepositoryDashboardWindow(item.alexandriaEntry);
-            log.info(`[Quick Open] Opening repository window for ${item.name}`);
-          } else {
-            log.error(`[Quick Open] No AlexandriaEntry found for repository ${item.name}`);
-          }
+          // Open dev workspace with panel framework
+          await openDevWorkspaceWindow({
+            repositoryPath: item.localPath,
+            repositoryName: item.name,
+          });
+          log.info(`[Quick Open] Opening dev workspace for ${item.name}`);
         } else if (item.type === 'workspace') {
           // Open workspace window directly from main process
           const {

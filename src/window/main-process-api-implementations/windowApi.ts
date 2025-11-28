@@ -10,6 +10,7 @@ import type {
   OpenLocalFilesRequest,
   OpenRemoteFilesRequest,
   RepositoryWindowState,
+  DevWorkspaceOptions,
 } from '../../shared/main-process-api-interfaces/WindowAPI';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
@@ -114,4 +115,10 @@ export const windowAPI: WindowAPI = {
       },
     );
   },
+
+  /**
+   * Open a dev workspace window with the panel framework
+   */
+  openDevWorkspace: (options: DevWorkspaceOptions) =>
+    ipcRenderer.invoke(WindowEvent.OPEN_DEV_WORKSPACE, options),
 };

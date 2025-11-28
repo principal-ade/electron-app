@@ -91,7 +91,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
 
   // Listen for repository:selected events
   useEffect(() => {
-    const unsubscribe = events.on('repository:selected', (event) => {
+    const unsubscribe = events.on('repository:selected', async (event) => {
       const { repository, repositoryPath } = event.payload as {
         repositoryId: string;
         repository: AlexandriaEntry;
@@ -104,12 +104,25 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
       });
 
       if (repository) {
+        const repoPath = repositoryPath || repository.path;
         const selectedRepo = {
           name: repository.name,
-          path: repositoryPath || repository.path,
+          path: repoPath,
         };
         console.info('[AlexandriaWorkspaceLayout] Updating selected repository:', selectedRepo);
         onRepositorySelected(selectedRepo);
+
+        // Open the repository in a new dev workspace window
+        if (repoPath) {
+          try {
+            await WindowService.openDevWorkspace({
+              repositoryPath: repoPath,
+              repositoryName: repository.name,
+            });
+          } catch (error) {
+            console.error('[AlexandriaWorkspaceLayout] Failed to open dev workspace:', error);
+          }
+        }
       }
     });
 

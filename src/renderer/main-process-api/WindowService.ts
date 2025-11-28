@@ -12,6 +12,7 @@ import type {
   OpenLocalFilesRequest,
   OpenRemoteFilesRequest,
   RepositoryWindowState,
+  DevWorkspaceOptions,
 } from '../../shared/main-process-api-interfaces/WindowAPI';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
@@ -202,6 +203,22 @@ export class WindowService {
         '[WindowService] Failed to register repository windows listener:',
         error,
       );
+    }
+  }
+
+  /**
+   * Open a dev workspace window with the panel framework
+   * @param options - Repository path and name
+   * @returns Window ID if successful, null otherwise
+   */
+  static async openDevWorkspace(
+    options: DevWorkspaceOptions,
+  ): Promise<{ windowId: number } | null> {
+    try {
+      return await window.mainProcess.window.openDevWorkspace(options);
+    } catch (error) {
+      console.error('[WindowService] Failed to open dev workspace:', error);
+      throw new Error('Failed to open dev workspace window');
     }
   }
 }

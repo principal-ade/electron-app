@@ -76,6 +76,11 @@ const quickOpenEntryPath = path.join(
   'quick-open',
   'index.tsx',
 );
+const devWorkspaceEntryPath = path.join(
+  webpackPaths.srcRendererPath,
+  'dev-workspace',
+  'index.tsx',
+);
 
 // Define entry points - use object format for multiple named entries
 const entryPoints: { [key: string]: string } = {};
@@ -189,6 +194,25 @@ if (fs.existsSync(quickOpenEntryPath)) {
       filename: 'quick-open.html',
       template: path.join(webpackPaths.srcRendererPath, 'quick-open.ejs'),
       chunks: ['quick-open'],
+      minify: {
+        collapseWhitespace: true,
+        removeAttributeQuotes: true,
+        removeComments: true,
+      },
+      isBrowser: false,
+      isDevelopment: true,
+    }),
+  );
+}
+
+// Add Dev Workspace entry if it exists
+if (fs.existsSync(devWorkspaceEntryPath)) {
+  entryPoints['dev-workspace'] = devWorkspaceEntryPath;
+  htmlPlugins.push(
+    new HtmlWebpackPlugin({
+      filename: 'dev-workspace.html',
+      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
+      chunks: ['dev-workspace'],
       minify: {
         collapseWhitespace: true,
         removeAttributeQuotes: true,
@@ -474,6 +498,10 @@ const configuration: webpack.Configuration = {
         {
           from: /^\/alexandria-workspace.html/,
           to: '/alexandria-workspace.html',
+        },
+        {
+          from: /^\/dev-workspace.html/,
+          to: '/dev-workspace.html',
         },
         {
           from: /^\/dev-sidecar.html/,
