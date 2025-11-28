@@ -29,6 +29,14 @@ export interface DevWorkspaceOptions {
 }
 
 /**
+ * Options for opening an extension window
+ */
+export interface ExtensionWindowOptions {
+  /** Optional: pre-select a specific panel to display */
+  panelId?: string;
+}
+
+/**
  * Request to open local files in an editor window
  */
 export interface OpenLocalFilesRequest {
@@ -168,4 +176,11 @@ export interface WindowAPI {
    * @returns Window ID if successful, null otherwise
    */
   openDevWorkspace(options: DevWorkspaceOptions): Promise<{ windowId: number } | null>;
+
+  /**
+   * Open the extension browser window
+   * @param options - Optional configuration
+   * @returns Window ID if successful, null otherwise
+   */
+  openExtensionWindow(options?: ExtensionWindowOptions): Promise<{ windowId: number } | null>;
 }

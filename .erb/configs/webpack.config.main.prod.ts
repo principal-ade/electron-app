@@ -31,6 +31,10 @@ const configuration: webpack.Configuration = {
       webpackPaths.srcWindowPath,
       'preload-dev-workspace.ts',
     ),
+    'preload-extension-window': path.join(
+      webpackPaths.srcWindowPath,
+      'preload-extension-window.ts',
+    ),
     terminal: path.join(webpackPaths.srcMainPath, 'terminal', 'index.ts'),
     'event-worker': path.join(
       webpackPaths.srcPath,

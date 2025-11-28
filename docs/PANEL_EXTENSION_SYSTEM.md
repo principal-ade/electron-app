@@ -2,953 +2,528 @@
 
 ## Executive Summary
 
-This document outlines the design for transforming the current hardcoded panel system into an extensible architecture that supports third-party panel extensions. The goal is to enable developers to create custom panels that integrate seamlessly with the repository workspace while maintaining backward compatibility with existing built-in panels.
+This document outlines the architecture for the panel extension system that enables third-party panel extensions to be dynamically loaded and displayed in the application. The system uses `@principal-ade/panel-framework-core` as the foundation and supports panels distributed via NPM with the `panel-extension` keyword.
 
 ---
 
 ## Table of Contents
 
-1. [Current Architecture Analysis](#current-architecture-analysis)
-2. [Design Goals](#design-goals)
-3. [Proposed Architecture](#proposed-architecture)
-4. [Extension API](#extension-api)
-5. [Migration Strategy](#migration-strategy)
-6. [Implementation Phases](#implementation-phases)
-7. [Security Considerations](#security-considerations)
-8. [Developer Experience](#developer-experience)
+1. [Current Implementation Status](#current-implementation-status)
+2. [Architecture Overview](#architecture-overview)
+3. [Panel Framework Core](#panel-framework-core)
+4. [Extension Discovery](#extension-discovery)
+5. [Extension Window](#extension-window)
+6. [Extension API Contract](#extension-api-contract)
+7. [Developer Guide](#developer-guide)
+8. [Security Considerations](#security-considerations)
 
 ---
 
-## Current Architecture Analysis
+## Current Implementation Status
 
-### Panel Registration System
+### Completed Components
 
-The current system has **four key components**:
+✅ **Panel Framework Core** (`@principal-ade/panel-framework-core`)
+- `PanelHarness` - Context provider for panels
+- `PanelWrapper` - Error boundary and lifecycle wrapper
+- `PanelEventBus` - Inter-panel communication
+- `PanelRegistry` - Panel registration and lazy loading
+- Core types: `PanelComponentProps`, `PanelContextValue`, `PanelDefinition`, etc.
 
-#### 1. **Panel Catalog** (`src/shared/panels/repositoryPanelCatalog.ts`)
+✅ **Panel Extension Store Specification**
+- NPM-based distribution model
+- Multi-panel packages support
+- `panels` array export format
+- Lifecycle hooks (`onMount`, `onUnmount`, `onPackageLoad`, `onPackageUnload`)
+
+✅ **DevWorkspace Integration**
+- Panel framework layout in DevWorkspace window
+- `RepositoryPanelContext` for repository-scoped panels
+- Terminal and Visual Validation panels
+
+### In Progress
+
+🔄 **Extension Window** - New window to list and launch panel extensions
+
+### Planned
+
+📋 Extension discovery from `node_modules`
+📋 Dynamic panel loading at runtime
+📋 Extension management UI (enable/disable/configure)
+
+---
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  Extension Window                                                    │
+│  ┌─────────────────────────────────────────────────────────────────┐│
+│  │  Extension List                                                  ││
+│  │  - Lists discovered panel extensions                            ││
+│  │  - Shows metadata (name, version, author, description)          ││
+│  │  - Open panel action                                            ││
+│  └─────────────────────────────────────────────────────────────────┘│
+│  ┌─────────────────────────────────────────────────────────────────┐│
+│  │  Panel Viewer                                                    ││
+│  │  - Renders selected panel with PanelHarness                     ││
+│  │  - Provides context, actions, and events                        ││
+│  └─────────────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  @principal-ade/panel-framework-core                                 │
+│  ┌───────────────┐ ┌───────────────┐ ┌───────────────┐              │
+│  │ PanelHarness  │ │ PanelRegistry │ │ PanelEventBus │              │
+│  └───────────────┘ └───────────────┘ └───────────────┘              │
+│  ┌───────────────┐ ┌───────────────┐                                │
+│  │ PanelWrapper  │ │ Types/Utils   │                                │
+│  └───────────────┘ └───────────────┘                                │
+└─────────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  Extension Discovery (Main Process)                                  │
+│  - Scans node_modules for `panel-extension` keyword                 │
+│  - Validates manifest and panel definitions                         │
+│  - Provides list to renderer via IPC                                │
+└─────────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  NPM Packages (node_modules)                                         │
+│  @industry-theme/visual-validation-panel                            │
+│  @industry-theme/terminal-panel                                      │
+│  @industry-theme/ghostty-terminal-panel                             │
+│  @my-publisher/custom-panels                                         │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Panel Framework Core
+
+### Location
+`/Users/griever/Developer/new-panels/panel-framework`
+
+Published as: `@principal-ade/panel-framework-core`
+
+### Key Exports
+
 ```typescript
-export const repositoryPanelCatalog = [
+// Components
+export { PanelHarness, usePanelContext, usePanelActions, usePanelEvents } from './components/PanelHarness';
+export { PanelWrapper } from './components/PanelWrapper';
+
+// Events
+export { PanelEventBus } from './events/PanelEventBus';
+
+// Registry
+export { PanelRegistry, globalPanelRegistry } from './utils/panelRegistry';
+
+// Types
+export type {
+  PanelComponentProps,
+  PanelContextValue,
+  PanelActions,
+  PanelEventEmitter,
+  PanelEvent,
+  PanelEventType,
+  PanelMetadata,
+  PanelDefinition,
+  PanelModule,
+  PanelRegistryEntry,
+  PanelLifecycleHooks,
+  DataSlice,
+  WorkspaceMetadata,
+  RepositoryMetadata,
+} from './types';
+```
+
+### PanelComponentProps
+
+All panel components receive these props:
+
+```typescript
+interface PanelComponentProps {
+  /** Access to shared data and state */
+  context: PanelContextValue;
+
+  /** Actions for interpanel communication */
+  actions: PanelActions;
+
+  /** Event system for panel-to-panel communication */
+  events: PanelEventEmitter;
+}
+```
+
+### PanelContextValue
+
+```typescript
+interface PanelContextValue {
+  // Current scope information
+  currentScope: {
+    type: 'workspace' | 'repository';
+    workspace?: WorkspaceMetadata;
+    repository?: RepositoryMetadata;
+  };
+
+  // Dynamic data slice access
+  slices: ReadonlyMap<string, DataSlice>;
+
+  // Generic slice accessors
+  getSlice<T = unknown>(name: string): DataSlice<T> | undefined;
+  getWorkspaceSlice<T = unknown>(name: string): DataSlice<T> | undefined;
+  getRepositorySlice<T = unknown>(name: string): DataSlice<T> | undefined;
+
+  // Utility methods
+  hasSlice(name: string, scope?: 'workspace' | 'repository'): boolean;
+  isSliceLoading(name: string, scope?: 'workspace' | 'repository'): boolean;
+
+  // Global refresh
+  refresh(scope?: 'workspace' | 'repository', slice?: string): Promise<void>;
+}
+```
+
+---
+
+## Extension Discovery
+
+### Discovery Mechanism
+
+Extensions are discovered by scanning `node_modules` for packages with the `panel-extension` keyword in their `package.json`:
+
+```json
+{
+  "name": "@my-publisher/awesome-panels",
+  "version": "1.0.0",
+  "keywords": ["panel-extension"],
+  "main": "dist/panels.bundle.js",
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  }
+}
+```
+
+### Required Export Structure
+
+Panel packages must export a `panels` array:
+
+```typescript
+// dist/panels.bundle.js
+export const panels = [
   {
-    id: 'tasks',
-    label: 'Tasks',
-    description: 'Project notes and TODOs...',
-    slices: ['markdown'] as const,
-    surfaces: ['explorer'] as const,
+    id: 'my-publisher.panel-one',
+    name: 'Panel One',
+    icon: '📊',
+    version: '1.0.0',
+    description: 'First panel in the package',
+    component: PanelOneComponent,
+    onMount: async (context) => { /* lifecycle hook */ },
+    onUnmount: async (context) => { /* lifecycle hook */ },
   },
-  // ... more panels
-]
-```
-- Defines **metadata** for each panel
-- Specifies **surfaces** (where panels appear: 'explorer', 'manager', 'agent', 'viewer', 'excalidraw')
-- Defines **slices** (data requirements: 'git', 'markdown', 'fileTree', 'packages', 'quality')
+  {
+    id: 'my-publisher.panel-two',
+    name: 'Panel Two',
+    icon: '📈',
+    version: '1.0.0',
+    description: 'Second panel in the package',
+    component: PanelTwoComponent,
+  },
+];
 
-#### 2. **Panel Previews** (`src/renderer/panels/panelPreviews.tsx`)
+// Optional package-level hooks
+export const onPackageLoad = async () => { /* called once when package loads */ };
+export const onPackageUnload = async () => { /* called when package unloads */ };
+```
+
+### IPC Interface
+
 ```typescript
-export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
-  tasks: {
-    icon: <ListTodo size={16} />,
-    preview: <TasksPanelPreview />,
-    label: 'Tasks',
-    description: 'Track repository TODOs...',
-  },
+// Main Process API
+interface PanelExtensionAPI {
+  // Discover all installed panel extensions
+  discoverExtensions(): Promise<DiscoveredExtension[]>;
+
+  // Load a specific extension package
+  loadExtension(packageName: string): Promise<LoadedExtension>;
+
+  // Get extension bundle path for dynamic import
+  getExtensionBundlePath(packageName: string): Promise<string>;
+}
+
+interface DiscoveredExtension {
+  packageName: string;
+  packagePath: string;
+  bundlePath: string;
+  panels: PanelMetadata[];
+  packageVersion: string;
+  packageAuthor?: string;
 }
 ```
-- Provides **icons** (Lucide React components)
-- Supplies **preview components** for panel configurator UI
-- Optional **labels** and **descriptions**
-
-#### 3. **Panel Registry** (`src/renderer/panels/registry.tsx`)
-```typescript
-const panelRenderers: Partial<Record<RepositoryPanelId, RepositoryPanelRenderer>> = {
-  gitChanges: ({ actions }) => <GitChangesPanel onFileClick={actions.openFile} />,
-  // ... more renderers
-}
-```
-- Maps panel IDs to **render functions**
-- Receives **context** (repository data) and **actions** (callbacks)
-- Provides panel implementation
-
-#### 4. **Workspace Integration** (`src/renderer/repo-manager/RepositoryWorkspace.tsx`)
-```typescript
-const panelContentMap = React.useMemo(() => ({
-  tasks: (
-    <RepositoryPanelProvider
-      repositoryPath={repositoryPath}
-      actions={{ openFile: handleSearchFileSelect }}
-    >
-      <TasksPanel onTaskClick={handleTaskClick} />
-    </RepositoryPanelProvider>
-  ),
-  // ... more panels
-}), [dependencies])
-```
-- Creates **concrete instances** with specific props
-- Wraps panels in **RepositoryPanelProvider** for data access
-- Manages **panel lifecycle** and **state**
-
-### Current Data Flow
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  Panel Catalog (Metadata)                                    │
-│  - ID, label, description                                    │
-│  - Surfaces, slices, default location                        │
-└────────────────────┬────────────────────────────────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Panel Previews (Visual Metadata)                            │
-│  - Icons, preview components                                 │
-└────────────────────┬────────────────────────────────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Panel Registry (Implementation)                             │
-│  - Render functions receiving context + actions              │
-└────────────────────┬────────────────────────────────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Workspace Integration (Instantiation)                       │
-│  - Wraps in RepositoryPanelProvider                          │
-│  - Passes specific props and callbacks                       │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Current Strengths
-
-✅ **Type Safety**: Strong TypeScript typing throughout
-✅ **Context Provider**: Centralized data access via `RepositoryPanelProvider`
-✅ **Separation of Concerns**: Metadata, visuals, and implementation separated
-✅ **Flexible Layout**: Supports tabs, single panels, and complex layouts
-✅ **Data Slices**: Clear data dependencies via slice system
-
-### Current Limitations
-
-❌ **Hardcoded Registration**: All panels must be imported and registered in core files
-❌ **No Dynamic Loading**: Cannot load panels at runtime
-❌ **Tight Coupling**: Workspace component directly instantiates panels
-❌ **No Versioning**: No extension API versioning
-❌ **Limited Isolation**: Extensions can access full app context
 
 ---
 
-## Design Goals
+## Extension Window
 
-### Primary Goals
+### Purpose
 
-1. **Dynamic Registration**: Enable runtime registration of panels from external sources
-2. **Backward Compatibility**: Maintain full compatibility with existing built-in panels
-3. **Type Safety**: Preserve strong typing for extension developers
-4. **Sandboxing**: Isolate extensions from core application state
-5. **Developer Experience**: Provide clear, simple API for extension authors
-
-### Non-Goals (Future Considerations)
-
-- Cross-application extensions (panels that work across multiple apps)
-- Native code execution in extensions
-- Network-based extension distribution (marketplace)
-
----
-
-## Proposed Architecture
-
-### High-Level Overview
-
-```
-┌───────────────────────────────────────────────────────────────────┐
-│  Extension Discovery Layer                                         │
-│  - Scans extension directories                                     │
-│  - Validates extension manifests                                   │
-│  - Loads extension bundles                                         │
-└──────────────────────────┬────────────────────────────────────────┘
-                           │
-                           ▼
-┌───────────────────────────────────────────────────────────────────┐
-│  Panel Extension Registry                                          │
-│  - Built-in panels (static)                                        │
-│  - External panels (dynamic)                                       │
-│  - Provides unified API                                            │
-└──────────────────────────┬────────────────────────────────────────┘
-                           │
-                           ▼
-┌───────────────────────────────────────────────────────────────────┐
-│  Extension Runtime Environment                                     │
-│  - Sandboxed context API                                           │
-│  - Action handlers                                                 │
-│  - Lifecycle management                                            │
-└──────────────────────────┬────────────────────────────────────────┘
-                           │
-                           ▼
-┌───────────────────────────────────────────────────────────────────┐
-│  Workspace Integration                                             │
-│  - Renders panels from registry                                    │
-│  - Manages panel state                                             │
-│  - Handles errors gracefully                                       │
-└───────────────────────────────────────────────────────────────────┘
-```
+A dedicated window for browsing and launching panel extensions. This window:
+1. Lists all discovered panel extensions
+2. Shows panel metadata (name, description, author, version)
+3. Allows opening individual panels in a viewer
+4. Provides context for panels (repository, workspace, or standalone)
 
 ### File Structure
 
 ```
-src/
-├── shared/
-│   ├── panels/
-│   │   ├── repositoryPanelCatalog.ts          # Built-in panel definitions
-│   │   ├── extensionManifest.ts               # NEW: Extension manifest types
-│   │   └── panelExtensionAPI.ts               # NEW: Public API types
-│   └── extensions/
-│       ├── ExtensionLoader.ts                 # NEW: Main process extension loader
-│       └── ExtensionValidator.ts              # NEW: Manifest validation
-├── renderer/
-│   ├── panels/
-│   │   ├── registry.tsx                       # Updated: Dynamic registry
-│   │   ├── panelPreviews.tsx                  # Updated: Support dynamic previews
-│   │   ├── ExtensionPanelWrapper.tsx          # NEW: Sandboxed panel wrapper
-│   │   └── ExtensionPanelRuntime.tsx          # NEW: Extension runtime context
-│   └── services/
-│       └── PanelExtensionService.ts           # NEW: Renderer-side extension management
-└── extensions/                                # NEW: Extensions directory
-    └── [extension-name]/
-        ├── manifest.json
-        ├── index.js (or tsx)
-        └── icon.svg (optional)
+src/renderer/extension-window/
+├── index.tsx                          # Entry point
+├── ExtensionWindowApp.tsx             # Main app component
+├── ExtensionWindowTitlebar.tsx        # Window titlebar
+├── components/
+│   ├── ExtensionList.tsx              # List of discovered extensions
+│   ├── ExtensionCard.tsx              # Individual extension display
+│   ├── PanelViewer.tsx                # Renders selected panel
+│   └── ContextSelector.tsx            # Choose repository/workspace context
+└── services/
+    └── ExtensionDiscoveryService.ts   # IPC wrapper for extension discovery
+```
+
+### Window Data
+
+```typescript
+interface ExtensionWindowData {
+  // Optional: pre-select a specific repository context
+  repositoryPath?: string;
+  repositoryName?: string;
+
+  // Optional: pre-select a specific panel to display
+  panelId?: string;
+}
+```
+
+### Layout Options
+
+**Option A: Split Layout**
+```
+┌────────────────────────────────────────────────────────┐
+│  Titlebar                                              │
+├────────────────┬───────────────────────────────────────┤
+│ Extension List │  Panel Viewer                         │
+│ ┌────────────┐ │  ┌─────────────────────────────────┐  │
+│ │ Panel A    │ │  │                                 │  │
+│ │ Panel B  ● │ │  │    Selected Panel Renders       │  │
+│ │ Panel C    │ │  │          Here                   │  │
+│ │ Panel D    │ │  │                                 │  │
+│ └────────────┘ │  └─────────────────────────────────┘  │
+└────────────────┴───────────────────────────────────────┘
+```
+
+**Option B: Full Panel with Dropdown**
+```
+┌────────────────────────────────────────────────────────┐
+│  Titlebar  [ Extension: Panel Name ▼ ] [ Context ▼ ]   │
+├────────────────────────────────────────────────────────┤
+│                                                        │
+│               Selected Panel Renders                   │
+│                     Full Screen                        │
+│                                                        │
+└────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Extension API
+## Extension API Contract
 
-### Extension Manifest Schema
+### Panel Definition Interface
 
-Every panel extension requires a `manifest.json`:
+```typescript
+interface PanelDefinition {
+  // Required
+  id: string;           // Unique identifier (e.g., 'publisher.panel-name')
+  name: string;         // Display name
+  component: React.ComponentType<PanelComponentProps>;
 
-```json
-{
-  "name": "my-custom-panel",
-  "version": "1.0.0",
-  "displayName": "My Custom Panel",
-  "description": "A custom panel for viewing data",
-  "author": "Developer Name",
-  "license": "MIT",
+  // Optional metadata
+  icon?: string;        // Emoji or icon URL
+  version?: string;     // Semantic version
+  author?: string;      // Author name or organization
+  description?: string; // Short description
+  surfaces?: string[];  // Where panel can be displayed
+  slices?: string[];    // Data dependencies
 
-  "panel": {
-    "id": "myCustomPanel",
-    "label": "Custom Panel",
-    "surfaces": ["explorer", "manager"],
-    "slices": ["fileTree", "git"],
-    "icon": "./icon.svg"
-  },
-
-  "apiVersion": "1.0",
-  "permissions": [
-    "filesystem:read",
-    "git:status"
-  ],
-
-  "entry": "./index.js"
+  // Optional lifecycle hooks
+  onMount?: (context: PanelContextValue) => void | Promise<void>;
+  onUnmount?: (context: PanelContextValue) => void | Promise<void>;
 }
 ```
 
-### Extension Entry Point
-
-Extensions export a standard interface:
+### Panel Component Example
 
 ```typescript
-// extensions/my-panel/index.tsx
-import type { PanelExtension, PanelExtensionContext } from '@/shared/panels/panelExtensionAPI';
+import React, { useEffect } from 'react';
+import type { PanelComponentProps } from '@principal-ade/panel-framework-core';
 
-export const activate: PanelExtension = (context: PanelExtensionContext) => {
-  return {
-    // Panel component
-    Panel: ({ repositoryPath, onFileClick }) => {
-      return (
-        <div>
-          <h2>My Custom Panel</h2>
-          {/* Panel content */}
-        </div>
-      );
-    },
+export const MyPanel: React.FC<PanelComponentProps> = ({
+  context,
+  actions,
+  events
+}) => {
+  // Access repository data
+  const gitSlice = context.getRepositorySlice('git');
 
-    // Preview component for configurator
-    Preview: () => (
-      <div>Panel preview</div>
-    ),
+  // Subscribe to events
+  useEffect(() => {
+    const unsubscribe = events.on('file:opened', (event) => {
+      console.log('File opened:', event.payload);
+    });
+    return unsubscribe;
+  }, [events]);
 
-    // Optional: Icon as React component
-    Icon: () => <MyCustomIcon />,
-
-    // Optional: Lifecycle hooks
-    onActivate: () => {
-      console.log('Panel activated');
-    },
-
-    onDeactivate: () => {
-      console.log('Panel deactivated');
-    },
-  };
-};
-```
-
-### Sandboxed Context API
-
-Extensions receive a sandboxed context object:
-
-```typescript
-export interface PanelExtensionContext {
-  // Panel metadata
-  readonly panelId: string;
-  readonly version: string;
-
-  // Repository data (read-only)
-  readonly repository: {
-    path: string | null;
-    fileTree: FileTree | null;
-    gitStatus: GitStatus | null;
-    packages: PackageLayer[] | null;
+  // Use actions
+  const handleOpenFile = (path: string) => {
+    actions.openFile?.(path);
   };
 
-  // Actions (limited, permission-based)
-  actions: {
-    openFile: (path: string) => void;
-    openGitDiff: (path: string) => void;
-    showNotification: (message: string, type: 'info' | 'warning' | 'error') => void;
-  };
-
-  // Storage API (scoped to extension)
-  storage: {
-    get: <T>(key: string) => Promise<T | null>;
-    set: <T>(key: string, value: T) => Promise<void>;
-    delete: (key: string) => Promise<void>;
-  };
-
-  // Theming
-  theme: {
-    colors: Record<string, string>;
-    fontSizes: number[];
-  };
-}
-```
-
-### Panel Props Interface
-
-Standardized props for all panels:
-
-```typescript
-export interface PanelExtensionProps {
-  // Core props
-  repositoryPath: string | null;
-  isActive: boolean;
-  isVisible: boolean;
-
-  // Callbacks
-  onFileClick?: (path: string) => void;
-  onReady?: () => void;
-  onError?: (error: Error) => void;
-
-  // Optional context (for advanced panels)
-  context?: PanelExtensionContext;
-}
-```
-
----
-
-## Migration Strategy
-
-### Phase 1: Prepare Foundation (Non-Breaking)
-
-**Goal**: Add extension infrastructure without changing existing code
-
-**Tasks**:
-1. Create extension manifest types
-2. Create extension API types
-3. Create `ExtensionLoader` service (no-op initially)
-4. Add extension directory scanning
-5. Create `ExtensionPanelWrapper` component
-6. Add extension registry alongside existing registry
-
-**Migration for built-in panels**: None required
-
----
-
-### Phase 2: Migrate Built-In Panels (Internal Refactor)
-
-**Goal**: Convert built-in panels to use extension API internally
-
-**Tasks**:
-1. Create manifest.json for each built-in panel (internal only)
-2. Wrap built-in panels in `ExtensionPanelWrapper`
-3. Update registry to use unified extension API
-4. Test all existing panels work identically
-
-**Migration for built-in panels**:
-```typescript
-// Before
-const GitChangesPanel: React.FC<Props> = ({ onFileClick }) => { ... }
-
-// After (still internal, but uses extension API)
-const GitChangesPanel: React.FC<PanelExtensionProps> = ({ context, onFileClick }) => {
-  // Can access context.repository, context.actions, etc.
-  // But maintains backward compatibility via props
-}
-```
-
----
-
-### Phase 3: Enable External Extensions
-
-**Goal**: Allow loading of external panel extensions
-
-**Tasks**:
-1. Implement extension validation
-2. Add permission system
-3. Create extension development CLI/template
-4. Add extension management UI
-5. Document extension API
-
-**Migration for external developers**:
-- Follow extension API documentation
-- Use provided template/starter kit
-
----
-
-## Implementation Phases
-
-### Phase 1: Foundation (Week 1-2)
-
-```typescript
-// src/shared/extensions/extensionManifest.ts
-export interface ExtensionManifest {
-  name: string;
-  version: string;
-  displayName: string;
-  description: string;
-  author: string;
-  license: string;
-  panel: {
-    id: string;
-    label: string;
-    surfaces: RepositoryPanelSurface[];
-    slices?: RepositoryPanelSlice[];
-    icon?: string;
-  };
-  apiVersion: string;
-  permissions: string[];
-  entry: string;
-}
-
-// src/shared/extensions/ExtensionLoader.ts
-export class ExtensionLoader {
-  private extensions = new Map<string, LoadedExtension>();
-
-  async loadExtensions(extensionDirs: string[]): Promise<void> {
-    for (const dir of extensionDirs) {
-      const manifest = await this.loadManifest(dir);
-      if (this.validateManifest(manifest)) {
-        const extension = await this.loadExtension(dir, manifest);
-        this.extensions.set(manifest.panel.id, extension);
-      }
-    }
+  if (gitSlice?.loading) {
+    return <div>Loading...</div>;
   }
-
-  getExtension(id: string): LoadedExtension | undefined {
-    return this.extensions.get(id);
-  }
-
-  getAllExtensions(): LoadedExtension[] {
-    return Array.from(this.extensions.values());
-  }
-}
-```
-
-### Phase 2: Runtime Wrapper (Week 2-3)
-
-```typescript
-// src/renderer/panels/ExtensionPanelWrapper.tsx
-export const ExtensionPanelWrapper: React.FC<{
-  extensionId: string;
-  props: PanelExtensionProps;
-}> = ({ extensionId, props }) => {
-  const [error, setError] = useState<Error | null>(null);
-  const extension = usePanelExtension(extensionId);
-
-  const context = useMemo(() =>
-    createSandboxedContext(extensionId, props),
-    [extensionId, props]
-  );
-
-  if (error) {
-    return <PanelErrorBoundary error={error} extensionId={extensionId} />;
-  }
-
-  if (!extension) {
-    return <PanelLoadingState />;
-  }
-
-  const PanelComponent = extension.Panel;
 
   return (
-    <ErrorBoundary onError={setError}>
-      <PanelComponent {...props} context={context} />
-    </ErrorBoundary>
+    <div>
+      <h2>My Panel</h2>
+      <p>Repository: {context.currentScope.repository?.name}</p>
+      {/* Panel content */}
+    </div>
   );
 };
 ```
 
-### Phase 3: Dynamic Registry (Week 3-4)
+---
 
-```typescript
-// src/renderer/panels/registry.tsx (updated)
-export class PanelExtensionRegistry {
-  private static builtInPanels = repositoryPanelCatalog;
-  private static externalPanels = new Map<string, ExtensionPanel>();
+## Developer Guide
 
-  static registerExtension(panel: ExtensionPanel): void {
-    this.externalPanels.set(panel.id, panel);
-  }
+### Creating a Panel Extension Package
 
-  static getAllPanels(): RepositoryPanelDefinition[] {
-    return [
-      ...this.builtInPanels.map(this.wrapBuiltInPanel),
-      ...Array.from(this.externalPanels.values()).map(this.wrapExtensionPanel),
-    ];
-  }
+1. **Initialize package**
+   ```bash
+   mkdir my-panels && cd my-panels
+   npm init -y
+   ```
 
-  private static wrapExtensionPanel(panel: ExtensionPanel): RepositoryPanelDefinition {
-    return {
-      id: panel.id,
-      label: panel.label,
-      description: panel.description,
-      surfaces: panel.surfaces,
-      slices: panel.slices,
-      render: (props) => (
-        <ExtensionPanelWrapper
-          extensionId={panel.id}
-          props={props}
-        />
-      ),
-    };
-  }
-}
-```
+2. **Configure package.json**
+   ```json
+   {
+     "name": "@my-publisher/my-panels",
+     "version": "1.0.0",
+     "main": "dist/panels.bundle.js",
+     "keywords": ["panel-extension"],
+     "peerDependencies": {
+       "react": "^18.0.0",
+       "react-dom": "^18.0.0"
+     },
+     "devDependencies": {
+       "@principal-ade/panel-framework-core": "^1.0.0",
+       "typescript": "^5.0.0",
+       "vite": "^5.0.0"
+     }
+   }
+   ```
 
-### Phase 4: Extension Management UI (Week 4-5)
+3. **Create panel component**
+   ```typescript
+   // src/MyPanel.tsx
+   import type { PanelComponentProps } from '@principal-ade/panel-framework-core';
 
-Create extension management interface:
-- List installed extensions
-- Enable/disable extensions
-- View extension details
-- Install from directory
-- Uninstall extensions
+   export const MyPanel: React.FC<PanelComponentProps> = ({ context }) => {
+     return <div>Hello from My Panel!</div>;
+   };
+   ```
+
+4. **Create entry point**
+   ```typescript
+   // src/index.tsx
+   import { MyPanel } from './MyPanel';
+
+   export const panels = [
+     {
+       id: 'my-publisher.my-panel',
+       name: 'My Panel',
+       icon: '🎨',
+       description: 'A custom panel',
+       component: MyPanel,
+     },
+   ];
+   ```
+
+5. **Configure Vite build**
+   ```typescript
+   // vite.config.ts
+   import { defineConfig } from 'vite';
+   import react from '@vitejs/plugin-react';
+
+   export default defineConfig({
+     plugins: [react()],
+     build: {
+       lib: {
+         entry: './src/index.tsx',
+         fileName: 'panels.bundle',
+         formats: ['es'],
+       },
+       rollupOptions: {
+         external: ['react', 'react-dom'],
+       },
+     },
+   });
+   ```
+
+6. **Build and publish**
+   ```bash
+   npm run build
+   npm publish
+   ```
+
+### Testing Locally
+
+1. Build your extension package
+2. Use `npm link` to symlink to the desktop app
+3. Open the Extensions Window
+4. Your panels should appear in the list
 
 ---
 
 ## Security Considerations
 
-### Permission System
+### Execution Model
 
-Extensions must declare permissions in manifest:
+Panel extensions run in the same process as the main application with full Node.js access. This is intentional for maximum capability but requires trust.
 
-```json
-{
-  "permissions": [
-    "filesystem:read",      // Read files from repository
-    "filesystem:write",     // Write files to repository
-    "git:status",           // Read git status
-    "git:commit",           // Create git commits
-    "network:fetch",        // Make HTTP requests
-    "storage:local"         // Use local storage
-  ]
-}
-```
+### Recommendations
 
-### Sandboxing Strategy
+1. **Trusted Sources Only**: Only install extensions from trusted publishers
+2. **Code Review**: Review extension source code before installation
+3. **Version Pinning**: Pin extension versions in package.json
+4. **Minimal Permissions**: Extensions should request only needed capabilities
 
-1. **Context Isolation**: Extensions only access data through context API
-2. **No Direct Imports**: Cannot import from core app
-3. **Permission Checks**: All actions validated against declared permissions
-4. **Error Boundaries**: Errors contained to individual panels
-5. **Resource Limits**: Memory and execution time limits
+### Future Enhancements
 
-### Validation
-
-Before loading, validate:
-- ✅ Manifest schema is valid
-- ✅ API version is supported
-- ✅ Permissions are recognized
-- ✅ Entry point exists
-- ✅ Code is properly bundled
-- ✅ No malicious patterns detected
+- Extension signature verification
+- Permission system for sensitive operations
+- Sandboxed execution option for untrusted extensions
 
 ---
 
-## Developer Experience
+## Related Documentation
 
-### Extension Development Flow
-
-```bash
-# 1. Create extension from template
-npx create-panel-extension my-panel
-
-# 2. Develop with hot reload
-cd my-panel
-npm run dev
-
-# 3. Build for distribution
-npm run build
-
-# 4. Test in app
-npm run link  # Symlinks to app's extension directory
-
-# 5. Package for sharing
-npm run package  # Creates .panel-extension file
-```
-
-### Extension Template Structure
-
-```
-my-panel/
-├── manifest.json
-├── package.json
-├── tsconfig.json
-├── src/
-│   ├── index.tsx          # Entry point
-│   ├── Panel.tsx          # Main panel component
-│   ├── Preview.tsx        # Preview component
-│   └── Icon.tsx           # Icon component
-├── types/
-│   └── panel-api.d.ts     # Auto-generated API types
-└── README.md
-```
-
-### VS Code Integration
-
-Provide extension development tools:
-- Extension manifest schema for autocompletion
-- TypeScript types for panel API
-- Snippet library for common patterns
-- Debug configuration for extension development
+- [Panel Extension Store Specification](/Users/griever/Developer/new-panels/panel-framework/PANEL_EXTENSION_STORE_SPECIFICATION.md)
+- [Web Panel System Implementation Roadmap](/Users/griever/Developer/new-panels/panel-framework/WEB_PANEL_SYSTEM_IMPLEMENTATION_ROADMAP.md)
+- [Panel Framework Core README](/Users/griever/Developer/new-panels/panel-framework/README.md)
 
 ---
 
-## Example: Converting TasksPanel
-
-### Current Implementation
-
-```typescript
-// src/renderer/panels/components/TasksPanel.tsx
-export const TasksPanel: React.FC<TasksPanelProps> = ({
-  repositoryPath,
-  onTaskClick,
-}) => {
-  // Implementation
-};
-```
-
-### As Extension
-
-```typescript
-// extensions/tasks-panel/src/index.tsx
-import type { PanelExtension } from '@/shared/panels/panelExtensionAPI';
-
-export const activate: PanelExtension = (context) => {
-  return {
-    Panel: ({ isActive, isVisible }) => {
-      const { repository, actions } = context;
-
-      return (
-        <div>
-          <h2>Tasks for {repository.path}</h2>
-          {/* Same component logic */}
-        </div>
-      );
-    },
-
-    Preview: () => <TasksPanelPreview />,
-
-    Icon: () => <ListTodo size={16} />,
-  };
-};
-```
-
-```json
-// extensions/tasks-panel/manifest.json
-{
-  "name": "tasks-panel",
-  "version": "1.0.0",
-  "displayName": "Tasks Panel",
-  "description": "Track repository TODOs and tasks",
-  "panel": {
-    "id": "tasks",
-    "label": "Tasks",
-    "surfaces": ["explorer", "manager"],
-    "slices": ["markdown"]
-  },
-  "apiVersion": "1.0",
-  "permissions": ["filesystem:read", "storage:local"],
-  "entry": "./dist/index.js"
-}
-```
-
----
-
-## Backward Compatibility Strategy
-
-### Built-In Panels
-
-All existing panels continue to work without modification:
-- Keep current registration system
-- Run alongside extension system
-- Gradually migrate to extension API internally
-- No breaking changes to existing code
-
-### Deprecation Path
-
-1. **Phase 1-2**: Both systems coexist
-2. **Phase 3**: Built-in panels use extension API internally
-3. **Phase 4**: (Future) Consider making all panels extensions
-
----
-
-## Success Metrics
-
-### Technical Metrics
-- ✅ Zero breaking changes to existing panels
-- ✅ Extension load time < 100ms
-- ✅ Panel render performance same as built-in
-- ✅ Memory overhead < 5MB per extension
-
-### Developer Metrics
-- ✅ Extension API documented
-- ✅ Template/starter kit available
-- ✅ < 30 minutes to create first extension
-- ✅ TypeScript types for full API
-
----
-
-## Open Questions
-
-1. **Extension Distribution**: How will users discover and install extensions?
-2. **Versioning**: How to handle API version compatibility?
-3. **Dependencies**: Can extensions depend on each other?
-4. **Hot Reload**: Should extensions support hot reload during development?
-5. **Native Code**: Do we need to support native node modules in extensions?
-
----
-
-## Next Steps
-
-1. **Review & Approve**: Get stakeholder buy-in on architecture
-2. **Prototype**: Build minimal proof-of-concept
-3. **Implement Phase 1**: Create foundation without breaking changes
-4. **Test Migration**: Convert one built-in panel as proof
-5. **Document API**: Write comprehensive extension development guide
-6. **Iterate**: Gather feedback and refine approach
-
----
-
-## Appendix A: Extension Manifest JSON Schema
-
-```json
-{
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "type": "object",
-  "required": ["name", "version", "panel", "apiVersion", "entry"],
-  "properties": {
-    "name": {
-      "type": "string",
-      "pattern": "^[a-z0-9-]+$",
-      "description": "Unique extension identifier"
-    },
-    "version": {
-      "type": "string",
-      "pattern": "^\\d+\\.\\d+\\.\\d+$",
-      "description": "Semantic version"
-    },
-    "displayName": {
-      "type": "string",
-      "description": "Human-readable name"
-    },
-    "description": {
-      "type": "string",
-      "description": "Short description of the panel"
-    },
-    "author": {
-      "type": "string",
-      "description": "Extension author"
-    },
-    "license": {
-      "type": "string",
-      "description": "License identifier (SPDX)"
-    },
-    "panel": {
-      "type": "object",
-      "required": ["id", "label"],
-      "properties": {
-        "id": {
-          "type": "string",
-          "pattern": "^[a-zA-Z0-9]+$",
-          "description": "Unique panel ID"
-        },
-        "label": {
-          "type": "string",
-          "description": "Display label"
-        },
-        "surfaces": {
-          "type": "array",
-          "items": {
-            "enum": ["explorer", "manager", "viewer", "agent", "excalidraw"]
-          },
-          "description": "Surfaces where panel appears"
-        },
-        "slices": {
-          "type": "array",
-          "items": {
-            "enum": ["git", "markdown", "fileTree", "packages", "quality"]
-          },
-          "description": "Required data slices"
-        },
-        "icon": {
-          "type": "string",
-          "description": "Path to icon file"
-        }
-      }
-    },
-    "apiVersion": {
-      "type": "string",
-      "pattern": "^\\d+\\.\\d+$",
-      "description": "Required API version"
-    },
-    "permissions": {
-      "type": "array",
-      "items": {
-        "type": "string",
-        "pattern": "^[a-z]+:[a-z]+$"
-      },
-      "description": "Required permissions"
-    },
-    "entry": {
-      "type": "string",
-      "description": "Entry point file path"
-    }
-  }
-}
-```
-
----
-
-## Appendix B: Full TypeScript API Definitions
-
-```typescript
-// src/shared/panels/panelExtensionAPI.ts
-
-import type { FileTree } from '@principal-ai/repository-abstraction';
-import type { PackageLayer } from '@principal-ai/codebase-composition';
-import type { GitStatus } from '../types/repository.types';
-
-export interface PanelExtensionContext {
-  readonly panelId: string;
-  readonly version: string;
-
-  readonly repository: {
-    readonly path: string | null;
-    readonly fileTree: FileTree | null;
-    readonly gitStatus: GitStatus | null;
-    readonly packages: PackageLayer[] | null;
-    readonly markdownFiles: Array<{ path: string; title?: string }>;
-  };
-
-  actions: {
-    openFile: (path: string) => void;
-    openGitDiff: (path: string, status?: GitChangeSelectionStatus) => void;
-    showNotification: (message: string, type: 'info' | 'warning' | 'error') => void;
-    requestRefresh: () => Promise<void>;
-  };
-
-  storage: {
-    get: <T>(key: string) => Promise<T | null>;
-    set: <T>(key: string, value: T) => Promise<void>;
-    delete: (key: string) => Promise<void>;
-    clear: () => Promise<void>;
-  };
-
-  theme: {
-    colors: Record<string, string>;
-    fontSizes: number[];
-  };
-
-  permissions: {
-    has: (permission: string) => boolean;
-    request: (permission: string) => Promise<boolean>;
-  };
-}
-
-export interface PanelExtensionProps {
-  repositoryPath: string | null;
-  isActive: boolean;
-  isVisible: boolean;
-  onFileClick?: (path: string) => void;
-  onReady?: () => void;
-  onError?: (error: Error) => void;
-  context?: PanelExtensionContext;
-}
-
-export interface PanelExtensionResult {
-  Panel: React.ComponentType<PanelExtensionProps>;
-  Preview: React.ComponentType;
-  Icon?: React.ComponentType;
-
-  onActivate?: () => void | Promise<void>;
-  onDeactivate?: () => void | Promise<void>;
-  onRepositoryChange?: (path: string | null) => void | Promise<void>;
-}
-
-export type PanelExtension = (
-  context: PanelExtensionContext
-) => PanelExtensionResult | Promise<PanelExtensionResult>;
-
-export interface ExtensionManifest {
-  name: string;
-  version: string;
-  displayName: string;
-  description: string;
-  author: string;
-  license: string;
-
-  panel: {
-    id: string;
-    label: string;
-    surfaces: RepositoryPanelSurface[];
-    slices?: RepositoryPanelSlice[];
-    icon?: string;
-  };
-
-  apiVersion: string;
-  permissions: string[];
-  entry: string;
-
-  repository?: {
-    type: 'git';
-    url: string;
-  };
-
-  bugs?: {
-    url: string;
-  };
-
-  homepage?: string;
-}
-
-export interface LoadedExtension {
-  manifest: ExtensionManifest;
-  activate: PanelExtension;
-  path: string;
-  enabled: boolean;
-}
-```
-
----
-
-*Document Version: 1.0*
-*Last Updated: 2025-01-XX*
-*Status: Draft - Awaiting Review*
+*Document Version: 2.0*
+*Last Updated: November 2025*
+*Status: Active Development*

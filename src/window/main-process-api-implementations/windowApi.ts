@@ -11,6 +11,7 @@ import type {
   OpenRemoteFilesRequest,
   RepositoryWindowState,
   DevWorkspaceOptions,
+  ExtensionWindowOptions,
 } from '../../shared/main-process-api-interfaces/WindowAPI';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
@@ -121,4 +122,10 @@ export const windowAPI: WindowAPI = {
    */
   openDevWorkspace: (options: DevWorkspaceOptions) =>
     ipcRenderer.invoke(WindowEvent.OPEN_DEV_WORKSPACE, options),
+
+  /**
+   * Open the extension browser window
+   */
+  openExtensionWindow: (options?: ExtensionWindowOptions) =>
+    ipcRenderer.invoke(WindowEvent.OPEN_EXTENSION_WINDOW, options),
 };

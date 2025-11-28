@@ -95,7 +95,8 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
         contextIsolation: true,
         nodeIntegration: false,
         webSecurity: true,
-        preload: defaultOptions.webPreferences?.preload,
+        // Allow custom preload if provided, otherwise use default
+        preload: options?.webPreferences?.preload || defaultOptions.webPreferences?.preload,
       },
     };
 

@@ -7,12 +7,14 @@ import {
   Settings as SettingsIcon,
   Activity,
   FolderOpen,
+  Puzzle,
 } from 'lucide-react';
 import { GeneralSettings } from './components/GeneralSettings';
 import { AIAssistantsSettings } from './components/AIAssistantsSettings';
 import { UpdatesSettings } from './components/UpdatesSettings';
 import { ObservabilitySettings } from './components/ObservabilitySettings';
 import { WorkspaceSettings } from './components/WorkspaceSettings';
+import { WindowService } from '../../../main-process-api/WindowService';
 
 type SettingsCategory =
   | 'general'
@@ -279,6 +281,55 @@ export const Settings: React.FC = () => {
             >
               <Activity size={18} />
               Observability
+            </button>
+
+            {/* Divider */}
+            <div
+              style={{
+                height: '1px',
+                backgroundColor: theme.colors.border,
+                margin: '12px 0',
+              }}
+            />
+
+            {/* Extensions - Opens separate window */}
+            <button
+              onClick={() => WindowService.openExtensionWindow()}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px 16px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor: 'transparent',
+                color: theme.colors.text,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                fontSize: '14px',
+                fontWeight: 500,
+                textAlign: 'left',
+                width: '100%',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundTertiary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+            >
+              <Puzzle size={18} />
+              Extensions
+              <span
+                style={{
+                  marginLeft: 'auto',
+                  fontSize: '11px',
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                ↗
+              </span>
             </button>
           </div>
         </div>

@@ -68,6 +68,8 @@ import { registerActIntegrationHandlers } from './services/ipc/act/actIntegratio
 import { setupWindowSwitcherHandlers } from './window/windowSwitcher';
 import { setupQuickOpenHandlers } from './window/quickOpen';
 import { registerDevWorkspaceWindowHandlers } from './window/devWorkspaceWindowHandlers';
+import { registerExtensionWindowHandlers } from './window/extensionWindowHandlers';
+import { extensionDiscoveryService } from './services/ExtensionDiscoveryService';
 
 // let agentSessionEventsHttpBridge: AgentSessionEventsHttpBridge | null = null;
 let principalMCPBridgePort: number | null = null;
@@ -144,6 +146,7 @@ const registerAllIpcHandlers = async () => {
   registerWindowManagerIpcHandlers(applicationWindows);
   registerModernWindowHandlers(); // Register modern window creation handlers
   registerDevWorkspaceWindowHandlers(); // Register dev-workspace window handlers
+  registerExtensionWindowHandlers(); // Register extension browser window handlers
   setupWindowSwitcherHandlers(); // Register window switcher handlers
   setupQuickOpenHandlers(); // Register quick open handlers
   //registerStorageHandlers();
@@ -242,6 +245,10 @@ const registerAllIpcHandlers = async () => {
   // Register A24z handlers
   const a24zHandler = new A24zHandler();
   a24zHandler.registerHandlers();
+
+  // Initialize and register Extension Discovery handlers
+  await extensionDiscoveryService.initialize();
+  extensionDiscoveryService.registerHandlers();
 
   setupTypeSchemaHandlers();
   excalidrawHandlers.registerHandlers();

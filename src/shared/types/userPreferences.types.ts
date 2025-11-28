@@ -205,6 +205,10 @@ export interface UserPreferences {
     builtInWorkspaceIds?: string[];
   };
 
+  // Extension preferences
+  /** Custom directory for panel extensions (default: ~/.principal/extensions) */
+  extensionsDirectory?: string;
+
   // TODO: Add these fields that are currently using direct storage.get/set calls:
   // - aiConfiguration: src/renderer/services/ai/SessionSummaryService.ts:223
   //                     src/renderer/services/ai/ArchitecturalScaffoldService.ts:117,142

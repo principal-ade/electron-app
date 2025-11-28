@@ -10,6 +10,8 @@ export enum WindowEvent {
   OPEN_REPOSITORY_DASHBOARD = 'window:open-repository-dashboard',
   // Open the dev-workspace window (panel framework)
   OPEN_DEV_WORKSPACE = 'window:open-dev-workspace',
+  // Open the extensions window (panel extension browser)
+  OPEN_EXTENSION_WINDOW = 'window:open-extension-window',
   // Open a markdown viewer for a specific file path (no dialog)
   OPEN_MARKDOWN_VIEW = 'window:open-markdown-view',
   // Open a markdown viewer with a relative path from repository

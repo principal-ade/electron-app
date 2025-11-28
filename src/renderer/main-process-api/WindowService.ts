@@ -13,6 +13,7 @@ import type {
   OpenRemoteFilesRequest,
   RepositoryWindowState,
   DevWorkspaceOptions,
+  ExtensionWindowOptions,
 } from '../../shared/main-process-api-interfaces/WindowAPI';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
@@ -219,6 +220,22 @@ export class WindowService {
     } catch (error) {
       console.error('[WindowService] Failed to open dev workspace:', error);
       throw new Error('Failed to open dev workspace window');
+    }
+  }
+
+  /**
+   * Open the extension browser window
+   * @param options - Optional configuration
+   * @returns Window ID if successful, null otherwise
+   */
+  static async openExtensionWindow(
+    options?: ExtensionWindowOptions,
+  ): Promise<{ windowId: number } | null> {
+    try {
+      return await window.mainProcess.window.openExtensionWindow(options);
+    } catch (error) {
+      console.error('[WindowService] Failed to open extension window:', error);
+      throw new Error('Failed to open extension window');
     }
   }
 }
