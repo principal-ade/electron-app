@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
+import { PanelControls } from '@principal-ade/panel-layouts';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 import { Plus, Keyboard } from 'lucide-react';
 import { AddRepositoryToWorkspaceModal } from '../../panels/components/AddRepositoryToWorkspaceModal';
@@ -10,6 +11,12 @@ export interface AlexandriaWorkspaceTitlebarProps {
   workspaceRepositoryIds?: string[];
   enableKeyboardShortcuts?: boolean;
   onToggleKeyboardShortcuts?: () => void;
+  // Panel controls
+  collapsed?: { left: boolean; right: boolean };
+  onToggleLeftSidebar?: () => void;
+  onToggleRightSidebar?: () => void;
+  onSwitchLeftMiddlePanels?: () => void;
+  onSwitchRightMiddlePanels?: () => void;
 }
 
 export const AlexandriaWorkspaceTitlebar: React.FC<
@@ -19,6 +26,11 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
   workspaceRepositoryIds = [],
   enableKeyboardShortcuts = false,
   onToggleKeyboardShortcuts,
+  collapsed,
+  onToggleLeftSidebar,
+  onToggleRightSidebar,
+  onSwitchLeftMiddlePanels,
+  onSwitchRightMiddlePanels,
 }) => {
   const { theme } = useTheme();
   const [showAddModal, setShowAddModal] = useState(false);
@@ -102,6 +114,23 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
           WebkitAppRegion: 'no-drag',
         }}
       >
+        {/* Panel Controls */}
+        {(onToggleLeftSidebar || onToggleRightSidebar || onSwitchLeftMiddlePanels || onSwitchRightMiddlePanels) && (
+          <PanelControls
+            leftSidebarCollapsed={collapsed?.left ?? false}
+            onToggleLeftSidebar={onToggleLeftSidebar}
+            showLeftSidebarControl={!!onToggleLeftSidebar}
+            rightSidebarCollapsed={collapsed?.right ?? false}
+            onToggleRightSidebar={onToggleRightSidebar}
+            showRightSidebarControl={!!onToggleRightSidebar}
+            onSwitchLeftMiddlePanels={onSwitchLeftMiddlePanels}
+            showSwitchLeftMiddle={!!onSwitchLeftMiddlePanels}
+            onSwitchRightMiddlePanels={onSwitchRightMiddlePanels}
+            showSwitchRightMiddle={!!onSwitchRightMiddlePanels}
+            iconSize={16}
+          />
+        )}
+
         {/* Theme Toggle */}
         <WorkspaceThemeDropdown
           workspaceId={workspace.id}

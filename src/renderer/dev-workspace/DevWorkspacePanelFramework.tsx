@@ -1,10 +1,9 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
-  ConfigurablePanelLayout,
-  type PanelDefinitionWithContent,
-} from '@principal-ade/panels';
-import '@principal-ade/panels/panels.css';
+  EditableConfigurablePanelLayout,
+  type PanelLayout,
+} from '@principal-ade/panel-layouts';
 import '@industry-theme/visual-validation-panel/dist/panels.bundle.css';
 import { RepositoryPanelProvider, useRepositoryPanelProvider } from '../contexts/RepositoryPanelContext';
 import { TabbedTerminalPanel } from '@industry-theme/terminal-panel';
@@ -16,12 +15,40 @@ import { UserPreferencesService } from '../main-process-api/UserPreferencesServi
 export interface DevWorkspacePanelFrameworkProps {
   repositoryPath: string;
   repository: Repository;
+  /**
+   * External collapsed state (controlled from titlebar)
+   */
+  collapsed?: { left: boolean; right: boolean };
+  /**
+   * Callback when collapsed state changes
+   */
+  onCollapsedChange?: (collapsed: { left: boolean; right: boolean }) => void;
+  /**
+   * External layout state (controlled from titlebar for switch operations)
+   */
+  layout?: PanelLayout;
+  /**
+   * Callback when layout changes
+   */
+  onLayoutChange?: (layout: PanelLayout) => void;
+}
+
+interface DevWorkspacePanelFrameworkInnerProps {
+  collapsed: { left: boolean; right: boolean };
+  onCollapsedChange: (collapsed: { left: boolean; right: boolean }) => void;
+  layout: PanelLayout;
+  onLayoutChange: (layout: PanelLayout) => void;
 }
 
 /**
  * Inner component that uses RepositoryPanelProvider context
  */
-const DevWorkspacePanelFrameworkInner: React.FC = () => {
+const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerProps> = ({
+  collapsed,
+  onCollapsedChange,
+  layout,
+  onLayoutChange,
+}) => {
   const { theme } = useTheme();
   const { context, actions, events } = useRepositoryPanelProvider();
 
@@ -53,7 +80,7 @@ const DevWorkspacePanelFrameworkInner: React.FC = () => {
   const VisualValidationPanelComponent = visualValidationPanels[0]?.component;
 
   // Define all panels using panel framework components
-  const allPanels: PanelDefinitionWithContent[] = useMemo(
+  const allPanels = useMemo(
     () => [
       {
         id: 'terminal',
@@ -112,44 +139,17 @@ const DevWorkspacePanelFrameworkInner: React.FC = () => {
         background: theme.colors.background,
       }}
     >
-      <ConfigurablePanelLayout
+      <EditableConfigurablePanelLayout
         panels={allPanels}
-        layout={{
-          left: {
-            type: 'tabs',
-            panels: ['visualValidation'],
-            config: {
-              defaultActiveTab: 0,
-              tabPosition: 'top',
-            },
-          },
-          middle: {
-            type: 'tabs',
-            panels: ['terminal'],
-            config: {
-              defaultActiveTab: 0,
-              tabPosition: 'top',
-            },
-          },
-          right: {
-            type: 'tabs',
-            panels: [], // Empty - will be collapsed
-            config: {
-              defaultActiveTab: 0,
-              tabPosition: 'top',
-            },
-          },
-        }}
+        layout={layout}
+        onLayoutChange={onLayoutChange}
+        isEditMode={false}
         collapsiblePanels={{ left: true, right: true }}
         defaultSizes={{ left: 30, middle: 50, right: 20 }}
         minSizes={{ left: 15, middle: 30, right: 15 }}
-        collapsed={{
-          left: false,  // Show visual validation panel
-          right: true, // Start collapsed
-        }}
-        showCollapseButtons={true}
+        collapsed={collapsed}
+        showCollapseButtons={false}
         theme={theme}
-        style={{ height: '100%', width: '100%' }}
       />
     </div>
   );
@@ -163,9 +163,57 @@ const DevWorkspacePanelFrameworkInner: React.FC = () => {
  * - PanelProvider for shared context, actions, and events
  * - ConfigurablePanelLayout for visual layout management
  */
+// Default layout configuration
+const DEFAULT_LAYOUT: PanelLayout = {
+  left: 'visualValidation',
+  middle: 'terminal',
+  right: '',  // Empty - will be collapsed
+};
+
 export const DevWorkspacePanelFramework: React.FC<
   DevWorkspacePanelFrameworkProps
-> = ({ repositoryPath, repository }) => {
+> = ({
+  repositoryPath,
+  repository,
+  collapsed: externalCollapsed,
+  onCollapsedChange: externalOnCollapsedChange,
+  layout: externalLayout,
+  onLayoutChange: externalOnLayoutChange,
+}) => {
+  // Internal collapsed state (used when not controlled externally)
+  const [internalCollapsed, setInternalCollapsed] = useState({
+    left: false,  // Show visual validation panel
+    right: true,  // Start collapsed
+  });
+
+  // Internal layout state (used when not controlled externally)
+  const [internalLayout, setInternalLayout] = useState<PanelLayout>(DEFAULT_LAYOUT);
+
+  // Use external state if provided, otherwise use internal
+  const collapsed = externalCollapsed ?? internalCollapsed;
+  const onCollapsedChange = useCallback(
+    (newCollapsed: { left: boolean; right: boolean }) => {
+      if (externalOnCollapsedChange) {
+        externalOnCollapsedChange(newCollapsed);
+      } else {
+        setInternalCollapsed(newCollapsed);
+      }
+    },
+    [externalOnCollapsedChange]
+  );
+
+  const layout = externalLayout ?? internalLayout;
+  const onLayoutChange = useCallback(
+    (newLayout: PanelLayout) => {
+      if (externalOnLayoutChange) {
+        externalOnLayoutChange(newLayout);
+      } else {
+        setInternalLayout(newLayout);
+      }
+    },
+    [externalOnLayoutChange]
+  );
+
   // Use the same terminal context format as legacy MultiTerminalPanel
   // Legacy uses: terminal:${owner}/${name}
   // This ensures terminal sessions are shared when switching between classic and panel framework modes
@@ -191,7 +239,12 @@ export const DevWorkspacePanelFramework: React.FC<
       repository={repositoryMetadata}
       terminalContext={terminalContext}
     >
-      <DevWorkspacePanelFrameworkInner />
+      <DevWorkspacePanelFrameworkInner
+        collapsed={collapsed}
+        onCollapsedChange={onCollapsedChange}
+        layout={layout}
+        onLayoutChange={onLayoutChange}
+      />
     </RepositoryPanelProvider>
   );
 };

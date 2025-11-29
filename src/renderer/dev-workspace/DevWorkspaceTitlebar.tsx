@@ -1,6 +1,7 @@
 import React from 'react';
 import { Layers, Cloud, CloudOff, Terminal } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
+import { PanelControls } from '@principal-ade/panel-layouts';
 import { BaseTitlebar } from '../components/Titlebar/BaseTitlebar';
 import { GitSyncStatusIndicator } from '../components/Titlebar/GitSyncStatusIndicator';
 import { RepositoryAvatar } from '../components/repository-maps/RepositoryAvatar';
@@ -19,6 +20,12 @@ export interface DevWorkspaceTitlebarProps {
   // Terminal implementation toggle
   terminalImplementation?: 'industry-themed' | 'ghostty';
   onToggleTerminalImplementation?: () => void;
+  // Panel controls
+  collapsed?: { left: boolean; right: boolean };
+  onToggleLeftSidebar?: () => void;
+  onToggleRightSidebar?: () => void;
+  onSwitchLeftMiddlePanels?: () => void;
+  onSwitchRightMiddlePanels?: () => void;
 }
 
 export const DevWorkspaceTitlebar: React.FC<
@@ -32,6 +39,11 @@ export const DevWorkspaceTitlebar: React.FC<
   onSwitchToClassic,
   terminalImplementation,
   onToggleTerminalImplementation,
+  collapsed,
+  onToggleLeftSidebar,
+  onToggleRightSidebar,
+  onSwitchLeftMiddlePanels,
+  onSwitchRightMiddlePanels,
 }) => {
   const { theme } = useTheme();
 
@@ -256,7 +268,7 @@ export const DevWorkspaceTitlebar: React.FC<
         </div>
       </div>
 
-      {/* Right: Terminal toggle and mode switch */}
+      {/* Right: Panel controls, terminal toggle and mode switch */}
       <div
         style={{
           position: 'absolute',
@@ -264,8 +276,27 @@ export const DevWorkspaceTitlebar: React.FC<
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
+          // @ts-ignore - WebkitAppRegion is not in CSSProperties
+          WebkitAppRegion: 'no-drag',
         }}
       >
+        {/* Panel Controls */}
+        {(onToggleLeftSidebar || onToggleRightSidebar || onSwitchLeftMiddlePanels || onSwitchRightMiddlePanels) && (
+          <PanelControls
+            leftSidebarCollapsed={collapsed?.left ?? false}
+            onToggleLeftSidebar={onToggleLeftSidebar}
+            showLeftSidebarControl={!!onToggleLeftSidebar}
+            rightSidebarCollapsed={collapsed?.right ?? true}
+            onToggleRightSidebar={onToggleRightSidebar}
+            showRightSidebarControl={!!onToggleRightSidebar}
+            onSwitchLeftMiddlePanels={onSwitchLeftMiddlePanels}
+            showSwitchLeftMiddle={!!onSwitchLeftMiddlePanels}
+            onSwitchRightMiddlePanels={onSwitchRightMiddlePanels}
+            showSwitchRightMiddle={!!onSwitchRightMiddlePanels}
+            iconSize={16}
+          />
+        )}
+
         {/* Terminal Implementation Toggle */}
         {onToggleTerminalImplementation && (
           <button

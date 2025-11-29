@@ -32,11 +32,31 @@ interface AlexandriaWorkspaceLayoutProps {
    * @default false - Disabled by default until DOM focus integration is complete
    */
   enableKeyboardShortcuts?: boolean;
+  /**
+   * External collapsed state (controlled from titlebar)
+   */
+  collapsed?: { left: boolean; right: boolean };
+  /**
+   * Callback when collapsed state changes
+   */
+  onCollapsedChange?: (collapsed: { left: boolean; right: boolean }) => void;
+  /**
+   * External layout state (controlled from titlebar for switch operations)
+   */
+  layout?: PanelLayout;
+  /**
+   * Callback when layout changes
+   */
+  onLayoutChange?: (layout: PanelLayout) => void;
 }
 
 interface AlexandriaWorkspaceLayoutContentProps {
   onRepositorySelected: (repository: { name: string; path: string }) => void;
   enableKeyboardShortcuts: boolean;
+  collapsed: { left: boolean; right: boolean };
+  onCollapsedChange: (collapsed: { left: boolean; right: boolean }) => void;
+  layout: PanelLayout;
+  onLayoutChange: (layout: PanelLayout) => void;
 }
 
 /**
@@ -45,19 +65,15 @@ interface AlexandriaWorkspaceLayoutContentProps {
 const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutContentProps> = ({
   onRepositorySelected,
   enableKeyboardShortcuts,
+  collapsed,
+  onCollapsedChange,
+  layout,
+  onLayoutChange,
 }) => {
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
 
-  // Panel layout configuration (left/middle/right)
-  const [layout, setLayout] = useState<PanelLayout>({
-    left: 'workspace-repos',
-    middle: 'terminal',
-    right: 'alexandria-docs',
-  });
-
   const [isEditMode, _setIsEditMode] = useState(false);
-  const [collapsed, setCollapsed] = useState({ left: false, right: false });
   const [showAllTerminals, setShowAllTerminals] = useState(false);
 
   // Panel focus management for keyboard shortcuts
@@ -69,12 +85,12 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
 
   // Collapse/expand handlers
   const handleExpand = useCallback(async (panel: 'left' | 'right') => {
-    setCollapsed((prev) => ({ ...prev, [panel]: false }));
-  }, []);
+    onCollapsedChange({ ...collapsed, [panel]: false });
+  }, [collapsed, onCollapsedChange]);
 
   const handleCollapse = useCallback(async (panel: 'left' | 'right') => {
-    setCollapsed((prev) => ({ ...prev, [panel]: true }));
-  }, []);
+    onCollapsedChange({ ...collapsed, [panel]: true });
+  }, [collapsed, onCollapsedChange]);
 
   // Keyboard shortcuts (Alt+1, Alt+2, Alt+3)
   // NOTE: Disabled by default until DOM focus integration is implemented
@@ -306,7 +322,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
         panels={panels}
         layout={layout}
         isEditMode={isEditMode}
-        onLayoutChange={setLayout}
+        onLayoutChange={onLayoutChange}
         defaultSizes={{ left: 25, middle: 50, right: 25 }}
         minSizes={{ left: 15, middle: 30, right: 20 }}
         collapsed={collapsed}
@@ -321,10 +337,38 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
  * Alexandria Workspace Layout Component
  * Similar to web-ade's EditorLayout but for workspace management
  */
+// Default layout for Alexandria workspace
+const DEFAULT_LAYOUT: PanelLayout = {
+  left: 'workspace-repos',
+  middle: 'terminal',
+  right: 'alexandria-docs',
+};
+
 export const AlexandriaWorkspaceLayout: React.FC<
   AlexandriaWorkspaceLayoutProps
-> = ({ workspace, repository: initialRepository, enableKeyboardShortcuts = false }) => {
+> = ({
+  workspace,
+  repository: initialRepository,
+  enableKeyboardShortcuts = false,
+  collapsed: externalCollapsed,
+  onCollapsedChange: externalOnCollapsedChange,
+  layout: externalLayout,
+  onLayoutChange: externalOnLayoutChange,
+}) => {
   const { theme } = useTheme();
+
+  // Internal collapsed state (used when not controlled externally)
+  const [internalCollapsed, setInternalCollapsed] = useState({ left: false, right: false });
+
+  // Internal layout state (used when not controlled externally)
+  const [internalLayout, setInternalLayout] = useState<PanelLayout>(DEFAULT_LAYOUT);
+
+  // Use external state if provided, otherwise use internal
+  const collapsed = externalCollapsed ?? internalCollapsed;
+  const onCollapsedChange = externalOnCollapsedChange ?? setInternalCollapsed;
+
+  const layout = externalLayout ?? internalLayout;
+  const onLayoutChange = externalOnLayoutChange ?? setInternalLayout;
 
   // Track the selected repository
   const [selectedRepository, setSelectedRepository] = useState<{
@@ -359,6 +403,10 @@ export const AlexandriaWorkspaceLayout: React.FC<
       <AlexandriaWorkspaceLayoutContent
         onRepositorySelected={setSelectedRepository}
         enableKeyboardShortcuts={enableKeyboardShortcuts}
+        collapsed={collapsed}
+        onCollapsedChange={onCollapsedChange}
+        layout={layout}
+        onLayoutChange={onLayoutChange}
       />
     </PanelProvider>
   );

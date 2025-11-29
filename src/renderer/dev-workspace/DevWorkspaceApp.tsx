@@ -5,7 +5,8 @@
  * Uses the panel framework layout with minimal API dependencies.
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import type { PanelLayout } from '@principal-ade/panel-layouts';
 import { DevWorkspacePanelFramework } from './DevWorkspacePanelFramework';
 import { DevWorkspaceTitlebar } from './DevWorkspaceTitlebar';
 import type { Repository } from '../../shared/types/repository.types';
@@ -44,6 +45,12 @@ export const DevWorkspaceApp: React.FC = () => {
   const windowData = useWindowData();
   const [currentBranch, setCurrentBranch] = useState<string | undefined>();
   const [terminalImplementation, setTerminalImplementation] = useState<'industry-themed' | 'ghostty'>('ghostty');
+  const [collapsed, setCollapsed] = useState({ left: false, right: true });
+  const [layout, setLayout] = useState<PanelLayout>({
+    left: 'visualValidation',
+    middle: 'terminal',
+    right: '',
+  });
 
   const repositoryPath = windowData?.repositoryPath || process.cwd();
   const repositoryName = windowData?.repositoryName || 'Dev Workspace';
@@ -142,6 +149,23 @@ export const DevWorkspaceApp: React.FC = () => {
     }
   };
 
+  // Switch handlers for panel swapping
+  const handleSwitchLeftMiddle = useCallback(() => {
+    setLayout(prev => ({
+      ...prev,
+      left: prev.middle,
+      middle: prev.left,
+    }));
+  }, []);
+
+  const handleSwitchRightMiddle = useCallback(() => {
+    setLayout(prev => ({
+      ...prev,
+      right: prev.middle,
+      middle: prev.right,
+    }));
+  }, []);
+
   // Wait for window data to load
   if (windowData === null) {
     return (
@@ -162,11 +186,20 @@ export const DevWorkspaceApp: React.FC = () => {
         selectedSource={selectedSource}
         terminalImplementation={terminalImplementation}
         onToggleTerminalImplementation={handleToggleTerminalImplementation}
+        collapsed={collapsed}
+        onToggleLeftSidebar={() => setCollapsed(prev => ({ ...prev, left: !prev.left }))}
+        onToggleRightSidebar={() => setCollapsed(prev => ({ ...prev, right: !prev.right }))}
+        onSwitchLeftMiddlePanels={handleSwitchLeftMiddle}
+        onSwitchRightMiddlePanels={handleSwitchRightMiddle}
       />
       <div className="flex-1 overflow-hidden">
         <DevWorkspacePanelFramework
           repositoryPath={repositoryPath}
           repository={repository}
+          collapsed={collapsed}
+          onCollapsedChange={setCollapsed}
+          layout={layout}
+          onLayoutChange={setLayout}
         />
       </div>
     </div>

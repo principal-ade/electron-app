@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
+import type { PanelLayout } from '@principal-ade/panel-layouts';
 import type { Workspace, AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { AlexandriaWorkspaceTitlebar } from '../components/Titlebar';
@@ -19,6 +20,29 @@ const AlexandriaWorkspaceContent: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [enableKeyboardShortcuts, setEnableKeyboardShortcuts] = useState(false);
+  const [collapsed, setCollapsed] = useState({ left: false, right: false });
+  const [layout, setLayout] = useState<PanelLayout>({
+    left: 'workspace-repos',
+    middle: 'terminal',
+    right: 'alexandria-docs',
+  });
+
+  // Switch handlers for panel swapping
+  const handleSwitchLeftMiddle = useCallback(() => {
+    setLayout(prev => ({
+      ...prev,
+      left: prev.middle,
+      middle: prev.left,
+    }));
+  }, []);
+
+  const handleSwitchRightMiddle = useCallback(() => {
+    setLayout(prev => ({
+      ...prev,
+      right: prev.middle,
+      middle: prev.right,
+    }));
+  }, []);
 
   useEffect(() => {
     // Get workspace ID from URL parameters
@@ -168,12 +192,21 @@ const AlexandriaWorkspaceContent: React.FC = () => {
         }
         enableKeyboardShortcuts={enableKeyboardShortcuts}
         onToggleKeyboardShortcuts={() => setEnableKeyboardShortcuts(!enableKeyboardShortcuts)}
+        collapsed={collapsed}
+        onToggleLeftSidebar={() => setCollapsed(prev => ({ ...prev, left: !prev.left }))}
+        onToggleRightSidebar={() => setCollapsed(prev => ({ ...prev, right: !prev.right }))}
+        onSwitchLeftMiddlePanels={handleSwitchLeftMiddle}
+        onSwitchRightMiddlePanels={handleSwitchRightMiddle}
       />
 
       {/* Main Content - Panel Layout */}
       <AlexandriaWorkspaceLayout
         workspace={workspace}
         enableKeyboardShortcuts={enableKeyboardShortcuts}
+        collapsed={collapsed}
+        onCollapsedChange={setCollapsed}
+        layout={layout}
+        onLayoutChange={setLayout}
       />
     </div>
   );
