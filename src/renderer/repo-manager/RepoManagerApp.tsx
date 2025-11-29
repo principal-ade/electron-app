@@ -7,7 +7,7 @@ import { RepositoryService } from '../main-process-api/RepositoryService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import type { Repository } from '../../shared/types/repository.types';
 import { RepositoryWorkspace } from './RepositoryWorkspace';
-import type { GitStatus } from '../../main/services/GitStatusService';
+import type { GitStatus } from '../../shared/types/git.types';
 
 interface RepoManagerWindowData {
   repository?: Repository;

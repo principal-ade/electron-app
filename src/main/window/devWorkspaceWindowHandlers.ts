@@ -97,6 +97,7 @@ export async function openDevWorkspaceWindow(
       contentSecurityPolicy: true,
       externalLinkHandler: true,
       errorHandlers: true,
+      maximizeOnShow: true,
     },
     metadata,
   );

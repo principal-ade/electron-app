@@ -1,23 +1,11 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { gitClientFactory } from '../utils/gitClientFactory';
-import * as fs from 'fs';
-import * as path from 'path';
+import type { BranchInfo } from '../../shared/types/git.types';
+
+export type { BranchInfo } from '../../shared/types/git.types';
 
 const execAsync = promisify(exec);
-
-export interface BranchInfo {
-  currentBranch?: string;
-  defaultBranch?: string;
-  availableBranches: string[];
-  remotes: string[];
-  currentCommit?: string;
-  branchStatus?: {
-    ahead: number;
-    behind: number;
-    upToDate: boolean;
-  };
-}
 
 export class GitBranchService {
   /**

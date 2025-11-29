@@ -381,20 +381,19 @@ export class HookConfigurationManager {
       if (agentType === 'claude') {
         const status = await this.claudeManager.getHookStatus();
         // Check if the specific hook type is enabled
-        const hookEvents = [
+        // Note: Only the hook types supported by @principal-ai/agent-monitoring are checked
+        const supportedHookEvents = [
           'PreToolUse',
           'PostToolUse',
           'Notification',
-          'UserPromptSubmit',
           'Stop',
           'SubagentStop',
-          'PreCompact',
-          'SessionStart',
-          'SessionEnd',
         ] as const;
-        if (hookEvents.includes(hookType as (typeof hookEvents)[number])) {
-          return status.get(hookType as (typeof hookEvents)[number]) || false;
+        type SupportedHookEvent = (typeof supportedHookEvents)[number];
+        if (supportedHookEvents.includes(hookType as SupportedHookEvent)) {
+          return status.get(hookType as SupportedHookEvent) || false;
         }
+        // For newer hook types not yet in the library, return false
         return false;
       }
       if (agentType === 'cline') {

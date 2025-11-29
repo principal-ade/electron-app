@@ -11,9 +11,20 @@
     "src/renderer/pages/ArchivedSessionsViewer.tsx",
     "src/renderer/pages/StandaloneTerminal.tsx",
     "src/renderer/pages/StoreViewer.tsx",
-    "src/renderer/repo-manager/RepositoryManager.tsx",
     "src/renderer/pages/MultiFileEditorWindow.tsx",
-    "src/renderer/components/principal/PrincipalConfigurationView.tsx"
+    "src/renderer/pages/CallimachusWindow/index.tsx",
+    "src/renderer/components/principal/PrincipalConfigurationView.tsx",
+    "src/renderer/principal-window/index.tsx",
+    "src/renderer/repo-manager/index.tsx",
+    "src/renderer/quick-open/index.tsx",
+    "src/renderer/window-switcher/index.tsx",
+    "src/renderer/dev-workspace/index.tsx",
+    "src/renderer/dev-sidecar/index.tsx",
+    "src/renderer/dev-sidecar-logs/index.tsx",
+    "src/renderer/alexandria-workspace/index.tsx",
+    "src/renderer/extension-window/index.tsx",
+    "src/event-processing-server/server.ts",
+    "src/event-processing-server/worker-entry.ts"
   ],
   "project": [
     "src/**/*.{ts,tsx,js,jsx}"

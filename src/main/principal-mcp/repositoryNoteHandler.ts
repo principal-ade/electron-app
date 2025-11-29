@@ -1,6 +1,6 @@
 import path from 'path';
 import { MemoryPalace } from '@principal-ai/alexandria-core-library';
-import type { StoredAnchoredNote } from '@principal-ai/alexandria-core-library';
+import type { StoredAnchoredNote, AnchoredNoteWithPath } from '@principal-ai/alexandria-core-library';
 import { NodeFileSystemAdapter } from '@principal-ai/alexandria-core-library/node';
 import { GitService } from '../version-control-providers/GitService';
 import type { GitInfo } from '../../shared/types/git.types';
@@ -82,11 +82,12 @@ class RepositoryNoteHandler {
   }
 
   private convertToRepositoryNote(
-    storedNote: StoredAnchoredNote,
+    noteWithPath: AnchoredNoteWithPath,
     gitInfo: GitInfo,
   ): RepositoryNote {
-    // Convert a24z StoredNote to RepositoryNote format for UI compatibility
+    // Convert a24z AnchoredNoteWithPath to RepositoryNote format for UI compatibility
     // Note: gitInfo is required - we can't have notes without a repository
+    const storedNote = noteWithPath.note;
     const primaryAnchor = storedNote.anchors?.[0] || '.';
     const fullPath = path.join(gitInfo.root, primaryAnchor);
 
@@ -306,7 +307,7 @@ class RepositoryNoteHandler {
     }
   }
 
-  async getAllNotesForPath(targetPath: string): Promise<StoredAnchoredNote[]> {
+  async getAllNotesForPath(targetPath: string): Promise<AnchoredNoteWithPath[]> {
     try {
       const memory = await this.getMemoryInstance(targetPath);
       if (!memory) {

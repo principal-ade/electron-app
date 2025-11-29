@@ -1,12 +1,8 @@
 import { BrowserWindow } from 'electron';
-import { GitBranchService, BranchInfo } from '../version-control-providers/gitBranchService';
+import { GitBranchService } from '../version-control-providers/gitBranchService';
+import type { GitStatus } from '../../shared/types/git.types';
 
-export interface GitStatus extends BranchInfo {
-  path: string;
-  lastUpdated: number;
-  isStale: boolean;
-  isRefreshing: boolean;
-}
+export type { GitStatus } from '../../shared/types/git.types';
 
 interface CacheEntry {
   status: GitStatus;

@@ -542,6 +542,18 @@ export async function openRepositoryDashboardWindow(
   const repoName = repository.name;
   const remoteUrl = repository.remoteUrl;
 
+  // Guard against local-only repositories without a remote URL
+  // TODO: As we move to dev-workspace window, we should handle local-only repos better
+  // by generating a local identifier and skipping remote metadata fetching
+  if (!remoteUrl) {
+    console.warn(
+      '[modernWindowHandlers] Cannot open repository dashboard for local-only repository:',
+      repository.name,
+      '- no remote URL configured',
+    );
+    return;
+  }
+
   // Log if we're missing github data so we can surface this in the UI
   if (!repository.github) {
     console.log(
@@ -617,7 +629,7 @@ export async function openRepositoryDashboardWindow(
       stars: repository.github?.stars || existingRepo?.metadata?.stars,
       description:
         repository.github?.description ||
-        existingRepo?.metadata?.description,
+        existingRepo?.description,
       topics: repository.github?.topics || existingRepo?.metadata?.topics,
       license: repository.github?.license || existingRepo?.metadata?.license,
       defaultBranch: existingRepo?.metadata?.defaultBranch,
