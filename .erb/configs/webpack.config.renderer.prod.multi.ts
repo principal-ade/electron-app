@@ -71,6 +71,11 @@ const quickOpenEntryPath = path.join(
   'quick-open',
   'index.tsx',
 );
+const extensionWindowEntryPath = path.join(
+  webpackPaths.srcRendererPath,
+  'extension-window',
+  'index.tsx',
+);
 
 // Use principal entry if it exists, otherwise fall back to legacy
 if (fs.existsSync(principalEntryPath)) {
@@ -227,6 +232,25 @@ if (fs.existsSync(quickOpenEntryPath)) {
       filename: 'quick-open.html',
       template: path.join(webpackPaths.srcRendererPath, 'quick-open.ejs'),
       chunks: ['quick-open'],
+      minify: {
+        collapseWhitespace: true,
+        removeAttributeQuotes: true,
+        removeComments: true,
+      },
+      isBrowser: false,
+      isDevelopment: false,
+    }),
+  );
+}
+
+// Register Extension Window entry when present
+if (fs.existsSync(extensionWindowEntryPath)) {
+  entryPoints['extension-window'] = extensionWindowEntryPath;
+  htmlPlugins.push(
+    new HtmlWebpackPlugin({
+      filename: 'extension-window.html',
+      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
+      chunks: ['extension-window'],
       minify: {
         collapseWhitespace: true,
         removeAttributeQuotes: true,

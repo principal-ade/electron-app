@@ -192,6 +192,23 @@ export class ExtensionDiscoveryService {
   }
 
   /**
+   * Check if a directory entry is a directory (or symlink to a directory)
+   */
+  private isDirectoryEntry(entry: fs.Dirent, parentPath: string): boolean {
+    if (entry.isDirectory()) return true;
+    if (entry.isSymbolicLink()) {
+      try {
+        const fullPath = path.join(parentPath, entry.name);
+        const stat = fs.statSync(fullPath);
+        return stat.isDirectory();
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Discover all installed panel extensions
    */
   async discoverExtensions(): Promise<DiscoveredExtension[]> {
@@ -205,7 +222,7 @@ export class ExtensionDiscoveryService {
       const entries = await fs.promises.readdir(this.extensionsDirectory, { withFileTypes: true });
 
       for (const entry of entries) {
-        if (!entry.isDirectory()) continue;
+        if (!this.isDirectoryEntry(entry, this.extensionsDirectory)) continue;
 
         // Handle scoped packages (@org/package-name)
         if (entry.name.startsWith('@')) {
@@ -213,7 +230,7 @@ export class ExtensionDiscoveryService {
           const scopedEntries = await fs.promises.readdir(scopePath, { withFileTypes: true });
 
           for (const scopedEntry of scopedEntries) {
-            if (!scopedEntry.isDirectory()) continue;
+            if (!this.isDirectoryEntry(scopedEntry, scopePath)) continue;
 
             const packageName = `${entry.name}/${scopedEntry.name}`;
             const packagePath = path.join(scopePath, scopedEntry.name);
@@ -342,8 +359,12 @@ export class ExtensionDiscoveryService {
     packageName: string
   ): Promise<PanelMetadata[]> {
     try {
-      // Dynamic import the bundle
-      const module = await import(bundlePath);
+      // Resolve symlinks to get the real path for dynamic import
+      const realBundlePath = fs.realpathSync(bundlePath);
+      // Use native Node.js import to bypass webpack's module resolution
+      // eslint-disable-next-line @typescript-eslint/no-implied-eval
+      const importFn = new Function('specifier', 'return import(specifier)') as (specifier: string) => Promise<any>;
+      const module = await importFn(`file://${realBundlePath}`);
 
       if (!Array.isArray(module.panels)) {
         console.warn(`[ExtensionDiscoveryService] Extension ${packageName} must export a 'panels' array`);
@@ -351,15 +372,16 @@ export class ExtensionDiscoveryService {
       }
 
       // Extract just the metadata (not the components)
+      // Panel definitions use nested metadata: { metadata: { id, name, ... }, component }
       return module.panels.map((panel: any) => ({
-        id: panel.id,
-        name: panel.name,
-        icon: panel.icon,
-        version: panel.version,
-        author: panel.author,
-        description: panel.description,
-        surfaces: panel.surfaces,
-        slices: panel.slices,
+        id: panel.metadata.id,
+        name: panel.metadata.name,
+        icon: panel.metadata.icon,
+        version: panel.metadata.version,
+        author: panel.metadata.author,
+        description: panel.metadata.description,
+        surfaces: panel.metadata.surfaces,
+        slices: panel.metadata.slices,
       }));
     } catch (error) {
       console.error(`[ExtensionDiscoveryService] Failed to extract panel metadata from ${packageName}:`, error);
