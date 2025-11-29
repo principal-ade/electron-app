@@ -40,7 +40,7 @@ export function getAuthEndpoints(baseUrl: string): AuthEndpoints {
 }
 ```
 
-The `baseUrl` is determined by the `AUTH_SERVER_URL` environment variable, which defaults to `https://principal-ade.com` in production and can be set to `http://localhost:3000` for local development.
+The `baseUrl` is determined by the `AUTH_SERVER_URL` environment variable, which defaults to `https://auth.principal-ade.com` in production and can be set to `http://localhost:3000` for local development.
 
 ## PKCE (Proof Key for Code Exchange)
 

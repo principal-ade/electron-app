@@ -7,6 +7,12 @@ export const APP_BRANDING = {
   APP_NAME: 'Principal ADE',
   COMPANY_NAME: 'A24Z',
 
+  // Auth server URLs
+  AUTH_SERVER_URL: {
+    DEVELOPMENT: 'http://localhost:3000',
+    PRODUCTION: 'https://auth.principal-ade.com',
+  },
+
   // Bridge ports for HTTP communication
   BRIDGE_PORTS: {
     AGENT_SESSION_EVENTS: 3043, // Port for claude-hook, opencode-hook

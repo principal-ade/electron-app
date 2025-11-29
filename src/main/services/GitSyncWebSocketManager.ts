@@ -20,6 +20,7 @@ import type {
 import fetch from 'node-fetch';
 import { deviceIdService } from './DeviceIdService';
 import jwt from 'jsonwebtoken';
+import { APP_BRANDING } from '../../shared/config/appBranding';
 
 // Import Control Tower Core components
 import {
@@ -154,7 +155,7 @@ export class GitSyncWebSocketManager {
   private readonly DEFAULT_DEV_SERVER = 'ws://localhost:3001';
   private readonly DEFAULT_DEV_AUTH = 'http://localhost:3000';
   private readonly DEFAULT_PROD_SERVER = 'wss://repository-traffic-controller-production.rj36caac972nm.us-east-1.cs.amazonlightsail.com';
-  private readonly DEFAULT_PROD_AUTH = 'https://principal-ade.com';
+  private readonly DEFAULT_PROD_AUTH = APP_BRANDING.AUTH_SERVER_URL.PRODUCTION;
 
   private constructor() {
     // Default to production servers, override with environment variables if needed

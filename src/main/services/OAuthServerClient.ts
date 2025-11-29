@@ -17,6 +17,7 @@ import {
   getAuthProviderName,
   type AuthEndpoints,
 } from './AuthProvider';
+import { APP_BRANDING } from '../../shared/config/appBranding';
 
 interface AuthStartResponse {
   auth_url: string;
@@ -58,7 +59,7 @@ export class OAuthServerClient {
     this.serverUrl =
       config?.serverUrl ||
       process.env.AUTH_SERVER_URL ||
-      'https://principal-ade.com';
+      APP_BRANDING.AUTH_SERVER_URL.PRODUCTION;
 
     // Get endpoints for current provider
     this.endpoints = getAuthEndpoints(this.serverUrl);

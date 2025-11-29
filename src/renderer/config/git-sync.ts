@@ -2,6 +2,8 @@
  * Git Sync Server Configuration
  */
 
+import { APP_BRANDING } from '../../shared/config/appBranding';
+
 const isDevelopment = process.env.NODE_ENV === 'development';
 
 // Define the config type
@@ -24,8 +26,8 @@ export const SERVER_URLS = {
 
 // Auth server URLs for different environments
 export const AUTH_SERVER_URLS = {
-  development: 'http://localhost:3000',
-  production: 'https://principal-ade.com',
+  development: APP_BRANDING.AUTH_SERVER_URL.DEVELOPMENT,
+  production: APP_BRANDING.AUTH_SERVER_URL.PRODUCTION,
 };
 
 // Server URLs based on environment

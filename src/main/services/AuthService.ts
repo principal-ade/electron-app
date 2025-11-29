@@ -19,6 +19,7 @@ import {
 } from './UnifiedSecureStorage';
 import { AuthEvent } from '../../shared/ipc-events/AuthEvents';
 import { GitCredentialHelper } from './GitCredentialHelper';
+import { APP_BRANDING } from '../../shared/config/appBranding';
 
 interface GitHubUser {
   login: string;
@@ -172,7 +173,7 @@ class AuthService {
       try {
         // Use the OAuth client from dev-collab-cli
         const authClient = new OAuthServerClient({
-          serverUrl: process.env.AUTH_SERVER_URL || 'https://principal-ade.com',
+          serverUrl: process.env.AUTH_SERVER_URL || APP_BRANDING.AUTH_SERVER_URL.PRODUCTION,
           forceReauth: options.forceNew || false,
         });
 
@@ -465,7 +466,7 @@ class AuthService {
           // Attempt to refresh the token
           const authClient = new OAuthServerClient({
             serverUrl:
-              process.env.AUTH_SERVER_URL || 'https://principal-ade.com',
+              process.env.AUTH_SERVER_URL || APP_BRANDING.AUTH_SERVER_URL.PRODUCTION,
           });
 
           const refreshedAuth =
@@ -879,7 +880,7 @@ class AuthService {
 
       // Attempt to refresh the token
       const authClient = new OAuthServerClient({
-        serverUrl: process.env.AUTH_SERVER_URL || 'https://principal-ade.com',
+        serverUrl: process.env.AUTH_SERVER_URL || APP_BRANDING.AUTH_SERVER_URL.PRODUCTION,
       });
 
       const refreshedAuth = await authClient.refreshAccessToken(refreshToken);
