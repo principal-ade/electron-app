@@ -82,6 +82,7 @@ export const ExtensionAPIEvents = {
 
   // Extension management
   LOAD_EXTENSION: 'extension:load',
+  FETCH_EXTENSION_BUNDLE: 'extension:fetch-bundle',
   ENABLE_EXTENSION: 'extension:enable',
   DISABLE_EXTENSION: 'extension:disable',
   UNINSTALL_EXTENSION: 'extension:uninstall',
@@ -108,6 +109,12 @@ export interface ExtensionAPI {
    * Load a specific extension and get its bundle path
    */
   loadExtension(packageName: string): Promise<LoadedExtension | null>;
+
+  /**
+   * Fetch an extension's bundle content as a base64 string
+   * Used to load the bundle in the renderer via Blob URL
+   */
+  fetchExtensionBundle(packageName: string): Promise<string | null>;
 
   /**
    * Enable an extension

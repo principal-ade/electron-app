@@ -19,6 +19,10 @@ export const extensionAPI: ExtensionAPI = {
     return await ipcRenderer.invoke(ExtensionAPIEvents.LOAD_EXTENSION, packageName);
   },
 
+  fetchExtensionBundle: async (packageName: string): Promise<string | null> => {
+    return await ipcRenderer.invoke(ExtensionAPIEvents.FETCH_EXTENSION_BUNDLE, packageName);
+  },
+
   enableExtension: async (packageName: string): Promise<void> => {
     return await ipcRenderer.invoke(ExtensionAPIEvents.ENABLE_EXTENSION, packageName);
   },

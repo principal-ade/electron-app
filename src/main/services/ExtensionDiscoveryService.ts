@@ -414,6 +414,29 @@ export class ExtensionDiscoveryService {
   }
 
   /**
+   * Fetch an extension's bundle content as a base64 string
+   * This allows the renderer to load the bundle via Blob URL,
+   * bypassing file:// protocol restrictions
+   */
+  async fetchExtensionBundle(packageName: string): Promise<string | null> {
+    const extension = await this.loadExtension(packageName);
+
+    if (!extension) {
+      return null;
+    }
+
+    try {
+      // Resolve symlinks to get the real path
+      const realBundlePath = fs.realpathSync(extension.bundlePath);
+      const bundleContent = await fs.promises.readFile(realBundlePath, 'utf-8');
+      return bundleContent;
+    } catch (error) {
+      console.error(`[ExtensionDiscoveryService] Failed to fetch bundle for ${packageName}:`, error);
+      return null;
+    }
+  }
+
+  /**
    * Enable an extension
    */
   async enableExtension(packageName: string): Promise<void> {
@@ -495,6 +518,10 @@ export class ExtensionDiscoveryService {
 
     ipcMain.handle(ExtensionAPIEvents.LOAD_EXTENSION, async (_event, packageName: string) => {
       return this.loadExtension(packageName);
+    });
+
+    ipcMain.handle(ExtensionAPIEvents.FETCH_EXTENSION_BUNDLE, async (_event, packageName: string) => {
+      return this.fetchExtensionBundle(packageName);
     });
 
     ipcMain.handle(ExtensionAPIEvents.ENABLE_EXTENSION, async (_event, packageName: string) => {

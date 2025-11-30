@@ -485,8 +485,8 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
             'Content-Security-Policy': [
               "default-src 'self';",
               process.env.NODE_ENV !== 'production'
-                ? "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' 'unsafe-inline';"
-                : "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval';",
+                ? "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' 'unsafe-inline' blob:;"
+                : "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' blob:;",
               "style-src 'self' 'unsafe-inline';",
               "img-src 'self' data: blob: https:;",
               "font-src 'self' data:;",

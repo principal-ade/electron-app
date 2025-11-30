@@ -14,6 +14,7 @@ import type { ExtensionWindowMainProcessAPI } from '../../shared/main-process-ap
 import { ExtensionWindowTitlebar } from './ExtensionWindowTitlebar';
 import { ExtensionList } from './components/ExtensionList';
 import { ExtensionDetails } from './components/ExtensionDetails';
+import { PanelHarness } from './components/PanelHarness';
 
 // Get the mainProcess API from the window object
 const mainProcess = (window as any).mainProcess as ExtensionWindowMainProcessAPI | undefined;
@@ -25,6 +26,7 @@ export const ExtensionWindowApp: React.FC = () => {
   const [extensions, setExtensions] = useState<DiscoveredExtension[]>([]);
   const [selectedExtension, setSelectedExtension] = useState<DiscoveredExtension | null>(null);
   const [selectedPanel, setSelectedPanel] = useState<PanelMetadata | null>(null);
+  const [previewingPanel, setPreviewingPanel] = useState<{ extension: DiscoveredExtension; panel: PanelMetadata } | null>(null);
   const [extensionsDirectory, setExtensionsDirectory] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +90,18 @@ export const ExtensionWindowApp: React.FC = () => {
   // Handle panel selection
   const handleSelectPanel = (panel: PanelMetadata) => {
     setSelectedPanel(panel);
+  };
+
+  // Handle panel preview
+  const handlePreviewPanel = (panel: PanelMetadata) => {
+    if (selectedExtension) {
+      setPreviewingPanel({ extension: selectedExtension, panel });
+    }
+  };
+
+  // Close panel preview
+  const handleClosePreview = () => {
+    setPreviewingPanel(null);
   };
 
   // Handle enable/disable
@@ -184,13 +198,20 @@ export const ExtensionWindowApp: React.FC = () => {
           </div>
         </div>
 
-        {/* Extension Details */}
+        {/* Extension Details or Panel Preview */}
         <div className="flex-1 overflow-hidden">
-          {selectedExtension ? (
+          {previewingPanel ? (
+            <PanelHarness
+              packageName={previewingPanel.extension.packageName}
+              panel={previewingPanel.panel}
+              onClose={handleClosePreview}
+            />
+          ) : selectedExtension ? (
             <ExtensionDetails
               extension={selectedExtension}
               selectedPanel={selectedPanel}
               onSelectPanel={handleSelectPanel}
+              onPreviewPanel={handlePreviewPanel}
               onToggleEnabled={() => handleToggleEnabled(selectedExtension)}
               onUninstall={() => handleUninstall(selectedExtension)}
             />

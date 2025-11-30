@@ -15,6 +15,7 @@ interface ExtensionDetailsProps {
   extension: DiscoveredExtension;
   selectedPanel: PanelMetadata | null;
   onSelectPanel: (panel: PanelMetadata) => void;
+  onPreviewPanel: (panel: PanelMetadata) => void;
   onToggleEnabled: () => void;
   onUninstall: () => void;
 }
@@ -23,6 +24,7 @@ export const ExtensionDetails: React.FC<ExtensionDetailsProps> = ({
   extension,
   selectedPanel,
   onSelectPanel,
+  onPreviewPanel,
   onToggleEnabled,
   onUninstall,
 }) => {
@@ -141,6 +143,19 @@ export const ExtensionDetails: React.FC<ExtensionDetailsProps> = ({
                         </div>
                       )}
                     </div>
+
+                    {/* Preview Button */}
+                    {extension.enabled && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onPreviewPanel(panel);
+                        }}
+                        className="mt-3 px-3 py-1.5 text-xs rounded bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+                      >
+                        Preview Panel
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
