@@ -13,6 +13,12 @@ export const APP_BRANDING = {
     PRODUCTION: 'https://auth.principal-ade.com',
   },
 
+  // Web-ADE URLs (browser-based editor)
+  WEB_ADE_URL: {
+    DEVELOPMENT: 'http://localhost:3000',
+    PRODUCTION: 'https://app.principal-ade.com',
+  },
+
   // Bridge ports for HTTP communication
   BRIDGE_PORTS: {
     AGENT_SESSION_EVENTS: 3043, // Port for claude-hook, opencode-hook

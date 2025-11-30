@@ -22,6 +22,7 @@ import { fileSystemAPI } from './main-process-api-implementations/fileSystemApi'
 import { repositoryMonitoringAPI } from './main-process-api-implementations/repositoryMonitoringApi';
 import { userPreferencesAPI } from './main-process-api-implementations/userPreferencesApi';
 import { repositoryAPI } from './main-process-api-implementations/repositoryApi';
+import { shellAPI } from './main-process-api-implementations/shellApi';
 
 console.info('[Preload-DevWorkspace] API imports successful');
 
@@ -35,6 +36,7 @@ const devWorkspaceAPI: DevWorkspaceMainProcessAPI = {
   repositoryMonitoring: repositoryMonitoringAPI,
   userPreferences: userPreferencesAPI,
   repository: repositoryAPI,
+  shell: shellAPI,
 };
 
 // Expose the mainProcess API

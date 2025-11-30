@@ -70,9 +70,18 @@ if (!gotTheLock) {
   console.log('[Main Process] Another instance is already running. Exiting...');
   app.exit(0);
 } else {
-  // Handle when another instance tries to start
-  app.on('second-instance', (_event, _commandLine, _workingDirectory) => {
-    // Someone tried to run a second instance, focus our window instead
+  // Handle when another instance tries to start (also handles deep links on Windows/Linux)
+  app.on('second-instance', (_event, commandLine, _workingDirectory) => {
+    // Check if this was triggered by a deep link
+    const deepLinkUrl = commandLine.find((arg) =>
+      arg.startsWith(`${PROTOCOL_NAME}://`),
+    );
+    if (deepLinkUrl) {
+      handleDeepLink(deepLinkUrl);
+      return;
+    }
+
+    // Otherwise, just focus the existing window
     const windows = Array.from(applicationWindows.values());
     if (windows.length > 0 && windows[0].window) {
       if (windows[0].window.isMinimized()) windows[0].window.restore();
@@ -81,8 +90,71 @@ if (!gotTheLock) {
   });
 }
 
+/**
+ * Handle deep link URLs from principal-ade:// protocol
+ * Format: principal-ade://open-workspace?path=/path/to/repo&name=RepoName
+ * Format: principal-ade://open-workspace?owner=github-owner&repo=repo-name
+ */
+async function handleDeepLink(url: string): Promise<void> {
+  console.log(`[Main] Handling deep link: ${url}`);
+
+  try {
+    const parsedUrl = new URL(url);
+    const command = parsedUrl.hostname;
+
+    if (command === 'open-workspace') {
+      const params = parsedUrl.searchParams;
+      const path = params.get('path');
+      const name = params.get('name');
+      const owner = params.get('owner');
+      const repo = params.get('repo');
+
+      // Import the dev workspace handler dynamically to avoid circular deps
+      const { openDevWorkspaceWindow } = await import(
+        './window/devWorkspaceWindowHandlers'
+      );
+
+      if (path) {
+        // Open local workspace by path
+        console.log(`[Main] Opening dev workspace at path: ${path}`);
+        await openDevWorkspaceWindow({
+          repositoryPath: decodeURIComponent(path),
+          repositoryName: name ? decodeURIComponent(name) : undefined,
+        });
+      } else if (owner && repo) {
+        // TODO: For GitHub repos, we'd need to find the local clone or clone it
+        // For now, just log that this is not yet supported
+        console.log(
+          `[Main] Opening GitHub repo ${owner}/${repo} - need to find local clone`,
+        );
+        // Could add logic to find local clone and open it
+      }
+    } else {
+      console.warn(`[Main] Unknown deep link command: ${command}`);
+    }
+  } catch (error) {
+    console.error('[Main] Failed to handle deep link:', error);
+  }
+}
+
 // Security: Disable remote module
 app.commandLine.appendSwitch('disable-site-isolation-trials');
+
+// Register as the default protocol handler for principal-ade:// URLs
+// This allows web-ade to open the desktop app with deep links
+const PROTOCOL_NAME = 'principal-ade';
+if (process.defaultApp) {
+  // In development, we need to register with the path to electron
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient(PROTOCOL_NAME, process.execPath, [
+      path.resolve(process.argv[1]),
+    ]);
+  }
+} else {
+  // In production, just register the protocol
+  app.setAsDefaultProtocolClient(PROTOCOL_NAME);
+}
+console.log(`[Main] Registered as handler for ${PROTOCOL_NAME}:// URLs`);
 
 // Apply production constraints in development if requested
 if (process.env.NODE_ENV_PACKAGED_SIMULATION === 'true') {
@@ -355,6 +427,14 @@ protocol.registerSchemesAsPrivileged([
     },
   },
 ]);
+
+// Handle deep links on macOS (open-url event)
+// This must be set up before app is ready
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  console.log(`[Main] Received open-url event: ${url}`);
+  handleDeepLink(url);
+});
 
 app
   .whenReady()

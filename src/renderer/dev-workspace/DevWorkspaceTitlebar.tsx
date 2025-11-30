@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layers, Cloud, CloudOff, Terminal } from 'lucide-react';
+import { Layers, Cloud, CloudOff, Terminal, Globe } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { PanelControls } from '@principal-ade/panel-layouts';
 import { BaseTitlebar } from '../components/Titlebar/BaseTitlebar';
@@ -26,6 +26,8 @@ export interface DevWorkspaceTitlebarProps {
   onToggleRightSidebar?: () => void;
   onSwitchLeftMiddlePanels?: () => void;
   onSwitchRightMiddlePanels?: () => void;
+  // Web-ADE integration
+  onOpenInWebADE?: () => void;
 }
 
 export const DevWorkspaceTitlebar: React.FC<
@@ -44,6 +46,7 @@ export const DevWorkspaceTitlebar: React.FC<
   onToggleRightSidebar,
   onSwitchLeftMiddlePanels,
   onSwitchRightMiddlePanels,
+  onOpenInWebADE,
 }) => {
   const { theme } = useTheme();
 
@@ -295,6 +298,43 @@ export const DevWorkspaceTitlebar: React.FC<
             showSwitchRightMiddle={!!onSwitchRightMiddlePanels}
             iconSize={16}
           />
+        )}
+
+        {/* Open in Web-ADE Button */}
+        {onOpenInWebADE && (
+          <button
+            onClick={onOpenInWebADE}
+            title="Open in Web-ADE"
+            style={{
+              // @ts-ignore - WebkitAppRegion is not in CSSProperties
+              WebkitAppRegion: 'no-drag',
+              background: theme.colors.backgroundTertiary,
+              border: `1px solid ${theme.colors.border}`,
+              color: theme.colors.textSecondary,
+              cursor: 'pointer',
+              padding: '6px 12px',
+              borderRadius: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.2s',
+              fontSize: `${theme.fontSizes[1]}px`,
+              fontWeight: theme.fontWeights.medium,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+              e.currentTarget.style.borderColor = theme.colors.primary;
+              e.currentTarget.style.color = theme.colors.text;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+              e.currentTarget.style.borderColor = theme.colors.border;
+              e.currentTarget.style.color = theme.colors.textSecondary;
+            }}
+          >
+            <Globe size={14} />
+            <span>Web</span>
+          </button>
         )}
 
         {/* Terminal Implementation Toggle */}
