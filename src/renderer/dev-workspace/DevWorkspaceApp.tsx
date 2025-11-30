@@ -24,26 +24,36 @@ import { UserPreferencesService } from '../main-process-api/UserPreferencesServi
 import { APP_BRANDING } from '../../shared/config/appBranding';
 
 /**
- * Parse window initialization data from URL hash
- * Format: #init/{encodedJSON}
+ * Alexandria entry data passed from main process
  */
-function useWindowData(): { repositoryPath?: string; repositoryName?: string } | null {
-  const [data, setData] = useState<{ repositoryPath?: string; repositoryName?: string } | null>(null);
+interface AlexandriaEntryData {
+  name: string;
+  path: string;
+  remoteUrl?: string;
+  github?: {
+    owner?: string;
+    description?: string;
+    avatarUrl?: string;
+  };
+}
+
+/**
+ * Parse window initialization data from URL hash
+ * Format: #init/{encodedJSON} where JSON is an AlexandriaEntry
+ */
+function useWindowData(): AlexandriaEntryData | null {
+  const [data, setData] = useState<AlexandriaEntryData | null>(null);
 
   useEffect(() => {
     const hash = window.location.hash;
     if (hash.startsWith('#init/')) {
       try {
         const encodedData = hash.slice(6); // Remove '#init/'
-        const parsed = JSON.parse(decodeURIComponent(encodedData));
+        const parsed = JSON.parse(decodeURIComponent(encodedData)) as AlexandriaEntryData;
         setData(parsed);
       } catch (error) {
         console.error('[DevWorkspaceApp] Failed to parse window data:', error);
-        setData({});
       }
-    } else {
-      // No init data, use defaults
-      setData({});
     }
   }, []);
 
@@ -56,14 +66,13 @@ function useWindowData(): { repositoryPath?: string; repositoryName?: string } |
  * called inside the DevWorkspaceEventProvider.
  */
 interface DevWorkspaceContentProps {
-  repositoryPath: string;
-  repositoryName: string;
+  alexandriaEntry: AlexandriaEntryData;
 }
 
 const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
-  repositoryPath,
-  repositoryName,
+  alexandriaEntry,
 }) => {
+  const { name: repositoryName, path: repositoryPath, remoteUrl, github } = alexandriaEntry;
   const { events } = useDevWorkspaceEvents();
   const [currentBranch, setCurrentBranch] = useState<string | undefined>();
   const [terminalImplementation, setTerminalImplementation] = useState<'industry-themed' | 'ghostty'>('ghostty');
@@ -74,15 +83,16 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     right: '',
   });
 
-  // Create a minimal repository object for the panel framework
+  // Create repository object from Alexandria entry data
   const repository: Repository = useMemo(() => ({
-    owner: 'local',
+    owner: github?.owner || 'local',
     name: repositoryName,
-    remoteUrl: '',
-    vcsType: 'generic' as const,
+    remoteUrl: remoteUrl || '',
+    vcsType: 'git' as const,
+    avatarUrl: github?.avatarUrl,
     localClones: repositoryPath ? [{ path: repositoryPath, addedAt: Date.now() }] : [],
     addedAt: Date.now(),
-  }), [repositoryPath, repositoryName]);
+  }), [repositoryPath, repositoryName, remoteUrl, github]);
 
   // Create file tree source for the titlebar
   const selectedSource: FileTreeSource | null = useMemo(() => {
@@ -90,9 +100,9 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     return {
       id: `local-${repositoryPath}`,
       type: 'local' as const,
-      owner: 'local',
+      owner: github?.owner || 'local',
       name: repositoryName,
-      remoteUrl: '',
+      remoteUrl: remoteUrl || '',
       location: repositoryPath,
       locationType: 'working' as const,
       label: repositoryName,
@@ -101,7 +111,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         currentBranch,
       },
     };
-  }, [repositoryPath, repositoryName, currentBranch]);
+  }, [repositoryPath, repositoryName, remoteUrl, github, currentBranch]);
 
   // Quick command handler for Agent Command Palette
   const handleQuickCommand = useCallback(async (name: string, args: Record<string, unknown>) => {
@@ -299,6 +309,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     <div className="h-screen w-screen overflow-hidden bg-gray-900 flex flex-col">
       <DevWorkspaceTitlebar
         repository={repository}
+        repositoryOwner={github?.owner}
         repositoryName={repositoryName}
         selectedSource={selectedSource}
         terminalImplementation={terminalImplementation}
@@ -337,10 +348,10 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
  * Wraps the content in the event provider so hooks can access the event bus.
  */
 export const DevWorkspaceApp: React.FC = () => {
-  const windowData = useWindowData();
+  const alexandriaEntry = useWindowData();
 
   // Wait for window data to load
-  if (windowData === null) {
+  if (alexandriaEntry === null) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-900 text-white">
         <div className="text-center">
@@ -351,15 +362,9 @@ export const DevWorkspaceApp: React.FC = () => {
     );
   }
 
-  const repositoryPath = windowData?.repositoryPath || process.cwd();
-  const repositoryName = windowData?.repositoryName || 'Dev Workspace';
-
   return (
     <DevWorkspaceEventProvider>
-      <DevWorkspaceContent
-        repositoryPath={repositoryPath}
-        repositoryName={repositoryName}
-      />
+      <DevWorkspaceContent alexandriaEntry={alexandriaEntry} />
     </DevWorkspaceEventProvider>
   );
 };

@@ -11,6 +11,7 @@ import { resolveHtmlPath } from '../util';
 import { createSpecialWindow, applicationWindows, specialWindows } from './modernWindowManager';
 import { PrimaryWindowType, WindowMetadata } from './types';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
 const DEV_WORKSPACE_PURPOSE = 'dev-workspace';
 
@@ -18,10 +19,8 @@ const DEV_WORKSPACE_PURPOSE = 'dev-workspace';
  * Options for opening a dev-workspace window
  */
 export interface DevWorkspaceOptions {
-  /** Path to the repository (for terminal working directory) */
-  repositoryPath?: string;
-  /** Name to display in window title */
-  repositoryName?: string;
+  /** Full Alexandria entry with repository metadata */
+  alexandriaEntry: AlexandriaEntry;
 }
 
 /**
@@ -37,11 +36,10 @@ function getDevWorkspacePreloadPath(): string {
  * Open a dev-workspace window
  */
 export async function openDevWorkspaceWindow(
-  options?: DevWorkspaceOptions,
+  options: DevWorkspaceOptions,
 ): Promise<{ windowId: number } | null> {
-  const windowName = options?.repositoryPath
-    ? `${DEV_WORKSPACE_PURPOSE}-${options.repositoryPath}`
-    : DEV_WORKSPACE_PURPOSE;
+  const { alexandriaEntry } = options;
+  const windowName = `${DEV_WORKSPACE_PURPOSE}-${alexandriaEntry.path}`;
 
   // Check if window already exists
   const existingId = specialWindows.get(windowName);
@@ -65,8 +63,8 @@ export async function openDevWorkspaceWindow(
   // Create metadata
   const metadata: WindowMetadata = {
     primaryType: PrimaryWindowType.DEV_WORKSPACE,
-    displayName: options?.repositoryName || 'Dev Workspace',
-    localPath: options?.repositoryPath,
+    displayName: alexandriaEntry.name,
+    localPath: alexandriaEntry.path,
     purpose: windowName,
   };
 
@@ -78,9 +76,7 @@ export async function openDevWorkspaceWindow(
       height: 800,
       minWidth: 800,
       minHeight: 600,
-      title: options?.repositoryName
-        ? `${options.repositoryName} - Dev Workspace`
-        : 'Dev Workspace',
+      title: `${alexandriaEntry.name} - Dev Workspace`,
       webPreferences: {
         preload: preloadPath,
         contextIsolation: true,
@@ -107,12 +103,8 @@ export async function openDevWorkspaceWindow(
     return null;
   }
 
-  // Load the dev-workspace HTML
-  const payload = {
-    repositoryPath: options?.repositoryPath,
-    repositoryName: options?.repositoryName,
-  };
-  const encodedData = encodeURIComponent(JSON.stringify(payload));
+  // Load the dev-workspace HTML - pass the full Alexandria entry
+  const encodedData = encodeURIComponent(JSON.stringify(alexandriaEntry));
   const url = `${resolveHtmlPath('dev-workspace.html')}#init/${encodedData}`;
 
   console.log(`[DevWorkspaceWindow] Window ${appWindow.window.id} loading: ${url}`);

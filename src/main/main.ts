@@ -115,19 +115,40 @@ async function handleDeepLink(url: string): Promise<void> {
       );
 
       if (path) {
-        // Open local workspace by path
-        console.log(`[Main] Opening dev workspace at path: ${path}`);
-        await openDevWorkspaceWindow({
-          repositoryPath: decodeURIComponent(path),
-          repositoryName: name ? decodeURIComponent(name) : undefined,
-        });
-      } else if (owner && repo) {
-        // TODO: For GitHub repos, we'd need to find the local clone or clone it
-        // For now, just log that this is not yet supported
-        console.log(
-          `[Main] Opening GitHub repo ${owner}/${repo} - need to find local clone`,
+        // Open local workspace by path - look up Alexandria entry first
+        const decodedPath = decodeURIComponent(path);
+        console.log(`[Main] Opening dev workspace at path: ${decodedPath}`);
+
+        // Look up the Alexandria entry for this path
+        const { AlexandriaRegistryService } = await import(
+          './stores/AlexandriaRegistryService'
         );
-        // Could add logic to find local clone and open it
+        const service = AlexandriaRegistryService.getInstance();
+        const alexandriaEntry = await service.getRepositoryByPath(decodedPath);
+
+        if (alexandriaEntry) {
+          await openDevWorkspaceWindow({ alexandriaEntry });
+        } else {
+          console.warn(`[Main] No Alexandria entry found for path: ${decodedPath}`);
+        }
+      } else if (owner && repo) {
+        // Look up Alexandria entry by owner/repo
+        const { AlexandriaRegistryService } = await import(
+          './stores/AlexandriaRegistryService'
+        );
+        const service = AlexandriaRegistryService.getInstance();
+        const repositories = await service.getRepositories();
+        const alexandriaEntry = repositories.find(
+          (r) => r.github?.owner === owner && r.name === repo
+        );
+
+        if (alexandriaEntry) {
+          await openDevWorkspaceWindow({ alexandriaEntry });
+        } else {
+          console.warn(
+            `[Main] No Alexandria entry found for ${owner}/${repo}`,
+          );
+        }
       }
     } else {
       console.warn(`[Main] Unknown deep link command: ${command}`);

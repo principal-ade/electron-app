@@ -1,6 +1,6 @@
 {
   "name": "principal-ade",
-  "version": "0.0.200",
+  "version": "0.0.201",
   "description": "Principal ADE - The future of Agentic Development Environment",
   "type": "module",
   "keywords": [
@@ -180,7 +180,7 @@
     "@principal-ade/industry-themed-monaco-editor": "^0.1.9",
     "@principal-ade/industry-themed-terminal": "^0.1.10",
     "@principal-ade/panel-framework-core": "^0.1.3",
-    "@principal-ade/panel-layouts": "^0.2.5",
+    "@principal-ade/panel-layouts": "^0.2.8",
     "@principal-ade/panels": "^1.0.39",
     "@principal-ai/agent-monitoring": "^0.3.11",
     "@principal-ai/agent-monitoring-ui": "^0.1.6",

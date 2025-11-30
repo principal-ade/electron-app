@@ -217,6 +217,154 @@ electron-app/src/renderer/dev-workspace/
 ├── DevWorkspaceTitlebar.tsx         ← NO CHANGES
 ├── global.d.ts                      ← MODIFY (add AI IPC types - optional)
 └── index.tsx                        ← NO CHANGES
+
+electron-app/src/renderer/main-process-api/
+└── AIService.ts                     ← NEW (service wrapper for AI IPC)
+```
+
+---
+
+## Panel Tool Registration System
+
+### How It Works
+
+Panel tools are UTCP-compatible function definitions that AI agents and command palettes can invoke. The system uses a **registry + event-based** architecture:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                         PANEL TOOL REGISTRATION FLOW                             │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  1. TOOL DEFINITION                                                             │
+│  ─────────────────                                                              │
+│                                                                                 │
+│  layoutTools (from @principal-ade/panel-layouts)                                │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │  {                                                                       │   │
+│  │    name: 'collapse_all_panels',                                          │   │
+│  │    description: 'Collapse both left and right panels',                   │   │
+│  │    inputs: { type: 'object', properties: {}, required: [] },             │   │
+│  │    outputs: { type: 'object', properties: { success: { type: 'bool' } } }│   │
+│  │    tags: ['panel', 'layout', 'collapse', 'focus'],                       │   │
+│  │    tool_call_template: {                                                 │   │
+│  │      call_template_type: 'panel_event',                                  │   │
+│  │      event_type: 'panel:collapse-all'  ← Event to emit when invoked      │   │
+│  │    }                                                                     │   │
+│  │  }                                                                       │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                 │
+│  2. TOOL REGISTRATION                                                           │
+│  ────────────────────                                                           │
+│                                                                                 │
+│  Panel metadata (or layout tools) → PanelToolRegistry.registerPanelTools()     │
+│                                            ↓                                    │
+│                                    Global Tool Registry                         │
+│                                    (singleton instance)                         │
+│                                                                                 │
+│  3. TOOL DISCOVERY (by AI)                                                      │
+│  ─────────────────────────                                                      │
+│                                                                                 │
+│  registry.getToolsAsAIFunctions() → [{ name, description, parameters }, ...]   │
+│                                            ↓                                    │
+│                                    Sent to LLM with user query                  │
+│                                                                                 │
+│  4. TOOL INVOCATION                                                             │
+│  ──────────────────                                                             │
+│                                                                                 │
+│  LLM decides: "collapse_all_panels" matches "hide the sidebars"                │
+│                                            ↓                                    │
+│  registry.invokeTool('collapse_all_panels', {})                                │
+│                                            ↓                                    │
+│  Registry looks up tool_call_template.event_type                               │
+│                                            ↓                                    │
+│  eventEmitter.emit({ type: 'panel:collapse-all', payload: {} })                │
+│                                                                                 │
+│  5. EVENT HANDLING                                                              │
+│  ─────────────────                                                              │
+│                                                                                 │
+│  DevWorkspaceApp listens for 'panel:collapse-all' event                        │
+│                                            ↓                                    │
+│  setCollapsed({ left: true, right: true })                                     │
+│                                            ↓                                    │
+│  UI updates, panels collapse                                                    │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Available Layout Tools
+
+The `layoutTools` array from `@principal-ade/panel-layouts` includes:
+
+| Tool Name | Event Emitted | Description |
+|-----------|---------------|-------------|
+| `toggle_panel` | `panel:toggle` | Collapse/expand a side panel |
+| `collapse_all_panels` | `panel:collapse-all` | Collapse both sidebars |
+| `expand_all_panels` | `panel:expand-all` | Expand both sidebars |
+| `switch_panel` | `panel:switch` | Change panel content in a slot |
+| `focus_panel` | `panel:focus` | Set focus to a panel slot |
+| `reset_layout` | `panel:reset-layout` | Reset to default layout |
+| `get_visible_panels` | `panel:get-visibility` | Query current panel visibility |
+
+### Registering Custom Tools
+
+You can register additional tools from panel packages:
+
+```typescript
+import { getGlobalToolRegistry } from '@principal-ade/panel-framework-core';
+
+useEffect(() => {
+  const registry = getGlobalToolRegistry();
+
+  // Register tools from an external panel package
+  import('@industry-theme/visual-validation-panel').then((mod) => {
+    const panel = mod.VisualValidationPanel;
+    if (panel?.metadata?.tools) {
+      registry.registerPanelTools(panel.metadata);
+      console.log('[DevWorkspace] Registered visual validation tools');
+    }
+  });
+
+  return () => {
+    registry.unregisterPanelTools('visual-validation');
+  };
+}, []);
+```
+
+### Tool Definition Structure (UTCP)
+
+```typescript
+interface PanelTool {
+  name: string;                    // Tool identifier
+  description: string;             // For AI to understand purpose
+  inputs: JsonSchema;              // JSON Schema for parameters
+  outputs: JsonSchema;             // JSON Schema for return value
+  tags: string[];                  // For search/discovery
+  tool_call_template: {
+    call_template_type: 'panel_event';
+    event_type: string;            // Event to emit when invoked
+    target_panel?: string;         // Optional specific panel target
+  };
+}
+```
+
+### Converting Tools for AI Providers
+
+```typescript
+import {
+  layoutTools,
+  toolsToGeminiFormat,
+  toolsToOpenAIFormat,
+  toolsToAnthropicFormat,
+} from '@principal-ade/panel-layouts';
+
+// For Google Gemini
+const geminiTools = toolsToGeminiFormat(layoutTools);
+
+// For OpenAI
+const openAITools = toolsToOpenAIFormat(layoutTools);
+
+// For Anthropic Claude
+const anthropicTools = toolsToAnthropicFormat(layoutTools);
 ```
 
 ---
@@ -369,14 +517,62 @@ const handleQuickCommand = useCallback(async (name: string, args: Record<string,
 
 ### Step 5: Wire Up AI Integration (Natural Language Mode)
 
-For natural language commands, you need an AI provider. There are several options:
+For natural language commands, you need an AI provider. Following the codebase's service wrapper pattern (like `UserPreferencesService`, `RepositoryMonitoringService`), create a dedicated service class.
 
-**Option A: Use IPC to Main Process (Recommended for Electron)**
+**Option A: Create AIService (Recommended - Follows Codebase Pattern)**
 
-Create a bridge to the main process for AI calls:
+First, create the service wrapper:
+
+**New File:** `electron-app/src/renderer/main-process-api/AIService.ts`
+
+```typescript
+import type { PanelTool } from '@principal-ade/panel-framework-core';
+
+export interface AIToolCall {
+  name: string;
+  args: Record<string, unknown>;
+}
+
+export interface AIProcessingResult {
+  toolCalls?: AIToolCall[];
+  message?: string;
+  error?: string;
+}
+
+/**
+ * Service wrapper for AI-related IPC calls.
+ * Follows the same pattern as UserPreferencesService, GitService, etc.
+ */
+export class AIService {
+  /**
+   * Process a natural language query and return tool calls.
+   */
+  static async processNaturalLanguage(
+    query: string,
+    tools: PanelTool[],
+  ): Promise<AIProcessingResult> {
+    try {
+      const result = await window.mainProcess.ai.processNaturalLanguage({
+        query,
+        tools,
+      });
+      return result;
+    } catch (error) {
+      console.error('[AIService] Error processing natural language:', error);
+      return {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+}
+```
+
+Then use it in DevWorkspaceApp:
 
 ```typescript
 // In DevWorkspaceApp.tsx
+import { AIService } from '../main-process-api/AIService';
+
 useEffect(() => {
   if (!events) return;
 
@@ -388,15 +584,18 @@ useEffect(() => {
       return;
     }
 
-    // Natural language mode - send to AI via IPC
+    // Natural language mode - send to AI via service
     try {
       agentPalette.setStatus?.('thinking');
 
-      // Call main process AI service
-      const response = await window.mainProcess.ai.processNaturalLanguage({
-        query,
-        tools: layoutTools,
-      });
+      // Use AIService instead of direct window.mainProcess call
+      const response = await AIService.processNaturalLanguage(query, layoutTools);
+
+      if (response.error) {
+        agentPalette.setStatus?.('error');
+        console.error('[DevWorkspace] AI processing failed:', response.error);
+        return;
+      }
 
       // Execute returned tool calls
       for (const toolCall of response.toolCalls || []) {
@@ -580,6 +779,7 @@ interface DevWorkspaceAPI {
 | `package.json` | Edit | Update `@principal-ade/panel-layouts` to `^0.2.8` |
 | `DevWorkspaceEventContext.tsx` | Create | New event emitter context |
 | `DevWorkspaceApp.tsx` | Edit | Add imports, hook, handlers, and render component |
+| `AIService.ts` | Create | Service wrapper for AI IPC (in `main-process-api/`) |
 | `global.d.ts` | Edit | Add AI IPC type declarations (optional) |
 
 ---

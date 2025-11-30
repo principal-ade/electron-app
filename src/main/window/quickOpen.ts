@@ -313,11 +313,10 @@ export function setupQuickOpenHandlers(): void {
         }
       } else {
         // Open new window
-        if (item.type === 'repository') {
+        if (item.type === 'repository' && item.alexandriaEntry) {
           // Open dev workspace with panel framework
           await openDevWorkspaceWindow({
-            repositoryPath: item.localPath,
-            repositoryName: item.name,
+            alexandriaEntry: item.alexandriaEntry,
           });
           log.info(`[Quick Open] Opening dev workspace for ${item.name}`);
         } else if (item.type === 'workspace') {
