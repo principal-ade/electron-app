@@ -2,8 +2,9 @@ import React, { useState, useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { PanelControls } from '@principal-ade/panel-layouts';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
-import { Plus, Keyboard } from 'lucide-react';
+import { Plus, Keyboard, FilePlus2 } from 'lucide-react';
 import { AddRepositoryToWorkspaceModal } from '../../panels/components/AddRepositoryToWorkspaceModal';
+import { CreateRepositoryInWorkspaceModal } from '../../panels/components/CreateRepositoryInWorkspaceModal';
 import { WorkspaceThemeDropdown } from './WorkspaceThemeDropdown';
 
 export interface AlexandriaWorkspaceTitlebarProps {
@@ -34,6 +35,7 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
 }) => {
   const { theme } = useTheme();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Memoize the repository IDs for the modal
   const currentRepositoryIds = useMemo(() => {
@@ -175,6 +177,42 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
           </button>
         )}
 
+        {/* Create Repository Button - only show if workspace has a clone path */}
+        {workspace.suggestedClonePath && (
+          <button
+            onClick={() => setShowCreateModal(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '4px 10px',
+              borderRadius: '6px',
+              backgroundColor: 'transparent',
+              border: `1px solid ${theme.colors.border}`,
+              color: theme.colors.textSecondary,
+              cursor: 'pointer',
+              fontSize: `${theme.fontSizes[0]}px`,
+              fontWeight: theme.fontWeights.medium,
+              fontFamily: theme.fonts.body,
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = theme.colors.primary;
+              e.currentTarget.style.borderColor = theme.colors.primary;
+              e.currentTarget.style.color = theme.colors.background;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.borderColor = theme.colors.border;
+              e.currentTarget.style.color = theme.colors.textSecondary;
+            }}
+            title="Create new GitHub repository"
+          >
+            <FilePlus2 size={14} />
+            Create
+          </button>
+        )}
+
         {/* Add Repository Button */}
         <button
           onClick={() => setShowAddModal(true)}
@@ -203,7 +241,7 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
             e.currentTarget.style.borderColor = theme.colors.border;
             e.currentTarget.style.color = theme.colors.textSecondary;
           }}
-          title="Add repository to workspace"
+          title="Add existing repository to workspace"
         >
           <Plus size={14} />
           Add
@@ -216,6 +254,13 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
         onClose={() => setShowAddModal(false)}
         workspace={workspace}
         currentRepositoryIds={currentRepositoryIds}
+      />
+
+      {/* Create Repository Modal */}
+      <CreateRepositoryInWorkspaceModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        workspace={workspace}
       />
     </div>
   );

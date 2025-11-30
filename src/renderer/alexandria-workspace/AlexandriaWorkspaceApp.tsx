@@ -90,13 +90,22 @@ const AlexandriaWorkspaceContent: React.FC = () => {
     const unsubscribe = WorkspaceService.onWorkspaceChange((event) => {
       console.info('[AlexandriaWorkspaceApp] Workspace change event received:', event);
 
-      // Only reload workspace metadata for 'updated' events
-      // 'membership-changed' is handled by PanelContext
-      // 'deleted' would close the window anyway
-      // 'added' doesn't apply to this workspace
-      if (event.type === 'updated' && event.workspaceId === workspaceId) {
-        console.info('[AlexandriaWorkspaceApp] Workspace metadata updated, reloading');
-        loadWorkspace();
+      if (event.workspaceId === workspaceId) {
+        if (event.type === 'updated') {
+          // Reload workspace metadata for 'updated' events
+          console.info('[AlexandriaWorkspaceApp] Workspace metadata updated, reloading');
+          loadWorkspace();
+        } else if (event.type === 'membership-changed') {
+          // Reload repositories when membership changes
+          console.info('[AlexandriaWorkspaceApp] Workspace membership changed, reloading repositories');
+          WorkspaceService.getRepositoriesInWorkspace(workspaceId)
+            .then((repos) => {
+              setWorkspaceRepositories(repos);
+            })
+            .catch((err) => {
+              console.error('[AlexandriaWorkspaceApp] Error reloading repositories:', err);
+            });
+        }
       }
     });
 
