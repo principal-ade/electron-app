@@ -105,7 +105,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
     onCollapse: handleCollapse,
   });
 
-  // Listen for repository:selected events
+  // Listen for repository:selected events (for updating context, NOT opening windows)
   useEffect(() => {
     const unsubscribe = events.on('repository:selected', async (event) => {
       const { repository, repositoryPath } = event.payload as {
@@ -127,6 +127,28 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
         };
         console.info('[AlexandriaWorkspaceLayout] Updating selected repository:', selectedRepo);
         onRepositorySelected(selectedRepo);
+      }
+    });
+
+    return unsubscribe;
+  }, [events, onRepositorySelected]);
+
+  // Listen for repository:opened events (for explicitly opening windows)
+  useEffect(() => {
+    const unsubscribe = events.on('repository:opened', async (event) => {
+      const { repository, repositoryPath } = event.payload as {
+        repositoryId: string;
+        repository: AlexandriaEntry;
+        repositoryPath: string;
+      };
+
+      console.info('[AlexandriaWorkspaceLayout] Repository opened event received:', {
+        repository,
+        repositoryPath,
+      });
+
+      if (repository) {
+        const repoPath = repositoryPath || repository.path;
 
         // Open the repository in a new dev workspace window
         if (repoPath) {
@@ -143,7 +165,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
     });
 
     return unsubscribe;
-  }, [events, onRepositorySelected]);
+  }, [events]);
 
   // Listen for file:opened events (from Alexandria docs panel)
   useEffect(() => {
