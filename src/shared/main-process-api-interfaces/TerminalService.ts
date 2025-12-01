@@ -79,7 +79,7 @@ export interface TerminalAPI {
     context?: string,
   ) => Promise<string>;
   write: (sessionId: string, data: string) => Promise<void>;
-  resize: (sessionId: string, cols: number, rows: number) => Promise<void>;
+  resize: (sessionId: string, cols: number, rows: number, force?: boolean) => Promise<void>;
   destroy: (sessionId: string) => Promise<void>;
   list: () => Promise<Array<TerminalInfo>>;
   popOut: (sessionId: string) => Promise<{ windowId: number }>;

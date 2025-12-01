@@ -3,6 +3,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import type { PanelLayout } from '@principal-ade/panel-layouts';
 import type { Workspace, AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
+import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { AlexandriaWorkspaceTitlebar } from '../components/Titlebar';
 import { AlexandriaWorkspaceLayout } from './AlexandriaWorkspaceLayout';
 import { CustomThemeProvider } from '../providers/CustomThemeProvider';
@@ -87,7 +88,7 @@ const AlexandriaWorkspaceContent: React.FC = () => {
     loadWorkspace();
 
     // Subscribe to workspace changes
-    const unsubscribe = WorkspaceService.onWorkspaceChange((event) => {
+    const unsubscribeWorkspace = WorkspaceService.onWorkspaceChange((event) => {
       console.info('[AlexandriaWorkspaceApp] Workspace change event received:', event);
 
       if (event.workspaceId === workspaceId) {
@@ -109,8 +110,38 @@ const AlexandriaWorkspaceContent: React.FC = () => {
       }
     });
 
+    // Subscribe to Alexandria repository changes to handle stale references
+    // This catches cases where a repository is moved/updated from another workspace window
+    const unsubscribeAlexandria = AlexandriaService.onRepositoryChange((event) => {
+      if (event.type === 'updated' && event.repository) {
+        // Check if this repository is in our workspace and update it if so
+        setWorkspaceRepositories((prevRepos) => {
+          const repoIndex = prevRepos.findIndex(
+            (r) => r.name === event.repository?.name || r.github?.id === event.repository?.github?.id
+          );
+          if (repoIndex !== -1) {
+            console.info('[AlexandriaWorkspaceApp] Repository updated, refreshing local state:', event.repository?.name);
+            const newRepos = [...prevRepos];
+            newRepos[repoIndex] = event.repository as AlexandriaEntry;
+            return newRepos;
+          }
+          return prevRepos;
+        });
+      } else if (event.type === 'removed' && event.name) {
+        // Remove the repository from our local state if it was deleted
+        setWorkspaceRepositories((prevRepos) => {
+          const filtered = prevRepos.filter((r) => r.name !== event.name);
+          if (filtered.length !== prevRepos.length) {
+            console.info('[AlexandriaWorkspaceApp] Repository removed, updating local state:', event.name);
+          }
+          return filtered;
+        });
+      }
+    });
+
     return () => {
-      unsubscribe();
+      unsubscribeWorkspace();
+      unsubscribeAlexandria();
     };
   }, []);
 

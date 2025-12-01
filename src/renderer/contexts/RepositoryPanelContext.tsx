@@ -29,7 +29,8 @@ interface RepositoryPanelActions extends PanelActions {
   resizeTerminal?: (
     sessionId: string,
     cols: number,
-    rows: number
+    rows: number,
+    force?: boolean
   ) => Promise<void>;
   destroyTerminalSession?: (sessionId: string) => Promise<void>;
   readFile?: (filePath: string) => Promise<string>;
@@ -246,8 +247,8 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
         await TerminalService.write(sessionId, data);
       },
 
-      resizeTerminal: async (sessionId: string, cols: number, rows: number) => {
-        await TerminalService.resize(sessionId, cols, rows);
+      resizeTerminal: async (sessionId: string, cols: number, rows: number, force?: boolean) => {
+        await TerminalService.resize(sessionId, cols, rows, force);
       },
 
       destroyTerminalSession: async (sessionId: string) => {

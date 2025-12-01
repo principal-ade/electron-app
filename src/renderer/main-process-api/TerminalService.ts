@@ -63,8 +63,8 @@ export class TerminalService {
     return window.mainProcess.terminal.getOpenWindows();
   }
 
-  static async resize(id: string, cols: number, rows: number): Promise<void> {
-    return window.mainProcess.terminal.resize(id, cols, rows);
+  static async resize(id: string, cols: number, rows: number, force?: boolean): Promise<void> {
+    return window.mainProcess.terminal.resize(id, cols, rows, force);
   }
 
   static async refresh(id: string): Promise<boolean> {

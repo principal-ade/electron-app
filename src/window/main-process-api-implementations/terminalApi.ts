@@ -62,8 +62,9 @@ export const terminalAPI: TerminalAPI = {
     sessionId: string,
     cols: number,
     rows: number,
+    force?: boolean,
   ): Promise<void> => {
-    return ipcRenderer.invoke(TerminalAPIEvents.RESIZE, sessionId, cols, rows);
+    return ipcRenderer.invoke(TerminalAPIEvents.RESIZE, sessionId, cols, rows, force);
   },
 
   destroy: async (sessionId: string): Promise<void> => {

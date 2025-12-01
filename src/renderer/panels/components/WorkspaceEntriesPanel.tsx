@@ -5,6 +5,7 @@ import type { Workspace, AlexandriaEntry } from '@principal-ai/alexandria-core-l
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { WindowService } from '../../main-process-api/WindowService';
 import { FileSystemService } from '../../main-process-api/FileSystemService';
+import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { LocalProjectCard } from './LocalProjectCard';
 import { AddProjectsPanel } from './AddProjectsPanel';
 
@@ -69,13 +70,40 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
     loadWorkspaceRepos();
 
     // Subscribe to workspace changes
-    const unsubscribe = WorkspaceService.onWorkspaceChange((event) => {
+    const unsubscribeWorkspace = WorkspaceService.onWorkspaceChange((event) => {
       if (event.type === 'membership-changed' && event.workspaceId === selectedWorkspace.id) {
         loadWorkspaceRepos();
       }
     });
 
-    return unsubscribe;
+    // Subscribe to Alexandria repository changes to handle stale references
+    // This catches cases where a repository is moved/updated from another workspace window
+    const unsubscribeAlexandria = AlexandriaService.onRepositoryChange((event) => {
+      if (event.type === 'updated' && event.repository) {
+        // Check if this repository is in our workspace and update it if so
+        setWorkspaceRepositories((prevRepos) => {
+          const repoIndex = prevRepos.findIndex(
+            (r) => r.name === event.repository?.name || r.github?.id === event.repository?.github?.id
+          );
+          if (repoIndex !== -1) {
+            const newRepos = [...prevRepos];
+            newRepos[repoIndex] = event.repository as AlexandriaEntry;
+            return newRepos;
+          }
+          return prevRepos;
+        });
+      } else if (event.type === 'removed' && event.name) {
+        // Remove the repository from our local state if it was deleted
+        setWorkspaceRepositories((prevRepos) =>
+          prevRepos.filter((r) => r.name !== event.name)
+        );
+      }
+    });
+
+    return () => {
+      unsubscribeWorkspace();
+      unsubscribeAlexandria();
+    };
   }, [selectedWorkspace]);
 
   // Home directory click handler - opens native picker and saves immediately

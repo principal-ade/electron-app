@@ -17,8 +17,8 @@ export function setupCommandHandlers(
   // Resize terminal
   ipcMain.handle(
     TerminalAPIEvents.RESIZE,
-    async (event: IpcMainInvokeEvent, sessionId: string, cols: number, rows: number) => {
-      sessionManager.resizeSession(sessionId, cols, rows);
+    async (event: IpcMainInvokeEvent, sessionId: string, cols: number, rows: number, force?: boolean) => {
+      sessionManager.resizeSession(sessionId, cols, rows, force ?? false);
     },
   );
 

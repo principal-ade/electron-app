@@ -347,10 +347,17 @@ export class TerminalSessionManager {
   }
 
   // Resize a session
-  resizeSession(sessionId: string, cols: number, rows: number): void {
+  resizeSession(sessionId: string, cols: number, rows: number, force: boolean = false): void {
     const session = this.sessions.get(sessionId);
     if (session) {
-      session.pty.resize(cols, rows);
+      if (force) {
+        // Force SIGWINCH by temporarily changing dimensions
+        // This ensures the shell redraws even if dimensions match
+        session.pty.resize(cols + 1, rows);
+        session.pty.resize(cols, rows);
+      } else {
+        session.pty.resize(cols, rows);
+      }
     }
   }
 
