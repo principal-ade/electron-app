@@ -46,9 +46,6 @@ export enum WindowType {
   SESSION_DETAILS = 'session-details',
   MULTI_FILE_EDITOR = 'multi-file-editor',
 
-  // Tool windows - minimal features
-  TERMINAL = 'terminal',
-
   // Utility windows - bare minimum
   STORE_VIEWER = 'store-viewer',
 }
@@ -116,15 +113,6 @@ export const WINDOW_TYPE_CONFIGS: Record<WindowType, WindowFeatures> = {
     singleton: true,
     persistState: true,
     errorHandlers: true,
-  },
-
-  // Tool windows
-  [WindowType.TERMINAL]: {
-    menu: false,
-    devTools: true,
-    contentSecurityPolicy: true,
-    singleton: false, // Multiple terminals allowed
-    persistState: false,
   },
 
   // Utility windows

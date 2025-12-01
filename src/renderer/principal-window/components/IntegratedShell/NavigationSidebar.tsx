@@ -1,7 +1,6 @@
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   Github,
-  Terminal,
   Search,
   Settings,
   Activity,
@@ -34,7 +33,6 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   const [showReposButton, setShowReposButton] = useState(false);
   const [showMonitorButton, setShowMonitorButton] = useState(false);
   const [showSearchButton, setShowSearchButton] = useState(false);
-  const [showTerminalButton, setShowTerminalButton] = useState(false);
 
   useEffect(() => {
     // Load user preferences for showing buttons
@@ -42,7 +40,6 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
       setShowReposButton(prefs.showReposButton ?? false);
       setShowMonitorButton(prefs.showMonitorButton ?? false);
       setShowSearchButton(prefs.showSearchButton ?? false);
-      setShowTerminalButton(prefs.showTerminalButton ?? false);
     });
 
     // Listen for preference changes
@@ -57,9 +54,6 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         }
         if ('showSearchButton' in detail) {
           setShowSearchButton(detail.showSearchButton ?? false);
-        }
-        if ('showTerminalButton' in detail) {
-          setShowTerminalButton(detail.showTerminalButton ?? false);
         }
       }
     };
@@ -133,16 +127,6 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
             id: 'repository' as NavigationView,
             icon: <Github size={20} />,
             label: 'Repos',
-          },
-        ]
-      : []),
-    // Only include terminal button if user has enabled it in preferences
-    ...(showTerminalButton
-      ? [
-          {
-            id: 'terminal' as NavigationView,
-            icon: <Terminal size={20} />,
-            label: 'Term',
           },
         ]
       : []),

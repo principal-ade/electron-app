@@ -4,7 +4,6 @@ import { IntegratedTitlebar } from './IntegratedTitlebar';
 import { useTheme } from '@principal-ade/industry-theme';
 import { MarkdownSearch } from '../../views/MarkdownSearch';
 import { Settings } from '../../views/Settings';
-import { TerminalManager } from '../../views/TerminalManager';
 import { SystemMonitor } from '../../views/SystemMonitor/SystemMonitor';
 import { AuthView } from '../../views/AuthView';
 import { FeedView } from '../../views/FeedView';
@@ -17,12 +16,8 @@ import './IntegratedShell.css';
 export type NavigationView = InteractiveShellNavigationView;
 
 // Helper to map view to panel layout key
-const getViewKey = (
-  view: NavigationView,
-): 'terminalManager' | 'authView' | null => {
+const getViewKey = (view: NavigationView): 'authView' | null => {
   switch (view) {
-    case 'terminal':
-      return 'terminalManager';
     case 'auth':
       return 'authView';
     default:
@@ -35,8 +30,6 @@ const getViewDefaults = (
   view: NavigationView,
 ): { left: boolean; right: boolean } => {
   switch (view) {
-    case 'terminal':
-      return { left: false, right: false }; // No right panel for terminal
     case 'auth':
       return { left: false, right: false }; // No right panel for auth
     default:
@@ -53,7 +46,6 @@ export const IntegratedShell: React.FC = () => {
   const [viewCollapsedStates, setViewCollapsedStates] = useState<
     Record<string, { left: boolean; right: boolean }>
   >({
-    terminal: { left: false, right: false },
     auth: { left: false, right: false },
     monitoring: { left: false, right: false },
     search: { left: false, right: false },
@@ -80,7 +72,7 @@ export const IntegratedShell: React.FC = () => {
         const newViewStates = { ...viewCollapsedStates };
 
         // Load each view's collapsed state
-        const views: NavigationView[] = ['terminal', 'auth'];
+        const views: NavigationView[] = ['auth'];
         for (const view of views) {
           const viewKey = getViewKey(view);
           const defaults = getViewDefaults(view);
@@ -263,7 +255,7 @@ export const IntegratedShell: React.FC = () => {
 
       <div className="main-content">
         <IntegratedTitlebar
-          showSidebarControl={activeView === 'terminal'}
+          showSidebarControl={false}
           sidebarCollapsed={sidebarCollapsed}
           onToggleSidebar={handleToggleSidebar}
           showRightSidebarControl={false}
@@ -309,9 +301,6 @@ export const IntegratedShell: React.FC = () => {
             }}
           >
             {/* Views will be rendered here based on activeView */}
-            {activeView === 'terminal' && (
-              <TerminalManager sidebarCollapsed={sidebarCollapsed} />
-            )}
             {activeView === 'search' && <MarkdownSearch />}
             {activeView === 'monitoring' && (
               <SystemMonitor sidebarCollapsed={sidebarCollapsed} />

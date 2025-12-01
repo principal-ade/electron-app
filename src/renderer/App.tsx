@@ -1,5 +1,4 @@
 import React, { Suspense } from 'react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
 
 import { useTheme } from '@principal-ade/industry-theme';
 
@@ -41,11 +40,6 @@ declare global {
 
 // Lazy load all page components
 // LandingPage removed - functionality migrated to RepositoryExplorer in principal-window
-const StandaloneTerminal = React.lazy(() =>
-  import('./pages/StandaloneTerminal').then((m) => ({
-    default: m.StandaloneTerminal,
-  })),
-);
 const StoreViewer = React.lazy(() =>
   import('./pages/StoreViewer').then((m) => ({ default: m.StoreViewer })),
 );
@@ -76,7 +70,6 @@ function AppContent({
   const { theme } = useTheme();
 
   const [currentView, setCurrentView] = React.useState<
-    | 'terminal'
     | 'storeViewer'
     | 'markdownView'
     | 'repositoryMaps'
@@ -105,10 +98,7 @@ function AppContent({
     const checkHash = () => {
       const { hash } = window.location;
 
-      if (hash.startsWith('#/terminal/')) {
-        // This is a terminal route, render the standalone terminal
-        setCurrentView('terminal' as unknown as typeof currentView);
-      } else if (hash.startsWith('#markdown-view')) {
+      if (hash.startsWith('#markdown-view')) {
         // Markdown view route
         if (hash.includes('/')) {
           try {
@@ -218,22 +208,6 @@ function AppContent({
       <div>Loading...</div>
     </div>
   );
-
-  if (currentView === 'terminal') {
-    // For terminal view, use hash-based routing
-    return (
-      <Suspense fallback={<LoadingFallback />}>
-        <MemoryRouter initialEntries={[window.location.hash.substring(1)]}>
-          <Routes>
-            <Route
-              path="/terminal/:sessionId"
-              element={<StandaloneTerminal />}
-            />
-          </Routes>
-        </MemoryRouter>
-      </Suspense>
-    );
-  }
 
   if (currentView === 'markdownView') {
     // Get project name from parent App component

@@ -154,14 +154,6 @@ export const repositoryPanelCatalog = [
     surfaces: ['manager', 'agent'] as const,
   },
   {
-    id: 'multiTerminal',
-    label: 'Multi Terminal',
-    description:
-      'Flexible terminal panel that can switch between tabbed and carousel layouts.',
-    slices: [] as const,
-    surfaces: ['manager'] as const,
-  },
-  {
     id: 'codeViewer',
     label: 'Code Viewer',
     description: 'View source code files with syntax highlighting.',

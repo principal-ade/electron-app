@@ -27,7 +27,6 @@ import {
   Pencil,
   Play,
   Search,
-  Terminal as TerminalIcon,
   Users,
   Wrench,
 } from 'lucide-react';
@@ -51,7 +50,6 @@ import { AgentContextTreePanelPreview } from './components/AgentContextTreePanel
 import { TasksPanelPreview } from './components/TasksPanel';
 import { MCPTasksPanelPreview } from './components/MCPTasksPanel';
 import { CityVisualizationPanelPreview } from './components/CityVisualizationPanel';
-import { TabbedTerminalPanelPreview } from './components/TabbedTerminalPanel';
 import { FilePreviewPanelPreview } from './components/FilePreviewPanel';
 import { MarkdownRenderingPanelPreview } from './components/MarkdownRenderingPanel';
 import { AlexandriaDrawingPanelPreview } from './components/AlexandriaDrawingPanel';
@@ -170,13 +168,6 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
   cityVisualization: {
     icon: <Building2 size={16} />,
     preview: <CityVisualizationPanelPreview />,
-  },
-  multiTerminal: {
-    icon: <TerminalIcon size={16} />,
-    preview: <TabbedTerminalPanelPreview />,
-    label: 'Multi Terminal',
-    description:
-      'Flexible terminal panel that can switch between tabbed and carousel layouts.',
   },
   codeViewer: {
     icon: <FileCode size={16} />,

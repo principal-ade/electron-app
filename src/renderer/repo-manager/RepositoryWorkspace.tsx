@@ -96,7 +96,6 @@ import { DrawingsListPanel } from '../panels/components/DrawingsListPanel';
 import { QualityHexagonPanel } from '../panels/components/QualityHexagonPanel';
 import { CityMapManager } from './shared/CityMapManager';
 import { AlexandriaDocsPanel } from './shared/AlexandriaDocsPanel';
-import { MultiTerminalPanel } from '../panels/components/MultiTerminalPanel';
 import { MDXEditorPanel } from '../panels/components/MDXEditorPanel';
 import { LocalhostBrowserPanel } from '../panels/components/LocalhostBrowserPanel';
 import { panelPreviewRegistry } from '../panels/panelPreviews';
@@ -183,16 +182,13 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       },
       right: {
         type: 'tabs',
-        panels: ['multiTerminal', 'cityVisualization'],
+        panels: ['cityVisualization'],
         config: {
           defaultActiveTab: 0,
           tabPosition: 'top',
         },
       },
     });
-
-    // Terminal panel state
-    const [showAllTerminals, setShowAllTerminals] = useState(false);
 
     // Workspace layout state
     const [availableWorkspaces, setAvailableWorkspaces] = useState<
@@ -2699,74 +2695,13 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
 
                 const propsPanelLayout = panelLayout || {
                   left: 'left',
-                  middle: 'tabbedTerminal',
+                  middle: 'codeViewer',
                   right: 'middle',
                 };
-
-                // Multi Terminal panel (combines tabbed and carousel with toggle button)
-                const isMultiTerminalVisible =
-                  propsPanelLayout.middle === 'multiTerminal' ||
-                  propsPanelLayout.left === 'multiTerminal' ||
-                  propsPanelLayout.right === 'multiTerminal';
-                const multiTerminalPanel =
-                  selectedSource?.type === 'local' ? (
-                    <div
-                      style={{
-                        height: '100%',
-                        width: '100%',
-                        display: 'flex',
-                        flexDirection: 'column',
-                      }}
-                    >
-                      <MultiTerminalPanel
-                        directory={selectedSource.location}
-                        repositoryKey={repositoryKey}
-                        isVisible={isMultiTerminalVisible}
-                        hideHeader={false}
-                        key={`multi-terminal-${selectedSource.location}`}
-                        showAllTerminals={showAllTerminals}
-                        onShowAllTerminalsChange={setShowAllTerminals}
-                      />
-                    </div>
-                  ) : (
-                    <div
-                      style={{
-                        height: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexDirection: 'column',
-                        backgroundColor: theme.colors.backgroundSecondary,
-                        color: theme.colors.textSecondary,
-                        padding: '20px',
-                        textAlign: 'center',
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: theme.fontSizes[3],
-                          fontWeight: theme.fontWeights.semibold,
-                          marginBottom: '8px',
-                          color: theme.colors.text,
-                        }}
-                      >
-                        Terminal Unavailable
-                      </div>
-                      <div style={{ fontSize: theme.fontSizes[2] }}>
-                        Terminal is only available for local repository clones
-                      </div>
-                    </div>
-                  );
 
                 // Create all panel definitions
                 const allPanels: PanelDefinitionWithContent[] = [
                   ...leftPanelTabs,
-                  {
-                    id: 'multiTerminal',
-                    label: 'Multi Terminal',
-                    content: multiTerminalPanel,
-                    icon: panelPreviewRegistry.multiTerminal?.icon,
-                  },
                   {
                     id: 'cityVisualization',
                     label: 'City Visualization',
@@ -2831,7 +2766,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                   },
                   right: {
                     type: 'tabs',
-                    panels: ['multiTerminal', 'cityVisualization'],
+                    panels: ['cityVisualization'],
                     config: {
                       defaultActiveTab: 0,
                       tabPosition: 'top',

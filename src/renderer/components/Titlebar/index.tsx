@@ -24,9 +24,6 @@ export type { MarkdownViewerTitlebarProps } from './MarkdownViewerTitlebar';
 export { CallimachusTitlebar } from './CallimachusTitlebar';
 export type { CallimachusTitlebarProps } from './CallimachusTitlebar';
 
-export { TerminalTitlebar } from './TerminalTitlebar';
-export type { TerminalTitlebarProps } from './TerminalTitlebar';
-
 export { AlexandriaWorkspaceTitlebar } from './AlexandriaWorkspaceTitlebar';
 export type { AlexandriaWorkspaceTitlebarProps } from './AlexandriaWorkspaceTitlebar';
 
