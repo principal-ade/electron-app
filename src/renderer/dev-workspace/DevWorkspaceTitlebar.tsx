@@ -18,7 +18,7 @@ export interface DevWorkspaceTitlebarProps {
   // UI Mode toggle
   onSwitchToClassic?: () => void;
   // Terminal implementation toggle
-  terminalImplementation?: 'industry-themed' | 'ghostty';
+  terminalImplementation?: 'xterm' | 'ghostty';
   onToggleTerminalImplementation?: () => void;
   // Panel controls
   collapsed?: { left: boolean; right: boolean };
@@ -341,7 +341,7 @@ export const DevWorkspaceTitlebar: React.FC<
         {onToggleTerminalImplementation && (
           <button
             onClick={onToggleTerminalImplementation}
-            title={`Switch to ${terminalImplementation === 'ghostty' ? 'Industry-Themed' : 'Ghostty'} terminal`}
+            title={`Switch to ${terminalImplementation === 'ghostty' ? 'XTerm' : 'Ghostty'} terminal`}
             style={{
               // @ts-ignore - WebkitAppRegion is not in CSSProperties
               WebkitAppRegion: 'no-drag',
@@ -370,19 +370,19 @@ export const DevWorkspaceTitlebar: React.FC<
             }}
           >
             <Terminal size={14} />
-            <span>{terminalImplementation === 'ghostty' ? 'Ghostty' : 'Industry'}</span>
+            <span>{terminalImplementation === 'ghostty' ? 'Ghostty' : 'XTerm'}</span>
           </button>
         )}
         {onSwitchToClassic && (
           <button
             onClick={onSwitchToClassic}
-            title="Switch to Classic mode"
+            title="Open Legacy View"
             style={{
               // @ts-ignore - WebkitAppRegion is not in CSSProperties
               WebkitAppRegion: 'no-drag',
               background: theme.colors.backgroundTertiary,
-              border: `1px solid ${theme.colors.primary}`,
-              color: theme.colors.primary,
+              border: `1px solid ${theme.colors.border}`,
+              color: theme.colors.textSecondary,
               cursor: 'pointer',
               padding: '6px 12px',
               borderRadius: '6px',
@@ -394,17 +394,19 @@ export const DevWorkspaceTitlebar: React.FC<
               fontWeight: theme.fontWeights.medium,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.primary;
-              e.currentTarget.style.color = theme.colors.background;
+              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+              e.currentTarget.style.borderColor = theme.colors.primary;
+              e.currentTarget.style.color = theme.colors.text;
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor =
                 theme.colors.backgroundTertiary;
-              e.currentTarget.style.color = theme.colors.primary;
+              e.currentTarget.style.borderColor = theme.colors.border;
+              e.currentTarget.style.color = theme.colors.textSecondary;
             }}
           >
             <Layers size={14} />
-            <span>Panel Framework</span>
+            <span>Legacy</span>
           </button>
         )}
       </div>

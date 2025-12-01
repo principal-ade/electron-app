@@ -12,6 +12,7 @@ import { createSpecialWindow, applicationWindows, specialWindows } from './moder
 import { PrimaryWindowType, WindowMetadata } from './types';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import { broadcastRepositoryWindowsChanged } from './modernWindowHandlers';
 
 const DEV_WORKSPACE_PURPOSE = 'dev-workspace';
 
@@ -60,11 +61,12 @@ export async function openDevWorkspaceWindow(
   const preloadPath = getDevWorkspacePreloadPath();
   console.log(`[DevWorkspaceWindow] Using preload: ${preloadPath}`);
 
-  // Create metadata
+  // Create metadata (include remoteUrl for window state tracking)
   const metadata: WindowMetadata = {
     primaryType: PrimaryWindowType.DEV_WORKSPACE,
     displayName: alexandriaEntry.name,
     localPath: alexandriaEntry.path,
+    remoteUrl: alexandriaEntry.remoteUrl,
     purpose: windowName,
   };
 
@@ -109,6 +111,19 @@ export async function openDevWorkspaceWindow(
 
   console.log(`[DevWorkspaceWindow] Window ${appWindow.window.id} loading: ${url}`);
   appWindow.window.loadURL(url);
+
+  // Broadcast window state change (opening)
+  broadcastRepositoryWindowsChanged();
+
+  // Broadcast when window becomes visible (ready)
+  appWindow.window.once('show', () => {
+    broadcastRepositoryWindowsChanged();
+  });
+
+  // Broadcast when window closes
+  appWindow.window.once('closed', () => {
+    broadcastRepositoryWindowsChanged();
+  });
 
   return { windowId: appWindow.window.id };
 }

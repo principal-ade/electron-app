@@ -80,12 +80,14 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
     e.stopPropagation();
 
     if (localRepo) {
-      // Repository exists locally - open dashboard
+      // Repository exists locally - open dev workspace
       setWindowState('opening');
       try {
-        await WindowService.openRepositoryDashboard(localRepo.repository);
+        await WindowService.openDevWorkspace({
+          alexandriaEntry: localRepo.repository,
+        });
       } catch (error) {
-        console.error('Error opening repository dashboard:', error);
+        console.error('Error opening dev workspace:', error);
         setWindowState('closed');
       }
     } else {
@@ -103,9 +105,11 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
     // Automatically open the newly cloned repository
     // Note: The localRepo will be updated automatically via useAllRepositories cache subscription
     try {
-      await WindowService.openRepositoryDashboard(repo);
+      await WindowService.openDevWorkspace({
+        alexandriaEntry: repo,
+      });
     } catch (error) {
-      console.error('Error opening cloned repository dashboard:', error);
+      console.error('Error opening cloned repository dev workspace:', error);
     }
   };
 
@@ -192,7 +196,10 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
         remoteUrl = `https://github.com/${owner}/${repoName}`;
       }
 
-      const repoWindow = repoWindows.find((w) => w.remoteUrl === remoteUrl);
+      // Find this repository's window in the list (match by localPath first, then remoteUrl)
+      const repoWindow = repoWindows.find(
+        (w) => w.localPath === entry.path || w.remoteUrl === remoteUrl
+      );
       setWindowState(repoWindow ? repoWindow.state : 'closed');
     });
   }, [localRepo]);

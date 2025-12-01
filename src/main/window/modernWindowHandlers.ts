@@ -22,11 +22,14 @@ import { repositoryMetadataService } from '../services/RepositoryMetadataService
  */
 export interface RepositoryWindowState {
   remoteUrl: string;
+  /** Local path for dev-workspace windows */
+  localPath?: string;
   state: 'opening' | 'ready';
 }
 
 /**
  * Get list of open repository windows with their states
+ * Includes both legacy repo-manager windows and new dev-workspace windows
  */
 function getOpenRepositoryWindows(): RepositoryWindowState[] {
   const {
@@ -39,15 +42,26 @@ function getOpenRepositoryWindows(): RepositoryWindowState[] {
   const repoWindows: RepositoryWindowState[] = [];
 
   for (const [windowName, windowId] of specialWindows.entries()) {
+    const appWindow = applicationWindows.get(windowId);
+    if (!appWindow || appWindow.window.isDestroyed()) {
+      continue;
+    }
+
+    // Check if window is ready (has been shown)
+    const state = appWindow.window.isVisible() ? 'ready' : 'opening';
+
+    // Legacy repo-manager windows (repository-maps-{remoteUrl})
     if (windowName.startsWith('repository-maps-')) {
-      const appWindow = applicationWindows.get(windowId);
-      if (appWindow && !appWindow.window.isDestroyed()) {
-        // Extract the remoteUrl from the window name
-        const remoteUrl = windowName.replace('repository-maps-', '');
-        // Check if window is ready (has been shown)
-        const state = appWindow.window.isVisible() ? 'ready' : 'opening';
-        repoWindows.push({ remoteUrl, state });
-      }
+      const remoteUrl = windowName.replace('repository-maps-', '');
+      repoWindows.push({ remoteUrl, state });
+    }
+    // Dev-workspace windows (dev-workspace-{localPath})
+    else if (windowName.startsWith('dev-workspace-')) {
+      const localPath = windowName.replace('dev-workspace-', '');
+      // Get remoteUrl from window metadata if available
+      const metadata = appWindow.metadata;
+      const remoteUrl = metadata?.remoteUrl || '';
+      repoWindows.push({ remoteUrl, localPath, state });
     }
   }
 

@@ -332,12 +332,14 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
     };
   }, [events]);
 
-  // Listen for repository:opened events and open repository window
+  // Listen for repository:opened events and open dev workspace window
   useEffect(() => {
     const unsubscribe = events.on('repository:opened', (event) => {
       const { repository } = event.payload as { repositoryId: string; repository: AlexandriaEntry };
       if (repository) {
-        WindowService.openRepositoryDashboard(repository);
+        WindowService.openDevWorkspace({
+          alexandriaEntry: repository,
+        });
       }
     });
 

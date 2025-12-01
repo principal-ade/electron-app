@@ -528,9 +528,9 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
       }
 
       if (repository) {
-        await WindowService.openRepositoryDashboard(
-          repository as unknown as AlexandriaEntry,
-        );
+        await WindowService.openDevWorkspace({
+          alexandriaEntry: repository as unknown as AlexandriaEntry,
+        });
       } else {
         window.alert(
           'Could not find a repository associated with this directory. Make sure this is a git repository with a remote configured.',

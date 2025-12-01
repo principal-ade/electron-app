@@ -127,8 +127,10 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
         remoteUrl = `https://github.com/${owner}/${repoName}`;
       }
 
-      // Find this repository's window in the list
-      const repoWindow = repoWindows.find((w) => w.remoteUrl === remoteUrl);
+      // Find this repository's window in the list (match by localPath first, then remoteUrl)
+      const repoWindow = repoWindows.find(
+        (w) => w.localPath === entry.path || w.remoteUrl === remoteUrl
+      );
       setWindowState(repoWindow ? repoWindow.state : 'closed');
     });
   }, [entry]);
@@ -168,9 +170,11 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
     e.stopPropagation();
     setWindowState('opening');
     try {
-      await WindowService.openRepositoryDashboard(entry);
+      await WindowService.openDevWorkspace({
+        alexandriaEntry: entry,
+      });
     } catch (error) {
-      console.error('Error opening repository dashboard:', error);
+      console.error('Error opening dev workspace:', error);
       setWindowState('closed');
     }
   };

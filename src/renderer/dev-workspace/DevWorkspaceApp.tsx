@@ -75,7 +75,8 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   const { name: repositoryName, path: repositoryPath, remoteUrl, github } = alexandriaEntry;
   const { events } = useDevWorkspaceEvents();
   const [currentBranch, setCurrentBranch] = useState<string | undefined>();
-  const [terminalImplementation, setTerminalImplementation] = useState<'industry-themed' | 'ghostty'>('ghostty');
+  const [terminalImplementation, setTerminalImplementation] = useState<'xterm' | 'ghostty'>('xterm');
+  const [showTerminalToggle, setShowTerminalToggle] = useState(false);
   const [collapsed, setCollapsed] = useState({ left: false, right: true });
   const [layout, setLayout] = useState<PanelLayout>({
     left: 'visualValidation',
@@ -231,9 +232,11 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     const loadPreference = async () => {
       try {
         const prefs = await UserPreferencesService.getPreferences();
-        if (prefs.terminalImplementation === 'industry-themed' || prefs.terminalImplementation === 'ghostty') {
+        if (prefs.terminalImplementation === 'xterm' || prefs.terminalImplementation === 'ghostty') {
           setTerminalImplementation(prefs.terminalImplementation);
         }
+        // Load the toggle visibility preference (default: false)
+        setShowTerminalToggle(prefs.showTerminalImplementationToggle ?? false);
       } catch (error) {
         console.error('[DevWorkspaceApp] Failed to load terminal preference:', error);
       }
@@ -242,8 +245,11 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
 
     // Subscribe to preference updates so UI stays in sync
     const unsubscribe = UserPreferencesService.onPreferencesUpdated((prefs) => {
-      if (prefs.terminalImplementation === 'industry-themed' || prefs.terminalImplementation === 'ghostty') {
+      if (prefs.terminalImplementation === 'xterm' || prefs.terminalImplementation === 'ghostty') {
         setTerminalImplementation(prefs.terminalImplementation);
+      }
+      if (prefs.showTerminalImplementationToggle !== undefined) {
+        setShowTerminalToggle(prefs.showTerminalImplementationToggle);
       }
     });
 
@@ -251,7 +257,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   }, []);
 
   const handleToggleTerminalImplementation = async () => {
-    const newImpl = terminalImplementation === 'ghostty' ? 'industry-themed' : 'ghostty';
+    const newImpl = terminalImplementation === 'ghostty' ? 'xterm' : 'ghostty';
     setTerminalImplementation(newImpl);
     try {
       await UserPreferencesService.updatePreferences({ terminalImplementation: newImpl });
@@ -305,6 +311,26 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     }
   }, [githubInfo]);
 
+  // Open legacy repo-manager window
+  const handleSwitchToClassic = useCallback(async () => {
+    try {
+      // Build AlexandriaEntry-like object from our data
+      const entry = {
+        name: repositoryName,
+        path: repositoryPath,
+        remoteUrl: remoteUrl || '',
+        github: github ? {
+          owner: github.owner,
+          description: github.description,
+          avatarUrl: github.avatarUrl,
+        } : undefined,
+      };
+      await window.mainProcess.window.openRepositoryDashboard(entry);
+    } catch (error) {
+      console.error('[DevWorkspaceApp] Failed to open legacy repo-manager:', error);
+    }
+  }, [repositoryName, repositoryPath, remoteUrl, github]);
+
   return (
     <div className="h-screen w-screen overflow-hidden bg-gray-900 flex flex-col">
       <DevWorkspaceTitlebar
@@ -313,13 +339,14 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         repositoryName={repositoryName}
         selectedSource={selectedSource}
         terminalImplementation={terminalImplementation}
-        onToggleTerminalImplementation={handleToggleTerminalImplementation}
+        onToggleTerminalImplementation={showTerminalToggle ? handleToggleTerminalImplementation : undefined}
         collapsed={collapsed}
         onToggleLeftSidebar={() => setCollapsed(prev => ({ ...prev, left: !prev.left }))}
         onToggleRightSidebar={() => setCollapsed(prev => ({ ...prev, right: !prev.right }))}
         onSwitchLeftMiddlePanels={handleSwitchLeftMiddle}
         onSwitchRightMiddlePanels={handleSwitchRightMiddle}
         onOpenInWebADE={githubInfo ? handleOpenInWebADE : undefined}
+        onSwitchToClassic={handleSwitchToClassic}
       />
       <div className="flex-1 overflow-hidden">
         <DevWorkspacePanelFramework

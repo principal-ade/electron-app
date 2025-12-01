@@ -209,7 +209,7 @@ export class WindowService {
 
   /**
    * Open a dev workspace window with the panel framework
-   * @param options - Repository path and name
+   * @param options - Options containing the Alexandria entry for the repository
    * @returns Window ID if successful, null otherwise
    */
   static async openDevWorkspace(

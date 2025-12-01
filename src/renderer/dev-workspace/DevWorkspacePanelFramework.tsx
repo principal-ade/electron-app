@@ -6,7 +6,7 @@ import {
 } from '@principal-ade/panel-layouts';
 import '@industry-theme/visual-validation-panel/dist/panels.bundle.css';
 import { RepositoryPanelProvider, useRepositoryPanelProvider } from '../contexts/RepositoryPanelContext';
-import { TabbedTerminalPanel } from '@industry-theme/terminal-panel';
+import { TabbedTerminalPanel } from '@industry-theme/xterm-terminal-panel';
 import { TabbedGhosttyTerminal } from '@industry-theme/ghostty-terminal-panel';
 import { panels as visualValidationPanels } from '@industry-theme/visual-validation-panel';
 import type { Repository } from '../../shared/types/repository.types';
@@ -52,14 +52,14 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
   const { theme } = useTheme();
   const { context, actions, events } = useRepositoryPanelProvider();
 
-  // Load terminal implementation preference (default to ghostty for testing)
-  const [terminalImplementation, setTerminalImplementation] = useState<'industry-themed' | 'ghostty'>('ghostty');
+  // Load terminal implementation preference (default to xterm)
+  const [terminalImplementation, setTerminalImplementation] = useState<'xterm' | 'ghostty'>('xterm');
 
   useEffect(() => {
     const loadPreference = async () => {
       const prefs = await UserPreferencesService.getPreferences();
-      // Default to 'ghostty' if not set
-      setTerminalImplementation(prefs.terminalImplementation ?? 'ghostty');
+      // Default to 'xterm' if not set
+      setTerminalImplementation(prefs.terminalImplementation ?? 'xterm');
     };
     loadPreference();
 

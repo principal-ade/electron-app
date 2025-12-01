@@ -12,6 +12,7 @@
  * - userPreferences: User settings and preferences
  * - repository: Repository management and avatar loading
  * - shell: Shell operations (opening external URLs, etc.)
+ * - window: Window management (opening repo-manager, etc.)
  */
 
 import type { TerminalAPI } from './TerminalService';
@@ -20,6 +21,7 @@ import type { RepositoryMonitoringAPI } from './RepositoryMonitoringAPI';
 import type { UserPreferencesAPI } from './UserPreferencesAPI';
 import type { RepositoryAPI } from './RepositoryAPI';
 import type { ShellAPI } from './ShellAPI';
+import type { WindowAPI } from './WindowAPI';
 
 export interface DevWorkspaceMainProcessAPI {
   terminal: TerminalAPI;
@@ -28,6 +30,7 @@ export interface DevWorkspaceMainProcessAPI {
   userPreferences: UserPreferencesAPI;
   repository: RepositoryAPI;
   shell: ShellAPI;
+  window: WindowAPI;
 }
 
 // Re-export the individual API types for convenience
@@ -37,3 +40,4 @@ export type { RepositoryMonitoringAPI } from './RepositoryMonitoringAPI';
 export type { UserPreferencesAPI } from './UserPreferencesAPI';
 export type { RepositoryAPI } from './RepositoryAPI';
 export type { ShellAPI } from './ShellAPI';
+export type { WindowAPI } from './WindowAPI';

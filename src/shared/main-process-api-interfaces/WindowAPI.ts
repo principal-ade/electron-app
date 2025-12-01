@@ -10,6 +10,8 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
  */
 export interface RepositoryWindowState {
   remoteUrl: string;
+  /** Local path for dev-workspace windows */
+  localPath?: string;
   state: 'opening' | 'ready';
 }
 
@@ -22,10 +24,8 @@ export interface StoreViewerOptions {
  * Options for opening a dev workspace window
  */
 export interface DevWorkspaceOptions {
-  /** Path to the repository (for terminal working directory) */
-  repositoryPath: string;
-  /** Name to display in window title */
-  repositoryName: string;
+  /** Full Alexandria entry with repository metadata */
+  alexandriaEntry: AlexandriaEntry;
 }
 
 /**

@@ -17,7 +17,7 @@ export interface RepositoryTitlebarSimpleProps {
   // UI Mode toggle
   onSwitchToClassic?: () => void;
   // Terminal implementation toggle
-  terminalImplementation?: 'industry-themed' | 'ghostty';
+  terminalImplementation?: 'xterm' | 'ghostty';
   onToggleTerminalImplementation?: () => void;
 }
 
@@ -270,7 +270,7 @@ export const RepositoryTitlebarSimple: React.FC<
         {onToggleTerminalImplementation && (
           <button
             onClick={onToggleTerminalImplementation}
-            title={`Switch to ${terminalImplementation === 'ghostty' ? 'Industry-Themed' : 'Ghostty'} terminal`}
+            title={`Switch to ${terminalImplementation === 'ghostty' ? 'XTerm' : 'Ghostty'} terminal`}
             style={{
               // @ts-ignore - WebkitAppRegion is not in CSSProperties
               WebkitAppRegion: 'no-drag',
@@ -299,7 +299,7 @@ export const RepositoryTitlebarSimple: React.FC<
             }}
           >
             <Terminal size={14} />
-            <span>{terminalImplementation === 'ghostty' ? 'Ghostty' : 'Industry'}</span>
+            <span>{terminalImplementation === 'ghostty' ? 'Ghostty' : 'XTerm'}</span>
           </button>
         )}
         {onSwitchToClassic && (

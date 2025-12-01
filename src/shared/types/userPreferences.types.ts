@@ -75,7 +75,9 @@ export interface UserPreferences {
   /** Default terminal for opening shells */
   defaultTerminal?: TerminalId;
   /** Terminal implementation for panel framework mode */
-  terminalImplementation?: 'industry-themed' | 'ghostty'; // default: 'ghostty'
+  terminalImplementation?: 'xterm' | 'ghostty'; // default: 'xterm'
+  /** Show the terminal implementation toggle button in dev-workspace titlebar (default: false) */
+  showTerminalImplementationToggle?: boolean;
 
   // Repository management
   /** Base default directory - the top-level directory for all Principal work */

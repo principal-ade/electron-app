@@ -40,11 +40,13 @@ export const GitHubStarredRepositoryCard: React.FC<
     e.stopPropagation();
 
     if (localRepo) {
-      // Repository exists locally - open dashboard
+      // Repository exists locally - open dev workspace
       try {
-        await WindowService.openRepositoryDashboard(localRepo.repository);
+        await WindowService.openDevWorkspace({
+          alexandriaEntry: localRepo.repository,
+        });
       } catch (error) {
-        console.error('Error opening repository dashboard:', error);
+        console.error('Error opening dev workspace:', error);
       }
     } else {
       // Repository not cloned - trigger clone
@@ -61,9 +63,11 @@ export const GitHubStarredRepositoryCard: React.FC<
     // Automatically open the newly cloned repository
     // Note: The localRepo will be updated automatically via useAllRepositories cache subscription
     try {
-      await WindowService.openRepositoryDashboard(repo);
+      await WindowService.openDevWorkspace({
+        alexandriaEntry: repo,
+      });
     } catch (error) {
-      console.error('Error opening cloned repository dashboard:', error);
+      console.error('Error opening cloned repository dev workspace:', error);
     }
   };
 

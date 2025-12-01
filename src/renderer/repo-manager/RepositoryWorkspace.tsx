@@ -123,7 +123,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     const { registerLayer, unregisterLayer } = useHighlightLayers();
 
     // Terminal implementation state
-    const [terminalImplementation, setTerminalImplementation] = useState<'industry-themed' | 'ghostty'>('ghostty');
+    const [terminalImplementation, setTerminalImplementation] = useState<'xterm' | 'ghostty'>('xterm');
 
     // Get repository identifier (owner/name or just name if no owner)
     const repoIdentifier = repository.owner
@@ -134,14 +134,14 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     useEffect(() => {
       const loadPreferences = async () => {
         const prefs = await UserPreferencesService.getPreferences();
-        setTerminalImplementation(prefs?.terminalImplementation ?? 'ghostty');
+        setTerminalImplementation(prefs?.terminalImplementation ?? 'xterm');
       };
       loadPreferences();
     }, [repoIdentifier]);
 
     // Handle terminal implementation toggle
     const handleToggleTerminalImplementation = async () => {
-      const newImplementation = terminalImplementation === 'ghostty' ? 'industry-themed' : 'ghostty';
+      const newImplementation = terminalImplementation === 'ghostty' ? 'xterm' : 'ghostty';
       await UserPreferencesService.updatePreferences({
         terminalImplementation: newImplementation,
       });
