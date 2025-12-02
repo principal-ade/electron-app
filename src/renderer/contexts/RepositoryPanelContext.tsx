@@ -20,6 +20,7 @@ import { TerminalService } from '../main-process-api/TerminalService';
 import type { TerminalInfo, TerminalOwnershipStatus, TerminalOwnershipResult, RequestDataPortResult, PortReadyData } from '../../shared/main-process-api-interfaces/TerminalService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { FileSystemService } from '../main-process-api/FileSystemService';
+import { WindowService } from '../main-process-api/WindowService';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 
 // Extend PanelActions with terminal-specific and file system actions
@@ -35,6 +36,7 @@ interface RepositoryPanelActions extends PanelActions {
   destroyTerminalSession?: (sessionId: string) => Promise<void>;
   readFile?: (filePath: string) => Promise<string>;
   writeFile?: (filePath: string, content: string) => Promise<void>;
+  openFile?: (filePath: string) => Promise<void>;
   // Terminal ownership actions
   checkTerminalOwnership?: (sessionId: string) => Promise<TerminalOwnershipStatus>;
   claimTerminalOwnership?: (sessionId: string, force?: boolean) => Promise<TerminalOwnershipResult>;
@@ -286,6 +288,23 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
         }
       },
 
+      openFile: async (filePath: string) => {
+        try {
+          // Check if it's a markdown file
+          if (filePath.toLowerCase().endsWith('.md')) {
+            await WindowService.openMarkdownViewFromRepository(filePath, repositoryPath, {
+              viewMode: 'single',
+            });
+          } else {
+            // For non-markdown files, could open in editor or emit event
+            console.log('[RepositoryPanelProvider] openFile called for non-markdown:', filePath);
+          }
+        } catch (error) {
+          console.error('[RepositoryPanelProvider] Failed to open file:', filePath, error);
+          throw error;
+        }
+      },
+
       // Terminal ownership actions
       checkTerminalOwnership: async (sessionId: string) => {
         return TerminalService.checkOwnership(sessionId);
@@ -340,6 +359,22 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
     [repositoryPath, terminalContext, events],
   );
 
+  // Extract markdown files from file tree
+  const markdownFiles = useMemo(() => {
+    if (!fileTreeData?.allFiles) return [];
+
+    return fileTreeData.allFiles
+      .filter((file) => {
+        const name = file.name || file.path.split('/').pop() || '';
+        return name.toLowerCase().endsWith('.md');
+      })
+      .map((file) => ({
+        path: file.path,
+        title: (file.name || file.path.split('/').pop() || '').replace(/\.md$/i, ''),
+        lastModified: file.mtime ? new Date(file.mtime).getTime() : undefined,
+      }));
+  }, [fileTreeData]);
+
   // Create data slices
   const slices = useMemo<Map<string, DataSlice>>(
     () =>
@@ -368,8 +403,33 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
             },
           },
         ],
+        [
+          'markdown',
+          {
+            scope: 'repository' as const,
+            name: 'markdown',
+            data: markdownFiles,
+            loading: fileTreeLoading,
+            error: null,
+            refresh: async () => {
+              // Markdown slice refreshes when fileTree refreshes
+              if (repositoryPath) {
+                setFileTreeLoading(true);
+                try {
+                  const tree = await RepositoryMonitoringService.getFileTree(repositoryPath);
+                  setFileTreeData(tree);
+                } catch (error) {
+                  console.error('[RepositoryPanelProvider] Failed to refresh file tree:', error);
+                  setFileTreeData(null);
+                } finally {
+                  setFileTreeLoading(false);
+                }
+              }
+            },
+          },
+        ],
       ]),
-    [repositoryPath, fileTreeData, fileTreeLoading],
+    [repositoryPath, fileTreeData, fileTreeLoading, markdownFiles],
   );
 
   // Create context value
