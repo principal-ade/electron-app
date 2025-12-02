@@ -214,7 +214,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
  */
 // Default layout configuration
 const DEFAULT_LAYOUT: PanelLayout = {
-  left: 'visualValidation',
+  left: 'docs',
   middle: 'terminal',
   right: 'codeCity',
 };

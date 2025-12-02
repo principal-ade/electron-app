@@ -1,5 +1,5 @@
-import React from 'react';
-import { Layers, Cloud, CloudOff, Terminal, Globe } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Layers, Cloud, CloudOff, Terminal, Globe, Settings, Check } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { PanelControls } from '@principal-ade/panel-layouts';
 import { BaseTitlebar } from '../components/Titlebar/BaseTitlebar';
@@ -8,6 +8,45 @@ import { RepositoryAvatar } from '../components/repository-maps/RepositoryAvatar
 import type { Repository } from '../../shared/types/repository.types';
 import type { FileTreeSource } from '../types/file-tree-source';
 import { useRepositoryGitStatus } from '../hooks/useRepositoryGitStatus';
+
+// Panel configuration presets
+export interface PanelPreset {
+  id: string;
+  name: string;
+  description?: string;
+  layout: {
+    left: string;
+    middle: string;
+    right: string;
+  };
+}
+
+export const DEFAULT_PANEL_PRESETS: PanelPreset[] = [
+  {
+    id: 'default',
+    name: 'Default',
+    description: 'Documentation, Terminal, Code City',
+    layout: { left: 'docs', middle: 'terminal', right: 'codeCity' },
+  },
+  {
+    id: 'visual-validation',
+    name: 'Visual Validation',
+    description: 'Visual Validation, Terminal, Code City',
+    layout: { left: 'visualValidation', middle: 'terminal', right: 'codeCity' },
+  },
+  {
+    id: 'docs-focused',
+    name: 'Documentation Focus',
+    description: 'Documentation, Terminal, Documentation',
+    layout: { left: 'docs', middle: 'terminal', right: 'docs' },
+  },
+  {
+    id: 'terminal-focused',
+    name: 'Terminal Focus',
+    description: 'Code City, Terminal, Visual Validation',
+    layout: { left: 'codeCity', middle: 'terminal', right: 'visualValidation' },
+  },
+];
 
 export interface DevWorkspaceTitlebarProps {
   repository?: Repository;
@@ -28,6 +67,9 @@ export interface DevWorkspaceTitlebarProps {
   onSwitchRightMiddlePanels?: () => void;
   // Web-ADE integration
   onOpenInWebADE?: () => void;
+  // Panel configuration
+  currentLayout?: { left: string; middle: string; right: string };
+  onLayoutChange?: (layout: { left: string; middle: string; right: string }) => void;
 }
 
 export const DevWorkspaceTitlebar: React.FC<
@@ -47,8 +89,43 @@ export const DevWorkspaceTitlebar: React.FC<
   onSwitchLeftMiddlePanels,
   onSwitchRightMiddlePanels,
   onOpenInWebADE,
+  currentLayout,
+  onLayoutChange,
 }) => {
   const { theme } = useTheme();
+  const [showConfigDropdown, setShowConfigDropdown] = useState(false);
+  const configButtonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node) &&
+        configButtonRef.current &&
+        !configButtonRef.current.contains(event.target as Node)
+      ) {
+        setShowConfigDropdown(false);
+      }
+    };
+
+    if (showConfigDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showConfigDropdown]);
+
+  // Check if current layout matches a preset
+  const currentPresetId = DEFAULT_PANEL_PRESETS.find(
+    (preset) =>
+      currentLayout &&
+      preset.layout.left === currentLayout.left &&
+      preset.layout.middle === currentLayout.middle &&
+      preset.layout.right === currentLayout.right
+  )?.id;
 
   // Get local clone path for git status
   const localClonePath =
@@ -81,6 +158,146 @@ export const DevWorkspaceTitlebar: React.FC<
 
   return (
     <BaseTitlebar confirmBeforeClose={true}>
+      {/* Left: Configuration button */}
+      {onLayoutChange && (
+        <div
+          style={{
+            position: 'absolute',
+            left: '80px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            // @ts-ignore - WebkitAppRegion is not in CSSProperties
+            WebkitAppRegion: 'no-drag',
+          }}
+        >
+          <div style={{ position: 'relative' }}>
+            <button
+              ref={configButtonRef}
+              onClick={() => setShowConfigDropdown(!showConfigDropdown)}
+              title="Panel Configuration"
+              style={{
+                // @ts-ignore - WebkitAppRegion is not in CSSProperties
+                WebkitAppRegion: 'no-drag',
+                background: showConfigDropdown ? theme.colors.backgroundSecondary : theme.colors.backgroundTertiary,
+                border: `1px solid ${showConfigDropdown ? theme.colors.primary : theme.colors.border}`,
+                color: showConfigDropdown ? theme.colors.text : theme.colors.textSecondary,
+                cursor: 'pointer',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s',
+                fontSize: `${theme.fontSizes[1]}px`,
+                fontWeight: theme.fontWeights.medium,
+              }}
+              onMouseEnter={(e) => {
+                if (!showConfigDropdown) {
+                  e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                  e.currentTarget.style.borderColor = theme.colors.primary;
+                  e.currentTarget.style.color = theme.colors.text;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!showConfigDropdown) {
+                  e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                  e.currentTarget.style.borderColor = theme.colors.border;
+                  e.currentTarget.style.color = theme.colors.textSecondary;
+                }
+              }}
+            >
+              <Settings size={14} />
+              <span>Layout</span>
+            </button>
+
+            {/* Configuration Dropdown */}
+            {showConfigDropdown && (
+              <div
+                ref={dropdownRef}
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  marginTop: '4px',
+                  backgroundColor: theme.colors.background,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                  minWidth: '220px',
+                  zIndex: 1000,
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    padding: '8px 12px',
+                    borderBottom: `1px solid ${theme.colors.border}`,
+                    fontSize: `${theme.fontSizes[0]}px`,
+                    color: theme.colors.textSecondary,
+                    fontWeight: theme.fontWeights.semibold,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                  }}
+                >
+                  Panel Presets
+                </div>
+                {DEFAULT_PANEL_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    onClick={() => {
+                      onLayoutChange(preset.layout);
+                      setShowConfigDropdown(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '8px',
+                      color: theme.colors.text,
+                      fontSize: `${theme.fontSizes[1]}px`,
+                      textAlign: 'left',
+                      transition: 'background-color 0.15s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: theme.fontWeights.medium }}>
+                        {preset.name}
+                      </div>
+                      {preset.description && (
+                        <div
+                          style={{
+                            fontSize: `${theme.fontSizes[0]}px`,
+                            color: theme.colors.textSecondary,
+                            marginTop: '2px',
+                          }}
+                        >
+                          {preset.description}
+                        </div>
+                      )}
+                    </div>
+                    {currentPresetId === preset.id && (
+                      <Check size={16} style={{ color: theme.colors.success, flexShrink: 0 }} />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Center: Repository info */}
       <div
         style={{

@@ -79,7 +79,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   const [showTerminalToggle, setShowTerminalToggle] = useState(false);
   const [collapsed, setCollapsed] = useState({ left: false, right: false });
   const [layout, setLayout] = useState<PanelLayout>({
-    left: 'visualValidation',
+    left: 'docs',
     middle: 'terminal',
     right: 'codeCity',
   });
@@ -188,7 +188,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         }
       }),
       events.on('panel:reset-layout', () => {
-        setLayout({ left: 'visualValidation', middle: 'terminal', right: 'codeCity' });
+        setLayout({ left: 'docs', middle: 'terminal', right: 'codeCity' });
         setCollapsed({ left: false, right: false });
       }),
     ];
@@ -347,6 +347,8 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         onSwitchRightMiddlePanels={handleSwitchRightMiddle}
         onOpenInWebADE={githubInfo ? handleOpenInWebADE : undefined}
         onSwitchToClassic={handleSwitchToClassic}
+        currentLayout={layout as { left: string; middle: string; right: string }}
+        onLayoutChange={(newLayout) => setLayout(newLayout)}
       />
       <div className="flex-1 overflow-hidden">
         <DevWorkspacePanelFramework
