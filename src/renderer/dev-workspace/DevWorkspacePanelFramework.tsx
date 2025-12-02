@@ -11,6 +11,7 @@ import { TabbedTerminalPanel } from '@industry-theme/xterm-terminal-panel';
 import { TabbedGhosttyTerminal } from '@industry-theme/ghostty-terminal-panel';
 import { panels as visualValidationPanels } from '@industry-theme/visual-validation-panel';
 import { panels as codeCityPanels } from '@industry-theme/code-city-panel';
+import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import type { Repository } from '../../shared/types/repository.types';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 
@@ -81,6 +82,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
 
   const VisualValidationPanelComponent = visualValidationPanels[0]?.component;
   const CodeCityPanelComponent = codeCityPanels[0]?.component;
+  const DocsPanelComponent = docsPanels[0]?.component;
 
   // Define all panels using panel framework components
   const allPanels = useMemo(
@@ -150,8 +152,30 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
           <div>Code City panel not available</div>
         ),
       },
+      {
+        id: 'docs',
+        label: 'Documentation',
+        content: DocsPanelComponent ? (
+          <div style={{
+            height: '100%',
+            width: '100%',
+            overflow: 'hidden',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <DocsPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div>Documentation panel not available</div>
+        ),
+      },
     ],
-    [VisualValidationPanelComponent, CodeCityPanelComponent, context, actions, events, terminalImplementation, terminalContext, terminalDirectory],
+    [VisualValidationPanelComponent, CodeCityPanelComponent, DocsPanelComponent, context, actions, events, terminalImplementation, terminalContext, terminalDirectory],
   );
 
   return (
