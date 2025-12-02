@@ -479,6 +479,14 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
   private setupContentSecurityPolicy(): void {
     this.window.webContents.session.webRequest.onHeadersReceived(
       (details, callback) => {
+        // Don't override CSP for localhost URLs (e.g., webview content like Storybook)
+        // Let those servers control their own CSP
+        const url = new URL(details.url);
+        if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+          callback({ responseHeaders: details.responseHeaders });
+          return;
+        }
+
         callback({
           responseHeaders: {
             ...details.responseHeaders,
@@ -496,6 +504,7 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
               "object-src 'none';",
               "base-uri 'self';",
               "form-action 'self';",
+              "frame-src http://localhost:* https://localhost:*;",
               "frame-ancestors 'none';",
               'upgrade-insecure-requests;',
             ]

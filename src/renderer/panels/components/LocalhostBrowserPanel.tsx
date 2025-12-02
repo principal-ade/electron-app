@@ -595,7 +595,8 @@ export const LocalhostBrowserPanel: React.FC<LocalhostBrowserPanelProps> = ({
             border: 'none',
           }}
           // @ts-ignore - webview attributes not in types
-          allowpopups
+          allowpopups="true"
+          webpreferences="contextIsolation=no, nodeIntegration=no, webSecurity=no"
           useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
         />
       </div>
