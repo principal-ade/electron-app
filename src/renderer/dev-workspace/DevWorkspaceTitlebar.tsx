@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Layers, Cloud, CloudOff, Terminal, Globe, Settings, Check } from 'lucide-react';
+import { Layers, Cloud, CloudOff, Terminal, Globe, Settings, Check, Eye, EyeOff, RefreshCw, Loader2, Copy, FolderCheck } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { PanelControls } from '@principal-ade/panel-layouts';
 import { BaseTitlebar } from '../components/Titlebar/BaseTitlebar';
@@ -70,6 +70,16 @@ export interface DevWorkspaceTitlebarProps {
   // Panel configuration
   currentLayout?: { left: string; middle: string; right: string };
   onLayoutChange?: (layout: { left: string; middle: string; right: string }) => void;
+  // Monitoring status
+  monitoringStatus?: {
+    registered: boolean;
+    gitWatching: boolean;
+    loading: boolean;
+    error?: string;
+  };
+  onRefreshMonitoring?: () => void;
+  // Repository path for copy
+  repositoryPath?: string;
 }
 
 export const DevWorkspaceTitlebar: React.FC<
@@ -91,11 +101,27 @@ export const DevWorkspaceTitlebar: React.FC<
   onOpenInWebADE,
   currentLayout,
   onLayoutChange,
+  monitoringStatus,
+  onRefreshMonitoring,
+  repositoryPath,
 }) => {
   const { theme } = useTheme();
   const [showConfigDropdown, setShowConfigDropdown] = useState(false);
+  const [copiedPath, setCopiedPath] = useState(false);
   const configButtonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Handle copy repository path
+  const handleCopyPath = async () => {
+    if (!repositoryPath) return;
+    try {
+      await navigator.clipboard.writeText(repositoryPath);
+      setCopiedPath(true);
+      setTimeout(() => setCopiedPath(false), 2000);
+    } catch (error) {
+      console.error('[DevWorkspaceTitlebar] Failed to copy path:', error);
+    }
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -295,6 +321,108 @@ export const DevWorkspaceTitlebar: React.FC<
               </div>
             )}
           </div>
+
+          {/* Monitoring Status Button */}
+          {monitoringStatus && (
+            <button
+              onClick={onRefreshMonitoring}
+              disabled={monitoringStatus.loading}
+              title={
+                monitoringStatus.loading
+                  ? 'Initializing monitoring...'
+                  : monitoringStatus.registered && monitoringStatus.gitWatching
+                    ? 'Monitoring active - Click to refresh'
+                    : monitoringStatus.error
+                      ? `Monitoring error: ${monitoringStatus.error} - Click to retry`
+                      : 'Monitoring inactive - Click to retry'
+              }
+              style={{
+                // @ts-ignore - WebkitAppRegion is not in CSSProperties
+                WebkitAppRegion: 'no-drag',
+                background: theme.colors.backgroundTertiary,
+                border: `1px solid ${theme.colors.border}`,
+                color: theme.colors.textSecondary,
+                cursor: monitoringStatus.loading ? 'not-allowed' : 'pointer',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s',
+                fontSize: `${theme.fontSizes[1]}px`,
+                fontWeight: theme.fontWeights.medium,
+                opacity: monitoringStatus.loading ? 0.7 : 1,
+              }}
+              onMouseEnter={(e) => {
+                if (!monitoringStatus.loading) {
+                  e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                  e.currentTarget.style.borderColor = theme.colors.primary;
+                  e.currentTarget.style.color = theme.colors.text;
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                e.currentTarget.style.borderColor = theme.colors.border;
+                e.currentTarget.style.color = theme.colors.textSecondary;
+              }}
+            >
+              {monitoringStatus.loading ? (
+                <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+              ) : monitoringStatus.registered && monitoringStatus.gitWatching ? (
+                <Eye size={14} style={{ color: theme.colors.success }} />
+              ) : (
+                <EyeOff size={14} style={{ color: theme.colors.warning }} />
+              )}
+              <span>
+                {monitoringStatus.loading
+                  ? 'Starting...'
+                  : monitoringStatus.registered && monitoringStatus.gitWatching
+                    ? 'Watching'
+                    : 'Inactive'}
+              </span>
+            </button>
+          )}
+
+          {/* Copy Path Button */}
+          {repositoryPath && (
+            <button
+              onClick={handleCopyPath}
+              title={copiedPath ? 'Copied!' : `Copy path: ${repositoryPath}`}
+              style={{
+                // @ts-ignore - WebkitAppRegion is not in CSSProperties
+                WebkitAppRegion: 'no-drag',
+                background: copiedPath ? theme.colors.success : theme.colors.backgroundTertiary,
+                border: `1px solid ${copiedPath ? theme.colors.success : theme.colors.border}`,
+                color: copiedPath ? theme.colors.background : theme.colors.textSecondary,
+                cursor: 'pointer',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s',
+                fontSize: `${theme.fontSizes[1]}px`,
+                fontWeight: theme.fontWeights.medium,
+              }}
+              onMouseEnter={(e) => {
+                if (!copiedPath) {
+                  e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                  e.currentTarget.style.borderColor = theme.colors.primary;
+                  e.currentTarget.style.color = theme.colors.text;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!copiedPath) {
+                  e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                  e.currentTarget.style.borderColor = theme.colors.border;
+                  e.currentTarget.style.color = theme.colors.textSecondary;
+                }
+              }}
+            >
+              {copiedPath ? <Check size={14} /> : <Copy size={14} />}
+              <span>{copiedPath ? 'Copied' : 'Path'}</span>
+            </button>
+          )}
         </div>
       )}
 

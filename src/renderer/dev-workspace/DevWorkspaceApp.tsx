@@ -198,6 +198,83 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     };
   }, [events]);
 
+  // Monitoring status state
+  const [monitoringStatus, setMonitoringStatus] = useState<{
+    registered: boolean;
+    gitWatching: boolean;
+    loading: boolean;
+    error?: string;
+  }>({ registered: false, gitWatching: false, loading: true });
+
+  // Initialize repository monitoring on mount
+  useEffect(() => {
+    if (!repositoryPath) return;
+
+    const initializeMonitoring = async () => {
+      setMonitoringStatus(prev => ({ ...prev, loading: true, error: undefined }));
+
+      try {
+        // Start monitoring service if not already started
+        console.log('[DevWorkspaceApp] Starting monitoring service...');
+        await RepositoryMonitoringService.startMonitoring();
+        console.log('[DevWorkspaceApp] Monitoring service started');
+
+        // Register repository with monitoring service
+        console.log('[DevWorkspaceApp] Registering repository:', repositoryPath);
+        await RepositoryMonitoringService.registerRepository(repositoryPath);
+        console.log('[DevWorkspaceApp] Repository registered successfully');
+
+        // Enable git watching for the repository
+        console.log('[DevWorkspaceApp] Enabling git watching:', repositoryPath);
+        const result = await RepositoryMonitoringService.enableGitWatching(repositoryPath);
+
+        if (result.success) {
+          console.log('[DevWorkspaceApp] Git watching enabled successfully');
+          setMonitoringStatus({ registered: true, gitWatching: true, loading: false });
+        } else {
+          console.warn('[DevWorkspaceApp] Failed to enable git watching:', result.error);
+          setMonitoringStatus({ registered: true, gitWatching: false, loading: false, error: result.error });
+        }
+      } catch (error) {
+        console.error('[DevWorkspaceApp] Failed to initialize monitoring:', error);
+        setMonitoringStatus({
+          registered: false,
+          gitWatching: false,
+          loading: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    };
+
+    initializeMonitoring();
+  }, [repositoryPath]);
+
+  // Refresh monitoring status
+  const refreshMonitoringStatus = useCallback(async () => {
+    if (!repositoryPath) return;
+
+    setMonitoringStatus(prev => ({ ...prev, loading: true }));
+
+    try {
+      // Re-register and re-enable watching
+      await RepositoryMonitoringService.registerRepository(repositoryPath);
+      const result = await RepositoryMonitoringService.enableGitWatching(repositoryPath);
+
+      setMonitoringStatus({
+        registered: true,
+        gitWatching: result.success,
+        loading: false,
+        error: result.success ? undefined : result.error,
+      });
+    } catch (error) {
+      setMonitoringStatus(prev => ({
+        ...prev,
+        loading: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }));
+    }
+  }, [repositoryPath]);
+
   // Load current branch on mount
   useEffect(() => {
     if (!repositoryPath) return;
@@ -349,6 +426,9 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         onSwitchToClassic={handleSwitchToClassic}
         currentLayout={layout as { left: string; middle: string; right: string }}
         onLayoutChange={(newLayout) => setLayout(newLayout)}
+        monitoringStatus={monitoringStatus}
+        onRefreshMonitoring={refreshMonitoringStatus}
+        repositoryPath={repositoryPath}
       />
       <div className="flex-1 overflow-hidden">
         <DevWorkspacePanelFramework
