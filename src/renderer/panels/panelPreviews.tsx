@@ -2,7 +2,6 @@ import React from 'react';
 import {
   Activity,
   AlertCircle,
-  Book,
   BrainCircuit,
   CheckSquare,
   Edit,
@@ -41,7 +40,6 @@ import { GitStatusPanelPreview } from './components/GitStatusPanel';
 import { RepositoryActionsPanelPreview } from './components/RepositoryActionsPanel';
 import { RepoSourceArchitecturePanelPreview } from '../repo-manager/shared/RepoSourceArchitecturePanelSimple';
 import { ToolsPanelPreview } from './components/ToolsPanel';
-import { AlexandriaDocsPanelPreview } from '../repo-manager/shared/AlexandriaDocsPanel';
 import { DrawingsListPanelPreview } from './components/DrawingsListPanel';
 import { AgentEventsPanelPreview } from './components/AgentEventsPanel';
 import { AgentSessionsPanelPreview } from './components/AgentSessionsPanel';
@@ -123,10 +121,6 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
   tools: {
     icon: <Wrench size={16} />,
     preview: <ToolsPanelPreview />,
-  },
-  docs: {
-    icon: <Book size={16} />,
-    preview: <AlexandriaDocsPanelPreview />,
   },
   drawings: {
     icon: <Pencil size={16} />,

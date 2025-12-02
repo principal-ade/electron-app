@@ -6,7 +6,6 @@ import {
   GitBranch,
   Layers,
   Wrench,
-  Book,
   FileText,
   Pencil,
   Activity,
@@ -93,7 +92,6 @@ import { TasksPanel } from '../panels/components/TasksPanel';
 import { MCPTasksPanel } from '../panels/components/MCPTasksPanel';
 import { DrawingsListPanel } from '../panels/components/DrawingsListPanel';
 import { QualityHexagonPanel } from '../panels/components/QualityHexagonPanel';
-import { AlexandriaDocsPanel } from './shared/AlexandriaDocsPanel';
 import { MDXEditorPanel } from '../panels/components/MDXEditorPanel';
 import { LocalhostBrowserPanel } from '../panels/components/LocalhostBrowserPanel';
 import { panelPreviewRegistry } from '../panels/panelPreviews';
@@ -1551,9 +1549,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     // Tab and view change handlers
     const handleTabChange = useCallback((tabId: string) => {
       setActiveTab(tabId);
-      if (tabId !== 'docs') {
-        setSelectedDocPath(null);
-      }
+      setSelectedDocPath(null);
     }, []);
 
     // Create content provider for search
@@ -2090,34 +2086,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
             onHighlightLayersChange={setToolsHighlightLayers}
           />
         ),
-        docs: (
-          <AlexandriaDocsPanel
-            repositoryPath={
-              selectedSource?.location || repository.localClones[0]?.path || ''
-            }
-            onDocumentSelect={handleDocumentSelect}
-            selectedDocument={selectedDocPath ?? undefined}
-            onFileSelect={handleFileClick}
-            gitStatus={
-              cacheData?.gitStatus
-                ? {
-                    staged: cacheData.gitStatus.stagedFiles.map((path) => ({
-                      path,
-                    })),
-                    unstaged: cacheData.gitStatus.modifiedFiles.map((path) => ({
-                      path,
-                    })),
-                    untracked: cacheData.gitStatus.untrackedFiles.map((path) => ({
-                      path,
-                    })),
-                    deleted: cacheData.gitStatus.deletedFiles.map((path) => ({
-                      path,
-                    })),
-                  }
-                : undefined
-            }
-          />
-        ),
         agentEvents: (
           <AgentEventsPanel
             repositoryPath={
@@ -2303,13 +2271,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
         icon: <Wrench size={14} />,
         visible: true,
         content: panelContentMap.tools,
-      },
-      {
-        id: 'docs',
-        label: 'Docs',
-        icon: <Book size={14} />,
-        visible: true,
-        content: panelContentMap.docs,
       },
       {
         id: 'drawings',
@@ -2697,7 +2658,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                 const defaultLayout: PanelLayout = {
                   left: {
                     type: 'tabs',
-                    panels: ['fileTree', 'search', 'gitChanges', 'docs'],
+                    panels: ['fileTree', 'search', 'gitChanges'],
                     config: {
                       defaultActiveTab: 0,
                       tabPosition: 'top',
