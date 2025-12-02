@@ -12,6 +12,7 @@ import { PanelProvider, usePanelProvider } from '../contexts/PanelContext';
 import { TabbedTerminalPanel } from '@industry-theme/xterm-terminal-panel';
 import { panels as workspacePanels } from '@industry-theme/alexandria-workspace-panel';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
+import { panels as codeCityPanels } from '@industry-theme/code-city-panel';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { WindowService } from '../main-process-api/WindowService';
 
@@ -201,6 +202,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
   // Get panel components
   const WorkspacePanelComponent = workspacePanels[0]?.component;
   const DocsPanelComponent = docsPanels[0]?.component;
+  const CodeCityPanelComponent = codeCityPanels[0]?.component;
 
   // Get terminal directory from context
   const terminalDirectory = context.currentScope.repository?.path ||
@@ -324,8 +326,50 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
           </div>
         ),
       },
+      {
+        id: 'code-city',
+        label: 'Code City',
+        content: CodeCityPanelComponent ? (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('right')} />}
+            <CodeCityPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: '16px',
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+              height: '100%',
+              overflow: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('right')} />}
+            <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
+              Code City panel not available
+            </p>
+          </div>
+        ),
+      },
     ],
-    [theme, context, actions, events, WorkspacePanelComponent, DocsPanelComponent, isFocused, enableKeyboardShortcuts, terminalContext, terminalDirectory, showAllTerminals]
+    [theme, context, actions, events, WorkspacePanelComponent, DocsPanelComponent, CodeCityPanelComponent, isFocused, enableKeyboardShortcuts, terminalContext, terminalDirectory, showAllTerminals]
   );
 
   return (
@@ -363,7 +407,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
 const DEFAULT_LAYOUT: PanelLayout = {
   left: 'workspace-repos',
   middle: 'terminal',
-  right: 'alexandria-docs',
+  right: 'code-city',
 };
 
 export const AlexandriaWorkspaceLayout: React.FC<

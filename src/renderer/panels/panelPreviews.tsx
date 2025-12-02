@@ -4,7 +4,6 @@ import {
   AlertCircle,
   Book,
   BrainCircuit,
-  Building2,
   CheckSquare,
   Edit,
   FileCode,
@@ -49,7 +48,6 @@ import { AgentSessionsPanelPreview } from './components/AgentSessionsPanel';
 import { AgentContextTreePanelPreview } from './components/AgentContextTreePanel';
 import { TasksPanelPreview } from './components/TasksPanel';
 import { MCPTasksPanelPreview } from './components/MCPTasksPanel';
-import { CityVisualizationPanelPreview } from './components/CityVisualizationPanel';
 import { FilePreviewPanelPreview } from './components/FilePreviewPanel';
 import { MarkdownRenderingPanelPreview } from './components/MarkdownRenderingPanel';
 import { AlexandriaDrawingPanelPreview } from './components/AlexandriaDrawingPanel';
@@ -164,10 +162,6 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
     preview: <MCPTasksPanelPreview />,
     label: 'MCP Tasks',
     description: 'Track tasks submitted through the MCP bridge to dependencies.',
-  },
-  cityVisualization: {
-    icon: <Building2 size={16} />,
-    preview: <CityVisualizationPanelPreview />,
   },
   codeViewer: {
     icon: <FileCode size={16} />,

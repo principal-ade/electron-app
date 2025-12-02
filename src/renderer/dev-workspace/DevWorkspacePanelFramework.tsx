@@ -5,10 +5,12 @@ import {
   type PanelLayout,
 } from '@principal-ade/panel-layouts';
 import '@industry-theme/visual-validation-panel/dist/panels.bundle.css';
+// Note: code-city-panel CSS is bundled inline, no separate import needed
 import { RepositoryPanelProvider, useRepositoryPanelProvider } from '../contexts/RepositoryPanelContext';
 import { TabbedTerminalPanel } from '@industry-theme/xterm-terminal-panel';
 import { TabbedGhosttyTerminal } from '@industry-theme/ghostty-terminal-panel';
 import { panels as visualValidationPanels } from '@industry-theme/visual-validation-panel';
+import { panels as codeCityPanels } from '@industry-theme/code-city-panel';
 import type { Repository } from '../../shared/types/repository.types';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 
@@ -78,6 +80,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
   const terminalDirectory = (context as { repositoryPath?: string }).repositoryPath || '/';
 
   const VisualValidationPanelComponent = visualValidationPanels[0]?.component;
+  const CodeCityPanelComponent = codeCityPanels[0]?.component;
 
   // Define all panels using panel framework components
   const allPanels = useMemo(
@@ -125,8 +128,30 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
           <div>Visual Validation panel not available</div>
         ),
       },
+      {
+        id: 'codeCity',
+        label: 'Code City',
+        content: CodeCityPanelComponent ? (
+          <div style={{
+            height: '100%',
+            width: '100%',
+            overflow: 'hidden',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <CodeCityPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div>Code City panel not available</div>
+        ),
+      },
     ],
-    [VisualValidationPanelComponent, context, actions, events, terminalImplementation, terminalContext, terminalDirectory],
+    [VisualValidationPanelComponent, CodeCityPanelComponent, context, actions, events, terminalImplementation, terminalContext, terminalDirectory],
   );
 
   return (
@@ -167,7 +192,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
 const DEFAULT_LAYOUT: PanelLayout = {
   left: 'visualValidation',
   middle: 'terminal',
-  right: '',  // Empty - will be collapsed
+  right: 'codeCity',
 };
 
 export const DevWorkspacePanelFramework: React.FC<
@@ -183,7 +208,7 @@ export const DevWorkspacePanelFramework: React.FC<
   // Internal collapsed state (used when not controlled externally)
   const [internalCollapsed, setInternalCollapsed] = useState({
     left: false,  // Show visual validation panel
-    right: true,  // Start collapsed
+    right: false, // Show code city panel
   });
 
   // Internal layout state (used when not controlled externally)

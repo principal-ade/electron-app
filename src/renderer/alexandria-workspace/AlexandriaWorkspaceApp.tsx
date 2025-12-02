@@ -25,7 +25,7 @@ const AlexandriaWorkspaceContent: React.FC = () => {
   const [layout, setLayout] = useState<PanelLayout>({
     left: 'workspace-repos',
     middle: 'terminal',
-    right: 'alexandria-docs',
+    right: 'code-city',
   });
 
   // Switch handlers for panel swapping

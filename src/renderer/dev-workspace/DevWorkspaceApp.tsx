@@ -77,11 +77,11 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   const [currentBranch, setCurrentBranch] = useState<string | undefined>();
   const [terminalImplementation, setTerminalImplementation] = useState<'xterm' | 'ghostty'>('xterm');
   const [showTerminalToggle, setShowTerminalToggle] = useState(false);
-  const [collapsed, setCollapsed] = useState({ left: false, right: true });
+  const [collapsed, setCollapsed] = useState({ left: false, right: false });
   const [layout, setLayout] = useState<PanelLayout>({
     left: 'visualValidation',
     middle: 'terminal',
-    right: '',
+    right: 'codeCity',
   });
 
   // Create repository object from Alexandria entry data
@@ -188,8 +188,8 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         }
       }),
       events.on('panel:reset-layout', () => {
-        setLayout({ left: 'visualValidation', middle: 'terminal', right: '' });
-        setCollapsed({ left: false, right: true });
+        setLayout({ left: 'visualValidation', middle: 'terminal', right: 'codeCity' });
+        setCollapsed({ left: false, right: false });
       }),
     ];
 

@@ -89,12 +89,10 @@ import { AgentEventsPanel } from '../panels/components/AgentEventsPanel';
 import { AgentSessionsPanel } from '../panels/components/AgentSessionsPanel';
 import { AgentContextTreePanel } from '../panels/components/AgentContextTreePanel';
 import { useHighlightLayers } from '../contexts/HighlightLayersContext';
-import { CityVisualizationPanel } from '../panels/components/CityVisualizationPanel';
 import { TasksPanel } from '../panels/components/TasksPanel';
 import { MCPTasksPanel } from '../panels/components/MCPTasksPanel';
 import { DrawingsListPanel } from '../panels/components/DrawingsListPanel';
 import { QualityHexagonPanel } from '../panels/components/QualityHexagonPanel';
-import { CityMapManager } from './shared/CityMapManager';
 import { AlexandriaDocsPanel } from './shared/AlexandriaDocsPanel';
 import { MDXEditorPanel } from '../panels/components/MDXEditorPanel';
 import { LocalhostBrowserPanel } from '../panels/components/LocalhostBrowserPanel';
@@ -2647,52 +2645,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
               flexDirection: 'column',
             }}
           >
-            <CityMapManager
-              fileTree={fileTree}
-              activeSource={selectedSource}
-              gitEnabled={gitState?.enabled}
-              headTree={gitState?.headTree}
-              hasNoCommits={gitState?.hasNoCommits}
-              viewMode="explore"
-              renderCustomBadges={() => (
-                <>
-                  {fileTreeSources.length > 1 && (
-                    <button
-                      onClick={() => {
-                        console.info('Open source selector');
-                      }}
-                      style={{
-                        padding: '3px 8px',
-                        borderRadius: '6px',
-                        border: `1px solid ${theme.colors.border}`,
-                        backgroundColor: theme.colors.background,
-                        color: theme.colors.textSecondary,
-                        fontSize: theme.fontSizes[0],
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {fileTreeSources.length} sources
-                    </button>
-                  )}
-                </>
-              )}
-            >
-              {({ cityData: managedCityData, sourceBadges, isBuilding }) => {
-                // City visualization panel (standalone, decoupled from document viewing)
-                const cityPanel = (
-                  <CityVisualizationPanel
-                    cityData={managedCityData}
-                    treeStats={treeStats}
-                    onFileClick={handleFileClick}
-                    onHelpClick={() => setShowHelpModal(true)}
-                    loading={loading || isBuilding}
-                    loadingMessage="Loading repository structure"
-                    emptyMessage="Select a branch to explore"
-                    sourceBadges={sourceBadges}
-                    toolbarItems={toolbarItems}
-                  />
-                );
-
+            {(() => {
                 const propsPanelLayout = panelLayout || {
                   left: 'left',
                   middle: 'codeViewer',
@@ -2702,12 +2655,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                 // Create all panel definitions
                 const allPanels: PanelDefinitionWithContent[] = [
                   ...leftPanelTabs,
-                  {
-                    id: 'cityVisualization',
-                    label: 'City Visualization',
-                    content: cityPanel,
-                    icon: panelPreviewRegistry.cityVisualization?.icon,
-                  },
                   {
                     id: 'codeViewer',
                     label: 'Code Viewer',
@@ -2766,7 +2713,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                   },
                   right: {
                     type: 'tabs',
-                    panels: ['cityVisualization'],
+                    panels: ['codeViewer'],
                     config: {
                       defaultActiveTab: 0,
                       tabPosition: 'top',
@@ -2946,8 +2893,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     />
                   </div>
                 );
-              }}
-            </CityMapManager>
+              })()}
             {/* File Viewer Modal */}
             {showFileViewer && viewerFilePath && viewerRelativePath && (
               <RemoteFileViewerModal
