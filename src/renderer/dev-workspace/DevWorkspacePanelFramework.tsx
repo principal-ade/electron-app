@@ -194,7 +194,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
         onLayoutChange={onLayoutChange}
         isEditMode={false}
         collapsiblePanels={{ left: true, right: true }}
-        defaultSizes={{ left: 30, middle: 50, right: 20 }}
+        defaultSizes={{ left: 25, middle: 50, right: 25 }}
         minSizes={{ left: 15, middle: 30, right: 15 }}
         collapsed={collapsed}
         showCollapseButtons={false}
