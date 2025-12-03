@@ -30,6 +30,11 @@ export const ExtensionWindowApp: React.FC = () => {
   const [extensionsDirectory, setExtensionsDirectory] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  const handleToggleSidebar = useCallback(() => {
+    setSidebarCollapsed((prev) => !prev);
+  }, []);
 
   // Load extensions on mount
   const loadExtensions = useCallback(async () => {
@@ -161,19 +166,27 @@ export const ExtensionWindowApp: React.FC = () => {
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-gray-900 flex flex-col">
-      <ExtensionWindowTitlebar extensionsDirectory={extensionsDirectory} />
+      <ExtensionWindowTitlebar
+          extensionsDirectory={extensionsDirectory}
+          sidebarCollapsed={sidebarCollapsed}
+          onToggleSidebar={handleToggleSidebar}
+        />
 
       <div className="flex-1 flex overflow-hidden">
         {/* Extension List Sidebar */}
-        <div className="w-80 border-r border-gray-700 flex flex-col">
-          <div className="p-4 border-b border-gray-700">
+        <div
+          className={`border-r border-gray-700 flex flex-col transition-all duration-200 ease-in-out overflow-hidden ${
+            sidebarCollapsed ? 'w-0 border-r-0' : 'w-80'
+          }`}
+        >
+          <div className="p-4 border-b border-gray-700 min-w-80">
             <h2 className="text-sm font-medium text-gray-300">Installed Extensions</h2>
             <p className="text-xs text-gray-500 mt-1">
               {extensions.length} extension{extensions.length !== 1 ? 's' : ''} found
             </p>
           </div>
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto min-w-80">
             {loading ? (
               <div className="p-4 text-gray-400 text-sm">Loading extensions...</div>
             ) : error ? (

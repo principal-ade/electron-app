@@ -70,7 +70,7 @@ export async function openDevWorkspaceWindow(
     purpose: windowName,
   };
 
-  // Create the window with minimal features (terminal support only)
+  // Create the window with terminal and file system support
   const appWindow = createSpecialWindow(
     windowName,
     {
@@ -87,8 +87,8 @@ export async function openDevWorkspaceWindow(
       },
     },
     {
-      // Minimal features - no file system adapter, window manager adapter, or GitHub adapter
-      // These would require the full preload, which we don't want
+      // Dev workspace needs file system adapter for panel file reading
+      fileSystemAdapter: true,
       terminalManager: true,
       menu: true,
       devTools: true,

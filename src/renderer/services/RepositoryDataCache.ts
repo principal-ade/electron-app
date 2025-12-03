@@ -140,6 +140,7 @@ export class RepositoryDataCache extends EventEmitter {
   private static instance: RepositoryDataCache | null = null;
   private cache = new Map<string, LocalCacheEntry<RepositoryCacheData>>();
   private updateQueue = new Map<string, QueuedUpdate>();
+  private loadingPromises = new Map<string, Promise<RepositoryCacheData>>(); // Deduplicates concurrent load calls
   private flushTimer: NodeJS.Timeout | null = null;
   private flushInterval = 100; // Batch updates every 100ms
   private eventSubscriptions: (() => void)[] = [];
@@ -250,15 +251,37 @@ export class RepositoryDataCache extends EventEmitter {
 
   /**
    * Load repository data into cache
+   * Deduplicates concurrent calls for the same repository
    */
   async load(repoPath: string): Promise<RepositoryCacheData> {
-    console.log(`[RepositoryDataCache] Loading data for: ${repoPath}`);
-
     // Check if we have fresh cached data
     const existing = this.cache.get(repoPath);
     if (existing && !this.isCacheStale(existing)) {
       return existing.data;
     }
+
+    // Check if a load is already in progress for this repo
+    const existingPromise = this.loadingPromises.get(repoPath);
+    if (existingPromise) {
+      return existingPromise;
+    }
+
+    // Create and track the loading promise
+    const loadPromise = this.loadInternal(repoPath);
+    this.loadingPromises.set(repoPath, loadPromise);
+
+    try {
+      return await loadPromise;
+    } finally {
+      this.loadingPromises.delete(repoPath);
+    }
+  }
+
+  /**
+   * Internal load implementation
+   */
+  private async loadInternal(repoPath: string): Promise<RepositoryCacheData> {
+    console.log(`[RepositoryDataCache] Loading data for: ${repoPath}`);
 
     // Fetch all data in parallel
     const [snapshot, repository] = await Promise.all([
@@ -867,6 +890,7 @@ export class RepositoryDataCache extends EventEmitter {
   clear(): void {
     this.cache.clear();
     this.updateQueue.clear();
+    this.loadingPromises.clear();
     if (this.flushTimer) {
       clearTimeout(this.flushTimer);
       this.flushTimer = null;

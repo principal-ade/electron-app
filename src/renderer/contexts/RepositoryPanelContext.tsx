@@ -15,6 +15,7 @@ import type {
   PanelEventEmitter,
   RepositoryMetadata,
   DataSlice,
+  PanelAdapters,
 } from '@principal-ade/panel-framework-core';
 import { TerminalService } from '../main-process-api/TerminalService';
 import type { TerminalInfo, TerminalOwnershipStatus, TerminalOwnershipResult, RequestDataPortResult, PortReadyData } from '../../shared/main-process-api-interfaces/TerminalService';
@@ -22,6 +23,7 @@ import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonit
 import { FileSystemService } from '../main-process-api/FileSystemService';
 import { WindowService } from '../main-process-api/WindowService';
 import type { FileTree } from '@principal-ai/repository-abstraction';
+import { minimatch } from 'minimatch';
 
 // Extend PanelActions with terminal-specific and file system actions
 interface RepositoryPanelActions extends PanelActions {
@@ -375,6 +377,24 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
       }));
   }, [fileTreeData]);
 
+  // Create adapters for panels to use
+  const adapters: PanelAdapters = useMemo(() => ({
+    // readFile accepts relative paths and resolves them against the repository path
+    readFile: async (relativePath: string): Promise<string> => {
+      const absolutePath = relativePath.startsWith('/') ? relativePath : `${repositoryPath}/${relativePath}`;
+      // FileSystemService.readFile returns { content, filePath } or null
+      const result = await FileSystemService.readFile(absolutePath);
+      if (!result) {
+        throw new Error(`File not found: ${absolutePath}`);
+      }
+      // Extract content from the result object
+      return typeof result === 'string' ? result : result.content;
+    },
+    matchesPath: (pattern: string, filePath: string): boolean => {
+      return minimatch(filePath, pattern);
+    },
+  }), [repositoryPath]);
+
   // Create data slices
   const slices = useMemo<Map<string, DataSlice>>(
     () =>
@@ -448,6 +468,7 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
         repository,
       },
       slices,
+      adapters,
       getSlice: <T = unknown>(name: string): DataSlice<T> | undefined => {
         return slices.get(name) as DataSlice<T> | undefined;
       },
@@ -477,7 +498,7 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
         await Promise.all(slicesToRefresh.map((slice) => slice.refresh()));
       },
     }),
-    [repositoryPath, repository, terminalSessions, terminalContext, loading, slices],
+    [repositoryPath, repository, terminalSessions, terminalContext, loading, slices, adapters],
   );
 
   // Provider value

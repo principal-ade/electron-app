@@ -12,6 +12,7 @@ import type { AlexandriaEntry, CodebaseView, Workspace, WorkspaceMembership } fr
 import { gitClientFactory } from '../utils/gitClientFactory';
 import { FileSystemService } from '../file-system-service';
 import { LocalNodeGlobAdapter } from '../adapters/LocalNodeGlobAdapter';
+import { homedir } from 'os';
 
 export class AlexandriaRegistryService {
   private static instance: AlexandriaRegistryService;
@@ -22,7 +23,8 @@ export class AlexandriaRegistryService {
     // Create filesystem and glob adapters for outpost manager
     const fsAdapter = new NodeFileSystemAdapter();
     const globAdapter = new LocalNodeGlobAdapter(); // Use our local fixed adapter
-    this.outpostManager = new AlexandriaOutpostManager(fsAdapter, globAdapter);
+    const homeDir = homedir(); // Get user's home directory
+    this.outpostManager = new AlexandriaOutpostManager(fsAdapter, globAdapter, homeDir);
   }
 
   static getInstance(): AlexandriaRegistryService {

@@ -17,6 +17,7 @@ import type {
   RepositoryMetadata,
   PanelEvent,
   PanelEventEmitter,
+  PanelAdapters,
 } from '@principal-ade/panel-framework-core';
 import { TerminalService } from '../main-process-api/TerminalService';
 import type { TerminalInfo } from '../../shared/main-process-api-interfaces/TerminalService';
@@ -26,6 +27,8 @@ import { AlexandriaDocsService } from '../main-process-api/AlexandriaDocsService
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { FileTree } from '@principal-ai/repository-abstraction';
+import { IPCFileSystemAdapter, IPCGlobAdapter } from '../adapters';
+import { minimatch } from 'minimatch';
 
 // Extend PanelActions with terminal and workspace-specific actions
 interface ExtendedPanelActions extends PanelActions {
@@ -229,7 +232,10 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       setFileTreeLoading(true);
       try {
         const tree = await RepositoryMonitoringService.getFileTree(repository.path);
-        console.info('[PanelContext] Fetched file tree for repository:', repository.path, tree);
+        console.info('[PanelContext] Fetched file tree for repository:', repository.path);
+        console.info('[PanelContext] FileTree stats:', tree?.stats);
+        console.info('[PanelContext] FileTree sample allFiles (first 5):', tree?.allFiles?.slice(0, 5));
+        console.info('[PanelContext] FileTree .alexandria files:', tree?.allFiles?.filter(f => f.path.includes('.alexandria') || f.relativePath?.includes('.alexandria')));
         setFileTreeData(tree);
       } catch (error) {
         console.error('[PanelContext] Failed to fetch file tree:', error);
@@ -467,14 +473,19 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
 
   // Define panel actions
   const actions: ExtendedPanelActions = useMemo(
-    () => ({
+    () => {
+      const repoPath = repository?.path || workspace?.path || '';
+
+      return {
       openFile: (filePath: string) => {
-        console.info('[PanelContext] Opening file:', filePath);
+        // Resolve relative paths against repository path
+        const absolutePath = filePath.startsWith('/') ? filePath : `${repoPath}/${filePath}`;
+        console.info('[PanelContext] Opening file:', absolutePath);
         events.emit({
           type: 'file:opened',
           source: 'alexandria-workspace',
           timestamp: Date.now(),
-          payload: { filePath },
+          payload: { filePath: absolutePath },
         });
       },
       openRepository: (repositoryId: string) => {
@@ -715,14 +726,42 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
           throw error;
         }
       },
-    }),
-    [events, workspace, repository?.name, terminalContext]
+    };
+    },
+    [events, workspace, repository?.path, repository?.name, terminalContext]
   );
+
+  // Create adapters for panels to use (memoized to avoid recreating on every render)
+  const adapters: PanelAdapters = useMemo(() => {
+    const repoPath = repository?.path || workspace?.path || '';
+    console.log('[PanelContext] Creating adapters with repoPath:', repoPath);
+
+    return {
+      // Full adapters (for panels that need complete FileSystem/Glob interface)
+      fileSystem: new IPCFileSystemAdapter(),
+      glob: new IPCGlobAdapter(),
+
+      // Minimal adapters (for panels using FileTree-based adapters)
+      // readFile accepts relative paths and resolves them against the repository path
+      readFile: async (path: string): Promise<string> => {
+        // Resolve relative paths against repository path
+        const absolutePath = path.startsWith('/') ? path : `${repoPath}/${path}`;
+        const result = await window.mainProcess.fileSystem.readFile(absolutePath);
+        if (!result) throw new Error(`Failed to read file: ${path}`);
+        return result.content;
+      },
+      matchesPath: (pattern: string, path: string): boolean => {
+        return minimatch(path, pattern);
+      },
+    };
+  }, [repository?.path, workspace?.path]);
 
   // Create the extended context value with both framework and panel-specific properties
   const context: ExtendedPanelContextValue = useMemo(
     () => {
       console.info('[PanelContext] Creating context with repository:', repository);
+      console.info('[PanelContext] Context adapters:', adapters);
+      console.info('[PanelContext] Context adapters.readFile:', adapters?.readFile);
       return {
         currentScope: {
           type: repository ? ('repository' as const) : ('workspace' as const),
@@ -730,6 +769,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
           repository,
         },
         slices,
+        adapters,
       getSlice: <T = unknown>(name: string): DataSlice<T> | undefined => {
         return slices.get(name) as DataSlice<T> | undefined;
       },
@@ -788,7 +828,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       loading: false,
       };
     },
-    [workspace, repository, slices, terminalSessions, markdownFiles, fileTreeData, fileTreeLoading]
+    [workspace, repository, slices, adapters, terminalSessions, markdownFiles, fileTreeData, fileTreeLoading]
   );
 
   // Combine context, actions, and events into provider value
