@@ -44,6 +44,8 @@ interface LocalProjectCardProps {
   isAdding?: boolean;
   /** Callback when repository is removed from workspace */
   onRemovedFromWorkspace?: (entry: typeof repositoryData.repository) => void;
+  /** Callback when repository is removed from local projects (minimal mode) */
+  onRemovedFromLocalProjects?: (entry: typeof repositoryData.repository) => void;
 }
 
 export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
@@ -53,6 +55,7 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
   onAddToWorkspace,
   isAdding = false,
   onRemovedFromWorkspace,
+  onRemovedFromLocalProjects,
 }) => {
   const { theme } = useTheme();
   const { selectedRepository, setSelectedRepository } = useSelectedRepository();
@@ -242,6 +245,24 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
     } catch (error) {
       console.error('Failed to delete Alexandria entry:', error);
       alert(`Failed to delete repository: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  const handleRemoveFromLocalProjects = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    try {
+      setIsRemoving(true);
+      // TODO: Close any open windows for this repository first when WindowService.closeRepositoryWindow is implemented
+      // Remove from Alexandria registry without deleting local files
+      await AlexandriaService.removeRepository(entry.name, false);
+      // Notify parent for immediate UI update
+      onRemovedFromLocalProjects?.(entry);
+    } catch (error) {
+      console.error('Failed to remove repository from local projects:', error);
+      alert(`Failed to remove repository: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsRemoving(false);
     }
   };
 
@@ -669,62 +690,108 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
             );
           }
 
-          // Minimal mode - only show Open button
+          // Minimal mode - show Open button and Remove button
           return (
-            <button
-              type="button"
-              onClick={handleOpenLocally}
-              title={
-                windowState === 'ready'
-                  ? 'Focus window'
-                  : windowState === 'opening'
-                    ? 'Window is opening...'
-                    : 'Open locally'
-              }
-              disabled={windowState === 'opening'}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '6px 10px',
-                gap: '4px',
-                borderRadius: '4px',
-                border: `1px solid ${theme.colors.success || '#10b981'}`,
-                backgroundColor: `${theme.colors.success || '#10b981'}15`,
-                color: theme.colors.success || '#10b981',
-                fontSize: `${theme.fontSizes[0]}px`,
-                fontWeight: theme.fontWeights.medium,
-                cursor: windowState === 'opening' ? 'wait' : 'pointer',
-                opacity: windowState === 'opening' ? 0.6 : 1,
-                transition: 'all 0.15s ease',
-              }}
-              onMouseEnter={(event) => {
-                if (windowState !== 'opening') {
-                  event.currentTarget.style.backgroundColor = `${theme.colors.success || '#10b981'}25`;
+            <>
+              <button
+                type="button"
+                onClick={handleOpenLocally}
+                title={
+                  windowState === 'ready'
+                    ? 'Focus window'
+                    : windowState === 'opening'
+                      ? 'Window is opening...'
+                      : 'Open locally'
                 }
-              }}
-              onMouseLeave={(event) => {
-                event.currentTarget.style.backgroundColor = `${theme.colors.success || '#10b981'}15`;
-              }}
-            >
-              {windowState === 'ready' ? (
-                <Focus size={12} />
-              ) : windowState === 'opening' ? (
-                <Loader2
-                  size={12}
-                  style={{
-                    animation: 'spin 1s linear infinite',
-                  }}
-                />
-              ) : (
-                <FolderOpen size={12} />
-              )}
-              {windowState === 'ready'
-                ? 'Focus'
-                : windowState === 'opening'
-                  ? 'Opening...'
-                  : 'Open'}
-            </button>
+                disabled={windowState === 'opening'}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '6px 10px',
+                  gap: '4px',
+                  borderRadius: '4px',
+                  border: `1px solid ${theme.colors.success || '#10b981'}`,
+                  backgroundColor: `${theme.colors.success || '#10b981'}15`,
+                  color: theme.colors.success || '#10b981',
+                  fontSize: `${theme.fontSizes[0]}px`,
+                  fontWeight: theme.fontWeights.medium,
+                  cursor: windowState === 'opening' ? 'wait' : 'pointer',
+                  opacity: windowState === 'opening' ? 0.6 : 1,
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={(event) => {
+                  if (windowState !== 'opening') {
+                    event.currentTarget.style.backgroundColor = `${theme.colors.success || '#10b981'}25`;
+                  }
+                }}
+                onMouseLeave={(event) => {
+                  event.currentTarget.style.backgroundColor = `${theme.colors.success || '#10b981'}15`;
+                }}
+              >
+                {windowState === 'ready' ? (
+                  <Focus size={12} />
+                ) : windowState === 'opening' ? (
+                  <Loader2
+                    size={12}
+                    style={{
+                      animation: 'spin 1s linear infinite',
+                    }}
+                  />
+                ) : (
+                  <FolderOpen size={12} />
+                )}
+                {windowState === 'ready'
+                  ? 'Focus'
+                  : windowState === 'opening'
+                    ? 'Opening...'
+                    : 'Open'}
+              </button>
+
+              {/* Remove from local projects button */}
+              <button
+                type="button"
+                onClick={handleRemoveFromLocalProjects}
+                disabled={isRemoving}
+                title="Remove from local projects"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '28px',
+                  height: '28px',
+                  padding: 0,
+                  borderRadius: '4px',
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  color: theme.colors.textSecondary,
+                  cursor: isRemoving ? 'wait' : 'pointer',
+                  opacity: isRemoving ? 0.6 : 1,
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={(event) => {
+                  if (!isRemoving) {
+                    event.currentTarget.style.backgroundColor = theme.colors.error || '#ef4444';
+                    event.currentTarget.style.color = theme.colors.background;
+                  }
+                }}
+                onMouseLeave={(event) => {
+                  event.currentTarget.style.backgroundColor = 'transparent';
+                  event.currentTarget.style.color = theme.colors.textSecondary;
+                }}
+              >
+                {isRemoving ? (
+                  <Loader2
+                    size={14}
+                    style={{
+                      animation: 'spin 1s linear infinite',
+                    }}
+                  />
+                ) : (
+                  <X size={14} />
+                )}
+              </button>
+            </>
           );
         })()}
       </div>

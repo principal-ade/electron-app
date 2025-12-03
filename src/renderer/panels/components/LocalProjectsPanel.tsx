@@ -221,6 +221,7 @@ export const LocalProjectsPanel: React.FC = () => {
           <LocalProjectCard
             key={repoData.repository.path}
             repositoryData={repoData}
+            onRemovedFromLocalProjects={() => refresh()}
           />
         ))}
 
