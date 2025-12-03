@@ -237,6 +237,8 @@ const AlexandriaWorkspaceContent: React.FC = () => {
         onToggleRightSidebar={() => setCollapsed(prev => ({ ...prev, right: !prev.right }))}
         onSwitchLeftMiddlePanels={handleSwitchLeftMiddle}
         onSwitchRightMiddlePanels={handleSwitchRightMiddle}
+        layout={layout}
+        onLayoutChange={setLayout}
       />
 
       {/* Main Content - Panel Layout */}

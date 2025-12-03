@@ -1,11 +1,21 @@
 import React, { useState, useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { PanelControls } from '@principal-ade/panel-layouts';
+import { PanelControls, type PanelLayout } from '@principal-ade/panel-layouts';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 import { Plus, Keyboard, FilePlus2 } from 'lucide-react';
 import { AddRepositoryToWorkspaceModal } from '../../panels/components/AddRepositoryToWorkspaceModal';
 import { CreateRepositoryInWorkspaceModal } from '../../panels/components/CreateRepositoryInWorkspaceModal';
 import { WorkspaceThemeDropdown } from './WorkspaceThemeDropdown';
+import { PanelSelectorDropdown, type PanelOption } from './PanelSelectorDropdown';
+
+// Available panels for Alexandria workspace
+const AVAILABLE_PANELS: PanelOption[] = [
+  { id: 'workspace-repos', label: 'Repositories' },
+  { id: 'terminal', label: 'Terminal' },
+  { id: 'alexandria-docs', label: 'Documentation' },
+  { id: 'code-city', label: 'Code City' },
+  { id: 'localhost-browser', label: 'Localhost Browser' },
+];
 
 export interface AlexandriaWorkspaceTitlebarProps {
   workspace: Workspace;
@@ -18,6 +28,9 @@ export interface AlexandriaWorkspaceTitlebarProps {
   onToggleRightSidebar?: () => void;
   onSwitchLeftMiddlePanels?: () => void;
   onSwitchRightMiddlePanels?: () => void;
+  // Layout controls
+  layout?: PanelLayout;
+  onLayoutChange?: (layout: PanelLayout) => void;
 }
 
 export const AlexandriaWorkspaceTitlebar: React.FC<
@@ -32,6 +45,8 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
   onToggleRightSidebar,
   onSwitchLeftMiddlePanels,
   onSwitchRightMiddlePanels,
+  layout,
+  onLayoutChange,
 }) => {
   const { theme } = useTheme();
   const [showAddModal, setShowAddModal] = useState(false);
@@ -41,6 +56,20 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
   const currentRepositoryIds = useMemo(() => {
     return workspaceRepositoryIds.filter((id): id is string => id != null);
   }, [workspaceRepositoryIds]);
+
+  // Handler for changing the left panel
+  const handleLeftPanelChange = (panelId: string) => {
+    if (layout && onLayoutChange) {
+      onLayoutChange({ ...layout, left: panelId });
+    }
+  };
+
+  // Handler for changing the right panel
+  const handleRightPanelChange = (panelId: string) => {
+    if (layout && onLayoutChange) {
+      onLayoutChange({ ...layout, right: panelId });
+    }
+  };
 
   return (
     <div
@@ -57,8 +86,30 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
         WebkitAppRegion: 'drag',
       }}
     >
-      {/* Left spacer for traffic lights on macOS */}
-      <div style={{ width: '80px', flexShrink: 0 }} />
+      {/* Left section: traffic lights spacer + left panel dropdown */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          marginLeft: '16px',
+          // @ts-ignore - WebkitAppRegion is not in CSSProperties
+          WebkitAppRegion: 'no-drag',
+        }}
+      >
+        {/* Traffic lights spacer on macOS */}
+        <div style={{ width: '64px', flexShrink: 0 }} />
+
+        {/* Left Panel Selector */}
+        {layout && onLayoutChange && typeof layout.left === 'string' && (
+          <PanelSelectorDropdown
+            side="left"
+            currentPanelId={layout.left}
+            availablePanels={AVAILABLE_PANELS}
+            onPanelChange={handleLeftPanelChange}
+          />
+        )}
+      </div>
 
       {/* Center: Workspace name */}
       <div
@@ -116,6 +167,16 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
           WebkitAppRegion: 'no-drag',
         }}
       >
+        {/* Right Panel Selector */}
+        {layout && onLayoutChange && typeof layout.right === 'string' && (
+          <PanelSelectorDropdown
+            side="right"
+            currentPanelId={layout.right}
+            availablePanels={AVAILABLE_PANELS}
+            onPanelChange={handleRightPanelChange}
+          />
+        )}
+
         {/* Panel Controls */}
         {(onToggleLeftSidebar || onToggleRightSidebar || onSwitchLeftMiddlePanels || onSwitchRightMiddlePanels) && (
           <PanelControls

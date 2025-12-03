@@ -13,6 +13,7 @@ import { TabbedTerminalPanel } from '@industry-theme/xterm-terminal-panel';
 import { panels as workspacePanels } from '@industry-theme/alexandria-workspace-panel';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import { panels as codeCityPanels } from '@industry-theme/code-city-panel';
+import { panels as localhostPanels } from '@industry-theme/localhost-panels';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { WindowService } from '../main-process-api/WindowService';
 
@@ -203,6 +204,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
   const WorkspacePanelComponent = workspacePanels[0]?.component;
   const DocsPanelComponent = docsPanels[0]?.component;
   const CodeCityPanelComponent = codeCityPanels[0]?.component;
+  const LocalhostPanelComponent = localhostPanels[0]?.component;
 
   // Get terminal directory from context
   const terminalDirectory = context.currentScope.repository?.path ||
@@ -368,8 +370,50 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
           </div>
         ),
       },
+      {
+        id: 'localhost-browser',
+        label: 'Localhost Browser',
+        content: LocalhostPanelComponent ? (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('right')} />}
+            <LocalhostPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: '16px',
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+              height: '100%',
+              overflow: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('right')} />}
+            <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
+              Localhost Browser panel not available
+            </p>
+          </div>
+        ),
+      },
     ],
-    [theme, context, actions, events, WorkspacePanelComponent, DocsPanelComponent, CodeCityPanelComponent, isFocused, enableKeyboardShortcuts, terminalContext, terminalDirectory, showAllTerminals]
+    [theme, context, actions, events, WorkspacePanelComponent, DocsPanelComponent, CodeCityPanelComponent, LocalhostPanelComponent, isFocused, enableKeyboardShortcuts, terminalContext, terminalDirectory, showAllTerminals]
   );
 
   return (
