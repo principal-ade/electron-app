@@ -1,0 +1,15 @@
+{
+  "id": "note-1764741997585-e91kcync3",
+  "note": "Old DependenciesPanel removed. Features to add to @industry-theme/dependencies-panel:\n1. Live analysis via PackageManagerService (checkVersions, checkLicenses, checkVulnerabilities)\n2. Smart filters (critical-security, deprecated, safe-updates, license-review, production-risk)\n3. Batch update prompt generation for AI agents\n4. Analysis progress UI with event listeners",
+  "anchors": [
+    "src/renderer/components/repository-maps/DependenciesPanel.tsx"
+  ],
+  "tags": [
+    "migration",
+    "dependencies-panel",
+    "todo"
+  ],
+  "metadata": {},
+  "timestamp": 1764741997585,
+  "codebaseViewId": "default"
+}
