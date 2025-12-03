@@ -23,7 +23,15 @@ import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonit
 import { FileSystemService } from '../main-process-api/FileSystemService';
 import { WindowService } from '../main-process-api/WindowService';
 import type { FileTree } from '@principal-ai/repository-abstraction';
+import type { PackageLayer } from '@principal-ai/codebase-composition';
+import type { PackageSummary } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 import { minimatch } from 'minimatch';
+
+// Types for packages slice data (matches @industry-theme/dependencies-panel expectations)
+interface PackagesSliceData {
+  packages: PackageLayer[];
+  summary: PackageSummary;
+}
 
 // Extend PanelActions with terminal-specific and file system actions
 interface RepositoryPanelActions extends PanelActions {
@@ -96,6 +104,10 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
   // Track file tree for the current repository
   const [fileTreeData, setFileTreeData] = useState<FileTree | null>(null);
   const [fileTreeLoading, setFileTreeLoading] = useState(false);
+
+  // Track packages data for the current repository
+  const [packagesData, setPackagesData] = useState<PackagesSliceData | null>(null);
+  const [packagesLoading, setPackagesLoading] = useState(false);
 
   // Loading state
   const [loading] = useState(false);
@@ -190,6 +202,34 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
     };
 
     fetchFileTree();
+  }, [repositoryPath]);
+
+  // Fetch packages when repository changes
+  useEffect(() => {
+    const fetchPackages = async () => {
+      if (!repositoryPath) {
+        setPackagesData(null);
+        return;
+      }
+
+      setPackagesLoading(true);
+      try {
+        const result = await RepositoryMonitoringService.getPackages(repositoryPath);
+        if (result) {
+          console.info('[RepositoryPanelProvider] Fetched packages for repository:', repositoryPath, result.packages.length, 'packages');
+          setPackagesData(result);
+        } else {
+          setPackagesData(null);
+        }
+      } catch (error) {
+        console.error('[RepositoryPanelProvider] Failed to fetch packages:', error);
+        setPackagesData(null);
+      } finally {
+        setPackagesLoading(false);
+      }
+    };
+
+    fetchPackages();
   }, [repositoryPath]);
 
   // Create actions object
@@ -448,8 +488,36 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
             },
           },
         ],
+        [
+          'packages',
+          {
+            scope: 'repository' as const,
+            name: 'packages',
+            data: packagesData,
+            loading: packagesLoading,
+            error: null,
+            refresh: async () => {
+              if (repositoryPath) {
+                setPackagesLoading(true);
+                try {
+                  const result = await RepositoryMonitoringService.getPackages(repositoryPath);
+                  if (result) {
+                    setPackagesData(result);
+                  } else {
+                    setPackagesData(null);
+                  }
+                } catch (error) {
+                  console.error('[RepositoryPanelProvider] Failed to refresh packages:', error);
+                  setPackagesData(null);
+                } finally {
+                  setPackagesLoading(false);
+                }
+              }
+            },
+          },
+        ],
       ]),
-    [repositoryPath, fileTreeData, fileTreeLoading, markdownFiles],
+    [repositoryPath, fileTreeData, fileTreeLoading, markdownFiles, packagesData, packagesLoading],
   );
 
   // Create context value

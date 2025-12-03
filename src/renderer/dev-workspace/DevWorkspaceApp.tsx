@@ -79,7 +79,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   const [showTerminalToggle, setShowTerminalToggle] = useState(false);
   const [collapsed, setCollapsed] = useState({ left: false, right: false });
   const [layout, setLayout] = useState<PanelLayout>({
-    left: 'docs',
+    left: 'dependencies',
     middle: 'terminal',
     right: 'codeCity',
   });
@@ -188,7 +188,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         }
       }),
       events.on('panel:reset-layout', () => {
-        setLayout({ left: 'docs', middle: 'terminal', right: 'codeCity' });
+        setLayout({ left: 'dependencies', middle: 'terminal', right: 'codeCity' });
         setCollapsed({ left: false, right: false });
       }),
     ];

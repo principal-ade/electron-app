@@ -168,6 +168,7 @@
     "@industry-theme/alexandria-docs-panel": "^0.4.15",
     "@industry-theme/alexandria-workspace-panel": "^1.0.4",
     "@industry-theme/code-city-panel": "^0.1.5",
+    "@industry-theme/dependencies-panel": "^0.1.0",
     "@industry-theme/ghostty-terminal-panel": "^0.1.17",
     "@industry-theme/visual-validation-panel": "^0.3.1",
     "@industry-theme/xterm-terminal-panel": "^0.1.2",

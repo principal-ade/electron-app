@@ -61,7 +61,6 @@ import type { WorkspaceLayout } from '../../shared/types/userPreferences.types';
 import { RepositoryNote } from '../../shared/main-process-api-interfaces/RepositoryNotesAPI';
 import { RepositoryNotesService } from '../main-process-api/RepositoryNotesService';
 import type { ToolbarItem } from './shared/RepositoryToolbar';
-import { RepoSourceArchitecturePanelSimple } from './shared/RepoSourceArchitecturePanelSimple';
 import {
   NullContentProvider,
   GitHubContentProvider,
@@ -211,9 +210,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       null,
     );
     const [fileTreeSources, setFileTreeSources] = useState<FileTreeSource[]>([]);
-    const [packageLayers, setPackageLayers] = useState<PackageLayer[] | null>(
-      null,
-    );
 
     // Event highlight service - convert agent events to map highlights
     const [eventHighlightService] = useState(() => new EventHighlightService());
@@ -295,9 +291,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     const [noteHighlightLayers, setNoteHighlightLayers] = useState<
       HighlightLayer[]
     >([]);
-    const [packageHighlightLayers, setPackageHighlightLayers] = useState<
-      HighlightLayer[]
-    >([]);
     const [folderFilterHighlightLayers, setFolderFilterHighlightLayers] =
       useState<HighlightLayer[]>([]);
 
@@ -324,22 +317,10 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     // File color state - default to showing file colors
     const [showFileColors, setShowFileColors] = useState(true);
 
-    // Package highlight state
-    const [highlightedPackages, setHighlightedPackages] = useState<Set<string>>(
-      new Set(),
-    );
+    // Tools highlight state
     const [toolsHighlightLayers, setToolsHighlightLayers] = useState<
       HighlightLayer[]
     >([]);
-
-    // Dependency analysis highlight state
-    const [analyzingPackagePath, setAnalyzingPackagePath] = useState<
-      string | null
-    >(null);
-    const [
-      dependencyAnalysisHighlightLayer,
-      setDependencyAnalysisHighlightLayer,
-    ] = useState<HighlightLayer[]>([]);
 
     // Documentation state
     const [selectedDocPath, setSelectedDocPath] = useState<string | null>(null);
@@ -1560,87 +1541,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       return new NullContentProvider();
     }, [selectedSource]);
 
-    // Handle dependency analysis highlighting
-    const handlePackageAnalysisStart = useCallback(
-      (packagePath: string, packageName: string) => {
-        if (!fileTree) return;
-
-        setAnalyzingPackagePath(packagePath);
-        setPackageHighlightLayers([]);
-
-        const highlightLayer: HighlightLayer = {
-          id: 'dependency-analysis',
-          name: `Analyzing ${packageName}`,
-          color: '#0ea5e9',
-          opacity: 0.9,
-          items: [{ path: packagePath, type: 'directory' as const }],
-          enabled: true,
-          priority: 10,
-        };
-
-        setDependencyAnalysisHighlightLayer([highlightLayer]);
-      },
-      [fileTree],
-    );
-
-    const handlePackageAnalysisEnd = useCallback(() => {
-      const prevAnalyzingPath = analyzingPackagePath;
-      setAnalyzingPackagePath(null);
-      setDependencyAnalysisHighlightLayer([]);
-
-      if (prevAnalyzingPath && fileTree && packageLayers) {
-        const packageData = packageLayers.find(
-          (pkg) => pkg.packageData.path === prevAnalyzingPath,
-        );
-        if (packageData) {
-          const highlightLayer: HighlightLayer = {
-            id: 'package-selection',
-            name: `Selected ${packageData.packageData.name}`,
-            color: '#22c55e',
-            opacity: 0.9,
-            items: [
-              { path: prevAnalyzingPath, type: 'directory' as const },
-              {
-                path: packageData.packageData.manifestPath,
-                type: 'file' as const,
-              },
-            ],
-            enabled: true,
-            priority: 5,
-          };
-          setPackageHighlightLayers([highlightLayer]);
-        }
-      }
-    }, [analyzingPackagePath, fileTree, packageLayers]);
-
-    // Handle package selection highlighting
-    const handlePackageSelected = useCallback(
-      (packagePath: string, packageName: string) => {
-        if (!fileTree) return;
-
-        if (analyzingPackagePath === packagePath) return;
-
-        const highlightLayer: HighlightLayer = {
-          id: 'package-selection',
-          name: `Selected ${packageName}`,
-          color: '#22c55e',
-          opacity: 0.9,
-          items: [{ path: packagePath, type: 'directory' as const }],
-          enabled: true,
-          priority: 5,
-        };
-
-        setPackageHighlightLayers([highlightLayer]);
-      },
-      [fileTree, analyzingPackagePath],
-    );
-
-    const handlePackageDeselected = useCallback(() => {
-      if (!analyzingPackagePath) {
-        setPackageHighlightLayers([]);
-      }
-    }, [analyzingPackagePath]);
-
     // Simple file tree search without indexing for better performance
     const performSimpleSearch = useCallback(
       (query: string): string[] => {
@@ -1852,82 +1752,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       setNoteHighlightLayers(layers);
     }, [selectedNoteIds, tribalKnowledgeNotes]);
 
-    // Create package highlight layers
-    useEffect(() => {
-      if (highlightedPackages.size === 0) {
-        setPackageHighlightLayers([]);
-        return;
-      }
-
-      if (!packageLayers) {
-        setPackageHighlightLayers([]);
-        return;
-      }
-
-      const layers: HighlightLayer[] = [];
-      const colors = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899'];
-      let colorIndex = 0;
-
-      for (const packageId of highlightedPackages) {
-        const pkg = packageLayers.find((p) => p.id === packageId);
-        if (!pkg) continue;
-
-        const items: Array<{
-          path: string;
-          type: 'file' | 'directory';
-          renderStrategy?: 'fill' | 'border';
-        }> = [];
-
-        const isRootPackage =
-          !pkg.packageData.path ||
-          pkg.packageData.path === '.' ||
-          pkg.packageData.path === 'root' ||
-          pkg.packageData.path === '' ||
-          pkg.packageData.path === 'package.json';
-
-        if (isRootPackage) {
-          items.push({
-            path: '',
-            type: 'directory' as const,
-            renderStrategy: 'fill',
-          });
-          const manifestFile = pkg.packageData.manifestPath || 'package.json';
-          items.push({
-            path: manifestFile,
-            type: 'file' as const,
-            renderStrategy: 'fill',
-          });
-        } else {
-          items.push({
-            path: pkg.packageData.path,
-            type: 'directory' as const,
-            renderStrategy: 'fill',
-          });
-          if (pkg.packageData.manifestPath) {
-            items.push({
-              path: pkg.packageData.manifestPath,
-              type: 'file' as const,
-              renderStrategy: 'fill',
-            });
-          }
-        }
-
-        const layer: HighlightLayer = {
-          id: `package-highlight-${packageId}`,
-          name: `Package: ${pkg.packageData.name}`,
-          enabled: true,
-          color: colors[colorIndex % colors.length],
-          priority: 35 + colorIndex,
-          items,
-        };
-
-        layers.push(layer);
-        colorIndex++;
-      }
-
-      setPackageHighlightLayers(layers);
-    }, [highlightedPackages, packageLayers]);
-
     // Get git state for source badges
     const gitState =
       selectedSource?.type === 'local'
@@ -2056,29 +1880,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
           />
         ),
         githubProjects: <GitHubProjectsPanel />,
-        dependencies: selectedSource ? (
-          <RepoSourceArchitecturePanelSimple
-            source={selectedSource}
-            onError={(error) => {
-              console.error('Architecture panel error:', error);
-            }}
-            onPackageLayersChanged={setPackageLayers}
-            onPackageAnalysisStart={handlePackageAnalysisStart}
-            onPackageAnalysisEnd={handlePackageAnalysisEnd}
-            onPackageSelected={handlePackageSelected}
-            onPackageDeselected={handlePackageDeselected}
-          />
-        ) : (
-          <div
-            style={{
-              padding: '20px',
-              textAlign: 'center',
-              color: theme.colors.textSecondary,
-            }}
-          >
-            No source selected
-          </div>
-        ),
         tools: (
           <ToolsPanel
             packageLayers={cacheData?.packages ?? null}
@@ -2186,13 +1987,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       handleFolderFiltersChange,
       handleFileClick,
       handleGitChangeSelect,
-      setPackageLayers,
-      handlePackageAnalysisStart,
-      handlePackageAnalysisEnd,
-      handlePackageSelected,
-      handlePackageDeselected,
       theme.colors.textSecondary,
-      packageLayers,
       repositoryPathForTools,
       setToolsHighlightLayers,
       repository.localClones,
@@ -2405,28 +2200,11 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
         });
       }
 
-      if (highlightedPackages.size > 0) {
-        items.push({
-          id: 'package-highlights',
-          label: 'Package Highlights',
-          shortLabel: 'Packages',
-          icon: <Layers />,
-          count: highlightedPackages.size,
-          color: '#10b981',
-          active: true,
-          onClick: () => {
-            setHighlightedPackages(new Set());
-          },
-          tooltip: `Clear package highlights (${highlightedPackages.size} highlighted)`,
-        });
-      }
-
       return items;
     }, [
       showFileColors,
       searchResults.length,
       selectedNoteIds.size,
-      highlightedPackages.size,
       gitState,
       selectedSource,
       setGitChangesVisible,

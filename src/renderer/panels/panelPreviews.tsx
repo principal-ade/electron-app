@@ -38,7 +38,6 @@ import { GitHubProjectsPanelPreview } from './components/GitHubProjectsPanel';
 import { GitHubSocialPanelPreview } from './components/GitHubSocialPanel';
 import { GitStatusPanelPreview } from './components/GitStatusPanel';
 import { RepositoryActionsPanelPreview } from './components/RepositoryActionsPanel';
-import { RepoSourceArchitecturePanelPreview } from '../repo-manager/shared/RepoSourceArchitecturePanelSimple';
 import { ToolsPanelPreview } from './components/ToolsPanel';
 import { DrawingsListPanelPreview } from './components/DrawingsListPanel';
 import { AgentEventsPanelPreview } from './components/AgentEventsPanel';
@@ -113,10 +112,6 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
     preview: <RepositoryActionsPanelPreview />,
     label: 'Repository Actions',
     description: 'Run project-specific automations and scripts.',
-  },
-  dependencies: {
-    icon: <Layers size={16} />,
-    preview: <RepoSourceArchitecturePanelPreview />,
   },
   tools: {
     icon: <Wrench size={16} />,

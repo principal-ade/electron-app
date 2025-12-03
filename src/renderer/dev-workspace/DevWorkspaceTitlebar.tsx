@@ -25,8 +25,8 @@ export const DEFAULT_PANEL_PRESETS: PanelPreset[] = [
   {
     id: 'default',
     name: 'Default',
-    description: 'Documentation, Terminal, Code City',
-    layout: { left: 'docs', middle: 'terminal', right: 'codeCity' },
+    description: 'Dependencies, Terminal, Code City',
+    layout: { left: 'dependencies', middle: 'terminal', right: 'codeCity' },
   },
   {
     id: 'visual-validation',

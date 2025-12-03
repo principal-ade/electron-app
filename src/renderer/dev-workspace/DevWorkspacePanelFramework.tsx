@@ -12,6 +12,7 @@ import { TabbedGhosttyTerminal } from '@industry-theme/ghostty-terminal-panel';
 import { panels as visualValidationPanels } from '@industry-theme/visual-validation-panel';
 import { panels as codeCityPanels } from '@industry-theme/code-city-panel';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
+import { panels as dependenciesPanels } from '@industry-theme/dependencies-panel';
 import type { Repository } from '../../shared/types/repository.types';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 
@@ -83,6 +84,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
   const VisualValidationPanelComponent = visualValidationPanels[0]?.component;
   const CodeCityPanelComponent = codeCityPanels[0]?.component;
   const DocsPanelComponent = docsPanels[0]?.component;
+  const DependenciesPanelComponent = dependenciesPanels[0]?.component;
 
   // Define all panels using panel framework components
   const allPanels = useMemo(
@@ -174,8 +176,30 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
           <div>Documentation panel not available</div>
         ),
       },
+      {
+        id: 'dependencies',
+        label: 'Dependencies',
+        content: DependenciesPanelComponent ? (
+          <div style={{
+            height: '100%',
+            width: '100%',
+            overflow: 'hidden',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <DependenciesPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div>Dependencies panel not available</div>
+        ),
+      },
     ],
-    [VisualValidationPanelComponent, CodeCityPanelComponent, DocsPanelComponent, context, actions, events, terminalImplementation, terminalContext, terminalDirectory],
+    [VisualValidationPanelComponent, CodeCityPanelComponent, DocsPanelComponent, DependenciesPanelComponent, context, actions, events, terminalImplementation, terminalContext, terminalDirectory],
   );
 
   return (
@@ -214,7 +238,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
  */
 // Default layout configuration
 const DEFAULT_LAYOUT: PanelLayout = {
-  left: 'docs',
+  left: 'dependencies',
   middle: 'terminal',
   right: 'codeCity',
 };
