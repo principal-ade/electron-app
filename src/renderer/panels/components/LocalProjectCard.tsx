@@ -197,7 +197,6 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
 
       // Refresh the location status
       setIsInWorkspaceDirectory(true);
-      alert(`Successfully moved ${entry.name} to workspace directory!`);
 
       // Events will update all panels automatically - no need for hard reload
     } catch (error) {
