@@ -27,7 +27,6 @@ import { AlexandriaDocsService } from '../main-process-api/AlexandriaDocsService
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { FileTree } from '@principal-ai/repository-abstraction';
-import { IPCFileSystemAdapter, IPCGlobAdapter } from '../adapters';
 import { minimatch } from 'minimatch';
 
 // Extend PanelActions with terminal and workspace-specific actions
@@ -737,10 +736,6 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
     console.log('[PanelContext] Creating adapters with repoPath:', repoPath);
 
     return {
-      // Full adapters (for panels that need complete FileSystem/Glob interface)
-      fileSystem: new IPCFileSystemAdapter(),
-      glob: new IPCGlobAdapter(),
-
       // Minimal adapters (for panels using FileTree-based adapters)
       // readFile accepts relative paths and resolves them against the repository path
       readFile: async (path: string): Promise<string> => {
