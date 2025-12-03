@@ -62,8 +62,6 @@ import {
 import { registerObservabilityHandlers } from './observability/observabilityHandlers';
 import { RemoteAgentWindowManager } from './window/remoteAgentWindowManager';
 import { registerRemoteAgentWindowHandlers } from './window/remoteAgentWindowHandlers';
-import { DevSidecarManager } from './window/devSidecarManager';
-import { registerDevSidecarHandlers } from './window/devSidecarHandlers';
 import { registerActIntegrationHandlers } from './services/ipc/act/actIntegrationHandlers';
 import { setupWindowSwitcherHandlers } from './window/windowSwitcher';
 import { setupQuickOpenHandlers } from './window/quickOpen';
@@ -74,7 +72,6 @@ import { extensionDiscoveryService } from './services/ExtensionDiscoveryService'
 // let agentSessionEventsHttpBridge: AgentSessionEventsHttpBridge | null = null;
 let principalMCPBridgePort: number | null = null;
 let remoteAgentWindowManager: RemoteAgentWindowManager | null = null;
-let devSidecarManager: DevSidecarManager | null = null;
 
 // Setup app version handler
 const setupAppVersionHandler = () => {
@@ -231,9 +228,6 @@ const registerAllIpcHandlers = async () => {
   // Initialize remote agent window manager
   remoteAgentWindowManager = new RemoteAgentWindowManager();
   registerRemoteAgentWindowHandlers(remoteAgentWindowManager);
-
-  devSidecarManager = new DevSidecarManager();
-  registerDevSidecarHandlers(devSidecarManager);
 
   // LLM Models handlers have been removed
   const typedStore = await getTypedStorageManager();

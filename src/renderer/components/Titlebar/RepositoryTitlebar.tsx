@@ -3,7 +3,6 @@ import {
   Layout,
   Layers,
   Key,
-  ExternalLink,
   Link2,
   NotebookPen,
   ArrowLeftRight,
@@ -29,7 +28,6 @@ import type {
 } from '../../../shared/types/userPreferences.types';
 import { ViewSidebarControls } from '../../principal-window/components/ViewSidebarControls/ViewSidebarControls';
 import { SaveWorkspaceModal } from '../../repo-manager/shared/SaveWorkspaceModal';
-import { DevSidecarService } from '../../main-process-api/DevSidecarService';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 import { ShellService } from '../../main-process-api/ShellService';
 import { useRepositoryGitStatus } from '../../hooks/useRepositoryGitStatus';
@@ -98,9 +96,6 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
 }) => {
   const { theme } = useTheme();
   const [showSaveWorkspaceModal, setShowSaveWorkspaceModal] = useState(false);
-  const [devSidecarSessionId, setDevSidecarSessionId] = useState<string | null>(
-    null,
-  );
   const [showOpenInIDE, setShowOpenInIDE] = useState(false);
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [pathCopied, setPathCopied] = useState(false);
@@ -123,22 +118,6 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
         gitStatusWithFiles.deletedFiles.length >
       0
     : false;
-
-  // Listen for dev sidecar window events
-  useEffect(() => {
-    const unsubscribeCreated = DevSidecarService.onWindowCreated((info) => {
-      setDevSidecarSessionId(info.sessionId);
-    });
-    const unsubscribeClosed = DevSidecarService.onWindowClosed((sessionId) => {
-      if (sessionId === devSidecarSessionId) {
-        setDevSidecarSessionId(null);
-      }
-    });
-    return () => {
-      unsubscribeCreated();
-      unsubscribeClosed();
-    };
-  }, [devSidecarSessionId]);
 
   // Load user preferences for titlebar button visibility
   useEffect(() => {
@@ -169,27 +148,6 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
       );
     };
   }, []);
-
-  // Handle dev sidecar button click
-  const handleDevSidecarClick = async () => {
-    if (devSidecarSessionId) {
-      // Focus existing window
-      await DevSidecarService.focusWindow(devSidecarSessionId);
-    } else {
-      // Create new window
-      try {
-        const info = await DevSidecarService.createWindow({
-          devServerUrl: 'http://localhost:3000', // Default URL, can be customized
-        });
-        setDevSidecarSessionId(info.sessionId);
-      } catch (error) {
-        console.error(
-          '[RepositoryTitlebar] Failed to create dev sidecar:',
-          error,
-        );
-      }
-    }
-  };
 
   // Handle open in Finder/Explorer button click
   const handleOpenInFinder = async () => {
@@ -646,53 +604,6 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
             <NotebookPen size={14} />
           </button>
         )}
-
-        {/* Dev Sidecar button */}
-        <button
-          onClick={handleDevSidecarClick}
-          style={{
-            WebkitAppRegion:
-              'no-drag' as React.CSSProperties['WebkitAppRegion'],
-            background: devSidecarSessionId
-              ? theme.colors.backgroundTertiary
-              : 'transparent',
-            border: 'none',
-            color: devSidecarSessionId
-              ? theme.colors.primary
-              : theme.colors.textSecondary,
-            cursor: 'pointer',
-            padding: '6px',
-            borderRadius: '4px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.2s',
-            width: '32px',
-            height: '32px',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor =
-              theme.colors.backgroundTertiary;
-            e.currentTarget.style.color = theme.colors.primary;
-          }}
-          onMouseLeave={(e) => {
-            if (!devSidecarSessionId) {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = theme.colors.textSecondary;
-            } else {
-              e.currentTarget.style.backgroundColor =
-                theme.colors.backgroundTertiary;
-              e.currentTarget.style.color = theme.colors.primary;
-            }
-          }}
-          title={
-            devSidecarSessionId
-              ? 'Focus dev preview window'
-              : 'Open dev preview window'
-          }
-        >
-          <ExternalLink size={14} />
-        </button>
 
         {showSidebarControls && onToggleSidebar && (
           <ViewSidebarControls

@@ -69,16 +69,6 @@ const titlebarEntryPath = path.join(
   'titlebar',
   'index.tsx',
 );
-const devSidecarEntryPath = path.join(
-  webpackPaths.srcRendererPath,
-  'dev-sidecar',
-  'index.tsx',
-);
-const devSidecarLogsEntryPath = path.join(
-  webpackPaths.srcRendererPath,
-  'dev-sidecar-logs',
-  'index.tsx',
-);
 const windowSwitcherEntryPath = path.join(
   webpackPaths.srcRendererPath,
   'window-switcher',
@@ -173,32 +163,6 @@ if (fs.existsSync(titlebarEntryPath)) {
         removeAttributeQuotes: true,
         removeComments: true,
       },
-      isBrowser: false,
-      isDevelopment: true,
-    }),
-  );
-}
-
-if (fs.existsSync(devSidecarEntryPath)) {
-  entryPoints['dev-sidecar'] = devSidecarEntryPath;
-  htmlPlugins.push(
-    new HtmlWebpackPlugin({
-      filename: 'dev-sidecar.html',
-      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
-      chunks: ['dev-sidecar'],
-      isBrowser: false,
-      isDevelopment: true,
-    }),
-  );
-}
-
-if (fs.existsSync(devSidecarLogsEntryPath)) {
-  entryPoints['dev-sidecar-logs'] = devSidecarLogsEntryPath;
-  htmlPlugins.push(
-    new HtmlWebpackPlugin({
-      filename: 'dev-sidecar-logs.html',
-      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
-      chunks: ['dev-sidecar-logs'],
       isBrowser: false,
       isDevelopment: true,
     }),
@@ -499,14 +463,6 @@ const configuration: webpack.Configuration = {
         {
           from: /^\/alexandria-workspace.html/,
           to: '/alexandria-workspace.html',
-        },
-        {
-          from: /^\/dev-sidecar.html/,
-          to: '/dev-sidecar.html',
-        },
-        {
-          from: /^\/dev-sidecar-logs.html/,
-          to: '/dev-sidecar-logs.html',
         },
         { from: /^\/index.html/, to: '/index.html' },
         { from: /./, to: '/index.html' }

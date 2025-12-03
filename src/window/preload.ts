@@ -56,7 +56,6 @@ import { testDebugAPI } from './main-process-api-implementations/testDebugApi';
 import { documentSearchAPI } from './main-process-api-implementations/documentSearchApi';
 import { observabilityAPI } from './main-process-api-implementations/observabilityApi';
 import { remoteAgentWindowAPI } from './main-process-api-implementations/remoteAgentWindowApi';
-import { devSidecarAPI } from './main-process-api-implementations/devSidecarApi';
 // Removed mermaid import - it uses 'debug' which isn't available in preload context
 // import mermaid from 'mermaid';
 
@@ -140,7 +139,6 @@ const mainProcessExposure: MainProcessAPI = {
   documentSearch: documentSearchAPI,
   observability: observabilityAPI,
   remoteAgentWindow: remoteAgentWindowAPI,
-  devSidecar: devSidecarAPI,
 };
 
 // Mermaid removed from preload - will be loaded in renderer instead
