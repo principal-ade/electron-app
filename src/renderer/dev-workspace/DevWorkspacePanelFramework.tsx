@@ -13,6 +13,7 @@ import { panels as visualValidationPanels } from '@industry-theme/visual-validat
 import { panels as codeCityPanels } from '@industry-theme/code-city-panel';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import { panels as dependenciesPanels } from '@industry-theme/dependencies-panel';
+import { panels as localhostPanels } from '@industry-theme/localhost-panels';
 import type { Repository } from '../../shared/types/repository.types';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 
@@ -85,6 +86,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
   const CodeCityPanelComponent = codeCityPanels[0]?.component;
   const DocsPanelComponent = docsPanels[0]?.component;
   const DependenciesPanelComponent = dependenciesPanels[0]?.component;
+  const LocalhostPanelComponent = localhostPanels[0]?.component;
 
   // Define all panels using panel framework components
   const allPanels = useMemo(
@@ -198,8 +200,52 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
           <div>Dependencies panel not available</div>
         ),
       },
+      {
+        id: 'localhostBrowser',
+        label: 'Localhost Browser',
+        content: LocalhostPanelComponent ? (
+          <div style={{
+            height: '100%',
+            width: '100%',
+            overflow: 'hidden',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <LocalhostPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div>Localhost Browser panel not available</div>
+        ),
+      },
+      {
+        id: 'localhostBrowserAlt',
+        label: 'Localhost Browser (Alt)',
+        content: LocalhostPanelComponent ? (
+          <div style={{
+            height: '100%',
+            width: '100%',
+            overflow: 'hidden',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <LocalhostPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div>Localhost Browser panel not available</div>
+        ),
+      },
     ],
-    [VisualValidationPanelComponent, CodeCityPanelComponent, DocsPanelComponent, DependenciesPanelComponent, context, actions, events, terminalImplementation, terminalContext, terminalDirectory],
+    [VisualValidationPanelComponent, CodeCityPanelComponent, DocsPanelComponent, DependenciesPanelComponent, LocalhostPanelComponent, context, actions, events, terminalImplementation, terminalContext, terminalDirectory],
   );
 
   return (
@@ -241,6 +287,20 @@ const DEFAULT_LAYOUT: PanelLayout = {
   left: 'dependencies',
   middle: 'terminal',
   right: 'codeCity',
+};
+
+// Storybook layout: terminal in middle, localhost browsers on sides (left collapsed)
+// Left browser can be used for app preview, right for Storybook (or vice versa)
+export const STORYBOOK_LAYOUT: PanelLayout = {
+  left: 'localhostBrowser',
+  middle: 'terminal',
+  right: 'localhostBrowserAlt',
+};
+
+// Default collapsed state for Storybook layout (left collapsed)
+export const STORYBOOK_COLLAPSED = {
+  left: true,
+  right: false,
 };
 
 export const DevWorkspacePanelFramework: React.FC<

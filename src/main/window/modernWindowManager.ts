@@ -261,7 +261,7 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
       nodeIntegration: false,
       sandbox: sandboxValue,
       webSecurity: true,
-      webviewTag: true, // Enable webview tag for LocalhostBrowserPanel
+      webviewTag: true, // Enable webview tag for localhost browser panels
     };
 
     // Additional sandbox workaround for problematic Electron versions

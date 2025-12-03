@@ -19,6 +19,10 @@ export interface PanelPreset {
     middle: string;
     right: string;
   };
+  collapsed?: {
+    left: boolean;
+    right: boolean;
+  };
 }
 
 export const DEFAULT_PANEL_PRESETS: PanelPreset[] = [
@@ -46,6 +50,13 @@ export const DEFAULT_PANEL_PRESETS: PanelPreset[] = [
     description: 'Code City, Terminal, Visual Validation',
     layout: { left: 'codeCity', middle: 'terminal', right: 'visualValidation' },
   },
+  {
+    id: 'storybook',
+    name: 'Storybook',
+    description: 'Browser, Terminal, Browser (Alt)',
+    layout: { left: 'localhostBrowser', middle: 'terminal', right: 'localhostBrowserAlt' },
+    collapsed: { left: true, right: false },
+  },
 ];
 
 export interface DevWorkspaceTitlebarProps {
@@ -70,6 +81,7 @@ export interface DevWorkspaceTitlebarProps {
   // Panel configuration
   currentLayout?: { left: string; middle: string; right: string };
   onLayoutChange?: (layout: { left: string; middle: string; right: string }) => void;
+  onCollapsedChange?: (collapsed: { left: boolean; right: boolean }) => void;
   // Monitoring status
   monitoringStatus?: {
     registered: boolean;
@@ -101,6 +113,7 @@ export const DevWorkspaceTitlebar: React.FC<
   onOpenInWebADE,
   currentLayout,
   onLayoutChange,
+  onCollapsedChange,
   monitoringStatus,
   onRefreshMonitoring,
   repositoryPath,
@@ -272,7 +285,10 @@ export const DevWorkspaceTitlebar: React.FC<
                   <button
                     key={preset.id}
                     onClick={() => {
-                      onLayoutChange(preset.layout);
+                      onLayoutChange?.(preset.layout);
+                      if (preset.collapsed && onCollapsedChange) {
+                        onCollapsedChange(preset.collapsed);
+                      }
                       setShowConfigDropdown(false);
                     }}
                     style={{

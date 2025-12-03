@@ -24,7 +24,6 @@ import { GitHubProjectsPanel } from './components/GitHubProjectsPanel';
 import { GitHubSocialPanel } from './components/GitHubSocialPanel';
 import { GraphDetailPanel } from './components/GraphDetailPanel';
 import { PresencePanel } from './components/PresencePanel';
-import { LocalhostBrowserPanel } from './components/LocalhostBrowserPanel';
 import { WorkspacesListPanel } from './components/WorkspacesListPanel';
 import { WorkspaceEntriesPanel } from './components/WorkspaceEntriesPanel';
 import { MCPTasksPanel } from './components/MCPTasksPanel';
@@ -92,7 +91,6 @@ const panelRenderers: Partial<
     />
   ),
   presence: () => <PresencePanel />,
-  localhostBrowser: () => <LocalhostBrowserPanel />,
   workspacesList: () => <WorkspacesListPanel />,
   workspaceEntries: () => <WorkspaceEntriesPanel />,
   mcpTasks: () => <MCPTasksPanel />,

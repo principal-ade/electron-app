@@ -426,6 +426,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         onSwitchToClassic={handleSwitchToClassic}
         currentLayout={layout as { left: string; middle: string; right: string }}
         onLayoutChange={(newLayout) => setLayout(newLayout)}
+        onCollapsedChange={setCollapsed}
         monitoringStatus={monitoringStatus}
         onRefreshMonitoring={refreshMonitoringStatus}
         repositoryPath={repositoryPath}

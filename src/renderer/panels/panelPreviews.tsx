@@ -13,7 +13,6 @@ import {
   GitBranch,
   GitCompare,
   GitPullRequest,
-  Globe,
   History,
   Image,
   Info,
@@ -53,7 +52,6 @@ import { GitDiffPanelPreview } from './components/GitDiffPanel';
 import { MDXEditorPanelPreview } from './components/MDXEditorPanel';
 import { GitHubReadmePanel } from './components/GitHubReadmePanel';
 import { PresencePanelPreview } from './components/PresencePanel';
-import { LocalhostBrowserPanelPreview } from './components/LocalhostBrowserPanel';
 import { WorkspacesListPanelPreview } from './components/WorkspacesListPanel';
 import { WorkspaceEntriesPanelPreview } from './components/WorkspaceEntriesPanel';
 
@@ -227,13 +225,6 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
     label: 'Live Presence',
     description:
       'See who is online and what repositories they are working on in real-time.',
-  },
-  localhostBrowser: {
-    icon: <Globe size={16} />,
-    preview: <LocalhostBrowserPanelPreview />,
-    label: 'Localhost Browser',
-    description:
-      'View localhost development servers in an embedded browser view.',
   },
   workspacesList: {
     icon: <DoorClosed size={16} />,

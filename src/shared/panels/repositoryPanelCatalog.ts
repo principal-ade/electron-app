@@ -242,14 +242,6 @@ export const repositoryPanelCatalog = [
     surfaces: ['principal'] as const,
   },
   {
-    id: 'localhostBrowser',
-    label: 'Localhost Browser',
-    description:
-      'View localhost development servers in an embedded browser view.',
-    slices: [] as const,
-    surfaces: ['manager', 'viewer', 'agent', 'principal'] as const,
-  },
-  {
     id: 'workspacesList',
     label: 'Workspaces',
     description:
