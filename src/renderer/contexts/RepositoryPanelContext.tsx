@@ -27,7 +27,7 @@ import type { PackageLayer } from '@principal-ai/codebase-composition';
 import type { PackageSummary } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 import { minimatch } from 'minimatch';
 
-// Types for packages slice data (matches @industry-theme/dependencies-panel expectations)
+// Types for packages slice data (matches @industry-theme/alexandria-panels DependenciesPanel expectations)
 interface PackagesSliceData {
   packages: PackageLayer[];
   summary: PackageSummary;

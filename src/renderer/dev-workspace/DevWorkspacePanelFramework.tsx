@@ -12,7 +12,7 @@ import { TabbedGhosttyTerminal } from '@industry-theme/ghostty-terminal-panel';
 import { panels as visualValidationPanels } from '@industry-theme/visual-validation-panel';
 import { panels as codeCityPanels } from '@industry-theme/code-city-panel';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
-import { panels as dependenciesPanels } from '@industry-theme/dependencies-panel';
+import { panels as alexandriaPanels } from '@industry-theme/alexandria-panels';
 import { panels as localhostPanels } from '@industry-theme/localhost-panels';
 import type { Repository } from '../../shared/types/repository.types';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
@@ -85,7 +85,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
   const VisualValidationPanelComponent = visualValidationPanels[0]?.component;
   const CodeCityPanelComponent = codeCityPanels[0]?.component;
   const DocsPanelComponent = docsPanels[0]?.component;
-  const DependenciesPanelComponent = dependenciesPanels[0]?.component;
+  const DependenciesPanelComponent = alexandriaPanels.find(p => p.metadata?.name === 'Dependencies')?.component;
   const LocalhostPanelComponent = localhostPanels[0]?.component;
 
   // Define all panels using panel framework components
