@@ -861,11 +861,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
 
   // Create the extended context value with both framework and panel-specific properties
   const context: ExtendedPanelContextValue = useMemo(
-    () => {
-      console.info('[PanelContext] Creating context with repository:', repository);
-      console.info('[PanelContext] Context adapters:', adapters);
-      console.info('[PanelContext] Context adapters.readFile:', adapters?.readFile);
-      return {
+    () => ({
         currentScope: {
           type: repository ? ('repository' as const) : ('workspace' as const),
           workspace,
@@ -932,8 +928,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       // Localhost detection data
       localhostServers,
       localhostServersLoading,
-      };
-    },
+    }),
     [workspace, repository, slices, adapters, terminalSessions, markdownFiles, fileTreeData, fileTreeLoading, localhostServers, localhostServersLoading]
   );
 

@@ -10,7 +10,7 @@ import {
 } from '@principal-ade/panel-layouts';
 import { PanelProvider, usePanelProvider } from '../contexts/PanelContext';
 import { TabbedTerminalPanel } from '@industry-theme/xterm-terminal-panel';
-import { panels as workspacePanels } from '@industry-theme/alexandria-workspace-panel';
+import { panels as workspacePanels } from '@industry-theme/alexandria-panels';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import { panels as codeCityPanels } from '@industry-theme/code-city-panel';
 import { panels as localhostPanels } from '@industry-theme/localhost-panels';
@@ -201,7 +201,8 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
   }, [events, context]);
 
   // Get panel components
-  const WorkspacePanelComponent = workspacePanels[0]?.component;
+  // Use WorkspaceRepositoriesPanel (panels[1]) which expects workspace + workspaceRepositories slices
+  const WorkspacePanelComponent = workspacePanels[1]?.component;
   const DocsPanelComponent = docsPanels[0]?.component;
   const CodeCityPanelComponent = codeCityPanels[0]?.component;
   const LocalhostPanelComponent = localhostPanels[0]?.component;
