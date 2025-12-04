@@ -167,16 +167,6 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
           WebkitAppRegion: 'no-drag',
         }}
       >
-        {/* Right Panel Selector */}
-        {layout && onLayoutChange && typeof layout.right === 'string' && (
-          <PanelSelectorDropdown
-            side="right"
-            currentPanelId={layout.right}
-            availablePanels={AVAILABLE_PANELS}
-            onPanelChange={handleRightPanelChange}
-          />
-        )}
-
         {/* Panel Controls */}
         {(onToggleLeftSidebar || onToggleRightSidebar || onSwitchLeftMiddlePanels || onSwitchRightMiddlePanels) && (
           <PanelControls
@@ -307,6 +297,16 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
           <Plus size={14} />
           Add
         </button>
+
+        {/* Right Panel Selector - rightmost button */}
+        {layout && onLayoutChange && typeof layout.right === 'string' && (
+          <PanelSelectorDropdown
+            side="right"
+            currentPanelId={layout.right}
+            availablePanels={AVAILABLE_PANELS}
+            onPanelChange={handleRightPanelChange}
+          />
+        )}
       </div>
 
       {/* Add Repository Modal */}

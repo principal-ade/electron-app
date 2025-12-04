@@ -1,13 +1,24 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Layers, Cloud, CloudOff, Terminal, Globe, Settings, Check, Eye, EyeOff, RefreshCw, Loader2, Copy, FolderCheck } from 'lucide-react';
+import React, { useState } from 'react';
+import { Layers, Cloud, CloudOff, Terminal, Globe, Check, Eye, EyeOff, Loader2, Copy } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { PanelControls } from '@principal-ade/panel-layouts';
 import { BaseTitlebar } from '../components/Titlebar/BaseTitlebar';
 import { GitSyncStatusIndicator } from '../components/Titlebar/GitSyncStatusIndicator';
 import { RepositoryAvatar } from '../components/repository-maps/RepositoryAvatar';
+import { PanelSelectorDropdown, type PanelOption } from '../components/Titlebar/PanelSelectorDropdown';
 import type { Repository } from '../../shared/types/repository.types';
 import type { FileTreeSource } from '../types/file-tree-source';
 import { useRepositoryGitStatus } from '../hooks/useRepositoryGitStatus';
+
+// Available panels for Dev workspace
+const AVAILABLE_PANELS: PanelOption[] = [
+  { id: 'dependencies', label: 'Dependencies' },
+  { id: 'terminal', label: 'Terminal' },
+  { id: 'codeCity', label: 'Code City' },
+  { id: 'visualValidation', label: 'Visual Validation' },
+  { id: 'docs', label: 'Documentation' },
+  { id: 'localhostBrowser', label: 'Localhost Browser' },
+];
 
 // Panel configuration presets
 export interface PanelPreset {
@@ -119,10 +130,7 @@ export const DevWorkspaceTitlebar: React.FC<
   repositoryPath,
 }) => {
   const { theme } = useTheme();
-  const [showConfigDropdown, setShowConfigDropdown] = useState(false);
   const [copiedPath, setCopiedPath] = useState(false);
-  const configButtonRef = useRef<HTMLButtonElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Handle copy repository path
   const handleCopyPath = async () => {
@@ -136,35 +144,19 @@ export const DevWorkspaceTitlebar: React.FC<
     }
   };
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node) &&
-        configButtonRef.current &&
-        !configButtonRef.current.contains(event.target as Node)
-      ) {
-        setShowConfigDropdown(false);
-      }
-    };
-
-    if (showConfigDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
+  // Handler for changing the left panel
+  const handleLeftPanelChange = (panelId: string) => {
+    if (currentLayout && onLayoutChange) {
+      onLayoutChange({ ...currentLayout, left: panelId });
     }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showConfigDropdown]);
+  };
 
-  // Check if current layout matches a preset
-  const currentPresetId = DEFAULT_PANEL_PRESETS.find(
-    (preset) =>
-      currentLayout &&
-      preset.layout.left === currentLayout.left &&
-      preset.layout.middle === currentLayout.middle &&
-      preset.layout.right === currentLayout.right
-  )?.id;
+  // Handler for changing the right panel
+  const handleRightPanelChange = (panelId: string) => {
+    if (currentLayout && onLayoutChange) {
+      onLayoutChange({ ...currentLayout, right: panelId });
+    }
+  };
 
   // Get local clone path for git status
   const localClonePath =
@@ -210,133 +202,15 @@ export const DevWorkspaceTitlebar: React.FC<
             WebkitAppRegion: 'no-drag',
           }}
         >
-          <div style={{ position: 'relative' }}>
-            <button
-              ref={configButtonRef}
-              onClick={() => setShowConfigDropdown(!showConfigDropdown)}
-              title="Panel Configuration"
-              style={{
-                // @ts-ignore - WebkitAppRegion is not in CSSProperties
-                WebkitAppRegion: 'no-drag',
-                background: showConfigDropdown ? theme.colors.backgroundSecondary : theme.colors.backgroundTertiary,
-                border: `1px solid ${showConfigDropdown ? theme.colors.primary : theme.colors.border}`,
-                color: showConfigDropdown ? theme.colors.text : theme.colors.textSecondary,
-                cursor: 'pointer',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s',
-                fontSize: `${theme.fontSizes[1]}px`,
-                fontWeight: theme.fontWeights.medium,
-              }}
-              onMouseEnter={(e) => {
-                if (!showConfigDropdown) {
-                  e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-                  e.currentTarget.style.borderColor = theme.colors.primary;
-                  e.currentTarget.style.color = theme.colors.text;
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!showConfigDropdown) {
-                  e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-                  e.currentTarget.style.borderColor = theme.colors.border;
-                  e.currentTarget.style.color = theme.colors.textSecondary;
-                }
-              }}
-            >
-              <Settings size={14} />
-              <span>Layout</span>
-            </button>
-
-            {/* Configuration Dropdown */}
-            {showConfigDropdown && (
-              <div
-                ref={dropdownRef}
-                style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  marginTop: '4px',
-                  backgroundColor: theme.colors.background,
-                  border: `1px solid ${theme.colors.border}`,
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                  minWidth: '220px',
-                  zIndex: 1000,
-                  overflow: 'hidden',
-                }}
-              >
-                <div
-                  style={{
-                    padding: '8px 12px',
-                    borderBottom: `1px solid ${theme.colors.border}`,
-                    fontSize: `${theme.fontSizes[0]}px`,
-                    color: theme.colors.textSecondary,
-                    fontWeight: theme.fontWeights.semibold,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                  }}
-                >
-                  Panel Presets
-                </div>
-                {DEFAULT_PANEL_PRESETS.map((preset) => (
-                  <button
-                    key={preset.id}
-                    onClick={() => {
-                      onLayoutChange?.(preset.layout);
-                      if (preset.collapsed && onCollapsedChange) {
-                        onCollapsedChange(preset.collapsed);
-                      }
-                      setShowConfigDropdown(false);
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '8px',
-                      color: theme.colors.text,
-                      fontSize: `${theme.fontSizes[1]}px`,
-                      textAlign: 'left',
-                      transition: 'background-color 0.15s',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: theme.fontWeights.medium }}>
-                        {preset.name}
-                      </div>
-                      {preset.description && (
-                        <div
-                          style={{
-                            fontSize: `${theme.fontSizes[0]}px`,
-                            color: theme.colors.textSecondary,
-                            marginTop: '2px',
-                          }}
-                        >
-                          {preset.description}
-                        </div>
-                      )}
-                    </div>
-                    {currentPresetId === preset.id && (
-                      <Check size={16} style={{ color: theme.colors.success, flexShrink: 0 }} />
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Left Panel Selector */}
+          {currentLayout && (
+            <PanelSelectorDropdown
+              side="left"
+              currentPanelId={currentLayout.left}
+              availablePanels={AVAILABLE_PANELS}
+              onPanelChange={handleLeftPanelChange}
+            />
+          )}
 
           {/* Monitoring Status Button */}
           {monitoringStatus && (
@@ -632,7 +506,7 @@ export const DevWorkspaceTitlebar: React.FC<
         </div>
       </div>
 
-      {/* Right: Panel controls, terminal toggle and mode switch */}
+      {/* Right: Panel controls, terminal toggle, mode switch, and panel selector */}
       <div
         style={{
           position: 'absolute',
@@ -769,6 +643,16 @@ export const DevWorkspaceTitlebar: React.FC<
             <Layers size={14} />
             <span>Legacy</span>
           </button>
+        )}
+
+        {/* Right Panel Selector - rightmost button */}
+        {currentLayout && onLayoutChange && (
+          <PanelSelectorDropdown
+            side="right"
+            currentPanelId={currentLayout.right}
+            availablePanels={AVAILABLE_PANELS}
+            onPanelChange={handleRightPanelChange}
+          />
         )}
       </div>
     </BaseTitlebar>

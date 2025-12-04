@@ -379,7 +379,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     const isDev = process.env.NODE_ENV === 'development';
     const baseUrl = isDev ? APP_BRANDING.WEB_ADE_URL.DEVELOPMENT : APP_BRANDING.WEB_ADE_URL.PRODUCTION;
 
-    const webAdeUrl = `${baseUrl}/editor/${githubInfo.owner}/${githubInfo.repo}`;
+    const webAdeUrl = `${baseUrl}/${githubInfo.owner}/${githubInfo.repo}`;
 
     try {
       await window.mainProcess.shell.openExternal(webAdeUrl);

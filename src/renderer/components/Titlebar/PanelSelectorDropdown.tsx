@@ -69,29 +69,33 @@ export const PanelSelectorDropdown: React.FC<PanelSelectorDropdownProps> = ({
         }}
         style={{
           display: 'flex',
+          flexDirection: side === 'right' ? 'row-reverse' : 'row',
           alignItems: 'center',
           gap: '6px',
-          padding: '4px 10px',
-          backgroundColor: 'transparent',
+          padding: '6px 12px',
+          background: theme.colors.backgroundTertiary,
           border: `1px solid ${theme.colors.border}`,
           borderRadius: '6px',
           color: theme.colors.textSecondary,
           cursor: 'pointer',
-          fontSize: `${theme.fontSizes[0]}px`,
+          fontSize: `${theme.fontSizes[1]}px`,
           fontWeight: theme.fontWeights.medium,
           fontFamily: theme.fonts.body,
-          transition: 'all 0.2s ease',
+          transition: 'all 0.2s',
           // @ts-ignore - WebkitAppRegion is not in CSSProperties
           WebkitAppRegion: 'no-drag',
           position: 'relative',
           zIndex: 101,
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor =
-            theme.colors.backgroundTertiary || 'rgba(255, 255, 255, 0.1)';
+          e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+          e.currentTarget.style.borderColor = theme.colors.primary;
+          e.currentTarget.style.color = theme.colors.text;
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = 'transparent';
+          e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+          e.currentTarget.style.borderColor = theme.colors.border;
+          e.currentTarget.style.color = theme.colors.textSecondary;
         }}
         title={`Change ${side} panel`}
       >
