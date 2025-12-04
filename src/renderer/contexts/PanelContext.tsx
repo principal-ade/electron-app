@@ -25,6 +25,11 @@ import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { WindowService } from '../main-process-api/WindowService';
 import { AlexandriaDocsService } from '../main-process-api/AlexandriaDocsService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
+import {
+  LocalhostDetectionService,
+  type RunningServer,
+  type ServerScanResult,
+} from '../main-process-api/LocalhostDetectionService';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import { minimatch } from 'minimatch';
@@ -103,6 +108,10 @@ interface ExtendedPanelActions extends PanelActions {
     repository: AlexandriaEntry,
     workspaceId: string
   ) => Promise<string>;
+  // Localhost detection actions
+  detectLocalhostServers?: () => Promise<ServerScanResult>;
+  checkLocalhostPort?: (port: number) => Promise<boolean>;
+  navigateToLocalhost?: (port: number, path?: string) => void;
 }
 
 // Extended context interface that panels actually expect
@@ -132,6 +141,9 @@ interface ExtendedPanelContextValue extends PanelContextValue {
     repositoryPath?: string;
   }>;
   loading: boolean;
+  // Localhost detection data
+  localhostServers: RunningServer[];
+  localhostServersLoading: boolean;
 }
 
 // Provider value that contains context, actions, and events separately
@@ -178,6 +190,11 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
   // Track file tree for the current repository
   const [fileTreeData, setFileTreeData] = useState<FileTree | null>(null);
   const [fileTreeLoading, setFileTreeLoading] = useState(false);
+
+  // Track localhost servers
+  const [localhostServers, setLocalhostServers] = useState<RunningServer[]>([]);
+  const [localhostServersLoading, setLocalhostServersLoading] = useState(false);
+  const localhostWatchIdRef = useRef<string | null>(null);
 
   // Fetch markdown files when repository changes
   useEffect(() => {
@@ -269,6 +286,48 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
 
     fetchRepositories();
   }, [workspace?.id]);
+
+  // Initialize localhost server detection
+  useEffect(() => {
+    let unsubscribeUpdates: (() => void) | null = null;
+
+    const initLocalhostDetection = async () => {
+      setLocalhostServersLoading(true);
+      try {
+        // Do initial scan
+        const result = await LocalhostDetectionService.detectRunningServers();
+        setLocalhostServers(result.servers);
+
+        // Start watching for changes (every 5 seconds)
+        const { watchId } = await LocalhostDetectionService.startWatching(undefined, 5000);
+        localhostWatchIdRef.current = watchId;
+
+        // Subscribe to updates
+        unsubscribeUpdates = LocalhostDetectionService.onServersUpdated((scanResult) => {
+          setLocalhostServers(scanResult.servers);
+        });
+      } catch (error) {
+        console.error('[PanelContext] Failed to initialize localhost detection:', error);
+      } finally {
+        setLocalhostServersLoading(false);
+      }
+    };
+
+    initLocalhostDetection();
+
+    return () => {
+      // Cleanup: stop watching and unsubscribe
+      if (localhostWatchIdRef.current) {
+        LocalhostDetectionService.stopWatching(localhostWatchIdRef.current).catch((err) => {
+          console.error('[PanelContext] Failed to stop localhost watching:', err);
+        });
+        localhostWatchIdRef.current = null;
+      }
+      if (unsubscribeUpdates) {
+        unsubscribeUpdates();
+      }
+    };
+  }, []);
 
   // Listen for workspace membership changes and refresh repositories
   useEffect(() => {
@@ -466,8 +525,30 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
             },
           },
         ],
+        [
+          'localhostServers',
+          {
+            scope: 'workspace' as const,
+            name: 'localhostServers',
+            data: localhostServers,
+            loading: localhostServersLoading,
+            error: null,
+            refresh: async () => {
+              // Refetch localhost servers
+              setLocalhostServersLoading(true);
+              try {
+                const result = await LocalhostDetectionService.detectRunningServers();
+                setLocalhostServers(result.servers);
+              } catch (error) {
+                console.error('[PanelContext] Failed to refresh localhost servers:', error);
+              } finally {
+                setLocalhostServersLoading(false);
+              }
+            },
+          },
+        ],
       ]),
-    [workspace, workspaceRepositories, repositoriesLoading, markdownFiles, markdownLoading, fileTreeData, fileTreeLoading, repository]
+    [workspace, workspaceRepositories, repositoriesLoading, markdownFiles, markdownLoading, fileTreeData, fileTreeLoading, repository, localhostServers, localhostServersLoading]
   );
 
   // Define panel actions
@@ -725,8 +806,35 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
           throw error;
         }
       },
+
+      // Localhost detection actions
+      detectLocalhostServers: async () => {
+        setLocalhostServersLoading(true);
+        try {
+          const result = await LocalhostDetectionService.detectRunningServers();
+          setLocalhostServers(result.servers);
+          return result;
+        } finally {
+          setLocalhostServersLoading(false);
+        }
+      },
+
+      checkLocalhostPort: async (port: number) => {
+        return LocalhostDetectionService.checkPort(port);
+      },
+
+      navigateToLocalhost: (port: number, path?: string) => {
+        console.info('[PanelContext] Navigating to localhost:', port, path);
+        events.emit({
+          type: 'localhost:navigate',
+          source: 'alexandria-workspace',
+          timestamp: Date.now(),
+          payload: { port, path: path || '/' },
+        });
+      },
     };
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [events, workspace, repository?.path, repository?.name, terminalContext]
   );
 
@@ -821,9 +929,12 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
         repositoryPath: undefined, // TerminalInfo doesn't include repositoryPath
       })),
       loading: false,
+      // Localhost detection data
+      localhostServers,
+      localhostServersLoading,
       };
     },
-    [workspace, repository, slices, adapters, terminalSessions, markdownFiles, fileTreeData, fileTreeLoading]
+    [workspace, repository, slices, adapters, terminalSessions, markdownFiles, fileTreeData, fileTreeLoading, localhostServers, localhostServersLoading]
   );
 
   // Combine context, actions, and events into provider value

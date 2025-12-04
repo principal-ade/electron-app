@@ -68,6 +68,10 @@ import { setupQuickOpenHandlers } from './window/quickOpen';
 import { registerDevWorkspaceWindowHandlers } from './window/devWorkspaceWindowHandlers';
 import { registerExtensionWindowHandlers } from './window/extensionWindowHandlers';
 import { extensionDiscoveryService } from './services/ExtensionDiscoveryService';
+import {
+  registerLocalhostDetectionHandlers,
+  cleanupLocalhostWatchers,
+} from './services/ipc/localhost/localhostDetectionHandlers';
 
 // let agentSessionEventsHttpBridge: AgentSessionEventsHttpBridge | null = null;
 let principalMCPBridgePort: number | null = null;
@@ -250,6 +254,7 @@ const registerAllIpcHandlers = async () => {
   registerPackageManagerHandlers();
   registerSystemHandlers();
   registerFeedbackHandlers();
+  registerLocalhostDetectionHandlers();
 };
 
 // Setup terminal manager
@@ -344,6 +349,10 @@ export const shutdownServices = async () => {
   // Shutdown document search service
   shutdownDocumentSearch();
   console.log('[Main Process] Document search service stopped.');
+
+  // Cleanup localhost detection watchers
+  cleanupLocalhostWatchers();
+  console.log('[Main Process] Localhost detection watchers cleaned up.');
 
   // Close all remote agent windows
   if (remoteAgentWindowManager) {

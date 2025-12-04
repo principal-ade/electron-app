@@ -45,6 +45,7 @@ import type { FeedbackAPI } from './FeedbackAPI';
 import type { DocumentSearchAPI } from '../ipc/DocumentSearchIPC';
 import type { ObservabilityAPI } from './ObservabilityAPI';
 import type { RemoteAgentWindowAPI } from './RemoteAgentWindowAPI';
+import type { LocalhostDetectionAPI } from './LocalhostDetectionAPI';
 
 // Re-export for convenience
 export type {
@@ -111,6 +112,7 @@ export interface MainProcessAPI {
   documentSearch: DocumentSearchAPI;
   observability: ObservabilityAPI;
   remoteAgentWindow: RemoteAgentWindowAPI;
+  localhostDetection: LocalhostDetectionAPI;
 }
 
 /**
