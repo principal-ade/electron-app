@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { PanelLeft, PanelRight } from 'lucide-react';
 
 export interface PanelOption {
   id: string;
@@ -50,8 +49,6 @@ export const PanelSelectorDropdown: React.FC<PanelSelectorDropdownProps> = ({
     setIsDropdownOpen(false);
   };
 
-  const Icon = side === 'left' ? PanelLeft : PanelRight;
-
   return (
     <div
       ref={dropdownRef}
@@ -99,7 +96,6 @@ export const PanelSelectorDropdown: React.FC<PanelSelectorDropdownProps> = ({
         }}
         title={`Change ${side} panel`}
       >
-        <Icon size={14} />
         <span>{currentPanel?.label || 'Panel'}</span>
       </button>
 

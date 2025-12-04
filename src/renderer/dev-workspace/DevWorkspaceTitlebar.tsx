@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Layers, Cloud, CloudOff, Terminal, Globe, Check, Eye, EyeOff, Loader2, Copy } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { PanelControls } from '@principal-ade/panel-layouts';
+import { PanelCollapseButton, PanelSwitchButton } from '@principal-ade/panel-layouts';
 import { BaseTitlebar } from '../components/Titlebar/BaseTitlebar';
 import { GitSyncStatusIndicator } from '../components/Titlebar/GitSyncStatusIndicator';
 import { RepositoryAvatar } from '../components/repository-maps/RepositoryAvatar';
@@ -202,6 +202,16 @@ export const DevWorkspaceTitlebar: React.FC<
             WebkitAppRegion: 'no-drag',
           }}
         >
+          {/* Left Collapse Button - outside the panel selector */}
+          {onToggleLeftSidebar && (
+            <PanelCollapseButton
+              isCollapsed={collapsed?.left ?? false}
+              onToggle={onToggleLeftSidebar}
+              side="left"
+              iconSize={16}
+            />
+          )}
+
           {/* Left Panel Selector */}
           {currentLayout && (
             <PanelSelectorDropdown
@@ -209,6 +219,15 @@ export const DevWorkspaceTitlebar: React.FC<
               currentPanelId={currentLayout.left}
               availablePanels={AVAILABLE_PANELS}
               onPanelChange={handleLeftPanelChange}
+            />
+          )}
+
+          {/* Left-Middle Switch Button */}
+          {onSwitchLeftMiddlePanels && (
+            <PanelSwitchButton
+              onSwitch={onSwitchLeftMiddlePanels}
+              variant="left-middle"
+              iconSize={16}
             />
           )}
 
@@ -518,23 +537,6 @@ export const DevWorkspaceTitlebar: React.FC<
           WebkitAppRegion: 'no-drag',
         }}
       >
-        {/* Panel Controls */}
-        {(onToggleLeftSidebar || onToggleRightSidebar || onSwitchLeftMiddlePanels || onSwitchRightMiddlePanels) && (
-          <PanelControls
-            leftSidebarCollapsed={collapsed?.left ?? false}
-            onToggleLeftSidebar={onToggleLeftSidebar}
-            showLeftSidebarControl={!!onToggleLeftSidebar}
-            rightSidebarCollapsed={collapsed?.right ?? true}
-            onToggleRightSidebar={onToggleRightSidebar}
-            showRightSidebarControl={!!onToggleRightSidebar}
-            onSwitchLeftMiddlePanels={onSwitchLeftMiddlePanels}
-            showSwitchLeftMiddle={!!onSwitchLeftMiddlePanels}
-            onSwitchRightMiddlePanels={onSwitchRightMiddlePanels}
-            showSwitchRightMiddle={!!onSwitchRightMiddlePanels}
-            iconSize={16}
-          />
-        )}
-
         {/* Open in Web-ADE Button */}
         {onOpenInWebADE && (
           <button
@@ -645,13 +647,32 @@ export const DevWorkspaceTitlebar: React.FC<
           </button>
         )}
 
-        {/* Right Panel Selector - rightmost button */}
+        {/* Right-Middle Switch Button */}
+        {onSwitchRightMiddlePanels && (
+          <PanelSwitchButton
+            onSwitch={onSwitchRightMiddlePanels}
+            variant="right-middle"
+            iconSize={16}
+          />
+        )}
+
+        {/* Right Panel Selector */}
         {currentLayout && onLayoutChange && (
           <PanelSelectorDropdown
             side="right"
             currentPanelId={currentLayout.right}
             availablePanels={AVAILABLE_PANELS}
             onPanelChange={handleRightPanelChange}
+          />
+        )}
+
+        {/* Right Collapse Button - outside the panel selector */}
+        {onToggleRightSidebar && (
+          <PanelCollapseButton
+            isCollapsed={collapsed?.right ?? true}
+            onToggle={onToggleRightSidebar}
+            side="right"
+            iconSize={16}
           />
         )}
       </div>

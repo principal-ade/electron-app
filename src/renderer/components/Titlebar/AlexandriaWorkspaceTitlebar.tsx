@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { PanelControls, type PanelLayout } from '@principal-ade/panel-layouts';
+import { PanelCollapseButton, PanelSwitchButton, type PanelLayout } from '@principal-ade/panel-layouts';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 import { Plus, Keyboard, FilePlus2 } from 'lucide-react';
 import { AddRepositoryToWorkspaceModal } from '../../panels/components/AddRepositoryToWorkspaceModal';
@@ -100,6 +100,16 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
         {/* Traffic lights spacer on macOS */}
         <div style={{ width: '64px', flexShrink: 0 }} />
 
+        {/* Left Collapse Button - outside the panel selector */}
+        {onToggleLeftSidebar && (
+          <PanelCollapseButton
+            isCollapsed={collapsed?.left ?? false}
+            onToggle={onToggleLeftSidebar}
+            side="left"
+            iconSize={16}
+          />
+        )}
+
         {/* Left Panel Selector */}
         {layout && onLayoutChange && typeof layout.left === 'string' && (
           <PanelSelectorDropdown
@@ -107,6 +117,15 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
             currentPanelId={layout.left}
             availablePanels={AVAILABLE_PANELS}
             onPanelChange={handleLeftPanelChange}
+          />
+        )}
+
+        {/* Left-Middle Switch Button */}
+        {onSwitchLeftMiddlePanels && (
+          <PanelSwitchButton
+            onSwitch={onSwitchLeftMiddlePanels}
+            variant="left-middle"
+            iconSize={16}
           />
         )}
       </div>
@@ -167,23 +186,6 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
           WebkitAppRegion: 'no-drag',
         }}
       >
-        {/* Panel Controls */}
-        {(onToggleLeftSidebar || onToggleRightSidebar || onSwitchLeftMiddlePanels || onSwitchRightMiddlePanels) && (
-          <PanelControls
-            leftSidebarCollapsed={collapsed?.left ?? false}
-            onToggleLeftSidebar={onToggleLeftSidebar}
-            showLeftSidebarControl={!!onToggleLeftSidebar}
-            rightSidebarCollapsed={collapsed?.right ?? false}
-            onToggleRightSidebar={onToggleRightSidebar}
-            showRightSidebarControl={!!onToggleRightSidebar}
-            onSwitchLeftMiddlePanels={onSwitchLeftMiddlePanels}
-            showSwitchLeftMiddle={!!onSwitchLeftMiddlePanels}
-            onSwitchRightMiddlePanels={onSwitchRightMiddlePanels}
-            showSwitchRightMiddle={!!onSwitchRightMiddlePanels}
-            iconSize={16}
-          />
-        )}
-
         {/* Theme Toggle */}
         <WorkspaceThemeDropdown
           workspaceId={workspace.id}
@@ -298,13 +300,32 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
           Add
         </button>
 
-        {/* Right Panel Selector - rightmost button */}
+        {/* Right-Middle Switch Button */}
+        {onSwitchRightMiddlePanels && (
+          <PanelSwitchButton
+            onSwitch={onSwitchRightMiddlePanels}
+            variant="right-middle"
+            iconSize={16}
+          />
+        )}
+
+        {/* Right Panel Selector */}
         {layout && onLayoutChange && typeof layout.right === 'string' && (
           <PanelSelectorDropdown
             side="right"
             currentPanelId={layout.right}
             availablePanels={AVAILABLE_PANELS}
             onPanelChange={handleRightPanelChange}
+          />
+        )}
+
+        {/* Right Collapse Button - outside the panel selector */}
+        {onToggleRightSidebar && (
+          <PanelCollapseButton
+            isCollapsed={collapsed?.right ?? false}
+            onToggle={onToggleRightSidebar}
+            side="right"
+            iconSize={16}
           />
         )}
       </div>
