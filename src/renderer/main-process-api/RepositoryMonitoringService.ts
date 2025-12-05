@@ -17,6 +17,7 @@ import type {
   PackageSummary,
   RepositoryCacheSnapshot,
   RepositoryCacheSyncEvent,
+  WorkspaceChangeEventPayload,
 } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 
 export class RepositoryMonitoringService {
@@ -329,6 +330,17 @@ export class RepositoryMonitoringService {
    */
   static onGitStatusChanged(callback: (status: GitStatus) => void): () => void {
     return window.mainProcess.repositoryMonitoring.onGitStatusChanged(callback);
+  }
+
+  /**
+   * Subscribe to workspace file changes
+   * @param callback Function to call when workspace files change
+   * @returns Cleanup function to unsubscribe
+   */
+  static onWorkspaceChange(
+    callback: (event: WorkspaceChangeEventPayload) => void,
+  ): () => void {
+    return window.mainProcess.repositoryMonitoring.onWorkspaceChange(callback);
   }
 
   /**

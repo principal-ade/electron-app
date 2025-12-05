@@ -1,9 +1,10 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type { PanelLayout } from '@principal-ade/panel-layouts';
 import type { Workspace, AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
+import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { AlexandriaWorkspaceTitlebar } from '../components/Titlebar';
 import { AlexandriaWorkspaceLayout } from './AlexandriaWorkspaceLayout';
 import { CustomThemeProvider } from '../providers/CustomThemeProvider';
@@ -14,6 +15,15 @@ import { GlobalFeedbackProvider } from '../GlobalFeedbackProvider';
  *
  * This component handles the workspace data loading and rendering.
  */
+/** Git status info for a repository */
+interface RepoGitStatus {
+  branch?: string;
+  ahead?: number;
+  behind?: number;
+  staged?: number;
+  unstaged?: number;
+}
+
 const AlexandriaWorkspaceContent: React.FC = () => {
   const { theme } = useTheme();
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
@@ -27,6 +37,12 @@ const AlexandriaWorkspaceContent: React.FC = () => {
     middle: 'terminal',
     right: 'code-city',
   });
+
+  // Track git status for each repository by path
+  const [repoGitStatuses, setRepoGitStatuses] = useState<Map<string, RepoGitStatus>>(new Map());
+
+  // Track which repositories have been registered for monitoring
+  const registeredReposRef = useRef<Set<string>>(new Set());
 
   // Switch handlers for panel swapping
   const handleSwitchLeftMiddle = useCallback(() => {
@@ -144,6 +160,110 @@ const AlexandriaWorkspaceContent: React.FC = () => {
       unsubscribeAlexandria();
     };
   }, []);
+
+  // Register workspace repositories for monitoring and enable git watching
+  useEffect(() => {
+    if (workspaceRepositories.length === 0) return;
+
+    const initializeMonitoring = async () => {
+      // Start monitoring service if not already started
+      try {
+        await RepositoryMonitoringService.startMonitoring();
+      } catch (err) {
+        console.error('[AlexandriaWorkspaceApp] Failed to start monitoring service:', err);
+        return;
+      }
+
+      // Register each repository and enable git watching
+      for (const repo of workspaceRepositories) {
+        if (!repo.path || registeredReposRef.current.has(repo.path)) continue;
+
+        try {
+          await RepositoryMonitoringService.registerRepository(repo.path);
+          await RepositoryMonitoringService.enableGitWatching(repo.path);
+          registeredReposRef.current.add(repo.path);
+
+          // Fetch initial git status
+          const gitStatus = await RepositoryMonitoringService.getGitStatus(repo.path);
+          if (gitStatus) {
+            setRepoGitStatuses((prev) => {
+              const next = new Map(prev);
+              next.set(repo.path, {
+                branch: gitStatus.branch,
+                ahead: gitStatus.ahead,
+                behind: gitStatus.behind,
+              });
+              return next;
+            });
+          }
+
+          console.info('[AlexandriaWorkspaceApp] Registered repository for monitoring:', repo.path);
+        } catch (err) {
+          console.error('[AlexandriaWorkspaceApp] Failed to register repository:', repo.path, err);
+        }
+      }
+    };
+
+    initializeMonitoring();
+
+    // Cleanup: unregister repositories when component unmounts
+    return () => {
+      for (const repoPath of registeredReposRef.current) {
+        RepositoryMonitoringService.disableGitWatching(repoPath).catch((err) => {
+          console.error('[AlexandriaWorkspaceApp] Failed to disable git watching:', repoPath, err);
+        });
+      }
+      registeredReposRef.current.clear();
+    };
+  }, [workspaceRepositories]);
+
+  // Subscribe to git status changes for all workspace repositories
+  useEffect(() => {
+    if (workspaceRepositories.length === 0) return;
+
+    const repoPaths = new Set(workspaceRepositories.map((r) => r.path));
+
+    const unsubscribe = RepositoryMonitoringService.onGitStatusChanged((status) => {
+      // Only handle events for repositories in this workspace
+      if (!repoPaths.has(status.repoPath as typeof workspaceRepositories[0]['path'])) return;
+
+      console.log('[AlexandriaWorkspaceApp] Git status changed:', status.repoPath, status.branch);
+
+      setRepoGitStatuses((prev) => {
+        const next = new Map(prev);
+        next.set(status.repoPath, {
+          branch: status.branch,
+          ahead: status.ahead,
+          behind: status.behind,
+        });
+        return next;
+      });
+    });
+
+    return () => unsubscribe();
+  }, [workspaceRepositories]);
+
+  // Subscribe to workspace file changes
+  useEffect(() => {
+    if (workspaceRepositories.length === 0) return;
+
+    const repoPaths = new Set(workspaceRepositories.map((r) => r.path));
+
+    const unsubscribe = RepositoryMonitoringService.onWorkspaceChange((event) => {
+      // Only handle events for repositories in this workspace
+      if (!repoPaths.has(event.repoPath as typeof workspaceRepositories[0]['path'])) return;
+
+      console.log('[AlexandriaWorkspaceApp] Workspace changed:', {
+        repoPath: event.repoPath,
+        changeCount: event.changes?.length ?? 0,
+        state: event.state,
+      });
+
+      // Could emit to a panel event bus here if needed for child panels
+    });
+
+    return () => unsubscribe();
+  }, [workspaceRepositories]);
 
   if (loading) {
     return (

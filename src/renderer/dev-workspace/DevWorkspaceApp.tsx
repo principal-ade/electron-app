@@ -21,7 +21,9 @@ import type { Repository } from '../../shared/types/repository.types';
 import type { FileTreeSource } from '../types/file-tree-source';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
+import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { APP_BRANDING } from '../../shared/config/appBranding';
+import { AlexandriaEventType } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
 
 /**
  * Alexandria entry data passed from main process
@@ -303,6 +305,58 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
 
     return () => unsubscribe();
   }, [repositoryPath]);
+
+  // Subscribe to Alexandria repository change events
+  useEffect(() => {
+    if (!repositoryPath) return;
+
+    const unsubscribe = AlexandriaService.onRepositoryChange((event) => {
+      // Check if this event is for our repository
+      if (event.type === AlexandriaEventType.REMOVED) {
+        // Repository was removed - we could close the window or show a message
+        if (event.name === repositoryName) {
+          console.log('[DevWorkspaceApp] Repository was removed from Alexandria registry');
+        }
+      } else if (event.repository?.path === repositoryPath) {
+        console.log('[DevWorkspaceApp] Repository updated:', event.type, event.repository);
+        // Repository was added or updated - could refresh local state if needed
+      }
+    });
+
+    return () => unsubscribe();
+  }, [repositoryPath, repositoryName]);
+
+  // Subscribe to workspace file change events
+  useEffect(() => {
+    if (!repositoryPath) return;
+
+    const unsubscribe = RepositoryMonitoringService.onWorkspaceChange((event) => {
+      // Filter events for this repository
+      if (event.repoPath !== repositoryPath) return;
+
+      console.log('[DevWorkspaceApp] Workspace changed:', {
+        repoPath: event.repoPath,
+        changeCount: event.changes?.length ?? 0,
+        state: event.state,
+      });
+
+      // Emit to the event bus so panels can react to file changes
+      if (events) {
+        events.emit({
+          type: 'workspace:changed',
+          source: 'DevWorkspaceApp',
+          timestamp: Date.now(),
+          payload: {
+            repoPath: event.repoPath,
+            changes: event.changes,
+            state: event.state,
+          },
+        });
+      }
+    });
+
+    return () => unsubscribe();
+  }, [repositoryPath, events]);
 
   // Load terminal implementation preference and subscribe to updates
   useEffect(() => {
