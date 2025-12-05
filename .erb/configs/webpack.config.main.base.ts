@@ -57,6 +57,8 @@ const configuration: webpack.Configuration = {
     modules: [webpackPaths.srcPath, 'node_modules'],
     alias: {
       'src/main/util': path.resolve(__dirname, '../../src/main/util'),
+      // Fix for globby v16 + unicorn-magic conditional exports
+      'unicorn-magic/node': path.resolve(__dirname, '../../node_modules/unicorn-magic/node.js'),
     },
     plugins: [new TsconfigPathsPlugins({
       configFile: path.resolve(__dirname, '../../tsconfig.main.json'),
