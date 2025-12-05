@@ -35,12 +35,9 @@ import { systemAPI } from './main-process-api-implementations/systemApi';
 import { userPreferencesAPI } from './main-process-api-implementations/userPreferencesApi';
 import { windowManagerAPI } from './main-process-api-implementations/windowManagerApi';
 import { a24zAPI } from './main-process-api-implementations/a24zApi';
-import { repositoryNotesApi } from './main-process-api-implementations/repositoryNotesApi';
-import { palaceTasksApi } from './main-process-api-implementations/palaceTasksApi';
 import { repositoryMonitoringAPI } from './main-process-api-implementations/repositoryMonitoringApi';
 import { secretsAPI } from './main-process-api-implementations/secretsApi';
 import { linksAPI } from './main-process-api-implementations/linksApi';
-import { mcpTasksAPI } from './main-process-api-implementations/mcpTasksApi';
 import { apiProxyApi } from './main-process-api-implementations/apiProxyApi';
 import { appVersionManagerApi } from './main-process-api-implementations/appVersionManagerApi';
 import { orbitAPI } from './main-process-api-implementations/orbitApi';
@@ -111,12 +108,9 @@ const mainProcessExposure: MainProcessAPI = {
   git: gitAPI,
   fileSystem: fileSystemAPI,
   store: storeAPI,
-  repositoryNotes: repositoryNotesApi,
-  palaceTasks: palaceTasksApi,
   repositoryMonitoring: repositoryMonitoringAPI,
   secrets: secretsAPI,
   links: linksAPI,
-  mcpTasks: mcpTasksAPI,
   shell: shellAPI,
   system: systemAPI,
   terminal: terminalAPI,

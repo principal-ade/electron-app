@@ -4,7 +4,6 @@ import {
   Layers,
   Key,
   Link2,
-  NotebookPen,
   ArrowLeftRight,
   ArrowRightLeft,
   FolderOpen,
@@ -39,7 +38,6 @@ export interface RepositoryTitlebarProps {
   selectedSource?: FileTreeSource | null;
   onSecretsClick?: () => void;
   onLinksClick?: () => void;
-  onAddNoteClick?: () => void;
   onShowGitChanges?: () => void;
   showSidebarControls?: boolean;
   sidebarCollapsed?: boolean;
@@ -75,7 +73,6 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
   selectedSource,
   onSecretsClick,
   onLinksClick,
-  onAddNoteClick,
   onShowGitChanges,
   showSidebarControls = false,
   sidebarCollapsed = false,
@@ -567,41 +564,6 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
             title="Manage repository links"
           >
             <Link2 size={14} />
-          </button>
-        )}
-
-        {/* Add Note button - only show for local clones */}
-        {hasLocalClone && onAddNoteClick && (
-          <button
-            onClick={onAddNoteClick}
-            style={{
-              WebkitAppRegion:
-                'no-drag' as React.CSSProperties['WebkitAppRegion'],
-              background: 'transparent',
-              border: 'none',
-              color: theme.colors.textSecondary,
-              cursor: 'pointer',
-              padding: '6px',
-              borderRadius: '4px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.2s',
-              width: '32px',
-              height: '32px',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor =
-                theme.colors.backgroundTertiary;
-              e.currentTarget.style.color = theme.colors.text;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = theme.colors.textSecondary;
-            }}
-            title="Add note"
-          >
-            <NotebookPen size={14} />
           </button>
         )}
 

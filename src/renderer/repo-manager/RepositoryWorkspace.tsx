@@ -9,7 +9,6 @@ import {
   FileText,
   Pencil,
   Activity,
-  ListTodo,
   AlertCircle,
   GitPullRequest,
   Palette,
@@ -17,8 +16,6 @@ import {
   History,
   FolderGit2,
   FolderOpen,
-  RotateCcw,
-  Mailbox,
 } from 'lucide-react';
 import { parseGitHubUrl } from '../../shared/utils/githubUrlParser';
 import { PackageLayer } from '@principal-ai/codebase-composition';
@@ -34,7 +31,6 @@ import { LinksModal } from './shared/LinksModal';
 import { SourceBadgeHelpModal } from './shared/SourceBadgeHelpModal';
 import { BadgeInfoModal } from './shared/BadgeInfoModal';
 import { PanelConfiguratorModal } from './shared/PanelConfiguratorModal';
-import { AddNoteModal } from '../panels/components/AddNoteModal';
 import {
   ConfigurablePanelLayout,
   type PanelDefinition,
@@ -58,8 +54,6 @@ import type { HighlightLayer } from '@principal-ai/code-city-react';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import { WorkspaceLayoutService } from '../services/WorkspaceLayoutService';
 import type { WorkspaceLayout } from '../../shared/types/userPreferences.types';
-import { RepositoryNote } from '../../shared/main-process-api-interfaces/RepositoryNotesAPI';
-import { RepositoryNotesService } from '../main-process-api/RepositoryNotesService';
 import type { ToolbarItem } from './shared/RepositoryToolbar';
 import {
   NullContentProvider,
@@ -87,8 +81,6 @@ import { AgentEventsPanel } from '../panels/components/AgentEventsPanel';
 import { AgentSessionsPanel } from '../panels/components/AgentSessionsPanel';
 import { AgentContextTreePanel } from '../panels/components/AgentContextTreePanel';
 import { useHighlightLayers } from '../contexts/HighlightLayersContext';
-import { TasksPanel } from '../panels/components/TasksPanel';
-import { MCPTasksPanel } from '../panels/components/MCPTasksPanel';
 import { DrawingsListPanel } from '../panels/components/DrawingsListPanel';
 import { QualityHexagonPanel } from '../panels/components/QualityHexagonPanel';
 import { MDXEditorPanel } from '../panels/components/MDXEditorPanel';
@@ -148,7 +140,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     // Modal states
     const [showSecretsModal, setShowSecretsModal] = useState(false);
     const [showLinksModal, setShowLinksModal] = useState(false);
-    const [showAddNoteModal, setShowAddNoteModal] = useState(false);
     const [showSourceHelpModal, setShowSourceHelpModal] = useState(false);
     const [showBadgeInfoModal, setShowBadgeInfoModal] = useState(false);
     const [showPanelConfigModal, setShowPanelConfigModal] = useState(false);
@@ -264,14 +255,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     const [loadingAgentMCPStatus, setLoadingAgentMCPStatus] = useState(false);
     const [agentsWithMCP, setAgentsWithMCP] = useState<SupportedAgent[]>([]);
 
-    // Notes state
-    const [tribalKnowledgeNotes, setTribalKnowledgeNotes] = useState<
-      RepositoryNote[]
-    >([]);
-    const [selectedNoteIds, setSelectedNoteIds] = useState<Set<string>>(
-      new Set(),
-    );
-
     // Search state
     const [selectedFile, setSelectedFile] = useState<string | null>(null);
     const [searchResults, setSearchResults] = useState<string[]>([]);
@@ -287,10 +270,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     const [selectedFileLayer, setSelectedFileLayer] = useState<
       HighlightLayer | null
     >(null);
-    const [noteHighlightLayers, setNoteHighlightLayers] = useState<
-      HighlightLayer[]
-    >([]);
-    const [folderFilterHighlightLayers, setFolderFilterHighlightLayers] =
+        const [folderFilterHighlightLayers, setFolderFilterHighlightLayers] =
       useState<HighlightLayer[]>([]);
 
     // File viewer modal state
@@ -1385,21 +1365,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       [focusPanelTab],
     );
 
-    // Handle task click - open task markdown in viewer
-    const handleTaskClick = useCallback(
-      async (task: any) => {
-        const taskDocPath =
-          task.documentPath ||
-          `${repositoryPath}/.palace-work/tasks/active/${task.id}.task.md`;
-        setSelectedDocPath(taskDocPath);
-        setSelectedDocType('markdown');
-        setRightPaneMode('document');
-        // Focus the markdown viewer tab
-        focusPanelTab('markdownViewer');
-      },
-      [repositoryPath, focusPanelTab],
-    );
-
     const openFileInRightPane = useCallback(
       async (filePath: string) => {
         setSelectedDiffFile(null);
@@ -1591,35 +1556,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       }
     }, [searchQuery, performSimpleSearch]);
 
-    // Fetch repository notes
-    useEffect(() => {
-      const fetchNotes = async () => {
-        if (!repository.remoteUrl) return;
-        try {
-          const notes = await RepositoryNotesService.getNotesForRepository(
-            repository.remoteUrl,
-          );
-          setTribalKnowledgeNotes(notes);
-        } catch (error) {
-          console.error('Failed to fetch repository notes:', error);
-        }
-      };
-      fetchNotes();
-    }, [repository.remoteUrl]);
-
-    // Handler for when a note is added
-    const handleNoteAdded = useCallback(async () => {
-      if (!repository.remoteUrl) return;
-      try {
-        const notes = await RepositoryNotesService.getNotesForRepository(
-          repository.remoteUrl,
-        );
-        setTribalKnowledgeNotes(notes);
-      } catch (error) {
-        console.error('Failed to fetch repository notes:', error);
-      }
-    }, [repository.remoteUrl]);
-
     // Create search highlight layer
     useEffect(() => {
       if (searchResults.length === 0) {
@@ -1707,49 +1643,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
 
       setSelectedFileLayer(layer);
     }, [selectedFile, repository.name]);
-
-    // Create note highlight layers
-    useEffect(() => {
-      if (selectedNoteIds.size === 0) {
-        setNoteHighlightLayers([]);
-        return;
-      }
-
-      const layers: HighlightLayer[] = [];
-      const colors = ['#8b5cf6', '#ec4899', '#06b6d4', '#10b981', '#f59e0b'];
-      let colorIndex = 0;
-
-      for (const noteId of selectedNoteIds) {
-        const note = tribalKnowledgeNotes.find((n) => n.id === noteId);
-        if (!note) continue;
-
-        const color = colors[colorIndex % colors.length];
-        colorIndex++;
-
-        const items: Array<{ path: string; type: 'file' | 'directory' }> = [];
-        if (note.relativePath) {
-          items.push({ path: note.relativePath, type: 'directory' as const });
-        }
-        if (note.anchors) {
-          for (const anchor of note.anchors) {
-            items.push({ path: anchor, type: 'file' as const });
-          }
-        }
-
-        if (items.length > 0) {
-          layers.push({
-            id: `note-${noteId}`,
-            name: `Note: ${note.note.substring(0, 30)}...`,
-            enabled: true,
-            color,
-            priority: 20 + colorIndex,
-            items,
-          });
-        }
-      }
-
-      setNoteHighlightLayers(layers);
-    }, [selectedNoteIds, tribalKnowledgeNotes]);
 
     // Get git state for source badges
     const gitState =
@@ -1909,17 +1802,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
             onFileSelect={handleSearchFileSelect}
           />
         ),
-        tasks: (
-          <TasksPanel
-            repositoryPath={
-              selectedSource?.type === 'local'
-                ? selectedSource.location
-                : repository.localClones?.[0]?.path || ''
-            }
-            onTaskClick={handleTaskClick}
-          />
-        ),
-        mcpTasks: <MCPTasksPanel />,
         drawings: (
           <RepositoryPanelProvider
             repositoryPath={
@@ -1996,7 +1878,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       ghRepo,
       handleDocumentSelect,
       selectedDocPath,
-      handleTaskClick,
       cacheData,
     ]);
 
@@ -2182,27 +2063,10 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
         });
       }
 
-      if (selectedNoteIds.size > 0) {
-        items.push({
-          id: 'tribal-notes',
-          label: 'Tribal Notes',
-          shortLabel: 'Notes',
-          icon: <FileText />,
-          count: selectedNoteIds.size,
-          color: '#8b5cf6',
-          active: true,
-          onClick: () => {
-            setSelectedNoteIds(new Set());
-          },
-          tooltip: `Clear selected notes (${selectedNoteIds.size} selected)`,
-        });
-      }
-
       return items;
     }, [
       showFileColors,
       searchResults.length,
-      selectedNoteIds.size,
       gitState,
       selectedSource,
       setGitChangesVisible,
@@ -2341,7 +2205,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
           selectedSource={selectedSource}
           onSecretsClick={() => setShowSecretsModal(true)}
           onLinksClick={() => setShowLinksModal(true)}
-          onAddNoteClick={() => setShowAddNoteModal(true)}
           onConfigurePanels={() => setShowPanelConfigModal(true)}
           onSwitchPanels={handleSwitchPanels}
           onSwitchLeftMiddlePanels={handleSwitchLeftMiddlePanels}
@@ -2669,17 +2532,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
           onClose={() => setShowLinksModal(false)}
           repository={repository}
           selectedSource={selectedSource}
-        />
-
-        <AddNoteModal
-          isOpen={showAddNoteModal}
-          onClose={() => setShowAddNoteModal(false)}
-          onNoteAdded={handleNoteAdded}
-          repositoryPath={
-            selectedSource?.type === 'local'
-              ? selectedSource.location
-              : repository.localClones?.[0]?.path || ''
-          }
         />
 
         <SourceBadgeHelpModal

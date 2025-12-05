@@ -26,7 +26,6 @@ import { GraphDetailPanel } from './components/GraphDetailPanel';
 import { PresencePanel } from './components/PresencePanel';
 import { WorkspacesListPanel } from './components/WorkspacesListPanel';
 import { WorkspaceEntriesPanel } from './components/WorkspaceEntriesPanel';
-import { MCPTasksPanel } from './components/MCPTasksPanel';
 
 export interface RepositoryPanelRenderProps {
   context: RepositoryPanelContextValue;
@@ -93,7 +92,6 @@ const panelRenderers: Partial<
   presence: () => <PresencePanel />,
   workspacesList: () => <WorkspacesListPanel />,
   workspaceEntries: () => <WorkspaceEntriesPanel />,
-  mcpTasks: () => <MCPTasksPanel />,
 };
 
 export const repositoryPanelDefinitions = repositoryPanelCatalog.map(

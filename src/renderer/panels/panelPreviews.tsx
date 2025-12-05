@@ -3,7 +3,6 @@ import {
   Activity,
   AlertCircle,
   BrainCircuit,
-  CheckSquare,
   Edit,
   FileCode,
   FileEdit,
@@ -18,7 +17,6 @@ import {
   Info,
   Layers,
   DoorClosed,
-  Mailbox,
   Network,
   Package,
   Pencil,
@@ -42,8 +40,6 @@ import { DrawingsListPanelPreview } from './components/DrawingsListPanel';
 import { AgentEventsPanelPreview } from './components/AgentEventsPanel';
 import { AgentSessionsPanelPreview } from './components/AgentSessionsPanel';
 import { AgentContextTreePanelPreview } from './components/AgentContextTreePanel';
-import { TasksPanelPreview } from './components/TasksPanel';
-import { MCPTasksPanelPreview } from './components/MCPTasksPanel';
 import { FilePreviewPanelPreview } from './components/FilePreviewPanel';
 import { MarkdownRenderingPanelPreview } from './components/MarkdownRenderingPanel';
 import { AlexandriaDrawingPanelPreview } from './components/AlexandriaDrawingPanel';
@@ -137,18 +133,6 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
   agentContext: {
     icon: <BrainCircuit size={16} />,
     preview: <AgentContextTreePanelPreview />,
-  },
-  tasks: {
-    icon: <CheckSquare size={16} />,
-    preview: <TasksPanelPreview />,
-    label: 'Tasks',
-    description: 'Track repository TODOs, notes, and follow-up actions.',
-  },
-  mcpTasks: {
-    icon: <Mailbox size={16} />,
-    preview: <MCPTasksPanelPreview />,
-    label: 'MCP Tasks',
-    description: 'Track tasks submitted through the MCP bridge to dependencies.',
   },
   codeViewer: {
     icon: <FileCode size={16} />,

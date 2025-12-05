@@ -21,7 +21,6 @@ import { registerModernWindowHandlers } from './window/modernWindowHandlers';
 import { registerStoreHandlers } from './stores/storeHandlers';
 import { registerSecretHandlers } from './stores/secretHandlers';
 import { registerLinksHandlers } from './stores/linksHandlers';
-import { registerMCPTasksHandlers } from './stores/mcpTasksHandlers';
 import { getTypedStorageManager } from './storage-providers';
 import { registerGitHandlers } from './file-system/gitHandlers';
 import { registerSSHSetupHandlers } from './services/ipc/git/sshSetupHandlers';
@@ -40,8 +39,6 @@ import { registerRepositoryHandlers } from './stores/RepositoryApiEventHandler';
 import { registerAlexandriaHandlers } from './stores/AlexandriaApiEventHandler';
 import { registerWorkspaceHandlers } from './stores/WorkspaceApiEventHandler';
 import { registerAlexandriaDocsHandlers } from './stores/AlexandriaDocsApiEventHandler';
-import { registerRepositoryNotesHandlers } from './principal-mcp/repositoryNotesHandlers';
-import { registerPalaceTasksHandlers } from './palace-tasks/palaceTasksHandlers';
 import {
   registerRepositoryMonitoringHandlers,
   getManager as getRepositoryMonitoringManager,
@@ -156,13 +153,10 @@ const registerAllIpcHandlers = async () => {
   registerActIntegrationHandlers();
   registerSecretHandlers();
   await registerLinksHandlers();
-  await registerMCPTasksHandlers();
   registerRepositoryHandlers();
   registerAlexandriaHandlers();
   registerWorkspaceHandlers();
   registerAlexandriaDocsHandlers();
-  registerRepositoryNotesHandlers();
-  registerPalaceTasksHandlers();
   registerApiProxyHandlers();
   JWTService.registerHandlers();
 
