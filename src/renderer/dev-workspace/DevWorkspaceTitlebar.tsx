@@ -14,6 +14,7 @@ import { useRepositoryGitStatus } from '../hooks/useRepositoryGitStatus';
 const AVAILABLE_PANELS: PanelOption[] = [
   { id: 'docs', label: 'Documentation' },
   { id: 'codeCity', label: 'Code City' },
+  { id: 'configLibrary', label: 'Config Library' },
   { id: 'dependencies', label: 'Dependencies' },
   { id: 'localhostBrowser', label: 'Localhost Browser' },
   { id: 'visualValidation', label: 'Visual Validation' },

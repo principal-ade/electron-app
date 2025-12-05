@@ -4,12 +4,12 @@ import {
   EditableConfigurablePanelLayout,
   type PanelLayout,
 } from '@principal-ade/panel-layouts';
-import '@industry-theme/visual-validation-panel/dist/panels.bundle.css';
+// CSS is bundled inline in visual-validation-panel, no separate import needed
 // Note: code-city-panel CSS is bundled inline, no separate import needed
 import { RepositoryPanelProvider, useRepositoryPanelProvider } from '../contexts/RepositoryPanelContext';
 import { TabbedTerminalPanel } from '@industry-theme/xterm-terminal-panel';
 import { TabbedGhosttyTerminal } from '@industry-theme/ghostty-terminal-panel';
-import { panels as visualValidationPanels } from '@industry-theme/visual-validation-panel';
+import { panels as visualValidationPanels, ConfigLibraryBrowserPanel } from '@industry-theme/visual-validation-panel';
 import { panels as codeCityPanels } from '@industry-theme/code-city-panel';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import { panels as alexandriaPanels } from '@industry-theme/alexandria-panels';
@@ -242,6 +242,26 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
           </div>
         ) : (
           <div>Localhost Browser panel not available</div>
+        ),
+      },
+      {
+        id: 'configLibrary',
+        label: 'Config Library',
+        content: (
+          <div style={{
+            height: '100%',
+            width: '100%',
+            overflow: 'hidden',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <ConfigLibraryBrowserPanel
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
         ),
       },
     ],
