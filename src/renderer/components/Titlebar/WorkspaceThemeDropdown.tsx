@@ -7,17 +7,25 @@ import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 export interface WorkspaceThemeDropdownProps {
   workspaceId: string;
   currentTheme?: string;
+  onOpenChange?: (isOpen: boolean) => void;
 }
 
 export const WorkspaceThemeDropdown: React.FC<WorkspaceThemeDropdownProps> = ({
   workspaceId,
   currentTheme,
+  onOpenChange,
 }) => {
   const [selectedTheme, setSelectedTheme] = useState<string>(currentTheme || 'principalAI');
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpenInternal] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { theme, colorMode } = useTheme();
   const availableThemes = getThemeNames();
+
+  // Wrapper to notify parent of open state changes
+  const setIsDropdownOpen = (open: boolean) => {
+    setIsDropdownOpenInternal(open);
+    onOpenChange?.(open);
+  };
 
   // Update local state when workspace theme changes externally
   useEffect(() => {

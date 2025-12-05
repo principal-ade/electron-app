@@ -12,12 +12,12 @@ import { useRepositoryGitStatus } from '../hooks/useRepositoryGitStatus';
 
 // Available panels for Dev workspace
 const AVAILABLE_PANELS: PanelOption[] = [
-  { id: 'dependencies', label: 'Dependencies' },
-  { id: 'terminal', label: 'Terminal' },
-  { id: 'codeCity', label: 'Code City' },
-  { id: 'visualValidation', label: 'Visual Validation' },
   { id: 'docs', label: 'Documentation' },
+  { id: 'codeCity', label: 'Code City' },
+  { id: 'dependencies', label: 'Dependencies' },
   { id: 'localhostBrowser', label: 'Localhost Browser' },
+  { id: 'visualValidation', label: 'Visual Validation' },
+  { id: 'terminal', label: 'Terminal' },
 ];
 
 // Panel configuration presets
@@ -131,6 +131,7 @@ export const DevWorkspaceTitlebar: React.FC<
 }) => {
   const { theme } = useTheme();
   const [copiedPath, setCopiedPath] = useState(false);
+  const [isTitlebarHovered, setIsTitlebarHovered] = useState(false);
 
   // Handle copy repository path
   const handleCopyPath = async () => {
@@ -188,6 +189,11 @@ export const DevWorkspaceTitlebar: React.FC<
     (displayOwner ? `https://github.com/${displayOwner}.png` : null);
 
   return (
+    <div
+      onMouseEnter={() => setIsTitlebarHovered(true)}
+      onMouseLeave={() => setIsTitlebarHovered(false)}
+      style={{ display: 'contents' }}
+    >
     <BaseTitlebar confirmBeforeClose={true}>
       {/* Left: Configuration button */}
       {onLayoutChange && (
@@ -231,107 +237,119 @@ export const DevWorkspaceTitlebar: React.FC<
             />
           )}
 
-          {/* Monitoring Status Button */}
-          {monitoringStatus && (
-            <button
-              onClick={onRefreshMonitoring}
-              disabled={monitoringStatus.loading}
-              title={
-                monitoringStatus.loading
-                  ? 'Initializing monitoring...'
-                  : monitoringStatus.registered && monitoringStatus.gitWatching
-                    ? 'Monitoring active - Click to refresh'
-                    : monitoringStatus.error
-                      ? `Monitoring error: ${monitoringStatus.error} - Click to retry`
-                      : 'Monitoring inactive - Click to retry'
-              }
-              style={{
-                // @ts-ignore - WebkitAppRegion is not in CSSProperties
-                WebkitAppRegion: 'no-drag',
-                background: theme.colors.backgroundTertiary,
-                border: `1px solid ${theme.colors.border}`,
-                color: theme.colors.textSecondary,
-                cursor: monitoringStatus.loading ? 'not-allowed' : 'pointer',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s',
-                fontSize: `${theme.fontSizes[1]}px`,
-                fontWeight: theme.fontWeights.medium,
-                opacity: monitoringStatus.loading ? 0.7 : 1,
-              }}
-              onMouseEnter={(e) => {
-                if (!monitoringStatus.loading) {
-                  e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-                  e.currentTarget.style.borderColor = theme.colors.primary;
-                  e.currentTarget.style.color = theme.colors.text;
+          {/* Hover-reveal buttons: Monitoring Status & Copy Path */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              opacity: isTitlebarHovered ? 1 : 0,
+              visibility: isTitlebarHovered ? 'visible' : 'hidden',
+              transition: 'opacity 0.2s ease, visibility 0.2s ease',
+            }}
+          >
+            {/* Monitoring Status Button */}
+            {monitoringStatus && (
+              <button
+                onClick={onRefreshMonitoring}
+                disabled={monitoringStatus.loading}
+                title={
+                  monitoringStatus.loading
+                    ? 'Initializing monitoring...'
+                    : monitoringStatus.registered && monitoringStatus.gitWatching
+                      ? 'Monitoring active - Click to refresh'
+                      : monitoringStatus.error
+                        ? `Monitoring error: ${monitoringStatus.error} - Click to retry`
+                        : 'Monitoring inactive - Click to retry'
                 }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-                e.currentTarget.style.borderColor = theme.colors.border;
-                e.currentTarget.style.color = theme.colors.textSecondary;
-              }}
-            >
-              {monitoringStatus.loading ? (
-                <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
-              ) : monitoringStatus.registered && monitoringStatus.gitWatching ? (
-                <Eye size={14} style={{ color: theme.colors.success }} />
-              ) : (
-                <EyeOff size={14} style={{ color: theme.colors.warning }} />
-              )}
-              <span>
-                {monitoringStatus.loading
-                  ? 'Starting...'
-                  : monitoringStatus.registered && monitoringStatus.gitWatching
-                    ? 'Watching'
-                    : 'Inactive'}
-              </span>
-            </button>
-          )}
-
-          {/* Copy Path Button */}
-          {repositoryPath && (
-            <button
-              onClick={handleCopyPath}
-              title={copiedPath ? 'Copied!' : `Copy path: ${repositoryPath}`}
-              style={{
-                // @ts-ignore - WebkitAppRegion is not in CSSProperties
-                WebkitAppRegion: 'no-drag',
-                background: copiedPath ? theme.colors.success : theme.colors.backgroundTertiary,
-                border: `1px solid ${copiedPath ? theme.colors.success : theme.colors.border}`,
-                color: copiedPath ? theme.colors.background : theme.colors.textSecondary,
-                cursor: 'pointer',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s',
-                fontSize: `${theme.fontSizes[1]}px`,
-                fontWeight: theme.fontWeights.medium,
-              }}
-              onMouseEnter={(e) => {
-                if (!copiedPath) {
-                  e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-                  e.currentTarget.style.borderColor = theme.colors.primary;
-                  e.currentTarget.style.color = theme.colors.text;
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!copiedPath) {
+                style={{
+                  // @ts-ignore - WebkitAppRegion is not in CSSProperties
+                  WebkitAppRegion: 'no-drag',
+                  background: theme.colors.backgroundTertiary,
+                  border: `1px solid ${theme.colors.border}`,
+                  color: theme.colors.textSecondary,
+                  cursor: monitoringStatus.loading ? 'not-allowed' : 'pointer',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s',
+                  fontSize: `${theme.fontSizes[1]}px`,
+                  fontWeight: theme.fontWeights.medium,
+                  opacity: monitoringStatus.loading ? 0.7 : 1,
+                }}
+                onMouseEnter={(e) => {
+                  if (!monitoringStatus.loading) {
+                    e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                    e.currentTarget.style.borderColor = theme.colors.primary;
+                    e.currentTarget.style.color = theme.colors.text;
+                  }
+                }}
+                onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
                   e.currentTarget.style.borderColor = theme.colors.border;
                   e.currentTarget.style.color = theme.colors.textSecondary;
-                }
-              }}
-            >
-              {copiedPath ? <Check size={14} /> : <Copy size={14} />}
-              <span>{copiedPath ? 'Copied' : 'Path'}</span>
-            </button>
-          )}
+                }}
+              >
+                {monitoringStatus.loading ? (
+                  <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                ) : monitoringStatus.registered && monitoringStatus.gitWatching ? (
+                  <Eye size={14} style={{ color: theme.colors.success }} />
+                ) : (
+                  <EyeOff size={14} style={{ color: theme.colors.warning }} />
+                )}
+                <span>
+                  {monitoringStatus.loading
+                    ? 'Starting...'
+                    : monitoringStatus.registered && monitoringStatus.gitWatching
+                      ? 'Watching'
+                      : 'Inactive'}
+                </span>
+              </button>
+            )}
+
+            {/* Copy Path Button */}
+            {repositoryPath && (
+              <button
+                onClick={handleCopyPath}
+                title={copiedPath ? 'Copied!' : `Copy path: ${repositoryPath}`}
+                style={{
+                  // @ts-ignore - WebkitAppRegion is not in CSSProperties
+                  WebkitAppRegion: 'no-drag',
+                  background: copiedPath ? theme.colors.success : theme.colors.backgroundTertiary,
+                  border: `1px solid ${copiedPath ? theme.colors.success : theme.colors.border}`,
+                  color: copiedPath ? theme.colors.background : theme.colors.textSecondary,
+                  cursor: 'pointer',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s',
+                  fontSize: `${theme.fontSizes[1]}px`,
+                  fontWeight: theme.fontWeights.medium,
+                }}
+                onMouseEnter={(e) => {
+                  if (!copiedPath) {
+                    e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                    e.currentTarget.style.borderColor = theme.colors.primary;
+                    e.currentTarget.style.color = theme.colors.text;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!copiedPath) {
+                    e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                    e.currentTarget.style.borderColor = theme.colors.border;
+                    e.currentTarget.style.color = theme.colors.textSecondary;
+                  }
+                }}
+              >
+                {copiedPath ? <Check size={14} /> : <Copy size={14} />}
+                <span>{copiedPath ? 'Copied' : 'Path'}</span>
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -537,115 +555,127 @@ export const DevWorkspaceTitlebar: React.FC<
           WebkitAppRegion: 'no-drag',
         }}
       >
-        {/* Open in Web-ADE Button */}
-        {onOpenInWebADE && (
-          <button
-            onClick={onOpenInWebADE}
-            title="Open in Web-ADE"
-            style={{
-              // @ts-ignore - WebkitAppRegion is not in CSSProperties
-              WebkitAppRegion: 'no-drag',
-              background: theme.colors.backgroundTertiary,
-              border: `1px solid ${theme.colors.border}`,
-              color: theme.colors.textSecondary,
-              cursor: 'pointer',
-              padding: '6px 12px',
-              borderRadius: '6px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: 'all 0.2s',
-              fontSize: `${theme.fontSizes[1]}px`,
-              fontWeight: theme.fontWeights.medium,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-              e.currentTarget.style.borderColor = theme.colors.primary;
-              e.currentTarget.style.color = theme.colors.text;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-              e.currentTarget.style.borderColor = theme.colors.border;
-              e.currentTarget.style.color = theme.colors.textSecondary;
-            }}
-          >
-            <Globe size={14} />
-            <span>Web</span>
-          </button>
-        )}
+        {/* Hover-reveal buttons: Web-ADE, Terminal toggle, Legacy */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            opacity: isTitlebarHovered ? 1 : 0,
+            visibility: isTitlebarHovered ? 'visible' : 'hidden',
+            transition: 'opacity 0.2s ease, visibility 0.2s ease',
+          }}
+        >
+          {/* Open in Web-ADE Button */}
+          {onOpenInWebADE && (
+            <button
+              onClick={onOpenInWebADE}
+              title="Open in Web-ADE"
+              style={{
+                // @ts-ignore - WebkitAppRegion is not in CSSProperties
+                WebkitAppRegion: 'no-drag',
+                background: theme.colors.backgroundTertiary,
+                border: `1px solid ${theme.colors.border}`,
+                color: theme.colors.textSecondary,
+                cursor: 'pointer',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s',
+                fontSize: `${theme.fontSizes[1]}px`,
+                fontWeight: theme.fontWeights.medium,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                e.currentTarget.style.borderColor = theme.colors.primary;
+                e.currentTarget.style.color = theme.colors.text;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                e.currentTarget.style.borderColor = theme.colors.border;
+                e.currentTarget.style.color = theme.colors.textSecondary;
+              }}
+            >
+              <Globe size={14} />
+              <span>Web</span>
+            </button>
+          )}
 
-        {/* Terminal Implementation Toggle */}
-        {onToggleTerminalImplementation && (
-          <button
-            onClick={onToggleTerminalImplementation}
-            title={`Switch to ${terminalImplementation === 'ghostty' ? 'XTerm' : 'Ghostty'} terminal`}
-            style={{
-              // @ts-ignore - WebkitAppRegion is not in CSSProperties
-              WebkitAppRegion: 'no-drag',
-              background: theme.colors.backgroundTertiary,
-              border: `1px solid ${theme.colors.border}`,
-              color: theme.colors.textSecondary,
-              cursor: 'pointer',
-              padding: '6px 12px',
-              borderRadius: '6px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: 'all 0.2s',
-              fontSize: `${theme.fontSizes[1]}px`,
-              fontWeight: theme.fontWeights.medium,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-              e.currentTarget.style.borderColor = theme.colors.primary;
-              e.currentTarget.style.color = theme.colors.text;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-              e.currentTarget.style.borderColor = theme.colors.border;
-              e.currentTarget.style.color = theme.colors.textSecondary;
-            }}
-          >
-            <Terminal size={14} />
-            <span>{terminalImplementation === 'ghostty' ? 'Ghostty' : 'XTerm'}</span>
-          </button>
-        )}
-        {onSwitchToClassic && (
-          <button
-            onClick={onSwitchToClassic}
-            title="Open Legacy View"
-            style={{
-              // @ts-ignore - WebkitAppRegion is not in CSSProperties
-              WebkitAppRegion: 'no-drag',
-              background: theme.colors.backgroundTertiary,
-              border: `1px solid ${theme.colors.border}`,
-              color: theme.colors.textSecondary,
-              cursor: 'pointer',
-              padding: '6px 12px',
-              borderRadius: '6px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: 'all 0.2s',
-              fontSize: `${theme.fontSizes[1]}px`,
-              fontWeight: theme.fontWeights.medium,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-              e.currentTarget.style.borderColor = theme.colors.primary;
-              e.currentTarget.style.color = theme.colors.text;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor =
-                theme.colors.backgroundTertiary;
-              e.currentTarget.style.borderColor = theme.colors.border;
-              e.currentTarget.style.color = theme.colors.textSecondary;
-            }}
-          >
-            <Layers size={14} />
-            <span>Legacy</span>
-          </button>
-        )}
+          {/* Terminal Implementation Toggle */}
+          {onToggleTerminalImplementation && (
+            <button
+              onClick={onToggleTerminalImplementation}
+              title={`Switch to ${terminalImplementation === 'ghostty' ? 'XTerm' : 'Ghostty'} terminal`}
+              style={{
+                // @ts-ignore - WebkitAppRegion is not in CSSProperties
+                WebkitAppRegion: 'no-drag',
+                background: theme.colors.backgroundTertiary,
+                border: `1px solid ${theme.colors.border}`,
+                color: theme.colors.textSecondary,
+                cursor: 'pointer',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s',
+                fontSize: `${theme.fontSizes[1]}px`,
+                fontWeight: theme.fontWeights.medium,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                e.currentTarget.style.borderColor = theme.colors.primary;
+                e.currentTarget.style.color = theme.colors.text;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                e.currentTarget.style.borderColor = theme.colors.border;
+                e.currentTarget.style.color = theme.colors.textSecondary;
+              }}
+            >
+              <Terminal size={14} />
+              <span>{terminalImplementation === 'ghostty' ? 'Ghostty' : 'XTerm'}</span>
+            </button>
+          )}
+          {onSwitchToClassic && (
+            <button
+              onClick={onSwitchToClassic}
+              title="Open Legacy View"
+              style={{
+                // @ts-ignore - WebkitAppRegion is not in CSSProperties
+                WebkitAppRegion: 'no-drag',
+                background: theme.colors.backgroundTertiary,
+                border: `1px solid ${theme.colors.border}`,
+                color: theme.colors.textSecondary,
+                cursor: 'pointer',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s',
+                fontSize: `${theme.fontSizes[1]}px`,
+                fontWeight: theme.fontWeights.medium,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                e.currentTarget.style.borderColor = theme.colors.primary;
+                e.currentTarget.style.color = theme.colors.text;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundTertiary;
+                e.currentTarget.style.borderColor = theme.colors.border;
+                e.currentTarget.style.color = theme.colors.textSecondary;
+              }}
+            >
+              <Layers size={14} />
+              <span>Legacy</span>
+            </button>
+          )}
+        </div>
 
         {/* Right-Middle Switch Button */}
         {onSwitchRightMiddlePanels && (
@@ -677,5 +707,6 @@ export const DevWorkspaceTitlebar: React.FC<
         )}
       </div>
     </BaseTitlebar>
+    </div>
   );
 };

@@ -11,10 +11,10 @@ import { PanelSelectorDropdown, type PanelOption } from './PanelSelectorDropdown
 // Available panels for Alexandria workspace
 const AVAILABLE_PANELS: PanelOption[] = [
   { id: 'workspace-repos', label: 'Repositories' },
-  { id: 'terminal', label: 'Terminal' },
   { id: 'alexandria-docs', label: 'Documentation' },
   { id: 'code-city', label: 'Code City' },
   { id: 'localhost-browser', label: 'Localhost Browser' },
+  { id: 'terminal', label: 'Terminal' },
 ];
 
 export interface AlexandriaWorkspaceTitlebarProps {
@@ -51,6 +51,11 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
   const { theme } = useTheme();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isTitlebarHovered, setIsTitlebarHovered] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // Show buttons if titlebar is hovered OR if dropdown is open
+  const showHoverButtons = isTitlebarHovered || isDropdownOpen;
 
   // Memoize the repository IDs for the modal
   const currentRepositoryIds = useMemo(() => {
@@ -73,6 +78,8 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
 
   return (
     <div
+      onMouseEnter={() => setIsTitlebarHovered(true)}
+      onMouseLeave={() => setIsTitlebarHovered(false)}
       style={{
         height: '56px',
         backgroundColor: theme.colors.backgroundSecondary,
@@ -186,54 +193,101 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
           WebkitAppRegion: 'no-drag',
         }}
       >
-        {/* Theme Toggle */}
-        <WorkspaceThemeDropdown
-          workspaceId={workspace.id}
-          currentTheme={workspace.theme}
-        />
+        {/* Hover-reveal buttons: Theme, Create, Add */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            opacity: showHoverButtons ? 1 : 0,
+            visibility: showHoverButtons ? 'visible' : 'hidden',
+            transition: 'opacity 0.2s ease, visibility 0.2s ease',
+          }}
+        >
+          {/* Theme Toggle */}
+          <WorkspaceThemeDropdown
+            workspaceId={workspace.id}
+            currentTheme={workspace.theme}
+            onOpenChange={setIsDropdownOpen}
+          />
 
-        {/* Keyboard Shortcuts Toggle */}
-        {onToggleKeyboardShortcuts && (
-          <button
-            onClick={onToggleKeyboardShortcuts}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '4px 10px',
-              borderRadius: '6px',
-              backgroundColor: enableKeyboardShortcuts ? theme.colors.primary : 'transparent',
-              border: `1px solid ${enableKeyboardShortcuts ? theme.colors.primary : theme.colors.border}`,
-              color: enableKeyboardShortcuts ? theme.colors.background : theme.colors.textSecondary,
-              cursor: 'pointer',
-              fontSize: `${theme.fontSizes[0]}px`,
-              fontWeight: theme.fontWeights.medium,
-              fontFamily: theme.fonts.body,
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              if (!enableKeyboardShortcuts) {
-                e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-                e.currentTarget.style.borderColor = theme.colors.border;
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!enableKeyboardShortcuts) {
+          {/* Keyboard Shortcuts Toggle */}
+          {onToggleKeyboardShortcuts && (
+            <button
+              onClick={onToggleKeyboardShortcuts}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '4px 10px',
+                borderRadius: '6px',
+                backgroundColor: enableKeyboardShortcuts ? theme.colors.primary : 'transparent',
+                border: `1px solid ${enableKeyboardShortcuts ? theme.colors.primary : theme.colors.border}`,
+                color: enableKeyboardShortcuts ? theme.colors.background : theme.colors.textSecondary,
+                cursor: 'pointer',
+                fontSize: `${theme.fontSizes[0]}px`,
+                fontWeight: theme.fontWeights.medium,
+                fontFamily: theme.fonts.body,
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                if (!enableKeyboardShortcuts) {
+                  e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                  e.currentTarget.style.borderColor = theme.colors.border;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!enableKeyboardShortcuts) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.borderColor = theme.colors.border;
+                }
+              }}
+              title={enableKeyboardShortcuts ? 'Disable keyboard shortcuts (Alt+1/2/3)' : 'Enable keyboard shortcuts (Alt+1/2/3)'}
+            >
+              <Keyboard size={14} />
+              {enableKeyboardShortcuts ? 'On' : 'Off'}
+            </button>
+          )}
+
+          {/* Create Repository Button - only show if workspace has a clone path */}
+          {workspace.suggestedClonePath && (
+            <button
+              onClick={() => setShowCreateModal(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '4px 10px',
+                borderRadius: '6px',
+                backgroundColor: 'transparent',
+                border: `1px solid ${theme.colors.border}`,
+                color: theme.colors.textSecondary,
+                cursor: 'pointer',
+                fontSize: `${theme.fontSizes[0]}px`,
+                fontWeight: theme.fontWeights.medium,
+                fontFamily: theme.fonts.body,
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.primary;
+                e.currentTarget.style.borderColor = theme.colors.primary;
+                e.currentTarget.style.color = theme.colors.background;
+              }}
+              onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = 'transparent';
                 e.currentTarget.style.borderColor = theme.colors.border;
-              }
-            }}
-            title={enableKeyboardShortcuts ? 'Disable keyboard shortcuts (Alt+1/2/3)' : 'Enable keyboard shortcuts (Alt+1/2/3)'}
-          >
-            <Keyboard size={14} />
-            {enableKeyboardShortcuts ? 'On' : 'Off'}
-          </button>
-        )}
+                e.currentTarget.style.color = theme.colors.textSecondary;
+              }}
+              title="Create new GitHub repository"
+            >
+              <FilePlus2 size={14} />
+              Create
+            </button>
+          )}
 
-        {/* Create Repository Button - only show if workspace has a clone path */}
-        {workspace.suggestedClonePath && (
+          {/* Add Repository Button */}
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => setShowAddModal(true)}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -259,46 +313,12 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
               e.currentTarget.style.borderColor = theme.colors.border;
               e.currentTarget.style.color = theme.colors.textSecondary;
             }}
-            title="Create new GitHub repository"
+            title="Add existing repository to workspace"
           >
-            <FilePlus2 size={14} />
-            Create
+            <Plus size={14} />
+            Add
           </button>
-        )}
-
-        {/* Add Repository Button */}
-        <button
-          onClick={() => setShowAddModal(true)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            padding: '4px 10px',
-            borderRadius: '6px',
-            backgroundColor: 'transparent',
-            border: `1px solid ${theme.colors.border}`,
-            color: theme.colors.textSecondary,
-            cursor: 'pointer',
-            fontSize: `${theme.fontSizes[0]}px`,
-            fontWeight: theme.fontWeights.medium,
-            fontFamily: theme.fonts.body,
-            transition: 'all 0.2s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = theme.colors.primary;
-            e.currentTarget.style.borderColor = theme.colors.primary;
-            e.currentTarget.style.color = theme.colors.background;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.borderColor = theme.colors.border;
-            e.currentTarget.style.color = theme.colors.textSecondary;
-          }}
-          title="Add existing repository to workspace"
-        >
-          <Plus size={14} />
-          Add
-        </button>
+        </div>
 
         {/* Right-Middle Switch Button */}
         {onSwitchRightMiddlePanels && (

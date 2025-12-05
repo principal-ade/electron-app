@@ -1,5 +1,4 @@
 import { createRoot } from 'react-dom/client';
-import { ThemeProvider } from '@principal-ade/industry-theme';
 import '../styles/tailwind.css';
 import '../index.css';
 
@@ -46,9 +45,7 @@ if (!container) {
 
 const root = createRoot(container);
 root.render(
-  <ThemeProvider>
-    <AppErrorBoundary>
-      <AlexandriaWorkspaceApp />
-    </AppErrorBoundary>
-  </ThemeProvider>,
+  <AppErrorBoundary>
+    <AlexandriaWorkspaceApp />
+  </AppErrorBoundary>,
 );
