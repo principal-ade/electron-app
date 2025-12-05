@@ -13,6 +13,7 @@
  * - repository: Repository management and avatar loading
  * - shell: Shell operations (opening external URLs, etc.)
  * - window: Window management (opening repo-manager, etc.)
+ * - alexandria: Alexandria repository registry events
  */
 
 import type { TerminalAPI } from './TerminalService';
@@ -22,6 +23,7 @@ import type { UserPreferencesAPI } from './UserPreferencesAPI';
 import type { RepositoryAPI } from './RepositoryAPI';
 import type { ShellAPI } from './ShellAPI';
 import type { WindowAPI } from './WindowAPI';
+import type { AlexandriaAPI } from './AlexandriaAPI';
 
 export interface DevWorkspaceMainProcessAPI {
   terminal: TerminalAPI;
@@ -31,6 +33,7 @@ export interface DevWorkspaceMainProcessAPI {
   repository: RepositoryAPI;
   shell: ShellAPI;
   window: WindowAPI;
+  alexandria: AlexandriaAPI;
 }
 
 // Re-export the individual API types for convenience
@@ -41,3 +44,4 @@ export type { UserPreferencesAPI } from './UserPreferencesAPI';
 export type { RepositoryAPI } from './RepositoryAPI';
 export type { ShellAPI } from './ShellAPI';
 export type { WindowAPI } from './WindowAPI';
+export type { AlexandriaAPI } from './AlexandriaAPI';

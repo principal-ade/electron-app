@@ -24,6 +24,7 @@ import { userPreferencesAPI } from './main-process-api-implementations/userPrefe
 import { repositoryAPI } from './main-process-api-implementations/repositoryApi';
 import { shellAPI } from './main-process-api-implementations/shellApi';
 import { windowAPI } from './main-process-api-implementations/windowApi';
+import { alexandriaAPI } from './main-process-api-implementations/alexandriaApi';
 
 console.info('[Preload-DevWorkspace] API imports successful');
 
@@ -39,6 +40,7 @@ const devWorkspaceAPI: DevWorkspaceMainProcessAPI = {
   repository: repositoryAPI,
   shell: shellAPI,
   window: windowAPI,
+  alexandria: alexandriaAPI,
 };
 
 // Expose the mainProcess API
