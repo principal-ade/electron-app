@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   EditableConfigurablePanelLayout,
@@ -22,22 +22,10 @@ import { UserPreferencesService } from '../main-process-api/UserPreferencesServi
 export interface DevWorkspacePanelFrameworkProps {
   repositoryPath: string;
   repository: Repository;
-  /**
-   * External collapsed state (controlled from titlebar)
-   */
-  collapsed?: { left: boolean; right: boolean };
-  /**
-   * Callback when collapsed state changes
-   */
-  onCollapsedChange?: (collapsed: { left: boolean; right: boolean }) => void;
-  /**
-   * External layout state (controlled from titlebar for switch operations)
-   */
-  layout?: PanelLayout;
-  /**
-   * Callback when layout changes
-   */
-  onLayoutChange?: (layout: PanelLayout) => void;
+  collapsed: { left: boolean; right: boolean };
+  onCollapsedChange: (collapsed: { left: boolean; right: boolean }) => void;
+  layout: PanelLayout;
+  onLayoutChange: (layout: PanelLayout) => void;
 }
 
 interface DevWorkspacePanelFrameworkInnerProps {
@@ -373,70 +361,16 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
  * - PanelProvider for shared context, actions, and events
  * - ConfigurablePanelLayout for visual layout management
  */
-// Default layout configuration
-const DEFAULT_LAYOUT: PanelLayout = {
-  left: 'dependencies',
-  middle: 'terminal',
-  right: 'codeCity',
-};
-
-// Storybook layout: terminal in middle, localhost browsers on sides (left collapsed)
-// Left browser can be used for app preview, right for Storybook (or vice versa)
-export const STORYBOOK_LAYOUT: PanelLayout = {
-  left: 'localhostBrowser',
-  middle: 'terminal',
-  right: 'localhostBrowserAlt',
-};
-
-// Default collapsed state for Storybook layout (left collapsed)
-export const STORYBOOK_COLLAPSED = {
-  left: true,
-  right: false,
-};
-
 export const DevWorkspacePanelFramework: React.FC<
   DevWorkspacePanelFrameworkProps
 > = ({
   repositoryPath,
   repository,
-  collapsed: externalCollapsed,
-  onCollapsedChange: externalOnCollapsedChange,
-  layout: externalLayout,
-  onLayoutChange: externalOnLayoutChange,
+  collapsed,
+  onCollapsedChange,
+  layout,
+  onLayoutChange,
 }) => {
-  // Internal collapsed state (used when not controlled externally)
-  const [internalCollapsed, setInternalCollapsed] = useState({
-    left: false,  // Show visual validation panel
-    right: false, // Show code city panel
-  });
-
-  // Internal layout state (used when not controlled externally)
-  const [internalLayout, setInternalLayout] = useState<PanelLayout>(DEFAULT_LAYOUT);
-
-  // Use external state if provided, otherwise use internal
-  const collapsed = externalCollapsed ?? internalCollapsed;
-  const onCollapsedChange = useCallback(
-    (newCollapsed: { left: boolean; right: boolean }) => {
-      if (externalOnCollapsedChange) {
-        externalOnCollapsedChange(newCollapsed);
-      } else {
-        setInternalCollapsed(newCollapsed);
-      }
-    },
-    [externalOnCollapsedChange]
-  );
-
-  const layout = externalLayout ?? internalLayout;
-  const onLayoutChange = useCallback(
-    (newLayout: PanelLayout) => {
-      if (externalOnLayoutChange) {
-        externalOnLayoutChange(newLayout);
-      } else {
-        setInternalLayout(newLayout);
-      }
-    },
-    [externalOnLayoutChange]
-  );
 
   // Use the same terminal context format as legacy MultiTerminalPanel
   // Legacy uses: terminal:${owner}/${name}
