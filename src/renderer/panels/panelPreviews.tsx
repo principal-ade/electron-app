@@ -2,21 +2,15 @@ import React from 'react';
 import {
   Activity,
   AlertCircle,
-  BrainCircuit,
   Edit,
   FileCode,
   FileEdit,
   FileText,
-  FolderGit2,
-  FolderTree,
-  GitBranch,
   GitCompare,
   GitPullRequest,
   History,
   Image,
-  Info,
   Layers,
-  DoorClosed,
   Network,
   Package,
   Pencil,
@@ -25,31 +19,23 @@ import {
   Users,
   Wrench,
 } from 'lucide-react';
-import { FileTreePanelPreview } from './components/FileTreePanelContent';
 import { RepositorySearchTabPreview } from '../components/repository-maps/RepositorySearchTab';
-import { GitChangesPanelPreview } from './components/GitChangesPanel';
 import { GitCommitHistoryPanelPreview } from './components/GitCommitHistoryPanel';
 import { GitIssuesPanelPreview } from './components/GitIssuesPanel';
 import { GitPullRequestsPanelPreview } from './components/GitPullRequestsPanel';
-import { GitHubProjectsPanelPreview } from './components/GitHubProjectsPanel';
 import { GitHubSocialPanelPreview } from './components/GitHubSocialPanel';
-import { GitStatusPanelPreview } from './components/GitStatusPanel';
 import { RepositoryActionsPanelPreview } from './components/RepositoryActionsPanel';
 import { ToolsPanelPreview } from './components/ToolsPanel';
 import { DrawingsListPanelPreview } from './components/DrawingsListPanel';
 import { AgentEventsPanelPreview } from './components/AgentEventsPanel';
 import { AgentSessionsPanelPreview } from './components/AgentSessionsPanel';
-import { AgentContextTreePanelPreview } from './components/AgentContextTreePanel';
 import { FilePreviewPanelPreview } from './components/FilePreviewPanel';
 import { MarkdownRenderingPanelPreview } from './components/MarkdownRenderingPanel';
 import { AlexandriaDrawingPanelPreview } from './components/AlexandriaDrawingPanel';
 import { QualityHexagonPanelPreview } from './components/QualityHexagonPanel';
 import { GitDiffPanelPreview } from './components/GitDiffPanel';
 import { MDXEditorPanelPreview } from './components/MDXEditorPanel';
-import { GitHubReadmePanel } from './components/GitHubReadmePanel';
 import { PresencePanelPreview } from './components/PresencePanel';
-import { WorkspacesListPanelPreview } from './components/WorkspacesListPanel';
-import { WorkspaceEntriesPanelPreview } from './components/WorkspaceEntriesPanel';
 
 export interface PanelPreviewMetadata {
   icon: React.ReactNode;
@@ -59,17 +45,9 @@ export interface PanelPreviewMetadata {
 }
 
 export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
-  fileTree: {
-    icon: <FolderTree size={16} />,
-    preview: <FileTreePanelPreview />,
-  },
   search: {
     icon: <Search size={16} />,
     preview: <RepositorySearchTabPreview />,
-  },
-  gitChanges: {
-    icon: <GitBranch size={16} />,
-    preview: <GitChangesPanelPreview />,
   },
   gitHistory: {
     icon: <History size={16} />,
@@ -83,23 +61,12 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
     icon: <GitPullRequest size={16} />,
     preview: <GitPullRequestsPanelPreview />,
   },
-  githubProjects: {
-    icon: <FolderGit2 size={16} />,
-    preview: <GitHubProjectsPanelPreview />,
-  },
   githubSocial: {
     icon: <Users size={16} />,
     preview: <GitHubSocialPanelPreview />,
     label: 'GitHub Network',
     description:
       'View coworkers from your organizations and people you follow.',
-  },
-  gitStatus: {
-    icon: <Info size={16} />,
-    preview: <GitStatusPanelPreview />,
-    label: 'Git Status',
-    description:
-      'Branch details, upstream alignment, and the latest commit metadata.',
   },
   actions: {
     icon: <Play size={16} />,
@@ -129,10 +96,6 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
     preview: <AgentSessionsPanelPreview />,
     label: 'Agent Sessions',
     description: 'Summaries of recent agent activity grouped by session.',
-  },
-  agentContext: {
-    icon: <BrainCircuit size={16} />,
-    preview: <AgentContextTreePanelPreview />,
   },
   codeViewer: {
     icon: <FileCode size={16} />,
@@ -166,23 +129,6 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
     label: 'MDX Editor',
     description: 'Rich markdown editor with live preview and formatting tools.',
   },
-  githubReadme: {
-    icon: <FileText size={16} />,
-    preview: (
-      <div
-        style={{
-          padding: '16px',
-          textAlign: 'center',
-          fontSize: '13px',
-          color: '#888',
-        }}
-      >
-        GitHub README Viewer
-      </div>
-    ),
-    label: 'GitHub README',
-    description: 'View README files from GitHub repositories in the Feed.',
-  },
   graphsList: {
     icon: <Network size={16} />,
     preview: (
@@ -209,18 +155,6 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
     label: 'Live Presence',
     description:
       'See who is online and what repositories they are working on in real-time.',
-  },
-  workspacesList: {
-    icon: <DoorClosed size={16} />,
-    preview: <WorkspacesListPanelPreview />,
-    label: 'Workspaces',
-    description: 'Browse and manage your workspaces for organizing repositories.',
-  },
-  workspaceEntries: {
-    icon: <FolderGit2 size={16} />,
-    preview: <WorkspaceEntriesPanelPreview />,
-    label: 'Workspace Repositories',
-    description: 'View and manage repositories in the selected workspace.',
   },
 };
 

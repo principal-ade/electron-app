@@ -450,12 +450,12 @@ export const DevWorkspaceTitlebar: React.FC<
                     {selectedSource.metadata.currentBranch}
 
                     {/* Uncommitted changes indicator */}
-                    {hasUncommittedChanges && onShowGitChanges && (
+                    {hasUncommittedChanges && (
                       <span
-                        onClick={(e) => {
+                        onClick={onShowGitChanges ? (e) => {
                           e.stopPropagation();
                           onShowGitChanges();
-                        }}
+                        } : undefined}
                         style={{
                           display: 'inline-block',
                           width: '6px',
@@ -464,16 +464,16 @@ export const DevWorkspaceTitlebar: React.FC<
                           backgroundColor: theme.colors.warning,
                           marginLeft: '6px',
                           verticalAlign: 'middle',
-                          cursor: 'pointer',
+                          cursor: onShowGitChanges ? 'pointer' : 'default',
                           transition: 'opacity 0.2s',
                         }}
-                        onMouseEnter={(e) => {
+                        onMouseEnter={onShowGitChanges ? (e) => {
                           e.currentTarget.style.opacity = '0.7';
-                        }}
-                        onMouseLeave={(e) => {
+                        } : undefined}
+                        onMouseLeave={onShowGitChanges ? (e) => {
                           e.currentTarget.style.opacity = '1';
-                        }}
-                        title="Click to view uncommitted changes"
+                        } : undefined}
+                        title={onShowGitChanges ? "Click to view uncommitted changes" : "Uncommitted changes"}
                       />
                     )}
                   </span>

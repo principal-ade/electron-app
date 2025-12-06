@@ -462,6 +462,12 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     }
   }, [repositoryName, repositoryPath, remoteUrl, github]);
 
+  // Show git changes panel
+  const handleShowGitChanges = useCallback(() => {
+    setLayout(prev => ({ ...prev, left: 'gitChanges' }));
+    setCollapsed(prev => ({ ...prev, left: false }));
+  }, []);
+
   return (
     <div className="h-screen w-screen overflow-hidden bg-gray-900 flex flex-col">
       <DevWorkspaceTitlebar
@@ -469,6 +475,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         repositoryOwner={github?.owner}
         repositoryName={repositoryName}
         selectedSource={selectedSource}
+        onShowGitChanges={handleShowGitChanges}
         terminalImplementation={terminalImplementation}
         onToggleTerminalImplementation={showTerminalToggle ? handleToggleTerminalImplementation : undefined}
         collapsed={collapsed}

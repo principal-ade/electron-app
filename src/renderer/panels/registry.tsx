@@ -10,22 +10,17 @@ import {
   type RepositoryPanelSurface,
   type RepositoryPanelVisibility,
 } from '../../shared/panels/repositoryPanelCatalog';
-import { GitChangesPanel } from './components/GitChangesPanel';
 import { GitIssuesPanel } from './components/GitIssuesPanel';
 import { GitPullRequestsPanel } from './components/GitPullRequestsPanel';
 import { GitDiffPanel } from './components/GitDiffPanel';
 import { AlexandriaDrawingPanel } from './components/AlexandriaDrawingPanel';
 import { DrawingsListPanel } from './components/DrawingsListPanel';
 import { ToolsPanel } from './components/ToolsPanel';
-import { AgentContextTreePanel } from './components/AgentContextTreePanel';
 import { GitCommitHistoryPanel } from './components/GitCommitHistoryPanel';
 import { MDXEditorPanel } from './components/MDXEditorPanel';
-import { GitHubProjectsPanel } from './components/GitHubProjectsPanel';
 import { GitHubSocialPanel } from './components/GitHubSocialPanel';
 import { GraphDetailPanel } from './components/GraphDetailPanel';
 import { PresencePanel } from './components/PresencePanel';
-import { WorkspacesListPanel } from './components/WorkspacesListPanel';
-import { WorkspaceEntriesPanel } from './components/WorkspaceEntriesPanel';
 
 export interface RepositoryPanelRenderProps {
   context: RepositoryPanelContextValue;
@@ -43,16 +38,12 @@ export type RepositoryPanelDefinition = RepositoryPanelDefinitionBase & {
 const panelRenderers: Partial<
   Record<RepositoryPanelId, RepositoryPanelRenderer>
 > = {
-  gitChanges: ({ actions }) => (
-    <GitChangesPanel onFileClick={actions.openFile} />
-  ),
   gitIssues: ({ context }) => (
     <GitIssuesPanel repository={context.repository ?? undefined} />
   ),
   gitPullRequests: ({ context }) => (
     <GitPullRequestsPanel repository={context.repository ?? undefined} />
   ),
-  githubProjects: () => <GitHubProjectsPanel />,
   githubSocial: () => <GitHubSocialPanel />,
   gitHistory: ({ context }) => (
     <GitCommitHistoryPanel repositoryPath={context.repositoryPath} />
@@ -68,12 +59,6 @@ const panelRenderers: Partial<
   ),
   excalidrawEditor: () => <AlexandriaDrawingPanel />,
   drawings: () => <DrawingsListPanel />,
-  agentContext: ({ context, actions }) => (
-    <AgentContextTreePanel
-      repositoryPath={context.repositoryPath}
-      onFileSelect={actions.openFile}
-    />
-  ),
   mdxEditor: () => (
     <MDXEditorPanel
       filePath={null}
@@ -90,8 +75,6 @@ const panelRenderers: Partial<
     />
   ),
   presence: () => <PresencePanel />,
-  workspacesList: () => <WorkspacesListPanel />,
-  workspaceEntries: () => <WorkspaceEntriesPanel />,
 };
 
 export const repositoryPanelDefinitions = repositoryPanelCatalog.map(

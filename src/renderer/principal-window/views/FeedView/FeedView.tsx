@@ -2,13 +2,11 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import {
-  FolderGit2,
   Users,
   Network,
   Star,
   Activity,
   Folder,
-  DoorClosed,
 } from 'lucide-react';
 import { ConfigurablePanelLayout } from '@principal-ade/panels';
 import '@principal-ade/panels/panels.css';
@@ -17,14 +15,11 @@ import { useAllRepositories } from '../../../hooks/useRepositoryData';
 import { buildWorkspaceDependencyGraph } from '../../../services/WorkspaceDependencyGraphService';
 import { WorkspaceService } from '../../../main-process-api/WorkspaceService';
 import { GraphDetailPanel } from '../../../panels/components/GraphDetailPanel';
-import { GitHubProjectsPanel } from '../../../panels/components/GitHubProjectsPanel';
 import { GitHubStarredPanel } from '../../../panels/components/GitHubStarredPanel';
 import { GitHubSocialPanel } from '../../../panels/components/GitHubSocialPanel';
 import { GitSyncDiagnosticPanel } from '../../../panels/components/GitSyncDiagnosticPanel';
 import { LocalProjectsPanel } from '../../../panels/components/LocalProjectsPanel';
 import { PresencePanel } from '../../../panels/components/PresencePanel';
-import { WorkspacesListPanel } from '../../../panels/components/WorkspacesListPanel';
-import { WorkspaceEntriesPanel } from '../../../panels/components/WorkspaceEntriesPanel';
 import { SelectedRepositoryProvider } from '../../../contexts/SelectedRepositoryContext';
 import {
   WorkspaceFilterProvider,
@@ -148,23 +143,6 @@ const FeedViewInner: React.FC = () => {
         content: <LocalProjectsPanel />,
       },
       {
-        id: 'workspaces-list',
-        label: 'Workspaces',
-        icon: <DoorClosed size={16} />,
-        content: (
-          <WorkspacesListPanel
-            selectedWorkspaceId={selectedWorkspace?.id}
-            onWorkspaceSelect={setSelectedWorkspace}
-          />
-        ),
-      },
-      {
-        id: 'workspace-entries',
-        label: 'Workspace Repositories',
-        icon: <FolderGit2 size={16} />,
-        content: <WorkspaceEntriesPanel selectedWorkspace={selectedWorkspace} />,
-      },
-      {
         id: 'graph-view',
         label: 'Workspace Graph',
         icon: <Network size={16} />,
@@ -181,12 +159,6 @@ const FeedViewInner: React.FC = () => {
     // Only add GitHub panels when authenticated
     if (isAuthenticated) {
       basePanels.push(
-        {
-          id: 'github-projects',
-          label: 'GitHub Projects',
-          icon: <FolderGit2 size={16} />,
-          content: <GitHubProjectsPanel />,
-        },
         {
           id: 'github-starred',
           label: 'Starred',

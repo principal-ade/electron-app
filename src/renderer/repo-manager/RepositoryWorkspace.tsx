@@ -16,6 +16,8 @@ import {
   History,
   FolderGit2,
   FolderOpen,
+  ListTodo,
+  Mailbox,
 } from 'lucide-react';
 import { parseGitHubUrl } from '../../shared/utils/githubUrlParser';
 import { PackageLayer } from '@principal-ai/codebase-composition';
@@ -67,19 +69,15 @@ import { useGitChanges } from '../contexts/GitChangesContext';
 import { useRepositoryData } from '../hooks/useRepositoryData';
 import { RepositorySearchTab } from '../components/repository-maps/RepositorySearchTab';
 import { ToolsPanel } from '../panels/components/ToolsPanel';
-import { FileTreePanelContent } from '../panels/components/FileTreePanelContent';
 import { RepositoryPanelProvider } from '../panels/RepositoryPanelProvider';
-import { GitChangesPanel } from '../panels/components/GitChangesPanel';
 import { GitIssuesPanel } from '../panels/components/GitIssuesPanel';
 import { GitPullRequestsPanel } from '../panels/components/GitPullRequestsPanel';
-import { GitHubProjectsPanel } from '../panels/components/GitHubProjectsPanel';
 import { GitCommitHistoryPanel } from '../panels/components/GitCommitHistoryPanel';
 import { MarkdownRenderingPanel, ExcalidrawPanel } from './panels';
 import { FilePreviewPanel } from '../panels/components/FilePreviewPanel';
 import { GitDiffPanel } from '../panels/components/GitDiffPanel';
 import { AgentEventsPanel } from '../panels/components/AgentEventsPanel';
 import { AgentSessionsPanel } from '../panels/components/AgentSessionsPanel';
-import { AgentContextTreePanel } from '../panels/components/AgentContextTreePanel';
 import { useHighlightLayers } from '../contexts/HighlightLayersContext';
 import { DrawingsListPanel } from '../panels/components/DrawingsListPanel';
 import { QualityHexagonPanel } from '../panels/components/QualityHexagonPanel';
@@ -1708,16 +1706,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     // Create panel content map - matches registry IDs
     const panelContentMap = React.useMemo(() => {
       const map: Record<string, React.ReactNode> = {
-        fileTree: (
-          <RepositoryPanelProvider
-            repositoryPath={
-              selectedSource?.type === 'local' ? selectedSource.location : null
-            }
-            actions={{ openFile: handleSearchFileSelect }}
-          >
-            <FileTreePanelContent onFileSelect={handleSearchFileSelect} />
-          </RepositoryPanelProvider>
-        ),
         search: (
           <RepositorySearchTab
             fileTrees={fileTrees}
@@ -1730,19 +1718,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
             onSearchResultHover={handleSearchResultHover}
             onFolderFiltersChange={handleFolderFiltersChange}
           />
-        ),
-        gitChanges: (
-          <RepositoryPanelProvider
-            repositoryPath={
-              selectedSource?.type === 'local' ? selectedSource.location : null
-            }
-            actions={{
-              openGitDiff: handleGitChangeSelect,
-              openFile: handleFileClick,
-            }}
-          >
-            <GitChangesPanel variant="tab" />
-          </RepositoryPanelProvider>
         ),
         gitHistory: (
           <GitCommitHistoryPanel
@@ -1771,7 +1746,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
             }}
           />
         ),
-        githubProjects: <GitHubProjectsPanel />,
         tools: (
           <ToolsPanel
             packageLayers={cacheData?.packages ?? null}
@@ -1792,14 +1766,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
             repositoryPath={
               selectedSource?.type === 'local' ? selectedSource.location : null
             }
-          />
-        ),
-        agentContext: (
-          <AgentContextTreePanel
-            repositoryPath={
-              selectedSource?.type === 'local' ? selectedSource.location : null
-            }
-            onFileSelect={handleSearchFileSelect}
           />
         ),
         drawings: (
