@@ -205,7 +205,7 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
     loadTerminalSessions();
   }, []);
 
-  // Fetch file tree when repository changes
+  // Fetch file tree when repository changes and subscribe to cache sync updates
   useEffect(() => {
     const fetchFileTree = async () => {
       if (!repositoryPath) {
@@ -227,9 +227,23 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
     };
 
     fetchFileTree();
+
+    // Subscribe to cache sync events for fileTree updates
+    const unsubscribe = RepositoryMonitoringService.onCacheSync((event) => {
+      if (event.repoPath === repositoryPath && event.slice === 'fileTree') {
+        console.info('[RepositoryPanelProvider] File tree cache sync received for repository:', repositoryPath);
+        if (event.entry.data) {
+          setFileTreeData(event.entry.data as FileTree);
+        }
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, [repositoryPath]);
 
-  // Fetch packages when repository changes
+  // Fetch packages when repository changes and subscribe to cache sync updates
   useEffect(() => {
     const fetchPackages = async () => {
       if (!repositoryPath) {
@@ -255,6 +269,20 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
     };
 
     fetchPackages();
+
+    // Subscribe to cache sync events for packages updates
+    const unsubscribe = RepositoryMonitoringService.onCacheSync((event) => {
+      if (event.repoPath === repositoryPath && event.slice === 'packages') {
+        console.info('[RepositoryPanelProvider] Packages cache sync received for repository:', repositoryPath);
+        if (event.entry.data) {
+          setPackagesData(event.entry.data as PackagesSliceData);
+        }
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, [repositoryPath]);
 
   // Fetch git status when repository changes and subscribe to updates
