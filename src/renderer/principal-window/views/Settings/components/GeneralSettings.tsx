@@ -31,9 +31,9 @@ export const GeneralSettings: React.FC = () => {
   const [showTerminalDebugButton, setShowTerminalDebugButton] = useState(false);
   const [showTerminalShowAllButton, setShowTerminalShowAllButton] =
     useState(true);
-  const [showReposButton, setShowReposButton] = useState(false);
   const [showMonitorButton, setShowMonitorButton] = useState(false);
   const [showSearchButton, setShowSearchButton] = useState(false);
+  const [showProjectsButton, setShowProjectsButton] = useState(false);
   const [showPresencePanel, setShowPresencePanel] = useState(false);
   const [presenceAutoConnect, setPresenceAutoConnect] = useState(true);
 
@@ -61,9 +61,9 @@ export const GeneralSettings: React.FC = () => {
       setShowGitSyncPanel(prefs.showGitSyncPanel ?? false);
       setShowTerminalDebugButton(prefs.showTerminalDebugButton ?? false);
       setShowTerminalShowAllButton(prefs.showTerminalShowAllButton ?? true);
-      setShowReposButton(prefs.showReposButton ?? false);
       setShowMonitorButton(prefs.showMonitorButton ?? false);
       setShowSearchButton(prefs.showSearchButton ?? false);
+      setShowProjectsButton(prefs.showProjectsButton ?? false);
       setShowPresencePanel(prefs.showPresencePanel ?? false);
       setPresenceAutoConnect(prefs.presenceAutoConnect ?? true);
     };
@@ -961,100 +961,6 @@ export const GeneralSettings: React.FC = () => {
           >
             <div style={{ flex: 1 }}>
               <label
-                htmlFor="showReposButton"
-                style={{
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  color: theme.colors.text,
-                  display: 'block',
-                  marginBottom: '8px',
-                  cursor: 'pointer',
-                }}
-              >
-                Show Repos Button
-              </label>
-              <p
-                style={{
-                  fontSize: '13px',
-                  color: theme.colors.textSecondary,
-                  lineHeight: '1.5',
-                }}
-              >
-                When enabled, the Repos button will appear in the side
-                navigation. When disabled (default), the button is hidden as
-                this view is deprecated.
-              </p>
-            </div>
-            <label
-              style={{
-                position: 'relative',
-                display: 'inline-block',
-                width: '48px',
-                height: '24px',
-                flexShrink: 0,
-              }}
-            >
-              <input
-                id="showReposButton"
-                type="checkbox"
-                checked={showReposButton}
-                onChange={async (e) => {
-                  const newValue = e.target.checked;
-                  setShowReposButton(newValue);
-                  await UserPreferencesService.updatePreferences({
-                    showReposButton: newValue,
-                  });
-                }}
-                style={{
-                  opacity: 0,
-                  width: 0,
-                  height: 0,
-                }}
-              />
-              <span
-                style={{
-                  position: 'absolute',
-                  cursor: 'pointer',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: showReposButton
-                    ? theme.colors.primary
-                    : theme.colors.border,
-                  transition: '0.3s',
-                  borderRadius: '24px',
-                }}
-              >
-                <span
-                  style={{
-                    position: 'absolute',
-                    content: '',
-                    height: '18px',
-                    width: '18px',
-                    left: showReposButton ? '27px' : '3px',
-                    bottom: '3px',
-                    backgroundColor: theme.colors.background,
-                    transition: '0.3s',
-                    borderRadius: '50%',
-                  }}
-                />
-              </span>
-            </label>
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              gap: '16px',
-              marginTop: '16px',
-              paddingTop: '16px',
-              borderTop: `1px solid ${theme.colors.border}`,
-            }}
-          >
-            <div style={{ flex: 1 }}>
-              <label
                 htmlFor="showMonitorButton"
                 style={{
                   fontSize: '14px',
@@ -1219,6 +1125,99 @@ export const GeneralSettings: React.FC = () => {
                     height: '18px',
                     width: '18px',
                     left: showSearchButton ? '27px' : '3px',
+                    bottom: '3px',
+                    backgroundColor: theme.colors.background,
+                    transition: '0.3s',
+                    borderRadius: '50%',
+                  }}
+                />
+              </span>
+            </label>
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              gap: '16px',
+              marginTop: '16px',
+              paddingTop: '16px',
+              borderTop: `1px solid ${theme.colors.border}`,
+            }}
+          >
+            <div style={{ flex: 1 }}>
+              <label
+                htmlFor="showProjectsButton"
+                style={{
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: theme.colors.text,
+                  display: 'block',
+                  marginBottom: '8px',
+                  cursor: 'pointer',
+                }}
+              >
+                Show Projects Button (Legacy)
+              </label>
+              <p
+                style={{
+                  fontSize: '13px',
+                  color: theme.colors.textSecondary,
+                  lineHeight: '1.5',
+                }}
+              >
+                When enabled, the legacy Projects button will appear in the side
+                navigation. This is the old view before the panel framework.
+              </p>
+            </div>
+            <label
+              style={{
+                position: 'relative',
+                display: 'inline-block',
+                width: '48px',
+                height: '24px',
+                flexShrink: 0,
+              }}
+            >
+              <input
+                id="showProjectsButton"
+                type="checkbox"
+                checked={showProjectsButton}
+                onChange={async (e) => {
+                  const newValue = e.target.checked;
+                  setShowProjectsButton(newValue);
+                  await UserPreferencesService.updatePreferences({
+                    showProjectsButton: newValue,
+                  });
+                }}
+                style={{
+                  opacity: 0,
+                  width: 0,
+                  height: 0,
+                }}
+              />
+              <span
+                style={{
+                  position: 'absolute',
+                  cursor: 'pointer',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: showProjectsButton
+                    ? theme.colors.primary
+                    : theme.colors.border,
+                  transition: '0.3s',
+                  borderRadius: '24px',
+                }}
+              >
+                <span
+                  style={{
+                    position: 'absolute',
+                    content: '',
+                    height: '18px',
+                    width: '18px',
+                    left: showProjectsButton ? '27px' : '3px',
                     bottom: '3px',
                     backgroundColor: theme.colors.background,
                     transition: '0.3s',

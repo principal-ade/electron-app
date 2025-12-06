@@ -5,7 +5,6 @@ import {
   FolderGit2,
   Users,
   Network,
-  FileText,
   Star,
   Activity,
   Folder,
@@ -21,16 +20,12 @@ import { GraphDetailPanel } from '../../../panels/components/GraphDetailPanel';
 import { GitHubProjectsPanel } from '../../../panels/components/GitHubProjectsPanel';
 import { GitHubStarredPanel } from '../../../panels/components/GitHubStarredPanel';
 import { GitHubSocialPanel } from '../../../panels/components/GitHubSocialPanel';
-import { GitHubReadmePanel } from '../../../panels/components/GitHubReadmePanel';
 import { GitSyncDiagnosticPanel } from '../../../panels/components/GitSyncDiagnosticPanel';
 import { LocalProjectsPanel } from '../../../panels/components/LocalProjectsPanel';
 import { PresencePanel } from '../../../panels/components/PresencePanel';
 import { WorkspacesListPanel } from '../../../panels/components/WorkspacesListPanel';
 import { WorkspaceEntriesPanel } from '../../../panels/components/WorkspaceEntriesPanel';
-import {
-  SelectedRepositoryProvider,
-  useSelectedRepository,
-} from '../../../contexts/SelectedRepositoryContext';
+import { SelectedRepositoryProvider } from '../../../contexts/SelectedRepositoryContext';
 import {
   WorkspaceFilterProvider,
   useWorkspaceFilter,
@@ -46,7 +41,6 @@ import { useAuth } from '../../../hooks/useAuthState';
 const FeedViewInner: React.FC = () => {
   const { theme } = useTheme();
   const { repositories } = useAllRepositories();
-  const { selectedRepository } = useSelectedRepository();
   const { selectedWorkspace, setSelectedWorkspace } = useWorkspaceFilter();
   const { isAuthenticated } = useAuth();
   const { middlePanelActiveTab, setMiddlePanelActiveTab } = usePanelFocus();
@@ -171,12 +165,6 @@ const FeedViewInner: React.FC = () => {
         content: <WorkspaceEntriesPanel selectedWorkspace={selectedWorkspace} />,
       },
       {
-        id: 'readme-viewer',
-        label: 'README',
-        icon: <FileText size={16} />,
-        content: <GitHubReadmePanel repository={selectedRepository} />,
-      },
-      {
         id: 'graph-view',
         label: 'Workspace Graph',
         icon: <Network size={16} />,
@@ -238,7 +226,6 @@ const FeedViewInner: React.FC = () => {
   }, [
     workspaceGraph,
     selectedTopLevelNodes,
-    selectedRepository,
     showGitSyncPanel,
     showPresencePanel,
     selectedWorkspace,
@@ -277,7 +264,7 @@ const FeedViewInner: React.FC = () => {
         },
         middle: {
           type: 'tabs' as const,
-          panels: ['workspace-entries', 'graph-view', 'readme-viewer'],
+          panels: ['workspace-entries', 'graph-view'],
           config: {
             defaultActiveTab: 0,
             tabPosition: 'top' as const,

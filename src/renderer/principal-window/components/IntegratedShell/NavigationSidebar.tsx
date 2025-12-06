@@ -1,11 +1,11 @@
 import { useTheme } from '@principal-ade/industry-theme';
 import {
-  Github,
   Search,
   Settings,
   Activity,
   User,
   GitBranch,
+  LayoutGrid,
 } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuthState';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
@@ -30,30 +30,30 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
 }) => {
   const { theme, mode } = useTheme();
   const { isAuthenticated, user } = useAuth();
-  const [showReposButton, setShowReposButton] = useState(false);
   const [showMonitorButton, setShowMonitorButton] = useState(false);
   const [showSearchButton, setShowSearchButton] = useState(false);
+  const [showProjectsButton, setShowProjectsButton] = useState(false);
 
   useEffect(() => {
     // Load user preferences for showing buttons
     UserPreferencesService.getPreferences().then((prefs) => {
-      setShowReposButton(prefs.showReposButton ?? false);
       setShowMonitorButton(prefs.showMonitorButton ?? false);
       setShowSearchButton(prefs.showSearchButton ?? false);
+      setShowProjectsButton(prefs.showProjectsButton ?? false);
     });
 
     // Listen for preference changes
     const handlePreferencesUpdated = (event: Event) => {
       const detail = (event as CustomEvent).detail;
       if (detail) {
-        if ('showReposButton' in detail) {
-          setShowReposButton(detail.showReposButton ?? false);
-        }
         if ('showMonitorButton' in detail) {
           setShowMonitorButton(detail.showMonitorButton ?? false);
         }
         if ('showSearchButton' in detail) {
           setShowSearchButton(detail.showSearchButton ?? false);
+        }
+        if ('showProjectsButton' in detail) {
+          setShowProjectsButton(detail.showProjectsButton ?? false);
         }
       }
     };
@@ -119,14 +119,14 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
     );
 
   const navItems: NavItem[] = [
-    { id: 'feed', icon: <GitBranch size={20} />, label: 'Projects' },
-    // Only include repository button if user has enabled it in preferences
-    ...(showReposButton
+    { id: 'workspaces', icon: <LayoutGrid size={20} />, label: 'Workspaces' },
+    // Only include old projects button if user has enabled it in preferences
+    ...(showProjectsButton
       ? [
           {
-            id: 'repository' as NavigationView,
-            icon: <Github size={20} />,
-            label: 'Repos',
+            id: 'feed' as NavigationView,
+            icon: <GitBranch size={20} />,
+            label: 'Projects',
           },
         ]
       : []),
