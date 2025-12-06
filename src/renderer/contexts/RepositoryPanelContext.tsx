@@ -24,13 +24,34 @@ import { FileSystemService } from '../main-process-api/FileSystemService';
 import { WindowService } from '../main-process-api/WindowService';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { PackageLayer } from '@principal-ai/codebase-composition';
-import type { PackageSummary } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+import type { PackageSummary, GitStatusWithFiles } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 import { minimatch } from 'minimatch';
 
 // Types for packages slice data (matches @industry-theme/alexandria-panels DependenciesPanel expectations)
 interface PackagesSliceData {
   packages: PackageLayer[];
   summary: PackageSummary;
+}
+
+// Git status slice data - simple string arrays for file paths
+interface GitStatusSliceData {
+  staged: string[];
+  unstaged: string[];
+  untracked: string[];
+  deleted: string[];
+}
+
+// Helper to convert GitStatusWithFiles to GitStatusSliceData
+function mapGitStatusToSliceData(status: GitStatusWithFiles | null): GitStatusSliceData {
+  if (!status) {
+    return { staged: [], unstaged: [], untracked: [], deleted: [] };
+  }
+  return {
+    staged: status.stagedFiles ?? [],
+    unstaged: status.modifiedFiles ?? [],
+    untracked: status.untrackedFiles ?? [],
+    deleted: status.deletedFiles ?? [],
+  };
 }
 
 // Extend PanelActions with terminal-specific and file system actions
@@ -108,6 +129,10 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
   // Track packages data for the current repository
   const [packagesData, setPackagesData] = useState<PackagesSliceData | null>(null);
   const [packagesLoading, setPackagesLoading] = useState(false);
+
+  // Track git status for the current repository
+  const [gitStatusData, setGitStatusData] = useState<GitStatusSliceData | null>(null);
+  const [gitStatusLoading, setGitStatusLoading] = useState(false);
 
   // Loading state
   const [loading] = useState(false);
@@ -230,6 +255,50 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
     };
 
     fetchPackages();
+  }, [repositoryPath]);
+
+  // Fetch git status when repository changes and subscribe to updates
+  useEffect(() => {
+    const fetchGitStatus = async () => {
+      if (!repositoryPath) {
+        setGitStatusData(null);
+        return;
+      }
+
+      setGitStatusLoading(true);
+      try {
+        const status = await RepositoryMonitoringService.getGitStatusWithFiles(repositoryPath);
+        console.info('[RepositoryPanelProvider] Fetched git status for repository:', repositoryPath);
+        setGitStatusData(mapGitStatusToSliceData(status));
+      } catch (error) {
+        console.error('[RepositoryPanelProvider] Failed to fetch git status:', error);
+        setGitStatusData(null);
+      } finally {
+        setGitStatusLoading(false);
+      }
+    };
+
+    fetchGitStatus();
+
+    // Subscribe to git status changes - onGitStatusChanged only provides metadata,
+    // so we need to fetch the full status with files when notified
+    const unsubscribe = RepositoryMonitoringService.onGitStatusChanged((data) => {
+      if (data.repoPath === repositoryPath) {
+        console.info('[RepositoryPanelProvider] Git status changed for repository:', repositoryPath);
+        // Fetch full status with files since the event only has metadata
+        RepositoryMonitoringService.getGitStatusWithFiles(repositoryPath)
+          .then((status) => {
+            setGitStatusData(mapGitStatusToSliceData(status));
+          })
+          .catch((error) => {
+            console.error('[RepositoryPanelProvider] Failed to refresh git status after change:', error);
+          });
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, [repositoryPath]);
 
   // Create actions object
@@ -516,8 +585,32 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
             },
           },
         ],
+        [
+          'git',
+          {
+            scope: 'repository' as const,
+            name: 'git',
+            data: gitStatusData,
+            loading: gitStatusLoading,
+            error: null,
+            refresh: async () => {
+              if (repositoryPath) {
+                setGitStatusLoading(true);
+                try {
+                  const status = await RepositoryMonitoringService.getGitStatusWithFiles(repositoryPath);
+                  setGitStatusData(mapGitStatusToSliceData(status));
+                } catch (error) {
+                  console.error('[RepositoryPanelProvider] Failed to refresh git status:', error);
+                  setGitStatusData(null);
+                } finally {
+                  setGitStatusLoading(false);
+                }
+              }
+            },
+          },
+        ],
       ]),
-    [repositoryPath, fileTreeData, fileTreeLoading, markdownFiles, packagesData, packagesLoading],
+    [repositoryPath, fileTreeData, fileTreeLoading, markdownFiles, packagesData, packagesLoading, gitStatusData, gitStatusLoading],
   );
 
   // Create context value

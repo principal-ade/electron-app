@@ -14,6 +14,7 @@ import { panels as workspacePanels } from '@industry-theme/alexandria-panels';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import { panels as codeCityPanels } from '@industry-theme/code-city-panel';
 import { panels as localhostPanels } from '@industry-theme/localhost-panels';
+import { panels as agentDrivenPanels } from '@industry-theme/agent-driven-ui-panels';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { WindowService } from '../main-process-api/WindowService';
 
@@ -206,6 +207,8 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
   const DocsPanelComponent = docsPanels[0]?.component;
   const CodeCityPanelComponent = codeCityPanels[0]?.component;
   const LocalhostPanelComponent = localhostPanels[0]?.component;
+  const EventBusPanelComponent = agentDrivenPanels.find(p => p.metadata?.id === 'industry-theme.event-bus-panel')?.component;
+  const AgentToolsPanelComponent = agentDrivenPanels.find(p => p.metadata?.id === 'industry-theme.agent-tools-panel')?.component;
 
   // Get terminal directory from context
   const terminalDirectory = context.currentScope.repository?.path ||
@@ -413,8 +416,92 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
           </div>
         ),
       },
+      {
+        id: 'event-bus',
+        label: 'Event Bus',
+        content: EventBusPanelComponent ? (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('right')} />}
+            <EventBusPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: '16px',
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+              height: '100%',
+              overflow: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('right')} />}
+            <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
+              Event Bus panel not available
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: 'agent-tools',
+        label: 'Agent Tools',
+        content: AgentToolsPanelComponent ? (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('right')} />}
+            <AgentToolsPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: '16px',
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+              height: '100%',
+              overflow: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('right')} />}
+            <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
+              Agent Tools panel not available
+            </p>
+          </div>
+        ),
+      },
     ],
-    [theme, context, actions, events, WorkspacePanelComponent, DocsPanelComponent, CodeCityPanelComponent, LocalhostPanelComponent, isFocused, enableKeyboardShortcuts, terminalContext, terminalDirectory, showAllTerminals]
+    [theme, context, actions, events, WorkspacePanelComponent, DocsPanelComponent, CodeCityPanelComponent, LocalhostPanelComponent, EventBusPanelComponent, AgentToolsPanelComponent, isFocused, enableKeyboardShortcuts, terminalContext, terminalDirectory, showAllTerminals]
   );
 
   return (

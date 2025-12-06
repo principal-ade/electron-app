@@ -14,6 +14,8 @@ import { panels as codeCityPanels } from '@industry-theme/code-city-panel';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import { panels as alexandriaPanels } from '@industry-theme/alexandria-panels';
 import { panels as localhostPanels } from '@industry-theme/localhost-panels';
+import { panels as agentDrivenPanels } from '@industry-theme/agent-driven-ui-panels';
+import { panels as repositoryCompositionPanels } from '@industry-theme/repository-composition-panels';
 import type { Repository } from '../../shared/types/repository.types';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 
@@ -87,6 +89,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
   const DocsPanelComponent = docsPanels[0]?.component;
   const DependenciesPanelComponent = alexandriaPanels.find(p => p.metadata?.name === 'Dependencies')?.component;
   const LocalhostPanelComponent = localhostPanels[0]?.component;
+  const EventBusPanelComponent = agentDrivenPanels.find(p => p.metadata?.id === 'industry-theme.event-bus-panel')?.component;
+  const AgentToolsPanelComponent = agentDrivenPanels.find(p => p.metadata?.id === 'industry-theme.agent-tools-panel')?.component;
+  const GitChangesPanelComponent = repositoryCompositionPanels.find(p => p.metadata?.id === 'industry-theme.git-changes')?.component;
 
   // Define all panels using panel framework components
   const allPanels = useMemo(
@@ -201,6 +206,28 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
         ),
       },
       {
+        id: 'gitChanges',
+        label: 'Git Changes',
+        content: GitChangesPanelComponent ? (
+          <div style={{
+            height: '100%',
+            width: '100%',
+            overflow: 'hidden',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <GitChangesPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div>Git Changes panel not available</div>
+        ),
+      },
+      {
         id: 'localhostBrowser',
         label: 'Localhost Browser',
         content: LocalhostPanelComponent ? (
@@ -264,8 +291,52 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
           </div>
         ),
       },
+      {
+        id: 'eventBus',
+        label: 'Event Bus',
+        content: EventBusPanelComponent ? (
+          <div style={{
+            height: '100%',
+            width: '100%',
+            overflow: 'hidden',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <EventBusPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div>Event Bus panel not available</div>
+        ),
+      },
+      {
+        id: 'agentTools',
+        label: 'Agent Tools',
+        content: AgentToolsPanelComponent ? (
+          <div style={{
+            height: '100%',
+            width: '100%',
+            overflow: 'hidden',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <AgentToolsPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div>Agent Tools panel not available</div>
+        ),
+      },
     ],
-    [VisualValidationPanelComponent, CodeCityPanelComponent, DocsPanelComponent, DependenciesPanelComponent, LocalhostPanelComponent, context, actions, events, terminalImplementation, terminalContext, terminalDirectory],
+    [VisualValidationPanelComponent, CodeCityPanelComponent, DocsPanelComponent, DependenciesPanelComponent, GitChangesPanelComponent, LocalhostPanelComponent, EventBusPanelComponent, AgentToolsPanelComponent, context, actions, events, terminalImplementation, terminalContext, terminalDirectory],
   );
 
   return (
