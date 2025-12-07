@@ -18,6 +18,7 @@ const AVAILABLE_PANELS: PanelOption[] = [
   { id: 'dependencies', label: 'Dependencies' },
   { id: 'gitChanges', label: 'Git Changes' },
   { id: 'localhostBrowser', label: 'Localhost Browser' },
+  { id: 'localProjects', label: 'Local Projects' },
   { id: 'visualValidation', label: 'Visual Validation' },
   { id: 'terminal', label: 'Terminal' },
 ];

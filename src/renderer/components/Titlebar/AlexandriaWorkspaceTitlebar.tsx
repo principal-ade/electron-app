@@ -11,6 +11,7 @@ import { PanelSelectorDropdown, type PanelOption } from './PanelSelectorDropdown
 // Available panels for Alexandria workspace
 const AVAILABLE_PANELS: PanelOption[] = [
   { id: 'workspace-repos', label: 'Repositories' },
+  { id: 'local-projects', label: 'Local Projects' },
   { id: 'alexandria-docs', label: 'Documentation' },
   { id: 'code-city', label: 'Code City' },
   { id: 'localhost-browser', label: 'Localhost Browser' },

@@ -76,6 +76,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
   const CodeCityPanelComponent = codeCityPanels[0]?.component;
   const DocsPanelComponent = docsPanels[0]?.component;
   const DependenciesPanelComponent = alexandriaPanels.find(p => p.metadata?.name === 'Dependencies')?.component;
+  const LocalProjectsPanelComponent = alexandriaPanels.find(p => p.metadata?.id === 'industry-theme.local-projects')?.component;
   const LocalhostPanelComponent = localhostPanels[0]?.component;
   const EventBusPanelComponent = agentDrivenPanels.find(p => p.metadata?.id === 'industry-theme.event-bus-panel')?.component;
   const AgentToolsPanelComponent = agentDrivenPanels.find(p => p.metadata?.id === 'industry-theme.agent-tools-panel')?.component;
@@ -323,8 +324,30 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
           <div>Agent Tools panel not available</div>
         ),
       },
+      {
+        id: 'localProjects',
+        label: 'Local Projects',
+        content: LocalProjectsPanelComponent ? (
+          <div style={{
+            height: '100%',
+            width: '100%',
+            overflow: 'hidden',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <LocalProjectsPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div>Local Projects panel not available</div>
+        ),
+      },
     ],
-    [VisualValidationPanelComponent, CodeCityPanelComponent, DocsPanelComponent, DependenciesPanelComponent, GitChangesPanelComponent, LocalhostPanelComponent, EventBusPanelComponent, AgentToolsPanelComponent, context, actions, events, terminalImplementation, terminalContext, terminalDirectory],
+    [VisualValidationPanelComponent, CodeCityPanelComponent, DocsPanelComponent, DependenciesPanelComponent, LocalProjectsPanelComponent, GitChangesPanelComponent, LocalhostPanelComponent, EventBusPanelComponent, AgentToolsPanelComponent, context, actions, events, terminalImplementation, terminalContext, terminalDirectory],
   );
 
   return (

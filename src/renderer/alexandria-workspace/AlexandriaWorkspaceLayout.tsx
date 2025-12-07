@@ -204,6 +204,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
   // Get panel components
   // Use WorkspaceRepositoriesPanel (panels[1]) which expects workspace + workspaceRepositories slices
   const WorkspacePanelComponent = workspacePanels[1]?.component;
+  const LocalProjectsPanelComponent = workspacePanels.find(p => p.metadata?.id === 'industry-theme.local-projects')?.component;
   const DocsPanelComponent = docsPanels[0]?.component;
   const CodeCityPanelComponent = codeCityPanels[0]?.component;
   const LocalhostPanelComponent = localhostPanels[0]?.component;
@@ -500,8 +501,50 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
           </div>
         ),
       },
+      {
+        id: 'local-projects',
+        label: 'Local Projects',
+        content: LocalProjectsPanelComponent ? (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('left')} />}
+            <LocalProjectsPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: '16px',
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+              height: '100%',
+              overflow: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('left')} />}
+            <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
+              Local Projects panel not available
+            </p>
+          </div>
+        ),
+      },
     ],
-    [theme, context, actions, events, WorkspacePanelComponent, DocsPanelComponent, CodeCityPanelComponent, LocalhostPanelComponent, EventBusPanelComponent, AgentToolsPanelComponent, isFocused, enableKeyboardShortcuts, terminalContext, terminalDirectory, showAllTerminals]
+    [theme, context, actions, events, WorkspacePanelComponent, LocalProjectsPanelComponent, DocsPanelComponent, CodeCityPanelComponent, LocalhostPanelComponent, EventBusPanelComponent, AgentToolsPanelComponent, isFocused, enableKeyboardShortcuts, terminalContext, terminalDirectory, showAllTerminals]
   );
 
   return (

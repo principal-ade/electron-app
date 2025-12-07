@@ -25,6 +25,8 @@ import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { WindowService } from '../main-process-api/WindowService';
 import { AlexandriaDocsService } from '../main-process-api/AlexandriaDocsService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
+import { AlexandriaService } from '../main-process-api/AlexandriaService';
+import { FileSystemService } from '../main-process-api/FileSystemService';
 import {
   LocalhostDetectionService,
   type RunningServer,
@@ -112,6 +114,11 @@ interface ExtendedPanelActions extends PanelActions {
   detectLocalhostServers?: () => Promise<ServerScanResult>;
   checkLocalhostPort?: (port: number) => Promise<boolean>;
   navigateToLocalhost?: (port: number, path?: string) => void;
+  // Local Projects panel actions
+  selectDirectory?: () => Promise<{ path: string; name: string } | null>;
+  registerRepository?: (name: string, path: string) => Promise<void>;
+  removeRepository?: (name: string, deleteLocal: boolean) => Promise<void>;
+  openRepository?: (entryOrId: AlexandriaEntry | string) => Promise<void>;
 }
 
 // Extended context interface that panels actually expect
@@ -195,6 +202,10 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
   const [localhostServers, setLocalhostServers] = useState<RunningServer[]>([]);
   const [localhostServersLoading, setLocalhostServersLoading] = useState(false);
   const localhostWatchIdRef = useRef<string | null>(null);
+
+  // Track all Alexandria repositories (for Local Projects panel)
+  const [alexandriaRepositories, setAlexandriaRepositories] = useState<AlexandriaEntry[]>([]);
+  const [alexandriaRepositoriesLoading, setAlexandriaRepositoriesLoading] = useState(false);
 
   // Fetch markdown files when repository changes
   useEffect(() => {
@@ -355,6 +366,36 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
 
     return unsubscribe;
   }, [workspace?.id]);
+
+  // Fetch all Alexandria repositories (for Local Projects panel) and subscribe to changes
+  useEffect(() => {
+    const fetchAlexandriaRepositories = async () => {
+      setAlexandriaRepositoriesLoading(true);
+      try {
+        const repos = await AlexandriaService.getRepositories();
+        console.info('[PanelContext] Fetched Alexandria repositories:', repos.length);
+        setAlexandriaRepositories(repos);
+      } catch (error) {
+        console.error('[PanelContext] Failed to fetch Alexandria repositories:', error);
+        setAlexandriaRepositories([]);
+      } finally {
+        setAlexandriaRepositoriesLoading(false);
+      }
+    };
+
+    fetchAlexandriaRepositories();
+
+    // Subscribe to repository changes
+    const unsubscribe = AlexandriaService.onRepositoryChange((event) => {
+      console.info('[PanelContext] Alexandria repository change:', event.type);
+      // Refetch repositories on any change
+      fetchAlexandriaRepositories();
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   // Wire up terminal exit events to panel event bus
   useEffect(() => {
@@ -547,8 +588,30 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
             },
           },
         ],
+        [
+          'alexandriaRepositories',
+          {
+            scope: 'workspace' as const,
+            name: 'alexandriaRepositories',
+            data: { repositories: alexandriaRepositories },
+            loading: alexandriaRepositoriesLoading,
+            error: null,
+            refresh: async () => {
+              setAlexandriaRepositoriesLoading(true);
+              try {
+                const repos = await AlexandriaService.getRepositories();
+                setAlexandriaRepositories(repos);
+              } catch (error) {
+                console.error('[PanelContext] Failed to refresh Alexandria repositories:', error);
+                setAlexandriaRepositories([]);
+              } finally {
+                setAlexandriaRepositoriesLoading(false);
+              }
+            },
+          },
+        ],
       ]),
-    [workspace, workspaceRepositories, repositoriesLoading, markdownFiles, markdownLoading, fileTreeData, fileTreeLoading, repository, localhostServers, localhostServersLoading]
+    [workspace, workspaceRepositories, repositoriesLoading, markdownFiles, markdownLoading, fileTreeData, fileTreeLoading, repository, localhostServers, localhostServersLoading, alexandriaRepositories, alexandriaRepositoriesLoading]
   );
 
   // Define panel actions
@@ -568,14 +631,28 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
           payload: { filePath: absolutePath },
         });
       },
-      openRepository: (repositoryId: string) => {
-        console.info('[PanelContext] Opening repository:', repositoryId);
-        events.emit({
-          type: 'repository:opened',
-          source: 'alexandria-workspace',
-          timestamp: Date.now(),
-          payload: { repositoryId },
-        });
+      openRepository: async (entryOrId: AlexandriaEntry | string) => {
+        // Handle both AlexandriaEntry objects and repository ID strings
+        if (typeof entryOrId === 'string') {
+          console.info('[PanelContext] Opening repository by ID:', entryOrId);
+          events.emit({
+            type: 'repository:opened',
+            source: 'alexandria-workspace',
+            timestamp: Date.now(),
+            payload: { repositoryId: entryOrId },
+          });
+        } else {
+          // It's an AlexandriaEntry - open dev workspace directly
+          try {
+            await WindowService.openDevWorkspace({
+              alexandriaEntry: entryOrId,
+            });
+            console.info('[PanelContext] Opened repository:', entryOrId.name);
+          } catch (error) {
+            console.error('[PanelContext] Failed to open repository:', error);
+            throw error;
+          }
+        }
       },
       openGitDiff: (filePath: string, status?: string) => {
         console.info('[PanelContext] Opening git diff:', filePath, status);
@@ -831,6 +908,47 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
           timestamp: Date.now(),
           payload: { port, path: path || '/' },
         });
+      },
+
+      // Local Projects panel actions
+      selectDirectory: async () => {
+        try {
+          const result = await FileSystemService.selectDirectory({
+            title: 'Select Project Directory',
+            buttonLabel: 'Add Project',
+            properties: ['openDirectory'],
+          });
+          if (result && !result.canceled && 'filePaths' in result && result.filePaths.length > 0) {
+            const selectedPath = result.filePaths[0];
+            // Extract the directory name from the path
+            const name = selectedPath.split('/').pop() || selectedPath;
+            return { path: selectedPath, name };
+          }
+          return null;
+        } catch (error) {
+          console.error('[PanelContext] Failed to select directory:', error);
+          return null;
+        }
+      },
+
+      registerRepository: async (name: string, path: string) => {
+        try {
+          await AlexandriaService.registerRepository(name, path);
+          console.info('[PanelContext] Registered repository:', name, path);
+        } catch (error) {
+          console.error('[PanelContext] Failed to register repository:', error);
+          throw error;
+        }
+      },
+
+      removeRepository: async (name: string, deleteLocal: boolean) => {
+        try {
+          await AlexandriaService.removeRepository(name, deleteLocal);
+          console.info('[PanelContext] Removed repository:', name);
+        } catch (error) {
+          console.error('[PanelContext] Failed to remove repository:', error);
+          throw error;
+        }
       },
     };
     },

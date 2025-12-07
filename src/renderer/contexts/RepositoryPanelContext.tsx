@@ -22,6 +22,8 @@ import type { TerminalInfo, TerminalOwnershipStatus, TerminalOwnershipResult, Re
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { FileSystemService } from '../main-process-api/FileSystemService';
 import { WindowService } from '../main-process-api/WindowService';
+import { AlexandriaService } from '../main-process-api/AlexandriaService';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { PackageLayer } from '@principal-ai/codebase-composition';
 import type { PackageSummary, GitStatusWithFiles } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
@@ -80,6 +82,11 @@ interface RepositoryPanelActions extends PanelActions {
   onTerminalData?: (sessionId: string, callback: (data: string) => void) => () => void;
   // List terminal sessions (used by TabbedTerminalPanel for restoration)
   listTerminalSessions?: () => Promise<TerminalInfo[]>;
+  // Local Projects panel actions
+  selectDirectory?: () => Promise<{ path: string; name: string } | null>;
+  registerRepository?: (name: string, path: string) => Promise<void>;
+  removeRepository?: (name: string, deleteLocal: boolean) => Promise<void>;
+  openRepository?: (entry: AlexandriaEntry) => Promise<void>;
 }
 
 // Extended context for repository panels
@@ -133,6 +140,10 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
   // Track git status for the current repository
   const [gitStatusData, setGitStatusData] = useState<GitStatusSliceData | null>(null);
   const [gitStatusLoading, setGitStatusLoading] = useState(false);
+
+  // Track all Alexandria repositories (for Local Projects panel)
+  const [alexandriaRepositories, setAlexandriaRepositories] = useState<AlexandriaEntry[]>([]);
+  const [alexandriaRepositoriesLoading, setAlexandriaRepositoriesLoading] = useState(false);
 
   // Loading state
   const [loading] = useState(false);
@@ -329,6 +340,36 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
     };
   }, [repositoryPath]);
 
+  // Fetch all Alexandria repositories (for Local Projects panel) and subscribe to changes
+  useEffect(() => {
+    const fetchAlexandriaRepositories = async () => {
+      setAlexandriaRepositoriesLoading(true);
+      try {
+        const repos = await AlexandriaService.getRepositories();
+        console.info('[RepositoryPanelProvider] Fetched Alexandria repositories:', repos.length);
+        setAlexandriaRepositories(repos);
+      } catch (error) {
+        console.error('[RepositoryPanelProvider] Failed to fetch Alexandria repositories:', error);
+        setAlexandriaRepositories([]);
+      } finally {
+        setAlexandriaRepositoriesLoading(false);
+      }
+    };
+
+    fetchAlexandriaRepositories();
+
+    // Subscribe to repository changes
+    const unsubscribe = AlexandriaService.onRepositoryChange((event) => {
+      console.info('[RepositoryPanelProvider] Alexandria repository change:', event.type);
+      // Refetch repositories on any change
+      fetchAlexandriaRepositories();
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
   // Create actions object
   const actions: RepositoryPanelActions = useMemo(
     () => ({
@@ -494,6 +535,59 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
       onTerminalPortReady: (callback: (data: PortReadyData, port: MessagePort) => void) => {
         return TerminalService.onPortReady(callback);
       },
+
+      // Local Projects panel actions
+      selectDirectory: async () => {
+        try {
+          const result = await FileSystemService.selectDirectory({
+            title: 'Select Project Directory',
+            buttonLabel: 'Add Project',
+            properties: ['openDirectory'],
+          });
+          if (result && !result.canceled && 'filePaths' in result && result.filePaths.length > 0) {
+            const selectedPath = result.filePaths[0];
+            // Extract the directory name from the path
+            const name = selectedPath.split('/').pop() || selectedPath;
+            return { path: selectedPath, name };
+          }
+          return null;
+        } catch (error) {
+          console.error('[RepositoryPanelProvider] Failed to select directory:', error);
+          return null;
+        }
+      },
+
+      registerRepository: async (name: string, path: string) => {
+        try {
+          await AlexandriaService.registerRepository(name, path);
+          console.info('[RepositoryPanelProvider] Registered repository:', name, path);
+        } catch (error) {
+          console.error('[RepositoryPanelProvider] Failed to register repository:', error);
+          throw error;
+        }
+      },
+
+      removeRepository: async (name: string, deleteLocal: boolean) => {
+        try {
+          await AlexandriaService.removeRepository(name, deleteLocal);
+          console.info('[RepositoryPanelProvider] Removed repository:', name);
+        } catch (error) {
+          console.error('[RepositoryPanelProvider] Failed to remove repository:', error);
+          throw error;
+        }
+      },
+
+      openRepository: async (entry: AlexandriaEntry) => {
+        try {
+          await WindowService.openDevWorkspace({
+            alexandriaEntry: entry,
+          });
+          console.info('[RepositoryPanelProvider] Opened repository:', entry.name);
+        } catch (error) {
+          console.error('[RepositoryPanelProvider] Failed to open repository:', error);
+          throw error;
+        }
+      },
     }),
     [repositoryPath, terminalContext, events],
   );
@@ -637,8 +731,30 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
             },
           },
         ],
+        [
+          'alexandriaRepositories',
+          {
+            scope: 'repository' as const,
+            name: 'alexandriaRepositories',
+            data: { repositories: alexandriaRepositories },
+            loading: alexandriaRepositoriesLoading,
+            error: null,
+            refresh: async () => {
+              setAlexandriaRepositoriesLoading(true);
+              try {
+                const repos = await AlexandriaService.getRepositories();
+                setAlexandriaRepositories(repos);
+              } catch (error) {
+                console.error('[RepositoryPanelProvider] Failed to refresh Alexandria repositories:', error);
+                setAlexandriaRepositories([]);
+              } finally {
+                setAlexandriaRepositoriesLoading(false);
+              }
+            },
+          },
+        ],
       ]),
-    [repositoryPath, fileTreeData, fileTreeLoading, markdownFiles, packagesData, packagesLoading, gitStatusData, gitStatusLoading],
+    [repositoryPath, fileTreeData, fileTreeLoading, markdownFiles, packagesData, packagesLoading, gitStatusData, gitStatusLoading, alexandriaRepositories, alexandriaRepositoriesLoading],
   );
 
   // Create context value
