@@ -1,0 +1,484 @@
+{
+  "vv": {
+    "name": "Windows & IPC Architecture",
+    "version": "1.0.0",
+    "nodeTypes": {
+      "main-process": {
+        "label": "Main Process",
+        "color": "#4F46E5"
+      },
+      "renderer-process": {
+        "label": "Renderer Process",
+        "color": "#7C3AED"
+      },
+      "preload": {
+        "label": "Preload Script",
+        "color": "#8B5CF6"
+      },
+      "principal-window": {
+        "label": "Principal Window",
+        "color": "#2563EB"
+      },
+      "repo-manager": {
+        "label": "Repo Manager",
+        "color": "#3B82F6"
+      },
+      "alexandria-workspace": {
+        "label": "Alexandria Workspace",
+        "color": "#60A5FA"
+      },
+      "dev-workspace": {
+        "label": "Dev Workspace",
+        "color": "#93C5FD"
+      },
+      "file-system-service": {
+        "label": "File System Service",
+        "color": "#6366F1"
+      },
+      "terminal-service": {
+        "label": "Terminal Service",
+        "color": "#818CF8"
+      },
+      "github-adapter": {
+        "label": "GitHub Adapter",
+        "color": "#171515"
+      },
+      "storage-service": {
+        "label": "Storage Service",
+        "color": "#8B5CF6"
+      },
+      "observability-service": {
+        "label": "Observability Service",
+        "color": "#14B8A6"
+      },
+      "panel-context": {
+        "label": "Panel Context",
+        "color": "#C084FC"
+      },
+      "workspace-context": {
+        "label": "Workspace Context",
+        "color": "#E9D5FF"
+      }
+    },
+    "edgeTypes": {
+      "ipc": {
+        "label": "IPC",
+        "style": "solid",
+        "color": "#6366F1"
+      },
+      "ipc-event": {
+        "label": "IPC Event",
+        "style": "dashed",
+        "color": "#818CF8"
+      },
+      "renders": {
+        "label": "Renders",
+        "style": "solid",
+        "color": "#EC4899"
+      },
+      "uses": {
+        "label": "Uses",
+        "style": "dotted",
+        "color": "#64748B"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "main-process",
+      "type": "text",
+      "x": 401,
+      "y": 491,
+      "width": 200,
+      "height": 80,
+      "text": "Main Process",
+      "vv": {
+        "nodeType": "main-process",
+        "shape": "rectangle",
+        "notes": "Electron main process (Node.js). Handles IPC, services, file system, and system operations. Entry: src/main/main.ts"
+      }
+    },
+    {
+      "id": "preload",
+      "type": "text",
+      "x": 402,
+      "y": 317,
+      "width": 200,
+      "height": 80,
+      "text": "Preload Bridge",
+      "vv": {
+        "nodeType": "preload",
+        "shape": "rectangle",
+        "notes": "Isolated context bridge. Exposes 40+ APIs via contextBridge.exposeInMainWorld('mainProcess', apis). File: src/window/preload.ts"
+      }
+    },
+    {
+      "id": "renderer-process",
+      "type": "text",
+      "x": 400,
+      "y": 200,
+      "width": 200,
+      "height": 80,
+      "text": "Renderer Process",
+      "vv": {
+        "nodeType": "renderer-process",
+        "shape": "rectangle",
+        "notes": "React/TypeScript UI. Calls window.mainProcess.* APIs. Uses service classes from src/renderer/main-process-api/"
+      }
+    },
+    {
+      "id": "principal-window",
+      "type": "text",
+      "x": 50,
+      "y": 50,
+      "width": 160,
+      "height": 60,
+      "text": "Principal Window",
+      "vv": {
+        "nodeType": "principal-window",
+        "shape": "rectangle",
+        "notes": "Main app shell. Features: all adapters, menu, devTools, terminal. Views: Auth, Workspaces, Settings, Feed"
+      }
+    },
+    {
+      "id": "repo-manager",
+      "type": "text",
+      "x": 767,
+      "y": 53,
+      "width": 160,
+      "height": 60,
+      "text": "Repo Manager",
+      "vv": {
+        "nodeType": "repo-manager",
+        "shape": "rectangle",
+        "notes": "Repository exploration workspace. Multi-pane layout with 50+ panels. Features: fileSystemAdapter, terminalManager"
+      }
+    },
+    {
+      "id": "alexandria-workspace",
+      "type": "text",
+      "x": 263,
+      "y": 50,
+      "width": 180,
+      "height": 60,
+      "text": "Alexandria Workspace",
+      "vv": {
+        "nodeType": "alexandria-workspace",
+        "shape": "rectangle",
+        "notes": "Knowledge base workspace. Code exploration with panel layout. Features: fileSystemAdapter, githubAdapter"
+      }
+    },
+    {
+      "id": "dev-workspace",
+      "type": "text",
+      "x": 543,
+      "y": 53,
+      "width": 160,
+      "height": 60,
+      "text": "Dev Workspace",
+      "vv": {
+        "nodeType": "dev-workspace",
+        "shape": "rectangle",
+        "notes": "Development environment. Custom preload: preload-dev-workspace.js. Features: fileSystemAdapter, terminalManager"
+      }
+    },
+    {
+      "id": "file-system-adapter",
+      "type": "text",
+      "x": -66,
+      "y": 810,
+      "width": 160,
+      "height": 60,
+      "text": "FileSystem Adapter",
+      "vv": {
+        "nodeType": "file-system-service",
+        "shape": "rectangle",
+        "notes": "Per-window adapter. Handles file ops, watchers (chokidar), shell commands. File: src/main/file-system/fileSystemHandlers.ts"
+      }
+    },
+    {
+      "id": "window-manager-adapter",
+      "type": "text",
+      "x": 146,
+      "y": 808,
+      "width": 180,
+      "height": 60,
+      "text": "WindowManager Adapter",
+      "vv": {
+        "nodeType": "storage-service",
+        "shape": "rectangle",
+        "notes": "Per-window adapter. Handles fullscreen, minimize, window state events. File: src/main/window/windowManagerHandlers.ts"
+      }
+    },
+    {
+      "id": "github-adapter",
+      "type": "text",
+      "x": 581,
+      "y": 808,
+      "width": 140,
+      "height": 60,
+      "text": "GitHub Adapter",
+      "vv": {
+        "nodeType": "github-adapter",
+        "shape": "rectangle",
+        "notes": "Per-window adapter. GitHub API context, auth, repository operations. Isolated per window."
+      }
+    },
+    {
+      "id": "terminal-manager",
+      "type": "text",
+      "x": 749,
+      "y": 806,
+      "width": 160,
+      "height": 60,
+      "text": "Terminal Manager",
+      "vv": {
+        "nodeType": "terminal-service",
+        "shape": "rectangle",
+        "notes": "Per-window PTY sessions. Uses node-pty for terminal emulation. xterm.js frontend."
+      }
+    },
+    {
+      "id": "modern-window-manager",
+      "type": "text",
+      "x": 368,
+      "y": 809,
+      "width": 200,
+      "height": 60,
+      "text": "ModernWindowManager",
+      "vv": {
+        "nodeType": "storage-service",
+        "shape": "rectangle",
+        "notes": "Core window creation & lifecycle. Tracks windows in applicationWindows Map. File: src/main/window/modernWindowManager.ts"
+      }
+    },
+    {
+      "id": "ipc-handlers",
+      "type": "text",
+      "x": 683,
+      "y": 589,
+      "width": 140,
+      "height": 80,
+      "text": "IPC Handlers",
+      "vv": {
+        "nodeType": "observability-service",
+        "shape": "rectangle",
+        "notes": "Handler registration in initialization.ts. 30+ handler groups: file system, git, repository, agent, auth, etc."
+      }
+    },
+    {
+      "id": "api-interfaces",
+      "type": "text",
+      "x": 160,
+      "y": 424,
+      "width": 140,
+      "height": 80,
+      "text": "API Interfaces",
+      "vv": {
+        "nodeType": "panel-context",
+        "shape": "rectangle",
+        "notes": "Type definitions for all 40+ APIs. Files: src/shared/main-process-api-interfaces/*.ts"
+      }
+    },
+    {
+      "id": "api-implementations",
+      "type": "text",
+      "x": 675,
+      "y": 421,
+      "width": 160,
+      "height": 80,
+      "text": "API Implementations",
+      "vv": {
+        "nodeType": "panel-context",
+        "shape": "rectangle",
+        "notes": "Preload implementations using ipcRenderer.invoke/send. Files: src/window/main-process-api-implementations/*.ts"
+      }
+    },
+    {
+      "id": "event-channels",
+      "type": "text",
+      "x": 895,
+      "y": 650,
+      "width": 140,
+      "height": 80,
+      "text": "Event Channels",
+      "vv": {
+        "nodeType": "workspace-context",
+        "shape": "rectangle",
+        "notes": "IPC event enums: WindowEvent, FileSystemAPIEvent, PrincipalEvent, etc. Files: src/shared/ipc-events/*.ts"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "renderer-to-preload",
+      "fromNode": "renderer-process",
+      "toNode": "preload",
+      "label": "window.mainProcess.*",
+      "vv": {
+        "edgeType": "ipc",
+        "notes": "Renderer calls preload APIs via global window.mainProcess object"
+      }
+    },
+    {
+      "id": "preload-to-main",
+      "fromNode": "preload",
+      "toNode": "main-process",
+      "label": "ipcRenderer.invoke()",
+      "vv": {
+        "edgeType": "ipc",
+        "notes": "Preload uses ipcRenderer.invoke for request/response, ipcRenderer.send for fire-and-forget"
+      }
+    },
+    {
+      "id": "main-to-preload-events",
+      "fromNode": "main-process",
+      "toNode": "preload",
+      "label": "webContents.send()",
+      "vv": {
+        "edgeType": "ipc-event",
+        "notes": "Main process pushes events to renderer via webContents.send(channel, data)"
+      }
+    },
+    {
+      "id": "principal-renders-renderer",
+      "fromNode": "principal-window",
+      "toNode": "renderer-process",
+      "label": "loads",
+      "vv": {
+        "edgeType": "renders",
+        "notes": "Each window loads renderer process with its HTML entry point"
+      }
+    },
+    {
+      "id": "repo-renders-renderer",
+      "fromNode": "repo-manager",
+      "toNode": "renderer-process",
+      "label": "loads",
+      "vv": {
+        "edgeType": "renders",
+        "notes": "Loads src/renderer/repo-manager/index.tsx"
+      }
+    },
+    {
+      "id": "alexandria-renders-renderer",
+      "fromNode": "alexandria-workspace",
+      "toNode": "renderer-process",
+      "label": "loads",
+      "vv": {
+        "edgeType": "renders",
+        "notes": "Loads src/renderer/alexandria-workspace/index.tsx"
+      }
+    },
+    {
+      "id": "dev-renders-renderer",
+      "fromNode": "dev-workspace",
+      "toNode": "renderer-process",
+      "label": "loads",
+      "vv": {
+        "edgeType": "renders",
+        "notes": "Loads dev workspace entry with custom preload"
+      }
+    },
+    {
+      "id": "main-uses-fs-adapter",
+      "fromNode": "main-process",
+      "toNode": "file-system-adapter",
+      "label": "per-window",
+      "vv": {
+        "edgeType": "uses",
+        "notes": "Each window gets its own FileSystemAdapter instance with isolated state"
+      }
+    },
+    {
+      "id": "main-uses-wm-adapter",
+      "fromNode": "main-process",
+      "toNode": "window-manager-adapter",
+      "label": "per-window",
+      "vv": {
+        "edgeType": "uses",
+        "notes": "Each window gets its own WindowManagerAdapter for window state"
+      }
+    },
+    {
+      "id": "main-uses-gh-adapter",
+      "fromNode": "main-process",
+      "toNode": "github-adapter",
+      "label": "per-window",
+      "vv": {
+        "edgeType": "uses",
+        "notes": "Each window gets its own GitHub context"
+      }
+    },
+    {
+      "id": "main-uses-terminal",
+      "fromNode": "main-process",
+      "toNode": "terminal-manager",
+      "label": "per-window",
+      "vv": {
+        "edgeType": "uses",
+        "notes": "PTY sessions are scoped to windows"
+      }
+    },
+    {
+      "id": "main-uses-window-manager",
+      "fromNode": "main-process",
+      "toNode": "modern-window-manager",
+      "label": "creates windows",
+      "vv": {
+        "edgeType": "uses",
+        "notes": "ModernWindowManager.createWindow() / createSpecialWindow()"
+      }
+    },
+    {
+      "id": "main-uses-handlers",
+      "fromNode": "main-process",
+      "toNode": "ipc-handlers",
+      "label": "registers",
+      "vv": {
+        "edgeType": "uses",
+        "notes": "ipcMain.handle() registered in initialization.ts"
+      }
+    },
+    {
+      "id": "preload-uses-interfaces",
+      "fromNode": "preload",
+      "toNode": "api-interfaces",
+      "label": "implements",
+      "vv": {
+        "edgeType": "uses",
+        "notes": "Preload implements interfaces from shared types"
+      }
+    },
+    {
+      "id": "preload-uses-implementations",
+      "fromNode": "preload",
+      "toNode": "api-implementations",
+      "label": "exports",
+      "vv": {
+        "edgeType": "uses",
+        "notes": "Aggregates all API implementations into mainProcess object"
+      }
+    },
+    {
+      "id": "handlers-use-channels",
+      "fromNode": "ipc-handlers",
+      "toNode": "event-channels",
+      "label": "listens to",
+      "vv": {
+        "edgeType": "uses",
+        "notes": "Handlers register for specific event channels"
+      }
+    },
+    {
+      "id": "implementations-use-channels",
+      "fromNode": "api-implementations",
+      "toNode": "event-channels",
+      "label": "invokes",
+      "vv": {
+        "edgeType": "uses",
+        "notes": "API implementations use channel enums for type-safe IPC"
+      }
+    }
+  ]
+}

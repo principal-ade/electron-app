@@ -1,0 +1,331 @@
+version: "1.0.0"
+name: "Principal ADE Component Library"
+
+nodeComponents:
+  # ============================================
+  # PROCESSES
+  # ============================================
+  main-process:
+    label: "Main Process"
+    description: "Electron main process - Node.js backend handling IPC, services, and system operations"
+    category: "process"
+    color: "#4F46E5"
+
+  renderer-process:
+    label: "Renderer Process"
+    description: "React/TypeScript UI process running in Chromium"
+    category: "process"
+    color: "#7C3AED"
+
+  preload:
+    label: "Preload Script"
+    description: "Bridge script exposing safe APIs to renderer"
+    category: "process"
+    color: "#8B5CF6"
+
+  # ============================================
+  # WINDOWS
+  # ============================================
+  principal-window:
+    label: "Principal Window"
+    description: "Main app shell - authentication, workspaces, settings, feed"
+    category: "window"
+    color: "#2563EB"
+
+  repo-manager:
+    label: "Repo Manager"
+    description: "Repository exploration workspace with multi-pane layout"
+    category: "window"
+    color: "#3B82F6"
+
+  alexandria-workspace:
+    label: "Alexandria Workspace"
+    description: "Knowledge base workspace for code exploration"
+    category: "window"
+    color: "#60A5FA"
+
+  dev-workspace:
+    label: "Dev Workspace"
+    description: "Development environment window"
+    category: "window"
+    color: "#93C5FD"
+
+  extension-window:
+    label: "Extension Window"
+    description: "Browser window for extensions"
+    category: "window"
+    color: "#BFDBFE"
+
+  # ============================================
+  # MAIN PROCESS SERVICES
+  # ============================================
+  auth-service:
+    label: "Auth Service"
+    description: "Authentication, JWT handling, and secure token IPC"
+    category: "service"
+    color: "#DC2626"
+
+  git-service:
+    label: "Git Service"
+    description: "Core git operations (status, commit, branch, etc.)"
+    category: "service"
+    color: "#F97316"
+
+  git-sync-service:
+    label: "Git Sync Service"
+    description: "WebSocket-based git synchronization manager"
+    category: "service"
+    color: "#FB923C"
+
+  git-status-service:
+    label: "Git Status Service"
+    description: "Repository git status tracking and file change detection"
+    category: "service"
+    color: "#FDBA74"
+
+  repository-service:
+    label: "Repository Service"
+    description: "Repository CRUD, metadata, and lifecycle management"
+    category: "service"
+    color: "#059669"
+
+  workspace-service:
+    label: "Workspace Service"
+    description: "Workspace operations and state persistence"
+    category: "service"
+    color: "#10B981"
+
+  alexandria-service:
+    label: "Alexandria Service"
+    description: "Knowledge base storage and retrieval"
+    category: "service"
+    color: "#34D399"
+
+  agent-session-service:
+    label: "Agent Session Service"
+    description: "Agent session lifecycle and coordination"
+    category: "service"
+    color: "#F59E0B"
+
+  agent-events-service:
+    label: "Agent Events Service"
+    description: "Agent session event processing and HTTP bridge"
+    category: "service"
+    color: "#FBBF24"
+
+  file-system-service:
+    label: "File System Service"
+    description: "File operations, watching, and shell commands"
+    category: "service"
+    color: "#6366F1"
+
+  terminal-service:
+    label: "Terminal Service"
+    description: "PTY management and terminal session handling"
+    category: "service"
+    color: "#818CF8"
+
+  docker-service:
+    label: "Docker Service"
+    description: "Docker container and image management"
+    category: "service"
+    color: "#0EA5E9"
+
+  observability-service:
+    label: "Observability Service"
+    description: "Monitoring, logging, and event emission"
+    category: "service"
+    color: "#14B8A6"
+
+  storage-service:
+    label: "Storage Service"
+    description: "Typed data persistence via Electron Store"
+    category: "service"
+    color: "#8B5CF6"
+
+  # ============================================
+  # UI COMPONENTS
+  # ============================================
+  panel-system:
+    label: "Panel System"
+    description: "Dynamic panel registry with 50+ panels (git, markdown, code, graphs)"
+    category: "ui"
+    color: "#EC4899"
+
+  titlebar:
+    label: "Titlebar"
+    description: "Custom window titlebar components"
+    category: "ui"
+    color: "#F472B6"
+
+  modals:
+    label: "Modals"
+    description: "Shared modal dialogs (add repo, secrets, settings)"
+    category: "ui"
+    color: "#F9A8D4"
+
+  integrated-shell:
+    label: "Integrated Shell"
+    description: "Primary window navigation and view switching"
+    category: "ui"
+    color: "#DB2777"
+
+  # ============================================
+  # PANEL CATEGORIES
+  # ============================================
+  git-panels:
+    label: "Git Panels"
+    description: "Issues, PRs, commits, diff, history, changes panels"
+    category: "panel"
+    color: "#F97316"
+
+  code-panels:
+    label: "Code Panels"
+    description: "Files, tools, graphs, code-city visualization"
+    category: "panel"
+    color: "#22C55E"
+
+  markdown-panels:
+    label: "Markdown Panels"
+    description: "Editor, rendering, search, slides, books"
+    category: "panel"
+    color: "#3B82F6"
+
+  agent-panels:
+    label: "Agent Panels"
+    description: "File activity, tool use, session overview"
+    category: "panel"
+    color: "#EAB308"
+
+  # ============================================
+  # STATE MANAGEMENT
+  # ============================================
+  repository-context:
+    label: "Repository Context"
+    description: "Repository state and data provider"
+    category: "state"
+    color: "#A855F7"
+
+  panel-context:
+    label: "Panel Context"
+    description: "Panel visibility, ordering, and focus state"
+    category: "state"
+    color: "#C084FC"
+
+  git-changes-context:
+    label: "Git Changes Context"
+    description: "Git status and file change tracking"
+    category: "state"
+    color: "#D8B4FE"
+
+  workspace-context:
+    label: "Workspace Context"
+    description: "Workspace filter and visible projects state"
+    category: "state"
+    color: "#E9D5FF"
+
+  # ============================================
+  # EXTERNAL INTEGRATIONS
+  # ============================================
+  github-adapter:
+    label: "GitHub Adapter"
+    description: "GitHub API integration for remote repositories"
+    category: "integration"
+    color: "#171515"
+
+  mcp-bridge:
+    label: "MCP Bridge"
+    description: "Model Context Protocol server integration"
+    category: "integration"
+    color: "#06B6D4"
+
+  event-server:
+    label: "Event Server"
+    description: "HTTP server for agent session events"
+    category: "integration"
+    color: "#0891B2"
+
+  # ============================================
+  # STORES
+  # ============================================
+  repository-store:
+    label: "Repository Store"
+    description: "Persistent repository metadata and configuration"
+    category: "store"
+    color: "#65A30D"
+
+  workspace-store:
+    label: "Workspace Store"
+    description: "Workspace data persistence"
+    category: "store"
+    color: "#84CC16"
+
+  alexandria-store:
+    label: "Alexandria Store"
+    description: "Knowledge base data storage"
+    category: "store"
+    color: "#A3E635"
+
+  user-preferences-store:
+    label: "User Preferences"
+    description: "User settings and UI state persistence"
+    category: "store"
+    color: "#BEF264"
+
+edgeComponents:
+  # ============================================
+  # COMMUNICATION TYPES
+  # ============================================
+  ipc:
+    label: "IPC"
+    description: "Electron IPC communication (invoke/send)"
+    style: "solid"
+    color: "#6366F1"
+
+  ipc-event:
+    label: "IPC Event"
+    description: "Reactive IPC event subscription"
+    style: "dashed"
+    color: "#818CF8"
+
+  context-provider:
+    label: "Context"
+    description: "React Context provider relationship"
+    style: "solid"
+    color: "#A855F7"
+
+  websocket:
+    label: "WebSocket"
+    description: "WebSocket connection"
+    style: "solid"
+    color: "#14B8A6"
+
+  http:
+    label: "HTTP"
+    description: "HTTP API communication"
+    style: "solid"
+    color: "#F59E0B"
+
+  file-watch:
+    label: "File Watch"
+    description: "File system watch subscription"
+    style: "dashed"
+    color: "#22C55E"
+
+  renders:
+    label: "Renders"
+    description: "Parent renders child component"
+    style: "solid"
+    color: "#EC4899"
+
+  uses:
+    label: "Uses"
+    description: "Component uses/depends on another"
+    style: "dotted"
+    color: "#64748B"
+
+  stores-in:
+    label: "Stores In"
+    description: "Service persists data to store"
+    style: "solid"
+    color: "#84CC16"
