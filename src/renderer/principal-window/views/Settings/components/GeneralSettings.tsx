@@ -33,8 +33,6 @@ export const GeneralSettings: React.FC = () => {
     useState(true);
   const [showMonitorButton, setShowMonitorButton] = useState(false);
   const [showSearchButton, setShowSearchButton] = useState(false);
-  const [showProjectsButton, setShowProjectsButton] = useState(false);
-  const [showPresencePanel, setShowPresencePanel] = useState(false);
   const [presenceAutoConnect, setPresenceAutoConnect] = useState(true);
 
   const editorOptions = useMemo(
@@ -63,8 +61,6 @@ export const GeneralSettings: React.FC = () => {
       setShowTerminalShowAllButton(prefs.showTerminalShowAllButton ?? true);
       setShowMonitorButton(prefs.showMonitorButton ?? false);
       setShowSearchButton(prefs.showSearchButton ?? false);
-      setShowProjectsButton(prefs.showProjectsButton ?? false);
-      setShowPresencePanel(prefs.showPresencePanel ?? false);
       setPresenceAutoConnect(prefs.presenceAutoConnect ?? true);
     };
 
@@ -568,103 +564,6 @@ export const GeneralSettings: React.FC = () => {
             </label>
           </div>
 
-          {/* Show Presence Panel */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              gap: '16px',
-              marginTop: '16px',
-              paddingTop: '16px',
-              borderTop: `1px solid ${theme.colors.border}`,
-            }}
-          >
-            <div style={{ flex: 1 }}>
-              <label
-                htmlFor="showPresencePanel"
-                style={{
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  color: theme.colors.text,
-                  display: 'block',
-                  marginBottom: '8px',
-                  cursor: 'pointer',
-                }}
-              >
-                Show Presence Panel
-              </label>
-              <p
-                style={{
-                  fontSize: '13px',
-                  color: theme.colors.textSecondary,
-                  lineHeight: '1.5',
-                }}
-              >
-                When enabled, the Presence diagnostic panel will be visible in
-                the Feed view. This panel shows detailed presence information
-                for debugging. When disabled (default), you can still use
-                presence features through the Social panel.
-              </p>
-            </div>
-            <label
-              style={{
-                position: 'relative',
-                display: 'inline-block',
-                width: '48px',
-                height: '24px',
-                flexShrink: 0,
-              }}
-            >
-              <input
-                id="showPresencePanel"
-                type="checkbox"
-                checked={showPresencePanel}
-                onChange={async (e) => {
-                  const newValue = e.target.checked;
-                  setShowPresencePanel(newValue);
-                  await UserPreferencesService.updatePreferences({
-                    showPresencePanel: newValue,
-                  });
-                }}
-                style={{
-                  opacity: 0,
-                  width: 0,
-                  height: 0,
-                }}
-              />
-              <span
-                style={{
-                  position: 'absolute',
-                  cursor: 'pointer',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: showPresencePanel
-                    ? theme.colors.primary
-                    : theme.colors.border,
-                  transition: '0.3s',
-                  borderRadius: '24px',
-                }}
-              >
-                <span
-                  style={{
-                    position: 'absolute',
-                    content: '',
-                    height: '18px',
-                    width: '18px',
-                    left: showPresencePanel ? '27px' : '3px',
-                    bottom: '3px',
-                    backgroundColor: theme.colors.background,
-                    transition: '0.3s',
-                    borderRadius: '50%',
-                  }}
-                />
-              </span>
-            </label>
-          </div>
-
           {/* Presence Auto-Connect */}
           <div
             style={{
@@ -1125,99 +1024,6 @@ export const GeneralSettings: React.FC = () => {
                     height: '18px',
                     width: '18px',
                     left: showSearchButton ? '27px' : '3px',
-                    bottom: '3px',
-                    backgroundColor: theme.colors.background,
-                    transition: '0.3s',
-                    borderRadius: '50%',
-                  }}
-                />
-              </span>
-            </label>
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              gap: '16px',
-              marginTop: '16px',
-              paddingTop: '16px',
-              borderTop: `1px solid ${theme.colors.border}`,
-            }}
-          >
-            <div style={{ flex: 1 }}>
-              <label
-                htmlFor="showProjectsButton"
-                style={{
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  color: theme.colors.text,
-                  display: 'block',
-                  marginBottom: '8px',
-                  cursor: 'pointer',
-                }}
-              >
-                Show Projects Button (Legacy)
-              </label>
-              <p
-                style={{
-                  fontSize: '13px',
-                  color: theme.colors.textSecondary,
-                  lineHeight: '1.5',
-                }}
-              >
-                When enabled, the legacy Projects button will appear in the side
-                navigation. This is the old view before the panel framework.
-              </p>
-            </div>
-            <label
-              style={{
-                position: 'relative',
-                display: 'inline-block',
-                width: '48px',
-                height: '24px',
-                flexShrink: 0,
-              }}
-            >
-              <input
-                id="showProjectsButton"
-                type="checkbox"
-                checked={showProjectsButton}
-                onChange={async (e) => {
-                  const newValue = e.target.checked;
-                  setShowProjectsButton(newValue);
-                  await UserPreferencesService.updatePreferences({
-                    showProjectsButton: newValue,
-                  });
-                }}
-                style={{
-                  opacity: 0,
-                  width: 0,
-                  height: 0,
-                }}
-              />
-              <span
-                style={{
-                  position: 'absolute',
-                  cursor: 'pointer',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: showProjectsButton
-                    ? theme.colors.primary
-                    : theme.colors.border,
-                  transition: '0.3s',
-                  borderRadius: '24px',
-                }}
-              >
-                <span
-                  style={{
-                    position: 'absolute',
-                    content: '',
-                    height: '18px',
-                    width: '18px',
-                    left: showProjectsButton ? '27px' : '3px',
                     bottom: '3px',
                     backgroundColor: theme.colors.background,
                     transition: '0.3s',

@@ -25,8 +25,8 @@ export type InteractiveShellNavigationView =
   | 'settings'
   | 'monitoring'
   | 'auth'
-  | 'feed'
-  | 'workspaces';
+  | 'workspaces'
+  | 'network';
 
 // Repository view right pane modes
 export type RightPaneMode = 'city' | 'terminal' | 'session-detail' | 'document';
@@ -96,9 +96,7 @@ export interface UserPreferences {
   showRepoFilterBar?: boolean; // Show/hide the filter bar in repos view
   showMonitorButton?: boolean; // Show/hide the monitor button in side nav (default: false)
   showSearchButton?: boolean; // Show/hide the search button in side nav (default: false)
-  showProjectsButton?: boolean; // Show/hide the old projects button in side nav (default: false - legacy view)
-  showGitSyncPanel?: boolean; // Show/hide the git sync panel in Feed view (default: false)
-  showPresencePanel?: boolean; // Show/hide the presence panel in Feed view (default: false - for debugging)
+  showGitSyncPanel?: boolean; // Show/hide the git sync panel (default: false)
   showTerminalDebugButton?: boolean; // Show/hide the debug button in terminal panels (default: false)
   showTerminalShowAllButton?: boolean; // Show/hide the show all terminals button in terminal panels (default: true)
 

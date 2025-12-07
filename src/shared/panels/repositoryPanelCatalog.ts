@@ -53,13 +53,6 @@ export const repositoryPanelCatalog = [
     surfaces: ['explorer'] as const,
   },
   {
-    id: 'githubSocial',
-    label: 'GitHub Network',
-    description:
-      'View coworkers from your organizations and people you follow on GitHub.',
-    surfaces: ['explorer', 'principal'] as const,
-  },
-  {
     id: 'gitStatus',
     label: 'Git Status',
     description:
@@ -209,22 +202,6 @@ export const repositoryPanelCatalog = [
     label: 'GitHub README',
     description: 'View README files from GitHub repositories in the Feed.',
     slices: ['markdown'] as const,
-    surfaces: ['principal'] as const,
-  },
-  {
-    id: 'graphDetail',
-    label: 'Package Dependencies',
-    description:
-      'Visualize package dependencies within a repository or monorepo workspace.',
-    slices: ['packages'] as const,
-    surfaces: ['principal', 'manager', 'viewer'] as const,
-  },
-  {
-    id: 'presence',
-    label: 'Live Presence',
-    description:
-      'See who is online and what repositories they are working on in real-time.',
-    slices: [] as const,
     surfaces: ['principal'] as const,
   },
   {

@@ -18,9 +18,6 @@ import { DrawingsListPanel } from './components/DrawingsListPanel';
 import { ToolsPanel } from './components/ToolsPanel';
 import { GitCommitHistoryPanel } from './components/GitCommitHistoryPanel';
 import { MDXEditorPanel } from './components/MDXEditorPanel';
-import { GitHubSocialPanel } from './components/GitHubSocialPanel';
-import { GraphDetailPanel } from './components/GraphDetailPanel';
-import { PresencePanel } from './components/PresencePanel';
 
 export interface RepositoryPanelRenderProps {
   context: RepositoryPanelContextValue;
@@ -44,7 +41,6 @@ const panelRenderers: Partial<
   gitPullRequests: ({ context }) => (
     <GitPullRequestsPanel repository={context.repository ?? undefined} />
   ),
-  githubSocial: () => <GitHubSocialPanel />,
   gitHistory: ({ context }) => (
     <GitCommitHistoryPanel repositoryPath={context.repositoryPath} />
   ),
@@ -67,14 +63,6 @@ const panelRenderers: Partial<
       }}
     />
   ),
-  graphDetail: () => (
-    <GraphDetailPanel
-      graph={null}
-      selectedTopLevelNodes={[]}
-      onTopLevelNodesChange={() => {}}
-    />
-  ),
-  presence: () => <PresencePanel />,
 };
 
 export const repositoryPanelDefinitions = repositoryPanelCatalog.map(

@@ -4,8 +4,8 @@ import {
   Settings,
   Activity,
   User,
-  GitBranch,
   LayoutGrid,
+  Users,
 } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuthState';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
@@ -32,14 +32,12 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   const { isAuthenticated, user } = useAuth();
   const [showMonitorButton, setShowMonitorButton] = useState(false);
   const [showSearchButton, setShowSearchButton] = useState(false);
-  const [showProjectsButton, setShowProjectsButton] = useState(false);
 
   useEffect(() => {
     // Load user preferences for showing buttons
     UserPreferencesService.getPreferences().then((prefs) => {
       setShowMonitorButton(prefs.showMonitorButton ?? false);
       setShowSearchButton(prefs.showSearchButton ?? false);
-      setShowProjectsButton(prefs.showProjectsButton ?? false);
     });
 
     // Listen for preference changes
@@ -51,9 +49,6 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         }
         if ('showSearchButton' in detail) {
           setShowSearchButton(detail.showSearchButton ?? false);
-        }
-        if ('showProjectsButton' in detail) {
-          setShowProjectsButton(detail.showProjectsButton ?? false);
         }
       }
     };
@@ -120,16 +115,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
 
   const navItems: NavItem[] = [
     { id: 'workspaces', icon: <LayoutGrid size={20} />, label: 'Workspaces' },
-    // Only include old projects button if user has enabled it in preferences
-    ...(showProjectsButton
-      ? [
-          {
-            id: 'feed' as NavigationView,
-            icon: <GitBranch size={20} />,
-            label: 'Projects',
-          },
-        ]
-      : []),
+    { id: 'network', icon: <Users size={20} />, label: 'Network' },
     // Only include search button if user has enabled it in preferences
     ...(showSearchButton
       ? [

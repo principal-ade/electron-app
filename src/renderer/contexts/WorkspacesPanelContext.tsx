@@ -19,17 +19,24 @@ import type { Workspace, AlexandriaEntry } from '@principal-ai/alexandria-core-l
 import type {
   WorkspacesSlice,
   WorkspacesListPanelActions,
+  GitHubStarredSlice,
+  GitHubStarredPanelActions,
+  GitHubProjectsSlice,
+  GitHubProjectsPanelActions,
+  GitHubRepository,
+  GitHubOrganization,
 } from '@industry-theme/alexandria-panels';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { WindowService } from '../main-process-api/WindowService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { FileSystemService } from '../main-process-api/FileSystemService';
+import { GithubService } from '../main-process-api/GithubService';
 
 /**
  * Extended actions for WorkspacesPanelProvider
- * Combines workspace list actions with repository actions
+ * Combines workspace list actions with repository actions and GitHub actions
  */
-interface WorkspacesPanelActions extends PanelActions, WorkspacesListPanelActions {
+interface WorkspacesPanelActions extends PanelActions, WorkspacesListPanelActions, GitHubStarredPanelActions, GitHubProjectsPanelActions {
   removeRepositoryFromWorkspace?: (
     repositoryId: string,
     workspaceId: string
@@ -92,6 +99,19 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
   // State for all local repositories (for LocalProjectsPanel)
   const [localRepositories, setLocalRepositories] = useState<AlexandriaEntry[]>([]);
   const [localRepositoriesLoading, setLocalRepositoriesLoading] = useState(true);
+
+  // State for GitHub starred repositories
+  const [starredRepositories, setStarredRepositories] = useState<GitHubRepository[]>([]);
+  const [starredLoading, setStarredLoading] = useState(false);
+  const [starredError, setStarredError] = useState<string | undefined>();
+
+  // State for GitHub projects (user repos + org repos)
+  const [userRepositories, setUserRepositories] = useState<GitHubRepository[]>([]);
+  const [organizations, setOrganizations] = useState<GitHubOrganization[]>([]);
+  const [orgRepositories, setOrgRepositories] = useState<Record<string, GitHubRepository[]>>({});
+  const [projectsLoading, setProjectsLoading] = useState(false);
+  const [projectsError, setProjectsError] = useState<string | undefined>();
+  const [currentUser, setCurrentUser] = useState<string>('');
 
   // Fetch workspaces on mount
   useEffect(() => {
@@ -167,6 +187,92 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
     return unsubscribe;
   }, []);
 
+  // Fetch GitHub starred repositories
+  const fetchStarredRepositories = async () => {
+    setStarredLoading(true);
+    setStarredError(undefined);
+    try {
+      const starred = await GithubService.getUserStarredRepositories({
+        perPage: 100,
+        sort: 'updated',
+        direction: 'desc',
+      });
+      // Cast to panels package type (structurally compatible)
+      setStarredRepositories(starred as unknown as GitHubRepository[]);
+    } catch (error) {
+      console.error('[WorkspacesPanelProvider] Failed to fetch starred repositories:', error);
+      setStarredError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to load starred repositories from GitHub.'
+      );
+    } finally {
+      setStarredLoading(false);
+    }
+  };
+
+  // Fetch GitHub projects (user repos + org repos)
+  const fetchGitHubProjects = async () => {
+    setProjectsLoading(true);
+    setProjectsError(undefined);
+    try {
+      // Fetch current user
+      const user = await GithubService.getCurrentUser();
+      if (user) {
+        setCurrentUser(user.login);
+      }
+
+      // Fetch user's repositories and organizations in parallel
+      const [userRepos, orgs] = await Promise.all([
+        GithubService.getUserRepositories({
+          perPage: 100,
+          sort: 'updated',
+          direction: 'desc',
+        }),
+        GithubService.getUserOrganizations(),
+      ]);
+
+      // Cast to panels package types (structurally compatible)
+      setUserRepositories(userRepos as unknown as GitHubRepository[]);
+      setOrganizations(orgs as unknown as GitHubOrganization[]);
+
+      // Fetch repositories for each organization
+      const orgReposMap: Record<string, GitHubRepository[]> = {};
+      await Promise.all(
+        orgs.map(async (org) => {
+          try {
+            const repos = await GithubService.getOrgRepositories(org.login, {
+              perPage: 100,
+              sort: 'updated',
+              direction: 'desc',
+            });
+            // Cast to panels package type (structurally compatible)
+            orgReposMap[org.login] = repos as unknown as GitHubRepository[];
+          } catch (error) {
+            console.error(`[WorkspacesPanelProvider] Failed to fetch repos for org ${org.login}:`, error);
+            orgReposMap[org.login] = [];
+          }
+        })
+      );
+      setOrgRepositories(orgReposMap);
+    } catch (error) {
+      console.error('[WorkspacesPanelProvider] Failed to fetch GitHub projects:', error);
+      setProjectsError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to load repositories from GitHub.'
+      );
+    } finally {
+      setProjectsLoading(false);
+    }
+  };
+
+  // Fetch GitHub data on mount (these will silently fail if not authenticated)
+  useEffect(() => {
+    void fetchStarredRepositories();
+    void fetchGitHubProjects();
+  }, []);
+
   // Listen for workspace changes from other parts of the app
   useEffect(() => {
     const unsubscribe = WorkspaceService.onWorkspaceChange((event) => {
@@ -177,7 +283,7 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
         WorkspaceService.getWorkspaces().then(setWorkspaces).catch(console.error);
       }
 
-      if (event.type === 'membership-changed' && event.workspaceId === selectedWorkspace?.id) {
+      if (event.type === 'membership-changed' && event.workspaceId && event.workspaceId === selectedWorkspace?.id) {
         // Refetch repositories for current workspace
         WorkspaceService.getRepositoriesInWorkspace(event.workspaceId)
           .then(setWorkspaceRepositories)
@@ -321,8 +427,41 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
             },
           },
         ],
-      ]),
-    [workspaces, defaultWorkspaceId, workspacesLoading, selectedWorkspace, workspaceRepositories, repositoriesLoading, localRepositories, localRepositoriesLoading]
+        [
+          'githubStarred',
+          {
+            scope: 'global' as const,
+            name: 'githubStarred',
+            data: {
+              repositories: starredRepositories,
+              loading: starredLoading,
+              error: starredError,
+            } as GitHubStarredSlice,
+            loading: starredLoading,
+            error: (starredError ?? null) as string | null,
+            refresh: fetchStarredRepositories,
+          },
+        ],
+        [
+          'githubProjects',
+          {
+            scope: 'global' as const,
+            name: 'githubProjects',
+            data: {
+              userRepositories,
+              organizations,
+              orgRepositories,
+              loading: projectsLoading,
+              error: projectsError,
+              currentUser,
+            } as GitHubProjectsSlice,
+            loading: projectsLoading,
+            error: (projectsError ?? null) as string | null,
+            refresh: fetchGitHubProjects,
+          },
+        ],
+      ]) as Map<string, DataSlice>,
+    [workspaces, defaultWorkspaceId, workspacesLoading, selectedWorkspace, workspaceRepositories, repositoriesLoading, localRepositories, localRepositoriesLoading, starredRepositories, starredLoading, starredError, userRepositories, organizations, orgRepositories, projectsLoading, projectsError, currentUser]
   );
 
   // Define actions
@@ -335,19 +474,6 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
           source: 'workspaces-view',
           timestamp: Date.now(),
           payload: { filePath },
-        });
-      },
-
-      openRepository: async (entry: AlexandriaEntry) => {
-        console.info('[WorkspacesPanelProvider] Opening repository:', entry.name);
-        await WindowService.openDevWorkspace({
-          alexandriaEntry: entry,
-        });
-        events.emit({
-          type: 'repository:opened',
-          source: 'workspaces-view',
-          timestamp: Date.now(),
-          payload: { repositoryId: entry.name, repository: entry },
         });
       },
 
@@ -526,8 +652,53 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
 
         return newPath;
       },
+
+      // GitHub panel actions
+      cloneRepository: async (repo: GitHubRepository) => {
+        console.info('[WorkspacesPanelProvider] Clone requested for:', repo.full_name);
+        // Emit event for clone modal to handle
+        events.emit({
+          type: 'github:clone-requested',
+          source: 'workspaces-view',
+          timestamp: Date.now(),
+          payload: { repository: repo },
+        });
+      },
+
+      // openRepository for GitHub panels (takes localPath string)
+      // Note: This overloads the existing openRepository that takes AlexandriaEntry
+      // The GitHub panels call this with a path string, so we find the matching entry
+      openRepository: async (entryOrPath: AlexandriaEntry | string) => {
+        let entry: AlexandriaEntry | undefined;
+
+        if (typeof entryOrPath === 'string') {
+          // Find the local repo entry by path
+          entry = localRepositories.find((r) => r.path === entryOrPath);
+          if (!entry) {
+            console.error('[WorkspacesPanelProvider] Could not find repository at path:', entryOrPath);
+            return;
+          }
+        } else {
+          entry = entryOrPath;
+        }
+
+        console.info('[WorkspacesPanelProvider] Opening repository:', entry.name);
+        await WindowService.openDevWorkspace({
+          alexandriaEntry: entry,
+        });
+        events.emit({
+          type: 'repository:opened',
+          source: 'workspaces-view',
+          timestamp: Date.now(),
+          payload: { repositoryId: entry.name, repository: entry },
+        });
+      },
+
+      refreshStarred: fetchStarredRepositories,
+
+      refreshProjects: fetchGitHubProjects,
     }),
-    [events, selectedWorkspace]
+    [events, selectedWorkspace, localRepositories]
   );
 
   // Create context value

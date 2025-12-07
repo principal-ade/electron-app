@@ -6,8 +6,11 @@ import {
   WorkspacesListPanel,
   WorkspaceRepositoriesPanel,
   LocalProjectsPanel,
+  GitHubStarredPanel,
+  GitHubProjectsPanel,
 } from '@industry-theme/alexandria-panels';
-import { DoorClosed, FolderGit2, Folder } from 'lucide-react';
+import { DoorClosed, FolderGit2, Folder, Star } from 'lucide-react';
+import { useAuth } from '../../../hooks/useAuthState';
 import {
   WorkspacesPanelProvider,
   useWorkspacesPanelProvider,
@@ -21,6 +24,7 @@ import { WorkspacesViewHeader } from './WorkspacesViewHeader';
 const WorkspacesViewContent: React.FC = () => {
   const { theme } = useTheme();
   const { context, actions, events } = useWorkspacesPanelProvider();
+  const { isAuthenticated } = useAuth();
 
   // Use panel persistence for three-panel layout
   const panelState = usePanelPersistence({
@@ -32,76 +36,117 @@ const WorkspacesViewContent: React.FC = () => {
 
   // Define panels using alexandria-panels components
   const panels = useMemo(
-    () => [
-      {
-        id: 'workspaces-list',
-        label: 'Workspaces',
-        icon: <DoorClosed size={16} />,
-        content: (
-          <WorkspacesListPanel
-            context={context}
-            actions={actions}
-            events={events}
-          />
-        ),
-      },
-      {
-        id: 'local-projects',
-        label: 'Local Projects',
-        icon: <Folder size={16} />,
-        content: (
-          <LocalProjectsPanel
-            context={context}
-            actions={actions}
-            events={events}
-          />
-        ),
-      },
-      {
-        id: 'workspace-repositories',
-        label: 'Repositories',
-        icon: <FolderGit2 size={16} />,
-        content: (
-          <WorkspaceRepositoriesPanel
-            context={context}
-            actions={actions}
-            events={events}
-          />
-        ),
-      },
-    ],
-    [context, actions, events]
+    () => {
+      const basePanels = [
+        {
+          id: 'workspaces-list',
+          label: 'Workspaces',
+          icon: <DoorClosed size={16} />,
+          content: (
+            <WorkspacesListPanel
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          ),
+        },
+        {
+          id: 'local-projects',
+          label: 'Local Projects',
+          icon: <Folder size={16} />,
+          content: (
+            <LocalProjectsPanel
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          ),
+        },
+        {
+          id: 'workspace-repositories',
+          label: 'Repositories',
+          icon: <FolderGit2 size={16} />,
+          content: (
+            <WorkspaceRepositoriesPanel
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          ),
+        },
+      ];
+
+      // Add GitHub panels when authenticated
+      if (isAuthenticated) {
+        basePanels.push(
+          {
+            id: 'github-projects',
+            label: 'GitHub Projects',
+            icon: <FolderGit2 size={16} />,
+            content: (
+              <GitHubProjectsPanel
+                context={context}
+                actions={actions}
+                events={events}
+              />
+            ),
+          },
+          {
+            id: 'github-starred',
+            label: 'Starred',
+            icon: <Star size={16} />,
+            content: (
+              <GitHubStarredPanel
+                context={context}
+                actions={actions}
+                events={events}
+              />
+            ),
+          }
+        );
+      }
+
+      return basePanels;
+    },
+    [context, actions, events, isAuthenticated]
   );
 
   // Define layout configuration
   const layout = useMemo(
-    () => ({
-      left: {
-        type: 'tabs' as const,
-        panels: ['workspaces-list', 'local-projects'],
-        config: {
-          defaultActiveTab: 0,
-          tabPosition: 'top' as const,
+    () => {
+      // Build left panel tabs based on authentication
+      const leftPanels = isAuthenticated
+        ? ['workspaces-list', 'local-projects', 'github-projects', 'github-starred']
+        : ['workspaces-list', 'local-projects'];
+
+      return {
+        left: {
+          type: 'tabs' as const,
+          panels: leftPanels,
+          config: {
+            defaultActiveTab: 0,
+            tabPosition: 'top' as const,
+          },
         },
-      },
-      middle: {
-        type: 'tabs' as const,
-        panels: ['workspace-repositories'],
-        config: {
-          defaultActiveTab: 0,
-          tabPosition: 'top' as const,
+        middle: {
+          type: 'tabs' as const,
+          panels: ['workspace-repositories'],
+          config: {
+            defaultActiveTab: 0,
+            tabPosition: 'top' as const,
+          },
         },
-      },
-      right: {
-        type: 'tabs' as const,
-        panels: [],
-        config: {
-          defaultActiveTab: 0,
-          tabPosition: 'top' as const,
+        right: {
+          type: 'tabs' as const,
+          panels: [],
+          config: {
+            defaultActiveTab: 0,
+            tabPosition: 'top' as const,
+          },
         },
-      },
-    }),
-    []
+      };
+    },
+    [isAuthenticated]
   );
 
   return (

@@ -23,7 +23,6 @@ import { RepositorySearchTabPreview } from '../components/repository-maps/Reposi
 import { GitCommitHistoryPanelPreview } from './components/GitCommitHistoryPanel';
 import { GitIssuesPanelPreview } from './components/GitIssuesPanel';
 import { GitPullRequestsPanelPreview } from './components/GitPullRequestsPanel';
-import { GitHubSocialPanelPreview } from './components/GitHubSocialPanel';
 import { RepositoryActionsPanelPreview } from './components/RepositoryActionsPanel';
 import { ToolsPanelPreview } from './components/ToolsPanel';
 import { DrawingsListPanelPreview } from './components/DrawingsListPanel';
@@ -35,7 +34,6 @@ import { AlexandriaDrawingPanelPreview } from './components/AlexandriaDrawingPan
 import { QualityHexagonPanelPreview } from './components/QualityHexagonPanel';
 import { GitDiffPanelPreview } from './components/GitDiffPanel';
 import { MDXEditorPanelPreview } from './components/MDXEditorPanel';
-import { PresencePanelPreview } from './components/PresencePanel';
 
 export interface PanelPreviewMetadata {
   icon: React.ReactNode;
@@ -60,13 +58,6 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
   gitPullRequests: {
     icon: <GitPullRequest size={16} />,
     preview: <GitPullRequestsPanelPreview />,
-  },
-  githubSocial: {
-    icon: <Users size={16} />,
-    preview: <GitHubSocialPanelPreview />,
-    label: 'GitHub Network',
-    description:
-      'View coworkers from your organizations and people you follow.',
   },
   actions: {
     icon: <Play size={16} />,
@@ -137,24 +128,6 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
     label: 'Dependency Graphs',
     description:
       'Browse dependency clusters discovered across your repositories.',
-  },
-  graphDetail: {
-    icon: <Network size={16} />,
-    preview: (
-      <div style={{ padding: '16px', textAlign: 'center' }}>
-        Graph Visualization
-      </div>
-    ),
-    label: 'Graph Visualization',
-    description:
-      'Interactive graph visualization with filtering and cluster analysis.',
-  },
-  presence: {
-    icon: <Users size={16} />,
-    preview: <PresencePanelPreview />,
-    label: 'Live Presence',
-    description:
-      'See who is online and what repositories they are working on in real-time.',
   },
 };
 

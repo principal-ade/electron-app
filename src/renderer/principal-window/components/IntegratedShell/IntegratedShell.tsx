@@ -6,8 +6,8 @@ import { MarkdownSearch } from '../../views/MarkdownSearch';
 import { Settings } from '../../views/Settings';
 import { SystemMonitor } from '../../views/SystemMonitor/SystemMonitor';
 import { AuthView } from '../../views/AuthView';
-import { FeedView } from '../../views/FeedView';
 import { WorkspacesView } from '../../views/WorkspacesView';
+import { GitSyncView } from '../../views/GitSyncView';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { PresenceService } from '../../../main-process-api/PresenceService';
 import { SecureAuthService } from '../../../services/SecureAuthService';
@@ -51,8 +51,8 @@ export const IntegratedShell: React.FC = () => {
     monitoring: { left: false, right: false },
     search: { left: false, right: false },
     settings: { left: false, right: false },
-    feed: { left: false, right: false },
     workspaces: { left: false, right: false },
+    network: { left: false, right: false },
   });
 
   // Get current view's collapsed states
@@ -309,8 +309,8 @@ export const IntegratedShell: React.FC = () => {
             )}
             {activeView === 'settings' && <Settings />}
             {activeView === 'auth' && <AuthView />}
-            {activeView === 'feed' && <FeedView />}
             {activeView === 'workspaces' && <WorkspacesView />}
+            {activeView === 'network' && <GitSyncView />}
           </div>
         </div>
       </div>
