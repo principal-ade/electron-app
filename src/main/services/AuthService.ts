@@ -493,9 +493,11 @@ class AuthService {
             isPreservedToken: newGithubToken === githubToken,
           });
 
+          // Use stored user data - refresh endpoint only returns WorkOS tokens
+          // The electron app already has the user data from initial login
           await this.storeAuth(
             newGithubToken,
-            refreshedAuth.user,
+            user,
             refreshedAuth.workosToken,
             refreshedAuth.refreshToken,
             refreshedAuth.expiresAt,
@@ -503,7 +505,7 @@ class AuthService {
 
           // Update AuthStateManager with GitHub token (not WorkOS token!)
           AuthStateManager.getInstance().setAuthenticated(
-            refreshedAuth.user,
+            user,
             newGithubToken,
           );
 
@@ -515,7 +517,7 @@ class AuthService {
             success: true,
             authenticated: true,
             token: newGithubToken, // ✅ Return GitHub token for API calls
-            user: refreshedAuth.user,
+            user: user,
           };
         } catch (refreshError: any) {
           console.error(
@@ -885,11 +887,12 @@ class AuthService {
 
       const refreshedAuth = await authClient.refreshAccessToken(refreshToken);
 
-      // Get the existing GitHub token to preserve it
+      // Get the existing GitHub token and user data to preserve
       const githubTokenData = await this.storage.getTokenWithMetadata(
         TOKEN_KEYS.GITHUB_TOKEN,
       );
       const existingGithubToken = githubTokenData?.token;
+      const existingUser = githubTokenData?.metadata?.user as AuthResult['user'] | undefined;
 
       // If refresh gave us a new GitHub token, use it; otherwise keep the existing one
       const newGithubToken =
@@ -904,10 +907,18 @@ class AuthService {
         );
       }
 
-      // Store the new tokens
+      // Ensure we have user data
+      if (!existingUser) {
+        throw new Error(
+          'Token refresh failed: no user data available',
+        );
+      }
+
+      // Store the new tokens with existing user data
+      // Refresh endpoint only returns WorkOS tokens, user data is preserved locally
       await this.storeAuth(
         newGithubToken,
-        refreshedAuth.user,
+        existingUser,
         refreshedAuth.workosToken,
         refreshedAuth.refreshToken,
         refreshedAuth.expiresAt,
@@ -915,7 +926,7 @@ class AuthService {
 
       // Update AuthStateManager with GitHub token
       AuthStateManager.getInstance().setAuthenticated(
-        refreshedAuth.user,
+        existingUser,
         newGithubToken,
       );
 

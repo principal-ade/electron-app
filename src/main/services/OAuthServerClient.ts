@@ -30,7 +30,7 @@ interface TokenResponse {
   token_type: string;
   expires_in?: number; // Token lifetime in seconds
   scope?: string;
-  user: {
+  user?: {
     login: string;
     email: string;
     name: string;
@@ -43,7 +43,7 @@ export interface AuthResult {
   workosToken?: string; // WorkOS token for session management
   refreshToken?: string;
   expiresAt?: number; // Unix timestamp when token expires
-  user: TokenResponse['user'];
+  user?: TokenResponse['user']; // User data (may be undefined on refresh - use stored data)
 }
 
 export class OAuthServerClient {
