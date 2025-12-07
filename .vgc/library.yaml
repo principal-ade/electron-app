@@ -272,6 +272,57 @@ nodeComponents:
     category: "store"
     color: "#BEF264"
 
+  # ============================================
+  # REPOSITORY MONITORING
+  # ============================================
+  repo-monitoring-worker:
+    label: "Repository Monitoring Worker"
+    description: "Node.js utility process running @principal-ai/repository-monitoring-server for file watching and cache building"
+    category: "process"
+    color: "#0D9488"
+
+  repo-monitoring-manager:
+    label: "Repository Monitoring Manager"
+    description: "Main process manager that spawns and communicates with the monitoring worker"
+    category: "service"
+    color: "#14B8A6"
+
+  repo-cache-registry:
+    label: "Cache Registry"
+    description: "Worker-side cache storage with version tracking, hash validation, and rebuild scheduling"
+    category: "service"
+    color: "#2DD4BF"
+
+  git-watcher-adapter:
+    label: "Git Watcher Adapter"
+    description: "Chokidar-based file system watcher detecting changes in .git and workspace files"
+    category: "service"
+    color: "#5EEAD4"
+
+  file-tree-builder:
+    label: "File Tree Builder"
+    description: "Async file tree construction with filtering and metadata"
+    category: "service"
+    color: "#99F6E4"
+
+  repository-data-cache:
+    label: "Repository Data Cache"
+    description: "Renderer-side EventEmitter cache with subscription tracking, batched updates, and version validation"
+    category: "state"
+    color: "#A855F7"
+
+  use-repository-data:
+    label: "useRepositoryData Hook"
+    description: "React hook subscribing to RepositoryDataCache for reactive UI updates"
+    category: "state"
+    color: "#C084FC"
+
+  repo-monitoring-service:
+    label: "Repository Monitoring Service"
+    description: "Renderer-side service wrapper for IPC communication with monitoring system"
+    category: "service"
+    color: "#7C3AED"
+
 edgeComponents:
   # ============================================
   # COMMUNICATION TYPES
@@ -329,3 +380,21 @@ edgeComponents:
     description: "Service persists data to store"
     style: "solid"
     color: "#84CC16"
+
+  worker-message:
+    label: "Worker Message"
+    description: "Node.js worker/utility process postMessage communication"
+    style: "solid"
+    color: "#0D9488"
+
+  cache-sync:
+    label: "Cache Sync"
+    description: "RepositoryCacheSyncEvent broadcast"
+    style: "dashed"
+    color: "#14B8A6"
+
+  subscription:
+    label: "Subscription"
+    description: "Event subscription/listener pattern"
+    style: "dashed"
+    color: "#A855F7"

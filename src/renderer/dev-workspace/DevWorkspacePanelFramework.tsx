@@ -75,7 +75,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
   const VisualValidationPanelComponent = visualValidationPanels[0]?.component;
   const CodeCityPanelComponent = codeCityPanels[0]?.component;
   const DocsPanelComponent = docsPanels[0]?.component;
-  const DependenciesPanelComponent = alexandriaPanels.find(p => p.metadata?.name === 'Dependencies')?.component;
+  const DependenciesPanelComponent = repositoryCompositionPanels.find(p => p.metadata?.id === 'industry-theme.dependencies')?.component;
   const LocalProjectsPanelComponent = alexandriaPanels.find(p => p.metadata?.id === 'industry-theme.local-projects')?.component;
   const LocalhostPanelComponent = localhostPanels[0]?.component;
   const EventBusPanelComponent = agentDrivenPanels.find(p => p.metadata?.id === 'industry-theme.event-bus-panel')?.component;

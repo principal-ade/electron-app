@@ -1,0 +1,393 @@
+import React, {
+  createContext,
+  useContext,
+  useMemo,
+  useState,
+  useEffect,
+  useCallback,
+  type ReactNode,
+} from 'react';
+import { PanelEventBus } from '@principal-ade/panel-framework-core';
+import type {
+  PanelContextValue,
+  PanelActions,
+  DataSlice,
+  PanelEventEmitter,
+} from '@principal-ade/panel-framework-core';
+import type {
+  GitHubUser as LocalGitHubUser,
+  GitHubOrganization as LocalGitHubOrganization,
+  GitHubOrgMember as LocalGitHubOrgMember,
+} from '../../shared/main-process-api-interfaces/GitHubAPI';
+import type { UserPresence as LocalUserPresence } from '../../shared/main-process-api-interfaces/PresenceAPI';
+import { GithubService } from '../main-process-api/GithubService';
+import { PresenceService } from '../main-process-api/PresenceService';
+import { useGitSyncConnection } from '../hooks/useGitSyncConnection';
+import { useAuthState } from '../hooks/useAuthState';
+import { SecureAuthService } from '../services/SecureAuthService';
+
+// Local types that match the package's expected structure
+interface SocialData {
+  following: LocalGitHubUser[];
+  followers: LocalGitHubUser[];
+  organizations: LocalGitHubOrganization[];
+  orgMembers: Map<string, LocalGitHubOrgMember[]>;
+}
+
+/**
+ * Extended actions for GitSyncPanelProvider
+ */
+interface GitSyncPanelActions extends PanelActions {
+  login?: () => Promise<void>;
+  toggleVisibility?: () => Promise<void>;
+  connect?: () => Promise<void>;
+  disconnect?: () => Promise<void>;
+}
+
+/**
+ * Provider value containing context, actions, and events
+ */
+interface GitSyncPanelProviderValue {
+  context: PanelContextValue;
+  actions: GitSyncPanelActions;
+  events: PanelEventEmitter;
+}
+
+const GitSyncPanelContext = createContext<GitSyncPanelProviderValue | null>(null);
+
+interface GitSyncPanelProviderProps {
+  children: ReactNode;
+}
+
+export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
+  children,
+}) => {
+  // Initialize event bus
+  const events = useMemo(() => new PanelEventBus(), []);
+
+  // Auth state
+  const {
+    isAuthenticated,
+    isLoading: isAuthLoading,
+    isLoggingIn,
+    login,
+    loginError,
+    user,
+  } = useAuthState();
+
+  // Connection state
+  const { isConnected } = useGitSyncConnection();
+
+  // Visibility state
+  const [isVisible, setIsVisible] = useState(true);
+
+  // Social data state
+  const [socialData, setSocialData] = useState<SocialData>({
+    following: [],
+    followers: [],
+    organizations: [],
+    orgMembers: new Map(),
+  });
+  const [socialDataLoading, setSocialDataLoading] = useState(false);
+  const [socialDataError, setSocialDataError] = useState<string | null>(null);
+
+  // Presence data state
+  const [presenceData, setPresenceData] = useState<LocalUserPresence[]>([]);
+  const [presenceLoading, setPresenceLoading] = useState(false);
+
+  // Fetch social data when authenticated
+  const fetchSocialData = useCallback(async () => {
+    if (!isAuthenticated) {
+      setSocialData({
+        following: [],
+        followers: [],
+        organizations: [],
+        orgMembers: new Map(),
+      });
+      return;
+    }
+
+    setSocialDataLoading(true);
+    setSocialDataError(null);
+
+    try {
+      // Fetch following, followers, and organizations in parallel
+      const [following, followers, organizations] = await Promise.all([
+        GithubService.getUserFollowing(),
+        GithubService.getUserFollowers(),
+        GithubService.getUserOrganizations(),
+      ]);
+
+      // Fetch members for each organization
+      const orgMembersMap = new Map<string, LocalGitHubOrgMember[]>();
+      await Promise.all(
+        organizations.map(async (org: LocalGitHubOrganization) => {
+          try {
+            const members = await GithubService.getOrgMembers(org.login);
+            orgMembersMap.set(org.login, members);
+          } catch (err) {
+            console.error(`[GitSyncPanelContext] Failed to load members for ${org.login}`, err);
+          }
+        }),
+      );
+
+      setSocialData({
+        following: following as LocalGitHubUser[],
+        followers: followers as LocalGitHubUser[],
+        organizations: organizations as LocalGitHubOrganization[],
+        orgMembers: orgMembersMap,
+      });
+    } catch (err) {
+      console.error('[GitSyncPanelContext] Failed to load social data', err);
+      setSocialDataError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to load social data from GitHub.',
+      );
+    } finally {
+      setSocialDataLoading(false);
+    }
+  }, [isAuthenticated]);
+
+  // Fetch social data when auth state changes
+  useEffect(() => {
+    if (isAuthenticated) {
+      void fetchSocialData();
+    }
+  }, [isAuthenticated, fetchSocialData]);
+
+  // Fetch and subscribe to presence data
+  useEffect(() => {
+    if (!isConnected) {
+      setPresenceData([]);
+      return;
+    }
+
+    const fetchPresence = async () => {
+      setPresenceLoading(true);
+      try {
+        const data = await PresenceService.getUsers();
+        setPresenceData((data.users || []) as LocalUserPresence[]);
+      } catch (err) {
+        console.error('[GitSyncPanelContext] Failed to fetch presence:', err);
+      } finally {
+        setPresenceLoading(false);
+      }
+    };
+
+    // Initial fetch
+    void fetchPresence();
+
+    // Subscribe to presence updates
+    const unsubscribe = PresenceService.onPresenceEvent(() => {
+      // Refetch presence data when any presence event occurs
+      void fetchPresence();
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [isConnected]);
+
+  // Handle visibility toggle
+  const handleVisibilityToggle = useCallback(async () => {
+    try {
+      const newVisibility = !isVisible;
+      const result = await PresenceService.setVisibility(newVisibility);
+      if (result.success) {
+        setIsVisible(newVisibility);
+      } else {
+        console.error('[GitSyncPanelContext] Failed to set visibility:', result.message);
+      }
+    } catch (err) {
+      console.error('[GitSyncPanelContext] Failed to set visibility:', err);
+    }
+  }, [isVisible]);
+
+  // Handle connect
+  const handleConnect = useCallback(async () => {
+    try {
+      const authService = SecureAuthService.getInstance();
+      const authResult = await authService.checkAuth();
+
+      if (!authResult.authenticated || !authResult.token) {
+        console.error('[GitSyncPanelContext] Cannot connect: not authenticated');
+        return;
+      }
+
+      const result = await PresenceService.connectToPresence(authResult.token);
+      if (!result.success) {
+        console.error('[GitSyncPanelContext] Failed to connect:', result.error);
+      }
+    } catch (err) {
+      console.error('[GitSyncPanelContext] Failed to connect:', err);
+    }
+  }, []);
+
+  // Define data slices
+  const slices = useMemo<Map<string, DataSlice<unknown>>>(
+    () =>
+      new Map([
+        [
+          'github-social',
+          {
+            scope: 'global' as const,
+            name: 'github-social',
+            data: {
+              isAuthenticated,
+              isAuthLoading,
+              isLoggingIn,
+              loginError,
+              user: user as LocalGitHubUser | null,
+              socialData,
+              isLoading: socialDataLoading,
+              error: socialDataError,
+            },
+            loading: socialDataLoading || isAuthLoading,
+            error: socialDataError ? new Error(socialDataError) : null,
+            refresh: fetchSocialData,
+          },
+        ],
+        [
+          'presence',
+          {
+            scope: 'global' as const,
+            name: 'presence',
+            data: {
+              isConnected,
+              isVisible,
+              users: presenceData,
+            },
+            loading: presenceLoading,
+            error: null,
+            refresh: async () => {
+              if (isConnected) {
+                setPresenceLoading(true);
+                try {
+                  const data = await PresenceService.getUsers();
+                  setPresenceData((data.users || []) as LocalUserPresence[]);
+                } catch (err) {
+                  console.error('[GitSyncPanelContext] Failed to refresh presence:', err);
+                } finally {
+                  setPresenceLoading(false);
+                }
+              }
+            },
+          },
+        ],
+      ]),
+    [
+      isAuthenticated,
+      isAuthLoading,
+      isLoggingIn,
+      loginError,
+      user,
+      socialData,
+      socialDataLoading,
+      socialDataError,
+      isConnected,
+      isVisible,
+      presenceData,
+      presenceLoading,
+      fetchSocialData,
+    ]
+  );
+
+  // Define actions
+  const actions: GitSyncPanelActions = useMemo(
+    () => ({
+      openFile: (filePath: string) => {
+        events.emit({
+          type: 'file:opened',
+          source: 'git-sync-view',
+          timestamp: Date.now(),
+          payload: { filePath },
+        });
+      },
+
+      navigateToPanel: (panelId: string) => {
+        events.emit({
+          type: 'panel:focus',
+          source: 'git-sync-view',
+          timestamp: Date.now(),
+          payload: { panelId },
+        });
+      },
+
+      login: async () => {
+        await login();
+      },
+
+      toggleVisibility: handleVisibilityToggle,
+
+      connect: handleConnect,
+    }),
+    [events, login, handleVisibilityToggle, handleConnect]
+  );
+
+  // Create context value
+  const context: PanelContextValue = useMemo(
+    () => ({
+      currentScope: {
+        type: 'workspace' as const,
+        workspace: undefined,
+        repository: undefined,
+      },
+      slices,
+      adapters: {},
+      getSlice: <T = unknown>(name: string): DataSlice<T> | undefined => {
+        return slices.get(name) as DataSlice<T> | undefined;
+      },
+      getWorkspaceSlice: <T = unknown>(_name: string): DataSlice<T> | undefined => {
+        return undefined;
+      },
+      getRepositorySlice: <T = unknown>(_name: string): DataSlice<T> | undefined => {
+        return undefined;
+      },
+      hasSlice: (name: string): boolean => {
+        return slices.has(name);
+      },
+      isSliceLoading: (name: string): boolean => {
+        const slice = slices.get(name);
+        return slice?.loading ?? false;
+      },
+      refresh: async (_scope?: 'workspace' | 'repository', sliceName?: string): Promise<void> => {
+        if (sliceName) {
+          const slice = slices.get(sliceName);
+          if (slice) {
+            await slice.refresh();
+          }
+        } else {
+          await Promise.all(Array.from(slices.values()).map((slice) => slice.refresh()));
+        }
+      },
+    }),
+    [slices]
+  );
+
+  // Combine into provider value
+  const value: GitSyncPanelProviderValue = useMemo(
+    () => ({
+      context,
+      actions,
+      events,
+    }),
+    [context, actions, events]
+  );
+
+  return (
+    <GitSyncPanelContext.Provider value={value}>
+      {children}
+    </GitSyncPanelContext.Provider>
+  );
+};
+
+export const useGitSyncPanelProvider = (): GitSyncPanelProviderValue => {
+  const value = useContext(GitSyncPanelContext);
+  if (!value) {
+    throw new Error('useGitSyncPanelProvider must be used within a GitSyncPanelProvider');
+  }
+  return value;
+};
+
+export default GitSyncPanelContext;

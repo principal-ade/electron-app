@@ -2,6 +2,7 @@ import type { FSWatcher } from 'chokidar';
 import chokidar from 'chokidar';
 import { dialog, ipcMain, BrowserWindow, app } from 'electron';
 import * as fs from 'fs';
+import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 
 import { FileSystemAPIEvent } from '../../shared/main-process-api-interfaces/FileSystemAPI';
@@ -53,12 +54,13 @@ export class ElectronFileSystemAdapter {
       );
       return null;
     }
-    if (!filePath || !fs.existsSync(filePath)) {
+    if (!filePath) {
       return null;
     }
 
     try {
-      const content = fs.readFileSync(filePath, 'utf8');
+      await fsPromises.access(filePath);
+      const content = await fsPromises.readFile(filePath, 'utf8');
       return { content, filePath };
     } catch (error) {
       console.error('Error reading file:', error);
@@ -86,7 +88,7 @@ export class ElectronFileSystemAdapter {
     if (!result.canceled && result.filePaths.length > 0) {
       const filePath = result.filePaths[0];
       try {
-        const content = fs.readFileSync(filePath, 'utf8');
+        const content = await fsPromises.readFile(filePath, 'utf8');
         return { content, filePath };
       } catch (error) {
         console.error('Error reading file:', error);
@@ -152,11 +154,9 @@ export class ElectronFileSystemAdapter {
     try {
       // Ensure directory exists
       const dir = path.dirname(filePath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
+      await fsPromises.mkdir(dir, { recursive: true });
 
-      fs.writeFileSync(filePath, content, 'utf8');
+      await fsPromises.writeFile(filePath, content, 'utf8');
       console.log(`[File System] Successfully wrote file: ${filePath}`);
       return { success: true, filePath };
     } catch (error) {
@@ -186,11 +186,11 @@ export class ElectronFileSystemAdapter {
       );
       return null;
     }
-    if (!filePath || !fs.existsSync(filePath)) {
+    if (!filePath) {
       return null;
     }
     try {
-      const stats = fs.statSync(filePath);
+      const stats = await fsPromises.stat(filePath);
       return {
         size: stats.size,
         isDirectory: stats.isDirectory(),
@@ -209,21 +209,24 @@ export class ElectronFileSystemAdapter {
       );
       return null;
     }
-    if (!dirPath || !fs.existsSync(dirPath)) {
+    if (!dirPath) {
       return null;
     }
     try {
+      // Check if directory exists
+      await fsPromises.access(dirPath);
+
       let totalFiles = 0;
       let totalDirectories = 0;
       let totalSize = 0;
 
-      const processDirectory = (currentPath: string) => {
-        const entries = fs.readdirSync(currentPath);
+      const processDirectory = async (currentPath: string): Promise<void> => {
+        const entries = await fsPromises.readdir(currentPath);
 
         for (const entry of entries) {
           const fullPath = path.join(currentPath, entry);
           try {
-            const stats = fs.statSync(fullPath);
+            const stats = await fsPromises.stat(fullPath);
 
             if (stats.isDirectory()) {
               totalDirectories++;
@@ -234,7 +237,7 @@ export class ElectronFileSystemAdapter {
                 entry !== 'dist' &&
                 entry !== 'build'
               ) {
-                processDirectory(fullPath);
+                await processDirectory(fullPath);
               }
             } else {
               totalFiles++;
@@ -247,7 +250,7 @@ export class ElectronFileSystemAdapter {
         }
       };
 
-      processDirectory(dirPath);
+      await processDirectory(dirPath);
 
       return {
         totalFiles,
@@ -267,11 +270,11 @@ export class ElectronFileSystemAdapter {
       );
       return [];
     }
-    if (!dirPath || !fs.existsSync(dirPath)) {
+    if (!dirPath) {
       return [];
     }
     try {
-      const entries = fs.readdirSync(dirPath);
+      const entries = await fsPromises.readdir(dirPath);
       return entries;
     } catch (error) {
       console.error('Error reading directory:', error);
@@ -306,14 +309,11 @@ export class ElectronFileSystemAdapter {
     this.fileWatcher = this.createFileWatcher(filePath, this.mainWindow);
     this.currentlyWatchingPath = filePath;
     try {
-      if (!fs.existsSync(filePath)) {
-        console.error(`[File System] File does not exist: ${filePath}`);
-        return false;
-      }
+      await fsPromises.access(filePath);
       this.fileWatcher.add(filePath);
       return true;
     } catch (error) {
-      console.error('[File System] ❌ Error setting up file watcher:', error);
+      console.error(`[File System] File does not exist or cannot be accessed: ${filePath}`, error);
       return false;
     }
   }
@@ -365,16 +365,18 @@ export class ElectronFileSystemAdapter {
     );
 
     try {
-      if (!fs.existsSync(directoryPath)) {
-        console.error(
-          `[File System] Directory does not exist: ${directoryPath}`,
-        );
-        // Reset paths if we failed to watch, as no valid root is established.
-        this.rootPath = null;
-        this.currentlyWatchingPath = null;
-        return false;
-      }
+      await fsPromises.access(directoryPath);
+    } catch {
+      console.error(
+        `[File System] Directory does not exist: ${directoryPath}`,
+      );
+      // Reset paths if we failed to watch, as no valid root is established.
+      this.rootPath = null;
+      this.currentlyWatchingPath = null;
+      return false;
+    }
 
+    try {
       this.directoryWatcher = chokidar.watch(directoryPath, {
         persistent: true,
         ignoreInitial: true,
@@ -445,13 +447,15 @@ export class ElectronFileSystemAdapter {
     return fileWatcher;
   }
 
-  private createGitWatcher(
+  private async createGitWatcher(
     repoPath: string,
     targetWindow: BrowserWindow,
-  ): FSWatcher | null {
+  ): Promise<FSWatcher | null> {
     const gitIndexPath = path.join(repoPath, '.git', 'index');
 
-    if (!fs.existsSync(gitIndexPath)) {
+    try {
+      await fsPromises.access(gitIndexPath);
+    } catch {
       console.log(`[File System] No .git/index found at ${gitIndexPath}`);
       return null;
     }
@@ -620,7 +624,7 @@ export class ElectronFileSystemAdapter {
     }
 
     try {
-      this.gitWatcher = this.createGitWatcher(repoPath, this.mainWindow);
+      this.gitWatcher = await this.createGitWatcher(repoPath, this.mainWindow);
 
       if (this.gitWatcher) {
         console.log(`[File System] Git watcher started for ${repoPath}`);
@@ -789,23 +793,23 @@ export class ElectronFileSystemAdapter {
     }
   }
 
-  private findFilesWithExtensions(
+  private async findFilesWithExtensions(
     dirPath: string,
     extensions: string[],
     maxDepth = 3,
     currentDepth = 0,
-  ): string[] {
+  ): Promise<string[]> {
     let files: string[] = [];
     if (currentDepth > maxDepth) return files;
 
     try {
-      const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+      const entries = await fsPromises.readdir(dirPath, { withFileTypes: true });
       for (const entry of entries) {
         if (entry.name.startsWith('.')) continue;
         const entryPath = path.join(dirPath, entry.name);
         if (entry.isDirectory()) {
           files = files.concat(
-            this.findFilesWithExtensions(
+            await this.findFilesWithExtensions(
               entryPath,
               extensions,
               maxDepth,
@@ -837,7 +841,9 @@ export class ElectronFileSystemAdapter {
 
     const workingDir = options?.cwd || process.cwd();
 
-    if (!fs.existsSync(workingDir)) {
+    try {
+      await fsPromises.access(workingDir);
+    } catch {
       console.error(
         `[File System] glob: Working directory does not exist: ${workingDir}`,
       );
@@ -848,44 +854,42 @@ export class ElectronFileSystemAdapter {
       // Simple glob implementation for **/*.ext patterns
       if (pattern.startsWith('**/') && pattern.includes('.')) {
         const extension = pattern.substring(pattern.lastIndexOf('.'));
-        return this.findFilesWithExtensions(workingDir, [extension], 10, 0).map(
-          (filePath) => path.relative(workingDir, filePath),
-        );
+        const files = await this.findFilesWithExtensions(workingDir, [extension], 10, 0);
+        return files.map((filePath) => path.relative(workingDir, filePath));
       }
 
       // For other patterns, use a basic implementation
-      return this.findFilesWithGlobPattern(workingDir, pattern);
+      return await this.findFilesWithGlobPattern(workingDir, pattern);
     } catch (error) {
       console.error('[File System] Error in glob pattern matching:', error);
       return [];
     }
   }
 
-  private findFilesWithGlobPattern(
+  private async findFilesWithGlobPattern(
     dirPath: string,
     pattern: string,
     maxDepth = 10,
     currentDepth = 0,
-  ): string[] {
+  ): Promise<string[]> {
     let files: string[] = [];
     if (currentDepth > maxDepth) return files;
 
     try {
-      const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+      const entries = await fsPromises.readdir(dirPath, { withFileTypes: true });
       for (const entry of entries) {
         if (entry.name.startsWith('.')) continue;
         const entryPath = path.join(dirPath, entry.name);
         const relativePath = path.relative(dirPath, entryPath);
 
         if (entry.isDirectory()) {
-          files = files.concat(
-            this.findFilesWithGlobPattern(
-              entryPath,
-              pattern,
-              maxDepth,
-              currentDepth + 1,
-            ).map((f) => path.join(relativePath, f)),
+          const subFiles = await this.findFilesWithGlobPattern(
+            entryPath,
+            pattern,
+            maxDepth,
+            currentDepth + 1,
           );
+          files = files.concat(subFiles.map((f) => path.join(relativePath, f)));
         } else {
           // Simple pattern matching - convert glob to regex
           const regex = new RegExp(
@@ -933,12 +937,17 @@ export class ElectronFileSystemAdapter {
         return false;
       }
 
-      if (
-        !fs.existsSync(resolvedNewPath) ||
-        !fs.statSync(resolvedNewPath).isDirectory()
-      ) {
+      try {
+        const stats = await fsPromises.stat(resolvedNewPath);
+        if (!stats.isDirectory()) {
+          console.error(
+            `[File System] addPathToDirectoryWatcher: Path is not a directory: ${resolvedNewPath}`,
+          );
+          return false;
+        }
+      } catch {
         console.error(
-          `[File System] addPathToDirectoryWatcher: Path is not a valid directory or does not exist: ${resolvedNewPath}`,
+          `[File System] addPathToDirectoryWatcher: Path does not exist: ${resolvedNewPath}`,
         );
         return false;
       }
@@ -997,14 +1006,17 @@ export class ElectronFileSystemAdapter {
 
       // It's good practice to check if the path exists, though unwatch might handle non-existent paths gracefully.
       // For consistency with adding, we can check.
-      if (
-        !fs.existsSync(resolvedSubPath) ||
-        !fs.statSync(resolvedSubPath).isDirectory()
-      ) {
+      try {
+        const stats = await fsPromises.stat(resolvedSubPath);
+        if (!stats.isDirectory()) {
+          console.warn(
+            `[File System] stopWatchingSubdirectory: Path to unwatch is not a directory: ${resolvedSubPath}. Proceeding to attempt unwatch.`,
+          );
+        }
+      } catch {
         console.warn(
-          `[File System] stopWatchingSubdirectory: Path to unwatch is not a valid directory or does not exist: ${resolvedSubPath}. Proceeding to attempt unwatch.`,
+          `[File System] stopWatchingSubdirectory: Path to unwatch does not exist: ${resolvedSubPath}. Proceeding to attempt unwatch.`,
         );
-        // Depending on strictness, you could return false here.
         // Chokidar's unwatch might not error if the path isn't actively watched or doesn't exist, it just removes it from its list.
       }
 
