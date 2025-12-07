@@ -13,6 +13,11 @@ import {
   type RepositoryCacheSyncEvent,
 } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 import { QualityLensService } from '../quality-lenses/QualityLensService';
+import {
+  applicationWindows,
+  PrimaryWindowType,
+} from '../window/types';
+import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
 
 // Type alias for git state event payload (structure defined in repository-monitoring-server)
 type GitStateEventPayload = { event: { type: string }; [key: string]: unknown };
@@ -29,6 +34,98 @@ const MonitoringInternalEvent = {
 
 // Create singleton manager instance
 let repositoryMonitoringManager: RepositoryMonitoringManager | null = null;
+
+// Cache for workspace repo paths to avoid repeated async lookups
+const workspaceRepoPathsCache = new Map<string, { paths: Set<string>; timestamp: number }>();
+const WORKSPACE_CACHE_TTL = 5000; // 5 seconds
+
+/**
+ * Check if a window should receive events for a given repository path.
+ * - MAIN windows receive all events
+ * - REPOSITORY and DEV_WORKSPACE windows receive events for their specific repo
+ * - WORKSPACE windows receive events for all repos in their workspace
+ */
+async function shouldWindowReceiveRepoEvent(
+  windowId: number,
+  repoPath: string,
+): Promise<boolean> {
+  const appWindow = applicationWindows.get(windowId);
+  if (!appWindow || appWindow.window.isDestroyed()) {
+    return false;
+  }
+
+  const metadata = appWindow.metadata;
+  if (!metadata) {
+    return false;
+  }
+
+  switch (metadata.primaryType) {
+    case PrimaryWindowType.MAIN:
+      // Main window gets everything
+      return true;
+
+    case PrimaryWindowType.REPOSITORY:
+    case PrimaryWindowType.DEV_WORKSPACE:
+      // Single repo windows: check if event matches their repo
+      return metadata.localPath === repoPath;
+
+    case PrimaryWindowType.WORKSPACE:
+      // Workspace windows: check if repo is in workspace
+      if (!metadata.workspaceId) {
+        return false;
+      }
+
+      // Check cache first
+      const cached = workspaceRepoPathsCache.get(metadata.workspaceId);
+      const now = Date.now();
+
+      if (cached && (now - cached.timestamp) < WORKSPACE_CACHE_TTL) {
+        return cached.paths.has(repoPath);
+      }
+
+      // Cache miss or stale - fetch from service
+      try {
+        const service = AlexandriaRegistryService.getInstance();
+        const repos = await service.getRepositoriesInWorkspace(metadata.workspaceId);
+        // Convert branded paths to plain strings for comparison
+        const paths = new Set(repos.map(r => String(r.path)));
+        workspaceRepoPathsCache.set(metadata.workspaceId, { paths, timestamp: now });
+        return paths.has(repoPath);
+      } catch (error) {
+        console.error(`[RepositoryMonitoring] Failed to get workspace repos:`, error);
+        return false;
+      }
+
+    default:
+      return false;
+  }
+}
+
+/**
+ * Broadcast a repository event to relevant windows only.
+ * Uses setImmediate to yield to the event loop between sends.
+ */
+async function broadcastToRelevantWindows<T extends { repoPath: string }>(
+  eventName: string,
+  payload: T,
+): Promise<void> {
+  const windowIds = Array.from(applicationWindows.keys());
+
+  for (const windowId of windowIds) {
+    const shouldReceive = await shouldWindowReceiveRepoEvent(windowId, payload.repoPath);
+    if (shouldReceive) {
+      const appWindow = applicationWindows.get(windowId);
+      if (appWindow && !appWindow.window.isDestroyed()) {
+        // Yield to event loop before each send
+        setImmediate(() => {
+          if (!appWindow.window.isDestroyed()) {
+            appWindow.window.webContents.send(eventName, payload);
+          }
+        });
+      }
+    }
+  }
+}
 
 /**
  * Get or create the repository monitoring manager instance
@@ -456,21 +553,18 @@ export function registerRepositoryMonitoringHandlers(): void {
     });
   });
 
-  // Forward git status change events to renderer windows
+  // Forward git status change events to relevant renderer windows only
   manager.on(
     MonitoringInternalEvent.GIT_STATUS_CHANGED,
     (data: GitStatusMetadata) => {
-      const windows = BrowserWindow.getAllWindows();
-      windows.forEach((window) => {
-        window.webContents.send(
-          RepositoryMonitoringAPIEvent.GIT_STATUS_CHANGED,
-          data,
-        );
-      });
+      broadcastToRelevantWindows(
+        RepositoryMonitoringAPIEvent.GIT_STATUS_CHANGED,
+        data,
+      );
     },
   );
 
-  // Forward git state events to renderer windows
+  // Forward git state events to relevant renderer windows only
   manager.on(
     MonitoringInternalEvent.GIT_STATE_EVENT,
     (payload: GitStateEventPayload) => {
@@ -478,13 +572,23 @@ export function registerRepositoryMonitoringHandlers(): void {
         '[RepositoryMonitoring] Forwarding git state event to renderer:',
         payload.event.type,
       );
-      const windows = BrowserWindow.getAllWindows();
-      windows.forEach((window) => {
-        window.webContents.send(
+      // GitStateEventPayload should have repoPath from the monitoring worker
+      const repoPath = payload.repoPath;
+      if (typeof repoPath === 'string') {
+        broadcastToRelevantWindows(
           RepositoryMonitoringAPIEvent.GIT_STATE_EVENT,
-          payload,
+          { ...payload, repoPath },
         );
-      });
+      } else {
+        // Fallback: broadcast to all windows if no repoPath
+        const windows = BrowserWindow.getAllWindows();
+        windows.forEach((window) => {
+          window.webContents.send(
+            RepositoryMonitoringAPIEvent.GIT_STATE_EVENT,
+            payload,
+          );
+        });
+      }
     },
   );
 
@@ -494,31 +598,25 @@ export function registerRepositoryMonitoringHandlers(): void {
       console.log(
         `[RepositoryMonitoring] Forwarding workspace change to renderer for ${payload.repoPath}`,
       );
-      const windows = BrowserWindow.getAllWindows();
-      windows.forEach((window) => {
-        window.webContents.send(
-          RepositoryMonitoringAPIEvent.WORKSPACE_CHANGED,
-          payload,
-        );
-      });
+      broadcastToRelevantWindows(
+        RepositoryMonitoringAPIEvent.WORKSPACE_CHANGED,
+        payload,
+      );
     },
   );
 
-  // Forward cache sync events to renderer windows
+  // Forward cache sync events to relevant renderer windows only
   manager.on(
     MonitoringInternalEvent.CACHE_SYNC,
     (event: RepositoryCacheSyncEvent) => {
       console.log(
         `[RepositoryMonitoring] Forwarding cache sync to renderer: ${event.repoPath} - ${event.slice}`,
       );
-      const windows = BrowserWindow.getAllWindows();
-      windows.forEach((window) => {
-        window.webContents.send(RepositoryMonitoringAPIEvent.CACHE_SYNC, event);
-      });
+      broadcastToRelevantWindows(RepositoryMonitoringAPIEvent.CACHE_SYNC, event);
     },
   );
 
-  // Forward build artifacts detected events to renderer windows
+  // Forward build artifacts detected events to relevant renderer windows only
   manager.on(
     MonitoringInternalEvent.BUILD_ARTIFACTS_DETECTED,
     (
@@ -527,13 +625,10 @@ export function registerRepositoryMonitoringHandlers(): void {
       console.log(
         `[RepositoryMonitoring] Forwarding build artifacts detected to renderer: ${payload.repoPath} - ${payload.artifacts.length} artifacts`,
       );
-      const windows = BrowserWindow.getAllWindows();
-      windows.forEach((window) => {
-        window.webContents.send(
-          RepositoryMonitoringAPIEvent.BUILD_ARTIFACTS_DETECTED,
-          payload,
-        );
-      });
+      broadcastToRelevantWindows(
+        RepositoryMonitoringAPIEvent.BUILD_ARTIFACTS_DETECTED,
+        payload,
+      );
     },
   );
 
