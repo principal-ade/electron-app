@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ConfigurablePanelLayout } from '@principal-ade/panels';
 import '@principal-ade/panels/panels.css';
@@ -9,6 +9,7 @@ import {
   GitHubStarredPanel,
   GitHubProjectsPanel,
 } from '@industry-theme/alexandria-panels';
+import type { GitHubRepository } from '@industry-theme/alexandria-panels';
 import { DoorClosed, FolderGit2, Folder, Star } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuthState';
 import {
@@ -17,6 +18,8 @@ import {
 } from '../../../contexts/WorkspacesPanelContext';
 import { usePanelPersistence } from '../../../hooks/usePanelPersistence';
 import { WorkspacesViewHeader } from './WorkspacesViewHeader';
+import { GitCloneModal } from '../../../components/GitCloneModal';
+import { CreateWorkspaceModal } from '../../../components/CreateWorkspaceModal';
 
 /**
  * Inner content component that uses the panel context
@@ -25,6 +28,55 @@ const WorkspacesViewContent: React.FC = () => {
   const { theme } = useTheme();
   const { context, actions, events } = useWorkspacesPanelProvider();
   const { isAuthenticated } = useAuth();
+
+  // State for clone modal
+  const [isCloneModalOpen, setIsCloneModalOpen] = useState(false);
+  const [cloneModalInitialUrl, setCloneModalInitialUrl] = useState<string | undefined>();
+
+  // State for create workspace modal
+  const [isCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen] = useState(false);
+
+  // Handle clone modal close
+  const handleCloseCloneModal = useCallback(() => {
+    setIsCloneModalOpen(false);
+    setCloneModalInitialUrl(undefined);
+  }, []);
+
+  // Handle create workspace modal close
+  const handleCloseCreateWorkspaceModal = useCallback(() => {
+    setIsCreateWorkspaceModalOpen(false);
+  }, []);
+
+  // Handle workspace created successfully - refresh the workspaces list
+  const handleWorkspaceCreated = useCallback(() => {
+    // Refresh workspaces slice
+    context.refresh('workspace', 'workspaces');
+  }, [context]);
+
+  // Listen for github:clone-requested events
+  useEffect(() => {
+    const unsubscribe = events.on('github:clone-requested', (event) => {
+      const { repository } = event.payload as { repository: GitHubRepository };
+      console.info('[WorkspacesView] Clone requested for:', repository.full_name);
+
+      // Use the clone_url or html_url from the repository
+      const cloneUrl = repository.clone_url || repository.html_url;
+      setCloneModalInitialUrl(cloneUrl);
+      setIsCloneModalOpen(true);
+    });
+
+    return unsubscribe;
+  }, [events]);
+
+  // Listen for create-workspace-requested events from WorkspacesListPanel
+  useEffect(() => {
+    const unsubscribe = events.on('industry-theme.workspaces-list:create-workspace-requested', () => {
+      console.info('[WorkspacesView] Create workspace requested');
+      setIsCreateWorkspaceModalOpen(true);
+    });
+
+    return unsubscribe;
+  }, [events]);
 
   // Use panel persistence for three-panel layout
   const panelState = usePanelPersistence({
@@ -150,55 +202,71 @@ const WorkspacesViewContent: React.FC = () => {
   );
 
   return (
-    <div
-      style={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-      }}
-    >
-      {/* Header */}
-      <WorkspacesViewHeader />
+    <>
+      <div
+        style={{
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Header */}
+        <WorkspacesViewHeader />
 
-      {/* Panel Layout */}
-      <ConfigurablePanelLayout
-        panels={panels}
-        layout={layout}
-        collapsiblePanels={{ left: true, right: true }}
-        defaultSizes={
-          panelState.type === 'three-panel'
-            ? panelState.sizes
-            : { left: 25, middle: 50, right: 25 }
-        }
-        minSizes={{ left: 15, middle: 30, right: 20 }}
-        collapsed={
-          panelState.type === 'three-panel'
-            ? { ...panelState.collapsed, right: true }
-            : { left: false, right: true }
-        }
-        style={{ flex: 1, width: '100%', minHeight: 0 }}
-        theme={theme}
-        showCollapseButtons={false}
-        onPanelResize={
-          panelState.type === 'three-panel'
-            ? panelState.handlePanelResize
-            : undefined
-        }
-        onLeftCollapseComplete={panelState.handleLeftCollapseComplete}
-        onLeftExpandComplete={panelState.handleLeftExpandComplete}
-        onRightCollapseComplete={
-          panelState.type === 'three-panel'
-            ? panelState.handleRightCollapseComplete
-            : undefined
-        }
-        onRightExpandComplete={
-          panelState.type === 'three-panel'
-            ? panelState.handleRightExpandComplete
-            : undefined
-        }
+        {/* Panel Layout */}
+        <ConfigurablePanelLayout
+          panels={panels}
+          layout={layout}
+          collapsiblePanels={{ left: true, right: true }}
+          defaultSizes={
+            panelState.type === 'three-panel'
+              ? panelState.sizes
+              : { left: 25, middle: 50, right: 25 }
+          }
+          minSizes={{ left: 15, middle: 30, right: 20 }}
+          collapsed={
+            panelState.type === 'three-panel'
+              ? { ...panelState.collapsed, right: true }
+              : { left: false, right: true }
+          }
+          style={{ flex: 1, width: '100%', minHeight: 0 }}
+          theme={theme}
+          showCollapseButtons={false}
+          onPanelResize={
+            panelState.type === 'three-panel'
+              ? panelState.handlePanelResize
+              : undefined
+          }
+          onLeftCollapseComplete={panelState.handleLeftCollapseComplete}
+          onLeftExpandComplete={panelState.handleLeftExpandComplete}
+          onRightCollapseComplete={
+            panelState.type === 'three-panel'
+              ? panelState.handleRightCollapseComplete
+              : undefined
+          }
+          onRightExpandComplete={
+            panelState.type === 'three-panel'
+              ? panelState.handleRightExpandComplete
+              : undefined
+          }
+        />
+      </div>
+
+      {/* Clone Repository Modal */}
+      <GitCloneModal
+        isOpen={isCloneModalOpen}
+        onClose={handleCloseCloneModal}
+        initialUrl={cloneModalInitialUrl}
       />
-    </div>
+
+      {/* Create Workspace Modal */}
+      <CreateWorkspaceModal
+        isOpen={isCreateWorkspaceModalOpen}
+        onClose={handleCloseCreateWorkspaceModal}
+        onSuccess={handleWorkspaceCreated}
+      />
+    </>
   );
 };
 
