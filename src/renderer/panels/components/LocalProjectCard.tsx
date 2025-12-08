@@ -239,11 +239,16 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
 
   const handleDeleteEntry = async (deleteLocal: boolean) => {
     try {
+      setIsRemoving(true);
       await AlexandriaService.removeRepository(entry.name, deleteLocal);
-      // Events will update all panels automatically
+      // Notify parent for immediate UI update
+      onRemovedFromLocalProjects?.(entry);
+      // Events will also update all panels automatically
     } catch (error) {
       console.error('Failed to delete Alexandria entry:', error);
       alert(`Failed to delete repository: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsRemoving(false);
     }
   };
 
@@ -747,11 +752,13 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
                     : 'Open'}
               </button>
 
-              {/* Remove from local projects button */}
+              {/* Remove from local projects button - opens modal for user choice */}
               <button
                 type="button"
-                onClick={handleRemoveFromLocalProjects}
-                disabled={isRemoving}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowDeleteModal(true);
+                }}
                 title="Remove from local projects"
                 style={{
                   display: 'inline-flex',
@@ -764,31 +771,19 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
                   border: 'none',
                   backgroundColor: 'transparent',
                   color: theme.colors.textSecondary,
-                  cursor: isRemoving ? 'wait' : 'pointer',
-                  opacity: isRemoving ? 0.6 : 1,
+                  cursor: 'pointer',
                   transition: 'all 0.15s ease',
                 }}
                 onMouseEnter={(event) => {
-                  if (!isRemoving) {
-                    event.currentTarget.style.backgroundColor = theme.colors.error || '#ef4444';
-                    event.currentTarget.style.color = theme.colors.background;
-                  }
+                  event.currentTarget.style.backgroundColor = theme.colors.error || '#ef4444';
+                  event.currentTarget.style.color = theme.colors.background;
                 }}
                 onMouseLeave={(event) => {
                   event.currentTarget.style.backgroundColor = 'transparent';
                   event.currentTarget.style.color = theme.colors.textSecondary;
                 }}
               >
-                {isRemoving ? (
-                  <Loader2
-                    size={14}
-                    style={{
-                      animation: 'spin 1s linear infinite',
-                    }}
-                  />
-                ) : (
-                  <X size={14} />
-                )}
+                <Trash2 size={14} />
               </button>
             </>
           );
