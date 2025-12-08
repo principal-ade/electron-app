@@ -1210,6 +1210,7 @@ export class GitHubAdapter {
         full_name: repo.full_name,
         owner: {
           login: repo.owner.login,
+          avatar_url: repo.owner.avatar_url,
         },
         private: repo.private,
         html_url: repo.html_url,
@@ -1221,6 +1222,7 @@ export class GitHubAdapter {
         language: repo.language,
         default_branch: repo.default_branch,
         stargazers_count: repo.stargazers_count,
+        license: repo.license?.spdx_id || null,
       }));
     }
 
@@ -1236,7 +1238,7 @@ export class GitHubAdapter {
           id: repo.id,
           name: repo.name,
           full_name: repo.full_name,
-          owner: { login: repo.owner.login },
+          owner: { login: repo.owner.login, avatar_url: repo.owner.avatar_url },
           private: repo.private,
           html_url: repo.html_url,
           description: repo.description,
@@ -1247,6 +1249,7 @@ export class GitHubAdapter {
           language: repo.language,
           default_branch: repo.default_branch,
           stargazers_count: repo.stargazers_count,
+          license: repo.license?.spdx_id || null,
         }));
       }
 
@@ -1277,6 +1280,7 @@ export class GitHubAdapter {
         full_name: repo.full_name,
         owner: {
           login: repo.owner.login,
+          avatar_url: repo.owner.avatar_url,
         },
         private: repo.private,
         html_url: repo.html_url,
@@ -1288,6 +1292,7 @@ export class GitHubAdapter {
         language: repo.language,
         default_branch: repo.default_branch,
         stargazers_count: repo.stargazers_count,
+        license: repo.license?.spdx_id || null,
       }));
     }
 
@@ -1301,7 +1306,7 @@ export class GitHubAdapter {
           id: repo.id,
           name: repo.name,
           full_name: repo.full_name,
-          owner: { login: repo.owner.login },
+          owner: { login: repo.owner.login, avatar_url: repo.owner.avatar_url },
           private: repo.private,
           html_url: repo.html_url,
           description: repo.description,
@@ -1312,6 +1317,7 @@ export class GitHubAdapter {
           language: repo.language,
           default_branch: repo.default_branch,
           stargazers_count: repo.stargazers_count,
+          license: repo.license?.spdx_id || null,
         }));
       }
 
@@ -1349,6 +1355,7 @@ export class GitHubAdapter {
         full_name: repo.full_name,
         owner: {
           login: repo.owner.login,
+          avatar_url: repo.owner.avatar_url,
         },
         private: repo.private,
         html_url: repo.html_url,
@@ -1360,6 +1367,7 @@ export class GitHubAdapter {
         language: repo.language,
         default_branch: repo.default_branch,
         stargazers_count: repo.stargazers_count,
+        license: repo.license?.spdx_id || null,
       }));
     }
 
@@ -1375,7 +1383,7 @@ export class GitHubAdapter {
           id: repo.id,
           name: repo.name,
           full_name: repo.full_name,
-          owner: { login: repo.owner.login },
+          owner: { login: repo.owner.login, avatar_url: repo.owner.avatar_url },
           private: repo.private,
           html_url: repo.html_url,
           description: repo.description,
@@ -1386,6 +1394,7 @@ export class GitHubAdapter {
           language: repo.language,
           default_branch: repo.default_branch,
           stargazers_count: repo.stargazers_count,
+          license: repo.license?.spdx_id || null,
         }));
       }
 

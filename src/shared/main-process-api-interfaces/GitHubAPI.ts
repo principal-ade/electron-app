@@ -164,6 +164,7 @@ export interface GitHubRepository {
   full_name: string;
   owner: {
     login: string;
+    avatar_url: string;
   };
   private: boolean;
   html_url: string;
@@ -175,6 +176,8 @@ export interface GitHubRepository {
   language: string | null;
   default_branch: string;
   stargazers_count?: number;
+  /** License SPDX identifier (e.g., "MIT", "Apache-2.0") */
+  license?: string | null;
 }
 
 export interface GitHubOrganization {
