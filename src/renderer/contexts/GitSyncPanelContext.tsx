@@ -20,7 +20,10 @@ import type {
   GitHubOrgMember as LocalGitHubOrgMember,
   GitHubRepository as LocalGitHubRepository,
 } from '../../shared/main-process-api-interfaces/GitHubAPI';
-import type { UserPresence as LocalUserPresence } from '../../shared/main-process-api-interfaces/PresenceAPI';
+import type {
+  UserPresence as LocalUserPresence,
+  RepositorySession,
+} from '../../shared/main-process-api-interfaces/PresenceAPI';
 import { GithubService } from '../main-process-api/GithubService';
 import { PresenceService } from '../main-process-api/PresenceService';
 import { useGitSyncConnection } from '../hooks/useGitSyncConnection';
@@ -71,6 +74,8 @@ interface GitSyncPanelProviderValue {
   context: PanelContextValue;
   actions: GitSyncPanelActions;
   events: PanelEventEmitter;
+  /** Whether connected to presence server (for conditional panel rendering) */
+  isConnected: boolean;
 }
 
 const GitSyncPanelContext = createContext<GitSyncPanelProviderValue | null>(null);
@@ -114,6 +119,10 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
   // Presence data state
   const [presenceData, setPresenceData] = useState<LocalUserPresence[]>([]);
   const [presenceLoading, setPresenceLoading] = useState(false);
+
+  // Current user's open projects (for current-projects slice)
+  const [currentUserSessions, setCurrentUserSessions] = useState<RepositorySession[]>([]);
+  const [activeRepository, setActiveRepository] = useState<string | undefined>();
 
   // Selected user profile state (for UserProfilePanel)
   const [selectedUserProfile, setSelectedUserProfile] = useState<SelectedUserProfile>({
@@ -220,6 +229,8 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
   useEffect(() => {
     if (!isConnected) {
       setPresenceData([]);
+      setCurrentUserSessions([]);
+      setActiveRepository(undefined);
       return;
     }
 
@@ -227,7 +238,22 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
       setPresenceLoading(true);
       try {
         const data = await PresenceService.getUsers();
-        setPresenceData((data.users || []) as LocalUserPresence[]);
+        const users = (data.users || []) as LocalUserPresence[];
+        setPresenceData(users);
+
+        // Extract current user's sessions for the current-projects slice
+        if (user?.login) {
+          const currentUserPresence = users.find(
+            (u) => u.userId === user.login || u.userId === String(user.id)
+          );
+          if (currentUserPresence) {
+            setCurrentUserSessions(currentUserPresence.openRepositories || []);
+            setActiveRepository(currentUserPresence.activeRepository);
+          } else {
+            setCurrentUserSessions([]);
+            setActiveRepository(undefined);
+          }
+        }
       } catch (err) {
         console.error('[GitSyncPanelContext] Failed to fetch presence:', err);
       } finally {
@@ -247,7 +273,7 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
     return () => {
       unsubscribe();
     };
-  }, [isConnected]);
+  }, [isConnected, user]);
 
   // Listen for user selection events from GitHubSocialPanel
   useEffect(() => {
@@ -369,6 +395,30 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
             },
           },
         ],
+        [
+          'current-projects',
+          {
+            scope: 'global' as const,
+            name: 'current-projects',
+            data: {
+              projects: currentUserSessions.map((session) => ({
+                ...session,
+                agentId: 'desktop-client',
+                clientType: 'desktop' as const,
+              })),
+              activeProject: activeRepository,
+              currentActivity: undefined, // TODO: Add activity tracking
+              isLoading: presenceLoading,
+              error: null,
+            },
+            loading: presenceLoading,
+            error: null,
+            refresh: async () => {
+              // Presence data refreshes automatically via subscription
+              console.log('[GitSyncPanelContext] Current projects slice refresh triggered');
+            },
+          },
+        ],
       ]),
     [
       isAuthenticated,
@@ -387,6 +437,8 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
       selectedUserProfile,
       selectedUserLoading,
       selectedUserError,
+      currentUserSessions,
+      activeRepository,
     ]
   );
 
@@ -506,8 +558,9 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
       context,
       actions,
       events,
+      isConnected,
     }),
-    [context, actions, events]
+    [context, actions, events, isConnected]
   );
 
   return (

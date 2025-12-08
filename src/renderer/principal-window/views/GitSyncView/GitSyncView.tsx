@@ -2,9 +2,9 @@ import React, { useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ConfigurablePanelLayout } from '@principal-ade/panels';
 import '@principal-ade/panels/panels.css';
-import { GitHubSocialPanel } from '@industry-theme/git-sync-panels';
+import { GitHubSocialPanel, CurrentProjectsPanel } from '@industry-theme/git-sync-panels';
 import { UserProfilePanel } from '@industry-theme/alexandria-panels';
-import { Users, User } from 'lucide-react';
+import { Users, User, FolderGit2 } from 'lucide-react';
 import {
   GitSyncPanelProvider,
   useGitSyncPanelProvider,
@@ -15,7 +15,7 @@ import {
  */
 const GitSyncViewContent: React.FC = () => {
   const { theme } = useTheme();
-  const { context, actions, events } = useGitSyncPanelProvider();
+  const { context, actions, events, isConnected } = useGitSyncPanelProvider();
 
   // Fixed panel sizes - no persistence needed for this view
   const panelSizes = useMemo(() => ({ left: 0, middle: 50, right: 50 }), []);
@@ -24,6 +24,8 @@ const GitSyncViewContent: React.FC = () => {
   const collapsiblePanels = useMemo(() => ({ left: false, right: false }), []);
 
   // Define panels using git-sync-panels and alexandria-panels components
+  // When connected to presence server, show CurrentProjectsPanel
+  // Otherwise show UserProfilePanel
   const panels = useMemo(
     () => [
       {
@@ -39,10 +41,16 @@ const GitSyncViewContent: React.FC = () => {
         ),
       },
       {
-        id: 'user-profile',
-        label: 'Profile',
-        icon: <User size={16} />,
-        content: (
+        id: 'projects-or-profile',
+        label: isConnected ? 'Projects' : 'Profile',
+        icon: isConnected ? <FolderGit2 size={16} /> : <User size={16} />,
+        content: isConnected ? (
+          <CurrentProjectsPanel
+            context={context}
+            actions={actions}
+            events={events}
+          />
+        ) : (
           <UserProfilePanel
             context={context}
             actions={actions}
@@ -51,10 +59,10 @@ const GitSyncViewContent: React.FC = () => {
         ),
       },
     ],
-    [context, actions, events]
+    [context, actions, events, isConnected]
   );
 
-  // Define layout configuration - network in middle, profile on right
+  // Define layout configuration - network in middle, projects/profile on right
   const layout = useMemo(
     () => ({
       left: {
@@ -75,7 +83,7 @@ const GitSyncViewContent: React.FC = () => {
       },
       right: {
         type: 'tabs' as const,
-        panels: ['user-profile'],
+        panels: ['projects-or-profile'],
         config: {
           defaultActiveTab: 0,
           tabPosition: 'top' as const,
