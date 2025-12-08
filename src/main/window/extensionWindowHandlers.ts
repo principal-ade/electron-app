@@ -74,6 +74,7 @@ export async function openExtensionWindow(
       minWidth: 600,
       minHeight: 400,
       title: 'Extensions',
+      alwaysOnTop: true,
       webPreferences: {
         preload: preloadPath,
         contextIsolation: true,
