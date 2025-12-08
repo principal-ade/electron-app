@@ -303,4 +303,71 @@ export class OAuthServerClient {
       throw new Error(`Token refresh failed: ${error.message}`);
     }
   }
+
+  /**
+   * Fetch the current valid GitHub token from the central token store
+   * This is used to sync the local token with the server after login from another surface
+   *
+   * @param githubToken The local GitHub token to use for authentication
+   * @param githubUserId The user's GitHub ID
+   * @returns The current token data from the server, or null if not available
+   */
+  async fetchCurrentToken(
+    githubToken: string,
+    githubUserId: number
+  ): Promise<{ githubToken: string; githubLogin: string; updatedAt: number } | null> {
+    try {
+      console.log('[OAuthServerClient] Fetching current token from server...');
+
+      const url = new URL(`${this.serverUrl}/api/auth/token/current`);
+      url.searchParams.set('github_user_id', String(githubUserId));
+
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${githubToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const error = (await response.json()) as { error?: string; error_description?: string };
+        console.log('[OAuthServerClient] Failed to fetch current token:', error);
+
+        // 404 means no token stored - not an error, just not available yet
+        if (response.status === 404) {
+          return null;
+        }
+
+        // 503 means token store not configured - also not a hard error
+        if (response.status === 503) {
+          console.log('[OAuthServerClient] Token store not configured on server');
+          return null;
+        }
+
+        return null;
+      }
+
+      const data = (await response.json()) as {
+        github_token: string;
+        github_login: string;
+        updated_at: number;
+      };
+
+      console.log('[OAuthServerClient] Current token fetched successfully:', {
+        login: data.github_login,
+        updatedAt: new Date(data.updated_at).toISOString(),
+        tokenPrefix: data.github_token?.substring(0, 4),
+      });
+
+      return {
+        githubToken: data.github_token,
+        githubLogin: data.github_login,
+        updatedAt: data.updated_at,
+      };
+    } catch (error: any) {
+      console.error('[OAuthServerClient] Error fetching current token:', error.message);
+      return null;
+    }
+  }
 }

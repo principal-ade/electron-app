@@ -546,6 +546,30 @@ class AuthService {
         },
       );
 
+      // Sync token from server to get the latest (handles login from other surfaces)
+      let currentGithubToken = githubToken;
+      if (user.id) {
+        try {
+          const authClient = new OAuthServerClient({
+            serverUrl: process.env.AUTH_SERVER_URL || APP_BRANDING.AUTH_SERVER_URL.PRODUCTION,
+          });
+          const serverToken = await authClient.fetchCurrentToken(githubToken, user.id);
+
+          if (serverToken && serverToken.githubToken !== githubToken) {
+            console.log('[AuthService] Server has a newer token, updating local storage');
+            currentGithubToken = serverToken.githubToken;
+
+            // Update the stored GitHub token
+            await this.storage.setToken(TOKEN_KEYS.GITHUB_TOKEN, currentGithubToken, {
+              user,
+            });
+          }
+        } catch (syncError) {
+          // Non-fatal: if sync fails, continue with local token
+          console.log('[AuthService] Token sync failed, using local token:', syncError);
+        }
+      }
+
       // If avatar URL is missing or user data seems incorrect, fetch from GitHub
       let enrichedUser = user;
       const needsGitHubFetch = !user.avatarUrl || user.login.includes('.');
@@ -555,7 +579,7 @@ class AuthService {
           console.log('[AuthService] Fetching canonical GitHub user data...');
           const response = await fetch('https://api.github.com/user', {
             headers: {
-              Authorization: `Bearer ${githubToken}`,
+              Authorization: `Bearer ${currentGithubToken}`,
               Accept: 'application/vnd.github.v3+json',
             },
           });
@@ -576,7 +600,7 @@ class AuthService {
             );
 
             // Update stored user data with canonical GitHub data
-            await this.storage.setToken(TOKEN_KEYS.GITHUB_TOKEN, githubToken, {
+            await this.storage.setToken(TOKEN_KEYS.GITHUB_TOKEN, currentGithubToken, {
               user: enrichedUser,
             });
           } else {
@@ -602,7 +626,7 @@ class AuthService {
       return {
         success: true,
         authenticated: true,
-        token: githubToken, // ✅ Always return GitHub token for API calls
+        token: currentGithubToken, // ✅ Always return GitHub token for API calls (synced from server if newer)
         user: enrichedUser,
       };
     } catch (error) {
