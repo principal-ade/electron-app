@@ -170,6 +170,31 @@ export class GithubService {
     return result || [];
   }
 
+  static async getUser(username: string): Promise<GitHubUser | null> {
+    const result = await window.mainProcess.github.getUser(username);
+    return result;
+  }
+
+  static async getUserOrganizationsForUser(
+    username: string,
+  ): Promise<GitHubOrganization[]> {
+    const result =
+      await window.mainProcess.github.getUserOrganizationsForUser(username);
+    return result || [];
+  }
+
+  static async getUserStarredRepositoriesForUser(
+    username: string,
+    options?: RepositoryFetchOptions,
+  ): Promise<GitHubRepository[]> {
+    const result =
+      await window.mainProcess.github.getUserStarredRepositoriesForUser(
+        username,
+        options,
+      );
+    return result || [];
+  }
+
   static async createRepository(
     owner: string,
     input: CreateRepositoryInput,

@@ -23,6 +23,9 @@ export enum GitHubAPIEvent {
   GET_USER_FOLLOWERS = 'github:get-user-followers',
   GET_USER_FOLLOWING = 'github:get-user-following',
   GET_ORG_MEMBERS = 'github:get-org-members',
+  GET_USER = 'github:get-user',
+  GET_USER_ORGANIZATIONS_FOR_USER = 'github:get-user-organizations-for-user',
+  GET_USER_STARRED_REPOSITORIES_FOR_USER = 'github:get-user-starred-repositories-for-user',
   // Config fetching events (formerly ConfigAPI)
   FETCH_REMOTE_CONFIG = 'github:fetch-remote-config',
   FETCH_GITHUB_CONFIG = 'github:fetch-github-config',
@@ -386,6 +389,15 @@ export interface GitHubAPI {
   getUserFollowers: (username?: string) => Promise<GitHubUser[]>;
   getUserFollowing: (username?: string) => Promise<GitHubUser[]>;
   getOrgMembers: (org: string) => Promise<GitHubOrgMember[]>;
+  /** Get a specific user's profile */
+  getUser: (username: string) => Promise<GitHubUser | null>;
+  /** Get a specific user's public organizations */
+  getUserOrganizationsForUser: (username: string) => Promise<GitHubOrganization[]>;
+  /** Get a specific user's starred repositories */
+  getUserStarredRepositoriesForUser: (
+    username: string,
+    options?: RepositoryFetchOptions,
+  ) => Promise<GitHubRepository[]>;
   createRepository: (
     owner: string,
     input: CreateRepositoryInput,

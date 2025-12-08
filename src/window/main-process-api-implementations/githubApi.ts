@@ -144,6 +144,25 @@ export const githubAPI: GitHubAPI = {
     return ipcRenderer.invoke(GitHubAPIEvent.GET_ORG_MEMBERS, org);
   },
 
+  getUser: async (username) => {
+    return ipcRenderer.invoke(GitHubAPIEvent.GET_USER, username);
+  },
+
+  getUserOrganizationsForUser: async (username) => {
+    return ipcRenderer.invoke(
+      GitHubAPIEvent.GET_USER_ORGANIZATIONS_FOR_USER,
+      username,
+    );
+  },
+
+  getUserStarredRepositoriesForUser: async (username, options) => {
+    return ipcRenderer.invoke(
+      GitHubAPIEvent.GET_USER_STARRED_REPOSITORIES_FOR_USER,
+      username,
+      options,
+    );
+  },
+
   createRepository: async (
     owner: string,
     input: CreateRepositoryInput,

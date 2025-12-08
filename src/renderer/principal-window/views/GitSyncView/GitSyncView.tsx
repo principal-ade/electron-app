@@ -3,12 +3,12 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { ConfigurablePanelLayout } from '@principal-ade/panels';
 import '@principal-ade/panels/panels.css';
 import { GitHubSocialPanel } from '@industry-theme/git-sync-panels';
-import { Users } from 'lucide-react';
+import { UserProfilePanel } from '@industry-theme/alexandria-panels';
+import { Users, User } from 'lucide-react';
 import {
   GitSyncPanelProvider,
   useGitSyncPanelProvider,
 } from '../../../contexts/GitSyncPanelContext';
-import { usePanelPersistence } from '../../../hooks/usePanelPersistence';
 
 /**
  * Inner content component that uses the panel context
@@ -17,15 +17,13 @@ const GitSyncViewContent: React.FC = () => {
   const { theme } = useTheme();
   const { context, actions, events } = useGitSyncPanelProvider();
 
-  // Use panel persistence for three-panel layout (single panel in middle)
-  const panelState = usePanelPersistence({
-    viewKey: 'gitSyncView',
-    defaultSizes: { left: 0, middle: 100, right: 0 },
-    collapsed: { left: true, right: true },
-    panelType: 'three-panel',
-  });
+  // Fixed panel sizes - no persistence needed for this view
+  const panelSizes = useMemo(() => ({ left: 0, middle: 50, right: 50 }), []);
+  const minSizes = useMemo(() => ({ left: 0, middle: 300, right: 280 }), []);
+  const collapsed = useMemo(() => ({ left: true, right: false }), []);
+  const collapsiblePanels = useMemo(() => ({ left: false, right: false }), []);
 
-  // Define panels using git-sync-panels components
+  // Define panels using git-sync-panels and alexandria-panels components
   const panels = useMemo(
     () => [
       {
@@ -40,11 +38,23 @@ const GitSyncViewContent: React.FC = () => {
           />
         ),
       },
+      {
+        id: 'user-profile',
+        label: 'Profile',
+        icon: <User size={16} />,
+        content: (
+          <UserProfilePanel
+            context={context}
+            actions={actions}
+            events={events}
+          />
+        ),
+      },
     ],
     [context, actions, events]
   );
 
-  // Define layout configuration - single panel in middle
+  // Define layout configuration - network in middle, profile on right
   const layout = useMemo(
     () => ({
       left: {
@@ -65,7 +75,7 @@ const GitSyncViewContent: React.FC = () => {
       },
       right: {
         type: 'tabs' as const,
-        panels: [],
+        panels: ['user-profile'],
         config: {
           defaultActiveTab: 0,
           tabPosition: 'top' as const,
@@ -88,24 +98,13 @@ const GitSyncViewContent: React.FC = () => {
       <ConfigurablePanelLayout
         panels={panels}
         layout={layout}
-        collapsiblePanels={{ left: false, right: false }}
-        defaultSizes={
-          panelState.type === 'three-panel'
-            ? panelState.sizes
-            : { left: 0, middle: 100, right: 0 }
-        }
-        minSizes={{ left: 0, middle: 100, right: 0 }}
-        collapsed={{ left: true, right: true }}
+        collapsiblePanels={collapsiblePanels}
+        defaultSizes={panelSizes}
+        minSizes={minSizes}
+        collapsed={collapsed}
         style={{ flex: 1, width: '100%', minHeight: 0 }}
         theme={theme}
         showCollapseButtons={false}
-        onPanelResize={
-          panelState.type === 'three-panel'
-            ? panelState.handlePanelResize
-            : undefined
-        }
-        onLeftCollapseComplete={panelState.handleLeftCollapseComplete}
-        onLeftExpandComplete={panelState.handleLeftExpandComplete}
       />
     </div>
   );

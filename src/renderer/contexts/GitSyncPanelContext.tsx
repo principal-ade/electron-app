@@ -18,6 +18,7 @@ import type {
   GitHubUser as LocalGitHubUser,
   GitHubOrganization as LocalGitHubOrganization,
   GitHubOrgMember as LocalGitHubOrgMember,
+  GitHubRepository as LocalGitHubRepository,
 } from '../../shared/main-process-api-interfaces/GitHubAPI';
 import type { UserPresence as LocalUserPresence } from '../../shared/main-process-api-interfaces/PresenceAPI';
 import { GithubService } from '../main-process-api/GithubService';
@@ -34,6 +35,19 @@ interface SocialData {
   orgMembers: Map<string, LocalGitHubOrgMember[]>;
 }
 
+// Selected user profile data for the UserProfilePanel
+interface SelectedUserProfile {
+  user: LocalGitHubUser | null;
+  organizations: LocalGitHubOrganization[];
+  starredRepositories: LocalGitHubRepository[];
+  presence?: {
+    status: 'online' | 'away' | 'offline';
+    lastSeen?: number;
+    statusMessage?: string;
+    activeRepository?: string;
+  };
+}
+
 /**
  * Extended actions for GitSyncPanelProvider
  */
@@ -42,6 +56,12 @@ interface GitSyncPanelActions extends PanelActions {
   toggleVisibility?: () => Promise<void>;
   connect?: () => Promise<void>;
   disconnect?: () => Promise<void>;
+  // UserProfilePanel actions
+  selectUser?: (username: string) => Promise<void>;
+  viewOrganization?: (orgLogin: string) => Promise<void>;
+  viewRepository?: (owner: string, repo: string) => Promise<void>;
+  cloneRepository?: (repository: LocalGitHubRepository) => Promise<void>;
+  openInBrowser?: (url: string) => Promise<void>;
 }
 
 /**
@@ -94,6 +114,15 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
   // Presence data state
   const [presenceData, setPresenceData] = useState<LocalUserPresence[]>([]);
   const [presenceLoading, setPresenceLoading] = useState(false);
+
+  // Selected user profile state (for UserProfilePanel)
+  const [selectedUserProfile, setSelectedUserProfile] = useState<SelectedUserProfile>({
+    user: null,
+    organizations: [],
+    starredRepositories: [],
+  });
+  const [selectedUserLoading, setSelectedUserLoading] = useState(false);
+  const [selectedUserError, setSelectedUserError] = useState<string | null>(null);
 
   // Fetch social data when authenticated
   const fetchSocialData = useCallback(async () => {
@@ -156,6 +185,37 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
     }
   }, [isAuthenticated, fetchSocialData]);
 
+  // Fetch selected user's profile data
+  const fetchUserProfile = useCallback(async (username: string) => {
+    setSelectedUserLoading(true);
+    setSelectedUserError(null);
+
+    try {
+      // Fetch user profile, their organizations, and starred repos in parallel
+      const [userProfile, userOrgs, userStarred] = await Promise.all([
+        GithubService.getUser(username),
+        GithubService.getUserOrganizationsForUser(username),
+        GithubService.getUserStarredRepositoriesForUser(username),
+      ]);
+
+      setSelectedUserProfile({
+        user: userProfile as LocalGitHubUser,
+        organizations: userOrgs as LocalGitHubOrganization[],
+        starredRepositories: userStarred as LocalGitHubRepository[],
+        // Note: presence will be updated separately when presence data changes
+      });
+    } catch (err) {
+      console.error('[GitSyncPanelContext] Failed to load user profile:', err);
+      setSelectedUserError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to load user profile from GitHub.',
+      );
+    } finally {
+      setSelectedUserLoading(false);
+    }
+  }, []); // No dependencies - doesn't need presence data during fetch
+
   // Fetch and subscribe to presence data
   useEffect(() => {
     if (!isConnected) {
@@ -188,6 +248,18 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
       unsubscribe();
     };
   }, [isConnected]);
+
+  // Listen for user selection events from GitHubSocialPanel
+  useEffect(() => {
+    const unsubscribe = events.on('user:selected', (event) => {
+      const { username } = event.payload as { username: string };
+      if (username) {
+        void fetchUserProfile(username);
+      }
+    });
+
+    return unsubscribe;
+  }, [events, fetchUserProfile]);
 
   // Handle visibility toggle
   const handleVisibilityToggle = useCallback(async () => {
@@ -275,6 +347,28 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
             },
           },
         ],
+        [
+          'userProfile',
+          {
+            scope: 'global' as const,
+            name: 'userProfile',
+            data: {
+              user: selectedUserProfile.user,
+              organizations: selectedUserProfile.organizations,
+              starredRepositories: selectedUserProfile.starredRepositories,
+              presence: selectedUserProfile.presence,
+              loading: selectedUserLoading,
+              error: selectedUserError,
+            },
+            loading: selectedUserLoading,
+            error: selectedUserError ? new Error(selectedUserError) : null,
+            refresh: async () => {
+              if (selectedUserProfile.user?.login) {
+                await fetchUserProfile(selectedUserProfile.user.login);
+              }
+            },
+          },
+        ],
       ]),
     [
       isAuthenticated,
@@ -290,6 +384,9 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
       presenceData,
       presenceLoading,
       fetchSocialData,
+      selectedUserProfile,
+      selectedUserLoading,
+      selectedUserError,
     ]
   );
 
@@ -321,8 +418,46 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
       toggleVisibility: handleVisibilityToggle,
 
       connect: handleConnect,
+
+      // UserProfilePanel actions
+      selectUser: async (username: string) => {
+        await fetchUserProfile(username);
+      },
+
+      viewOrganization: async (orgLogin: string) => {
+        // Emit event for navigation - host app can handle this
+        events.emit({
+          type: 'organization:selected',
+          source: 'git-sync-view',
+          timestamp: Date.now(),
+          payload: { orgLogin },
+        });
+      },
+
+      viewRepository: async (owner: string, repo: string) => {
+        // Emit event for navigation - host app can handle this
+        events.emit({
+          type: 'repository:selected',
+          source: 'git-sync-view',
+          timestamp: Date.now(),
+          payload: { owner, repo },
+        });
+      },
+
+      cloneRepository: async (repository: LocalGitHubRepository) => {
+        events.emit({
+          type: 'github:clone-requested',
+          source: 'git-sync-view',
+          timestamp: Date.now(),
+          payload: { repository },
+        });
+      },
+
+      openInBrowser: async (url: string) => {
+        window.open(url, '_blank');
+      },
     }),
-    [events, login, handleVisibilityToggle, handleConnect]
+    [events, login, handleVisibilityToggle, handleConnect, fetchUserProfile]
   );
 
   // Create context value

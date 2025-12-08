@@ -2185,6 +2185,87 @@ export class GitHubAdapter {
   }
 
   /**
+   * Get a specific user's profile
+   */
+  async getUser(username: string): Promise<any | null> {
+    const endpoint = `/users/${username}`;
+    const apiResult = await this.makeGitHubAPICall(endpoint);
+
+    if (apiResult.success && apiResult.data) {
+      return apiResult.data;
+    }
+
+    // Fallback to CLI
+    try {
+      const result = await this.executeCommand(['gh', 'api', endpoint]);
+      if (result.success && result.stdout) {
+        return JSON.parse(result.stdout);
+      }
+    } catch (error) {
+      console.error('[GitHub] Error getting user:', error);
+    }
+
+    return null;
+  }
+
+  /**
+   * Get a specific user's public organizations
+   */
+  async getUserOrganizationsForUser(username: string): Promise<any[]> {
+    const endpoint = `/users/${username}/orgs`;
+    const apiResult = await this.makeGitHubAPICall(endpoint);
+
+    if (apiResult.success && apiResult.data) {
+      return apiResult.data;
+    }
+
+    // Fallback to CLI
+    try {
+      const result = await this.executeCommand(['gh', 'api', endpoint]);
+      if (result.success && result.stdout) {
+        return JSON.parse(result.stdout);
+      }
+    } catch (error) {
+      console.error('[GitHub] Error getting user organizations:', error);
+    }
+
+    return [];
+  }
+
+  /**
+   * Get a specific user's starred repositories
+   */
+  async getUserStarredRepositoriesForUser(
+    username: string,
+    options?: RepositoryFetchOptions,
+  ): Promise<any[]> {
+    const queryParams = new URLSearchParams();
+    if (options?.sort) queryParams.set('sort', options.sort);
+    if (options?.direction) queryParams.set('direction', options.direction);
+    if (options?.perPage) queryParams.set('per_page', String(options.perPage));
+    if (options?.page) queryParams.set('page', String(options.page));
+
+    const endpoint = `/users/${username}/starred${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const apiResult = await this.makeGitHubAPICall(endpoint);
+
+    if (apiResult.success && apiResult.data) {
+      return apiResult.data;
+    }
+
+    // Fallback to CLI
+    try {
+      const result = await this.executeCommand(['gh', 'api', endpoint]);
+      if (result.success && result.stdout) {
+        return JSON.parse(result.stdout);
+      }
+    } catch (error) {
+      console.error('[GitHub] Error getting user starred repositories:', error);
+    }
+
+    return [];
+  }
+
+  /**
    * Create a new GitHub repository
    */
   async createRepository(
@@ -2937,6 +3018,39 @@ export function registerGitHubIpcHandlers(
     }
     return adapter.getOrgMembers(org);
   });
+
+  ipcMain.handle(GitHubAPIEvent.GET_USER, async (event, username) => {
+    const adapter = getAdapterFromSender(event.sender);
+    if (!adapter) {
+      console.error('[GitHub] No adapter found for GET_USER');
+      return null;
+    }
+    return adapter.getUser(username);
+  });
+
+  ipcMain.handle(
+    GitHubAPIEvent.GET_USER_ORGANIZATIONS_FOR_USER,
+    async (event, username) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for GET_USER_ORGANIZATIONS_FOR_USER');
+        return [];
+      }
+      return adapter.getUserOrganizationsForUser(username);
+    },
+  );
+
+  ipcMain.handle(
+    GitHubAPIEvent.GET_USER_STARRED_REPOSITORIES_FOR_USER,
+    async (event, username, options) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for GET_USER_STARRED_REPOSITORIES_FOR_USER');
+        return [];
+      }
+      return adapter.getUserStarredRepositoriesForUser(username, options);
+    },
+  );
 
   ipcMain.handle(
     GitHubAPIEvent.CREATE_REPOSITORY,
