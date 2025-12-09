@@ -343,6 +343,15 @@ export class GitSyncWebSocketManager {
           });
           console.log('[GitSyncWebSocketManager] Auth message sent to server for:', connectionId);
           connectionInfo.status.authenticated = true;
+
+          // Join the repository room so presence extension tracks this repo as open
+          // The repoId format is "owner/repo" which matches the room ID expected by RepositoryPresenceExtension
+          try {
+            await client.joinRoom(connectionInfo.repoId);
+            console.log('[GitSyncWebSocketManager] Joined repository room:', connectionInfo.repoId);
+          } catch (joinError) {
+            console.error('[GitSyncWebSocketManager] Failed to join repository room:', joinError);
+          }
         } else {
           console.warn('[GitSyncWebSocketManager] No auth token available for authenticate message');
         }
