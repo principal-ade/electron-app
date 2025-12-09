@@ -173,7 +173,7 @@
     "@industry-theme/git-sync-panels": "^0.1.4",
     "@industry-theme/localhost-panels": "^0.1.4",
     "@industry-theme/repository-composition-panels": "^0.2.2",
-    "@industry-theme/visual-validation-panel": "^0.3.12",
+    "@industry-theme/visual-validation-panel": "^0.3.13",
     "@industry-theme/xterm-terminal-panel": "^0.1.2",
     "@mdxeditor/editor": "^3.50.0",
     "@modelcontextprotocol/sdk": "1.11.4",

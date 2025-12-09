@@ -6,6 +6,8 @@
  * - fileSystem: File read/write operations
  * - repositoryMonitoring: Git status and file tree
  * - userPreferences: User settings
+ * - gitSync: Git-sync room connections
+ * - authentication: Authentication status
  *
  * When adding new APIs, update DevWorkspaceMainProcessAPI in
  * src/shared/main-process-api-interfaces/DevWorkspaceAPI.ts
@@ -25,6 +27,8 @@ import { repositoryAPI } from './main-process-api-implementations/repositoryApi'
 import { shellAPI } from './main-process-api-implementations/shellApi';
 import { windowAPI } from './main-process-api-implementations/windowApi';
 import { alexandriaAPI } from './main-process-api-implementations/alexandriaApi';
+import { gitSyncAPI } from './main-process-api-implementations/gitSyncApi';
+import { authenticationAPI } from './main-process-api-implementations/authenticationApi';
 
 console.info('[Preload-DevWorkspace] API imports successful');
 
@@ -41,6 +45,8 @@ const devWorkspaceAPI: DevWorkspaceMainProcessAPI = {
   shell: shellAPI,
   window: windowAPI,
   alexandria: alexandriaAPI,
+  gitSync: gitSyncAPI,
+  authentication: authenticationAPI,
 };
 
 // Expose the mainProcess API

@@ -37,21 +37,22 @@ export const GitSyncStatusIndicator: React.FC<GitSyncStatusIndicatorProps> = ({
           alignItems: 'center',
           justifyContent: 'center',
           padding: '0',
-          borderRadius: '4px',
-          backgroundColor: 'transparent',
-          border: 'none',
+          borderRadius: '6px',
+          backgroundColor: `${color}15`,
+          border: `1px solid ${color}40`,
           cursor: 'pointer',
           transition: 'all 0.2s ease',
-          width: '100%',
-          height: '100%',
+          width: '28px',
+          height: '28px',
           WebkitAppRegion: 'no-drag' as any,
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor =
-            theme.colors.backgroundTertiary;
+          e.currentTarget.style.backgroundColor = `${color}25`;
+          e.currentTarget.style.borderColor = `${color}60`;
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = 'transparent';
+          e.currentTarget.style.backgroundColor = `${color}15`;
+          e.currentTarget.style.borderColor = `${color}40`;
         }}
         title={
           isConnected

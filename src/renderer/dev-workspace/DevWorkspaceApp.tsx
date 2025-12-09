@@ -22,6 +22,7 @@ import type { FileTreeSource } from '../types/file-tree-source';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
+import { gitSyncConnectionManager } from '../services/git-sync/GitSyncConnectionManager';
 import { APP_BRANDING } from '../../shared/config/appBranding';
 import { AlexandriaEventType } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
 
@@ -357,6 +358,77 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
 
     return () => unsubscribe();
   }, [repositoryPath, events]);
+
+  // Auto-connect to git-sync traffic controller when workspace opens
+  useEffect(() => {
+    if (!repositoryPath) return;
+
+    let isMounted = true;
+
+    const connectToGitSync = async () => {
+      // Get branch information
+      const branch = currentBranch || 'main';
+
+      try {
+        console.info(
+          '[DevWorkspaceApp] Attempting to connect to git-sync:',
+          {
+            owner: github?.owner || 'local',
+            name: repositoryName,
+            branch,
+            path: repositoryPath,
+          },
+        );
+
+        // Attempt to get/create a connection
+        const client = await gitSyncConnectionManager.getConnection(
+          repositoryPath,
+          branch,
+          {
+            owner: github?.owner || 'local',
+            name: repositoryName,
+          },
+        );
+
+        if (isMounted && client) {
+          console.info(
+            '[DevWorkspaceApp] Successfully connected to git-sync room:',
+            `${github?.owner || 'local'}/${repositoryName}:${branch}`,
+          );
+        } else if (isMounted) {
+          console.warn(
+            '[DevWorkspaceApp] getConnection returned null - connection not established',
+          );
+        }
+      } catch (error) {
+        // Log the error with more context
+        if (isMounted) {
+          console.error(
+            '[DevWorkspaceApp] Failed to connect to git-sync:',
+            {
+              error,
+              errorMessage:
+                error instanceof Error ? error.message : String(error),
+              repository: `${github?.owner || 'local'}/${repositoryName}`,
+              branch,
+            },
+          );
+          // Note: We don't show toast notifications here to avoid disrupting the user
+          // experience. Users can check git-sync status in the titlebar indicator.
+        }
+      }
+    };
+
+    // Delay connection slightly to allow window to fully initialize
+    const timeoutId = setTimeout(() => {
+      connectToGitSync();
+    }, 1000);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+    };
+  }, [repositoryPath, repositoryName, github?.owner, currentBranch]);
 
   // Load terminal implementation preference and subscribe to updates
   useEffect(() => {

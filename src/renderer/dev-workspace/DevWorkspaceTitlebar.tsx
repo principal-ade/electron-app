@@ -390,102 +390,43 @@ export const DevWorkspaceTitlebar: React.FC<
             gap: '2px',
           }}
         >
-          {/* Repository name and branch */}
+          {/* Repository name */}
           <span
             style={{
               fontSize: `${theme.fontSizes[2]}px`,
               fontWeight: theme.fontWeights.medium,
               fontFamily: theme.fonts.body,
+              color: theme.colors.text,
+              cursor: displayOwner ? 'pointer' : 'default',
             }}
-          >
-            <span
-              style={{
-                color: theme.colors.text,
-                fontWeight: theme.fontWeights.medium,
-                cursor: displayOwner ? 'pointer' : 'default',
-              }}
-              onClick={() => {
-                if (displayOwner && displayName) {
-                  window.open(
-                    `https://github.com/${displayOwner}/${displayName}`,
-                    '_blank',
-                  );
-                }
-              }}
-              onMouseEnter={(e) => {
-                if (displayOwner) {
-                  e.currentTarget.style.opacity = '0.7';
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = '1';
-              }}
-              title={
-                displayOwner
-                  ? `Open ${displayOwner}/${displayName} on GitHub`
-                  : undefined
+            onClick={() => {
+              if (displayOwner && displayName) {
+                window.open(
+                  `https://github.com/${displayOwner}/${displayName}`,
+                  '_blank',
+                );
               }
-            >
-              {displayName}
-            </span>
-
-            {/* Branch */}
-            {selectedSource?.type === 'local' &&
-              selectedSource.metadata?.currentBranch && (
-                <>
-                  <span
-                    style={{
-                      color: theme.colors.accent,
-                      fontWeight: theme.fontWeights.medium,
-                      padding: '0 8px',
-                    }}
-                  >
-                    on
-                  </span>
-                  <span
-                    style={{
-                      color: theme.colors.text,
-                      fontWeight: theme.fontWeights.medium,
-                    }}
-                  >
-                    {selectedSource.metadata.currentBranch}
-
-                    {/* Uncommitted changes indicator */}
-                    {hasUncommittedChanges && (
-                      <span
-                        onClick={onShowGitChanges ? (e) => {
-                          e.stopPropagation();
-                          onShowGitChanges();
-                        } : undefined}
-                        style={{
-                          display: 'inline-block',
-                          width: '6px',
-                          height: '6px',
-                          borderRadius: '50%',
-                          backgroundColor: theme.colors.warning,
-                          marginLeft: '6px',
-                          verticalAlign: 'middle',
-                          cursor: onShowGitChanges ? 'pointer' : 'default',
-                          transition: 'opacity 0.2s',
-                        }}
-                        onMouseEnter={onShowGitChanges ? (e) => {
-                          e.currentTarget.style.opacity = '0.7';
-                        } : undefined}
-                        onMouseLeave={onShowGitChanges ? (e) => {
-                          e.currentTarget.style.opacity = '1';
-                        } : undefined}
-                        title={onShowGitChanges ? "Click to view uncommitted changes" : "Uncommitted changes"}
-                      />
-                    )}
-                  </span>
-                </>
-              )}
+            }}
+            onMouseEnter={(e) => {
+              if (displayOwner) {
+                e.currentTarget.style.opacity = '0.7';
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '1';
+            }}
+            title={
+              displayOwner
+                ? `Open ${displayOwner}/${displayName} on GitHub`
+                : undefined
+            }
+          >
+            {displayName}
           </span>
 
-          {/* Remote sync status - below repo name */}
+          {/* Remote sync status and branch - second line */}
           {selectedSource?.type === 'local' &&
-            selectedSource.metadata?.currentBranch &&
-            gitStatus && (
+            selectedSource.metadata?.currentBranch && (
               <span
                 style={{
                   display: 'flex',
@@ -494,36 +435,86 @@ export const DevWorkspaceTitlebar: React.FC<
                   fontSize: `${theme.fontSizes[0]}px`,
                 }}
               >
-                {gitStatus.ahead === 0 && gitStatus.behind === 0 ? (
+                {/* Remote sync status */}
+                {gitStatus && (
+                  <>
+                    {gitStatus.ahead === 0 && gitStatus.behind === 0 ? (
+                      <span
+                        style={{
+                          color: theme.colors.success,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        <Cloud size={12} />
+                        <span>Synced</span>
+                      </span>
+                    ) : (
+                      <span
+                        style={{
+                          color: theme.colors.warning,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        <CloudOff size={12} />
+                        <span>
+                          {gitStatus.ahead > 0 && gitStatus.behind > 0
+                            ? 'Diverged'
+                            : gitStatus.ahead > 0
+                              ? 'Ahead'
+                              : 'Behind'}
+                        </span>
+                      </span>
+                    )}
+                    <span style={{ color: theme.colors.textSecondary }}>·</span>
+                  </>
+                )}
+
+                {/* Branch info */}
+                <span
+                  style={{
+                    color: theme.colors.accent,
+                    fontWeight: theme.fontWeights.medium,
+                  }}
+                >
+                  on
+                </span>
+                <span
+                  style={{
+                    color: theme.colors.text,
+                    fontWeight: theme.fontWeights.medium,
+                  }}
+                >
+                  {selectedSource.metadata.currentBranch}
+                </span>
+
+                {/* Uncommitted changes indicator */}
+                {hasUncommittedChanges && (
                   <span
+                    onClick={onShowGitChanges ? (e) => {
+                      e.stopPropagation();
+                      onShowGitChanges();
+                    } : undefined}
                     style={{
-                      color: theme.colors.success,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
+                      display: 'inline-block',
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      backgroundColor: theme.colors.warning,
+                      cursor: onShowGitChanges ? 'pointer' : 'default',
+                      transition: 'opacity 0.2s',
                     }}
-                  >
-                    <Cloud size={12} />
-                    <span>Synced</span>
-                  </span>
-                ) : (
-                  <span
-                    style={{
-                      color: theme.colors.warning,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                    }}
-                  >
-                    <CloudOff size={12} />
-                    <span>
-                      {gitStatus.ahead > 0 && gitStatus.behind > 0
-                        ? 'Diverged'
-                        : gitStatus.ahead > 0
-                          ? 'Ahead'
-                          : 'Behind'}
-                    </span>
-                  </span>
+                    onMouseEnter={onShowGitChanges ? (e) => {
+                      e.currentTarget.style.opacity = '0.7';
+                    } : undefined}
+                    onMouseLeave={onShowGitChanges ? (e) => {
+                      e.currentTarget.style.opacity = '1';
+                    } : undefined}
+                    title={onShowGitChanges ? "Click to view uncommitted changes" : "Uncommitted changes"}
+                  />
                 )}
               </span>
             )}
