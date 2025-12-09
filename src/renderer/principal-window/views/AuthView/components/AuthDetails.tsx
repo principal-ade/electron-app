@@ -463,8 +463,13 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
   const handleDisconnectPresence = useCallback(async () => {
     try {
       setIsDisconnecting(true);
-      await gitSyncConnectionManager.disconnectAll();
-      console.info('[AuthDetails] Disconnected from presence');
+      // Use PresenceService to disconnect from presence (goes to main process)
+      const result = await PresenceService.disconnectFromPresence();
+      if (result.success) {
+        console.info('[AuthDetails] Disconnected from presence');
+      } else {
+        console.error('[AuthDetails] Failed to disconnect from presence:', result.message);
+      }
     } catch (err) {
       console.error('[AuthDetails] Failed to disconnect from presence:', err);
     } finally {
@@ -605,6 +610,9 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                 onClick={async () => {
                   try {
                     await logout();
+                    // Disconnect from presence (main process)
+                    await PresenceService.disconnectFromPresence();
+                    // Also clear any local connection state
                     gitSyncConnectionManager.disconnectAll();
                     console.info('Logged out successfully');
                   } catch (error) {

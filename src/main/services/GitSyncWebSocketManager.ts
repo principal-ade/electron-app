@@ -338,9 +338,31 @@ export class GitSyncWebSocketManager {
     const { client, connectionId } = connectionInfo;
 
     // Connection opened
-    client.on('connected', () => {
+    client.on('connected', async () => {
       console.log('[GitSyncWebSocketManager] Client connected:', connectionId);
       connectionInfo.status.connected = true;
+
+      // Send authenticate message to server (required by BaseServer)
+      // The server expects { type: 'authenticate', payload: { token: '...' } }
+      try {
+        const authAdapter = client['auth'] as { getCurrentToken?: () => string };
+        const token = authAdapter?.getCurrentToken?.();
+        if (token) {
+          // Access the transport to send raw message
+          const transport = client['transport'] as { send: (msg: unknown) => Promise<void> };
+          await transport.send({
+            type: 'authenticate',
+            payload: { token },
+            timestamp: Date.now(),
+          });
+          console.log('[GitSyncWebSocketManager] Auth message sent to server for:', connectionId);
+          connectionInfo.status.authenticated = true;
+        } else {
+          console.warn('[GitSyncWebSocketManager] No auth token available for authenticate message');
+        }
+      } catch (error) {
+        console.error('[GitSyncWebSocketManager] Failed to send auth message:', error);
+      }
 
       // Broadcast connection-added event to all renderers
       this.broadcastConnectionEvent('connection-added', connectionId);
@@ -822,9 +844,32 @@ export class GitSyncWebSocketManager {
     const { client, connectionId } = connectionInfo;
 
     // Connection opened
-    client.on('connected', () => {
+    client.on('connected', async () => {
+      console.log('[GitSyncWebSocketManager] Presence WebSocket connected, sending auth message...');
       connectionInfo.status.connected = true;
-      connectionInfo.status.authenticated = true; // Auth is handled by Control Tower Core
+
+      // Send authenticate message to server (required by BaseServer)
+      // The server expects { type: 'authenticate', payload: { token: '...' } }
+      try {
+        const authAdapter = client['auth'] as { getCurrentToken?: () => string };
+        const token = authAdapter?.getCurrentToken?.();
+        if (token) {
+          // Access the transport to send raw message
+          const transport = client['transport'] as { send: (msg: unknown) => Promise<void> };
+          await transport.send({
+            type: 'authenticate',
+            payload: { token },
+            timestamp: Date.now(),
+          });
+          console.log('[GitSyncWebSocketManager] Auth message sent to server');
+          connectionInfo.status.authenticated = true;
+        } else {
+          console.warn('[GitSyncWebSocketManager] No auth token available for authenticate message');
+        }
+      } catch (error) {
+        console.error('[GitSyncWebSocketManager] Failed to send auth message:', error);
+      }
+
       this.broadcastConnectionEvent('connection-added', connectionId);
 
       // Auto-subscribe to presence after successful connection

@@ -556,6 +556,9 @@ export class GitSyncConnectionManager extends EventEmitter {
   disconnectAll() {
     console.log('GitSyncConnectionManager: Disconnecting all connections');
 
+    // Collect connection keys before clearing
+    const connectionKeys = Array.from(this.connections.keys());
+
     for (const connection of this.connections.values()) {
       if (connection.client) {
         connection.client.disconnect();
@@ -563,6 +566,11 @@ export class GitSyncConnectionManager extends EventEmitter {
     }
 
     this.connections.clear();
+
+    // Emit connection-removed for each connection so UI updates
+    for (const connectionKey of connectionKeys) {
+      this.emit('connection-removed', connectionKey);
+    }
   }
 
   /**
