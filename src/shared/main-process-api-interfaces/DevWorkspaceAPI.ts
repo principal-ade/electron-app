@@ -26,6 +26,7 @@ import type { WindowAPI } from './WindowAPI';
 import type { AlexandriaAPI } from './AlexandriaAPI';
 import type { GitSyncAPI } from './GitSyncAPI';
 import type { AuthenticationAPI } from './AuthenticationAPI';
+import type { AgentSessionSDKAPI } from './AgentSessionSDKAPI';
 
 export interface DevWorkspaceMainProcessAPI {
   terminal: TerminalAPI;
@@ -38,6 +39,7 @@ export interface DevWorkspaceMainProcessAPI {
   alexandria: AlexandriaAPI;
   gitSync: GitSyncAPI;
   authentication: AuthenticationAPI;
+  agentSessionSDK: AgentSessionSDKAPI;
 }
 
 // Re-export the individual API types for convenience
@@ -51,3 +53,4 @@ export type { WindowAPI } from './WindowAPI';
 export type { AlexandriaAPI } from './AlexandriaAPI';
 export type { GitSyncAPI } from './GitSyncAPI';
 export type { AuthenticationAPI } from './AuthenticationAPI';
+export type { AgentSessionSDKAPI } from './AgentSessionSDKAPI';

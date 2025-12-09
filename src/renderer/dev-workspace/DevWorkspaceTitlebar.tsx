@@ -14,12 +14,12 @@ import { useRepositoryGitStatus } from '../hooks/useRepositoryGitStatus';
 const AVAILABLE_PANELS: PanelOption[] = [
   { id: 'docs', label: 'Documentation' },
   { id: 'codeCity', label: 'Code City' },
-  { id: 'configLibrary', label: 'Config Library' },
+  { id: 'configLibrary', label: 'Architecture Library' },
   { id: 'dependencies', label: 'Dependencies' },
   { id: 'gitChanges', label: 'File Tree' },
   { id: 'localhostBrowser', label: 'Localhost Browser' },
   { id: 'localProjects', label: 'Local Projects' },
-  { id: 'visualValidation', label: 'Visual Validation' },
+  { id: 'visualValidation', label: 'Architecture Diagram' },
   { id: 'terminal', label: 'Terminal' },
 ];
 

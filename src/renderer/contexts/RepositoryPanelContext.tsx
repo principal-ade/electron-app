@@ -28,6 +28,9 @@ import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { PackageLayer } from '@principal-ai/codebase-composition';
 import type { PackageSummary, GitStatusWithFiles } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 import { minimatch } from 'minimatch';
+import { EventHighlightService } from '../repo-manager/services/EventHighlightService';
+import { AgentSessionSDKService } from '../main-process-api/AgentSessionSDKService';
+import type { HighlightLayer } from '@principal-ai/code-city-react';
 
 // Types for packages slice data (matches @industry-theme/alexandria-panels DependenciesPanel expectations)
 interface PackagesSliceData {
@@ -144,6 +147,10 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
   // Track all Alexandria repositories (for Local Projects panel)
   const [alexandriaRepositories, setAlexandriaRepositories] = useState<AlexandriaEntry[]>([]);
   const [alexandriaRepositoriesLoading, setAlexandriaRepositoriesLoading] = useState(false);
+
+  // Track agent highlight layers for code city visualization
+  const [agentHighlightLayers, setAgentHighlightLayers] = useState<HighlightLayer[]>([]);
+  const eventHighlightServiceRef = useRef<EventHighlightService | null>(null);
 
   // Loading state
   const [loading] = useState(false);
@@ -369,6 +376,44 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
       unsubscribe();
     };
   }, []);
+
+  // Set up EventHighlightService for agent events -> code city highlight layers
+  useEffect(() => {
+    if (!repositoryPath) {
+      setAgentHighlightLayers([]);
+      return;
+    }
+
+    // Create or get the event highlight service
+    if (!eventHighlightServiceRef.current) {
+      eventHighlightServiceRef.current = new EventHighlightService();
+    }
+
+    const service = eventHighlightServiceRef.current;
+
+    // Set repository context
+    service.setRepository(repositoryPath);
+
+    // Subscribe to processed agent events
+    const unsubscribeEvents = AgentSessionSDKService.onProcessedEvent((event) => {
+      console.log('[RepositoryPanelProvider] Received agent event:', event.eventType, event.toolName);
+      service.processEvent(event);
+    });
+
+    // Listen for highlight layer updates from the service
+    const handleHighlightUpdate = (layers: HighlightLayer[]) => {
+      console.log('[RepositoryPanelProvider] Agent highlight layers updated:', layers.length);
+      setAgentHighlightLayers(layers);
+    };
+
+    service.on('highlight-update', handleHighlightUpdate);
+
+    return () => {
+      console.log('[RepositoryPanelProvider] Cleaning up event highlight service');
+      unsubscribeEvents();
+      service.off('highlight-update', handleHighlightUpdate);
+    };
+  }, [repositoryPath]);
 
   // Create actions object
   const actions: RepositoryPanelActions = useMemo(
@@ -753,8 +798,22 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
             },
           },
         ],
+        [
+          'agentHighlightLayers',
+          {
+            scope: 'repository' as const,
+            name: 'agentHighlightLayers',
+            data: agentHighlightLayers,
+            loading: false,
+            error: null,
+            refresh: async () => {
+              // Agent highlight layers are updated reactively from events, no manual refresh needed
+              // Clear and re-fetch could be done here if needed
+            },
+          },
+        ],
       ]),
-    [repositoryPath, fileTreeData, fileTreeLoading, markdownFiles, packagesData, packagesLoading, gitStatusData, gitStatusLoading, alexandriaRepositories, alexandriaRepositoriesLoading],
+    [repositoryPath, fileTreeData, fileTreeLoading, markdownFiles, packagesData, packagesLoading, gitStatusData, gitStatusLoading, alexandriaRepositories, alexandriaRepositoriesLoading, agentHighlightLayers],
   );
 
   // Create context value

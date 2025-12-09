@@ -29,6 +29,7 @@ import { windowAPI } from './main-process-api-implementations/windowApi';
 import { alexandriaAPI } from './main-process-api-implementations/alexandriaApi';
 import { gitSyncAPI } from './main-process-api-implementations/gitSyncApi';
 import { authenticationAPI } from './main-process-api-implementations/authenticationApi';
+import { agentSessionSDKApi } from './main-process-api-implementations/agentSessionSDKApi';
 
 console.info('[Preload-DevWorkspace] API imports successful');
 
@@ -47,6 +48,7 @@ const devWorkspaceAPI: DevWorkspaceMainProcessAPI = {
   alexandria: alexandriaAPI,
   gitSync: gitSyncAPI,
   authentication: authenticationAPI,
+  agentSessionSDK: agentSessionSDKApi,
 };
 
 // Expose the mainProcess API
