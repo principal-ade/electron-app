@@ -28,9 +28,7 @@ import {
   ClientBuilder,
   WebSocketClientTransportAdapter,
   type IAuthAdapter,
-  type AuthResult,
   type TokenPayload,
-  type Credentials,
   type Event,
   type RoomState,
   type RoomUser,
@@ -38,21 +36,13 @@ import {
 
 /**
  * Simple JWT Auth Adapter for Control Tower Core
+ * Token-only authentication - no credential-based auth
  */
 class JWTAuthAdapter implements IAuthAdapter {
   private token: string;
 
   constructor(token: string) {
     this.token = token;
-  }
-
-  async authenticate(_credentials: Credentials): Promise<AuthResult> {
-    // For JWT auth, we don't actually use credentials parameter
-    // The token is already provided in the constructor
-    return {
-      success: true,
-      token: this.token,
-    };
   }
 
   getCurrentToken(): string {
@@ -70,10 +60,6 @@ class JWTAuthAdapter implements IAuthAdapter {
 
   isAuthRequired(): boolean {
     return true;
-  }
-
-  getSupportedCredentialTypes() {
-    return ['jwt' as const];
   }
 }
 
