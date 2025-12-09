@@ -162,6 +162,20 @@ export const DevWorkspaceTitlebar: React.FC<
     }
   };
 
+  // Handler to expand left panel if collapsed
+  const handleExpandLeftPanel = () => {
+    if (collapsed?.left && onCollapsedChange) {
+      onCollapsedChange({ ...collapsed, left: false });
+    }
+  };
+
+  // Handler to expand right panel if collapsed
+  const handleExpandRightPanel = () => {
+    if (collapsed?.right && onCollapsedChange) {
+      onCollapsedChange({ ...collapsed, right: false });
+    }
+  };
+
   // Get local clone path for git status
   const localClonePath =
     selectedSource?.type === 'local'
@@ -228,6 +242,7 @@ export const DevWorkspaceTitlebar: React.FC<
               currentPanelId={currentLayout.left}
               availablePanels={AVAILABLE_PANELS}
               onPanelChange={handleLeftPanelChange}
+              onExpand={handleExpandLeftPanel}
             />
           )}
 
@@ -687,6 +702,7 @@ export const DevWorkspaceTitlebar: React.FC<
             currentPanelId={currentLayout.right}
             availablePanels={AVAILABLE_PANELS}
             onPanelChange={handleRightPanelChange}
+            onExpand={handleExpandRightPanel}
           />
         )}
 

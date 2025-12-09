@@ -38,6 +38,12 @@ const AlexandriaWorkspaceContent: React.FC = () => {
     right: 'code-city',
   });
 
+  // Track the currently selected repository
+  const [selectedRepository, setSelectedRepository] = useState<{
+    name: string;
+    path: string;
+  } | undefined>(undefined);
+
   // Track git status for each repository by path
   const [repoGitStatuses, setRepoGitStatuses] = useState<Map<string, RepoGitStatus>>(new Map());
 
@@ -350,11 +356,13 @@ const AlexandriaWorkspaceContent: React.FC = () => {
           .map(entry => entry.github?.id)
           .filter((id): id is string => id != null)
         }
+        selectedRepository={selectedRepository}
         enableKeyboardShortcuts={enableKeyboardShortcuts}
         onToggleKeyboardShortcuts={() => setEnableKeyboardShortcuts(!enableKeyboardShortcuts)}
         collapsed={collapsed}
         onToggleLeftSidebar={() => setCollapsed(prev => ({ ...prev, left: !prev.left }))}
         onToggleRightSidebar={() => setCollapsed(prev => ({ ...prev, right: !prev.right }))}
+        onCollapsedChange={setCollapsed}
         onSwitchLeftMiddlePanels={handleSwitchLeftMiddle}
         onSwitchRightMiddlePanels={handleSwitchRightMiddle}
         layout={layout}
@@ -369,6 +377,7 @@ const AlexandriaWorkspaceContent: React.FC = () => {
         onCollapsedChange={setCollapsed}
         layout={layout}
         onLayoutChange={setLayout}
+        onRepositorySelected={setSelectedRepository}
       />
     </div>
   );

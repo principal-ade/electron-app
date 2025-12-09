@@ -21,6 +21,7 @@ const AVAILABLE_PANELS: PanelOption[] = [
 export interface AlexandriaWorkspaceTitlebarProps {
   workspace: Workspace;
   workspaceRepositoryIds?: string[];
+  selectedRepository?: { name: string; path: string };
   enableKeyboardShortcuts?: boolean;
   onToggleKeyboardShortcuts?: () => void;
   // Panel controls
@@ -29,6 +30,7 @@ export interface AlexandriaWorkspaceTitlebarProps {
   onToggleRightSidebar?: () => void;
   onSwitchLeftMiddlePanels?: () => void;
   onSwitchRightMiddlePanels?: () => void;
+  onCollapsedChange?: (collapsed: { left: boolean; right: boolean }) => void;
   // Layout controls
   layout?: PanelLayout;
   onLayoutChange?: (layout: PanelLayout) => void;
@@ -39,6 +41,7 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
 > = ({
   workspace,
   workspaceRepositoryIds = [],
+  selectedRepository,
   enableKeyboardShortcuts = false,
   onToggleKeyboardShortcuts,
   collapsed,
@@ -46,6 +49,7 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
   onToggleRightSidebar,
   onSwitchLeftMiddlePanels,
   onSwitchRightMiddlePanels,
+  onCollapsedChange,
   layout,
   onLayoutChange,
 }) => {
@@ -74,6 +78,20 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
   const handleRightPanelChange = (panelId: string) => {
     if (layout && onLayoutChange) {
       onLayoutChange({ ...layout, right: panelId });
+    }
+  };
+
+  // Handler to expand left panel if collapsed
+  const handleExpandLeftPanel = () => {
+    if (collapsed?.left && onCollapsedChange) {
+      onCollapsedChange({ ...collapsed, left: false });
+    }
+  };
+
+  // Handler to expand right panel if collapsed
+  const handleExpandRightPanel = () => {
+    if (collapsed?.right && onCollapsedChange) {
+      onCollapsedChange({ ...collapsed, right: false });
     }
   };
 
@@ -125,6 +143,7 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
             currentPanelId={layout.left}
             availablePanels={AVAILABLE_PANELS}
             onPanelChange={handleLeftPanelChange}
+            onExpand={handleExpandLeftPanel}
           />
         )}
 
@@ -138,7 +157,7 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
         )}
       </div>
 
-      {/* Center: Workspace name */}
+      {/* Center: Workspace name and selected repository */}
       <div
         style={{
           position: 'absolute',
@@ -164,8 +183,23 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
           {workspace.name}
         </span>
 
-        {/* Description */}
-        {workspace.description && (
+        {/* Selected repository or description */}
+        {selectedRepository ? (
+          <span
+            style={{
+              fontSize: `${theme.fontSizes[0]}px`,
+              color: theme.colors.accent,
+              fontFamily: theme.fonts.body,
+              maxWidth: '300px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+            title={selectedRepository.path}
+          >
+            {selectedRepository.name}
+          </span>
+        ) : workspace.description ? (
           <span
             style={{
               fontSize: `${theme.fontSizes[0]}px`,
@@ -179,7 +213,7 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
           >
             {workspace.description}
           </span>
-        )}
+        ) : null}
       </div>
 
       {/* Right: Actions will go here */}
@@ -337,6 +371,7 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
             currentPanelId={layout.right}
             availablePanels={AVAILABLE_PANELS}
             onPanelChange={handleRightPanelChange}
+            onExpand={handleExpandRightPanel}
           />
         )}
 

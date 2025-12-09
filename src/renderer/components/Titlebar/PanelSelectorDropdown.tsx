@@ -11,6 +11,8 @@ export interface PanelSelectorDropdownProps {
   currentPanelId: string;
   availablePanels: PanelOption[];
   onPanelChange: (panelId: string) => void;
+  /** Called when a panel is selected to expand the panel if collapsed */
+  onExpand?: () => void;
 }
 
 export const PanelSelectorDropdown: React.FC<PanelSelectorDropdownProps> = ({
@@ -18,6 +20,7 @@ export const PanelSelectorDropdown: React.FC<PanelSelectorDropdownProps> = ({
   currentPanelId,
   availablePanels,
   onPanelChange,
+  onExpand,
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -46,6 +49,8 @@ export const PanelSelectorDropdown: React.FC<PanelSelectorDropdownProps> = ({
 
   const handlePanelChange = (panelId: string) => {
     onPanelChange(panelId);
+    // Expand the panel if it's collapsed when a new panel is selected
+    onExpand?.();
     setIsDropdownOpen(false);
   };
 

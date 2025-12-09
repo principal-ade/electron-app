@@ -51,10 +51,15 @@ interface AlexandriaWorkspaceLayoutProps {
    * Callback when layout changes
    */
   onLayoutChange?: (layout: PanelLayout) => void;
+  /**
+   * Callback when a repository is selected or deselected
+   */
+  onRepositorySelected?: (repository: { name: string; path: string } | undefined) => void;
 }
 
 interface AlexandriaWorkspaceLayoutContentProps {
-  onRepositorySelected: (repository: { name: string; path: string }) => void;
+  selectedRepository?: { name: string; path: string };
+  onRepositorySelected: (repository: { name: string; path: string } | undefined) => void;
   enableKeyboardShortcuts: boolean;
   collapsed: { left: boolean; right: boolean };
   onCollapsedChange: (collapsed: { left: boolean; right: boolean }) => void;
@@ -66,6 +71,7 @@ interface AlexandriaWorkspaceLayoutContentProps {
  * Content component that uses panel context
  */
 const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutContentProps> = ({
+  selectedRepository,
   onRepositorySelected,
   enableKeyboardShortcuts,
   collapsed,
@@ -124,17 +130,24 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
 
       if (repository) {
         const repoPath = repositoryPath || repository.path;
-        const selectedRepo = {
-          name: repository.name,
-          path: repoPath,
-        };
-        console.info('[AlexandriaWorkspaceLayout] Updating selected repository:', selectedRepo);
-        onRepositorySelected(selectedRepo);
+
+        // Toggle: if clicking on the already selected repo, deselect it
+        if (selectedRepository && selectedRepository.path === repoPath) {
+          console.info('[AlexandriaWorkspaceLayout] Deselecting repository:', selectedRepository.name);
+          onRepositorySelected(undefined);
+        } else {
+          const selectedRepo = {
+            name: repository.name,
+            path: repoPath,
+          };
+          console.info('[AlexandriaWorkspaceLayout] Updating selected repository:', selectedRepo);
+          onRepositorySelected(selectedRepo);
+        }
       }
     });
 
     return unsubscribe;
-  }, [events, onRepositorySelected]);
+  }, [events, onRepositorySelected, selectedRepository]);
 
   // Listen for repository:opened events (for explicitly opening windows)
   useEffect(() => {
@@ -595,6 +608,7 @@ export const AlexandriaWorkspaceLayout: React.FC<
   onCollapsedChange: externalOnCollapsedChange,
   layout: externalLayout,
   onLayoutChange: externalOnLayoutChange,
+  onRepositorySelected: externalOnRepositorySelected,
 }) => {
   const { theme } = useTheme();
 
@@ -616,6 +630,12 @@ export const AlexandriaWorkspaceLayout: React.FC<
     name: string;
     path: string;
   } | undefined>(initialRepository);
+
+  // Handler that updates both internal state and calls external callback
+  const handleRepositorySelected = useCallback((repository: { name: string; path: string } | undefined) => {
+    setSelectedRepository(repository);
+    externalOnRepositorySelected?.(repository);
+  }, [externalOnRepositorySelected]);
 
   // Log when repository changes
   useEffect(() => {
@@ -642,7 +662,8 @@ export const AlexandriaWorkspaceLayout: React.FC<
       terminalContext={`alexandria-workspace-${workspace.id}`}
     >
       <AlexandriaWorkspaceLayoutContent
-        onRepositorySelected={setSelectedRepository}
+        selectedRepository={selectedRepository}
+        onRepositorySelected={handleRepositorySelected}
         enableKeyboardShortcuts={enableKeyboardShortcuts}
         collapsed={collapsed}
         onCollapsedChange={onCollapsedChange}
