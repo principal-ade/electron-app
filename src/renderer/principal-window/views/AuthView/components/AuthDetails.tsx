@@ -480,40 +480,14 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
         overflowY: 'auto',
       }}
     >
-      <div
-        style={{
-          maxWidth: '800px',
-          margin: '0 auto',
-        }}
-      >
+      <div>
         <div
           style={{
-            marginBottom: '32px',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: '24px',
           }}
         >
-          <h1
-            style={{
-              fontSize: '28px',
-              fontWeight: 600,
-              marginBottom: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-            }}
-          >
-            <Shield size={32} />
-            Account & Authentication
-          </h1>
-          <p
-            style={{
-              color: theme.colors.textSecondary,
-              fontSize: '14px',
-            }}
-          >
-            Manage your authentication status and account settings
-          </p>
-        </div>
-
         {/* Authentication Status Card */}
         <div
           style={{
@@ -521,7 +495,6 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
             border: `1px solid ${theme.colors.border}`,
             borderRadius: '12px',
             padding: '24px',
-            marginBottom: '24px',
           }}
         >
           <div
@@ -795,7 +768,6 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
               border: `1px solid ${theme.colors.border}`,
               borderRadius: '12px',
               padding: '24px',
-              marginBottom: '24px',
             }}
           >
             <div
@@ -894,7 +866,6 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
               border: `1px solid ${theme.colors.border}`,
               borderRadius: '12px',
               padding: '24px',
-              marginBottom: '24px',
             }}
           >
             <div
@@ -1184,7 +1155,6 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
               border: `1px solid ${theme.colors.border}`,
               borderRadius: '12px',
               padding: '24px',
-              marginBottom: '24px',
             }}
           >
             <div
@@ -1709,7 +1679,6 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
               border: `1px solid ${theme.colors.border}`,
               borderRadius: '12px',
               padding: '24px',
-              marginBottom: '24px',
             }}
           >
             <div
@@ -2101,7 +2070,6 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
             border: `1px solid ${theme.colors.border}`,
             borderRadius: '12px',
             padding: '24px',
-            marginBottom: '24px',
           }}
         >
           <div
@@ -2557,6 +2525,7 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
             </div>
           </div>
         )}
+        </div>
       </div>
 
       {/* SSH Setup Wizard */}
