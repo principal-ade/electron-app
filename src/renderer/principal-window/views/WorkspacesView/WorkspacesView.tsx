@@ -10,6 +10,7 @@ import {
   GitHubProjectsPanel,
 } from '@industry-theme/alexandria-panels';
 import type { GitHubRepository } from '@industry-theme/alexandria-panels';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { DoorClosed, FolderGit2, Folder, Star } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuthState';
 import {
@@ -20,6 +21,8 @@ import { usePanelPersistence } from '../../../hooks/usePanelPersistence';
 import { WorkspacesViewHeader } from './WorkspacesViewHeader';
 import { GitCloneModal } from '../../../components/GitCloneModal';
 import { CreateWorkspaceModal } from '../../../components/CreateWorkspaceModal';
+import { DeleteAlexandriaEntryModal } from '../../../panels/components/DeleteAlexandriaEntryModal';
+import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 
 /**
  * Inner content component that uses the panel context
@@ -35,6 +38,10 @@ const WorkspacesViewContent: React.FC = () => {
 
   // State for create workspace modal
   const [isCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen] = useState(false);
+
+  // State for delete repository modal
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [entryToDelete, setEntryToDelete] = useState<AlexandriaEntry | null>(null);
 
   // Handle clone modal close
   const handleCloseCloneModal = useCallback(() => {
@@ -52,6 +59,35 @@ const WorkspacesViewContent: React.FC = () => {
     // Refresh workspaces slice
     context.refresh('workspace', 'workspaces');
   }, [context]);
+
+  // Handle delete modal close
+  const handleCloseDeleteModal = useCallback(() => {
+    setIsDeleteModalOpen(false);
+    setEntryToDelete(null);
+  }, []);
+
+  // Handle delete confirmation
+  const handleConfirmDelete = useCallback(async (deleteLocal: boolean) => {
+    if (!entryToDelete) return;
+    await AlexandriaService.removeRepository(entryToDelete.name, deleteLocal);
+    // Refresh the repositories list
+    context.refresh('repository', 'alexandriaRepositories');
+  }, [entryToDelete, context]);
+
+  // Override actions to intercept removeRepository and show modal
+  const overriddenActions = useMemo(() => ({
+    ...actions,
+    removeRepository: async (name: string, _deleteLocal: boolean) => {
+      // Find the entry by name from the context
+      const slice = context.getSlice<{ repositories: AlexandriaEntry[] }>('alexandriaRepositories');
+      const repositories = slice?.data?.repositories || [];
+      const entry = repositories.find((r) => r.name === name);
+      if (entry) {
+        setEntryToDelete(entry);
+        setIsDeleteModalOpen(true);
+      }
+    },
+  }), [actions, context]);
 
   // Listen for github:clone-requested events
   useEffect(() => {
@@ -109,7 +145,7 @@ const WorkspacesViewContent: React.FC = () => {
           content: (
             <LocalProjectsPanel
               context={context}
-              actions={actions}
+              actions={overriddenActions}
               events={events}
             />
           ),
@@ -160,7 +196,7 @@ const WorkspacesViewContent: React.FC = () => {
 
       return basePanels;
     },
-    [context, actions, events, isAuthenticated]
+    [context, actions, overriddenActions, events, isAuthenticated]
   );
 
   // Define layout configuration
@@ -265,6 +301,14 @@ const WorkspacesViewContent: React.FC = () => {
         isOpen={isCreateWorkspaceModalOpen}
         onClose={handleCloseCreateWorkspaceModal}
         onSuccess={handleWorkspaceCreated}
+      />
+
+      {/* Delete Repository Modal */}
+      <DeleteAlexandriaEntryModal
+        isOpen={isDeleteModalOpen}
+        entry={entryToDelete}
+        onClose={handleCloseDeleteModal}
+        onConfirm={handleConfirmDelete}
       />
     </>
   );
