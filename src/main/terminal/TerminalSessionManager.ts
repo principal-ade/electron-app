@@ -3,10 +3,10 @@ import * as os from 'os';
 import { BrowserWindow, MessageChannelMain } from 'electron';
 import { TerminalSession } from './types';
 import { pty } from './utils/ptyLoader';
+import { ownershipManager } from './TerminalOwnershipManager';
 import { agentSessionService } from '../agent-sessions/agentSessionService';
 import { terminalEnvironment } from '../terminalEnvironment';
 import { TerminalAPIEvents } from '../../shared/main-process-api-interfaces/TerminalService';
-import { terminalConfig } from './config';
 
 export class TerminalSessionManager {
   private sessions: Map<string, TerminalSession> = new Map();
@@ -14,8 +14,8 @@ export class TerminalSessionManager {
   private maxSessions = 20;
   private rendererWindows: Set<BrowserWindow> = new Set();
 
-  // MessagePort support
-  private sessionPorts: Map<string, MessageChannelMain> = new Map();
+  // MessagePort support - track ports per session per window
+  private sessionPorts: Map<string, Map<number, MessageChannelMain>> = new Map();
 
   // Renderer window tracking
   addRendererWindow(window: BrowserWindow): void {
@@ -27,13 +27,15 @@ export class TerminalSessionManager {
 
     const cleanup = () => {
       this.rendererWindows.delete(window);
+      this.cleanupWindowPorts(window.id);
+      ownershipManager.cleanupWindow(window.id);
       window.removeListener('closed', cleanup);
     };
 
     window.on('closed', cleanup);
   }
 
-  // Broadcasting
+  // Broadcasting to all renderer windows (for exit events, etc.)
   broadcastToRendererWindows(channel: string, payload: unknown): void {
     for (const rendererWindow of Array.from(this.rendererWindows)) {
       if (rendererWindow.isDestroyed()) {
@@ -52,31 +54,42 @@ export class TerminalSessionManager {
     }
   }
 
-  // Send terminal data only to windows actively viewing this terminal
-  sendToActiveViewers(sessionId: string, data: string): void {
-    const session = this.sessions.get(sessionId);
-    if (!session || session.activeViewers.size === 0) {
-      return; // No one viewing, skip entirely
+  /**
+   * Send terminal data to the owner window only.
+   * This avoids sizing conflicts from multiple windows receiving data.
+   */
+  private sendToOwner(sessionId: string, data: string): void {
+    const ownerWindowId = ownershipManager.getOwner(sessionId);
+    if (ownerWindowId === undefined) {
+      // Only log occasionally to avoid spam
+      if (data.length > 0 && data.charCodeAt(0) !== 27) { // Skip escape sequences
+        console.warn(`[Terminal] No owner for session ${sessionId}, dropping ${data.length} bytes`);
+      }
+      return;
     }
 
-    const channel = this.sessionPorts.get(sessionId);
+    const windowPorts = this.sessionPorts.get(sessionId);
+    if (!windowPorts) {
+      console.warn(`[Terminal] No ports map for session ${sessionId}`);
+      return;
+    }
+
+    const channel = windowPorts.get(ownerWindowId);
     if (!channel) {
-      console.error(
-        `[Terminal] No MessagePort found for session ${sessionId}. Data will be lost. ` +
-        `Active viewers: ${Array.from(session.activeViewers).join(', ')}`,
+      console.warn(
+        `[Terminal] No MessagePort found for owner window ${ownerWindowId} on session ${sessionId}. ` +
+        `Available windows: ${Array.from(windowPorts.keys()).join(', ')}`
       );
       return;
     }
 
     try {
-      // Send data through port1 (which will arrive at port2 in renderer)
       channel.port1.postMessage({ type: 'DATA', data });
     } catch (error) {
       console.error(
         `[Terminal] Failed to send data via MessagePort for session ${sessionId}:`,
         error,
       );
-      // No fallback - let the error surface so we can debug MessagePort issues
     }
   }
 
@@ -98,6 +111,11 @@ export class TerminalSessionManager {
   // Get session by ID
   getSession(sessionId: string): TerminalSession | undefined {
     return this.sessions.get(sessionId);
+  }
+
+  // Check if session exists
+  hasSession(sessionId: string): boolean {
+    return this.sessions.has(sessionId);
   }
 
   // Get all sessions
@@ -199,9 +217,11 @@ export class TerminalSessionManager {
       agentSessionId: activeAgentSessionId || undefined,
       createdAt: now,
       lastActivity: now,
-      activeViewers: new Set(),
     };
     this.sessions.set(sessionId, session);
+
+    // Initialize port tracking for this session
+    this.sessionPorts.set(sessionId, new Map());
 
     // If there's an active AI session, update it to include this terminal
     if (activeAgentSessionId) {
@@ -230,14 +250,15 @@ export class TerminalSessionManager {
       }
     }
 
-    // Handle PTY data
+    // Handle PTY data - send only to owner
     ptyProcess.onData((data: string) => {
-      this.sendToActiveViewers(sessionId, data);
+      session.lastActivity = Date.now();
+      this.sendToOwner(sessionId, data);
     });
 
     // Handle PTY exit
     ptyProcess.onExit(async (exitCode: { exitCode: number }) => {
-      this.broadcastToRendererWindows('terminal:exit', {
+      this.broadcastToRendererWindows(TerminalAPIEvents.ON_EXIT, {
         sessionId,
         code: exitCode.exitCode,
       });
@@ -300,10 +321,14 @@ export class TerminalSessionManager {
 
   // Clean up a session and its repo tracking
   cleanupSession(sessionId: string): void {
-    // Close MessageChannel if it exists
-    this.closeMessageChannel(sessionId);
+    // Close all MessageChannels for this session
+    this.closeAllPortsForSession(sessionId);
+
+    // Clean up ownership
+    ownershipManager.removeSession(sessionId);
 
     this.sessions.delete(sessionId);
+
     // Clean up repo tracking
     for (const [repo, sid] of Array.from(this.sessionsByRepo.entries())) {
       if (sid === sessionId) {
@@ -328,20 +353,21 @@ export class TerminalSessionManager {
     this.sessions.forEach((session, sessionId) => {
       try {
         session.pty.kill();
-        // Close MessageChannel if it exists
-        this.closeMessageChannel(sessionId);
+        this.closeAllPortsForSession(sessionId);
       } catch (_error) {
         // Ignore errors during cleanup
       }
     });
     this.sessions.clear();
     this.sessionsByRepo.clear();
+    this.sessionPorts.clear();
   }
 
   // Write data to a session
   writeToSession(sessionId: string, data: string): void {
     const session = this.sessions.get(sessionId);
     if (session) {
+      session.lastActivity = Date.now();
       session.pty.write(data);
     }
   }
@@ -379,26 +405,64 @@ export class TerminalSessionManager {
   // MessagePort support methods
 
   /**
-   * Create a MessageChannel for a session and transfer port to renderer
+   * Create a MessageChannel for a session and transfer port to renderer.
+   * Also claims ownership for the window.
+   * @deprecated Use createPortForSession instead (matches terminal-testing-app pattern)
    */
   createMessageChannelForSession(sessionId: string, windowId: number): boolean {
-    if (!terminalConfig.enableMessagePorts) {
-      console.log('[Terminal] MessagePorts disabled, skipping channel creation');
+    // Delegate to createPortForSession with claimOwnership=true for backward compat
+    return this.createPortForSession(sessionId, windowId, true);
+  }
+
+  /**
+   * Create and send a new MessagePort for a session to a window.
+   * Matches the terminal-testing-app pattern where ownership is managed separately.
+   *
+   * @param sessionId - The session to create a port for
+   * @param windowId - The window to send the port to
+   * @param claimOwnership - Whether to also claim ownership (default: false)
+   */
+  createPortForSession(sessionId: string, windowId: number, claimOwnership: boolean = false): boolean {
+    console.log(`[Terminal] createPortForSession called: sessionId=${sessionId}, windowId=${windowId}, claimOwnership=${claimOwnership}`);
+
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      console.error(`[Terminal] Cannot create port: session ${sessionId} not found`);
+      console.error(`[Terminal] Available sessions: ${Array.from(this.sessions.keys()).join(', ')}`);
       return false;
     }
 
     const window = BrowserWindow.fromId(windowId);
     if (!window || window.isDestroyed()) {
-      console.error(`[Terminal] Cannot create MessageChannel: window ${windowId} not found`);
+      console.error(`[Terminal] Cannot create port: window ${windowId} not found or destroyed`);
+      console.error(`[Terminal] All windows: ${BrowserWindow.getAllWindows().map(w => w.id).join(', ')}`);
       return false;
     }
+
+    // Check if this window already has a port for this session (matches testing app)
+    const existingPorts = this.sessionPorts.get(sessionId);
+    if (existingPorts?.has(windowId)) {
+      console.log(`[Terminal] Window ${windowId} already has a port for session ${sessionId}`);
+      // Still claim ownership if requested
+      if (claimOwnership) {
+        ownershipManager.claimOwnership(sessionId, windowId);
+      }
+      return true;
+    }
+
+    console.log(`[Terminal] Session and window validated, creating new MessageChannel`);
 
     try {
       // Create MessageChannel
       const channel = new MessageChannelMain();
-      this.sessionPorts.set(sessionId, channel);
 
-      console.log(`[Terminal] Created MessageChannel for session ${sessionId}`);
+      // Store the channel
+      if (!this.sessionPorts.has(sessionId)) {
+        this.sessionPorts.set(sessionId, new Map());
+      }
+      this.sessionPorts.get(sessionId)!.set(windowId, channel);
+
+      console.log(`[Terminal] Created MessageChannel for session ${sessionId} -> window ${windowId}`);
 
       // Start listening on port1 (main process side)
       channel.port1.start();
@@ -409,21 +473,25 @@ export class TerminalSessionManager {
         this.handlePortMessage(sessionId, event.data);
       });
 
-      // Transfer port2 to renderer
-      window.webContents.postMessage(
-        TerminalAPIEvents.PORT_READY,
-        {
-          sessionId,
-          writable: true, // TODO: Check ownership before setting this
-        },
-        [channel.port2],
-      );
+      // Claim ownership only if requested
+      if (claimOwnership) {
+        ownershipManager.claimOwnership(sessionId, windowId);
+      }
 
-      console.log(`[Terminal] Transferred port2 to window ${windowId} for session ${sessionId}`);
+      // Transfer port2 to renderer using 'terminal:port' channel (matches testing app)
+      console.log(`[Terminal] Sending port to window ${windowId} for session ${sessionId}`);
+
+      try {
+        window.webContents.postMessage('terminal:port', sessionId, [channel.port2]);
+        console.log(`[Terminal] ✅ Port sent successfully to window ${windowId} for session ${sessionId}`);
+      } catch (postError) {
+        console.error(`[Terminal] ❌ Failed to send port:`, postError);
+        return false;
+      }
 
       return true;
     } catch (error) {
-      console.error(`[Terminal] Failed to create MessageChannel for session ${sessionId}:`, error);
+      console.error(`[Terminal] Failed to create port for session ${sessionId}:`, error);
       return false;
     }
   }
@@ -441,6 +509,7 @@ export class TerminalSessionManager {
 
     try {
       if (message.type === 'WRITE') {
+        session.lastActivity = Date.now();
         session.pty.write(message.data);
       } else if (message.type === 'RESIZE') {
         session.pty.resize(message.cols, message.rows);
@@ -453,19 +522,38 @@ export class TerminalSessionManager {
   }
 
   /**
-   * Close MessageChannel for a session
+   * Close all MessageChannels for a session
    */
-  closeMessageChannel(sessionId: string): void {
-    const channel = this.sessionPorts.get(sessionId);
-    if (channel) {
-      try {
-        channel.port1.close();
-        // port2 will be closed automatically when port1 closes
-      } catch (error) {
-        console.error(`[Terminal] Error closing MessageChannel for session ${sessionId}:`, error);
+  private closeAllPortsForSession(sessionId: string): void {
+    const windowPorts = this.sessionPorts.get(sessionId);
+    if (windowPorts) {
+      for (const [windowId, channel] of windowPorts.entries()) {
+        try {
+          channel.port1.close();
+        } catch (error) {
+          console.error(`[Terminal] Error closing port for window ${windowId} on session ${sessionId}:`, error);
+        }
       }
       this.sessionPorts.delete(sessionId);
-      console.log(`[Terminal] Closed MessageChannel for session ${sessionId}`);
+      console.log(`[Terminal] Closed all ports for session ${sessionId}`);
+    }
+  }
+
+  /**
+   * Clean up ports for a specific window (called when window closes)
+   */
+  private cleanupWindowPorts(windowId: number): void {
+    for (const [sessionId, windowPorts] of this.sessionPorts.entries()) {
+      const channel = windowPorts.get(windowId);
+      if (channel) {
+        try {
+          channel.port1.close();
+        } catch {
+          // Port may already be closed
+        }
+        windowPorts.delete(windowId);
+        console.log(`[Terminal] Cleaned up port for window ${windowId} on session ${sessionId}`);
+      }
     }
   }
 }

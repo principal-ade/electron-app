@@ -59,6 +59,7 @@ const configuration: webpack.Configuration = {
       (dependency) => {
         // Exclude all Node.js specific packages
         const nodeOnlyPackages = [
+          '@egoist/tipc', // Uses subpath exports only (./main, ./renderer) - must be imported directly
           '@modelcontextprotocol/sdk',
           '@principal-ai/repository-monitoring', // Node.js only watcher library
           '@principal-ai/repository-monitoring-server', // Main process only - contains pre-bundled worker

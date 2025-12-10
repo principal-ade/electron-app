@@ -62,6 +62,7 @@ const configuration: webpack.Configuration = {
       (dependency) => {
         // Exclude all Node.js specific packages
         const nodeOnlyPackages = [
+          '@egoist/tipc', // Uses subpath exports only (./main, ./renderer) - must be imported directly
           '@modelcontextprotocol/sdk',
           '@principal-ai/control-tower-core', // WebSocket/collaboration library - Node.js only, uses node:module
           '@principal-ai/repository-monitoring', // Node.js only watcher library

@@ -568,7 +568,36 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
       },
 
       // Session-specific data subscription (used by TabbedTerminalPanel)
+      // Automatically claims ownership and requests a data port
       onTerminalData: (sessionId: string, callback: (data: string) => void) => {
+        console.info('[RepositoryPanelContext] onTerminalData called for session:', sessionId);
+
+        // First claim ownership, then request data port, then refresh terminal
+        // This matches the terminal-testing-app pattern:
+        // 1. claimTerminalOwnership - so we're the owner and receive data
+        // 2. requestTerminalDataPort - to get the MessageChannel for streaming
+        // 3. refreshTerminal - force redraw since we don't have buffer history
+        TerminalService.claimOwnership(sessionId).then((ownershipResult) => {
+          console.info('[RepositoryPanelContext] Claimed ownership for session:', sessionId, 'result:', ownershipResult);
+
+          // Request the data port regardless of ownership result
+          return TerminalService.requestDataPort(sessionId);
+        }).then((portResult) => {
+          console.info('[RepositoryPanelContext] Requested data port for session:', sessionId, 'result:', portResult);
+
+          // After port is ready, force a refresh to redraw the terminal
+          // This sends Ctrl+L which redraws the prompt/screen
+          setTimeout(() => {
+            TerminalService.refresh(sessionId).then(() => {
+              console.info('[RepositoryPanelContext] Refreshed terminal for session:', sessionId);
+            }).catch((err) => {
+              console.warn('[RepositoryPanelContext] Failed to refresh terminal:', err);
+            });
+          }, 100); // Small delay to ensure port is fully connected
+        }).catch((err) => {
+          console.warn('[RepositoryPanelContext] Failed during reconnection:', err);
+        });
+
         return TerminalService.onDataForSession(sessionId, callback);
       },
 

@@ -3,10 +3,7 @@ import {
   Activity,
   AlertCircle,
   Edit,
-  FileCode,
-  FileEdit,
   FileText,
-  GitCompare,
   GitPullRequest,
   History,
   Image,
@@ -14,7 +11,6 @@ import {
   Network,
   Pencil,
   Search,
-  Users,
 } from 'lucide-react';
 import { RepositorySearchTabPreview } from '../components/repository-maps/RepositorySearchTab';
 import { GitCommitHistoryPanelPreview } from './components/GitCommitHistoryPanel';
@@ -23,11 +19,8 @@ import { GitPullRequestsPanelPreview } from './components/GitPullRequestsPanel';
 import { DrawingsListPanelPreview } from './components/DrawingsListPanel';
 import { AgentEventsPanelPreview } from './components/AgentEventsPanel';
 import { AgentSessionsPanelPreview } from './components/AgentSessionsPanel';
-import { FilePreviewPanelPreview } from './components/FilePreviewPanel';
 import { MarkdownRenderingPanelPreview } from './components/MarkdownRenderingPanel';
 import { AlexandriaDrawingPanelPreview } from './components/AlexandriaDrawingPanel';
-import { GitDiffPanelPreview } from './components/GitDiffPanel';
-import { MDXEditorPanelPreview } from './components/MDXEditorPanel';
 
 export interface PanelPreviewMetadata {
   icon: React.ReactNode;
@@ -72,10 +65,6 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
     label: 'Agent Sessions',
     description: 'Summaries of recent agent activity grouped by session.',
   },
-  codeViewer: {
-    icon: <FileCode size={16} />,
-    preview: <FilePreviewPanelPreview />,
-  },
   markdownViewer: {
     icon: <FileText size={16} />,
     preview: <MarkdownRenderingPanelPreview />,
@@ -89,16 +78,6 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
     preview: <AlexandriaDrawingPanelPreview />,
     label: 'Excalidraw Editor',
     description: 'Create and edit excalidraw drawings saved to Memory Palace.',
-  },
-  gitDiff: {
-    icon: <GitCompare size={16} />,
-    preview: <GitDiffPanelPreview />,
-  },
-  mdxEditor: {
-    icon: <FileEdit size={16} />,
-    preview: <MDXEditorPanelPreview />,
-    label: 'MDX Editor',
-    description: 'Rich markdown editor with live preview and formatting tools.',
   },
   graphsList: {
     icon: <Network size={16} />,

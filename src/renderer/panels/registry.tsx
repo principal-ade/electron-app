@@ -12,11 +12,9 @@ import {
 } from '../../shared/panels/repositoryPanelCatalog';
 import { GitIssuesPanel } from './components/GitIssuesPanel';
 import { GitPullRequestsPanel } from './components/GitPullRequestsPanel';
-import { GitDiffPanel } from './components/GitDiffPanel';
 import { AlexandriaDrawingPanel } from './components/AlexandriaDrawingPanel';
 import { DrawingsListPanel } from './components/DrawingsListPanel';
 import { GitCommitHistoryPanel } from './components/GitCommitHistoryPanel';
-import { MDXEditorPanel } from './components/MDXEditorPanel';
 
 export interface RepositoryPanelRenderProps {
   context: RepositoryPanelContextValue;
@@ -43,19 +41,8 @@ const panelRenderers: Partial<
   gitHistory: ({ context }) => (
     <GitCommitHistoryPanel repositoryPath={context.repositoryPath} />
   ),
-  gitDiff: ({ context }) => (
-    <GitDiffPanel relativeFilePath={null} repositoryPath={context.repositoryPath} />
-  ),
   excalidrawEditor: () => <AlexandriaDrawingPanel />,
   drawings: () => <DrawingsListPanel />,
-  mdxEditor: () => (
-    <MDXEditorPanel
-      filePath={null}
-      onSave={(content) => {
-        console.warn('Markdown saved:', content);
-      }}
-    />
-  ),
 };
 
 export const repositoryPanelDefinitions = repositoryPanelCatalog.map(

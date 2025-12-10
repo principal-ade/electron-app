@@ -1,29 +1,22 @@
 import { BrowserWindow } from 'electron';
-import { TerminalSessionManager } from './TerminalSessionManager';
-import { TerminalOwnershipManager } from './TerminalOwnershipManager';
-import { TerminalWindowManager } from './TerminalWindowManager';
+import { getSessionManagerInstance } from './sessionManagerSingleton';
 import { setupSessionHandlers } from './handlers/sessionHandlers';
 import { setupOwnershipHandlers } from './handlers/ownershipHandlers';
 import { setupCommandHandlers } from './handlers/commandHandlers';
-import { setupWindowHandlers } from './handlers/windowHandlers';
 import { isPtyAvailable } from './utils/ptyLoader';
+import type { TerminalSessionManager } from './TerminalSessionManager';
 
 /**
- * Main TerminalManager class that coordinates between session management,
- * ownership tracking, and window management.
+ * Main TerminalManager class that coordinates terminal session management.
+ * Uses the singleton session manager to share state with TIPC router.
+ * Ownership is handled by the singleton ownershipManager.
  */
 class TerminalManager {
   private sessionManager: TerminalSessionManager;
-  private ownershipManager: TerminalOwnershipManager;
-  private windowManager: TerminalWindowManager;
 
   constructor() {
-    this.sessionManager = new TerminalSessionManager();
-    this.ownershipManager = new TerminalOwnershipManager();
-    this.windowManager = new TerminalWindowManager(
-      this.sessionManager.broadcastToRendererWindows.bind(this.sessionManager),
-    );
-
+    // Use singleton to share state with TIPC router
+    this.sessionManager = getSessionManagerInstance();
     this.setupIPCHandlers();
   }
 
@@ -42,10 +35,9 @@ class TerminalManager {
    * Set up all IPC handlers for terminal functionality
    */
   private setupIPCHandlers(): void {
-    setupSessionHandlers(this.sessionManager, this.ownershipManager);
-    setupOwnershipHandlers(this.sessionManager, this.ownershipManager);
+    setupSessionHandlers(this.sessionManager);
+    setupOwnershipHandlers(this.sessionManager);
     setupCommandHandlers(this.sessionManager);
-    setupWindowHandlers(this.sessionManager, this.windowManager);
   }
 
   /**
@@ -85,11 +77,10 @@ class TerminalManager {
   }
 
   /**
-   * Clean up all sessions and windows
+   * Clean up all sessions
    */
   destroyAllSessions(): void {
     this.sessionManager.destroyAllSessions();
-    this.windowManager.closeAllWindows();
   }
 }
 

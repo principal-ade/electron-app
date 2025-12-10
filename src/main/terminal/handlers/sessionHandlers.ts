@@ -1,18 +1,18 @@
 import { ipcMain, BrowserWindow, IpcMainInvokeEvent } from 'electron';
 import { TerminalSessionManager } from '../TerminalSessionManager';
-import { TerminalOwnershipManager } from '../TerminalOwnershipManager';
+import { ownershipManager } from '../TerminalOwnershipManager';
 import { TerminalAPIEvents } from '../../../shared/main-process-api-interfaces/TerminalService';
 import { TerminalInfo } from '../../../shared/main-process-api-interfaces/TerminalService';
 import { isPtyAvailable } from '../utils/ptyLoader';
 
 export function setupSessionHandlers(
   sessionManager: TerminalSessionManager,
-  ownershipManager: TerminalOwnershipManager,
 ): void {
   // Get or create a terminal session for a repository
   ipcMain.handle(
     'terminal:getOrCreate',
     async (event: IpcMainInvokeEvent, directory: string, context?: string) => {
+      console.log(`[Terminal] getOrCreate called: directory=${directory}, context=${context}`);
       try {
         // Check if node-pty is available
         if (!isPtyAvailable()) {
@@ -35,6 +35,9 @@ export function setupSessionHandlers(
             `[Terminal] REUSING existing session ${existingSession.id} for ${sessionKey}`,
           );
           sessionId = existingSession.id;
+
+          // Create MessageChannel for the window and claim ownership
+          sessionManager.createMessageChannelForSession(sessionId, senderWindowId);
         } else {
           console.log(
             `[Terminal] Creating NEW session for ${sessionKey} (current sessions: ${sessionManager.getAllSessions().size})`,
@@ -52,20 +55,9 @@ export function setupSessionHandlers(
 
           // Track by repository+context
           sessionManager.trackSessionByRepo(sessionKey, sessionId);
-        }
 
-        // Automatically claim ownership for the calling window
-        const session = sessionManager.getSession(sessionId);
-        if (session) {
-          ownershipManager.handleAutomaticOwnershipClaim(
-            session,
-            senderWindowId,
-          );
-
-          // Create MessageChannel if enabled and this is a new session
-          if (!existingSession) {
-            sessionManager.createMessageChannelForSession(sessionId, senderWindowId);
-          }
+          // Create MessageChannel for the window and claim ownership
+          sessionManager.createMessageChannelForSession(sessionId, senderWindowId);
         }
 
         return sessionId;
@@ -107,17 +99,8 @@ export function setupSessionHandlers(
         // Create new session with context
         const sessionId = await sessionManager.createSession(directory, context);
 
-        // Automatically claim ownership for the calling window
-        const session = sessionManager.getSession(sessionId);
-        if (session) {
-          ownershipManager.handleAutomaticOwnershipClaim(
-            session,
-            senderWindowId,
-          );
-
-          // Create MessageChannel if enabled
-          sessionManager.createMessageChannelForSession(sessionId, senderWindowId);
-        }
+        // Create MessageChannel for the window and claim ownership
+        sessionManager.createMessageChannelForSession(sessionId, senderWindowId);
 
         return sessionId;
       } catch (error) {
@@ -162,6 +145,11 @@ export function setupSessionHandlers(
           );
         }
 
+        const senderWindowId = BrowserWindow.fromWebContents(event.sender)?.id;
+        if (!senderWindowId) {
+          throw new Error('Could not determine sender window ID');
+        }
+
         // Create new session with command
         const sessionId = await sessionManager.createSession(
           directory,
@@ -169,17 +157,8 @@ export function setupSessionHandlers(
           command,
         );
 
-        // Automatically claim ownership for the calling window
-        const senderWindowId = BrowserWindow.fromWebContents(event.sender)?.id;
-        if (senderWindowId) {
-          const session = sessionManager.getSession(sessionId);
-          if (session) {
-            ownershipManager.handleAutomaticOwnershipClaim(
-              session,
-              senderWindowId,
-            );
-          }
-        }
+        // Create MessageChannel for the window and claim ownership
+        sessionManager.createMessageChannelForSession(sessionId, senderWindowId);
 
         console.log(
           `Terminal session created successfully with command: ${sessionId}`,
@@ -220,17 +199,19 @@ export function setupSessionHandlers(
   ipcMain.handle(TerminalAPIEvents.LIST, async (_event: IpcMainInvokeEvent) => {
     const terminals: TerminalInfo[] = Array.from(
       sessionManager.getAllSessions().entries(),
-    ).map(([id, session]) => ({
-      id,
-      directory: session.directory,
-      context: session.context,
-      agentSessionId: session.agentSessionId,
-      createdAt: session.createdAt,
-      lastActivity: session.lastActivity,
-      status: 'active' as const,
-      ownedByWindowId: session.ownedByWindowId,
-      ownershipClaimedAt: session.ownershipClaimedAt,
-    }));
+    ).map(([id, session]) => {
+      const ownerWindowId = ownershipManager.getOwner(id);
+      return {
+        id,
+        directory: session.directory,
+        context: session.context,
+        agentSessionId: session.agentSessionId,
+        createdAt: session.createdAt,
+        lastActivity: session.lastActivity,
+        status: 'active' as const,
+        ownedByWindowId: ownerWindowId,
+      };
+    });
     return terminals;
   });
 }

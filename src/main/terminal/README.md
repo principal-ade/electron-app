@@ -76,16 +76,16 @@ Phase 1 implements MessageChannel-based data streaming while keeping PTY process
 ```
 src/main/terminal/
 ├── index.ts                      # Main TerminalManager (coordinator)
-├── config.ts                     # Feature flags and configuration
 ├── types.ts                      # Shared TypeScript interfaces
 ├── TerminalSessionManager.ts     # Session lifecycle & MessageChannels
 ├── TerminalOwnershipManager.ts   # Ownership and viewer tracking
-├── TerminalWindowManager.ts      # Pop-out window management
+├── sessionManagerSingleton.ts    # Singleton for shared state with TIPC
 ├── handlers/                     # IPC handler modules
 │   ├── sessionHandlers.ts        # create/getOrCreate/destroy
 │   ├── ownershipHandlers.ts      # claim/release/check
-│   ├── commandHandlers.ts        # write/resize/refresh
-│   └── windowHandlers.ts         # pop-out/focus
+│   └── commandHandlers.ts        # write/resize/refresh
+├── tipc/                         # TIPC router for type-safe RPC
+│   └── terminalRouter.ts         # Terminal TIPC procedures
 ├── utils/
 │   └── ptyLoader.ts              # Dynamic node-pty loading
 └── phase2-future/                # Phase 2 foundation (deferred)
@@ -124,28 +124,14 @@ Manages:
 - Ownership transfers
 - Viewer management
 
-### TerminalWindowManager
-Handles:
-- Pop-out terminal windows
-- Window positioning and sizing
-- Window lifecycle events
-
-### Configuration (`config.ts`)
-Feature flags:
-- `enableMessagePorts` - Enable/disable MessagePort mode (default: true)
-- `maxSessions` - Concurrent session limit (default: 20)
-- `outputBufferSize` - Buffer size for future replay (default: 1000)
+### TIPC Router (`tipc/terminalRouter.ts`)
+Type-safe RPC for terminal operations:
+- Session management (create, destroy, list)
+- Ownership management (check, claim, release)
+- Data port management (request MessagePort for streaming)
+- Follows the terminal-testing-app pattern for reconnection
 
 ## Usage
-
-### Enabling/Disabling MessagePorts
-
-**Enabled by default** for testing and production use.
-
-To disable:
-```bash
-TERMINAL_ENABLE_MESSAGE_PORTS=false npm start
-```
 
 ### Monitoring
 
@@ -212,7 +198,6 @@ Foundation code is preserved in `phase2-future/worker/` for future implementatio
 ### Verification
 ```bash
 # Should see these logs:
-[Terminal Config] Configuration loaded: { enableMessagePorts: true, ... }
 [Terminal] Created MessageChannel for session <id>
 [TerminalAPI] Using existing MessagePort for session <id>
 ```

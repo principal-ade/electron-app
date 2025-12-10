@@ -678,6 +678,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
 
       // Terminal actions
       createTerminalSession: async (options?: { cwd?: string; command?: string; context?: string }) => {
+        console.info('[PanelContext] createTerminalSession called with options:', options);
         // Use the provided context (from TabbedTerminalPanel) or fall back to the provider's terminalContext
         const sessionContext = options?.context || terminalContext;
         if (!sessionContext) {
@@ -744,8 +745,10 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
 
       // MessagePort-based terminal data streaming (high-performance path)
       requestTerminalDataPort: async (sessionId: string) => {
-        console.info('[PanelContext] Requesting terminal data port for session:', sessionId);
-        return TerminalService.requestDataPort(sessionId);
+        console.info('[PanelContext] requestTerminalDataPort called for session:', sessionId);
+        const result = await TerminalService.requestDataPort(sessionId);
+        console.info('[PanelContext] requestTerminalDataPort result:', result);
+        return result;
       },
 
       onTerminalPortReady: (callback) => {
@@ -758,7 +761,10 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       },
 
       claimTerminalOwnership: async (sessionId: string, force?: boolean) => {
-        return TerminalService.claimOwnership(sessionId, force);
+        console.info('[PanelContext] claimTerminalOwnership called for session:', sessionId, 'force:', force);
+        const result = await TerminalService.claimOwnership(sessionId, force);
+        console.info('[PanelContext] claimTerminalOwnership result:', result);
+        return result;
       },
 
       releaseTerminalOwnership: async (sessionId: string) => {
@@ -774,13 +780,44 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       },
 
       // Session-specific data subscription (used by TabbedTerminalPanel)
+      // Automatically claims ownership and requests a data port
       onTerminalData: (sessionId: string, callback: (data: string) => void) => {
+        console.info('[PanelContext] onTerminalData called for session:', sessionId);
+
+        // First claim ownership, then request data port, then refresh terminal
+        // This matches the terminal-testing-app pattern:
+        // 1. claimTerminalOwnership - so we're the owner and receive data
+        // 2. requestTerminalDataPort - to get the MessageChannel for streaming
+        // 3. refreshTerminal - force redraw since we don't have buffer history
+        TerminalService.claimOwnership(sessionId).then((ownershipResult) => {
+          console.info('[PanelContext] Claimed ownership for session:', sessionId, 'result:', ownershipResult);
+
+          // Request the data port regardless of ownership result
+          return TerminalService.requestDataPort(sessionId);
+        }).then((portResult) => {
+          console.info('[PanelContext] Requested data port for session:', sessionId, 'result:', portResult);
+
+          // After port is ready, force a refresh to redraw the terminal
+          // This sends Ctrl+L which redraws the prompt/screen
+          setTimeout(() => {
+            TerminalService.refresh(sessionId).then(() => {
+              console.info('[PanelContext] Refreshed terminal for session:', sessionId);
+            }).catch((err) => {
+              console.warn('[PanelContext] Failed to refresh terminal:', err);
+            });
+          }, 100); // Small delay to ensure port is fully connected
+        }).catch((err) => {
+          console.warn('[PanelContext] Failed during reconnection:', err);
+        });
+
         return TerminalService.onDataForSession(sessionId, callback);
       },
 
       // List terminal sessions (used by TabbedTerminalPanel for restoration)
       listTerminalSessions: async () => {
+        console.info('[PanelContext] listTerminalSessions called');
         const sessions = await TerminalService.list();
+        console.info('[PanelContext] listTerminalSessions found:', sessions.length, 'sessions');
         // Map to TerminalSessionInfo format (directory -> cwd)
         return sessions.map((s) => ({
           id: s.id,

@@ -162,6 +162,7 @@
   },
   "dependencies": {
     "@a24z/callimachus": "^0.1.4",
+    "@egoist/tipc": "^0.3.2",
     "@electron/notarize": "^3.0.0",
     "@excalidraw/excalidraw": "^0.18.0",
     "@excalidraw/math": "^0.18.0-f0063e113",

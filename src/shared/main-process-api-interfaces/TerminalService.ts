@@ -6,16 +6,11 @@ export enum TerminalAPIEvents {
   RESIZE = 'terminal:resize',
   DESTROY = 'terminal:destroy',
   LIST = 'terminal:list',
-  POP_OUT = 'terminal:popOut',
-  FOCUS_WINDOW = 'terminal:focusWindow',
   REFRESH = 'terminal:refresh',
   ON_DATA = 'terminal:data',
   ON_EXIT = 'terminal:exit',
-  ON_WINDOW_READY = 'terminal:window-ready',
-  ON_WINDOW_CLOSE = 'terminal:window-close',
   CHECK_COMMAND = 'terminal:checkCommand',
   CLEAR_PATH_CACHE = 'terminal:clearPathCache',
-  GET_OPEN_WINDOWS = 'terminal:getOpenWindows',
   CHECK_OWNERSHIP = 'terminal:checkOwnership',
   CLAIM_OWNERSHIP = 'terminal:claimOwnership',
   RELEASE_OWNERSHIP = 'terminal:releaseOwnership',
@@ -48,6 +43,7 @@ export interface TerminalOwnershipResult {
   success: boolean;
   reason?: string;
   ownedByWindowId?: number;
+  previousOwner?: number;
 }
 export interface TerminalData {
   sessionId: string;
@@ -82,27 +78,8 @@ export interface TerminalAPI {
   resize: (sessionId: string, cols: number, rows: number, force?: boolean) => Promise<void>;
   destroy: (sessionId: string) => Promise<void>;
   list: () => Promise<Array<TerminalInfo>>;
-  popOut: (sessionId: string) => Promise<{ windowId: number }>;
-  focusWindow: (windowId: number) => Promise<void>;
-  getOpenWindows: () => Promise<
-    Array<{ terminalId: string; windowId: number }>
-  >;
   onDataForSession: (sessionId: string, callback: (data: string) => void) => () => void;
   onExit: (callback: (exit: TerminalExit) => void) => () => void;
-  onWindowReady: (
-    callback: (data: {
-      terminalId: string;
-      agentSessionId?: string;
-      windowId: number;
-    }) => void,
-  ) => () => void;
-  onWindowClose: (
-    callback: (data: {
-      terminalId: string;
-      agentSessionId?: string;
-      windowId: number;
-    }) => void,
-  ) => () => void;
   refresh: (sessionId: string) => Promise<boolean>;
   checkOwnership: (sessionId: string) => Promise<TerminalOwnershipStatus>;
   claimOwnership: (

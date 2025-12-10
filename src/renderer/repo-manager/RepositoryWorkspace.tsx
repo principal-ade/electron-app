@@ -71,13 +71,10 @@ import { GitIssuesPanel } from '../panels/components/GitIssuesPanel';
 import { GitPullRequestsPanel } from '../panels/components/GitPullRequestsPanel';
 import { GitCommitHistoryPanel } from '../panels/components/GitCommitHistoryPanel';
 import { MarkdownRenderingPanel, ExcalidrawPanel } from './panels';
-import { FilePreviewPanel } from '../panels/components/FilePreviewPanel';
-import { GitDiffPanel } from '../panels/components/GitDiffPanel';
 import { AgentEventsPanel } from '../panels/components/AgentEventsPanel';
 import { AgentSessionsPanel } from '../panels/components/AgentSessionsPanel';
 import { useHighlightLayers } from '../contexts/HighlightLayersContext';
 import { DrawingsListPanel } from '../panels/components/DrawingsListPanel';
-import { MDXEditorPanel } from '../panels/components/MDXEditorPanel';
 import { panelPreviewRegistry } from '../panels/panelPreviews';
 import { repositoryPanelDefinitions } from '../panels/registry';
 import { gitSyncConnectionManager } from '../services/git-sync/GitSyncConnectionManager';
@@ -1740,25 +1737,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
             />
           </RepositoryPanelProvider>
         ),
-        mdxEditor: (
-          <RepositoryPanelProvider
-            repositoryPath={
-              selectedSource?.type === 'local' ? selectedSource.location : null
-            }
-            actions={{ openFile: handleSearchFileSelect }}
-          >
-            <MDXEditorPanel
-              variant="tab"
-              filePath={
-                selectedDocPath &&
-                (selectedDocPath.endsWith('.md') ||
-                  selectedDocPath.endsWith('.mdx'))
-                  ? selectedDocPath
-                  : null
-              }
-            />
-          </RepositoryPanelProvider>
-        ),
       };
       return map;
     }, [
@@ -1886,13 +1864,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
         visible: true,
         content: panelContentMap.mcpTasks,
       },
-      {
-        id: 'mdxEditor',
-        label: 'MDX Editor',
-        icon: <FileText size={14} />,
-        visible: true,
-        content: panelContentMap.mdxEditor,
-      },
     ];
 
     // Create toolbar items
@@ -1975,35 +1946,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     }, [visibleTabs, activeTab, handleTabChange]);
 
     // Memoize viewer panels
-    const codeViewerPanel = useMemo(() => {
-      return (
-        <FilePreviewPanel
-          filePath={selectedCodeFile}
-          source={selectedSource}
-          contentProvider={fileViewerContentProvider}
-          onClose={() => {
-            setSelectedCodeFile(null);
-            setSelectedFile(null);
-          }}
-        />
-      );
-    }, [selectedCodeFile, selectedSource, fileViewerContentProvider]);
-
-    const gitDiffViewerPanel = useMemo(() => {
-      return (
-        <GitDiffPanel
-          relativeFilePath={selectedDiffFile?.path ?? null}
-          repositoryPath={
-            selectedSource?.type === 'local' ? selectedSource.location : null
-          }
-          status={selectedDiffFile?.status}
-          onClose={() => {
-            setSelectedDiffFile(null);
-          }}
-        />
-      );
-    }, [selectedDiffFile, selectedSource]);
-
     const markdownViewerPanel = useMemo(() => {
       const shouldShow = selectedDocType !== 'excalidraw';
       return (
@@ -2146,24 +2088,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                 // Create all panel definitions
                 const allPanels: PanelDefinitionWithContent[] = [
                   ...leftPanelTabs,
-                  {
-                    id: 'codeViewer',
-                    label: 'Code Viewer',
-                    content: codeViewerPanel,
-                    icon: panelPreviewRegistry.codeViewer?.icon,
-                  },
-                  {
-                    id: 'gitDiff',
-                    label: 'Git Diff',
-                    content: gitDiffViewerPanel,
-                    icon: panelPreviewRegistry.gitDiff?.icon,
-                  },
-                  {
-                    id: 'gitDiffViewer',
-                    label: 'Diff Viewer',
-                    content: gitDiffViewerPanel,
-                    icon: panelPreviewRegistry.gitDiff?.icon,
-                  },
                   {
                     id: 'markdownViewer',
                     label: 'Markdown Viewer',

@@ -8,8 +8,20 @@ import type {
   TerminalOwnershipResult,
 } from '../../shared/main-process-api-interfaces/TerminalService';
 
-// Global port registry - stores MessagePorts for sessions
+// ============================================
+// Terminal MessagePort Management
+// ============================================
+
+// Store active MessagePorts by session ID
 const sessionPorts = new Map<string, MessagePort>();
+
+// Store data subscribers by session ID (allows subscribing before port arrives)
+const terminalSubscribers = new Map<string, Set<(data: string) => void>>();
+
+// Store ownership lost subscribers
+const ownershipLostSubscribers = new Set<
+  (data: { sessionId: string; newOwnerWindowId: number }) => void
+>();
 
 // Set up global PORT_READY listener immediately
 ipcRenderer.on(
@@ -19,15 +31,65 @@ ipcRenderer.on(
     data: { sessionId: string; writable: boolean; ownershipToken?: string },
   ) => {
     const port = event.ports[0];
-    if (port) {
-      console.info(`[TerminalAPI] Received MessagePort for session ${data.sessionId}`);
-      sessionPorts.set(data.sessionId, port);
-      port.start(); // Start the port immediately
-    } else {
-      console.warn(`[TerminalAPI] PORT_READY event for ${data.sessionId} but no port found`);
+    if (!port) {
+      console.warn(
+        `[TerminalAPI] PORT_READY event for ${data.sessionId} but no port found`,
+      );
+      return;
+    }
+
+    console.info(
+      `[TerminalAPI] Received MessagePort for session ${data.sessionId}`,
+    );
+
+    // Store the port
+    sessionPorts.set(data.sessionId, port);
+
+    // Start the port
+    port.start();
+
+    // Route incoming data to subscribers
+    port.onmessage = (e: MessageEvent) => {
+      if (e.data?.type === 'DATA') {
+        const subscribers = terminalSubscribers.get(data.sessionId);
+        if (subscribers && subscribers.size > 0) {
+          subscribers.forEach((cb) => cb(e.data.data));
+        }
+      } else if (e.data?.type === 'EXIT') {
+        console.log(`[TerminalAPI] Terminal session ${data.sessionId} exited`);
+        // Clean up on exit
+        sessionPorts.delete(data.sessionId);
+        terminalSubscribers.delete(data.sessionId);
+      }
+    };
+
+    // Log if there are already subscribers waiting
+    const existingSubscribers = terminalSubscribers.get(data.sessionId);
+    if (existingSubscribers && existingSubscribers.size > 0) {
+      console.info(
+        `[TerminalAPI] Port ready, ${existingSubscribers.size} subscriber(s) waiting for session ${data.sessionId}`,
+      );
     }
   },
 );
+
+// Set up ownership lost listener
+ipcRenderer.on(
+  TerminalAPIEvents.OWNERSHIP_LOST,
+  (
+    _event: Electron.IpcRendererEvent,
+    data: { sessionId: string; newOwnerWindowId: number },
+  ) => {
+    console.log(
+      `[TerminalAPI] Ownership lost for session ${data.sessionId}, new owner: ${data.newOwnerWindowId}`,
+    );
+    ownershipLostSubscribers.forEach((cb) => cb(data));
+  },
+);
+
+// ============================================
+// Terminal API Implementation
+// ============================================
 
 export const terminalAPI: TerminalAPI = {
   create: async (directory: string, context?: string): Promise<string> => {
@@ -64,7 +126,13 @@ export const terminalAPI: TerminalAPI = {
     rows: number,
     force?: boolean,
   ): Promise<void> => {
-    return ipcRenderer.invoke(TerminalAPIEvents.RESIZE, sessionId, cols, rows, force);
+    return ipcRenderer.invoke(
+      TerminalAPIEvents.RESIZE,
+      sessionId,
+      cols,
+      rows,
+      force,
+    );
   },
 
   destroy: async (sessionId: string): Promise<void> => {
@@ -75,49 +143,36 @@ export const terminalAPI: TerminalAPI = {
     return ipcRenderer.invoke(TerminalAPIEvents.LIST);
   },
 
-  popOut: async (sessionId: string): Promise<{ windowId: number }> => {
-    return ipcRenderer.invoke(TerminalAPIEvents.POP_OUT, sessionId);
-  },
-
-  focusWindow: async (windowId: number): Promise<void> => {
-    return ipcRenderer.invoke(TerminalAPIEvents.FOCUS_WINDOW, windowId);
-  },
-
-  getOpenWindows: async (): Promise<
-    Array<{ terminalId: string; windowId: number }>
-  > => {
-    return ipcRenderer.invoke(TerminalAPIEvents.GET_OPEN_WINDOWS);
-  },
-
-  // Session-specific data subscription - only receives data for this specific session
-  // Requires MessagePort - no legacy IPC fallback
+  // Session-specific data subscription
+  // Uses subscriber pattern - can subscribe before port arrives
   onDataForSession: (sessionId: string, callback: (data: string) => void) => {
-    // Check if we have a MessagePort for this session
-    const existingPort = sessionPorts.get(sessionId);
-    if (!existingPort) {
-      console.error(
-        `[TerminalAPI] No MessagePort available for session ${sessionId}. ` +
-        `Data subscription will not receive any data. ` +
-        `Available ports: ${Array.from(sessionPorts.keys()).join(', ') || 'none'}`,
-      );
-      // Return a no-op cleanup function
-      return () => {};
+    // Initialize subscriber set for this session if needed
+    if (!terminalSubscribers.has(sessionId)) {
+      terminalSubscribers.set(sessionId, new Set());
     }
 
-    console.info(`[TerminalAPI] Using MessagePort for session ${sessionId}`);
+    // Add the callback to subscribers
+    terminalSubscribers.get(sessionId)!.add(callback);
 
-    // Listen for data on the MessagePort
-    const portListener = (event: MessageEvent) => {
-      const message = event.data;
-      if (message && message.type === 'DATA') {
-        callback(message.data);
-      }
-    };
-    existingPort.addEventListener('message', portListener);
+    const hasPort = sessionPorts.has(sessionId);
+    console.info(
+      `[TerminalAPI] Subscribed to terminal data for session ${sessionId} (port ${hasPort ? 'ready' : 'pending'})`,
+    );
 
-    // Return cleanup function for port
+    // Return unsubscribe function
     return () => {
-      existingPort.removeEventListener('message', portListener);
+      const subscribers = terminalSubscribers.get(sessionId);
+      if (subscribers) {
+        subscribers.delete(callback);
+        console.info(
+          `[TerminalAPI] Unsubscribed from terminal data for session ${sessionId}`,
+        );
+
+        // Clean up empty subscriber sets
+        if (subscribers.size === 0) {
+          terminalSubscribers.delete(sessionId);
+        }
+      }
     };
   },
 
@@ -127,40 +182,6 @@ export const terminalAPI: TerminalAPI = {
     ipcRenderer.on(TerminalAPIEvents.ON_EXIT, listener);
     return () => {
       ipcRenderer.removeListener(TerminalAPIEvents.ON_EXIT, listener);
-    };
-  },
-
-  onWindowReady: (
-    callback: (data: {
-      terminalId: string;
-      agentSessionId?: string;
-      windowId: number;
-    }) => void,
-  ) => {
-    const listener = (
-      _event: Electron.IpcRendererEvent,
-      data: { terminalId: string; agentSessionId?: string; windowId: number },
-    ) => callback(data);
-    ipcRenderer.on(TerminalAPIEvents.ON_WINDOW_READY, listener);
-    return () => {
-      ipcRenderer.removeListener(TerminalAPIEvents.ON_WINDOW_READY, listener);
-    };
-  },
-
-  onWindowClose: (
-    callback: (data: {
-      terminalId: string;
-      agentSessionId?: string;
-      windowId: number;
-    }) => void,
-  ) => {
-    const listener = (
-      _event: Electron.IpcRendererEvent,
-      data: { terminalId: string; agentSessionId?: string; windowId: number },
-    ) => callback(data);
-    ipcRenderer.on(TerminalAPIEvents.ON_WINDOW_CLOSE, listener);
-    return () => {
-      ipcRenderer.removeListener(TerminalAPIEvents.ON_WINDOW_CLOSE, listener);
     };
   },
 
@@ -194,13 +215,12 @@ export const terminalAPI: TerminalAPI = {
   onOwnershipLost: (
     callback: (data: { sessionId: string; newOwnerWindowId: number }) => void,
   ) => {
-    const listener = (
-      _event: Electron.IpcRendererEvent,
-      data: { sessionId: string; newOwnerWindowId: number },
-    ) => callback(data);
-    ipcRenderer.on(TerminalAPIEvents.OWNERSHIP_LOST, listener);
+    ownershipLostSubscribers.add(callback);
+    console.info('[TerminalAPI] Subscribed to ownership lost events');
+
     return () => {
-      ipcRenderer.removeListener(TerminalAPIEvents.OWNERSHIP_LOST, listener);
+      ownershipLostSubscribers.delete(callback);
+      console.info('[TerminalAPI] Unsubscribed from ownership lost events');
     };
   },
 
@@ -214,13 +234,9 @@ export const terminalAPI: TerminalAPI = {
       event: Electron.IpcRendererEvent,
       data: { sessionId: string; writable: boolean; ownershipToken?: string },
     ) => {
-      // The first port in the event.ports array is our MessagePort
       const port = event.ports[0];
       if (port) {
-        console.info('[TerminalAPI] Received MessagePort for session:', data.sessionId);
         callback(data, port);
-      } else {
-        console.warn('[TerminalAPI] PORT_READY event received but no port found');
       }
     };
     ipcRenderer.on(TerminalAPIEvents.PORT_READY, listener);
@@ -229,7 +245,9 @@ export const terminalAPI: TerminalAPI = {
     };
   },
 
-  requestDataPort: async (sessionId: string): Promise<{ success: boolean; reason?: string }> => {
+  requestDataPort: async (
+    sessionId: string,
+  ): Promise<{ success: boolean; reason?: string }> => {
     return ipcRenderer.invoke(TerminalAPIEvents.REQUEST_DATA_PORT, sessionId);
   },
 };

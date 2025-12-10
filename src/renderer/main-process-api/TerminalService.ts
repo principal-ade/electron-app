@@ -1,23 +1,42 @@
-import {
-  TerminalExit,
+/**
+ * Terminal Service using TIPC
+ *
+ * This service uses TIPC for type-safe RPC to the main process,
+ * matching the terminal-testing-app implementation.
+ */
+
+import { terminalClient, onTerminalData, onOwnershipLost } from '../tipc/terminalClient';
+import type {
   TerminalInfo,
   TerminalOwnershipStatus,
   TerminalOwnershipResult,
   RequestDataPortResult,
-  PortReadyData,
 } from '../../shared/main-process-api-interfaces/TerminalService';
 
 export class TerminalService {
   static async list(): Promise<TerminalInfo[]> {
-    return window.mainProcess.terminal.list();
+    const sessions = await terminalClient.listTerminalSessions();
+    // Map to TerminalInfo format
+    return sessions.map((s) => ({
+      id: s.id,
+      directory: s.directory || s.cwd || '',
+      context: s.context,
+      agentSessionId: s.agentSessionId,
+      createdAt: s.createdAt,
+      lastActivity: s.lastActivity,
+      status: (s.status as 'active' | 'disconnected') || 'active',
+      ownedByWindowId: s.ownedByWindowId,
+    }));
   }
 
   static async create(dir: string, context?: string): Promise<string> {
-    return window.mainProcess.terminal.create(dir, context);
+    return terminalClient.createTerminalSession({ cwd: dir, context });
   }
 
   static async getOrCreate(dir: string, context?: string): Promise<string> {
-    return window.mainProcess.terminal.getOrCreate(dir, context);
+    // For TIPC, we use createTerminalSession which handles creation
+    // The session manager will reuse existing sessions based on context
+    return terminalClient.createTerminalSession({ cwd: dir, context });
   }
 
   static async createWithCommand(
@@ -25,117 +44,92 @@ export class TerminalService {
     command: string,
     context?: string,
   ): Promise<string> {
-    return window.mainProcess.terminal.createWithCommand(dir, command, context);
+    return terminalClient.createTerminalSession({ cwd: dir, command, context });
   }
 
   static async destroy(id: string): Promise<void> {
-    return window.mainProcess.terminal.destroy(id);
+    return terminalClient.destroyTerminalSession({ sessionId: id });
   }
 
   static async write(id: string, data: string): Promise<void> {
-    return window.mainProcess.terminal.write(id, data);
+    return terminalClient.writeToTerminal({ sessionId: id, data });
   }
 
+  /**
+   * Subscribe to terminal data for a specific session.
+   * Uses preload's MessagePort abstraction (matches testing app).
+   */
   static onDataForSession(
     sessionId: string,
     callback: (data: string) => void,
   ): () => void {
-    return window.mainProcess.terminal.onDataForSession(sessionId, callback);
+    return onTerminalData(sessionId, callback);
   }
 
   static async onExit(
-    callback: (exit: TerminalExit) => void,
+    callback: (exit: { sessionId: string; code: number }) => void,
   ): Promise<() => void> {
-    return window.mainProcess.terminal.onExit(callback);
-  }
-
-  static async popOut(id: string): Promise<{ windowId: number }> {
-    return window.mainProcess.terminal.popOut(id);
-  }
-
-  static async focusWindow(windowId: number): Promise<void> {
-    return window.mainProcess.terminal.focusWindow(windowId);
-  }
-
-  static async getOpenWindows(): Promise<
-    Array<{ terminalId: string; windowId: number }>
-  > {
-    return window.mainProcess.terminal.getOpenWindows();
+    // Exit events come through the MessagePort as EXIT type messages
+    // For now, return a no-op since exit is handled by port onmessage
+    return () => {};
   }
 
   static async resize(id: string, cols: number, rows: number, force?: boolean): Promise<void> {
-    return window.mainProcess.terminal.resize(id, cols, rows, force);
+    return terminalClient.resizeTerminal({ sessionId: id, cols, rows, force });
   }
 
   static async refresh(id: string): Promise<boolean> {
-    return window.mainProcess.terminal.refresh(id);
-  }
-
-  static onWindowReady(
-    callback: (data: {
-      terminalId: string;
-      agentSessionId?: string;
-      windowId: number;
-    }) => void,
-  ): () => void {
-    return window.mainProcess.terminal.onWindowReady?.(callback) || (() => {});
-  }
-
-  static onWindowClose(
-    callback: (data: {
-      terminalId?: string;
-      agentSessionId?: string;
-      windowId: number;
-    }) => void,
-  ): () => void {
-    return window.mainProcess.terminal.onWindowClose?.(callback) || (() => {});
+    const result = await terminalClient.refreshTerminal({ sessionId: id });
+    return result.success;
   }
 
   static async checkOwnership(
     sessionId: string,
   ): Promise<TerminalOwnershipStatus> {
-    return window.mainProcess.terminal.checkOwnership(sessionId);
+    return terminalClient.checkTerminalOwnership({ sessionId });
   }
 
   static async claimOwnership(
     sessionId: string,
     force?: boolean,
   ): Promise<TerminalOwnershipResult> {
-    return window.mainProcess.terminal.claimOwnership(sessionId, force);
+    return terminalClient.claimTerminalOwnership({ sessionId, force });
   }
 
   static async releaseOwnership(
     sessionId: string,
   ): Promise<TerminalOwnershipResult> {
-    return window.mainProcess.terminal.releaseOwnership(sessionId);
+    return terminalClient.releaseTerminalOwnership({ sessionId });
   }
 
+  /**
+   * Subscribe to ownership lost events.
+   * Uses preload's subscription (matches testing app).
+   */
   static onOwnershipLost(
     callback: (data: { sessionId: string; newOwnerWindowId: number }) => void,
   ): () => void {
-    return (
-      window.mainProcess.terminal.onOwnershipLost?.(callback) || (() => {})
-    );
+    return onOwnershipLost(callback);
   }
 
   /**
    * Request a MessagePort for receiving terminal data directly.
-   * This bypasses IPC for high-performance data streaming.
-   * The port will be delivered via the onPortReady callback.
+   * This creates a MessageChannel in the main process and sends the port.
    */
   static async requestDataPort(
     sessionId: string,
   ): Promise<RequestDataPortResult> {
-    return window.mainProcess.terminal.requestDataPort(sessionId);
+    return terminalClient.requestTerminalDataPort({ sessionId });
   }
 
   /**
-   * Listen for MessagePort delivery after requesting via requestDataPort().
-   * The port can be used for direct data streaming from the terminal.
+   * Listen for MessagePort delivery.
+   * Not needed with TIPC pattern - ports are delivered automatically.
    */
   static onPortReady(
-    callback: (data: PortReadyData, port: MessagePort) => void,
+    callback: (data: { sessionId: string; writable: boolean }, port: MessagePort) => void,
   ): () => void {
-    return window.mainProcess.terminal.onPortReady?.(callback) || (() => {});
+    // Port delivery is handled by preload's 'terminal:port' listener
+    return () => {};
   }
 }
