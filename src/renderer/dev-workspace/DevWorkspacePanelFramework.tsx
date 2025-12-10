@@ -4,12 +4,12 @@ import {
   EditableConfigurablePanelLayout,
   type PanelLayout,
 } from '@principal-ade/panel-layouts';
-// CSS is bundled inline in visual-validation-panel, no separate import needed
+// CSS is bundled inline in principal-view-panels, no separate import needed
 // Note: code-city-panel CSS is bundled inline, no separate import needed
 import { RepositoryPanelProvider, useRepositoryPanelProvider } from '../contexts/RepositoryPanelContext';
 import { TabbedTerminalPanel } from '@industry-theme/xterm-terminal-panel';
 import { TabbedGhosttyTerminal } from '@industry-theme/ghostty-terminal-panel';
-import { panels as visualValidationPanels, ConfigLibraryBrowserPanel } from '@industry-theme/visual-validation-panel';
+import { panels as principalViewPanels, ConfigLibraryBrowserPanel } from '@industry-theme/principal-view-panels';
 import { panels as codeCityPanels } from '@industry-theme/code-city-panel';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import { panels as alexandriaPanels } from '@industry-theme/alexandria-panels';
@@ -72,7 +72,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
   const terminalContext = (context as { terminalContext?: string }).terminalContext || 'terminal:default';
   const terminalDirectory = (context as { repositoryPath?: string }).repositoryPath || '/';
 
-  const VisualValidationPanelComponent = visualValidationPanels[0]?.component;
+  const PrincipalViewPanelComponent = principalViewPanels[0]?.component;
   const CodeCityPanelComponent = codeCityPanels[0]?.component;
   const DocsPanelComponent = docsPanels[0]?.component;
   const DependenciesPanelComponent = repositoryCompositionPanels.find(p => p.metadata?.id === 'industry-theme.dependencies')?.component;
@@ -107,9 +107,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
         ),
       },
       {
-        id: 'visualValidation',
-        label: 'Visual Validation',
-        content: VisualValidationPanelComponent ? (
+        id: 'principalView',
+        label: 'Principal View',
+        content: PrincipalViewPanelComponent ? (
           <div style={{
             height: '100%',
             width: '100%',
@@ -118,14 +118,14 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
             display: 'flex',
             flexDirection: 'column'
           }}>
-            <VisualValidationPanelComponent
+            <PrincipalViewPanelComponent
               context={context}
               actions={actions}
               events={events}
             />
           </div>
         ) : (
-          <div>Visual Validation panel not available</div>
+          <div>Principal View panel not available</div>
         ),
       },
       {
@@ -347,7 +347,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
         ),
       },
     ],
-    [VisualValidationPanelComponent, CodeCityPanelComponent, DocsPanelComponent, DependenciesPanelComponent, LocalProjectsPanelComponent, GitChangesPanelComponent, LocalhostPanelComponent, EventBusPanelComponent, AgentToolsPanelComponent, context, actions, events, terminalImplementation, terminalContext, terminalDirectory],
+    [PrincipalViewPanelComponent, CodeCityPanelComponent, DocsPanelComponent, DependenciesPanelComponent, LocalProjectsPanelComponent, GitChangesPanelComponent, LocalhostPanelComponent, EventBusPanelComponent, AgentToolsPanelComponent, context, actions, events, terminalImplementation, terminalContext, terminalDirectory],
   );
 
   return (

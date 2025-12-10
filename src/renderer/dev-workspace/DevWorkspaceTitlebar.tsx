@@ -19,7 +19,7 @@ const AVAILABLE_PANELS: PanelOption[] = [
   { id: 'gitChanges', label: 'File Tree' },
   { id: 'localhostBrowser', label: 'Localhost Browser' },
   { id: 'localProjects', label: 'Local Projects' },
-  { id: 'visualValidation', label: 'Architecture Diagram' },
+  { id: 'principalView', label: 'Architecture Diagram' },
   { id: 'terminal', label: 'Terminal' },
 ];
 
@@ -47,10 +47,10 @@ export const DEFAULT_PANEL_PRESETS: PanelPreset[] = [
     layout: { left: 'dependencies', middle: 'terminal', right: 'codeCity' },
   },
   {
-    id: 'visual-validation',
-    name: 'Visual Validation',
-    description: 'Visual Validation, Terminal, Code City',
-    layout: { left: 'visualValidation', middle: 'terminal', right: 'codeCity' },
+    id: 'principal-view',
+    name: 'Principal View',
+    description: 'Principal View, Terminal, Code City',
+    layout: { left: 'principalView', middle: 'terminal', right: 'codeCity' },
   },
   {
     id: 'docs-focused',
@@ -61,8 +61,8 @@ export const DEFAULT_PANEL_PRESETS: PanelPreset[] = [
   {
     id: 'terminal-focused',
     name: 'Terminal Focus',
-    description: 'Code City, Terminal, Visual Validation',
-    layout: { left: 'codeCity', middle: 'terminal', right: 'visualValidation' },
+    description: 'Code City, Terminal, Principal View',
+    layout: { left: 'codeCity', middle: 'terminal', right: 'principalView' },
   },
   {
     id: 'storybook',

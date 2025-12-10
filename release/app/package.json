@@ -28,7 +28,7 @@
     "@industry-theme/git-sync-panels": "^0.1.4",
     "@industry-theme/localhost-panels": "^0.1.4",
     "@industry-theme/repository-composition-panels": "^0.2.2",
-    "@industry-theme/visual-validation-panel": "^0.3.16",
+    "@industry-theme/principal-view-panels": "^0.1.1",
     "@industry-theme/xterm-terminal-panel": "^0.1.2",
     "@principal-ade/industry-themed-mdx-editor": "^0.1.14",
     "@principal-ade/industry-themed-monaco-editor": "^0.1.9",
