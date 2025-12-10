@@ -83,21 +83,6 @@ export const repositoryPanelCatalog = [
     surfaces: ['explorer', 'manager', 'agent'] as const,
   },
   {
-    id: 'actions',
-    label: 'Repository Actions',
-    description: 'Run project-specific automations and scripts.',
-    slices: ['fileTree'] as const,
-    surfaces: ['explorer'] as const,
-  },
-  {
-    id: 'packageInfo',
-    label: 'Package Information',
-    description:
-      'Package insights, quality metrics, and dependency layers detected in the codebase.',
-    slices: ['packages'] as const,
-    surfaces: ['explorer', 'manager'] as const,
-  },
-  {
     id: 'fileTree',
     label: 'Files',
     description: 'Browse the complete file tree structure of the repository.',
@@ -117,13 +102,6 @@ export const repositoryPanelCatalog = [
     description: 'Explore package architecture and dependency relationships.',
     slices: ['packages', 'fileTree'] as const,
     surfaces: ['manager', 'agent'] as const,
-  },
-  {
-    id: 'tools',
-    label: 'Tools',
-    description: 'Development tools and utilities for the repository.',
-    slices: ['packages'] as const,
-    surfaces: ['manager'] as const,
   },
   {
     id: 'docs',

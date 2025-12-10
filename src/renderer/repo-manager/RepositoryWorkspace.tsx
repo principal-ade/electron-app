@@ -5,14 +5,12 @@ import {
   Search,
   GitBranch,
   Layers,
-  Wrench,
   FileText,
   Pencil,
   Activity,
   AlertCircle,
   GitPullRequest,
   Palette,
-  Package,
   History,
   FolderGit2,
   FolderOpen,
@@ -68,7 +66,6 @@ import { HelpModal } from './shared/HelpModal';
 import { useGitChanges } from '../contexts/GitChangesContext';
 import { useRepositoryData } from '../hooks/useRepositoryData';
 import { RepositorySearchTab } from '../components/repository-maps/RepositorySearchTab';
-import { ToolsPanel } from '../panels/components/ToolsPanel';
 import { RepositoryPanelProvider } from '../panels/RepositoryPanelProvider';
 import { GitIssuesPanel } from '../panels/components/GitIssuesPanel';
 import { GitPullRequestsPanel } from '../panels/components/GitPullRequestsPanel';
@@ -80,7 +77,6 @@ import { AgentEventsPanel } from '../panels/components/AgentEventsPanel';
 import { AgentSessionsPanel } from '../panels/components/AgentSessionsPanel';
 import { useHighlightLayers } from '../contexts/HighlightLayersContext';
 import { DrawingsListPanel } from '../panels/components/DrawingsListPanel';
-import { QualityHexagonPanel } from '../panels/components/QualityHexagonPanel';
 import { MDXEditorPanel } from '../panels/components/MDXEditorPanel';
 import { panelPreviewRegistry } from '../panels/panelPreviews';
 import { repositoryPanelDefinitions } from '../panels/registry';
@@ -294,10 +290,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     // File color state - default to showing file colors
     const [showFileColors, setShowFileColors] = useState(true);
 
-    // Tools highlight state
-    const [toolsHighlightLayers, setToolsHighlightLayers] = useState<
-      HighlightLayer[]
-    >([]);
 
     // Documentation state
     const [selectedDocPath, setSelectedDocPath] = useState<string | null>(null);
@@ -1209,35 +1201,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       };
     }, [gitHighlightLayers, registerLayer, unregisterLayer]);
 
-    // Register tools highlight layers
-    useEffect(() => {
-      if (!toolsHighlightLayers || toolsHighlightLayers.length === 0) {
-        return;
-      }
-
-      console.log(
-        '[RepositoryWorkspace] Registering tools highlight layers:',
-        toolsHighlightLayers.length,
-      );
-
-      // Register each tools layer
-      toolsHighlightLayers.forEach((layer, idx) => {
-        registerLayer(`tools-highlight-${idx}`, {
-          name: layer.name,
-          enabled: layer.enabled,
-          color: layer.color,
-          opacity: layer.opacity,
-          priority: layer.priority,
-          items: layer.items,
-        });
-      });
-
-      return () => {
-        toolsHighlightLayers.forEach((_, idx) => {
-          unregisterLayer(`tools-highlight-${idx}`);
-        });
-      };
-    }, [toolsHighlightLayers, registerLayer, unregisterLayer]);
 
     // Separate provider for viewing individual files
     const fileViewerContentProvider = useMemo(() => {
@@ -1664,17 +1627,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       return trees;
     }, [fileTree, gitState?.headTree, selectedSource]);
 
-    const repositoryPathForTools =
-      selectedSource?.type === 'local'
-        ? selectedSource.location
-        : repository.localClones?.[0]?.path || '';
-
-    useEffect(() => {
-      if (!repositoryPathForTools) {
-        setToolsHighlightLayers([]);
-      }
-    }, [repositoryPathForTools]);
-
     useEffect(() => {
       setSelectedDiffFile(null);
     }, [selectedSource?.id]);
@@ -1746,13 +1698,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
             }}
           />
         ),
-        tools: (
-          <ToolsPanel
-            packageLayers={cacheData?.packages ?? null}
-            repositoryPath={repositoryPathForTools}
-            onHighlightLayersChange={setToolsHighlightLayers}
-          />
-        ),
         agentEvents: (
           <AgentEventsPanel
             repositoryPath={
@@ -1795,10 +1740,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
             />
           </RepositoryPanelProvider>
         ),
-        packageInfo:
-          selectedSource?.type === 'local' ? (
-            <QualityHexagonPanel directory={selectedSource.location} />
-          ) : null,
         mdxEditor: (
           <RepositoryPanelProvider
             repositoryPath={
@@ -1834,8 +1775,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       handleFileClick,
       handleGitChangeSelect,
       theme.colors.textSecondary,
-      repositoryPathForTools,
-      setToolsHighlightLayers,
       repository.localClones,
       repository.remoteUrl,
       repository.owner,
@@ -1906,13 +1845,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
         content: panelContentMap.dependencies,
       },
       {
-        id: 'tools',
-        label: 'Tools',
-        icon: <Wrench size={14} />,
-        visible: true,
-        content: panelContentMap.tools,
-      },
-      {
         id: 'drawings',
         label: 'Drawings',
         icon: <Pencil size={14} />,
@@ -1953,13 +1885,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
         icon: <Mailbox size={14} />,
         visible: true,
         content: panelContentMap.mcpTasks,
-      },
-      {
-        id: 'packageInfo',
-        label: 'Package Information',
-        icon: <Package size={14} />,
-        visible: selectedSource?.type === 'local',
-        content: panelContentMap.packageInfo,
       },
       {
         id: 'mdxEditor',

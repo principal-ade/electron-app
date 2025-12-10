@@ -459,13 +459,9 @@ export class WorkspaceLayoutService {
         id: 'quality-check',
         name: 'Quality Check',
         description:
-          'Package information, tools, and dependencies on left; city visualization map in middle; multi terminal and code viewer on right (collapsed)',
+          'Dependencies on left; city visualization map in middle; multi terminal and code viewer on right (collapsed)',
         layout: {
-          left: {
-            type: 'tabs',
-            panels: ['packageInfo', 'tools', 'dependencies'],
-            config: { defaultActiveTab: 0, tabPosition: 'top' },
-          },
+          left: 'dependencies',
           middle: 'cityVisualization',
           right: {
             type: 'tabs',

@@ -15,7 +15,6 @@ import { GitPullRequestsPanel } from './components/GitPullRequestsPanel';
 import { GitDiffPanel } from './components/GitDiffPanel';
 import { AlexandriaDrawingPanel } from './components/AlexandriaDrawingPanel';
 import { DrawingsListPanel } from './components/DrawingsListPanel';
-import { ToolsPanel } from './components/ToolsPanel';
 import { GitCommitHistoryPanel } from './components/GitCommitHistoryPanel';
 import { MDXEditorPanel } from './components/MDXEditorPanel';
 
@@ -46,12 +45,6 @@ const panelRenderers: Partial<
   ),
   gitDiff: ({ context }) => (
     <GitDiffPanel relativeFilePath={null} repositoryPath={context.repositoryPath} />
-  ),
-  tools: ({ context }) => (
-    <ToolsPanel
-      packageLayers={context.packages}
-      repositoryPath={context.repositoryPath || ''}
-    />
   ),
   excalidrawEditor: () => <AlexandriaDrawingPanel />,
   drawings: () => <DrawingsListPanel />,

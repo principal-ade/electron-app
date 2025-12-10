@@ -12,26 +12,20 @@ import {
   Image,
   Layers,
   Network,
-  Package,
   Pencil,
-  Play,
   Search,
   Users,
-  Wrench,
 } from 'lucide-react';
 import { RepositorySearchTabPreview } from '../components/repository-maps/RepositorySearchTab';
 import { GitCommitHistoryPanelPreview } from './components/GitCommitHistoryPanel';
 import { GitIssuesPanelPreview } from './components/GitIssuesPanel';
 import { GitPullRequestsPanelPreview } from './components/GitPullRequestsPanel';
-import { RepositoryActionsPanelPreview } from './components/RepositoryActionsPanel';
-import { ToolsPanelPreview } from './components/ToolsPanel';
 import { DrawingsListPanelPreview } from './components/DrawingsListPanel';
 import { AgentEventsPanelPreview } from './components/AgentEventsPanel';
 import { AgentSessionsPanelPreview } from './components/AgentSessionsPanel';
 import { FilePreviewPanelPreview } from './components/FilePreviewPanel';
 import { MarkdownRenderingPanelPreview } from './components/MarkdownRenderingPanel';
 import { AlexandriaDrawingPanelPreview } from './components/AlexandriaDrawingPanel';
-import { QualityHexagonPanelPreview } from './components/QualityHexagonPanel';
 import { GitDiffPanelPreview } from './components/GitDiffPanel';
 import { MDXEditorPanelPreview } from './components/MDXEditorPanel';
 
@@ -58,16 +52,6 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
   gitPullRequests: {
     icon: <GitPullRequest size={16} />,
     preview: <GitPullRequestsPanelPreview />,
-  },
-  actions: {
-    icon: <Play size={16} />,
-    preview: <RepositoryActionsPanelPreview />,
-    label: 'Repository Actions',
-    description: 'Run project-specific automations and scripts.',
-  },
-  tools: {
-    icon: <Wrench size={16} />,
-    preview: <ToolsPanelPreview />,
   },
   drawings: {
     icon: <Pencil size={16} />,
@@ -105,10 +89,6 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
     preview: <AlexandriaDrawingPanelPreview />,
     label: 'Excalidraw Editor',
     description: 'Create and edit excalidraw drawings saved to Memory Palace.',
-  },
-  packageInfo: {
-    icon: <Package size={16} />,
-    preview: <QualityHexagonPanelPreview />,
   },
   gitDiff: {
     icon: <GitCompare size={16} />,
