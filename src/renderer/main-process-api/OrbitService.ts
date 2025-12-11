@@ -2,19 +2,18 @@
  * Service layer for Orbit P2P Collaboration functionality
  * ALL window.mainProcess.orbit calls MUST be encapsulated here
  *
- * This service handles authentication and user management for P2P collaboration,
- * including WebRTC signaling for real-time collaboration features.
- * Note: Uses WorkOS authentication with GitHub as the identity provider.
+ * This service handles authentication and WebSocket-based signaling
+ * for P2P collaboration via Control Tower.
  */
 
 import type {
-  OrbitUser,
   OrbitAuthResponse,
   OrbitStatusResponse,
+  OrbitConnectConfig,
+  OrbitConnectResult,
+  OrbitSendSignalRequest,
   OrbitPeer,
-  OrbitJoinResponse,
   OrbitSignal,
-  OrbitPollResponse,
 } from '../../shared/main-process-api-interfaces/OrbitAPI';
 
 export class OrbitService {
@@ -28,10 +27,7 @@ export class OrbitService {
       console.error('[OrbitService] Failed to open auth:', error);
       return {
         success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to open authentication',
+        error: error instanceof Error ? error.message : 'Failed to open authentication',
       };
     }
   }
@@ -62,61 +58,52 @@ export class OrbitService {
       return {
         status: 'error',
         metadata: {
-          error:
-            error instanceof Error ? error.message : 'Failed to check status',
+          error: error instanceof Error ? error.message : 'Failed to check status',
         },
       };
     }
   }
 
   /**
-   * Join a signaling room for collaboration
+   * Connect to signaling server for a repository (WebSocket-based)
    */
-  static async joinRoom(
-    token: string,
-    repoUrl: string,
-  ): Promise<OrbitJoinResponse> {
+  static async connect(config: OrbitConnectConfig): Promise<OrbitConnectResult> {
     try {
-      return await window.mainProcess.orbit.joinRoom(token, repoUrl);
+      return await window.mainProcess.orbit.connect(config);
     } catch (error) {
-      console.error('[OrbitService] Failed to join room:', error);
+      console.error('[OrbitService] Failed to connect:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to join room',
+        error: error instanceof Error ? error.message : 'Failed to connect',
       };
     }
   }
 
   /**
-   * Poll for new signals and peer updates
+   * Disconnect from signaling server
    */
-  static async pollSignals(
-    peerId: string,
-    repoUrl: string,
-  ): Promise<OrbitPollResponse> {
-    try {
-      return await window.mainProcess.orbit.pollSignals(peerId, repoUrl);
-    } catch (error) {
-      console.error('[OrbitService] Failed to poll signals:', error);
-      return {
-        success: false,
-        error:
-          error instanceof Error ? error.message : 'Failed to poll signals',
-      };
-    }
-  }
-
-  /**
-   * Send a signal to another peer
-   */
-  static async sendSignal(
-    from: string,
-    to: string,
-    type: string,
-    data: unknown,
+  static async disconnect(
+    connectionId: string,
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      return await window.mainProcess.orbit.sendSignal(from, to, type, data);
+      return await window.mainProcess.orbit.disconnect(connectionId);
+    } catch (error) {
+      console.error('[OrbitService] Failed to disconnect:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to disconnect',
+      };
+    }
+  }
+
+  /**
+   * Send a WebRTC signal to a peer
+   */
+  static async sendSignal(
+    request: OrbitSendSignalRequest,
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      return await window.mainProcess.orbit.sendSignal(request);
     } catch (error) {
       console.error('[OrbitService] Failed to send signal:', error);
       return {
@@ -127,20 +114,60 @@ export class OrbitService {
   }
 
   /**
-   * Leave a signaling room
+   * Get current peers in the room
    */
-  static async leaveRoom(
-    peerId: string,
-    repoUrl: string,
-  ): Promise<{ success: boolean; error?: string }> {
+  static async getPeers(connectionId: string): Promise<OrbitPeer[]> {
     try {
-      return await window.mainProcess.orbit.leaveRoom(peerId, repoUrl);
+      return await window.mainProcess.orbit.getPeers(connectionId);
     } catch (error) {
-      console.error('[OrbitService] Failed to leave room:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to leave room',
-      };
+      console.error('[OrbitService] Failed to get peers:', error);
+      return [];
     }
+  }
+
+  /**
+   * Subscribe to signal received events
+   */
+  static onSignalReceived(callback: (signal: OrbitSignal) => void): () => void {
+    return window.mainProcess.orbit.onSignalReceived(callback);
+  }
+
+  /**
+   * Subscribe to peer joined events
+   */
+  static onPeerJoined(callback: (peer: OrbitPeer) => void): () => void {
+    return window.mainProcess.orbit.onPeerJoined(callback);
+  }
+
+  /**
+   * Subscribe to peer left events
+   */
+  static onPeerLeft(callback: (data: { peerId: string }) => void): () => void {
+    return window.mainProcess.orbit.onPeerLeft(callback);
+  }
+
+  /**
+   * Subscribe to connected events
+   */
+  static onConnected(
+    callback: (data: { connectionId: string; peerId: string; githubHandle: string }) => void,
+  ): () => void {
+    return window.mainProcess.orbit.onConnected(callback);
+  }
+
+  /**
+   * Subscribe to disconnected events
+   */
+  static onDisconnected(callback: (data: { connectionId: string }) => void): () => void {
+    return window.mainProcess.orbit.onDisconnected(callback);
+  }
+
+  /**
+   * Subscribe to error events
+   */
+  static onError(
+    callback: (data: { connectionId: string; error: string }) => void,
+  ): () => void {
+    return window.mainProcess.orbit.onError(callback);
   }
 }

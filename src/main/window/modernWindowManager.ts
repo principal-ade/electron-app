@@ -20,6 +20,7 @@ import { GitHubAdapter } from '../version-control-providers/githubHandlers';
 import MenuBuilder from '../menu';
 import AppVersionManager from '../AppVersionManager';
 import { gitSyncWebSocketManager } from '../services/GitSyncWebSocketManager';
+import { orbitWebSocketManager } from '../services/OrbitWebSocketManager';
 
 // Import shared types and data structures
 import {
@@ -176,6 +177,16 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
       } catch (error) {
         console.error(
           `[ModernWindow] Error disconnecting git-sync connections:`,
+          error,
+        );
+      }
+
+      // Clean up orbit P2P connections for this window
+      try {
+        orbitWebSocketManager.disconnectForWindow(this.window.id);
+      } catch (error) {
+        console.error(
+          `[ModernWindow] Error disconnecting orbit connections:`,
           error,
         );
       }

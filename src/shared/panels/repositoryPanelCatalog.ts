@@ -2,7 +2,6 @@ export type RepositoryPanelSurface =
   | 'explorer'
   | 'manager'
   | 'viewer'
-  | 'excalidraw'
   | 'agent'
   | 'principal';
 
@@ -123,28 +122,6 @@ export const repositoryPanelCatalog = [
     description: 'View markdown files as documents or slides with toggle.',
     slices: ['markdown'] as const,
     surfaces: ['viewer', 'agent'] as const,
-  },
-  {
-    id: 'excalidrawDiagram',
-    label: 'Excalidraw Diagram',
-    description: 'View and interact with excalidraw diagrams.',
-    slices: [] as const,
-    surfaces: ['viewer', 'excalidraw'] as const,
-  },
-  {
-    id: 'excalidrawEditor',
-    label: 'Excalidraw Editor',
-    description: 'Create and edit excalidraw drawings saved to Memory Palace.',
-    slices: [] as const,
-    surfaces: ['excalidraw'] as const,
-  },
-  {
-    id: 'drawings',
-    label: 'Drawings',
-    description:
-      'Browse and manage Excalidraw diagrams saved in the repository.',
-    slices: [] as const,
-    surfaces: ['excalidraw', 'manager', 'agent'] as const,
   },
   {
     id: 'agentEvents',

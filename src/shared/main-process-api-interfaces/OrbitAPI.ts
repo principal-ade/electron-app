@@ -35,14 +35,6 @@ export interface OrbitPeer {
   githubHandle: string;
 }
 
-export interface OrbitJoinResponse {
-  success: boolean;
-  peerId?: string;
-  githubHandle?: string;
-  peers?: OrbitPeer[];
-  error?: string;
-}
-
 export interface OrbitSignal {
   from: string;
   to?: string;
@@ -50,11 +42,34 @@ export interface OrbitSignal {
   data: unknown; // Signal data can be any WebRTC signal type
 }
 
-export interface OrbitPollResponse {
+/**
+ * WebSocket-based connection config
+ */
+export interface OrbitConnectConfig {
+  repoUrl: string;
+  token: string;
+}
+
+/**
+ * WebSocket-based connection result
+ */
+export interface OrbitConnectResult {
   success: boolean;
-  signals?: OrbitSignal[];
+  connectionId?: string;
+  peerId?: string;
+  githubHandle?: string;
   peers?: OrbitPeer[];
   error?: string;
+}
+
+/**
+ * Send signal request
+ */
+export interface OrbitSendSignalRequest {
+  connectionId: string;
+  targetPeerId: string;
+  signalType: string;
+  signalData: unknown;
 }
 
 export interface OrbitAPI {
@@ -74,30 +89,64 @@ export interface OrbitAPI {
   checkStatus(token: string): Promise<OrbitStatusResponse>;
 
   /**
-   * Join a signaling room for collaboration
+   * Connect to signaling server for a repository (WebSocket-based)
    */
-  joinRoom(token: string, repoUrl: string): Promise<OrbitJoinResponse>;
+  connect(config: OrbitConnectConfig): Promise<OrbitConnectResult>;
 
   /**
-   * Poll for new signals and peer updates
+   * Disconnect from signaling server
    */
-  pollSignals(peerId: string, repoUrl: string): Promise<OrbitPollResponse>;
+  disconnect(connectionId: string): Promise<{ success: boolean; error?: string }>;
 
   /**
-   * Send a signal to another peer
+   * Send a WebRTC signal to a peer
    */
-  sendSignal(
-    from: string,
-    to: string,
-    type: string,
-    data: unknown,
-  ): Promise<{ success: boolean; error?: string }>;
+  sendSignal(request: OrbitSendSignalRequest): Promise<{ success: boolean; error?: string }>;
 
   /**
-   * Leave a signaling room
+   * Get current peers in the room
    */
-  leaveRoom(
-    peerId: string,
-    repoUrl: string,
-  ): Promise<{ success: boolean; error?: string }>;
+  getPeers(connectionId: string): Promise<OrbitPeer[]>;
+
+  /**
+   * Subscribe to signal received events
+   */
+  onSignalReceived(
+    callback: (signal: OrbitSignal) => void,
+  ): () => void;
+
+  /**
+   * Subscribe to peer joined events
+   */
+  onPeerJoined(
+    callback: (peer: OrbitPeer) => void,
+  ): () => void;
+
+  /**
+   * Subscribe to peer left events
+   */
+  onPeerLeft(
+    callback: (data: { peerId: string }) => void,
+  ): () => void;
+
+  /**
+   * Subscribe to connected events
+   */
+  onConnected(
+    callback: (data: { connectionId: string; peerId: string; githubHandle: string }) => void,
+  ): () => void;
+
+  /**
+   * Subscribe to disconnected events
+   */
+  onDisconnected(
+    callback: (data: { connectionId: string }) => void,
+  ): () => void;
+
+  /**
+   * Subscribe to error events
+   */
+  onError(
+    callback: (data: { connectionId: string; error: string }) => void,
+  ): () => void;
 }

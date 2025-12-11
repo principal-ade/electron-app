@@ -12,6 +12,7 @@ import { useRepositoryGitStatus } from '../hooks/useRepositoryGitStatus';
 
 // Available panels for Dev workspace
 const AVAILABLE_PANELS: PanelOption[] = [
+  { id: 'codeQuality', label: 'Code Quality' },
   { id: 'docs', label: 'Documentation' },
   { id: 'codeCity', label: 'Code City' },
   { id: 'configLibrary', label: 'Architecture Library' },

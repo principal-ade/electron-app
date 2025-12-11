@@ -33,7 +33,6 @@ import { registerPackageManagerHandlers } from './services/ipc/packageManager/pa
 import { registerSystemHandlers } from './system/systemHandlers';
 import { registerFeedbackHandlers } from './services/ipc/feedback/feedbackHandlers';
 import { getTerminalManager } from './terminalWrapper';
-import { excalidrawHandlers } from './drawings/excalidrawHandlers';
 
 import { setupAgentConfigHandlers } from './agent-management/agentConfigHandlers';
 import { registerFileSystemIpcHandlers } from './file-system/fileSystemHandlers';
@@ -245,7 +244,6 @@ const registerAllIpcHandlers = async () => {
   extensionDiscoveryService.registerHandlers();
 
   setupTypeSchemaHandlers();
-  excalidrawHandlers.registerHandlers();
   setupTypeExtractionHandlers();
   registerPackageManagerHandlers();
   registerSystemHandlers();

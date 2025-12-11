@@ -70,11 +70,10 @@ import { RepositoryPanelProvider } from '../panels/RepositoryPanelProvider';
 import { GitIssuesPanel } from '../panels/components/GitIssuesPanel';
 import { GitPullRequestsPanel } from '../panels/components/GitPullRequestsPanel';
 import { GitCommitHistoryPanel } from '../panels/components/GitCommitHistoryPanel';
-import { MarkdownRenderingPanel, ExcalidrawPanel } from './panels';
+import { MarkdownRenderingPanel } from './panels';
 import { AgentEventsPanel } from '../panels/components/AgentEventsPanel';
 import { AgentSessionsPanel } from '../panels/components/AgentSessionsPanel';
 import { useHighlightLayers } from '../contexts/HighlightLayersContext';
-import { DrawingsListPanel } from '../panels/components/DrawingsListPanel';
 import { panelPreviewRegistry } from '../panels/panelPreviews';
 import { repositoryPanelDefinitions } from '../panels/registry';
 import { gitSyncConnectionManager } from '../services/git-sync/GitSyncConnectionManager';
@@ -290,10 +289,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
 
     // Documentation state
     const [selectedDocPath, setSelectedDocPath] = useState<string | null>(null);
-    const [selectedDocType, setSelectedDocType] = useState<
-      'markdown' | 'excalidraw'
-    >('markdown');
-    const [createExcalidrawTrigger, setCreateExcalidrawTrigger] = useState(0);
+    const [selectedDocType, setSelectedDocType] = useState<'markdown'>('markdown');
 
     // Git changes from context
     const {
@@ -1309,16 +1305,11 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
 
     // Handle documentation selection
     const handleDocumentSelect = useCallback(
-      async (filePath: string, type: 'markdown' | 'excalidraw') => {
+      async (filePath: string, type: 'markdown') => {
         setSelectedDocPath(filePath);
         setSelectedDocType(type);
         setRightPaneMode('document');
-        // Focus the appropriate viewer tab
-        if (type === 'markdown') {
-          focusPanelTab('markdownViewer');
-        } else {
-          focusPanelTab('excalidrawDiagram');
-        }
+        focusPanelTab('markdownViewer');
       },
       [focusPanelTab],
     );
@@ -1710,33 +1701,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
             }
           />
         ),
-        drawings: (
-          <RepositoryPanelProvider
-            repositoryPath={
-              selectedSource?.type === 'local' ? selectedSource.location : null
-            }
-            actions={{ openFile: handleSearchFileSelect }}
-          >
-            <DrawingsListPanel
-              onDrawingSelect={(drawingId, drawingName) => {
-                // Open the drawing in the Excalidraw panel
-                const drawingPath = drawingId.endsWith('.excalidraw')
-                  ? drawingId
-                  : `${drawingId}.excalidraw`;
-                setSelectedDocPath(drawingPath);
-                setSelectedDocType('excalidraw');
-                setRightPaneMode('document');
-              }}
-              onCreateNew={() => {
-                // Switch the right pane to the Excalidraw editor and start a fresh canvas
-                setCreateExcalidrawTrigger((prev) => prev + 1);
-                setSelectedDocPath(null);
-                setSelectedDocType('excalidraw');
-                setRightPaneMode('document');
-              }}
-            />
-          </RepositoryPanelProvider>
-        ),
       };
       return map;
     }, [
@@ -1947,10 +1911,9 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
 
     // Memoize viewer panels
     const markdownViewerPanel = useMemo(() => {
-      const shouldShow = selectedDocType !== 'excalidraw';
       return (
         <MarkdownRenderingPanel
-          filePath={shouldShow ? selectedDocPath : null}
+          filePath={selectedDocPath}
           source={selectedSource}
           contentProvider={fileViewerContentProvider}
           onClose={() => {
@@ -1965,33 +1928,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       selectedSource,
       fileViewerContentProvider,
     ]);
-
-    const excalidrawDiagramPanel = useMemo(
-      () => (
-        <ExcalidrawPanel
-          filePath={selectedDocType === 'excalidraw' ? selectedDocPath : null}
-          createNewTrigger={createExcalidrawTrigger}
-          source={selectedSource}
-          contentProvider={fileViewerContentProvider}
-          onClose={() => {
-            setSelectedDocPath(null);
-            setSelectedDocType('markdown');
-          }}
-          onDiagramCreated={(diagramId) => {
-            // Update selection to show the newly created diagram
-            setSelectedDocPath(diagramId);
-            setSelectedDocType('excalidraw');
-          }}
-        />
-      ),
-      [
-        selectedDocPath,
-        selectedDocType,
-        createExcalidrawTrigger,
-        selectedSource,
-        fileViewerContentProvider,
-      ],
-    );
 
     const leftPanelTabs: PanelDefinitionWithContent[] = visibleTabs.map(
       ({ visible: _visible, content, ...tab }) => ({
@@ -2093,12 +2029,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     label: 'Markdown Viewer',
                     content: markdownViewerPanel,
                     icon: panelPreviewRegistry.markdownViewer?.icon,
-                  },
-                  {
-                    id: 'excalidrawDiagram',
-                    label: 'Excalidraw Diagram',
-                    content: excalidrawDiagramPanel,
-                    icon: panelPreviewRegistry.excalidrawDiagram?.icon,
                   },
                 ];
 

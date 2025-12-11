@@ -21,7 +21,6 @@ import { agentInstallationAPI } from './main-process-api-implementations/agentIn
 import { agentSessionEventsAPI } from './main-process-api-implementations/agentSessionEventsApi';
 import { authenticationAPI } from './main-process-api-implementations/authenticationApi';
 import { clipboardAPI } from './main-process-api-implementations/clipboardApi';
-import { excalidrawAPI } from './main-process-api-implementations/excalidrawApi';
 import { fileSystemAPI } from './main-process-api-implementations/fileSystemApi';
 import { gitAPI } from './main-process-api-implementations/gitApi';
 import { githubAPI } from './main-process-api-implementations/githubApi';
@@ -102,7 +101,6 @@ const mainProcessExposure: MainProcessAPI = {
   appVersionManager: appVersionManagerApi,
   authentication: authenticationAPI,
   clipboard: clipboardAPI,
-  excalidraw: excalidrawAPI,
   repository: repositoryAPI,
   github: githubAPI,
   git: gitAPI,

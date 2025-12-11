@@ -152,6 +152,10 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
   const [agentHighlightLayers, setAgentHighlightLayers] = useState<HighlightLayer[]>([]);
   const eventHighlightServiceRef = useRef<EventHighlightService | null>(null);
 
+  // Track quality metrics data (fetched from GitHub Actions artifacts)
+  // Initially null - will show empty state with setup instructions
+  const [qualityData, setQualityData] = useState<{ packages: Array<{ name: string; version?: string; metrics: Record<string, number> }>; lastUpdated: string } | null>(null);
+
   // Loading state
   const [loading] = useState(false);
 
@@ -841,8 +845,23 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
             },
           },
         ],
+        [
+          'quality',
+          {
+            scope: 'repository' as const,
+            name: 'quality',
+            data: qualityData,
+            loading: false,
+            error: null,
+            refresh: async () => {
+              // TODO: Implement fetching from GitHub Actions artifacts
+              // See docs/quality-metrics-implementation.md for details
+              console.log('[RepositoryPanelProvider] Quality metrics refresh not yet implemented');
+            },
+          },
+        ],
       ]),
-    [repositoryPath, fileTreeData, fileTreeLoading, markdownFiles, packagesData, packagesLoading, gitStatusData, gitStatusLoading, alexandriaRepositories, alexandriaRepositoriesLoading, agentHighlightLayers],
+    [repositoryPath, fileTreeData, fileTreeLoading, markdownFiles, packagesData, packagesLoading, gitStatusData, gitStatusLoading, alexandriaRepositories, alexandriaRepositoriesLoading, agentHighlightLayers, qualityData],
   );
 
   // Create context value

@@ -28,7 +28,6 @@ import type { WindowManagerAPI } from './WindowManagerAPI';
 import { AgentSessionEventsAPI } from './AgentSessionEventsAPI';
 import type { OrbitAPI } from './OrbitAPI';
 import type { ApiProxyAPI } from './ApiProxyAPI';
-import type { ExcalidrawAPI } from './ExcalidrawAPI';
 import type { PackageManagerAPI } from './PackageManagerAPI';
 import type { TypeExtractionAPI } from './TypeExtractionAPI';
 import type { TypeSchemaAPI } from './TypeSchemaAPI';
@@ -75,7 +74,6 @@ export interface MainProcessAPI {
   appVersionManager: AppVersionManagerAPI;
   authentication: AuthenticationAPI;
   clipboard: ClipboardAPI;
-  excalidraw: ExcalidrawAPI;
   fileSystem: FileSystemAPI;
   git: GitAPI;
   github: GitHubAPI;

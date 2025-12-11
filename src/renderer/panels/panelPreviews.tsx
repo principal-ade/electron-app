@@ -2,25 +2,20 @@ import React from 'react';
 import {
   Activity,
   AlertCircle,
-  Edit,
   FileText,
   GitPullRequest,
   History,
-  Image,
   Layers,
   Network,
-  Pencil,
   Search,
 } from 'lucide-react';
 import { RepositorySearchTabPreview } from '../components/repository-maps/RepositorySearchTab';
 import { GitCommitHistoryPanelPreview } from './components/GitCommitHistoryPanel';
 import { GitIssuesPanelPreview } from './components/GitIssuesPanel';
 import { GitPullRequestsPanelPreview } from './components/GitPullRequestsPanel';
-import { DrawingsListPanelPreview } from './components/DrawingsListPanel';
 import { AgentEventsPanelPreview } from './components/AgentEventsPanel';
 import { AgentSessionsPanelPreview } from './components/AgentSessionsPanel';
 import { MarkdownRenderingPanelPreview } from './components/MarkdownRenderingPanel';
-import { AlexandriaDrawingPanelPreview } from './components/AlexandriaDrawingPanel';
 
 export interface PanelPreviewMetadata {
   icon: React.ReactNode;
@@ -46,13 +41,6 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
     icon: <GitPullRequest size={16} />,
     preview: <GitPullRequestsPanelPreview />,
   },
-  drawings: {
-    icon: <Pencil size={16} />,
-    preview: <DrawingsListPanelPreview />,
-    label: 'Drawings',
-    description:
-      'Browse and manage Excalidraw diagrams saved in the repository.',
-  },
   agentEvents: {
     icon: <Activity size={16} />,
     preview: <AgentEventsPanelPreview />,
@@ -68,16 +56,6 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
   markdownViewer: {
     icon: <FileText size={16} />,
     preview: <MarkdownRenderingPanelPreview />,
-  },
-  excalidrawDiagram: {
-    icon: <Image size={16} />,
-    preview: <AlexandriaDrawingPanelPreview />,
-  },
-  excalidrawEditor: {
-    icon: <Edit size={16} />,
-    preview: <AlexandriaDrawingPanelPreview />,
-    label: 'Excalidraw Editor',
-    description: 'Create and edit excalidraw drawings saved to Memory Palace.',
   },
   graphsList: {
     icon: <Network size={16} />,

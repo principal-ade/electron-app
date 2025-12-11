@@ -16,6 +16,7 @@ import { panels as alexandriaPanels } from '@industry-theme/alexandria-panels';
 import { panels as localhostPanels } from '@industry-theme/localhost-panels';
 import { panels as agentDrivenPanels } from '@industry-theme/agent-driven-ui-panels';
 import { panels as repositoryCompositionPanels } from '@industry-theme/repository-composition-panels';
+import { panels as codeQualityPanels } from '@principal-ade/code-quality-panels';
 import type { Repository } from '../../shared/types/repository.types';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 
@@ -81,6 +82,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
   const EventBusPanelComponent = agentDrivenPanels.find(p => p.metadata?.id === 'industry-theme.event-bus-panel')?.component;
   const AgentToolsPanelComponent = agentDrivenPanels.find(p => p.metadata?.id === 'industry-theme.agent-tools-panel')?.component;
   const GitChangesPanelComponent = repositoryCompositionPanels.find(p => p.metadata?.id === 'industry-theme.git-changes')?.component;
+  const CodeQualityPanelComponent = codeQualityPanels.find(p => p.metadata?.id === 'principal-ade.quality-hexagon-panel')?.component;
 
   // Define all panels using panel framework components
   const allPanels = useMemo(
@@ -346,8 +348,30 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
           <div>Local Projects panel not available</div>
         ),
       },
+      {
+        id: 'codeQuality',
+        label: 'Code Quality',
+        content: CodeQualityPanelComponent ? (
+          <div style={{
+            height: '100%',
+            width: '100%',
+            overflow: 'hidden',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <CodeQualityPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div>Code Quality panel not available</div>
+        ),
+      },
     ],
-    [PrincipalViewPanelComponent, CodeCityPanelComponent, DocsPanelComponent, DependenciesPanelComponent, LocalProjectsPanelComponent, GitChangesPanelComponent, LocalhostPanelComponent, EventBusPanelComponent, AgentToolsPanelComponent, context, actions, events, terminalImplementation, terminalContext, terminalDirectory],
+    [PrincipalViewPanelComponent, CodeCityPanelComponent, DocsPanelComponent, DependenciesPanelComponent, LocalProjectsPanelComponent, GitChangesPanelComponent, LocalhostPanelComponent, EventBusPanelComponent, AgentToolsPanelComponent, CodeQualityPanelComponent, context, actions, events, terminalImplementation, terminalContext, terminalDirectory],
   );
 
   return (
