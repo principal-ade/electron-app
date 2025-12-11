@@ -1,5 +1,5 @@
 {
-  "vv": {
+  "pv": {
     "name": "Repository Monitoring Event Flow",
     "version": "1.0.0",
     "nodeTypes": {
@@ -82,10 +82,9 @@
       "width": 180,
       "height": 70,
       "text": "GitChangesContext",
-      "vv": {
+      "pv": {
         "nodeType": "react-context",
-        "shape": "rectangle",
-        "notes": "React context for git state. Subscribes to onGitStatusChanged events. Manages git diff highlighting. File: src/renderer/contexts/GitChangesContext.tsx"
+        "shape": "rectangle"
       }
     },
     {
@@ -96,10 +95,9 @@
       "width": 200,
       "height": 70,
       "text": "RepositoryPanelContext",
-      "vv": {
+      "pv": {
         "nodeType": "react-context",
-        "shape": "rectangle",
-        "notes": "React context for repository panel data. Subscribes to onCacheSync for fileTree and packages updates. File: src/renderer/contexts/RepositoryPanelContext.tsx"
+        "shape": "rectangle"
       }
     },
     {
@@ -110,10 +108,9 @@
       "width": 200,
       "height": 70,
       "text": "WorkspacesPanelContext",
-      "vv": {
+      "pv": {
         "nodeType": "react-context",
-        "shape": "rectangle",
-        "notes": "React context for workspace file changes. File: src/renderer/contexts/WorkspacesPanelContext.tsx"
+        "shape": "rectangle"
       }
     },
     {
@@ -124,10 +121,9 @@
       "width": 220,
       "height": 70,
       "text": "RepositoryMonitoringService",
-      "vv": {
+      "pv": {
         "nodeType": "service",
-        "shape": "rectangle",
-        "notes": "High-level TypeScript service class. Wraps preload API with error handling. Used by React components and contexts. File: src/renderer/main-process-api/RepositoryMonitoringService.ts"
+        "shape": "rectangle"
       }
     },
     {
@@ -138,10 +134,9 @@
       "width": 220,
       "height": 70,
       "text": "repositoryMonitoringApi",
-      "vv": {
+      "pv": {
         "nodeType": "api-layer",
-        "shape": "rectangle",
-        "notes": "Preload API implementation. IPC method wrappers using ipcRenderer.invoke/on. Exposed via window.mainProcess.repositoryMonitoring. File: src/window/main-process-api-implementations/repositoryMonitoringApi.ts"
+        "shape": "rectangle"
       }
     },
     {
@@ -152,10 +147,9 @@
       "width": 200,
       "height": 70,
       "text": "RepositoryMonitoringAPIEvent",
-      "vv": {
+      "pv": {
         "nodeType": "event-enum",
-        "shape": "rectangle",
-        "notes": "41 event types: GET_FILE_TREE, GET_PACKAGES, CACHE_SYNC, GIT_STATUS_CHANGED, WORKSPACE_CHANGED, etc. File: src/shared/main-process-api-interfaces/RepositoryMonitoringAPI.ts"
+        "shape": "rectangle"
       }
     },
     {
@@ -166,10 +160,9 @@
       "width": 220,
       "height": 70,
       "text": "IPC Handlers",
-      "vv": {
+      "pv": {
         "nodeType": "main-process",
-        "shape": "rectangle",
-        "notes": "Central IPC handler registration. Forwards events from worker to renderer windows. ipcMain.handle() for all monitoring operations. File: src/main/repository-monitoring/ipcHandlers.ts"
+        "shape": "rectangle"
       }
     },
     {
@@ -180,10 +173,9 @@
       "width": 220,
       "height": 70,
       "text": "RepositoryMonitoringManager",
-      "vv": {
+      "pv": {
         "nodeType": "main-process",
-        "shape": "rectangle",
-        "notes": "Singleton manager. Manages worker process lifecycle. Handles IPC message routing to/from worker. Broadcasts events to all renderer windows."
+        "shape": "rectangle"
       }
     },
     {
@@ -194,10 +186,9 @@
       "width": 180,
       "height": 70,
       "text": "BrowserWindow.getAllWindows()",
-      "vv": {
+      "pv": {
         "nodeType": "main-process",
-        "shape": "rectangle",
-        "notes": "All open windows receive broadcast events via webContents.send(). Events pushed to ALL renderer windows simultaneously."
+        "shape": "rectangle"
       }
     },
     {
@@ -208,10 +199,9 @@
       "width": 220,
       "height": 80,
       "text": "Worker Process (Utility)",
-      "vv": {
+      "pv": {
         "nodeType": "worker-process",
-        "shape": "rectangle",
-        "notes": "Separate Node.js utility process. Runs @principal-ai/repository-monitoring-server. Isolates heavy I/O from main process. Communicates via process.parentPort.postMessage()."
+        "shape": "rectangle"
       }
     },
     {
@@ -222,10 +212,9 @@
       "width": 150,
       "height": 60,
       "text": "GitWatcherAdapter",
-      "vv": {
+      "pv": {
         "nodeType": "watcher",
-        "shape": "rectangle",
-        "notes": "Monitors git state changes (branch, dirty, staged, ahead/behind). Emits GIT_STATUS_CHANGED events."
+        "shape": "rectangle"
       }
     },
     {
@@ -236,10 +225,9 @@
       "width": 150,
       "height": 60,
       "text": "FileTreeBuilder",
-      "vv": {
+      "pv": {
         "nodeType": "service",
-        "shape": "rectangle",
-        "notes": "Creates FileTree structures. Respects .gitignore patterns. Emits fileTree cache updates."
+        "shape": "rectangle"
       }
     },
     {
@@ -250,10 +238,9 @@
       "width": 150,
       "height": 60,
       "text": "PackageProcessor",
-      "vv": {
+      "pv": {
         "nodeType": "service",
-        "shape": "rectangle",
-        "notes": "Detects packages in monorepos. Scans for package.json, Cargo.toml, etc. Emits packages cache updates."
+        "shape": "rectangle"
       }
     },
     {
@@ -264,10 +251,9 @@
       "width": 150,
       "height": 60,
       "text": "GitRemoteService",
-      "vv": {
+      "pv": {
         "nodeType": "service",
-        "shape": "rectangle",
-        "notes": "Fetches remote URL, branches, auth methods. Emits gitRemote cache updates."
+        "shape": "rectangle"
       }
     },
     {
@@ -278,10 +264,9 @@
       "width": 220,
       "height": 80,
       "text": "RepositoryCacheRegistry",
-      "vv": {
+      "pv": {
         "nodeType": "cache",
-        "shape": "rectangle",
-        "notes": "Centralized cache with 4 slices: gitStatus, fileTree, packages, gitRemote. Each slice has version, hash, timestamp. Emits CACHE_SYNC events on updates."
+        "shape": "rectangle"
       }
     },
     {
@@ -292,10 +277,9 @@
       "width": 140,
       "height": 50,
       "text": "gitStatus slice",
-      "vv": {
+      "pv": {
         "nodeType": "cache",
-        "shape": "rectangle",
-        "notes": "Branch, dirty state, ahead/behind counts, staged/untracked flags."
+        "shape": "rectangle"
       }
     },
     {
@@ -306,10 +290,9 @@
       "width": 140,
       "height": 50,
       "text": "fileTree slice",
-      "vv": {
+      "pv": {
         "nodeType": "cache",
-        "shape": "rectangle",
-        "notes": "Full directory structure with gitignore support."
+        "shape": "rectangle"
       }
     },
     {
@@ -320,10 +303,9 @@
       "width": 140,
       "height": 50,
       "text": "packages slice",
-      "vv": {
+      "pv": {
         "nodeType": "cache",
-        "shape": "rectangle",
-        "notes": "Detected packages and their metadata."
+        "shape": "rectangle"
       }
     },
     {
@@ -334,10 +316,9 @@
       "width": 140,
       "height": 50,
       "text": "gitRemote slice",
-      "vv": {
+      "pv": {
         "nodeType": "cache",
-        "shape": "rectangle",
-        "notes": "Remote URL, branches, auth methods."
+        "shape": "rectangle"
       }
     }
   ],
@@ -347,9 +328,8 @@
       "fromNode": "git-changes-context",
       "toNode": "repository-monitoring-service",
       "label": "uses",
-      "vv": {
-        "edgeType": "uses",
-        "notes": "Context calls service methods and subscribes to events"
+      "pv": {
+        "edgeType": "uses"
       }
     },
     {
@@ -357,9 +337,8 @@
       "fromNode": "repository-panel-context",
       "toNode": "repository-monitoring-service",
       "label": "uses",
-      "vv": {
-        "edgeType": "uses",
-        "notes": "Context calls service methods and subscribes to onCacheSync"
+      "pv": {
+        "edgeType": "uses"
       }
     },
     {
@@ -367,9 +346,8 @@
       "fromNode": "workspaces-panel-context",
       "toNode": "repository-monitoring-service",
       "label": "uses",
-      "vv": {
-        "edgeType": "uses",
-        "notes": "Context subscribes to workspace change events"
+      "pv": {
+        "edgeType": "uses"
       }
     },
     {
@@ -377,9 +355,8 @@
       "fromNode": "repository-monitoring-service",
       "toNode": "repository-monitoring-api",
       "label": "window.mainProcess",
-      "vv": {
-        "edgeType": "uses",
-        "notes": "Service wraps preload API calls"
+      "pv": {
+        "edgeType": "uses"
       }
     },
     {
@@ -387,9 +364,8 @@
       "fromNode": "repository-monitoring-api",
       "toNode": "monitoring-events-enum",
       "label": "uses channels",
-      "vv": {
-        "edgeType": "uses",
-        "notes": "API uses event enum for type-safe IPC channels"
+      "pv": {
+        "edgeType": "uses"
       }
     },
     {
@@ -397,9 +373,8 @@
       "fromNode": "repository-monitoring-api",
       "toNode": "ipc-handlers",
       "label": "ipcRenderer.invoke()",
-      "vv": {
-        "edgeType": "ipc-invoke",
-        "notes": "RPC calls: getFileTree, getPackages, getCacheSnapshot, register, etc."
+      "pv": {
+        "edgeType": "ipc-invoke"
       }
     },
     {
@@ -407,9 +382,8 @@
       "fromNode": "ipc-handlers",
       "toNode": "repository-monitoring-api",
       "label": "webContents.send()",
-      "vv": {
-        "edgeType": "ipc-event",
-        "notes": "Push events: GIT_STATUS_CHANGED, CACHE_SYNC, WORKSPACE_CHANGED"
+      "pv": {
+        "edgeType": "ipc-event"
       }
     },
     {
@@ -417,9 +391,8 @@
       "fromNode": "ipc-handlers",
       "toNode": "monitoring-manager",
       "label": "delegates",
-      "vv": {
-        "edgeType": "uses",
-        "notes": "Handlers delegate operations to manager singleton"
+      "pv": {
+        "edgeType": "uses"
       }
     },
     {
@@ -427,9 +400,8 @@
       "fromNode": "ipc-handlers",
       "toNode": "browser-windows",
       "label": "broadcasts",
-      "vv": {
-        "edgeType": "uses",
-        "notes": "Events broadcast to ALL windows via BrowserWindow.getAllWindows()"
+      "pv": {
+        "edgeType": "uses"
       }
     },
     {
@@ -437,9 +409,8 @@
       "fromNode": "monitoring-manager",
       "toNode": "worker-process",
       "label": "postMessage",
-      "vv": {
-        "edgeType": "post-message",
-        "notes": "Commands sent to worker via Node.js child process IPC"
+      "pv": {
+        "edgeType": "post-message"
       }
     },
     {
@@ -447,9 +418,8 @@
       "fromNode": "worker-process",
       "toNode": "monitoring-manager",
       "label": "parentPort.postMessage",
-      "vv": {
-        "edgeType": "post-message",
-        "notes": "Worker sends results and events back via process.parentPort"
+      "pv": {
+        "edgeType": "post-message"
       }
     },
     {
@@ -457,9 +427,8 @@
       "fromNode": "worker-process",
       "toNode": "git-watcher",
       "label": "uses",
-      "vv": {
-        "edgeType": "uses",
-        "notes": "Worker uses git watcher for monitoring"
+      "pv": {
+        "edgeType": "uses"
       }
     },
     {
@@ -467,9 +436,8 @@
       "fromNode": "worker-process",
       "toNode": "file-tree-builder",
       "label": "uses",
-      "vv": {
-        "edgeType": "uses",
-        "notes": "Worker uses file tree builder"
+      "pv": {
+        "edgeType": "uses"
       }
     },
     {
@@ -477,9 +445,8 @@
       "fromNode": "worker-process",
       "toNode": "package-processor",
       "label": "uses",
-      "vv": {
-        "edgeType": "uses",
-        "notes": "Worker uses package processor"
+      "pv": {
+        "edgeType": "uses"
       }
     },
     {
@@ -487,9 +454,8 @@
       "fromNode": "worker-process",
       "toNode": "git-remote-service",
       "label": "uses",
-      "vv": {
-        "edgeType": "uses",
-        "notes": "Worker uses git remote service"
+      "pv": {
+        "edgeType": "uses"
       }
     },
     {
@@ -497,9 +463,8 @@
       "fromNode": "git-watcher",
       "toNode": "cache-registry",
       "label": "updates",
-      "vv": {
-        "edgeType": "emits",
-        "notes": "Git watcher updates gitStatus cache slice"
+      "pv": {
+        "edgeType": "emits"
       }
     },
     {
@@ -507,9 +472,8 @@
       "fromNode": "file-tree-builder",
       "toNode": "cache-registry",
       "label": "updates",
-      "vv": {
-        "edgeType": "emits",
-        "notes": "File tree builder updates fileTree cache slice"
+      "pv": {
+        "edgeType": "emits"
       }
     },
     {
@@ -517,9 +481,8 @@
       "fromNode": "package-processor",
       "toNode": "cache-registry",
       "label": "updates",
-      "vv": {
-        "edgeType": "emits",
-        "notes": "Package processor updates packages cache slice"
+      "pv": {
+        "edgeType": "emits"
       }
     },
     {
@@ -527,9 +490,8 @@
       "fromNode": "git-remote-service",
       "toNode": "cache-registry",
       "label": "updates",
-      "vv": {
-        "edgeType": "emits",
-        "notes": "Git remote service updates gitRemote cache slice"
+      "pv": {
+        "edgeType": "emits"
       }
     },
     {
@@ -537,9 +499,8 @@
       "fromNode": "cache-registry",
       "toNode": "cache-slice-git",
       "label": "contains",
-      "vv": {
-        "edgeType": "uses",
-        "notes": "Cache registry contains gitStatus slice"
+      "pv": {
+        "edgeType": "uses"
       }
     },
     {
@@ -547,9 +508,8 @@
       "fromNode": "cache-registry",
       "toNode": "cache-slice-filetree",
       "label": "contains",
-      "vv": {
-        "edgeType": "uses",
-        "notes": "Cache registry contains fileTree slice"
+      "pv": {
+        "edgeType": "uses"
       }
     },
     {
@@ -557,9 +517,8 @@
       "fromNode": "cache-registry",
       "toNode": "cache-slice-packages",
       "label": "contains",
-      "vv": {
-        "edgeType": "uses",
-        "notes": "Cache registry contains packages slice"
+      "pv": {
+        "edgeType": "uses"
       }
     },
     {
@@ -567,9 +526,8 @@
       "fromNode": "cache-registry",
       "toNode": "cache-slice-remote",
       "label": "contains",
-      "vv": {
-        "edgeType": "uses",
-        "notes": "Cache registry contains gitRemote slice"
+      "pv": {
+        "edgeType": "uses"
       }
     },
     {
@@ -577,9 +535,8 @@
       "fromNode": "cache-registry",
       "toNode": "worker-process",
       "label": "CACHE_SYNC",
-      "vv": {
-        "edgeType": "emits",
-        "notes": "Cache emits CACHE_SYNC event with slice name and entry data"
+      "pv": {
+        "edgeType": "emits"
       }
     }
   ]

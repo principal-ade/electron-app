@@ -1,5 +1,5 @@
 {
-  "vv": {
+  "pv": {
     "name": "Principal ADE - System Architecture",
     "version": "1.0.0",
     "nodeTypes": {
@@ -65,10 +65,9 @@
       "width": 200,
       "height": 70,
       "text": "Main Process",
-      "vv": {
+      "pv": {
         "nodeType": "main",
-        "shape": "rectangle",
-        "notes": "Electron main process (Node.js). Handles IPC, services, file system, auth, git operations. Entry: src/main/main.ts"
+        "shape": "rectangle"
       }
     },
     {
@@ -79,10 +78,9 @@
       "width": 200,
       "height": 70,
       "text": "Renderer Process(es)",
-      "vv": {
+      "pv": {
         "nodeType": "renderer",
-        "shape": "rectangle",
-        "notes": "React/TypeScript UI. Multiple windows: Principal, Repo Manager, Alexandria, Dev Workspace. Runs in Chromium."
+        "shape": "rectangle"
       }
     },
     {
@@ -93,10 +91,9 @@
       "width": 200,
       "height": 70,
       "text": "Worker Process",
-      "vv": {
+      "pv": {
         "nodeType": "worker",
-        "shape": "rectangle",
-        "notes": "Utility process for repository monitoring. Runs @principal-ai/repository-monitoring-server. Isolates heavy I/O from main process."
+        "shape": "rectangle"
       }
     },
     {
@@ -107,10 +104,9 @@
       "width": 160,
       "height": 60,
       "text": "GitHub API",
-      "vv": {
+      "pv": {
         "nodeType": "external-api",
-        "shape": "rectangle",
-        "notes": "api.github.com. Repository data, issues, PRs, user profile, OAuth. Used for repo management and social features."
+        "shape": "rectangle"
       }
     },
     {
@@ -121,10 +117,9 @@
       "width": 160,
       "height": 60,
       "text": "WorkOS Auth",
-      "vv": {
+      "pv": {
         "nodeType": "external-api",
-        "shape": "rectangle",
-        "notes": "OAuth/OIDC provider. Handles authentication flow, token issuance, and refresh. Returns GitHub + WorkOS tokens."
+        "shape": "rectangle"
       }
     },
     {
@@ -135,10 +130,9 @@
       "width": 160,
       "height": 60,
       "text": "Git Sync Server",
-      "vv": {
+      "pv": {
         "nodeType": "external-api",
-        "shape": "rectangle",
-        "notes": "WebSocket server for real-time git synchronization. Syncs repository state across devices/sessions."
+        "shape": "rectangle"
       }
     },
     {
@@ -149,10 +143,9 @@
       "width": 160,
       "height": 60,
       "text": "OpenRouter API",
-      "vv": {
+      "pv": {
         "nodeType": "external-api",
-        "shape": "rectangle",
-        "notes": "LLM API gateway. Routes requests to various AI models (Claude, GPT, etc.) for agent capabilities."
+        "shape": "rectangle"
       }
     },
     {
@@ -163,10 +156,9 @@
       "width": 140,
       "height": 60,
       "text": "Git CLI",
-      "vv": {
+      "pv": {
         "nodeType": "local-tool",
-        "shape": "rectangle",
-        "notes": "Local git binary. Used for clone, commit, push, pull, status. Auth via GIT_ASKPASS with GitHub token."
+        "shape": "rectangle"
       }
     },
     {
@@ -177,10 +169,9 @@
       "width": 140,
       "height": 60,
       "text": "Docker",
-      "vv": {
+      "pv": {
         "nodeType": "local-tool",
-        "shape": "rectangle",
-        "notes": "Container runtime. DockerService manages containers and images for development environments."
+        "shape": "rectangle"
       }
     },
     {
@@ -191,10 +182,9 @@
       "width": 140,
       "height": 60,
       "text": "Terminal (PTY)",
-      "vv": {
+      "pv": {
         "nodeType": "local-tool",
-        "shape": "rectangle",
-        "notes": "Pseudo-terminal via node-pty. Powers integrated terminal with xterm.js frontend. Shell access for dev tasks."
+        "shape": "rectangle"
       }
     },
     {
@@ -205,10 +195,9 @@
       "width": 140,
       "height": 60,
       "text": "File System",
-      "vv": {
+      "pv": {
         "nodeType": "local-tool",
-        "shape": "rectangle",
-        "notes": "Local file system access. File watching (chokidar), read/write operations, directory traversal."
+        "shape": "rectangle"
       }
     },
     {
@@ -219,10 +208,9 @@
       "width": 160,
       "height": 60,
       "text": "OS Keychain",
-      "vv": {
+      "pv": {
         "nodeType": "storage",
-        "shape": "rectangle",
-        "notes": "macOS Keychain / Windows Credential Manager. Holds encryption key for safeStorage. Protects auth tokens."
+        "shape": "rectangle"
       }
     },
     {
@@ -233,10 +221,9 @@
       "width": 160,
       "height": 60,
       "text": "App Storage",
-      "vv": {
+      "pv": {
         "nodeType": "storage",
-        "shape": "rectangle",
-        "notes": "~/Library/Application Support/[App]/. Encrypted tokens, user preferences, workspace state, repository cache."
+        "shape": "rectangle"
       }
     },
     {
@@ -247,10 +234,9 @@
       "width": 160,
       "height": 60,
       "text": "Local Repositories",
-      "vv": {
+      "pv": {
         "nodeType": "storage",
-        "shape": "rectangle",
-        "notes": "Git repositories on local disk. Monitored by worker process for file changes, git status, package detection."
+        "shape": "rectangle"
       }
     }
   ],
@@ -262,9 +248,8 @@
       "toNode": "renderer-processes",
       "toSide": "bottom",
       "label": "IPC",
-      "vv": {
-        "edgeType": "ipc",
-        "notes": "Electron IPC via preload bridge. 40+ API surfaces exposed to renderer."
+      "pv": {
+        "edgeType": "ipc"
       }
     },
     {
@@ -274,9 +259,8 @@
       "toNode": "worker-process",
       "toSide": "top",
       "label": "postMessage",
-      "vv": {
-        "edgeType": "ipc",
-        "notes": "Utility process IPC. Repository monitoring commands and events."
+      "pv": {
+        "edgeType": "ipc"
       }
     },
     {
@@ -286,9 +270,8 @@
       "toNode": "github-api",
       "toSide": "bottom",
       "label": "REST API",
-      "vv": {
-        "edgeType": "http",
-        "notes": "GitHub REST API calls from renderer (via adapters). Repos, issues, PRs, user data."
+      "pv": {
+        "edgeType": "http"
       }
     },
     {
@@ -298,9 +281,8 @@
       "toNode": "github-api",
       "toSide": "bottom",
       "label": "REST API",
-      "vv": {
-        "edgeType": "http",
-        "notes": "GitHub API calls from main process. User profile enrichment, token validation."
+      "pv": {
+        "edgeType": "http"
       }
     },
     {
@@ -310,9 +292,8 @@
       "toNode": "workos-api",
       "toSide": "right",
       "label": "OAuth + REST",
-      "vv": {
-        "edgeType": "http",
-        "notes": "PKCE OAuth flow for login. Token refresh endpoint for session management."
+      "pv": {
+        "edgeType": "http"
       }
     },
     {
@@ -322,9 +303,8 @@
       "toNode": "git-sync-server",
       "toSide": "right",
       "label": "WebSocket",
-      "vv": {
-        "edgeType": "websocket",
-        "notes": "Real-time git state sync. JWT authenticated. Bidirectional updates."
+      "pv": {
+        "edgeType": "websocket"
       }
     },
     {
@@ -334,9 +314,8 @@
       "toNode": "openrouter-api",
       "toSide": "right",
       "label": "REST API",
-      "vv": {
-        "edgeType": "http",
-        "notes": "LLM API calls for agent capabilities. Model selection and routing."
+      "pv": {
+        "edgeType": "http"
       }
     },
     {
@@ -346,9 +325,8 @@
       "toNode": "git-cli",
       "toSide": "left",
       "label": "spawn",
-      "vv": {
-        "edgeType": "spawns",
-        "notes": "Spawns git commands. Uses GIT_ASKPASS for GitHub auth. Captures stdout/stderr."
+      "pv": {
+        "edgeType": "spawns"
       }
     },
     {
@@ -358,9 +336,8 @@
       "toNode": "docker",
       "toSide": "left",
       "label": "Docker API",
-      "vv": {
-        "edgeType": "spawns",
-        "notes": "Docker CLI/API for container management. Dev environment containers."
+      "pv": {
+        "edgeType": "spawns"
       }
     },
     {
@@ -370,9 +347,8 @@
       "toNode": "terminal-pty",
       "toSide": "left",
       "label": "node-pty",
-      "vv": {
-        "edgeType": "spawns",
-        "notes": "PTY sessions via node-pty. Per-window terminal instances."
+      "pv": {
+        "edgeType": "spawns"
       }
     },
     {
@@ -382,9 +358,8 @@
       "toNode": "file-system",
       "toSide": "left",
       "label": "fs",
-      "vv": {
-        "edgeType": "reads-writes",
-        "notes": "File read/write operations from main process."
+      "pv": {
+        "edgeType": "reads-writes"
       }
     },
     {
@@ -394,9 +369,8 @@
       "toNode": "file-system",
       "toSide": "left",
       "label": "chokidar",
-      "vv": {
-        "edgeType": "reads-writes",
-        "notes": "File watching for repository monitoring. Detects changes, builds file trees."
+      "pv": {
+        "edgeType": "reads-writes"
       }
     },
     {
@@ -406,9 +380,8 @@
       "toNode": "os-keychain",
       "toSide": "top",
       "label": "safeStorage",
-      "vv": {
-        "edgeType": "reads-writes",
-        "notes": "Electron safeStorage API. Gets encryption key for token storage."
+      "pv": {
+        "edgeType": "reads-writes"
       }
     },
     {
@@ -418,9 +391,8 @@
       "toNode": "app-storage",
       "toSide": "top",
       "label": "read/write",
-      "vv": {
-        "edgeType": "reads-writes",
-        "notes": "App data persistence. Encrypted tokens, preferences, cache files."
+      "pv": {
+        "edgeType": "reads-writes"
       }
     },
     {
@@ -430,9 +402,8 @@
       "toNode": "local-repos",
       "toSide": "top",
       "label": "monitor",
-      "vv": {
-        "edgeType": "reads-writes",
-        "notes": "Repository monitoring. File changes, git status, package detection."
+      "pv": {
+        "edgeType": "reads-writes"
       }
     },
     {
@@ -442,9 +413,8 @@
       "toNode": "local-repos",
       "toSide": "right",
       "label": "git ops",
-      "vv": {
-        "edgeType": "reads-writes",
-        "notes": "Git operations on local repos via git CLI."
+      "pv": {
+        "edgeType": "reads-writes"
       }
     }
   ]

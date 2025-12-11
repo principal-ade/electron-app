@@ -1,29 +1,90 @@
 {
-  "vv": {
+  "pv": {
     "name": "Cache Sync Architecture",
     "version": "1.0.0",
     "description": "Repository cache sync event broadcasting mechanism - flow from worker process through main process to renderer",
     "nodeTypes": {
-      "git-watcher-adapter": { "label": "Git Watcher Adapter", "color": "#5EEAD4" },
-      "repo-cache-registry": { "label": "Cache Registry", "color": "#2DD4BF" },
-      "file-tree-builder": { "label": "File Tree Builder", "color": "#99F6E4" },
-      "repo-monitoring-worker": { "label": "Monitoring Worker", "color": "#0D9488" },
-      "repo-monitoring-manager": { "label": "Monitoring Manager", "color": "#14B8A6" },
-      "ipc-handler": { "label": "IPC Handler", "color": "#6366F1" },
-      "preload": { "label": "Preload Script", "color": "#8B5CF6" },
-      "repo-monitoring-service": { "label": "Monitoring Service", "color": "#7C3AED" },
-      "repository-data-cache": { "label": "Data Cache", "color": "#A855F7" },
-      "use-repository-data": { "label": "Hook", "color": "#C084FC" },
-      "panel-system": { "label": "Panel System", "color": "#EC4899" }
+      "git-watcher-adapter": {
+        "label": "Git Watcher Adapter",
+        "color": "#5EEAD4"
+      },
+      "repo-cache-registry": {
+        "label": "Cache Registry",
+        "color": "#2DD4BF"
+      },
+      "file-tree-builder": {
+        "label": "File Tree Builder",
+        "color": "#99F6E4"
+      },
+      "repo-monitoring-worker": {
+        "label": "Monitoring Worker",
+        "color": "#0D9488"
+      },
+      "repo-monitoring-manager": {
+        "label": "Monitoring Manager",
+        "color": "#14B8A6"
+      },
+      "ipc-handler": {
+        "label": "IPC Handler",
+        "color": "#6366F1"
+      },
+      "preload": {
+        "label": "Preload Script",
+        "color": "#8B5CF6"
+      },
+      "repo-monitoring-service": {
+        "label": "Monitoring Service",
+        "color": "#7C3AED"
+      },
+      "repository-data-cache": {
+        "label": "Data Cache",
+        "color": "#A855F7"
+      },
+      "use-repository-data": {
+        "label": "Hook",
+        "color": "#C084FC"
+      },
+      "panel-system": {
+        "label": "Panel System",
+        "color": "#EC4899"
+      }
     },
     "edgeTypes": {
-      "file-watch": { "label": "File Watch", "style": "dashed", "color": "#22C55E" },
-      "uses": { "label": "Uses", "style": "dotted", "color": "#64748B" },
-      "subscription": { "label": "Subscription", "style": "dashed", "color": "#A855F7" },
-      "worker-message": { "label": "Worker Message", "style": "solid", "color": "#0D9488" },
-      "cache-sync": { "label": "Cache Sync", "style": "dashed", "color": "#14B8A6" },
-      "ipc-event": { "label": "IPC Event", "style": "dashed", "color": "#818CF8" },
-      "renders": { "label": "Renders", "style": "solid", "color": "#EC4899" }
+      "file-watch": {
+        "label": "File Watch",
+        "style": "dashed",
+        "color": "#22C55E"
+      },
+      "uses": {
+        "label": "Uses",
+        "style": "dotted",
+        "color": "#64748B"
+      },
+      "subscription": {
+        "label": "Subscription",
+        "style": "dashed",
+        "color": "#A855F7"
+      },
+      "worker-message": {
+        "label": "Worker Message",
+        "style": "solid",
+        "color": "#0D9488"
+      },
+      "cache-sync": {
+        "label": "Cache Sync",
+        "style": "dashed",
+        "color": "#14B8A6"
+      },
+      "ipc-event": {
+        "label": "IPC Event",
+        "style": "dashed",
+        "color": "#818CF8"
+      },
+      "renders": {
+        "label": "Renders",
+        "style": "solid",
+        "color": "#EC4899"
+      }
     }
   },
   "nodes": [
@@ -44,11 +105,9 @@
       "width": 180,
       "height": 60,
       "text": "Git Watcher Adapter",
-      "vv": {
+      "pv": {
         "nodeType": "git-watcher-adapter",
-        "shape": "rectangle",
-        "file": "src/main/repository-monitoring/worker/GitWatcherAdapter.ts",
-        "notes": "Chokidar-based watcher for .git/index and workspace files. Emits WORKSPACE_CHANGED events with 100-300ms debounce."
+        "shape": "rectangle"
       }
     },
     {
@@ -59,11 +118,9 @@
       "width": 180,
       "height": 60,
       "text": "Cache Registry",
-      "vv": {
+      "pv": {
         "nodeType": "repo-cache-registry",
-        "shape": "rectangle",
-        "file": "@principal-ai/repository-monitoring-server",
-        "notes": "Version-tracked cache with 4 slices: gitStatus, fileTree, packages, gitRemote. Schedules rebuilds with debouncing (250ms file tree, 300ms packages)."
+        "shape": "rectangle"
       }
     },
     {
@@ -74,10 +131,9 @@
       "width": 180,
       "height": 60,
       "text": "File Tree Builder",
-      "vv": {
+      "pv": {
         "nodeType": "file-tree-builder",
-        "shape": "rectangle",
-        "notes": "Async file tree construction. Max 2 concurrent builds to prevent filesystem thrashing."
+        "shape": "rectangle"
       }
     },
     {
@@ -88,11 +144,9 @@
       "width": 180,
       "height": 60,
       "text": "Repository Monitoring Server",
-      "vv": {
+      "pv": {
         "nodeType": "repo-monitoring-worker",
-        "shape": "rectangle",
-        "file": "@principal-ai/repository-monitoring-server",
-        "notes": "Main worker entry point. Handles cache updates and posts CACHE_SYNC events to main process via parentPort."
+        "shape": "rectangle"
       }
     },
     {
@@ -121,11 +175,9 @@
       "width": 180,
       "height": 60,
       "text": "Repository Monitoring Manager",
-      "vv": {
+      "pv": {
         "nodeType": "repo-monitoring-manager",
-        "shape": "rectangle",
-        "file": "src/main/repository-monitoring/RepositoryMonitoringManager.ts",
-        "notes": "Spawns worker, handles worker messages, emits events locally"
+        "shape": "rectangle"
       }
     },
     {
@@ -136,11 +188,9 @@
       "width": 180,
       "height": 60,
       "text": "IPC Handlers\n\nBroadcasts to ALL windows:\nBrowserWindow.getAllWindows()",
-      "vv": {
+      "pv": {
         "nodeType": "ipc-handler",
-        "shape": "rectangle",
-        "file": "src/main/repository-monitoring/ipcHandlers.ts:507-519",
-        "notes": "Synchronously iterates all windows to broadcast cache sync events"
+        "shape": "rectangle"
       }
     },
     {
@@ -169,11 +219,9 @@
       "width": 180,
       "height": 60,
       "text": "Preload Bridge",
-      "vv": {
+      "pv": {
         "nodeType": "preload",
-        "shape": "rectangle",
-        "file": "src/window/main-process-api-implementations/repositoryMonitoringApi.ts",
-        "notes": "Exposes window.mainProcess.repositoryMonitoring.onCacheSync(callback)"
+        "shape": "rectangle"
       }
     },
     {
@@ -184,11 +232,9 @@
       "width": 180,
       "height": 60,
       "text": "Repository Monitoring Service",
-      "vv": {
+      "pv": {
         "nodeType": "repo-monitoring-service",
-        "shape": "rectangle",
-        "file": "src/renderer/main-process-api/RepositoryMonitoringService.ts",
-        "notes": "Static service wrapper for clean API"
+        "shape": "rectangle"
       }
     },
     {
@@ -199,11 +245,9 @@
       "width": 200,
       "height": 80,
       "text": "Repository Data Cache",
-      "vv": {
+      "pv": {
         "nodeType": "repository-data-cache",
-        "shape": "rectangle",
-        "file": "src/renderer/services/RepositoryDataCache.ts",
-        "notes": "EventEmitter-based cache. Version validation prevents stale updates. 100ms batched flush interval. Tracks component subscriptions."
+        "shape": "rectangle"
       }
     },
     {
@@ -214,11 +258,9 @@
       "width": 150,
       "height": 60,
       "text": "useRepositoryData()",
-      "vv": {
+      "pv": {
         "nodeType": "use-repository-data",
-        "shape": "rectangle",
-        "file": "src/renderer/hooks/useRepositoryData.ts",
-        "notes": "React hook that subscribes to cache updates and triggers re-renders"
+        "shape": "rectangle"
       }
     },
     {
@@ -229,10 +271,9 @@
       "width": 200,
       "height": 60,
       "text": "UI Components",
-      "vv": {
+      "pv": {
         "nodeType": "panel-system",
-        "shape": "rectangle",
-        "notes": "File Tree Panel, Git Changes, Repository cards, etc."
+        "shape": "rectangle"
       }
     },
     {
@@ -271,7 +312,9 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "WORKSPACE_CHANGED",
-      "vv": { "edgeType": "file-watch" }
+      "pv": {
+        "edgeType": "file-watch"
+      }
     },
     {
       "id": "e2",
@@ -280,7 +323,9 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "scheduleRebuild()",
-      "vv": { "edgeType": "uses" }
+      "pv": {
+        "edgeType": "uses"
+      }
     },
     {
       "id": "e3",
@@ -289,7 +334,9 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "cacheUpdated event",
-      "vv": { "edgeType": "subscription" }
+      "pv": {
+        "edgeType": "subscription"
+      }
     },
     {
       "id": "e4",
@@ -298,7 +345,9 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "parentPort.postMessage()",
-      "vv": { "edgeType": "worker-message" }
+      "pv": {
+        "edgeType": "worker-message"
+      }
     },
     {
       "id": "e5",
@@ -307,7 +356,9 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "manager.on('cache-sync')",
-      "vv": { "edgeType": "subscription" }
+      "pv": {
+        "edgeType": "subscription"
+      }
     },
     {
       "id": "e6",
@@ -316,7 +367,9 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "webContents.send() to ALL windows",
-      "vv": { "edgeType": "cache-sync" }
+      "pv": {
+        "edgeType": "cache-sync"
+      }
     },
     {
       "id": "e7",
@@ -325,7 +378,9 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "ipcRenderer.on()",
-      "vv": { "edgeType": "ipc-event" }
+      "pv": {
+        "edgeType": "ipc-event"
+      }
     },
     {
       "id": "e8",
@@ -334,7 +389,9 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "onCacheSync(callback)",
-      "vv": { "edgeType": "subscription" }
+      "pv": {
+        "edgeType": "subscription"
+      }
     },
     {
       "id": "e9",
@@ -343,7 +400,9 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "cache.subscribe(repoPath)",
-      "vv": { "edgeType": "subscription" }
+      "pv": {
+        "edgeType": "subscription"
+      }
     },
     {
       "id": "e10",
@@ -352,7 +411,9 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "setData() -> re-render",
-      "vv": { "edgeType": "renders" }
+      "pv": {
+        "edgeType": "renders"
+      }
     }
   ]
 }

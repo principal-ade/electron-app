@@ -1,5 +1,5 @@
 {
-  "vv": {
+  "pv": {
     "name": "Authentication & Token Refresh Flow",
     "version": "1.0.0",
     "nodeTypes": {
@@ -66,10 +66,9 @@
       "width": 160,
       "height": 60,
       "text": "AuthView",
-      "vv": {
+      "pv": {
         "nodeType": "renderer",
-        "shape": "rectangle",
-        "notes": "[React Component] Login/logout UI component. Uses useAuthState hook for auth operations. File: src/renderer/principal-window/views/AuthView/AuthView.tsx"
+        "shape": "rectangle"
       }
     },
     {
@@ -80,10 +79,9 @@
       "width": 160,
       "height": 60,
       "text": "useAuthState()",
-      "vv": {
+      "pv": {
         "nodeType": "renderer",
-        "shape": "rectangle",
-        "notes": "[React Hook] Provides isAuthenticated, user, login(), logout(), refresh(). Subscribes to auth state changes. File: src/renderer/hooks/useAuthState.ts"
+        "shape": "rectangle"
       }
     },
     {
@@ -94,10 +92,9 @@
       "width": 180,
       "height": 60,
       "text": "AuthenticationService",
-      "vv": {
+      "pv": {
         "nodeType": "renderer",
-        "shape": "rectangle",
-        "notes": "[Service Layer] Wraps preload API with error handling. login(), logout(), check(), onAuthStateChanged(). File: src/renderer/main-process-api/AuthenticationService.ts"
+        "shape": "rectangle"
       }
     },
     {
@@ -108,10 +105,9 @@
       "width": 180,
       "height": 60,
       "text": "authenticationApi",
-      "vv": {
+      "pv": {
         "nodeType": "preload",
-        "shape": "rectangle",
-        "notes": "Preload bridge. Exposes window.mainProcess.authentication. Uses ipcRenderer.invoke/on for IPC. File: src/window/main-process-api-implementations/authenticationApi.ts"
+        "shape": "rectangle"
       }
     },
     {
@@ -122,10 +118,9 @@
       "width": 160,
       "height": 60,
       "text": "AuthEvent enum",
-      "vv": {
+      "pv": {
         "nodeType": "preload",
-        "shape": "rectangle",
-        "notes": "[Shared] IPC channel definitions: LOGIN, LOGOUT, CHECK, STATUS, STATE_CHANGED, GET_TOKEN_METADATA, VALIDATE_GITHUB_TOKEN. File: src/shared/ipc-events/AuthEvents.ts"
+        "shape": "rectangle"
       }
     },
     {
@@ -136,10 +131,9 @@
       "width": 180,
       "height": 70,
       "text": "AuthService",
-      "vv": {
+      "pv": {
         "nodeType": "main",
-        "shape": "rectangle",
-        "notes": "Core auth logic. Handles LOGIN/LOGOUT IPC. Orchestrates OAuth flow, token refresh, state updates. File: src/main/services/AuthService.ts"
+        "shape": "rectangle"
       }
     },
     {
@@ -150,10 +144,9 @@
       "width": 180,
       "height": 70,
       "text": "AuthStateManager",
-      "vv": {
+      "pv": {
         "nodeType": "main",
-        "shape": "rectangle",
-        "notes": "[Singleton] Canonical auth state: isAuthenticated, user, token. Broadcasts state changes to all windows. File: src/main/services/AuthStateManager.ts"
+        "shape": "rectangle"
       }
     },
     {
@@ -164,10 +157,9 @@
       "width": 180,
       "height": 70,
       "text": "OAuthServerClient",
-      "vv": {
+      "pv": {
         "nodeType": "main",
-        "shape": "rectangle",
-        "notes": "PKCE OAuth flow. authenticate(): start → browser → poll for token. refreshAccessToken(): POST /api/auth/workos/refresh. File: src/main/services/OAuthServerClient.ts"
+        "shape": "rectangle"
       }
     },
     {
@@ -178,10 +170,9 @@
       "width": 180,
       "height": 70,
       "text": "SecureTokenIPC",
-      "vv": {
+      "pv": {
         "nodeType": "main",
-        "shape": "rectangle",
-        "notes": "Token IPC handlers. SAVE/GET/CLEAR_GITHUB_AUTH. Lazy initialization - no keychain access on startup. File: src/main/services/SecureTokenIPC.ts"
+        "shape": "rectangle"
       }
     },
     {
@@ -192,10 +183,9 @@
       "width": 160,
       "height": 70,
       "text": "JWTService",
-      "vv": {
+      "pv": {
         "nodeType": "main",
-        "shape": "rectangle",
-        "notes": "Creates JWTs for git-sync. Maps GitHub permissions to sync permissions. Signs with HS256. File: src/main/services/JWTService.ts"
+        "shape": "rectangle"
       }
     },
     {
@@ -206,10 +196,9 @@
       "width": 200,
       "height": 70,
       "text": "UnifiedSecureStorage",
-      "vv": {
+      "pv": {
         "nodeType": "storage",
-        "shape": "rectangle",
-        "notes": "Singleton. Encrypts tokens using safeStorage (Keychain-protected key), then writes encrypted blobs to JSON file. 30s timeout protection. Manages: github_token, workos_token, workos_refresh_token. File: src/main/services/UnifiedSecureStorage.ts"
+        "shape": "rectangle"
       }
     },
     {
@@ -220,10 +209,9 @@
       "width": 200,
       "height": 50,
       "text": "OS Keychain (safeStorage)",
-      "vv": {
+      "pv": {
         "nodeType": "storage",
-        "shape": "rectangle",
-        "notes": "macOS Keychain / Windows Credential Manager. Holds the encryption KEY used by safeStorage.encryptString/decryptString. Tokens are NOT stored here directly - only the key that encrypts them."
+        "shape": "rectangle"
       }
     },
     {
@@ -234,10 +222,9 @@
       "width": 200,
       "height": 60,
       "text": "unified-secure-storage.json",
-      "vv": {
+      "pv": {
         "nodeType": "storage",
-        "shape": "rectangle",
-        "notes": "~/Library/Application Support/[App]/unified-secure-storage.json. Contains ENCRYPTED token blobs (base64), not plaintext. Encrypted using Keychain-protected key. File permissions: 0o600."
+        "shape": "rectangle"
       }
     },
     {
@@ -248,10 +235,9 @@
       "width": 160,
       "height": 70,
       "text": "WorkOS Auth API",
-      "vv": {
+      "pv": {
         "nodeType": "external",
-        "shape": "rectangle",
-        "notes": "External OAuth server. Endpoints: /api/auth/workos/start, /token, /refresh. Returns github_access_token, workos_access_token, refresh_token, expires_in."
+        "shape": "rectangle"
       }
     },
     {
@@ -262,10 +248,9 @@
       "width": 160,
       "height": 50,
       "text": "GitHub API",
-      "vv": {
+      "pv": {
         "nodeType": "external",
-        "shape": "rectangle",
-        "notes": "GET /user for profile enrichment. Validates tokens. Returns user info (login, email, avatar)."
+        "shape": "rectangle"
       }
     },
     {
@@ -276,10 +261,9 @@
       "width": 140,
       "height": 50,
       "text": "System Browser",
-      "vv": {
+      "pv": {
         "nodeType": "external",
-        "shape": "rectangle",
-        "notes": "shell.openExternal(auth_url). User authorizes GitHub access. Redirects back to WorkOS."
+        "shape": "rectangle"
       }
     },
     {
@@ -290,10 +274,9 @@
       "width": 160,
       "height": 70,
       "text": "githubTokenAuth",
-      "vv": {
+      "pv": {
         "nodeType": "main",
-        "shape": "rectangle",
-        "notes": "Git HTTPS auth helper. Creates GIT_ASKPASS script. Provides token for git clone/push. File: src/shared/git/githubTokenAuth.ts"
+        "shape": "rectangle"
       }
     },
     {
@@ -304,10 +287,9 @@
       "width": 130,
       "height": 50,
       "text": "github_token",
-      "vv": {
+      "pv": {
         "nodeType": "storage",
-        "shape": "rectangle",
-        "notes": "GitHub PAT. Never expires. Used for API calls and git operations."
+        "shape": "rectangle"
       }
     },
     {
@@ -318,10 +300,9 @@
       "width": 130,
       "height": 50,
       "text": "workos_token",
-      "vv": {
+      "pv": {
         "nodeType": "storage",
-        "shape": "rectangle",
-        "notes": "WorkOS session token. Expires in 1 hour. Used for session management."
+        "shape": "rectangle"
       }
     },
     {
@@ -332,10 +313,9 @@
       "width": 130,
       "height": 50,
       "text": "workos_refresh_token",
-      "vv": {
+      "pv": {
         "nodeType": "storage",
-        "shape": "rectangle",
-        "notes": "WorkOS refresh token. Used to refresh workos_token via POST /api/auth/workos/refresh. Rotated on each refresh (token rotation). Long-lived."
+        "shape": "rectangle"
       }
     }
   ],
@@ -345,9 +325,8 @@
       "fromNode": "auth-view",
       "toNode": "use-auth-state",
       "label": "uses",
-      "vv": {
-        "edgeType": "uses",
-        "notes": "Component uses hook for auth state and actions"
+      "pv": {
+        "edgeType": "uses"
       }
     },
     {
@@ -355,9 +334,8 @@
       "fromNode": "use-auth-state",
       "toNode": "authentication-service",
       "label": "calls",
-      "vv": {
-        "edgeType": "uses",
-        "notes": "Hook calls service methods for login/logout/refresh"
+      "pv": {
+        "edgeType": "uses"
       }
     },
     {
@@ -365,9 +343,8 @@
       "fromNode": "authentication-service",
       "toNode": "authentication-api",
       "label": "window.mainProcess",
-      "vv": {
-        "edgeType": "uses",
-        "notes": "Service wraps preload API calls"
+      "pv": {
+        "edgeType": "uses"
       }
     },
     {
@@ -375,9 +352,8 @@
       "fromNode": "authentication-api",
       "toNode": "auth-events",
       "label": "uses channels",
-      "vv": {
-        "edgeType": "uses",
-        "notes": "API uses AuthEvent enum for type-safe IPC channels"
+      "pv": {
+        "edgeType": "uses"
       }
     },
     {
@@ -385,9 +361,8 @@
       "fromNode": "authentication-api",
       "toNode": "auth-service",
       "label": "ipcRenderer.invoke(LOGIN)",
-      "vv": {
-        "edgeType": "ipc-invoke",
-        "notes": "LOGIN, LOGOUT, CHECK, GET_TOKEN_METADATA IPC calls"
+      "pv": {
+        "edgeType": "ipc-invoke"
       }
     },
     {
@@ -395,9 +370,8 @@
       "fromNode": "auth-state-manager",
       "toNode": "authentication-api",
       "label": "auth-state:changed",
-      "vv": {
-        "edgeType": "ipc-event",
-        "notes": "Broadcasts state changes to all renderer windows via webContents.send()"
+      "pv": {
+        "edgeType": "ipc-event"
       }
     },
     {
@@ -405,9 +379,8 @@
       "fromNode": "auth-service",
       "toNode": "auth-state-manager",
       "label": "setAuthenticated()",
-      "vv": {
-        "edgeType": "uses",
-        "notes": "Updates canonical auth state after login/logout/refresh"
+      "pv": {
+        "edgeType": "uses"
       }
     },
     {
@@ -415,9 +388,8 @@
       "fromNode": "auth-service",
       "toNode": "oauth-client",
       "label": "authenticate()",
-      "vv": {
-        "edgeType": "uses",
-        "notes": "Delegates OAuth flow to OAuthServerClient"
+      "pv": {
+        "edgeType": "uses"
       }
     },
     {
@@ -425,9 +397,8 @@
       "fromNode": "auth-service",
       "toNode": "secure-token-ipc",
       "label": "store tokens",
-      "vv": {
-        "edgeType": "uses",
-        "notes": "Stores/retrieves tokens via SecureTokenIPC"
+      "pv": {
+        "edgeType": "uses"
       }
     },
     {
@@ -435,9 +406,8 @@
       "fromNode": "auth-service",
       "toNode": "jwt-service",
       "label": "createJWT()",
-      "vv": {
-        "edgeType": "uses",
-        "notes": "Creates JWTs for git-sync operations"
+      "pv": {
+        "edgeType": "uses"
       }
     },
     {
@@ -445,9 +415,8 @@
       "fromNode": "oauth-client",
       "toNode": "workos-api",
       "label": "POST /start, /token, /refresh",
-      "vv": {
-        "edgeType": "http",
-        "notes": "PKCE OAuth flow: start auth, poll for token, refresh token"
+      "pv": {
+        "edgeType": "http"
       }
     },
     {
@@ -455,9 +424,8 @@
       "fromNode": "oauth-client",
       "toNode": "browser",
       "label": "shell.openExternal()",
-      "vv": {
-        "edgeType": "uses",
-        "notes": "Opens system browser for user authorization"
+      "pv": {
+        "edgeType": "uses"
       }
     },
     {
@@ -465,9 +433,8 @@
       "fromNode": "auth-service",
       "toNode": "github-api",
       "label": "GET /user",
-      "vv": {
-        "edgeType": "http",
-        "notes": "Fetches user profile for enrichment after OAuth"
+      "pv": {
+        "edgeType": "http"
       }
     },
     {
@@ -475,9 +442,8 @@
       "fromNode": "secure-token-ipc",
       "toNode": "unified-storage",
       "label": "setToken/getToken",
-      "vv": {
-        "edgeType": "uses",
-        "notes": "IPC handlers delegate to UnifiedSecureStorage"
+      "pv": {
+        "edgeType": "uses"
       }
     },
     {
@@ -485,9 +451,8 @@
       "fromNode": "unified-storage",
       "toNode": "keychain",
       "label": "safeStorage.encrypt/decrypt",
-      "vv": {
-        "edgeType": "stores",
-        "notes": "Uses Electron safeStorage for encryption keys"
+      "pv": {
+        "edgeType": "stores"
       }
     },
     {
@@ -495,9 +460,8 @@
       "fromNode": "unified-storage",
       "toNode": "storage-file",
       "label": "write/read",
-      "vv": {
-        "edgeType": "stores",
-        "notes": "Persists encrypted tokens to JSON file"
+      "pv": {
+        "edgeType": "stores"
       }
     },
     {
@@ -505,9 +469,8 @@
       "fromNode": "jwt-service",
       "toNode": "github-token-auth",
       "label": "provides token",
-      "vv": {
-        "edgeType": "uses",
-        "notes": "JWTService provides tokens for git operations"
+      "pv": {
+        "edgeType": "uses"
       }
     },
     {
@@ -515,9 +478,8 @@
       "fromNode": "storage-file",
       "toNode": "token-github",
       "label": "contains",
-      "vv": {
-        "edgeType": "stores",
-        "notes": "Stores encrypted github_token"
+      "pv": {
+        "edgeType": "stores"
       }
     },
     {
@@ -525,9 +487,8 @@
       "fromNode": "storage-file",
       "toNode": "token-workos",
       "label": "contains",
-      "vv": {
-        "edgeType": "stores",
-        "notes": "Stores encrypted workos_token"
+      "pv": {
+        "edgeType": "stores"
       }
     },
     {
@@ -535,9 +496,8 @@
       "fromNode": "storage-file",
       "toNode": "token-refresh",
       "label": "contains",
-      "vv": {
-        "edgeType": "stores",
-        "notes": "Stores encrypted workos_refresh_token"
+      "pv": {
+        "edgeType": "stores"
       }
     }
   ]

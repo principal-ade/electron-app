@@ -6,321 +6,321 @@ nodeComponents:
   # PROCESSES
   # ============================================
   main-process:
-    label: "Main Process"
+    defaultLabel: "Main Process"
     description: "Electron main process - Node.js backend handling IPC, services, and system operations"
-    category: "process"
+    tags: ["process"]
     color: "#4F46E5"
 
   renderer-process:
-    label: "Renderer Process"
+    defaultLabel: "Renderer Process"
     description: "React/TypeScript UI process running in Chromium"
-    category: "process"
+    tags: ["process"]
     color: "#7C3AED"
 
   preload:
-    label: "Preload Script"
+    defaultLabel: "Preload Script"
     description: "Bridge script exposing safe APIs to renderer"
-    category: "process"
+    tags: ["process"]
     color: "#8B5CF6"
 
   # ============================================
   # WINDOWS
   # ============================================
   principal-window:
-    label: "Principal Window"
+    defaultLabel: "Principal Window"
     description: "Main app shell - authentication, workspaces, settings, feed"
-    category: "window"
+    tags: ["window"]
     color: "#2563EB"
 
   repo-manager:
-    label: "Repo Manager"
+    defaultLabel: "Repo Manager"
     description: "Repository exploration workspace with multi-pane layout"
-    category: "window"
+    tags: ["window"]
     color: "#3B82F6"
 
   alexandria-workspace:
-    label: "Alexandria Workspace"
+    defaultLabel: "Alexandria Workspace"
     description: "Knowledge base workspace for code exploration"
-    category: "window"
+    tags: ["window"]
     color: "#60A5FA"
 
   dev-workspace:
-    label: "Dev Workspace"
+    defaultLabel: "Dev Workspace"
     description: "Development environment window"
-    category: "window"
+    tags: ["window"]
     color: "#93C5FD"
 
   extension-window:
-    label: "Extension Window"
+    defaultLabel: "Extension Window"
     description: "Browser window for extensions"
-    category: "window"
+    tags: ["window"]
     color: "#BFDBFE"
 
   # ============================================
   # MAIN PROCESS SERVICES
   # ============================================
   auth-service:
-    label: "Auth Service"
+    defaultLabel: "Auth Service"
     description: "Authentication, JWT handling, and secure token IPC"
-    category: "service"
+    tags: ["service"]
     color: "#DC2626"
 
   git-service:
-    label: "Git Service"
+    defaultLabel: "Git Service"
     description: "Core git operations (status, commit, branch, etc.)"
-    category: "service"
+    tags: ["service"]
     color: "#F97316"
 
   git-sync-service:
-    label: "Git Sync Service"
+    defaultLabel: "Git Sync Service"
     description: "WebSocket-based git synchronization manager"
-    category: "service"
+    tags: ["service"]
     color: "#FB923C"
 
   git-status-service:
-    label: "Git Status Service"
+    defaultLabel: "Git Status Service"
     description: "Repository git status tracking and file change detection"
-    category: "service"
+    tags: ["service"]
     color: "#FDBA74"
 
   repository-service:
-    label: "Repository Service"
+    defaultLabel: "Repository Service"
     description: "Repository CRUD, metadata, and lifecycle management"
-    category: "service"
+    tags: ["service"]
     color: "#059669"
 
   workspace-service:
-    label: "Workspace Service"
+    defaultLabel: "Workspace Service"
     description: "Workspace operations and state persistence"
-    category: "service"
+    tags: ["service"]
     color: "#10B981"
 
   alexandria-service:
-    label: "Alexandria Service"
+    defaultLabel: "Alexandria Service"
     description: "Knowledge base storage and retrieval"
-    category: "service"
+    tags: ["service"]
     color: "#34D399"
 
   agent-session-service:
-    label: "Agent Session Service"
+    defaultLabel: "Agent Session Service"
     description: "Agent session lifecycle and coordination"
-    category: "service"
+    tags: ["service"]
     color: "#F59E0B"
 
   agent-events-service:
-    label: "Agent Events Service"
+    defaultLabel: "Agent Events Service"
     description: "Agent session event processing and HTTP bridge"
-    category: "service"
+    tags: ["service"]
     color: "#FBBF24"
 
   file-system-service:
-    label: "File System Service"
+    defaultLabel: "File System Service"
     description: "File operations, watching, and shell commands"
-    category: "service"
+    tags: ["service"]
     color: "#6366F1"
 
   terminal-service:
-    label: "Terminal Service"
+    defaultLabel: "Terminal Service"
     description: "PTY management and terminal session handling"
-    category: "service"
+    tags: ["service"]
     color: "#818CF8"
 
   docker-service:
-    label: "Docker Service"
+    defaultLabel: "Docker Service"
     description: "Docker container and image management"
-    category: "service"
+    tags: ["service"]
     color: "#0EA5E9"
 
   observability-service:
-    label: "Observability Service"
+    defaultLabel: "Observability Service"
     description: "Monitoring, logging, and event emission"
-    category: "service"
+    tags: ["service"]
     color: "#14B8A6"
 
   storage-service:
-    label: "Storage Service"
+    defaultLabel: "Storage Service"
     description: "Typed data persistence via Electron Store"
-    category: "service"
+    tags: ["service"]
     color: "#8B5CF6"
 
   # ============================================
   # UI COMPONENTS
   # ============================================
   panel-system:
-    label: "Panel System"
+    defaultLabel: "Panel System"
     description: "Dynamic panel registry with 50+ panels (git, markdown, code, graphs)"
-    category: "ui"
+    tags: ["ui"]
     color: "#EC4899"
 
   titlebar:
-    label: "Titlebar"
+    defaultLabel: "Titlebar"
     description: "Custom window titlebar components"
-    category: "ui"
+    tags: ["ui"]
     color: "#F472B6"
 
   modals:
-    label: "Modals"
+    defaultLabel: "Modals"
     description: "Shared modal dialogs (add repo, secrets, settings)"
-    category: "ui"
+    tags: ["ui"]
     color: "#F9A8D4"
 
   integrated-shell:
-    label: "Integrated Shell"
+    defaultLabel: "Integrated Shell"
     description: "Primary window navigation and view switching"
-    category: "ui"
+    tags: ["ui"]
     color: "#DB2777"
 
   # ============================================
   # PANEL CATEGORIES
   # ============================================
   git-panels:
-    label: "Git Panels"
+    defaultLabel: "Git Panels"
     description: "Issues, PRs, commits, diff, history, changes panels"
-    category: "panel"
+    tags: ["panel"]
     color: "#F97316"
 
   code-panels:
-    label: "Code Panels"
+    defaultLabel: "Code Panels"
     description: "Files, tools, graphs, code-city visualization"
-    category: "panel"
+    tags: ["panel"]
     color: "#22C55E"
 
   markdown-panels:
-    label: "Markdown Panels"
+    defaultLabel: "Markdown Panels"
     description: "Editor, rendering, search, slides, books"
-    category: "panel"
+    tags: ["panel"]
     color: "#3B82F6"
 
   agent-panels:
-    label: "Agent Panels"
+    defaultLabel: "Agent Panels"
     description: "File activity, tool use, session overview"
-    category: "panel"
+    tags: ["panel"]
     color: "#EAB308"
 
   # ============================================
   # STATE MANAGEMENT
   # ============================================
   repository-context:
-    label: "Repository Context"
+    defaultLabel: "Repository Context"
     description: "Repository state and data provider"
-    category: "state"
+    tags: ["state"]
     color: "#A855F7"
 
   panel-context:
-    label: "Panel Context"
+    defaultLabel: "Panel Context"
     description: "Panel visibility, ordering, and focus state"
-    category: "state"
+    tags: ["state"]
     color: "#C084FC"
 
   git-changes-context:
-    label: "Git Changes Context"
+    defaultLabel: "Git Changes Context"
     description: "Git status and file change tracking"
-    category: "state"
+    tags: ["state"]
     color: "#D8B4FE"
 
   workspace-context:
-    label: "Workspace Context"
+    defaultLabel: "Workspace Context"
     description: "Workspace filter and visible projects state"
-    category: "state"
+    tags: ["state"]
     color: "#E9D5FF"
 
   # ============================================
   # EXTERNAL INTEGRATIONS
   # ============================================
   github-adapter:
-    label: "GitHub Adapter"
+    defaultLabel: "GitHub Adapter"
     description: "GitHub API integration for remote repositories"
-    category: "integration"
+    tags: ["integration"]
     color: "#171515"
 
   mcp-bridge:
-    label: "MCP Bridge"
+    defaultLabel: "MCP Bridge"
     description: "Model Context Protocol server integration"
-    category: "integration"
+    tags: ["integration"]
     color: "#06B6D4"
 
   event-server:
-    label: "Event Server"
+    defaultLabel: "Event Server"
     description: "HTTP server for agent session events"
-    category: "integration"
+    tags: ["integration"]
     color: "#0891B2"
 
   # ============================================
   # STORES
   # ============================================
   repository-store:
-    label: "Repository Store"
+    defaultLabel: "Repository Store"
     description: "Persistent repository metadata and configuration"
-    category: "store"
+    tags: ["store"]
     color: "#65A30D"
 
   workspace-store:
-    label: "Workspace Store"
+    defaultLabel: "Workspace Store"
     description: "Workspace data persistence"
-    category: "store"
+    tags: ["store"]
     color: "#84CC16"
 
   alexandria-store:
-    label: "Alexandria Store"
+    defaultLabel: "Alexandria Store"
     description: "Knowledge base data storage"
-    category: "store"
+    tags: ["store"]
     color: "#A3E635"
 
   user-preferences-store:
-    label: "User Preferences"
+    defaultLabel: "User Preferences"
     description: "User settings and UI state persistence"
-    category: "store"
+    tags: ["store"]
     color: "#BEF264"
 
   # ============================================
   # REPOSITORY MONITORING
   # ============================================
   repo-monitoring-worker:
-    label: "Repository Monitoring Worker"
+    defaultLabel: "Repository Monitoring Worker"
     description: "Node.js utility process running @principal-ai/repository-monitoring-server for file watching and cache building"
-    category: "process"
+    tags: ["process"]
     color: "#0D9488"
 
   repo-monitoring-manager:
-    label: "Repository Monitoring Manager"
+    defaultLabel: "Repository Monitoring Manager"
     description: "Main process manager that spawns and communicates with the monitoring worker"
-    category: "service"
+    tags: ["service"]
     color: "#14B8A6"
 
   repo-cache-registry:
-    label: "Cache Registry"
+    defaultLabel: "Cache Registry"
     description: "Worker-side cache storage with version tracking, hash validation, and rebuild scheduling"
-    category: "service"
+    tags: ["service"]
     color: "#2DD4BF"
 
   git-watcher-adapter:
-    label: "Git Watcher Adapter"
+    defaultLabel: "Git Watcher Adapter"
     description: "Chokidar-based file system watcher detecting changes in .git and workspace files"
-    category: "service"
+    tags: ["service"]
     color: "#5EEAD4"
 
   file-tree-builder:
-    label: "File Tree Builder"
+    defaultLabel: "File Tree Builder"
     description: "Async file tree construction with filtering and metadata"
-    category: "service"
+    tags: ["service"]
     color: "#99F6E4"
 
   repository-data-cache:
-    label: "Repository Data Cache"
+    defaultLabel: "Repository Data Cache"
     description: "Renderer-side EventEmitter cache with subscription tracking, batched updates, and version validation"
-    category: "state"
+    tags: ["state"]
     color: "#A855F7"
 
   use-repository-data:
-    label: "useRepositoryData Hook"
+    defaultLabel: "useRepositoryData Hook"
     description: "React hook subscribing to RepositoryDataCache for reactive UI updates"
-    category: "state"
+    tags: ["state"]
     color: "#C084FC"
 
   repo-monitoring-service:
-    label: "Repository Monitoring Service"
+    defaultLabel: "Repository Monitoring Service"
     description: "Renderer-side service wrapper for IPC communication with monitoring system"
-    category: "service"
+    tags: ["service"]
     color: "#7C3AED"
 
 edgeComponents:
