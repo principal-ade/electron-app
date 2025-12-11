@@ -9,9 +9,10 @@ import {
   GitHubStarredPanel,
   GitHubProjectsPanel,
 } from '@industry-theme/alexandria-panels';
+import { RepositoryQualityGridPanel } from '@principal-ade/code-quality-panels';
 import type { GitHubRepository } from '@industry-theme/alexandria-panels';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import { DoorClosed, FolderGit2, Folder, Star } from 'lucide-react';
+import { DoorClosed, FolderGit2, Folder, Star, Hexagon } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuthState';
 import {
   WorkspacesPanelProvider,
@@ -162,6 +163,18 @@ const WorkspacesViewContent: React.FC = () => {
             />
           ),
         },
+        {
+          id: 'repository-quality-grid',
+          label: 'Quality',
+          icon: <Hexagon size={16} />,
+          content: (
+            <RepositoryQualityGridPanel
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          ),
+        },
       ];
 
       // Add GitHub panels when authenticated
@@ -218,7 +231,7 @@ const WorkspacesViewContent: React.FC = () => {
         },
         middle: {
           type: 'tabs' as const,
-          panels: ['workspace-repositories'],
+          panels: ['repository-quality-grid'],
           config: {
             defaultActiveTab: 0,
             tabPosition: 'top' as const,
@@ -226,7 +239,7 @@ const WorkspacesViewContent: React.FC = () => {
         },
         right: {
           type: 'tabs' as const,
-          panels: [],
+          panels: ['workspace-repositories'],
           config: {
             defaultActiveTab: 0,
             tabPosition: 'top' as const,
@@ -263,8 +276,8 @@ const WorkspacesViewContent: React.FC = () => {
           minSizes={{ left: 15, middle: 30, right: 20 }}
           collapsed={
             panelState.type === 'three-panel'
-              ? { ...panelState.collapsed, right: true }
-              : { left: false, right: true }
+              ? panelState.collapsed
+              : { left: false, right: false }
           }
           style={{ flex: 1, width: '100%', minHeight: 0 }}
           theme={theme}
