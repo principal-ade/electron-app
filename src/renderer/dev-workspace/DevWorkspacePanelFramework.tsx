@@ -7,6 +7,8 @@ import {
 // CSS is bundled inline in principal-view-panels, no separate import needed
 // Note: code-city-panel CSS is bundled inline, no separate import needed
 import { RepositoryPanelProvider, useRepositoryPanelProvider } from '../contexts/RepositoryPanelContext';
+import { TerminalProvider, useTerminalProvider } from '../contexts/TerminalContext';
+import { AgentHighlightProvider, useAgentHighlightProvider } from '../contexts/AgentHighlightContext';
 import { TabbedTerminalPanel } from '@industry-theme/xterm-terminal-panel';
 import { TabbedGhosttyTerminal } from '@industry-theme/ghostty-terminal-panel';
 import { panels as principalViewPanels, ConfigLibraryBrowserPanel } from '@industry-theme/principal-view-panels';
@@ -37,7 +39,7 @@ interface DevWorkspacePanelFrameworkInnerProps {
 }
 
 /**
- * Inner component that uses RepositoryPanelProvider context
+ * Inner component that uses RepositoryPanelProvider, TerminalProvider, and AgentHighlightProvider contexts
  */
 const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerProps> = ({
   collapsed,
@@ -47,6 +49,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
 }) => {
   const { theme } = useTheme();
   const { context, actions, events } = useRepositoryPanelProvider();
+  const { context: terminalCtx, actions: terminalActions } = useTerminalProvider();
+  const { context: agentHighlightCtx } = useAgentHighlightProvider();
 
   // Load terminal implementation preference (default to xterm)
   const [terminalImplementation, setTerminalImplementation] = useState<'xterm' | 'ghostty'>('xterm');
@@ -69,9 +73,35 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
     return unsubscribe;
   }, []);
 
-  // Get required props for tabbed terminal panels
-  const terminalContext = (context as { terminalContext?: string }).terminalContext || 'terminal:default';
-  const terminalDirectory = (context as { repositoryPath?: string }).repositoryPath || '/';
+  // Get required props for tabbed terminal panels from TerminalContext
+  const terminalContext = terminalCtx.terminalContext || 'terminal:default';
+  const terminalDirectory = terminalCtx.repositoryPath || '/';
+
+  // Create merged context for terminal panels (includes terminal sessions)
+  const terminalPanelContext = useMemo(() => ({
+    ...context,
+    terminalSessions: terminalCtx.terminalSessions,
+    terminalContext: terminalCtx.terminalContext,
+  }), [context, terminalCtx.terminalSessions, terminalCtx.terminalContext]);
+
+  // Create merged context for Code City panel (includes agent highlight layers)
+  const codeCityPanelContext = useMemo(() => ({
+    ...context,
+    // Add agent highlight layers as a data slice for Code City
+    slices: new Map([
+      ...Array.from(context.slices?.entries() || []),
+      ['agentHighlightLayers', {
+        scope: 'repository' as const,
+        name: 'agentHighlightLayers',
+        data: agentHighlightCtx.highlightLayers,
+        loading: false,
+        error: null,
+        refresh: async () => {
+          // Agent highlight layers are updated reactively from events
+        },
+      }],
+    ]),
+  }), [context, agentHighlightCtx.highlightLayers]);
 
   const PrincipalViewPanelComponent = principalViewPanels[0]?.component;
   const CodeCityPanelComponent = codeCityPanels[0]?.component;
@@ -90,18 +120,19 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
       {
         id: 'terminal',
         label: 'Terminal',
+        // Note: ghostty panel has different TerminalActions type - see TODO in ghostty-terminal-panel repo
         content: terminalImplementation === 'ghostty' ? (
           <TabbedGhosttyTerminal
-            context={context}
-            actions={actions}
+            context={terminalPanelContext}
+            actions={terminalActions as never}
             events={events}
             terminalContext={terminalContext}
             directory={terminalDirectory}
           />
         ) : (
           <TabbedTerminalPanel
-            context={context}
-            actions={actions}
+            context={terminalPanelContext}
+            actions={terminalActions}
             events={events}
             terminalContext={terminalContext}
             directory={terminalDirectory}
@@ -143,7 +174,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
             flexDirection: 'column'
           }}>
             <CodeCityPanelComponent
-              context={context}
+              context={codeCityPanelContext}
               actions={actions}
               events={events}
             />
@@ -371,7 +402,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
         ),
       },
     ],
-    [PrincipalViewPanelComponent, CodeCityPanelComponent, DocsPanelComponent, DependenciesPanelComponent, LocalProjectsPanelComponent, GitChangesPanelComponent, LocalhostPanelComponent, EventBusPanelComponent, AgentToolsPanelComponent, CodeQualityPanelComponent, context, actions, events, terminalImplementation, terminalContext, terminalDirectory],
+    [PrincipalViewPanelComponent, CodeCityPanelComponent, DocsPanelComponent, DependenciesPanelComponent, LocalProjectsPanelComponent, GitChangesPanelComponent, LocalhostPanelComponent, EventBusPanelComponent, AgentToolsPanelComponent, CodeQualityPanelComponent, context, actions, events, terminalImplementation, terminalContext, terminalDirectory, terminalPanelContext, terminalActions, codeCityPanelContext],
   );
 
   return (
@@ -405,7 +436,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
  *
  * This is a simplified, modern panel system that uses:
  * - Panel framework components from @industry-theme packages
- * - PanelProvider for shared context, actions, and events
+ * - RepositoryPanelProvider for panel data (file tree, git status, etc.)
+ * - TerminalProvider for terminal state (separate to avoid re-renders)
  * - ConfigurablePanelLayout for visual layout management
  */
 export const DevWorkspacePanelFramework: React.FC<
@@ -442,14 +474,20 @@ export const DevWorkspacePanelFramework: React.FC<
     <RepositoryPanelProvider
       repositoryPath={repositoryPath}
       repository={repositoryMetadata}
-      terminalContext={terminalContext}
     >
-      <DevWorkspacePanelFrameworkInner
-        collapsed={collapsed}
-        onCollapsedChange={onCollapsedChange}
-        layout={layout}
-        onLayoutChange={onLayoutChange}
-      />
+      <TerminalProvider
+        repositoryPath={repositoryPath}
+        terminalContext={terminalContext}
+      >
+        <AgentHighlightProvider repositoryPath={repositoryPath}>
+          <DevWorkspacePanelFrameworkInner
+            collapsed={collapsed}
+            onCollapsedChange={onCollapsedChange}
+            layout={layout}
+            onLayoutChange={onLayoutChange}
+          />
+        </AgentHighlightProvider>
+      </TerminalProvider>
     </RepositoryPanelProvider>
   );
 };

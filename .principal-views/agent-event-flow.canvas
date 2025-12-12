@@ -1,0 +1,418 @@
+{
+  "pv": {
+    "name": "Agent Event Flow to Renderer",
+    "version": "1.0.0",
+    "nodeTypes": {
+      "utility-process": {
+        "label": "Utility Process",
+        "color": "#EF4444"
+      },
+      "main-process": {
+        "label": "Main Process",
+        "color": "#4F46E5"
+      },
+      "event-manager": {
+        "label": "Event Manager",
+        "color": "#7C3AED"
+      },
+      "cache": {
+        "label": "Session Cache",
+        "color": "#8B5CF6"
+      },
+      "ipc-handler": {
+        "label": "IPC Handler",
+        "color": "#6366F1"
+      },
+      "preload": {
+        "label": "Preload Script",
+        "color": "#14B8A6"
+      },
+      "renderer-api": {
+        "label": "Renderer API",
+        "color": "#10B981"
+      },
+      "service": {
+        "label": "Service Layer",
+        "color": "#22C55E"
+      },
+      "context": {
+        "label": "React Context",
+        "color": "#84CC16"
+      },
+      "component": {
+        "label": "Component",
+        "color": "#EAB308"
+      },
+      "interface": {
+        "label": "Interface",
+        "color": "#64748B"
+      }
+    },
+    "edgeTypes": {
+      "event-flow": {
+        "label": "Event Flow",
+        "style": "solid",
+        "color": "#7C3AED",
+        "animation": {
+          "type": "flow",
+          "duration": 1500
+        }
+      },
+      "ipc": {
+        "label": "IPC",
+        "style": "solid",
+        "color": "#6366F1"
+      },
+      "broadcast": {
+        "label": "Broadcast",
+        "style": "dashed",
+        "color": "#F59E0B",
+        "animation": {
+          "type": "pulse",
+          "duration": 1000
+        }
+      },
+      "subscribe": {
+        "label": "Subscribe",
+        "style": "dotted",
+        "color": "#22C55E"
+      },
+      "uses": {
+        "label": "Uses",
+        "style": "dotted",
+        "color": "#64748B"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "group-main",
+      "type": "group",
+      "x": 0,
+      "y": 180,
+      "width": 720,
+      "height": 380,
+      "label": "Main Process"
+    },
+    {
+      "id": "group-renderer",
+      "type": "group",
+      "x": 800,
+      "y": 0,
+      "width": 480,
+      "height": 700,
+      "label": "Renderer Process"
+    },
+    {
+      "id": "event-server",
+      "type": "text",
+      "x": 20,
+      "y": 20,
+      "width": 200,
+      "height": 80,
+      "text": "Event Processing Server\n(Utility Process)",
+      "pv": {
+        "nodeType": "utility-process",
+        "shape": "rectangle",
+        "sources": ["src/main/agent-session-events/event-processing-server/**"]
+      }
+    },
+    {
+      "id": "event-server-manager",
+      "type": "text",
+      "x": 20,
+      "y": 220,
+      "width": 220,
+      "height": 80,
+      "text": "EventServerManager\n(EventEmitter)",
+      "pv": {
+        "nodeType": "event-manager",
+        "shape": "rectangle",
+        "sources": ["src/main/agent-session-events/EventServerManager.ts"]
+      }
+    },
+    {
+      "id": "session-cache",
+      "type": "text",
+      "x": 280,
+      "y": 220,
+      "width": 180,
+      "height": 80,
+      "text": "SessionCache\n(In-Memory Store)",
+      "pv": {
+        "nodeType": "cache",
+        "shape": "rectangle",
+        "sources": ["src/main/agent-session-events/agentSessionSDKHandlers.ts"]
+      }
+    },
+    {
+      "id": "sdk-handlers",
+      "type": "text",
+      "x": 280,
+      "y": 340,
+      "width": 180,
+      "height": 80,
+      "text": "SDK Handlers\nipcMain.handle()",
+      "pv": {
+        "nodeType": "ipc-handler",
+        "shape": "rectangle",
+        "sources": ["src/main/agent-session-events/agentSessionSDKHandlers.ts"]
+      }
+    },
+    {
+      "id": "broadcast-node",
+      "type": "text",
+      "x": 500,
+      "y": 280,
+      "width": 200,
+      "height": 80,
+      "text": "webContents.send()\n→ All Windows",
+      "pv": {
+        "nodeType": "main-process",
+        "shape": "rectangle"
+      }
+    },
+    {
+      "id": "event-types",
+      "type": "text",
+      "x": 500,
+      "y": 400,
+      "width": 200,
+      "height": 100,
+      "text": "IPC Events:\n• SESSION_CREATED\n• SESSION_UPDATED\n• PROCESSED_EVENT",
+      "pv": {
+        "nodeType": "interface",
+        "shape": "rectangle",
+        "sources": ["src/shared/main-process-api-interfaces/AgentSessionSDKAPI.ts"]
+      }
+    },
+    {
+      "id": "preload",
+      "type": "text",
+      "x": 820,
+      "y": 30,
+      "width": 200,
+      "height": 80,
+      "text": "Preload Bridge\ncontextBridge.expose()",
+      "pv": {
+        "nodeType": "preload",
+        "shape": "rectangle",
+        "sources": ["src/window/preload.ts"]
+      }
+    },
+    {
+      "id": "renderer-api-impl",
+      "type": "text",
+      "x": 820,
+      "y": 150,
+      "width": 200,
+      "height": 80,
+      "text": "agentSessionSDKApi\nipcRenderer.on()",
+      "pv": {
+        "nodeType": "renderer-api",
+        "shape": "rectangle",
+        "sources": ["src/window/main-process-api-implementations/agentSessionSDKApi.ts"]
+      }
+    },
+    {
+      "id": "sdk-service",
+      "type": "text",
+      "x": 820,
+      "y": 270,
+      "width": 200,
+      "height": 80,
+      "text": "AgentSessionSDKService\nonProcessedEvent()",
+      "pv": {
+        "nodeType": "service",
+        "shape": "rectangle",
+        "sources": ["src/renderer/main-process-api/AgentSessionSDKService.ts"]
+      }
+    },
+    {
+      "id": "repo-panel-context",
+      "type": "text",
+      "x": 820,
+      "y": 390,
+      "width": 200,
+      "height": 80,
+      "text": "RepositoryPanelContext\nuseEffect subscription",
+      "pv": {
+        "nodeType": "context",
+        "shape": "rectangle",
+        "sources": ["src/renderer/contexts/RepositoryPanelContext.tsx"]
+      }
+    },
+    {
+      "id": "event-highlight-service",
+      "type": "text",
+      "x": 1060,
+      "y": 390,
+      "width": 200,
+      "height": 80,
+      "text": "EventHighlightService\nprocessEvent()",
+      "pv": {
+        "nodeType": "service",
+        "shape": "rectangle",
+        "sources": ["src/renderer/services/EventHighlightService.ts"]
+      }
+    },
+    {
+      "id": "session-events-view",
+      "type": "text",
+      "x": 820,
+      "y": 510,
+      "width": 200,
+      "height": 80,
+      "text": "SessionEventsView\n(Event List UI)",
+      "pv": {
+        "nodeType": "component",
+        "shape": "rectangle",
+        "sources": ["src/renderer/components/repository-maps/SessionEventsView.tsx"]
+      }
+    },
+    {
+      "id": "code-city",
+      "type": "text",
+      "x": 1060,
+      "y": 510,
+      "width": 200,
+      "height": 80,
+      "text": "Code City\n(Visualization)",
+      "pv": {
+        "nodeType": "component",
+        "shape": "rectangle"
+      }
+    },
+    {
+      "id": "event-interface",
+      "type": "text",
+      "x": 20,
+      "y": 340,
+      "width": 220,
+      "height": 100,
+      "text": "RepoNormalized\nUniversalAgentSessionEvent\n(@principal-ai/agent-monitoring)",
+      "pv": {
+        "nodeType": "interface",
+        "shape": "rectangle",
+        "sources": ["src/shared/main-process-api-interfaces/AgentSessionEventsAPI.ts"]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "server-to-manager",
+      "fromNode": "event-server",
+      "toNode": "event-server-manager",
+      "label": "ProcessedEventMessage",
+      "pv": {
+        "edgeType": "event-flow"
+      }
+    },
+    {
+      "id": "manager-to-cache",
+      "fromNode": "event-server-manager",
+      "toNode": "session-cache",
+      "label": "emit('processed-event')",
+      "pv": {
+        "edgeType": "event-flow"
+      }
+    },
+    {
+      "id": "cache-to-handlers",
+      "fromNode": "session-cache",
+      "toNode": "sdk-handlers",
+      "label": "provides data",
+      "pv": {
+        "edgeType": "uses"
+      }
+    },
+    {
+      "id": "manager-to-broadcast",
+      "fromNode": "event-server-manager",
+      "toNode": "broadcast-node",
+      "label": "handleProcessedEvent()",
+      "pv": {
+        "edgeType": "event-flow"
+      }
+    },
+    {
+      "id": "broadcast-to-events",
+      "fromNode": "broadcast-node",
+      "toNode": "event-types",
+      "pv": {
+        "edgeType": "uses"
+      }
+    },
+    {
+      "id": "broadcast-to-preload",
+      "fromNode": "broadcast-node",
+      "toNode": "preload",
+      "label": "IPC Channel",
+      "pv": {
+        "edgeType": "broadcast"
+      }
+    },
+    {
+      "id": "preload-to-api",
+      "fromNode": "preload",
+      "toNode": "renderer-api-impl",
+      "label": "exposes API",
+      "pv": {
+        "edgeType": "ipc"
+      }
+    },
+    {
+      "id": "api-to-service",
+      "fromNode": "renderer-api-impl",
+      "toNode": "sdk-service",
+      "label": "wrapped by",
+      "pv": {
+        "edgeType": "uses"
+      }
+    },
+    {
+      "id": "service-to-context",
+      "fromNode": "sdk-service",
+      "toNode": "repo-panel-context",
+      "label": "onProcessedEvent()",
+      "pv": {
+        "edgeType": "subscribe"
+      }
+    },
+    {
+      "id": "context-to-highlight",
+      "fromNode": "repo-panel-context",
+      "toNode": "event-highlight-service",
+      "label": "service.processEvent()",
+      "pv": {
+        "edgeType": "event-flow"
+      }
+    },
+    {
+      "id": "context-to-view",
+      "fromNode": "repo-panel-context",
+      "toNode": "session-events-view",
+      "label": "provides events",
+      "pv": {
+        "edgeType": "uses"
+      }
+    },
+    {
+      "id": "highlight-to-codacity",
+      "fromNode": "event-highlight-service",
+      "toNode": "code-city",
+      "label": "emit('highlight-update')",
+      "pv": {
+        "edgeType": "event-flow"
+      }
+    },
+    {
+      "id": "manager-uses-interface",
+      "fromNode": "event-server-manager",
+      "toNode": "event-interface",
+      "pv": {
+        "edgeType": "uses"
+      }
+    }
+  ]
+}

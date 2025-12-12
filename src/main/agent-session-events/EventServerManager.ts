@@ -219,7 +219,6 @@ export class EventServerManager extends EventEmitter {
    * Handle messages from the worker
    */
   private async handleWorkerMessage(msg: ServerToMainMessage): Promise<void> {
-    this.log('info', `Received message from server: ${msg.type}`);
     this.emit('worker-message', msg);
 
     try {
@@ -349,33 +348,12 @@ export class EventServerManager extends EventEmitter {
 
     // Step 3: Broadcast to windows for real-time updates
     const windows = BrowserWindow.getAllWindows();
-
-    this.log('info', `=========== BROADCASTING EVENT TO WINDOWS ===========`);
-    this.log('info', `Number of windows: ${windows.length}`);
-    this.log('info', `Event type: ${repoNormalizedEvent.eventType}`);
-    this.log('info', `Session ID: ${normalizedSessionId}`);
-    this.log('info', `Tool name: ${repoNormalizedEvent.toolName}`);
-    this.log(
-      'info',
-      `Repository info: ${JSON.stringify(repoNormalizedEvent.repository)}`,
-    );
-
-    // Determine if this is a new session (first event for this session)
     const isNewSession = repoNormalizedEvent.eventType === 'session-start';
-
     const eventName = isNewSession
       ? AgentSessionSDKAPIEvents.SESSION_CREATED
       : AgentSessionSDKAPIEvents.SESSION_UPDATED;
 
-    this.log('info', `Sending event: ${eventName}`);
-    this.log(
-      'info',
-      `Also sending: ${AgentSessionSDKAPIEvents.PROCESSED_EVENT}`,
-    );
-
-    windows.forEach((window, index) => {
-      this.log('info', `Sending to window ${index + 1}/${windows.length}`);
-
+    windows.forEach((window) => {
       window.webContents.send(eventName, {
         sessionId: normalizedSessionId,
         repository:
@@ -383,20 +361,16 @@ export class EventServerManager extends EventEmitter {
           repoNormalizedEvent.workingDirectory,
       });
 
-      // Also send the raw SDK event for components that need it
       window.webContents.send(
         AgentSessionSDKAPIEvents.PROCESSED_EVENT,
         repoNormalizedEvent,
       );
-
-      this.log('info', `Successfully sent to window ${index + 1}`);
     });
 
     this.log(
-      'info',
-      `Processed and broadcast event for session: ${normalizedSessionId}`,
+      'debug',
+      `Broadcast ${repoNormalizedEvent.eventType} to ${windows.length} windows`,
     );
-    this.log('info', `=====================================================`);
   }
 
   /**

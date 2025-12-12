@@ -17,8 +17,6 @@ import type {
   DataSlice,
   PanelAdapters,
 } from '@principal-ade/panel-framework-core';
-import { TerminalService } from '../main-process-api/TerminalService';
-import type { TerminalInfo, TerminalOwnershipStatus, TerminalOwnershipResult, RequestDataPortResult, PortReadyData } from '../../shared/main-process-api-interfaces/TerminalService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { FileSystemService } from '../main-process-api/FileSystemService';
 import { WindowService } from '../main-process-api/WindowService';
@@ -28,9 +26,6 @@ import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { PackageLayer } from '@principal-ai/codebase-composition';
 import type { PackageSummary, GitStatusWithFiles } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 import { minimatch } from 'minimatch';
-import { EventHighlightService } from '../services/EventHighlightService';
-import { AgentSessionSDKService } from '../main-process-api/AgentSessionSDKService';
-import type { HighlightLayer } from '@principal-ai/code-city-react';
 
 // Types for packages slice data (matches @industry-theme/alexandria-panels DependenciesPanel expectations)
 interface PackagesSliceData {
@@ -59,32 +54,12 @@ function mapGitStatusToSliceData(status: GitStatusWithFiles | null): GitStatusSl
   };
 }
 
-// Extend PanelActions with terminal-specific and file system actions
+// Extend PanelActions with file system actions
+// Note: Terminal actions have been moved to TerminalContext
 interface RepositoryPanelActions extends PanelActions {
-  createTerminalSession?: (options?: { cwd?: string; context?: string }) => Promise<string>;
-  writeToTerminal?: (sessionId: string, data: string) => Promise<void>;
-  resizeTerminal?: (
-    sessionId: string,
-    cols: number,
-    rows: number,
-    force?: boolean
-  ) => Promise<void>;
-  destroyTerminalSession?: (sessionId: string) => Promise<void>;
   readFile?: (filePath: string) => Promise<string>;
   writeFile?: (filePath: string, content: string) => Promise<void>;
   openFile?: (filePath: string) => Promise<void>;
-  // Terminal ownership actions
-  checkTerminalOwnership?: (sessionId: string) => Promise<TerminalOwnershipStatus>;
-  claimTerminalOwnership?: (sessionId: string, force?: boolean) => Promise<TerminalOwnershipResult>;
-  releaseTerminalOwnership?: (sessionId: string) => Promise<TerminalOwnershipResult>;
-  refreshTerminal?: (sessionId: string) => Promise<boolean>;
-  // MessagePort-based terminal data streaming (high-performance path)
-  requestTerminalDataPort?: (sessionId: string) => Promise<RequestDataPortResult>;
-  onTerminalPortReady?: (callback: (data: PortReadyData, port: MessagePort) => void) => () => void;
-  // Session-specific data subscription (used by TabbedTerminalPanel)
-  onTerminalData?: (sessionId: string, callback: (data: string) => void) => () => void;
-  // List terminal sessions (used by TabbedTerminalPanel for restoration)
-  listTerminalSessions?: () => Promise<TerminalInfo[]>;
   // Local Projects panel actions
   selectDirectory?: () => Promise<{ path: string; name: string } | null>;
   registerRepository?: (name: string, path: string) => Promise<void>;
@@ -93,11 +68,10 @@ interface RepositoryPanelActions extends PanelActions {
 }
 
 // Extended context for repository panels
+// Note: Terminal state has been moved to TerminalContext
 interface RepositoryPanelContextValue extends PanelContextValue {
   repositoryPath: string;
-  repository: RepositoryMetadata | null; // Required by terminal panel
-  terminalSessions?: TerminalInfo[];
-  terminalContext?: string; // Context prefix for terminal sessions
+  repository: RepositoryMetadata | null;
   loading: boolean;
 }
 
@@ -113,24 +87,16 @@ const RepositoryPanelContext = createContext<RepositoryPanelProviderValue | null
 interface RepositoryPanelProviderProps {
   children: ReactNode;
   repositoryPath: string;
-  repository: RepositoryMetadata; // Required - terminal panel needs this
-  terminalContext: string; // Required for terminal session identification
+  repository: RepositoryMetadata;
 }
 
 export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = ({
   children,
   repositoryPath,
   repository,
-  terminalContext,
 }) => {
   // Initialize event bus
   const events = useMemo(() => new PanelEventBus(), []);
-
-  // Track active terminal sessions
-  const [terminalSessions, setTerminalSessions] = useState<TerminalInfo[]>([]);
-
-  // Track terminal session subscriptions for cleanup
-  const terminalSubscriptionsRef = useRef<Map<string, () => void>>(new Map());
 
   // Track file tree for the current repository
   const [fileTreeData, setFileTreeData] = useState<FileTree | null>(null);
@@ -148,84 +114,12 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
   const [alexandriaRepositories, setAlexandriaRepositories] = useState<AlexandriaEntry[]>([]);
   const [alexandriaRepositoriesLoading, setAlexandriaRepositoriesLoading] = useState(false);
 
-  // Track agent highlight layers for code city visualization
-  const [agentHighlightLayers, setAgentHighlightLayers] = useState<HighlightLayer[]>([]);
-  const eventHighlightServiceRef = useRef<EventHighlightService | null>(null);
-
   // Track quality metrics data (fetched from GitHub Actions artifacts)
   // Initially null - will show empty state with setup instructions
   const [qualityData, setQualityData] = useState<{ packages: Array<{ name: string; version?: string; metrics: Record<string, number> }>; lastUpdated: string } | null>(null);
 
   // Loading state
   const [loading] = useState(false);
-
-  // Forward terminal exit events to panel event bus
-  useEffect(() => {
-    let unsubExit: (() => void) | null = null;
-
-    TerminalService.onExit((terminalExit) => {
-      events.emit({
-        type: 'terminal:exit',
-        source: 'repository-panel',
-        timestamp: Date.now(),
-        payload: terminalExit,
-      });
-
-      // Remove this session from our list
-      setTerminalSessions((prev) =>
-        prev.filter((session) => session.id !== terminalExit.sessionId),
-      );
-
-      // Clean up subscription for this terminal
-      const unsubscribe = terminalSubscriptionsRef.current.get(terminalExit.sessionId);
-      if (unsubscribe) {
-        unsubscribe();
-        terminalSubscriptionsRef.current.delete(terminalExit.sessionId);
-      }
-    }).then((unsub) => {
-      unsubExit = unsub;
-    });
-
-    return () => {
-      if (unsubExit) {
-        unsubExit();
-      }
-      // Clean up all terminal subscriptions
-      terminalSubscriptionsRef.current.forEach((unsub) => unsub());
-      terminalSubscriptionsRef.current.clear();
-    };
-  }, [events]);
-
-  // Forward terminal ownership lost events to panel event bus
-  useEffect(() => {
-    const unsubscribe = TerminalService.onOwnershipLost((data) => {
-      console.log('[RepositoryPanelProvider] Ownership lost event:', data);
-      events.emit({
-        type: 'terminal:ownershipLost',
-        source: 'repository-panel',
-        timestamp: Date.now(),
-        payload: data,
-      });
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [events]);
-
-  // Fetch terminal sessions on mount
-  useEffect(() => {
-    const loadTerminalSessions = async () => {
-      try {
-        const sessions = await TerminalService.list();
-        setTerminalSessions(sessions);
-      } catch (error) {
-        console.error('[RepositoryPanelProvider] Failed to load terminal sessions:', error);
-      }
-    };
-
-    loadTerminalSessions();
-  }, []);
 
   // Fetch file tree when repository changes and subscribe to cache sync updates
   useEffect(() => {
@@ -381,120 +275,12 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
     };
   }, []);
 
-  // Set up EventHighlightService for agent events -> code city highlight layers
-  useEffect(() => {
-    if (!repositoryPath) {
-      setAgentHighlightLayers([]);
-      return;
-    }
-
-    // Create or get the event highlight service
-    if (!eventHighlightServiceRef.current) {
-      eventHighlightServiceRef.current = new EventHighlightService();
-    }
-
-    const service = eventHighlightServiceRef.current;
-
-    // Set repository context
-    service.setRepository(repositoryPath);
-
-    // Subscribe to processed agent events
-    const unsubscribeEvents = AgentSessionSDKService.onProcessedEvent((event) => {
-      console.log('[RepositoryPanelProvider] Received agent event:', event.eventType, event.toolName);
-      service.processEvent(event);
-    });
-
-    // Listen for highlight layer updates from the service
-    const handleHighlightUpdate = (layers: HighlightLayer[]) => {
-      console.log('[RepositoryPanelProvider] Agent highlight layers updated:', layers.length);
-      setAgentHighlightLayers(layers);
-    };
-
-    service.on('highlight-update', handleHighlightUpdate);
-
-    return () => {
-      console.log('[RepositoryPanelProvider] Cleaning up event highlight service');
-      unsubscribeEvents();
-      service.off('highlight-update', handleHighlightUpdate);
-    };
-  }, [repositoryPath]);
-
   // Create actions object
+  // Note: Terminal actions have been moved to TerminalContext
   const actions: RepositoryPanelActions = useMemo(
     () => ({
       notifyPanels: (event: PanelEvent) => {
         events.emit(event);
-      },
-
-      // Terminal actions
-      createTerminalSession: async (options?: { cwd?: string; context?: string }) => {
-        const cwd = options?.cwd || repositoryPath;
-        // Use provided context (e.g., tab ID) or fall back to the default terminalContext
-        // If a tab-specific context is provided, append it to the base context
-        const sessionContext = options?.context
-          ? `${terminalContext}:${options.context}`
-          : terminalContext;
-
-        // Check existing sessions before creating
-        const existingSessions = await TerminalService.list();
-        const existingSession = existingSessions.find(s => s.context === sessionContext);
-
-        console.info('[RepositoryPanelProvider] createTerminalSession called with:', {
-          optionsCwd: options?.cwd,
-          optionsContext: options?.context,
-          repositoryPath,
-          finalCwd: cwd,
-          context: sessionContext,
-          existingSession: existingSession ? {
-            id: existingSession.id,
-            directory: existingSession.directory,
-            context: existingSession.context,
-          } : null,
-          allSessions: existingSessions.map(s => ({ id: s.id, directory: s.directory, context: s.context })),
-        });
-        const sessionId = await TerminalService.getOrCreate(cwd, sessionContext);
-
-        // Subscribe to this terminal's data channel and forward to panel event bus
-        if (!terminalSubscriptionsRef.current.has(sessionId)) {
-          const unsubscribe = TerminalService.onDataForSession(sessionId, (data) => {
-            events.emit({
-              type: 'terminal:data',
-              source: 'repository-panel',
-              timestamp: Date.now(),
-              payload: { sessionId, data },
-            });
-          });
-
-          terminalSubscriptionsRef.current.set(sessionId, unsubscribe);
-        }
-
-        // Update terminal sessions list
-        const terminals = await TerminalService.list();
-        setTerminalSessions(terminals);
-        return sessionId;
-      },
-
-      writeToTerminal: async (sessionId: string, data: string) => {
-        await TerminalService.write(sessionId, data);
-      },
-
-      resizeTerminal: async (sessionId: string, cols: number, rows: number, force?: boolean) => {
-        await TerminalService.resize(sessionId, cols, rows, force);
-      },
-
-      destroyTerminalSession: async (sessionId: string) => {
-        await TerminalService.destroy(sessionId);
-
-        // Clean up subscription
-        const unsubscribe = terminalSubscriptionsRef.current.get(sessionId);
-        if (unsubscribe) {
-          unsubscribe();
-          terminalSubscriptionsRef.current.delete(sessionId);
-        }
-
-        // Update terminal sessions list
-        const terminals = await TerminalService.list();
-        setTerminalSessions(terminals);
       },
 
       // File system actions
@@ -532,86 +318,6 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
           console.error('[RepositoryPanelProvider] Failed to open file:', filePath, error);
           throw error;
         }
-      },
-
-      // Terminal ownership actions
-      checkTerminalOwnership: async (sessionId: string) => {
-        return TerminalService.checkOwnership(sessionId);
-      },
-
-      claimTerminalOwnership: async (sessionId: string, force?: boolean) => {
-        console.log(`[RepositoryPanelActions] claimTerminalOwnership called: sessionId=${sessionId}, force=${force}`);
-        const result = await TerminalService.claimOwnership(sessionId, force);
-        console.log(`[RepositoryPanelActions] claimTerminalOwnership result:`, result);
-        return result;
-      },
-
-      releaseTerminalOwnership: async (sessionId: string) => {
-        return TerminalService.releaseOwnership(sessionId);
-      },
-
-      // Listen for ownership lost events
-      onOwnershipLost: (callback: (data: { sessionId: string; newOwnerWindowId: number }) => void) => {
-        console.log('[RepositoryPanelActions] onOwnershipLost: registering callback');
-        const unsubscribe = TerminalService.onOwnershipLost((data) => {
-          console.log('[RepositoryPanelActions] onOwnershipLost: received event from TerminalService:', data);
-          callback(data);
-        });
-        return () => {
-          console.log('[RepositoryPanelActions] onOwnershipLost: unsubscribing');
-          unsubscribe();
-        };
-      },
-
-      refreshTerminal: async (sessionId: string) => {
-        return TerminalService.refresh(sessionId);
-      },
-
-      listTerminalSessions: async () => {
-        return TerminalService.list();
-      },
-
-      // Session-specific data subscription (used by TabbedTerminalPanel)
-      // Automatically claims ownership and requests a data port
-      onTerminalData: (sessionId: string, callback: (data: string) => void) => {
-        console.info('[RepositoryPanelContext] onTerminalData called for session:', sessionId);
-
-        // First claim ownership, then request data port, then refresh terminal
-        // This matches the terminal-testing-app pattern:
-        // 1. claimTerminalOwnership - so we're the owner and receive data
-        // 2. requestTerminalDataPort - to get the MessageChannel for streaming
-        // 3. refreshTerminal - force redraw since we don't have buffer history
-        TerminalService.claimOwnership(sessionId).then((ownershipResult) => {
-          console.info('[RepositoryPanelContext] Claimed ownership for session:', sessionId, 'result:', ownershipResult);
-
-          // Request the data port regardless of ownership result
-          return TerminalService.requestDataPort(sessionId);
-        }).then((portResult) => {
-          console.info('[RepositoryPanelContext] Requested data port for session:', sessionId, 'result:', portResult);
-
-          // After port is ready, force a refresh to redraw the terminal
-          // This sends Ctrl+L which redraws the prompt/screen
-          setTimeout(() => {
-            TerminalService.refresh(sessionId).then(() => {
-              console.info('[RepositoryPanelContext] Refreshed terminal for session:', sessionId);
-            }).catch((err) => {
-              console.warn('[RepositoryPanelContext] Failed to refresh terminal:', err);
-            });
-          }, 100); // Small delay to ensure port is fully connected
-        }).catch((err) => {
-          console.warn('[RepositoryPanelContext] Failed during reconnection:', err);
-        });
-
-        return TerminalService.onDataForSession(sessionId, callback);
-      },
-
-      // MessagePort-based terminal data streaming (high-performance path)
-      requestTerminalDataPort: async (sessionId: string) => {
-        return TerminalService.requestDataPort(sessionId);
-      },
-
-      onTerminalPortReady: (callback: (data: PortReadyData, port: MessagePort) => void) => {
-        return TerminalService.onPortReady(callback);
       },
 
       // Local Projects panel actions
@@ -667,7 +373,7 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
         }
       },
     }),
-    [repositoryPath, terminalContext, events],
+    [repositoryPath, events],
   );
 
   // Extract markdown files from file tree
@@ -832,20 +538,6 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
           },
         ],
         [
-          'agentHighlightLayers',
-          {
-            scope: 'repository' as const,
-            name: 'agentHighlightLayers',
-            data: agentHighlightLayers,
-            loading: false,
-            error: null,
-            refresh: async () => {
-              // Agent highlight layers are updated reactively from events, no manual refresh needed
-              // Clear and re-fetch could be done here if needed
-            },
-          },
-        ],
-        [
           'quality',
           {
             scope: 'repository' as const,
@@ -861,17 +553,16 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
           },
         ],
       ]),
-    [repositoryPath, fileTreeData, fileTreeLoading, markdownFiles, packagesData, packagesLoading, gitStatusData, gitStatusLoading, alexandriaRepositories, alexandriaRepositoriesLoading, agentHighlightLayers, qualityData],
+    [repositoryPath, fileTreeData, fileTreeLoading, markdownFiles, packagesData, packagesLoading, gitStatusData, gitStatusLoading, alexandriaRepositories, alexandriaRepositoriesLoading, qualityData],
   );
 
   // Create context value
+  // Note: Terminal state has been moved to TerminalContext
   const context: RepositoryPanelContextValue = useMemo(
     () => ({
       // Repository-specific properties
       repositoryPath,
       repository,
-      terminalSessions,
-      terminalContext,
       loading,
 
       // PanelContextValue required properties
@@ -910,7 +601,7 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
         await Promise.all(slicesToRefresh.map((slice) => slice.refresh()));
       },
     }),
-    [repositoryPath, repository, terminalSessions, terminalContext, loading, slices, adapters],
+    [repositoryPath, repository, loading, slices, adapters],
   );
 
   // Provider value
