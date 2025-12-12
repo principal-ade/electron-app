@@ -1,4 +1,3 @@
-import React from 'react';
 import type {
   RepositoryPanelActions,
   RepositoryPanelContextValue,
@@ -10,9 +9,6 @@ import {
   type RepositoryPanelSurface,
   type RepositoryPanelVisibility,
 } from '../../shared/panels/repositoryPanelCatalog';
-import { GitIssuesPanel } from './components/GitIssuesPanel';
-import { GitPullRequestsPanel } from './components/GitPullRequestsPanel';
-import { GitCommitHistoryPanel } from './components/GitCommitHistoryPanel';
 
 export interface RepositoryPanelRenderProps {
   context: RepositoryPanelContextValue;
@@ -27,19 +23,10 @@ export type RepositoryPanelDefinition = RepositoryPanelDefinitionBase & {
   render?: RepositoryPanelRenderer;
 };
 
+// Panel renderers - git panels moved to @industry-theme/git-panels
 const panelRenderers: Partial<
   Record<RepositoryPanelId, RepositoryPanelRenderer>
-> = {
-  gitIssues: ({ context }) => (
-    <GitIssuesPanel repository={context.repository ?? undefined} />
-  ),
-  gitPullRequests: ({ context }) => (
-    <GitPullRequestsPanel repository={context.repository ?? undefined} />
-  ),
-  gitHistory: ({ context }) => (
-    <GitCommitHistoryPanel repositoryPath={context.repositoryPath} />
-  ),
-};
+> = {};
 
 export const repositoryPanelDefinitions = repositoryPanelCatalog.map(
   (definition) => ({
