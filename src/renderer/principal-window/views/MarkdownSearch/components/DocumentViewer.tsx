@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { FileText, ExternalLink, Copy, Check } from 'lucide-react';
 import type { SearchResult } from '@principal-ai/markdown-search';
-import { MarkdownDocumentViewer } from '../../../../repo-manager/shared/MarkdownDocumentViewer';
+import { MarkdownDocumentViewer } from '../../../../components/MarkdownDocumentViewer';
 import { FileSystemService } from '../../../../main-process-api/FileSystemService';
 
 interface DocumentViewerProps {

@@ -1,9 +1,9 @@
 import React from 'react';
-import { ThemedSlidePresentation } from '../../components/markdown/ThemedSlidePresentation';
-import { ThemedSlidePresentationBook } from '../../components/markdown/ThemedSlidePresentationBook';
-import { ThemedDocumentView } from '../../components/markdown/ThemedDocumentView';
-import { ThemedMonaco } from '../../components/shared/ThemedMonaco';
-import { MarkdownEmptyOverlay } from '../../components/repository-maps/MarkdownEmptyOverlay';
+import { ThemedSlidePresentation } from './markdown/ThemedSlidePresentation';
+import { ThemedSlidePresentationBook } from './markdown/ThemedSlidePresentationBook';
+import { ThemedDocumentView } from './markdown/ThemedDocumentView';
+import { ThemedMonaco } from './shared/ThemedMonaco';
+import { MarkdownEmptyOverlay } from './repository-maps/MarkdownEmptyOverlay';
 import type { Theme } from '@principal-ade/industry-theme';
 
 interface MarkdownDocumentViewerProps {

@@ -123,12 +123,6 @@ export interface WindowAPI {
   ): Promise<void>;
 
   /**
-   * Open Repository Dashboard for Alexandria repositories
-   * @param repository - Alexandria repository entry with path information
-   */
-  openRepositoryDashboard(repository: AlexandriaEntry): Promise<void>;
-
-  /**
    * Open Pattern Discovery (Callimachus) window
    * Opens a dedicated window for semantic code pattern search and discovery
    */

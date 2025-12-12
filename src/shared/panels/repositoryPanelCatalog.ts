@@ -10,8 +10,7 @@ export type RepositoryPanelSlice =
   | 'markdown'
   | 'fileTree'
   | 'packages'
-  | 'quality'
-  | 'graphs';
+  | 'quality';
 
 export interface RepositoryPanelDefinitionBase {
   id: string;
@@ -29,13 +28,6 @@ export const repositoryPanelCatalog = [
       'Review staged, unstaged, and untracked changes for the repository.',
     slices: ['git'] as const,
     surfaces: ['manager', 'agent', 'principal'] as const,
-  },
-  {
-    id: 'gitIssues',
-    label: 'Git Issues',
-    description:
-      'Browse, triage, and manage GitHub issues for this repository.',
-    surfaces: ['explorer'] as const,
   },
   {
     id: 'gitPullRequests',

@@ -69,12 +69,6 @@ export const windowAPI: WindowAPI = {
     ),
 
   /**
-   * Open Repository Dashboard for Alexandria repositories
-   */
-  openRepositoryDashboard: (repository: AlexandriaEntry) =>
-    ipcRenderer.invoke(WindowEvent.OPEN_REPOSITORY_DASHBOARD, repository),
-
-  /**
    * Open Pattern Discovery (Callimachus) window
    */
   openCallimachusWindow: () =>

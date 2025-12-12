@@ -8,7 +8,7 @@ import { UserPreferencesService } from '../main-process-api/UserPreferencesServi
 import { MarkdownViewerTitlebar } from '../components/Titlebar';
 import { FileDeleteConfirmDialog } from '../components/FileDeleteConfirmDialog';
 
-import { MarkdownDocumentViewer } from '../repo-manager/shared/MarkdownDocumentViewer';
+import { MarkdownDocumentViewer } from '../components/MarkdownDocumentViewer';
 import { useFileWatch } from '../hooks/useFileWatch';
 
 interface MarkdownViewProps {

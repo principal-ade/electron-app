@@ -30,11 +30,6 @@ const principalEntryPath = path.join(
   'principal-window',
   'index.tsx',
 );
-const repoManagerEntryPath = path.join(
-  webpackPaths.srcRendererPath,
-  'repo-manager',
-  'index.tsx',
-);
 const devWorkspaceEntryPath = path.join(
   webpackPaths.srcRendererPath,
   'dev-workspace',
@@ -75,24 +70,6 @@ if (fs.existsSync(principalEntryPath)) {
       filename: 'principal.html',
       template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
       chunks: ['principal'],
-      minify: {
-        collapseWhitespace: true,
-        removeAttributeQuotes: true,
-        removeComments: true,
-      },
-      isBrowser: false,
-      isDevelopment: false,
-    })
-  );
-}
-
-if (fs.existsSync(repoManagerEntryPath)) {
-  entryPoints['repo-manager'] = repoManagerEntryPath;
-  htmlPlugins.push(
-    new HtmlWebpackPlugin({
-      filename: 'repo-manager.html',
-      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
-      chunks: ['repo-manager'],
       minify: {
         collapseWhitespace: true,
         removeAttributeQuotes: true,

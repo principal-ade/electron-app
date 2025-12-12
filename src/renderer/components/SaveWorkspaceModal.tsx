@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
-import type { WorkspaceLayout } from '../../../shared/types/userPreferences.types';
+import type { WorkspaceLayout } from '../../shared/types/userPreferences.types';
 
 export interface SaveWorkspaceModalProps {
   isOpen: boolean;

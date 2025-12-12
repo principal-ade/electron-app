@@ -26,7 +26,7 @@ import type {
   UserPreferences,
 } from '../../../shared/types/userPreferences.types';
 import { ViewSidebarControls } from '../../principal-window/components/ViewSidebarControls/ViewSidebarControls';
-import { SaveWorkspaceModal } from '../../repo-manager/shared/SaveWorkspaceModal';
+import { SaveWorkspaceModal } from '../SaveWorkspaceModal';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 import { ShellService } from '../../main-process-api/ShellService';
 import { useRepositoryGitStatus } from '../../hooks/useRepositoryGitStatus';

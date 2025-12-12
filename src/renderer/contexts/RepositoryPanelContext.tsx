@@ -28,7 +28,7 @@ import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { PackageLayer } from '@principal-ai/codebase-composition';
 import type { PackageSummary, GitStatusWithFiles } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 import { minimatch } from 'minimatch';
-import { EventHighlightService } from '../repo-manager/services/EventHighlightService';
+import { EventHighlightService } from '../services/EventHighlightService';
 import { AgentSessionSDKService } from '../main-process-api/AgentSessionSDKService';
 import type { HighlightLayer } from '@principal-ai/code-city-react';
 

@@ -121,24 +121,6 @@ export class WindowService {
   }
 
   /**
-   * Open Repository Dashboard for Alexandria repositories
-   * @param repository - Alexandria repository from @principal-ai/alexandria-core-library package
-   */
-  static async openRepositoryDashboard(
-    repository: AlexandriaEntry,
-  ): Promise<void> {
-    try {
-      await window.mainProcess.window.openRepositoryDashboard(repository);
-    } catch (error) {
-      console.error(
-        '[WindowService] Failed to open repository dashboard:',
-        error,
-      );
-      throw new Error('Failed to open repository dashboard window');
-    }
-  }
-
-  /**
    * Open Pattern Discovery (Callimachus) window
    * Opens a dedicated window for semantic code pattern search and discovery
    */

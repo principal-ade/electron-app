@@ -356,7 +356,6 @@ export class WorkspaceLayoutService {
             panels: [
               'tasks',
               'dependencies',
-              'gitIssues',
               'fileTree',
               'docs',
               'drawings',

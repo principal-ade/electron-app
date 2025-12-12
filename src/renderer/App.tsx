@@ -13,8 +13,6 @@ import { AppVersionManagerService } from './main-process-api/AppVersionManagerSe
 // Import MarkdownView directly (not lazy loaded)
 import { MarkdownView } from './pages/MarkdownView';
 
-import type { Repository } from '../shared/types/repository.types';
-
 // Type definitions for window init data
 interface MarkdownViewData {
   filePath?: string;
@@ -24,11 +22,6 @@ interface MarkdownViewData {
 
 interface MultiFileEditorData {
   [key: string]: unknown;
-}
-
-interface RepositoryMapsData {
-  repository?: Repository;
-  mode?: string;
 }
 
 // Extend window interface for markdown project name
@@ -42,11 +35,6 @@ declare global {
 // LandingPage removed - functionality migrated to RepositoryExplorer in principal-window
 const StoreViewer = React.lazy(() =>
   import('./pages/StoreViewer').then((m) => ({ default: m.StoreViewer })),
-);
-const RepositoryWorkspace = React.lazy(() =>
-  import('./repo-manager/RepositoryWorkspace').then((m) => ({
-    default: m.RepositoryWorkspace,
-  })),
 );
 const MultiFileEditorWindow = React.lazy(() =>
   import('./pages/MultiFileEditorWindow').then((m) => ({
@@ -72,7 +60,6 @@ function AppContent({
   const [currentView, setCurrentView] = React.useState<
     | 'storeViewer'
     | 'markdownView'
-    | 'repositoryMaps'
     | 'multiFileEditor'
     | 'callimachus'
     | 'search'
@@ -80,7 +67,7 @@ function AppContent({
   >(null);
   // const [useNewUI, setUseNewUI] = React.useState(false); // No longer needed
   const [windowInitData, setWindowInitData] = React.useState<
-    MarkdownViewData | MultiFileEditorData | RepositoryMapsData | null
+    MarkdownViewData | MultiFileEditorData | null
   >(null);
 
   // Platform adapters no longer needed for SimplifiedWorkspace
@@ -126,30 +113,6 @@ function AppContent({
         } catch (e) {
           console.error('Failed to parse multi-file editor data:', e);
         }
-      } else if (hash.startsWith('#repository-maps')) {
-        // Repository Maps route
-        if (hash.includes('/')) {
-          try {
-            const hashPart = hash.substring('#repository-maps/'.length);
-
-            // Check if there are URL parameters
-            const [encodedData, queryString] = hashPart.split('?');
-            const data = JSON.parse(decodeURIComponent(encodedData));
-
-            // Parse mode from query parameters
-            if (queryString) {
-              const params = new URLSearchParams(queryString);
-              const mode = params.get('mode');
-              if (mode) {
-                data.mode = mode;
-              }
-            }
-            setWindowInitData(data);
-          } catch (e) {
-            console.error('Failed to parse repository maps data:', e);
-          }
-        }
-        setCurrentView('repositoryMaps');
       } else if (hash === '#/callimachus' || hash.startsWith('#/callimachus')) {
         // Callimachus Pattern Discovery route
         setCurrentView('callimachus');
@@ -243,31 +206,6 @@ function AppContent({
     return (
       <Suspense fallback={<LoadingFallback />}>
         <CallimachusWindow />
-      </Suspense>
-    );
-  }
-
-  if (currentView === 'repositoryMaps') {
-    // Pass windowInitData to the window object so RepositoryManager can access mode
-    if (windowInitData) {
-      (window as unknown as { windowInitData: unknown }).windowInitData =
-        windowInitData;
-    }
-
-    const repoData = windowInitData as RepositoryMapsData | null;
-
-    // Don't render if no repository data
-    if (!repoData?.repository) {
-      return <LoadingFallback />;
-    }
-
-    return (
-      <Suspense fallback={<LoadingFallback />}>
-        <RepositoryWorkspace
-          repository={repoData.repository}
-          onBack={() => window.close()}
-          hasUpdateAvailable={hasUpdateAvailable}
-        />
       </Suspense>
     );
   }

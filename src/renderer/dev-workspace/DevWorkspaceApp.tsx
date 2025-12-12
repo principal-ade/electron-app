@@ -514,26 +514,6 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     }
   }, [githubInfo]);
 
-  // Open legacy repo-manager window
-  const handleSwitchToClassic = useCallback(async () => {
-    try {
-      // Build AlexandriaEntry-like object from our data
-      const entry = {
-        name: repositoryName,
-        path: repositoryPath,
-        remoteUrl: remoteUrl || '',
-        github: github ? {
-          owner: github.owner,
-          description: github.description,
-          avatarUrl: github.avatarUrl,
-        } : undefined,
-      };
-      await window.mainProcess.window.openRepositoryDashboard(entry);
-    } catch (error) {
-      console.error('[DevWorkspaceApp] Failed to open legacy repo-manager:', error);
-    }
-  }, [repositoryName, repositoryPath, remoteUrl, github]);
-
   // Show git changes panel
   const handleShowGitChanges = useCallback(() => {
     setLayout(prev => ({ ...prev, left: 'gitChanges' }));
@@ -556,7 +536,6 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         onSwitchLeftMiddlePanels={handleSwitchLeftMiddle}
         onSwitchRightMiddlePanels={handleSwitchRightMiddle}
         onOpenInWebADE={githubInfo ? handleOpenInWebADE : undefined}
-        onSwitchToClassic={handleSwitchToClassic}
         currentLayout={layout as { left: string; middle: string; right: string }}
         onLayoutChange={(newLayout) => setLayout(newLayout)}
         onCollapsedChange={setCollapsed}

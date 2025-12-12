@@ -1,0 +1,331 @@
+{
+  "pv": {
+    "name": "Principal ADE - Window Architecture",
+    "version": "1.0.0",
+    "nodeTypes": {
+      "primary-window": {
+        "label": "Primary Window",
+        "color": "#3B82F6"
+      },
+      "workspace-window": {
+        "label": "Workspace Window",
+        "color": "#8B5CF6"
+      },
+      "viewer-window": {
+        "label": "Viewer Window",
+        "color": "#22C55E"
+      },
+      "utility-window": {
+        "label": "Utility Window",
+        "color": "#F59E0B"
+      },
+      "external-window": {
+        "label": "External Window",
+        "color": "#EF4444"
+      },
+      "manager": {
+        "label": "Window Manager",
+        "color": "#64748B"
+      }
+    },
+    "edgeTypes": {
+      "creates": {
+        "label": "Creates",
+        "style": "solid",
+        "color": "#3B82F6"
+      },
+      "ipc": {
+        "label": "IPC",
+        "style": "solid",
+        "color": "#8B5CF6"
+      },
+      "manages": {
+        "label": "Manages",
+        "style": "dashed",
+        "color": "#64748B"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "window-manager",
+      "type": "text",
+      "x": 400,
+      "y": 0,
+      "width": 220,
+      "height": 70,
+      "text": "Modern Window Manager",
+      "pv": {
+        "nodeType": "manager",
+        "shape": "rectangle",
+        "sources": ["src/main/window/modernWindowManager.ts"]
+      }
+    },
+    {
+      "id": "main-window",
+      "type": "text",
+      "x": 0,
+      "y": 150,
+      "width": 200,
+      "height": 80,
+      "text": "Main Window\n(principal.html)",
+      "pv": {
+        "nodeType": "primary-window",
+        "shape": "rectangle",
+        "sources": ["src/main/window/modernWindowManager.ts:createWindow"]
+      }
+    },
+    {
+      "id": "repository-maps-window",
+      "type": "text",
+      "x": 240,
+      "y": 150,
+      "width": 200,
+      "height": 80,
+      "text": "Repository Maps\n(Code City)",
+      "pv": {
+        "nodeType": "primary-window",
+        "shape": "rectangle",
+        "sources": ["src/main/window/modernWindowHandlers.ts"]
+      }
+    },
+    {
+      "id": "dev-workspace-window",
+      "type": "text",
+      "x": 480,
+      "y": 150,
+      "width": 200,
+      "height": 80,
+      "text": "Dev Workspace\n(dev-workspace.html)",
+      "pv": {
+        "nodeType": "workspace-window",
+        "shape": "rectangle",
+        "sources": ["src/main/window/devWorkspaceWindowHandlers.ts"]
+      }
+    },
+    {
+      "id": "alexandria-workspace-window",
+      "type": "text",
+      "x": 720,
+      "y": 150,
+      "width": 220,
+      "height": 80,
+      "text": "Alexandria Workspace\n(alexandria-workspace.html)",
+      "pv": {
+        "nodeType": "workspace-window",
+        "shape": "rectangle",
+        "sources": ["src/main/window/modernWindowHandlers.ts"]
+      }
+    },
+    {
+      "id": "extension-browser-window",
+      "type": "text",
+      "x": 0,
+      "y": 300,
+      "width": 200,
+      "height": 80,
+      "text": "Extension Browser\n(extension-window.html)",
+      "pv": {
+        "nodeType": "external-window",
+        "shape": "rectangle",
+        "sources": ["src/main/window/extensionWindowHandlers.ts"]
+      }
+    },
+    {
+      "id": "markdown-viewer-window",
+      "type": "text",
+      "x": 240,
+      "y": 300,
+      "width": 200,
+      "height": 80,
+      "text": "Markdown Viewer\n(index.html#markdown-view)",
+      "pv": {
+        "nodeType": "viewer-window",
+        "shape": "rectangle",
+        "sources": ["src/main/window/modernWindowHandlers.ts"]
+      }
+    },
+    {
+      "id": "store-viewer-window",
+      "type": "text",
+      "x": 480,
+      "y": 300,
+      "width": 200,
+      "height": 80,
+      "text": "Store Viewer\n(index.html#store-viewer)",
+      "pv": {
+        "nodeType": "viewer-window",
+        "shape": "rectangle",
+        "sources": ["src/main/window/modernWindowHandlers.ts"]
+      }
+    },
+    {
+      "id": "callimachus-window",
+      "type": "text",
+      "x": 720,
+      "y": 300,
+      "width": 220,
+      "height": 80,
+      "text": "Callimachus\nPattern Discovery",
+      "pv": {
+        "nodeType": "viewer-window",
+        "shape": "rectangle",
+        "sources": ["src/main/window/callimachusWindow.ts"]
+      }
+    },
+    {
+      "id": "window-switcher",
+      "type": "text",
+      "x": 120,
+      "y": 450,
+      "width": 180,
+      "height": 70,
+      "text": "Window Switcher\n(Cmd+')",
+      "pv": {
+        "nodeType": "utility-window",
+        "shape": "rectangle",
+        "sources": ["src/main/window/windowSwitcher.ts"]
+      }
+    },
+    {
+      "id": "quick-open",
+      "type": "text",
+      "x": 340,
+      "y": 450,
+      "width": 180,
+      "height": 70,
+      "text": "Quick Open\n(Cmd+O)",
+      "pv": {
+        "nodeType": "utility-window",
+        "shape": "rectangle",
+        "sources": ["src/main/window/quickOpen.ts"]
+      }
+    },
+    {
+      "id": "remote-agent-window",
+      "type": "text",
+      "x": 560,
+      "y": 450,
+      "width": 200,
+      "height": 70,
+      "text": "Remote Agent\n(BrowserView)",
+      "pv": {
+        "nodeType": "external-window",
+        "shape": "rectangle",
+        "sources": ["src/main/window/remoteAgentWindowManager.ts"]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "manager-to-main",
+      "fromNode": "window-manager",
+      "fromSide": "bottom",
+      "toNode": "main-window",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "creates"
+      }
+    },
+    {
+      "id": "manager-to-repo-maps",
+      "fromNode": "window-manager",
+      "fromSide": "bottom",
+      "toNode": "repository-maps-window",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "creates"
+      }
+    },
+    {
+      "id": "manager-to-dev-workspace",
+      "fromNode": "window-manager",
+      "fromSide": "bottom",
+      "toNode": "dev-workspace-window",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "creates"
+      }
+    },
+    {
+      "id": "manager-to-alexandria",
+      "fromNode": "window-manager",
+      "fromSide": "bottom",
+      "toNode": "alexandria-workspace-window",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "creates"
+      }
+    },
+    {
+      "id": "manager-to-extension",
+      "fromNode": "window-manager",
+      "fromSide": "bottom",
+      "toNode": "extension-browser-window",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "creates"
+      }
+    },
+    {
+      "id": "manager-to-markdown",
+      "fromNode": "window-manager",
+      "fromSide": "bottom",
+      "toNode": "markdown-viewer-window",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "creates"
+      }
+    },
+    {
+      "id": "manager-to-store",
+      "fromNode": "window-manager",
+      "fromSide": "bottom",
+      "toNode": "store-viewer-window",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "creates"
+      }
+    },
+    {
+      "id": "manager-to-callimachus",
+      "fromNode": "window-manager",
+      "fromSide": "bottom",
+      "toNode": "callimachus-window",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "creates"
+      }
+    },
+    {
+      "id": "manager-to-switcher",
+      "fromNode": "window-manager",
+      "fromSide": "bottom",
+      "toNode": "window-switcher",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "manages"
+      }
+    },
+    {
+      "id": "manager-to-quick-open",
+      "fromNode": "window-manager",
+      "fromSide": "bottom",
+      "toNode": "quick-open",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "manages"
+      }
+    },
+    {
+      "id": "manager-to-remote-agent",
+      "fromNode": "window-manager",
+      "fromSide": "bottom",
+      "toNode": "remote-agent-window",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "creates"
+      }
+    }
+  ]
+}
