@@ -1,15 +1,15 @@
 {
-  "id": "authentication-services-documentation",
+  "id": "github-actions-local-runner-integration-design",
   "version": "1.0.0",
-  "name": "Authentication Services Documentation",
+  "name": "GitHub Actions Local Runner Integration Design",
   "description": "Codebase view extracted from documentation",
   "rows": 1,
   "cols": 1,
   "referenceGroups": {},
-  "overviewPath": "docs/authentication-services.md",
+  "overviewPath": "docs/act-integration-design.md",
   "category": "docs",
   "displayOrder": 0,
-  "timestamp": "2025-12-12T04:00:05.888Z",
+  "timestamp": "2025-12-12T04:00:05.877Z",
   "metadata": {
     "generationType": "user",
     "ui": {

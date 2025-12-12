@@ -1,15 +1,15 @@
 {
-  "id": "authentication-services-documentation",
+  "id": "panel-extension-store-architecture-and-developer-s",
   "version": "1.0.0",
-  "name": "Authentication Services Documentation",
+  "name": "Panel Extension Store: Architecture and Developer Specification",
   "description": "Codebase view extracted from documentation",
   "rows": 1,
   "cols": 1,
   "referenceGroups": {},
-  "overviewPath": "docs/authentication-services.md",
+  "overviewPath": "docs/panel-extension-store-specification.md",
   "category": "docs",
   "displayOrder": 0,
-  "timestamp": "2025-12-12T04:00:05.888Z",
+  "timestamp": "2025-12-12T04:00:05.977Z",
   "metadata": {
     "generationType": "user",
     "ui": {

@@ -1,15 +1,15 @@
 {
-  "id": "authentication-services-documentation",
+  "id": "git-write-operations-removal-completed",
   "version": "1.0.0",
-  "name": "Authentication Services Documentation",
+  "name": "Git Write Operations Removal - COMPLETED ✅",
   "description": "Codebase view extracted from documentation",
   "rows": 1,
   "cols": 1,
   "referenceGroups": {},
-  "overviewPath": "docs/authentication-services.md",
+  "overviewPath": "docs/git-write-operations-removal.md",
   "category": "docs",
   "displayOrder": 0,
-  "timestamp": "2025-12-12T04:00:05.888Z",
+  "timestamp": "2025-12-12T03:49:23.918Z",
   "metadata": {
     "generationType": "user",
     "ui": {

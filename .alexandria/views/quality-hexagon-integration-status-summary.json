@@ -1,15 +1,15 @@
 {
-  "id": "authentication-services-documentation",
+  "id": "quality-hexagon-integration-status-summary",
   "version": "1.0.0",
-  "name": "Authentication Services Documentation",
-  "description": "Codebase view extracted from documentation",
+  "name": "Quality Hexagon Integration - Status Summary",
+  "description": "**Last Updated:** 2025-10-11",
   "rows": 1,
   "cols": 1,
   "referenceGroups": {},
-  "overviewPath": "docs/authentication-services.md",
+  "overviewPath": "docs/quality-hexagon-status-summary.md",
   "category": "docs",
   "displayOrder": 0,
-  "timestamp": "2025-12-12T04:00:05.888Z",
+  "timestamp": "2025-12-12T04:00:05.991Z",
   "metadata": {
     "generationType": "user",
     "ui": {

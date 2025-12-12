@@ -1,15 +1,15 @@
 {
-  "id": "authentication-services-documentation",
+  "id": "presence-connection-authentication-issue",
   "version": "1.0.0",
-  "name": "Authentication Services Documentation",
+  "name": "Presence Connection Authentication Issue",
   "description": "Codebase view extracted from documentation",
   "rows": 1,
   "cols": 1,
   "referenceGroups": {},
-  "overviewPath": "docs/authentication-services.md",
+  "overviewPath": "docs/presence-connection-issue.md",
   "category": "docs",
   "displayOrder": 0,
-  "timestamp": "2025-12-12T04:00:05.888Z",
+  "timestamp": "2025-12-12T04:00:05.987Z",
   "metadata": {
     "generationType": "user",
     "ui": {

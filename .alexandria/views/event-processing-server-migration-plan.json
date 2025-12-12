@@ -1,15 +1,15 @@
 {
-  "id": "authentication-services-documentation",
+  "id": "event-processing-server-migration-plan",
   "version": "1.0.0",
-  "name": "Authentication Services Documentation",
+  "name": "Event Processing Server Migration Plan",
   "description": "Codebase view extracted from documentation",
   "rows": 1,
   "cols": 1,
   "referenceGroups": {},
-  "overviewPath": "docs/authentication-services.md",
+  "overviewPath": "docs/event-processing-migration-plan.md",
   "category": "docs",
   "displayOrder": 0,
-  "timestamp": "2025-12-12T04:00:05.888Z",
+  "timestamp": "2025-12-12T04:00:05.914Z",
   "metadata": {
     "generationType": "user",
     "ui": {

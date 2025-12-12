@@ -1,15 +1,15 @@
 {
-  "id": "authentication-services-documentation",
+  "id": "markdown-search-real-time-indexing-plan",
   "version": "1.0.0",
-  "name": "Authentication Services Documentation",
+  "name": "Markdown Search Real-time Indexing Plan",
   "description": "Codebase view extracted from documentation",
   "rows": 1,
   "cols": 1,
   "referenceGroups": {},
-  "overviewPath": "docs/authentication-services.md",
+  "overviewPath": "docs/markdown-search-realtime-indexing-plan.md",
   "category": "docs",
   "displayOrder": 0,
-  "timestamp": "2025-12-12T04:00:05.888Z",
+  "timestamp": "2025-12-12T04:00:05.951Z",
   "metadata": {
     "generationType": "user",
     "ui": {

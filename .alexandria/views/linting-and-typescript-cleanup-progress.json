@@ -1,15 +1,15 @@
 {
-  "id": "authentication-services-documentation",
+  "id": "linting-and-typescript-cleanup-progress",
   "version": "1.0.0",
-  "name": "Authentication Services Documentation",
+  "name": "Linting and TypeScript Cleanup Progress",
   "description": "Codebase view extracted from documentation",
   "rows": 1,
   "cols": 1,
   "referenceGroups": {},
-  "overviewPath": "docs/authentication-services.md",
+  "overviewPath": "docs/linting-cleanup-progress.md",
   "category": "docs",
   "displayOrder": 0,
-  "timestamp": "2025-12-12T04:00:05.888Z",
+  "timestamp": "2025-12-12T04:00:05.944Z",
   "metadata": {
     "generationType": "user",
     "ui": {

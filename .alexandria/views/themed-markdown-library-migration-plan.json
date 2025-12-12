@@ -1,15 +1,15 @@
 {
-  "id": "authentication-services-documentation",
+  "id": "themed-markdown-library-migration-plan",
   "version": "1.0.0",
-  "name": "Authentication Services Documentation",
+  "name": "Themed Markdown Library Migration Plan",
   "description": "Codebase view extracted from documentation",
   "rows": 1,
   "cols": 1,
   "referenceGroups": {},
-  "overviewPath": "docs/authentication-services.md",
+  "overviewPath": "docs/archive/themed-markdown-migration.md",
   "category": "docs",
   "displayOrder": 0,
-  "timestamp": "2025-12-12T04:00:05.888Z",
+  "timestamp": "2025-12-12T04:00:06.115Z",
   "metadata": {
     "generationType": "user",
     "ui": {

@@ -1,15 +1,15 @@
 {
-  "id": "authentication-services-documentation",
+  "id": "git-event-library-integration-usage-guide",
   "version": "1.0.0",
-  "name": "Authentication Services Documentation",
+  "name": "Git Event Library Integration Usage Guide",
   "description": "Codebase view extracted from documentation",
   "rows": 1,
   "cols": 1,
   "referenceGroups": {},
-  "overviewPath": "docs/authentication-services.md",
+  "overviewPath": "docs/git-event-library-usage.md",
   "category": "docs",
   "displayOrder": 0,
-  "timestamp": "2025-12-12T04:00:05.888Z",
+  "timestamp": "2025-12-12T04:00:05.931Z",
   "metadata": {
     "generationType": "user",
     "ui": {

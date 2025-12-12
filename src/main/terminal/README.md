@@ -239,3 +239,168 @@ Compare terminal responsiveness with MessagePorts enabled vs disabled:
 4. **Renderer Support** (02e2093e2) - Added renderer-side MessagePort handling
 5. **Enabled by Default** (c67afa24f) - Activated MessagePorts for testing
 6. **Timing Fix** (310a8840c) - Fixed PORT_READY event timing with global registry
+
+## Performance Optimizations
+
+### Implemented ✅
+
+**1. WebGL Renderer (`@industry-theme/xterm-terminal-panel@0.1.6`)**
+- Uses `@xterm/addon-webgl` for GPU-accelerated rendering
+- Falls back to canvas renderer if WebGL unavailable
+- Handles WebGL context loss gracefully
+- Significantly faster for high-throughput terminal output
+
+**2. Debounced Scroll-to-Bottom (`@industry-theme/xterm-terminal-panel@0.1.6`)**
+- Changed from immediate scroll on every write to 1-second debounce
+- Only scrolls after writes stop for 1 second
+- Reduces layout thrashing during rapid output
+- Constant: `SCROLL_DEBOUNCE_MS = 1000`
+
+### Future Optimizations 📋
+
+**3. Write Batching in Preload (High Impact)**
+
+Currently, each MessagePort message immediately dispatches to all subscribers:
+
+```typescript
+// Current: preload.ts
+port.onmessage = (e: MessageEvent) => {
+  if (e.data?.type === 'DATA') {
+    subscribers.forEach((cb) => cb(e.data.data));  // Immediate dispatch
+  }
+};
+```
+
+**Proposed:** Buffer incoming data and flush on `requestAnimationFrame`:
+
+```typescript
+// Proposed: preload.ts
+const pendingData = new Map<string, string[]>();
+let rafScheduled = false;
+
+function flushPendingData() {
+  rafScheduled = false;
+  for (const [sessionId, chunks] of pendingData) {
+    const subscribers = terminalSubscribers.get(sessionId);
+    if (subscribers && chunks.length > 0) {
+      const batch = chunks.join('');
+      subscribers.forEach((cb) => cb(batch));
+    }
+  }
+  pendingData.clear();
+}
+
+port.onmessage = (e: MessageEvent) => {
+  if (e.data?.type === 'DATA') {
+    if (!pendingData.has(sessionId)) {
+      pendingData.set(sessionId, []);
+    }
+    pendingData.get(sessionId)!.push(e.data.data);
+
+    if (!rafScheduled) {
+      rafScheduled = true;
+      requestAnimationFrame(flushPendingData);
+    }
+  }
+};
+```
+
+**Benefits:**
+- Reduces write frequency to ~60/sec max (matches display refresh)
+- Batches rapid small chunks into single larger writes
+- xterm.js handles larger batches more efficiently
+
+**Location:** `src/window/preload.ts` (lines 262-273)
+
+---
+
+**4. Main Process Batching (Lower Priority)**
+
+Buffer data in `TerminalSessionManager.sendToOwner()` before posting to MessagePort:
+
+```typescript
+// Proposed: TerminalSessionManager.ts
+private pendingOutputs = new Map<string, string[]>();
+private flushScheduled = false;
+
+private sendToOwner(sessionId: string, data: string): void {
+  if (!this.pendingOutputs.has(sessionId)) {
+    this.pendingOutputs.set(sessionId, []);
+  }
+  this.pendingOutputs.get(sessionId)!.push(data);
+
+  if (!this.flushScheduled) {
+    this.flushScheduled = true;
+    setImmediate(() => this.flushOutputs());
+  }
+}
+
+private flushOutputs(): void {
+  this.flushScheduled = false;
+  for (const [sessionId, chunks] of this.pendingOutputs) {
+    const batch = chunks.join('');
+    // ... send via MessagePort
+  }
+  this.pendingOutputs.clear();
+}
+```
+
+**Benefits:**
+- Reduces MessagePort message frequency
+- Batches PTY output bursts (common with build output)
+
+**Trade-off:** Adds slight latency (~1ms) for interactive typing
+
+**Location:** `src/main/terminal/TerminalSessionManager.ts` (lines 61-94)
+
+---
+
+**5. Reduce Subscriber Iteration Overhead (Minor)**
+
+Current subscriber pattern uses `forEach` on every message:
+
+```typescript
+subscribers.forEach((cb) => cb(e.data.data));
+```
+
+For single-subscriber case (most common), direct call is faster:
+
+```typescript
+if (subscribers.size === 1) {
+  subscribers.values().next().value(e.data.data);
+} else {
+  subscribers.forEach((cb) => cb(e.data.data));
+}
+```
+
+**Impact:** Minor - only matters at very high message rates
+
+---
+
+### Performance Testing
+
+To measure impact of optimizations:
+
+```bash
+# High-frequency output test
+yes "test output line" | head -10000
+
+# Build output test
+npm install  # or large build
+
+# Continuous output
+tail -f /var/log/system.log
+```
+
+Monitor:
+- CPU usage in Activity Monitor
+- Frame rate in DevTools Performance tab
+- Console for `[ThemedTerminal] WebGL renderer enabled`
+
+### Priority Order
+
+1. ✅ WebGL addon - GPU acceleration (DONE)
+2. ✅ Debounce scrollToBottom - Layout thrashing (DONE)
+3. 📋 Write batching in preload - Biggest remaining gain
+4. 📋 Main process batching - Diminishing returns
+5. 📋 Subscriber optimization - Micro-optimization

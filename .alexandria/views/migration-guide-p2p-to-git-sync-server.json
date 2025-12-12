@@ -1,15 +1,15 @@
 {
-  "id": "authentication-services-documentation",
+  "id": "migration-guide-p2p-to-git-sync-server",
   "version": "1.0.0",
-  "name": "Authentication Services Documentation",
+  "name": "Migration Guide: P2P to Git-Sync Server",
   "description": "Codebase view extracted from documentation",
   "rows": 1,
   "cols": 1,
   "referenceGroups": {},
-  "overviewPath": "docs/authentication-services.md",
+  "overviewPath": "docs/archive/MIGRATION-TO-GIT-SYNC.md",
   "category": "docs",
   "displayOrder": 0,
-  "timestamp": "2025-12-12T04:00:05.888Z",
+  "timestamp": "2025-12-12T03:49:23.954Z",
   "metadata": {
     "generationType": "user",
     "ui": {

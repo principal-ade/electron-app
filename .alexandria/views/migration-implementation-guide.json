@@ -1,15 +1,15 @@
 {
-  "id": "authentication-services-documentation",
+  "id": "migration-implementation-guide",
   "version": "1.0.0",
-  "name": "Authentication Services Documentation",
+  "name": "Migration Implementation Guide",
   "description": "Codebase view extracted from documentation",
   "rows": 1,
   "cols": 1,
   "referenceGroups": {},
-  "overviewPath": "docs/authentication-services.md",
+  "overviewPath": "docs/archive/migration-implementation.md",
   "category": "docs",
   "displayOrder": 0,
-  "timestamp": "2025-12-12T04:00:05.888Z",
+  "timestamp": "2025-12-12T04:00:06.111Z",
   "metadata": {
     "generationType": "user",
     "ui": {

@@ -1,15 +1,15 @@
 {
-  "id": "authentication-services-documentation",
+  "id": "codebase-composition-library-usage-documentation",
   "version": "1.0.0",
-  "name": "Authentication Services Documentation",
+  "name": "Codebase-Composition Library Usage Documentation",
   "description": "Codebase view extracted from documentation",
   "rows": 1,
   "cols": 1,
   "referenceGroups": {},
-  "overviewPath": "docs/authentication-services.md",
+  "overviewPath": "docs/codebase-composition-usage.md",
   "category": "docs",
   "displayOrder": 0,
-  "timestamp": "2025-12-12T04:00:05.888Z",
+  "timestamp": "2025-12-12T04:00:05.894Z",
   "metadata": {
     "generationType": "user",
     "ui": {

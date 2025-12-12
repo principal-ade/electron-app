@@ -1,15 +1,15 @@
 {
-  "id": "authentication-services-documentation",
+  "id": "electronapi-final-cleanup-plan",
   "version": "1.0.0",
-  "name": "Authentication Services Documentation",
+  "name": "ElectronAPI Final Cleanup Plan",
   "description": "Codebase view extracted from documentation",
   "rows": 1,
   "cols": 1,
   "referenceGroups": {},
-  "overviewPath": "docs/authentication-services.md",
+  "overviewPath": "docs/electronapi-final-cleanup.md",
   "category": "docs",
   "displayOrder": 0,
-  "timestamp": "2025-12-12T04:00:05.888Z",
+  "timestamp": "2025-12-12T04:00:05.908Z",
   "metadata": {
     "generationType": "user",
     "ui": {

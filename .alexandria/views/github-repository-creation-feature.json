@@ -1,15 +1,15 @@
 {
-  "id": "authentication-services-documentation",
+  "id": "github-repository-creation-feature",
   "version": "1.0.0",
-  "name": "Authentication Services Documentation",
+  "name": "GitHub Repository Creation Feature",
   "description": "Codebase view extracted from documentation",
   "rows": 1,
   "cols": 1,
   "referenceGroups": {},
-  "overviewPath": "docs/authentication-services.md",
+  "overviewPath": "docs/github-project-creation-feature.md",
   "category": "docs",
   "displayOrder": 0,
-  "timestamp": "2025-12-12T04:00:05.888Z",
+  "timestamp": "2025-12-12T04:00:05.934Z",
   "metadata": {
     "generationType": "user",
     "ui": {
