@@ -10,6 +10,7 @@ import {
   EyeOff,
   Loader2,
   Copy,
+  Play,
 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
@@ -33,7 +34,6 @@ const AVAILABLE_PANELS: PanelOption[] = [
   { id: 'docs', label: 'Documentation' },
   { id: 'codeCity', label: 'Code City' },
   { id: 'configLibrary', label: 'Architecture Library' },
-  { id: 'dependencies', label: 'Dependencies' },
   { id: 'gitChanges', label: 'File Tree' },
   { id: 'localhostBrowser', label: 'Localhost Browser' },
   { id: 'localProjects', label: 'Local Projects' },
@@ -62,8 +62,8 @@ export const DEFAULT_PANEL_PRESETS: PanelPreset[] = [
   {
     id: 'default',
     name: 'Default',
-    description: 'Dependencies, Terminal, Code City',
-    layout: { left: 'dependencies', middle: 'terminal', right: 'codeCity' },
+    description: 'Package Composition, Terminal, Code City',
+    layout: { left: 'packageComposition', middle: 'terminal', right: 'codeCity' },
   },
   {
     id: 'principal-view',
@@ -115,6 +115,8 @@ export interface DevWorkspaceTitlebarProps {
   onSwitchRightMiddlePanels?: () => void;
   // Web-ADE integration
   onOpenInWebADE?: () => void;
+  // GitHub Actions
+  onOpenGitHubActions?: () => void;
   // Panel configuration
   currentLayout?: { left: string; middle: string; right: string };
   onLayoutChange?: (layout: {
@@ -150,6 +152,7 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
   onSwitchLeftMiddlePanels,
   onSwitchRightMiddlePanels,
   onOpenInWebADE,
+  onOpenGitHubActions,
   currentLayout,
   onLayoutChange,
   onCollapsedChange,
@@ -681,6 +684,45 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
               >
                 <Globe size={14} />
                 <span>Web</span>
+              </button>
+            )}
+
+            {/* Open GitHub Actions Button */}
+            {onOpenGitHubActions && (
+              <button
+                onClick={onOpenGitHubActions}
+                title="Open GitHub Actions"
+                style={{
+                  // @ts-ignore - WebkitAppRegion is not in CSSProperties
+                  WebkitAppRegion: 'no-drag',
+                  background: theme.colors.backgroundTertiary,
+                  border: `1px solid ${theme.colors.border}`,
+                  color: theme.colors.textSecondary,
+                  cursor: 'pointer',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s',
+                  fontSize: `${theme.fontSizes[1]}px`,
+                  fontWeight: theme.fontWeights.medium,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundSecondary;
+                  e.currentTarget.style.borderColor = theme.colors.primary;
+                  e.currentTarget.style.color = theme.colors.text;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundTertiary;
+                  e.currentTarget.style.borderColor = theme.colors.border;
+                  e.currentTarget.style.color = theme.colors.textSecondary;
+                }}
+              >
+                <Play size={14} />
+                <span>Actions</span>
               </button>
             )}
 

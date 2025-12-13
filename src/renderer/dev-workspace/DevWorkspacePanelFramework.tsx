@@ -127,9 +127,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   const PrincipalViewPanelComponent = principalViewPanels[0]?.component;
   const CodeCityPanelComponent = codeCityPanels[0]?.component;
   const DocsPanelComponent = docsPanels[0]?.component;
-  const DependenciesPanelComponent = repositoryCompositionPanels.find(
-    (p) => p.metadata?.id === 'industry-theme.dependencies',
-  )?.component;
   const LocalProjectsPanelComponent = alexandriaPanels.find(
     (p) => p.metadata?.id === 'industry-theme.local-projects',
   )?.component;
@@ -246,30 +243,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           </div>
         ) : (
           <div>Documentation panel not available</div>
-        ),
-      },
-      {
-        id: 'dependencies',
-        label: 'Dependencies',
-        content: DependenciesPanelComponent ? (
-          <div
-            style={{
-              height: '100%',
-              width: '100%',
-              overflow: 'hidden',
-              position: 'relative',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <DependenciesPanelComponent
-              context={context}
-              actions={actions}
-              events={events}
-            />
-          </div>
-        ) : (
-          <div>Dependencies panel not available</div>
         ),
       },
       {
@@ -491,7 +464,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       PrincipalViewPanelComponent,
       CodeCityPanelComponent,
       DocsPanelComponent,
-      DependenciesPanelComponent,
       LocalProjectsPanelComponent,
       GitChangesPanelComponent,
       LocalhostPanelComponent,

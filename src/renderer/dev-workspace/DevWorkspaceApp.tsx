@@ -211,7 +211,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
       }),
       events.on('panel:reset-layout', () => {
         setLayout({
-          left: 'dependencies',
+          left: 'packageComposition',
           middle: 'terminal',
           right: 'codeCity',
         });
@@ -609,6 +609,19 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     }
   }, [githubInfo]);
 
+  // Open GitHub Actions page - only available for GitHub repos with .github folder
+  const handleOpenGitHubActions = useCallback(async () => {
+    if (!githubInfo) return;
+
+    const actionsUrl = `https://github.com/${githubInfo.owner}/${githubInfo.repo}/actions`;
+
+    try {
+      await window.mainProcess.shell.openExternal(actionsUrl);
+    } catch (error) {
+      console.error('[DevWorkspaceApp] Failed to open GitHub Actions:', error);
+    }
+  }, [githubInfo]);
+
   // Show git changes panel
   const handleShowGitChanges = useCallback(() => {
     setLayout((prev) => ({ ...prev, left: 'gitChanges' }));
@@ -637,6 +650,9 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         onSwitchLeftMiddlePanels={handleSwitchLeftMiddle}
         onSwitchRightMiddlePanels={handleSwitchRightMiddle}
         onOpenInWebADE={githubInfo ? handleOpenInWebADE : undefined}
+        onOpenGitHubActions={
+          githubInfo && hasGitHubFolder ? handleOpenGitHubActions : undefined
+        }
         currentLayout={
           layout as { left: string; middle: string; right: string }
         }
