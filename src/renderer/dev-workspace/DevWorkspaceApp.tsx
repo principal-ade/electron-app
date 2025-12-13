@@ -325,6 +325,34 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     }
   }, [repositoryPath]);
 
+  // Check for .github folder on mount
+  useEffect(() => {
+    if (!repositoryPath) return;
+
+    const checkGitHubFolder = async () => {
+      try {
+        const fileTree =
+          await RepositoryMonitoringService.getFileTree(repositoryPath);
+        if (fileTree?.allFiles) {
+          const hasFolder = fileTree.allFiles.some(
+            (file) =>
+              file.path.startsWith('.github/') ||
+              file.path === '.github' ||
+              file.path.includes('/.github/'),
+          );
+          setHasGitHubFolder(hasFolder);
+        }
+      } catch (error) {
+        console.error(
+          '[DevWorkspaceApp] Failed to check for .github folder:',
+          error,
+        );
+      }
+    };
+
+    checkGitHubFolder();
+  }, [repositoryPath]);
+
   // Load current branch on mount
   useEffect(() => {
     if (!repositoryPath) return;
