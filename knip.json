@@ -7,15 +7,10 @@
     "src/window/preload.ts",
     ".erb/scripts/**/*.{js,ts}",
     ".erb/configs/**/*.ts",
-    "src/renderer/pages/LandingPage/LandingPage.tsx",
-    "src/renderer/pages/ArchivedSessionsViewer.tsx",
-    "src/renderer/pages/StandaloneTerminal.tsx",
     "src/renderer/pages/StoreViewer.tsx",
     "src/renderer/pages/MultiFileEditorWindow.tsx",
     "src/renderer/pages/CallimachusWindow/index.tsx",
-    "src/renderer/components/principal/PrincipalConfigurationView.tsx",
     "src/renderer/principal-window/index.tsx",
-    "src/renderer/repo-manager/index.tsx",
     "src/renderer/quick-open/index.tsx",
     "src/renderer/window-switcher/index.tsx",
     "src/renderer/dev-workspace/index.tsx",
@@ -38,17 +33,8 @@
     "out/**"
   ],
   "ignoreDependencies": [
-    "@electron-forge/*",
-    "electron-builder",
-    "playwright",
-    "@playwright/test",
-    "electron",
-    "electron-updater",
-    "electron-log",
-    "electron-store",
     "node-pty",
-    "keytar",
-    "core"
+    "keytar"
   ],
   "webpack": false,
   "eslint": {
@@ -77,11 +63,7 @@
   "tailwind": {
     "config": ["tailwind.config.js"]
   },
-  "ignoreBinaries": [
-    "electronmon",
-    "electron-rebuild",
-    "http-server"
-  ],
+  "ignoreBinaries": [],
   "ignoreExportsUsedInFile": {
     "interface": true,
     "type": true,
