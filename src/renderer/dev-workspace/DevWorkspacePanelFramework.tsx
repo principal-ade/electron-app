@@ -112,6 +112,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
   const EventBusPanelComponent = agentDrivenPanels.find(p => p.metadata?.id === 'industry-theme.event-bus-panel')?.component;
   const AgentToolsPanelComponent = agentDrivenPanels.find(p => p.metadata?.id === 'industry-theme.agent-tools-panel')?.component;
   const GitChangesPanelComponent = repositoryCompositionPanels.find(p => p.metadata?.id === 'industry-theme.git-changes')?.component;
+  const PackageCompositionPanelComponent = repositoryCompositionPanels.find(p => p.metadata?.id === 'industry-theme.package-composition')?.component;
   const CodeQualityPanelComponent = codeQualityPanels.find(p => p.metadata?.id === 'principal-ade.quality-hexagon-panel')?.component;
 
   // Define all panels using panel framework components
@@ -401,8 +402,30 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
           <div>Code Quality panel not available</div>
         ),
       },
+      {
+        id: 'packageComposition',
+        label: 'Package Composition',
+        content: PackageCompositionPanelComponent ? (
+          <div style={{
+            height: '100%',
+            width: '100%',
+            overflow: 'hidden',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <PackageCompositionPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div>Package Composition panel not available</div>
+        ),
+      },
     ],
-    [PrincipalViewPanelComponent, CodeCityPanelComponent, DocsPanelComponent, DependenciesPanelComponent, LocalProjectsPanelComponent, GitChangesPanelComponent, LocalhostPanelComponent, EventBusPanelComponent, AgentToolsPanelComponent, CodeQualityPanelComponent, context, actions, events, terminalImplementation, terminalContext, terminalDirectory, terminalPanelContext, terminalActions, codeCityPanelContext],
+    [PrincipalViewPanelComponent, CodeCityPanelComponent, DocsPanelComponent, DependenciesPanelComponent, LocalProjectsPanelComponent, GitChangesPanelComponent, LocalhostPanelComponent, EventBusPanelComponent, AgentToolsPanelComponent, CodeQualityPanelComponent, PackageCompositionPanelComponent, context, actions, events, terminalImplementation, terminalContext, terminalDirectory, terminalPanelContext, terminalActions, codeCityPanelContext],
   );
 
   return (

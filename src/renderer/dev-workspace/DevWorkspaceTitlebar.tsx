@@ -20,6 +20,7 @@ const AVAILABLE_PANELS: PanelOption[] = [
   { id: 'gitChanges', label: 'File Tree' },
   { id: 'localhostBrowser', label: 'Localhost Browser' },
   { id: 'localProjects', label: 'Local Projects' },
+  { id: 'packageComposition', label: 'Package Composition' },
   { id: 'principalView', label: 'Architecture Diagram' },
   { id: 'terminal', label: 'Terminal' },
 ];
