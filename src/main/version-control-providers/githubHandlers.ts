@@ -2444,6 +2444,101 @@ export class GitHubAdapter {
     console.warn('[GitHub] Failed to fetch license templates, returning empty array');
     return [];
   }
+
+  /**
+   * Get repository info including permissions
+   * Returns null if repo not found or user doesn't have access
+   */
+  async getRepository(owner: string, repo: string): Promise<any | null> {
+    console.log(`[GitHub] Fetching repository info for ${owner}/${repo}`);
+
+    const endpoint = `/repos/${owner}/${repo}`;
+    const apiResult = await this.makeGitHubAPICall(endpoint);
+
+    if (apiResult.success && apiResult.data) {
+      console.log(`[GitHub] Successfully fetched repository ${owner}/${repo}`, {
+        permissions: apiResult.data.permissions,
+        fork: apiResult.data.fork,
+      });
+      return apiResult.data;
+    }
+
+    // Fallback to CLI
+    try {
+      const result = await this.executeCommand(['gh', 'api', endpoint]);
+      if (result.success && result.stdout) {
+        const repoData = JSON.parse(result.stdout);
+        console.log(`[GitHub] Successfully fetched repository ${owner}/${repo} via CLI`);
+        return repoData;
+      }
+    } catch (error) {
+      console.error('[GitHub] Error getting repository info:', error);
+    }
+
+    console.warn(`[GitHub] Failed to fetch repository ${owner}/${repo}`);
+    return null;
+  }
+
+  /**
+   * Fork a repository to the authenticated user's account or an organization
+   */
+  async forkRepository(
+    owner: string,
+    repo: string,
+    options?: { organization?: string; name?: string; default_branch_only?: boolean },
+  ): Promise<any | null> {
+    console.log(`[GitHub] Forking repository ${owner}/${repo}`, options);
+
+    const endpoint = `/repos/${owner}/${repo}/forks`;
+    const body: any = {};
+
+    if (options?.organization) {
+      body.organization = options.organization;
+    }
+    if (options?.name) {
+      body.name = options.name;
+    }
+    if (options?.default_branch_only !== undefined) {
+      body.default_branch_only = options.default_branch_only;
+    }
+
+    const apiResult = await this.makeGitHubAPICall(endpoint, {
+      method: 'POST',
+      body: Object.keys(body).length > 0 ? body : undefined,
+    });
+
+    if (apiResult.success && apiResult.data) {
+      console.log(`[GitHub] Successfully forked repository to ${apiResult.data.full_name}`);
+      return apiResult.data;
+    }
+
+    // Fallback to CLI
+    try {
+      const args = ['gh', 'repo', 'fork', `${owner}/${repo}`, '--clone=false'];
+      if (options?.organization) {
+        args.push('--org', options.organization);
+      }
+      // Note: gh CLI doesn't support custom name or default_branch_only directly
+
+      const result = await this.executeCommand(args);
+      if (result.success) {
+        // gh fork doesn't return JSON by default, fetch the forked repo info
+        const currentUser = await this.getCurrentUser();
+        if (currentUser) {
+          const forkOwner = options?.organization || currentUser.login;
+          const forkName = options?.name || repo;
+          // Wait a moment for GitHub to create the fork
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          return this.getRepository(forkOwner, forkName);
+        }
+      }
+    } catch (error) {
+      console.error('[GitHub] Error forking repository:', error);
+    }
+
+    console.error(`[GitHub] Failed to fork repository ${owner}/${repo}`, apiResult.error);
+    return null;
+  }
 }
 
 // Register IPC handlers
@@ -3095,6 +3190,35 @@ export function registerGitHubIpcHandlers(
     }
     return adapter.getLicenseTemplates();
   });
+
+  ipcMain.handle(
+    GitHubAPIEvent.GET_REPOSITORY,
+    async (event, owner: string, repo: string) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for GET_REPOSITORY');
+        return null;
+      }
+      return adapter.getRepository(owner, repo);
+    },
+  );
+
+  ipcMain.handle(
+    GitHubAPIEvent.FORK_REPOSITORY,
+    async (
+      event,
+      owner: string,
+      repo: string,
+      options?: { organization?: string; name?: string; default_branch_only?: boolean },
+    ) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for FORK_REPOSITORY');
+        return null;
+      }
+      return adapter.forkRepository(owner, repo, options);
+    },
+  );
 
   console.log('[GitHub] IPC handlers registered');
   console.log('[Config] Configuration handlers registered');

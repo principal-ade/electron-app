@@ -6,6 +6,7 @@ import {
   GitHubConfigRequest,
   CreateIssueRequest,
   CreateRepositoryInput,
+  ForkRepositoryOptions,
 } from '../../shared/main-process-api-interfaces/GitHubAPI';
 
 export const githubAPI: GitHubAPI = {
@@ -182,5 +183,22 @@ export const githubAPI: GitHubAPI = {
 
   getLicenseTemplates: async () => {
     return ipcRenderer.invoke(GitHubAPIEvent.GET_LICENSE_TEMPLATES);
+  },
+
+  getRepository: async (owner: string, repo: string) => {
+    return ipcRenderer.invoke(GitHubAPIEvent.GET_REPOSITORY, owner, repo);
+  },
+
+  forkRepository: async (
+    owner: string,
+    repo: string,
+    options?: ForkRepositoryOptions,
+  ) => {
+    return ipcRenderer.invoke(
+      GitHubAPIEvent.FORK_REPOSITORY,
+      owner,
+      repo,
+      options,
+    );
   },
 };

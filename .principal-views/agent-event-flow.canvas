@@ -229,17 +229,17 @@
       }
     },
     {
-      "id": "repo-panel-context",
+      "id": "agent-highlight-context",
       "type": "text",
       "x": 820,
       "y": 390,
       "width": 200,
       "height": 80,
-      "text": "RepositoryPanelContext\nuseEffect subscription",
+      "text": "AgentHighlightContext\nuseEffect subscription",
       "pv": {
         "nodeType": "context",
         "shape": "rectangle",
-        "sources": ["src/renderer/contexts/RepositoryPanelContext.tsx"]
+        "sources": ["src/renderer/contexts/AgentHighlightContext.tsx"]
       }
     },
     {
@@ -373,7 +373,7 @@
     {
       "id": "service-to-context",
       "fromNode": "sdk-service",
-      "toNode": "repo-panel-context",
+      "toNode": "agent-highlight-context",
       "label": "onProcessedEvent()",
       "pv": {
         "edgeType": "subscribe"
@@ -381,7 +381,7 @@
     },
     {
       "id": "context-to-highlight",
-      "fromNode": "repo-panel-context",
+      "fromNode": "agent-highlight-context",
       "toNode": "event-highlight-service",
       "label": "service.processEvent()",
       "pv": {
@@ -390,7 +390,7 @@
     },
     {
       "id": "context-to-view",
-      "fromNode": "repo-panel-context",
+      "fromNode": "agent-highlight-context",
       "toNode": "session-events-view",
       "label": "provides events",
       "pv": {

@@ -12,6 +12,8 @@ import type {
   CreateRepositoryInput,
   GitHubRepositoryCreated,
   GitHubLicenseTemplate,
+  GitHubRepositoryWithPermissions,
+  ForkRepositoryOptions,
 } from '../../shared/main-process-api-interfaces/GitHubAPI';
 
 export class GithubService {
@@ -216,5 +218,33 @@ export class GithubService {
   static async getLicenseTemplates(): Promise<GitHubLicenseTemplate[]> {
     const result = await window.mainProcess.github.getLicenseTemplates();
     return result || [];
+  }
+
+  /**
+   * Get repository info including permissions
+   * Returns null if repo not found or user doesn't have access
+   */
+  static async getRepository(
+    owner: string,
+    repo: string,
+  ): Promise<GitHubRepositoryWithPermissions | null> {
+    const result = await window.mainProcess.github.getRepository(owner, repo);
+    return result;
+  }
+
+  /**
+   * Fork a repository to the authenticated user's account or an organization
+   */
+  static async forkRepository(
+    owner: string,
+    repo: string,
+    options?: ForkRepositoryOptions,
+  ): Promise<GitHubRepositoryCreated | null> {
+    const result = await window.mainProcess.github.forkRepository(
+      owner,
+      repo,
+      options,
+    );
+    return result;
   }
 }

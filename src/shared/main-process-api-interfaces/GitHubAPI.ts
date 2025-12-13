@@ -33,6 +33,9 @@ export enum GitHubAPIEvent {
   CREATE_REPOSITORY = 'github:create-repository',
   GET_GITIGNORE_TEMPLATES = 'github:get-gitignore-templates',
   GET_LICENSE_TEMPLATES = 'github:get-license-templates',
+  // Repository info and forking
+  GET_REPOSITORY = 'github:get-repository',
+  FORK_REPOSITORY = 'github:fork-repository',
 }
 
 // Config fetching types (formerly from ConfigAPI)
@@ -178,6 +181,29 @@ export interface GitHubRepository {
   stargazers_count?: number;
   /** License SPDX identifier (e.g., "MIT", "Apache-2.0") */
   license?: string | null;
+}
+
+export interface GitHubRepositoryPermissions {
+  admin: boolean;
+  maintain?: boolean;
+  push: boolean;
+  triage?: boolean;
+  pull: boolean;
+}
+
+export interface GitHubRepositoryWithPermissions extends GitHubRepository {
+  permissions?: GitHubRepositoryPermissions;
+  parent?: GitHubRepository; // Present if this is a fork
+  source?: GitHubRepository; // The root repo if this is a fork of a fork
+}
+
+export interface ForkRepositoryOptions {
+  /** Organization to fork to (optional, defaults to user) */
+  organization?: string;
+  /** Name for the forked repo (optional, defaults to original name) */
+  name?: string;
+  /** Whether to fork only the default branch */
+  default_branch_only?: boolean;
 }
 
 export interface GitHubOrganization {
@@ -408,4 +434,15 @@ export interface GitHubAPI {
   ) => Promise<GitHubRepositoryCreated>;
   getGitignoreTemplates: () => Promise<string[]>;
   getLicenseTemplates: () => Promise<GitHubLicenseTemplate[]>;
+  /** Get repository info including permissions */
+  getRepository: (
+    owner: string,
+    repo: string,
+  ) => Promise<GitHubRepositoryWithPermissions | null>;
+  /** Fork a repository */
+  forkRepository: (
+    owner: string,
+    repo: string,
+    options?: ForkRepositoryOptions,
+  ) => Promise<GitHubRepositoryCreated | null>;
 }
