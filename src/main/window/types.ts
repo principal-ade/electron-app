@@ -139,14 +139,14 @@ export function isWorkspaceWindow(windowId: number): boolean {
 export function getRepositoryUrl(windowId: number): string | null {
   const metadata = getWindowMetadata(windowId);
   return metadata?.primaryType === PrimaryWindowType.REPOSITORY
-    ? metadata.remoteUrl ?? null
+    ? (metadata.remoteUrl ?? null)
     : null;
 }
 
 export function getWorkspaceId(windowId: number): string | null {
   const metadata = getWindowMetadata(windowId);
   return metadata?.primaryType === PrimaryWindowType.WORKSPACE
-    ? metadata.workspaceId ?? null
+    ? (metadata.workspaceId ?? null)
     : null;
 }
 

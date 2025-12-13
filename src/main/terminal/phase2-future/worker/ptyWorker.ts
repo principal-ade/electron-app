@@ -7,10 +7,7 @@
  */
 
 import * as os from 'os';
-import {
-  WorkerControlMessage,
-  WorkerEventMessage,
-} from './types';
+import { WorkerControlMessage, WorkerEventMessage } from './types';
 
 // Import node-pty dynamically
 let pty: any;
@@ -81,10 +78,14 @@ function createSession(
         env,
       });
     } catch (spawnError) {
-      console.error('[PTY Worker] Failed to spawn shell, trying fallback:', spawnError);
+      console.error(
+        '[PTY Worker] Failed to spawn shell, trying fallback:',
+        spawnError,
+      );
 
       // Try fallback shell
-      const fallbackShell = process.platform === 'darwin' ? '/bin/bash' : '/bin/sh';
+      const fallbackShell =
+        process.platform === 'darwin' ? '/bin/bash' : '/bin/sh';
       console.log(`[PTY Worker] Trying fallback shell: ${fallbackShell}`);
 
       ptyProcess = pty.spawn(fallbackShell, args, {
@@ -130,7 +131,9 @@ function createSession(
 
     // Handle PTY exit
     ptyProcess.onExit((exitInfo: { exitCode: number }) => {
-      console.log(`[PTY Worker] Session ${sessionId} exited with code ${exitInfo.exitCode}`);
+      console.log(
+        `[PTY Worker] Session ${sessionId} exited with code ${exitInfo.exitCode}`,
+      );
 
       // Notify main process
       sendToMain({
@@ -163,13 +166,17 @@ function createSession(
     // Send initial command if provided
     if (command) {
       setTimeout(() => {
-        console.log(`[PTY Worker] Sending command for session ${sessionId}: ${command}`);
+        console.log(
+          `[PTY Worker] Sending command for session ${sessionId}: ${command}`,
+        );
         ptyProcess.write(`${command}\r`);
       }, 500);
     } else {
       // Send a newline to trigger the shell prompt
       setTimeout(() => {
-        console.log(`[PTY Worker] Sending initial newline for session ${sessionId}`);
+        console.log(
+          `[PTY Worker] Sending initial newline for session ${sessionId}`,
+        );
         ptyProcess.write('\r');
       }, 200);
     }
@@ -225,7 +232,9 @@ function resizeSession(sessionId: string, cols: number, rows: number): void {
 
   // This is handled via the MessagePort from renderer
   // This control message is for future use if needed
-  console.log(`[PTY Worker] Resize request for session ${sessionId}: ${cols}x${rows}`);
+  console.log(
+    `[PTY Worker] Resize request for session ${sessionId}: ${cols}x${rows}`,
+  );
 }
 
 /**
@@ -247,47 +256,61 @@ function writeSession(sessionId: string, data: string): void {
  * Handle control messages from main process
  */
 if (parentPort) {
-  parentPort.on('message', (message: WorkerControlMessage | { type: 'PORT_TRANSFER'; sessionId: string; port: MessagePort }) => {
-    try {
-      if (message.type === 'CREATE_SESSION') {
-        // Port will be sent separately via PORT_TRANSFER
-        console.log(`[PTY Worker] Received CREATE_SESSION for ${message.sessionId}`);
-        // Store the creation params, wait for port
-        (createSession as any).pending = (createSession as any).pending || new Map();
-        (createSession as any).pending.set(message.sessionId, message);
-      } else if (message.type === 'PORT_TRANSFER') {
-        // Receive the port for a session
-        console.log(`[PTY Worker] Received PORT_TRANSFER for ${message.sessionId}`);
-        const pending = (createSession as any).pending?.get(message.sessionId);
-        if (pending) {
-          createSession(
-            pending.sessionId,
-            pending.cols,
-            pending.rows,
-            pending.cwd,
-            pending.env,
-            pending.shell,
-            pending.args,
-            message.port,
-            pending.command,
+  parentPort.on(
+    'message',
+    (
+      message:
+        | WorkerControlMessage
+        | { type: 'PORT_TRANSFER'; sessionId: string; port: MessagePort },
+    ) => {
+      try {
+        if (message.type === 'CREATE_SESSION') {
+          // Port will be sent separately via PORT_TRANSFER
+          console.log(
+            `[PTY Worker] Received CREATE_SESSION for ${message.sessionId}`,
           );
-          (createSession as any).pending.delete(message.sessionId);
+          // Store the creation params, wait for port
+          (createSession as any).pending =
+            (createSession as any).pending || new Map();
+          (createSession as any).pending.set(message.sessionId, message);
+        } else if (message.type === 'PORT_TRANSFER') {
+          // Receive the port for a session
+          console.log(
+            `[PTY Worker] Received PORT_TRANSFER for ${message.sessionId}`,
+          );
+          const pending = (createSession as any).pending?.get(
+            message.sessionId,
+          );
+          if (pending) {
+            createSession(
+              pending.sessionId,
+              pending.cols,
+              pending.rows,
+              pending.cwd,
+              pending.env,
+              pending.shell,
+              pending.args,
+              message.port,
+              pending.command,
+            );
+            (createSession as any).pending.delete(message.sessionId);
+          }
+        } else if (message.type === 'DESTROY_SESSION') {
+          destroySession(message.sessionId);
+        } else if (message.type === 'RESIZE_SESSION') {
+          resizeSession(message.sessionId, message.cols, message.rows);
+        } else if (message.type === 'WRITE_SESSION') {
+          writeSession(message.sessionId, message.data);
         }
-      } else if (message.type === 'DESTROY_SESSION') {
-        destroySession(message.sessionId);
-      } else if (message.type === 'RESIZE_SESSION') {
-        resizeSession(message.sessionId, message.cols, message.rows);
-      } else if (message.type === 'WRITE_SESSION') {
-        writeSession(message.sessionId, message.data);
+      } catch (error) {
+        console.error('[PTY Worker] Error handling message:', error);
+        sendToMain({
+          type: 'WORKER_ERROR',
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
-    } catch (error) {
-      console.error('[PTY Worker] Error handling message:', error);
-      sendToMain({
-        type: 'WORKER_ERROR',
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  });
+    },
+  );
 
   // Notify main process that worker is ready
   sendToMain({ type: 'WORKER_READY' });

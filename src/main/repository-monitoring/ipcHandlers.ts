@@ -13,10 +13,7 @@ import {
   type RepositoryCacheSyncEvent,
 } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 import { QualityLensService } from '../quality-lenses/QualityLensService';
-import {
-  applicationWindows,
-  PrimaryWindowType,
-} from '../window/types';
+import { applicationWindows, PrimaryWindowType } from '../window/types';
 import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
 
 // Type alias for git state event payload (structure defined in repository-monitoring-server)
@@ -36,7 +33,10 @@ const MonitoringInternalEvent = {
 let repositoryMonitoringManager: RepositoryMonitoringManager | null = null;
 
 // Cache for workspace repo paths to avoid repeated async lookups
-const workspaceRepoPathsCache = new Map<string, { paths: Set<string>; timestamp: number }>();
+const workspaceRepoPathsCache = new Map<
+  string,
+  { paths: Set<string>; timestamp: number }
+>();
 const WORKSPACE_CACHE_TTL = 5000; // 5 seconds
 
 /**
@@ -79,20 +79,28 @@ async function shouldWindowReceiveRepoEvent(
       const cached = workspaceRepoPathsCache.get(metadata.workspaceId);
       const now = Date.now();
 
-      if (cached && (now - cached.timestamp) < WORKSPACE_CACHE_TTL) {
+      if (cached && now - cached.timestamp < WORKSPACE_CACHE_TTL) {
         return cached.paths.has(repoPath);
       }
 
       // Cache miss or stale - fetch from service
       try {
         const service = AlexandriaRegistryService.getInstance();
-        const repos = await service.getRepositoriesInWorkspace(metadata.workspaceId);
+        const repos = await service.getRepositoriesInWorkspace(
+          metadata.workspaceId,
+        );
         // Convert branded paths to plain strings for comparison
-        const paths = new Set(repos.map(r => String(r.path)));
-        workspaceRepoPathsCache.set(metadata.workspaceId, { paths, timestamp: now });
+        const paths = new Set(repos.map((r) => String(r.path)));
+        workspaceRepoPathsCache.set(metadata.workspaceId, {
+          paths,
+          timestamp: now,
+        });
         return paths.has(repoPath);
       } catch (error) {
-        console.error(`[RepositoryMonitoring] Failed to get workspace repos:`, error);
+        console.error(
+          `[RepositoryMonitoring] Failed to get workspace repos:`,
+          error,
+        );
         return false;
       }
 
@@ -112,7 +120,10 @@ async function broadcastToRelevantWindows<T extends { repoPath: string }>(
   const windowIds = Array.from(applicationWindows.keys());
 
   for (const windowId of windowIds) {
-    const shouldReceive = await shouldWindowReceiveRepoEvent(windowId, payload.repoPath);
+    const shouldReceive = await shouldWindowReceiveRepoEvent(
+      windowId,
+      payload.repoPath,
+    );
     if (shouldReceive) {
       const appWindow = applicationWindows.get(windowId);
       if (appWindow && !appWindow.window.isDestroyed()) {
@@ -612,7 +623,10 @@ export function registerRepositoryMonitoringHandlers(): void {
       console.log(
         `[RepositoryMonitoring] Forwarding cache sync to renderer: ${event.repoPath} - ${event.slice}`,
       );
-      broadcastToRelevantWindows(RepositoryMonitoringAPIEvent.CACHE_SYNC, event);
+      broadcastToRelevantWindows(
+        RepositoryMonitoringAPIEvent.CACHE_SYNC,
+        event,
+      );
     },
   );
 

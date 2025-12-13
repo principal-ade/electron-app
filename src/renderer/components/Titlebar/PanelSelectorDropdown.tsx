@@ -26,7 +26,7 @@ export const PanelSelectorDropdown: React.FC<PanelSelectorDropdownProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { theme } = useTheme();
 
-  const currentPanel = availablePanels.find(p => p.id === currentPanelId);
+  const currentPanel = availablePanels.find((p) => p.id === currentPanelId);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -90,12 +90,14 @@ export const PanelSelectorDropdown: React.FC<PanelSelectorDropdownProps> = ({
           zIndex: 101,
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+          e.currentTarget.style.backgroundColor =
+            theme.colors.backgroundSecondary;
           e.currentTarget.style.borderColor = theme.colors.primary;
           e.currentTarget.style.color = theme.colors.text;
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+          e.currentTarget.style.backgroundColor =
+            theme.colors.backgroundTertiary;
           e.currentTarget.style.borderColor = theme.colors.border;
           e.currentTarget.style.color = theme.colors.textSecondary;
         }}
@@ -143,7 +145,8 @@ export const PanelSelectorDropdown: React.FC<PanelSelectorDropdownProps> = ({
                 }}
                 onMouseEnter={(e) => {
                   if (!isSelected) {
-                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                    e.currentTarget.style.backgroundColor =
+                      'rgba(255, 255, 255, 0.05)';
                   }
                 }}
                 onMouseLeave={(e) => {

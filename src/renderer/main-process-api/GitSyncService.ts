@@ -222,7 +222,9 @@ export class GitSyncService {
   /**
    * Set the environment (dev or prod) for GitSync servers
    */
-  static async setEnvironment(environment: 'development' | 'production'): Promise<void> {
+  static async setEnvironment(
+    environment: 'development' | 'production',
+  ): Promise<void> {
     try {
       await window.mainProcess.gitSync.setEnvironment(environment);
     } catch (error) {

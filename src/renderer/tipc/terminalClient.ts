@@ -25,11 +25,22 @@ declare global {
     electron: {
       ipcRenderer: {
         invoke: typeof Electron.ipcRenderer.invoke;
-        on: (channel: string, handler: (...args: unknown[]) => void) => () => void;
+        on: (
+          channel: string,
+          handler: (...args: unknown[]) => void,
+        ) => () => void;
         send: typeof Electron.ipcRenderer.send;
       };
-      onTerminalData: (sessionId: string, callback: (data: string) => void) => () => void;
-      onOwnershipLost: (callback: (data: { sessionId: string; newOwnerWindowId: number }) => void) => () => void;
+      onTerminalData: (
+        sessionId: string,
+        callback: (data: string) => void,
+      ) => () => void;
+      onOwnershipLost: (
+        callback: (data: {
+          sessionId: string;
+          newOwnerWindowId: number;
+        }) => void,
+      ) => () => void;
     };
   }
 }
@@ -50,8 +61,12 @@ export interface TerminalClient {
     canClaim: boolean;
     ownerWindowExists: boolean;
   }>;
-  claimTerminalOwnership: (input: OwnershipInput) => Promise<TerminalOwnershipResult>;
-  releaseTerminalOwnership: (input: { sessionId: string }) => Promise<TerminalOwnershipResult>;
+  claimTerminalOwnership: (
+    input: OwnershipInput,
+  ) => Promise<TerminalOwnershipResult>;
+  releaseTerminalOwnership: (input: {
+    sessionId: string;
+  }) => Promise<TerminalOwnershipResult>;
   requestTerminalDataPort: (input: RequestDataPortInput) => Promise<{
     success: boolean;
     reason?: string;
@@ -66,7 +81,9 @@ let _terminalClient: TerminalClient | null = null;
 function getTerminalClient(): TerminalClient {
   if (!_terminalClient) {
     if (!window.electron?.ipcRenderer?.invoke) {
-      throw new Error('Terminal client not available - window.electron not initialized');
+      throw new Error(
+        'Terminal client not available - window.electron not initialized',
+      );
     }
     _terminalClient = createClient<any>({
       ipcInvoke: window.electron.ipcRenderer.invoke,
@@ -88,10 +105,15 @@ export const terminalClient: TerminalClient = new Proxy({} as TerminalClient, {
 });
 
 // Re-export terminal data APIs from preload (also lazy)
-export const onTerminalData = (sessionId: string, callback: (data: string) => void) => {
+export const onTerminalData = (
+  sessionId: string,
+  callback: (data: string) => void,
+) => {
   return window.electron.onTerminalData(sessionId, callback);
 };
 
-export const onOwnershipLost = (callback: (data: { sessionId: string; newOwnerWindowId: number }) => void) => {
+export const onOwnershipLost = (
+  callback: (data: { sessionId: string; newOwnerWindowId: number }) => void,
+) => {
   return window.electron.onOwnershipLost(callback);
 };

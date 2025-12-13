@@ -218,7 +218,10 @@ export class RepositoryApiEventHandler implements RepositoryAPI {
     remoteUrl: string,
   ): Promise<string | null> {
     try {
-      console.log('[downloadAndCacheAvatar] Downloading avatar from:', avatarUrl);
+      console.log(
+        '[downloadAndCacheAvatar] Downloading avatar from:',
+        avatarUrl,
+      );
 
       // Fetch the avatar image
       const response = await fetch(avatarUrl);
@@ -250,10 +253,16 @@ export class RepositoryApiEventHandler implements RepositoryAPI {
         return cachedUrl;
       }
 
-      console.error('[downloadAndCacheAvatar] Failed to save avatar:', result.error);
+      console.error(
+        '[downloadAndCacheAvatar] Failed to save avatar:',
+        result.error,
+      );
       return null;
     } catch (error) {
-      console.error('[downloadAndCacheAvatar] Error downloading avatar:', error);
+      console.error(
+        '[downloadAndCacheAvatar] Error downloading avatar:',
+        error,
+      );
       return null;
     }
   }
@@ -939,7 +948,8 @@ export class RepositoryApiEventHandler implements RepositoryAPI {
 
           // Refresh the current branch information
           try {
-            const branchInfo = await this.branchService.getBranchInfo(localPath);
+            const branchInfo =
+              await this.branchService.getBranchInfo(localPath);
             if (branchInfo?.currentBranch) {
               repo.localClones[cloneIndex].currentBranch =
                 branchInfo.currentBranch;

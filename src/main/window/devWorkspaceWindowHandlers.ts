@@ -8,7 +8,11 @@
 import { ipcMain, app } from 'electron';
 import path from 'path';
 import { resolveHtmlPath } from '../util';
-import { createSpecialWindow, applicationWindows, specialWindows } from './modernWindowManager';
+import {
+  createSpecialWindow,
+  applicationWindows,
+  specialWindows,
+} from './modernWindowManager';
 import { PrimaryWindowType, WindowMetadata } from './types';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
@@ -109,7 +113,9 @@ export async function openDevWorkspaceWindow(
   const encodedData = encodeURIComponent(JSON.stringify(alexandriaEntry));
   const url = `${resolveHtmlPath('dev-workspace.html')}#init/${encodedData}`;
 
-  console.log(`[DevWorkspaceWindow] Window ${appWindow.window.id} loading: ${url}`);
+  console.log(
+    `[DevWorkspaceWindow] Window ${appWindow.window.id} loading: ${url}`,
+  );
   appWindow.window.loadURL(url);
 
   // Broadcast window state change (opening)

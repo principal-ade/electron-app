@@ -462,7 +462,9 @@ export const CreateGitHubRepositoryModal: React.FC<
               fontWeight: theme.fontWeights.semibold,
               fontFamily: theme.fonts.body,
               cursor:
-                isCreating || !repositoryName.trim() ? 'not-allowed' : 'pointer',
+                isCreating || !repositoryName.trim()
+                  ? 'not-allowed'
+                  : 'pointer',
               opacity: isCreating || !repositoryName.trim() ? 0.5 : 1,
             }}
           >

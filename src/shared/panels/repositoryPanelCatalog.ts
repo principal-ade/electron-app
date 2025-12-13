@@ -162,8 +162,7 @@ export const repositoryPanelCatalog = [
   {
     id: 'workspaceEntries',
     label: 'Workspace Repositories',
-    description:
-      'View and manage repositories in the selected workspace.',
+    description: 'View and manage repositories in the selected workspace.',
     slices: [] as const,
     surfaces: ['principal'] as const,
   },

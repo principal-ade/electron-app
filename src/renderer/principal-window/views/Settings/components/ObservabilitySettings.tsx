@@ -939,7 +939,9 @@ export const ObservabilitySettings: React.FC = () => {
                 backgroundColor: canSave
                   ? theme.colors.primary
                   : theme.colors.backgroundSecondary,
-                color: canSave ? theme.colors.background : theme.colors.textSecondary,
+                color: canSave
+                  ? theme.colors.background
+                  : theme.colors.textSecondary,
                 border: 'none',
                 borderRadius: '8px',
                 fontSize: '14px',

@@ -240,7 +240,9 @@ try {
 // Terminal MessagePort storage and subscription management
 const terminalPorts = new Map<string, MessagePort>();
 const terminalSubscribers = new Map<string, Set<(data: string) => void>>();
-const ownershipLostSubscribers = new Set<(data: { sessionId: string; newOwnerWindowId: number }) => void>();
+const ownershipLostSubscribers = new Set<
+  (data: { sessionId: string; newOwnerWindowId: number }) => void
+>();
 
 // Listen for MessagePort delivery from main process (matching testing app pattern)
 ipcRenderer.on('terminal:port', (event, sessionId: string) => {
@@ -275,22 +277,32 @@ ipcRenderer.on('terminal:port', (event, sessionId: string) => {
   // Check if there are already subscribers waiting for this port
   const existingSubscribers = terminalSubscribers.get(sessionId);
   if (existingSubscribers && existingSubscribers.size > 0) {
-    console.log(`[preload] Port ready, ${existingSubscribers.size} subscriber(s) waiting for session ${sessionId}`);
+    console.log(
+      `[preload] Port ready, ${existingSubscribers.size} subscriber(s) waiting for session ${sessionId}`,
+    );
   }
 });
 
 // Listen for ownership lost events from main process
-ipcRenderer.on('terminal:ownershipLost', (_event, data: { sessionId: string; newOwnerWindowId: number }) => {
-  console.log(`[preload] Ownership lost for session ${data.sessionId}, new owner: ${data.newOwnerWindowId}`);
-  ownershipLostSubscribers.forEach((cb) => cb(data));
-});
+ipcRenderer.on(
+  'terminal:ownershipLost',
+  (_event, data: { sessionId: string; newOwnerWindowId: number }) => {
+    console.log(
+      `[preload] Ownership lost for session ${data.sessionId}, new owner: ${data.newOwnerWindowId}`,
+    );
+    ownershipLostSubscribers.forEach((cb) => cb(data));
+  },
+);
 
 try {
   contextBridge.exposeInMainWorld('electron', {
     ipcRenderer: {
       invoke: ipcRenderer.invoke.bind(ipcRenderer),
       on: (channel: string, handler: (...args: unknown[]) => void) => {
-        const subscription = (_event: Electron.IpcRendererEvent, ...args: unknown[]) => handler(...args);
+        const subscription = (
+          _event: Electron.IpcRendererEvent,
+          ...args: unknown[]
+        ) => handler(...args);
         ipcRenderer.on(channel, subscription);
         return () => ipcRenderer.removeListener(channel, subscription);
       },
@@ -298,7 +310,10 @@ try {
     },
 
     // Terminal data subscription (abstracts MessagePort) - matches testing app
-    onTerminalData: (sessionId: string, callback: (data: string) => void): (() => void) => {
+    onTerminalData: (
+      sessionId: string,
+      callback: (data: string) => void,
+    ): (() => void) => {
       // Initialize subscriber set for this session if needed
       if (!terminalSubscribers.has(sessionId)) {
         terminalSubscribers.set(sessionId, new Set());
@@ -307,14 +322,18 @@ try {
       // Add the callback to subscribers
       terminalSubscribers.get(sessionId)!.add(callback);
 
-      console.log(`[preload] Subscribed to terminal data for session ${sessionId}`);
+      console.log(
+        `[preload] Subscribed to terminal data for session ${sessionId}`,
+      );
 
       // Return unsubscribe function
       return () => {
         const subscribers = terminalSubscribers.get(sessionId);
         if (subscribers) {
           subscribers.delete(callback);
-          console.log(`[preload] Unsubscribed from terminal data for session ${sessionId}`);
+          console.log(
+            `[preload] Unsubscribed from terminal data for session ${sessionId}`,
+          );
 
           // Clean up empty subscriber sets
           if (subscribers.size === 0) {
@@ -325,7 +344,9 @@ try {
     },
 
     // Ownership lost subscription - matches testing app
-    onOwnershipLost: (callback: (data: { sessionId: string; newOwnerWindowId: number }) => void): (() => void) => {
+    onOwnershipLost: (
+      callback: (data: { sessionId: string; newOwnerWindowId: number }) => void,
+    ): (() => void) => {
       ownershipLostSubscribers.add(callback);
       console.log('[preload] Subscribed to ownership lost events');
 

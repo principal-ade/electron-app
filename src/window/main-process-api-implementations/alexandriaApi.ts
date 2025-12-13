@@ -52,7 +52,8 @@ export const alexandriaAPI: AlexandriaAPI = {
       );
     };
   },
-  getRepositories: (skipGitInfo?: boolean) => ipcRenderer.invoke(AlexandriaAPIEvent.GET_ALL, skipGitInfo),
+  getRepositories: (skipGitInfo?: boolean) =>
+    ipcRenderer.invoke(AlexandriaAPIEvent.GET_ALL, skipGitInfo),
   getRepository: (name: string) =>
     ipcRenderer.invoke(AlexandriaAPIEvent.GET, name),
   getRepositoryByPath: (path: string) =>
@@ -71,5 +72,9 @@ export const alexandriaAPI: AlexandriaAPI = {
   getCodebaseViews: (repositoryPath: string) =>
     ipcRenderer.invoke(AlexandriaAPIEvent.GET_CODEBASE_VIEWS, repositoryPath),
   getCodebaseView: (repositoryPath: string, viewId: string) =>
-    ipcRenderer.invoke(AlexandriaAPIEvent.GET_CODEBASE_VIEW, repositoryPath, viewId),
+    ipcRenderer.invoke(
+      AlexandriaAPIEvent.GET_CODEBASE_VIEW,
+      repositoryPath,
+      viewId,
+    ),
 };

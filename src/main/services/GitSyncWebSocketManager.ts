@@ -140,12 +140,14 @@ export class GitSyncWebSocketManager {
   // Hardcoded defaults
   private readonly DEFAULT_DEV_SERVER = 'ws://localhost:3001';
   private readonly DEFAULT_DEV_AUTH = 'http://localhost:3000';
-  private readonly DEFAULT_PROD_SERVER = 'wss://repository-traffic-controller-production.rj36caac972nm.us-east-1.cs.amazonlightsail.com';
+  private readonly DEFAULT_PROD_SERVER =
+    'wss://repository-traffic-controller-production.rj36caac972nm.us-east-1.cs.amazonlightsail.com';
   private readonly DEFAULT_PROD_AUTH = APP_BRANDING.AUTH_SERVER_URL.PRODUCTION;
 
   private constructor() {
     // Default to production servers, override with environment variables if needed
-    this.serverUrl = process.env.GIT_SYNC_SERVER_URL || this.DEFAULT_PROD_SERVER;
+    this.serverUrl =
+      process.env.GIT_SYNC_SERVER_URL || this.DEFAULT_PROD_SERVER;
     this.authServerUrl = process.env.AUTH_SERVER_URL || this.DEFAULT_PROD_AUTH;
 
     console.log(
@@ -200,7 +202,9 @@ export class GitSyncWebSocketManager {
    * Get current environment based on server URLs
    */
   getCurrentEnvironment(): 'development' | 'production' {
-    return this.serverUrl === this.DEFAULT_PROD_SERVER ? 'production' : 'development';
+    return this.serverUrl === this.DEFAULT_PROD_SERVER
+      ? 'production'
+      : 'development';
   }
 
   /**
@@ -331,32 +335,50 @@ export class GitSyncWebSocketManager {
       // Send authenticate message to server (required by BaseServer)
       // The server expects { type: 'authenticate', payload: { token: '...' } }
       try {
-        const authAdapter = client['auth'] as { getCurrentToken?: () => string };
+        const authAdapter = client['auth'] as {
+          getCurrentToken?: () => string;
+        };
         const token = authAdapter?.getCurrentToken?.();
         if (token) {
           // Access the transport to send raw message
-          const transport = client['transport'] as { send: (msg: unknown) => Promise<void> };
+          const transport = client['transport'] as {
+            send: (msg: unknown) => Promise<void>;
+          };
           await transport.send({
             type: 'authenticate',
             payload: { token },
             timestamp: Date.now(),
           });
-          console.log('[GitSyncWebSocketManager] Auth message sent to server for:', connectionId);
+          console.log(
+            '[GitSyncWebSocketManager] Auth message sent to server for:',
+            connectionId,
+          );
           connectionInfo.status.authenticated = true;
 
           // Join the repository room so presence extension tracks this repo as open
           // The repoId format is "owner/repo" which matches the room ID expected by RepositoryPresenceExtension
           try {
             await client.joinRoom(connectionInfo.repoId);
-            console.log('[GitSyncWebSocketManager] Joined repository room:', connectionInfo.repoId);
+            console.log(
+              '[GitSyncWebSocketManager] Joined repository room:',
+              connectionInfo.repoId,
+            );
           } catch (joinError) {
-            console.error('[GitSyncWebSocketManager] Failed to join repository room:', joinError);
+            console.error(
+              '[GitSyncWebSocketManager] Failed to join repository room:',
+              joinError,
+            );
           }
         } else {
-          console.warn('[GitSyncWebSocketManager] No auth token available for authenticate message');
+          console.warn(
+            '[GitSyncWebSocketManager] No auth token available for authenticate message',
+          );
         }
       } catch (error) {
-        console.error('[GitSyncWebSocketManager] Failed to send auth message:', error);
+        console.error(
+          '[GitSyncWebSocketManager] Failed to send auth message:',
+          error,
+        );
       }
 
       // Broadcast connection-added event to all renderers
@@ -365,7 +387,10 @@ export class GitSyncWebSocketManager {
 
     // Disconnected
     client.on('disconnected', () => {
-      console.log('[GitSyncWebSocketManager] Client disconnected:', connectionId);
+      console.log(
+        '[GitSyncWebSocketManager] Client disconnected:',
+        connectionId,
+      );
       connectionInfo.status.connected = false;
       connectionInfo.status.authenticated = false;
 
@@ -378,21 +403,21 @@ export class GitSyncWebSocketManager {
     // Error
     client.on('error', (data: { error: Error }) => {
       console.error('[GitSyncWebSocketManager] Client error:', data.error);
-      this.broadcastToRenderers(
-        GitSyncEvent.ON_MESSAGE,
-        connectionId,
-        { type: 'error', error: data.error.message },
-      );
+      this.broadcastToRenderers(GitSyncEvent.ON_MESSAGE, connectionId, {
+        type: 'error',
+        error: data.error.message,
+      });
     });
 
     // Reconnecting
     client.on('reconnecting', () => {
-      console.log('[GitSyncWebSocketManager] Client reconnecting:', connectionId);
-      this.broadcastToRenderers(
-        GitSyncEvent.ON_MESSAGE,
+      console.log(
+        '[GitSyncWebSocketManager] Client reconnecting:',
         connectionId,
-        { type: 'reconnecting' },
       );
+      this.broadcastToRenderers(GitSyncEvent.ON_MESSAGE, connectionId, {
+        type: 'reconnecting',
+      });
     });
 
     // Listen for raw messages via the transport layer's message handler
@@ -480,16 +505,19 @@ export class GitSyncWebSocketManager {
       const authServerUrl = this.authServerUrl;
 
       // Call landing-page's presence-token endpoint
-      const response = await fetch(`${authServerUrl}/api/auth/cli/presence-token`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetch(
+        `${authServerUrl}/api/auth/cli/presence-token`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            github_token: githubToken,
+            device_id: agentId,
+          }),
         },
-        body: JSON.stringify({
-          github_token: githubToken,
-          device_id: agentId,
-        }),
-      });
+      );
 
       if (!response.ok) {
         const errorData = (await response
@@ -617,10 +645,7 @@ export class GitSyncWebSocketManager {
       // Note: GitSyncMessage is our custom type, but we cast it to Event for Control Tower Core
       // The underlying transport will handle the actual message format
       await connectionInfo.client.broadcast(message as unknown as Event);
-      console.log(
-        '[GitSyncWebSocketManager] Sent message:',
-        message.type,
-      );
+      console.log('[GitSyncWebSocketManager] Sent message:', message.type);
       return { success: true };
     } catch (error) {
       const errorMessage =
@@ -819,8 +844,12 @@ export class GitSyncWebSocketManager {
         message: 'Connected to presence tracking',
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to connect';
-      console.error('[GitSyncWebSocketManager] Failed to connect to presence:', error);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to connect';
+      console.error(
+        '[GitSyncWebSocketManager] Failed to connect to presence:',
+        error,
+      );
 
       // Clean up on error
       this.connections.delete(connectionId);
@@ -840,17 +869,23 @@ export class GitSyncWebSocketManager {
 
     // Connection opened
     client.on('connected', async () => {
-      console.log('[GitSyncWebSocketManager] Presence WebSocket connected, sending auth message...');
+      console.log(
+        '[GitSyncWebSocketManager] Presence WebSocket connected, sending auth message...',
+      );
       connectionInfo.status.connected = true;
 
       // Send authenticate message to server (required by BaseServer)
       // The server expects { type: 'authenticate', payload: { token: '...' } }
       try {
-        const authAdapter = client['auth'] as { getCurrentToken?: () => string };
+        const authAdapter = client['auth'] as {
+          getCurrentToken?: () => string;
+        };
         const token = authAdapter?.getCurrentToken?.();
         if (token) {
           // Access the transport to send raw message
-          const transport = client['transport'] as { send: (msg: unknown) => Promise<void> };
+          const transport = client['transport'] as {
+            send: (msg: unknown) => Promise<void>;
+          };
           await transport.send({
             type: 'authenticate',
             payload: { token },
@@ -859,10 +894,15 @@ export class GitSyncWebSocketManager {
           console.log('[GitSyncWebSocketManager] Auth message sent to server');
           connectionInfo.status.authenticated = true;
         } else {
-          console.warn('[GitSyncWebSocketManager] No auth token available for authenticate message');
+          console.warn(
+            '[GitSyncWebSocketManager] No auth token available for authenticate message',
+          );
         }
       } catch (error) {
-        console.error('[GitSyncWebSocketManager] Failed to send auth message:', error);
+        console.error(
+          '[GitSyncWebSocketManager] Failed to send auth message:',
+          error,
+        );
       }
 
       this.broadcastConnectionEvent('connection-added', connectionId);
@@ -886,25 +926,40 @@ export class GitSyncWebSocketManager {
 
     // Error
     client.on('error', (data: { error: Error }) => {
-      console.error('[GitSyncWebSocketManager] Presence client error:', data.error);
+      console.error(
+        '[GitSyncWebSocketManager] Presence client error:',
+        data.error,
+      );
     });
 
     // Room joined - emitted when successfully joined a room
     client.on('room_joined', (data: { roomId: string; state: RoomState }) => {
-      console.log('[GitSyncWebSocketManager] 📡 Event emitted: room_joined', data);
+      console.log(
+        '[GitSyncWebSocketManager] 📡 Event emitted: room_joined',
+        data,
+      );
 
       // Store presence room state if this is the global presence room
       if (data.roomId === '__global_presence__' && data.state?.users) {
         this.presenceRoomState = { users: data.state.users };
-        console.log('[GitSyncWebSocketManager] ✓ Stored presence room state with', data.state.users.size, 'users');
+        console.log(
+          '[GitSyncWebSocketManager] ✓ Stored presence room state with',
+          data.state.users.size,
+          'users',
+        );
       }
 
-      console.log('[GitSyncWebSocketManager] ✓ room_joined event:', data.roomId);
+      console.log(
+        '[GitSyncWebSocketManager] ✓ room_joined event:',
+        data.roomId,
+      );
     });
 
     // Presence updated - emitted when users join/leave or update their presence
     client.on('presence_updated', (data: { users: RoomUser[] }) => {
-      console.log('[GitSyncWebSocketManager] 📡 presence_updated event received');
+      console.log(
+        '[GitSyncWebSocketManager] 📡 presence_updated event received',
+      );
 
       // Update stored room state - convert array to Map
       const usersMap = new Map<string, RoomUser>();
@@ -913,7 +968,11 @@ export class GitSyncWebSocketManager {
       }
       this.presenceRoomState = { users: usersMap };
 
-      console.log('[GitSyncWebSocketManager] ✓ Updated presence room state with', usersMap.size, 'users');
+      console.log(
+        '[GitSyncWebSocketManager] ✓ Updated presence room state with',
+        usersMap.size,
+        'users',
+      );
 
       // Broadcast to renderers
       this.broadcastToRenderers(GitSyncEvent.ON_MESSAGE, connectionId, {
@@ -921,7 +980,6 @@ export class GitSyncWebSocketManager {
         users: data.users,
       });
     });
-
   }
 
   /**
@@ -943,11 +1001,15 @@ export class GitSyncWebSocketManager {
       // Find any connected client
       const connections = Array.from(this.connections.values());
       const activeConnection = connections.find(
-        (conn) => conn.client.getConnectionState() === 'connected' && conn.status.authenticated,
+        (conn) =>
+          conn.client.getConnectionState() === 'connected' &&
+          conn.status.authenticated,
       );
 
       if (!activeConnection) {
-        console.warn('[GitSyncWebSocketManager] No active connection for presence subscription');
+        console.warn(
+          '[GitSyncWebSocketManager] No active connection for presence subscription',
+        );
         return false;
       }
 
@@ -970,7 +1032,9 @@ export class GitSyncWebSocketManager {
         // IMPORTANT: Set up the promise and event listener BEFORE calling joinRoom()
         const joinPromise = new Promise<void>((resolve, reject) => {
           const timeout = setTimeout(() => {
-            console.error('[GitSyncWebSocketManager] Room join timeout - no room_joined event received');
+            console.error(
+              '[GitSyncWebSocketManager] Room join timeout - no room_joined event received',
+            );
             reject(new Error('Room join timeout'));
           }, 5000);
 
@@ -992,7 +1056,10 @@ export class GitSyncWebSocketManager {
         this.presenceRoomJoinInProgress = false;
       }
     } catch (error) {
-      console.error('[GitSyncWebSocketManager] Failed to subscribe to presence:', error);
+      console.error(
+        '[GitSyncWebSocketManager] Failed to subscribe to presence:',
+        error,
+      );
       return false;
     }
   }
@@ -1004,19 +1071,29 @@ export class GitSyncWebSocketManager {
     success: boolean;
     data?: {
       users: unknown[];
-      stats: { totalOnline: number; totalRepositories: number; activeCollaborations: number };
+      stats: {
+        totalOnline: number;
+        totalRepositories: number;
+        activeCollaborations: number;
+      };
     };
     error?: string;
   }> {
     try {
       // Check if we have stored presence room state
       if (!this.presenceRoomState) {
-        console.warn('[GitSyncWebSocketManager] No presence room state available');
+        console.warn(
+          '[GitSyncWebSocketManager] No presence room state available',
+        );
         return {
           success: true,
           data: {
             users: [],
-            stats: { totalOnline: 0, totalRepositories: 0, activeCollaborations: 0 },
+            stats: {
+              totalOnline: 0,
+              totalRepositories: 0,
+              activeCollaborations: 0,
+            },
           },
         };
       }
@@ -1029,8 +1106,11 @@ export class GitSyncWebSocketManager {
         return {
           userId: user.username, // Use the actual username field from RoomUser
           status: user.status || 'online',
-          openRepositories: (user.metadata?.openRepositories as unknown[]) || [],
-          activeRepository: user.metadata?.activeRepository as string | undefined,
+          openRepositories:
+            (user.metadata?.openRepositories as unknown[]) || [],
+          activeRepository: user.metadata?.activeRepository as
+            | string
+            | undefined,
           lastSeen: user.lastActivity,
           devices: (user.metadata?.devices as unknown[]) || [],
           statusMessage: user.metadata?.statusMessage as string | undefined,
@@ -1041,7 +1121,11 @@ export class GitSyncWebSocketManager {
 
       const totalOnline = transformedUsers.length;
 
-      console.log('[GitSyncWebSocketManager] Fetched presence data:', totalOnline, 'users');
+      console.log(
+        '[GitSyncWebSocketManager] Fetched presence data:',
+        totalOnline,
+        'users',
+      );
 
       return {
         success: true,
@@ -1051,8 +1135,14 @@ export class GitSyncWebSocketManager {
         },
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch presence data';
-      console.error('[GitSyncWebSocketManager] Failed to fetch presence:', error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to fetch presence data';
+      console.error(
+        '[GitSyncWebSocketManager] Failed to fetch presence:',
+        error,
+      );
       return {
         success: false,
         error: errorMessage,
@@ -1073,21 +1163,37 @@ export class GitSyncWebSocketManager {
   }> {
     try {
       // Convert WebSocket URL to HTTP URL for REST API calls
-      const httpUrl = this.serverUrl.replace('wss://', 'https://').replace('ws://', 'http://');
-      const response = await fetch(`${httpUrl}/api/presence/repos/${owner}/${repo}`);
+      const httpUrl = this.serverUrl
+        .replace('wss://', 'https://')
+        .replace('ws://', 'http://');
+      const response = await fetch(
+        `${httpUrl}/api/presence/repos/${owner}/${repo}`,
+      );
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch repository presence: ${response.status}`);
+        throw new Error(
+          `Failed to fetch repository presence: ${response.status}`,
+        );
       }
 
-      const data = await response.json() as { repoId: string; users: unknown[]; totalUsers: number };
+      const data = (await response.json()) as {
+        repoId: string;
+        users: unknown[];
+        totalUsers: number;
+      };
       return {
         success: true,
         data,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch repository presence';
-      console.error('[GitSyncWebSocketManager] Failed to fetch repository presence:', error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to fetch repository presence';
+      console.error(
+        '[GitSyncWebSocketManager] Failed to fetch repository presence:',
+        error,
+      );
       return {
         success: false,
         error: errorMessage,
@@ -1098,16 +1204,16 @@ export class GitSyncWebSocketManager {
   /**
    * Fetch presence for a specific user
    */
-  async fetchUserPresence(
-    userId: string,
-  ): Promise<{
+  async fetchUserPresence(userId: string): Promise<{
     success: boolean;
     data?: unknown;
     error?: string;
   }> {
     try {
       // Convert WebSocket URL to HTTP URL for REST API calls
-      const httpUrl = this.serverUrl.replace('wss://', 'https://').replace('ws://', 'http://');
+      const httpUrl = this.serverUrl
+        .replace('wss://', 'https://')
+        .replace('ws://', 'http://');
       const response = await fetch(`${httpUrl}/api/presence/user/${userId}`);
 
       if (!response.ok) {
@@ -1126,8 +1232,14 @@ export class GitSyncWebSocketManager {
         data,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch user presence';
-      console.error('[GitSyncWebSocketManager] Failed to fetch user presence:', error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to fetch user presence';
+      console.error(
+        '[GitSyncWebSocketManager] Failed to fetch user presence:',
+        error,
+      );
       return {
         success: false,
         error: errorMessage,
@@ -1146,13 +1258,17 @@ export class GitSyncWebSocketManager {
     token?: string,
   ): Promise<{ success: boolean; message?: string }> {
     try {
-      const httpUrl = this.serverUrl.replace('wss://', 'https://').replace('ws://', 'http://');
+      const httpUrl = this.serverUrl
+        .replace('wss://', 'https://')
+        .replace('ws://', 'http://');
 
       // Get auth token - use provided token or get from active connection
       let authToken = token;
       if (!authToken) {
         const activeConnection = Array.from(this.connections.values()).find(
-          (conn) => conn.client.getConnectionState() === 'connected' && conn.status.authenticated,
+          (conn) =>
+            conn.client.getConnectionState() === 'connected' &&
+            conn.status.authenticated,
         );
         authToken = activeConnection?.token;
       }
@@ -1179,14 +1295,26 @@ export class GitSyncWebSocketManager {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to report repository opened: ${response.status}`);
+        throw new Error(
+          `Failed to report repository opened: ${response.status}`,
+        );
       }
 
-      console.log('[GitSyncWebSocketManager] Reported repository opened:', { owner, repo, branch });
+      console.log('[GitSyncWebSocketManager] Reported repository opened:', {
+        owner,
+        repo,
+        branch,
+      });
       return { success: true, message: 'Repository opened reported' };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to report repository opened';
-      console.error('[GitSyncWebSocketManager] Failed to report repository opened:', error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to report repository opened';
+      console.error(
+        '[GitSyncWebSocketManager] Failed to report repository opened:',
+        error,
+      );
       return { success: false, message: errorMessage };
     }
   }
@@ -1200,13 +1328,17 @@ export class GitSyncWebSocketManager {
     token?: string,
   ): Promise<{ success: boolean; message?: string }> {
     try {
-      const httpUrl = this.serverUrl.replace('wss://', 'https://').replace('ws://', 'http://');
+      const httpUrl = this.serverUrl
+        .replace('wss://', 'https://')
+        .replace('ws://', 'http://');
 
       // Get auth token - use provided token or get from active connection
       let authToken = token;
       if (!authToken) {
         const activeConnection = Array.from(this.connections.values()).find(
-          (conn) => conn.client.getConnectionState() === 'connected' && conn.status.authenticated,
+          (conn) =>
+            conn.client.getConnectionState() === 'connected' &&
+            conn.status.authenticated,
         );
         authToken = activeConnection?.token;
       }
@@ -1231,14 +1363,25 @@ export class GitSyncWebSocketManager {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to report repository closed: ${response.status}`);
+        throw new Error(
+          `Failed to report repository closed: ${response.status}`,
+        );
       }
 
-      console.log('[GitSyncWebSocketManager] Reported repository closed:', { owner, repo });
+      console.log('[GitSyncWebSocketManager] Reported repository closed:', {
+        owner,
+        repo,
+      });
       return { success: true, message: 'Repository closed reported' };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to report repository closed';
-      console.error('[GitSyncWebSocketManager] Failed to report repository closed:', error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to report repository closed';
+      console.error(
+        '[GitSyncWebSocketManager] Failed to report repository closed:',
+        error,
+      );
       return { success: false, message: errorMessage };
     }
   }
@@ -1252,13 +1395,17 @@ export class GitSyncWebSocketManager {
     token?: string,
   ): Promise<{ success: boolean; message?: string }> {
     try {
-      const httpUrl = this.serverUrl.replace('wss://', 'https://').replace('ws://', 'http://');
+      const httpUrl = this.serverUrl
+        .replace('wss://', 'https://')
+        .replace('ws://', 'http://');
 
       // Get auth token - use provided token or get from active connection
       let authToken = token;
       if (!authToken) {
         const activeConnection = Array.from(this.connections.values()).find(
-          (conn) => conn.client.getConnectionState() === 'connected' && conn.status.authenticated,
+          (conn) =>
+            conn.client.getConnectionState() === 'connected' &&
+            conn.status.authenticated,
         );
         authToken = activeConnection?.token;
       }
@@ -1283,14 +1430,25 @@ export class GitSyncWebSocketManager {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to report active repository: ${response.status}`);
+        throw new Error(
+          `Failed to report active repository: ${response.status}`,
+        );
       }
 
-      console.log('[GitSyncWebSocketManager] Reported active repository:', { owner, repo });
+      console.log('[GitSyncWebSocketManager] Reported active repository:', {
+        owner,
+        repo,
+      });
       return { success: true, message: 'Active repository reported' };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to report active repository';
-      console.error('[GitSyncWebSocketManager] Failed to report active repository:', error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to report active repository';
+      console.error(
+        '[GitSyncWebSocketManager] Failed to report active repository:',
+        error,
+      );
       return { success: false, message: errorMessage };
     }
   }
@@ -1304,13 +1462,17 @@ export class GitSyncWebSocketManager {
     token?: string,
   ): Promise<{ success: boolean; message?: string }> {
     try {
-      const httpUrl = this.serverUrl.replace('wss://', 'https://').replace('ws://', 'http://');
+      const httpUrl = this.serverUrl
+        .replace('wss://', 'https://')
+        .replace('ws://', 'http://');
 
       // Get auth token - use provided token or get from active connection
       let authToken = token;
       if (!authToken) {
         const activeConnection = Array.from(this.connections.values()).find(
-          (conn) => conn.client.getConnectionState() === 'connected' && conn.status.authenticated,
+          (conn) =>
+            conn.client.getConnectionState() === 'connected' &&
+            conn.status.authenticated,
         );
         authToken = activeConnection?.token;
       }
@@ -1338,11 +1500,20 @@ export class GitSyncWebSocketManager {
         throw new Error(`Failed to update presence status: ${response.status}`);
       }
 
-      console.log('[GitSyncWebSocketManager] Updated presence status:', { status, statusMessage });
+      console.log('[GitSyncWebSocketManager] Updated presence status:', {
+        status,
+        statusMessage,
+      });
       return { success: true, message: 'Status updated' };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update presence status';
-      console.error('[GitSyncWebSocketManager] Failed to update presence status:', error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to update presence status';
+      console.error(
+        '[GitSyncWebSocketManager] Failed to update presence status:',
+        error,
+      );
       return { success: false, message: errorMessage };
     }
   }
@@ -1356,13 +1527,17 @@ export class GitSyncWebSocketManager {
     token?: string,
   ): Promise<{ success: boolean; message?: string }> {
     try {
-      const httpUrl = this.serverUrl.replace('wss://', 'https://').replace('ws://', 'http://');
+      const httpUrl = this.serverUrl
+        .replace('wss://', 'https://')
+        .replace('ws://', 'http://');
 
       // Get auth token - use provided token or get from active connection
       let authToken = token;
       if (!authToken) {
         const activeConnection = Array.from(this.connections.values()).find(
-          (conn) => conn.client.getConnectionState() === 'connected' && conn.status.authenticated,
+          (conn) =>
+            conn.client.getConnectionState() === 'connected' &&
+            conn.status.authenticated,
         );
         authToken = activeConnection?.token;
       }
@@ -1387,14 +1562,28 @@ export class GitSyncWebSocketManager {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to set presence visibility: ${response.status}`);
+        throw new Error(
+          `Failed to set presence visibility: ${response.status}`,
+        );
       }
 
-      console.log('[GitSyncWebSocketManager] Set presence visibility:', { userId, visible });
-      return { success: true, message: `Visibility set to ${visible ? 'visible' : 'invisible'}` };
+      console.log('[GitSyncWebSocketManager] Set presence visibility:', {
+        userId,
+        visible,
+      });
+      return {
+        success: true,
+        message: `Visibility set to ${visible ? 'visible' : 'invisible'}`,
+      };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to set presence visibility';
-      console.error('[GitSyncWebSocketManager] Failed to set presence visibility:', error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to set presence visibility';
+      console.error(
+        '[GitSyncWebSocketManager] Failed to set presence visibility:',
+        error,
+      );
       return { success: false, message: errorMessage };
     }
   }
@@ -1402,15 +1591,21 @@ export class GitSyncWebSocketManager {
   /**
    * Send a heartbeat to keep presence alive
    */
-  async sendPresenceHeartbeat(token?: string): Promise<{ success: boolean; message?: string }> {
+  async sendPresenceHeartbeat(
+    token?: string,
+  ): Promise<{ success: boolean; message?: string }> {
     try {
-      const httpUrl = this.serverUrl.replace('wss://', 'https://').replace('ws://', 'http://');
+      const httpUrl = this.serverUrl
+        .replace('wss://', 'https://')
+        .replace('ws://', 'http://');
 
       // Get auth token - use provided token or get from active connection
       let authToken = token;
       if (!authToken) {
         const activeConnection = Array.from(this.connections.values()).find(
-          (conn) => conn.client.getConnectionState() === 'connected' && conn.status.authenticated,
+          (conn) =>
+            conn.client.getConnectionState() === 'connected' &&
+            conn.status.authenticated,
         );
         authToken = activeConnection?.token;
       }
@@ -1432,13 +1627,21 @@ export class GitSyncWebSocketManager {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to send presence heartbeat: ${response.status}`);
+        throw new Error(
+          `Failed to send presence heartbeat: ${response.status}`,
+        );
       }
 
       return { success: true, message: 'Heartbeat sent' };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to send presence heartbeat';
-      console.error('[GitSyncWebSocketManager] Failed to send presence heartbeat:', error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to send presence heartbeat';
+      console.error(
+        '[GitSyncWebSocketManager] Failed to send presence heartbeat:',
+        error,
+      );
       return { success: false, message: errorMessage };
     }
   }

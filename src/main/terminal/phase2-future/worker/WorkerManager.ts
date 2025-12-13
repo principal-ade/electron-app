@@ -22,7 +22,9 @@ export class WorkerManager {
    * For phase 1, this just marks the worker as ready since we're keeping PTY in main process
    */
   async start(): Promise<void> {
-    console.log('[WorkerManager] Phase 1: PTY stays in main process, MessageChannels enabled');
+    console.log(
+      '[WorkerManager] Phase 1: PTY stays in main process, MessageChannels enabled',
+    );
     this.isReady = true;
 
     // Emit WORKER_READY event

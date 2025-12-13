@@ -1,7 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useTheme } from '@principal-ade/industry-theme';
-import { X, Loader2, AlertCircle, ChevronRight, Building2, ArrowLeft, Check } from 'lucide-react';
+import {
+  X,
+  Loader2,
+  AlertCircle,
+  ChevronRight,
+  Building2,
+  ArrowLeft,
+  Check,
+} from 'lucide-react';
 import { GithubService } from '../../main-process-api/GithubService';
 import { GitService } from '../../main-process-api/GitService';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
@@ -55,7 +63,9 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
 
   // Templates
   const [gitignoreTemplates, setGitignoreTemplates] = useState<string[]>([]);
-  const [licenseTemplates, setLicenseTemplates] = useState<GitHubLicenseTemplate[]>([]);
+  const [licenseTemplates, setLicenseTemplates] = useState<
+    GitHubLicenseTemplate[]
+  >([]);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
 
   // Load organizations when modal opens
@@ -95,7 +105,7 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
       setOrgsError(
         err instanceof Error
           ? err.message
-          : 'Failed to load organizations. Please try again.'
+          : 'Failed to load organizations. Please try again.',
       );
     } finally {
       setIsLoadingOrgs(false);
@@ -140,7 +150,9 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
     }
 
     if (!workspace.suggestedClonePath) {
-      setError('This workspace has no clone directory configured. Please set a home directory for the workspace first.');
+      setError(
+        'This workspace has no clone directory configured. Please set a home directory for the workspace first.',
+      );
       return;
     }
 
@@ -160,22 +172,29 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
         license_template: licenseTemplate || undefined,
       };
 
-      const repository: GitHubRepositoryCreated = await GithubService.createRepository(
-        selectedOrg,
-        input,
-        true, // isOrganization
-      );
+      const repository: GitHubRepositoryCreated =
+        await GithubService.createRepository(
+          selectedOrg,
+          input,
+          true, // isOrganization
+        );
 
       // Step 2: Clone the repository
       setProgressStep('cloning');
 
       // Determine the target path for cloning
-      const targetPath = path.join(workspace.suggestedClonePath, repository.name);
+      const targetPath = path.join(
+        workspace.suggestedClonePath,
+        repository.name,
+      );
 
       // Use HTTPS clone URL (more reliable in most environments)
       const cloneUrl = repository.clone_url;
 
-      const cloneSuccess = await GitService.cloneRepository(cloneUrl, targetPath);
+      const cloneSuccess = await GitService.cloneRepository(
+        cloneUrl,
+        targetPath,
+      );
 
       if (!cloneSuccess) {
         throw new Error('Failed to clone repository');
@@ -192,7 +211,10 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
       // Step 4: Add to workspace
       setProgressStep('adding');
 
-      await WorkspaceService.addRepositoryToWorkspace(registeredRepo, workspace.id);
+      await WorkspaceService.addRepositoryToWorkspace(
+        registeredRepo,
+        workspace.id,
+      );
 
       // Done!
       setProgressStep('done');
@@ -478,9 +500,7 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
             }}
           >
             Organization:{' '}
-            <strong style={{ color: theme.colors.text }}>
-              {selectedOrg}
-            </strong>
+            <strong style={{ color: theme.colors.text }}>{selectedOrg}</strong>
           </p>
         </div>
 
@@ -780,7 +800,9 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
               fontWeight: theme.fontWeights.semibold,
               fontFamily: theme.fonts.body,
               cursor:
-                isCreating || !repositoryName.trim() ? 'not-allowed' : 'pointer',
+                isCreating || !repositoryName.trim()
+                  ? 'not-allowed'
+                  : 'pointer',
               opacity: isCreating || !repositoryName.trim() ? 0.5 : 1,
             }}
           >
@@ -855,7 +877,9 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
             color: theme.colors.text,
           }}
         >
-          {step === 'complete' ? 'Repository Created!' : getProgressLabel(progressStep)}
+          {step === 'complete'
+            ? 'Repository Created!'
+            : getProgressLabel(progressStep)}
         </h3>
         <p
           style={{
@@ -880,29 +904,35 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
             marginTop: '16px',
           }}
         >
-          {(['creating', 'cloning', 'registering', 'adding'] as ProgressStep[]).map(
-            (s) => {
-              const steps: ProgressStep[] = ['creating', 'cloning', 'registering', 'adding'];
-              const isActive = s === progressStep;
-              const isPast = steps.indexOf(s) < steps.indexOf(progressStep);
+          {(
+            ['creating', 'cloning', 'registering', 'adding'] as ProgressStep[]
+          ).map((s) => {
+            const steps: ProgressStep[] = [
+              'creating',
+              'cloning',
+              'registering',
+              'adding',
+            ];
+            const isActive = s === progressStep;
+            const isPast = steps.indexOf(s) < steps.indexOf(progressStep);
 
-              return (
-                <div
-                  key={s}
-                  style={{
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    backgroundColor: isPast || isActive
+            return (
+              <div
+                key={s}
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor:
+                    isPast || isActive
                       ? theme.colors.primary
                       : theme.colors.border,
-                    opacity: isActive ? 1 : isPast ? 0.6 : 0.3,
-                    transition: 'all 0.3s',
-                  }}
-                />
-              );
-            }
-          )}
+                  opacity: isActive ? 1 : isPast ? 0.6 : 0.3,
+                  transition: 'all 0.3s',
+                }}
+              />
+            );
+          })}
         </div>
       )}
     </div>

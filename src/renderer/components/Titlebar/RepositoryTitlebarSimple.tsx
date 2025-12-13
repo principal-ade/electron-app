@@ -240,7 +240,16 @@ export const RepositoryTitlebarSimple: React.FC<
         </div>
 
         {/* Git-Sync connectivity indicator - right side, mirrors avatar */}
-        <div style={{ width: '28px', height: '28px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div
+          style={{
+            width: '28px',
+            height: '28px',
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
           <GitSyncStatusIndicator
             repositoryPath={
               selectedSource?.type === 'local'
@@ -288,18 +297,22 @@ export const RepositoryTitlebarSimple: React.FC<
               fontWeight: theme.fontWeights.medium,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundSecondary;
               e.currentTarget.style.borderColor = theme.colors.primary;
               e.currentTarget.style.color = theme.colors.text;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
               e.currentTarget.style.borderColor = theme.colors.border;
               e.currentTarget.style.color = theme.colors.textSecondary;
             }}
           >
             <Terminal size={14} />
-            <span>{terminalImplementation === 'ghostty' ? 'Ghostty' : 'XTerm'}</span>
+            <span>
+              {terminalImplementation === 'ghostty' ? 'Ghostty' : 'XTerm'}
+            </span>
           </button>
         )}
         {onSwitchToClassic && (

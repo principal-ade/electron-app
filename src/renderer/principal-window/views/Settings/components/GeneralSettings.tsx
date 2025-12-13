@@ -96,7 +96,6 @@ export const GeneralSettings: React.FC = () => {
     };
   }, []);
 
-
   return (
     <div style={{ maxWidth: '800px' }}>
       {/* About Section */}

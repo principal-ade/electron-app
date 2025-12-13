@@ -54,12 +54,16 @@ interface AlexandriaWorkspaceLayoutProps {
   /**
    * Callback when a repository is selected or deselected
    */
-  onRepositorySelected?: (repository: { name: string; path: string } | undefined) => void;
+  onRepositorySelected?: (
+    repository: { name: string; path: string } | undefined,
+  ) => void;
 }
 
 interface AlexandriaWorkspaceLayoutContentProps {
   selectedRepository?: { name: string; path: string };
-  onRepositorySelected: (repository: { name: string; path: string } | undefined) => void;
+  onRepositorySelected: (
+    repository: { name: string; path: string } | undefined,
+  ) => void;
   enableKeyboardShortcuts: boolean;
   collapsed: { left: boolean; right: boolean };
   onCollapsedChange: (collapsed: { left: boolean; right: boolean }) => void;
@@ -70,7 +74,9 @@ interface AlexandriaWorkspaceLayoutContentProps {
 /**
  * Content component that uses panel context
  */
-const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutContentProps> = ({
+const AlexandriaWorkspaceLayoutContent: React.FC<
+  AlexandriaWorkspaceLayoutContentProps
+> = ({
   selectedRepository,
   onRepositorySelected,
   enableKeyboardShortcuts,
@@ -93,13 +99,19 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
   });
 
   // Collapse/expand handlers
-  const handleExpand = useCallback(async (panel: 'left' | 'right') => {
-    onCollapsedChange({ ...collapsed, [panel]: false });
-  }, [collapsed, onCollapsedChange]);
+  const handleExpand = useCallback(
+    async (panel: 'left' | 'right') => {
+      onCollapsedChange({ ...collapsed, [panel]: false });
+    },
+    [collapsed, onCollapsedChange],
+  );
 
-  const handleCollapse = useCallback(async (panel: 'left' | 'right') => {
-    onCollapsedChange({ ...collapsed, [panel]: true });
-  }, [collapsed, onCollapsedChange]);
+  const handleCollapse = useCallback(
+    async (panel: 'left' | 'right') => {
+      onCollapsedChange({ ...collapsed, [panel]: true });
+    },
+    [collapsed, onCollapsedChange],
+  );
 
   // Keyboard shortcuts (Alt+1, Alt+2, Alt+3)
   // NOTE: Disabled by default until DOM focus integration is implemented
@@ -123,24 +135,33 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
         repositoryPath: string;
       };
 
-      console.info('[AlexandriaWorkspaceLayout] Repository selected event received:', {
-        repository,
-        repositoryPath,
-      });
+      console.info(
+        '[AlexandriaWorkspaceLayout] Repository selected event received:',
+        {
+          repository,
+          repositoryPath,
+        },
+      );
 
       if (repository) {
         const repoPath = repositoryPath || repository.path;
 
         // Toggle: if clicking on the already selected repo, deselect it
         if (selectedRepository && selectedRepository.path === repoPath) {
-          console.info('[AlexandriaWorkspaceLayout] Deselecting repository:', selectedRepository.name);
+          console.info(
+            '[AlexandriaWorkspaceLayout] Deselecting repository:',
+            selectedRepository.name,
+          );
           onRepositorySelected(undefined);
         } else {
           const selectedRepo = {
             name: repository.name,
             path: repoPath,
           };
-          console.info('[AlexandriaWorkspaceLayout] Updating selected repository:', selectedRepo);
+          console.info(
+            '[AlexandriaWorkspaceLayout] Updating selected repository:',
+            selectedRepo,
+          );
           onRepositorySelected(selectedRepo);
         }
       }
@@ -158,10 +179,13 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
         repositoryPath: string;
       };
 
-      console.info('[AlexandriaWorkspaceLayout] Repository opened event received:', {
-        repository,
-        repositoryPath,
-      });
+      console.info(
+        '[AlexandriaWorkspaceLayout] Repository opened event received:',
+        {
+          repository,
+          repositoryPath,
+        },
+      );
 
       if (repository) {
         const repoPath = repositoryPath || repository.path;
@@ -174,7 +198,10 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
               repositoryName: repository.name,
             });
           } catch (error) {
-            console.error('[AlexandriaWorkspaceLayout] Failed to open dev workspace:', error);
+            console.error(
+              '[AlexandriaWorkspaceLayout] Failed to open dev workspace:',
+              error,
+            );
           }
         }
       }
@@ -188,7 +215,10 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
     const unsubscribe = events.on('file:opened', async (event) => {
       const { filePath } = event.payload as { filePath: string };
 
-      console.info('[AlexandriaWorkspaceLayout] File opened event received:', filePath);
+      console.info(
+        '[AlexandriaWorkspaceLayout] File opened event received:',
+        filePath,
+      );
 
       // If it's a markdown file, open it in the standalone markdown viewer
       if (filePath.endsWith('.md')) {
@@ -196,17 +226,26 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
         const repositoryPath = context.currentScope.repository?.path;
 
         if (!repositoryPath) {
-          console.warn('[AlexandriaWorkspaceLayout] Cannot open markdown file - no repository selected');
+          console.warn(
+            '[AlexandriaWorkspaceLayout] Cannot open markdown file - no repository selected',
+          );
           return;
         }
 
         try {
           // Use the new function that handles relative paths in the main process
-          await WindowService.openMarkdownViewFromRepository(filePath, repositoryPath, {
-            viewMode: 'single',
-          });
+          await WindowService.openMarkdownViewFromRepository(
+            filePath,
+            repositoryPath,
+            {
+              viewMode: 'single',
+            },
+          );
         } catch (error) {
-          console.error('[AlexandriaWorkspaceLayout] Failed to open markdown viewer:', error);
+          console.error(
+            '[AlexandriaWorkspaceLayout] Failed to open markdown viewer:',
+            error,
+          );
         }
       }
     });
@@ -217,15 +256,22 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
   // Get panel components
   // Use WorkspaceRepositoriesPanel (panels[1]) which expects workspace + workspaceRepositories slices
   const WorkspacePanelComponent = workspacePanels[1]?.component;
-  const LocalProjectsPanelComponent = workspacePanels.find(p => p.metadata?.id === 'industry-theme.local-projects')?.component;
+  const LocalProjectsPanelComponent = workspacePanels.find(
+    (p) => p.metadata?.id === 'industry-theme.local-projects',
+  )?.component;
   const DocsPanelComponent = docsPanels[0]?.component;
   const CodeCityPanelComponent = codeCityPanels[0]?.component;
   const LocalhostPanelComponent = localhostPanels[0]?.component;
-  const EventBusPanelComponent = agentDrivenPanels.find(p => p.metadata?.id === 'industry-theme.event-bus-panel')?.component;
-  const AgentToolsPanelComponent = agentDrivenPanels.find(p => p.metadata?.id === 'industry-theme.agent-tools-panel')?.component;
+  const EventBusPanelComponent = agentDrivenPanels.find(
+    (p) => p.metadata?.id === 'industry-theme.event-bus-panel',
+  )?.component;
+  const AgentToolsPanelComponent = agentDrivenPanels.find(
+    (p) => p.metadata?.id === 'industry-theme.agent-tools-panel',
+  )?.component;
 
   // Get terminal directory from context
-  const terminalDirectory = context.currentScope.repository?.path ||
+  const terminalDirectory =
+    context.currentScope.repository?.path ||
     context.currentScope.workspace?.path ||
     '/';
 
@@ -249,7 +295,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
               position: 'relative',
             }}
           >
-            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('left')} />}
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
             <WorkspacePanelComponent
               context={context}
               actions={actions}
@@ -270,7 +318,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
               position: 'relative',
             }}
           >
-            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('left')} />}
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
             <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
               Workspace panel not available
             </p>
@@ -291,7 +341,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
               position: 'relative',
             }}
           >
-            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('middle')} />}
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('middle')} />
+            )}
             <TabbedTerminalPanel
               context={context}
               actions={actions}
@@ -318,7 +370,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
               position: 'relative',
             }}
           >
-            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('right')} />}
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('right')} />
+            )}
             <DocsPanelComponent
               context={context}
               actions={actions}
@@ -339,7 +393,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
               position: 'relative',
             }}
           >
-            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('right')} />}
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('right')} />
+            )}
             <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
               Alexandria Docs panel not available
             </p>
@@ -360,7 +416,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
               position: 'relative',
             }}
           >
-            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('right')} />}
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('right')} />
+            )}
             <CodeCityPanelComponent
               context={context}
               actions={actions}
@@ -381,7 +439,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
               position: 'relative',
             }}
           >
-            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('right')} />}
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('right')} />
+            )}
             <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
               Code City panel not available
             </p>
@@ -402,7 +462,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
               position: 'relative',
             }}
           >
-            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('right')} />}
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('right')} />
+            )}
             <LocalhostPanelComponent
               context={context}
               actions={actions}
@@ -423,7 +485,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
               position: 'relative',
             }}
           >
-            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('right')} />}
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('right')} />
+            )}
             <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
               Localhost Browser panel not available
             </p>
@@ -444,7 +508,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
               position: 'relative',
             }}
           >
-            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('right')} />}
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('right')} />
+            )}
             <EventBusPanelComponent
               context={context}
               actions={actions}
@@ -465,7 +531,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
               position: 'relative',
             }}
           >
-            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('right')} />}
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('right')} />
+            )}
             <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
               Event Bus panel not available
             </p>
@@ -486,7 +554,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
               position: 'relative',
             }}
           >
-            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('right')} />}
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('right')} />
+            )}
             <AgentToolsPanelComponent
               context={context}
               actions={actions}
@@ -507,7 +577,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
               position: 'relative',
             }}
           >
-            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('right')} />}
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('right')} />
+            )}
             <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
               Agent Tools panel not available
             </p>
@@ -528,7 +600,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
               position: 'relative',
             }}
           >
-            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('left')} />}
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
             <LocalProjectsPanelComponent
               context={context}
               actions={actions}
@@ -549,7 +623,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
               position: 'relative',
             }}
           >
-            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('left')} />}
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
             <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
               Local Projects panel not available
             </p>
@@ -557,7 +633,24 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
         ),
       },
     ],
-    [theme, context, actions, events, WorkspacePanelComponent, LocalProjectsPanelComponent, DocsPanelComponent, CodeCityPanelComponent, LocalhostPanelComponent, EventBusPanelComponent, AgentToolsPanelComponent, isFocused, enableKeyboardShortcuts, terminalContext, terminalDirectory, showAllTerminals]
+    [
+      theme,
+      context,
+      actions,
+      events,
+      WorkspacePanelComponent,
+      LocalProjectsPanelComponent,
+      DocsPanelComponent,
+      CodeCityPanelComponent,
+      LocalhostPanelComponent,
+      EventBusPanelComponent,
+      AgentToolsPanelComponent,
+      isFocused,
+      enableKeyboardShortcuts,
+      terminalContext,
+      terminalDirectory,
+      showAllTerminals,
+    ],
   );
 
   return (
@@ -613,10 +706,14 @@ export const AlexandriaWorkspaceLayout: React.FC<
   const { theme } = useTheme();
 
   // Internal collapsed state (used when not controlled externally)
-  const [internalCollapsed, setInternalCollapsed] = useState({ left: false, right: false });
+  const [internalCollapsed, setInternalCollapsed] = useState({
+    left: false,
+    right: false,
+  });
 
   // Internal layout state (used when not controlled externally)
-  const [internalLayout, setInternalLayout] = useState<PanelLayout>(DEFAULT_LAYOUT);
+  const [internalLayout, setInternalLayout] =
+    useState<PanelLayout>(DEFAULT_LAYOUT);
 
   // Use external state if provided, otherwise use internal
   const collapsed = externalCollapsed ?? internalCollapsed;
@@ -626,20 +723,29 @@ export const AlexandriaWorkspaceLayout: React.FC<
   const onLayoutChange = externalOnLayoutChange ?? setInternalLayout;
 
   // Track the selected repository
-  const [selectedRepository, setSelectedRepository] = useState<{
-    name: string;
-    path: string;
-  } | undefined>(initialRepository);
+  const [selectedRepository, setSelectedRepository] = useState<
+    | {
+        name: string;
+        path: string;
+      }
+    | undefined
+  >(initialRepository);
 
   // Handler that updates both internal state and calls external callback
-  const handleRepositorySelected = useCallback((repository: { name: string; path: string } | undefined) => {
-    setSelectedRepository(repository);
-    externalOnRepositorySelected?.(repository);
-  }, [externalOnRepositorySelected]);
+  const handleRepositorySelected = useCallback(
+    (repository: { name: string; path: string } | undefined) => {
+      setSelectedRepository(repository);
+      externalOnRepositorySelected?.(repository);
+    },
+    [externalOnRepositorySelected],
+  );
 
   // Log when repository changes
   useEffect(() => {
-    console.info('[AlexandriaWorkspaceLayout] Selected repository state updated:', selectedRepository);
+    console.info(
+      '[AlexandriaWorkspaceLayout] Selected repository state updated:',
+      selectedRepository,
+    );
   }, [selectedRepository]);
 
   return (

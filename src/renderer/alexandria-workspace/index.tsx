@@ -18,7 +18,10 @@ window.addEventListener('unhandledrejection', (event) => {
     return;
   }
 
-  console.error('[AlexandriaWorkspace] Unhandled promise rejection:', event.reason);
+  console.error(
+    '[AlexandriaWorkspace] Unhandled promise rejection:',
+    event.reason,
+  );
   event.preventDefault();
 });
 

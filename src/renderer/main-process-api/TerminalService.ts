@@ -5,7 +5,11 @@
  * matching the terminal-testing-app implementation.
  */
 
-import { terminalClient, onTerminalData, onOwnershipLost } from '../tipc/terminalClient';
+import {
+  terminalClient,
+  onTerminalData,
+  onOwnershipLost,
+} from '../tipc/terminalClient';
 import type {
   TerminalInfo,
   TerminalOwnershipStatus,
@@ -74,7 +78,12 @@ export class TerminalService {
     return () => {};
   }
 
-  static async resize(id: string, cols: number, rows: number, force?: boolean): Promise<void> {
+  static async resize(
+    id: string,
+    cols: number,
+    rows: number,
+    force?: boolean,
+  ): Promise<void> {
     return terminalClient.resizeTerminal({ sessionId: id, cols, rows, force });
   }
 
@@ -127,7 +136,10 @@ export class TerminalService {
    * Not needed with TIPC pattern - ports are delivered automatically.
    */
   static onPortReady(
-    callback: (data: { sessionId: string; writable: boolean }, port: MessagePort) => void,
+    callback: (
+      data: { sessionId: string; writable: boolean },
+      port: MessagePort,
+    ) => void,
   ): () => void {
     // Port delivery is handled by preload's 'terminal:port' listener
     return () => {};

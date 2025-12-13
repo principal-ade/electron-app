@@ -15,7 +15,9 @@ export const WorkspaceThemeDropdown: React.FC<WorkspaceThemeDropdownProps> = ({
   currentTheme,
   onOpenChange,
 }) => {
-  const [selectedTheme, setSelectedTheme] = useState<string>(currentTheme || 'principalAI');
+  const [selectedTheme, setSelectedTheme] = useState<string>(
+    currentTheme || 'principalAI',
+  );
   const [isDropdownOpen, setIsDropdownOpenInternal] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { theme, colorMode } = useTheme();
@@ -62,7 +64,10 @@ export const WorkspaceThemeDropdown: React.FC<WorkspaceThemeDropdownProps> = ({
     try {
       await WorkspaceService.updateWorkspace(workspaceId, { theme: themeName });
     } catch (error) {
-      console.error('[WorkspaceThemeDropdown] Failed to update workspace theme:', error);
+      console.error(
+        '[WorkspaceThemeDropdown] Failed to update workspace theme:',
+        error,
+      );
       // Revert on failure
       if (currentTheme) {
         setSelectedTheme(currentTheme);

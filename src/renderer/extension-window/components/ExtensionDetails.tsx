@@ -101,9 +101,7 @@ export const ExtensionDetails: React.FC<ExtensionDetailsProps> = ({
               >
                 <div className="flex items-start gap-3">
                   {/* Icon */}
-                  <div className="text-2xl">
-                    {panel.icon || '📦'}
-                  </div>
+                  <div className="text-2xl">{panel.icon || '📦'}</div>
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
@@ -168,7 +166,10 @@ export const ExtensionDetails: React.FC<ExtensionDetailsProps> = ({
       <div className="p-4 border-t border-gray-700 text-xs text-gray-500">
         <div className="flex items-center gap-2">
           <span className="text-gray-600">Path:</span>
-          <code className="text-gray-400 truncate" title={extension.packagePath}>
+          <code
+            className="text-gray-400 truncate"
+            title={extension.packagePath}
+          >
             {extension.packagePath}
           </code>
         </div>

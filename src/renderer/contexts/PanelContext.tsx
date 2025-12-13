@@ -38,13 +38,17 @@ import { minimatch } from 'minimatch';
 
 // Extend PanelActions with terminal and workspace-specific actions
 interface ExtendedPanelActions extends PanelActions {
-  createTerminalSession?: (options?: { cwd?: string; command?: string; context?: string }) => Promise<string>;
+  createTerminalSession?: (options?: {
+    cwd?: string;
+    command?: string;
+    context?: string;
+  }) => Promise<string>;
   writeToTerminal?: (sessionId: string, data: string) => Promise<void>;
   resizeTerminal?: (
     sessionId: string,
     cols: number,
     rows: number,
-    force?: boolean
+    force?: boolean,
   ) => Promise<void>;
   destroyTerminalSession?: (sessionId: string) => Promise<void>;
   /**
@@ -52,14 +56,19 @@ interface ExtendedPanelActions extends PanelActions {
    * This bypasses IPC for high-performance data streaming.
    * Returns { success: true } if the port will be delivered via onTerminalPortReady.
    */
-  requestTerminalDataPort?: (sessionId: string) => Promise<{ success: boolean; reason?: string }>;
+  requestTerminalDataPort?: (
+    sessionId: string,
+  ) => Promise<{ success: boolean; reason?: string }>;
   /**
    * Register a callback to receive MessagePorts for terminal data streaming.
    * Call this before requestTerminalDataPort() to ensure you receive the port.
    * Returns an unsubscribe function.
    */
   onTerminalPortReady?: (
-    callback: (data: { sessionId: string; writable: boolean }, port: MessagePort) => void
+    callback: (
+      data: { sessionId: string; writable: boolean },
+      port: MessagePort,
+    ) => void,
   ) => () => void;
   // Ownership actions
   checkTerminalOwnership?: (sessionId: string) => Promise<{
@@ -68,7 +77,10 @@ interface ExtendedPanelActions extends PanelActions {
     ownedByThisWindow?: boolean;
     canClaim: boolean;
   }>;
-  claimTerminalOwnership?: (sessionId: string, force?: boolean) => Promise<{
+  claimTerminalOwnership?: (
+    sessionId: string,
+    force?: boolean,
+  ) => Promise<{
     success: boolean;
     reason?: string;
   }>;
@@ -83,7 +95,7 @@ interface ExtendedPanelActions extends PanelActions {
    * Returns an unsubscribe function.
    */
   onOwnershipLost?: (
-    callback: (data: { sessionId: string; newOwnerWindowId: number }) => void
+    callback: (data: { sessionId: string; newOwnerWindowId: number }) => void,
   ) => () => void;
   /**
    * Subscribe to terminal data for a specific session.
@@ -91,7 +103,7 @@ interface ExtendedPanelActions extends PanelActions {
    */
   onTerminalData?: (
     sessionId: string,
-    callback: (data: string) => void
+    callback: (data: string) => void,
   ) => () => void;
   /**
    * List all terminal sessions.
@@ -99,16 +111,16 @@ interface ExtendedPanelActions extends PanelActions {
   listTerminalSessions?: () => Promise<TerminalInfo[]>;
   removeRepositoryFromWorkspace?: (
     repositoryId: string,
-    workspaceId: string
+    workspaceId: string,
   ) => Promise<void>;
   copyToClipboard?: (text: string) => Promise<void>;
   isRepositoryInWorkspaceDirectory?: (
     repository: AlexandriaEntry,
-    workspaceId: string
+    workspaceId: string,
   ) => Promise<boolean | null>;
   moveRepositoryToWorkspaceDirectory?: (
     repository: AlexandriaEntry,
-    workspaceId: string
+    workspaceId: string,
   ) => Promise<string>;
   // Localhost detection actions
   detectLocalhostServers?: () => Promise<ServerScanResult>;
@@ -187,11 +199,15 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
   const terminalSubscriptionsRef = useRef<Map<string, () => void>>(new Map());
 
   // Track workspace repositories
-  const [workspaceRepositories, setWorkspaceRepositories] = useState<AlexandriaEntry[]>([]);
+  const [workspaceRepositories, setWorkspaceRepositories] = useState<
+    AlexandriaEntry[]
+  >([]);
   const [repositoriesLoading, setRepositoriesLoading] = useState(false);
 
   // Track markdown files for the current repository
-  const [markdownFiles, setMarkdownFiles] = useState<Array<{ path: string; title?: string; lastModified: number }>>([]);
+  const [markdownFiles, setMarkdownFiles] = useState<
+    Array<{ path: string; title?: string; lastModified: number }>
+  >([]);
   const [markdownLoading, setMarkdownLoading] = useState(false);
 
   // Track file tree for the current repository
@@ -204,8 +220,11 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
   const localhostWatchIdRef = useRef<string | null>(null);
 
   // Track all Alexandria repositories (for Local Projects panel)
-  const [alexandriaRepositories, setAlexandriaRepositories] = useState<AlexandriaEntry[]>([]);
-  const [alexandriaRepositoriesLoading, setAlexandriaRepositoriesLoading] = useState(false);
+  const [alexandriaRepositories, setAlexandriaRepositories] = useState<
+    AlexandriaEntry[]
+  >([]);
+  const [alexandriaRepositoriesLoading, setAlexandriaRepositoriesLoading] =
+    useState(false);
 
   // Fetch markdown files when repository changes
   useEffect(() => {
@@ -223,7 +242,8 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
           path: repository.path,
         } as AlexandriaEntry;
 
-        const docs = await AlexandriaDocsService.getComprehensiveDocuments(entry);
+        const docs =
+          await AlexandriaDocsService.getComprehensiveDocuments(entry);
 
         // Combine all documents (tracked + untracked)
         const allDocs = [...docs.tracked, ...docs.untracked];
@@ -235,7 +255,11 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
           lastModified: Date.now(), // We could get actual mtime if needed
         }));
 
-        console.info('[PanelContext] Fetched markdown files for repository:', repository.path, files);
+        console.info(
+          '[PanelContext] Fetched markdown files for repository:',
+          repository.path,
+          files,
+        );
         setMarkdownFiles(files);
       } catch (error) {
         console.error('[PanelContext] Failed to fetch markdown files:', error);
@@ -258,11 +282,26 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
 
       setFileTreeLoading(true);
       try {
-        const tree = await RepositoryMonitoringService.getFileTree(repository.path);
-        console.info('[PanelContext] Fetched file tree for repository:', repository.path);
+        const tree = await RepositoryMonitoringService.getFileTree(
+          repository.path,
+        );
+        console.info(
+          '[PanelContext] Fetched file tree for repository:',
+          repository.path,
+        );
         console.info('[PanelContext] FileTree stats:', tree?.stats);
-        console.info('[PanelContext] FileTree sample allFiles (first 5):', tree?.allFiles?.slice(0, 5));
-        console.info('[PanelContext] FileTree .alexandria files:', tree?.allFiles?.filter(f => f.path.includes('.alexandria') || f.relativePath?.includes('.alexandria')));
+        console.info(
+          '[PanelContext] FileTree sample allFiles (first 5):',
+          tree?.allFiles?.slice(0, 5),
+        );
+        console.info(
+          '[PanelContext] FileTree .alexandria files:',
+          tree?.allFiles?.filter(
+            (f) =>
+              f.path.includes('.alexandria') ||
+              f.relativePath?.includes('.alexandria'),
+          ),
+        );
         setFileTreeData(tree);
       } catch (error) {
         console.error('[PanelContext] Failed to fetch file tree:', error);
@@ -285,10 +324,15 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
 
       setRepositoriesLoading(true);
       try {
-        const repos = await WorkspaceService.getRepositoriesInWorkspace(workspace.id as string);
+        const repos = await WorkspaceService.getRepositoriesInWorkspace(
+          workspace.id as string,
+        );
         setWorkspaceRepositories(repos);
       } catch (error) {
-        console.error('[PanelContext] Failed to fetch workspace repositories:', error);
+        console.error(
+          '[PanelContext] Failed to fetch workspace repositories:',
+          error,
+        );
         setWorkspaceRepositories([]);
       } finally {
         setRepositoriesLoading(false);
@@ -310,15 +354,23 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
         setLocalhostServers(result.servers);
 
         // Start watching for changes (every 5 seconds)
-        const { watchId } = await LocalhostDetectionService.startWatching(undefined, 5000);
+        const { watchId } = await LocalhostDetectionService.startWatching(
+          undefined,
+          5000,
+        );
         localhostWatchIdRef.current = watchId;
 
         // Subscribe to updates
-        unsubscribeUpdates = LocalhostDetectionService.onServersUpdated((scanResult) => {
-          setLocalhostServers(scanResult.servers);
-        });
+        unsubscribeUpdates = LocalhostDetectionService.onServersUpdated(
+          (scanResult) => {
+            setLocalhostServers(scanResult.servers);
+          },
+        );
       } catch (error) {
-        console.error('[PanelContext] Failed to initialize localhost detection:', error);
+        console.error(
+          '[PanelContext] Failed to initialize localhost detection:',
+          error,
+        );
       } finally {
         setLocalhostServersLoading(false);
       }
@@ -329,8 +381,13 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
     return () => {
       // Cleanup: stop watching and unsubscribe
       if (localhostWatchIdRef.current) {
-        LocalhostDetectionService.stopWatching(localhostWatchIdRef.current).catch((err) => {
-          console.error('[PanelContext] Failed to stop localhost watching:', err);
+        LocalhostDetectionService.stopWatching(
+          localhostWatchIdRef.current,
+        ).catch((err) => {
+          console.error(
+            '[PanelContext] Failed to stop localhost watching:',
+            err,
+          );
         });
         localhostWatchIdRef.current = null;
       }
@@ -344,8 +401,13 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
   useEffect(() => {
     const unsubscribe = WorkspaceService.onWorkspaceChange((event) => {
       // Only refresh if it's a membership change for the current workspace
-      if (event.type === 'membership-changed' && event.workspaceId === workspace?.id) {
-        console.info('[PanelContext] Workspace membership changed, refreshing repositories');
+      if (
+        event.type === 'membership-changed' &&
+        event.workspaceId === workspace?.id
+      ) {
+        console.info(
+          '[PanelContext] Workspace membership changed, refreshing repositories',
+        );
 
         // Refetch repositories
         if (workspace?.id) {
@@ -355,7 +417,10 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
               setWorkspaceRepositories(repos);
             })
             .catch((error) => {
-              console.error('[PanelContext] Failed to refresh workspace repositories after membership change:', error);
+              console.error(
+                '[PanelContext] Failed to refresh workspace repositories after membership change:',
+                error,
+              );
             })
             .finally(() => {
               setRepositoriesLoading(false);
@@ -373,10 +438,16 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       setAlexandriaRepositoriesLoading(true);
       try {
         const repos = await AlexandriaService.getRepositories();
-        console.info('[PanelContext] Fetched Alexandria repositories:', repos.length);
+        console.info(
+          '[PanelContext] Fetched Alexandria repositories:',
+          repos.length,
+        );
         setAlexandriaRepositories(repos);
       } catch (error) {
-        console.error('[PanelContext] Failed to fetch Alexandria repositories:', error);
+        console.error(
+          '[PanelContext] Failed to fetch Alexandria repositories:',
+          error,
+        );
         setAlexandriaRepositories([]);
       } finally {
         setAlexandriaRepositoriesLoading(false);
@@ -411,7 +482,9 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       });
 
       // Unsubscribe from terminal data for this session
-      const unsubscribe = terminalSubscriptionsRef.current.get(terminalExit.sessionId);
+      const unsubscribe = terminalSubscriptionsRef.current.get(
+        terminalExit.sessionId,
+      );
       if (unsubscribe) {
         unsubscribe();
         terminalSubscriptionsRef.current.delete(terminalExit.sessionId);
@@ -419,7 +492,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
 
       // Remove session from list on exit
       setTerminalSessions((prev) =>
-        prev.filter((s) => s.id !== terminalExit.sessionId)
+        prev.filter((s) => s.id !== terminalExit.sessionId),
       );
     }).then((unsub) => {
       unsubExit = unsub;
@@ -440,7 +513,10 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
   // Listen for repository:opened events and open dev workspace window
   useEffect(() => {
     const unsubscribe = events.on('repository:opened', (event) => {
-      const { repository } = event.payload as { repositoryId: string; repository: AlexandriaEntry };
+      const { repository } = event.payload as {
+        repositoryId: string;
+        repository: AlexandriaEntry;
+      };
       if (repository) {
         WindowService.openDevWorkspace({
           alexandriaEntry: repository,
@@ -496,10 +572,16 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
               if (workspace?.id) {
                 setRepositoriesLoading(true);
                 try {
-                  const repos = await WorkspaceService.getRepositoriesInWorkspace(workspace.id as string);
+                  const repos =
+                    await WorkspaceService.getRepositoriesInWorkspace(
+                      workspace.id as string,
+                    );
                   setWorkspaceRepositories(repos);
                 } catch (error) {
-                  console.error('[PanelContext] Failed to refresh workspace repositories:', error);
+                  console.error(
+                    '[PanelContext] Failed to refresh workspace repositories:',
+                    error,
+                  );
                 } finally {
                   setRepositoriesLoading(false);
                 }
@@ -524,7 +606,10 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
                     name: repository.name,
                     path: repository.path,
                   } as AlexandriaEntry;
-                  const docs = await AlexandriaDocsService.getComprehensiveDocuments(entry);
+                  const docs =
+                    await AlexandriaDocsService.getComprehensiveDocuments(
+                      entry,
+                    );
                   const allDocs = [...docs.tracked, ...docs.untracked];
                   const files = allDocs.map((docPath) => ({
                     path: docPath,
@@ -533,7 +618,10 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
                   }));
                   setMarkdownFiles(files);
                 } catch (error) {
-                  console.error('[PanelContext] Failed to refresh markdown files:', error);
+                  console.error(
+                    '[PanelContext] Failed to refresh markdown files:',
+                    error,
+                  );
                 } finally {
                   setMarkdownLoading(false);
                 }
@@ -554,10 +642,15 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
               if (repository?.path) {
                 setFileTreeLoading(true);
                 try {
-                  const tree = await RepositoryMonitoringService.getFileTree(repository.path);
+                  const tree = await RepositoryMonitoringService.getFileTree(
+                    repository.path,
+                  );
                   setFileTreeData(tree);
                 } catch (error) {
-                  console.error('[PanelContext] Failed to refresh file tree:', error);
+                  console.error(
+                    '[PanelContext] Failed to refresh file tree:',
+                    error,
+                  );
                   setFileTreeData(null);
                 } finally {
                   setFileTreeLoading(false);
@@ -578,10 +671,14 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
               // Refetch localhost servers
               setLocalhostServersLoading(true);
               try {
-                const result = await LocalhostDetectionService.detectRunningServers();
+                const result =
+                  await LocalhostDetectionService.detectRunningServers();
                 setLocalhostServers(result.servers);
               } catch (error) {
-                console.error('[PanelContext] Failed to refresh localhost servers:', error);
+                console.error(
+                  '[PanelContext] Failed to refresh localhost servers:',
+                  error,
+                );
               } finally {
                 setLocalhostServersLoading(false);
               }
@@ -602,7 +699,10 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
                 const repos = await AlexandriaService.getRepositories();
                 setAlexandriaRepositories(repos);
               } catch (error) {
-                console.error('[PanelContext] Failed to refresh Alexandria repositories:', error);
+                console.error(
+                  '[PanelContext] Failed to refresh Alexandria repositories:',
+                  error,
+                );
                 setAlexandriaRepositories([]);
               } finally {
                 setAlexandriaRepositoriesLoading(false);
@@ -611,7 +711,20 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
           },
         ],
       ]),
-    [workspace, workspaceRepositories, repositoriesLoading, markdownFiles, markdownLoading, fileTreeData, fileTreeLoading, repository, localhostServers, localhostServersLoading, alexandriaRepositories, alexandriaRepositoriesLoading]
+    [
+      workspace,
+      workspaceRepositories,
+      repositoriesLoading,
+      markdownFiles,
+      markdownLoading,
+      fileTreeData,
+      fileTreeLoading,
+      repository,
+      localhostServers,
+      localhostServersLoading,
+      alexandriaRepositories,
+      alexandriaRepositoriesLoading,
+    ],
   );
 
   // Define panel actions
@@ -620,377 +733,479 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       const repoPath = repository?.path || workspace?.path || '';
 
       return {
-      openFile: (filePath: string) => {
-        // Resolve relative paths against repository path
-        const absolutePath = filePath.startsWith('/') ? filePath : `${repoPath}/${filePath}`;
-        console.info('[PanelContext] Opening file:', absolutePath);
-        events.emit({
-          type: 'file:opened',
-          source: 'alexandria-workspace',
-          timestamp: Date.now(),
-          payload: { filePath: absolutePath },
-        });
-      },
-      openRepository: async (entryOrId: AlexandriaEntry | string) => {
-        // Handle both AlexandriaEntry objects and repository ID strings
-        if (typeof entryOrId === 'string') {
-          console.info('[PanelContext] Opening repository by ID:', entryOrId);
+        openFile: (filePath: string) => {
+          // Resolve relative paths against repository path
+          const absolutePath = filePath.startsWith('/')
+            ? filePath
+            : `${repoPath}/${filePath}`;
+          console.info('[PanelContext] Opening file:', absolutePath);
           events.emit({
-            type: 'repository:opened',
+            type: 'file:opened',
             source: 'alexandria-workspace',
             timestamp: Date.now(),
-            payload: { repositoryId: entryOrId },
+            payload: { filePath: absolutePath },
           });
-        } else {
-          // It's an AlexandriaEntry - open dev workspace directly
-          try {
-            await WindowService.openDevWorkspace({
-              alexandriaEntry: entryOrId,
-            });
-            console.info('[PanelContext] Opened repository:', entryOrId.name);
-          } catch (error) {
-            console.error('[PanelContext] Failed to open repository:', error);
-            throw error;
-          }
-        }
-      },
-      openGitDiff: (filePath: string, status?: string) => {
-        console.info('[PanelContext] Opening git diff:', filePath, status);
-        events.emit({
-          type: 'git:diff',
-          source: 'alexandria-workspace',
-          timestamp: Date.now(),
-          payload: { filePath, status },
-        });
-      },
-      navigateToPanel: (panelId: string) => {
-        console.info('[PanelContext] Navigating to panel:', panelId);
-        events.emit({
-          type: 'panel:focus',
-          source: 'alexandria-workspace',
-          timestamp: Date.now(),
-          payload: { panelId },
-        });
-      },
-      notifyPanels: (event: PanelEvent) => {
-        events.emit(event);
-      },
-
-      // Terminal actions
-      createTerminalSession: async (options?: { cwd?: string; command?: string; context?: string }) => {
-        console.info('[PanelContext] createTerminalSession called with options:', options);
-        // Use the provided context (from TabbedTerminalPanel) or fall back to the provider's terminalContext
-        const sessionContext = options?.context || terminalContext;
-        if (!sessionContext) {
-          throw new Error(
-            'terminalContext is required in PanelProvider to create terminal sessions. ' +
-            'Please provide a terminalContext prop to PanelProvider.'
-          );
-        }
-        const cwd = options?.cwd || workspace.path;
-
-        // Always create a new session - each tab should have its own PTY
-        let sessionId: string;
-        if (options?.command) {
-          sessionId = await TerminalService.createWithCommand(cwd, options.command, sessionContext);
-        } else {
-          sessionId = await TerminalService.create(cwd, sessionContext);
-        }
-
-        // Subscribe to this terminal's data channel and forward to panel event bus
-        // Only subscribe if we haven't already subscribed to this session
-        if (!terminalSubscriptionsRef.current.has(sessionId)) {
-          const unsubscribe = TerminalService.onDataForSession(sessionId, (data) => {
-            // Forward terminal data to panel event bus
+        },
+        openRepository: async (entryOrId: AlexandriaEntry | string) => {
+          // Handle both AlexandriaEntry objects and repository ID strings
+          if (typeof entryOrId === 'string') {
+            console.info('[PanelContext] Opening repository by ID:', entryOrId);
             events.emit({
-              type: 'terminal:data',
+              type: 'repository:opened',
               source: 'alexandria-workspace',
               timestamp: Date.now(),
-              payload: { sessionId, data },
+              payload: { repositoryId: entryOrId },
             });
-          });
-
-          // Store unsubscribe function for cleanup
-          terminalSubscriptionsRef.current.set(sessionId, unsubscribe);
-        }
-
-        // Fetch updated terminal info
-        const terminals = await TerminalService.list();
-        setTerminalSessions(terminals);
-
-        return sessionId;
-      },
-
-      writeToTerminal: async (sessionId: string, data: string) => {
-        await TerminalService.write(sessionId, data);
-      },
-
-      resizeTerminal: async (sessionId: string, cols: number, rows: number, force?: boolean) => {
-        await TerminalService.resize(sessionId, cols, rows, force);
-      },
-
-      destroyTerminalSession: async (sessionId: string) => {
-        console.info('[PanelContext] Destroying terminal session:', sessionId);
-
-        // Unsubscribe from terminal data before destroying
-        const unsubscribe = terminalSubscriptionsRef.current.get(sessionId);
-        if (unsubscribe) {
-          unsubscribe();
-          terminalSubscriptionsRef.current.delete(sessionId);
-        }
-
-        await TerminalService.destroy(sessionId);
-        setTerminalSessions((prev) => prev.filter((s) => s.id !== sessionId));
-      },
-
-      // MessagePort-based terminal data streaming (high-performance path)
-      requestTerminalDataPort: async (sessionId: string) => {
-        console.info('[PanelContext] requestTerminalDataPort called for session:', sessionId);
-        const result = await TerminalService.requestDataPort(sessionId);
-        console.info('[PanelContext] requestTerminalDataPort result:', result);
-        return result;
-      },
-
-      onTerminalPortReady: (callback) => {
-        return TerminalService.onPortReady(callback);
-      },
-
-      // Terminal ownership actions
-      checkTerminalOwnership: async (sessionId: string) => {
-        return TerminalService.checkOwnership(sessionId);
-      },
-
-      claimTerminalOwnership: async (sessionId: string, force?: boolean) => {
-        console.info('[PanelContext] claimTerminalOwnership called for session:', sessionId, 'force:', force);
-        const result = await TerminalService.claimOwnership(sessionId, force);
-        console.info('[PanelContext] claimTerminalOwnership result:', result);
-        return result;
-      },
-
-      releaseTerminalOwnership: async (sessionId: string) => {
-        return TerminalService.releaseOwnership(sessionId);
-      },
-
-      refreshTerminal: async (sessionId: string) => {
-        return TerminalService.refresh(sessionId);
-      },
-
-      onOwnershipLost: (callback: (data: { sessionId: string; newOwnerWindowId: number }) => void) => {
-        return TerminalService.onOwnershipLost(callback);
-      },
-
-      // Session-specific data subscription (used by TabbedTerminalPanel)
-      // Automatically claims ownership and requests a data port
-      onTerminalData: (sessionId: string, callback: (data: string) => void) => {
-        console.info('[PanelContext] onTerminalData called for session:', sessionId);
-
-        // First claim ownership, then request data port, then refresh terminal
-        // This matches the terminal-testing-app pattern:
-        // 1. claimTerminalOwnership - so we're the owner and receive data
-        // 2. requestTerminalDataPort - to get the MessageChannel for streaming
-        // 3. refreshTerminal - force redraw since we don't have buffer history
-        TerminalService.claimOwnership(sessionId).then((ownershipResult) => {
-          console.info('[PanelContext] Claimed ownership for session:', sessionId, 'result:', ownershipResult);
-
-          // Request the data port regardless of ownership result
-          return TerminalService.requestDataPort(sessionId);
-        }).then((portResult) => {
-          console.info('[PanelContext] Requested data port for session:', sessionId, 'result:', portResult);
-
-          // After port is ready, force a refresh to redraw the terminal
-          // This sends Ctrl+L which redraws the prompt/screen
-          setTimeout(() => {
-            TerminalService.refresh(sessionId).then(() => {
-              console.info('[PanelContext] Refreshed terminal for session:', sessionId);
-            }).catch((err) => {
-              console.warn('[PanelContext] Failed to refresh terminal:', err);
-            });
-          }, 100); // Small delay to ensure port is fully connected
-        }).catch((err) => {
-          console.warn('[PanelContext] Failed during reconnection:', err);
-        });
-
-        return TerminalService.onDataForSession(sessionId, callback);
-      },
-
-      // List terminal sessions (used by TabbedTerminalPanel for restoration)
-      listTerminalSessions: async () => {
-        console.info('[PanelContext] listTerminalSessions called');
-        const sessions = await TerminalService.list();
-        console.info('[PanelContext] listTerminalSessions found:', sessions.length, 'sessions');
-        // Map to TerminalSessionInfo format (directory -> cwd)
-        return sessions.map((s) => ({
-          id: s.id,
-          pid: 0,
-          cwd: s.directory,
-          shell: '',
-          createdAt: s.createdAt,
-          lastActivity: s.lastActivity,
-          context: s.context,
-        }));
-      },
-
-      // Workspace actions
-      removeRepositoryFromWorkspace: async (
-        repositoryId: string,
-        workspaceId: string
-      ) => {
-        console.info(
-          '[PanelContext] Removing repository from workspace:',
-          repositoryId,
-          workspaceId
-        );
-
-        try {
-          await WorkspaceService.removeRepositoryFromWorkspace(repositoryId, workspaceId);
-
-          // Refresh the repositories list
-          if (workspace?.id === workspaceId) {
-            const repos = await WorkspaceService.getRepositoriesInWorkspace(workspaceId);
-            setWorkspaceRepositories(repos);
+          } else {
+            // It's an AlexandriaEntry - open dev workspace directly
+            try {
+              await WindowService.openDevWorkspace({
+                alexandriaEntry: entryOrId,
+              });
+              console.info('[PanelContext] Opened repository:', entryOrId.name);
+            } catch (error) {
+              console.error('[PanelContext] Failed to open repository:', error);
+              throw error;
+            }
           }
-
-          // Emit event
+        },
+        openGitDiff: (filePath: string, status?: string) => {
+          console.info('[PanelContext] Opening git diff:', filePath, status);
           events.emit({
-            type: 'workspace:membership-changed',
+            type: 'git:diff',
             source: 'alexandria-workspace',
             timestamp: Date.now(),
-            payload: { repositoryId, workspaceId, action: 'removed' },
+            payload: { filePath, status },
           });
-        } catch (error) {
-          console.error('[PanelContext] Failed to remove repository from workspace:', error);
-          throw error;
-        }
-      },
-
-      copyToClipboard: async (text: string) => {
-        console.info('[PanelContext] Copying to clipboard');
-        await navigator.clipboard.writeText(text);
-      },
-
-      // Repository location actions
-      isRepositoryInWorkspaceDirectory: async (
-        repository: AlexandriaEntry,
-        workspaceId: string
-      ) => {
-        console.info(
-          '[PanelContext] Checking if repository is in workspace directory:',
-          repository.name,
-          workspaceId
-        );
-
-        try {
-          return await WorkspaceService.isRepositoryInWorkspaceDirectory(repository, workspaceId);
-        } catch (error) {
-          console.error('[PanelContext] Failed to check repository location:', error);
-          throw error;
-        }
-      },
-
-      moveRepositoryToWorkspaceDirectory: async (
-        repository: AlexandriaEntry,
-        workspaceId: string
-      ) => {
-        console.info(
-          '[PanelContext] Moving repository to workspace directory:',
-          repository.name,
-          workspaceId
-        );
-
-        try {
-          const newPath = await WorkspaceService.moveRepositoryToWorkspaceDirectory(repository, workspaceId);
-
-          // Refresh the repositories list to reflect the updated path
-          if (workspace?.id === workspaceId) {
-            const repos = await WorkspaceService.getRepositoriesInWorkspace(workspaceId);
-            setWorkspaceRepositories(repos);
-          }
-
-          // Emit event to notify other panels
+        },
+        navigateToPanel: (panelId: string) => {
+          console.info('[PanelContext] Navigating to panel:', panelId);
           events.emit({
-            type: 'repository:moved',
+            type: 'panel:focus',
             source: 'alexandria-workspace',
             timestamp: Date.now(),
-            payload: { repositoryId: repository.github?.id || repository.name, workspaceId, newPath },
+            payload: { panelId },
           });
+        },
+        notifyPanels: (event: PanelEvent) => {
+          events.emit(event);
+        },
 
-          return newPath;
-        } catch (error) {
-          console.error('[PanelContext] Failed to move repository:', error);
-          throw error;
-        }
-      },
+        // Terminal actions
+        createTerminalSession: async (options?: {
+          cwd?: string;
+          command?: string;
+          context?: string;
+        }) => {
+          console.info(
+            '[PanelContext] createTerminalSession called with options:',
+            options,
+          );
+          // Use the provided context (from TabbedTerminalPanel) or fall back to the provider's terminalContext
+          const sessionContext = options?.context || terminalContext;
+          if (!sessionContext) {
+            throw new Error(
+              'terminalContext is required in PanelProvider to create terminal sessions. ' +
+                'Please provide a terminalContext prop to PanelProvider.',
+            );
+          }
+          const cwd = options?.cwd || workspace.path;
 
-      // Localhost detection actions
-      detectLocalhostServers: async () => {
-        setLocalhostServersLoading(true);
-        try {
-          const result = await LocalhostDetectionService.detectRunningServers();
-          setLocalhostServers(result.servers);
+          // Always create a new session - each tab should have its own PTY
+          let sessionId: string;
+          if (options?.command) {
+            sessionId = await TerminalService.createWithCommand(
+              cwd,
+              options.command,
+              sessionContext,
+            );
+          } else {
+            sessionId = await TerminalService.create(cwd, sessionContext);
+          }
+
+          // Subscribe to this terminal's data channel and forward to panel event bus
+          // Only subscribe if we haven't already subscribed to this session
+          if (!terminalSubscriptionsRef.current.has(sessionId)) {
+            const unsubscribe = TerminalService.onDataForSession(
+              sessionId,
+              (data) => {
+                // Forward terminal data to panel event bus
+                events.emit({
+                  type: 'terminal:data',
+                  source: 'alexandria-workspace',
+                  timestamp: Date.now(),
+                  payload: { sessionId, data },
+                });
+              },
+            );
+
+            // Store unsubscribe function for cleanup
+            terminalSubscriptionsRef.current.set(sessionId, unsubscribe);
+          }
+
+          // Fetch updated terminal info
+          const terminals = await TerminalService.list();
+          setTerminalSessions(terminals);
+
+          return sessionId;
+        },
+
+        writeToTerminal: async (sessionId: string, data: string) => {
+          await TerminalService.write(sessionId, data);
+        },
+
+        resizeTerminal: async (
+          sessionId: string,
+          cols: number,
+          rows: number,
+          force?: boolean,
+        ) => {
+          await TerminalService.resize(sessionId, cols, rows, force);
+        },
+
+        destroyTerminalSession: async (sessionId: string) => {
+          console.info(
+            '[PanelContext] Destroying terminal session:',
+            sessionId,
+          );
+
+          // Unsubscribe from terminal data before destroying
+          const unsubscribe = terminalSubscriptionsRef.current.get(sessionId);
+          if (unsubscribe) {
+            unsubscribe();
+            terminalSubscriptionsRef.current.delete(sessionId);
+          }
+
+          await TerminalService.destroy(sessionId);
+          setTerminalSessions((prev) => prev.filter((s) => s.id !== sessionId));
+        },
+
+        // MessagePort-based terminal data streaming (high-performance path)
+        requestTerminalDataPort: async (sessionId: string) => {
+          console.info(
+            '[PanelContext] requestTerminalDataPort called for session:',
+            sessionId,
+          );
+          const result = await TerminalService.requestDataPort(sessionId);
+          console.info(
+            '[PanelContext] requestTerminalDataPort result:',
+            result,
+          );
           return result;
-        } finally {
-          setLocalhostServersLoading(false);
-        }
-      },
+        },
 
-      checkLocalhostPort: async (port: number) => {
-        return LocalhostDetectionService.checkPort(port);
-      },
+        onTerminalPortReady: (callback) => {
+          return TerminalService.onPortReady(callback);
+        },
 
-      navigateToLocalhost: (port: number, path?: string) => {
-        console.info('[PanelContext] Navigating to localhost:', port, path);
-        events.emit({
-          type: 'localhost:navigate',
-          source: 'alexandria-workspace',
-          timestamp: Date.now(),
-          payload: { port, path: path || '/' },
-        });
-      },
+        // Terminal ownership actions
+        checkTerminalOwnership: async (sessionId: string) => {
+          return TerminalService.checkOwnership(sessionId);
+        },
 
-      // Local Projects panel actions
-      selectDirectory: async () => {
-        try {
-          const result = await FileSystemService.selectDirectory({
-            title: 'Select Project Directory',
-            buttonLabel: 'Add Project',
-            properties: ['openDirectory'],
-          });
-          if (result && !result.canceled && 'filePaths' in result && result.filePaths.length > 0) {
-            const selectedPath = result.filePaths[0];
-            // Extract the directory name from the path
-            const name = selectedPath.split('/').pop() || selectedPath;
-            return { path: selectedPath, name };
+        claimTerminalOwnership: async (sessionId: string, force?: boolean) => {
+          console.info(
+            '[PanelContext] claimTerminalOwnership called for session:',
+            sessionId,
+            'force:',
+            force,
+          );
+          const result = await TerminalService.claimOwnership(sessionId, force);
+          console.info('[PanelContext] claimTerminalOwnership result:', result);
+          return result;
+        },
+
+        releaseTerminalOwnership: async (sessionId: string) => {
+          return TerminalService.releaseOwnership(sessionId);
+        },
+
+        refreshTerminal: async (sessionId: string) => {
+          return TerminalService.refresh(sessionId);
+        },
+
+        onOwnershipLost: (
+          callback: (data: {
+            sessionId: string;
+            newOwnerWindowId: number;
+          }) => void,
+        ) => {
+          return TerminalService.onOwnershipLost(callback);
+        },
+
+        // Session-specific data subscription (used by TabbedTerminalPanel)
+        // Automatically claims ownership and requests a data port
+        onTerminalData: (
+          sessionId: string,
+          callback: (data: string) => void,
+        ) => {
+          console.info(
+            '[PanelContext] onTerminalData called for session:',
+            sessionId,
+          );
+
+          // First claim ownership, then request data port, then refresh terminal
+          // This matches the terminal-testing-app pattern:
+          // 1. claimTerminalOwnership - so we're the owner and receive data
+          // 2. requestTerminalDataPort - to get the MessageChannel for streaming
+          // 3. refreshTerminal - force redraw since we don't have buffer history
+          TerminalService.claimOwnership(sessionId)
+            .then((ownershipResult) => {
+              console.info(
+                '[PanelContext] Claimed ownership for session:',
+                sessionId,
+                'result:',
+                ownershipResult,
+              );
+
+              // Request the data port regardless of ownership result
+              return TerminalService.requestDataPort(sessionId);
+            })
+            .then((portResult) => {
+              console.info(
+                '[PanelContext] Requested data port for session:',
+                sessionId,
+                'result:',
+                portResult,
+              );
+
+              // After port is ready, force a refresh to redraw the terminal
+              // This sends Ctrl+L which redraws the prompt/screen
+              setTimeout(() => {
+                TerminalService.refresh(sessionId)
+                  .then(() => {
+                    console.info(
+                      '[PanelContext] Refreshed terminal for session:',
+                      sessionId,
+                    );
+                  })
+                  .catch((err) => {
+                    console.warn(
+                      '[PanelContext] Failed to refresh terminal:',
+                      err,
+                    );
+                  });
+              }, 100); // Small delay to ensure port is fully connected
+            })
+            .catch((err) => {
+              console.warn('[PanelContext] Failed during reconnection:', err);
+            });
+
+          return TerminalService.onDataForSession(sessionId, callback);
+        },
+
+        // List terminal sessions (used by TabbedTerminalPanel for restoration)
+        listTerminalSessions: async () => {
+          console.info('[PanelContext] listTerminalSessions called');
+          const sessions = await TerminalService.list();
+          console.info(
+            '[PanelContext] listTerminalSessions found:',
+            sessions.length,
+            'sessions',
+          );
+          // Map to TerminalSessionInfo format (directory -> cwd)
+          return sessions.map((s) => ({
+            id: s.id,
+            pid: 0,
+            cwd: s.directory,
+            shell: '',
+            createdAt: s.createdAt,
+            lastActivity: s.lastActivity,
+            context: s.context,
+          }));
+        },
+
+        // Workspace actions
+        removeRepositoryFromWorkspace: async (
+          repositoryId: string,
+          workspaceId: string,
+        ) => {
+          console.info(
+            '[PanelContext] Removing repository from workspace:',
+            repositoryId,
+            workspaceId,
+          );
+
+          try {
+            await WorkspaceService.removeRepositoryFromWorkspace(
+              repositoryId,
+              workspaceId,
+            );
+
+            // Refresh the repositories list
+            if (workspace?.id === workspaceId) {
+              const repos =
+                await WorkspaceService.getRepositoriesInWorkspace(workspaceId);
+              setWorkspaceRepositories(repos);
+            }
+
+            // Emit event
+            events.emit({
+              type: 'workspace:membership-changed',
+              source: 'alexandria-workspace',
+              timestamp: Date.now(),
+              payload: { repositoryId, workspaceId, action: 'removed' },
+            });
+          } catch (error) {
+            console.error(
+              '[PanelContext] Failed to remove repository from workspace:',
+              error,
+            );
+            throw error;
           }
-          return null;
-        } catch (error) {
-          console.error('[PanelContext] Failed to select directory:', error);
-          return null;
-        }
-      },
+        },
 
-      registerRepository: async (name: string, path: string) => {
-        try {
-          await AlexandriaService.registerRepository(name, path);
-          console.info('[PanelContext] Registered repository:', name, path);
-        } catch (error) {
-          console.error('[PanelContext] Failed to register repository:', error);
-          throw error;
-        }
-      },
+        copyToClipboard: async (text: string) => {
+          console.info('[PanelContext] Copying to clipboard');
+          await navigator.clipboard.writeText(text);
+        },
 
-      removeRepository: async (name: string, deleteLocal: boolean) => {
-        try {
-          await AlexandriaService.removeRepository(name, deleteLocal);
-          console.info('[PanelContext] Removed repository:', name);
-        } catch (error) {
-          console.error('[PanelContext] Failed to remove repository:', error);
-          throw error;
-        }
-      },
-    };
+        // Repository location actions
+        isRepositoryInWorkspaceDirectory: async (
+          repository: AlexandriaEntry,
+          workspaceId: string,
+        ) => {
+          console.info(
+            '[PanelContext] Checking if repository is in workspace directory:',
+            repository.name,
+            workspaceId,
+          );
+
+          try {
+            return await WorkspaceService.isRepositoryInWorkspaceDirectory(
+              repository,
+              workspaceId,
+            );
+          } catch (error) {
+            console.error(
+              '[PanelContext] Failed to check repository location:',
+              error,
+            );
+            throw error;
+          }
+        },
+
+        moveRepositoryToWorkspaceDirectory: async (
+          repository: AlexandriaEntry,
+          workspaceId: string,
+        ) => {
+          console.info(
+            '[PanelContext] Moving repository to workspace directory:',
+            repository.name,
+            workspaceId,
+          );
+
+          try {
+            const newPath =
+              await WorkspaceService.moveRepositoryToWorkspaceDirectory(
+                repository,
+                workspaceId,
+              );
+
+            // Refresh the repositories list to reflect the updated path
+            if (workspace?.id === workspaceId) {
+              const repos =
+                await WorkspaceService.getRepositoriesInWorkspace(workspaceId);
+              setWorkspaceRepositories(repos);
+            }
+
+            // Emit event to notify other panels
+            events.emit({
+              type: 'repository:moved',
+              source: 'alexandria-workspace',
+              timestamp: Date.now(),
+              payload: {
+                repositoryId: repository.github?.id || repository.name,
+                workspaceId,
+                newPath,
+              },
+            });
+
+            return newPath;
+          } catch (error) {
+            console.error('[PanelContext] Failed to move repository:', error);
+            throw error;
+          }
+        },
+
+        // Localhost detection actions
+        detectLocalhostServers: async () => {
+          setLocalhostServersLoading(true);
+          try {
+            const result =
+              await LocalhostDetectionService.detectRunningServers();
+            setLocalhostServers(result.servers);
+            return result;
+          } finally {
+            setLocalhostServersLoading(false);
+          }
+        },
+
+        checkLocalhostPort: async (port: number) => {
+          return LocalhostDetectionService.checkPort(port);
+        },
+
+        navigateToLocalhost: (port: number, path?: string) => {
+          console.info('[PanelContext] Navigating to localhost:', port, path);
+          events.emit({
+            type: 'localhost:navigate',
+            source: 'alexandria-workspace',
+            timestamp: Date.now(),
+            payload: { port, path: path || '/' },
+          });
+        },
+
+        // Local Projects panel actions
+        selectDirectory: async () => {
+          try {
+            const result = await FileSystemService.selectDirectory({
+              title: 'Select Project Directory',
+              buttonLabel: 'Add Project',
+              properties: ['openDirectory'],
+            });
+            if (
+              result &&
+              !result.canceled &&
+              'filePaths' in result &&
+              result.filePaths.length > 0
+            ) {
+              const selectedPath = result.filePaths[0];
+              // Extract the directory name from the path
+              const name = selectedPath.split('/').pop() || selectedPath;
+              return { path: selectedPath, name };
+            }
+            return null;
+          } catch (error) {
+            console.error('[PanelContext] Failed to select directory:', error);
+            return null;
+          }
+        },
+
+        registerRepository: async (name: string, path: string) => {
+          try {
+            await AlexandriaService.registerRepository(name, path);
+            console.info('[PanelContext] Registered repository:', name, path);
+          } catch (error) {
+            console.error(
+              '[PanelContext] Failed to register repository:',
+              error,
+            );
+            throw error;
+          }
+        },
+
+        removeRepository: async (name: string, deleteLocal: boolean) => {
+          try {
+            await AlexandriaService.removeRepository(name, deleteLocal);
+            console.info('[PanelContext] Removed repository:', name);
+          } catch (error) {
+            console.error('[PanelContext] Failed to remove repository:', error);
+            throw error;
+          }
+        },
+      };
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [events, workspace, repository?.path, repository?.name, terminalContext]
+    [events, workspace, repository?.path, repository?.name, terminalContext],
   );
 
   // Create adapters for panels to use (memoized to avoid recreating on every render)
@@ -1003,8 +1218,11 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       // readFile accepts relative paths and resolves them against the repository path
       readFile: async (path: string): Promise<string> => {
         // Resolve relative paths against repository path
-        const absolutePath = path.startsWith('/') ? path : `${repoPath}/${path}`;
-        const result = await window.mainProcess.fileSystem.readFile(absolutePath);
+        const absolutePath = path.startsWith('/')
+          ? path
+          : `${repoPath}/${path}`;
+        const result =
+          await window.mainProcess.fileSystem.readFile(absolutePath);
         if (!result) throw new Error(`Failed to read file: ${path}`);
         return result.content;
       },
@@ -1017,36 +1235,50 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
   // Create the extended context value with both framework and panel-specific properties
   const context: ExtendedPanelContextValue = useMemo(
     () => ({
-        currentScope: {
-          type: repository ? ('repository' as const) : ('workspace' as const),
-          workspace,
-          repository,
-        },
-        slices,
-        adapters,
-      getSlice: <T = unknown>(name: string): DataSlice<T> | undefined => {
+      currentScope: {
+        type: repository ? ('repository' as const) : ('workspace' as const),
+        workspace,
+        repository,
+      },
+      slices,
+      adapters,
+      getSlice: <T = unknown,>(name: string): DataSlice<T> | undefined => {
         return slices.get(name) as DataSlice<T> | undefined;
       },
-      getWorkspaceSlice: <T = unknown>(name: string): DataSlice<T> | undefined => {
+      getWorkspaceSlice: <T = unknown,>(
+        name: string,
+      ): DataSlice<T> | undefined => {
         const slice = slices.get(name);
-        return slice?.scope === 'workspace' ? (slice as DataSlice<T>) : undefined;
+        return slice?.scope === 'workspace'
+          ? (slice as DataSlice<T>)
+          : undefined;
       },
-      getRepositorySlice: <T = unknown>(name: string): DataSlice<T> | undefined => {
+      getRepositorySlice: <T = unknown,>(
+        name: string,
+      ): DataSlice<T> | undefined => {
         const slice = slices.get(name);
-        return slice?.scope === 'repository' ? (slice as DataSlice<T>) : undefined;
+        return slice?.scope === 'repository'
+          ? (slice as DataSlice<T>)
+          : undefined;
       },
       hasSlice: (name: string, scope?: 'workspace' | 'repository'): boolean => {
         const slice = slices.get(name);
         if (!slice) return false;
         return scope ? slice.scope === scope : true;
       },
-      isSliceLoading: (name: string, scope?: 'workspace' | 'repository'): boolean => {
+      isSliceLoading: (
+        name: string,
+        scope?: 'workspace' | 'repository',
+      ): boolean => {
         const slice = slices.get(name);
         if (!slice) return false;
         if (scope && slice.scope !== scope) return false;
         return slice.loading;
       },
-      refresh: async (scope?: 'workspace' | 'repository', sliceName?: string): Promise<void> => {
+      refresh: async (
+        scope?: 'workspace' | 'repository',
+        sliceName?: string,
+      ): Promise<void> => {
         const slicesToRefresh = Array.from(slices.values()).filter((slice) => {
           if (scope && slice.scope !== scope) return false;
           if (sliceName && slice.name !== sliceName) return false;
@@ -1084,7 +1316,18 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       localhostServers,
       localhostServersLoading,
     }),
-    [workspace, repository, slices, adapters, terminalSessions, markdownFiles, fileTreeData, fileTreeLoading, localhostServers, localhostServersLoading]
+    [
+      workspace,
+      repository,
+      slices,
+      adapters,
+      terminalSessions,
+      markdownFiles,
+      fileTreeData,
+      fileTreeLoading,
+      localhostServers,
+      localhostServersLoading,
+    ],
   );
 
   // Combine context, actions, and events into provider value
@@ -1094,13 +1337,11 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       actions,
       events,
     }),
-    [context, actions, events]
+    [context, actions, events],
   );
 
   return (
-    <PanelContext.Provider value={value}>
-      {children}
-    </PanelContext.Provider>
+    <PanelContext.Provider value={value}>{children}</PanelContext.Provider>
   );
 };
 

@@ -78,7 +78,9 @@ interface GitSyncPanelProviderValue {
   isConnected: boolean;
 }
 
-const GitSyncPanelContext = createContext<GitSyncPanelProviderValue | null>(null);
+const GitSyncPanelContext = createContext<GitSyncPanelProviderValue | null>(
+  null,
+);
 
 interface GitSyncPanelProviderProps {
   children: ReactNode;
@@ -121,17 +123,24 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
   const [presenceLoading, setPresenceLoading] = useState(false);
 
   // Current user's open projects (for current-projects slice)
-  const [currentUserSessions, setCurrentUserSessions] = useState<RepositorySession[]>([]);
-  const [activeRepository, setActiveRepository] = useState<string | undefined>();
+  const [currentUserSessions, setCurrentUserSessions] = useState<
+    RepositorySession[]
+  >([]);
+  const [activeRepository, setActiveRepository] = useState<
+    string | undefined
+  >();
 
   // Selected user profile state (for UserProfilePanel)
-  const [selectedUserProfile, setSelectedUserProfile] = useState<SelectedUserProfile>({
-    user: null,
-    organizations: [],
-    starredRepositories: [],
-  });
+  const [selectedUserProfile, setSelectedUserProfile] =
+    useState<SelectedUserProfile>({
+      user: null,
+      organizations: [],
+      starredRepositories: [],
+    });
   const [selectedUserLoading, setSelectedUserLoading] = useState(false);
-  const [selectedUserError, setSelectedUserError] = useState<string | null>(null);
+  const [selectedUserError, setSelectedUserError] = useState<string | null>(
+    null,
+  );
 
   // Fetch social data when authenticated
   const fetchSocialData = useCallback(async () => {
@@ -164,7 +173,10 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
             const members = await GithubService.getOrgMembers(org.login);
             orgMembersMap.set(org.login, members);
           } catch (err) {
-            console.error(`[GitSyncPanelContext] Failed to load members for ${org.login}`, err);
+            console.error(
+              `[GitSyncPanelContext] Failed to load members for ${org.login}`,
+              err,
+            );
           }
         }),
       );
@@ -244,7 +256,7 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
         // Extract current user's sessions for the current-projects slice
         if (user?.login) {
           const currentUserPresence = users.find(
-            (u) => u.userId === user.login || u.userId === String(user.id)
+            (u) => u.userId === user.login || u.userId === String(user.id),
           );
           if (currentUserPresence) {
             setCurrentUserSessions(currentUserPresence.openRepositories || []);
@@ -295,7 +307,10 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
       if (result.success) {
         setIsVisible(newVisibility);
       } else {
-        console.error('[GitSyncPanelContext] Failed to set visibility:', result.message);
+        console.error(
+          '[GitSyncPanelContext] Failed to set visibility:',
+          result.message,
+        );
       }
     } catch (err) {
       console.error('[GitSyncPanelContext] Failed to set visibility:', err);
@@ -309,7 +324,9 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
       const authResult = await authService.checkAuth();
 
       if (!authResult.authenticated || !authResult.token) {
-        console.error('[GitSyncPanelContext] Cannot connect: not authenticated');
+        console.error(
+          '[GitSyncPanelContext] Cannot connect: not authenticated',
+        );
         return;
       }
 
@@ -365,7 +382,10 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
                   const data = await PresenceService.getUsers();
                   setPresenceData((data.users || []) as LocalUserPresence[]);
                 } catch (err) {
-                  console.error('[GitSyncPanelContext] Failed to refresh presence:', err);
+                  console.error(
+                    '[GitSyncPanelContext] Failed to refresh presence:',
+                    err,
+                  );
                 } finally {
                   setPresenceLoading(false);
                 }
@@ -415,7 +435,9 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
             error: null,
             refresh: async () => {
               // Presence data refreshes automatically via subscription
-              console.log('[GitSyncPanelContext] Current projects slice refresh triggered');
+              console.log(
+                '[GitSyncPanelContext] Current projects slice refresh triggered',
+              );
             },
           },
         ],
@@ -439,7 +461,7 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
       selectedUserError,
       currentUserSessions,
       activeRepository,
-    ]
+    ],
   );
 
   // Define actions
@@ -509,7 +531,7 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
         window.open(url, '_blank');
       },
     }),
-    [events, login, handleVisibilityToggle, handleConnect, fetchUserProfile]
+    [events, login, handleVisibilityToggle, handleConnect, fetchUserProfile],
   );
 
   // Create context value
@@ -522,13 +544,17 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
       },
       slices,
       adapters: {},
-      getSlice: <T = unknown>(name: string): DataSlice<T> | undefined => {
+      getSlice: <T = unknown,>(name: string): DataSlice<T> | undefined => {
         return slices.get(name) as DataSlice<T> | undefined;
       },
-      getWorkspaceSlice: <T = unknown>(_name: string): DataSlice<T> | undefined => {
+      getWorkspaceSlice: <T = unknown,>(
+        _name: string,
+      ): DataSlice<T> | undefined => {
         return undefined;
       },
-      getRepositorySlice: <T = unknown>(_name: string): DataSlice<T> | undefined => {
+      getRepositorySlice: <T = unknown,>(
+        _name: string,
+      ): DataSlice<T> | undefined => {
         return undefined;
       },
       hasSlice: (name: string): boolean => {
@@ -538,18 +564,23 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
         const slice = slices.get(name);
         return slice?.loading ?? false;
       },
-      refresh: async (_scope?: 'workspace' | 'repository', sliceName?: string): Promise<void> => {
+      refresh: async (
+        _scope?: 'workspace' | 'repository',
+        sliceName?: string,
+      ): Promise<void> => {
         if (sliceName) {
           const slice = slices.get(sliceName);
           if (slice) {
             await slice.refresh();
           }
         } else {
-          await Promise.all(Array.from(slices.values()).map((slice) => slice.refresh()));
+          await Promise.all(
+            Array.from(slices.values()).map((slice) => slice.refresh()),
+          );
         }
       },
     }),
-    [slices]
+    [slices],
   );
 
   // Combine into provider value
@@ -560,7 +591,7 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
       events,
       isConnected,
     }),
-    [context, actions, events, isConnected]
+    [context, actions, events, isConnected],
   );
 
   return (
@@ -573,7 +604,9 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
 export const useGitSyncPanelProvider = (): GitSyncPanelProviderValue => {
   const value = useContext(GitSyncPanelContext);
   if (!value) {
-    throw new Error('useGitSyncPanelProvider must be used within a GitSyncPanelProvider');
+    throw new Error(
+      'useGitSyncPanelProvider must be used within a GitSyncPanelProvider',
+    );
   }
   return value;
 };

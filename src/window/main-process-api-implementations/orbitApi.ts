@@ -92,7 +92,8 @@ export const orbitAPI: OrbitAPI = {
   onSignalReceived: (callback: (signal: OrbitSignal) => void): (() => void) => {
     const handler = (_event: unknown, signal: OrbitSignal) => callback(signal);
     ipcRenderer.on(OrbitEvent.SIGNAL_RECEIVED, handler);
-    return () => ipcRenderer.removeListener(OrbitEvent.SIGNAL_RECEIVED, handler);
+    return () =>
+      ipcRenderer.removeListener(OrbitEvent.SIGNAL_RECEIVED, handler);
   },
 
   /**
@@ -108,7 +109,8 @@ export const orbitAPI: OrbitAPI = {
    * Subscribe to peer left events
    */
   onPeerLeft: (callback: (data: { peerId: string }) => void): (() => void) => {
-    const handler = (_event: unknown, data: { peerId: string }) => callback(data);
+    const handler = (_event: unknown, data: { peerId: string }) =>
+      callback(data);
     ipcRenderer.on(OrbitEvent.PEER_LEFT, handler);
     return () => ipcRenderer.removeListener(OrbitEvent.PEER_LEFT, handler);
   },
@@ -117,7 +119,11 @@ export const orbitAPI: OrbitAPI = {
    * Subscribe to connected events
    */
   onConnected: (
-    callback: (data: { connectionId: string; peerId: string; githubHandle: string }) => void,
+    callback: (data: {
+      connectionId: string;
+      peerId: string;
+      githubHandle: string;
+    }) => void,
   ): (() => void) => {
     const handler = (
       _event: unknown,
@@ -133,7 +139,8 @@ export const orbitAPI: OrbitAPI = {
   onDisconnected: (
     callback: (data: { connectionId: string }) => void,
   ): (() => void) => {
-    const handler = (_event: unknown, data: { connectionId: string }) => callback(data);
+    const handler = (_event: unknown, data: { connectionId: string }) =>
+      callback(data);
     ipcRenderer.on(OrbitEvent.DISCONNECTED, handler);
     return () => ipcRenderer.removeListener(OrbitEvent.DISCONNECTED, handler);
   },

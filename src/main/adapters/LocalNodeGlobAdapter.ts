@@ -8,7 +8,10 @@
  * repositories without .gitignore files properly.
  */
 import { globby, globbySync, type Options } from 'globby';
-import { GlobAdapter, GlobOptions } from '@principal-ai/alexandria-core-library';
+import {
+  GlobAdapter,
+  GlobOptions,
+} from '@principal-ai/alexandria-core-library';
 
 /**
  * Node.js implementation using globby library with enhanced gitignore support

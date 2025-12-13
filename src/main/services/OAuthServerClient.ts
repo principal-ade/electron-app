@@ -314,8 +314,12 @@ export class OAuthServerClient {
    */
   async fetchCurrentToken(
     githubToken: string,
-    githubUserId: number
-  ): Promise<{ githubToken: string; githubLogin: string; updatedAt: number } | null> {
+    githubUserId: number,
+  ): Promise<{
+    githubToken: string;
+    githubLogin: string;
+    updatedAt: number;
+  } | null> {
     try {
       console.log('[OAuthServerClient] Fetching current token from server...');
 
@@ -331,8 +335,14 @@ export class OAuthServerClient {
       });
 
       if (!response.ok) {
-        const error = (await response.json()) as { error?: string; error_description?: string };
-        console.log('[OAuthServerClient] Failed to fetch current token:', error);
+        const error = (await response.json()) as {
+          error?: string;
+          error_description?: string;
+        };
+        console.log(
+          '[OAuthServerClient] Failed to fetch current token:',
+          error,
+        );
 
         // 404 means no token stored - not an error, just not available yet
         if (response.status === 404) {
@@ -341,7 +351,9 @@ export class OAuthServerClient {
 
         // 503 means token store not configured - also not a hard error
         if (response.status === 503) {
-          console.log('[OAuthServerClient] Token store not configured on server');
+          console.log(
+            '[OAuthServerClient] Token store not configured on server',
+          );
           return null;
         }
 
@@ -366,7 +378,10 @@ export class OAuthServerClient {
         updatedAt: data.updated_at,
       };
     } catch (error: any) {
-      console.error('[OAuthServerClient] Error fetching current token:', error.message);
+      console.error(
+        '[OAuthServerClient] Error fetching current token:',
+        error.message,
+      );
       return null;
     }
   }

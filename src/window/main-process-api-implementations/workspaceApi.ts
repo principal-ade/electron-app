@@ -1,5 +1,9 @@
 import { ipcRenderer, IpcRendererEvent } from 'electron';
-import type { Workspace, WorkspaceMembership, AlexandriaEntry } from '@principal-ai/alexandria-core-library';
+import type {
+  Workspace,
+  WorkspaceMembership,
+  AlexandriaEntry,
+} from '@principal-ai/alexandria-core-library';
 import {
   WorkspaceAPIEvent,
   type WorkspaceAPI,
@@ -8,7 +12,9 @@ import {
 
 export const workspaceApi: WorkspaceAPI = {
   // Event subscription
-  onWorkspaceChange(callback: (event: WorkspaceChangeEvent) => void): () => void {
+  onWorkspaceChange(
+    callback: (event: WorkspaceChangeEvent) => void,
+  ): () => void {
     const listener = (_event: IpcRendererEvent, data: WorkspaceChangeEvent) => {
       callback(data);
     };
@@ -29,7 +35,9 @@ export const workspaceApi: WorkspaceAPI = {
   },
 
   // Workspace CRUD
-  createWorkspace(workspace: Omit<Workspace, 'id' | 'createdAt' | 'updatedAt'>): Promise<Workspace> {
+  createWorkspace(
+    workspace: Omit<Workspace, 'id' | 'createdAt' | 'updatedAt'>,
+  ): Promise<Workspace> {
     return ipcRenderer.invoke(WorkspaceAPIEvent.CREATE_WORKSPACE, workspace);
   },
 
@@ -41,7 +49,10 @@ export const workspaceApi: WorkspaceAPI = {
     return ipcRenderer.invoke(WorkspaceAPIEvent.GET_ALL_WORKSPACES);
   },
 
-  updateWorkspace(id: string, updates: Partial<Omit<Workspace, 'id' | 'createdAt'>>): Promise<Workspace> {
+  updateWorkspace(
+    id: string,
+    updates: Partial<Omit<Workspace, 'id' | 'createdAt'>>,
+  ): Promise<Workspace> {
     return ipcRenderer.invoke(WorkspaceAPIEvent.UPDATE_WORKSPACE, id, updates);
   },
 
@@ -50,29 +61,63 @@ export const workspaceApi: WorkspaceAPI = {
   },
 
   // Membership Management
-  addRepositoryToWorkspace(repository: AlexandriaEntry | string, workspaceId: string, metadata?: Record<string, unknown>): Promise<void> {
-    return ipcRenderer.invoke(WorkspaceAPIEvent.ADD_REPOSITORY_TO_WORKSPACE, repository, workspaceId, metadata);
+  addRepositoryToWorkspace(
+    repository: AlexandriaEntry | string,
+    workspaceId: string,
+    metadata?: Record<string, unknown>,
+  ): Promise<void> {
+    return ipcRenderer.invoke(
+      WorkspaceAPIEvent.ADD_REPOSITORY_TO_WORKSPACE,
+      repository,
+      workspaceId,
+      metadata,
+    );
   },
 
-  removeRepositoryFromWorkspace(repository: AlexandriaEntry | string, workspaceId: string): Promise<void> {
-    return ipcRenderer.invoke(WorkspaceAPIEvent.REMOVE_REPOSITORY_FROM_WORKSPACE, repository, workspaceId);
+  removeRepositoryFromWorkspace(
+    repository: AlexandriaEntry | string,
+    workspaceId: string,
+  ): Promise<void> {
+    return ipcRenderer.invoke(
+      WorkspaceAPIEvent.REMOVE_REPOSITORY_FROM_WORKSPACE,
+      repository,
+      workspaceId,
+    );
   },
 
   getWorkspaceMemberships(workspaceId: string): Promise<WorkspaceMembership[]> {
-    return ipcRenderer.invoke(WorkspaceAPIEvent.GET_WORKSPACE_MEMBERSHIPS, workspaceId);
+    return ipcRenderer.invoke(
+      WorkspaceAPIEvent.GET_WORKSPACE_MEMBERSHIPS,
+      workspaceId,
+    );
   },
 
-  getRepositoryWorkspaces(repository: AlexandriaEntry | string): Promise<Workspace[]> {
-    return ipcRenderer.invoke(WorkspaceAPIEvent.GET_REPOSITORY_WORKSPACES, repository);
+  getRepositoryWorkspaces(
+    repository: AlexandriaEntry | string,
+  ): Promise<Workspace[]> {
+    return ipcRenderer.invoke(
+      WorkspaceAPIEvent.GET_REPOSITORY_WORKSPACES,
+      repository,
+    );
   },
 
   // Queries
   getRepositoriesInWorkspace(workspaceId: string): Promise<AlexandriaEntry[]> {
-    return ipcRenderer.invoke(WorkspaceAPIEvent.GET_REPOSITORIES_IN_WORKSPACE, workspaceId);
+    return ipcRenderer.invoke(
+      WorkspaceAPIEvent.GET_REPOSITORIES_IN_WORKSPACE,
+      workspaceId,
+    );
   },
 
-  isRepositoryInWorkspace(repository: AlexandriaEntry | string, workspaceId: string): Promise<boolean> {
-    return ipcRenderer.invoke(WorkspaceAPIEvent.IS_REPOSITORY_IN_WORKSPACE, repository, workspaceId);
+  isRepositoryInWorkspace(
+    repository: AlexandriaEntry | string,
+    workspaceId: string,
+  ): Promise<boolean> {
+    return ipcRenderer.invoke(
+      WorkspaceAPIEvent.IS_REPOSITORY_IN_WORKSPACE,
+      repository,
+      workspaceId,
+    );
   },
 
   // Default Workspace
@@ -81,15 +126,32 @@ export const workspaceApi: WorkspaceAPI = {
   },
 
   setDefaultWorkspace(workspaceId: string): Promise<void> {
-    return ipcRenderer.invoke(WorkspaceAPIEvent.SET_DEFAULT_WORKSPACE, workspaceId);
+    return ipcRenderer.invoke(
+      WorkspaceAPIEvent.SET_DEFAULT_WORKSPACE,
+      workspaceId,
+    );
   },
 
   // Repository Location Management
-  isRepositoryInWorkspaceDirectory(repository: AlexandriaEntry, workspaceId: string): Promise<boolean | null> {
-    return ipcRenderer.invoke(WorkspaceAPIEvent.IS_REPOSITORY_IN_WORKSPACE_DIRECTORY, repository, workspaceId);
+  isRepositoryInWorkspaceDirectory(
+    repository: AlexandriaEntry,
+    workspaceId: string,
+  ): Promise<boolean | null> {
+    return ipcRenderer.invoke(
+      WorkspaceAPIEvent.IS_REPOSITORY_IN_WORKSPACE_DIRECTORY,
+      repository,
+      workspaceId,
+    );
   },
 
-  moveRepositoryToWorkspaceDirectory(repository: AlexandriaEntry, workspaceId: string): Promise<string> {
-    return ipcRenderer.invoke(WorkspaceAPIEvent.MOVE_REPOSITORY_TO_WORKSPACE_DIRECTORY, repository, workspaceId);
+  moveRepositoryToWorkspaceDirectory(
+    repository: AlexandriaEntry,
+    workspaceId: string,
+  ): Promise<string> {
+    return ipcRenderer.invoke(
+      WorkspaceAPIEvent.MOVE_REPOSITORY_TO_WORKSPACE_DIRECTORY,
+      repository,
+      workspaceId,
+    );
   },
 };

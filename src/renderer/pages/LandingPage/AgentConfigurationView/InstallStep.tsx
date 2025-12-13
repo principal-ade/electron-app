@@ -145,18 +145,14 @@ export const InstallStep: React.FC<InstallStepProps> = ({
                 }}
                 onMouseEnter={(e) =>
                   !e.currentTarget.disabled &&
-                  (e.currentTarget.style.backgroundColor =
-                    theme.colors.primary)
+                  (e.currentTarget.style.backgroundColor = theme.colors.primary)
                 }
                 onMouseLeave={(e) =>
                   !e.currentTarget.disabled &&
-                  (e.currentTarget.style.backgroundColor =
-                    theme.colors.primary)
+                  (e.currentTarget.style.backgroundColor = theme.colors.primary)
                 }
               >
-                {isProcessing
-                  ? 'Opening...'
-                  : `Download ${agentDisplayName} →`}
+                {isProcessing ? 'Opening...' : `Download ${agentDisplayName} →`}
               </button>
             </>
           )}

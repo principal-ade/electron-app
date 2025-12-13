@@ -2,7 +2,10 @@ import React, { useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ConfigurablePanelLayout } from '@principal-ade/panels';
 import '@principal-ade/panels/panels.css';
-import { GitHubSocialPanel, CurrentProjectsPanel } from '@industry-theme/git-sync-panels';
+import {
+  GitHubSocialPanel,
+  CurrentProjectsPanel,
+} from '@industry-theme/git-sync-panels';
 import { UserProfilePanel } from '@industry-theme/alexandria-panels';
 import { Users, User, FolderGit2 } from 'lucide-react';
 import {
@@ -59,7 +62,7 @@ const GitSyncViewContent: React.FC = () => {
         ),
       },
     ],
-    [context, actions, events, isConnected]
+    [context, actions, events, isConnected],
   );
 
   // Define layout configuration - network in middle, projects/profile on right
@@ -90,7 +93,7 @@ const GitSyncViewContent: React.FC = () => {
         },
       },
     }),
-    []
+    [],
   );
 
   return (

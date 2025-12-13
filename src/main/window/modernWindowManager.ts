@@ -97,7 +97,9 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
         nodeIntegration: false,
         webSecurity: true,
         // Allow custom preload if provided, otherwise use default
-        preload: options?.webPreferences?.preload || defaultOptions.webPreferences?.preload,
+        preload:
+          options?.webPreferences?.preload ||
+          defaultOptions.webPreferences?.preload,
       },
     };
 
@@ -150,7 +152,10 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
       // Check if this was a repository window before cleanup
       let wasRepositoryWindow = false;
       for (const [purpose, windowId] of specialWindows.entries()) {
-        if (windowId === this.window.id && purpose.startsWith('repository-maps-')) {
+        if (
+          windowId === this.window.id &&
+          purpose.startsWith('repository-maps-')
+        ) {
           wasRepositoryWindow = true;
           break;
         }
@@ -203,20 +208,32 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
       // Broadcast repository window change if this was a repository window
       if (wasRepositoryWindow) {
         // Track repository closed in presence system
-        import('../services/PresenceWindowBridge').then((module) => {
-          module.presenceWindowBridge.trackRepositoryClosed(String(this.window.id));
-        }).catch((error) => {
-          console.error('[ModernWindow] Error tracking presence closure:', error);
-        });
+        import('../services/PresenceWindowBridge')
+          .then((module) => {
+            module.presenceWindowBridge.trackRepositoryClosed(
+              String(this.window.id),
+            );
+          })
+          .catch((error) => {
+            console.error(
+              '[ModernWindow] Error tracking presence closure:',
+              error,
+            );
+          });
 
         // Import and call broadcast function from modernWindowHandlers
-        import('./modernWindowHandlers').then((module) => {
-          if (module.broadcastRepositoryWindowsChanged) {
-            module.broadcastRepositoryWindowsChanged();
-          }
-        }).catch((error) => {
-          console.error('[ModernWindow] Error broadcasting window change:', error);
-        });
+        import('./modernWindowHandlers')
+          .then((module) => {
+            if (module.broadcastRepositoryWindowsChanged) {
+              module.broadcastRepositoryWindowsChanged();
+            }
+          })
+          .catch((error) => {
+            console.error(
+              '[ModernWindow] Error broadcasting window change:',
+              error,
+            );
+          });
       }
     });
   }
@@ -515,7 +532,7 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
               "object-src 'none';",
               "base-uri 'self';",
               "form-action 'self';",
-              "frame-src http://localhost:* https://localhost:*;",
+              'frame-src http://localhost:* https://localhost:*;',
               "frame-ancestors 'none';",
               'upgrade-insecure-requests;',
             ]

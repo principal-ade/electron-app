@@ -35,14 +35,19 @@ const WorkspacesViewContent: React.FC = () => {
 
   // State for clone modal
   const [isCloneModalOpen, setIsCloneModalOpen] = useState(false);
-  const [cloneModalInitialUrl, setCloneModalInitialUrl] = useState<string | undefined>();
+  const [cloneModalInitialUrl, setCloneModalInitialUrl] = useState<
+    string | undefined
+  >();
 
   // State for create workspace modal
-  const [isCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen] = useState(false);
+  const [isCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen] =
+    useState(false);
 
   // State for delete repository modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [entryToDelete, setEntryToDelete] = useState<AlexandriaEntry | null>(null);
+  const [entryToDelete, setEntryToDelete] = useState<AlexandriaEntry | null>(
+    null,
+  );
 
   // Handle clone modal close
   const handleCloseCloneModal = useCallback(() => {
@@ -68,33 +73,44 @@ const WorkspacesViewContent: React.FC = () => {
   }, []);
 
   // Handle delete confirmation
-  const handleConfirmDelete = useCallback(async (deleteLocal: boolean) => {
-    if (!entryToDelete) return;
-    await AlexandriaService.removeRepository(entryToDelete.name, deleteLocal);
-    // Refresh the repositories list
-    context.refresh('repository', 'alexandriaRepositories');
-  }, [entryToDelete, context]);
+  const handleConfirmDelete = useCallback(
+    async (deleteLocal: boolean) => {
+      if (!entryToDelete) return;
+      await AlexandriaService.removeRepository(entryToDelete.name, deleteLocal);
+      // Refresh the repositories list
+      context.refresh('repository', 'alexandriaRepositories');
+    },
+    [entryToDelete, context],
+  );
 
   // Override actions to intercept removeRepository and show modal
-  const overriddenActions = useMemo(() => ({
-    ...actions,
-    removeRepository: async (name: string, _deleteLocal: boolean) => {
-      // Find the entry by name from the context
-      const slice = context.getSlice<{ repositories: AlexandriaEntry[] }>('alexandriaRepositories');
-      const repositories = slice?.data?.repositories || [];
-      const entry = repositories.find((r) => r.name === name);
-      if (entry) {
-        setEntryToDelete(entry);
-        setIsDeleteModalOpen(true);
-      }
-    },
-  }), [actions, context]);
+  const overriddenActions = useMemo(
+    () => ({
+      ...actions,
+      removeRepository: async (name: string, _deleteLocal: boolean) => {
+        // Find the entry by name from the context
+        const slice = context.getSlice<{ repositories: AlexandriaEntry[] }>(
+          'alexandriaRepositories',
+        );
+        const repositories = slice?.data?.repositories || [];
+        const entry = repositories.find((r) => r.name === name);
+        if (entry) {
+          setEntryToDelete(entry);
+          setIsDeleteModalOpen(true);
+        }
+      },
+    }),
+    [actions, context],
+  );
 
   // Listen for github:clone-requested events
   useEffect(() => {
     const unsubscribe = events.on('github:clone-requested', (event) => {
       const { repository } = event.payload as { repository: GitHubRepository };
-      console.info('[WorkspacesView] Clone requested for:', repository.full_name);
+      console.info(
+        '[WorkspacesView] Clone requested for:',
+        repository.full_name,
+      );
 
       // Use the clone_url or html_url from the repository
       const cloneUrl = repository.clone_url || repository.html_url;
@@ -107,10 +123,13 @@ const WorkspacesViewContent: React.FC = () => {
 
   // Listen for create-workspace-requested events from WorkspacesListPanel
   useEffect(() => {
-    const unsubscribe = events.on('industry-theme.workspaces-list:create-workspace-requested', () => {
-      console.info('[WorkspacesView] Create workspace requested');
-      setIsCreateWorkspaceModalOpen(true);
-    });
+    const unsubscribe = events.on(
+      'industry-theme.workspaces-list:create-workspace-requested',
+      () => {
+        console.info('[WorkspacesView] Create workspace requested');
+        setIsCreateWorkspaceModalOpen(true);
+      },
+    );
 
     return unsubscribe;
   }, [events]);
@@ -124,39 +143,67 @@ const WorkspacesViewContent: React.FC = () => {
   });
 
   // Define panels using alexandria-panels components
-  const panels = useMemo(
-    () => {
-      const basePanels = [
+  const panels = useMemo(() => {
+    const basePanels = [
+      {
+        id: 'workspaces-list',
+        label: 'Workspaces',
+        icon: <DoorClosed size={16} />,
+        content: (
+          <WorkspacesListPanel
+            context={context}
+            actions={actions}
+            events={events}
+          />
+        ),
+      },
+      {
+        id: 'local-projects',
+        label: 'Local Projects',
+        icon: <Folder size={16} />,
+        content: (
+          <LocalProjectsPanel
+            context={context}
+            actions={overriddenActions}
+            events={events}
+          />
+        ),
+      },
+      {
+        id: 'workspace-repositories',
+        label: 'Repositories',
+        icon: <FolderGit2 size={16} />,
+        content: (
+          <WorkspaceRepositoriesPanel
+            context={context}
+            actions={actions}
+            events={events}
+          />
+        ),
+      },
+      {
+        id: 'repository-quality-grid',
+        label: 'Quality',
+        icon: <Hexagon size={16} />,
+        content: (
+          <RepositoryQualityGridPanel
+            context={context}
+            actions={actions}
+            events={events}
+          />
+        ),
+      },
+    ];
+
+    // Add GitHub panels when authenticated
+    if (isAuthenticated) {
+      basePanels.push(
         {
-          id: 'workspaces-list',
-          label: 'Workspaces',
-          icon: <DoorClosed size={16} />,
-          content: (
-            <WorkspacesListPanel
-              context={context}
-              actions={actions}
-              events={events}
-            />
-          ),
-        },
-        {
-          id: 'local-projects',
-          label: 'Local Projects',
-          icon: <Folder size={16} />,
-          content: (
-            <LocalProjectsPanel
-              context={context}
-              actions={overriddenActions}
-              events={events}
-            />
-          ),
-        },
-        {
-          id: 'workspace-repositories',
-          label: 'Repositories',
+          id: 'github-projects',
+          label: 'GitHub Projects',
           icon: <FolderGit2 size={16} />,
           content: (
-            <WorkspaceRepositoriesPanel
+            <GitHubProjectsPanel
               context={context}
               actions={actions}
               events={events}
@@ -164,91 +211,62 @@ const WorkspacesViewContent: React.FC = () => {
           ),
         },
         {
-          id: 'repository-quality-grid',
-          label: 'Quality',
-          icon: <Hexagon size={16} />,
+          id: 'github-starred',
+          label: 'Starred',
+          icon: <Star size={16} />,
           content: (
-            <RepositoryQualityGridPanel
+            <GitHubStarredPanel
               context={context}
               actions={actions}
               events={events}
             />
           ),
         },
-      ];
+      );
+    }
 
-      // Add GitHub panels when authenticated
-      if (isAuthenticated) {
-        basePanels.push(
-          {
-            id: 'github-projects',
-            label: 'GitHub Projects',
-            icon: <FolderGit2 size={16} />,
-            content: (
-              <GitHubProjectsPanel
-                context={context}
-                actions={actions}
-                events={events}
-              />
-            ),
-          },
-          {
-            id: 'github-starred',
-            label: 'Starred',
-            icon: <Star size={16} />,
-            content: (
-              <GitHubStarredPanel
-                context={context}
-                actions={actions}
-                events={events}
-              />
-            ),
-          }
-        );
-      }
-
-      return basePanels;
-    },
-    [context, actions, overriddenActions, events, isAuthenticated]
-  );
+    return basePanels;
+  }, [context, actions, overriddenActions, events, isAuthenticated]);
 
   // Define layout configuration
-  const layout = useMemo(
-    () => {
-      // Build left panel tabs based on authentication
-      const leftPanels = isAuthenticated
-        ? ['workspaces-list', 'local-projects', 'github-projects', 'github-starred']
-        : ['workspaces-list', 'local-projects'];
+  const layout = useMemo(() => {
+    // Build left panel tabs based on authentication
+    const leftPanels = isAuthenticated
+      ? [
+          'workspaces-list',
+          'local-projects',
+          'github-projects',
+          'github-starred',
+        ]
+      : ['workspaces-list', 'local-projects'];
 
-      return {
-        left: {
-          type: 'tabs' as const,
-          panels: leftPanels,
-          config: {
-            defaultActiveTab: 0,
-            tabPosition: 'top' as const,
-          },
+    return {
+      left: {
+        type: 'tabs' as const,
+        panels: leftPanels,
+        config: {
+          defaultActiveTab: 0,
+          tabPosition: 'top' as const,
         },
-        middle: {
-          type: 'tabs' as const,
-          panels: ['repository-quality-grid'],
-          config: {
-            defaultActiveTab: 0,
-            tabPosition: 'top' as const,
-          },
+      },
+      middle: {
+        type: 'tabs' as const,
+        panels: ['repository-quality-grid'],
+        config: {
+          defaultActiveTab: 0,
+          tabPosition: 'top' as const,
         },
-        right: {
-          type: 'tabs' as const,
-          panels: ['workspace-repositories'],
-          config: {
-            defaultActiveTab: 0,
-            tabPosition: 'top' as const,
-          },
+      },
+      right: {
+        type: 'tabs' as const,
+        panels: ['workspace-repositories'],
+        config: {
+          defaultActiveTab: 0,
+          tabPosition: 'top' as const,
         },
-      };
-    },
-    [isAuthenticated]
-  );
+      },
+    };
+  }, [isAuthenticated]);
 
   return (
     <>

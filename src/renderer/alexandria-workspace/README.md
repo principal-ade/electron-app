@@ -39,9 +39,11 @@ Workspaces are cross-repository collections that help organize multiple reposito
 ## Available Services
 
 ### WorkspaceService
+
 Located at: `src/renderer/main-process-api/WorkspaceService.ts`
 
 Key methods:
+
 - `createWorkspace(data)` - Create new workspace
 - `getWorkspaces()` - Get all workspaces
 - `updateWorkspace(id, updates)` - Update workspace
@@ -55,6 +57,7 @@ Key methods:
 ### Existing UI Components
 
 These can be integrated or referenced:
+
 - `src/renderer/components/CreateWorkspaceModal.tsx` - Modal for creating workspaces
 - `src/renderer/panels/components/WorkspacesListPanel.tsx` - List panel component
 - `src/renderer/panels/components/WorkspaceEntriesPanel.tsx` - Entries panel component
@@ -63,6 +66,7 @@ These can be integrated or referenced:
 ## Opening the Window
 
 From renderer process:
+
 ```typescript
 import { WindowEvent } from '@shared/ipc-events/WindowEvents';
 
@@ -86,6 +90,7 @@ Alexandria Workspace Window
 ## Data Model
 
 ### Workspace
+
 ```typescript
 interface Workspace {
   id: string;
@@ -102,9 +107,10 @@ interface Workspace {
 ```
 
 ### WorkspaceMembership
+
 ```typescript
 interface WorkspaceMembership {
-  repositoryId: string;  // "owner/name" format
+  repositoryId: string; // "owner/name" format
   workspaceId: string;
   addedAt: number;
   metadata?: Record<string, unknown>;
@@ -116,6 +122,7 @@ interface WorkspaceMembership {
 This window replaces the old "Palace Room Workspace" concept. Palace Rooms were repository-specific isolation containers, while Workspaces are cross-repository organizational tools.
 
 Key differences:
+
 - Palace Rooms: Per-repository, path-based
 - Workspaces: Cross-repository, identity-based
 - Workspaces support multi-clone (all local clones share membership)

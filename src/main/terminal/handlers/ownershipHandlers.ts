@@ -39,25 +39,42 @@ export function setupOwnershipHandlers(
   // This also creates a MessageChannel to ensure data can flow
   ipcMain.handle(
     TerminalAPIEvents.CLAIM_OWNERSHIP,
-    async (event: IpcMainInvokeEvent, sessionId: string, force: boolean = false) => {
+    async (
+      event: IpcMainInvokeEvent,
+      sessionId: string,
+      force: boolean = false,
+    ) => {
       if (!sessionManager.hasSession(sessionId)) {
-        console.log(`[Terminal] Cannot claim ownership: session ${sessionId} not found`);
+        console.log(
+          `[Terminal] Cannot claim ownership: session ${sessionId} not found`,
+        );
         return { success: false, reason: 'Session not found' };
       }
 
       const senderWindowId = BrowserWindow.fromWebContents(event.sender)?.id;
       if (!senderWindowId) {
-        console.log(`[Terminal] Cannot claim ownership: could not determine sender window ID`);
+        console.log(
+          `[Terminal] Cannot claim ownership: could not determine sender window ID`,
+        );
         return { success: false, reason: 'Could not determine window ID' };
       }
 
-      const result = ownershipManager.claimOwnership(sessionId, senderWindowId, force);
+      const result = ownershipManager.claimOwnership(
+        sessionId,
+        senderWindowId,
+        force,
+      );
 
       // Always create/refresh the MessageChannel when claiming ownership
       // This handles reconnection after page reload/window reopen
       if (result.success) {
-        sessionManager.createMessageChannelForSession(sessionId, senderWindowId);
-        console.log(`[Terminal] Created MessageChannel during ownership claim for session ${sessionId} -> window ${senderWindowId}`);
+        sessionManager.createMessageChannelForSession(
+          sessionId,
+          senderWindowId,
+        );
+        console.log(
+          `[Terminal] Created MessageChannel during ownership claim for session ${sessionId} -> window ${senderWindowId}`,
+        );
       }
 
       return result;
@@ -87,20 +104,29 @@ export function setupOwnershipHandlers(
     TerminalAPIEvents.REQUEST_DATA_PORT,
     async (event: IpcMainInvokeEvent, sessionId: string) => {
       if (!sessionManager.hasSession(sessionId)) {
-        console.log(`[Terminal] Cannot request data port: session ${sessionId} not found`);
+        console.log(
+          `[Terminal] Cannot request data port: session ${sessionId} not found`,
+        );
         return { success: false, reason: 'Session not found' };
       }
 
       const senderWindowId = BrowserWindow.fromWebContents(event.sender)?.id;
       if (!senderWindowId) {
-        console.log(`[Terminal] Cannot request data port: could not determine sender window ID`);
+        console.log(
+          `[Terminal] Cannot request data port: could not determine sender window ID`,
+        );
         return { success: false, reason: 'Could not determine window ID' };
       }
 
       // Create MessageChannel and transfer port to renderer
-      const success = sessionManager.createMessageChannelForSession(sessionId, senderWindowId);
+      const success = sessionManager.createMessageChannelForSession(
+        sessionId,
+        senderWindowId,
+      );
       if (success) {
-        console.log(`[Terminal] Created MessageChannel for session ${sessionId} -> window ${senderWindowId}`);
+        console.log(
+          `[Terminal] Created MessageChannel for session ${sessionId} -> window ${senderWindowId}`,
+        );
         return { success: true };
       } else {
         return { success: false, reason: 'Failed to create MessageChannel' };

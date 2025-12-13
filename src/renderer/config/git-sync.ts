@@ -21,7 +21,8 @@ interface GitSyncConfig {
 // Server URLs for different environments
 export const SERVER_URLS = {
   development: 'http://localhost:3001',
-  production: 'wss://repository-traffic-controller-production.rj36caac972nm.us-east-1.cs.amazonlightsail.com',
+  production:
+    'wss://repository-traffic-controller-production.rj36caac972nm.us-east-1.cs.amazonlightsail.com',
 };
 
 // Auth server URLs for different environments

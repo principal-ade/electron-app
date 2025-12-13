@@ -210,7 +210,9 @@ class QuickOpen {
 
       const openRepoUrls = openRepoWindowIds
         .map((id) => ({ id, url: getRepositoryUrl(id) }))
-        .filter((item): item is { id: number; url: string } => item.url !== null);
+        .filter(
+          (item): item is { id: number; url: string } => item.url !== null,
+        );
 
       const openWorkspaceIds = openWorkspaceWindowIds
         .map((id) => ({ windowId: id, workspaceId: getWorkspaceId(id) }))
@@ -289,112 +291,104 @@ export const quickOpen = new QuickOpen();
  */
 export function setupQuickOpenHandlers(): void {
   // Handle item selection from renderer
-  ipcMain.on(
-    'quick-open:select',
-    async (_event, item: QuickOpenItem) => {
-      log.info(
-        `[Quick Open] Item selected: ${item.type} - ${item.name} (isOpen: ${item.isOpen})`,
-      );
+  ipcMain.on('quick-open:select', async (_event, item: QuickOpenItem) => {
+    log.info(
+      `[Quick Open] Item selected: ${item.type} - ${item.name} (isOpen: ${item.isOpen})`,
+    );
 
-      // Close the overlay immediately for instant feedback
-      quickOpen.hide();
+    // Close the overlay immediately for instant feedback
+    quickOpen.hide();
 
-      if (item.isOpen && item.openWindowId) {
-        // Focus existing window
-        const { applicationWindows } = require('./types');
-        const appWindow = applicationWindows.get(item.openWindowId);
-        if (appWindow && !appWindow.window.isDestroyed()) {
-          if (appWindow.window.isMinimized()) {
-            appWindow.window.restore();
-          }
-          appWindow.window.show();
-          appWindow.window.focus();
-          log.info(`[Quick Open] Focused existing window ${item.openWindowId}`);
+    if (item.isOpen && item.openWindowId) {
+      // Focus existing window
+      const { applicationWindows } = require('./types');
+      const appWindow = applicationWindows.get(item.openWindowId);
+      if (appWindow && !appWindow.window.isDestroyed()) {
+        if (appWindow.window.isMinimized()) {
+          appWindow.window.restore();
         }
-      } else {
-        // Open new window
-        if (item.type === 'repository' && item.alexandriaEntry) {
-          // Open dev workspace with panel framework
-          await openDevWorkspaceWindow({
-            alexandriaEntry: item.alexandriaEntry,
-          });
-          log.info(`[Quick Open] Opening dev workspace for ${item.name}`);
-        } else if (item.type === 'workspace') {
-          // Open workspace window directly from main process
+        appWindow.window.show();
+        appWindow.window.focus();
+        log.info(`[Quick Open] Focused existing window ${item.openWindowId}`);
+      }
+    } else {
+      // Open new window
+      if (item.type === 'repository' && item.alexandriaEntry) {
+        // Open dev workspace with panel framework
+        await openDevWorkspaceWindow({
+          alexandriaEntry: item.alexandriaEntry,
+        });
+        log.info(`[Quick Open] Opening dev workspace for ${item.name}`);
+      } else if (item.type === 'workspace') {
+        // Open workspace window directly from main process
+        const { createSpecialWindow } = require('./modernWindowManager');
+        const { resolveHtmlPath } = require('../util');
+        const { PrimaryWindowType } = require('./types');
+
+        const workspaceId = item.id;
+        const windowName = `alexandria-workspace-${workspaceId}`;
+
+        // Fetch workspace name from the registry
+        let workspaceName = 'Alexandria Workspace';
+        try {
           const {
-            createSpecialWindow,
-          } = require('./modernWindowManager');
-          const { resolveHtmlPath } = require('../util');
-          const { PrimaryWindowType } = require('./types');
-
-          const workspaceId = item.id;
-          const windowName = `alexandria-workspace-${workspaceId}`;
-
-          // Fetch workspace name from the registry
-          let workspaceName = 'Alexandria Workspace';
-          try {
-            const {
-              AlexandriaRegistryService,
-            } = require('../stores/AlexandriaRegistryService');
-            const service = AlexandriaRegistryService.getInstance();
-            const workspace = await service.getWorkspace(workspaceId);
-            if (workspace?.name) {
-              workspaceName = workspace.name;
-            }
-          } catch (error) {
-            log.error(
-              '[Quick Open] Failed to fetch workspace name:',
-              error,
-            );
+            AlexandriaRegistryService,
+          } = require('../stores/AlexandriaRegistryService');
+          const service = AlexandriaRegistryService.getInstance();
+          const workspace = await service.getWorkspace(workspaceId);
+          if (workspace?.name) {
+            workspaceName = workspace.name;
           }
+        } catch (error) {
+          log.error('[Quick Open] Failed to fetch workspace name:', error);
+        }
 
-          // Create metadata for workspace window
-          const metadata = {
-            primaryType: PrimaryWindowType.WORKSPACE,
-            displayName: workspaceName,
-            workspaceId,
-            purpose: windowName,
-          };
+        // Create metadata for workspace window
+        const metadata = {
+          primaryType: PrimaryWindowType.WORKSPACE,
+          displayName: workspaceName,
+          workspaceId,
+          purpose: windowName,
+        };
 
-          const window = createSpecialWindow(
-            windowName,
-            {
-              width: 1280,
-              height: 832,
-              minWidth: 1024,
-              minHeight: 720,
-              title: workspaceName,
-            },
-            {
-              fileSystemAdapter: true,
-              windowManagerAdapter: true,
-              githubAdapter: true,
-              contentSecurityPolicy: true,
-              externalLinkHandler: true,
-              menu: true,
-              maximizeOnShow: true,
-            },
-            metadata,
+        const window = createSpecialWindow(
+          windowName,
+          {
+            width: 1280,
+            height: 832,
+            minWidth: 1024,
+            minHeight: 720,
+            title: workspaceName,
+          },
+          {
+            fileSystemAdapter: true,
+            windowManagerAdapter: true,
+            githubAdapter: true,
+            contentSecurityPolicy: true,
+            externalLinkHandler: true,
+            menu: true,
+            maximizeOnShow: true,
+          },
+          metadata,
+        );
+
+        if (window) {
+          // Register window with terminal manager to receive terminal events
+          const { terminalManager } = await import('../terminal');
+          terminalManager?.setMainWindow(window.window);
+          log.info(
+            `[Quick Open] Registered Alexandria Workspace window ${window.window.id} with terminal manager`,
           );
 
-          if (window) {
-            // Register window with terminal manager to receive terminal events
-            const { terminalManager } = await import('../terminal');
-            terminalManager?.setMainWindow(window.window);
-            log.info(
-              `[Quick Open] Registered Alexandria Workspace window ${window.window.id} with terminal manager`,
-            );
-
-            // Pass workspace ID to the window via URL parameter
-            const encodedWorkspaceId = encodeURIComponent(workspaceId);
-            const url = `${resolveHtmlPath('alexandria-workspace.html')}?workspaceId=${encodedWorkspaceId}`;
-            window.window.loadURL(url);
-            log.info(`[Quick Open] Opening workspace window for ${item.name}`);
-          }
+          // Pass workspace ID to the window via URL parameter
+          const encodedWorkspaceId = encodeURIComponent(workspaceId);
+          const url = `${resolveHtmlPath('alexandria-workspace.html')}?workspaceId=${encodedWorkspaceId}`;
+          window.window.loadURL(url);
+          log.info(`[Quick Open] Opening workspace window for ${item.name}`);
         }
       }
-    },
-  );
+    }
+  });
 
   // Handle request for items from renderer
   ipcMain.on('quick-open:request-items', () => {

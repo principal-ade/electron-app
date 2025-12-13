@@ -8,7 +8,11 @@
 import { ipcMain, app } from 'electron';
 import path from 'path';
 import { resolveHtmlPath } from '../util';
-import { createSpecialWindow, applicationWindows, specialWindows } from './modernWindowManager';
+import {
+  createSpecialWindow,
+  applicationWindows,
+  specialWindows,
+} from './modernWindowManager';
 import { PrimaryWindowType, WindowMetadata } from './types';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
 
@@ -104,7 +108,9 @@ export async function openExtensionWindow(
   const encodedData = encodeURIComponent(JSON.stringify(payload));
   const url = `${resolveHtmlPath('extension-window.html')}#init/${encodedData}`;
 
-  console.log(`[ExtensionWindow] Window ${appWindow.window.id} loading: ${url}`);
+  console.log(
+    `[ExtensionWindow] Window ${appWindow.window.id} loading: ${url}`,
+  );
   appWindow.window.loadURL(url);
 
   return { windowId: appWindow.window.id };

@@ -118,21 +118,35 @@ export const IntegratedShell: React.FC = () => {
         const authResult = await authService.checkAuth();
 
         if (!authResult.authenticated || !authResult.token) {
-          console.info('[IntegratedShell] Skipping presence auto-connect: not authenticated');
+          console.info(
+            '[IntegratedShell] Skipping presence auto-connect: not authenticated',
+          );
           return;
         }
 
         // Auto-connect to presence
-        console.info('[IntegratedShell] Auto-connecting to presence on startup');
-        const result = await PresenceService.connectToPresence(authResult.token);
+        console.info(
+          '[IntegratedShell] Auto-connecting to presence on startup',
+        );
+        const result = await PresenceService.connectToPresence(
+          authResult.token,
+        );
 
         if (result.success) {
-          console.info('[IntegratedShell] Successfully auto-connected to presence');
+          console.info(
+            '[IntegratedShell] Successfully auto-connected to presence',
+          );
         } else {
-          console.warn('[IntegratedShell] Failed to auto-connect to presence:', result.error);
+          console.warn(
+            '[IntegratedShell] Failed to auto-connect to presence:',
+            result.error,
+          );
         }
       } catch (error) {
-        console.error('[IntegratedShell] Error during presence auto-connect:', error);
+        console.error(
+          '[IntegratedShell] Error during presence auto-connect:',
+          error,
+        );
       }
     };
 
@@ -234,7 +248,6 @@ export const IntegratedShell: React.FC = () => {
       }
     }
   };
-
 
   const backgroundColor =
     mode === 'dark' && theme.modes?.dark?.background

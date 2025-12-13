@@ -38,7 +38,8 @@ const QuickOpenApp: React.FC = () => {
       setFilteredItems(receivedItems);
     };
 
-    const removeItemsListener = window.electronAPI.onQuickOpenItems?.(handleItems);
+    const removeItemsListener =
+      window.electronAPI.onQuickOpenItems?.(handleItems);
 
     // Request items now that listener is ready
     window.electronAPI.requestQuickOpenItems?.();
@@ -133,7 +134,10 @@ const QuickOpenApp: React.FC = () => {
       });
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      console.log('[Quick Open] Enter - selecting item at index:', selectedIndex);
+      console.log(
+        '[Quick Open] Enter - selecting item at index:',
+        selectedIndex,
+      );
       if (filteredItems[selectedIndex]) {
         handleSelectItem(filteredItems[selectedIndex]);
       }
@@ -210,9 +214,7 @@ const QuickOpenApp: React.FC = () => {
                 fontFamily: theme.fonts.body,
               }}
             >
-              {items.length === 0
-                ? 'Loading...'
-                : 'No matching items found'}
+              {items.length === 0 ? 'Loading...' : 'No matching items found'}
             </div>
           ) : (
             filteredItems.map((item, index) => {
@@ -234,7 +236,12 @@ const QuickOpenApp: React.FC = () => {
                     borderLeft: isSelected
                       ? `3px solid ${theme.colors.primary}`
                       : '3px solid transparent',
-                    opacity: isAnimating && !isAnimatingItem ? 0.3 : item.isOpen ? 0.7 : 1,
+                    opacity:
+                      isAnimating && !isAnimatingItem
+                        ? 0.3
+                        : item.isOpen
+                          ? 0.7
+                          : 1,
                     overflow: 'visible',
                     zIndex: isAnimatingItem ? 1000 : 1,
                   }}
@@ -250,8 +257,8 @@ const QuickOpenApp: React.FC = () => {
                       background: isAnimatingItem
                         ? theme.colors.primary
                         : isSelected
-                        ? `${theme.colors.primary}20`
-                        : 'transparent',
+                          ? `${theme.colors.primary}20`
+                          : 'transparent',
                       transform: isAnimatingItem ? 'scaleY(20)' : 'scaleY(1)',
                       transformOrigin: 'center',
                       boxShadow: isAnimatingItem
@@ -271,13 +278,20 @@ const QuickOpenApp: React.FC = () => {
                       zIndex: 1,
                     }}
                   >
-                    <div style={{ fontSize: theme.fontSizes[6], marginRight: '12px' }}>
+                    <div
+                      style={{
+                        fontSize: theme.fontSizes[6],
+                        marginRight: '12px',
+                      }}
+                    >
                       {item.type === 'repository' ? '📦' : '📁'}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div
                         style={{
-                          color: isAnimatingItem ? theme.colors.background : theme.colors.text,
+                          color: isAnimatingItem
+                            ? theme.colors.background
+                            : theme.colors.text,
                           fontSize: theme.fontSizes[3],
                           fontFamily: theme.fonts.body,
                           fontWeight: isAnimatingItem ? 600 : 500,
@@ -292,8 +306,12 @@ const QuickOpenApp: React.FC = () => {
                             style={{
                               display: 'inline-block',
                               padding: '2px 6px',
-                              background: isAnimatingItem ? theme.colors.background : theme.colors.primary,
-                              color: isAnimatingItem ? theme.colors.primary : theme.colors.background,
+                              background: isAnimatingItem
+                                ? theme.colors.background
+                                : theme.colors.primary,
+                              color: isAnimatingItem
+                                ? theme.colors.primary
+                                : theme.colors.background,
                               fontSize: theme.fontSizes[1],
                               fontFamily: theme.fonts.body,
                               borderRadius: '3px',
@@ -307,7 +325,9 @@ const QuickOpenApp: React.FC = () => {
                       {item.description && (
                         <div
                           style={{
-                            color: isAnimatingItem ? `${theme.colors.background}cc` : theme.colors.textSecondary,
+                            color: isAnimatingItem
+                              ? `${theme.colors.background}cc`
+                              : theme.colors.textSecondary,
                             fontSize: theme.fontSizes[2],
                             fontFamily: theme.fonts.body,
                             marginTop: '4px',
@@ -322,7 +342,9 @@ const QuickOpenApp: React.FC = () => {
                     </div>
                     <div
                       style={{
-                        color: isAnimatingItem ? `${theme.colors.background}cc` : theme.colors.textSecondary,
+                        color: isAnimatingItem
+                          ? `${theme.colors.background}cc`
+                          : theme.colors.textSecondary,
                         fontSize: theme.fontSizes[1],
                         fontFamily: theme.fonts.body,
                         textTransform: 'uppercase',
@@ -333,7 +355,7 @@ const QuickOpenApp: React.FC = () => {
                     </div>
                   </div>
                 </div>
-            );
+              );
             })
           )}
         </div>
@@ -347,16 +369,40 @@ const QuickOpenApp: React.FC = () => {
             borderTop: `1px solid ${theme.colors.border}`,
           }}
         >
-          <span style={{ fontSize: theme.fontSizes[1], fontFamily: theme.fonts.body, color: theme.colors.textSecondary }}>
+          <span
+            style={{
+              fontSize: theme.fontSizes[1],
+              fontFamily: theme.fonts.body,
+              color: theme.colors.textSecondary,
+            }}
+          >
             ↑↓ Navigate
           </span>
-          <span style={{ fontSize: theme.fontSizes[1], fontFamily: theme.fonts.body, color: theme.colors.textSecondary }}>
+          <span
+            style={{
+              fontSize: theme.fontSizes[1],
+              fontFamily: theme.fonts.body,
+              color: theme.colors.textSecondary,
+            }}
+          >
             Tab Cycle
           </span>
-          <span style={{ fontSize: theme.fontSizes[1], fontFamily: theme.fonts.body, color: theme.colors.textSecondary }}>
+          <span
+            style={{
+              fontSize: theme.fontSizes[1],
+              fontFamily: theme.fonts.body,
+              color: theme.colors.textSecondary,
+            }}
+          >
             Enter Select
           </span>
-          <span style={{ fontSize: theme.fontSizes[1], fontFamily: theme.fonts.body, color: theme.colors.textSecondary }}>
+          <span
+            style={{
+              fontSize: theme.fontSizes[1],
+              fontFamily: theme.fonts.body,
+              color: theme.colors.textSecondary,
+            }}
+          >
             Esc Close
           </span>
         </div>

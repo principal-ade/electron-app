@@ -60,8 +60,7 @@ export const gitSyncAPI: GitSyncAPI = {
   setEnvironment: (environment: 'development' | 'production') =>
     ipcRenderer.invoke(GitSyncEvent.SET_ENVIRONMENT, environment),
 
-  getEnvironment: () =>
-    ipcRenderer.invoke(GitSyncEvent.GET_ENVIRONMENT),
+  getEnvironment: () => ipcRenderer.invoke(GitSyncEvent.GET_ENVIRONMENT),
 
   onConnectionAdded: (callback: (connectionId: string) => void) => {
     const subscription = (_event: unknown, connectionId: string) =>

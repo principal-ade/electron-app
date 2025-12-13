@@ -6,10 +6,18 @@ import { ipcMain, BrowserWindow } from 'electron';
 import type { IpcMainInvokeEvent } from 'electron';
 import path from 'path';
 import fs from 'fs-extra';
-import { WorkspaceAPIEvent, type WorkspaceAPI, type WorkspaceChangeEvent } from '../../shared/main-process-api-interfaces/WorkspaceAPI';
+import {
+  WorkspaceAPIEvent,
+  type WorkspaceAPI,
+  type WorkspaceChangeEvent,
+} from '../../shared/main-process-api-interfaces/WorkspaceAPI';
 import { AlexandriaAPIEvent } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
 import { AlexandriaRegistryService } from './AlexandriaRegistryService';
-import type { Workspace, WorkspaceMembership, AlexandriaEntry } from '@principal-ai/alexandria-core-library';
+import type {
+  Workspace,
+  WorkspaceMembership,
+  AlexandriaEntry,
+} from '@principal-ai/alexandria-core-library';
 import { getManager as getMonitoringManager } from '../repository-monitoring/ipcHandlers';
 
 export class WorkspaceApiEventHandler implements WorkspaceAPI {
@@ -31,7 +39,7 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
     type: 'added' | 'updated' | 'deleted' | 'membership-changed',
     workspace?: Workspace,
     workspaceId?: string,
-    repositoryId?: string
+    repositoryId?: string,
   ): void {
     const event: WorkspaceChangeEvent = {
       type,
@@ -60,7 +68,7 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
    */
   private broadcastAlexandriaEvent(
     eventType: AlexandriaAPIEvent.REPOSITORY_UPDATED,
-    data: AlexandriaEntry
+    data: AlexandriaEntry,
   ): void {
     const windows = BrowserWindow.getAllWindows();
     windows.forEach((window) => {
@@ -77,7 +85,7 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
     try {
       const monitoringManager = getMonitoringManager();
       const status = await monitoringManager.getMonitoringStatus();
-      const repoInfo = status.repositories.find(r => r.path === repoPath);
+      const repoInfo = status.repositories.find((r) => r.path === repoPath);
       return repoInfo?.gitWatchingEnabled || false;
     } catch (error) {
       console.error('[Workspace] Failed to check git watching status:', error);
@@ -131,7 +139,9 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
 
   // ===== Workspace CRUD =====
 
-  async createWorkspace(workspace: Omit<Workspace, 'id' | 'createdAt' | 'updatedAt'>): Promise<Workspace> {
+  async createWorkspace(
+    workspace: Omit<Workspace, 'id' | 'createdAt' | 'updatedAt'>,
+  ): Promise<Workspace> {
     // Create the workspace folder if suggestedClonePath is provided
     if (workspace.suggestedClonePath) {
       await fs.ensureDir(workspace.suggestedClonePath);
@@ -150,7 +160,10 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
     return this.service.getWorkspaces();
   }
 
-  async updateWorkspace(id: string, updates: Partial<Omit<Workspace, 'id' | 'createdAt'>>): Promise<Workspace> {
+  async updateWorkspace(
+    id: string,
+    updates: Partial<Omit<Workspace, 'id' | 'createdAt'>>,
+  ): Promise<Workspace> {
     const updated = await this.service.updateWorkspace(id, updates);
     this.broadcastWorkspaceChange('updated', updated);
     return updated;
@@ -169,39 +182,65 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
   async addRepositoryToWorkspace(
     repository: AlexandriaEntry | string,
     workspaceId: string,
-    metadata?: Record<string, unknown>
+    metadata?: Record<string, unknown>,
   ): Promise<void> {
-    await this.service.addRepositoryToWorkspace(repository, workspaceId, metadata);
-    const repoId = typeof repository === 'string' ? repository : repository.github?.id || repository.name;
-    this.broadcastWorkspaceChange('membership-changed', undefined, workspaceId, repoId);
+    await this.service.addRepositoryToWorkspace(
+      repository,
+      workspaceId,
+      metadata,
+    );
+    const repoId =
+      typeof repository === 'string'
+        ? repository
+        : repository.github?.id || repository.name;
+    this.broadcastWorkspaceChange(
+      'membership-changed',
+      undefined,
+      workspaceId,
+      repoId,
+    );
   }
 
   async removeRepositoryFromWorkspace(
     repository: AlexandriaEntry | string,
-    workspaceId: string
+    workspaceId: string,
   ): Promise<void> {
     await this.service.removeRepositoryFromWorkspace(repository, workspaceId);
-    const repoId = typeof repository === 'string' ? repository : repository.github?.id || repository.name;
-    this.broadcastWorkspaceChange('membership-changed', undefined, workspaceId, repoId);
+    const repoId =
+      typeof repository === 'string'
+        ? repository
+        : repository.github?.id || repository.name;
+    this.broadcastWorkspaceChange(
+      'membership-changed',
+      undefined,
+      workspaceId,
+      repoId,
+    );
   }
 
-  async getWorkspaceMemberships(workspaceId: string): Promise<WorkspaceMembership[]> {
+  async getWorkspaceMemberships(
+    workspaceId: string,
+  ): Promise<WorkspaceMembership[]> {
     return this.service.getWorkspaceMemberships(workspaceId);
   }
 
-  async getRepositoryWorkspaces(repository: AlexandriaEntry | string): Promise<Workspace[]> {
+  async getRepositoryWorkspaces(
+    repository: AlexandriaEntry | string,
+  ): Promise<Workspace[]> {
     return this.service.getRepositoryWorkspaces(repository);
   }
 
   // ===== Query Methods =====
 
-  async getRepositoriesInWorkspace(workspaceId: string): Promise<AlexandriaEntry[]> {
+  async getRepositoriesInWorkspace(
+    workspaceId: string,
+  ): Promise<AlexandriaEntry[]> {
     return this.service.getRepositoriesInWorkspace(workspaceId);
   }
 
   async isRepositoryInWorkspace(
     repository: AlexandriaEntry | string,
-    workspaceId: string
+    workspaceId: string,
   ): Promise<boolean> {
     return this.service.isRepositoryInWorkspace(repository, workspaceId);
   }
@@ -222,7 +261,10 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
 
   // ===== Repository Location Management =====
 
-  async isRepositoryInWorkspaceDirectory(repository: AlexandriaEntry, workspaceId: string): Promise<boolean | null> {
+  async isRepositoryInWorkspaceDirectory(
+    repository: AlexandriaEntry,
+    workspaceId: string,
+  ): Promise<boolean | null> {
     const workspace = await this.service.getWorkspace(workspaceId);
     if (!workspace) {
       throw new Error(`Workspace ${workspaceId} not found`);
@@ -234,7 +276,9 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
     }
 
     // Normalize both paths for comparison
-    const normalizedWorkspacePath = path.normalize(workspace.suggestedClonePath);
+    const normalizedWorkspacePath = path.normalize(
+      workspace.suggestedClonePath,
+    );
     const normalizedRepoPath = path.normalize(repository.path);
 
     // Check if the repository path starts with the workspace path
@@ -246,21 +290,26 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
     return normalizedRepoPath.startsWith(workspacePathWithSep);
   }
 
-  async moveRepositoryToWorkspaceDirectory(repository: AlexandriaEntry, workspaceId: string): Promise<string> {
+  async moveRepositoryToWorkspaceDirectory(
+    repository: AlexandriaEntry,
+    workspaceId: string,
+  ): Promise<string> {
     const workspace = await this.service.getWorkspace(workspaceId);
     if (!workspace) {
       throw new Error(`Workspace ${workspaceId} not found`);
     }
 
     if (!workspace.suggestedClonePath) {
-      throw new Error(`Workspace ${workspace.name} does not have a suggested clone path configured`);
+      throw new Error(
+        `Workspace ${workspace.name} does not have a suggested clone path configured`,
+      );
     }
 
     // CRITICAL: Check if repository has an open window - prevent move if true
     if (this.isRepositoryWindowOpen(repository)) {
       throw new Error(
         `Cannot move repository "${repository.name}" while it has an open window. ` +
-        'Please close the repository window first.'
+          'Please close the repository window first.',
       );
     }
 
@@ -277,7 +326,9 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
 
     // Check if git watching is currently enabled (so we can restore it)
     const wasGitWatching = await this.isGitWatchingEnabled(oldPath);
-    console.log(`[Workspace] Git watching ${wasGitWatching ? 'enabled' : 'disabled'} for ${oldPath}`);
+    console.log(
+      `[Workspace] Git watching ${wasGitWatching ? 'enabled' : 'disabled'} for ${oldPath}`,
+    );
 
     try {
       const monitoringManager = getMonitoringManager();
@@ -289,28 +340,40 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
       }
 
       // Step 2: Unregister repository from monitoring server
-      console.log(`[Workspace] Unregistering repository from monitoring server: ${oldPath}`);
+      console.log(
+        `[Workspace] Unregistering repository from monitoring server: ${oldPath}`,
+      );
       await monitoringManager.unregisterRepository(oldPath);
 
       // Step 3: Ensure the workspace directory exists
       await fs.ensureDir(workspace.suggestedClonePath);
 
       // Step 4: Move the repository files
-      console.log(`[Workspace] Moving repository from ${oldPath} to ${targetPath}`);
+      console.log(
+        `[Workspace] Moving repository from ${oldPath} to ${targetPath}`,
+      );
       await fs.move(oldPath, targetPath, { overwrite: false });
 
       // Step 5: Update the repository entry in the registry with the new path
-      console.log(`[Workspace] Updating Alexandria registry with new path: ${targetPath}`);
-      await this.service.updateRepository(repository.name, { path: targetPath as typeof repository.path });
+      console.log(
+        `[Workspace] Updating Alexandria registry with new path: ${targetPath}`,
+      );
+      await this.service.updateRepository(repository.name, {
+        path: targetPath as typeof repository.path,
+      });
 
       // Step 6: Get updated entry from registry for event broadcasting
       const updatedEntry = await this.service.getRepository(repository.name);
       if (!updatedEntry) {
-        throw new Error(`Failed to retrieve updated repository entry for ${repository.name}`);
+        throw new Error(
+          `Failed to retrieve updated repository entry for ${repository.name}`,
+        );
       }
 
       // Step 7: Re-register repository with new path
-      console.log(`[Workspace] Re-registering repository with new path: ${targetPath}`);
+      console.log(
+        `[Workspace] Re-registering repository with new path: ${targetPath}`,
+      );
       await monitoringManager.registerRepository(targetPath);
 
       // Step 8: Re-enable git watching if it was enabled before
@@ -320,15 +383,29 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
       }
 
       // Step 9: Broadcast REPOSITORY_UPDATED event (Alexandria) for Feed panels
-      console.log(`[Workspace] Broadcasting REPOSITORY_UPDATED event for ${repository.name}`);
-      this.broadcastAlexandriaEvent(AlexandriaAPIEvent.REPOSITORY_UPDATED, updatedEntry);
+      console.log(
+        `[Workspace] Broadcasting REPOSITORY_UPDATED event for ${repository.name}`,
+      );
+      this.broadcastAlexandriaEvent(
+        AlexandriaAPIEvent.REPOSITORY_UPDATED,
+        updatedEntry,
+      );
 
       // Step 10: Broadcast MEMBERSHIP_CHANGED event (Workspace) for workspace state
       const repoId = repository.github?.id || repository.name;
-      console.log(`[Workspace] Broadcasting MEMBERSHIP_CHANGED event for workspace ${workspaceId}`);
-      this.broadcastWorkspaceChange('membership-changed', undefined, workspaceId, repoId);
+      console.log(
+        `[Workspace] Broadcasting MEMBERSHIP_CHANGED event for workspace ${workspaceId}`,
+      );
+      this.broadcastWorkspaceChange(
+        'membership-changed',
+        undefined,
+        workspaceId,
+        repoId,
+      );
 
-      console.log(`[Workspace] Successfully moved repository ${repository.name} to ${targetPath}`);
+      console.log(
+        `[Workspace] Successfully moved repository ${repository.name} to ${targetPath}`,
+      );
       return targetPath;
     } catch (error) {
       // If we fail after moving files, attempt to move them back
@@ -346,18 +423,23 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
 
           console.log(`[Workspace] Successfully rolled back repository move`);
         } catch (rollbackError) {
-          console.error(`[Workspace] CRITICAL: Failed to rollback repository move:`, rollbackError);
+          console.error(
+            `[Workspace] CRITICAL: Failed to rollback repository move:`,
+            rollbackError,
+          );
           throw new Error(
             `Failed to move repository and rollback also failed. ` +
-            `Repository may be in an inconsistent state. ` +
-            `Original error: ${error instanceof Error ? error.message : String(error)}. ` +
-            `Rollback error: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`
+              `Repository may be in an inconsistent state. ` +
+              `Original error: ${error instanceof Error ? error.message : String(error)}. ` +
+              `Rollback error: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`,
           );
         }
       }
 
       console.error(`[Workspace] Failed to move repository:`, error);
-      throw new Error(`Failed to move repository: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to move repository: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
@@ -379,8 +461,12 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
     ipcMain.removeHandler(WorkspaceAPIEvent.IS_REPOSITORY_IN_WORKSPACE);
     ipcMain.removeHandler(WorkspaceAPIEvent.GET_DEFAULT_WORKSPACE);
     ipcMain.removeHandler(WorkspaceAPIEvent.SET_DEFAULT_WORKSPACE);
-    ipcMain.removeHandler(WorkspaceAPIEvent.IS_REPOSITORY_IN_WORKSPACE_DIRECTORY);
-    ipcMain.removeHandler(WorkspaceAPIEvent.MOVE_REPOSITORY_TO_WORKSPACE_DIRECTORY);
+    ipcMain.removeHandler(
+      WorkspaceAPIEvent.IS_REPOSITORY_IN_WORKSPACE_DIRECTORY,
+    );
+    ipcMain.removeHandler(
+      WorkspaceAPIEvent.MOVE_REPOSITORY_TO_WORKSPACE_DIRECTORY,
+    );
   }
 }
 
@@ -393,94 +479,111 @@ export function registerWorkspaceHandlers(): void {
   // Workspace CRUD
   ipcMain.handle(
     WorkspaceAPIEvent.CREATE_WORKSPACE,
-    (_event: IpcMainInvokeEvent, workspace: Omit<Workspace, 'id' | 'createdAt' | 'updatedAt'>) =>
-      handler.createWorkspace(workspace)
+    (
+      _event: IpcMainInvokeEvent,
+      workspace: Omit<Workspace, 'id' | 'createdAt' | 'updatedAt'>,
+    ) => handler.createWorkspace(workspace),
   );
 
   ipcMain.handle(
     WorkspaceAPIEvent.GET_WORKSPACE,
-    (_event: IpcMainInvokeEvent, id: string) =>
-      handler.getWorkspace(id)
+    (_event: IpcMainInvokeEvent, id: string) => handler.getWorkspace(id),
   );
 
-  ipcMain.handle(
-    WorkspaceAPIEvent.GET_ALL_WORKSPACES,
-    () => handler.getWorkspaces()
+  ipcMain.handle(WorkspaceAPIEvent.GET_ALL_WORKSPACES, () =>
+    handler.getWorkspaces(),
   );
 
   ipcMain.handle(
     WorkspaceAPIEvent.UPDATE_WORKSPACE,
-    (_event: IpcMainInvokeEvent, id: string, updates: Partial<Omit<Workspace, 'id' | 'createdAt'>>) =>
-      handler.updateWorkspace(id, updates)
+    (
+      _event: IpcMainInvokeEvent,
+      id: string,
+      updates: Partial<Omit<Workspace, 'id' | 'createdAt'>>,
+    ) => handler.updateWorkspace(id, updates),
   );
 
   ipcMain.handle(
     WorkspaceAPIEvent.DELETE_WORKSPACE,
-    (_event: IpcMainInvokeEvent, id: string) =>
-      handler.deleteWorkspace(id)
+    (_event: IpcMainInvokeEvent, id: string) => handler.deleteWorkspace(id),
   );
 
   // Membership Management
   ipcMain.handle(
     WorkspaceAPIEvent.ADD_REPOSITORY_TO_WORKSPACE,
-    (_event: IpcMainInvokeEvent, repository: AlexandriaEntry | string, workspaceId: string, metadata?: Record<string, unknown>) =>
-      handler.addRepositoryToWorkspace(repository, workspaceId, metadata)
+    (
+      _event: IpcMainInvokeEvent,
+      repository: AlexandriaEntry | string,
+      workspaceId: string,
+      metadata?: Record<string, unknown>,
+    ) => handler.addRepositoryToWorkspace(repository, workspaceId, metadata),
   );
 
   ipcMain.handle(
     WorkspaceAPIEvent.REMOVE_REPOSITORY_FROM_WORKSPACE,
-    (_event: IpcMainInvokeEvent, repository: AlexandriaEntry | string, workspaceId: string) =>
-      handler.removeRepositoryFromWorkspace(repository, workspaceId)
+    (
+      _event: IpcMainInvokeEvent,
+      repository: AlexandriaEntry | string,
+      workspaceId: string,
+    ) => handler.removeRepositoryFromWorkspace(repository, workspaceId),
   );
 
   ipcMain.handle(
     WorkspaceAPIEvent.GET_WORKSPACE_MEMBERSHIPS,
     (_event: IpcMainInvokeEvent, workspaceId: string) =>
-      handler.getWorkspaceMemberships(workspaceId)
+      handler.getWorkspaceMemberships(workspaceId),
   );
 
   ipcMain.handle(
     WorkspaceAPIEvent.GET_REPOSITORY_WORKSPACES,
     (_event: IpcMainInvokeEvent, repository: AlexandriaEntry | string) =>
-      handler.getRepositoryWorkspaces(repository)
+      handler.getRepositoryWorkspaces(repository),
   );
 
   // Queries
   ipcMain.handle(
     WorkspaceAPIEvent.GET_REPOSITORIES_IN_WORKSPACE,
     (_event: IpcMainInvokeEvent, workspaceId: string) =>
-      handler.getRepositoriesInWorkspace(workspaceId)
+      handler.getRepositoriesInWorkspace(workspaceId),
   );
 
   ipcMain.handle(
     WorkspaceAPIEvent.IS_REPOSITORY_IN_WORKSPACE,
-    (_event: IpcMainInvokeEvent, repository: AlexandriaEntry | string, workspaceId: string) =>
-      handler.isRepositoryInWorkspace(repository, workspaceId)
+    (
+      _event: IpcMainInvokeEvent,
+      repository: AlexandriaEntry | string,
+      workspaceId: string,
+    ) => handler.isRepositoryInWorkspace(repository, workspaceId),
   );
 
   // Default Workspace
-  ipcMain.handle(
-    WorkspaceAPIEvent.GET_DEFAULT_WORKSPACE,
-    () => handler.getDefaultWorkspace()
+  ipcMain.handle(WorkspaceAPIEvent.GET_DEFAULT_WORKSPACE, () =>
+    handler.getDefaultWorkspace(),
   );
 
   ipcMain.handle(
     WorkspaceAPIEvent.SET_DEFAULT_WORKSPACE,
     (_event: IpcMainInvokeEvent, workspaceId: string) =>
-      handler.setDefaultWorkspace(workspaceId)
+      handler.setDefaultWorkspace(workspaceId),
   );
 
   // Repository Location Management
   ipcMain.handle(
     WorkspaceAPIEvent.IS_REPOSITORY_IN_WORKSPACE_DIRECTORY,
-    (_event: IpcMainInvokeEvent, repository: AlexandriaEntry, workspaceId: string) =>
-      handler.isRepositoryInWorkspaceDirectory(repository, workspaceId)
+    (
+      _event: IpcMainInvokeEvent,
+      repository: AlexandriaEntry,
+      workspaceId: string,
+    ) => handler.isRepositoryInWorkspaceDirectory(repository, workspaceId),
   );
 
   ipcMain.handle(
     WorkspaceAPIEvent.MOVE_REPOSITORY_TO_WORKSPACE_DIRECTORY,
-    (_event: IpcMainInvokeEvent, repository: AlexandriaEntry, workspaceId: string) =>
-      handler.moveRepositoryToWorkspaceDirectory(repository, workspaceId)
+    (
+      _event: IpcMainInvokeEvent,
+      repository: AlexandriaEntry,
+      workspaceId: string,
+    ) => handler.moveRepositoryToWorkspaceDirectory(repository, workspaceId),
   );
 
   console.log('[Workspace] IPC handlers registered');

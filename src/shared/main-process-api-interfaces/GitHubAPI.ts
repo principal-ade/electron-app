@@ -421,7 +421,9 @@ export interface GitHubAPI {
   /** Get a specific user's profile */
   getUser: (username: string) => Promise<GitHubUser | null>;
   /** Get a specific user's public organizations */
-  getUserOrganizationsForUser: (username: string) => Promise<GitHubOrganization[]>;
+  getUserOrganizationsForUser: (
+    username: string,
+  ) => Promise<GitHubOrganization[]>;
   /** Get a specific user's starred repositories */
   getUserStarredRepositoriesForUser: (
     username: string,

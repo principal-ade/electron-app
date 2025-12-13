@@ -12,7 +12,9 @@ export function setupSessionHandlers(
   ipcMain.handle(
     'terminal:getOrCreate',
     async (event: IpcMainInvokeEvent, directory: string, context?: string) => {
-      console.log(`[Terminal] getOrCreate called: directory=${directory}, context=${context}`);
+      console.log(
+        `[Terminal] getOrCreate called: directory=${directory}, context=${context}`,
+      );
       try {
         // Check if node-pty is available
         if (!isPtyAvailable()) {
@@ -37,7 +39,10 @@ export function setupSessionHandlers(
           sessionId = existingSession.id;
 
           // Create MessageChannel for the window and claim ownership
-          sessionManager.createMessageChannelForSession(sessionId, senderWindowId);
+          sessionManager.createMessageChannelForSession(
+            sessionId,
+            senderWindowId,
+          );
         } else {
           console.log(
             `[Terminal] Creating NEW session for ${sessionKey} (current sessions: ${sessionManager.getAllSessions().size})`,
@@ -57,7 +62,10 @@ export function setupSessionHandlers(
           sessionManager.trackSessionByRepo(sessionKey, sessionId);
 
           // Create MessageChannel for the window and claim ownership
-          sessionManager.createMessageChannelForSession(sessionId, senderWindowId);
+          sessionManager.createMessageChannelForSession(
+            sessionId,
+            senderWindowId,
+          );
         }
 
         return sessionId;
@@ -97,10 +105,16 @@ export function setupSessionHandlers(
         }
 
         // Create new session with context
-        const sessionId = await sessionManager.createSession(directory, context);
+        const sessionId = await sessionManager.createSession(
+          directory,
+          context,
+        );
 
         // Create MessageChannel for the window and claim ownership
-        sessionManager.createMessageChannelForSession(sessionId, senderWindowId);
+        sessionManager.createMessageChannelForSession(
+          sessionId,
+          senderWindowId,
+        );
 
         return sessionId;
       } catch (error) {
@@ -158,17 +172,17 @@ export function setupSessionHandlers(
         );
 
         // Create MessageChannel for the window and claim ownership
-        sessionManager.createMessageChannelForSession(sessionId, senderWindowId);
+        sessionManager.createMessageChannelForSession(
+          sessionId,
+          senderWindowId,
+        );
 
         console.log(
           `Terminal session created successfully with command: ${sessionId}`,
         );
         return sessionId;
       } catch (error) {
-        console.error(
-          'Failed to create terminal session with command:',
-          error,
-        );
+        console.error('Failed to create terminal session with command:', error);
 
         // More detailed error message
         const errorMessage =

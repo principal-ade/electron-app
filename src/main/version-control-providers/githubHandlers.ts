@@ -2356,7 +2356,9 @@ export class GitHubAdapter {
       console.error('[GitHub] Error creating repository:', error);
       throw new Error(
         apiResult.error ||
-          (error instanceof Error ? error.message : 'Failed to create repository'),
+          (error instanceof Error
+            ? error.message
+            : 'Failed to create repository'),
       );
     }
   }
@@ -2393,7 +2395,9 @@ export class GitHubAdapter {
       console.error('[GitHub] Error getting .gitignore templates:', error);
     }
 
-    console.warn('[GitHub] Failed to fetch .gitignore templates, returning empty array');
+    console.warn(
+      '[GitHub] Failed to fetch .gitignore templates, returning empty array',
+    );
     return [];
   }
 
@@ -2441,7 +2445,9 @@ export class GitHubAdapter {
       console.error('[GitHub] Error getting license templates:', error);
     }
 
-    console.warn('[GitHub] Failed to fetch license templates, returning empty array');
+    console.warn(
+      '[GitHub] Failed to fetch license templates, returning empty array',
+    );
     return [];
   }
 
@@ -2468,7 +2474,9 @@ export class GitHubAdapter {
       const result = await this.executeCommand(['gh', 'api', endpoint]);
       if (result.success && result.stdout) {
         const repoData = JSON.parse(result.stdout);
-        console.log(`[GitHub] Successfully fetched repository ${owner}/${repo} via CLI`);
+        console.log(
+          `[GitHub] Successfully fetched repository ${owner}/${repo} via CLI`,
+        );
         return repoData;
       }
     } catch (error) {
@@ -2485,7 +2493,11 @@ export class GitHubAdapter {
   async forkRepository(
     owner: string,
     repo: string,
-    options?: { organization?: string; name?: string; default_branch_only?: boolean },
+    options?: {
+      organization?: string;
+      name?: string;
+      default_branch_only?: boolean;
+    },
   ): Promise<any | null> {
     console.log(`[GitHub] Forking repository ${owner}/${repo}`, options);
 
@@ -2508,7 +2520,9 @@ export class GitHubAdapter {
     });
 
     if (apiResult.success && apiResult.data) {
-      console.log(`[GitHub] Successfully forked repository to ${apiResult.data.full_name}`);
+      console.log(
+        `[GitHub] Successfully forked repository to ${apiResult.data.full_name}`,
+      );
       return apiResult.data;
     }
 
@@ -2528,7 +2542,7 @@ export class GitHubAdapter {
           const forkOwner = options?.organization || currentUser.login;
           const forkName = options?.name || repo;
           // Wait a moment for GitHub to create the fork
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          await new Promise((resolve) => setTimeout(resolve, 2000));
           return this.getRepository(forkOwner, forkName);
         }
       }
@@ -2536,7 +2550,10 @@ export class GitHubAdapter {
       console.error('[GitHub] Error forking repository:', error);
     }
 
-    console.error(`[GitHub] Failed to fork repository ${owner}/${repo}`, apiResult.error);
+    console.error(
+      `[GitHub] Failed to fork repository ${owner}/${repo}`,
+      apiResult.error,
+    );
     return null;
   }
 }
@@ -3137,7 +3154,9 @@ export function registerGitHubIpcHandlers(
     async (event, username) => {
       const adapter = getAdapterFromSender(event.sender);
       if (!adapter) {
-        console.error('[GitHub] No adapter found for GET_USER_ORGANIZATIONS_FOR_USER');
+        console.error(
+          '[GitHub] No adapter found for GET_USER_ORGANIZATIONS_FOR_USER',
+        );
         return [];
       }
       return adapter.getUserOrganizationsForUser(username);
@@ -3149,7 +3168,9 @@ export function registerGitHubIpcHandlers(
     async (event, username, options) => {
       const adapter = getAdapterFromSender(event.sender);
       if (!adapter) {
-        console.error('[GitHub] No adapter found for GET_USER_STARRED_REPOSITORIES_FOR_USER');
+        console.error(
+          '[GitHub] No adapter found for GET_USER_STARRED_REPOSITORIES_FOR_USER',
+        );
         return [];
       }
       return adapter.getUserStarredRepositoriesForUser(username, options);
@@ -3209,7 +3230,11 @@ export function registerGitHubIpcHandlers(
       event,
       owner: string,
       repo: string,
-      options?: { organization?: string; name?: string; default_branch_only?: boolean },
+      options?: {
+        organization?: string;
+        name?: string;
+        default_branch_only?: boolean;
+      },
     ) => {
       const adapter = getAdapterFromSender(event.sender);
       if (!adapter) {

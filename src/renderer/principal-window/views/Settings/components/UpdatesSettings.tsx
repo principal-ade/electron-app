@@ -249,7 +249,9 @@ export const UpdatesSettings: React.FC = () => {
                 backgroundColor: isChecking
                   ? theme.colors.backgroundTertiary
                   : theme.colors.primary,
-                color: isChecking ? theme.colors.textSecondary : theme.colors.background,
+                color: isChecking
+                  ? theme.colors.textSecondary
+                  : theme.colors.background,
                 border: 'none',
                 borderRadius: '8px',
                 cursor: isChecking ? 'not-allowed' : 'pointer',
@@ -324,183 +326,183 @@ export const UpdatesSettings: React.FC = () => {
                 borderRadius: '12px',
               }}
             >
-          <h4
-            style={{
-              fontSize: '18px',
-              fontWeight: 600,
-              margin: '0 0 16px 0',
-              color: theme.colors.warning,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
-            <Sparkles size={20} />
-            New Version Available!
-          </h4>
-
-          <div style={{ marginBottom: '20px' }}>
-            <p
-              style={{
-                fontSize: '14px',
-                margin: '0 0 8px 0',
-                color: theme.colors.text,
-              }}
-            >
-              <strong>Current:</strong> v{currentVersion} →{' '}
-              <strong>Available:</strong> v{availableVersion}
-            </p>
-          </div>
-
-          {isDevMode ? (
-            <div>
-              <div
+              <h4
                 style={{
-                  padding: '12px',
-                  backgroundColor: theme.colors.backgroundSecondary,
-                  borderRadius: '8px',
-                  marginBottom: '12px',
+                  fontSize: '18px',
+                  fontWeight: 600,
+                  margin: '0 0 16px 0',
+                  color: theme.colors.warning,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
                 }}
               >
+                <Sparkles size={20} />
+                New Version Available!
+              </h4>
+
+              <div style={{ marginBottom: '20px' }}>
                 <p
                   style={{
-                    fontSize: '13px',
-                    margin: 0,
-                    color: theme.colors.textSecondary,
+                    fontSize: '14px',
+                    margin: '0 0 8px 0',
+                    color: theme.colors.text,
                   }}
                 >
-                  <Info
-                    size={14}
-                    style={{
-                      display: 'inline',
-                      marginRight: '6px',
-                      verticalAlign: 'text-bottom',
-                    }}
-                  />
-                  Development mode: Updates are detected but not automatically
-                  downloaded.
+                  <strong>Current:</strong> v{currentVersion} →{' '}
+                  <strong>Available:</strong> v{availableVersion}
                 </p>
               </div>
-              <button
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: theme.colors.warning,
-                  color: theme.colors.background,
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                }}
-                onClick={() => {
-                  setIsDownloading(true);
-                  setDownloadError(null);
-                  setDownloadProgress(0);
-                  setUpdateStatus(
-                    "Test downloading update (won't auto-install)...",
-                  );
-                  AppVersionManagerService.testDownloadUpdate();
-                }}
-                disabled={isDownloading || !updateAvailable}
-              >
-                Test Download (No Auto-Install)
-              </button>
-            </div>
-          ) : (
-            <div>
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '12px',
-                  alignItems: 'center',
-                }}
-              >
-                <button
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: isDownloaded
-                      ? theme.colors.success
-                      : isDownloading
-                        ? theme.colors.backgroundTertiary
-                        : theme.colors.warning,
-                    color: isDownloading
-                      ? theme.colors.textSecondary
-                      : theme.colors.background,
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: isDownloading ? 'not-allowed' : 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    opacity: isDownloading ? 0.7 : 1,
-                    transition: 'all 0.2s',
-                  }}
-                  onClick={isDownloaded ? installUpdate : downloadUpdate}
-                  disabled={isDownloading}
-                >
-                  {isDownloading
-                    ? `Downloading... ${Math.round(downloadProgress)}%`
-                    : isDownloaded
-                      ? 'Install & Restart'
-                      : 'Download Update'}
-                </button>
-                <span
-                  style={{
-                    fontSize: '13px',
-                    color: theme.colors.textSecondary,
-                  }}
-                >
-                  {isDownloaded
-                    ? 'Ready to install'
-                    : 'The app will restart after installation'}
-                </span>
-              </div>
 
-              {isDownloading && (
-                <div
-                  style={{
-                    width: '100%',
-                    height: '4px',
-                    backgroundColor: theme.colors.backgroundTertiary,
-                    borderRadius: '2px',
-                    overflow: 'hidden',
-                    marginTop: '12px',
-                  }}
-                >
+              {isDevMode ? (
+                <div>
                   <div
                     style={{
-                      width: `${downloadProgress}%`,
-                      height: '100%',
-                      backgroundColor: theme.colors.primary,
-                      transition: 'width 0.3s ease',
-                    }}
-                  />
-                </div>
-              )}
-
-              {downloadError && (
-                <div
-                  style={{
-                    marginTop: '12px',
-                    padding: '12px',
-                    backgroundColor: `${theme.colors.error}15`,
-                    border: `1px solid ${theme.colors.error}30`,
-                    borderRadius: '8px',
-                  }}
-                >
-                  <p
-                    style={{
-                      fontSize: '13px',
-                      margin: 0,
-                      color: theme.colors.error,
+                      padding: '12px',
+                      backgroundColor: theme.colors.backgroundSecondary,
+                      borderRadius: '8px',
+                      marginBottom: '12px',
                     }}
                   >
-                    {downloadError}
-                  </p>
+                    <p
+                      style={{
+                        fontSize: '13px',
+                        margin: 0,
+                        color: theme.colors.textSecondary,
+                      }}
+                    >
+                      <Info
+                        size={14}
+                        style={{
+                          display: 'inline',
+                          marginRight: '6px',
+                          verticalAlign: 'text-bottom',
+                        }}
+                      />
+                      Development mode: Updates are detected but not
+                      automatically downloaded.
+                    </p>
+                  </div>
+                  <button
+                    style={{
+                      padding: '10px 20px',
+                      backgroundColor: theme.colors.warning,
+                      color: theme.colors.background,
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                    }}
+                    onClick={() => {
+                      setIsDownloading(true);
+                      setDownloadError(null);
+                      setDownloadProgress(0);
+                      setUpdateStatus(
+                        "Test downloading update (won't auto-install)...",
+                      );
+                      AppVersionManagerService.testDownloadUpdate();
+                    }}
+                    disabled={isDownloading || !updateAvailable}
+                  >
+                    Test Download (No Auto-Install)
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: '12px',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <button
+                      style={{
+                        padding: '10px 20px',
+                        backgroundColor: isDownloaded
+                          ? theme.colors.success
+                          : isDownloading
+                            ? theme.colors.backgroundTertiary
+                            : theme.colors.warning,
+                        color: isDownloading
+                          ? theme.colors.textSecondary
+                          : theme.colors.background,
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: isDownloading ? 'not-allowed' : 'pointer',
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        opacity: isDownloading ? 0.7 : 1,
+                        transition: 'all 0.2s',
+                      }}
+                      onClick={isDownloaded ? installUpdate : downloadUpdate}
+                      disabled={isDownloading}
+                    >
+                      {isDownloading
+                        ? `Downloading... ${Math.round(downloadProgress)}%`
+                        : isDownloaded
+                          ? 'Install & Restart'
+                          : 'Download Update'}
+                    </button>
+                    <span
+                      style={{
+                        fontSize: '13px',
+                        color: theme.colors.textSecondary,
+                      }}
+                    >
+                      {isDownloaded
+                        ? 'Ready to install'
+                        : 'The app will restart after installation'}
+                    </span>
+                  </div>
+
+                  {isDownloading && (
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '4px',
+                        backgroundColor: theme.colors.backgroundTertiary,
+                        borderRadius: '2px',
+                        overflow: 'hidden',
+                        marginTop: '12px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: `${downloadProgress}%`,
+                          height: '100%',
+                          backgroundColor: theme.colors.primary,
+                          transition: 'width 0.3s ease',
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {downloadError && (
+                    <div
+                      style={{
+                        marginTop: '12px',
+                        padding: '12px',
+                        backgroundColor: `${theme.colors.error}15`,
+                        border: `1px solid ${theme.colors.error}30`,
+                        borderRadius: '8px',
+                      }}
+                    >
+                      <p
+                        style={{
+                          fontSize: '13px',
+                          margin: 0,
+                          color: theme.colors.error,
+                        }}
+                      >
+                        {downloadError}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          )}
-        </div>
           )}
         </div>
       </div>

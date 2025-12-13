@@ -180,8 +180,7 @@ export const GitSyncStatusIndicator: React.FC<GitSyncStatusIndicatorProps> = ({
                       color: theme.colors.text,
                     }}
                   >
-                    {connectionCount}{' '}
-                    {connectionCount === 1 ? 'room' : 'rooms'}
+                    {connectionCount} {connectionCount === 1 ? 'room' : 'rooms'}
                   </div>
                 </div>
               )}

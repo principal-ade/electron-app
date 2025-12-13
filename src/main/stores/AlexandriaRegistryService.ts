@@ -8,7 +8,12 @@ import {
   MemoryPalace,
 } from '@principal-ai/alexandria-core-library';
 import { NodeFileSystemAdapter } from '@principal-ai/alexandria-core-library/node';
-import type { AlexandriaEntry, CodebaseView, Workspace, WorkspaceMembership } from '@principal-ai/alexandria-core-library';
+import type {
+  AlexandriaEntry,
+  CodebaseView,
+  Workspace,
+  WorkspaceMembership,
+} from '@principal-ai/alexandria-core-library';
 import { gitClientFactory } from '../utils/gitClientFactory';
 import { FileSystemService } from '../file-system-service';
 import { LocalNodeGlobAdapter } from '../adapters/LocalNodeGlobAdapter';
@@ -24,7 +29,11 @@ export class AlexandriaRegistryService {
     const fsAdapter = new NodeFileSystemAdapter();
     const globAdapter = new LocalNodeGlobAdapter(); // Use our local fixed adapter
     const homeDir = homedir(); // Get user's home directory
-    this.outpostManager = new AlexandriaOutpostManager(fsAdapter, globAdapter, homeDir);
+    this.outpostManager = new AlexandriaOutpostManager(
+      fsAdapter,
+      globAdapter,
+      homeDir,
+    );
   }
 
   static getInstance(): AlexandriaRegistryService {
@@ -417,7 +426,10 @@ export class AlexandriaRegistryService {
    * @param updates - Partial updates to apply
    * @returns Updated repository entry
    */
-  async updateRepository(name: string, updates: Partial<Omit<AlexandriaEntry, 'name' | 'registeredAt'>>): Promise<AlexandriaEntry> {
+  async updateRepository(
+    name: string,
+    updates: Partial<Omit<AlexandriaEntry, 'name' | 'registeredAt'>>,
+  ): Promise<AlexandriaEntry> {
     return this.outpostManager.updateRepository(name, updates);
   }
 
@@ -853,7 +865,9 @@ export class AlexandriaRegistryService {
   /**
    * Create a new workspace
    */
-  async createWorkspace(workspace: Omit<Workspace, 'id' | 'createdAt' | 'updatedAt'>): Promise<Workspace> {
+  async createWorkspace(
+    workspace: Omit<Workspace, 'id' | 'createdAt' | 'updatedAt'>,
+  ): Promise<Workspace> {
     return this.outpostManager.workspaces.createWorkspace(workspace);
   }
 
@@ -874,7 +888,10 @@ export class AlexandriaRegistryService {
   /**
    * Update an existing workspace
    */
-  async updateWorkspace(id: string, updates: Partial<Omit<Workspace, 'id' | 'createdAt'>>): Promise<Workspace> {
+  async updateWorkspace(
+    id: string,
+    updates: Partial<Omit<Workspace, 'id' | 'createdAt'>>,
+  ): Promise<Workspace> {
     return this.outpostManager.workspaces.updateWorkspace(id, updates);
   }
 
@@ -893,9 +910,13 @@ export class AlexandriaRegistryService {
   async addRepositoryToWorkspace(
     repository: AlexandriaEntry | string,
     workspaceId: string,
-    metadata?: Record<string, unknown>
+    metadata?: Record<string, unknown>,
   ): Promise<void> {
-    return this.outpostManager.workspaces.addRepositoryToWorkspace(repository, workspaceId, metadata);
+    return this.outpostManager.workspaces.addRepositoryToWorkspace(
+      repository,
+      workspaceId,
+      metadata,
+    );
   }
 
   /**
@@ -903,22 +924,29 @@ export class AlexandriaRegistryService {
    */
   async removeRepositoryFromWorkspace(
     repository: AlexandriaEntry | string,
-    workspaceId: string
+    workspaceId: string,
   ): Promise<void> {
-    return this.outpostManager.workspaces.removeRepositoryFromWorkspace(repository, workspaceId);
+    return this.outpostManager.workspaces.removeRepositoryFromWorkspace(
+      repository,
+      workspaceId,
+    );
   }
 
   /**
    * Get all memberships for a workspace
    */
-  async getWorkspaceMemberships(workspaceId: string): Promise<WorkspaceMembership[]> {
+  async getWorkspaceMemberships(
+    workspaceId: string,
+  ): Promise<WorkspaceMembership[]> {
     return this.outpostManager.workspaces.getWorkspaceMemberships(workspaceId);
   }
 
   /**
    * Get all workspaces that contain a specific repository
    */
-  async getRepositoryWorkspaces(repository: AlexandriaEntry | string): Promise<Workspace[]> {
+  async getRepositoryWorkspaces(
+    repository: AlexandriaEntry | string,
+  ): Promise<Workspace[]> {
     return this.outpostManager.workspaces.getRepositoryWorkspaces(repository);
   }
 
@@ -927,10 +955,12 @@ export class AlexandriaRegistryService {
   /**
    * Get all repositories in a workspace
    */
-  async getRepositoriesInWorkspace(workspaceId: string): Promise<AlexandriaEntry[]> {
+  async getRepositoriesInWorkspace(
+    workspaceId: string,
+  ): Promise<AlexandriaEntry[]> {
     return this.outpostManager.workspaces.getRepositoriesInWorkspace(
       workspaceId,
-      this.outpostManager['projectRegistry'] // Access internal projectRegistry
+      this.outpostManager['projectRegistry'], // Access internal projectRegistry
     );
   }
 
@@ -939,9 +969,12 @@ export class AlexandriaRegistryService {
    */
   async isRepositoryInWorkspace(
     repository: AlexandriaEntry | string,
-    workspaceId: string
+    workspaceId: string,
   ): Promise<boolean> {
-    return this.outpostManager.workspaces.isRepositoryInWorkspace(repository, workspaceId);
+    return this.outpostManager.workspaces.isRepositoryInWorkspace(
+      repository,
+      workspaceId,
+    );
   }
 
   // ===== Default Workspace Methods =====

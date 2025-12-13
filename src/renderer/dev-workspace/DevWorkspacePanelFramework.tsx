@@ -6,12 +6,24 @@ import {
 } from '@principal-ade/panel-layouts';
 // CSS is bundled inline in principal-view-panels, no separate import needed
 // Note: code-city-panel CSS is bundled inline, no separate import needed
-import { RepositoryPanelProvider, useRepositoryPanelProvider } from '../contexts/RepositoryPanelContext';
-import { TerminalProvider, useTerminalProvider } from '../contexts/TerminalContext';
-import { AgentHighlightProvider, useAgentHighlightProvider } from '../contexts/AgentHighlightContext';
+import {
+  RepositoryPanelProvider,
+  useRepositoryPanelProvider,
+} from '../contexts/RepositoryPanelContext';
+import {
+  TerminalProvider,
+  useTerminalProvider,
+} from '../contexts/TerminalContext';
+import {
+  AgentHighlightProvider,
+  useAgentHighlightProvider,
+} from '../contexts/AgentHighlightContext';
 import { TabbedTerminalPanel } from '@industry-theme/xterm-terminal-panel';
 import { TabbedGhosttyTerminal } from '@industry-theme/ghostty-terminal-panel';
-import { panels as principalViewPanels, ConfigLibraryBrowserPanel } from '@industry-theme/principal-view-panels';
+import {
+  panels as principalViewPanels,
+  ConfigLibraryBrowserPanel,
+} from '@industry-theme/principal-view-panels';
 import { panels as codeCityPanels } from '@industry-theme/code-city-panel';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import { panels as alexandriaPanels } from '@industry-theme/alexandria-panels';
@@ -41,19 +53,19 @@ interface DevWorkspacePanelFrameworkInnerProps {
 /**
  * Inner component that uses RepositoryPanelProvider, TerminalProvider, and AgentHighlightProvider contexts
  */
-const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerProps> = ({
-  collapsed,
-  onCollapsedChange,
-  layout,
-  onLayoutChange,
-}) => {
+const DevWorkspacePanelFrameworkInner: React.FC<
+  DevWorkspacePanelFrameworkInnerProps
+> = ({ collapsed, onCollapsedChange, layout, onLayoutChange }) => {
   const { theme } = useTheme();
   const { context, actions, events } = useRepositoryPanelProvider();
-  const { context: terminalCtx, actions: terminalActions } = useTerminalProvider();
+  const { context: terminalCtx, actions: terminalActions } =
+    useTerminalProvider();
   const { context: agentHighlightCtx } = useAgentHighlightProvider();
 
   // Load terminal implementation preference (default to xterm)
-  const [terminalImplementation, setTerminalImplementation] = useState<'xterm' | 'ghostty'>('xterm');
+  const [terminalImplementation, setTerminalImplementation] = useState<
+    'xterm' | 'ghostty'
+  >('xterm');
 
   useEffect(() => {
     const loadPreference = async () => {
@@ -78,42 +90,65 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
   const terminalDirectory = terminalCtx.repositoryPath || '/';
 
   // Create merged context for terminal panels (includes terminal sessions)
-  const terminalPanelContext = useMemo(() => ({
-    ...context,
-    terminalSessions: terminalCtx.terminalSessions,
-    terminalContext: terminalCtx.terminalContext,
-  }), [context, terminalCtx.terminalSessions, terminalCtx.terminalContext]);
+  const terminalPanelContext = useMemo(
+    () => ({
+      ...context,
+      terminalSessions: terminalCtx.terminalSessions,
+      terminalContext: terminalCtx.terminalContext,
+    }),
+    [context, terminalCtx.terminalSessions, terminalCtx.terminalContext],
+  );
 
   // Create merged context for Code City panel (includes agent highlight layers)
-  const codeCityPanelContext = useMemo(() => ({
-    ...context,
-    // Add agent highlight layers as a data slice for Code City
-    slices: new Map([
-      ...Array.from(context.slices?.entries() || []),
-      ['agentHighlightLayers', {
-        scope: 'repository' as const,
-        name: 'agentHighlightLayers',
-        data: agentHighlightCtx.highlightLayers,
-        loading: false,
-        error: null,
-        refresh: async () => {
-          // Agent highlight layers are updated reactively from events
-        },
-      }],
-    ]),
-  }), [context, agentHighlightCtx.highlightLayers]);
+  const codeCityPanelContext = useMemo(
+    () => ({
+      ...context,
+      // Add agent highlight layers as a data slice for Code City
+      slices: new Map([
+        ...Array.from(context.slices?.entries() || []),
+        [
+          'agentHighlightLayers',
+          {
+            scope: 'repository' as const,
+            name: 'agentHighlightLayers',
+            data: agentHighlightCtx.highlightLayers,
+            loading: false,
+            error: null,
+            refresh: async () => {
+              // Agent highlight layers are updated reactively from events
+            },
+          },
+        ],
+      ]),
+    }),
+    [context, agentHighlightCtx.highlightLayers],
+  );
 
   const PrincipalViewPanelComponent = principalViewPanels[0]?.component;
   const CodeCityPanelComponent = codeCityPanels[0]?.component;
   const DocsPanelComponent = docsPanels[0]?.component;
-  const DependenciesPanelComponent = repositoryCompositionPanels.find(p => p.metadata?.id === 'industry-theme.dependencies')?.component;
-  const LocalProjectsPanelComponent = alexandriaPanels.find(p => p.metadata?.id === 'industry-theme.local-projects')?.component;
+  const DependenciesPanelComponent = repositoryCompositionPanels.find(
+    (p) => p.metadata?.id === 'industry-theme.dependencies',
+  )?.component;
+  const LocalProjectsPanelComponent = alexandriaPanels.find(
+    (p) => p.metadata?.id === 'industry-theme.local-projects',
+  )?.component;
   const LocalhostPanelComponent = localhostPanels[0]?.component;
-  const EventBusPanelComponent = agentDrivenPanels.find(p => p.metadata?.id === 'industry-theme.event-bus-panel')?.component;
-  const AgentToolsPanelComponent = agentDrivenPanels.find(p => p.metadata?.id === 'industry-theme.agent-tools-panel')?.component;
-  const GitChangesPanelComponent = repositoryCompositionPanels.find(p => p.metadata?.id === 'industry-theme.git-changes')?.component;
-  const PackageCompositionPanelComponent = repositoryCompositionPanels.find(p => p.metadata?.id === 'industry-theme.package-composition')?.component;
-  const CodeQualityPanelComponent = codeQualityPanels.find(p => p.metadata?.id === 'principal-ade.quality-hexagon-panel')?.component;
+  const EventBusPanelComponent = agentDrivenPanels.find(
+    (p) => p.metadata?.id === 'industry-theme.event-bus-panel',
+  )?.component;
+  const AgentToolsPanelComponent = agentDrivenPanels.find(
+    (p) => p.metadata?.id === 'industry-theme.agent-tools-panel',
+  )?.component;
+  const GitChangesPanelComponent = repositoryCompositionPanels.find(
+    (p) => p.metadata?.id === 'industry-theme.git-changes',
+  )?.component;
+  const PackageCompositionPanelComponent = repositoryCompositionPanels.find(
+    (p) => p.metadata?.id === 'industry-theme.package-composition',
+  )?.component;
+  const CodeQualityPanelComponent = codeQualityPanels.find(
+    (p) => p.metadata?.id === 'principal-ade.quality-hexagon-panel',
+  )?.component;
 
   // Define all panels using panel framework components
   const allPanels = useMemo(
@@ -122,36 +157,39 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
         id: 'terminal',
         label: 'Terminal',
         // Note: ghostty panel has different TerminalActions type - see TODO in ghostty-terminal-panel repo
-        content: terminalImplementation === 'ghostty' ? (
-          <TabbedGhosttyTerminal
-            context={terminalPanelContext}
-            actions={terminalActions as never}
-            events={events}
-            terminalContext={terminalContext}
-            directory={terminalDirectory}
-          />
-        ) : (
-          <TabbedTerminalPanel
-            context={terminalPanelContext}
-            actions={terminalActions}
-            events={events}
-            terminalContext={terminalContext}
-            directory={terminalDirectory}
-          />
-        ),
+        content:
+          terminalImplementation === 'ghostty' ? (
+            <TabbedGhosttyTerminal
+              context={terminalPanelContext}
+              actions={terminalActions as never}
+              events={events}
+              terminalContext={terminalContext}
+              directory={terminalDirectory}
+            />
+          ) : (
+            <TabbedTerminalPanel
+              context={terminalPanelContext}
+              actions={terminalActions}
+              events={events}
+              terminalContext={terminalContext}
+              directory={terminalDirectory}
+            />
+          ),
       },
       {
         id: 'principalView',
         label: 'Principal View',
         content: PrincipalViewPanelComponent ? (
-          <div style={{
-            height: '100%',
-            width: '100%',
-            overflow: 'hidden',
-            position: 'relative',
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
             <PrincipalViewPanelComponent
               context={context}
               actions={actions}
@@ -166,14 +204,16 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
         id: 'codeCity',
         label: 'Code City',
         content: CodeCityPanelComponent ? (
-          <div style={{
-            height: '100%',
-            width: '100%',
-            overflow: 'hidden',
-            position: 'relative',
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
             <CodeCityPanelComponent
               context={codeCityPanelContext}
               actions={actions}
@@ -188,14 +228,16 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
         id: 'docs',
         label: 'Documentation',
         content: DocsPanelComponent ? (
-          <div style={{
-            height: '100%',
-            width: '100%',
-            overflow: 'hidden',
-            position: 'relative',
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
             <DocsPanelComponent
               context={context}
               actions={actions}
@@ -210,14 +252,16 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
         id: 'dependencies',
         label: 'Dependencies',
         content: DependenciesPanelComponent ? (
-          <div style={{
-            height: '100%',
-            width: '100%',
-            overflow: 'hidden',
-            position: 'relative',
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
             <DependenciesPanelComponent
               context={context}
               actions={actions}
@@ -232,14 +276,16 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
         id: 'gitChanges',
         label: 'Git Changes',
         content: GitChangesPanelComponent ? (
-          <div style={{
-            height: '100%',
-            width: '100%',
-            overflow: 'hidden',
-            position: 'relative',
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
             <GitChangesPanelComponent
               context={context}
               actions={actions}
@@ -254,14 +300,16 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
         id: 'localhostBrowser',
         label: 'Localhost Browser',
         content: LocalhostPanelComponent ? (
-          <div style={{
-            height: '100%',
-            width: '100%',
-            overflow: 'hidden',
-            position: 'relative',
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
             <LocalhostPanelComponent
               context={context}
               actions={actions}
@@ -276,14 +324,16 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
         id: 'localhostBrowserAlt',
         label: 'Localhost Browser (Alt)',
         content: LocalhostPanelComponent ? (
-          <div style={{
-            height: '100%',
-            width: '100%',
-            overflow: 'hidden',
-            position: 'relative',
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
             <LocalhostPanelComponent
               context={context}
               actions={actions}
@@ -298,14 +348,16 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
         id: 'configLibrary',
         label: 'Config Library',
         content: (
-          <div style={{
-            height: '100%',
-            width: '100%',
-            overflow: 'hidden',
-            position: 'relative',
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
             <ConfigLibraryBrowserPanel
               context={context}
               actions={actions}
@@ -318,14 +370,16 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
         id: 'eventBus',
         label: 'Event Bus',
         content: EventBusPanelComponent ? (
-          <div style={{
-            height: '100%',
-            width: '100%',
-            overflow: 'hidden',
-            position: 'relative',
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
             <EventBusPanelComponent
               context={context}
               actions={actions}
@@ -340,14 +394,16 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
         id: 'agentTools',
         label: 'Agent Tools',
         content: AgentToolsPanelComponent ? (
-          <div style={{
-            height: '100%',
-            width: '100%',
-            overflow: 'hidden',
-            position: 'relative',
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
             <AgentToolsPanelComponent
               context={context}
               actions={actions}
@@ -362,14 +418,16 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
         id: 'localProjects',
         label: 'Local Projects',
         content: LocalProjectsPanelComponent ? (
-          <div style={{
-            height: '100%',
-            width: '100%',
-            overflow: 'hidden',
-            position: 'relative',
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
             <LocalProjectsPanelComponent
               context={context}
               actions={actions}
@@ -384,14 +442,16 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
         id: 'codeQuality',
         label: 'Code Quality',
         content: CodeQualityPanelComponent ? (
-          <div style={{
-            height: '100%',
-            width: '100%',
-            overflow: 'hidden',
-            position: 'relative',
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
             <CodeQualityPanelComponent
               context={context}
               actions={actions}
@@ -406,14 +466,16 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
         id: 'packageComposition',
         label: 'Package Composition',
         content: PackageCompositionPanelComponent ? (
-          <div style={{
-            height: '100%',
-            width: '100%',
-            overflow: 'hidden',
-            position: 'relative',
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
             <PackageCompositionPanelComponent
               context={context}
               actions={actions}
@@ -425,7 +487,28 @@ const DevWorkspacePanelFrameworkInner: React.FC<DevWorkspacePanelFrameworkInnerP
         ),
       },
     ],
-    [PrincipalViewPanelComponent, CodeCityPanelComponent, DocsPanelComponent, DependenciesPanelComponent, LocalProjectsPanelComponent, GitChangesPanelComponent, LocalhostPanelComponent, EventBusPanelComponent, AgentToolsPanelComponent, CodeQualityPanelComponent, PackageCompositionPanelComponent, context, actions, events, terminalImplementation, terminalContext, terminalDirectory, terminalPanelContext, terminalActions, codeCityPanelContext],
+    [
+      PrincipalViewPanelComponent,
+      CodeCityPanelComponent,
+      DocsPanelComponent,
+      DependenciesPanelComponent,
+      LocalProjectsPanelComponent,
+      GitChangesPanelComponent,
+      LocalhostPanelComponent,
+      EventBusPanelComponent,
+      AgentToolsPanelComponent,
+      CodeQualityPanelComponent,
+      PackageCompositionPanelComponent,
+      context,
+      actions,
+      events,
+      terminalImplementation,
+      terminalContext,
+      terminalDirectory,
+      terminalPanelContext,
+      terminalActions,
+      codeCityPanelContext,
+    ],
   );
 
   return (
@@ -473,7 +556,6 @@ export const DevWorkspacePanelFramework: React.FC<
   layout,
   onLayoutChange,
 }) => {
-
   // Use the same terminal context format as legacy MultiTerminalPanel
   // Legacy uses: terminal:${owner}/${name}
   // This ensures terminal sessions are shared when switching between classic and panel framework modes

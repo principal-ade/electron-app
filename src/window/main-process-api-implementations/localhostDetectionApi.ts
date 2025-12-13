@@ -17,7 +17,11 @@ export const localhostDetectionAPI: LocalhostDetectionAPI = {
   },
 
   checkPort: async (port: number, timeout?: number): Promise<boolean> => {
-    return ipcRenderer.invoke(LocalhostDetectionEvents.CHECK_PORT, port, timeout);
+    return ipcRenderer.invoke(
+      LocalhostDetectionEvents.CHECK_PORT,
+      port,
+      timeout,
+    );
   },
 
   getCommonPorts: async (): Promise<number[]> => {

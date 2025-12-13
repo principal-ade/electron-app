@@ -37,19 +37,26 @@ export const presenceAPI: PresenceAPI = {
   connectToPresence: (token: string) =>
     ipcRenderer.invoke(PresenceEvent.CONNECT, token),
 
-  disconnectFromPresence: () =>
-    ipcRenderer.invoke(PresenceEvent.DISCONNECT),
+  disconnectFromPresence: () => ipcRenderer.invoke(PresenceEvent.DISCONNECT),
 
   onPresenceEvent: (callback) => {
     const subscription = (_event: unknown, message: unknown) =>
-      callback(message as import('../../shared/main-process-api-interfaces/PresenceAPI').PresenceEvent);
+      callback(
+        message as import('../../shared/main-process-api-interfaces/PresenceAPI').PresenceEvent,
+      );
     ipcRenderer.on(PresenceEvent.ON_PRESENCE_EVENT, subscription);
     return () =>
       ipcRenderer.removeListener(PresenceEvent.ON_PRESENCE_EVENT, subscription);
   },
 
   reportRepositoryOpened: (owner, repo, branch, localPath) =>
-    ipcRenderer.invoke(PresenceEvent.REPORT_REPO_OPENED, owner, repo, branch, localPath),
+    ipcRenderer.invoke(
+      PresenceEvent.REPORT_REPO_OPENED,
+      owner,
+      repo,
+      branch,
+      localPath,
+    ),
 
   reportRepositoryClosed: (owner, repo) =>
     ipcRenderer.invoke(PresenceEvent.REPORT_REPO_CLOSED, owner, repo),
@@ -63,6 +70,5 @@ export const presenceAPI: PresenceAPI = {
   setVisibility: (visible) =>
     ipcRenderer.invoke(PresenceEvent.SET_VISIBILITY, visible),
 
-  sendHeartbeat: () =>
-    ipcRenderer.invoke(PresenceEvent.SEND_HEARTBEAT),
+  sendHeartbeat: () => ipcRenderer.invoke(PresenceEvent.SEND_HEARTBEAT),
 };

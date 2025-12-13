@@ -28,9 +28,15 @@ export class PresenceService {
     repo: string,
   ): Promise<{ repoId: string; users: UserPresence[]; totalUsers: number }> {
     try {
-      return await window.mainProcess.presence.getUsersInRepository(owner, repo);
+      return await window.mainProcess.presence.getUsersInRepository(
+        owner,
+        repo,
+      );
     } catch (error) {
-      console.error('[PresenceService] Failed to get users in repository:', error);
+      console.error(
+        '[PresenceService] Failed to get users in repository:',
+        error,
+      );
       throw error;
     }
   }
@@ -54,7 +60,10 @@ export class PresenceService {
     try {
       return await window.mainProcess.presence.subscribeToPresence();
     } catch (error) {
-      console.error('[PresenceService] Failed to subscribe to presence:', error);
+      console.error(
+        '[PresenceService] Failed to subscribe to presence:',
+        error,
+      );
       return false;
     }
   }
@@ -66,7 +75,10 @@ export class PresenceService {
     try {
       await window.mainProcess.presence.unsubscribeFromPresence();
     } catch (error) {
-      console.error('[PresenceService] Failed to unsubscribe from presence:', error);
+      console.error(
+        '[PresenceService] Failed to unsubscribe from presence:',
+        error,
+      );
     }
   }
 
@@ -93,14 +105,21 @@ export class PresenceService {
   /**
    * Disconnect from presence-only connection
    */
-  static async disconnectFromPresence(): Promise<{ success: boolean; message?: string }> {
+  static async disconnectFromPresence(): Promise<{
+    success: boolean;
+    message?: string;
+  }> {
     try {
       return await window.mainProcess.presence.disconnectFromPresence();
     } catch (error) {
-      console.error('[PresenceService] Failed to disconnect from presence:', error);
+      console.error(
+        '[PresenceService] Failed to disconnect from presence:',
+        error,
+      );
       return {
         success: false,
-        message: error instanceof Error ? error.message : 'Failed to disconnect',
+        message:
+          error instanceof Error ? error.message : 'Failed to disconnect',
       };
     }
   }
@@ -108,15 +127,20 @@ export class PresenceService {
   /**
    * Listen for presence events via IPC
    */
-  static onPresenceEvent(callback: (event: {
-    type: string;
-    payload: Record<string, unknown>;
-    timestamp: number;
-  }) => void): () => void {
+  static onPresenceEvent(
+    callback: (event: {
+      type: string;
+      payload: Record<string, unknown>;
+      timestamp: number;
+    }) => void,
+  ): () => void {
     try {
       return window.mainProcess.presence.onPresenceEvent(callback);
     } catch (error) {
-      console.error('[PresenceService] Failed to set up presence event listener:', error);
+      console.error(
+        '[PresenceService] Failed to set up presence event listener:',
+        error,
+      );
       // Return no-op cleanup function
       return () => {};
     }
@@ -139,10 +163,16 @@ export class PresenceService {
         localPath,
       );
     } catch (error) {
-      console.error('[PresenceService] Failed to report repository opened:', error);
+      console.error(
+        '[PresenceService] Failed to report repository opened:',
+        error,
+      );
       return {
         success: false,
-        message: error instanceof Error ? error.message : 'Failed to report repository opened',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Failed to report repository opened',
       };
     }
   }
@@ -155,12 +185,21 @@ export class PresenceService {
     repo: string,
   ): Promise<{ success: boolean; message?: string }> {
     try {
-      return await window.mainProcess.presence.reportRepositoryClosed(owner, repo);
+      return await window.mainProcess.presence.reportRepositoryClosed(
+        owner,
+        repo,
+      );
     } catch (error) {
-      console.error('[PresenceService] Failed to report repository closed:', error);
+      console.error(
+        '[PresenceService] Failed to report repository closed:',
+        error,
+      );
       return {
         success: false,
-        message: error instanceof Error ? error.message : 'Failed to report repository closed',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Failed to report repository closed',
       };
     }
   }
@@ -173,12 +212,21 @@ export class PresenceService {
     repo: string,
   ): Promise<{ success: boolean; message?: string }> {
     try {
-      return await window.mainProcess.presence.reportActiveRepository(owner, repo);
+      return await window.mainProcess.presence.reportActiveRepository(
+        owner,
+        repo,
+      );
     } catch (error) {
-      console.error('[PresenceService] Failed to report active repository:', error);
+      console.error(
+        '[PresenceService] Failed to report active repository:',
+        error,
+      );
       return {
         success: false,
-        message: error instanceof Error ? error.message : 'Failed to report active repository',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Failed to report active repository',
       };
     }
   }
@@ -196,7 +244,8 @@ export class PresenceService {
       console.error('[PresenceService] Failed to update status:', error);
       return {
         success: false,
-        message: error instanceof Error ? error.message : 'Failed to update status',
+        message:
+          error instanceof Error ? error.message : 'Failed to update status',
       };
     }
   }
@@ -204,14 +253,17 @@ export class PresenceService {
   /**
    * Set user visibility (visible/invisible mode)
    */
-  static async setVisibility(visible: boolean): Promise<{ success: boolean; message?: string }> {
+  static async setVisibility(
+    visible: boolean,
+  ): Promise<{ success: boolean; message?: string }> {
     try {
       return await window.mainProcess.presence.setVisibility(visible);
     } catch (error) {
       console.error('[PresenceService] Failed to set visibility:', error);
       return {
         success: false,
-        message: error instanceof Error ? error.message : 'Failed to set visibility',
+        message:
+          error instanceof Error ? error.message : 'Failed to set visibility',
       };
     }
   }
@@ -219,14 +271,18 @@ export class PresenceService {
   /**
    * Send a heartbeat to keep presence alive
    */
-  static async sendHeartbeat(): Promise<{ success: boolean; message?: string }> {
+  static async sendHeartbeat(): Promise<{
+    success: boolean;
+    message?: string;
+  }> {
     try {
       return await window.mainProcess.presence.sendHeartbeat();
     } catch (error) {
       console.error('[PresenceService] Failed to send heartbeat:', error);
       return {
         success: false,
-        message: error instanceof Error ? error.message : 'Failed to send heartbeat',
+        message:
+          error instanceof Error ? error.message : 'Failed to send heartbeat',
       };
     }
   }

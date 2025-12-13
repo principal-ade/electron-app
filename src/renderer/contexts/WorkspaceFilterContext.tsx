@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useEffect,
+} from 'react';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 
@@ -10,17 +16,21 @@ interface WorkspaceFilterContextValue {
   defaultWorkspace: Workspace | null;
 }
 
-const WorkspaceFilterContext = createContext<WorkspaceFilterContextValue | undefined>(
-  undefined,
-);
+const WorkspaceFilterContext = createContext<
+  WorkspaceFilterContextValue | undefined
+>(undefined);
 
 export const WorkspaceFilterProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const [selectedWorkspace, setSelectedWorkspace] = useState<Workspace | null>(null);
+  const [selectedWorkspace, setSelectedWorkspace] = useState<Workspace | null>(
+    null,
+  );
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [loading, setLoading] = useState(true);
-  const [defaultWorkspace, setDefaultWorkspace] = useState<Workspace | null>(null);
+  const [defaultWorkspace, setDefaultWorkspace] = useState<Workspace | null>(
+    null,
+  );
 
   // Load workspaces on mount
   useEffect(() => {
@@ -34,7 +44,10 @@ export const WorkspaceFilterProvider: React.FC<{ children: ReactNode }> = ({
         setWorkspaces(allWorkspaces);
         setDefaultWorkspace(defaultWs);
       } catch (error) {
-        console.error('[WorkspaceFilterContext] Failed to load workspaces:', error);
+        console.error(
+          '[WorkspaceFilterContext] Failed to load workspaces:',
+          error,
+        );
       } finally {
         setLoading(false);
       }
@@ -68,7 +81,9 @@ export const WorkspaceFilterProvider: React.FC<{ children: ReactNode }> = ({
 export const useWorkspaceFilter = (): WorkspaceFilterContextValue => {
   const context = useContext(WorkspaceFilterContext);
   if (!context) {
-    throw new Error('useWorkspaceFilter must be used within a WorkspaceFilterProvider');
+    throw new Error(
+      'useWorkspaceFilter must be used within a WorkspaceFilterProvider',
+    );
   }
   return context;
 };

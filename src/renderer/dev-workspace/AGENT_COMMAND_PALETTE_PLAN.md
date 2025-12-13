@@ -295,15 +295,15 @@ Panel tools are UTCP-compatible function definitions that AI agents and command 
 
 The `layoutTools` array from `@principal-ade/panel-layouts` includes:
 
-| Tool Name | Event Emitted | Description |
-|-----------|---------------|-------------|
-| `toggle_panel` | `panel:toggle` | Collapse/expand a side panel |
-| `collapse_all_panels` | `panel:collapse-all` | Collapse both sidebars |
-| `expand_all_panels` | `panel:expand-all` | Expand both sidebars |
-| `switch_panel` | `panel:switch` | Change panel content in a slot |
-| `focus_panel` | `panel:focus` | Set focus to a panel slot |
-| `reset_layout` | `panel:reset-layout` | Reset to default layout |
-| `get_visible_panels` | `panel:get-visibility` | Query current panel visibility |
+| Tool Name             | Event Emitted          | Description                    |
+| --------------------- | ---------------------- | ------------------------------ |
+| `toggle_panel`        | `panel:toggle`         | Collapse/expand a side panel   |
+| `collapse_all_panels` | `panel:collapse-all`   | Collapse both sidebars         |
+| `expand_all_panels`   | `panel:expand-all`     | Expand both sidebars           |
+| `switch_panel`        | `panel:switch`         | Change panel content in a slot |
+| `focus_panel`         | `panel:focus`          | Set focus to a panel slot      |
+| `reset_layout`        | `panel:reset-layout`   | Reset to default layout        |
+| `get_visible_panels`  | `panel:get-visibility` | Query current panel visibility |
 
 ### Registering Custom Tools
 
@@ -334,15 +334,15 @@ useEffect(() => {
 
 ```typescript
 interface PanelTool {
-  name: string;                    // Tool identifier
-  description: string;             // For AI to understand purpose
-  inputs: JsonSchema;              // JSON Schema for parameters
-  outputs: JsonSchema;             // JSON Schema for return value
-  tags: string[];                  // For search/discovery
+  name: string; // Tool identifier
+  description: string; // For AI to understand purpose
+  inputs: JsonSchema; // JSON Schema for parameters
+  outputs: JsonSchema; // JSON Schema for return value
+  tags: string[]; // For search/discovery
   tool_call_template: {
     call_template_type: 'panel_event';
-    event_type: string;            // Event to emit when invoked
-    target_panel?: string;         // Optional specific panel target
+    event_type: string; // Event to emit when invoked
+    target_panel?: string; // Optional specific panel target
   };
 }
 ```
@@ -388,6 +388,7 @@ npm install @principal-ade/panel-layouts@^0.2.8
 **File:** `electron-app/package.json`
 
 Update the panel-layouts dependency:
+
 ```json
 "@principal-ade/panel-layouts": "^0.2.8"
 ```
@@ -450,14 +451,17 @@ import {
   useAgentCommandPalette,
   layoutTools,
 } from '@principal-ade/panel-layouts';
-import { useDevWorkspaceEvents, DevWorkspaceEventProvider } from './DevWorkspaceEventContext';
+import {
+  useDevWorkspaceEvents,
+  DevWorkspaceEventProvider,
+} from './DevWorkspaceEventContext';
 
 // Inside DevWorkspaceApp component (after wrapping with provider)
 const { events } = useDevWorkspaceEvents();
 
 const agentPalette = useAgentCommandPalette({
   events,
-  keyboard: { key: 'p', altKey: true },  // Alt+P to open
+  keyboard: { key: 'p', altKey: true }, // Alt+P to open
   config: {
     placeholder: 'What would you like to do?',
     autoCloseDelay: 1500,
@@ -481,36 +485,39 @@ const agentPalette = useAgentCommandPalette({
 Add a tool execution handler for quick commands (commands prefixed with `/`):
 
 ```typescript
-const handleQuickCommand = useCallback(async (name: string, args: Record<string, unknown>) => {
-  switch (name) {
-    case 'toggle':
-      const panel = (args.args as string[])?.[0];
-      if (panel === 'left') {
-        setCollapsed(prev => ({ ...prev, left: !prev.left }));
-      } else if (panel === 'right') {
-        setCollapsed(prev => ({ ...prev, right: !prev.right }));
-      }
-      return { success: true };
+const handleQuickCommand = useCallback(
+  async (name: string, args: Record<string, unknown>) => {
+    switch (name) {
+      case 'toggle':
+        const panel = (args.args as string[])?.[0];
+        if (panel === 'left') {
+          setCollapsed((prev) => ({ ...prev, left: !prev.left }));
+        } else if (panel === 'right') {
+          setCollapsed((prev) => ({ ...prev, right: !prev.right }));
+        }
+        return { success: true };
 
-    case 'collapse':
-      setCollapsed({ left: true, right: true });
-      return { success: true };
+      case 'collapse':
+        setCollapsed({ left: true, right: true });
+        return { success: true };
 
-    case 'expand':
-      setCollapsed({ left: false, right: false });
-      return { success: true };
+      case 'expand':
+        setCollapsed({ left: false, right: false });
+        return { success: true };
 
-    case 'switch':
-      const [slot, panelName] = (args.args as string[]) || [];
-      if (slot && panelName) {
-        setLayout(prev => ({ ...prev, [slot]: panelName }));
-      }
-      return { success: true };
+      case 'switch':
+        const [slot, panelName] = (args.args as string[]) || [];
+        if (slot && panelName) {
+          setLayout((prev) => ({ ...prev, [slot]: panelName }));
+        }
+        return { success: true };
 
-    default:
-      return { error: `Unknown command: ${name}` };
-  }
-}, []);
+      default:
+        return { error: `Unknown command: ${name}` };
+    }
+  },
+  [],
+);
 ```
 
 ---
@@ -576,41 +583,47 @@ import { AIService } from '../main-process-api/AIService';
 useEffect(() => {
   if (!events) return;
 
-  const unsubscribe = events.on('agent-command-palette:submit', async (event) => {
-    const { query, mode } = event.payload as { query: string; mode: string };
+  const unsubscribe = events.on(
+    'agent-command-palette:submit',
+    async (event) => {
+      const { query, mode } = event.payload as { query: string; mode: string };
 
-    if (mode === 'quick-command') {
-      // Handled by onExecuteTool callback
-      return;
-    }
-
-    // Natural language mode - send to AI via service
-    try {
-      agentPalette.setStatus?.('thinking');
-
-      // Use AIService instead of direct window.mainProcess call
-      const response = await AIService.processNaturalLanguage(query, layoutTools);
-
-      if (response.error) {
-        agentPalette.setStatus?.('error');
-        console.error('[DevWorkspace] AI processing failed:', response.error);
+      if (mode === 'quick-command') {
+        // Handled by onExecuteTool callback
         return;
       }
 
-      // Execute returned tool calls
-      for (const toolCall of response.toolCalls || []) {
-        await executeToolFromAI(toolCall.name, toolCall.args);
-      }
+      // Natural language mode - send to AI via service
+      try {
+        agentPalette.setStatus?.('thinking');
 
-      agentPalette.setStatus?.('complete');
-      if (response.message) {
-        agentPalette.setAgentResponse?.(response.message);
+        // Use AIService instead of direct window.mainProcess call
+        const response = await AIService.processNaturalLanguage(
+          query,
+          layoutTools,
+        );
+
+        if (response.error) {
+          agentPalette.setStatus?.('error');
+          console.error('[DevWorkspace] AI processing failed:', response.error);
+          return;
+        }
+
+        // Execute returned tool calls
+        for (const toolCall of response.toolCalls || []) {
+          await executeToolFromAI(toolCall.name, toolCall.args);
+        }
+
+        agentPalette.setStatus?.('complete');
+        if (response.message) {
+          agentPalette.setAgentResponse?.(response.message);
+        }
+      } catch (error) {
+        agentPalette.setStatus?.('error');
+        console.error('[DevWorkspace] AI processing failed:', error);
       }
-    } catch (error) {
-      agentPalette.setStatus?.('error');
-      console.error('[DevWorkspace] AI processing failed:', error);
-    }
-  });
+    },
+  );
 
   return () => unsubscribe();
 }, [events, agentPalette]);
@@ -632,50 +645,64 @@ If you don't need natural language processing, just use quick commands:
 **File:** `electron-app/src/renderer/dev-workspace/DevWorkspaceApp.tsx`
 
 ```typescript
-const executeToolFromAI = useCallback(async (name: string, args: Record<string, unknown>) => {
-  const toolId = `ai-${Date.now()}`;
-  agentPalette.addPendingTool?.({ id: toolId, name, args });
-  agentPalette.updateToolStatus?.(toolId, 'running');
+const executeToolFromAI = useCallback(
+  async (name: string, args: Record<string, unknown>) => {
+    const toolId = `ai-${Date.now()}`;
+    agentPalette.addPendingTool?.({ id: toolId, name, args });
+    agentPalette.updateToolStatus?.(toolId, 'running');
 
-  try {
-    switch (name) {
-      case 'toggle_panel':
-        const panel = args.panel as 'left' | 'right';
-        setCollapsed(prev => ({ ...prev, [panel]: !prev[panel] }));
-        break;
+    try {
+      switch (name) {
+        case 'toggle_panel':
+          const panel = args.panel as 'left' | 'right';
+          setCollapsed((prev) => ({ ...prev, [panel]: !prev[panel] }));
+          break;
 
-      case 'collapse_all_panels':
-        setCollapsed({ left: true, right: true });
-        break;
+        case 'collapse_all_panels':
+          setCollapsed({ left: true, right: true });
+          break;
 
-      case 'expand_all_panels':
-        setCollapsed({ left: false, right: false });
-        break;
+        case 'expand_all_panels':
+          setCollapsed({ left: false, right: false });
+          break;
 
-      case 'switch_panel':
-        const { slot, panel: newPanel } = args as { slot: string; panel: string };
-        setLayout(prev => ({ ...prev, [slot]: newPanel }));
-        break;
+        case 'switch_panel':
+          const { slot, panel: newPanel } = args as {
+            slot: string;
+            panel: string;
+          };
+          setLayout((prev) => ({ ...prev, [slot]: newPanel }));
+          break;
 
-      case 'focus_panel':
-        // If you have focus management, handle it here
-        break;
+        case 'focus_panel':
+          // If you have focus management, handle it here
+          break;
 
-      case 'reset_layout':
-        setLayout({ left: 'visualValidation', middle: 'terminal', right: '' });
-        setCollapsed({ left: false, right: true });
-        break;
+        case 'reset_layout':
+          setLayout({
+            left: 'visualValidation',
+            middle: 'terminal',
+            right: '',
+          });
+          setCollapsed({ left: false, right: true });
+          break;
 
-      default:
-        throw new Error(`Unknown tool: ${name}`);
+        default:
+          throw new Error(`Unknown tool: ${name}`);
+      }
+
+      agentPalette.updateToolStatus?.(toolId, 'success');
+    } catch (error) {
+      agentPalette.updateToolStatus?.(
+        toolId,
+        'error',
+        undefined,
+        error instanceof Error ? error.message : 'Unknown error',
+      );
     }
-
-    agentPalette.updateToolStatus?.(toolId, 'success');
-  } catch (error) {
-    agentPalette.updateToolStatus?.(toolId, 'error', undefined,
-      error instanceof Error ? error.message : 'Unknown error');
-  }
-}, [agentPalette]);
+  },
+  [agentPalette],
+);
 ```
 
 ---
@@ -691,7 +718,7 @@ useEffect(() => {
   const listeners = [
     events.on('panel:toggle', (event) => {
       const { panel } = event.payload as { panel: 'left' | 'right' };
-      setCollapsed(prev => ({ ...prev, [panel]: !prev[panel] }));
+      setCollapsed((prev) => ({ ...prev, [panel]: !prev[panel] }));
     }),
     events.on('panel:collapse-all', () => {
       setCollapsed({ left: true, right: true });
@@ -701,7 +728,7 @@ useEffect(() => {
     }),
     events.on('panel:switch', (event) => {
       const { slot, panel } = event.payload as { slot: string; panel: string };
-      setLayout(prev => ({ ...prev, [slot]: panel }));
+      setLayout((prev) => ({ ...prev, [slot]: panel }));
     }),
     events.on('panel:reset-layout', () => {
       setLayout({ left: 'visualValidation', middle: 'terminal', right: '' });
@@ -709,7 +736,7 @@ useEffect(() => {
     }),
   ];
 
-  return () => listeners.forEach(unsub => unsub());
+  return () => listeners.forEach((unsub) => unsub());
 }, [events]);
 ```
 
@@ -726,11 +753,11 @@ return (
   <DevWorkspaceEventProvider>
     <div className="h-screen w-screen overflow-hidden bg-gray-900 flex flex-col">
       <DevWorkspaceTitlebar
-        // ... existing props
+      // ... existing props
       />
       <div className="flex-1 overflow-hidden">
         <DevWorkspacePanelFramework
-          // ... existing props
+        // ... existing props
         />
       </div>
 
@@ -774,13 +801,13 @@ interface DevWorkspaceAPI {
 
 ## File Changes Summary
 
-| File | Action | Description |
-|------|--------|-------------|
-| `package.json` | Edit | Update `@principal-ade/panel-layouts` to `^0.2.8` |
-| `DevWorkspaceEventContext.tsx` | Create | New event emitter context |
-| `DevWorkspaceApp.tsx` | Edit | Add imports, hook, handlers, and render component |
-| `AIService.ts` | Create | Service wrapper for AI IPC (in `main-process-api/`) |
-| `global.d.ts` | Edit | Add AI IPC type declarations (optional) |
+| File                           | Action | Description                                         |
+| ------------------------------ | ------ | --------------------------------------------------- |
+| `package.json`                 | Edit   | Update `@principal-ade/panel-layouts` to `^0.2.8`   |
+| `DevWorkspaceEventContext.tsx` | Create | New event emitter context                           |
+| `DevWorkspaceApp.tsx`          | Edit   | Add imports, hook, handlers, and render component   |
+| `AIService.ts`                 | Create | Service wrapper for AI IPC (in `main-process-api/`) |
+| `global.d.ts`                  | Edit   | Add AI IPC type declarations (optional)             |
 
 ---
 
@@ -788,25 +815,25 @@ interface DevWorkspaceAPI {
 
 After integration, users can use these quick commands (prefix with `/`):
 
-| Command | Description |
-|---------|-------------|
-| `/toggle left` | Toggle left sidebar |
-| `/toggle right` | Toggle right sidebar |
-| `/collapse` | Collapse all sidebars |
-| `/expand` | Expand all sidebars |
-| `/switch left terminal` | Switch left panel to terminal |
+| Command                           | Description                              |
+| --------------------------------- | ---------------------------------------- |
+| `/toggle left`                    | Toggle left sidebar                      |
+| `/toggle right`                   | Toggle right sidebar                     |
+| `/collapse`                       | Collapse all sidebars                    |
+| `/expand`                         | Expand all sidebars                      |
+| `/switch left terminal`           | Switch left panel to terminal            |
 | `/switch middle visualValidation` | Switch middle panel to visual validation |
 
 ---
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| `Alt+P` | Open Agent Command Palette |
-| `Enter` | Execute command |
-| `Escape` | Close palette |
-| `↑` / `↓` | Navigate command history |
+| Shortcut  | Action                     |
+| --------- | -------------------------- |
+| `Alt+P`   | Open Agent Command Palette |
+| `Enter`   | Execute command            |
+| `Escape`  | Close palette              |
+| `↑` / `↓` | Navigate command history   |
 
 ---
 

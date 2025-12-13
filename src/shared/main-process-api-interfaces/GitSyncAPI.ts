@@ -154,7 +154,10 @@ export interface GitSyncAPI {
   /**
    * Check if a service is available
    */
-  checkService(url: string, serviceName: string): Promise<{ available: boolean; status?: number; error?: string }>;
+  checkService(
+    url: string,
+    serviceName: string,
+  ): Promise<{ available: boolean; status?: number; error?: string }>;
 
   /**
    * Set the environment (dev or prod) for GitSync servers

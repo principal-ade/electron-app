@@ -68,7 +68,10 @@ try {
   contextBridge.exposeInMainWorld('appName', 'Principal ADE - Extensions');
   console.info('[Preload-ExtensionWindow] ✅ AppName exposed');
 } catch (error) {
-  console.error('[Preload-ExtensionWindow] ❌ Failed to expose appName:', error);
+  console.error(
+    '[Preload-ExtensionWindow] ❌ Failed to expose appName:',
+    error,
+  );
 }
 
 console.info(

@@ -2,7 +2,11 @@
  * IPC API interface for Workspace management
  */
 
-import type { Workspace, WorkspaceMembership, AlexandriaEntry } from '@principal-ai/alexandria-core-library';
+import type {
+  Workspace,
+  WorkspaceMembership,
+  AlexandriaEntry,
+} from '@principal-ai/alexandria-core-library';
 
 export enum WorkspaceAPIEvent {
   // Workspace CRUD
@@ -50,14 +54,18 @@ export interface WorkspaceAPI {
    * @param callback - Function to call when workspaces change
    * @returns Unsubscribe function
    */
-  onWorkspaceChange(callback: (event: WorkspaceChangeEvent) => void): () => void;
+  onWorkspaceChange(
+    callback: (event: WorkspaceChangeEvent) => void,
+  ): () => void;
 
   // ===== Workspace CRUD =====
 
   /**
    * Create a new workspace
    */
-  createWorkspace(workspace: Omit<Workspace, 'id' | 'createdAt' | 'updatedAt'>): Promise<Workspace>;
+  createWorkspace(
+    workspace: Omit<Workspace, 'id' | 'createdAt' | 'updatedAt'>,
+  ): Promise<Workspace>;
 
   /**
    * Get a specific workspace by ID
@@ -72,7 +80,10 @@ export interface WorkspaceAPI {
   /**
    * Update an existing workspace
    */
-  updateWorkspace(id: string, updates: Partial<Omit<Workspace, 'id' | 'createdAt'>>): Promise<Workspace>;
+  updateWorkspace(
+    id: string,
+    updates: Partial<Omit<Workspace, 'id' | 'createdAt'>>,
+  ): Promise<Workspace>;
 
   /**
    * Delete a workspace
@@ -84,12 +95,19 @@ export interface WorkspaceAPI {
   /**
    * Add a repository to a workspace
    */
-  addRepositoryToWorkspace(repository: AlexandriaEntry | string, workspaceId: string, metadata?: Record<string, unknown>): Promise<void>;
+  addRepositoryToWorkspace(
+    repository: AlexandriaEntry | string,
+    workspaceId: string,
+    metadata?: Record<string, unknown>,
+  ): Promise<void>;
 
   /**
    * Remove a repository from a workspace
    */
-  removeRepositoryFromWorkspace(repository: AlexandriaEntry | string, workspaceId: string): Promise<void>;
+  removeRepositoryFromWorkspace(
+    repository: AlexandriaEntry | string,
+    workspaceId: string,
+  ): Promise<void>;
 
   /**
    * Get all memberships for a workspace
@@ -99,7 +117,9 @@ export interface WorkspaceAPI {
   /**
    * Get all workspaces that contain a specific repository
    */
-  getRepositoryWorkspaces(repository: AlexandriaEntry | string): Promise<Workspace[]>;
+  getRepositoryWorkspaces(
+    repository: AlexandriaEntry | string,
+  ): Promise<Workspace[]>;
 
   // ===== Query Methods =====
 
@@ -111,7 +131,10 @@ export interface WorkspaceAPI {
   /**
    * Check if a repository is in a workspace
    */
-  isRepositoryInWorkspace(repository: AlexandriaEntry | string, workspaceId: string): Promise<boolean>;
+  isRepositoryInWorkspace(
+    repository: AlexandriaEntry | string,
+    workspaceId: string,
+  ): Promise<boolean>;
 
   // ===== Default Workspace =====
 
@@ -131,12 +154,18 @@ export interface WorkspaceAPI {
    * Check if a repository is located under the workspace's suggestedClonePath
    * @returns true if in directory, false if not, null if workspace has no suggestedClonePath
    */
-  isRepositoryInWorkspaceDirectory(repository: AlexandriaEntry, workspaceId: string): Promise<boolean | null>;
+  isRepositoryInWorkspaceDirectory(
+    repository: AlexandriaEntry,
+    workspaceId: string,
+  ): Promise<boolean | null>;
 
   /**
    * Move a repository to the workspace's suggestedClonePath
    * @returns The new path of the repository after moving
    * @throws Error if workspace has no suggestedClonePath or if move fails
    */
-  moveRepositoryToWorkspaceDirectory(repository: AlexandriaEntry, workspaceId: string): Promise<string>;
+  moveRepositoryToWorkspaceDirectory(
+    repository: AlexandriaEntry,
+    workspaceId: string,
+  ): Promise<string>;
 }

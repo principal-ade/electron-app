@@ -2,7 +2,10 @@
  * IPC API interface for Alexandria repository management
  */
 
-import type { AlexandriaEntry, CodebaseView } from '@principal-ai/alexandria-core-library';
+import type {
+  AlexandriaEntry,
+  CodebaseView,
+} from '@principal-ai/alexandria-core-library';
 
 export enum AlexandriaEventType {
   ADDED = 'added',

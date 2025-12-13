@@ -353,13 +353,7 @@ export class WorkspaceLayoutService {
         layout: {
           left: {
             type: 'tabs',
-            panels: [
-              'tasks',
-              'dependencies',
-              'fileTree',
-              'docs',
-              'drawings',
-            ],
+            panels: ['tasks', 'dependencies', 'fileTree', 'docs', 'drawings'],
             config: { defaultActiveTab: 0, tabPosition: 'top' },
           },
           middle: 'multiTerminal',

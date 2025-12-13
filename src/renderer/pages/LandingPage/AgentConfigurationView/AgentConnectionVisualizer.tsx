@@ -152,9 +152,7 @@ export const AgentConnectionVisualizer: React.FC<
             height="50"
             style={{ pointerEvents: 'none' }}
           >
-            <div
-              className="flex flex-col items-center justify-center w-full h-full"
-            >
+            <div className="flex flex-col items-center justify-center w-full h-full">
               <Database
                 size={
                   isHoveringPrincipalADE && hasHooks && isInstalled ? 22 : 20

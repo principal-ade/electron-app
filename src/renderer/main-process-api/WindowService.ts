@@ -115,7 +115,10 @@ export class WindowService {
         options,
       );
     } catch (error) {
-      console.error('[WindowService] Failed to open markdown view from repository:', error);
+      console.error(
+        '[WindowService] Failed to open markdown view from repository:',
+        error,
+      );
       throw new Error('Failed to open markdown view window');
     }
   }

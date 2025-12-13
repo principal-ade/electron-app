@@ -122,10 +122,14 @@ export class OrbitWebSocketManager {
   private readonly DEFAULT_PROD_AUTH = APP_BRANDING.AUTH_SERVER_URL.PRODUCTION;
 
   private constructor() {
-    this.serverUrl = process.env.GIT_SYNC_SERVER_URL || this.DEFAULT_PROD_SERVER;
+    this.serverUrl =
+      process.env.GIT_SYNC_SERVER_URL || this.DEFAULT_PROD_SERVER;
     this.authServerUrl = process.env.AUTH_SERVER_URL || this.DEFAULT_PROD_AUTH;
 
-    console.log('[OrbitWebSocketManager] Initialized with server:', this.serverUrl);
+    console.log(
+      '[OrbitWebSocketManager] Initialized with server:',
+      this.serverUrl,
+    );
   }
 
   static getInstance(): OrbitWebSocketManager {
@@ -242,7 +246,8 @@ export class OrbitWebSocketManager {
         peers: [],
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to connect';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to connect';
       console.error('[OrbitWebSocketManager] Failed to connect:', error);
 
       this.connections.delete(connectionId);
@@ -264,10 +269,14 @@ export class OrbitWebSocketManager {
 
       // Send authenticate message
       try {
-        const authAdapter = client['auth'] as { getCurrentToken?: () => string };
+        const authAdapter = client['auth'] as {
+          getCurrentToken?: () => string;
+        };
         const token = authAdapter?.getCurrentToken?.();
         if (token) {
-          const transport = client['transport'] as { send: (msg: unknown) => Promise<void> };
+          const transport = client['transport'] as {
+            send: (msg: unknown) => Promise<void>;
+          };
           await transport.send({
             type: 'authenticate',
             payload: { token },
@@ -431,10 +440,16 @@ export class OrbitWebSocketManager {
 
       await connectionInfo.client.broadcast(event);
 
-      console.log('[OrbitWebSocketManager] Signal sent:', signalType, '→', targetPeerId);
+      console.log(
+        '[OrbitWebSocketManager] Signal sent:',
+        signalType,
+        '→',
+        targetPeerId,
+      );
       return { success: true };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to send signal';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to send signal';
       console.error('[OrbitWebSocketManager] Failed to send signal:', error);
       return { success: false, error: errorMessage };
     }
@@ -454,7 +469,9 @@ export class OrbitWebSocketManager {
   /**
    * Disconnect from a collaboration session
    */
-  async disconnect(connectionId: string): Promise<{ success: boolean; message?: string }> {
+  async disconnect(
+    connectionId: string,
+  ): Promise<{ success: boolean; message?: string }> {
     const connectionInfo = this.connections.get(connectionId);
 
     if (!connectionInfo) {
@@ -478,7 +495,9 @@ export class OrbitWebSocketManager {
    * Disconnect all connections owned by a specific window
    */
   disconnectForWindow(windowId: number): void {
-    console.log(`[OrbitWebSocketManager] Disconnecting connections for window ${windowId}`);
+    console.log(
+      `[OrbitWebSocketManager] Disconnecting connections for window ${windowId}`,
+    );
 
     const toDisconnect: string[] = [];
 
@@ -488,7 +507,9 @@ export class OrbitWebSocketManager {
       }
     }
 
-    console.log(`[OrbitWebSocketManager] Found ${toDisconnect.length} connections to disconnect`);
+    console.log(
+      `[OrbitWebSocketManager] Found ${toDisconnect.length} connections to disconnect`,
+    );
 
     for (const id of toDisconnect) {
       this.disconnect(id);
@@ -539,25 +560,35 @@ export class OrbitWebSocketManager {
     try {
       const agentId = await deviceIdService.getDeviceId();
 
-      const response = await fetch(`${this.authServerUrl}/api/auth/cli/orbit-token`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          github_token: githubToken,
-          repo_url: repoUrl,
-          device_id: agentId,
-        }),
-      });
+      const response = await fetch(
+        `${this.authServerUrl}/api/auth/cli/orbit-token`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            github_token: githubToken,
+            repo_url: repoUrl,
+            device_id: agentId,
+          }),
+        },
+      );
 
       if (!response.ok) {
-        const errorData = (await response.json().catch(() => ({}))) as ErrorResponse;
-        throw new Error(errorData.error || `Failed to get orbit token: ${response.status}`);
+        const errorData = (await response
+          .json()
+          .catch(() => ({}))) as ErrorResponse;
+        throw new Error(
+          errorData.error || `Failed to get orbit token: ${response.status}`,
+        );
       }
 
       const data = (await response.json()) as OrbitTokenResponse;
       return data;
     } catch (error) {
-      console.error('[OrbitWebSocketManager] Failed to get orbit token:', error);
+      console.error(
+        '[OrbitWebSocketManager] Failed to get orbit token:',
+        error,
+      );
       throw error;
     }
   }

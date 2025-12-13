@@ -281,7 +281,8 @@ export class JWTService {
           console.log(`[JWTService] Access granted for ${params.repoId}`);
 
           // Get stable device ID (persisted across restarts)
-          const agentId = params.agentId || await deviceIdService.getDeviceId();
+          const agentId =
+            params.agentId || (await deviceIdService.getDeviceId());
           const branch = params.branch || 'main';
 
           // Map GitHub permissions to sync permissions

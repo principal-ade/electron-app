@@ -23,7 +23,11 @@ import type {
 import { ExtensionAPIEvents } from '../../shared/main-process-api-interfaces/ExtensionAPI';
 import { UserPreferencesHandler } from '../stores/userPreferencesHandler';
 
-const DEFAULT_EXTENSIONS_DIR = path.join(os.homedir(), '.principal', 'extensions');
+const DEFAULT_EXTENSIONS_DIR = path.join(
+  os.homedir(),
+  '.principal',
+  'extensions',
+);
 const EXTENSIONS_REGISTRY_FILE = 'extensions.json';
 const EXTENSION_CACHE_FILE = 'extension-cache.json';
 
@@ -75,7 +79,9 @@ export class ExtensionDiscoveryService {
       }
     } catch (error) {
       // UserPreferencesHandler may not be initialized yet, use default
-      console.log('[ExtensionDiscoveryService] Using default extensions directory');
+      console.log(
+        '[ExtensionDiscoveryService] Using default extensions directory',
+      );
     }
 
     // Ensure extensions directory exists
@@ -87,7 +93,10 @@ export class ExtensionDiscoveryService {
     // Load cache
     await this.loadCache();
 
-    console.log('[ExtensionDiscoveryService] Initialized with directory:', this.extensionsDirectory);
+    console.log(
+      '[ExtensionDiscoveryService] Initialized with directory:',
+      this.extensionsDirectory,
+    );
   }
 
   /**
@@ -114,7 +123,10 @@ export class ExtensionDiscoveryService {
     try {
       if (!fs.existsSync(this.extensionsDirectory)) {
         await fs.promises.mkdir(this.extensionsDirectory, { recursive: true });
-        console.log('[ExtensionDiscoveryService] Created extensions directory:', this.extensionsDirectory);
+        console.log(
+          '[ExtensionDiscoveryService] Created extensions directory:',
+          this.extensionsDirectory,
+        );
       }
 
       // Ensure .principal directory exists (parent of extensions)
@@ -123,7 +135,10 @@ export class ExtensionDiscoveryService {
         await fs.promises.mkdir(principalDir, { recursive: true });
       }
     } catch (error) {
-      console.error('[ExtensionDiscoveryService] Failed to create extensions directory:', error);
+      console.error(
+        '[ExtensionDiscoveryService] Failed to create extensions directory:',
+        error,
+      );
     }
   }
 
@@ -131,7 +146,10 @@ export class ExtensionDiscoveryService {
    * Load the extension registry from disk
    */
   private async loadRegistry(): Promise<void> {
-    const registryPath = path.join(path.dirname(this.extensionsDirectory), EXTENSIONS_REGISTRY_FILE);
+    const registryPath = path.join(
+      path.dirname(this.extensionsDirectory),
+      EXTENSIONS_REGISTRY_FILE,
+    );
 
     try {
       if (fs.existsSync(registryPath)) {
@@ -141,7 +159,10 @@ export class ExtensionDiscoveryService {
         this.registry = { installed: {} };
       }
     } catch (error) {
-      console.error('[ExtensionDiscoveryService] Failed to load registry:', error);
+      console.error(
+        '[ExtensionDiscoveryService] Failed to load registry:',
+        error,
+      );
       this.registry = { installed: {} };
     }
   }
@@ -150,12 +171,22 @@ export class ExtensionDiscoveryService {
    * Save the extension registry to disk
    */
   private async saveRegistry(): Promise<void> {
-    const registryPath = path.join(path.dirname(this.extensionsDirectory), EXTENSIONS_REGISTRY_FILE);
+    const registryPath = path.join(
+      path.dirname(this.extensionsDirectory),
+      EXTENSIONS_REGISTRY_FILE,
+    );
 
     try {
-      await fs.promises.writeFile(registryPath, JSON.stringify(this.registry, null, 2), 'utf-8');
+      await fs.promises.writeFile(
+        registryPath,
+        JSON.stringify(this.registry, null, 2),
+        'utf-8',
+      );
     } catch (error) {
-      console.error('[ExtensionDiscoveryService] Failed to save registry:', error);
+      console.error(
+        '[ExtensionDiscoveryService] Failed to save registry:',
+        error,
+      );
     }
   }
 
@@ -163,12 +194,18 @@ export class ExtensionDiscoveryService {
    * Load the extension metadata cache from disk
    */
   private async loadCache(): Promise<void> {
-    const cachePath = path.join(path.dirname(this.extensionsDirectory), EXTENSION_CACHE_FILE);
+    const cachePath = path.join(
+      path.dirname(this.extensionsDirectory),
+      EXTENSION_CACHE_FILE,
+    );
 
     try {
       if (fs.existsSync(cachePath)) {
         const data = await fs.promises.readFile(cachePath, 'utf-8');
-        const cacheData = JSON.parse(data) as Record<string, CachedExtensionMetadata>;
+        const cacheData = JSON.parse(data) as Record<
+          string,
+          CachedExtensionMetadata
+        >;
         this.cache = new Map(Object.entries(cacheData));
       }
     } catch (error) {
@@ -181,11 +218,18 @@ export class ExtensionDiscoveryService {
    * Save the extension metadata cache to disk
    */
   private async saveCache(): Promise<void> {
-    const cachePath = path.join(path.dirname(this.extensionsDirectory), EXTENSION_CACHE_FILE);
+    const cachePath = path.join(
+      path.dirname(this.extensionsDirectory),
+      EXTENSION_CACHE_FILE,
+    );
 
     try {
       const cacheData = Object.fromEntries(this.cache);
-      await fs.promises.writeFile(cachePath, JSON.stringify(cacheData, null, 2), 'utf-8');
+      await fs.promises.writeFile(
+        cachePath,
+        JSON.stringify(cacheData, null, 2),
+        'utf-8',
+      );
     } catch (error) {
       console.error('[ExtensionDiscoveryService] Failed to save cache:', error);
     }
@@ -219,7 +263,9 @@ export class ExtensionDiscoveryService {
     }
 
     try {
-      const entries = await fs.promises.readdir(this.extensionsDirectory, { withFileTypes: true });
+      const entries = await fs.promises.readdir(this.extensionsDirectory, {
+        withFileTypes: true,
+      });
 
       for (const entry of entries) {
         if (!this.isDirectoryEntry(entry, this.extensionsDirectory)) continue;
@@ -227,14 +273,19 @@ export class ExtensionDiscoveryService {
         // Handle scoped packages (@org/package-name)
         if (entry.name.startsWith('@')) {
           const scopePath = path.join(this.extensionsDirectory, entry.name);
-          const scopedEntries = await fs.promises.readdir(scopePath, { withFileTypes: true });
+          const scopedEntries = await fs.promises.readdir(scopePath, {
+            withFileTypes: true,
+          });
 
           for (const scopedEntry of scopedEntries) {
             if (!this.isDirectoryEntry(scopedEntry, scopePath)) continue;
 
             const packageName = `${entry.name}/${scopedEntry.name}`;
             const packagePath = path.join(scopePath, scopedEntry.name);
-            const extension = await this.loadExtensionMetadata(packageName, packagePath);
+            const extension = await this.loadExtensionMetadata(
+              packageName,
+              packagePath,
+            );
 
             if (extension) {
               extensions.push(extension);
@@ -243,7 +294,10 @@ export class ExtensionDiscoveryService {
         } else {
           // Regular package
           const packagePath = path.join(this.extensionsDirectory, entry.name);
-          const extension = await this.loadExtensionMetadata(entry.name, packagePath);
+          const extension = await this.loadExtensionMetadata(
+            entry.name,
+            packagePath,
+          );
 
           if (extension) {
             extensions.push(extension);
@@ -251,7 +305,10 @@ export class ExtensionDiscoveryService {
         }
       }
     } catch (error) {
-      console.error('[ExtensionDiscoveryService] Failed to discover extensions:', error);
+      console.error(
+        '[ExtensionDiscoveryService] Failed to discover extensions:',
+        error,
+      );
     }
 
     return extensions;
@@ -262,7 +319,7 @@ export class ExtensionDiscoveryService {
    */
   private async loadExtensionMetadata(
     packageName: string,
-    packagePath: string
+    packagePath: string,
   ): Promise<DiscoveredExtension | null> {
     const packageJsonPath = path.join(packagePath, 'package.json');
 
@@ -271,7 +328,10 @@ export class ExtensionDiscoveryService {
     }
 
     try {
-      const packageJsonData = await fs.promises.readFile(packageJsonPath, 'utf-8');
+      const packageJsonData = await fs.promises.readFile(
+        packageJsonPath,
+        'utf-8',
+      );
       const packageJson = JSON.parse(packageJsonData) as PackageJson;
 
       // Check for panel-extension keyword
@@ -281,21 +341,26 @@ export class ExtensionDiscoveryService {
 
       // Validate required fields
       if (!packageJson.main) {
-        console.warn(`[ExtensionDiscoveryService] Extension ${packageName} missing 'main' field`);
+        console.warn(
+          `[ExtensionDiscoveryService] Extension ${packageName} missing 'main' field`,
+        );
         return null;
       }
 
       const bundlePath = path.join(packagePath, packageJson.main);
 
       if (!fs.existsSync(bundlePath)) {
-        console.warn(`[ExtensionDiscoveryService] Extension ${packageName} bundle not found at ${bundlePath}`);
+        console.warn(
+          `[ExtensionDiscoveryService] Extension ${packageName} bundle not found at ${bundlePath}`,
+        );
         return null;
       }
 
       // Get author string
-      const author = typeof packageJson.author === 'string'
-        ? packageJson.author
-        : packageJson.author?.name;
+      const author =
+        typeof packageJson.author === 'string'
+          ? packageJson.author
+          : packageJson.author?.name;
 
       // Check cache for panel metadata
       let panels: PanelMetadata[] = [];
@@ -345,7 +410,10 @@ export class ExtensionDiscoveryService {
         installedAt,
       };
     } catch (error) {
-      console.error(`[ExtensionDiscoveryService] Failed to load extension ${packageName}:`, error);
+      console.error(
+        `[ExtensionDiscoveryService] Failed to load extension ${packageName}:`,
+        error,
+      );
       return null;
     }
   }
@@ -356,18 +424,23 @@ export class ExtensionDiscoveryService {
    */
   private async extractPanelMetadata(
     bundlePath: string,
-    packageName: string
+    packageName: string,
   ): Promise<PanelMetadata[]> {
     try {
       // Resolve symlinks to get the real path for dynamic import
       const realBundlePath = fs.realpathSync(bundlePath);
       // Use native Node.js import to bypass webpack's module resolution
       // eslint-disable-next-line @typescript-eslint/no-implied-eval
-      const importFn = new Function('specifier', 'return import(specifier)') as (specifier: string) => Promise<any>;
+      const importFn = new Function(
+        'specifier',
+        'return import(specifier)',
+      ) as (specifier: string) => Promise<any>;
       const module = await importFn(`file://${realBundlePath}`);
 
       if (!Array.isArray(module.panels)) {
-        console.warn(`[ExtensionDiscoveryService] Extension ${packageName} must export a 'panels' array`);
+        console.warn(
+          `[ExtensionDiscoveryService] Extension ${packageName} must export a 'panels' array`,
+        );
         return [];
       }
 
@@ -384,7 +457,10 @@ export class ExtensionDiscoveryService {
         slices: panel.metadata.slices,
       }));
     } catch (error) {
-      console.error(`[ExtensionDiscoveryService] Failed to extract panel metadata from ${packageName}:`, error);
+      console.error(
+        `[ExtensionDiscoveryService] Failed to extract panel metadata from ${packageName}:`,
+        error,
+      );
       return [];
     }
   }
@@ -397,12 +473,16 @@ export class ExtensionDiscoveryService {
     const extension = extensions.find((e) => e.packageName === packageName);
 
     if (!extension) {
-      console.error(`[ExtensionDiscoveryService] Extension not found: ${packageName}`);
+      console.error(
+        `[ExtensionDiscoveryService] Extension not found: ${packageName}`,
+      );
       return null;
     }
 
     if (!extension.enabled) {
-      console.error(`[ExtensionDiscoveryService] Extension is disabled: ${packageName}`);
+      console.error(
+        `[ExtensionDiscoveryService] Extension is disabled: ${packageName}`,
+      );
       return null;
     }
 
@@ -431,7 +511,10 @@ export class ExtensionDiscoveryService {
       const bundleContent = await fs.promises.readFile(realBundlePath, 'utf-8');
       return bundleContent;
     } catch (error) {
-      console.error(`[ExtensionDiscoveryService] Failed to fetch bundle for ${packageName}:`, error);
+      console.error(
+        `[ExtensionDiscoveryService] Failed to fetch bundle for ${packageName}:`,
+        error,
+      );
       return null;
     }
   }
@@ -466,7 +549,10 @@ export class ExtensionDiscoveryService {
     let packagePath: string;
     if (packageName.startsWith('@')) {
       // Scoped package
-      packagePath = path.join(this.extensionsDirectory, ...packageName.split('/'));
+      packagePath = path.join(
+        this.extensionsDirectory,
+        ...packageName.split('/'),
+      );
     } else {
       packagePath = path.join(this.extensionsDirectory, packageName);
     }
@@ -486,9 +572,14 @@ export class ExtensionDiscoveryService {
 
       this.broadcastExtensionsChanged();
 
-      console.log(`[ExtensionDiscoveryService] Uninstalled extension: ${packageName}`);
+      console.log(
+        `[ExtensionDiscoveryService] Uninstalled extension: ${packageName}`,
+      );
     } catch (error) {
-      console.error(`[ExtensionDiscoveryService] Failed to uninstall extension ${packageName}:`, error);
+      console.error(
+        `[ExtensionDiscoveryService] Failed to uninstall extension ${packageName}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -500,7 +591,10 @@ export class ExtensionDiscoveryService {
     const extensions = await this.discoverExtensions();
 
     BrowserWindow.getAllWindows().forEach((window) => {
-      window.webContents.send(ExtensionAPIEvents.EXTENSIONS_CHANGED, extensions);
+      window.webContents.send(
+        ExtensionAPIEvents.EXTENSIONS_CHANGED,
+        extensions,
+      );
     });
   }
 
@@ -516,29 +610,45 @@ export class ExtensionDiscoveryService {
       return this.getExtensionsDirectory();
     });
 
-    ipcMain.handle(ExtensionAPIEvents.LOAD_EXTENSION, async (_event, packageName: string) => {
-      return this.loadExtension(packageName);
-    });
+    ipcMain.handle(
+      ExtensionAPIEvents.LOAD_EXTENSION,
+      async (_event, packageName: string) => {
+        return this.loadExtension(packageName);
+      },
+    );
 
-    ipcMain.handle(ExtensionAPIEvents.FETCH_EXTENSION_BUNDLE, async (_event, packageName: string) => {
-      return this.fetchExtensionBundle(packageName);
-    });
+    ipcMain.handle(
+      ExtensionAPIEvents.FETCH_EXTENSION_BUNDLE,
+      async (_event, packageName: string) => {
+        return this.fetchExtensionBundle(packageName);
+      },
+    );
 
-    ipcMain.handle(ExtensionAPIEvents.ENABLE_EXTENSION, async (_event, packageName: string) => {
-      return this.enableExtension(packageName);
-    });
+    ipcMain.handle(
+      ExtensionAPIEvents.ENABLE_EXTENSION,
+      async (_event, packageName: string) => {
+        return this.enableExtension(packageName);
+      },
+    );
 
-    ipcMain.handle(ExtensionAPIEvents.DISABLE_EXTENSION, async (_event, packageName: string) => {
-      return this.disableExtension(packageName);
-    });
+    ipcMain.handle(
+      ExtensionAPIEvents.DISABLE_EXTENSION,
+      async (_event, packageName: string) => {
+        return this.disableExtension(packageName);
+      },
+    );
 
-    ipcMain.handle(ExtensionAPIEvents.UNINSTALL_EXTENSION, async (_event, packageName: string) => {
-      return this.uninstallExtension(packageName);
-    });
+    ipcMain.handle(
+      ExtensionAPIEvents.UNINSTALL_EXTENSION,
+      async (_event, packageName: string) => {
+        return this.uninstallExtension(packageName);
+      },
+    );
 
     console.log('[ExtensionDiscoveryService] IPC handlers registered');
   }
 }
 
 // Export singleton instance
-export const extensionDiscoveryService = ExtensionDiscoveryService.getInstance();
+export const extensionDiscoveryService =
+  ExtensionDiscoveryService.getInstance();

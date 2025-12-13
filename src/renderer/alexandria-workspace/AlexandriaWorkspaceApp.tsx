@@ -1,7 +1,10 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type { PanelLayout } from '@principal-ade/panel-layouts';
-import type { Workspace, AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import type {
+  Workspace,
+  AlexandriaEntry,
+} from '@principal-ai/alexandria-core-library/types';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
@@ -27,7 +30,9 @@ interface RepoGitStatus {
 const AlexandriaWorkspaceContent: React.FC = () => {
   const { theme } = useTheme();
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
-  const [workspaceRepositories, setWorkspaceRepositories] = useState<AlexandriaEntry[]>([]);
+  const [workspaceRepositories, setWorkspaceRepositories] = useState<
+    AlexandriaEntry[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [enableKeyboardShortcuts, setEnableKeyboardShortcuts] = useState(false);
@@ -39,20 +44,25 @@ const AlexandriaWorkspaceContent: React.FC = () => {
   });
 
   // Track the currently selected repository
-  const [selectedRepository, setSelectedRepository] = useState<{
-    name: string;
-    path: string;
-  } | undefined>(undefined);
+  const [selectedRepository, setSelectedRepository] = useState<
+    | {
+        name: string;
+        path: string;
+      }
+    | undefined
+  >(undefined);
 
   // Track git status for each repository by path
-  const [repoGitStatuses, setRepoGitStatuses] = useState<Map<string, RepoGitStatus>>(new Map());
+  const [repoGitStatuses, setRepoGitStatuses] = useState<
+    Map<string, RepoGitStatus>
+  >(new Map());
 
   // Track which repositories have been registered for monitoring
   const registeredReposRef = useRef<Set<string>>(new Set());
 
   // Switch handlers for panel swapping
   const handleSwitchLeftMiddle = useCallback(() => {
-    setLayout(prev => ({
+    setLayout((prev) => ({
       ...prev,
       left: prev.middle,
       middle: prev.left,
@@ -60,7 +70,7 @@ const AlexandriaWorkspaceContent: React.FC = () => {
   }, []);
 
   const handleSwitchRightMiddle = useCallback(() => {
-    setLayout(prev => ({
+    setLayout((prev) => ({
       ...prev,
       right: prev.middle,
       middle: prev.right,
@@ -92,10 +102,15 @@ const AlexandriaWorkspaceContent: React.FC = () => {
 
           // Load workspace repositories
           try {
-            const repos = await WorkspaceService.getRepositoriesInWorkspace(foundWorkspace.id);
+            const repos = await WorkspaceService.getRepositoriesInWorkspace(
+              foundWorkspace.id,
+            );
             setWorkspaceRepositories(repos);
           } catch (repoErr) {
-            console.error('[AlexandriaWorkspaceApp] Error loading repositories:', repoErr);
+            console.error(
+              '[AlexandriaWorkspaceApp] Error loading repositories:',
+              repoErr,
+            );
             setWorkspaceRepositories([]);
           }
         }
@@ -111,22 +126,32 @@ const AlexandriaWorkspaceContent: React.FC = () => {
 
     // Subscribe to workspace changes
     const unsubscribeWorkspace = WorkspaceService.onWorkspaceChange((event) => {
-      console.info('[AlexandriaWorkspaceApp] Workspace change event received:', event);
+      console.info(
+        '[AlexandriaWorkspaceApp] Workspace change event received:',
+        event,
+      );
 
       if (event.workspaceId === workspaceId) {
         if (event.type === 'updated') {
           // Reload workspace metadata for 'updated' events
-          console.info('[AlexandriaWorkspaceApp] Workspace metadata updated, reloading');
+          console.info(
+            '[AlexandriaWorkspaceApp] Workspace metadata updated, reloading',
+          );
           loadWorkspace();
         } else if (event.type === 'membership-changed') {
           // Reload repositories when membership changes
-          console.info('[AlexandriaWorkspaceApp] Workspace membership changed, reloading repositories');
+          console.info(
+            '[AlexandriaWorkspaceApp] Workspace membership changed, reloading repositories',
+          );
           WorkspaceService.getRepositoriesInWorkspace(workspaceId)
             .then((repos) => {
               setWorkspaceRepositories(repos);
             })
             .catch((err) => {
-              console.error('[AlexandriaWorkspaceApp] Error reloading repositories:', err);
+              console.error(
+                '[AlexandriaWorkspaceApp] Error reloading repositories:',
+                err,
+              );
             });
         }
       }
@@ -134,32 +159,42 @@ const AlexandriaWorkspaceContent: React.FC = () => {
 
     // Subscribe to Alexandria repository changes to handle stale references
     // This catches cases where a repository is moved/updated from another workspace window
-    const unsubscribeAlexandria = AlexandriaService.onRepositoryChange((event) => {
-      if (event.type === 'updated' && event.repository) {
-        // Check if this repository is in our workspace and update it if so
-        setWorkspaceRepositories((prevRepos) => {
-          const repoIndex = prevRepos.findIndex(
-            (r) => r.name === event.repository?.name || r.github?.id === event.repository?.github?.id
-          );
-          if (repoIndex !== -1) {
-            console.info('[AlexandriaWorkspaceApp] Repository updated, refreshing local state:', event.repository?.name);
-            const newRepos = [...prevRepos];
-            newRepos[repoIndex] = event.repository as AlexandriaEntry;
-            return newRepos;
-          }
-          return prevRepos;
-        });
-      } else if (event.type === 'removed' && event.name) {
-        // Remove the repository from our local state if it was deleted
-        setWorkspaceRepositories((prevRepos) => {
-          const filtered = prevRepos.filter((r) => r.name !== event.name);
-          if (filtered.length !== prevRepos.length) {
-            console.info('[AlexandriaWorkspaceApp] Repository removed, updating local state:', event.name);
-          }
-          return filtered;
-        });
-      }
-    });
+    const unsubscribeAlexandria = AlexandriaService.onRepositoryChange(
+      (event) => {
+        if (event.type === 'updated' && event.repository) {
+          // Check if this repository is in our workspace and update it if so
+          setWorkspaceRepositories((prevRepos) => {
+            const repoIndex = prevRepos.findIndex(
+              (r) =>
+                r.name === event.repository?.name ||
+                r.github?.id === event.repository?.github?.id,
+            );
+            if (repoIndex !== -1) {
+              console.info(
+                '[AlexandriaWorkspaceApp] Repository updated, refreshing local state:',
+                event.repository?.name,
+              );
+              const newRepos = [...prevRepos];
+              newRepos[repoIndex] = event.repository as AlexandriaEntry;
+              return newRepos;
+            }
+            return prevRepos;
+          });
+        } else if (event.type === 'removed' && event.name) {
+          // Remove the repository from our local state if it was deleted
+          setWorkspaceRepositories((prevRepos) => {
+            const filtered = prevRepos.filter((r) => r.name !== event.name);
+            if (filtered.length !== prevRepos.length) {
+              console.info(
+                '[AlexandriaWorkspaceApp] Repository removed, updating local state:',
+                event.name,
+              );
+            }
+            return filtered;
+          });
+        }
+      },
+    );
 
     return () => {
       unsubscribeWorkspace();
@@ -176,7 +211,10 @@ const AlexandriaWorkspaceContent: React.FC = () => {
       try {
         await RepositoryMonitoringService.startMonitoring();
       } catch (err) {
-        console.error('[AlexandriaWorkspaceApp] Failed to start monitoring service:', err);
+        console.error(
+          '[AlexandriaWorkspaceApp] Failed to start monitoring service:',
+          err,
+        );
         return;
       }
 
@@ -190,7 +228,9 @@ const AlexandriaWorkspaceContent: React.FC = () => {
           registeredReposRef.current.add(repo.path);
 
           // Fetch initial git status
-          const gitStatus = await RepositoryMonitoringService.getGitStatus(repo.path);
+          const gitStatus = await RepositoryMonitoringService.getGitStatus(
+            repo.path,
+          );
           if (gitStatus) {
             setRepoGitStatuses((prev) => {
               const next = new Map(prev);
@@ -203,9 +243,16 @@ const AlexandriaWorkspaceContent: React.FC = () => {
             });
           }
 
-          console.info('[AlexandriaWorkspaceApp] Registered repository for monitoring:', repo.path);
+          console.info(
+            '[AlexandriaWorkspaceApp] Registered repository for monitoring:',
+            repo.path,
+          );
         } catch (err) {
-          console.error('[AlexandriaWorkspaceApp] Failed to register repository:', repo.path, err);
+          console.error(
+            '[AlexandriaWorkspaceApp] Failed to register repository:',
+            repo.path,
+            err,
+          );
         }
       }
     };
@@ -215,9 +262,15 @@ const AlexandriaWorkspaceContent: React.FC = () => {
     // Cleanup: unregister repositories when component unmounts
     return () => {
       for (const repoPath of registeredReposRef.current) {
-        RepositoryMonitoringService.disableGitWatching(repoPath).catch((err) => {
-          console.error('[AlexandriaWorkspaceApp] Failed to disable git watching:', repoPath, err);
-        });
+        RepositoryMonitoringService.disableGitWatching(repoPath).catch(
+          (err) => {
+            console.error(
+              '[AlexandriaWorkspaceApp] Failed to disable git watching:',
+              repoPath,
+              err,
+            );
+          },
+        );
       }
       registeredReposRef.current.clear();
     };
@@ -229,22 +282,33 @@ const AlexandriaWorkspaceContent: React.FC = () => {
 
     const repoPaths = new Set(workspaceRepositories.map((r) => r.path));
 
-    const unsubscribe = RepositoryMonitoringService.onGitStatusChanged((status) => {
-      // Only handle events for repositories in this workspace
-      if (!repoPaths.has(status.repoPath as typeof workspaceRepositories[0]['path'])) return;
+    const unsubscribe = RepositoryMonitoringService.onGitStatusChanged(
+      (status) => {
+        // Only handle events for repositories in this workspace
+        if (
+          !repoPaths.has(
+            status.repoPath as (typeof workspaceRepositories)[0]['path'],
+          )
+        )
+          return;
 
-      console.log('[AlexandriaWorkspaceApp] Git status changed:', status.repoPath, status.branch);
+        console.log(
+          '[AlexandriaWorkspaceApp] Git status changed:',
+          status.repoPath,
+          status.branch,
+        );
 
-      setRepoGitStatuses((prev) => {
-        const next = new Map(prev);
-        next.set(status.repoPath, {
-          branch: status.branch,
-          ahead: status.ahead,
-          behind: status.behind,
+        setRepoGitStatuses((prev) => {
+          const next = new Map(prev);
+          next.set(status.repoPath, {
+            branch: status.branch,
+            ahead: status.ahead,
+            behind: status.behind,
+          });
+          return next;
         });
-        return next;
-      });
-    });
+      },
+    );
 
     return () => unsubscribe();
   }, [workspaceRepositories]);
@@ -255,18 +319,25 @@ const AlexandriaWorkspaceContent: React.FC = () => {
 
     const repoPaths = new Set(workspaceRepositories.map((r) => r.path));
 
-    const unsubscribe = RepositoryMonitoringService.onWorkspaceChange((event) => {
-      // Only handle events for repositories in this workspace
-      if (!repoPaths.has(event.repoPath as typeof workspaceRepositories[0]['path'])) return;
+    const unsubscribe = RepositoryMonitoringService.onWorkspaceChange(
+      (event) => {
+        // Only handle events for repositories in this workspace
+        if (
+          !repoPaths.has(
+            event.repoPath as (typeof workspaceRepositories)[0]['path'],
+          )
+        )
+          return;
 
-      console.log('[AlexandriaWorkspaceApp] Workspace changed:', {
-        repoPath: event.repoPath,
-        changeCount: event.changes?.length ?? 0,
-        state: event.state,
-      });
+        console.log('[AlexandriaWorkspaceApp] Workspace changed:', {
+          repoPath: event.repoPath,
+          changeCount: event.changes?.length ?? 0,
+          state: event.state,
+        });
 
-      // Could emit to a panel event bus here if needed for child panels
-    });
+        // Could emit to a panel event bus here if needed for child panels
+      },
+    );
 
     return () => unsubscribe();
   }, [workspaceRepositories]);
@@ -353,15 +424,20 @@ const AlexandriaWorkspaceContent: React.FC = () => {
       <AlexandriaWorkspaceTitlebar
         workspace={workspace}
         workspaceRepositoryIds={workspaceRepositories
-          .map(entry => entry.github?.id)
-          .filter((id): id is string => id != null)
-        }
+          .map((entry) => entry.github?.id)
+          .filter((id): id is string => id != null)}
         selectedRepository={selectedRepository}
         enableKeyboardShortcuts={enableKeyboardShortcuts}
-        onToggleKeyboardShortcuts={() => setEnableKeyboardShortcuts(!enableKeyboardShortcuts)}
+        onToggleKeyboardShortcuts={() =>
+          setEnableKeyboardShortcuts(!enableKeyboardShortcuts)
+        }
         collapsed={collapsed}
-        onToggleLeftSidebar={() => setCollapsed(prev => ({ ...prev, left: !prev.left }))}
-        onToggleRightSidebar={() => setCollapsed(prev => ({ ...prev, right: !prev.right }))}
+        onToggleLeftSidebar={() =>
+          setCollapsed((prev) => ({ ...prev, left: !prev.left }))
+        }
+        onToggleRightSidebar={() =>
+          setCollapsed((prev) => ({ ...prev, right: !prev.right }))
+        }
         onCollapsedChange={setCollapsed}
         onSwitchLeftMiddlePanels={handleSwitchLeftMiddle}
         onSwitchRightMiddlePanels={handleSwitchRightMiddle}
@@ -390,7 +466,9 @@ const AlexandriaWorkspaceContent: React.FC = () => {
  * and its repository members.
  */
 export const AlexandriaWorkspaceApp: React.FC = () => {
-  const [workspaceTheme, setWorkspaceTheme] = useState<string | undefined>(undefined);
+  const [workspaceTheme, setWorkspaceTheme] = useState<string | undefined>(
+    undefined,
+  );
   const [isLoadingWorkspace, setIsLoadingWorkspace] = useState(true);
 
   useEffect(() => {
@@ -412,7 +490,10 @@ export const AlexandriaWorkspaceApp: React.FC = () => {
           setWorkspaceTheme(workspace.theme);
         }
       } catch (error) {
-        console.error('[AlexandriaWorkspaceApp] Error loading workspace theme:', error);
+        console.error(
+          '[AlexandriaWorkspaceApp] Error loading workspace theme:',
+          error,
+        );
       } finally {
         setIsLoadingWorkspace(false);
       }

@@ -130,10 +130,9 @@ export class AlexandriaApiEventHandler implements AlexandriaAPI {
 
     try {
       const monitoringManager = getRepositoryMonitoringManager();
-      const registrationManager =
-        RepositoryRegistrationManager.getInstance({
-          monitoringManager,
-        });
+      const registrationManager = RepositoryRegistrationManager.getInstance({
+        monitoringManager,
+      });
       await registrationManager.handleRepositoryAdded(repo);
     } catch (error) {
       console.error(
@@ -146,10 +145,9 @@ export class AlexandriaApiEventHandler implements AlexandriaAPI {
   private async unregisterFromMonitoring(repoPath: string): Promise<void> {
     try {
       const monitoringManager = getRepositoryMonitoringManager();
-      const registrationManager =
-        RepositoryRegistrationManager.getInstance({
-          monitoringManager,
-        });
+      const registrationManager = RepositoryRegistrationManager.getInstance({
+        monitoringManager,
+      });
       await registrationManager.handleRepositoryRemoved(repoPath);
     } catch (error) {
       console.error(
@@ -173,9 +171,7 @@ export class AlexandriaApiEventHandler implements AlexandriaAPI {
         },
       );
 
-      console.log(
-        '[Alexandria] Subscribed to repository monitoring events',
-      );
+      console.log('[Alexandria] Subscribed to repository monitoring events');
     } catch (error) {
       console.error(
         '[Alexandria] Failed to setup repository monitoring:',
@@ -271,7 +267,9 @@ export function registerAlexandriaHandlers(): void {
   const handler = new AlexandriaApiEventHandler();
 
   // Register all IPC handlers using enum values
-  ipcMain.handle(AlexandriaAPIEvent.GET_ALL, (_, skipGitInfo?: boolean) => handler.getRepositories(skipGitInfo));
+  ipcMain.handle(AlexandriaAPIEvent.GET_ALL, (_, skipGitInfo?: boolean) =>
+    handler.getRepositories(skipGitInfo),
+  );
   ipcMain.handle(AlexandriaAPIEvent.GET, (_, name: string) =>
     handler.getRepository(name),
   );

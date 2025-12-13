@@ -7,7 +7,10 @@
 
 import { ipcMain } from 'electron';
 import { PresenceEvent } from '../../window/main-process-api-implementations/presenceApi';
-import { PresenceData, UserPresence } from '../../shared/main-process-api-interfaces/PresenceAPI';
+import {
+  PresenceData,
+  UserPresence,
+} from '../../shared/main-process-api-interfaces/PresenceAPI';
 import { gitSyncWebSocketManager } from './GitSyncWebSocketManager';
 import { authService } from './AuthService';
 
@@ -19,20 +22,17 @@ class PresenceIPC {
 
   private setupHandlers() {
     // Handler for presence:get-users
-    ipcMain.handle(
-      PresenceEvent.GET_USERS,
-      async (): Promise<PresenceData> => {
-        console.log('[PresenceIPC] Get users requested');
+    ipcMain.handle(PresenceEvent.GET_USERS, async (): Promise<PresenceData> => {
+      console.log('[PresenceIPC] Get users requested');
 
-        const result = await gitSyncWebSocketManager.fetchPresenceData();
+      const result = await gitSyncWebSocketManager.fetchPresenceData();
 
-        if (!result.success || !result.data) {
-          throw new Error(result.error || 'Failed to fetch presence data');
-        }
+      if (!result.success || !result.data) {
+        throw new Error(result.error || 'Failed to fetch presence data');
+      }
 
-        return result.data as PresenceData;
-      },
-    );
+      return result.data as PresenceData;
+    });
 
     // Handler for presence:get-users-in-repo
     ipcMain.handle(
@@ -41,16 +41,29 @@ class PresenceIPC {
         event,
         owner: string,
         repo: string,
-      ): Promise<{ repoId: string; users: UserPresence[]; totalUsers: number }> => {
+      ): Promise<{
+        repoId: string;
+        users: UserPresence[];
+        totalUsers: number;
+      }> => {
         console.log('[PresenceIPC] Get users in repo requested:', owner, repo);
 
-        const result = await gitSyncWebSocketManager.fetchRepositoryPresence(owner, repo);
+        const result = await gitSyncWebSocketManager.fetchRepositoryPresence(
+          owner,
+          repo,
+        );
 
         if (!result.success || !result.data) {
-          throw new Error(result.error || 'Failed to fetch repository presence');
+          throw new Error(
+            result.error || 'Failed to fetch repository presence',
+          );
         }
 
-        return result.data as { repoId: string; users: UserPresence[]; totalUsers: number };
+        return result.data as {
+          repoId: string;
+          users: UserPresence[];
+          totalUsers: number;
+        };
       },
     );
 
@@ -74,24 +87,18 @@ class PresenceIPC {
     );
 
     // Handler for presence:subscribe
-    ipcMain.handle(
-      PresenceEvent.SUBSCRIBE,
-      async (): Promise<boolean> => {
-        console.log('[PresenceIPC] Subscribe to presence requested');
+    ipcMain.handle(PresenceEvent.SUBSCRIBE, async (): Promise<boolean> => {
+      console.log('[PresenceIPC] Subscribe to presence requested');
 
-        return await gitSyncWebSocketManager.subscribeToPresence();
-      },
-    );
+      return await gitSyncWebSocketManager.subscribeToPresence();
+    });
 
     // Handler for presence:unsubscribe
-    ipcMain.handle(
-      PresenceEvent.UNSUBSCRIBE,
-      async (): Promise<void> => {
-        console.log('[PresenceIPC] Unsubscribe from presence requested');
-        // For now, we don't need to do anything as leaving the room
-        // is handled automatically when disconnecting
-      },
-    );
+    ipcMain.handle(PresenceEvent.UNSUBSCRIBE, async (): Promise<void> => {
+      console.log('[PresenceIPC] Unsubscribe from presence requested');
+      // For now, we don't need to do anything as leaving the room
+      // is handled automatically when disconnecting
+    });
 
     // Handler for presence:report-repo-opened
     ipcMain.handle(
@@ -103,7 +110,12 @@ class PresenceIPC {
         branch: string,
         localPath?: string,
       ): Promise<{ success: boolean; message?: string }> => {
-        console.log('[PresenceIPC] Report repository opened:', { owner, repo, branch, localPath });
+        console.log('[PresenceIPC] Report repository opened:', {
+          owner,
+          repo,
+          branch,
+          localPath,
+        });
 
         const token = await authService.getValidToken();
         return await gitSyncWebSocketManager.reportRepositoryOpened(
@@ -127,7 +139,11 @@ class PresenceIPC {
         console.log('[PresenceIPC] Report repository closed:', { owner, repo });
 
         const token = await authService.getValidToken();
-        return await gitSyncWebSocketManager.reportRepositoryClosed(owner, repo, token || undefined);
+        return await gitSyncWebSocketManager.reportRepositoryClosed(
+          owner,
+          repo,
+          token || undefined,
+        );
       },
     );
 
@@ -142,7 +158,11 @@ class PresenceIPC {
         console.log('[PresenceIPC] Report active repository:', { owner, repo });
 
         const token = await authService.getValidToken();
-        return await gitSyncWebSocketManager.reportActiveRepository(owner, repo, token || undefined);
+        return await gitSyncWebSocketManager.reportActiveRepository(
+          owner,
+          repo,
+          token || undefined,
+        );
       },
     );
 
@@ -157,7 +177,11 @@ class PresenceIPC {
         console.log('[PresenceIPC] Update status:', { status, statusMessage });
 
         const token = await authService.getValidToken();
-        return await gitSyncWebSocketManager.updatePresenceStatus(status, statusMessage, token || undefined);
+        return await gitSyncWebSocketManager.updatePresenceStatus(
+          status,
+          statusMessage,
+          token || undefined,
+        );
       },
     );
 
@@ -195,7 +219,9 @@ class PresenceIPC {
         console.log('[PresenceIPC] Send heartbeat');
 
         const token = await authService.getValidToken();
-        return await gitSyncWebSocketManager.sendPresenceHeartbeat(token || undefined);
+        return await gitSyncWebSocketManager.sendPresenceHeartbeat(
+          token || undefined,
+        );
       },
     );
   }

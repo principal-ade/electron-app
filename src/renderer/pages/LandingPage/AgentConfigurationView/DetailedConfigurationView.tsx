@@ -1086,8 +1086,7 @@ export const DetailedConfigurationView: React.FC<
       hasPrincipleMD: boolean;
       mcpServers: Record<string, any>;
     }>({ hasPrincipleMD: false, mcpServers: {} });
-    const [isTogglingDroidMCP, setIsTogglingDroidMCP] =
-      React.useState(false);
+    const [isTogglingDroidMCP, setIsTogglingDroidMCP] = React.useState(false);
 
     React.useEffect(() => {
       loadDroidMCPStatus();

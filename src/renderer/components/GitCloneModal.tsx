@@ -68,11 +68,17 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
 
   // Workspace state
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [defaultWorkspace, setDefaultWorkspace] = useState<Workspace | null>(null);
-  const [selectedWorkspace, setSelectedWorkspace] = useState<Workspace | null>(null);
+  const [defaultWorkspace, setDefaultWorkspace] = useState<Workspace | null>(
+    null,
+  );
+  const [selectedWorkspace, setSelectedWorkspace] = useState<Workspace | null>(
+    null,
+  );
   const [customDirectory, setCustomDirectory] = useState<string>(''); // User-selected custom directory
   const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string>(''); // Base default directory from preferences
-  const [cloneLocationType, setCloneLocationType] = useState<'default' | 'workspace'>('default'); // Which option is selected
+  const [cloneLocationType, setCloneLocationType] = useState<
+    'default' | 'workspace'
+  >('default'); // Which option is selected
 
   // Reset state when modal opens and focus the input
   useEffect(() => {
@@ -170,19 +176,25 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
         WorkspaceService.getWorkspaces(),
         WorkspaceService.getDefaultWorkspace(),
         UserPreferencesService.getPreferences(),
-      ]).then(([loadedWorkspaces, defaultWs, preferences]) => {
-        setWorkspaces(loadedWorkspaces);
-        setDefaultWorkspace(defaultWs);
-        setBaseDefaultDirectory(preferences.baseDefaultDirectory || preferences.defaultCloneDirectory || '');
+      ])
+        .then(([loadedWorkspaces, defaultWs, preferences]) => {
+          setWorkspaces(loadedWorkspaces);
+          setDefaultWorkspace(defaultWs);
+          setBaseDefaultDirectory(
+            preferences.baseDefaultDirectory ||
+              preferences.defaultCloneDirectory ||
+              '',
+          );
 
-        // Don't auto-select workspace - let user choose or use custom location
-        setSelectedWorkspace(null);
-      }).catch((error) => {
-        console.error('[GitCloneModal] Error loading workspaces:', error);
-        setWorkspaces([]);
-        setDefaultWorkspace(null);
-        setSelectedWorkspace(null);
-      });
+          // Don't auto-select workspace - let user choose or use custom location
+          setSelectedWorkspace(null);
+        })
+        .catch((error) => {
+          console.error('[GitCloneModal] Error loading workspaces:', error);
+          setWorkspaces([]);
+          setDefaultWorkspace(null);
+          setSelectedWorkspace(null);
+        });
     }
   }, [isOpen]);
 
@@ -482,7 +494,7 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
           try {
             await WorkspaceService.addRepositoryToWorkspace(
               registeredRepo,
-              selectedWorkspace.id
+              selectedWorkspace.id,
             );
           } catch (error) {
             console.error('[GitCloneModal] Error adding to workspace:', error);
@@ -513,7 +525,8 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
         details?: string;
       }
 
-      const errorMessage = err instanceof Error ? err.message : 'Failed to clone repository';
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to clone repository';
       const details = (err as EnhancedError)?.details || '';
 
       setError(errorMessage);
@@ -563,7 +576,7 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
         try {
           await WorkspaceService.addRepositoryToWorkspace(
             registeredRepo,
-            selectedWorkspace.id
+            selectedWorkspace.id,
           );
         } catch (error) {
           console.error('[GitCloneModal] Error adding to workspace:', error);
@@ -854,7 +867,10 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                       padding: '12px',
                       borderRadius: '8px',
                       border: `2px solid ${cloneLocationType === 'default' ? theme.colors.primary : theme.colors.border}`,
-                      backgroundColor: cloneLocationType === 'default' ? `${theme.colors.primary}10` : theme.colors.background,
+                      backgroundColor:
+                        cloneLocationType === 'default'
+                          ? `${theme.colors.primary}10`
+                          : theme.colors.background,
                       cursor: 'pointer',
                       transition: 'all 0.2s',
                     }}
@@ -892,9 +908,16 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                               FileSystemService.selectDirectory({
                                 title: 'Select Default Clone Directory',
                                 buttonLabel: 'Select Directory',
-                                properties: ['openDirectory', 'createDirectory'],
+                                properties: [
+                                  'openDirectory',
+                                  'createDirectory',
+                                ],
                               }).then((result) => {
-                                if (result && !result.canceled && result.filePaths?.[0]) {
+                                if (
+                                  result &&
+                                  !result.canceled &&
+                                  result.filePaths?.[0]
+                                ) {
                                   setCustomDirectory(result.filePaths[0]);
                                 }
                               });
@@ -913,7 +936,9 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                             }}
                           >
                             <FolderOpen size={14} />
-                            {customDirectory || baseDefaultDirectory ? 'Change Directory' : 'Select Directory'}
+                            {customDirectory || baseDefaultDirectory
+                              ? 'Change Directory'
+                              : 'Select Directory'}
                           </button>
                         )}
                       </div>
@@ -928,7 +953,10 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                         padding: '12px',
                         borderRadius: '8px',
                         border: `2px solid ${cloneLocationType === 'workspace' ? theme.colors.primary : theme.colors.border}`,
-                        backgroundColor: cloneLocationType === 'workspace' ? `${theme.colors.primary}10` : theme.colors.background,
+                        backgroundColor:
+                          cloneLocationType === 'workspace'
+                            ? `${theme.colors.primary}10`
+                            : theme.colors.background,
                         cursor: 'pointer',
                         transition: 'all 0.2s',
                       }}
@@ -958,11 +986,16 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                             Add to a specific workspace
                           </div>
                           {cloneLocationType === 'workspace' && (
-                            <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                            <div
+                              style={{ position: 'relative' }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               <select
                                 value={selectedWorkspace?.id || ''}
                                 onChange={(e) => {
-                                  const workspace = sortedWorkspaces.find((w) => w.id === e.target.value);
+                                  const workspace = sortedWorkspaces.find(
+                                    (w) => w.id === e.target.value,
+                                  );
                                   setSelectedWorkspace(workspace || null);
                                 }}
                                 style={{
@@ -979,9 +1012,14 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                               >
                                 <option value="">Select a workspace...</option>
                                 {sortedWorkspaces.map((workspace) => (
-                                  <option key={workspace.id} value={workspace.id}>
+                                  <option
+                                    key={workspace.id}
+                                    value={workspace.id}
+                                  >
                                     {workspace.name}
-                                    {defaultWorkspace?.id === workspace.id ? ' (Default)' : ''}
+                                    {defaultWorkspace?.id === workspace.id
+                                      ? ' (Default)'
+                                      : ''}
                                   </option>
                                 ))}
                               </select>
@@ -1026,12 +1064,12 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                     style={{ color: theme.colors.text }}
                   >
                     {cloneLocationType === 'default'
-                      ? (customDirectory || baseDefaultDirectory)
+                      ? customDirectory || baseDefaultDirectory
                         ? `${customDirectory || baseDefaultDirectory}/${repoName}`
                         : 'Select a directory to continue...'
                       : selectedWorkspace
-                      ? `${selectedWorkspace.suggestedClonePath || ''}/${repoName}`
-                      : 'Select a workspace to continue...'}
+                        ? `${selectedWorkspace.suggestedClonePath || ''}/${repoName}`
+                        : 'Select a workspace to continue...'}
                   </span>
                 </div>
               </div>

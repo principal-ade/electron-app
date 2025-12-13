@@ -1,13 +1,26 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useTheme } from '@principal-ade/industry-theme';
-import { X, Loader2, AlertCircle, Check, Github, FolderOpen, GitFork, Info } from 'lucide-react';
+import {
+  X,
+  Loader2,
+  AlertCircle,
+  Check,
+  Github,
+  FolderOpen,
+  GitFork,
+  Info,
+} from 'lucide-react';
 import { GitService } from '../../main-process-api/GitService';
 import { GithubService } from '../../main-process-api/GithubService';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
-import type { GitHubRepositoryWithPermissions, GitHubUser, GitHubOrganization } from '../../../shared/main-process-api-interfaces/GitHubAPI';
+import type {
+  GitHubRepositoryWithPermissions,
+  GitHubUser,
+  GitHubOrganization,
+} from '../../../shared/main-process-api-interfaces/GitHubAPI';
 
 // Helper to join paths (works in renderer without Node.js path module)
 function joinPath(...parts: string[]): string {
@@ -50,7 +63,9 @@ function parseGitHubUrl(input: string): ParsedGitHubUrl | null {
   const trimmed = input.trim();
 
   // Handle shorthand format: owner/repo
-  const shorthandMatch = trimmed.match(/^([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+)$/);
+  const shorthandMatch = trimmed.match(
+    /^([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+)$/,
+  );
   if (shorthandMatch) {
     return {
       owner: shorthandMatch[1],
@@ -60,7 +75,9 @@ function parseGitHubUrl(input: string): ParsedGitHubUrl | null {
   }
 
   // Handle HTTPS URL: https://github.com/owner/repo(.git)?
-  const httpsMatch = trimmed.match(/^https?:\/\/github\.com\/([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+?)(\.git)?$/);
+  const httpsMatch = trimmed.match(
+    /^https?:\/\/github\.com\/([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+?)(\.git)?$/,
+  );
   if (httpsMatch) {
     return {
       owner: httpsMatch[1],
@@ -70,7 +87,9 @@ function parseGitHubUrl(input: string): ParsedGitHubUrl | null {
   }
 
   // Handle SSH URL: git@github.com:owner/repo.git
-  const sshMatch = trimmed.match(/^git@github\.com:([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+?)(\.git)?$/);
+  const sshMatch = trimmed.match(
+    /^git@github\.com:([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+?)(\.git)?$/,
+  );
   if (sshMatch) {
     return {
       owner: sshMatch[1],
@@ -103,7 +122,8 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
   const [parsedUrl, setParsedUrl] = useState<ParsedGitHubUrl | null>(null);
 
   // Repository info and permissions
-  const [repoInfo, setRepoInfo] = useState<GitHubRepositoryWithPermissions | null>(null);
+  const [repoInfo, setRepoInfo] =
+    useState<GitHubRepositoryWithPermissions | null>(null);
   const [isCheckingPermissions, setIsCheckingPermissions] = useState(false);
   const [currentUser, setCurrentUser] = useState<GitHubUser | null>(null);
   const [willFork, setWillFork] = useState(false);
@@ -158,11 +178,13 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
       setRepoInfo(repo);
 
       if (!repo) {
-        setError('Repository not found or you don\'t have access to it.');
+        setError("Repository not found or you don't have access to it.");
       }
     } catch (err) {
       console.error('Failed to check permissions:', err);
-      setError('Failed to check repository permissions. You can still try to clone.');
+      setError(
+        'Failed to check repository permissions. You can still try to clone.',
+      );
     } finally {
       setIsCheckingPermissions(false);
     }
@@ -241,7 +263,9 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
 
     const targetPath = getTargetPath();
     if (!targetPath) {
-      setError('Please specify a clone directory or configure a workspace home directory');
+      setError(
+        'Please specify a clone directory or configure a workspace home directory',
+      );
       return;
     }
 
@@ -257,9 +281,8 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
       if (willFork && needsFork) {
         setProgressStep('forking');
 
-        const forkOptions = forkTarget !== 'personal'
-          ? { organization: forkTarget }
-          : undefined;
+        const forkOptions =
+          forkTarget !== 'personal' ? { organization: forkTarget } : undefined;
 
         const forkedRepo = await GithubService.forkRepository(
           parsedUrl.owner,
@@ -279,10 +302,15 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
 
       // Step 1: Clone the repository
       setProgressStep('cloning');
-      const cloneSuccess = await GitService.cloneRepository(cloneUrl, targetPath);
+      const cloneSuccess = await GitService.cloneRepository(
+        cloneUrl,
+        targetPath,
+      );
 
       if (!cloneSuccess) {
-        throw new Error('Failed to clone repository. Check that the URL is correct and you have access.');
+        throw new Error(
+          'Failed to clone repository. Check that the URL is correct and you have access.',
+        );
       }
 
       // Step 2: Register with Alexandria
@@ -296,7 +324,10 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
       // Step 3: Add to workspace
       setProgressStep('adding');
 
-      await WorkspaceService.addRepositoryToWorkspace(registeredRepo, workspace.id);
+      await WorkspaceService.addRepositoryToWorkspace(
+        registeredRepo,
+        workspace.id,
+      );
 
       // Done!
       setProgressStep('done');
@@ -421,7 +452,9 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
               }}
             >
               {isCheckingPermissions ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
                   <Loader2
                     size={14}
                     style={{ color: theme.colors.textSecondary }}
@@ -445,7 +478,10 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
                     color: theme.colors.textSecondary,
                   }}
                 >
-                  Will clone: <strong style={{ color: theme.colors.text }}>{parsedUrl.owner}/{parsedUrl.repo}</strong>
+                  Will clone:{' '}
+                  <strong style={{ color: theme.colors.text }}>
+                    {parsedUrl.owner}/{parsedUrl.repo}
+                  </strong>
                 </span>
               )}
             </div>
@@ -498,7 +534,8 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
                     color: theme.colors.textSecondary,
                   }}
                 >
-                  To contribute changes, you can fork this repository to your account or an organization.
+                  To contribute changes, you can fork this repository to your
+                  account or an organization.
                 </p>
                 <label
                   style={{
@@ -554,7 +591,13 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
                       Fork to:
                     </label>
                     {isLoadingOrgs ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
                         <Loader2
                           size={14}
                           style={{ color: theme.colors.textSecondary }}
@@ -792,7 +835,9 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
         </button>
         <button
           onClick={() => void handleClone()}
-          disabled={isCloning || !parsedUrl || !getTargetPath() || isCheckingPermissions}
+          disabled={
+            isCloning || !parsedUrl || !getTargetPath() || isCheckingPermissions
+          }
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -806,25 +851,40 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
             fontWeight: theme.fontWeights.semibold,
             fontFamily: theme.fonts.body,
             cursor:
-              isCloning || !parsedUrl || !getTargetPath() || isCheckingPermissions ? 'not-allowed' : 'pointer',
-            opacity: isCloning || !parsedUrl || !getTargetPath() || isCheckingPermissions ? 0.5 : 1,
+              isCloning ||
+              !parsedUrl ||
+              !getTargetPath() ||
+              isCheckingPermissions
+                ? 'not-allowed'
+                : 'pointer',
+            opacity:
+              isCloning ||
+              !parsedUrl ||
+              !getTargetPath() ||
+              isCheckingPermissions
+                ? 0.5
+                : 1,
           }}
         >
           {isCloning && <Loader2 size={16} className="animate-spin" />}
           {willFork && needsFork && <GitFork size={16} />}
           {isCloning
-            ? (willFork && needsFork ? 'Forking & Cloning...' : 'Cloning...')
-            : (willFork && needsFork ? 'Fork & Clone' : 'Clone Repository')
-          }
+            ? willFork && needsFork
+              ? 'Forking & Cloning...'
+              : 'Cloning...'
+            : willFork && needsFork
+              ? 'Fork & Clone'
+              : 'Clone Repository'}
         </button>
       </div>
     </>
   );
 
   const renderProgress = () => {
-    const allSteps: ProgressStep[] = willFork && needsFork
-      ? ['forking', 'cloning', 'registering', 'adding']
-      : ['cloning', 'registering', 'adding'];
+    const allSteps: ProgressStep[] =
+      willFork && needsFork
+        ? ['forking', 'cloning', 'registering', 'adding']
+        : ['cloning', 'registering', 'adding'];
 
     return (
       <div
@@ -872,7 +932,9 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
               color: theme.colors.text,
             }}
           >
-            {step === 'complete' ? 'Repository Cloned!' : getProgressLabel(progressStep)}
+            {step === 'complete'
+              ? 'Repository Cloned!'
+              : getProgressLabel(progressStep)}
           </h3>
           <p
             style={{
@@ -885,9 +947,8 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
             {step === 'complete'
               ? `${parsedUrl?.repo} has been ${willFork && forkedRepoUrl ? 'forked and ' : ''}cloned and added to ${workspace.name}`
               : willFork && progressStep === 'forking'
-                ? `Forking ${parsedUrl?.owner}/${parsedUrl?.repo} to ${forkTarget === 'personal' ? (currentUser?.login || 'your account') : forkTarget}...`
-                : `Cloning ${willFork && forkedRepoUrl ? 'your fork of ' : ''}${parsedUrl?.owner}/${parsedUrl?.repo}...`
-            }
+                ? `Forking ${parsedUrl?.owner}/${parsedUrl?.repo} to ${forkTarget === 'personal' ? currentUser?.login || 'your account' : forkTarget}...`
+                : `Cloning ${willFork && forkedRepoUrl ? 'your fork of ' : ''}${parsedUrl?.owner}/${parsedUrl?.repo}...`}
           </p>
         </div>
 
@@ -902,7 +963,8 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
           >
             {allSteps.map((s) => {
               const isActive = s === progressStep;
-              const isPast = allSteps.indexOf(s) < allSteps.indexOf(progressStep);
+              const isPast =
+                allSteps.indexOf(s) < allSteps.indexOf(progressStep);
 
               return (
                 <div
@@ -911,9 +973,10 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
                     width: '8px',
                     height: '8px',
                     borderRadius: '50%',
-                    backgroundColor: isPast || isActive
-                      ? theme.colors.primary
-                      : theme.colors.border,
+                    backgroundColor:
+                      isPast || isActive
+                        ? theme.colors.primary
+                        : theme.colors.border,
                     opacity: isActive ? 1 : isPast ? 0.6 : 0.3,
                     transition: 'all 0.3s',
                   }}
@@ -943,7 +1006,9 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
       case 'input':
         return 'Clone from GitHub';
       case 'progress':
-        return willFork && progressStep === 'forking' ? 'Forking Repository' : 'Cloning Repository';
+        return willFork && progressStep === 'forking'
+          ? 'Forking Repository'
+          : 'Cloning Repository';
       case 'complete':
         return 'Success';
       default:

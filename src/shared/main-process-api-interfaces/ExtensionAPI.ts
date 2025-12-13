@@ -134,5 +134,7 @@ export interface ExtensionAPI {
   /**
    * Subscribe to extension changes
    */
-  onExtensionsChanged(callback: (extensions: DiscoveredExtension[]) => void): () => void;
+  onExtensionsChanged(
+    callback: (extensions: DiscoveredExtension[]) => void,
+  ): () => void;
 }

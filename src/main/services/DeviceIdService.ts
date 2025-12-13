@@ -53,12 +53,18 @@ export class DeviceIdService {
 
         if (parsed.deviceId && typeof parsed.deviceId === 'string') {
           this.deviceId = parsed.deviceId;
-          console.log('[DeviceIdService] Loaded existing device ID:', this.deviceId);
+          console.log(
+            '[DeviceIdService] Loaded existing device ID:',
+            this.deviceId,
+          );
           return this.deviceId;
         }
       }
     } catch (error) {
-      console.error('[DeviceIdService] Failed to load device ID from disk:', error);
+      console.error(
+        '[DeviceIdService] Failed to load device ID from disk:',
+        error,
+      );
       // Continue to create a new ID
     }
 
@@ -101,7 +107,7 @@ export class DeviceIdService {
       await fs.promises.writeFile(
         this.deviceIdFilePath,
         JSON.stringify(deviceData, null, 2),
-        'utf-8'
+        'utf-8',
       );
 
       this.deviceId = newDeviceId;
@@ -112,7 +118,10 @@ export class DeviceIdService {
 
       // Fallback: generate temporary ID (not persisted)
       const fallbackId = `electron-${uuidv4()}`;
-      console.warn('[DeviceIdService] Using temporary device ID (not persisted):', fallbackId);
+      console.warn(
+        '[DeviceIdService] Using temporary device ID (not persisted):',
+        fallbackId,
+      );
       return fallbackId;
     }
   }

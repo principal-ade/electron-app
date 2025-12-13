@@ -14,7 +14,11 @@ export const LocalProjectsPanel: React.FC = () => {
 
   // Load all local repositories without expensive cache data (git status, file tree, packages)
   // LocalProjectCard only needs basic repository info, not the full cache data
-  const { repositories: localRepos, loading, refresh } = useAllRepositories({
+  const {
+    repositories: localRepos,
+    loading,
+    refresh,
+  } = useAllRepositories({
     skipCacheData: true,
   });
 
@@ -29,7 +33,13 @@ export const LocalProjectsPanel: React.FC = () => {
         properties: ['openDirectory'],
       });
 
-      if (!result || result.canceled || !('filePaths' in result) || !result.filePaths || result.filePaths.length === 0) {
+      if (
+        !result ||
+        result.canceled ||
+        !('filePaths' in result) ||
+        !result.filePaths ||
+        result.filePaths.length === 0
+      ) {
         return;
       }
 
@@ -44,10 +54,14 @@ export const LocalProjectsPanel: React.FC = () => {
       // Refresh the repository list
       await refresh();
 
-      console.log(`Successfully added project: ${projectName} at ${projectPath}`);
+      console.log(
+        `Successfully added project: ${projectName} at ${projectPath}`,
+      );
     } catch (error) {
       console.error('Failed to add project:', error);
-      alert(`Failed to add project: ${error instanceof Error ? error.message : String(error)}`);
+      alert(
+        `Failed to add project: ${error instanceof Error ? error.message : String(error)}`,
+      );
     } finally {
       setIsAdding(false);
     }

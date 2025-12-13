@@ -29,7 +29,11 @@ export const PanelFocusProvider: React.FC<{ children: ReactNode }> = ({
 
   return (
     <PanelFocusContext.Provider
-      value={{ focusReadmePanel, middlePanelActiveTab, setMiddlePanelActiveTab }}
+      value={{
+        focusReadmePanel,
+        middlePanelActiveTab,
+        setMiddlePanelActiveTab,
+      }}
     >
       {children}
     </PanelFocusContext.Provider>

@@ -15,7 +15,8 @@ export class TerminalSessionManager {
   private rendererWindows: Set<BrowserWindow> = new Set();
 
   // MessagePort support - track ports per session per window
-  private sessionPorts: Map<string, Map<number, MessageChannelMain>> = new Map();
+  private sessionPorts: Map<string, Map<number, MessageChannelMain>> =
+    new Map();
 
   // Renderer window tracking
   addRendererWindow(window: BrowserWindow): void {
@@ -62,8 +63,11 @@ export class TerminalSessionManager {
     const ownerWindowId = ownershipManager.getOwner(sessionId);
     if (ownerWindowId === undefined) {
       // Only log occasionally to avoid spam
-      if (data.length > 0 && data.charCodeAt(0) !== 27) { // Skip escape sequences
-        console.warn(`[Terminal] No owner for session ${sessionId}, dropping ${data.length} bytes`);
+      if (data.length > 0 && data.charCodeAt(0) !== 27) {
+        // Skip escape sequences
+        console.warn(
+          `[Terminal] No owner for session ${sessionId}, dropping ${data.length} bytes`,
+        );
       }
       return;
     }
@@ -78,7 +82,7 @@ export class TerminalSessionManager {
     if (!channel) {
       console.warn(
         `[Terminal] No MessagePort found for owner window ${ownerWindowId} on session ${sessionId}. ` +
-        `Available windows: ${Array.from(windowPorts.keys()).join(', ')}`
+          `Available windows: ${Array.from(windowPorts.keys()).join(', ')}`,
       );
       return;
     }
@@ -158,7 +162,8 @@ export class TerminalSessionManager {
       console.warn(
         `Directory ${workingDirectory} does not exist, using home directory`,
       );
-      workingDirectory = process.env.HOME || process.env.USERPROFILE || os.homedir();
+      workingDirectory =
+        process.env.HOME || process.env.USERPROFILE || os.homedir();
     }
 
     // Get properly configured environment with user's full PATH
@@ -373,7 +378,12 @@ export class TerminalSessionManager {
   }
 
   // Resize a session
-  resizeSession(sessionId: string, cols: number, rows: number, force: boolean = false): void {
+  resizeSession(
+    sessionId: string,
+    cols: number,
+    rows: number,
+    force: boolean = false,
+  ): void {
     const session = this.sessions.get(sessionId);
     if (session) {
       if (force) {
@@ -422,27 +432,45 @@ export class TerminalSessionManager {
    * @param windowId - The window to send the port to
    * @param claimOwnership - Whether to also claim ownership (default: false)
    */
-  createPortForSession(sessionId: string, windowId: number, claimOwnership: boolean = false): boolean {
-    console.log(`[Terminal] createPortForSession called: sessionId=${sessionId}, windowId=${windowId}, claimOwnership=${claimOwnership}`);
+  createPortForSession(
+    sessionId: string,
+    windowId: number,
+    claimOwnership: boolean = false,
+  ): boolean {
+    console.log(
+      `[Terminal] createPortForSession called: sessionId=${sessionId}, windowId=${windowId}, claimOwnership=${claimOwnership}`,
+    );
 
     const session = this.sessions.get(sessionId);
     if (!session) {
-      console.error(`[Terminal] Cannot create port: session ${sessionId} not found`);
-      console.error(`[Terminal] Available sessions: ${Array.from(this.sessions.keys()).join(', ')}`);
+      console.error(
+        `[Terminal] Cannot create port: session ${sessionId} not found`,
+      );
+      console.error(
+        `[Terminal] Available sessions: ${Array.from(this.sessions.keys()).join(', ')}`,
+      );
       return false;
     }
 
     const window = BrowserWindow.fromId(windowId);
     if (!window || window.isDestroyed()) {
-      console.error(`[Terminal] Cannot create port: window ${windowId} not found or destroyed`);
-      console.error(`[Terminal] All windows: ${BrowserWindow.getAllWindows().map(w => w.id).join(', ')}`);
+      console.error(
+        `[Terminal] Cannot create port: window ${windowId} not found or destroyed`,
+      );
+      console.error(
+        `[Terminal] All windows: ${BrowserWindow.getAllWindows()
+          .map((w) => w.id)
+          .join(', ')}`,
+      );
       return false;
     }
 
     // Check if this window already has a port for this session (matches testing app)
     const existingPorts = this.sessionPorts.get(sessionId);
     if (existingPorts?.has(windowId)) {
-      console.log(`[Terminal] Window ${windowId} already has a port for session ${sessionId}`);
+      console.log(
+        `[Terminal] Window ${windowId} already has a port for session ${sessionId}`,
+      );
       // Still claim ownership if requested
       if (claimOwnership) {
         ownershipManager.claimOwnership(sessionId, windowId);
@@ -450,7 +478,9 @@ export class TerminalSessionManager {
       return true;
     }
 
-    console.log(`[Terminal] Session and window validated, creating new MessageChannel`);
+    console.log(
+      `[Terminal] Session and window validated, creating new MessageChannel`,
+    );
 
     try {
       // Create MessageChannel
@@ -462,7 +492,9 @@ export class TerminalSessionManager {
       }
       this.sessionPorts.get(sessionId)!.set(windowId, channel);
 
-      console.log(`[Terminal] Created MessageChannel for session ${sessionId} -> window ${windowId}`);
+      console.log(
+        `[Terminal] Created MessageChannel for session ${sessionId} -> window ${windowId}`,
+      );
 
       // Start listening on port1 (main process side)
       channel.port1.start();
@@ -479,11 +511,17 @@ export class TerminalSessionManager {
       }
 
       // Transfer port2 to renderer using 'terminal:port' channel (matches testing app)
-      console.log(`[Terminal] Sending port to window ${windowId} for session ${sessionId}`);
+      console.log(
+        `[Terminal] Sending port to window ${windowId} for session ${sessionId}`,
+      );
 
       try {
-        window.webContents.postMessage('terminal:port', sessionId, [channel.port2]);
-        console.log(`[Terminal] ✅ Port sent successfully to window ${windowId} for session ${sessionId}`);
+        window.webContents.postMessage('terminal:port', sessionId, [
+          channel.port2,
+        ]);
+        console.log(
+          `[Terminal] ✅ Port sent successfully to window ${windowId} for session ${sessionId}`,
+        );
       } catch (postError) {
         console.error(`[Terminal] ❌ Failed to send port:`, postError);
         return false;
@@ -491,7 +529,10 @@ export class TerminalSessionManager {
 
       return true;
     } catch (error) {
-      console.error(`[Terminal] Failed to create port for session ${sessionId}:`, error);
+      console.error(
+        `[Terminal] Failed to create port for session ${sessionId}:`,
+        error,
+      );
       return false;
     }
   }
@@ -503,7 +544,9 @@ export class TerminalSessionManager {
   private handlePortMessage(sessionId: string, message: any): void {
     const session = this.sessions.get(sessionId);
     if (!session) {
-      console.warn(`[Terminal] Received message for non-existent session ${sessionId}`);
+      console.warn(
+        `[Terminal] Received message for non-existent session ${sessionId}`,
+      );
       return;
     }
 
@@ -514,10 +557,15 @@ export class TerminalSessionManager {
       } else if (message.type === 'RESIZE') {
         session.pty.resize(message.cols, message.rows);
       } else {
-        console.warn(`[Terminal] Unknown message type from port: ${message.type}`);
+        console.warn(
+          `[Terminal] Unknown message type from port: ${message.type}`,
+        );
       }
     } catch (error) {
-      console.error(`[Terminal] Error handling port message for session ${sessionId}:`, error);
+      console.error(
+        `[Terminal] Error handling port message for session ${sessionId}:`,
+        error,
+      );
     }
   }
 
@@ -531,7 +579,10 @@ export class TerminalSessionManager {
         try {
           channel.port1.close();
         } catch (error) {
-          console.error(`[Terminal] Error closing port for window ${windowId} on session ${sessionId}:`, error);
+          console.error(
+            `[Terminal] Error closing port for window ${windowId} on session ${sessionId}:`,
+            error,
+          );
         }
       }
       this.sessionPorts.delete(sessionId);
@@ -552,7 +603,9 @@ export class TerminalSessionManager {
           // Port may already be closed
         }
         windowPorts.delete(windowId);
-        console.log(`[Terminal] Cleaned up port for window ${windowId} on session ${sessionId}`);
+        console.log(
+          `[Terminal] Cleaned up port for window ${windowId} on session ${sessionId}`,
+        );
       }
     }
   }

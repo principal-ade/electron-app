@@ -47,7 +47,9 @@ export interface AgentHighlightProviderValue {
   actions: AgentHighlightActions;
 }
 
-const AgentHighlightContext = createContext<AgentHighlightProviderValue | null>(null);
+const AgentHighlightContext = createContext<AgentHighlightProviderValue | null>(
+  null,
+);
 
 interface AgentHighlightProviderProps {
   children: ReactNode;
@@ -69,11 +71,12 @@ export const AgentHighlightProvider: React.FC<AgentHighlightProviderProps> = ({
 }) => {
   // Track agent highlight layers for code city visualization
   const [highlightLayers, setHighlightLayers] = useState<HighlightLayer[]>([]);
-  const [navigationState, setNavigationState] = useState<AgentHighlightNavigationState>({
-    currentIndex: -1,
-    totalEvents: 0,
-    isLive: true,
-  });
+  const [navigationState, setNavigationState] =
+    useState<AgentHighlightNavigationState>({
+      currentIndex: -1,
+      totalEvents: 0,
+      isLive: true,
+    });
 
   // EventHighlightService instance
   const eventHighlightServiceRef = useRef<EventHighlightService | null>(null);
@@ -97,14 +100,23 @@ export const AgentHighlightProvider: React.FC<AgentHighlightProviderProps> = ({
     service.setRepository(repositoryPath);
 
     // Subscribe to processed agent events
-    const unsubscribeEvents = AgentSessionSDKService.onProcessedEvent((event) => {
-      console.log('[AgentHighlightProvider] Received agent event:', event.eventType, event.toolName);
-      service.processEvent(event);
-    });
+    const unsubscribeEvents = AgentSessionSDKService.onProcessedEvent(
+      (event) => {
+        console.log(
+          '[AgentHighlightProvider] Received agent event:',
+          event.eventType,
+          event.toolName,
+        );
+        service.processEvent(event);
+      },
+    );
 
     // Listen for highlight layer updates from the service
     const handleHighlightUpdate = (layers: HighlightLayer[]) => {
-      console.log('[AgentHighlightProvider] Agent highlight layers updated:', layers.length);
+      console.log(
+        '[AgentHighlightProvider] Agent highlight layers updated:',
+        layers.length,
+      );
       setHighlightLayers(layers);
       // Update navigation state
       const navState = service.getNavigationState();
@@ -114,27 +126,32 @@ export const AgentHighlightProvider: React.FC<AgentHighlightProviderProps> = ({
     service.on('highlight-update', handleHighlightUpdate);
 
     return () => {
-      console.log('[AgentHighlightProvider] Cleaning up event highlight service');
+      console.log(
+        '[AgentHighlightProvider] Cleaning up event highlight service',
+      );
       unsubscribeEvents();
       service.off('highlight-update', handleHighlightUpdate);
     };
   }, [repositoryPath]);
 
   // Create actions
-  const actions: AgentHighlightActions = useMemo(() => ({
-    navigatePrevious: () => {
-      eventHighlightServiceRef.current?.navigatePrevious();
-    },
-    navigateNext: () => {
-      eventHighlightServiceRef.current?.navigateNext();
-    },
-    goLive: () => {
-      eventHighlightServiceRef.current?.goLive();
-    },
-    clear: () => {
-      eventHighlightServiceRef.current?.clear();
-    },
-  }), []);
+  const actions: AgentHighlightActions = useMemo(
+    () => ({
+      navigatePrevious: () => {
+        eventHighlightServiceRef.current?.navigatePrevious();
+      },
+      navigateNext: () => {
+        eventHighlightServiceRef.current?.navigateNext();
+      },
+      goLive: () => {
+        eventHighlightServiceRef.current?.goLive();
+      },
+      clear: () => {
+        eventHighlightServiceRef.current?.clear();
+      },
+    }),
+    [],
+  );
 
   // Create context value
   const context: AgentHighlightContextValue = useMemo(
@@ -164,7 +181,9 @@ export const AgentHighlightProvider: React.FC<AgentHighlightProviderProps> = ({
 export const useAgentHighlightProvider = (): AgentHighlightProviderValue => {
   const context = useContext(AgentHighlightContext);
   if (!context) {
-    throw new Error('useAgentHighlightProvider must be used within an AgentHighlightProvider');
+    throw new Error(
+      'useAgentHighlightProvider must be used within an AgentHighlightProvider',
+    );
   }
   return context;
 };
@@ -188,9 +207,10 @@ export const useAgentHighlightActions = (): AgentHighlightActions => {
 /**
  * Hook to access navigation state (for UI indicators)
  */
-export const useAgentHighlightNavigation = (): AgentHighlightNavigationState => {
-  const { context } = useAgentHighlightProvider();
-  return context.navigationState;
-};
+export const useAgentHighlightNavigation =
+  (): AgentHighlightNavigationState => {
+    const { context } = useAgentHighlightProvider();
+    return context.navigationState;
+  };
 
 export default AgentHighlightContext;

@@ -373,7 +373,10 @@ export function registerModernWindowHandlers(): void {
 
         window.window.loadURL(url);
       } catch (err) {
-        console.error('[modernWindowHandlers] OPEN_MARKDOWN_VIEW_FROM_REPOSITORY error:', err);
+        console.error(
+          '[modernWindowHandlers] OPEN_MARKDOWN_VIEW_FROM_REPOSITORY error:',
+          err,
+        );
       }
     },
   );
@@ -420,14 +423,19 @@ export function registerModernWindowHandlers(): void {
       // Fetch workspace name from the registry
       let workspaceName = 'Alexandria Workspace';
       try {
-        const { AlexandriaRegistryService } = require('../stores/AlexandriaRegistryService');
+        const {
+          AlexandriaRegistryService,
+        } = require('../stores/AlexandriaRegistryService');
         const service = AlexandriaRegistryService.getInstance();
         const workspace = await service.getWorkspace(workspaceId);
         if (workspace?.name) {
           workspaceName = workspace.name;
         }
       } catch (error) {
-        console.error('[modernWindowHandlers] Failed to fetch workspace name:', error);
+        console.error(
+          '[modernWindowHandlers] Failed to fetch workspace name:',
+          error,
+        );
       }
 
       // Create metadata for workspace window
@@ -526,4 +534,3 @@ export function registerModernWindowHandlers(): void {
     return window !== null;
   });
 }
-

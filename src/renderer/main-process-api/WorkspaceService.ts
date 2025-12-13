@@ -3,18 +3,26 @@
  * Communicates with main process via IPC using window.mainProcess
  */
 
-import type { Workspace, WorkspaceMembership, AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import type {
+  Workspace,
+  WorkspaceMembership,
+  AlexandriaEntry,
+} from '@principal-ai/alexandria-core-library/types';
 import type { WorkspaceChangeEvent } from '../../shared/main-process-api-interfaces/WorkspaceAPI';
 
 export class WorkspaceService {
   // Event subscription
-  static onWorkspaceChange(callback: (event: WorkspaceChangeEvent) => void): () => void {
+  static onWorkspaceChange(
+    callback: (event: WorkspaceChangeEvent) => void,
+  ): () => void {
     return window.mainProcess.workspace.onWorkspaceChange(callback);
   }
 
   // ===== Workspace CRUD =====
 
-  static async createWorkspace(workspace: Omit<Workspace, 'id' | 'createdAt' | 'updatedAt'>): Promise<Workspace> {
+  static async createWorkspace(
+    workspace: Omit<Workspace, 'id' | 'createdAt' | 'updatedAt'>,
+  ): Promise<Workspace> {
     return window.mainProcess.workspace.createWorkspace(workspace);
   }
 
@@ -26,7 +34,10 @@ export class WorkspaceService {
     return window.mainProcess.workspace.getWorkspaces();
   }
 
-  static async updateWorkspace(id: string, updates: Partial<Omit<Workspace, 'id' | 'createdAt'>>): Promise<Workspace> {
+  static async updateWorkspace(
+    id: string,
+    updates: Partial<Omit<Workspace, 'id' | 'createdAt'>>,
+  ): Promise<Workspace> {
     return window.mainProcess.workspace.updateWorkspace(id, updates);
   }
 
@@ -39,37 +50,53 @@ export class WorkspaceService {
   static async addRepositoryToWorkspace(
     repository: AlexandriaEntry | string,
     workspaceId: string,
-    metadata?: Record<string, unknown>
+    metadata?: Record<string, unknown>,
   ): Promise<void> {
-    return window.mainProcess.workspace.addRepositoryToWorkspace(repository, workspaceId, metadata);
+    return window.mainProcess.workspace.addRepositoryToWorkspace(
+      repository,
+      workspaceId,
+      metadata,
+    );
   }
 
   static async removeRepositoryFromWorkspace(
     repository: AlexandriaEntry | string,
-    workspaceId: string
+    workspaceId: string,
   ): Promise<void> {
-    return window.mainProcess.workspace.removeRepositoryFromWorkspace(repository, workspaceId);
+    return window.mainProcess.workspace.removeRepositoryFromWorkspace(
+      repository,
+      workspaceId,
+    );
   }
 
-  static async getWorkspaceMemberships(workspaceId: string): Promise<WorkspaceMembership[]> {
+  static async getWorkspaceMemberships(
+    workspaceId: string,
+  ): Promise<WorkspaceMembership[]> {
     return window.mainProcess.workspace.getWorkspaceMemberships(workspaceId);
   }
 
-  static async getRepositoryWorkspaces(repository: AlexandriaEntry | string): Promise<Workspace[]> {
+  static async getRepositoryWorkspaces(
+    repository: AlexandriaEntry | string,
+  ): Promise<Workspace[]> {
     return window.mainProcess.workspace.getRepositoryWorkspaces(repository);
   }
 
   // ===== Query Methods =====
 
-  static async getRepositoriesInWorkspace(workspaceId: string): Promise<AlexandriaEntry[]> {
+  static async getRepositoriesInWorkspace(
+    workspaceId: string,
+  ): Promise<AlexandriaEntry[]> {
     return window.mainProcess.workspace.getRepositoriesInWorkspace(workspaceId);
   }
 
   static async isRepositoryInWorkspace(
     repository: AlexandriaEntry | string,
-    workspaceId: string
+    workspaceId: string,
   ): Promise<boolean> {
-    return window.mainProcess.workspace.isRepositoryInWorkspace(repository, workspaceId);
+    return window.mainProcess.workspace.isRepositoryInWorkspace(
+      repository,
+      workspaceId,
+    );
   }
 
   // ===== Default Workspace =====
@@ -86,15 +113,21 @@ export class WorkspaceService {
 
   static async isRepositoryInWorkspaceDirectory(
     repository: AlexandriaEntry,
-    workspaceId: string
+    workspaceId: string,
   ): Promise<boolean | null> {
-    return window.mainProcess.workspace.isRepositoryInWorkspaceDirectory(repository, workspaceId);
+    return window.mainProcess.workspace.isRepositoryInWorkspaceDirectory(
+      repository,
+      workspaceId,
+    );
   }
 
   static async moveRepositoryToWorkspaceDirectory(
     repository: AlexandriaEntry,
-    workspaceId: string
+    workspaceId: string,
   ): Promise<string> {
-    return window.mainProcess.workspace.moveRepositoryToWorkspaceDirectory(repository, workspaceId);
+    return window.mainProcess.workspace.moveRepositoryToWorkspaceDirectory(
+      repository,
+      workspaceId,
+    );
   }
 }

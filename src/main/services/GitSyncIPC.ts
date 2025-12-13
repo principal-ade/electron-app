@@ -82,7 +82,9 @@ class GitSyncIPC {
         // The internal GitSyncMessage has an index signature allowing this cast
         return await gitSyncWebSocketManager.sendMessageToConnection(
           message.connectionId,
-          message.data as Parameters<typeof gitSyncWebSocketManager.sendMessageToConnection>[1],
+          message.data as Parameters<
+            typeof gitSyncWebSocketManager.sendMessageToConnection
+          >[1],
         );
       },
     );
@@ -114,18 +116,24 @@ class GitSyncIPC {
     // Handler for git-sync:set-environment
     ipcMain.handle(
       GitSyncEvent.SET_ENVIRONMENT,
-      async (event, environment: 'development' | 'production'): Promise<void> => {
+      async (
+        event,
+        environment: 'development' | 'production',
+      ): Promise<void> => {
         console.log('[GitSyncIPC] Setting environment to:', environment);
         gitSyncWebSocketManager.setEnvironment(environment);
       },
     );
 
     // Handler for git-sync:get-environment
-    ipcMain.handle(GitSyncEvent.GET_ENVIRONMENT, async (): Promise<'development' | 'production'> => {
-      const environment = gitSyncWebSocketManager.getCurrentEnvironment();
-      console.log('[GitSyncIPC] Returning environment:', environment);
-      return environment;
-    });
+    ipcMain.handle(
+      GitSyncEvent.GET_ENVIRONMENT,
+      async (): Promise<'development' | 'production'> => {
+        const environment = gitSyncWebSocketManager.getCurrentEnvironment();
+        console.log('[GitSyncIPC] Returning environment:', environment);
+        return environment;
+      },
+    );
 
     // Handler for git-sync:check-repo-access
     ipcMain.handle(
@@ -171,7 +179,11 @@ class GitSyncIPC {
     // Handler for git-sync:check-service
     ipcMain.handle(
       GitSyncEvent.CHECK_SERVICE,
-      async (event, url: string, serviceName: string): Promise<{ available: boolean; status?: number; error?: string }> => {
+      async (
+        event,
+        url: string,
+        serviceName: string,
+      ): Promise<{ available: boolean; status?: number; error?: string }> => {
         console.log(`[GitSyncIPC] Checking service: ${serviceName} at ${url}`);
 
         try {
@@ -197,7 +209,11 @@ class GitSyncIPC {
 
             // 404 means endpoint doesn't exist
             if (response.status === 404) {
-              return { available: false, status: 404, error: 'Endpoint not found' };
+              return {
+                available: false,
+                status: 404,
+                error: 'Endpoint not found',
+              };
             }
 
             // Any other response means the endpoint exists
@@ -229,8 +245,12 @@ class GitSyncIPC {
             return { available: true, status: response.status };
           }
         } catch (error) {
-          console.error(`[GitSyncIPC] Service check failed for ${serviceName}:`, error);
-          const errorMsg = error instanceof Error ? error.message : String(error);
+          console.error(
+            `[GitSyncIPC] Service check failed for ${serviceName}:`,
+            error,
+          );
+          const errorMsg =
+            error instanceof Error ? error.message : String(error);
           return { available: false, error: errorMsg };
         }
       },

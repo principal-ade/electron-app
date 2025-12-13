@@ -11,7 +11,9 @@ import type { PanelMetadata } from '../../../shared/main-process-api-interfaces/
 import type { ExtensionWindowMainProcessAPI } from '../../../shared/main-process-api-interfaces/ExtensionWindowAPI';
 
 // Get the mainProcess API from the window object
-const mainProcess = (window as any).mainProcess as ExtensionWindowMainProcessAPI | undefined;
+const mainProcess = (window as any).mainProcess as
+  | ExtensionWindowMainProcessAPI
+  | undefined;
 
 interface PanelHarnessProps {
   /** The package name of the extension */
@@ -38,12 +40,16 @@ function transformBundleToUseGlobals(code: string): string {
     /import\s*\{([^}]+)\}\s*from\s*["']react\/jsx-runtime["'];?/g,
     (_, imports) => {
       const importList = imports.split(',').map((i: string) => i.trim());
-      return importList.map((imp: string) => {
-        const [name, alias] = imp.split(/\s+as\s+/).map((s: string) => s.trim());
-        const varName = alias || name;
-        return `const ${varName} = __REACT_JSX_RUNTIME__.${name};`;
-      }).join('\n');
-    }
+      return importList
+        .map((imp: string) => {
+          const [name, alias] = imp
+            .split(/\s+as\s+/)
+            .map((s: string) => s.trim());
+          const varName = alias || name;
+          return `const ${varName} = __REACT_JSX_RUNTIME__.${name};`;
+        })
+        .join('\n');
+    },
   );
 
   // Replace react imports (default and named)
@@ -52,68 +58,81 @@ function transformBundleToUseGlobals(code: string): string {
     (_, defaultImport, namedImports) => {
       const lines = [`const ${defaultImport} = __REACT__;`];
       if (namedImports.trim()) {
-        const importList = namedImports.split(',').map((i: string) => i.trim()).filter(Boolean);
+        const importList = namedImports
+          .split(',')
+          .map((i: string) => i.trim())
+          .filter(Boolean);
         importList.forEach((imp: string) => {
-          const [name, alias] = imp.split(/\s+as\s+/).map((s: string) => s.trim());
+          const [name, alias] = imp
+            .split(/\s+as\s+/)
+            .map((s: string) => s.trim());
           const varName = alias || name;
           lines.push(`const ${varName} = __REACT__.${name};`);
         });
       }
       return lines.join('\n');
-    }
+    },
   );
 
   // Replace simple react default import
   code = code.replace(
     /import\s+(\w+)\s+from\s*["']react["'];?/g,
-    (_, defaultImport) => `const ${defaultImport} = __REACT__;`
+    (_, defaultImport) => `const ${defaultImport} = __REACT__;`,
   );
 
   // Replace simple react named imports only
   code = code.replace(
     /import\s*\{([^}]+)\}\s*from\s*["']react["'];?/g,
     (_, imports) => {
-      const importList = imports.split(',').map((i: string) => i.trim()).filter(Boolean);
-      return importList.map((imp: string) => {
-        const [name, alias] = imp.split(/\s+as\s+/).map((s: string) => s.trim());
-        const varName = alias || name;
-        return `const ${varName} = __REACT__.${name};`;
-      }).join('\n');
-    }
+      const importList = imports
+        .split(',')
+        .map((i: string) => i.trim())
+        .filter(Boolean);
+      return importList
+        .map((imp: string) => {
+          const [name, alias] = imp
+            .split(/\s+as\s+/)
+            .map((s: string) => s.trim());
+          const varName = alias || name;
+          return `const ${varName} = __REACT__.${name};`;
+        })
+        .join('\n');
+    },
   );
 
   // Transform ES module exports to assign to exports object
   // Handle: export { foo, bar, baz };
-  code = code.replace(
-    /export\s*\{([^}]+)\};?/g,
-    (_, exports) => {
-      const exportList = exports.split(',').map((e: string) => e.trim()).filter(Boolean);
-      return exportList.map((exp: string) => {
+  code = code.replace(/export\s*\{([^}]+)\};?/g, (_, exports) => {
+    const exportList = exports
+      .split(',')
+      .map((e: string) => e.trim())
+      .filter(Boolean);
+    return exportList
+      .map((exp: string) => {
         // Handle "foo as bar" syntax
-        const [name, alias] = exp.split(/\s+as\s+/).map((s: string) => s.trim());
+        const [name, alias] = exp
+          .split(/\s+as\s+/)
+          .map((s: string) => s.trim());
         const exportName = alias || name;
         return `__EXPORTS__.${exportName} = ${name};`;
-      }).join('\n');
-    }
-  );
+      })
+      .join('\n');
+  });
 
   // Handle: export const foo = ...;
   code = code.replace(
     /export\s+const\s+(\w+)\s*=/g,
-    (_, name) => `const ${name} = __EXPORTS__.${name} =`
+    (_, name) => `const ${name} = __EXPORTS__.${name} =`,
   );
 
   // Handle: export function foo() { ... }
   code = code.replace(
     /export\s+function\s+(\w+)/g,
-    (_, name) => `__EXPORTS__.${name} = function ${name}`
+    (_, name) => `__EXPORTS__.${name} = function ${name}`,
   );
 
   // Handle: export default ...
-  code = code.replace(
-    /export\s+default\s+/g,
-    '__EXPORTS__.default = '
-  );
+  code = code.replace(/export\s+default\s+/g, '__EXPORTS__.default = ');
 
   return code;
 }
@@ -142,7 +161,10 @@ function executeBundle(code: string): any {
     return moduleExports;
   } catch (err) {
     console.error('[PanelHarness] Failed to execute bundle:', err);
-    console.error('[PanelHarness] Transformed code (first 2000 chars):', transformedCode.substring(0, 2000));
+    console.error(
+      '[PanelHarness] Transformed code (first 2000 chars):',
+      transformedCode.substring(0, 2000),
+    );
     throw err;
   }
 }
@@ -168,7 +190,8 @@ export const PanelHarness: React.FC<PanelHarnessProps> = ({
 
     try {
       // Fetch the bundle content from main process
-      const bundleContent = await mainProcess.extension.fetchExtensionBundle(packageName);
+      const bundleContent =
+        await mainProcess.extension.fetchExtensionBundle(packageName);
 
       if (!bundleContent) {
         setError(`Failed to fetch bundle for: ${packageName}`);
@@ -187,7 +210,7 @@ export const PanelHarness: React.FC<PanelHarnessProps> = ({
 
       // Find the specific panel by ID
       const panelDef = module.panels.find(
-        (p: any) => p.metadata?.id === panel.id
+        (p: any) => p.metadata?.id === panel.id,
       );
 
       if (!panelDef || !panelDef.component) {

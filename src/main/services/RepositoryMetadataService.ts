@@ -15,7 +15,8 @@ export class RepositoryMetadataService {
   private static instance: RepositoryMetadataService;
   private repositoryHandler: RepositoryApiEventHandler;
   private cache: Map<string, MetadataCache> = new Map();
-  private refreshPromises: Map<string, Promise<Repository | undefined>> = new Map();
+  private refreshPromises: Map<string, Promise<Repository | undefined>> =
+    new Map();
 
   // Cache configuration
   private readonly CACHE_DURATION = 60 * 60 * 1000; // 1 hour
@@ -57,7 +58,9 @@ export class RepositoryMetadataService {
     // If already refreshing, return the existing promise
     const existingPromise = this.refreshPromises.get(remoteUrl);
     if (existingPromise) {
-      console.log(`[RepositoryMetadataService] Already refreshing ${remoteUrl}, returning existing promise`);
+      console.log(
+        `[RepositoryMetadataService] Already refreshing ${remoteUrl}, returning existing promise`,
+      );
       return existingPromise;
     }
 
@@ -78,13 +81,18 @@ export class RepositoryMetadataService {
    * Internal refresh implementation
    */
   private async _doRefresh(remoteUrl: string): Promise<Repository | undefined> {
-    console.log(`[RepositoryMetadataService] Refreshing metadata for ${remoteUrl}`);
+    console.log(
+      `[RepositoryMetadataService] Refreshing metadata for ${remoteUrl}`,
+    );
     const startTime = Date.now();
 
     try {
-      const metadata = await this.repositoryHandler.refreshRepositoryMetadata(remoteUrl);
+      const metadata =
+        await this.repositoryHandler.refreshRepositoryMetadata(remoteUrl);
       if (!metadata) {
-        console.log(`[RepositoryMetadataService] No metadata found for ${remoteUrl}`);
+        console.log(
+          `[RepositoryMetadataService] No metadata found for ${remoteUrl}`,
+        );
         return undefined;
       }
 
@@ -97,14 +105,19 @@ export class RepositoryMetadataService {
       });
 
       const duration = Date.now() - startTime;
-      console.log(`[RepositoryMetadataService] Refreshed ${remoteUrl} in ${duration}ms`);
+      console.log(
+        `[RepositoryMetadataService] Refreshed ${remoteUrl} in ${duration}ms`,
+      );
 
       // Broadcast update to all windows
       this.broadcastMetadataUpdate(remoteUrl, metadata);
 
       return metadata;
     } catch (error) {
-      console.error(`[RepositoryMetadataService] Error refreshing ${remoteUrl}:`, error);
+      console.error(
+        `[RepositoryMetadataService] Error refreshing ${remoteUrl}:`,
+        error,
+      );
       return undefined;
     }
   }
@@ -116,7 +129,10 @@ export class RepositoryMetadataService {
     try {
       return await this.repositoryHandler.getRepository(remoteUrl);
     } catch (error) {
-      console.error(`[RepositoryMetadataService] Error fetching from database:`, error);
+      console.error(
+        `[RepositoryMetadataService] Error fetching from database:`,
+        error,
+      );
       return undefined;
     }
   }
@@ -129,7 +145,9 @@ export class RepositoryMetadataService {
     // Try cache first
     const cached = this.getCachedMetadata(remoteUrl);
     if (cached) {
-      console.log(`[RepositoryMetadataService] Returning cached metadata for ${remoteUrl}`);
+      console.log(
+        `[RepositoryMetadataService] Returning cached metadata for ${remoteUrl}`,
+      );
       return cached;
     }
 
@@ -143,13 +161,18 @@ export class RepositoryMetadataService {
    */
   getFallbackAvatarUrl(remoteUrl: string): string | null {
     try {
-      const match = remoteUrl.match(/github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?$/);
+      const match = remoteUrl.match(
+        /github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?$/,
+      );
       if (!match) return null;
 
       const [, owner] = match;
       return `https://github.com/${owner}.png?size=200`;
     } catch (error) {
-      console.error('[RepositoryMetadataService] Error generating fallback avatar:', error);
+      console.error(
+        '[RepositoryMetadataService] Error generating fallback avatar:',
+        error,
+      );
       return null;
     }
   }
@@ -157,9 +180,14 @@ export class RepositoryMetadataService {
   /**
    * Broadcast metadata update to all open windows
    */
-  private broadcastMetadataUpdate(remoteUrl: string, metadata: Repository): void {
+  private broadcastMetadataUpdate(
+    remoteUrl: string,
+    metadata: Repository,
+  ): void {
     const windows = BrowserWindow.getAllWindows();
-    console.log(`[RepositoryMetadataService] Broadcasting metadata update to ${windows.length} windows`);
+    console.log(
+      `[RepositoryMetadataService] Broadcasting metadata update to ${windows.length} windows`,
+    );
 
     for (const window of windows) {
       if (!window.isDestroyed()) {
@@ -194,10 +222,12 @@ export class RepositoryMetadataService {
     size: number;
     entries: Array<{ remoteUrl: string; hasAvatar: boolean }>;
   } {
-    const entries = Array.from(this.cache.entries()).map(([remoteUrl, entry]) => ({
-      remoteUrl,
-      hasAvatar: !!entry.data.avatarUrl,
-    }));
+    const entries = Array.from(this.cache.entries()).map(
+      ([remoteUrl, entry]) => ({
+        remoteUrl,
+        hasAvatar: !!entry.data.avatarUrl,
+      }),
+    );
 
     return {
       size: this.cache.size,
@@ -221,10 +251,13 @@ export class RepositoryMetadataService {
     }
 
     if (pruned > 0) {
-      console.log(`[RepositoryMetadataService] Pruned ${pruned} expired cache entries`);
+      console.log(
+        `[RepositoryMetadataService] Pruned ${pruned} expired cache entries`,
+      );
     }
   }
 }
 
 // Export singleton instance
-export const repositoryMetadataService = RepositoryMetadataService.getInstance();
+export const repositoryMetadataService =
+  RepositoryMetadataService.getInstance();

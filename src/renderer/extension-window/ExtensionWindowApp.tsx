@@ -17,16 +17,24 @@ import { ExtensionDetails } from './components/ExtensionDetails';
 import { PanelHarness } from './components/PanelHarness';
 
 // Get the mainProcess API from the window object
-const mainProcess = (window as any).mainProcess as ExtensionWindowMainProcessAPI | undefined;
+const mainProcess = (window as any).mainProcess as
+  | ExtensionWindowMainProcessAPI
+  | undefined;
 
 // Check if the API is available at module level
-const isAPIAvailable = !!(mainProcess?.extension);
+const isAPIAvailable = !!mainProcess?.extension;
 
 export const ExtensionWindowApp: React.FC = () => {
   const [extensions, setExtensions] = useState<DiscoveredExtension[]>([]);
-  const [selectedExtension, setSelectedExtension] = useState<DiscoveredExtension | null>(null);
-  const [selectedPanel, setSelectedPanel] = useState<PanelMetadata | null>(null);
-  const [previewingPanel, setPreviewingPanel] = useState<{ extension: DiscoveredExtension; panel: PanelMetadata } | null>(null);
+  const [selectedExtension, setSelectedExtension] =
+    useState<DiscoveredExtension | null>(null);
+  const [selectedPanel, setSelectedPanel] = useState<PanelMetadata | null>(
+    null,
+  );
+  const [previewingPanel, setPreviewingPanel] = useState<{
+    extension: DiscoveredExtension;
+    panel: PanelMetadata;
+  } | null>(null);
   const [extensionsDirectory, setExtensionsDirectory] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -73,9 +81,11 @@ export const ExtensionWindowApp: React.FC = () => {
     loadExtensions();
 
     // Subscribe to extension changes
-    const unsubscribe = mainProcess.extension.onExtensionsChanged((updatedExtensions) => {
-      setExtensions(updatedExtensions);
-    });
+    const unsubscribe = mainProcess.extension.onExtensionsChanged(
+      (updatedExtensions) => {
+        setExtensions(updatedExtensions);
+      },
+    );
 
     return () => {
       unsubscribe();
@@ -129,7 +139,9 @@ export const ExtensionWindowApp: React.FC = () => {
   const handleUninstall = async (extension: DiscoveredExtension) => {
     if (!mainProcess?.extension) return;
 
-    if (!confirm(`Are you sure you want to uninstall "${extension.packageName}"?`)) {
+    if (
+      !confirm(`Are you sure you want to uninstall "${extension.packageName}"?`)
+    ) {
       return;
     }
 
@@ -149,7 +161,9 @@ export const ExtensionWindowApp: React.FC = () => {
   if (!isAPIAvailable) {
     return (
       <div className="h-screen w-screen overflow-hidden bg-gray-900 flex flex-col items-center justify-center text-white">
-        <div className="text-red-500 text-xl mb-4">Extension API not available</div>
+        <div className="text-red-500 text-xl mb-4">
+          Extension API not available
+        </div>
         <div className="text-gray-400 text-sm text-center">
           The preload script may not have loaded correctly.
           <br />
@@ -167,10 +181,10 @@ export const ExtensionWindowApp: React.FC = () => {
   return (
     <div className="h-screen w-screen overflow-hidden bg-gray-900 flex flex-col">
       <ExtensionWindowTitlebar
-          extensionsDirectory={extensionsDirectory}
-          sidebarCollapsed={sidebarCollapsed}
-          onToggleSidebar={handleToggleSidebar}
-        />
+        extensionsDirectory={extensionsDirectory}
+        sidebarCollapsed={sidebarCollapsed}
+        onToggleSidebar={handleToggleSidebar}
+      />
 
       <div className="flex-1 flex overflow-hidden">
         {/* Extension List Sidebar */}
@@ -180,15 +194,20 @@ export const ExtensionWindowApp: React.FC = () => {
           }`}
         >
           <div className="p-4 border-b border-gray-700 min-w-80">
-            <h2 className="text-sm font-medium text-gray-300">Installed Extensions</h2>
+            <h2 className="text-sm font-medium text-gray-300">
+              Installed Extensions
+            </h2>
             <p className="text-xs text-gray-500 mt-1">
-              {extensions.length} extension{extensions.length !== 1 ? 's' : ''} found
+              {extensions.length} extension{extensions.length !== 1 ? 's' : ''}{' '}
+              found
             </p>
           </div>
 
           <div className="flex-1 overflow-y-auto min-w-80">
             {loading ? (
-              <div className="p-4 text-gray-400 text-sm">Loading extensions...</div>
+              <div className="p-4 text-gray-400 text-sm">
+                Loading extensions...
+              </div>
             ) : error ? (
               <div className="p-4 text-red-400 text-sm">{error}</div>
             ) : extensions.length === 0 ? (

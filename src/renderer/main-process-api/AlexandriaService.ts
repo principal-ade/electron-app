@@ -3,7 +3,10 @@
  * Communicates with main process via IPC using window.mainProcess
  */
 
-import type { AlexandriaEntry, CodebaseView } from '@principal-ai/alexandria-core-library/types';
+import type {
+  AlexandriaEntry,
+  CodebaseView,
+} from '@principal-ai/alexandria-core-library/types';
 import type { AlexandriaChangeEvent } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
 
 export class AlexandriaService {
@@ -13,7 +16,9 @@ export class AlexandriaService {
     return window.mainProcess.alexandria.onRepositoryChange(callback);
   }
 
-  static async getRepositories(skipGitInfo?: boolean): Promise<AlexandriaEntry[]> {
+  static async getRepositories(
+    skipGitInfo?: boolean,
+  ): Promise<AlexandriaEntry[]> {
     return window.mainProcess.alexandria.getRepositories(skipGitInfo);
   }
 
@@ -78,6 +83,9 @@ export class AlexandriaService {
     repositoryPath: string,
     viewId: string,
   ): Promise<CodebaseView | null> {
-    return window.mainProcess.alexandria.getCodebaseView(repositoryPath, viewId);
+    return window.mainProcess.alexandria.getCodebaseView(
+      repositoryPath,
+      viewId,
+    );
   }
 }

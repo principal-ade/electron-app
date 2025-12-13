@@ -129,7 +129,9 @@ async function handleDeepLink(url: string): Promise<void> {
         if (alexandriaEntry) {
           await openDevWorkspaceWindow({ alexandriaEntry });
         } else {
-          console.warn(`[Main] No Alexandria entry found for path: ${decodedPath}`);
+          console.warn(
+            `[Main] No Alexandria entry found for path: ${decodedPath}`,
+          );
         }
       } else if (owner && repo) {
         // Look up Alexandria entry by owner/repo
@@ -139,15 +141,13 @@ async function handleDeepLink(url: string): Promise<void> {
         const service = AlexandriaRegistryService.getInstance();
         const repositories = await service.getRepositories();
         const alexandriaEntry = repositories.find(
-          (r) => r.github?.owner === owner && r.name === repo
+          (r) => r.github?.owner === owner && r.name === repo,
         );
 
         if (alexandriaEntry) {
           await openDevWorkspaceWindow({ alexandriaEntry });
         } else {
-          console.warn(
-            `[Main] No Alexandria entry found for ${owner}/${repo}`,
-          );
+          console.warn(`[Main] No Alexandria entry found for ${owner}/${repo}`);
         }
       }
     } else {
@@ -327,7 +327,9 @@ app.on('browser-window-created', (_, window) => {
           !input.shift &&
           !input.alt))
     ) {
-      log.info('[Quick Open] Command+O triggered - Opening repo/workspace picker');
+      log.info(
+        '[Quick Open] Command+O triggered - Opening repo/workspace picker',
+      );
       quickOpen.show();
       event.preventDefault();
     }

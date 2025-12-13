@@ -12,12 +12,9 @@ interface DeleteWorkspaceConfirmationModalProps {
   onSuccess?: () => void;
 }
 
-export const DeleteWorkspaceConfirmationModal: React.FC<DeleteWorkspaceConfirmationModalProps> = ({
-  isOpen,
-  workspace,
-  onClose,
-  onSuccess,
-}) => {
+export const DeleteWorkspaceConfirmationModal: React.FC<
+  DeleteWorkspaceConfirmationModalProps
+> = ({ isOpen, workspace, onClose, onSuccess }) => {
   const { theme } = useTheme();
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -54,7 +51,10 @@ export const DeleteWorkspaceConfirmationModal: React.FC<DeleteWorkspaceConfirmat
       onSuccess?.();
       handleClose();
     } catch (error) {
-      console.error('[DeleteWorkspaceConfirmationModal] Error deleting workspace:', error);
+      console.error(
+        '[DeleteWorkspaceConfirmationModal] Error deleting workspace:',
+        error,
+      );
       setError('Failed to delete workspace. Please try again.');
     } finally {
       setIsDeleting(false);
@@ -87,7 +87,8 @@ export const DeleteWorkspaceConfirmationModal: React.FC<DeleteWorkspaceConfirmat
           border: `1px solid ${theme.colors.border}`,
           width: '90%',
           maxWidth: '480px',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+          boxShadow:
+            '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -192,7 +193,8 @@ export const DeleteWorkspaceConfirmationModal: React.FC<DeleteWorkspaceConfirmat
               lineHeight: 1.6,
             }}
           >
-            This action cannot be undone. Repositories in this workspace will not be deleted from your system.
+            This action cannot be undone. Repositories in this workspace will
+            not be deleted from your system.
           </p>
         </div>
 

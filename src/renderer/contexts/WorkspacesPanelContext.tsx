@@ -15,7 +15,10 @@ import type {
   PanelEvent,
   PanelEventEmitter,
 } from '@principal-ade/panel-framework-core';
-import type { Workspace, AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import type {
+  Workspace,
+  AlexandriaEntry,
+} from '@principal-ai/alexandria-core-library/types';
 import type {
   WorkspacesSlice,
   WorkspacesListPanelActions,
@@ -36,19 +39,23 @@ import { GithubService } from '../main-process-api/GithubService';
  * Extended actions for WorkspacesPanelProvider
  * Combines workspace list actions with repository actions and GitHub actions
  */
-interface WorkspacesPanelActions extends PanelActions, WorkspacesListPanelActions, GitHubStarredPanelActions, GitHubProjectsPanelActions {
+interface WorkspacesPanelActions
+  extends PanelActions,
+    WorkspacesListPanelActions,
+    GitHubStarredPanelActions,
+    GitHubProjectsPanelActions {
   removeRepositoryFromWorkspace?: (
     repositoryId: string,
-    workspaceId: string
+    workspaceId: string,
   ) => Promise<void>;
   copyToClipboard?: (text: string) => Promise<void>;
   isRepositoryInWorkspaceDirectory?: (
     repository: AlexandriaEntry,
-    workspaceId: string
+    workspaceId: string,
   ) => Promise<boolean | null>;
   moveRepositoryToWorkspaceDirectory?: (
     repository: AlexandriaEntry,
-    workspaceId: string
+    workspaceId: string,
   ) => Promise<string>;
 }
 
@@ -70,45 +77,60 @@ interface WorkspacesPanelProviderValue {
   events: PanelEventEmitter;
 }
 
-const WorkspacesPanelContext = createContext<WorkspacesPanelProviderValue | null>(null);
+const WorkspacesPanelContext =
+  createContext<WorkspacesPanelProviderValue | null>(null);
 
 interface WorkspacesPanelProviderProps {
   children: ReactNode;
   theme?: Theme;
 }
 
-export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = ({
-  children,
-  theme: _theme,
-}) => {
+export const WorkspacesPanelProvider: React.FC<
+  WorkspacesPanelProviderProps
+> = ({ children, theme: _theme }) => {
   // Initialize event bus
   const events = useMemo(() => new PanelEventBus(), []);
 
   // State for workspaces
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [workspacesLoading, setWorkspacesLoading] = useState(true);
-  const [defaultWorkspaceId, setDefaultWorkspaceId] = useState<string | null>(null);
+  const [defaultWorkspaceId, setDefaultWorkspaceId] = useState<string | null>(
+    null,
+  );
 
   // State for selected workspace
-  const [selectedWorkspace, setSelectedWorkspace] = useState<Workspace | null>(null);
+  const [selectedWorkspace, setSelectedWorkspace] = useState<Workspace | null>(
+    null,
+  );
 
   // State for workspace repositories
-  const [workspaceRepositories, setWorkspaceRepositories] = useState<AlexandriaEntry[]>([]);
+  const [workspaceRepositories, setWorkspaceRepositories] = useState<
+    AlexandriaEntry[]
+  >([]);
   const [repositoriesLoading, setRepositoriesLoading] = useState(false);
 
   // State for all local repositories (for LocalProjectsPanel)
-  const [localRepositories, setLocalRepositories] = useState<AlexandriaEntry[]>([]);
-  const [localRepositoriesLoading, setLocalRepositoriesLoading] = useState(true);
+  const [localRepositories, setLocalRepositories] = useState<AlexandriaEntry[]>(
+    [],
+  );
+  const [localRepositoriesLoading, setLocalRepositoriesLoading] =
+    useState(true);
 
   // State for GitHub starred repositories
-  const [starredRepositories, setStarredRepositories] = useState<GitHubRepository[]>([]);
+  const [starredRepositories, setStarredRepositories] = useState<
+    GitHubRepository[]
+  >([]);
   const [starredLoading, setStarredLoading] = useState(false);
   const [starredError, setStarredError] = useState<string | undefined>();
 
   // State for GitHub projects (user repos + org repos)
-  const [userRepositories, setUserRepositories] = useState<GitHubRepository[]>([]);
+  const [userRepositories, setUserRepositories] = useState<GitHubRepository[]>(
+    [],
+  );
   const [organizations, setOrganizations] = useState<GitHubOrganization[]>([]);
-  const [orgRepositories, setOrgRepositories] = useState<Record<string, GitHubRepository[]>>({});
+  const [orgRepositories, setOrgRepositories] = useState<
+    Record<string, GitHubRepository[]>
+  >({});
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState<string | undefined>();
   const [currentUser, setCurrentUser] = useState<string>('');
@@ -130,7 +152,10 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
           setSelectedWorkspace(defaultWs);
         }
       } catch (error) {
-        console.error('[WorkspacesPanelProvider] Failed to fetch workspaces:', error);
+        console.error(
+          '[WorkspacesPanelProvider] Failed to fetch workspaces:',
+          error,
+        );
       } finally {
         setWorkspacesLoading(false);
       }
@@ -149,10 +174,15 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
 
       setRepositoriesLoading(true);
       try {
-        const repos = await WorkspaceService.getRepositoriesInWorkspace(selectedWorkspace.id);
+        const repos = await WorkspaceService.getRepositoriesInWorkspace(
+          selectedWorkspace.id,
+        );
         setWorkspaceRepositories(repos);
       } catch (error) {
-        console.error('[WorkspacesPanelProvider] Failed to fetch workspace repositories:', error);
+        console.error(
+          '[WorkspacesPanelProvider] Failed to fetch workspace repositories:',
+          error,
+        );
         setWorkspaceRepositories([]);
       } finally {
         setRepositoriesLoading(false);
@@ -170,7 +200,10 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
         const repos = await AlexandriaService.getRepositories();
         setLocalRepositories(repos);
       } catch (error) {
-        console.error('[WorkspacesPanelProvider] Failed to fetch local repositories:', error);
+        console.error(
+          '[WorkspacesPanelProvider] Failed to fetch local repositories:',
+          error,
+        );
         setLocalRepositories([]);
       } finally {
         setLocalRepositoriesLoading(false);
@@ -200,11 +233,14 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
       // Cast to panels package type (structurally compatible)
       setStarredRepositories(starred as unknown as GitHubRepository[]);
     } catch (error) {
-      console.error('[WorkspacesPanelProvider] Failed to fetch starred repositories:', error);
+      console.error(
+        '[WorkspacesPanelProvider] Failed to fetch starred repositories:',
+        error,
+      );
       setStarredError(
         error instanceof Error
           ? error.message
-          : 'Failed to load starred repositories from GitHub.'
+          : 'Failed to load starred repositories from GitHub.',
       );
     } finally {
       setStarredLoading(false);
@@ -249,18 +285,24 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
             // Cast to panels package type (structurally compatible)
             orgReposMap[org.login] = repos as unknown as GitHubRepository[];
           } catch (error) {
-            console.error(`[WorkspacesPanelProvider] Failed to fetch repos for org ${org.login}:`, error);
+            console.error(
+              `[WorkspacesPanelProvider] Failed to fetch repos for org ${org.login}:`,
+              error,
+            );
             orgReposMap[org.login] = [];
           }
-        })
+        }),
       );
       setOrgRepositories(orgReposMap);
     } catch (error) {
-      console.error('[WorkspacesPanelProvider] Failed to fetch GitHub projects:', error);
+      console.error(
+        '[WorkspacesPanelProvider] Failed to fetch GitHub projects:',
+        error,
+      );
       setProjectsError(
         error instanceof Error
           ? error.message
-          : 'Failed to load repositories from GitHub.'
+          : 'Failed to load repositories from GitHub.',
       );
     } finally {
       setProjectsLoading(false);
@@ -278,12 +320,22 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
     const unsubscribe = WorkspaceService.onWorkspaceChange((event) => {
       console.info('[WorkspacesPanelProvider] Workspace change event:', event);
 
-      if (event.type === 'added' || event.type === 'updated' || event.type === 'deleted') {
+      if (
+        event.type === 'added' ||
+        event.type === 'updated' ||
+        event.type === 'deleted'
+      ) {
         // Refetch all workspaces
-        WorkspaceService.getWorkspaces().then(setWorkspaces).catch(console.error);
+        WorkspaceService.getWorkspaces()
+          .then(setWorkspaces)
+          .catch(console.error);
       }
 
-      if (event.type === 'membership-changed' && event.workspaceId && event.workspaceId === selectedWorkspace?.id) {
+      if (
+        event.type === 'membership-changed' &&
+        event.workspaceId &&
+        event.workspaceId === selectedWorkspace?.id
+      ) {
         // Refetch repositories for current workspace
         WorkspaceService.getRepositoriesInWorkspace(event.workspaceId)
           .then(setWorkspaceRepositories)
@@ -296,24 +348,44 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
 
   // Listen for workspace:selected events from panels
   useEffect(() => {
-    const unsubscribe = events.on('industry-theme.workspaces-list:workspace:selected', (event) => {
-      const { workspace } = event.payload as { workspaceId: string; workspace: Workspace };
-      console.info('[WorkspacesPanelProvider] Workspace selected event:', workspace);
-      setSelectedWorkspace(workspace);
-    });
+    const unsubscribe = events.on(
+      'industry-theme.workspaces-list:workspace:selected',
+      (event) => {
+        const { workspace } = event.payload as {
+          workspaceId: string;
+          workspace: Workspace;
+        };
+        console.info(
+          '[WorkspacesPanelProvider] Workspace selected event:',
+          workspace,
+        );
+        setSelectedWorkspace(workspace);
+      },
+    );
 
     return unsubscribe;
   }, [events]);
 
   // Listen for workspace:opened events to open in new window
   useEffect(() => {
-    const unsubscribe = events.on('industry-theme.workspaces-list:workspace:opened', (event) => {
-      const { workspace } = event.payload as { workspaceId: string; workspace: Workspace };
-      console.info('[WorkspacesPanelProvider] Workspace opened event:', workspace);
+    const unsubscribe = events.on(
+      'industry-theme.workspaces-list:workspace:opened',
+      (event) => {
+        const { workspace } = event.payload as {
+          workspaceId: string;
+          workspace: Workspace;
+        };
+        console.info(
+          '[WorkspacesPanelProvider] Workspace opened event:',
+          workspace,
+        );
 
-      // Open workspace in Alexandria workspace window
-      WindowService.openAlexandriaWorkspace(workspace.id).catch(console.error);
-    });
+        // Open workspace in Alexandria workspace window
+        WindowService.openAlexandriaWorkspace(workspace.id).catch(
+          console.error,
+        );
+      },
+    );
 
     return unsubscribe;
   }, [events]);
@@ -321,8 +393,14 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
   // Listen for repository:opened events to open dev workspace
   useEffect(() => {
     const unsubscribe = events.on('repository:opened', (event) => {
-      const { repository } = event.payload as { repositoryId: string; repository: AlexandriaEntry };
-      console.info('[WorkspacesPanelProvider] Repository opened event:', repository);
+      const { repository } = event.payload as {
+        repositoryId: string;
+        repository: AlexandriaEntry;
+      };
+      console.info(
+        '[WorkspacesPanelProvider] Repository opened event:',
+        repository,
+      );
 
       if (repository) {
         WindowService.openDevWorkspace({
@@ -355,7 +433,10 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
                 const repos = await AlexandriaService.getRepositories();
                 setLocalRepositories(repos);
               } catch (error) {
-                console.error('[WorkspacesPanelProvider] Failed to refresh local repositories:', error);
+                console.error(
+                  '[WorkspacesPanelProvider] Failed to refresh local repositories:',
+                  error,
+                );
               } finally {
                 setLocalRepositoriesLoading(false);
               }
@@ -384,7 +465,10 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
                 setWorkspaces(allWorkspaces);
                 setDefaultWorkspaceId(defaultWs?.id ?? null);
               } catch (error) {
-                console.error('[WorkspacesPanelProvider] Failed to refresh workspaces:', error);
+                console.error(
+                  '[WorkspacesPanelProvider] Failed to refresh workspaces:',
+                  error,
+                );
               } finally {
                 setWorkspacesLoading(false);
               }
@@ -416,10 +500,16 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
               if (selectedWorkspace) {
                 setRepositoriesLoading(true);
                 try {
-                  const repos = await WorkspaceService.getRepositoriesInWorkspace(selectedWorkspace.id);
+                  const repos =
+                    await WorkspaceService.getRepositoriesInWorkspace(
+                      selectedWorkspace.id,
+                    );
                   setWorkspaceRepositories(repos);
                 } catch (error) {
-                  console.error('[WorkspacesPanelProvider] Failed to refresh repositories:', error);
+                  console.error(
+                    '[WorkspacesPanelProvider] Failed to refresh repositories:',
+                    error,
+                  );
                 } finally {
                   setRepositoriesLoading(false);
                 }
@@ -461,7 +551,25 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
           },
         ],
       ]) as Map<string, DataSlice>,
-    [workspaces, defaultWorkspaceId, workspacesLoading, selectedWorkspace, workspaceRepositories, repositoriesLoading, localRepositories, localRepositoriesLoading, starredRepositories, starredLoading, starredError, userRepositories, organizations, orgRepositories, projectsLoading, projectsError, currentUser]
+    [
+      workspaces,
+      defaultWorkspaceId,
+      workspacesLoading,
+      selectedWorkspace,
+      workspaceRepositories,
+      repositoriesLoading,
+      localRepositories,
+      localRepositoriesLoading,
+      starredRepositories,
+      starredLoading,
+      starredError,
+      userRepositories,
+      organizations,
+      orgRepositories,
+      projectsLoading,
+      projectsError,
+      currentUser,
+    ],
   );
 
   // Define actions
@@ -478,7 +586,11 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
       },
 
       openGitDiff: (filePath: string, status?: string) => {
-        console.info('[WorkspacesPanelProvider] Opening git diff:', filePath, status);
+        console.info(
+          '[WorkspacesPanelProvider] Opening git diff:',
+          filePath,
+          status,
+        );
         events.emit({
           type: 'git:diff',
           source: 'workspaces-view',
@@ -519,7 +631,11 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
       },
 
       registerRepository: async (name: string, path: string) => {
-        console.info('[WorkspacesPanelProvider] Registering repository:', name, path);
+        console.info(
+          '[WorkspacesPanelProvider] Registering repository:',
+          name,
+          path,
+        );
         await AlexandriaService.registerRepository(name, path);
 
         // Refresh local repositories
@@ -528,7 +644,11 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
       },
 
       removeRepository: async (name: string, deleteLocal: boolean) => {
-        console.info('[WorkspacesPanelProvider] Removing repository:', name, deleteLocal);
+        console.info(
+          '[WorkspacesPanelProvider] Removing repository:',
+          name,
+          deleteLocal,
+        );
         await AlexandriaService.removeRepository(name, deleteLocal);
 
         // Refresh local repositories
@@ -537,12 +657,15 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
       },
 
       // Workspace actions
-      createWorkspace: async (name: string, options?: {
-        description?: string;
-        icon?: string;
-        theme?: string;
-        suggestedClonePath?: string;
-      }) => {
+      createWorkspace: async (
+        name: string,
+        options?: {
+          description?: string;
+          icon?: string;
+          theme?: string;
+          suggestedClonePath?: string;
+        },
+      ) => {
         console.info('[WorkspacesPanelProvider] Creating workspace:', name);
         const workspace = await WorkspaceService.createWorkspace({
           name,
@@ -559,8 +682,15 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
         return workspace;
       },
 
-      updateWorkspace: async (workspaceId: string, updates: Partial<Omit<Workspace, 'id' | 'createdAt' | 'updatedAt'>>) => {
-        console.info('[WorkspacesPanelProvider] Updating workspace:', workspaceId, updates);
+      updateWorkspace: async (
+        workspaceId: string,
+        updates: Partial<Omit<Workspace, 'id' | 'createdAt' | 'updatedAt'>>,
+      ) => {
+        console.info(
+          '[WorkspacesPanelProvider] Updating workspace:',
+          workspaceId,
+          updates,
+        );
         await WorkspaceService.updateWorkspace(workspaceId, updates);
 
         // Refresh workspaces list
@@ -577,7 +707,10 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
       },
 
       deleteWorkspace: async (workspaceId: string) => {
-        console.info('[WorkspacesPanelProvider] Deleting workspace:', workspaceId);
+        console.info(
+          '[WorkspacesPanelProvider] Deleting workspace:',
+          workspaceId,
+        );
         await WorkspaceService.deleteWorkspace(workspaceId);
 
         // Refresh workspaces list
@@ -591,29 +724,47 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
       },
 
       setDefaultWorkspace: async (workspaceId: string) => {
-        console.info('[WorkspacesPanelProvider] Setting default workspace:', workspaceId);
+        console.info(
+          '[WorkspacesPanelProvider] Setting default workspace:',
+          workspaceId,
+        );
         await WorkspaceService.setDefaultWorkspace(workspaceId);
         setDefaultWorkspaceId(workspaceId);
       },
 
       openWorkspace: async (workspaceId: string) => {
-        console.info('[WorkspacesPanelProvider] Opening workspace:', workspaceId);
+        console.info(
+          '[WorkspacesPanelProvider] Opening workspace:',
+          workspaceId,
+        );
         await WindowService.openAlexandriaWorkspace(workspaceId);
       },
 
       getWorkspaceRepositories: async (workspaceId: string) => {
-        const repos = await WorkspaceService.getRepositoriesInWorkspace(workspaceId);
+        const repos =
+          await WorkspaceService.getRepositoriesInWorkspace(workspaceId);
         return repos.map((r) => ({ name: r.name }));
       },
 
       // Repository actions
-      removeRepositoryFromWorkspace: async (repositoryId: string, workspaceId: string) => {
-        console.info('[WorkspacesPanelProvider] Removing repository from workspace:', repositoryId, workspaceId);
-        await WorkspaceService.removeRepositoryFromWorkspace(repositoryId, workspaceId);
+      removeRepositoryFromWorkspace: async (
+        repositoryId: string,
+        workspaceId: string,
+      ) => {
+        console.info(
+          '[WorkspacesPanelProvider] Removing repository from workspace:',
+          repositoryId,
+          workspaceId,
+        );
+        await WorkspaceService.removeRepositoryFromWorkspace(
+          repositoryId,
+          workspaceId,
+        );
 
         // Refresh repositories if this is the selected workspace
         if (selectedWorkspace?.id === workspaceId) {
-          const repos = await WorkspaceService.getRepositoriesInWorkspace(workspaceId);
+          const repos =
+            await WorkspaceService.getRepositoriesInWorkspace(workspaceId);
           setWorkspaceRepositories(repos);
         }
 
@@ -630,16 +781,30 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
         await navigator.clipboard.writeText(text);
       },
 
-      isRepositoryInWorkspaceDirectory: async (repository: AlexandriaEntry, workspaceId: string) => {
-        return WorkspaceService.isRepositoryInWorkspaceDirectory(repository, workspaceId);
+      isRepositoryInWorkspaceDirectory: async (
+        repository: AlexandriaEntry,
+        workspaceId: string,
+      ) => {
+        return WorkspaceService.isRepositoryInWorkspaceDirectory(
+          repository,
+          workspaceId,
+        );
       },
 
-      moveRepositoryToWorkspaceDirectory: async (repository: AlexandriaEntry, workspaceId: string) => {
-        const newPath = await WorkspaceService.moveRepositoryToWorkspaceDirectory(repository, workspaceId);
+      moveRepositoryToWorkspaceDirectory: async (
+        repository: AlexandriaEntry,
+        workspaceId: string,
+      ) => {
+        const newPath =
+          await WorkspaceService.moveRepositoryToWorkspaceDirectory(
+            repository,
+            workspaceId,
+          );
 
         // Refresh repositories
         if (selectedWorkspace?.id === workspaceId) {
-          const repos = await WorkspaceService.getRepositoriesInWorkspace(workspaceId);
+          const repos =
+            await WorkspaceService.getRepositoriesInWorkspace(workspaceId);
           setWorkspaceRepositories(repos);
         }
 
@@ -647,7 +812,11 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
           type: 'repository:moved',
           source: 'workspaces-view',
           timestamp: Date.now(),
-          payload: { repositoryId: repository.github?.id || repository.name, workspaceId, newPath },
+          payload: {
+            repositoryId: repository.github?.id || repository.name,
+            workspaceId,
+            newPath,
+          },
         });
 
         return newPath;
@@ -655,7 +824,10 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
 
       // GitHub panel actions
       cloneRepository: async (repo: GitHubRepository) => {
-        console.info('[WorkspacesPanelProvider] Clone requested for:', repo.full_name);
+        console.info(
+          '[WorkspacesPanelProvider] Clone requested for:',
+          repo.full_name,
+        );
         // Emit event for clone modal to handle
         events.emit({
           type: 'github:clone-requested',
@@ -675,14 +847,20 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
           // Find the local repo entry by path
           entry = localRepositories.find((r) => r.path === entryOrPath);
           if (!entry) {
-            console.error('[WorkspacesPanelProvider] Could not find repository at path:', entryOrPath);
+            console.error(
+              '[WorkspacesPanelProvider] Could not find repository at path:',
+              entryOrPath,
+            );
             return;
           }
         } else {
           entry = entryOrPath;
         }
 
-        console.info('[WorkspacesPanelProvider] Opening repository:', entry.name);
+        console.info(
+          '[WorkspacesPanelProvider] Opening repository:',
+          entry.name,
+        );
         await WindowService.openDevWorkspace({
           alexandriaEntry: entry,
         });
@@ -698,7 +876,7 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
 
       refreshProjects: fetchGitHubProjects,
     }),
-    [events, selectedWorkspace, localRepositories]
+    [events, selectedWorkspace, localRepositories],
   );
 
   // Create context value
@@ -706,23 +884,31 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
     () => ({
       currentScope: {
         type: 'workspace' as const,
-        workspace: selectedWorkspace ? {
-          id: selectedWorkspace.id,
-          name: selectedWorkspace.name,
-          path: selectedWorkspace.suggestedClonePath || '',
-        } : undefined,
+        workspace: selectedWorkspace
+          ? {
+              id: selectedWorkspace.id,
+              name: selectedWorkspace.name,
+              path: selectedWorkspace.suggestedClonePath || '',
+            }
+          : undefined,
         repository: undefined,
       },
       slices,
       adapters: {},
-      getSlice: <T = unknown>(name: string): DataSlice<T> | undefined => {
+      getSlice: <T = unknown,>(name: string): DataSlice<T> | undefined => {
         return slices.get(name) as DataSlice<T> | undefined;
       },
-      getWorkspaceSlice: <T = unknown>(name: string): DataSlice<T> | undefined => {
+      getWorkspaceSlice: <T = unknown,>(
+        name: string,
+      ): DataSlice<T> | undefined => {
         const slice = slices.get(name);
-        return slice?.scope === 'workspace' ? (slice as DataSlice<T>) : undefined;
+        return slice?.scope === 'workspace'
+          ? (slice as DataSlice<T>)
+          : undefined;
       },
-      getRepositorySlice: <T = unknown>(_name: string): DataSlice<T> | undefined => {
+      getRepositorySlice: <T = unknown,>(
+        _name: string,
+      ): DataSlice<T> | undefined => {
         return undefined; // No repository scope in this context
       },
       hasSlice: (name: string, scope?: 'workspace' | 'repository'): boolean => {
@@ -730,13 +916,19 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
         if (!slice) return false;
         return scope ? slice.scope === scope : true;
       },
-      isSliceLoading: (name: string, scope?: 'workspace' | 'repository'): boolean => {
+      isSliceLoading: (
+        name: string,
+        scope?: 'workspace' | 'repository',
+      ): boolean => {
         const slice = slices.get(name);
         if (!slice) return false;
         if (scope && slice.scope !== scope) return false;
         return slice.loading;
       },
-      refresh: async (scope?: 'workspace' | 'repository', sliceName?: string): Promise<void> => {
+      refresh: async (
+        scope?: 'workspace' | 'repository',
+        sliceName?: string,
+      ): Promise<void> => {
         const slicesToRefresh = Array.from(slices.values()).filter((slice) => {
           if (scope && slice.scope !== scope) return false;
           if (sliceName && slice.name !== sliceName) return false;
@@ -749,7 +941,7 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
       selectedWorkspace,
       setSelectedWorkspace,
     }),
-    [slices, selectedWorkspace]
+    [slices, selectedWorkspace],
   );
 
   // Combine into provider value
@@ -759,7 +951,7 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
       actions,
       events,
     }),
-    [context, actions, events]
+    [context, actions, events],
   );
 
   return (
@@ -772,7 +964,9 @@ export const WorkspacesPanelProvider: React.FC<WorkspacesPanelProviderProps> = (
 export const useWorkspacesPanelProvider = (): WorkspacesPanelProviderValue => {
   const value = useContext(WorkspacesPanelContext);
   if (!value) {
-    throw new Error('useWorkspacesPanelProvider must be used within a WorkspacesPanelProvider');
+    throw new Error(
+      'useWorkspacesPanelProvider must be used within a WorkspacesPanelProvider',
+    );
   }
   return value;
 };

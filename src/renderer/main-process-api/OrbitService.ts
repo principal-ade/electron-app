@@ -27,7 +27,10 @@ export class OrbitService {
       console.error('[OrbitService] Failed to open auth:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to open authentication',
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to open authentication',
       };
     }
   }
@@ -58,7 +61,8 @@ export class OrbitService {
       return {
         status: 'error',
         metadata: {
-          error: error instanceof Error ? error.message : 'Failed to check status',
+          error:
+            error instanceof Error ? error.message : 'Failed to check status',
         },
       };
     }
@@ -67,7 +71,9 @@ export class OrbitService {
   /**
    * Connect to signaling server for a repository (WebSocket-based)
    */
-  static async connect(config: OrbitConnectConfig): Promise<OrbitConnectResult> {
+  static async connect(
+    config: OrbitConnectConfig,
+  ): Promise<OrbitConnectResult> {
     try {
       return await window.mainProcess.orbit.connect(config);
     } catch (error) {
@@ -150,7 +156,11 @@ export class OrbitService {
    * Subscribe to connected events
    */
   static onConnected(
-    callback: (data: { connectionId: string; peerId: string; githubHandle: string }) => void,
+    callback: (data: {
+      connectionId: string;
+      peerId: string;
+      githubHandle: string;
+    }) => void,
   ): () => void {
     return window.mainProcess.orbit.onConnected(callback);
   }
@@ -158,7 +168,9 @@ export class OrbitService {
   /**
    * Subscribe to disconnected events
    */
-  static onDisconnected(callback: (data: { connectionId: string }) => void): () => void {
+  static onDisconnected(
+    callback: (data: { connectionId: string }) => void,
+  ): () => void {
     return window.mainProcess.orbit.onDisconnected(callback);
   }
 

@@ -47,7 +47,9 @@ interface ServiceStatus {
 export const GitSyncDiagnosticPanel: React.FC = () => {
   const { theme } = useTheme();
   const { repositories } = useAllRepositories();
-  const [environment, setEnvironment] = useState<'development' | 'production'>('production');
+  const [environment, setEnvironment] = useState<'development' | 'production'>(
+    'production',
+  );
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({
     connected: false,
     serverUrl: '',
@@ -134,7 +136,8 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
     const refreshConnectionStatus = async () => {
       try {
         const url = SERVER_URLS[environment];
-        const connections = await gitSyncConnectionManager.getActiveConnections();
+        const connections =
+          await gitSyncConnectionManager.getActiveConnections();
         const hasActiveConnection = Array.from(connections.values()).some(
           (conn) => conn.status.connected,
         );
@@ -144,7 +147,10 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
           serverUrl: url || 'Not configured',
         });
 
-        addEvent(`Environment changed to ${environment}`, environment === 'production' ? '🚀' : '🔧');
+        addEvent(
+          `Environment changed to ${environment}`,
+          environment === 'production' ? '🚀' : '🔧',
+        );
       } catch (error) {
         console.error('Failed to refresh connection:', error);
       }
@@ -243,7 +249,10 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
       if (!service.url) return false;
 
       // Use IPC to check service from main process
-      const result = await GitSyncService.checkService(service.url, service.name);
+      const result = await GitSyncService.checkService(
+        service.url,
+        service.name,
+      );
 
       if (result.available) {
         if (result.status) {
@@ -395,7 +404,8 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
         };
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       addEvent(`Connection test failed: ${errorMessage}`, '❌');
     }
   };
@@ -551,8 +561,14 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
             style={{
               padding: '6px 12px',
               fontSize: theme.fontSizes[1],
-              backgroundColor: environment === 'development' ? theme.colors.primary : theme.colors.backgroundSecondary,
-              color: environment === 'development' ? theme.colors.background : theme.colors.text,
+              backgroundColor:
+                environment === 'development'
+                  ? theme.colors.primary
+                  : theme.colors.backgroundSecondary,
+              color:
+                environment === 'development'
+                  ? theme.colors.background
+                  : theme.colors.text,
               border: `1px solid ${environment === 'development' ? theme.colors.primary : theme.colors.border}`,
               borderRadius: '4px 0 0 4px',
               cursor: 'pointer',
@@ -577,8 +593,14 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
             style={{
               padding: '6px 12px',
               fontSize: theme.fontSizes[1],
-              backgroundColor: environment === 'production' ? theme.colors.primary : theme.colors.backgroundSecondary,
-              color: environment === 'production' ? theme.colors.background : theme.colors.text,
+              backgroundColor:
+                environment === 'production'
+                  ? theme.colors.primary
+                  : theme.colors.backgroundSecondary,
+              color:
+                environment === 'production'
+                  ? theme.colors.background
+                  : theme.colors.text,
               border: `1px solid ${environment === 'production' ? theme.colors.primary : theme.colors.border}`,
               borderRadius: '0 4px 4px 0',
               cursor: 'pointer',

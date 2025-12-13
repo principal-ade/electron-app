@@ -75,10 +75,18 @@ export interface TerminalAPI {
     context?: string,
   ) => Promise<string>;
   write: (sessionId: string, data: string) => Promise<void>;
-  resize: (sessionId: string, cols: number, rows: number, force?: boolean) => Promise<void>;
+  resize: (
+    sessionId: string,
+    cols: number,
+    rows: number,
+    force?: boolean,
+  ) => Promise<void>;
   destroy: (sessionId: string) => Promise<void>;
   list: () => Promise<Array<TerminalInfo>>;
-  onDataForSession: (sessionId: string, callback: (data: string) => void) => () => void;
+  onDataForSession: (
+    sessionId: string,
+    callback: (data: string) => void,
+  ) => () => void;
   onExit: (callback: (exit: TerminalExit) => void) => () => void;
   refresh: (sessionId: string) => Promise<boolean>;
   checkOwnership: (sessionId: string) => Promise<TerminalOwnershipStatus>;

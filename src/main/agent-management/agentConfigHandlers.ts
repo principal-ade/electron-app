@@ -57,11 +57,15 @@ export function setupAgentConfigHandlers() {
         if (agentType === 'claude') {
           // Claude: Don't block on installation detection
           isInstalled = true;
-          console.log('[AgentConfig] Claude - allowing configuration regardless of installation status');
+          console.log(
+            '[AgentConfig] Claude - allowing configuration regardless of installation status',
+          );
         } else if (agentType === 'opencode') {
           // OpenCode: Don't block on installation detection
           isInstalled = true;
-          console.log('[AgentConfig] OpenCode - allowing configuration regardless of installation status');
+          console.log(
+            '[AgentConfig] OpenCode - allowing configuration regardless of installation status',
+          );
         } else if (agentType === 'cline') {
           // Cline is a VS Code extension, consider it "installed" if VS Code is present
           // Users need to install the extension themselves
@@ -72,7 +76,9 @@ export function setupAgentConfigHandlers() {
         } else if (agentType === 'droid') {
           // Droid: Don't block on installation detection
           isInstalled = true;
-          console.log('[AgentConfig] Droid - allowing configuration regardless of installation status');
+          console.log(
+            '[AgentConfig] Droid - allowing configuration regardless of installation status',
+          );
         } else {
           // For other agents, check if config file exists
           try {

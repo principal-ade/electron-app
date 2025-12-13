@@ -15,7 +15,10 @@ export class TerminalOwnershipManager {
   /**
    * Check ownership status for a session.
    */
-  checkOwnership(sessionId: string, requestingWindowId: number): OwnershipStatus {
+  checkOwnership(
+    sessionId: string,
+    requestingWindowId: number,
+  ): OwnershipStatus {
     const ownerWindowId = this.ownership.get(sessionId) ?? null;
 
     // Check if owner window still exists
@@ -44,7 +47,7 @@ export class TerminalOwnershipManager {
   claimOwnership(
     sessionId: string,
     windowId: number,
-    force: boolean = false
+    force: boolean = false,
   ): OwnershipResult {
     const currentOwner = this.ownership.get(sessionId);
 
@@ -75,7 +78,7 @@ export class TerminalOwnershipManager {
 
     console.log(
       `[OwnershipManager] Window ${windowId} claimed ownership of session ${sessionId}` +
-        (previousOwner !== undefined ? ` (from window ${previousOwner})` : '')
+        (previousOwner !== undefined ? ` (from window ${previousOwner})` : ''),
     );
 
     return {
@@ -101,7 +104,7 @@ export class TerminalOwnershipManager {
 
     this.ownership.delete(sessionId);
     console.log(
-      `[OwnershipManager] Window ${windowId} released ownership of session ${sessionId}`
+      `[OwnershipManager] Window ${windowId} released ownership of session ${sessionId}`,
     );
 
     return { success: true };
@@ -144,7 +147,7 @@ export class TerminalOwnershipManager {
 
     if (releasedSessions.length > 0) {
       console.log(
-        `[OwnershipManager] Cleaned up ${releasedSessions.length} sessions for closed window ${windowId}`
+        `[OwnershipManager] Cleaned up ${releasedSessions.length} sessions for closed window ${windowId}`,
       );
     }
 

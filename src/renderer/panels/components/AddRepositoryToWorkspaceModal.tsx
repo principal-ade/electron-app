@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { X, Search, FolderOpen, Plus } from 'lucide-react';
-import type { Workspace, AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import type {
+  Workspace,
+  AlexandriaEntry,
+} from '@principal-ai/alexandria-core-library/types';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { RepositoryAvatar } from '../../components/repository-maps/RepositoryAvatar';
@@ -37,14 +40,12 @@ export const AddRepositoryToWorkspaceModal: React.FC<
       const repos = await AlexandriaService.getRepositories();
 
       // Filter out repositories already in the workspace
-      const availableRepos = repos.filter(
-        (r) => {
-          // Check if this repository is already in the workspace
-          const repoId = r.github?.id;
-          if (!repoId) return false;
-          return !currentRepositoryIds.includes(repoId);
-        }
-      );
+      const availableRepos = repos.filter((r) => {
+        // Check if this repository is already in the workspace
+        const repoId = r.github?.id;
+        if (!repoId) return false;
+        return !currentRepositoryIds.includes(repoId);
+      });
 
       setRepositories(availableRepos);
     } catch (error) {
@@ -75,7 +76,7 @@ export const AddRepositoryToWorkspaceModal: React.FC<
       await WorkspaceService.addRepositoryToWorkspace(repo, workspace.id);
 
       // Remove from available list
-      setRepositories(prev => prev.filter(r => r.path !== repo.path));
+      setRepositories((prev) => prev.filter((r) => r.path !== repo.path));
 
       // If no more repos, close modal
       if (filteredRepositories.length <= 1) {
@@ -83,7 +84,9 @@ export const AddRepositoryToWorkspaceModal: React.FC<
       }
     } catch (error) {
       console.error('Failed to add repository to workspace:', error);
-      alert(`Failed to add repository: ${error instanceof Error ? error.message : String(error)}`);
+      alert(
+        `Failed to add repository: ${error instanceof Error ? error.message : String(error)}`,
+      );
     } finally {
       setAdding(null);
     }
@@ -325,7 +328,9 @@ export const AddRepositoryToWorkspaceModal: React.FC<
                           owner: repo.github?.owner || 'unknown',
                           remoteUrl: repo.remoteUrl || '',
                           vcsType: 'github',
-                          localClones: [{ path: repo.path, addedAt: Date.now() }],
+                          localClones: [
+                            { path: repo.path, addedAt: Date.now() },
+                          ],
                           addedAt: Date.now(),
                         }}
                         size={48}
@@ -392,7 +397,10 @@ export const AddRepositoryToWorkspaceModal: React.FC<
                           backgroundColor: isAdding
                             ? theme.colors.backgroundTertiary
                             : theme.colors.primary,
-                          color: isAdding ? theme.colors.textSecondary : (theme.colors.buttonText || theme.colors.background),
+                          color: isAdding
+                            ? theme.colors.textSecondary
+                            : theme.colors.buttonText ||
+                              theme.colors.background,
                           border: 'none',
                           cursor: isAdding ? 'default' : 'pointer',
                           fontSize: '13px',
@@ -442,7 +450,11 @@ export const AddRepositoryToWorkspaceModal: React.FC<
             }}
           >
             <span>
-              {filteredRepositories.length} {filteredRepositories.length === 1 ? 'repository' : 'repositories'} available
+              {filteredRepositories.length}{' '}
+              {filteredRepositories.length === 1
+                ? 'repository'
+                : 'repositories'}{' '}
+              available
             </span>
           </div>
         </div>

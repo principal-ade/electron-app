@@ -4,4 +4,8 @@
  * Exports the terminal router for registration with TIPC
  */
 
-export { terminalRouter, tipcSessionManager, type TerminalRouter } from './terminalRouter';
+export {
+  terminalRouter,
+  tipcSessionManager,
+  type TerminalRouter,
+} from './terminalRouter';

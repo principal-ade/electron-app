@@ -10,7 +10,10 @@ import { gitSyncWebSocketManager } from './GitSyncWebSocketManager';
 
 export class PresenceWindowBridge {
   private static instance: PresenceWindowBridge;
-  private trackedWindows: Map<string, { owner: string; repo: string; branch: string; localPath?: string }> = new Map();
+  private trackedWindows: Map<
+    string,
+    { owner: string; repo: string; branch: string; localPath?: string }
+  > = new Map();
   private focusedWindow: string | null = null;
 
   private constructor() {
@@ -56,10 +59,16 @@ export class PresenceWindowBridge {
       );
 
       if (!result.success) {
-        console.warn('[PresenceWindowBridge] Failed to report repository opened:', result.message);
+        console.warn(
+          '[PresenceWindowBridge] Failed to report repository opened:',
+          result.message,
+        );
       }
     } catch (error) {
-      console.error('[PresenceWindowBridge] Error reporting repository opened:', error);
+      console.error(
+        '[PresenceWindowBridge] Error reporting repository opened:',
+        error,
+      );
     }
   }
 
@@ -71,7 +80,10 @@ export class PresenceWindowBridge {
     const windowInfo = this.trackedWindows.get(windowId);
 
     if (!windowInfo) {
-      console.warn('[PresenceWindowBridge] Attempted to close untracked window:', windowId);
+      console.warn(
+        '[PresenceWindowBridge] Attempted to close untracked window:',
+        windowId,
+      );
       return;
     }
 
@@ -89,10 +101,16 @@ export class PresenceWindowBridge {
       );
 
       if (!result.success) {
-        console.warn('[PresenceWindowBridge] Failed to report repository closed:', result.message);
+        console.warn(
+          '[PresenceWindowBridge] Failed to report repository closed:',
+          result.message,
+        );
       }
     } catch (error) {
-      console.error('[PresenceWindowBridge] Error reporting repository closed:', error);
+      console.error(
+        '[PresenceWindowBridge] Error reporting repository closed:',
+        error,
+      );
     }
 
     // Remove from tracking
@@ -112,7 +130,10 @@ export class PresenceWindowBridge {
     const windowInfo = this.trackedWindows.get(windowId);
 
     if (!windowInfo) {
-      console.warn('[PresenceWindowBridge] Attempted to focus untracked window:', windowId);
+      console.warn(
+        '[PresenceWindowBridge] Attempted to focus untracked window:',
+        windowId,
+      );
       return;
     }
 
@@ -137,10 +158,16 @@ export class PresenceWindowBridge {
       );
 
       if (!result.success) {
-        console.warn('[PresenceWindowBridge] Failed to report active repository:', result.message);
+        console.warn(
+          '[PresenceWindowBridge] Failed to report active repository:',
+          result.message,
+        );
       }
     } catch (error) {
-      console.error('[PresenceWindowBridge] Error reporting active repository:', error);
+      console.error(
+        '[PresenceWindowBridge] Error reporting active repository:',
+        error,
+      );
     }
   }
 
@@ -162,7 +189,10 @@ export class PresenceWindowBridge {
   /**
    * Get all tracked windows
    */
-  getTrackedWindows(): Map<string, { owner: string; repo: string; branch: string; localPath?: string }> {
+  getTrackedWindows(): Map<
+    string,
+    { owner: string; repo: string; branch: string; localPath?: string }
+  > {
     return new Map(this.trackedWindows);
   }
 

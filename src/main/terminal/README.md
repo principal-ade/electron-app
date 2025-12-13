@@ -43,12 +43,14 @@ Phase 1 implements MessageChannel-based data streaming while keeping PTY process
 ### Data Flow
 
 **PTY Output (Main → Renderer):**
+
 1. PTY emits data via `onData` event
 2. Main: `port1.postMessage({ type: 'DATA', data })`
 3. Renderer: `port2.on('message')` receives data
 4. xterm.js displays the data
 
 **User Input (Renderer → Main):**
+
 1. User types in xterm.js
 2. Renderer: `port2.postMessage({ type: 'WRITE', data })`
 3. Main: `port1.on('message')` receives command
@@ -57,16 +59,19 @@ Phase 1 implements MessageChannel-based data streaming while keeping PTY process
 ### Benefits
 
 ✅ **Performance**
+
 - Eliminates per-chunk IPC overhead
 - Main process only handles setup, not every data packet
 - Direct MessageChannel communication
 
 ✅ **Compatibility**
+
 - Works with all existing terminal features
 - Automatic fallback to legacy IPC if needed
 - No renderer code changes required
 
 ✅ **Simplicity**
+
 - PTY stays in main process (easier debugging)
 - No worker process management overhead
 - Straightforward error handling
@@ -98,34 +103,43 @@ src/main/terminal/
 ## Key Components
 
 ### TerminalManager (`index.ts`)
+
 Main coordinator that:
+
 - Initializes all sub-managers
 - Sets up IPC handlers
 - Provides public API for other services
 - Manages overall lifecycle
 
 ### TerminalSessionManager
+
 Handles:
+
 - PTY process creation and lifecycle
 - MessageChannel creation and management
 - Data streaming (MessagePort or legacy IPC)
 - Session cleanup and destruction
 
 **Key Methods:**
+
 - `createSession()` - Spawns PTY and creates MessageChannel
 - `createMessageChannelForSession()` - Sets up port1/port2
 - `sendToActiveViewers()` - Streams data (via port or IPC)
 - `handlePortMessage()` - Processes renderer commands
 
 ### TerminalOwnershipManager
+
 Manages:
+
 - Single-writer ownership semantics
 - Window ownership tracking
 - Ownership transfers
 - Viewer management
 
 ### TIPC Router (`tipc/terminalRouter.ts`)
+
 Type-safe RPC for terminal operations:
+
 - Session management (create, destroy, list)
 - Ownership management (check, claim, release)
 - Data port management (request MessagePort for streaming)
@@ -138,6 +152,7 @@ Type-safe RPC for terminal operations:
 Console logs indicate which path is active:
 
 **MessagePort mode:**
+
 ```
 [Terminal] Created MessageChannel for session <id>
 [Terminal] Transferred port2 to window <id>
@@ -146,6 +161,7 @@ Console logs indicate which path is active:
 ```
 
 **Legacy IPC mode:**
+
 ```
 [TerminalAPI] Using legacy IPC for session <id>
 ```
@@ -157,18 +173,21 @@ Console logs indicate which path is active:
 Phase 2 would move PTY processes to Electron's `utilityProcess` for true process isolation.
 
 ### Benefits
+
 - PTY crashes don't affect main process
 - Better CPU distribution across cores
 - Improved main process responsiveness
 - Crash isolation and recovery
 
 ### Challenges
+
 - Cannot transfer MessagePorts to utilityProcess
 - Requires data proxy: PTY → worker → main → MessagePort → renderer
 - Adds complexity and another hop in data path
 - More complex error handling and recovery
 
 ### Architecture Sketch
+
 ```
 Utility Process         Main Process              Renderer
      │                       │                        │
@@ -179,7 +198,9 @@ Utility Process         Main Process              Renderer
 ```
 
 ### Decision
+
 Phase 2 is **deferred** because:
+
 1. Phase 1 provides the main performance benefit (no per-chunk IPC)
 2. Added complexity doesn't justify incremental gains
 3. PTY in main process is more debuggable
@@ -190,12 +211,14 @@ Foundation code is preserved in `phase2-future/worker/` for future implementatio
 ## Testing
 
 ### Manual Testing
+
 1. Open terminal in the app
 2. Verify shell prompt appears
 3. Type commands and verify output
 4. Check console for MessagePort logs
 
 ### Verification
+
 ```bash
 # Should see these logs:
 [Terminal] Created MessageChannel for session <id>
@@ -203,7 +226,9 @@ Foundation code is preserved in `phase2-future/worker/` for future implementatio
 ```
 
 ### Performance Testing
+
 Compare terminal responsiveness with MessagePorts enabled vs disabled:
+
 - High-frequency output (npm install, build logs)
 - Multiple concurrent terminals
 - Large output streams
@@ -211,16 +236,19 @@ Compare terminal responsiveness with MessagePorts enabled vs disabled:
 ## Troubleshooting
 
 ### Terminal shows cursor but no output
+
 - Check for `[TerminalAPI] Using existing MessagePort` message
 - Verify MessagePort is being received
 - Check browser console for errors
 
 ### Falls back to legacy IPC unexpectedly
+
 - Check `enableMessagePorts` flag is true
 - Look for MessageChannel creation errors
 - Verify port transfer succeeded
 
 ### Data not flowing
+
 - Ensure port.start() was called
 - Check message format: `{ type: 'DATA', data: '...' }`
 - Verify event listeners are attached
@@ -245,12 +273,14 @@ Compare terminal responsiveness with MessagePorts enabled vs disabled:
 ### Implemented ✅
 
 **1. WebGL Renderer (`@industry-theme/xterm-terminal-panel@0.1.6`)**
+
 - Uses `@xterm/addon-webgl` for GPU-accelerated rendering
 - Falls back to canvas renderer if WebGL unavailable
 - Handles WebGL context loss gracefully
 - Significantly faster for high-throughput terminal output
 
 **2. Debounced Scroll-to-Bottom (`@industry-theme/xterm-terminal-panel@0.1.6`)**
+
 - Changed from immediate scroll on every write to 1-second debounce
 - Only scrolls after writes stop for 1 second
 - Reduces layout thrashing during rapid output
@@ -266,7 +296,7 @@ Currently, each MessagePort message immediately dispatches to all subscribers:
 // Current: preload.ts
 port.onmessage = (e: MessageEvent) => {
   if (e.data?.type === 'DATA') {
-    subscribers.forEach((cb) => cb(e.data.data));  // Immediate dispatch
+    subscribers.forEach((cb) => cb(e.data.data)); // Immediate dispatch
   }
 };
 ```
@@ -306,6 +336,7 @@ port.onmessage = (e: MessageEvent) => {
 ```
 
 **Benefits:**
+
 - Reduces write frequency to ~60/sec max (matches display refresh)
 - Batches rapid small chunks into single larger writes
 - xterm.js handles larger batches more efficiently
@@ -346,6 +377,7 @@ private flushOutputs(): void {
 ```
 
 **Benefits:**
+
 - Reduces MessagePort message frequency
 - Batches PTY output bursts (common with build output)
 
@@ -393,6 +425,7 @@ tail -f /var/log/system.log
 ```
 
 Monitor:
+
 - CPU usage in Activity Monitor
 - Frame rate in DevTools Performance tab
 - Console for `[ThemedTerminal] WebGL renderer enabled`

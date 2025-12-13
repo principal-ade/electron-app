@@ -440,7 +440,9 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
       const authResult = await authService.checkAuth();
 
       if (!authResult.authenticated || !authResult.token) {
-        console.error('[AuthDetails] Not authenticated, cannot connect to presence');
+        console.error(
+          '[AuthDetails] Not authenticated, cannot connect to presence',
+        );
         return;
       }
 
@@ -448,7 +450,10 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
       const result = await PresenceService.connectToPresence(authResult.token);
 
       if (!result.success) {
-        console.error('[AuthDetails] Failed to connect to presence:', result.error);
+        console.error(
+          '[AuthDetails] Failed to connect to presence:',
+          result.error,
+        );
       } else {
         console.info('[AuthDetails] Connected to presence');
       }
@@ -468,7 +473,10 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
       if (result.success) {
         console.info('[AuthDetails] Disconnected from presence');
       } else {
-        console.error('[AuthDetails] Failed to disconnect from presence:', result.message);
+        console.error(
+          '[AuthDetails] Failed to disconnect from presence:',
+          result.message,
+        );
       }
     } catch (err) {
       console.error('[AuthDetails] Failed to disconnect from presence:', err);
@@ -493,430 +501,145 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
             gap: '24px',
           }}
         >
-        {/* Authentication Status Card */}
-        <div
-          style={{
-            backgroundColor: cardBackground,
-            border: `1px solid ${theme.colors.border}`,
-            borderRadius: '12px',
-            padding: '24px',
-          }}
-        >
+          {/* Authentication Status Card */}
           <div
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '24px',
+              backgroundColor: cardBackground,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: '12px',
+              padding: '24px',
             }}
           >
-            <h2
+            <div
               style={{
-                fontSize: '18px',
-                fontWeight: 600,
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
+                justifyContent: 'space-between',
+                marginBottom: '24px',
               }}
             >
-              Authentication Status
-              {isAuthenticated ? (
-                <CheckCircle
-                  size={20}
-                  style={{ color: theme.colors.success || '#10b981' }}
-                />
-              ) : (
-                <XCircle
-                  size={20}
-                  style={{ color: theme.colors.textSecondary }}
-                />
-              )}
-            </h2>
-          </div>
-
-          {isAuthenticated && authUser ? (
-            <div>
-              <div
+              <h2
                 style={{
+                  fontSize: '18px',
+                  fontWeight: 600,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '16px',
-                  marginBottom: '24px',
+                  gap: '8px',
                 }}
               >
-                {authUser.avatarUrl ? (
-                  <img
-                    src={authUser.avatarUrl}
-                    alt={authUser.login}
-                    style={{
-                      width: '64px',
-                      height: '64px',
-                      borderRadius: '50%',
-                      objectFit: 'cover',
-                      border: `2px solid ${theme.colors.border}`,
-                    }}
+                Authentication Status
+                {isAuthenticated ? (
+                  <CheckCircle
+                    size={20}
+                    style={{ color: theme.colors.success || '#10b981' }}
                   />
                 ) : (
-                  <div
-                    style={{
-                      width: '64px',
-                      height: '64px',
-                      borderRadius: '50%',
-                      backgroundColor: theme.colors.primary,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: theme.colors.background,
-                      fontWeight: 600,
-                      fontSize: '24px',
-                    }}
-                  >
-                    {authUser.login[0].toUpperCase()}
-                  </div>
+                  <XCircle
+                    size={20}
+                    style={{ color: theme.colors.textSecondary }}
+                  />
                 )}
-                <div>
-                  <h3
-                    style={{
-                      fontSize: '20px',
-                      fontWeight: 600,
-                      marginBottom: '4px',
-                    }}
-                  >
-                    {authUser.name || authUser.login}
-                  </h3>
-                  <p
-                    style={{
-                      color: theme.colors.textSecondary,
-                      fontSize: '14px',
-                    }}
-                  >
-                    @{authUser.login} · GitHub Account
-                  </p>
-                  {authUser.email && (
-                    <p
-                      style={{
-                        color: theme.colors.textSecondary,
-                        fontSize: '12px',
-                        marginTop: '4px',
-                      }}
-                    >
-                      {authUser.email}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <button
-                onClick={async () => {
-                  try {
-                    await logout();
-                    // Disconnect from presence (main process)
-                    await PresenceService.disconnectFromPresence();
-                    // Also clear any local connection state
-                    gitSyncConnectionManager.disconnectAll();
-                    console.info('Logged out successfully');
-                  } catch (error) {
-                    console.error('Logout failed:', error);
-                  }
-                }}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '10px 20px',
-                  backgroundColor: theme.colors.error || '#ef4444',
-                  color: theme.colors.background,
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  transition: 'opacity 0.2s',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.opacity = '0.9';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = '1';
-                }}
-              >
-                <LogOut size={16} />
-                Sign Out
-              </button>
-            </div>
-          ) : (
-            <div>
-              <p
-                style={{
-                  marginBottom: '20px',
-                  fontSize: '14px',
-                  color: theme.colors.textSecondary,
-                }}
-              >
-                You are currently not authenticated. Sign in with your GitHub
-                account to access repository features and synchronization.
-              </p>
-
-              {loginError &&
-                loginError !== 'Authentication already in progress' && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '12px 16px',
-                      backgroundColor: theme.colors.error
-                        ? `${theme.colors.error}20`
-                        : '#ef444420',
-                      border: `1px solid ${theme.colors.error || '#ef4444'}40`,
-                      borderRadius: '8px',
-                      marginBottom: '16px',
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: '13px',
-                        color: theme.colors.error || '#ef4444',
-                      }}
-                    >
-                      {loginError}
-                    </span>
-                    <button
-                      onClick={() => clearLoginError()}
-                      style={{
-                        backgroundColor: 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        padding: '4px',
-                        color: theme.colors.error || '#ef4444',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        lineHeight: 1,
-                      }}
-                      title="Dismiss"
-                    >
-                      ×
-                    </button>
-                  </div>
-                )}
-
-              <button
-                onClick={async () => {
-                  try {
-                    const forceRetry =
-                      loginError === 'Authentication already in progress';
-                    await login(forceRetry);
-                    console.info('Login completed successfully');
-                  } catch (error: unknown) {
-                    console.error('Login error:', error);
-                  }
-                }}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '10px 20px',
-                  backgroundColor: isLoggingIn
-                    ? theme.colors.backgroundTertiary
-                    : theme.colors.primary,
-                  color: isLoggingIn
-                    ? theme.colors.textSecondary
-                    : theme.colors.background,
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  cursor: isLoggingIn ? 'wait' : 'pointer',
-                  transition: 'all 0.2s',
-                  opacity: isLoggingIn ? 0.7 : 1,
-                }}
-                onMouseEnter={(e) => {
-                  if (!isLoggingIn) e.currentTarget.style.opacity = '0.9';
-                }}
-                onMouseLeave={(e) => {
-                  if (!isLoggingIn) e.currentTarget.style.opacity = '1';
-                }}
-                title={
-                  isLoggingIn
-                    ? 'Authenticating...'
-                    : loginError === 'Authentication already in progress'
-                      ? 'Click to retry'
-                      : 'Login with GitHub'
-                }
-                disabled={
-                  isLoggingIn &&
-                  loginError !== 'Authentication already in progress'
-                }
-              >
-                {isLoggingIn ? (
-                  <>
-                    <Loader2 size={16} className="spinning" />
-                    <span>Signing in...</span>
-                  </>
-                ) : (
-                  <>
-                    <LogIn size={16} />
-                    <span>
-                      {loginError === 'Authentication already in progress'
-                        ? 'Retry Sign In'
-                        : 'Sign In with GitHub'}
-                    </span>
-                  </>
-                )}
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Presence Connectivity Card */}
-        {isAuthenticated && (
-          <div
-            style={{
-              backgroundColor: cardBackground,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: '12px',
-              padding: '24px',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '20px',
-              }}
-            >
-              <h2
-                style={{
-                  fontSize: '18px',
-                  fontWeight: 600,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}
-              >
-                <Users size={20} />
-                Presence & Collaboration
               </h2>
             </div>
 
-            <p
-              style={{
-                color: theme.colors.textSecondary,
-                fontSize: '14px',
-                marginBottom: '20px',
-              }}
-            >
-              Connect to the presence server to see who else is online and share your activity with your team.
-            </p>
-
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-              }}
-            >
-              <button
-                onClick={() => {
-                  if (isConnected) {
-                    handleDisconnectPresence();
-                  } else {
-                    handleConnectPresence();
-                  }
-                }}
-                disabled={isConnecting || isDisconnecting}
-                style={{
-                  position: 'relative',
-                  width: '54px',
-                  height: '28px',
-                  borderRadius: '14px',
-                  border: 'none',
-                  cursor: (isConnecting || isDisconnecting) ? 'not-allowed' : 'pointer',
-                  backgroundColor: isConnected ? '#10b981' : '#6b7280',
-                  transition: 'background-color 0.2s ease',
-                  opacity: (isConnecting || isDisconnecting) ? 0.6 : 1,
-                }}
-                title={isConnected ? 'Disconnect from presence' : 'Connect to presence'}
-              >
+            {isAuthenticated && authUser ? (
+              <div>
                 <div
-                  style={{
-                    position: 'absolute',
-                    top: '2px',
-                    left: isConnected ? '28px' : '2px',
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '50%',
-                    backgroundColor: theme.colors.background,
-                    transition: 'left 0.2s ease',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                  }}
-                />
-              </button>
-              <span
-                style={{
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  color: theme.colors.text,
-                }}
-              >
-                {isConnecting ? 'Connecting...' : isDisconnecting ? 'Disconnecting...' : isConnected ? 'Connected' : 'Disconnected'}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Token Permissions Card */}
-        {isAuthenticated && tokenInfo && (
-          <div
-            style={{
-              backgroundColor: cardBackground,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: '12px',
-              padding: '24px',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '20px',
-              }}
-            >
-              <h2
-                style={{
-                  fontSize: '18px',
-                  fontWeight: 600,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}
-              >
-                <Key size={20} />
-                Token Permissions
-              </h2>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  onClick={async () => {
-                    // Open GitHub settings to manage authorized applications
-                    // (WorkOS uses this GitHub OAuth app for authentication)
-                    await ShellService.openExternal(
-                      'https://github.com/settings/connections/applications/Ov23liw7kWJ0kctIrSs3',
-                    );
-                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px',
-                    padding: '6px 12px',
-                    backgroundColor: theme.colors.primary,
-                    border: 'none',
-                    borderRadius: '6px',
+                    gap: '16px',
+                    marginBottom: '24px',
+                  }}
+                >
+                  {authUser.avatarUrl ? (
+                    <img
+                      src={authUser.avatarUrl}
+                      alt={authUser.login}
+                      style={{
+                        width: '64px',
+                        height: '64px',
+                        borderRadius: '50%',
+                        objectFit: 'cover',
+                        border: `2px solid ${theme.colors.border}`,
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: '64px',
+                        height: '64px',
+                        borderRadius: '50%',
+                        backgroundColor: theme.colors.primary,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: theme.colors.background,
+                        fontWeight: 600,
+                        fontSize: '24px',
+                      }}
+                    >
+                      {authUser.login[0].toUpperCase()}
+                    </div>
+                  )}
+                  <div>
+                    <h3
+                      style={{
+                        fontSize: '20px',
+                        fontWeight: 600,
+                        marginBottom: '4px',
+                      }}
+                    >
+                      {authUser.name || authUser.login}
+                    </h3>
+                    <p
+                      style={{
+                        color: theme.colors.textSecondary,
+                        fontSize: '14px',
+                      }}
+                    >
+                      @{authUser.login} · GitHub Account
+                    </p>
+                    {authUser.email && (
+                      <p
+                        style={{
+                          color: theme.colors.textSecondary,
+                          fontSize: '12px',
+                          marginTop: '4px',
+                        }}
+                      >
+                        {authUser.email}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  onClick={async () => {
+                    try {
+                      await logout();
+                      // Disconnect from presence (main process)
+                      await PresenceService.disconnectFromPresence();
+                      // Also clear any local connection state
+                      gitSyncConnectionManager.disconnectAll();
+                      console.info('Logged out successfully');
+                    } catch (error) {
+                      console.error('Logout failed:', error);
+                    }
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '10px 20px',
+                    backgroundColor: theme.colors.error || '#ef4444',
                     color: theme.colors.background,
-                    fontSize: '13px',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: 500,
                     cursor: 'pointer',
-                    transition: 'all 0.2s',
+                    transition: 'opacity 0.2s',
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.opacity = '0.9';
@@ -924,533 +647,664 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                   onMouseLeave={(e) => {
                     e.currentTarget.style.opacity = '1';
                   }}
-                  title="Manage permissions granted to this app"
                 >
-                  <ExternalLink size={14} />
-                  Manage Permissions
-                </button>
-                <button
-                  onClick={fetchTokenInfo}
-                  disabled={loadingTokenInfo}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    padding: '6px 12px',
-                    backgroundColor: 'transparent',
-                    border: `1px solid ${theme.colors.border}`,
-                    borderRadius: '6px',
-                    color: theme.colors.textSecondary,
-                    fontSize: '13px',
-                    cursor: loadingTokenInfo ? 'wait' : 'pointer',
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!loadingTokenInfo) {
-                      e.currentTarget.style.backgroundColor =
-                        theme.colors.backgroundSecondary;
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                  }}
-                >
-                  <RefreshCw
-                    size={14}
-                    className={loadingTokenInfo ? 'spinning' : ''}
-                  />
-                  Refresh
+                  <LogOut size={16} />
+                  Sign Out
                 </button>
               </div>
-            </div>
+            ) : (
+              <div>
+                <p
+                  style={{
+                    marginBottom: '20px',
+                    fontSize: '14px',
+                    color: theme.colors.textSecondary,
+                  }}
+                >
+                  You are currently not authenticated. Sign in with your GitHub
+                  account to access repository features and synchronization.
+                </p>
 
-            {loadingTokenInfo ? (
+                {loginError &&
+                  loginError !== 'Authentication already in progress' && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '12px 16px',
+                        backgroundColor: theme.colors.error
+                          ? `${theme.colors.error}20`
+                          : '#ef444420',
+                        border: `1px solid ${theme.colors.error || '#ef4444'}40`,
+                        borderRadius: '8px',
+                        marginBottom: '16px',
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: '13px',
+                          color: theme.colors.error || '#ef4444',
+                        }}
+                      >
+                        {loginError}
+                      </span>
+                      <button
+                        onClick={() => clearLoginError()}
+                        style={{
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: '4px',
+                          color: theme.colors.error || '#ef4444',
+                          fontSize: '16px',
+                          fontWeight: 'bold',
+                          lineHeight: 1,
+                        }}
+                        title="Dismiss"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
+
+                <button
+                  onClick={async () => {
+                    try {
+                      const forceRetry =
+                        loginError === 'Authentication already in progress';
+                      await login(forceRetry);
+                      console.info('Login completed successfully');
+                    } catch (error: unknown) {
+                      console.error('Login error:', error);
+                    }
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '10px 20px',
+                    backgroundColor: isLoggingIn
+                      ? theme.colors.backgroundTertiary
+                      : theme.colors.primary,
+                    color: isLoggingIn
+                      ? theme.colors.textSecondary
+                      : theme.colors.background,
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    cursor: isLoggingIn ? 'wait' : 'pointer',
+                    transition: 'all 0.2s',
+                    opacity: isLoggingIn ? 0.7 : 1,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isLoggingIn) e.currentTarget.style.opacity = '0.9';
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isLoggingIn) e.currentTarget.style.opacity = '1';
+                  }}
+                  title={
+                    isLoggingIn
+                      ? 'Authenticating...'
+                      : loginError === 'Authentication already in progress'
+                        ? 'Click to retry'
+                        : 'Login with GitHub'
+                  }
+                  disabled={
+                    isLoggingIn &&
+                    loginError !== 'Authentication already in progress'
+                  }
+                >
+                  {isLoggingIn ? (
+                    <>
+                      <Loader2 size={16} className="spinning" />
+                      <span>Signing in...</span>
+                    </>
+                  ) : (
+                    <>
+                      <LogIn size={16} />
+                      <span>
+                        {loginError === 'Authentication already in progress'
+                          ? 'Retry Sign In'
+                          : 'Sign In with GitHub'}
+                      </span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Presence Connectivity Card */}
+          {isAuthenticated && (
+            <div
+              style={{
+                backgroundColor: cardBackground,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: '12px',
+                padding: '24px',
+              }}
+            >
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  color: theme.colors.textSecondary,
+                  justifyContent: 'space-between',
+                  marginBottom: '20px',
                 }}
               >
-                <Loader2 size={16} className="spinning" />
-                Loading token information...
+                <h2
+                  style={{
+                    fontSize: '18px',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <Users size={20} />
+                  Presence & Collaboration
+                </h2>
               </div>
-            ) : tokenError ? (
+
+              <p
+                style={{
+                  color: theme.colors.textSecondary,
+                  fontSize: '14px',
+                  marginBottom: '20px',
+                }}
+              >
+                Connect to the presence server to see who else is online and
+                share your activity with your team.
+              </p>
+
               <div
                 style={{
-                  color: theme.colors.error || '#ef4444',
-                  fontSize: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
                 }}
               >
-                {tokenError}
-              </div>
-            ) : (
-              <>
-                {/* Token Scopes */}
-                <div style={{ marginBottom: '24px' }}>
-                  <h3
-                    style={{
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      marginBottom: '12px',
-                      color: theme.colors.textSecondary,
-                    }}
-                  >
-                    Granted Scopes
-                  </h3>
+                <button
+                  onClick={() => {
+                    if (isConnected) {
+                      handleDisconnectPresence();
+                    } else {
+                      handleConnectPresence();
+                    }
+                  }}
+                  disabled={isConnecting || isDisconnecting}
+                  style={{
+                    position: 'relative',
+                    width: '54px',
+                    height: '28px',
+                    borderRadius: '14px',
+                    border: 'none',
+                    cursor:
+                      isConnecting || isDisconnecting
+                        ? 'not-allowed'
+                        : 'pointer',
+                    backgroundColor: isConnected ? '#10b981' : '#6b7280',
+                    transition: 'background-color 0.2s ease',
+                    opacity: isConnecting || isDisconnecting ? 0.6 : 1,
+                  }}
+                  title={
+                    isConnected
+                      ? 'Disconnect from presence'
+                      : 'Connect to presence'
+                  }
+                >
                   <div
                     style={{
+                      position: 'absolute',
+                      top: '2px',
+                      left: isConnected ? '28px' : '2px',
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '50%',
+                      backgroundColor: theme.colors.background,
+                      transition: 'left 0.2s ease',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                    }}
+                  />
+                </button>
+                <span
+                  style={{
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    color: theme.colors.text,
+                  }}
+                >
+                  {isConnecting
+                    ? 'Connecting...'
+                    : isDisconnecting
+                      ? 'Disconnecting...'
+                      : isConnected
+                        ? 'Connected'
+                        : 'Disconnected'}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Token Permissions Card */}
+          {isAuthenticated && tokenInfo && (
+            <div
+              style={{
+                backgroundColor: cardBackground,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: '12px',
+                padding: '24px',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '20px',
+                }}
+              >
+                <h2
+                  style={{
+                    fontSize: '18px',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <Key size={20} />
+                  Token Permissions
+                </h2>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={async () => {
+                      // Open GitHub settings to manage authorized applications
+                      // (WorkOS uses this GitHub OAuth app for authentication)
+                      await ShellService.openExternal(
+                        'https://github.com/settings/connections/applications/Ov23liw7kWJ0kctIrSs3',
+                      );
+                    }}
+                    style={{
                       display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: '8px',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '6px 12px',
+                      backgroundColor: theme.colors.primary,
+                      border: 'none',
+                      borderRadius: '6px',
+                      color: theme.colors.background,
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.opacity = '0.9';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.opacity = '1';
+                    }}
+                    title="Manage permissions granted to this app"
+                  >
+                    <ExternalLink size={14} />
+                    Manage Permissions
+                  </button>
+                  <button
+                    onClick={fetchTokenInfo}
+                    disabled={loadingTokenInfo}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '6px 12px',
+                      backgroundColor: 'transparent',
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: '6px',
+                      color: theme.colors.textSecondary,
+                      fontSize: '13px',
+                      cursor: loadingTokenInfo ? 'wait' : 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!loadingTokenInfo) {
+                        e.currentTarget.style.backgroundColor =
+                          theme.colors.backgroundSecondary;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
                     }}
                   >
-                    {tokenInfo.scopes.length > 0 ? (
-                      tokenInfo.scopes.map((scope) => (
-                        <div
-                          key={scope}
-                          style={{
-                            padding: '6px 12px',
-                            backgroundColor: theme.colors.backgroundSecondary,
-                            border: `1px solid ${theme.colors.border}`,
-                            borderRadius: '6px',
-                            fontSize: '13px',
-                          }}
-                          title={formatScope(scope)}
-                        >
-                          <span
-                            style={{ fontFamily: 'monospace', fontWeight: 500 }}
-                          >
-                            {scope}
-                          </span>
-                        </div>
-                      ))
-                    ) : (
-                      <span
-                        style={{
-                          color: theme.colors.textSecondary,
-                          fontSize: '14px',
-                        }}
-                      >
-                        No specific scopes granted
-                      </span>
-                    )}
-                  </div>
-                  {tokenInfo.scopes.length > 0 && (
-                    <p
-                      style={{
-                        marginTop: '12px',
-                        fontSize: '12px',
-                        color: theme.colors.textSecondary,
-                        fontStyle: 'italic',
-                      }}
-                    >
-                      To change permissions, create a new token with different
-                      scopes via the Manage Token button.
-                    </p>
-                  )}
+                    <RefreshCw
+                      size={14}
+                      className={loadingTokenInfo ? 'spinning' : ''}
+                    />
+                    Refresh
+                  </button>
                 </div>
+              </div>
 
-                {/* Organizations Access */}
-                {tokenInfo.organizations.length > 0 && (
-                  <div>
+              {loadingTokenInfo ? (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    color: theme.colors.textSecondary,
+                  }}
+                >
+                  <Loader2 size={16} className="spinning" />
+                  Loading token information...
+                </div>
+              ) : tokenError ? (
+                <div
+                  style={{
+                    color: theme.colors.error || '#ef4444',
+                    fontSize: '14px',
+                  }}
+                >
+                  {tokenError}
+                </div>
+              ) : (
+                <>
+                  {/* Token Scopes */}
+                  <div style={{ marginBottom: '24px' }}>
                     <h3
                       style={{
                         fontSize: '14px',
                         fontWeight: 600,
                         marginBottom: '12px',
                         color: theme.colors.textSecondary,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
                       }}
                     >
-                      <Building size={16} />
-                      Organization Access
+                      Granted Scopes
                     </h3>
                     <div
                       style={{
-                        display: 'grid',
-                        gridTemplateColumns:
-                          'repeat(auto-fill, minmax(250px, 1fr))',
-                        gap: '12px',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '8px',
                       }}
                     >
-                      {tokenInfo.organizations.map((org) => (
-                        <div
-                          key={org.login}
+                      {tokenInfo.scopes.length > 0 ? (
+                        tokenInfo.scopes.map((scope) => (
+                          <div
+                            key={scope}
+                            style={{
+                              padding: '6px 12px',
+                              backgroundColor: theme.colors.backgroundSecondary,
+                              border: `1px solid ${theme.colors.border}`,
+                              borderRadius: '6px',
+                              fontSize: '13px',
+                            }}
+                            title={formatScope(scope)}
+                          >
+                            <span
+                              style={{
+                                fontFamily: 'monospace',
+                                fontWeight: 500,
+                              }}
+                            >
+                              {scope}
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <span
                           style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            padding: '12px',
-                            backgroundColor: secondaryBackground,
-                            border: `1px solid ${theme.colors.border}`,
-                            borderRadius: '8px',
+                            color: theme.colors.textSecondary,
+                            fontSize: '14px',
                           }}
                         >
-                          <img
-                            src={org.avatar_url}
-                            alt={org.login}
+                          No specific scopes granted
+                        </span>
+                      )}
+                    </div>
+                    {tokenInfo.scopes.length > 0 && (
+                      <p
+                        style={{
+                          marginTop: '12px',
+                          fontSize: '12px',
+                          color: theme.colors.textSecondary,
+                          fontStyle: 'italic',
+                        }}
+                      >
+                        To change permissions, create a new token with different
+                        scopes via the Manage Token button.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Organizations Access */}
+                  {tokenInfo.organizations.length > 0 && (
+                    <div>
+                      <h3
+                        style={{
+                          fontSize: '14px',
+                          fontWeight: 600,
+                          marginBottom: '12px',
+                          color: theme.colors.textSecondary,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                        }}
+                      >
+                        <Building size={16} />
+                        Organization Access
+                      </h3>
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns:
+                            'repeat(auto-fill, minmax(250px, 1fr))',
+                          gap: '12px',
+                        }}
+                      >
+                        {tokenInfo.organizations.map((org) => (
+                          <div
+                            key={org.login}
                             style={{
-                              width: '32px',
-                              height: '32px',
-                              borderRadius: '50%',
-                              objectFit: 'cover',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '12px',
+                              padding: '12px',
+                              backgroundColor: secondaryBackground,
+                              border: `1px solid ${theme.colors.border}`,
+                              borderRadius: '8px',
                             }}
-                          />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div
+                          >
+                            <img
+                              src={org.avatar_url}
+                              alt={org.login}
                               style={{
-                                fontWeight: 500,
-                                fontSize: '14px',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '50%',
+                                objectFit: 'cover',
                               }}
-                            >
-                              {org.login}
-                            </div>
-                            <div
-                              style={{
-                                fontSize: '12px',
-                                color: theme.colors.textSecondary,
-                              }}
-                            >
-                              @{org.login}
+                            />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div
+                                style={{
+                                  fontWeight: 500,
+                                  fontSize: '14px',
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                }}
+                              >
+                                {org.login}
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: '12px',
+                                  color: theme.colors.textSecondary,
+                                }}
+                              >
+                                @{org.login}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Rate Limit Info */}
-                {tokenInfo.rateLimit && (
-                  <div
-                    style={{
-                      marginTop: '16px',
-                      paddingTop: '16px',
-                      borderTop: `1px solid ${theme.colors.border}`,
-                      fontSize: '12px',
-                      color: theme.colors.textSecondary,
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                    }}
-                  >
-                    <span>
-                      API Rate Limit: {tokenInfo.rateLimit.remaining} /{' '}
-                      {tokenInfo.rateLimit.limit}
-                    </span>
-                    <span>
-                      Resets:{' '}
-                      {new Date(tokenInfo.rateLimit.reset).toLocaleTimeString()}
-                    </span>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
+                  {/* Rate Limit Info */}
+                  {tokenInfo.rateLimit && (
+                    <div
+                      style={{
+                        marginTop: '16px',
+                        paddingTop: '16px',
+                        borderTop: `1px solid ${theme.colors.border}`,
+                        fontSize: '12px',
+                        color: theme.colors.textSecondary,
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <span>
+                        API Rate Limit: {tokenInfo.rateLimit.remaining} /{' '}
+                        {tokenInfo.rateLimit.limit}
+                      </span>
+                      <span>
+                        Resets:{' '}
+                        {new Date(
+                          tokenInfo.rateLimit.reset,
+                        ).toLocaleTimeString()}
+                      </span>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
-        {/* Token Metadata & Refresh Testing Card */}
-        {isAuthenticated && tokenMetadata && (
-          <div
-            style={{
-              backgroundColor: cardBackground,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: '12px',
-              padding: '24px',
-            }}
-          >
+          {/* Token Metadata & Refresh Testing Card */}
+          {isAuthenticated && tokenMetadata && (
             <div
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '20px',
+                backgroundColor: cardBackground,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: '12px',
+                padding: '24px',
               }}
             >
-              <h2
-                style={{
-                  fontSize: '18px',
-                  fontWeight: 600,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}
-              >
-                <RefreshCw size={20} />
-                Token Information & Refresh Testing
-              </h2>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  onClick={validateGithubToken}
-                  disabled={validatingGithubToken}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    padding: '6px 12px',
-                    backgroundColor: 'transparent',
-                    border: `1px solid ${theme.colors.border}`,
-                    borderRadius: '6px',
-                    color: theme.colors.textSecondary,
-                    fontSize: '13px',
-                    cursor: validatingGithubToken ? 'wait' : 'pointer',
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!validatingGithubToken) {
-                      e.currentTarget.style.backgroundColor =
-                        theme.colors.backgroundSecondary;
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                  }}
-                  title="Validate GitHub token by making a test API call"
-                >
-                  <Shield
-                    size={14}
-                    className={validatingGithubToken ? 'spinning' : ''}
-                  />
-                  Validate Token
-                </button>
-                <button
-                  onClick={fetchTokenMetadata}
-                  disabled={loadingTokenMetadata}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    padding: '6px 12px',
-                    backgroundColor: 'transparent',
-                    border: `1px solid ${theme.colors.border}`,
-                    borderRadius: '6px',
-                    color: theme.colors.textSecondary,
-                    fontSize: '13px',
-                    cursor: loadingTokenMetadata ? 'wait' : 'pointer',
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!loadingTokenMetadata) {
-                      e.currentTarget.style.backgroundColor =
-                        theme.colors.backgroundSecondary;
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                  }}
-                >
-                  <RefreshCw
-                    size={14}
-                    className={loadingTokenMetadata ? 'spinning' : ''}
-                  />
-                  Refresh Info
-                </button>
-              </div>
-            </div>
-
-            {loadingTokenMetadata ? (
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  color: theme.colors.textSecondary,
+                  justifyContent: 'space-between',
+                  marginBottom: '20px',
                 }}
               >
-                <Loader2 size={16} className="spinning" />
-                Loading token metadata...
-              </div>
-            ) : (
-              <>
-                {/* Token Status */}
-                <div
+                <h2
                   style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                    gap: '16px',
-                    marginBottom: '20px',
+                    fontSize: '18px',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
                   }}
                 >
-                  <div
+                  <RefreshCw size={20} />
+                  Token Information & Refresh Testing
+                </h2>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={validateGithubToken}
+                    disabled={validatingGithubToken}
                     style={{
-                      padding: '16px',
-                      backgroundColor: secondaryBackground,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '6px 12px',
+                      backgroundColor: 'transparent',
                       border: `1px solid ${theme.colors.border}`,
-                      borderRadius: '8px',
+                      borderRadius: '6px',
+                      color: theme.colors.textSecondary,
+                      fontSize: '13px',
+                      cursor: validatingGithubToken ? 'wait' : 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!validatingGithubToken) {
+                        e.currentTarget.style.backgroundColor =
+                          theme.colors.backgroundSecondary;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                    title="Validate GitHub token by making a test API call"
+                  >
+                    <Shield
+                      size={14}
+                      className={validatingGithubToken ? 'spinning' : ''}
+                    />
+                    Validate Token
+                  </button>
+                  <button
+                    onClick={fetchTokenMetadata}
+                    disabled={loadingTokenMetadata}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '6px 12px',
+                      backgroundColor: 'transparent',
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: '6px',
+                      color: theme.colors.textSecondary,
+                      fontSize: '13px',
+                      cursor: loadingTokenMetadata ? 'wait' : 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!loadingTokenMetadata) {
+                        e.currentTarget.style.backgroundColor =
+                          theme.colors.backgroundSecondary;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
                     }}
                   >
-                    <div
-                      style={{
-                        fontSize: '12px',
-                        color: theme.colors.textSecondary,
-                        marginBottom: '4px',
-                      }}
-                    >
-                      Token Status
-                    </div>
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        fontSize: '14px',
-                        fontWeight: 500,
-                      }}
-                    >
-                      {tokenMetadata.hasToken ? (
-                        <>
-                          <CheckCircle
-                            size={16}
-                            style={{ color: theme.colors.success || '#10b981' }}
-                          />
-                          <span>Active</span>
-                        </>
-                      ) : (
-                        <>
-                          <XCircle
-                            size={16}
-                            style={{ color: theme.colors.error || '#ef4444' }}
-                          />
-                          <span>No Token</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
+                    <RefreshCw
+                      size={14}
+                      className={loadingTokenMetadata ? 'spinning' : ''}
+                    />
+                    Refresh Info
+                  </button>
+                </div>
+              </div>
 
+              {loadingTokenMetadata ? (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    color: theme.colors.textSecondary,
+                  }}
+                >
+                  <Loader2 size={16} className="spinning" />
+                  Loading token metadata...
+                </div>
+              ) : (
+                <>
+                  {/* Token Status */}
                   <div
                     style={{
-                      padding: '16px',
-                      backgroundColor: secondaryBackground,
-                      border: `1px solid ${theme.colors.border}`,
-                      borderRadius: '8px',
+                      display: 'grid',
+                      gridTemplateColumns:
+                        'repeat(auto-fit, minmax(250px, 1fr))',
+                      gap: '16px',
+                      marginBottom: '20px',
                     }}
                   >
-                    <div
-                      style={{
-                        fontSize: '12px',
-                        color: theme.colors.textSecondary,
-                        marginBottom: '4px',
-                      }}
-                    >
-                      Refresh Token
-                    </div>
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        fontSize: '14px',
-                        fontWeight: 500,
-                      }}
-                    >
-                      {tokenMetadata.hasRefreshToken ? (
-                        <>
-                          <CheckCircle
-                            size={16}
-                            style={{ color: theme.colors.success || '#10b981' }}
-                          />
-                          <span>Available</span>
-                        </>
-                      ) : (
-                        <>
-                          <AlertCircle
-                            size={16}
-                            style={{ color: theme.colors.warning || '#f59e0b' }}
-                          />
-                          <span>Not Available</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      padding: '16px',
-                      backgroundColor: secondaryBackground,
-                      border: `1px solid ${theme.colors.border}`,
-                      borderRadius: '8px',
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: '12px',
-                        color: theme.colors.textSecondary,
-                        marginBottom: '4px',
-                      }}
-                    >
-                      GitHub Token
-                    </div>
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        fontSize: '14px',
-                        fontWeight: 500,
-                      }}
-                    >
-                      {validatingGithubToken ? (
-                        <>
-                          <Loader2 size={16} className="spinning" />
-                          <span>Validating...</span>
-                        </>
-                      ) : githubTokenValidation ? (
-                        githubTokenValidation.valid ? (
-                          <>
-                            <CheckCircle
-                              size={16}
-                              style={{ color: theme.colors.success || '#10b981' }}
-                            />
-                            <span>Valid ({githubTokenValidation.tokenPrefix})</span>
-                          </>
-                        ) : githubTokenValidation.tokenPresent ? (
-                          <>
-                            <XCircle
-                              size={16}
-                              style={{ color: theme.colors.error || '#ef4444' }}
-                            />
-                            <span>Invalid ({githubTokenValidation.statusCode || 'Error'})</span>
-                          </>
-                        ) : (
-                          <>
-                            <AlertCircle
-                              size={16}
-                              style={{ color: theme.colors.warning || '#f59e0b' }}
-                            />
-                            <span>Not Present</span>
-                          </>
-                        )
-                      ) : (
-                        <>
-                          <AlertCircle
-                            size={16}
-                            style={{ color: theme.colors.textSecondary }}
-                          />
-                          <span>Unknown</span>
-                        </>
-                      )}
-                    </div>
-                    {githubTokenValidation && !githubTokenValidation.valid && githubTokenValidation.error && (
-                      <div
-                        style={{
-                          marginTop: '8px',
-                          fontSize: '11px',
-                          color: theme.colors.error || '#ef4444',
-                          lineHeight: '1.4',
-                        }}
-                      >
-                        {githubTokenValidation.error}
-                      </div>
-                    )}
-                  </div>
-
-                  {tokenMetadata.expiresAt && (
                     <div
                       style={{
                         padding: '16px',
@@ -1466,7 +1320,7 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                           marginBottom: '4px',
                         }}
                       >
-                        Expires In
+                        Token Status
                       </div>
                       <div
                         style={{
@@ -1477,25 +1331,7 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                           fontWeight: 500,
                         }}
                       >
-                        {tokenMetadata.isExpired ? (
-                          <>
-                            <XCircle
-                              size={16}
-                              style={{ color: theme.colors.error || '#ef4444' }}
-                            />
-                            <span>Expired</span>
-                          </>
-                        ) : tokenMetadata.isExpiringSoon ? (
-                          <>
-                            <AlertCircle
-                              size={16}
-                              style={{
-                                color: theme.colors.warning || '#f59e0b',
-                              }}
-                            />
-                            <span>{tokenMetadata.timeUntilExpiry}</span>
-                          </>
-                        ) : (
+                        {tokenMetadata.hasToken ? (
                           <>
                             <CheckCircle
                               size={16}
@@ -1503,184 +1339,791 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                                 color: theme.colors.success || '#10b981',
                               }}
                             />
-                            <span>{tokenMetadata.timeUntilExpiry}</span>
+                            <span>Active</span>
+                          </>
+                        ) : (
+                          <>
+                            <XCircle
+                              size={16}
+                              style={{ color: theme.colors.error || '#ef4444' }}
+                            />
+                            <span>No Token</span>
                           </>
                         )}
                       </div>
                     </div>
-                  )}
-                </div>
 
-                {/* Expiry Details */}
-                {tokenMetadata.expiresAt && (
+                    <div
+                      style={{
+                        padding: '16px',
+                        backgroundColor: secondaryBackground,
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: '8px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: '12px',
+                          color: theme.colors.textSecondary,
+                          marginBottom: '4px',
+                        }}
+                      >
+                        Refresh Token
+                      </div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontSize: '14px',
+                          fontWeight: 500,
+                        }}
+                      >
+                        {tokenMetadata.hasRefreshToken ? (
+                          <>
+                            <CheckCircle
+                              size={16}
+                              style={{
+                                color: theme.colors.success || '#10b981',
+                              }}
+                            />
+                            <span>Available</span>
+                          </>
+                        ) : (
+                          <>
+                            <AlertCircle
+                              size={16}
+                              style={{
+                                color: theme.colors.warning || '#f59e0b',
+                              }}
+                            />
+                            <span>Not Available</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        padding: '16px',
+                        backgroundColor: secondaryBackground,
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: '8px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: '12px',
+                          color: theme.colors.textSecondary,
+                          marginBottom: '4px',
+                        }}
+                      >
+                        GitHub Token
+                      </div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontSize: '14px',
+                          fontWeight: 500,
+                        }}
+                      >
+                        {validatingGithubToken ? (
+                          <>
+                            <Loader2 size={16} className="spinning" />
+                            <span>Validating...</span>
+                          </>
+                        ) : githubTokenValidation ? (
+                          githubTokenValidation.valid ? (
+                            <>
+                              <CheckCircle
+                                size={16}
+                                style={{
+                                  color: theme.colors.success || '#10b981',
+                                }}
+                              />
+                              <span>
+                                Valid ({githubTokenValidation.tokenPrefix})
+                              </span>
+                            </>
+                          ) : githubTokenValidation.tokenPresent ? (
+                            <>
+                              <XCircle
+                                size={16}
+                                style={{
+                                  color: theme.colors.error || '#ef4444',
+                                }}
+                              />
+                              <span>
+                                Invalid (
+                                {githubTokenValidation.statusCode || 'Error'})
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <AlertCircle
+                                size={16}
+                                style={{
+                                  color: theme.colors.warning || '#f59e0b',
+                                }}
+                              />
+                              <span>Not Present</span>
+                            </>
+                          )
+                        ) : (
+                          <>
+                            <AlertCircle
+                              size={16}
+                              style={{ color: theme.colors.textSecondary }}
+                            />
+                            <span>Unknown</span>
+                          </>
+                        )}
+                      </div>
+                      {githubTokenValidation &&
+                        !githubTokenValidation.valid &&
+                        githubTokenValidation.error && (
+                          <div
+                            style={{
+                              marginTop: '8px',
+                              fontSize: '11px',
+                              color: theme.colors.error || '#ef4444',
+                              lineHeight: '1.4',
+                            }}
+                          >
+                            {githubTokenValidation.error}
+                          </div>
+                        )}
+                    </div>
+
+                    {tokenMetadata.expiresAt && (
+                      <div
+                        style={{
+                          padding: '16px',
+                          backgroundColor: secondaryBackground,
+                          border: `1px solid ${theme.colors.border}`,
+                          borderRadius: '8px',
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: '12px',
+                            color: theme.colors.textSecondary,
+                            marginBottom: '4px',
+                          }}
+                        >
+                          Expires In
+                        </div>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontSize: '14px',
+                            fontWeight: 500,
+                          }}
+                        >
+                          {tokenMetadata.isExpired ? (
+                            <>
+                              <XCircle
+                                size={16}
+                                style={{
+                                  color: theme.colors.error || '#ef4444',
+                                }}
+                              />
+                              <span>Expired</span>
+                            </>
+                          ) : tokenMetadata.isExpiringSoon ? (
+                            <>
+                              <AlertCircle
+                                size={16}
+                                style={{
+                                  color: theme.colors.warning || '#f59e0b',
+                                }}
+                              />
+                              <span>{tokenMetadata.timeUntilExpiry}</span>
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle
+                                size={16}
+                                style={{
+                                  color: theme.colors.success || '#10b981',
+                                }}
+                              />
+                              <span>{tokenMetadata.timeUntilExpiry}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Expiry Details */}
+                  {tokenMetadata.expiresAt && (
+                    <div
+                      style={{
+                        padding: '12px',
+                        backgroundColor: secondaryBackground,
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: '6px',
+                        marginBottom: '20px',
+                        fontSize: '13px',
+                        color: theme.colors.textSecondary,
+                      }}
+                    >
+                      <strong>Token Expires:</strong>{' '}
+                      {tokenMetadata.expiresAtFormatted}
+                    </div>
+                  )}
+
+                  {/* Refresh Token Test */}
                   <div
                     style={{
+                      padding: '16px',
+                      backgroundColor: secondaryBackground,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: '8px',
+                    }}
+                  >
+                    <h3
+                      style={{
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        marginBottom: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                      }}
+                    >
+                      <Shield size={16} />
+                      Test Refresh Mechanism
+                    </h3>
+                    <p
+                      style={{
+                        fontSize: '13px',
+                        color: theme.colors.textSecondary,
+                        marginBottom: '12px',
+                        lineHeight: '1.5',
+                      }}
+                    >
+                      {tokenMetadata.hasRefreshToken
+                        ? 'Test the automatic token refresh mechanism by forcing a token refresh. This will request a new access token from the server using your refresh token.'
+                        : 'No refresh token is available. You may need to re-authenticate to get a refresh token.'}
+                    </p>
+                    <button
+                      onClick={handleTestRefresh}
+                      disabled={
+                        testingRefresh || !tokenMetadata.hasRefreshToken
+                      }
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 16px',
+                        backgroundColor: tokenMetadata.hasRefreshToken
+                          ? theme.colors.primary
+                          : theme.colors.backgroundSecondary,
+                        border: 'none',
+                        borderRadius: '6px',
+                        color: tokenMetadata.hasRefreshToken
+                          ? theme.colors.background
+                          : theme.colors.textSecondary,
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        cursor:
+                          tokenMetadata.hasRefreshToken && !testingRefresh
+                            ? 'pointer'
+                            : 'not-allowed',
+                        opacity: tokenMetadata.hasRefreshToken ? 1 : 0.5,
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (tokenMetadata.hasRefreshToken && !testingRefresh) {
+                          e.currentTarget.style.opacity = '0.9';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (tokenMetadata.hasRefreshToken) {
+                          e.currentTarget.style.opacity = '1';
+                        }
+                      }}
+                    >
+                      {testingRefresh ? (
+                        <>
+                          <Loader2 size={16} className="spinning" />
+                          Testing Refresh...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw size={16} />
+                          Test Token Refresh
+                        </>
+                      )}
+                    </button>
+
+                    {/* Refresh Result */}
+                    {refreshResult && (
+                      <div
+                        style={{
+                          marginTop: '12px',
+                          padding: '12px',
+                          backgroundColor: theme.colors.background,
+                          border: `1px solid ${
+                            refreshResult.success
+                              ? theme.colors.success || '#10b981'
+                              : theme.colors.error || '#ef4444'
+                          }`,
+                          borderRadius: '6px',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: '8px',
+                          fontSize: '13px',
+                        }}
+                      >
+                        {refreshResult.success ? (
+                          <CheckCircle
+                            size={16}
+                            style={{
+                              color: theme.colors.success || '#10b981',
+                              flexShrink: 0,
+                              marginTop: '2px',
+                            }}
+                          />
+                        ) : (
+                          <XCircle
+                            size={16}
+                            style={{
+                              color: theme.colors.error || '#ef4444',
+                              flexShrink: 0,
+                              marginTop: '2px',
+                            }}
+                          />
+                        )}
+                        <span>{refreshResult.message}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Information Notice */}
+                  <div
+                    style={{
+                      marginTop: '16px',
                       padding: '12px',
                       backgroundColor: secondaryBackground,
                       border: `1px solid ${theme.colors.border}`,
                       borderRadius: '6px',
-                      marginBottom: '20px',
-                      fontSize: '13px',
+                      fontSize: '12px',
                       color: theme.colors.textSecondary,
+                      fontStyle: 'italic',
+                      lineHeight: '1.6',
                     }}
                   >
-                    <strong>Token Expires:</strong>{' '}
-                    {tokenMetadata.expiresAtFormatted}
+                    <strong>Note:</strong> Tokens are automatically refreshed
+                    when they expire or are about to expire (within 5 minutes).
+                    This test allows you to manually verify the refresh
+                    mechanism is working correctly.
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* SSH Key Management Card */}
+          {isAuthenticated && (
+            <div
+              style={{
+                backgroundColor: cardBackground,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: '12px',
+                padding: '24px',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '20px',
+                }}
+              >
+                <h2
+                  style={{
+                    fontSize: '18px',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <Key size={20} />
+                  SSH Key Management
+                </h2>
+                {githubSSHKeys.length > 0 && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      color: theme.colors.success || '#10b981',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                    }}
+                  >
+                    <CheckCircle size={14} />
+                    {githubSSHKeys.length}{' '}
+                    {githubSSHKeys.length === 1 ? 'Key' : 'Keys'}
                   </div>
                 )}
+              </div>
 
-                {/* Refresh Token Test */}
+              {loadingSSHInfo ? (
                 <div
                   style={{
-                    padding: '16px',
-                    backgroundColor: secondaryBackground,
-                    border: `1px solid ${theme.colors.border}`,
-                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    color: theme.colors.textSecondary,
                   }}
                 >
-                  <h3
-                    style={{
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      marginBottom: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                    }}
-                  >
-                    <Shield size={16} />
-                    Test Refresh Mechanism
-                  </h3>
+                  <Loader2 size={16} className="spinning" />
+                  Loading SSH keys from GitHub...
+                </div>
+              ) : githubSSHKeys.length > 0 ? (
+                <>
                   <p
                     style={{
-                      fontSize: '13px',
+                      fontSize: '14px',
                       color: theme.colors.textSecondary,
-                      marginBottom: '12px',
-                      lineHeight: '1.5',
+                      marginBottom: '16px',
                     }}
                   >
-                    {tokenMetadata.hasRefreshToken
-                      ? 'Test the automatic token refresh mechanism by forcing a token refresh. This will request a new access token from the server using your refresh token.'
-                      : 'No refresh token is available. You may need to re-authenticate to get a refresh token.'}
+                    You have {githubSSHKeys.length} SSH{' '}
+                    {githubSSHKeys.length === 1 ? 'key' : 'keys'} configured on
+                    GitHub. These keys can be used to clone private repositories
+                    and access organization repositories.
                   </p>
-                  <button
-                    onClick={handleTestRefresh}
-                    disabled={testingRefresh || !tokenMetadata.hasRefreshToken}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '8px 16px',
-                      backgroundColor: tokenMetadata.hasRefreshToken
-                        ? theme.colors.primary
-                        : theme.colors.backgroundSecondary,
-                      border: 'none',
-                      borderRadius: '6px',
-                      color: tokenMetadata.hasRefreshToken
-                        ? theme.colors.background
-                        : theme.colors.textSecondary,
-                      fontSize: '13px',
-                      fontWeight: 500,
-                      cursor:
-                        tokenMetadata.hasRefreshToken && !testingRefresh
-                          ? 'pointer'
-                          : 'not-allowed',
-                      opacity: tokenMetadata.hasRefreshToken ? 1 : 0.5,
-                      transition: 'all 0.2s',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (tokenMetadata.hasRefreshToken && !testingRefresh) {
-                        e.currentTarget.style.opacity = '0.9';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (tokenMetadata.hasRefreshToken) {
-                        e.currentTarget.style.opacity = '1';
-                      }
-                    }}
-                  >
-                    {testingRefresh ? (
-                      <>
-                        <Loader2 size={16} className="spinning" />
-                        Testing Refresh...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw size={16} />
-                        Test Token Refresh
-                      </>
-                    )}
-                  </button>
 
-                  {/* Refresh Result */}
-                  {refreshResult && (
+                  {githubSSHKeys.map((key) => (
                     <div
+                      key={key.id}
                       style={{
-                        marginTop: '12px',
-                        padding: '12px',
-                        backgroundColor: theme.colors.background,
-                        border: `1px solid ${
-                          refreshResult.success
-                            ? theme.colors.success || '#10b981'
-                            : theme.colors.error || '#ef4444'
-                        }`,
-                        borderRadius: '6px',
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        gap: '8px',
-                        fontSize: '13px',
+                        backgroundColor: secondaryBackground,
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: '8px',
+                        padding: '16px',
+                        marginBottom: '12px',
                       }}
                     >
-                      {refreshResult.success ? (
-                        <CheckCircle
-                          size={16}
-                          style={{
-                            color: theme.colors.success || '#10b981',
-                            flexShrink: 0,
-                            marginTop: '2px',
-                          }}
-                        />
-                      ) : (
-                        <XCircle
-                          size={16}
-                          style={{
-                            color: theme.colors.error || '#ef4444',
-                            flexShrink: 0,
-                            marginTop: '2px',
-                          }}
-                        />
-                      )}
-                      <span>{refreshResult.message}</span>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          marginBottom: '8px',
+                        }}
+                      >
+                        <div>
+                          <div
+                            style={{
+                              fontSize: '14px',
+                              fontWeight: 600,
+                              color: theme.colors.text,
+                              marginBottom: '4px',
+                            }}
+                          >
+                            {key.title}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: '12px',
+                              color: theme.colors.textSecondary,
+                            }}
+                          >
+                            Added{' '}
+                            {new Date(key.created_at).toLocaleDateString()}
+                          </div>
+                        </div>
+                        {key.verified && (
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontSize: '12px',
+                              color: theme.colors.success || '#10b981',
+                            }}
+                          >
+                            <CheckCircle size={14} />
+                            Verified
+                          </div>
+                        )}
+                      </div>
+                      <div
+                        style={{
+                          fontFamily: 'monospace',
+                          fontSize: '11px',
+                          color: theme.colors.textSecondary,
+                          wordBreak: 'break-all',
+                          lineHeight: '1.5',
+                          padding: '8px',
+                          backgroundColor: theme.colors.background,
+                          borderRadius: '4px',
+                        }}
+                      >
+                        {key.key}
+                      </div>
+                    </div>
+                  ))}
+
+                  {connectionTestResult && (
+                    <div
+                      style={{
+                        padding: '12px 16px',
+                        backgroundColor: connectionTestResult.success
+                          ? `${theme.colors.success || '#10b981'}15`
+                          : `${theme.colors.error || '#ef4444'}15`,
+                        border: `1px solid ${connectionTestResult.success ? theme.colors.success || '#10b981' : theme.colors.error || '#ef4444'}40`,
+                        borderRadius: '8px',
+                        marginBottom: '16px',
+                        fontSize: '13px',
+                        color: connectionTestResult.success
+                          ? theme.colors.success || '#10b981'
+                          : theme.colors.error || '#ef4444',
+                      }}
+                    >
+                      {connectionTestResult.message}
                     </div>
                   )}
-                </div>
 
-                {/* Information Notice */}
-                <div
-                  style={{
-                    marginTop: '16px',
-                    padding: '12px',
-                    backgroundColor: secondaryBackground,
-                    border: `1px solid ${theme.colors.border}`,
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    color: theme.colors.textSecondary,
-                    fontStyle: 'italic',
-                    lineHeight: '1.6',
-                  }}
-                >
-                  <strong>Note:</strong> Tokens are automatically refreshed when
-                  they expire or are about to expire (within 5 minutes). This
-                  test allows you to manually verify the refresh mechanism is
-                  working correctly.
-                </div>
-              </>
-            )}
-          </div>
-        )}
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={handleTestSSHConnection}
+                      disabled={testingConnection}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '8px 16px',
+                        backgroundColor: theme.colors.primary,
+                        border: 'none',
+                        borderRadius: '6px',
+                        color: theme.colors.background,
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        cursor: testingConnection ? 'wait' : 'pointer',
+                        transition: 'all 0.2s',
+                        opacity: testingConnection ? 0.7 : 1,
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!testingConnection)
+                          e.currentTarget.style.opacity = '0.9';
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!testingConnection)
+                          e.currentTarget.style.opacity = '1';
+                      }}
+                    >
+                      {testingConnection ? (
+                        <>
+                          <Loader2 size={14} className="spinning" />
+                          Testing...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle size={14} />
+                          Test Connection
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setShowSSHSetup(true)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '8px 16px',
+                        backgroundColor: 'transparent',
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: '6px',
+                        color: theme.colors.textSecondary,
+                        fontSize: '13px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor =
+                          theme.colors.backgroundSecondary;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
+                    >
+                      <Key size={14} />
+                      Add New Key
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {sshKeysError && needsSSHPermission ? (
+                    <>
+                      <div
+                        style={{
+                          padding: '16px',
+                          backgroundColor: `${theme.colors.error || '#ef4444'}15`,
+                          border: `1px solid ${theme.colors.error || '#ef4444'}40`,
+                          borderRadius: '8px',
+                          marginBottom: '16px',
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'start',
+                            gap: '12px',
+                          }}
+                        >
+                          <AlertCircle
+                            size={20}
+                            style={{
+                              color: theme.colors.error || '#ef4444',
+                              flexShrink: 0,
+                              marginTop: '2px',
+                            }}
+                          />
+                          <div>
+                            <div
+                              style={{
+                                fontSize: '14px',
+                                fontWeight: 600,
+                                color: theme.colors.error || '#ef4444',
+                                marginBottom: '8px',
+                              }}
+                            >
+                              Additional GitHub Permissions Required
+                            </div>
+                            <p
+                              style={{
+                                fontSize: '13px',
+                                color: theme.colors.text,
+                                marginBottom: '12px',
+                                lineHeight: '1.5',
+                              }}
+                            >
+                              {sshKeysError}
+                            </p>
+                            <p
+                              style={{
+                                fontSize: '13px',
+                                color: theme.colors.textSecondary,
+                                marginBottom: '12px',
+                                lineHeight: '1.5',
+                              }}
+                            >
+                              To view and manage your SSH keys, you need to
+                              re-authenticate with additional permissions. Click
+                              "Manage Permissions" above to grant the{' '}
+                              <code
+                                style={{
+                                  padding: '2px 6px',
+                                  backgroundColor: theme.colors.background,
+                                  borderRadius: '4px',
+                                  fontFamily: 'monospace',
+                                }}
+                              >
+                                read:public_key
+                              </code>{' '}
+                              scope.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <p
+                        style={{
+                          fontSize: '14px',
+                          color: theme.colors.textSecondary,
+                          marginBottom: '16px',
+                        }}
+                      >
+                        You can still set up SSH keys manually. The wizard will
+                        help you generate and configure a new SSH key for Git
+                        operations.
+                      </p>
+                      <button
+                        onClick={() => setShowSSHSetup(true)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '10px 20px',
+                          backgroundColor: theme.colors.primary,
+                          color: theme.colors.background,
+                          border: 'none',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                          transition: 'opacity 0.2s',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.opacity = '0.9';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.opacity = '1';
+                        }}
+                      >
+                        <Key size={16} />
+                        Set Up SSH Key
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p
+                        style={{
+                          fontSize: '14px',
+                          color: theme.colors.textSecondary,
+                          marginBottom: '16px',
+                        }}
+                      >
+                        {sshKeysError ||
+                          'SSH keys are not configured. Set up SSH authentication to clone private repositories and access organization repositories without token limitations.'}
+                      </p>
+                      <button
+                        onClick={() => setShowSSHSetup(true)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '10px 20px',
+                          backgroundColor: theme.colors.primary,
+                          color: theme.colors.background,
+                          border: 'none',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                          transition: 'opacity 0.2s',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.opacity = '0.9';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.opacity = '1';
+                        }}
+                      >
+                        <Key size={16} />
+                        Set Up SSH Key
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
-        {/* SSH Key Management Card */}
-        {isAuthenticated && (
+          {/* System Permissions Card */}
           <div
             style={{
               backgroundColor: cardBackground,
@@ -1706,833 +2149,442 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                   gap: '8px',
                 }}
               >
-                <Key size={20} />
-                SSH Key Management
+                <Shield size={20} />
+                System Permissions
               </h2>
-              {githubSSHKeys.length > 0 && (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    color: theme.colors.success || '#10b981',
-                    fontSize: '12px',
-                    fontWeight: 500,
-                  }}
-                >
-                  <CheckCircle size={14} />
-                  {githubSSHKeys.length}{' '}
-                  {githubSSHKeys.length === 1 ? 'Key' : 'Keys'}
-                </div>
-              )}
+              <button
+                onClick={fetchKeychainStatus}
+                disabled={loadingKeychainStatus}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '6px 12px',
+                  backgroundColor: 'transparent',
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: '6px',
+                  color: theme.colors.textSecondary,
+                  fontSize: '13px',
+                  cursor: loadingKeychainStatus ? 'wait' : 'pointer',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  if (!loadingKeychainStatus) {
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.backgroundSecondary;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                <RefreshCw
+                  size={14}
+                  className={loadingKeychainStatus ? 'spinning' : ''}
+                />
+                Refresh
+              </button>
             </div>
 
-            {loadingSSHInfo ? (
+            <p
+              style={{
+                fontSize: '14px',
+                color: theme.colors.textSecondary,
+                marginBottom: '20px',
+              }}
+            >
+              View and manage system permissions required for secure credential
+              storage and authentication.
+            </p>
+
+            {loadingKeychainStatus ? (
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
                   color: theme.colors.textSecondary,
+                  padding: '20px',
                 }}
               >
                 <Loader2 size={16} className="spinning" />
-                Loading SSH keys from GitHub...
+                Checking permissions...
               </div>
-            ) : githubSSHKeys.length > 0 ? (
+            ) : (
               <>
-                <p
+                {/* Keychain Access Status */}
+                <div
                   style={{
-                    fontSize: '14px',
-                    color: theme.colors.textSecondary,
+                    backgroundColor: secondaryBackground,
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: '8px',
+                    padding: '16px',
                     marginBottom: '16px',
                   }}
                 >
-                  You have {githubSSHKeys.length} SSH{' '}
-                  {githubSSHKeys.length === 1 ? 'key' : 'keys'} configured on
-                  GitHub. These keys can be used to clone private repositories
-                  and access organization repositories.
-                </p>
-
-                {githubSSHKeys.map((key) => (
-                  <div
-                    key={key.id}
+                  <h3
                     style={{
-                      backgroundColor: secondaryBackground,
-                      border: `1px solid ${theme.colors.border}`,
-                      borderRadius: '8px',
-                      padding: '16px',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      marginTop: 0,
+                      marginBottom: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <Key size={16} />
+                    Keychain Access
+                  </h3>
+
+                  {keychainStatus ? (
+                    <>
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns:
+                            'repeat(auto-fit, minmax(200px, 1fr))',
+                          gap: '12px',
+                          marginBottom: '16px',
+                        }}
+                      >
+                        <div
+                          style={{
+                            padding: '12px',
+                            backgroundColor: theme.colors.background,
+                            borderRadius: '6px',
+                            border: `1px solid ${theme.colors.border}`,
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: '12px',
+                              color: theme.colors.textSecondary,
+                              marginBottom: '4px',
+                            }}
+                          >
+                            Keychain Available
+                          </div>
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              fontSize: '14px',
+                              fontWeight: 500,
+                              color: keychainStatus.available
+                                ? theme.colors.success
+                                : theme.colors.error,
+                            }}
+                          >
+                            {keychainStatus.available ? (
+                              <>
+                                <CheckCircle size={16} />
+                                Available
+                              </>
+                            ) : (
+                              <>
+                                <XCircle size={16} />
+                                Not Available
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        <div
+                          style={{
+                            padding: '12px',
+                            backgroundColor: theme.colors.background,
+                            borderRadius: '6px',
+                            border: `1px solid ${theme.colors.border}`,
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: '12px',
+                              color: theme.colors.textSecondary,
+                              marginBottom: '4px',
+                            }}
+                          >
+                            Encryption Status
+                          </div>
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              fontSize: '14px',
+                              fontWeight: 500,
+                              color: keychainStatus.initialized
+                                ? theme.colors.success
+                                : theme.colors.warning,
+                            }}
+                          >
+                            {keychainStatus.initialized ? (
+                              <>
+                                <CheckCircle size={16} />
+                                Initialized
+                              </>
+                            ) : (
+                              <>
+                                <AlertCircle size={16} />
+                                Not Initialized
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {keychainStatus.error && (
+                        <div
+                          style={{
+                            padding: '12px',
+                            backgroundColor: `${theme.colors.error}15`,
+                            border: `1px solid ${theme.colors.error}40`,
+                            borderRadius: '6px',
+                            marginBottom: '16px',
+                            fontSize: '13px',
+                            color: theme.colors.error,
+                          }}
+                        >
+                          <AlertCircle
+                            size={14}
+                            style={{ display: 'inline', marginRight: '6px' }}
+                          />
+                          {keychainStatus.error}
+                        </div>
+                      )}
+
+                      <button
+                        onClick={handleTestKeychainAccess}
+                        disabled={loadingKeychainStatus}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '8px 16px',
+                          backgroundColor: theme.colors.primary,
+                          border: 'none',
+                          borderRadius: '6px',
+                          color: theme.colors.background,
+                          fontSize: '13px',
+                          fontWeight: 500,
+                          cursor: loadingKeychainStatus ? 'wait' : 'pointer',
+                          transition: 'all 0.2s',
+                          opacity: loadingKeychainStatus ? 0.7 : 1,
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!loadingKeychainStatus)
+                            e.currentTarget.style.opacity = '0.9';
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!loadingKeychainStatus)
+                            e.currentTarget.style.opacity = '1';
+                        }}
+                      >
+                        {loadingKeychainStatus ? (
+                          <>
+                            <Loader2 size={14} className="spinning" />
+                            Testing...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle size={14} />
+                            Test Keychain Access
+                          </>
+                        )}
+                      </button>
+                    </>
+                  ) : (
+                    <div
+                      style={{
+                        fontSize: '14px',
+                        color: theme.colors.textSecondary,
+                      }}
+                    >
+                      Unable to check keychain status
+                    </div>
+                  )}
+                </div>
+
+                {/* macOS System Permissions Info */}
+                <div
+                  style={{
+                    backgroundColor: secondaryBackground,
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: '8px',
+                    padding: '16px',
+                  }}
+                >
+                  <h3
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      marginTop: 0,
                       marginBottom: '12px',
                     }}
                   >
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'flex-start',
-                        marginBottom: '8px',
-                      }}
-                    >
-                      <div>
-                        <div
-                          style={{
-                            fontSize: '14px',
-                            fontWeight: 600,
-                            color: theme.colors.text,
-                            marginBottom: '4px',
-                          }}
-                        >
-                          {key.title}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: '12px',
-                            color: theme.colors.textSecondary,
-                          }}
-                        >
-                          Added {new Date(key.created_at).toLocaleDateString()}
-                        </div>
-                      </div>
-                      {key.verified && (
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            fontSize: '12px',
-                            color: theme.colors.success || '#10b981',
-                          }}
-                        >
-                          <CheckCircle size={14} />
-                          Verified
-                        </div>
-                      )}
-                    </div>
-                    <div
+                    Required Permissions
+                  </h3>
+                  <ul
+                    style={{
+                      margin: 0,
+                      paddingLeft: '20px',
+                      fontSize: '13px',
+                      color: theme.colors.textSecondary,
+                      lineHeight: '1.8',
+                    }}
+                  >
+                    <li>
+                      <strong style={{ color: theme.colors.text }}>
+                        Keychain Access:
+                      </strong>{' '}
+                      Required to securely store authentication credentials
+                    </li>
+                    <li>
+                      <strong style={{ color: theme.colors.text }}>
+                        System Keychain:
+                      </strong>{' '}
+                      Must be unlocked for encryption/decryption operations
+                    </li>
+                  </ul>
+                  <div
+                    style={{
+                      marginTop: '16px',
+                      padding: '12px',
+                      backgroundColor: theme.colors.background,
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      color: theme.colors.textSecondary,
+                    }}
+                  >
+                    <strong style={{ color: theme.colors.text }}>
+                      To manage permissions:
+                    </strong>
+                    <br />
+                    <span
                       style={{
                         fontFamily: 'monospace',
                         fontSize: '11px',
-                        color: theme.colors.textSecondary,
-                        wordBreak: 'break-all',
-                        lineHeight: '1.5',
+                        display: 'block',
+                        marginTop: '8px',
                         padding: '8px',
-                        backgroundColor: theme.colors.background,
+                        backgroundColor: theme.colors.backgroundTertiary,
                         borderRadius: '4px',
                       }}
                     >
-                      {key.key}
-                    </div>
+                      System Preferences → Security & Privacy → Privacy
+                    </span>
                   </div>
-                ))}
-
-                {connectionTestResult && (
-                  <div
-                    style={{
-                      padding: '12px 16px',
-                      backgroundColor: connectionTestResult.success
-                        ? `${theme.colors.success || '#10b981'}15`
-                        : `${theme.colors.error || '#ef4444'}15`,
-                      border: `1px solid ${connectionTestResult.success ? theme.colors.success || '#10b981' : theme.colors.error || '#ef4444'}40`,
-                      borderRadius: '8px',
-                      marginBottom: '16px',
-                      fontSize: '13px',
-                      color: connectionTestResult.success
-                        ? theme.colors.success || '#10b981'
-                        : theme.colors.error || '#ef4444',
-                    }}
-                  >
-                    {connectionTestResult.message}
-                  </div>
-                )}
-
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    onClick={handleTestSSHConnection}
-                    disabled={testingConnection}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '8px 16px',
-                      backgroundColor: theme.colors.primary,
-                      border: 'none',
-                      borderRadius: '6px',
-                      color: theme.colors.background,
-                      fontSize: '13px',
-                      fontWeight: 500,
-                      cursor: testingConnection ? 'wait' : 'pointer',
-                      transition: 'all 0.2s',
-                      opacity: testingConnection ? 0.7 : 1,
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!testingConnection)
-                        e.currentTarget.style.opacity = '0.9';
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!testingConnection)
-                        e.currentTarget.style.opacity = '1';
-                    }}
-                  >
-                    {testingConnection ? (
-                      <>
-                        <Loader2 size={14} className="spinning" />
-                        Testing...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle size={14} />
-                        Test Connection
-                      </>
-                    )}
-                  </button>
-                  <button
-                    onClick={() => setShowSSHSetup(true)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '8px 16px',
-                      backgroundColor: 'transparent',
-                      border: `1px solid ${theme.colors.border}`,
-                      borderRadius: '6px',
-                      color: theme.colors.textSecondary,
-                      fontSize: '13px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor =
-                        theme.colors.backgroundSecondary;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }}
-                  >
-                    <Key size={14} />
-                    Add New Key
-                  </button>
                 </div>
-              </>
-            ) : (
-              <>
-                {sshKeysError && needsSSHPermission ? (
-                  <>
-                    <div
-                      style={{
-                        padding: '16px',
-                        backgroundColor: `${theme.colors.error || '#ef4444'}15`,
-                        border: `1px solid ${theme.colors.error || '#ef4444'}40`,
-                        borderRadius: '8px',
-                        marginBottom: '16px',
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'start',
-                          gap: '12px',
-                        }}
-                      >
-                        <AlertCircle
-                          size={20}
-                          style={{
-                            color: theme.colors.error || '#ef4444',
-                            flexShrink: 0,
-                            marginTop: '2px',
-                          }}
-                        />
-                        <div>
-                          <div
-                            style={{
-                              fontSize: '14px',
-                              fontWeight: 600,
-                              color: theme.colors.error || '#ef4444',
-                              marginBottom: '8px',
-                            }}
-                          >
-                            Additional GitHub Permissions Required
-                          </div>
-                          <p
-                            style={{
-                              fontSize: '13px',
-                              color: theme.colors.text,
-                              marginBottom: '12px',
-                              lineHeight: '1.5',
-                            }}
-                          >
-                            {sshKeysError}
-                          </p>
-                          <p
-                            style={{
-                              fontSize: '13px',
-                              color: theme.colors.textSecondary,
-                              marginBottom: '12px',
-                              lineHeight: '1.5',
-                            }}
-                          >
-                            To view and manage your SSH keys, you need to
-                            re-authenticate with additional permissions. Click
-                            "Manage Permissions" above to grant the{' '}
-                            <code
-                              style={{
-                                padding: '2px 6px',
-                                backgroundColor: theme.colors.background,
-                                borderRadius: '4px',
-                                fontFamily: 'monospace',
-                              }}
-                            >
-                              read:public_key
-                            </code>{' '}
-                            scope.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    <p
-                      style={{
-                        fontSize: '14px',
-                        color: theme.colors.textSecondary,
-                        marginBottom: '16px',
-                      }}
-                    >
-                      You can still set up SSH keys manually. The wizard will
-                      help you generate and configure a new SSH key for Git
-                      operations.
-                    </p>
-                    <button
-                      onClick={() => setShowSSHSetup(true)}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '10px 20px',
-                        backgroundColor: theme.colors.primary,
-                        color: theme.colors.background,
-                        border: 'none',
-                        borderRadius: '8px',
-                        fontSize: '14px',
-                        fontWeight: 500,
-                        cursor: 'pointer',
-                        transition: 'opacity 0.2s',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.opacity = '0.9';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.opacity = '1';
-                      }}
-                    >
-                      <Key size={16} />
-                      Set Up SSH Key
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <p
-                      style={{
-                        fontSize: '14px',
-                        color: theme.colors.textSecondary,
-                        marginBottom: '16px',
-                      }}
-                    >
-                      {sshKeysError ||
-                        'SSH keys are not configured. Set up SSH authentication to clone private repositories and access organization repositories without token limitations.'}
-                    </p>
-                    <button
-                      onClick={() => setShowSSHSetup(true)}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '10px 20px',
-                        backgroundColor: theme.colors.primary,
-                        color: theme.colors.background,
-                        border: 'none',
-                        borderRadius: '8px',
-                        fontSize: '14px',
-                        fontWeight: 500,
-                        cursor: 'pointer',
-                        transition: 'opacity 0.2s',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.opacity = '0.9';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.opacity = '1';
-                      }}
-                    >
-                      <Key size={16} />
-                      Set Up SSH Key
-                    </button>
-                  </>
-                )}
               </>
             )}
           </div>
-        )}
 
-        {/* System Permissions Card */}
-        <div
-          style={{
-            backgroundColor: cardBackground,
-            border: `1px solid ${theme.colors.border}`,
-            borderRadius: '12px',
-            padding: '24px',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '20px',
-            }}
-          >
-            <h2
+          {/* Connected Services Card */}
+          {isAuthenticated && (
+            <div
               style={{
-                fontSize: '18px',
-                fontWeight: 600,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}
-            >
-              <Shield size={20} />
-              System Permissions
-            </h2>
-            <button
-              onClick={fetchKeychainStatus}
-              disabled={loadingKeychainStatus}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '6px 12px',
-                backgroundColor: 'transparent',
+                backgroundColor: cardBackground,
                 border: `1px solid ${theme.colors.border}`,
-                borderRadius: '6px',
-                color: theme.colors.textSecondary,
-                fontSize: '13px',
-                cursor: loadingKeychainStatus ? 'wait' : 'pointer',
-                transition: 'all 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                if (!loadingKeychainStatus) {
-                  e.currentTarget.style.backgroundColor =
-                    theme.colors.backgroundSecondary;
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
+                borderRadius: '12px',
+                padding: '24px',
               }}
             >
-              <RefreshCw
-                size={14}
-                className={loadingKeychainStatus ? 'spinning' : ''}
-              />
-              Refresh
-            </button>
-          </div>
-
-          <p
-            style={{
-              fontSize: '14px',
-              color: theme.colors.textSecondary,
-              marginBottom: '20px',
-            }}
-          >
-            View and manage system permissions required for secure credential
-            storage and authentication.
-          </p>
-
-          {loadingKeychainStatus ? (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                color: theme.colors.textSecondary,
-                padding: '20px',
-              }}
-            >
-              <Loader2 size={16} className="spinning" />
-              Checking permissions...
-            </div>
-          ) : (
-            <>
-              {/* Keychain Access Status */}
-              <div
+              <h2
                 style={{
-                  backgroundColor: secondaryBackground,
-                  border: `1px solid ${theme.colors.border}`,
-                  borderRadius: '8px',
-                  padding: '16px',
-                  marginBottom: '16px',
+                  fontSize: '18px',
+                  fontWeight: 600,
+                  marginBottom: '20px',
                 }}
               >
-                <h3
-                  style={{
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    marginTop: 0,
-                    marginBottom: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                  }}
-                >
-                  <Key size={16} />
-                  Keychain Access
-                </h3>
+                Connected Services
+              </h2>
 
-                {keychainStatus ? (
-                  <>
-                    <div
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns:
-                          'repeat(auto-fit, minmax(200px, 1fr))',
-                        gap: '12px',
-                        marginBottom: '16px',
-                      }}
-                    >
-                      <div
-                        style={{
-                          padding: '12px',
-                          backgroundColor: theme.colors.background,
-                          borderRadius: '6px',
-                          border: `1px solid ${theme.colors.border}`,
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: '12px',
-                            color: theme.colors.textSecondary,
-                            marginBottom: '4px',
-                          }}
-                        >
-                          Keychain Available
-                        </div>
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            fontSize: '14px',
-                            fontWeight: 500,
-                            color: keychainStatus.available
-                              ? theme.colors.success
-                              : theme.colors.error,
-                          }}
-                        >
-                          {keychainStatus.available ? (
-                            <>
-                              <CheckCircle size={16} />
-                              Available
-                            </>
-                          ) : (
-                            <>
-                              <XCircle size={16} />
-                              Not Available
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      <div
-                        style={{
-                          padding: '12px',
-                          backgroundColor: theme.colors.background,
-                          borderRadius: '6px',
-                          border: `1px solid ${theme.colors.border}`,
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: '12px',
-                            color: theme.colors.textSecondary,
-                            marginBottom: '4px',
-                          }}
-                        >
-                          Encryption Status
-                        </div>
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            fontSize: '14px',
-                            fontWeight: 500,
-                            color: keychainStatus.initialized
-                              ? theme.colors.success
-                              : theme.colors.warning,
-                          }}
-                        >
-                          {keychainStatus.initialized ? (
-                            <>
-                              <CheckCircle size={16} />
-                              Initialized
-                            </>
-                          ) : (
-                            <>
-                              <AlertCircle size={16} />
-                              Not Initialized
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {keychainStatus.error && (
-                      <div
-                        style={{
-                          padding: '12px',
-                          backgroundColor: `${theme.colors.error}15`,
-                          border: `1px solid ${theme.colors.error}40`,
-                          borderRadius: '6px',
-                          marginBottom: '16px',
-                          fontSize: '13px',
-                          color: theme.colors.error,
-                        }}
-                      >
-                        <AlertCircle
-                          size={14}
-                          style={{ display: 'inline', marginRight: '6px' }}
-                        />
-                        {keychainStatus.error}
-                      </div>
-                    )}
-
-                    <button
-                      onClick={handleTestKeychainAccess}
-                      disabled={loadingKeychainStatus}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '8px 16px',
-                        backgroundColor: theme.colors.primary,
-                        border: 'none',
-                        borderRadius: '6px',
-                        color: theme.colors.background,
-                        fontSize: '13px',
-                        fontWeight: 500,
-                        cursor: loadingKeychainStatus ? 'wait' : 'pointer',
-                        transition: 'all 0.2s',
-                        opacity: loadingKeychainStatus ? 0.7 : 1,
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!loadingKeychainStatus)
-                          e.currentTarget.style.opacity = '0.9';
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!loadingKeychainStatus)
-                          e.currentTarget.style.opacity = '1';
-                      }}
-                    >
-                      {loadingKeychainStatus ? (
-                        <>
-                          <Loader2 size={14} className="spinning" />
-                          Testing...
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle size={14} />
-                          Test Keychain Access
-                        </>
-                      )}
-                    </button>
-                  </>
-                ) : (
-                  <div
-                    style={{
-                      fontSize: '14px',
-                      color: theme.colors.textSecondary,
-                    }}
-                  >
-                    Unable to check keychain status
-                  </div>
-                )}
-              </div>
-
-              {/* macOS System Permissions Info */}
-              <div
-                style={{
-                  backgroundColor: secondaryBackground,
-                  border: `1px solid ${theme.colors.border}`,
-                  borderRadius: '8px',
-                  padding: '16px',
-                }}
-              >
-                <h3
-                  style={{
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    marginTop: 0,
-                    marginBottom: '12px',
-                  }}
-                >
-                  Required Permissions
-                </h3>
-                <ul
-                  style={{
-                    margin: 0,
-                    paddingLeft: '20px',
-                    fontSize: '13px',
-                    color: theme.colors.textSecondary,
-                    lineHeight: '1.8',
-                  }}
-                >
-                  <li>
-                    <strong style={{ color: theme.colors.text }}>
-                      Keychain Access:
-                    </strong>{' '}
-                    Required to securely store authentication credentials
-                  </li>
-                  <li>
-                    <strong style={{ color: theme.colors.text }}>
-                      System Keychain:
-                    </strong>{' '}
-                    Must be unlocked for encryption/decryption operations
-                  </li>
-                </ul>
-                <div
-                  style={{
-                    marginTop: '16px',
-                    padding: '12px',
-                    backgroundColor: theme.colors.background,
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    color: theme.colors.textSecondary,
-                  }}
-                >
-                  <strong style={{ color: theme.colors.text }}>
-                    To manage permissions:
-                  </strong>
-                  <br />
-                  <span
-                    style={{
-                      fontFamily: 'monospace',
-                      fontSize: '11px',
-                      display: 'block',
-                      marginTop: '8px',
-                      padding: '8px',
-                      backgroundColor: theme.colors.backgroundTertiary,
-                      borderRadius: '4px',
-                    }}
-                  >
-                    System Preferences → Security & Privacy → Privacy
-                  </span>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Connected Services Card */}
-        {isAuthenticated && (
-          <div
-            style={{
-              backgroundColor: cardBackground,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: '12px',
-              padding: '24px',
-            }}
-          >
-            <h2
-              style={{
-                fontSize: '18px',
-                fontWeight: 600,
-                marginBottom: '20px',
-              }}
-            >
-              Connected Services
-            </h2>
-
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-              }}
-            >
               <div
                 style={{
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '12px',
-                  backgroundColor: secondaryBackground,
-                  borderRadius: '8px',
-                  border: `1px solid ${theme.colors.border}`,
+                  flexDirection: 'column',
+                  gap: '12px',
                 }}
               >
                 <div
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '12px',
+                    justifyContent: 'space-between',
+                    padding: '12px',
+                    backgroundColor: secondaryBackground,
+                    borderRadius: '8px',
+                    border: `1px solid ${theme.colors.border}`,
                   }}
                 >
                   <div
                     style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '8px',
-                      backgroundColor: '#24292e',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
+                      gap: '12px',
                     }}
                   >
-                    <svg
-                      width="24"
-                      height="24"
-                      viewBox="0 0 16 16"
-                      fill="white"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <p
+                    <div
                       style={{
-                        fontSize: '14px',
-                        fontWeight: 500,
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '8px',
+                        backgroundColor: '#24292e',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                       }}
                     >
-                      GitHub
-                    </p>
-                    <p
-                      style={{
-                        fontSize: '12px',
-                        color: theme.colors.textSecondary,
-                      }}
-                    >
-                      Repository access and synchronization
-                    </p>
+                      <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 16 16"
+                        fill="white"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <p
+                        style={{
+                          fontSize: '14px',
+                          fontWeight: 500,
+                        }}
+                      >
+                        GitHub
+                      </p>
+                      <p
+                        style={{
+                          fontSize: '12px',
+                          color: theme.colors.textSecondary,
+                        }}
+                      >
+                        Repository access and synchronization
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    color: theme.colors.success || '#10b981',
-                    fontSize: '12px',
-                    fontWeight: 500,
-                  }}
-                >
-                  <CheckCircle size={14} />
-                  Connected
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      color: theme.colors.success || '#10b981',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                    }}
+                  >
+                    <CheckCircle size={14} />
+                    Connected
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
         </div>
       </div>
 

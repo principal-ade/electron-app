@@ -169,12 +169,16 @@ export interface WindowAPI {
    * @param options - Repository path and name
    * @returns Window ID if successful, null otherwise
    */
-  openDevWorkspace(options: DevWorkspaceOptions): Promise<{ windowId: number } | null>;
+  openDevWorkspace(
+    options: DevWorkspaceOptions,
+  ): Promise<{ windowId: number } | null>;
 
   /**
    * Open the extension browser window
    * @param options - Optional configuration
    * @returns Window ID if successful, null otherwise
    */
-  openExtensionWindow(options?: ExtensionWindowOptions): Promise<{ windowId: number } | null>;
+  openExtensionWindow(
+    options?: ExtensionWindowOptions,
+  ): Promise<{ windowId: number } | null>;
 }

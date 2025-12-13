@@ -77,7 +77,9 @@ export interface PresenceEventPayloads {
 
 export type PresenceEventType = keyof PresenceEventPayloads;
 
-export interface PresenceEvent<T extends PresenceEventType = PresenceEventType> {
+export interface PresenceEvent<
+  T extends PresenceEventType = PresenceEventType,
+> {
   type: T;
   payload: PresenceEventPayloads[T];
   timestamp: number;

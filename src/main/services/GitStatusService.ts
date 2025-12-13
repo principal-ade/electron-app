@@ -64,7 +64,9 @@ export class GitStatusService {
     // If already refreshing, return the existing promise
     const existingPromise = this.refreshPromises.get(path);
     if (existingPromise) {
-      console.log(`[GitStatusService] Already refreshing ${path}, returning existing promise`);
+      console.log(
+        `[GitStatusService] Already refreshing ${path}, returning existing promise`,
+      );
       return existingPromise;
     }
 
@@ -155,7 +157,9 @@ export class GitStatusService {
    */
   private broadcastStatusUpdate(status: GitStatus): void {
     const windows = BrowserWindow.getAllWindows();
-    console.log(`[GitStatusService] Broadcasting status update to ${windows.length} windows`);
+    console.log(
+      `[GitStatusService] Broadcasting status update to ${windows.length} windows`,
+    );
 
     for (const window of windows) {
       if (!window.isDestroyed()) {

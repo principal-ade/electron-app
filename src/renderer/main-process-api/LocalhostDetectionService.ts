@@ -39,7 +39,10 @@ export const LocalhostDetectionService = {
     ports?: number[],
     intervalMs?: number,
   ): Promise<{ watchId: string }> => {
-    return window.mainProcess.localhostDetection.startWatching(ports, intervalMs);
+    return window.mainProcess.localhostDetection.startWatching(
+      ports,
+      intervalMs,
+    );
   },
 
   /**

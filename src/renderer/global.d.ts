@@ -28,7 +28,9 @@ declare global {
       onSelectPrevious?: (callback: () => void) => void | (() => void);
       cycleSelection?: (direction: 'next' | 'previous') => void;
       // Quick Open API
-      onQuickOpenItems?: (callback: (event: any, items: any[]) => void) => void | (() => void);
+      onQuickOpenItems?: (
+        callback: (event: any, items: any[]) => void,
+      ) => void | (() => void);
       requestQuickOpenItems?: () => void;
       selectQuickOpenItem?: (item: any) => void;
       closeQuickOpen?: () => void;

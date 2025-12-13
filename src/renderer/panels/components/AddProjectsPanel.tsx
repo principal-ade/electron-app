@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Search, FolderOpen, ArrowLeft } from 'lucide-react';
-import type { Workspace, AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import type {
+  Workspace,
+  AlexandriaEntry,
+} from '@principal-ai/alexandria-core-library/types';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { LocalProjectCard } from './LocalProjectCard';
@@ -19,8 +22,12 @@ export const AddProjectsPanel: React.FC<AddProjectsPanelProps> = ({
   onClose,
 }) => {
   const { theme } = useTheme();
-  const [availableRepositories, setAvailableRepositories] = useState<AlexandriaEntry[]>([]);
-  const [workspaceRepositories, setWorkspaceRepositories] = useState<AlexandriaEntry[]>(initialWorkspaceRepositories);
+  const [availableRepositories, setAvailableRepositories] = useState<
+    AlexandriaEntry[]
+  >([]);
+  const [workspaceRepositories, setWorkspaceRepositories] = useState<
+    AlexandriaEntry[]
+  >(initialWorkspaceRepositories);
   const [loadingAvailable, setLoadingAvailable] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [addingRepo, setAddingRepo] = useState<string | null>(null);
@@ -37,10 +44,12 @@ export const AddProjectsPanel: React.FC<AddProjectsPanelProps> = ({
       const allRepos = await AlexandriaService.getRepositories();
 
       // Get IDs of repos already in workspace
-      const wsRepoIds = new Set(workspaceRepositories.map(r => r.github?.id).filter(Boolean));
+      const wsRepoIds = new Set(
+        workspaceRepositories.map((r) => r.github?.id).filter(Boolean),
+      );
 
       // Filter out repositories already in the workspace
-      const available = allRepos.filter(r => {
+      const available = allRepos.filter((r) => {
         const repoId = r.github?.id;
         return repoId && !wsRepoIds.has(repoId);
       });
@@ -72,7 +81,9 @@ export const AddProjectsPanel: React.FC<AddProjectsPanelProps> = ({
 
   // Sort workspace repositories (no filtering)
   const sortedWorkspace = useMemo(() => {
-    return [...workspaceRepositories].sort((a, b) => a.name.localeCompare(b.name));
+    return [...workspaceRepositories].sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
   }, [workspaceRepositories]);
 
   const handleAddRepository = async (entry: AlexandriaEntry) => {
@@ -86,11 +97,15 @@ export const AddProjectsPanel: React.FC<AddProjectsPanelProps> = ({
       await WorkspaceService.addRepositoryToWorkspace(entry, workspace.id);
 
       // Update local state immediately for responsive UI
-      setAvailableRepositories(prev => prev.filter(r => r.path !== entry.path));
-      setWorkspaceRepositories(prev => [...prev, entry]);
+      setAvailableRepositories((prev) =>
+        prev.filter((r) => r.path !== entry.path),
+      );
+      setWorkspaceRepositories((prev) => [...prev, entry]);
     } catch (error) {
       console.error('Failed to add repository to workspace:', error);
-      alert(`Failed to add repository: ${error instanceof Error ? error.message : String(error)}`);
+      alert(
+        `Failed to add repository: ${error instanceof Error ? error.message : String(error)}`,
+      );
     } finally {
       setAddingRepo(null);
     }
@@ -98,8 +113,10 @@ export const AddProjectsPanel: React.FC<AddProjectsPanelProps> = ({
 
   const handleRemovedFromWorkspace = (entry: AlexandriaEntry) => {
     // Update local state immediately for responsive UI
-    setWorkspaceRepositories(prev => prev.filter(r => r.path !== entry.path));
-    setAvailableRepositories(prev => [...prev, entry]);
+    setWorkspaceRepositories((prev) =>
+      prev.filter((r) => r.path !== entry.path),
+    );
+    setAvailableRepositories((prev) => [...prev, entry]);
   };
 
   // Convert entries to RepositoryCacheData format for LocalProjectCard
@@ -158,7 +175,8 @@ export const AddProjectsPanel: React.FC<AddProjectsPanelProps> = ({
             transition: 'all 0.15s ease',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+            e.currentTarget.style.backgroundColor =
+              theme.colors.backgroundTertiary;
             e.currentTarget.style.color = theme.colors.text;
           }}
           onMouseLeave={(e) => {
@@ -240,13 +258,18 @@ export const AddProjectsPanel: React.FC<AddProjectsPanelProps> = ({
                   textAlign: 'center',
                 }}
               >
-                <FolderOpen size={32} style={{ opacity: 0.4, marginBottom: '8px' }} />
+                <FolderOpen
+                  size={32}
+                  style={{ opacity: 0.4, marginBottom: '8px' }}
+                />
                 <span style={{ fontSize: `${theme.fontSizes[1]}px` }}>
                   No projects in workspace yet
                 </span>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div
+                style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}
+              >
                 {sortedWorkspace.map((entry) => (
                   <LocalProjectCard
                     key={entry.path}
@@ -360,7 +383,10 @@ export const AddProjectsPanel: React.FC<AddProjectsPanelProps> = ({
                   textAlign: 'center',
                 }}
               >
-                <FolderOpen size={32} style={{ opacity: 0.4, marginBottom: '8px' }} />
+                <FolderOpen
+                  size={32}
+                  style={{ opacity: 0.4, marginBottom: '8px' }}
+                />
                 <span style={{ fontSize: `${theme.fontSizes[1]}px` }}>
                   {searchQuery
                     ? 'No projects match your search'
@@ -368,7 +394,9 @@ export const AddProjectsPanel: React.FC<AddProjectsPanelProps> = ({
                 </span>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div
+                style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}
+              >
                 {filteredAvailable.map((entry) => (
                   <LocalProjectCard
                     key={entry.path}

@@ -155,7 +155,9 @@ interface ProcessInfo {
 /**
  * Get process info for a port using lsof (macOS/Linux)
  */
-async function getProcessInfoForPort(port: number): Promise<ProcessInfo | null> {
+async function getProcessInfoForPort(
+  port: number,
+): Promise<ProcessInfo | null> {
   try {
     // Find the PID listening on this port
     const { stdout: lsofOutput } = await execAsync(

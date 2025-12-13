@@ -9,7 +9,10 @@
  */
 
 import { OrbitService } from '../../main-process-api/OrbitService';
-import type { OrbitPeer, OrbitSignal } from '../../../shared/main-process-api-interfaces/OrbitAPI';
+import type {
+  OrbitPeer,
+  OrbitSignal,
+} from '../../../shared/main-process-api-interfaces/OrbitAPI';
 
 export interface SignalingCallbacks {
   onConnected: (peerId: string, githubHandle: string) => void;
@@ -72,7 +75,8 @@ export class OrbitSignalingBridge {
       }
     } catch (error) {
       console.error('[OrbitSignalingBridge] Connection error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Connection failed';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Connection failed';
       this.callbacks?.onError(errorMessage);
       this.callbacks?.onDisconnected();
       this.cleanup();
@@ -99,9 +103,11 @@ export class OrbitSignalingBridge {
     this.eventCleanupFns.push(unsubPeerJoined);
 
     // Peer left
-    const unsubPeerLeft = OrbitService.onPeerLeft((data: { peerId: string }) => {
-      this.callbacks?.onPeerLeft(data.peerId);
-    });
+    const unsubPeerLeft = OrbitService.onPeerLeft(
+      (data: { peerId: string }) => {
+        this.callbacks?.onPeerLeft(data.peerId);
+      },
+    );
     this.eventCleanupFns.push(unsubPeerLeft);
 
     // Disconnected

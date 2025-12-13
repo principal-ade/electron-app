@@ -96,12 +96,16 @@ export interface OrbitAPI {
   /**
    * Disconnect from signaling server
    */
-  disconnect(connectionId: string): Promise<{ success: boolean; error?: string }>;
+  disconnect(
+    connectionId: string,
+  ): Promise<{ success: boolean; error?: string }>;
 
   /**
    * Send a WebRTC signal to a peer
    */
-  sendSignal(request: OrbitSendSignalRequest): Promise<{ success: boolean; error?: string }>;
+  sendSignal(
+    request: OrbitSendSignalRequest,
+  ): Promise<{ success: boolean; error?: string }>;
 
   /**
    * Get current peers in the room
@@ -111,29 +115,27 @@ export interface OrbitAPI {
   /**
    * Subscribe to signal received events
    */
-  onSignalReceived(
-    callback: (signal: OrbitSignal) => void,
-  ): () => void;
+  onSignalReceived(callback: (signal: OrbitSignal) => void): () => void;
 
   /**
    * Subscribe to peer joined events
    */
-  onPeerJoined(
-    callback: (peer: OrbitPeer) => void,
-  ): () => void;
+  onPeerJoined(callback: (peer: OrbitPeer) => void): () => void;
 
   /**
    * Subscribe to peer left events
    */
-  onPeerLeft(
-    callback: (data: { peerId: string }) => void,
-  ): () => void;
+  onPeerLeft(callback: (data: { peerId: string }) => void): () => void;
 
   /**
    * Subscribe to connected events
    */
   onConnected(
-    callback: (data: { connectionId: string; peerId: string; githubHandle: string }) => void,
+    callback: (data: {
+      connectionId: string;
+      peerId: string;
+      githubHandle: string;
+    }) => void,
   ): () => void;
 
   /**

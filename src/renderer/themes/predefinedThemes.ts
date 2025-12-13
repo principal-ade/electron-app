@@ -24,7 +24,8 @@ export const predefinedThemes: Record<
 > = {
   principalAI: {
     name: 'Principal AI',
-    description: 'Modern AI-inspired theme with vibrant indigo and cyan accents',
+    description:
+      'Modern AI-inspired theme with vibrant indigo and cyan accents',
     theme: landingPageTheme,
   },
   principalAILight: {

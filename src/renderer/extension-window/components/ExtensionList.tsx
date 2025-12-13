@@ -54,7 +54,8 @@ export const ExtensionList: React.FC<ExtensionListProps> = ({
 
               {/* Panel count */}
               <div className="text-xs text-gray-500 mt-1">
-                {extension.panels.length} panel{extension.panels.length !== 1 ? 's' : ''}
+                {extension.panels.length} panel
+                {extension.panels.length !== 1 ? 's' : ''}
               </div>
             </div>
 

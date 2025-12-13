@@ -173,7 +173,9 @@ class AuthService {
       try {
         // Use the OAuth client from dev-collab-cli
         const authClient = new OAuthServerClient({
-          serverUrl: process.env.AUTH_SERVER_URL || APP_BRANDING.AUTH_SERVER_URL.PRODUCTION,
+          serverUrl:
+            process.env.AUTH_SERVER_URL ||
+            APP_BRANDING.AUTH_SERVER_URL.PRODUCTION,
           forceReauth: options.forceNew || false,
         });
 
@@ -263,11 +265,18 @@ class AuthService {
           // Configure git credentials for HTTPS cloning
           try {
             await GitCredentialHelper.configureGitCredentials(result.token);
-            console.log('[AuthService] Git credentials configured for HTTPS cloning');
+            console.log(
+              '[AuthService] Git credentials configured for HTTPS cloning',
+            );
           } catch (gitConfigError) {
             // Don't fail login if git config fails - user can still use the app
-            console.error('[AuthService] Failed to configure git credentials:', gitConfigError);
-            console.warn('[AuthService] HTTPS cloning may not work, but login successful');
+            console.error(
+              '[AuthService] Failed to configure git credentials:',
+              gitConfigError,
+            );
+            console.warn(
+              '[AuthService] HTTPS cloning may not work, but login successful',
+            );
           }
 
           return {
@@ -316,7 +325,10 @@ class AuthService {
           console.log('[AuthService] Git credentials cleared on logout');
         } catch (gitClearError) {
           // Don't fail logout if git credential clearing fails
-          console.error('[AuthService] Failed to clear git credentials:', gitClearError);
+          console.error(
+            '[AuthService] Failed to clear git credentials:',
+            gitClearError,
+          );
         }
 
         return { success: true };
@@ -466,7 +478,8 @@ class AuthService {
           // Attempt to refresh the token
           const authClient = new OAuthServerClient({
             serverUrl:
-              process.env.AUTH_SERVER_URL || APP_BRANDING.AUTH_SERVER_URL.PRODUCTION,
+              process.env.AUTH_SERVER_URL ||
+              APP_BRANDING.AUTH_SERVER_URL.PRODUCTION,
           });
 
           const refreshedAuth =
@@ -504,10 +517,7 @@ class AuthService {
           );
 
           // Update AuthStateManager with GitHub token (not WorkOS token!)
-          AuthStateManager.getInstance().setAuthenticated(
-            user,
-            newGithubToken,
-          );
+          AuthStateManager.getInstance().setAuthenticated(user, newGithubToken);
 
           console.log(
             '[AuthService] Token refreshed successfully, GitHub token preserved',
@@ -551,22 +561,36 @@ class AuthService {
       if (user.id) {
         try {
           const authClient = new OAuthServerClient({
-            serverUrl: process.env.AUTH_SERVER_URL || APP_BRANDING.AUTH_SERVER_URL.PRODUCTION,
+            serverUrl:
+              process.env.AUTH_SERVER_URL ||
+              APP_BRANDING.AUTH_SERVER_URL.PRODUCTION,
           });
-          const serverToken = await authClient.fetchCurrentToken(githubToken, user.id);
+          const serverToken = await authClient.fetchCurrentToken(
+            githubToken,
+            user.id,
+          );
 
           if (serverToken && serverToken.githubToken !== githubToken) {
-            console.log('[AuthService] Server has a newer token, updating local storage');
+            console.log(
+              '[AuthService] Server has a newer token, updating local storage',
+            );
             currentGithubToken = serverToken.githubToken;
 
             // Update the stored GitHub token
-            await this.storage.setToken(TOKEN_KEYS.GITHUB_TOKEN, currentGithubToken, {
-              user,
-            });
+            await this.storage.setToken(
+              TOKEN_KEYS.GITHUB_TOKEN,
+              currentGithubToken,
+              {
+                user,
+              },
+            );
           }
         } catch (syncError) {
           // Non-fatal: if sync fails, continue with local token
-          console.log('[AuthService] Token sync failed, using local token:', syncError);
+          console.log(
+            '[AuthService] Token sync failed, using local token:',
+            syncError,
+          );
         }
       }
 
@@ -600,26 +624,26 @@ class AuthService {
             );
 
             // Update stored user data with canonical GitHub data
-            await this.storage.setToken(TOKEN_KEYS.GITHUB_TOKEN, currentGithubToken, {
-              user: enrichedUser,
-            });
+            await this.storage.setToken(
+              TOKEN_KEYS.GITHUB_TOKEN,
+              currentGithubToken,
+              {
+                user: enrichedUser,
+              },
+            );
           } else {
             console.error(
               '[AuthService] ❌ FAILED to fetch GitHub profile during auth check - HTTP',
               response.status,
             );
-            console.error(
-              '[AuthService] User may not have avatar URL!',
-            );
+            console.error('[AuthService] User may not have avatar URL!');
           }
         } catch (avatarError) {
           console.error(
             '[AuthService] ❌ EXCEPTION fetching GitHub profile during auth check:',
             avatarError,
           );
-          console.error(
-            '[AuthService] User may not have avatar URL!',
-          );
+          console.error('[AuthService] User may not have avatar URL!');
         }
       }
 
@@ -787,7 +811,13 @@ class AuthService {
   /**
    * Get current authenticated user information
    */
-  async getCurrentUser(): Promise<{ login: string; email: string; name?: string; id?: number; avatarUrl?: string } | null> {
+  async getCurrentUser(): Promise<{
+    login: string;
+    email: string;
+    name?: string;
+    id?: number;
+    avatarUrl?: string;
+  } | null> {
     try {
       const auth = await this.getStoredAuth();
 
@@ -906,7 +936,9 @@ class AuthService {
 
       // Attempt to refresh the token
       const authClient = new OAuthServerClient({
-        serverUrl: process.env.AUTH_SERVER_URL || APP_BRANDING.AUTH_SERVER_URL.PRODUCTION,
+        serverUrl:
+          process.env.AUTH_SERVER_URL ||
+          APP_BRANDING.AUTH_SERVER_URL.PRODUCTION,
       });
 
       const refreshedAuth = await authClient.refreshAccessToken(refreshToken);
@@ -916,7 +948,9 @@ class AuthService {
         TOKEN_KEYS.GITHUB_TOKEN,
       );
       const existingGithubToken = githubTokenData?.token;
-      const existingUser = githubTokenData?.metadata?.user as AuthResult['user'] | undefined;
+      const existingUser = githubTokenData?.metadata?.user as
+        | AuthResult['user']
+        | undefined;
 
       // If refresh gave us a new GitHub token, use it; otherwise keep the existing one
       const newGithubToken =
@@ -933,9 +967,7 @@ class AuthService {
 
       // Ensure we have user data
       if (!existingUser) {
-        throw new Error(
-          'Token refresh failed: no user data available',
-        );
+        throw new Error('Token refresh failed: no user data available');
       }
 
       // Store the new tokens with existing user data

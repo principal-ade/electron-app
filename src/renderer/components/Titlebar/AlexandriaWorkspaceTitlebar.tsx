@@ -1,13 +1,20 @@
 import React, { useState, useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { PanelCollapseButton, PanelSwitchButton, type PanelLayout } from '@principal-ade/panel-layouts';
+import {
+  PanelCollapseButton,
+  PanelSwitchButton,
+  type PanelLayout,
+} from '@principal-ade/panel-layouts';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 import { Plus, Keyboard, FilePlus2, Github } from 'lucide-react';
 import { AddRepositoryToWorkspaceModal } from '../../panels/components/AddRepositoryToWorkspaceModal';
 import { CreateRepositoryInWorkspaceModal } from '../../panels/components/CreateRepositoryInWorkspaceModal';
 import { CloneFromGitHubModal } from '../../panels/components/CloneFromGitHubModal';
 import { WorkspaceThemeDropdown } from './WorkspaceThemeDropdown';
-import { PanelSelectorDropdown, type PanelOption } from './PanelSelectorDropdown';
+import {
+  PanelSelectorDropdown,
+  type PanelOption,
+} from './PanelSelectorDropdown';
 
 // Available panels for Alexandria workspace
 const AVAILABLE_PANELS: PanelOption[] = [
@@ -258,9 +265,13 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
                 gap: '4px',
                 padding: '4px 10px',
                 borderRadius: '6px',
-                backgroundColor: enableKeyboardShortcuts ? theme.colors.primary : 'transparent',
+                backgroundColor: enableKeyboardShortcuts
+                  ? theme.colors.primary
+                  : 'transparent',
                 border: `1px solid ${enableKeyboardShortcuts ? theme.colors.primary : theme.colors.border}`,
-                color: enableKeyboardShortcuts ? theme.colors.background : theme.colors.textSecondary,
+                color: enableKeyboardShortcuts
+                  ? theme.colors.background
+                  : theme.colors.textSecondary,
                 cursor: 'pointer',
                 fontSize: `${theme.fontSizes[0]}px`,
                 fontWeight: theme.fontWeights.medium,
@@ -269,7 +280,8 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
               }}
               onMouseEnter={(e) => {
                 if (!enableKeyboardShortcuts) {
-                  e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundTertiary;
                   e.currentTarget.style.borderColor = theme.colors.border;
                 }
               }}
@@ -279,7 +291,11 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
                   e.currentTarget.style.borderColor = theme.colors.border;
                 }
               }}
-              title={enableKeyboardShortcuts ? 'Disable keyboard shortcuts (Alt+1/2/3)' : 'Enable keyboard shortcuts (Alt+1/2/3)'}
+              title={
+                enableKeyboardShortcuts
+                  ? 'Disable keyboard shortcuts (Alt+1/2/3)'
+                  : 'Enable keyboard shortcuts (Alt+1/2/3)'
+              }
             >
               <Keyboard size={14} />
               {enableKeyboardShortcuts ? 'On' : 'Off'}

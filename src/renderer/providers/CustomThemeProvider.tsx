@@ -28,7 +28,8 @@ export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({
       await ThemeService.loadPreferences();
 
       // Use workspace theme if provided, otherwise use user's global preference
-      const themeName = workspaceThemeName || ThemeService.getCurrentThemeName();
+      const themeName =
+        workspaceThemeName || ThemeService.getCurrentThemeName();
       const theme = await ThemeService.getActiveTheme(themeName);
 
       if (theme) {
@@ -36,7 +37,11 @@ export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({
       }
       setIsLoading(false);
 
-      console.info('[CustomThemeProvider] Initial theme loaded:', themeName, workspaceThemeName ? '(workspace override)' : '(user preference)');
+      console.info(
+        '[CustomThemeProvider] Initial theme loaded:',
+        themeName,
+        workspaceThemeName ? '(workspace override)' : '(user preference)',
+      );
     };
 
     loadInitialTheme();

@@ -25,7 +25,9 @@ export const terminalRouter = {
     .input<{ cwd?: string; command?: string; context?: string }>()
     .action(async ({ input, context }) => {
       if (!isPtyAvailable()) {
-        throw new Error('Terminal functionality is not available in this build');
+        throw new Error(
+          'Terminal functionality is not available in this build',
+        );
       }
 
       const window = BrowserWindow.fromWebContents(context.sender);
@@ -36,7 +38,7 @@ export const terminalRouter = {
       // Check session limit
       if (!sessionManager.canCreateSession()) {
         throw new Error(
-          `Maximum number of terminal sessions (${sessionManager.getMaxSessions()}) reached`
+          `Maximum number of terminal sessions (${sessionManager.getMaxSessions()}) reached`,
         );
       }
 
@@ -77,7 +79,7 @@ export const terminalRouter = {
           status: 'active' as const,
           ownedByWindowId: ownerWindowId,
         };
-      }
+      },
     );
     return sessions;
   }),
@@ -95,7 +97,7 @@ export const terminalRouter = {
         input.sessionId,
         input.cols,
         input.rows,
-        input.force ?? false
+        input.force ?? false,
       );
     }),
 
@@ -114,7 +116,9 @@ export const terminalRouter = {
   checkTerminalOwnership: t.procedure
     .input<{ sessionId: string }>()
     .action(async ({ input, context }) => {
-      console.log(`[TIPC] checkTerminalOwnership called: sessionId=${input.sessionId}`);
+      console.log(
+        `[TIPC] checkTerminalOwnership called: sessionId=${input.sessionId}`,
+      );
 
       const window = BrowserWindow.fromWebContents(context.sender);
       if (!window) {
@@ -141,7 +145,10 @@ export const terminalRouter = {
         };
       }
 
-      const result = ownershipManager.checkOwnership(input.sessionId, window.id);
+      const result = ownershipManager.checkOwnership(
+        input.sessionId,
+        window.id,
+      );
       console.log(`[TIPC] checkTerminalOwnership result:`, result);
       return result;
     }),
@@ -150,7 +157,7 @@ export const terminalRouter = {
     .input<{ sessionId: string; force?: boolean }>()
     .action(async ({ input, context }) => {
       console.log(
-        `[TIPC] claimTerminalOwnership called: sessionId=${input.sessionId}, force=${input.force}`
+        `[TIPC] claimTerminalOwnership called: sessionId=${input.sessionId}, force=${input.force}`,
       );
 
       const window = BrowserWindow.fromWebContents(context.sender);
@@ -170,7 +177,7 @@ export const terminalRouter = {
       const result = ownershipManager.claimOwnership(
         input.sessionId,
         window.id,
-        input.force ?? false
+        input.force ?? false,
       );
 
       console.log(`[TIPC] claimTerminalOwnership result:`, result);
@@ -180,7 +187,7 @@ export const terminalRouter = {
         const previousWindow = BrowserWindow.fromId(result.previousOwner);
         if (previousWindow && !previousWindow.isDestroyed()) {
           console.log(
-            `[TIPC] Notifying previous owner window ${result.previousOwner}`
+            `[TIPC] Notifying previous owner window ${result.previousOwner}`,
           );
           previousWindow.webContents.send('terminal:ownershipLost', {
             sessionId: input.sessionId,
@@ -209,7 +216,7 @@ export const terminalRouter = {
     .input<{ sessionId: string }>()
     .action(async ({ input, context }) => {
       console.log(
-        `[TIPC] requestTerminalDataPort called: sessionId=${input.sessionId}`
+        `[TIPC] requestTerminalDataPort called: sessionId=${input.sessionId}`,
       );
 
       const window = BrowserWindow.fromWebContents(context.sender);
@@ -230,7 +237,7 @@ export const terminalRouter = {
       const success = sessionManager.createPortForSession(
         input.sessionId,
         window.id,
-        false // Don't claim ownership - that's done separately via claimTerminalOwnership
+        false, // Don't claim ownership - that's done separately via claimTerminalOwnership
       );
 
       console.log(`[TIPC] requestTerminalDataPort result: success=${success}`);

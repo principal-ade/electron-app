@@ -294,7 +294,10 @@ export const ToolUsageCard: React.FC<ToolUsageCardProps> = ({ toolCounts }) => {
                 {toolName}
               </span>
               <span
-                style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary }}
+                style={{
+                  fontSize: theme.fontSizes[1],
+                  color: theme.colors.textSecondary,
+                }}
               >
                 {count}
               </span>

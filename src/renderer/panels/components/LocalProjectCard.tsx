@@ -1,6 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { FolderOpen, Focus, Loader2, Home, AlertTriangle, MoveRight, X, Copy, Check, Trash2, Plus } from 'lucide-react';
+import {
+  FolderOpen,
+  Focus,
+  Loader2,
+  Home,
+  AlertTriangle,
+  MoveRight,
+  X,
+  Copy,
+  Check,
+  Trash2,
+  Plus,
+} from 'lucide-react';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 
 import type { RepositoryCacheData } from '../../services/RepositoryDataCache';
@@ -29,9 +41,9 @@ if (typeof document !== 'undefined') {
 }
 
 export type CardActionMode =
-  | 'workspace'        // Show workspace actions (move, open, remove from workspace, delete)
+  | 'workspace' // Show workspace actions (move, open, remove from workspace, delete)
   | 'add-to-workspace' // Show "Add to workspace" button only
-  | 'minimal';         // Show only open button
+  | 'minimal'; // Show only open button
 
 interface LocalProjectCardProps {
   repositoryData: RepositoryCacheData;
@@ -45,7 +57,9 @@ interface LocalProjectCardProps {
   /** Callback when repository is removed from workspace */
   onRemovedFromWorkspace?: (entry: typeof repositoryData.repository) => void;
   /** Callback when repository is removed from local projects (minimal mode) */
-  onRemovedFromLocalProjects?: (entry: typeof repositoryData.repository) => void;
+  onRemovedFromLocalProjects?: (
+    entry: typeof repositoryData.repository,
+  ) => void;
 }
 
 export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
@@ -61,8 +75,12 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
   const { selectedRepository, setSelectedRepository } = useSelectedRepository();
   const { focusReadmePanel } = usePanelFocus();
   const entry = repositoryData.repository;
-  const [windowState, setWindowState] = useState<'closed' | 'opening' | 'ready'>('closed');
-  const [isInWorkspaceDirectory, setIsInWorkspaceDirectory] = useState<boolean | null>(null);
+  const [windowState, setWindowState] = useState<
+    'closed' | 'opening' | 'ready'
+  >('closed');
+  const [isInWorkspaceDirectory, setIsInWorkspaceDirectory] = useState<
+    boolean | null
+  >(null);
   const [isMoving, setIsMoving] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
   const [copiedPath, setCopiedPath] = useState(false);
@@ -88,7 +106,10 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
       }
 
       try {
-        const result = await WorkspaceService.isRepositoryInWorkspaceDirectory(entry, workspace.id);
+        const result = await WorkspaceService.isRepositoryInWorkspaceDirectory(
+          entry,
+          workspace.id,
+        );
         setIsInWorkspaceDirectory(result);
       } catch (error) {
         console.error('Failed to check repository location:', error);
@@ -132,7 +153,7 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
 
       // Find this repository's window in the list (match by localPath first, then remoteUrl)
       const repoWindow = repoWindows.find(
-        (w) => w.localPath === entry.path || w.remoteUrl === remoteUrl
+        (w) => w.localPath === entry.path || w.remoteUrl === remoteUrl,
       );
       setWindowState(repoWindow ? repoWindow.state : 'closed');
     });
@@ -189,7 +210,10 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
 
     try {
       setIsMoving(true);
-      const newPath = await WorkspaceService.moveRepositoryToWorkspaceDirectory(entry, workspace.id);
+      const newPath = await WorkspaceService.moveRepositoryToWorkspaceDirectory(
+        entry,
+        workspace.id,
+      );
 
       // Update the entry with the new path so the check reflects the change
       // Type assertion needed because path requires ValidatedRepositoryPath branded type
@@ -201,7 +225,9 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
       // Events will update all panels automatically - no need for hard reload
     } catch (error) {
       console.error('Failed to move repository:', error);
-      alert(`Failed to move repository: ${error instanceof Error ? error.message : String(error)}`);
+      alert(
+        `Failed to move repository: ${error instanceof Error ? error.message : String(error)}`,
+      );
     } finally {
       setIsMoving(false);
     }
@@ -220,7 +246,9 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
       onRemovedFromWorkspace?.(entry);
     } catch (error) {
       console.error('Failed to remove repository from workspace:', error);
-      alert(`Failed to remove repository: ${error instanceof Error ? error.message : String(error)}`);
+      alert(
+        `Failed to remove repository: ${error instanceof Error ? error.message : String(error)}`,
+      );
     } finally {
       setIsRemoving(false);
     }
@@ -246,7 +274,9 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
       // Events will also update all panels automatically
     } catch (error) {
       console.error('Failed to delete Alexandria entry:', error);
-      alert(`Failed to delete repository: ${error instanceof Error ? error.message : String(error)}`);
+      alert(
+        `Failed to delete repository: ${error instanceof Error ? error.message : String(error)}`,
+      );
     } finally {
       setIsRemoving(false);
     }
@@ -264,7 +294,9 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
       onRemovedFromLocalProjects?.(entry);
     } catch (error) {
       console.error('Failed to remove repository from local projects:', error);
-      alert(`Failed to remove repository: ${error instanceof Error ? error.message : String(error)}`);
+      alert(
+        `Failed to remove repository: ${error instanceof Error ? error.message : String(error)}`,
+      );
     } finally {
       setIsRemoving(false);
     }
@@ -375,7 +407,8 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
           }}
           onMouseLeave={(event) => {
             if (!copiedPath) {
-              event.currentTarget.style.color = theme.colors.textTertiary || theme.colors.textSecondary;
+              event.currentTarget.style.color =
+                theme.colors.textTertiary || theme.colors.textSecondary;
             }
           }}
         >
@@ -422,10 +455,18 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
       </div>
 
       {/* Action buttons */}
-      <div style={{ display: 'flex', gap: '4px', flexShrink: 0, alignItems: 'center' }}>
+      <div
+        style={{
+          display: 'flex',
+          gap: '4px',
+          flexShrink: 0,
+          alignItems: 'center',
+        }}
+      >
         {/* Determine effective action mode */}
         {(() => {
-          const effectiveMode = actionMode ?? (workspace ? 'workspace' : 'minimal');
+          const effectiveMode =
+            actionMode ?? (workspace ? 'workspace' : 'minimal');
 
           // Add to workspace mode - just show Add button
           if (effectiveMode === 'add-to-workspace') {
@@ -456,13 +497,15 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
                 }}
                 onMouseEnter={(event) => {
                   if (!isAdding) {
-                    event.currentTarget.style.backgroundColor = theme.colors.primary || '#3b82f6';
+                    event.currentTarget.style.backgroundColor =
+                      theme.colors.primary || '#3b82f6';
                     event.currentTarget.style.color = theme.colors.background;
                   }
                 }}
                 onMouseLeave={(event) => {
                   event.currentTarget.style.backgroundColor = `${theme.colors.primary || '#3b82f6'}15`;
-                  event.currentTarget.style.color = theme.colors.primary || '#3b82f6';
+                  event.currentTarget.style.color =
+                    theme.colors.primary || '#3b82f6';
                 }}
               >
                 {isAdding ? (
@@ -485,77 +528,83 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
             return (
               <>
                 {/* Location indicator */}
-                {workspace.suggestedClonePath && isInWorkspaceDirectory !== null && (
-                  <div
-                    title={
-                      isInWorkspaceDirectory
-                        ? `In workspace directory: ${workspace.suggestedClonePath}`
-                        : `Outside workspace directory`
-                    }
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '4px',
-                      backgroundColor: isInWorkspaceDirectory
-                        ? `${theme.colors.success || '#10b981'}15`
-                        : `${theme.colors.warning || '#f59e0b'}15`,
-                      color: isInWorkspaceDirectory
-                        ? theme.colors.success || '#10b981'
-                        : theme.colors.warning || '#f59e0b',
-                    }}
-                  >
-                    {isInWorkspaceDirectory ? <Home size={14} /> : <AlertTriangle size={14} />}
-                  </div>
-                )}
+                {workspace.suggestedClonePath &&
+                  isInWorkspaceDirectory !== null && (
+                    <div
+                      title={
+                        isInWorkspaceDirectory
+                          ? `In workspace directory: ${workspace.suggestedClonePath}`
+                          : `Outside workspace directory`
+                      }
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '4px',
+                        backgroundColor: isInWorkspaceDirectory
+                          ? `${theme.colors.success || '#10b981'}15`
+                          : `${theme.colors.warning || '#f59e0b'}15`,
+                        color: isInWorkspaceDirectory
+                          ? theme.colors.success || '#10b981'
+                          : theme.colors.warning || '#f59e0b',
+                      }}
+                    >
+                      {isInWorkspaceDirectory ? (
+                        <Home size={14} />
+                      ) : (
+                        <AlertTriangle size={14} />
+                      )}
+                    </div>
+                  )}
 
                 {/* Move to workspace button */}
-                {workspace.suggestedClonePath && isInWorkspaceDirectory === false && (
-                  <button
-                    type="button"
-                    onClick={handleMoveToWorkspace}
-                    disabled={isMoving}
-                    title={`Move to ${workspace.suggestedClonePath}`}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: '6px 10px',
-                      gap: '4px',
-                      borderRadius: '4px',
-                      border: `1px solid ${theme.colors.primary || '#3b82f6'}`,
-                      backgroundColor: `${theme.colors.primary || '#3b82f6'}15`,
-                      color: theme.colors.primary || '#3b82f6',
-                      fontSize: `${theme.fontSizes[0]}px`,
-                      fontWeight: theme.fontWeights.medium,
-                      cursor: isMoving ? 'wait' : 'pointer',
-                      opacity: isMoving ? 0.6 : 1,
-                      transition: 'all 0.15s ease',
-                    }}
-                    onMouseEnter={(event) => {
-                      if (!isMoving) {
-                        event.currentTarget.style.backgroundColor = `${theme.colors.primary || '#3b82f6'}25`;
-                      }
-                    }}
-                    onMouseLeave={(event) => {
-                      event.currentTarget.style.backgroundColor = `${theme.colors.primary || '#3b82f6'}15`;
-                    }}
-                  >
-                    {isMoving ? (
-                      <Loader2
-                        size={12}
-                        style={{
-                          animation: 'spin 1s linear infinite',
-                        }}
-                      />
-                    ) : (
-                      <MoveRight size={12} />
-                    )}
-                    {isMoving ? 'Moving...' : 'Move'}
-                  </button>
-                )}
+                {workspace.suggestedClonePath &&
+                  isInWorkspaceDirectory === false && (
+                    <button
+                      type="button"
+                      onClick={handleMoveToWorkspace}
+                      disabled={isMoving}
+                      title={`Move to ${workspace.suggestedClonePath}`}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '6px 10px',
+                        gap: '4px',
+                        borderRadius: '4px',
+                        border: `1px solid ${theme.colors.primary || '#3b82f6'}`,
+                        backgroundColor: `${theme.colors.primary || '#3b82f6'}15`,
+                        color: theme.colors.primary || '#3b82f6',
+                        fontSize: `${theme.fontSizes[0]}px`,
+                        fontWeight: theme.fontWeights.medium,
+                        cursor: isMoving ? 'wait' : 'pointer',
+                        opacity: isMoving ? 0.6 : 1,
+                        transition: 'all 0.15s ease',
+                      }}
+                      onMouseEnter={(event) => {
+                        if (!isMoving) {
+                          event.currentTarget.style.backgroundColor = `${theme.colors.primary || '#3b82f6'}25`;
+                        }
+                      }}
+                      onMouseLeave={(event) => {
+                        event.currentTarget.style.backgroundColor = `${theme.colors.primary || '#3b82f6'}15`;
+                      }}
+                    >
+                      {isMoving ? (
+                        <Loader2
+                          size={12}
+                          style={{
+                            animation: 'spin 1s linear infinite',
+                          }}
+                        />
+                      ) : (
+                        <MoveRight size={12} />
+                      )}
+                      {isMoving ? 'Moving...' : 'Move'}
+                    </button>
+                  )}
 
                 {/* Open/Focus button */}
                 <button
@@ -636,13 +685,15 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
                   }}
                   onMouseEnter={(event) => {
                     if (!isRemoving) {
-                      event.currentTarget.style.backgroundColor = theme.colors.error || '#ef4444';
+                      event.currentTarget.style.backgroundColor =
+                        theme.colors.error || '#ef4444';
                       event.currentTarget.style.color = theme.colors.background;
                     }
                   }}
                   onMouseLeave={(event) => {
                     event.currentTarget.style.backgroundColor = 'transparent';
-                    event.currentTarget.style.color = theme.colors.textSecondary;
+                    event.currentTarget.style.color =
+                      theme.colors.textSecondary;
                   }}
                 >
                   {isRemoving ? (
@@ -680,12 +731,14 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
                     transition: 'all 0.15s ease',
                   }}
                   onMouseEnter={(event) => {
-                    event.currentTarget.style.backgroundColor = theme.colors.error || '#ef4444';
+                    event.currentTarget.style.backgroundColor =
+                      theme.colors.error || '#ef4444';
                     event.currentTarget.style.color = theme.colors.background;
                   }}
                   onMouseLeave={(event) => {
                     event.currentTarget.style.backgroundColor = 'transparent';
-                    event.currentTarget.style.color = theme.colors.textSecondary;
+                    event.currentTarget.style.color =
+                      theme.colors.textSecondary;
                   }}
                 >
                   <Trash2 size={14} />
@@ -775,7 +828,8 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
                   transition: 'all 0.15s ease',
                 }}
                 onMouseEnter={(event) => {
-                  event.currentTarget.style.backgroundColor = theme.colors.error || '#ef4444';
+                  event.currentTarget.style.backgroundColor =
+                    theme.colors.error || '#ef4444';
                   event.currentTarget.style.color = theme.colors.background;
                 }}
                 onMouseLeave={(event) => {

@@ -30,7 +30,10 @@ import { AlexandriaService } from '../main-process-api/AlexandriaService';
 /**
  * Combined actions for GitHub panels
  */
-interface GitHubPanelActions extends PanelActions, GitHubStarredPanelActions, GitHubProjectsPanelActions {}
+interface GitHubPanelActions
+  extends PanelActions,
+    GitHubStarredPanelActions,
+    GitHubProjectsPanelActions {}
 
 /**
  * Provider value containing context, actions, and events
@@ -54,21 +57,30 @@ export const GitHubPanelProvider: React.FC<GitHubPanelProviderProps> = ({
   const events = useMemo(() => new PanelEventBus(), []);
 
   // State for starred repositories
-  const [starredRepositories, setStarredRepositories] = useState<GitHubRepository[]>([]);
+  const [starredRepositories, setStarredRepositories] = useState<
+    GitHubRepository[]
+  >([]);
   const [starredLoading, setStarredLoading] = useState(true);
   const [starredError, setStarredError] = useState<string | undefined>();
 
   // State for user repositories (projects)
-  const [userRepositories, setUserRepositories] = useState<GitHubRepository[]>([]);
+  const [userRepositories, setUserRepositories] = useState<GitHubRepository[]>(
+    [],
+  );
   const [organizations, setOrganizations] = useState<GitHubOrganization[]>([]);
-  const [orgRepositories, setOrgRepositories] = useState<Record<string, GitHubRepository[]>>({});
+  const [orgRepositories, setOrgRepositories] = useState<
+    Record<string, GitHubRepository[]>
+  >({});
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [projectsError, setProjectsError] = useState<string | undefined>();
   const [currentUser, setCurrentUser] = useState<string>('');
 
   // State for local repositories (to match cloned repos)
-  const [localRepositories, setLocalRepositories] = useState<AlexandriaEntry[]>([]);
-  const [localRepositoriesLoading, setLocalRepositoriesLoading] = useState(true);
+  const [localRepositories, setLocalRepositories] = useState<AlexandriaEntry[]>(
+    [],
+  );
+  const [localRepositoriesLoading, setLocalRepositoriesLoading] =
+    useState(true);
 
   // Fetch starred repositories
   const fetchStarred = useCallback(async () => {
@@ -82,11 +94,14 @@ export const GitHubPanelProvider: React.FC<GitHubPanelProviderProps> = ({
       });
       setStarredRepositories(starred);
     } catch (error) {
-      console.error('[GitHubPanelProvider] Failed to fetch starred repositories:', error);
+      console.error(
+        '[GitHubPanelProvider] Failed to fetch starred repositories:',
+        error,
+      );
       setStarredError(
         error instanceof Error
           ? error.message
-          : 'Failed to load starred repositories from GitHub.'
+          : 'Failed to load starred repositories from GitHub.',
       );
     } finally {
       setStarredLoading(false);
@@ -129,10 +144,13 @@ export const GitHubPanelProvider: React.FC<GitHubPanelProviderProps> = ({
             });
             orgReposMap[org.login] = repos;
           } catch (error) {
-            console.error(`[GitHubPanelProvider] Failed to fetch repos for org ${org.login}:`, error);
+            console.error(
+              `[GitHubPanelProvider] Failed to fetch repos for org ${org.login}:`,
+              error,
+            );
             orgReposMap[org.login] = [];
           }
-        })
+        }),
       );
       setOrgRepositories(orgReposMap);
     } catch (error) {
@@ -140,7 +158,7 @@ export const GitHubPanelProvider: React.FC<GitHubPanelProviderProps> = ({
       setProjectsError(
         error instanceof Error
           ? error.message
-          : 'Failed to load repositories from GitHub.'
+          : 'Failed to load repositories from GitHub.',
       );
     } finally {
       setProjectsLoading(false);
@@ -154,7 +172,10 @@ export const GitHubPanelProvider: React.FC<GitHubPanelProviderProps> = ({
       const repos = await AlexandriaService.getRepositories();
       setLocalRepositories(repos);
     } catch (error) {
-      console.error('[GitHubPanelProvider] Failed to fetch local repositories:', error);
+      console.error(
+        '[GitHubPanelProvider] Failed to fetch local repositories:',
+        error,
+      );
       setLocalRepositories([]);
     } finally {
       setLocalRepositoriesLoading(false);
@@ -242,33 +263,42 @@ export const GitHubPanelProvider: React.FC<GitHubPanelProviderProps> = ({
       projectsError,
       currentUser,
       fetchProjects,
-    ]
+    ],
   );
 
   // Handle clone repository
-  const handleCloneRepository = useCallback(async (repo: GitHubRepository) => {
-    console.info('[GitHubPanelProvider] Clone requested for:', repo.full_name);
-    // TODO: Open clone modal or trigger clone flow
-    // For now, emit an event that the host app can handle
-    events.emit({
-      type: 'github:clone-requested',
-      source: 'github-panel-provider',
-      timestamp: Date.now(),
-      payload: { repository: repo },
-    });
-  }, [events]);
+  const handleCloneRepository = useCallback(
+    async (repo: GitHubRepository) => {
+      console.info(
+        '[GitHubPanelProvider] Clone requested for:',
+        repo.full_name,
+      );
+      // TODO: Open clone modal or trigger clone flow
+      // For now, emit an event that the host app can handle
+      events.emit({
+        type: 'github:clone-requested',
+        source: 'github-panel-provider',
+        timestamp: Date.now(),
+        payload: { repository: repo },
+      });
+    },
+    [events],
+  );
 
   // Handle open repository
-  const handleOpenRepository = useCallback(async (localPath: string) => {
-    console.info('[GitHubPanelProvider] Opening repository at:', localPath);
-    // Find the local repo entry
-    const entry = localRepositories.find((r) => r.path === localPath);
-    if (entry) {
-      await WindowService.openDevWorkspace({
-        alexandriaEntry: entry,
-      });
-    }
-  }, [localRepositories]);
+  const handleOpenRepository = useCallback(
+    async (localPath: string) => {
+      console.info('[GitHubPanelProvider] Opening repository at:', localPath);
+      // Find the local repo entry
+      const entry = localRepositories.find((r) => r.path === localPath);
+      if (entry) {
+        await WindowService.openDevWorkspace({
+          alexandriaEntry: entry,
+        });
+      }
+    },
+    [localRepositories],
+  );
 
   // Define actions
   const actions: GitHubPanelActions = useMemo(
@@ -301,7 +331,13 @@ export const GitHubPanelProvider: React.FC<GitHubPanelProviderProps> = ({
       // GitHubProjectsPanel actions
       refreshProjects: fetchProjects,
     }),
-    [events, handleCloneRepository, handleOpenRepository, fetchStarred, fetchProjects]
+    [
+      events,
+      handleCloneRepository,
+      handleOpenRepository,
+      fetchStarred,
+      fetchProjects,
+    ],
   );
 
   // Create context value
@@ -314,13 +350,17 @@ export const GitHubPanelProvider: React.FC<GitHubPanelProviderProps> = ({
       },
       slices,
       adapters: {},
-      getSlice: <T = unknown>(name: string): DataSlice<T> | undefined => {
+      getSlice: <T = unknown,>(name: string): DataSlice<T> | undefined => {
         return slices.get(name) as DataSlice<T> | undefined;
       },
-      getWorkspaceSlice: <T = unknown>(_name: string): DataSlice<T> | undefined => {
+      getWorkspaceSlice: <T = unknown,>(
+        _name: string,
+      ): DataSlice<T> | undefined => {
         return undefined; // No workspace scope in this context
       },
-      getRepositorySlice: <T = unknown>(_name: string): DataSlice<T> | undefined => {
+      getRepositorySlice: <T = unknown,>(
+        _name: string,
+      ): DataSlice<T> | undefined => {
         return undefined; // No repository scope in this context
       },
       hasSlice: (name: string, scope?: 'workspace' | 'repository'): boolean => {
@@ -328,13 +368,19 @@ export const GitHubPanelProvider: React.FC<GitHubPanelProviderProps> = ({
         if (!slice) return false;
         return scope ? slice.scope === scope : true;
       },
-      isSliceLoading: (name: string, scope?: 'workspace' | 'repository'): boolean => {
+      isSliceLoading: (
+        name: string,
+        scope?: 'workspace' | 'repository',
+      ): boolean => {
         const slice = slices.get(name);
         if (!slice) return false;
         if (scope && slice.scope !== scope) return false;
         return slice.loading;
       },
-      refresh: async (scope?: 'workspace' | 'repository', sliceName?: string): Promise<void> => {
+      refresh: async (
+        scope?: 'workspace' | 'repository',
+        sliceName?: string,
+      ): Promise<void> => {
         const slicesToRefresh = Array.from(slices.values()).filter((slice) => {
           if (scope && slice.scope !== scope) return false;
           if (sliceName && slice.name !== sliceName) return false;
@@ -344,7 +390,7 @@ export const GitHubPanelProvider: React.FC<GitHubPanelProviderProps> = ({
         await Promise.all(slicesToRefresh.map((slice) => slice.refresh()));
       },
     }),
-    [slices]
+    [slices],
   );
 
   // Combine into provider value
@@ -354,7 +400,7 @@ export const GitHubPanelProvider: React.FC<GitHubPanelProviderProps> = ({
       actions,
       events,
     }),
-    [context, actions, events]
+    [context, actions, events],
   );
 
   return (
@@ -367,7 +413,9 @@ export const GitHubPanelProvider: React.FC<GitHubPanelProviderProps> = ({
 export const useGitHubPanelProvider = (): GitHubPanelProviderValue => {
   const value = useContext(GitHubPanelContext);
   if (!value) {
-    throw new Error('useGitHubPanelProvider must be used within a GitHubPanelProvider');
+    throw new Error(
+      'useGitHubPanelProvider must be used within a GitHubPanelProvider',
+    );
   }
   return value;
 };

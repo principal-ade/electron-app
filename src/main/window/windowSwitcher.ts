@@ -217,8 +217,12 @@ class WindowSwitcher {
   private updateWindowList(): void {
     this.windowList = [];
 
-    log.info(`[Window Switcher] applicationWindows.size: ${applicationWindows.size}`);
-    log.info(`[Window Switcher] applicationWindows keys: ${Array.from(applicationWindows.keys()).join(', ')}`);
+    log.info(
+      `[Window Switcher] applicationWindows.size: ${applicationWindows.size}`,
+    );
+    log.info(
+      `[Window Switcher] applicationWindows keys: ${Array.from(applicationWindows.keys()).join(', ')}`,
+    );
 
     // Get all application windows except the switcher itself
     for (const [id, appWindow] of applicationWindows.entries()) {
@@ -226,7 +230,9 @@ class WindowSwitcher {
         // Simply use the metadata display name!
         const title = appWindow.metadata?.displayName ?? 'Untitled Window';
 
-        log.info(`[Window Switcher] Window ${id} title: ${title} (type: ${appWindow.metadata?.primaryType})`);
+        log.info(
+          `[Window Switcher] Window ${id} title: ${title} (type: ${appWindow.metadata?.primaryType})`,
+        );
 
         this.windowList.push({ id, title });
       }

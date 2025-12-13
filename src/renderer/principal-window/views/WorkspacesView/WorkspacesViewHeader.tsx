@@ -6,7 +6,9 @@ import { FileSystemService } from '../../../main-process-api/FileSystemService';
 
 export const WorkspacesViewHeader: React.FC = () => {
   const { theme } = useTheme();
-  const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string | null>(null);
+  const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     const loadBaseDirectory = async () => {
@@ -17,9 +19,11 @@ export const WorkspacesViewHeader: React.FC = () => {
     loadBaseDirectory();
 
     // Listen for preference updates
-    const unsubscribe = UserPreferencesService.onPreferencesUpdated((preferences) => {
-      setBaseDefaultDirectory(preferences.baseDefaultDirectory || null);
-    });
+    const unsubscribe = UserPreferencesService.onPreferencesUpdated(
+      (preferences) => {
+        setBaseDefaultDirectory(preferences.baseDefaultDirectory || null);
+      },
+    );
 
     return () => {
       if (unsubscribe) {
@@ -66,7 +70,13 @@ export const WorkspacesViewHeader: React.FC = () => {
       {/* Left: Title */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <LayoutGrid size={20} color={theme.colors.text} />
-        <h2 style={{ fontSize: theme.fontSizes[4], fontWeight: theme.fontWeights.semibold, margin: 0 }}>
+        <h2
+          style={{
+            fontSize: theme.fontSizes[4],
+            fontWeight: theme.fontWeights.semibold,
+            margin: 0,
+          }}
+        >
           Workspaces
         </h2>
       </div>
@@ -85,10 +95,12 @@ export const WorkspacesViewHeader: React.FC = () => {
           transition: 'background-color 0.2s',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+          e.currentTarget.style.backgroundColor =
+            theme.colors.backgroundTertiary;
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+          e.currentTarget.style.backgroundColor =
+            theme.colors.backgroundSecondary;
         }}
         title={baseDefaultDirectory || 'Click to set base directory'}
       >
@@ -100,7 +112,9 @@ export const WorkspacesViewHeader: React.FC = () => {
             fontFamily: theme.fonts.mono,
           }}
         >
-          {baseDefaultDirectory ? getDirectoryDisplayName(baseDefaultDirectory) : 'Set base directory'}
+          {baseDefaultDirectory
+            ? getDirectoryDisplayName(baseDefaultDirectory)
+            : 'Set base directory'}
         </span>
       </div>
     </div>

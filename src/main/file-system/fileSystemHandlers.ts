@@ -313,7 +313,10 @@ export class ElectronFileSystemAdapter {
       this.fileWatcher.add(filePath);
       return true;
     } catch (error) {
-      console.error(`[File System] File does not exist or cannot be accessed: ${filePath}`, error);
+      console.error(
+        `[File System] File does not exist or cannot be accessed: ${filePath}`,
+        error,
+      );
       return false;
     }
   }
@@ -367,9 +370,7 @@ export class ElectronFileSystemAdapter {
     try {
       await fsPromises.access(directoryPath);
     } catch {
-      console.error(
-        `[File System] Directory does not exist: ${directoryPath}`,
-      );
+      console.error(`[File System] Directory does not exist: ${directoryPath}`);
       // Reset paths if we failed to watch, as no valid root is established.
       this.rootPath = null;
       this.currentlyWatchingPath = null;
@@ -803,7 +804,9 @@ export class ElectronFileSystemAdapter {
     if (currentDepth > maxDepth) return files;
 
     try {
-      const entries = await fsPromises.readdir(dirPath, { withFileTypes: true });
+      const entries = await fsPromises.readdir(dirPath, {
+        withFileTypes: true,
+      });
       for (const entry of entries) {
         if (entry.name.startsWith('.')) continue;
         const entryPath = path.join(dirPath, entry.name);
@@ -854,7 +857,12 @@ export class ElectronFileSystemAdapter {
       // Simple glob implementation for **/*.ext patterns
       if (pattern.startsWith('**/') && pattern.includes('.')) {
         const extension = pattern.substring(pattern.lastIndexOf('.'));
-        const files = await this.findFilesWithExtensions(workingDir, [extension], 10, 0);
+        const files = await this.findFilesWithExtensions(
+          workingDir,
+          [extension],
+          10,
+          0,
+        );
         return files.map((filePath) => path.relative(workingDir, filePath));
       }
 
@@ -876,7 +884,9 @@ export class ElectronFileSystemAdapter {
     if (currentDepth > maxDepth) return files;
 
     try {
-      const entries = await fsPromises.readdir(dirPath, { withFileTypes: true });
+      const entries = await fsPromises.readdir(dirPath, {
+        withFileTypes: true,
+      });
       for (const entry of entries) {
         if (entry.name.startsWith('.')) continue;
         const entryPath = path.join(dirPath, entry.name);

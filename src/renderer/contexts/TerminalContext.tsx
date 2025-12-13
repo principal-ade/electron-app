@@ -9,7 +9,10 @@ import React, {
 } from 'react';
 import { TerminalService } from '../main-process-api/TerminalService';
 import type { TerminalInfo } from '../../shared/main-process-api-interfaces/TerminalService';
-import type { TerminalPanelActions, TerminalSessionInfo } from '@industry-theme/xterm-terminal-panel';
+import type {
+  TerminalPanelActions,
+  TerminalSessionInfo,
+} from '@industry-theme/xterm-terminal-panel';
 
 /**
  * Terminal context value
@@ -64,7 +67,9 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
       );
 
       // Clean up subscription for this terminal
-      const unsubscribe = terminalSubscriptionsRef.current.get(terminalExit.sessionId);
+      const unsubscribe = terminalSubscriptionsRef.current.get(
+        terminalExit.sessionId,
+      );
       if (unsubscribe) {
         unsubscribe();
         terminalSubscriptionsRef.current.delete(terminalExit.sessionId);
@@ -90,7 +95,10 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
         const sessions = await TerminalService.list();
         setTerminalSessions(sessions);
       } catch (error) {
-        console.error('[TerminalProvider] Failed to load terminal sessions:', error);
+        console.error(
+          '[TerminalProvider] Failed to load terminal sessions:',
+          error,
+        );
       }
     };
 
@@ -100,7 +108,10 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
   // Create actions object matching TerminalPanelActions interface
   const actions: TerminalPanelActions = useMemo(
     () => ({
-      createTerminalSession: async (options?: { cwd?: string; context?: string }) => {
+      createTerminalSession: async (options?: {
+        cwd?: string;
+        context?: string;
+      }) => {
         const cwd = options?.cwd || repositoryPath;
         const sessionContext = options?.context
           ? `${terminalContext}:${options.context}`
@@ -108,7 +119,9 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
 
         // Check existing sessions before creating
         const existingSessions = await TerminalService.list();
-        const existingSession = existingSessions.find(s => s.context === sessionContext);
+        const existingSession = existingSessions.find(
+          (s) => s.context === sessionContext,
+        );
 
         console.info('[TerminalProvider] createTerminalSession called with:', {
           optionsCwd: options?.cwd,
@@ -116,20 +129,32 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
           repositoryPath,
           finalCwd: cwd,
           context: sessionContext,
-          existingSession: existingSession ? {
-            id: existingSession.id,
-            directory: existingSession.directory,
-            context: existingSession.context,
-          } : null,
-          allSessions: existingSessions.map(s => ({ id: s.id, directory: s.directory, context: s.context })),
+          existingSession: existingSession
+            ? {
+                id: existingSession.id,
+                directory: existingSession.directory,
+                context: existingSession.context,
+              }
+            : null,
+          allSessions: existingSessions.map((s) => ({
+            id: s.id,
+            directory: s.directory,
+            context: s.context,
+          })),
         });
-        const sessionId = await TerminalService.getOrCreate(cwd, sessionContext);
+        const sessionId = await TerminalService.getOrCreate(
+          cwd,
+          sessionContext,
+        );
 
         // Subscribe to this terminal's data channel
         if (!terminalSubscriptionsRef.current.has(sessionId)) {
-          const unsubscribe = TerminalService.onDataForSession(sessionId, (_data) => {
-            // Data is handled by individual terminal components via onTerminalData
-          });
+          const unsubscribe = TerminalService.onDataForSession(
+            sessionId,
+            (_data) => {
+              // Data is handled by individual terminal components via onTerminalData
+            },
+          );
 
           terminalSubscriptionsRef.current.set(sessionId, unsubscribe);
         }
@@ -146,7 +171,12 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
       },
 
       // Note: TerminalPanelActions expects void return, but we call async method
-      resizeTerminal: (sessionId: string, cols: number, rows: number, force?: boolean) => {
+      resizeTerminal: (
+        sessionId: string,
+        cols: number,
+        rows: number,
+        force?: boolean,
+      ) => {
         TerminalService.resize(sessionId, cols, rows, force);
       },
 
@@ -170,7 +200,9 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
       },
 
       claimTerminalOwnership: async (sessionId: string, force?: boolean) => {
-        console.log(`[TerminalActions] claimTerminalOwnership called: sessionId=${sessionId}, force=${force}`);
+        console.log(
+          `[TerminalActions] claimTerminalOwnership called: sessionId=${sessionId}, force=${force}`,
+        );
         const result = await TerminalService.claimOwnership(sessionId, force);
         console.log(`[TerminalActions] claimTerminalOwnership result:`, result);
         return result;
@@ -180,10 +212,18 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
         return TerminalService.releaseOwnership(sessionId);
       },
 
-      onOwnershipLost: (callback: (data: { sessionId: string; newOwnerWindowId: number }) => void) => {
+      onOwnershipLost: (
+        callback: (data: {
+          sessionId: string;
+          newOwnerWindowId: number;
+        }) => void,
+      ) => {
         console.log('[TerminalActions] onOwnershipLost: registering callback');
         const unsubscribe = TerminalService.onOwnershipLost((data) => {
-          console.log('[TerminalActions] onOwnershipLost: received event from TerminalService:', data);
+          console.log(
+            '[TerminalActions] onOwnershipLost: received event from TerminalService:',
+            data,
+          );
           callback(data);
         });
         return () => {
@@ -211,28 +251,52 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
       },
 
       onTerminalData: (sessionId: string, callback: (data: string) => void) => {
-        console.info('[TerminalContext] onTerminalData called for session:', sessionId);
+        console.info(
+          '[TerminalContext] onTerminalData called for session:',
+          sessionId,
+        );
 
         // First claim ownership, then request data port, then refresh terminal
-        TerminalService.claimOwnership(sessionId).then((ownershipResult) => {
-          console.info('[TerminalContext] Claimed ownership for session:', sessionId, 'result:', ownershipResult);
+        TerminalService.claimOwnership(sessionId)
+          .then((ownershipResult) => {
+            console.info(
+              '[TerminalContext] Claimed ownership for session:',
+              sessionId,
+              'result:',
+              ownershipResult,
+            );
 
-          // Request the data port regardless of ownership result
-          return TerminalService.requestDataPort(sessionId);
-        }).then((portResult) => {
-          console.info('[TerminalContext] Requested data port for session:', sessionId, 'result:', portResult);
+            // Request the data port regardless of ownership result
+            return TerminalService.requestDataPort(sessionId);
+          })
+          .then((portResult) => {
+            console.info(
+              '[TerminalContext] Requested data port for session:',
+              sessionId,
+              'result:',
+              portResult,
+            );
 
-          // After port is ready, force a refresh to redraw the terminal
-          setTimeout(() => {
-            TerminalService.refresh(sessionId).then(() => {
-              console.info('[TerminalContext] Refreshed terminal for session:', sessionId);
-            }).catch((err) => {
-              console.warn('[TerminalContext] Failed to refresh terminal:', err);
-            });
-          }, 100);
-        }).catch((err) => {
-          console.warn('[TerminalContext] Failed during reconnection:', err);
-        });
+            // After port is ready, force a refresh to redraw the terminal
+            setTimeout(() => {
+              TerminalService.refresh(sessionId)
+                .then(() => {
+                  console.info(
+                    '[TerminalContext] Refreshed terminal for session:',
+                    sessionId,
+                  );
+                })
+                .catch((err) => {
+                  console.warn(
+                    '[TerminalContext] Failed to refresh terminal:',
+                    err,
+                  );
+                });
+            }, 100);
+          })
+          .catch((err) => {
+            console.warn('[TerminalContext] Failed during reconnection:', err);
+          });
 
         return TerminalService.onDataForSession(sessionId, callback);
       },
@@ -277,7 +341,9 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
 export const useTerminalProvider = (): TerminalProviderValue => {
   const context = useContext(TerminalContext);
   if (!context) {
-    throw new Error('useTerminalProvider must be used within a TerminalProvider');
+    throw new Error(
+      'useTerminalProvider must be used within a TerminalProvider',
+    );
   }
   return context;
 };

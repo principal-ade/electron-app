@@ -1,8 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useTheme } from '@principal-ade/industry-theme';
-import { X, Trash2, AlertTriangle, FileX, Database, Briefcase } from 'lucide-react';
-import type { AlexandriaEntry, Workspace } from '@principal-ai/alexandria-core-library/types';
+import {
+  X,
+  Trash2,
+  AlertTriangle,
+  FileX,
+  Database,
+  Briefcase,
+} from 'lucide-react';
+import type {
+  AlexandriaEntry,
+  Workspace,
+} from '@principal-ai/alexandria-core-library/types';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { getWorkspaceThemeColor } from '../../themes/predefinedThemes';
 
@@ -13,12 +23,9 @@ interface DeleteAlexandriaEntryModalProps {
   onConfirm: (deleteLocal: boolean) => Promise<void>;
 }
 
-export const DeleteAlexandriaEntryModal: React.FC<DeleteAlexandriaEntryModalProps> = ({
-  isOpen,
-  entry,
-  onClose,
-  onConfirm,
-}) => {
+export const DeleteAlexandriaEntryModal: React.FC<
+  DeleteAlexandriaEntryModalProps
+> = ({ isOpen, entry, onClose, onConfirm }) => {
   const { theme } = useTheme();
   const [deleteLocal, setDeleteLocal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -55,7 +62,8 @@ export const DeleteAlexandriaEntryModal: React.FC<DeleteAlexandriaEntryModalProp
 
       try {
         setLoadingWorkspaces(true);
-        const repoWorkspaces = await WorkspaceService.getRepositoryWorkspaces(entry);
+        const repoWorkspaces =
+          await WorkspaceService.getRepositoryWorkspaces(entry);
         setWorkspaces(repoWorkspaces || []);
       } catch (error) {
         console.error('Error fetching repository workspaces:', error);
@@ -108,7 +116,8 @@ export const DeleteAlexandriaEntryModal: React.FC<DeleteAlexandriaEntryModalProp
           border: `1px solid ${theme.colors.border}`,
           width: '90%',
           maxWidth: '500px',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+          boxShadow:
+            '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -123,7 +132,10 @@ export const DeleteAlexandriaEntryModal: React.FC<DeleteAlexandriaEntryModalProp
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Trash2 size={24} style={{ color: theme.colors.error || '#ef4444' }} />
+            <Trash2
+              size={24}
+              style={{ color: theme.colors.error || '#ef4444' }}
+            />
             <h3
               style={{
                 margin: 0,
@@ -202,7 +214,11 @@ export const DeleteAlexandriaEntryModal: React.FC<DeleteAlexandriaEntryModalProp
           >
             <AlertTriangle
               size={20}
-              style={{ color: theme.colors.warning || '#f59e0b', flexShrink: 0, marginTop: '2px' }}
+              style={{
+                color: theme.colors.warning || '#f59e0b',
+                flexShrink: 0,
+                marginTop: '2px',
+              }}
             />
             <div>
               <div
@@ -222,7 +238,8 @@ export const DeleteAlexandriaEntryModal: React.FC<DeleteAlexandriaEntryModalProp
                   lineHeight: '1.5',
                 }}
               >
-                You can either remove this entry from Alexandria while keeping the local files, or permanently delete everything.
+                You can either remove this entry from Alexandria while keeping
+                the local files, or permanently delete everything.
               </div>
             </div>
           </div>
@@ -261,7 +278,10 @@ export const DeleteAlexandriaEntryModal: React.FC<DeleteAlexandriaEntryModalProp
                   marginBottom: '8px',
                 }}
               >
-                <Briefcase size={14} style={{ color: theme.colors.textSecondary }} />
+                <Briefcase
+                  size={14}
+                  style={{ color: theme.colors.textSecondary }}
+                />
                 <span
                   style={{
                     fontSize: '13px',
@@ -269,7 +289,8 @@ export const DeleteAlexandriaEntryModal: React.FC<DeleteAlexandriaEntryModalProp
                     color: theme.colors.text,
                   }}
                 >
-                  Will be removed from {workspaces.length} workspace{workspaces.length !== 1 ? 's' : ''}:
+                  Will be removed from {workspaces.length} workspace
+                  {workspaces.length !== 1 ? 's' : ''}:
                 </span>
               </div>
               <div
@@ -280,7 +301,10 @@ export const DeleteAlexandriaEntryModal: React.FC<DeleteAlexandriaEntryModalProp
                 }}
               >
                 {workspaces.map((workspace) => {
-                  const workspaceColor = getWorkspaceThemeColor(workspace.theme, theme.colors.primary);
+                  const workspaceColor = getWorkspaceThemeColor(
+                    workspace.theme,
+                    theme.colors.primary,
+                  );
                   return (
                     <div
                       key={workspace.id}
@@ -297,7 +321,11 @@ export const DeleteAlexandriaEntryModal: React.FC<DeleteAlexandriaEntryModalProp
                         color: theme.colors.text,
                       }}
                     >
-                      {workspace.icon && <span style={{ fontSize: '14px' }}>{workspace.icon}</span>}
+                      {workspace.icon && (
+                        <span style={{ fontSize: '14px' }}>
+                          {workspace.icon}
+                        </span>
+                      )}
                       {workspace.name}
                     </div>
                   );
@@ -316,15 +344,22 @@ export const DeleteAlexandriaEntryModal: React.FC<DeleteAlexandriaEntryModalProp
                 color: theme.colors.textSecondary,
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Briefcase size={14} style={{ color: theme.colors.textSecondary }} />
+              <div
+                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                <Briefcase
+                  size={14}
+                  style={{ color: theme.colors.textSecondary }}
+                />
                 Not currently in any workspaces
               </div>
             </div>
           )}
 
           {/* Options */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div
+            style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
+          >
             {/* Option 1: Just Unregister */}
             <label
               style={{
@@ -355,7 +390,14 @@ export const DeleteAlexandriaEntryModal: React.FC<DeleteAlexandriaEntryModalProp
                 }}
               />
               <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    marginBottom: '4px',
+                  }}
+                >
                   <Database size={16} style={{ color: theme.colors.primary }} />
                   <span
                     style={{
@@ -386,7 +428,9 @@ export const DeleteAlexandriaEntryModal: React.FC<DeleteAlexandriaEntryModalProp
                     lineHeight: '1.5',
                   }}
                 >
-                  Remove from Alexandria registry but keep all local files intact. The repository will also be removed from all workspaces. You can re-add this repository later.
+                  Remove from Alexandria registry but keep all local files
+                  intact. The repository will also be removed from all
+                  workspaces. You can re-add this repository later.
                 </div>
               </div>
             </label>
@@ -421,8 +465,18 @@ export const DeleteAlexandriaEntryModal: React.FC<DeleteAlexandriaEntryModalProp
                 }}
               />
               <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  <FileX size={16} style={{ color: theme.colors.error || '#ef4444' }} />
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    marginBottom: '4px',
+                  }}
+                >
+                  <FileX
+                    size={16}
+                    style={{ color: theme.colors.error || '#ef4444' }}
+                  />
                   <span
                     style={{
                       fontSize: '14px',
@@ -452,7 +506,8 @@ export const DeleteAlexandriaEntryModal: React.FC<DeleteAlexandriaEntryModalProp
                     lineHeight: '1.5',
                   }}
                 >
-                  Permanently delete all local files and remove from Alexandria. This action cannot be undone.
+                  Permanently delete all local files and remove from Alexandria.
+                  This action cannot be undone.
                 </div>
               </div>
             </label>

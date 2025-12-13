@@ -99,12 +99,17 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Get local clone path for git status
-  const localClonePath = selectedSource?.type === 'local'
-    ? selectedSource.location
-    : repository?.localClones?.[0]?.path;
+  const localClonePath =
+    selectedSource?.type === 'local'
+      ? selectedSource.location
+      : repository?.localClones?.[0]?.path;
 
   // Subscribe to git status (includes ahead/behind counts)
-  const { gitStatus, gitStatusWithFiles, refresh: refreshGitStatus } = useRepositoryGitStatus(localClonePath || null);
+  const {
+    gitStatus,
+    gitStatusWithFiles,
+    refresh: refreshGitStatus,
+  } = useRepositoryGitStatus(localClonePath || null);
 
   // Check if there are uncommitted changes
   const hasUncommittedChanges = gitStatusWithFiles
@@ -152,10 +157,7 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
       try {
         await ShellService.showItemInFolder(selectedSource.location);
       } catch (error) {
-        console.error(
-          '[RepositoryTitlebar] Failed to open in Finder:',
-          error,
-        );
+        console.error('[RepositoryTitlebar] Failed to open in Finder:', error);
       }
     }
   };
@@ -184,7 +186,10 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
     try {
       await refreshGitStatus();
     } catch (error) {
-      console.error('[RepositoryTitlebar] Failed to refresh git status:', error);
+      console.error(
+        '[RepositoryTitlebar] Failed to refresh git status:',
+        error,
+      );
     } finally {
       // Keep the spinning animation for at least 500ms for visual feedback
       setTimeout(() => setIsRefreshing(false), 500);
@@ -196,7 +201,8 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
   const hasLocalClone = selectedSource?.type === 'local';
 
   // Get avatar URL - use stored avatarUrl or construct from owner
-  const avatarUrl = repository?.avatarUrl ||
+  const avatarUrl =
+    repository?.avatarUrl ||
     (displayOwner ? `https://github.com/${displayOwner}.png` : null);
 
   return (
@@ -270,7 +276,15 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
           {selectedSource?.type === 'local' &&
             selectedSource.metadata?.currentBranch && (
               <>
-                <span style={{ color: theme.colors.accent, fontWeight: theme.fontWeights.medium, padding: '0 8px' }}>on</span>
+                <span
+                  style={{
+                    color: theme.colors.accent,
+                    fontWeight: theme.fontWeights.medium,
+                    padding: '0 8px',
+                  }}
+                >
+                  on
+                </span>
                 <span
                   style={{
                     color: theme.colors.text,
@@ -348,55 +362,54 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
         {/* Remote sync status */}
         {selectedSource?.type === 'local' &&
           selectedSource.metadata?.currentBranch &&
-          gitStatus && (
-            gitStatus.ahead === 0 && gitStatus.behind === 0 ? (
-              <span
-                onClick={() => setShowSyncModal(true)}
-                style={{
-                  color: theme.colors.success,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  cursor: 'pointer',
-                  transition: 'opacity 0.2s',
-                  fontSize: `${theme.fontSizes[1]}px`,
-                  WebkitAppRegion:
-                    'no-drag' as React.CSSProperties['WebkitAppRegion'],
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.opacity = '0.7';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = '1';
-                }}
-                title="In sync with remote - click for more info"
-              >
-                <Cloud size={14} />
-                <span>Synced</span>
+          gitStatus &&
+          (gitStatus.ahead === 0 && gitStatus.behind === 0 ? (
+            <span
+              onClick={() => setShowSyncModal(true)}
+              style={{
+                color: theme.colors.success,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                cursor: 'pointer',
+                transition: 'opacity 0.2s',
+                fontSize: `${theme.fontSizes[1]}px`,
+                WebkitAppRegion:
+                  'no-drag' as React.CSSProperties['WebkitAppRegion'],
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = '0.7';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = '1';
+              }}
+              title="In sync with remote - click for more info"
+            >
+              <Cloud size={14} />
+              <span>Synced</span>
+            </span>
+          ) : (
+            <span
+              style={{
+                color: theme.colors.warning,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: `${theme.fontSizes[1]}px`,
+                WebkitAppRegion:
+                  'no-drag' as React.CSSProperties['WebkitAppRegion'],
+              }}
+            >
+              <CloudOff size={14} />
+              <span>
+                {gitStatus.ahead > 0 && gitStatus.behind > 0
+                  ? 'Diverged'
+                  : gitStatus.ahead > 0
+                    ? 'Ahead'
+                    : 'Behind'}
               </span>
-            ) : (
-              <span
-                style={{
-                  color: theme.colors.warning,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  fontSize: `${theme.fontSizes[1]}px`,
-                  WebkitAppRegion:
-                    'no-drag' as React.CSSProperties['WebkitAppRegion'],
-                }}
-              >
-                <CloudOff size={14} />
-                <span>
-                  {gitStatus.ahead > 0 && gitStatus.behind > 0
-                    ? 'Diverged'
-                    : gitStatus.ahead > 0
-                      ? 'Ahead'
-                      : 'Behind'}
-                </span>
-              </span>
-            )
-        )}
+            </span>
+          ))}
 
         {/* Git-Sync connection status indicator */}
         <GitSyncStatusIndicator
@@ -688,9 +701,13 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
             style={{
               WebkitAppRegion:
                 'no-drag' as React.CSSProperties['WebkitAppRegion'],
-              background: pathCopied ? theme.colors.backgroundTertiary : 'transparent',
+              background: pathCopied
+                ? theme.colors.backgroundTertiary
+                : 'transparent',
               border: 'none',
-              color: pathCopied ? theme.colors.success : theme.colors.textSecondary,
+              color: pathCopied
+                ? theme.colors.success
+                : theme.colors.textSecondary,
               cursor: 'pointer',
               padding: '6px',
               borderRadius: '4px',
@@ -915,9 +932,7 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
                 }}
               >
                 <li>You have all the latest commits from GitHub</li>
-                <li>
-                  Your local commits have been pushed to GitHub (if any)
-                </li>
+                <li>Your local commits have been pushed to GitHub (if any)</li>
                 <li>
                   You can safely push or pull without conflicts (in most cases)
                 </li>
