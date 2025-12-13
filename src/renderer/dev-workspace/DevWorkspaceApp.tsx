@@ -22,6 +22,7 @@ import type { FileTreeSource } from '../types/file-tree-source';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
+import { FileSystemService } from '../main-process-api/FileSystemService';
 import { gitSyncConnectionManager } from '../services/git-sync/GitSyncConnectionManager';
 import { APP_BRANDING } from '../../shared/config/appBranding';
 import { AlexandriaEventType } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
@@ -95,6 +96,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     middle: 'terminal',
     right: 'codeCity',
   });
+  const [hasGitHubFolder, setHasGitHubFolder] = useState(false);
 
   // Create repository object from Alexandria entry data
   const repository: Repository = useMemo(
