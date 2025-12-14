@@ -16,6 +16,8 @@ interface QuickOpenItem {
   localPath?: string;
   isOpen: boolean;
   openWindowId?: number;
+  // Avatar URL for display (GitHub owner avatar for repositories)
+  avatarUrl?: string;
   // Full AlexandriaEntry for repositories (passed through to main process when opening)
   alexandriaEntry?: AlexandriaEntry;
 }
@@ -280,11 +282,45 @@ const QuickOpenApp: React.FC = () => {
                   >
                     <div
                       style={{
-                        fontSize: theme.fontSizes[6],
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '8px',
                         marginRight: '12px',
+                        backgroundColor: theme.colors.backgroundTertiary,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        overflow: 'hidden',
+                        flexShrink: 0,
                       }}
                     >
-                      {item.type === 'repository' ? '📦' : '📁'}
+                      {item.avatarUrl ? (
+                        <img
+                          src={item.avatarUrl}
+                          alt={item.name}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                          }}
+                          onError={(e) => {
+                            // Fallback to emoji on load error
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            if (target.nextSibling) {
+                              (target.nextSibling as HTMLElement).style.display = 'flex';
+                            }
+                          }}
+                        />
+                      ) : null}
+                      <span
+                        style={{
+                          display: item.avatarUrl ? 'none' : 'flex',
+                          fontSize: '16px',
+                        }}
+                      >
+                        {item.type === 'repository' ? '📦' : '📁'}
+                      </span>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div

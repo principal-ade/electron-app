@@ -25,6 +25,8 @@ interface QuickOpenItem {
   localPath?: string;
   isOpen: boolean;
   openWindowId?: number;
+  // Avatar URL for display (GitHub owner avatar for repositories)
+  avatarUrl?: string;
   // Full AlexandriaEntry for repositories (so we can pass complete data when opening)
   alexandriaEntry?: AlexandriaEntry;
 }
@@ -241,6 +243,10 @@ class QuickOpen {
         }
 
         const openRepo = openRepoUrls.find((r) => r.url === repo.remoteUrl);
+        // Build avatar URL from GitHub owner (GitHub's reliable avatar endpoint)
+        const owner = repo.github?.owner;
+        const avatarUrl = owner ? `https://github.com/${owner}.png?size=80` : undefined;
+
         items.push({
           id: repo.remoteUrl,
           type: 'repository',
@@ -250,6 +256,7 @@ class QuickOpen {
           localPath: repo.path,
           isOpen: !!openRepo,
           openWindowId: openRepo?.id,
+          avatarUrl,
           alexandriaEntry: repo,
         });
       }
