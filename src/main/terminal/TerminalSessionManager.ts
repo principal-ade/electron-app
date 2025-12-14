@@ -4,7 +4,6 @@ import { BrowserWindow, MessageChannelMain } from 'electron';
 import { TerminalSession } from './types';
 import { pty } from './utils/ptyLoader';
 import { ownershipManager } from './TerminalOwnershipManager';
-import { agentSessionService } from '../agent-sessions/agentSessionService';
 import { terminalEnvironment } from '../terminalEnvironment';
 import { TerminalAPIEvents } from '../../shared/main-process-api-interfaces/TerminalService';
 
@@ -203,23 +202,12 @@ export class TerminalSessionManager {
       });
     }
 
-    // Check for active AI session
-    let activeAgentSessionId: string | null = null;
-    try {
-      const sessionStore =
-        await agentSessionService.getSessionsForDirectory(directory);
-      activeAgentSessionId = sessionStore.activeSessionId;
-    } catch (err) {
-      console.warn('[Terminal] Could not get active agent session:', err);
-    }
-
     const now = Date.now();
     const session: TerminalSession = {
       id: sessionId,
       pty: ptyProcess,
       directory,
       context,
-      agentSessionId: activeAgentSessionId || undefined,
       createdAt: now,
       lastActivity: now,
     };
@@ -228,33 +216,6 @@ export class TerminalSessionManager {
     // Initialize port tracking for this session
     this.sessionPorts.set(sessionId, new Map());
 
-    // If there's an active AI session, update it to include this terminal
-    if (activeAgentSessionId) {
-      try {
-        const agentSession = await agentSessionService.getSession(
-          directory,
-          activeAgentSessionId,
-        );
-        if (agentSession) {
-          if (!agentSession.terminalSessions) {
-            agentSession.terminalSessions = [];
-          }
-          agentSession.terminalSessions.push({
-            terminalId: sessionId,
-            createdAt: now,
-            lastActivity: now,
-            status: 'active',
-          });
-          await agentSessionService.upsertSession(directory, agentSession);
-          console.log(
-            `[Terminal] Associated terminal ${sessionId} with AI session ${activeAgentSessionId}`,
-          );
-        }
-      } catch (err) {
-        console.warn('[Terminal] Could not associate with agent session:', err);
-      }
-    }
-
     // Handle PTY data - send only to owner
     ptyProcess.onData((data: string) => {
       session.lastActivity = Date.now();
@@ -262,36 +223,11 @@ export class TerminalSessionManager {
     });
 
     // Handle PTY exit
-    ptyProcess.onExit(async (exitCode: { exitCode: number }) => {
+    ptyProcess.onExit((exitCode: { exitCode: number }) => {
       this.broadcastToRendererWindows(TerminalAPIEvents.ON_EXIT, {
         sessionId,
         code: exitCode.exitCode,
       });
-
-      // Update AI session to mark terminal as closed
-      if (session.agentSessionId) {
-        try {
-          const agentSession = await agentSessionService.getSession(
-            directory,
-            session.agentSessionId,
-          );
-          if (agentSession && agentSession.terminalSessions) {
-            const terminalSession = agentSession.terminalSessions.find(
-              (t) => t.terminalId === sessionId,
-            );
-            if (terminalSession) {
-              terminalSession.status = 'closed';
-              terminalSession.lastActivity = Date.now();
-              await agentSessionService.upsertSession(directory, agentSession);
-            }
-          }
-        } catch (err) {
-          console.warn(
-            '[Terminal] Could not update agent session on exit:',
-            err,
-          );
-        }
-      }
 
       this.cleanupSession(sessionId);
     });

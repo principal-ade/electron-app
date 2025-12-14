@@ -18,12 +18,6 @@ import {
 } from '../../shared/main-process-api-interfaces/StoreAPI';
 import { ElectronStoreLocalStorageProvider } from './providers/ElectronStoreLocalStorageProvider';
 import { S3RemoteStorageProvider } from './providers/S3RemoteStorageProvider';
-// Define SupportedLLMProvider enum locally since ai.types was removed
-enum SupportedLLMProvider {
-  OPENROUTER = 'openrouter',
-  OLLAMA = 'ollama',
-  OPENAI = 'openai',
-}
 import { StorageNamespaces } from './all-namespaces';
 
 /**
@@ -792,38 +786,6 @@ export class MultiStoreManager extends EventEmitter {
         },
       },
       {
-        name: StaticNamespaces.AI_CONFIGURATION,
-        storageProvider: StorageProviderType.ELECTRON_STORE,
-        category: NamespaceCategory.CORE,
-        config: {
-          path: 'ai-configuration',
-          defaults: {
-            aiConfiguration: {
-              defaultProvider: SupportedLLMProvider.OPENROUTER,
-              providers: {
-                ollama: {
-                  type: SupportedLLMProvider.OLLAMA,
-                  enabled: false,
-                  baseUrl: 'http://localhost:11434',
-                  model: 'llama2', // TODO: Models should be dynamically loaded
-                },
-              },
-              conversations: [],
-              activeConversationId: null,
-            },
-          },
-        },
-      },
-      {
-        name: StaticNamespaces.LLM_MODELS,
-        storageProvider: StorageProviderType.ELECTRON_STORE,
-        category: NamespaceCategory.CORE,
-        config: {
-          path: 'llm-models',
-          defaults: {},
-        },
-      },
-      {
         name: StaticNamespaces.CACHE,
         storageProvider: StorageProviderType.ELECTRON_STORE,
         category: NamespaceCategory.CACHE,
@@ -837,25 +799,6 @@ export class MultiStoreManager extends EventEmitter {
         category: NamespaceCategory.CACHE,
         config: {
           path: 'temp',
-        },
-      },
-      {
-        name: StaticNamespaces.SESSION_SUMMARIES,
-        storageProvider: StorageProviderType.ELECTRON_STORE,
-        category: NamespaceCategory.CORE,
-        config: {
-          path: 'session-summaries',
-          defaults: {},
-        },
-      },
-      {
-        name: StaticNamespaces.GLOBAL_SESSION_REGISTRY,
-        storageProvider: StorageProviderType.ELECTRON_STORE,
-        category: NamespaceCategory.CORE,
-        isPrimary: true,
-        config: {
-          path: 'global-session-registry',
-          defaults: {},
         },
       },
       {

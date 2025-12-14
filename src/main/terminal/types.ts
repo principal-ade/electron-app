@@ -9,7 +9,6 @@ export interface TerminalSession {
   pty: any;
   directory: string;
   context?: string; // 'principal' | 'dashboard' | 'agent' | etc
-  agentSessionId?: string; // Associated AI session
   createdAt: number;
   lastActivity: number;
 }

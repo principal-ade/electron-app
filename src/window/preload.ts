@@ -47,7 +47,6 @@ import { sshSetupAPI } from './main-process-api-implementations/sshSetupApi';
 import { windowAPI } from './main-process-api-implementations/windowApi';
 import { principalAPI } from './main-process-api-implementations/principalApi';
 import { feedbackAPI } from './main-process-api-implementations/feedbackApi';
-import { llmModelsAPI } from './main-process-api-implementations/llmModelsApi';
 import { testDebugAPI } from './main-process-api-implementations/testDebugApi';
 import { documentSearchAPI } from './main-process-api-implementations/documentSearchApi';
 import { observabilityAPI } from './main-process-api-implementations/observabilityApi';
@@ -127,7 +126,6 @@ const mainProcessExposure: MainProcessAPI = {
   window: windowAPI,
   principal: principalAPI,
   feedback: feedbackAPI,
-  llmModels: llmModelsAPI,
   testDebug: testDebugAPI,
   documentSearch: documentSearchAPI,
   observability: observabilityAPI,

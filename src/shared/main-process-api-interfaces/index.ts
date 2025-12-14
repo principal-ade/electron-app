@@ -13,7 +13,6 @@ import type { ClipboardAPI } from './ClipboardAPI';
 import type { FileSystemAPI } from './FileSystemAPI';
 import type { GitAPI } from './GitAPI';
 import type { GitHubAPI } from './GitHubAPI';
-import type { LLMModelsAPI } from './LLMModelsAPI';
 import type { AppVersionManagerAPI } from './AppVersionManagerAPI';
 import type { RepositoryAPI } from './RepositoryAPI';
 import type { RepositoryMonitoringAPI } from './RepositoryMonitoringAPI';
@@ -77,7 +76,6 @@ export interface MainProcessAPI {
   fileSystem: FileSystemAPI;
   git: GitAPI;
   github: GitHubAPI;
-  llmModels: LLMModelsAPI;
   store: StoreAPI;
   repository: RepositoryAPI;
   repositoryMonitoring: RepositoryMonitoringAPI;

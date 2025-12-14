@@ -12,12 +12,8 @@
 export enum StaticNamespaces {
   USER_PREFERENCES = 'user-preferences',
   REPOSITORIES = 'repositories',
-  AI_CONFIGURATION = 'ai-configuration',
-  LLM_MODELS = 'llm-models',
   CACHE = 'cache',
   TEMP = 'temp',
-  GLOBAL_SESSION_REGISTRY = 'global-session-registry',
-  SESSION_SUMMARIES = 'session-summaries',
 
   // Docker Management
   DOCKER_CONTAINERS = 'docker-containers',

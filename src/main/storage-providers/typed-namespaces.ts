@@ -1,36 +1,13 @@
 import { Repository } from '../../shared/types/repository.types';
-import { LLMConfiguration } from '../../shared/main-process-api-interfaces/LLMModelsAPI';
 import {
   StorageNamespaceConfig,
   NamespaceCategory,
 } from '../../shared/main-process-api-interfaces/StoreAPI';
-import { AgentSessionEvent } from '../../shared/main-process-api-interfaces';
 import { UserPreferences } from '../../shared/types/userPreferences.types';
-import { AgentSessionRecord } from '../../shared/sessionTypes';
 import { SecretMetadata } from '../../shared/main-process-api-interfaces/SecretsAPI';
-
-// TODO: Define proper AIConfiguration interface
-interface AIConfiguration {
-  [key: string]: unknown;
-}
 
 import { StaticNamespaces, StorageProvider } from './types';
 import { StorageNamespaces } from './all-namespaces';
-
-export interface SessionSummary {
-  sessionId: string;
-  provider: string;
-  workingDirectory: string;
-  startTime: number;
-  endTime?: number;
-  lastUpdateTime: number;
-  totalEvents: number;
-  fileAccessCount: number;
-  fileWriteCount: number;
-  toolCallCount: number;
-  repositoriesAccessed: string[];
-  isActive: boolean;
-}
 
 /**
  * Links Management Data Types
@@ -185,12 +162,8 @@ export interface DockerAnalysisSession {
 export interface NamespaceDataTypes {
   [StaticNamespaces.USER_PREFERENCES]: UserPreferences;
   [StaticNamespaces.REPOSITORIES]: Repository; // Individual repository stored by key
-  [StaticNamespaces.AI_CONFIGURATION]: AIConfiguration;
-  [StaticNamespaces.LLM_MODELS]: LLMConfiguration;
   [StaticNamespaces.CACHE]: Record<string, any>;
   [StaticNamespaces.TEMP]: Record<string, any>;
-  [StaticNamespaces.GLOBAL_SESSION_REGISTRY]: GlobalSessionRegistry; // Global session index and active session tracking
-  [StaticNamespaces.SESSION_SUMMARIES]: SessionSummary; // Recent session summaries for quick access
 
   // Docker Management namespaces
   [StaticNamespaces.DOCKER_CONTAINERS]: ToolContainerState; // Persistent container state
@@ -201,18 +174,6 @@ export interface NamespaceDataTypes {
 
   // Links Management namespace
   [StaticNamespaces.REPOSITORY_LINKS]: StoredLinks; // Repository links and bookmarks
-}
-
-/**
- * Global session registry data
- * Stores global session index and active session tracking across directories
- */
-export interface GlobalSessionRegistry {
-  // Global session index - sessionId -> session data
-  sessions: Record<string, AgentSessionRecord>;
-
-  // Active session tracking - directory -> active sessionId
-  activeSessionsByDirectory: Record<string, string>;
 }
 
 /**
@@ -240,20 +201,6 @@ export class TypedNamespaceRegistry {
     this.register(StaticNamespaces.REPOSITORIES, {
       name: StaticNamespaces.REPOSITORIES,
       description: 'Repository configurations and metadata',
-      storageProvider: 'electron-store',
-      category: NamespaceCategory.CORE,
-    });
-
-    this.register(StaticNamespaces.AI_CONFIGURATION, {
-      name: StaticNamespaces.AI_CONFIGURATION,
-      description: 'AI provider configurations and settings',
-      storageProvider: 'electron-store',
-      category: NamespaceCategory.CORE,
-    });
-
-    this.register(StaticNamespaces.LLM_MODELS, {
-      name: StaticNamespaces.LLM_MODELS,
-      description: 'LLM model configurations and custom models',
       storageProvider: 'electron-store',
       category: NamespaceCategory.CORE,
     });
