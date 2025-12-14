@@ -6,10 +6,8 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 export interface LocalClone {
   path: string; // Local directory path
   addedAt: number; // When this local clone was added
-  lastAccessed?: number; // Last time this specific clone was accessed
   currentBranch?: string; // Current branch (fetched dynamically when needed)
   lastCommit?: string; // Last commit hash (fetched dynamically when needed)
-  customAvatarPath?: string; // Clone-specific custom avatar filename (stored in userData/repository-avatars/)
 }
 
 /**
@@ -92,39 +90,6 @@ export interface Repository {
 
   // Metadata
   addedAt: number; // When first added to the system
-  lastAccessed?: number; // Last time any clone was accessed
   description?: string; // Repository description
-  avatarUrl?: string; // Owner's avatar URL
-  customAvatarPath?: string; // Repository-level custom avatar filename (stored in userData/repository-avatars/)
-
-  // Tags for filtering and organization
-  tags?: string[]; // Both auto-generated and user-defined tags
-  manualTags?: string[]; // Only user-defined tags (subset of tags)
-
-  // Platform-specific metadata (optional, fetched from API)
-  metadata?: {
-    stars?: number;
-    language?: string;
-    topics?: string[];
-    defaultBranch?: string;
-    isPrivate?: boolean;
-    isLocalOnly?: boolean;
-    isFork?: boolean;
-    license?: {
-      key: string;
-      name: string;
-      spdxId: string;
-      url?: string;
-    };
-    parentRepo?: {
-      owner: string;
-      name: string;
-      url: string;
-    };
-  };
-
-  // Convenience getters for metadata (to avoid optional chaining everywhere)
-  isPrivate?: boolean;
-  isFork?: boolean;
-  isArchived?: boolean;
+  avatarUrl?: string; // Owner's avatar URL (from GitHub)
 }

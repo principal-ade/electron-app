@@ -217,7 +217,6 @@ export class RepositoryCache {
           name: gitInfo.repo || 'unknown',
           localClones: [],
           addedAt: Date.now(),
-          lastAccessed: Date.now(),
         };
         isNewRepository = true;
       }
@@ -235,14 +234,12 @@ export class RepositoryCache {
       localClone = {
         path: gitInfo.root,
         addedAt: Date.now(),
-        lastAccessed: Date.now(),
         currentBranch: gitInfo.branch,
       };
       repository.localClones.push(localClone);
       needsPersist = true;
     } else if (localClone.currentBranch !== gitInfo.branch) {
       localClone.currentBranch = gitInfo.branch;
-      localClone.lastAccessed = Date.now();
       needsPersist = true;
     }
 
@@ -281,35 +278,6 @@ export class RepositoryCache {
       repository,
       gitInfo,
     };
-  }
-
-  /**
-   * Update repository access time using type-safe store
-   */
-  async updateRepositoryAccess(remoteUrl: string): Promise<void> {
-    // Ensure cache is initialized
-    await this.ensureInitialized();
-    const repository = this.repositoriesCache.get(remoteUrl);
-    if (repository) {
-      repository.lastAccessed = Date.now();
-
-      // Persist to storage using type-safe store
-      const typedStore = await getTypedStorageManagerInstance();
-      const repoKey = this.getRepositoryKey(remoteUrl);
-
-      const result = await typedStore.set(
-        repoKey,
-        repository,
-        StaticNamespaces.REPOSITORIES,
-      );
-
-      if (!result.success) {
-        console.error(
-          '[RepositoryCache] Failed to update repository access time:',
-          result.error,
-        );
-      }
-    }
   }
 
   /**

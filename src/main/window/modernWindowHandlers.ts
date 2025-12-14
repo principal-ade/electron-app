@@ -15,7 +15,6 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import type { IModernApplicationWindow, WindowMetadata } from './types';
 import { PrimaryWindowType } from './types';
 import { gitStatusService } from '../services/GitStatusService';
-import { repositoryMetadataService } from '../services/RepositoryMetadataService';
 
 /**
  * Repository window state

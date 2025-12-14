@@ -42,16 +42,6 @@ jest.mock('../version-control-providers/gitBranchService', () => ({
   GitBranchService: jest.fn(),
 }));
 
-jest.mock('../version-control-providers/avatarStorageService', () => ({
-  avatarStorageService: {
-    saveRepositoryAvatar: jest.fn(),
-    saveCloneAvatar: jest.fn(),
-    removeRepositoryAvatar: jest.fn(),
-    removeCloneAvatar: jest.fn(),
-    getAvatarUrl: jest.fn(),
-  },
-}));
-
 jest.mock('./initialization', () => ({
   getTypedStorageManagerInstance: jest.fn(),
 }));
@@ -60,7 +50,6 @@ jest.mock('./initialization', () => ({
 import { BrowserWindow } from 'electron';
 import { RepositoryApiEventHandler } from './RepositoryApiEventHandler';
 import { GitBranchService } from '../version-control-providers/gitBranchService';
-import { avatarStorageService } from '../version-control-providers/avatarStorageService';
 import { getTypedStorageManagerInstance } from './initialization';
 
 // Mock fetch for GitHub API calls

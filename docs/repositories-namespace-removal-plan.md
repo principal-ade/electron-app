@@ -1,6 +1,6 @@
 # REPOSITORIES Namespace Removal Plan
 
-**Status:** Proposed
+**Status:** In Progress (Phase 1 & 2 Complete)
 **Related:** [Storage Namespace Cleanup Analysis](./storage-namespace-cleanup-analysis.md)
 
 ## Overview
@@ -33,51 +33,42 @@ This document outlines the steps required to remove the `REPOSITORIES` namespace
 
 ## Migration Tasks
 
-### Phase 1: Eliminate Non-Essential Features
+### Phase 1: Eliminate Non-Essential Features ✅ COMPLETE
 
 These features can be removed without replacement:
 
-#### 1.1 Remove User Tags
-- [ ] Remove `tags` and `manualTags` fields from `Repository` type
-- [ ] Remove tag-related methods from `RepositoryApiEventHandler`
-- [ ] Remove any UI that displays/edits tags (if exists)
+#### 1.1 Remove User Tags ✅
+- [x] Remove `tags` and `manualTags` fields from `Repository` type
+- [x] Remove tag-related methods from `RepositoryApiEventHandler`
+- [x] Remove any UI that displays/edits tags (if exists)
 
-#### 1.2 Remove Access Timestamps
-- [ ] Remove `lastAccessed` tracking from `Repository` and `LocalClone`
-- [ ] Remove `updateRepositoryAccess()` and `updateLocalCloneAccess()` methods
-- [ ] Remove "recent repositories" functionality (or reimplement with Alexandria)
+#### 1.2 Remove Access Timestamps ✅
+- [x] Remove `lastAccessed` tracking from `Repository` and `LocalClone`
+- [x] Remove `updateRepositoryAccess()` and `updateLocalCloneAccess()` methods
+- [x] Remove "recent repositories" functionality (or reimplement with Alexandria)
 
-#### 1.3 Remove GitHub Metadata Caching
-- [ ] Remove `metadata` field from `Repository` type
-- [ ] Remove `refreshRepositoryMetadata()` method
-- [ ] Remove `RepositoryMetadataService.ts` entirely
-- [ ] Let Alexandria handle GitHub metadata fetching
+#### 1.3 Remove GitHub Metadata Caching ✅
+- [x] Remove `metadata` field from `Repository` type
+- [x] Remove `refreshRepositoryMetadata()` method
+- [x] Remove `RepositoryMetadataService.ts` entirely
+- [x] Let Alexandria handle GitHub metadata fetching
 
-#### 1.4 Remove GitHub Search
-- [ ] Remove `searchGitHubRepositories()` from `RepositoryApiEventHandler`
-- [ ] Move to a dedicated GitHub API service if still needed
+#### 1.4 Remove GitHub Search ✅
+- [x] Remove `searchGitHubRepositories()` from `RepositoryApiEventHandler`
+- [x] Move to a dedicated GitHub API service if still needed
 
 ---
 
-### Phase 2: Migrate Avatar Storage
+### Phase 2: Remove Custom Avatars ✅ COMPLETE
 
-Custom avatar storage is REPOSITORIES-specific. Options:
+Custom avatar storage was removed entirely (Option C). Now using only GitHub avatar URLs directly.
 
-#### Option A: Move to Alexandria (Recommended)
-- [ ] Add `customAvatarPath` field to Alexandria entry type
-- [ ] Create avatar storage in `.alexandria/avatars/` directory
-- [ ] Migrate `setRepositoryAvatar()`, `getAvatarUrl()` to Alexandria service
-- [ ] Update `RepositoryAvatar.tsx` to use Alexandria API
-
-#### Option B: Separate Avatar Service
-- [ ] Create standalone `AvatarStorageService`
-- [ ] Store avatars in app userData directory
-- [ ] Key by repository remote URL or local path
-
-#### Option C: Remove Custom Avatars
-- [ ] Delete avatar functionality entirely
-- [ ] Use only GitHub avatar URLs (no local storage)
-- [ ] Simplest but loses feature
+#### Completed Tasks:
+- [x] Remove `customAvatarPath` field from `Repository` and `LocalClone` types
+- [x] Remove avatar methods from `RepositoryApiEventHandler`
+- [x] Remove avatar IPC handlers and API events
+- [x] Remove `avatarStorageService.ts` entirely
+- [x] Update `RepositoryAPI` interface and renderer services
 
 ---
 
