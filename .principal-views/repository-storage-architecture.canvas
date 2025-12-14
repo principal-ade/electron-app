@@ -1,0 +1,419 @@
+{
+  "pv": {
+    "name": "Repository Storage Architecture",
+    "version": "1.0.0",
+    "description": "Comparison of REPOSITORIES namespace vs Alexandria registry - two independent systems for repository management",
+    "nodeTypes": {
+      "namespace": {
+        "label": "Storage Namespace",
+        "color": "#3B82F6"
+      },
+      "alexandria": {
+        "label": "Alexandria System",
+        "color": "#8B5CF6"
+      },
+      "service": {
+        "label": "Service",
+        "color": "#F59E0B"
+      },
+      "cache": {
+        "label": "Cache",
+        "color": "#10B981"
+      },
+      "renderer": {
+        "label": "Renderer Component",
+        "color": "#EC4899"
+      },
+      "api": {
+        "label": "API Layer",
+        "color": "#6366F1"
+      },
+      "storage": {
+        "label": "Storage",
+        "color": "#64748B"
+      },
+      "external": {
+        "label": "External",
+        "color": "#EF4444"
+      },
+      "group-label": {
+        "label": "Group Label",
+        "color": "#1E293B"
+      }
+    },
+    "edgeTypes": {
+      "reads": {
+        "label": "Reads",
+        "style": "solid",
+        "color": "#10B981"
+      },
+      "writes": {
+        "label": "Writes",
+        "style": "solid",
+        "color": "#EF4444"
+      },
+      "ipc": {
+        "label": "IPC",
+        "style": "solid",
+        "color": "#6366F1"
+      },
+      "uses": {
+        "label": "Uses",
+        "style": "dotted",
+        "color": "#64748B"
+      },
+      "no-sync": {
+        "label": "No Sync",
+        "style": "dashed",
+        "color": "#EF4444"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "x": 71,
+      "y": -126,
+      "width": 500,
+      "height": 50,
+      "text": "# Repository Storage: Two Independent Systems"
+    },
+    {
+      "id": "repositories-group",
+      "type": "group",
+      "x": -657,
+      "y": -30,
+      "width": 400,
+      "height": 700,
+      "label": "REPOSITORIES Namespace (electron-store)"
+    },
+    {
+      "id": "alexandria-group",
+      "type": "group",
+      "x": 975,
+      "y": -34,
+      "width": 400,
+      "height": 700,
+      "label": "Alexandria Registry (home directory)"
+    },
+    {
+      "id": "repositories-namespace",
+      "type": "text",
+      "x": -248,
+      "y": 173,
+      "width": 300,
+      "height": 80,
+      "text": "**REPOSITORIES**\n`electron-store`\nKey: `repos_<url-hash>`",
+      "pv": {
+        "nodeType": "namespace",
+        "shape": "rectangle"
+      }
+    },
+    {
+      "id": "repository-api-handler",
+      "type": "text",
+      "x": 90,
+      "y": 169,
+      "width": 300,
+      "height": 60,
+      "text": "RepositoryApiEventHandler",
+      "pv": {
+        "nodeType": "service",
+        "shape": "rectangle",
+        "sources": [
+          "src/main/stores/RepositoryApiEventHandler.ts"
+        ]
+      }
+    },
+    {
+      "id": "repository-cache",
+      "type": "text",
+      "x": -226,
+      "y": 49,
+      "width": 300,
+      "height": 60,
+      "text": "RepositoryCache\n(in-memory + persistent)",
+      "pv": {
+        "nodeType": "cache",
+        "shape": "rectangle",
+        "sources": [
+          "src/main/stores/RepositoryCache.ts"
+        ]
+      }
+    },
+    {
+      "id": "repository-service",
+      "type": "text",
+      "x": 103,
+      "y": 62,
+      "width": 300,
+      "height": 60,
+      "text": "RepositoryService (renderer)",
+      "pv": {
+        "nodeType": "api",
+        "shape": "rectangle",
+        "sources": [
+          "src/renderer/main-process-api/RepositoryService.ts"
+        ]
+      }
+    },
+    {
+      "id": "repo-data-box",
+      "type": "text",
+      "x": -582,
+      "y": 690,
+      "width": 300,
+      "height": 180,
+      "text": "**Stores:**\n- Remote URL (primary key)\n- VCS type (github/gitlab/etc)\n- Multiple local clones[]\n- Custom avatars\n- User tags\n- Access timestamps\n- GitHub metadata cache"
+    },
+    {
+      "id": "alexandria-registry",
+      "type": "text",
+      "x": 709,
+      "y": 370,
+      "width": 300,
+      "height": 80,
+      "text": "**Alexandria Registry**\n`@principal-ai/alexandria-core-library`\nKey: local path",
+      "pv": {
+        "nodeType": "alexandria",
+        "shape": "rectangle"
+      }
+    },
+    {
+      "id": "alexandria-service",
+      "type": "text",
+      "x": 494,
+      "y": 367,
+      "width": 300,
+      "height": 60,
+      "text": "AlexandriaRegistryService",
+      "pv": {
+        "nodeType": "service",
+        "shape": "rectangle",
+        "sources": [
+          "src/main/stores/AlexandriaRegistryService.ts"
+        ]
+      }
+    },
+    {
+      "id": "alexandria-handler",
+      "type": "text",
+      "x": 493,
+      "y": 254,
+      "width": 300,
+      "height": 60,
+      "text": "AlexandriaApiEventHandler",
+      "pv": {
+        "nodeType": "api",
+        "shape": "rectangle",
+        "sources": [
+          "src/main/stores/AlexandriaApiEventHandler.ts"
+        ]
+      }
+    },
+    {
+      "id": "alexandria-renderer",
+      "type": "text",
+      "x": 488,
+      "y": 163,
+      "width": 300,
+      "height": 60,
+      "text": "AlexandriaService (renderer)",
+      "pv": {
+        "nodeType": "api",
+        "shape": "rectangle",
+        "sources": [
+          "src/renderer/main-process-api/AlexandriaService.ts"
+        ]
+      }
+    },
+    {
+      "id": "alexandria-data-box",
+      "type": "text",
+      "x": 832,
+      "y": 753,
+      "width": 300,
+      "height": 180,
+      "text": "**Stores:**\n- Local path (primary key)\n- Repository name\n- Remote URL\n- Workspace memberships\n- CodebaseView configs\n- .alexandria/ contents\n- GitHub metadata (fetched)"
+    },
+    {
+      "id": "no-sync-label",
+      "type": "text",
+      "x": 811,
+      "y": -118,
+      "width": 120,
+      "height": 40,
+      "text": "**NO SYNC**",
+      "color": "1"
+    },
+    {
+      "id": "event-server",
+      "type": "text",
+      "x": -212,
+      "y": -47,
+      "width": 250,
+      "height": 60,
+      "text": "EventServerManager\n(uses RepositoryCache)",
+      "pv": {
+        "nodeType": "external",
+        "shape": "rectangle",
+        "sources": [
+          "src/main/agent-session-events/EventServerManager.ts"
+        ]
+      }
+    },
+    {
+      "id": "repository-avatar",
+      "type": "text",
+      "x": 108,
+      "y": -45,
+      "width": 200,
+      "height": 60,
+      "text": "RepositoryAvatar.tsx\n(uses getAvatarUrl)",
+      "pv": {
+        "nodeType": "renderer",
+        "shape": "rectangle",
+        "sources": [
+          "src/renderer/components/repository-maps/RepositoryAvatar.tsx"
+        ]
+      }
+    },
+    {
+      "id": "panel-contexts",
+      "type": "text",
+      "x": 506,
+      "y": 62,
+      "width": 300,
+      "height": 60,
+      "text": "PanelContext, WorkspacesPanelContext\n(use AlexandriaService)",
+      "pv": {
+        "nodeType": "renderer",
+        "shape": "rectangle"
+      }
+    },
+    {
+      "id": "decision-box",
+      "type": "text",
+      "x": 150,
+      "y": 900,
+      "width": 600,
+      "height": 120,
+      "text": "## Decision Needed\n\n**Option A:** Keep both, consolidate later\n**Option B:** Migrate REPOSITORIES features → Alexandria\n**Option C:** Replace with simpler in-memory cache"
+    }
+  ],
+  "edges": [
+    {
+      "id": "namespace-to-handler",
+      "fromNode": "repositories-namespace",
+      "toNode": "repository-api-handler",
+      "pv": {
+        "edgeType": "reads"
+      }
+    },
+    {
+      "id": "handler-to-namespace",
+      "fromNode": "repository-api-handler",
+      "toNode": "repositories-namespace",
+      "pv": {
+        "edgeType": "writes"
+      }
+    },
+    {
+      "id": "cache-to-namespace",
+      "fromNode": "repository-cache",
+      "toNode": "repositories-namespace",
+      "label": "loads on init",
+      "pv": {
+        "edgeType": "reads"
+      }
+    },
+    {
+      "id": "cache-writes",
+      "fromNode": "repository-cache",
+      "toNode": "repositories-namespace",
+      "label": "auto-creates repos",
+      "pv": {
+        "edgeType": "writes"
+      }
+    },
+    {
+      "id": "service-to-handler",
+      "fromNode": "repository-service",
+      "toNode": "repository-api-handler",
+      "label": "IPC",
+      "pv": {
+        "edgeType": "ipc"
+      }
+    },
+    {
+      "id": "alexandria-to-service",
+      "fromNode": "alexandria-registry",
+      "toNode": "alexandria-service",
+      "pv": {
+        "edgeType": "reads"
+      }
+    },
+    {
+      "id": "service-to-alexandria",
+      "fromNode": "alexandria-service",
+      "toNode": "alexandria-registry",
+      "pv": {
+        "edgeType": "writes"
+      }
+    },
+    {
+      "id": "handler-to-alex-service",
+      "fromNode": "alexandria-handler",
+      "toNode": "alexandria-service",
+      "pv": {
+        "edgeType": "uses"
+      }
+    },
+    {
+      "id": "renderer-to-handler",
+      "fromNode": "alexandria-renderer",
+      "toNode": "alexandria-handler",
+      "label": "IPC",
+      "pv": {
+        "edgeType": "ipc"
+      }
+    },
+    {
+      "id": "no-sync-edge",
+      "fromNode": "repository-api-handler",
+      "toNode": "alexandria-handler",
+      "label": "No data sync!",
+      "pv": {
+        "edgeType": "no-sync"
+      }
+    },
+    {
+      "id": "event-server-to-cache",
+      "fromNode": "event-server",
+      "toNode": "repository-cache",
+      "label": "getRepositoryForPath()",
+      "pv": {
+        "edgeType": "uses"
+      }
+    },
+    {
+      "id": "avatar-to-service",
+      "fromNode": "repository-avatar",
+      "toNode": "repository-service",
+      "label": "getAvatarUrl()",
+      "pv": {
+        "edgeType": "uses"
+      }
+    },
+    {
+      "id": "panels-to-alexandria",
+      "fromNode": "panel-contexts",
+      "toNode": "alexandria-renderer",
+      "label": "getRepositories()",
+      "pv": {
+        "edgeType": "uses"
+      }
+    }
+  ]
+}

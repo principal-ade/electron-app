@@ -88,8 +88,8 @@
     {
       "id": "group-main",
       "type": "group",
-      "x": 0,
-      "y": 180,
+      "x": -71,
+      "y": 341,
       "width": 720,
       "height": 380,
       "label": "Main Process"
@@ -97,8 +97,8 @@
     {
       "id": "group-renderer",
       "type": "group",
-      "x": 800,
-      "y": 0,
+      "x": 739,
+      "y": -448,
       "width": 480,
       "height": 700,
       "label": "Renderer Process"
@@ -106,64 +106,72 @@
     {
       "id": "event-server",
       "type": "text",
-      "x": 20,
-      "y": 20,
+      "x": 199,
+      "y": -203,
       "width": 200,
       "height": 80,
       "text": "Event Processing Server\n(Utility Process)",
       "pv": {
         "nodeType": "utility-process",
         "shape": "rectangle",
-        "sources": ["src/main/agent-session-events/event-processing-server/**"]
+        "sources": [
+          "src/main/agent-session-events/event-processing-server/**"
+        ]
       }
     },
     {
       "id": "event-server-manager",
       "type": "text",
-      "x": 20,
-      "y": 220,
+      "x": 171,
+      "y": -71,
       "width": 220,
       "height": 80,
       "text": "EventServerManager\n(EventEmitter)",
       "pv": {
         "nodeType": "event-manager",
         "shape": "rectangle",
-        "sources": ["src/main/agent-session-events/EventServerManager.ts"]
+        "sources": [
+          "src/main/agent-session-events/EventServerManager.ts"
+        ]
       }
     },
     {
       "id": "session-cache",
       "type": "text",
-      "x": 280,
-      "y": 220,
+      "x": 198,
+      "y": 146,
       "width": 180,
       "height": 80,
       "text": "SessionCache\n(In-Memory Store)",
       "pv": {
         "nodeType": "cache",
         "shape": "rectangle",
-        "sources": ["src/main/agent-session-events/agentSessionSDKHandlers.ts"]
+        "sources": [
+          "src/main/agent-session-events/agentSessionSDKHandlers.ts"
+        ]
       }
     },
     {
       "id": "sdk-handlers",
       "type": "text",
-      "x": 280,
-      "y": 340,
+      "x": 201,
+      "y": 249,
       "width": 180,
       "height": 80,
       "text": "SDK Handlers\nipcMain.handle()",
       "pv": {
         "nodeType": "ipc-handler",
         "shape": "rectangle",
-        "sources": ["src/main/agent-session-events/agentSessionSDKHandlers.ts"]
+        "sources": [
+          "src/main/agent-session-events/agentSessionSDKHandlers.ts"
+        ]
       }
     },
     {
       "id": "broadcast-node",
       "type": "text",
-      "x": 500,
-      "y": 280,
+      "x": 388,
+      "y": 143,
       "width": 200,
       "height": 80,
       "text": "webContents.send()\n→ All Windows",
@@ -175,21 +183,23 @@
     {
       "id": "event-types",
       "type": "text",
-      "x": 500,
-      "y": 400,
+      "x": 400,
+      "y": 246,
       "width": 200,
       "height": 100,
       "text": "IPC Events:\n• SESSION_CREATED\n• SESSION_UPDATED\n• PROCESSED_EVENT",
       "pv": {
         "nodeType": "interface",
         "shape": "rectangle",
-        "sources": ["src/shared/main-process-api-interfaces/AgentSessionSDKAPI.ts"]
+        "sources": [
+          "src/shared/main-process-api-interfaces/AgentSessionSDKAPI.ts"
+        ]
       }
     },
     {
       "id": "preload",
       "type": "text",
-      "x": 820,
+      "x": 862,
       "y": 30,
       "width": 200,
       "height": 80,
@@ -197,13 +207,15 @@
       "pv": {
         "nodeType": "preload",
         "shape": "rectangle",
-        "sources": ["src/window/preload.ts"]
+        "sources": [
+          "src/window/preload.ts"
+        ]
       }
     },
     {
       "id": "renderer-api-impl",
       "type": "text",
-      "x": 820,
+      "x": 827,
       "y": 150,
       "width": 200,
       "height": 80,
@@ -211,27 +223,31 @@
       "pv": {
         "nodeType": "renderer-api",
         "shape": "rectangle",
-        "sources": ["src/window/main-process-api-implementations/agentSessionSDKApi.ts"]
+        "sources": [
+          "src/window/main-process-api-implementations/agentSessionSDKApi.ts"
+        ]
       }
     },
     {
       "id": "sdk-service",
       "type": "text",
-      "x": 820,
-      "y": 270,
+      "x": 850,
+      "y": 269,
       "width": 200,
       "height": 80,
       "text": "AgentSessionSDKService\nonProcessedEvent()",
       "pv": {
         "nodeType": "service",
         "shape": "rectangle",
-        "sources": ["src/renderer/main-process-api/AgentSessionSDKService.ts"]
+        "sources": [
+          "src/renderer/main-process-api/AgentSessionSDKService.ts"
+        ]
       }
     },
     {
       "id": "agent-highlight-context",
       "type": "text",
-      "x": 820,
+      "x": 806,
       "y": 390,
       "width": 200,
       "height": 80,
@@ -239,21 +255,25 @@
       "pv": {
         "nodeType": "context",
         "shape": "rectangle",
-        "sources": ["src/renderer/contexts/AgentHighlightContext.tsx"]
+        "sources": [
+          "src/renderer/contexts/AgentHighlightContext.tsx"
+        ]
       }
     },
     {
       "id": "event-highlight-service",
       "type": "text",
-      "x": 1060,
-      "y": 390,
+      "x": 1025,
+      "y": 509,
       "width": 200,
       "height": 80,
       "text": "EventHighlightService\nprocessEvent()",
       "pv": {
         "nodeType": "service",
         "shape": "rectangle",
-        "sources": ["src/renderer/services/EventHighlightService.ts"]
+        "sources": [
+          "src/renderer/services/EventHighlightService.ts"
+        ]
       }
     },
     {
@@ -267,14 +287,16 @@
       "pv": {
         "nodeType": "component",
         "shape": "rectangle",
-        "sources": ["src/renderer/components/repository-maps/SessionEventsView.tsx"]
+        "sources": [
+          "src/renderer/components/repository-maps/SessionEventsView.tsx"
+        ]
       }
     },
     {
       "id": "code-city",
       "type": "text",
-      "x": 1060,
-      "y": 510,
+      "x": 1076,
+      "y": 627,
       "width": 200,
       "height": 80,
       "text": "Code City\n(Visualization)",
@@ -286,15 +308,17 @@
     {
       "id": "event-interface",
       "type": "text",
-      "x": 20,
-      "y": 340,
+      "x": 28,
+      "y": 146,
       "width": 220,
       "height": 100,
       "text": "RepoNormalized\nUniversalAgentSessionEvent\n(@principal-ai/agent-monitoring)",
       "pv": {
         "nodeType": "interface",
         "shape": "rectangle",
-        "sources": ["src/shared/main-process-api-interfaces/AgentSessionEventsAPI.ts"]
+        "sources": [
+          "src/shared/main-process-api-interfaces/AgentSessionEventsAPI.ts"
+        ]
       }
     }
   ],
