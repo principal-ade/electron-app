@@ -48,9 +48,8 @@ export interface AlexandriaAPI {
 
   /**
    * Get all registered repositories
-   * @param skipGitInfo - If true, skips loading git commit info for performance
    */
-  getRepositories(skipGitInfo?: boolean): Promise<AlexandriaEntry[]>;
+  getRepositories(): Promise<AlexandriaEntry[]>;
 
   /**
    * Get a specific repository by name

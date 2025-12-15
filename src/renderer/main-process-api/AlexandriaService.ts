@@ -16,10 +16,8 @@ export class AlexandriaService {
     return window.mainProcess.alexandria.onRepositoryChange(callback);
   }
 
-  static async getRepositories(
-    skipGitInfo?: boolean,
-  ): Promise<AlexandriaEntry[]> {
-    return window.mainProcess.alexandria.getRepositories(skipGitInfo);
+  static async getRepositories(): Promise<AlexandriaEntry[]> {
+    return window.mainProcess.alexandria.getRepositories();
   }
 
   static async getRepository(name: string): Promise<AlexandriaEntry | null> {

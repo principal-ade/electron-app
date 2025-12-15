@@ -53,8 +53,8 @@ export class AlexandriaApiEventHandler implements AlexandriaAPI {
     });
   }
 
-  async getRepositories(skipGitInfo?: boolean) {
-    return this.registryService.getRepositories(skipGitInfo);
+  async getRepositories() {
+    return this.registryService.getRepositories();
   }
 
   async getRepository(name: string) {
@@ -267,9 +267,7 @@ export function registerAlexandriaHandlers(): void {
   const handler = new AlexandriaApiEventHandler();
 
   // Register all IPC handlers using enum values
-  ipcMain.handle(AlexandriaAPIEvent.GET_ALL, (_, skipGitInfo?: boolean) =>
-    handler.getRepositories(skipGitInfo),
-  );
+  ipcMain.handle(AlexandriaAPIEvent.GET_ALL, () => handler.getRepositories());
   ipcMain.handle(AlexandriaAPIEvent.GET, (_, name: string) =>
     handler.getRepository(name),
   );

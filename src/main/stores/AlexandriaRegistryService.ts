@@ -44,126 +44,34 @@ export class AlexandriaRegistryService {
   }
 
   /**
-   * Get all repositories with path information and git commit data
-   * @param skipGitInfo - If true, skips loading git commit info for performance
+   * Get all repositories with path information
+   * Repository metadata including github.lastCommit is already stored in the registry
    */
-  async getRepositories(skipGitInfo = false): Promise<AlexandriaEntry[]> {
-    // Use getAllEntries to get repositories with path information
-    const entries = this.outpostManager.getAllEntries();
-
-    // If skipGitInfo is true, return entries without git enrichment
-    if (skipGitInfo) {
-      return entries || [];
-    }
-
-    // Enrich each repository with last commit information
-    const enrichedEntries = await Promise.all(
-      entries.map(async (entry) => {
-        try {
-          // Get last commit info from git
-          const commitInfo = await gitClientFactory.getLastCommitInfo(
-            entry.path,
-          );
-
-          if (commitInfo && commitInfo.date) {
-            // Update the github field with last commit date only (per type constraints)
-            // Store other commit details at the top level
-            const enrichedEntry = {
-              ...entry,
-              github: {
-                ...entry.github,
-                lastCommit: commitInfo.date, // ISO date string from git
-              },
-              // Additional commit details (not part of GithubRepository type)
-              lastCommitMessage: commitInfo.message,
-              lastCommitAuthor: commitInfo.author,
-              lastCommitHash: commitInfo.shortHash || commitInfo.hash,
-            } as AlexandriaEntry;
-            return enrichedEntry;
-          }
-        } catch {
-          // If git info fails, just continue silently
-        }
-
-        // Return original entry if no git info available
-        return entry;
-      }),
-    );
-
-    return enrichedEntries;
+  async getRepositories(): Promise<AlexandriaEntry[]> {
+    return this.outpostManager.getAllEntries() || [];
   }
 
   /**
-   * Get repository by name with git info
+   * Get repository by name
    */
   async getRepository(name: string): Promise<AlexandriaEntry | null> {
-    // Get all entries and find by name
     const entries = this.outpostManager.getAllEntries();
-    const entry = entries.find((e) => e.name === name);
-
-    if (!entry) return null;
-
-    // Try to enrich with git info
-    try {
-      const commitInfo = await gitClientFactory.getLastCommitInfo(entry.path);
-      if (commitInfo) {
-        return {
-          ...entry,
-          github: {
-            ...entry.github,
-            lastCommit: commitInfo.date,
-          },
-          // Additional commit details (not part of GithubRepository type)
-          lastCommitMessage: commitInfo.message,
-          lastCommitAuthor: commitInfo.author,
-          lastCommitHash: commitInfo.shortHash || commitInfo.hash,
-        } as AlexandriaEntry;
-      }
-    } catch {
-      // Silently continue if git info fails
-    }
-
-    return entry;
+    return entries.find((e) => e.name === name) || null;
   }
 
   /**
-   * Get repository by local path with git info
+   * Get repository by local path
    */
   async getRepositoryByPath(path: string): Promise<AlexandriaEntry | null> {
-    // Get all entries and find by path
     const entries = this.outpostManager.getAllEntries();
-    const entry = entries.find((e) => e.path === path);
-
-    if (!entry) return null;
-
-    // Try to enrich with git info
-    try {
-      const commitInfo = await gitClientFactory.getLastCommitInfo(entry.path);
-      if (commitInfo) {
-        return {
-          ...entry,
-          github: {
-            ...entry.github,
-            lastCommit: commitInfo.date,
-          },
-          // Additional commit details (not part of GithubRepository type)
-          lastCommitMessage: commitInfo.message,
-          lastCommitAuthor: commitInfo.author,
-          lastCommitHash: commitInfo.shortHash || commitInfo.hash,
-        } as AlexandriaEntry;
-      }
-    } catch {
-      // Silently continue if git info fails
-    }
-
-    return entry;
+    return entries.find((e) => e.path === path) || null;
   }
 
   /**
-   * Fetch GitHub metadata for a repository using git CLI fallback for private repos
+   * Fetch GitHub metadata for a repository from GitHub API
+   * Falls back to parsing owner/repo from URL for private repos
    */
   private async fetchGitHubMetadata(
-    path: string,
     remoteUrl?: string,
   ): Promise<{
     owner?: string;
@@ -175,43 +83,31 @@ export class AlexandriaRegistryService {
     topics?: string[];
     isPublic?: boolean;
   } | null> {
-    try {
-      // If no remote URL provided, try to get it from git
-      if (!remoteUrl) {
-        const remotes = await gitClientFactory.getRemotes(path);
-        const originRemote = remotes.find((r) => r.name === 'origin');
-        remoteUrl = originRemote?.url;
-      }
+    if (!remoteUrl) {
+      return null;
+    }
 
-      if (!remoteUrl) {
-        console.log('[fetchGitHubMetadata] No remote URL found');
-        return null;
-      }
+    // Check if it's a GitHub URL
+    if (!remoteUrl.includes('github.com')) {
+      return null;
+    }
 
-      // Check if it's a GitHub URL
-      if (!remoteUrl.includes('github.com')) {
-        console.log('[fetchGitHubMetadata] Not a GitHub repository');
-        return null;
-      }
-
-      // Extract owner and repo from URL
-      const match = remoteUrl.match(
-        /github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?$/,
+    // Extract owner and repo from URL
+    const match = remoteUrl.match(
+      /github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?$/,
+    );
+    if (!match) {
+      console.log(
+        '[fetchGitHubMetadata] Could not parse GitHub URL:',
+        remoteUrl,
       );
-      if (!match) {
-        console.log(
-          '[fetchGitHubMetadata] Could not parse GitHub URL:',
-          remoteUrl,
-        );
-        return null;
-      }
+      return null;
+    }
 
-      const [, owner, repoName] = match;
+    const [, owner, repoName] = match;
+
+    try {
       const apiUrl = `https://api.github.com/repos/${owner}/${repoName}`;
-
-      console.log('[fetchGitHubMetadata] Fetching metadata from:', apiUrl);
-
-      // Try GitHub API
       const response = await fetch(apiUrl, {
         headers: {
           Accept: 'application/vnd.github.v3+json',
@@ -220,26 +116,18 @@ export class AlexandriaRegistryService {
       });
 
       if (response.status === 404) {
-        // Repository is private or doesn't exist
-        // Use git CLI fallback with parsed info
-        console.log(
-          '[fetchGitHubMetadata] Repository is private, using git CLI info',
-        );
+        // Repository is private or doesn't exist - return parsed info
         return {
-          owner: owner,
+          owner,
           name: repoName,
           isPublic: false,
         };
       }
 
       if (!response.ok) {
-        console.error(
-          '[fetchGitHubMetadata] API request failed:',
-          response.status,
-        );
-        // Still return basic info from parsed URL
+        // API failed - return basic info from parsed URL
         return {
-          owner: owner,
+          owner,
           name: repoName,
         };
       }
@@ -267,22 +155,11 @@ export class AlexandriaRegistryService {
       };
     } catch (error) {
       console.error('[fetchGitHubMetadata] Error fetching metadata:', error);
-
-      // Last resort: try to parse from remote URL if we have it
-      if (remoteUrl && remoteUrl.includes('github.com')) {
-        const match = remoteUrl.match(
-          /github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?$/,
-        );
-        if (match) {
-          const [, owner, repoName] = match;
-          return {
-            owner: owner,
-            name: repoName,
-          };
-        }
-      }
-
-      return null;
+      // Return basic info parsed from URL
+      return {
+        owner,
+        name: repoName,
+      };
     }
   }
 
@@ -313,7 +190,7 @@ export class AlexandriaRegistryService {
 
     // Fetch and update GitHub metadata if it's a GitHub repo
     if (remoteUrl && remoteUrl.includes('github.com')) {
-      const githubMetadata = await this.fetchGitHubMetadata(path, remoteUrl);
+      const githubMetadata = await this.fetchGitHubMetadata(remoteUrl);
       if (githubMetadata) {
         try {
           // Use the new updateGitHubMetadata method from Alexandria
@@ -474,10 +351,7 @@ export class AlexandriaRegistryService {
 
     try {
       // Always fetch and update GitHub metadata when explicitly refreshing
-      const githubMetadata = await this.fetchGitHubMetadata(
-        repo.path,
-        repo.remoteUrl,
-      );
+      const githubMetadata = await this.fetchGitHubMetadata(repo.remoteUrl);
       console.log(
         '[refreshRepository] Fetched GitHub metadata:',
         githubMetadata,
@@ -716,10 +590,7 @@ export class AlexandriaRegistryService {
         );
 
         try {
-          const githubMetadata = await this.fetchGitHubMetadata(
-            entry.path,
-            entry.remoteUrl,
-          );
+          const githubMetadata = await this.fetchGitHubMetadata(entry.remoteUrl);
           if (githubMetadata) {
             await this.outpostManager.updateGitHubMetadata(
               entry.name,

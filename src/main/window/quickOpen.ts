@@ -231,7 +231,7 @@ class QuickOpen {
 
       // Load repos and workspaces in parallel for better performance
       const [repositories, workspaces] = await Promise.all([
-        service.getRepositories(true), // Skip git info loading (Quick Open doesn't display it)
+        service.getRepositories(),
         service.getWorkspaces(),
       ]);
 
