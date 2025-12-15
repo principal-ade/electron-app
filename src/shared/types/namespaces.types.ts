@@ -11,7 +11,6 @@
  */
 export enum StaticNamespaces {
   USER_PREFERENCES = 'user-preferences',
-  REPOSITORIES = 'repositories',
   CACHE = 'cache',
   TEMP = 'temp',
 

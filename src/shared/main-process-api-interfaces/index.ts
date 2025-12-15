@@ -14,7 +14,6 @@ import type { FileSystemAPI } from './FileSystemAPI';
 import type { GitAPI } from './GitAPI';
 import type { GitHubAPI } from './GitHubAPI';
 import type { AppVersionManagerAPI } from './AppVersionManagerAPI';
-import type { RepositoryAPI } from './RepositoryAPI';
 import type { RepositoryMonitoringAPI } from './RepositoryMonitoringAPI';
 import type { SecretsAPI } from './SecretsAPI';
 import type { LinksAPI } from './LinksAPI';
@@ -77,7 +76,6 @@ export interface MainProcessAPI {
   git: GitAPI;
   github: GitHubAPI;
   store: StoreAPI;
-  repository: RepositoryAPI;
   repositoryMonitoring: RepositoryMonitoringAPI;
   secrets: SecretsAPI;
   links: LinksAPI;

@@ -775,17 +775,6 @@ export class MultiStoreManager extends EventEmitter {
         },
       },
       {
-        name: StaticNamespaces.REPOSITORIES,
-        storageProvider: StorageProviderType.ELECTRON_STORE,
-        category: NamespaceCategory.CORE,
-        config: {
-          path: 'repositories',
-          defaults: {
-            repositories: [],
-          },
-        },
-      },
-      {
         name: StaticNamespaces.CACHE,
         storageProvider: StorageProviderType.ELECTRON_STORE,
         category: NamespaceCategory.CACHE,

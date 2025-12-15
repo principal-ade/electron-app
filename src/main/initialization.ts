@@ -36,7 +36,6 @@ import { getTerminalManager } from './terminalWrapper';
 
 import { setupAgentConfigHandlers } from './agent-management/agentConfigHandlers';
 import { registerFileSystemIpcHandlers } from './file-system/fileSystemHandlers';
-import { registerRepositoryHandlers } from './stores/RepositoryApiEventHandler';
 import { registerAlexandriaHandlers } from './stores/AlexandriaApiEventHandler';
 import { registerWorkspaceHandlers } from './stores/WorkspaceApiEventHandler';
 import { registerAlexandriaDocsHandlers } from './stores/AlexandriaDocsApiEventHandler';
@@ -154,7 +153,6 @@ const registerAllIpcHandlers = async () => {
   registerActIntegrationHandlers();
   registerSecretHandlers();
   await registerLinksHandlers();
-  registerRepositoryHandlers();
   registerAlexandriaHandlers();
   registerWorkspaceHandlers();
   registerAlexandriaDocsHandlers();

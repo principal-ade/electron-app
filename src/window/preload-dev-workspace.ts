@@ -23,7 +23,6 @@ import { terminalAPI } from './main-process-api-implementations/terminalApi';
 import { fileSystemAPI } from './main-process-api-implementations/fileSystemApi';
 import { repositoryMonitoringAPI } from './main-process-api-implementations/repositoryMonitoringApi';
 import { userPreferencesAPI } from './main-process-api-implementations/userPreferencesApi';
-import { repositoryAPI } from './main-process-api-implementations/repositoryApi';
 import { shellAPI } from './main-process-api-implementations/shellApi';
 import { windowAPI } from './main-process-api-implementations/windowApi';
 import { alexandriaAPI } from './main-process-api-implementations/alexandriaApi';
@@ -42,7 +41,6 @@ const devWorkspaceAPI: DevWorkspaceMainProcessAPI = {
   fileSystem: fileSystemAPI,
   repositoryMonitoring: repositoryMonitoringAPI,
   userPreferences: userPreferencesAPI,
-  repository: repositoryAPI,
   shell: shellAPI,
   window: windowAPI,
   alexandria: alexandriaAPI,

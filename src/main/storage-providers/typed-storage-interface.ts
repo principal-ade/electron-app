@@ -210,20 +210,6 @@ export class NamespaceDataValidator {
     return data && typeof data === 'object';
   }
 
-  static isRepositories(
-    data: any,
-  ): data is NamespaceDataTypes[StaticNamespaces.REPOSITORIES] {
-    // Individual repository object, not an array
-    return (
-      data &&
-      typeof data === 'object' &&
-      'remoteUrl' in data &&
-      'name' in data &&
-      'localClones' in data &&
-      Array.isArray(data.localClones)
-    );
-  }
-
   static isAIConfiguration(
     data: any,
   ): data is NamespaceDataTypes[StaticNamespaces.AI_CONFIGURATION] {
@@ -298,8 +284,6 @@ export class NamespaceDataValidator {
     switch (namespace) {
       case StaticNamespaces.USER_PREFERENCES:
         return this.isUserPreferences(data);
-      case StaticNamespaces.REPOSITORIES:
-        return this.isRepositories(data);
       case StaticNamespaces.AI_CONFIGURATION:
         return this.isAIConfiguration(data);
       case StaticNamespaces.LLM_MODELS:

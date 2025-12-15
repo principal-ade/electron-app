@@ -1,4 +1,3 @@
-import { Repository } from '../../shared/types/repository.types';
 import {
   StorageNamespaceConfig,
   NamespaceCategory,
@@ -161,7 +160,6 @@ export interface DockerAnalysisSession {
  */
 export interface NamespaceDataTypes {
   [StaticNamespaces.USER_PREFERENCES]: UserPreferences;
-  [StaticNamespaces.REPOSITORIES]: Repository; // Individual repository stored by key
   [StaticNamespaces.CACHE]: Record<string, any>;
   [StaticNamespaces.TEMP]: Record<string, any>;
 
@@ -196,13 +194,6 @@ export class TypedNamespaceRegistry {
       storageProvider: 'electron-store',
       category: NamespaceCategory.CORE,
       isPrimary: true,
-    });
-
-    this.register(StaticNamespaces.REPOSITORIES, {
-      name: StaticNamespaces.REPOSITORIES,
-      description: 'Repository configurations and metadata',
-      storageProvider: 'electron-store',
-      category: NamespaceCategory.CORE,
     });
 
     // Cache and temporary data

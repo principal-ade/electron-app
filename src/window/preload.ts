@@ -25,7 +25,6 @@ import { fileSystemAPI } from './main-process-api-implementations/fileSystemApi'
 import { gitAPI } from './main-process-api-implementations/gitApi';
 import { githubAPI } from './main-process-api-implementations/githubApi';
 import { storeAPI } from './main-process-api-implementations/storeApi';
-import { repositoryAPI } from './main-process-api-implementations/repositoryApi';
 import { alexandriaAPI } from './main-process-api-implementations/alexandriaApi';
 import { alexandriaDocsAPI } from './main-process-api-implementations/alexandriaDocsApi';
 import { workspaceApi } from './main-process-api-implementations/workspaceApi';
@@ -100,7 +99,6 @@ const mainProcessExposure: MainProcessAPI = {
   appVersionManager: appVersionManagerApi,
   authentication: authenticationAPI,
   clipboard: clipboardAPI,
-  repository: repositoryAPI,
   github: githubAPI,
   git: gitAPI,
   fileSystem: fileSystemAPI,
