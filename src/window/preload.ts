@@ -51,6 +51,7 @@ import { documentSearchAPI } from './main-process-api-implementations/documentSe
 import { observabilityAPI } from './main-process-api-implementations/observabilityApi';
 import { remoteAgentWindowAPI } from './main-process-api-implementations/remoteAgentWindowApi';
 import { localhostDetectionAPI } from './main-process-api-implementations/localhostDetectionApi';
+import { githubArtifactAPI } from './main-process-api-implementations/githubArtifactApi';
 // Removed mermaid import - it uses 'debug' which isn't available in preload context
 // import mermaid from 'mermaid';
 
@@ -129,6 +130,7 @@ const mainProcessExposure: MainProcessAPI = {
   observability: observabilityAPI,
   remoteAgentWindow: remoteAgentWindowAPI,
   localhostDetection: localhostDetectionAPI,
+  githubArtifact: githubArtifactAPI,
 };
 
 // Mermaid removed from preload - will be loaded in renderer instead

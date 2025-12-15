@@ -8,6 +8,7 @@
  * - userPreferences: User settings
  * - gitSync: Git-sync room connections
  * - authentication: Authentication status
+ * - githubArtifact: GitHub Actions artifact fetching for quality metrics
  *
  * When adding new APIs, update DevWorkspaceMainProcessAPI in
  * src/shared/main-process-api-interfaces/DevWorkspaceAPI.ts
@@ -29,6 +30,7 @@ import { alexandriaAPI } from './main-process-api-implementations/alexandriaApi'
 import { gitSyncAPI } from './main-process-api-implementations/gitSyncApi';
 import { authenticationAPI } from './main-process-api-implementations/authenticationApi';
 import { agentSessionSDKApi } from './main-process-api-implementations/agentSessionSDKApi';
+import { githubArtifactAPI } from './main-process-api-implementations/githubArtifactApi';
 
 console.info('[Preload-DevWorkspace] API imports successful');
 
@@ -47,6 +49,7 @@ const devWorkspaceAPI: DevWorkspaceMainProcessAPI = {
   gitSync: gitSyncAPI,
   authentication: authenticationAPI,
   agentSessionSDK: agentSessionSDKApi,
+  githubArtifact: githubArtifactAPI,
 };
 
 // Expose the mainProcess API

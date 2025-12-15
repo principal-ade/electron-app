@@ -40,6 +40,7 @@ import type { DocumentSearchAPI } from '../ipc/DocumentSearchIPC';
 import type { ObservabilityAPI } from './ObservabilityAPI';
 import type { RemoteAgentWindowAPI } from './RemoteAgentWindowAPI';
 import type { LocalhostDetectionAPI } from './LocalhostDetectionAPI';
+import type { GitHubArtifactAPI } from './GitHubArtifactAPI';
 
 // Re-export for convenience
 export type {
@@ -101,6 +102,7 @@ export interface MainProcessAPI {
   observability: ObservabilityAPI;
   remoteAgentWindow: RemoteAgentWindowAPI;
   localhostDetection: LocalhostDetectionAPI;
+  githubArtifact: GitHubArtifactAPI;
 }
 
 /**

@@ -69,6 +69,7 @@ import {
   registerLocalhostDetectionHandlers,
   cleanupLocalhostWatchers,
 } from './services/ipc/localhost/localhostDetectionHandlers';
+import { registerGitHubArtifactHandlers } from './services/ipc/githubArtifactHandlers';
 
 // let agentSessionEventsHttpBridge: AgentSessionEventsHttpBridge | null = null;
 let principalMCPBridgePort: number | null = null;
@@ -247,6 +248,7 @@ const registerAllIpcHandlers = async () => {
   registerSystemHandlers();
   registerFeedbackHandlers();
   registerLocalhostDetectionHandlers();
+  registerGitHubArtifactHandlers();
 };
 
 // Setup terminal manager

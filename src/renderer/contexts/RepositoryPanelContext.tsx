@@ -21,6 +21,7 @@ import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonit
 import { FileSystemService } from '../main-process-api/FileSystemService';
 import { WindowService } from '../main-process-api/WindowService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
+import { GitHubArtifactService } from '../main-process-api/GitHubArtifactService';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { PackageLayer } from '@principal-ai/codebase-composition';
@@ -135,9 +136,27 @@ export const RepositoryPanelProvider: React.FC<
     }>;
     lastUpdated: string;
   } | null>(null);
+  const [qualityLoading, setQualityLoading] = useState(false);
 
   // Loading state
   const [loading] = useState(false);
+
+  // Helper to extract owner/repo from git remote URL
+  const parseGitHubRemote = (
+    remoteUrl: string,
+  ): { owner: string; repo: string } | null => {
+    // Handle SSH format: git@github.com:owner/repo.git
+    const sshMatch = remoteUrl.match(/git@github\.com:([^/]+)\/([^.]+)/);
+    if (sshMatch) {
+      return { owner: sshMatch[1], repo: sshMatch[2] };
+    }
+    // Handle HTTPS format: https://github.com/owner/repo.git
+    const httpsMatch = remoteUrl.match(/github\.com\/([^/]+)\/([^/.]+)/);
+    if (httpsMatch) {
+      return { owner: httpsMatch[1], repo: httpsMatch[2] };
+    }
+    return null;
+  };
 
   // Fetch file tree when repository changes and subscribe to cache sync updates
   useEffect(() => {
@@ -341,6 +360,84 @@ export const RepositoryPanelProvider: React.FC<
       unsubscribe();
     };
   }, []);
+
+  // Fetch quality metrics from GitHub Actions artifacts when repository changes
+  useEffect(() => {
+    const fetchQualityMetrics = async () => {
+      if (!repositoryPath) {
+        setQualityData(null);
+        return;
+      }
+
+      setQualityLoading(true);
+      try {
+        // Get git remote info to determine owner/repo
+        const remoteInfo =
+          await RepositoryMonitoringService.getGitRemoteInfo(repositoryPath);
+        if (!remoteInfo?.remoteUrl) {
+          console.log(
+            '[RepositoryPanelProvider] No git remote, cannot fetch quality metrics',
+          );
+          setQualityData(null);
+          return;
+        }
+
+        const githubInfo = parseGitHubRemote(remoteInfo.remoteUrl);
+        if (!githubInfo) {
+          console.log('[RepositoryPanelProvider] Not a GitHub repository');
+          setQualityData(null);
+          return;
+        }
+
+        // Get git status to know the current branch
+        const gitStatus =
+          await RepositoryMonitoringService.getGitStatus(repositoryPath);
+        const branch = gitStatus?.branch || 'main';
+
+        console.log(
+          `[RepositoryPanelProvider] Fetching quality metrics for ${githubInfo.owner}/${githubInfo.repo}@${branch}`,
+        );
+
+        // Fetch from GitHub artifacts
+        const artifactData = await GitHubArtifactService.getLatestQualityMetrics(
+          githubInfo.owner,
+          githubInfo.repo,
+          branch,
+        );
+
+        if (artifactData) {
+          // Transform to the format expected by the quality slice
+          const packages = artifactData.qualityMetrics.packages.map((pkg) => ({
+            name: pkg.name,
+            metrics: pkg.hexagon as unknown as Record<string, number>,
+          }));
+
+          console.log(
+            `[RepositoryPanelProvider] Quality metrics loaded: ${packages.length} packages`,
+          );
+          setQualityData({
+            packages,
+            lastUpdated: artifactData.timestamp,
+          });
+        } else {
+          console.log(
+            '[RepositoryPanelProvider] No quality artifacts found for this repository',
+          );
+          setQualityData(null);
+        }
+      } catch (error) {
+        console.error(
+          '[RepositoryPanelProvider] Failed to fetch quality metrics:',
+          error,
+        );
+        setQualityData(null);
+      } finally {
+        setQualityLoading(false);
+      }
+    };
+
+    fetchQualityMetrics();
+  }, [repositoryPath]);
 
   // Create actions object
   // Note: Terminal actions have been moved to TerminalContext
@@ -688,14 +785,65 @@ export const RepositoryPanelProvider: React.FC<
             scope: 'repository' as const,
             name: 'quality',
             data: qualityData,
-            loading: false,
+            loading: qualityLoading,
             error: null,
             refresh: async () => {
-              // TODO: Implement fetching from GitHub Actions artifacts
-              // See docs/quality-metrics-implementation.md for details
-              console.log(
-                '[RepositoryPanelProvider] Quality metrics refresh not yet implemented',
-              );
+              if (!repositoryPath) return;
+
+              setQualityLoading(true);
+              try {
+                const remoteInfo =
+                  await RepositoryMonitoringService.getGitRemoteInfo(
+                    repositoryPath,
+                  );
+                if (!remoteInfo?.remoteUrl) {
+                  setQualityData(null);
+                  return;
+                }
+
+                const githubInfo = parseGitHubRemote(remoteInfo.remoteUrl);
+                if (!githubInfo) {
+                  setQualityData(null);
+                  return;
+                }
+
+                const gitStatus =
+                  await RepositoryMonitoringService.getGitStatus(repositoryPath);
+                const branch = gitStatus?.branch || 'main';
+
+                // Clear cache to force fresh fetch
+                await GitHubArtifactService.clearCache();
+
+                const artifactData =
+                  await GitHubArtifactService.getLatestQualityMetrics(
+                    githubInfo.owner,
+                    githubInfo.repo,
+                    branch,
+                  );
+
+                if (artifactData) {
+                  const packages = artifactData.qualityMetrics.packages.map(
+                    (pkg) => ({
+                      name: pkg.name,
+                      metrics: pkg.hexagon as unknown as Record<string, number>,
+                    }),
+                  );
+                  setQualityData({
+                    packages,
+                    lastUpdated: artifactData.timestamp,
+                  });
+                } else {
+                  setQualityData(null);
+                }
+              } catch (error) {
+                console.error(
+                  '[RepositoryPanelProvider] Failed to refresh quality metrics:',
+                  error,
+                );
+                setQualityData(null);
+              } finally {
+                setQualityLoading(false);
+              }
             },
           },
         ],
@@ -712,6 +860,7 @@ export const RepositoryPanelProvider: React.FC<
       alexandriaRepositories,
       alexandriaRepositoriesLoading,
       qualityData,
+      qualityLoading,
     ],
   );
 
