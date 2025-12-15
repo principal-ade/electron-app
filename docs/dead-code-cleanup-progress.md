@@ -21,87 +21,68 @@ npx knip --files
 npx knip --files 2>&1 | grep "^src/renderer/components/"
 ```
 
-## Current Status (Updated - 2025-11-28)
+## Current Status (Updated - 2025-12-14)
 
-**Total unused files: 113**
+**Total unused files: 72** ⬇️ **-41 from previous (was 113)**
 
 ### By Top-Level Directory
 
-| Directory | Unused Files |
-|-----------|--------------|
-| renderer | 82 |
-| main | 11 |
-| event-processing-server | ✅ Clean |
+| Directory | Unused Files | Change |
+|-----------|--------------|--------|
+| renderer | 36 | ⬇️ **-46** |
+| shared | 15 | 🆕 New |
+| main | 11 | - |
+| titlebar | 4 | 🆕 New |
+| window | 3 | 🆕 New |
+| setupTests.js | 1 | 🆕 New |
+| event-processing-server | ✅ Clean | - |
 
 ### Renderer Breakdown
 
-| Subdirectory | Unused Files | Status |
+| Subdirectory | Unused Files | Change |
 |--------------|--------------|--------|
-| components | 21 | ⏳ Pending review |
-| services | 14 | ⏳ Pending review |
-| main-process-api | 11 | ⏳ Pending review |
-| utils | 10 | ⏳ Pending review |
-| repo-manager | 5 | ⏳ Pending review |
-| hooks | 5 | ⏳ Pending review |
-| panels | 3 | ⏳ Pending review |
-| pages | 1 | ⏳ Pending review |
-| types | 2 | ⏳ Pending review |
-| contexts | 2 | ⏳ Pending review |
-| adapters | 2 | ⏳ Pending review |
-| unused | 1 | ⏳ Pending review |
-| global.d.ts | 1 | ⏳ Pending review |
-| dev-workspace | 1 | ⏳ Pending review |
-| config | 1 | ⏳ Pending review |
+| main-process-api | 11 | - |
+| utils | 10 | - |
+| services | 7 | ⬇️ **-7** |
+| components | 6 | ⬇️ **-15** |
+| global.d.ts | 1 | - |
+| dev-workspace | 1 | - |
+| hooks | ✅ Clean | ⬇️ **-5** 🎉 |
+| panels | ✅ Clean | ⬇️ **-3** 🎉 |
+| types | ✅ Clean | ⬇️ **-2** 🎉 |
+| contexts | ✅ Clean | ⬇️ **-2** 🎉 |
+| adapters | ✅ Clean | ⬇️ **-2** 🎉 |
+| pages | ✅ Clean | ⬇️ **-1** 🎉 |
+| config | ✅ Clean | ⬇️ **-1** 🎉 |
+| repo-manager | ✅ Removed | Directory removed |
 
 ## Detailed File Lists
 
-### renderer/components (21 files)
+### renderer/components (6 files)
 
 ```
-src/renderer/components/agent-overview/FileActivityView.tsx
-src/renderer/components/agent-overview/SegmentSummary.tsx
-src/renderer/components/agent-overview/SessionDetailCards.tsx
-src/renderer/components/agent-overview/SessionSummaryOverlay/utils.ts
-src/renderer/components/agent-overview/ToolUseView.tsx
-src/renderer/components/common/Icons.tsx
-src/renderer/components/common/LicenseBadge.tsx
-src/renderer/components/common/Tooltip.tsx
+src/renderer/components/DeleteWorkspaceConfirmationModal.tsx
 src/renderer/components/landing-page/AnimatedTimelineEvent.tsx
 src/renderer/components/markdown/index.ts
-src/renderer/components/MonacoEditorErrorBoundary.tsx
-src/renderer/components/OAuthCallbackModal.tsx
-src/renderer/components/repository-maps/AgentSessionDetailView.tsx
-src/renderer/components/repository-maps/EmptyState.tsx
-src/renderer/components/repository-maps/GitChangesHelpModal.tsx
-src/renderer/components/repository-maps/HeaderSearchBar.tsx
-src/renderer/components/repository-maps/ImageCropper.tsx
-src/renderer/components/repository-maps/LoadingAnimation.tsx
-src/renderer/components/repository-maps/SessionEventsView.tsx
-src/renderer/components/shared/RepositoryNotesPanel.tsx
-src/renderer/components/withComponentTracking.tsx
+src/renderer/components/SaveWorkspaceModal.tsx
+src/renderer/components/Titlebar/TitlebarOpenInIDE.tsx
+src/renderer/components/Titlebar/WorkspaceSelector.tsx
 ```
 
 **Status:** ⏳ Pending review
 
 ---
 
-### renderer/services (14 files)
+### renderer/services (7 files)
 
 ```
-src/renderer/services/CityDataCacheService.ts
-src/renderer/services/EventSegmenterService.ts
-src/renderer/services/FileTypeLayerService.ts
+src/renderer/services/CloneVisibilityService.ts
+src/renderer/services/ContentProviders.ts
 src/renderer/services/GitignoreAnalysisService.ts
-src/renderer/services/MockQualityMetricsService.ts
-src/renderer/services/NavigationService.ts
-src/renderer/services/p2p/GitSyncManager.ts
-src/renderer/services/p2p/PeerManager.ts
-src/renderer/services/p2p/SignalingClient.ts
-src/renderer/services/p2p/SignalingClientHTTP.ts
-src/renderer/services/RepositoryTreeCacheService.ts
-src/renderer/services/sessionContextFormatterService.ts
-src/renderer/services/sessionContextService.ts
+src/renderer/services/RepositoryDataCache.ts
+src/renderer/services/SourceSelectionService.ts
 src/renderer/services/storage/CustomLayersStorageService.ts
+src/renderer/services/WorkspaceLayoutService.ts
 ```
 
 **Status:** ⏳ Pending review
@@ -111,15 +92,15 @@ src/renderer/services/storage/CustomLayersStorageService.ts
 ### renderer/main-process-api (11 files)
 
 ```
-src/renderer/main-process-api/A24zService.ts
 src/renderer/main-process-api/ActRunnerService.ts
 src/renderer/main-process-api/ActWorkflowService.ts
 src/renderer/main-process-api/ApiProxyService.ts
 src/renderer/main-process-api/ClipboardService.ts
 src/renderer/main-process-api/DockerService.ts
-src/renderer/main-process-api/LLMModelsService.ts
-src/renderer/main-process-api/OrbitService.ts
+src/renderer/main-process-api/LinksService.ts
+src/renderer/main-process-api/PackageManagerService.ts
 src/renderer/main-process-api/PrincipalService.ts
+src/renderer/main-process-api/SecretsService.ts
 src/renderer/main-process-api/TypeExtractionService.ts
 src/renderer/main-process-api/TypeSchemaService.ts
 ```
@@ -135,135 +116,121 @@ src/renderer/utils/devComponentHelper.ts
 src/renderer/utils/docsThemeValidator.ts
 src/renderer/utils/EventEmitter.ts
 src/renderer/utils/licenseUtils.ts
+src/renderer/utils/loadManifestContents.ts
 src/renderer/utils/monacoErrorSuppressor.ts
 src/renderer/utils/sessionCollisionDetector.ts
 src/renderer/utils/sessionPathNormalization.ts
-src/renderer/utils/terminalCleanup.ts
-src/renderer/utils/terminalUtils.ts
 src/renderer/utils/toolVisualizationConfig.ts
+src/renderer/utils/workflowParser.ts
 ```
 
 **Status:** ⏳ Pending review
 
 ---
 
-### renderer/repo-manager (5 files)
+### renderer/other (2 files)
 
 ```
-src/renderer/repo-manager/components/RepositoryLoadingState.tsx
-src/renderer/repo-manager/shared/MarkdownSearchPanel.tsx
-src/renderer/repo-manager/shared/ProcessingDetailsModal.tsx
-src/renderer/repo-manager/shared/RepositorySwitcherModal.tsx
-src/renderer/repo-manager/shared/TerminalCleanupButton.tsx
-```
-
-**Status:** ⏳ Pending review
-
----
-
-### renderer/hooks (5 files)
-
-```
-src/renderer/hooks/useAgentSessions.ts
-src/renderer/hooks/useFeedbackContextMenu.tsx
-src/renderer/hooks/useGitHubDetection.ts
-src/renderer/hooks/useSessionEventProcessor.ts
-src/renderer/hooks/useToolUIEvents.ts
-```
-
-**Status:** ⏳ Pending review
-
----
-
-### renderer/panels (3 files)
-
-```
-src/renderer/panels/components/RecentCommitsPanel.tsx
-src/renderer/panels/components/RepositoryNotesPanel.tsx
-src/renderer/panels/components/RepositoryTasksAndNotesPanel.tsx
-```
-
-**Status:** ⏳ Pending review
-
----
-
-### renderer/pages (1 file)
-
-```
-src/renderer/pages/CustomTitlebar/CustomTitlebar.tsx
-```
-
-**Status:** ⏳ Pending review
-
----
-
-### renderer/types (2 files)
-
-```
-src/renderer/types/file-activity.types.ts
-src/renderer/types/sessionContext.ts
-```
-
-**Status:** ⏳ Pending review
-
----
-
-### renderer/contexts (2 files)
-
-```
-src/renderer/contexts/RepositoryContext.tsx
-src/renderer/contexts/VisibleProjectsContext.tsx
-```
-
-**Status:** ⏳ Pending review
-
----
-
-### renderer/adapters (2 files)
-
-```
-src/renderer/adapters/SimpleGitHubConfigAdapter.ts
-src/renderer/adapters/SourceFileSystemAdapter.ts
-```
-
-**Status:** ⏳ Pending review
-
----
-
-### renderer/other (4 files)
-
-```
-src/renderer/unused/RepositorySettingsModal.tsx
 src/renderer/global.d.ts
 src/renderer/dev-workspace/global.d.ts
-src/renderer/config/orbit.config.ts
 ```
 
-**Status:** ⏳ Pending review
+**Status:** ⏳ Pending review (global.d.ts files may be needed for TypeScript)
 
 ---
 
 ## Main Process Unused Files (11 files)
 
 ```
-src/main/agent-management/ClaudeInstallationService.ts
-src/main/agent-sessions/SessionEventProcessorBackend.ts
-src/main/preload-git-sync.ts
 src/main/quality-lenses/PackageLayerToToolConfigBridge.ts
-src/main/services/ipc/auth/authHandlers.ts
+src/main/services/store/types/index.ts
+src/main/services/store/types/session.types.ts
 src/main/system/clipboardHandler.ts
 src/main/terminal/phase2-future/worker/ptyWorker.ts
 src/main/terminal/phase2-future/worker/types.ts
 src/main/terminal/phase2-future/worker/WorkerManager.ts
+src/main/version-control-providers/GitService.ts
 src/main/window/callimachusWindow.ts
 src/main/window/windowDefaults.ts
+src/main/window/windowTypes.ts
 ```
 
 **Status:** ⏳ Pending review
 
 **Notes:**
 - `terminal/phase2-future/*` - WIP worker implementation, keep for now
-- `preload-git-sync.ts` - May be a preload script entry point
+- `services/store/types/*` - May be imported dynamically or needed for type definitions
+
+---
+
+## Shared Unused Files (15 files) 🆕
+
+```
+src/shared/configs/gitignorePatterns.ts
+src/shared/configs/index.ts
+src/shared/configs/types.ts
+src/shared/git/githubTokenAuth.ts
+src/shared/ipc-events/CallimachusEvents.ts
+src/shared/ipc-events/MonitoringEvents.ts
+src/shared/main-process-api-interfaces/DevWorkspaceAPI.ts
+src/shared/repository-core/FileSystemCore.ts
+src/shared/repository-core/index.ts
+src/shared/sessionTypes.ts
+src/shared/types/alexandria.types.ts
+src/shared/types/devServer.types.ts
+src/shared/types/docsTheme.types.ts
+src/shared/types/document-discovery.types.ts
+src/shared/utils/githubUrlParser.ts
+```
+
+**Status:** ⏳ Pending review
+
+**Notes:**
+- Many of these may be type definitions imported elsewhere
+- `ipc-events/*` - IPC event definitions that may be used at runtime
+
+---
+
+## Titlebar Unused Files (4 files) 🆕
+
+```
+src/titlebar/index.js
+src/titlebar/index.tsx
+src/titlebar/RemoteAgentTitlebar.js
+src/titlebar/RemoteAgentTitlebar.tsx
+```
+
+**Status:** ⏳ Pending review
+
+**Notes:**
+- Appears to have duplicate JS/TSX files - may need cleanup
+- Could be entry points not configured in knip.json
+
+---
+
+## Window Unused Files (3 files) 🆕
+
+```
+src/window/main-process-api-implementations/extensionApi.ts
+src/window/preload-dev-workspace.ts
+src/window/preload-extension-window.ts
+```
+
+**Status:** ⏳ Pending review
+
+**Notes:**
+- `preload-*.ts` files are likely preload script entry points
+- May need to be added to knip.json entry points
+
+---
+
+## Other Unused Files (1 file) 🆕
+
+```
+src/setupTests.js
+```
+
+**Status:** ⏳ Pending review - May be Jest setup file
 
 ---
 
@@ -302,7 +269,27 @@ grep -r "from.*filename" src/
 
 | Date | Files Removed | Notes |
 |------|---------------|-------|
+| 2025-12-14 | ~41 | Major cleanup - many renderer subdirectories now clean |
 | 2025-11-28 | 2 | Removed `MetricBox.tsx`, `RightPaneContainer.tsx` from renderer/components |
 | 2025-11-28 | 2 | Removed `src/event-processing-server/types/` directory (duplicate of `types.ts`) |
 | 2025-11-28 | 0 | Initial audit |
+
+### 2025-12-14 Summary
+
+**Total:** 113 → 72 files (-41, -36% reduction)
+
+**Cleaned renderer subdirectories:**
+- hooks (5 files removed)
+- panels (3 files removed - moved to external package)
+- types (2 files removed)
+- contexts (2 files removed)
+- adapters (2 files removed)
+- pages (1 file removed)
+- config (1 file removed)
+- repo-manager (5 files - directory removed entirely)
+
+**New categories identified:**
+- shared: 15 files (newly detected by knip)
+- titlebar: 4 files (entry points may need knip config)
+- window: 3 files (preload scripts may need knip config)
 
