@@ -22,7 +22,6 @@ import {
   ServerStats,
   ProcessEventMessage,
   StorageResponseMessage,
-  RepositoryInfoResponseMessage,
   PingMessage,
   GetStatsMessage,
   createWindowBroadcastMessage,
@@ -194,9 +193,6 @@ export class EventProcessingServer extends EventEmitter {
           case 'STORAGE_RESPONSE':
             this.handleStorageResponse(message);
             break;
-          case 'REPOSITORY_INFO_RESPONSE':
-            this.handleRepositoryInfoResponse(message);
-            break;
           case 'SHUTDOWN':
             await this.handleShutdown();
             break;
@@ -341,36 +337,6 @@ export class EventProcessingServer extends EventEmitter {
       pending.resolve(message.data);
     } else {
       pending.reject(new Error(message.error || 'Storage operation failed'));
-    }
-  }
-
-  /**
-   * Handle repository info response from main process
-   */
-  private handleRepositoryInfoResponse(
-    message: RepositoryInfoResponseMessage,
-  ): void {
-    const pending = this.pendingRequests.get(message.id);
-    if (!pending) {
-      this.log(
-        'warn',
-        `Received repository info response for unknown request: ${message.id}`,
-      );
-      return;
-    }
-
-    // Clear timeout
-    if (pending.timeoutHandle) {
-      clearTimeout(pending.timeoutHandle);
-    }
-    this.pendingRequests.delete(message.id);
-
-    // Resolve with repository info or null
-    if (message.error) {
-      this.log('warn', `Repository info request failed: ${message.error}`);
-      pending.resolve(null);
-    } else {
-      pending.resolve(message.repositoryInfo);
     }
   }
 

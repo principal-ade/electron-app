@@ -2,10 +2,7 @@
  * Types for communication between event processing server and main process
  */
 
-import type {
-  RepositoryInfo,
-  SupportedAgent,
-} from '@principal-ai/agent-monitoring';
+import type { SupportedAgent } from '@principal-ai/agent-monitoring';
 
 /**
  * Configuration for the event processing server
@@ -76,11 +73,6 @@ export interface StorageRequestMessage extends BaseServerMessage {
   data?: unknown;
 }
 
-export interface RepositoryInfoRequestMessage extends BaseServerMessage {
-  type: 'REPOSITORY_INFO_REQUEST';
-  absolutePath: string;
-}
-
 export interface WindowBroadcastMessage extends BaseServerMessage {
   type: 'WINDOW_BROADCAST';
   channel: string;
@@ -109,7 +101,6 @@ export type ServerToMainMessage =
   | ReadyMessage
   | ProcessedEventMessage
   | StorageRequestMessage
-  | RepositoryInfoRequestMessage
   | WindowBroadcastMessage
   | ProcessingCompleteMessage
   | ServerStatsMessage
@@ -131,12 +122,6 @@ export interface StorageResponseMessage extends BaseClientMessage {
   error?: string;
 }
 
-export interface RepositoryInfoResponseMessage extends BaseClientMessage {
-  type: 'REPOSITORY_INFO_RESPONSE';
-  repositoryInfo: RepositoryInfo | null;
-  error?: string;
-}
-
 export interface ShutdownMessage extends BaseClientMessage {
   type: 'SHUTDOWN';
 }
@@ -152,7 +137,6 @@ export interface GetStatsMessage extends BaseClientMessage {
 export type MainToServerMessage =
   | ProcessEventMessage
   | StorageResponseMessage
-  | RepositoryInfoResponseMessage
   | ShutdownMessage
   | PingMessage
   | GetStatsMessage;
@@ -179,17 +163,6 @@ export function createStorageRequestMessage(
     namespace,
     key,
     data,
-  };
-}
-
-export function createRepositoryInfoRequestMessage(
-  absolutePath: string,
-): RepositoryInfoRequestMessage {
-  return {
-    type: 'REPOSITORY_INFO_REQUEST',
-    id: generateMessageId('repo-info'),
-    timestamp: Date.now(),
-    absolutePath,
   };
 }
 
@@ -241,12 +214,6 @@ export function isWindowBroadcastMessage(
   msg: ServerToMainMessage,
 ): msg is WindowBroadcastMessage {
   return msg.type === 'WINDOW_BROADCAST';
-}
-
-export function isRepositoryInfoRequestMessage(
-  msg: ServerToMainMessage,
-): msg is RepositoryInfoRequestMessage {
-  return msg.type === 'REPOSITORY_INFO_REQUEST';
 }
 
 export function isProcessedEventMessage(

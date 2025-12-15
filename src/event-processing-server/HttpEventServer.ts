@@ -27,7 +27,6 @@ import {
   EventProcessingServerConfig,
   MainToServerMessage,
   PendingRequest,
-  RepositoryInfoResponseMessage,
   ServerToMainMessage,
   StorageResponseMessage,
 } from './types';
@@ -501,20 +500,6 @@ export class HttpEventServer extends EventEmitter {
   }
 
   /**
-   * Log important events
-   */
-  /**
-   * Request repository info from main process
-   */
-  private requestRepositoryInfo(
-    absolutePath: string,
-  ): Promise<RepositoryInfo | null> {
-    return this.makeRequest<RepositoryInfo | null>('REPOSITORY_INFO_REQUEST', {
-      absolutePath,
-    });
-  }
-
-  /**
    * Generic request handler with timeout
    */
   private makeRequest<T>(
@@ -581,9 +566,6 @@ export class HttpEventServer extends EventEmitter {
           new Error(storageMessage.error || 'Storage operation failed'),
         );
       }
-    } else if (message.type === 'REPOSITORY_INFO_RESPONSE') {
-      const repoMessage = message as RepositoryInfoResponseMessage;
-      pending.resolve(repoMessage.repositoryInfo);
     } else {
       pending.reject(new Error(`Unhandled response type: ${message.type}`));
     }

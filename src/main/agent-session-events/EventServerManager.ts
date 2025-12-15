@@ -7,15 +7,11 @@ import { app, utilityProcess, UtilityProcess, BrowserWindow } from 'electron';
 import { EventEmitter } from 'events';
 import * as path from 'path';
 
-import { repositoryCache } from '../stores/RepositoryCache';
-
 import {
   ServerToMainMessage,
   MainToServerMessage,
   ProcessedEventMessage,
-  RepositoryInfoRequestMessage,
   WindowBroadcastMessage,
-  isRepositoryInfoRequestMessage,
   isWindowBroadcastMessage,
   isProcessedEventMessage,
 } from '../../event-processing-server/types';
@@ -229,8 +225,6 @@ export class EventServerManager extends EventEmitter {
 
       if (isProcessedEventMessage(msg)) {
         await this.handleProcessedEvent(msg);
-      } else if (isRepositoryInfoRequestMessage(msg)) {
-        await this.handleRepositoryInfoRequest(msg);
       } else if (isWindowBroadcastMessage(msg)) {
         this.handleWindowBroadcast(msg);
       } else if (msg.type === 'SERVER_ERROR') {
@@ -371,46 +365,6 @@ export class EventServerManager extends EventEmitter {
       'debug',
       `Broadcast ${repoNormalizedEvent.eventType} to ${windows.length} windows`,
     );
-  }
-
-  /**
-   * Handle repository info requests from server
-   */
-  private async handleRepositoryInfoRequest(
-    msg: RepositoryInfoRequestMessage,
-  ): Promise<void> {
-    try {
-      const repoInfo = await repositoryCache.getRepositoryForPath(
-        msg.absolutePath,
-      );
-
-      let repositoryInfo = null;
-      if (repoInfo?.gitInfo.root) {
-        repositoryInfo = {
-          root: repoInfo.gitInfo.root,
-          remoteUrl: repoInfo.gitInfo.remoteUrl,
-          owner: repoInfo.gitInfo.owner,
-          repo: repoInfo.gitInfo.repo,
-          branch: repoInfo.gitInfo.branch,
-          headCommit: repoInfo.gitInfo.headCommit,
-        };
-      }
-
-      this.sendToWorker({
-        type: 'REPOSITORY_INFO_RESPONSE',
-        id: msg.id,
-        timestamp: Date.now(),
-        repositoryInfo,
-      });
-    } catch (error) {
-      this.sendToWorker({
-        type: 'REPOSITORY_INFO_RESPONSE',
-        id: msg.id,
-        timestamp: Date.now(),
-        repositoryInfo: null,
-        error: (error as Error).message,
-      });
-    }
   }
 
   /**

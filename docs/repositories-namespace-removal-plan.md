@@ -72,31 +72,27 @@ Custom avatar storage was removed entirely (Option C). Now using only GitHub ava
 
 ---
 
-### Phase 3: Replace RepositoryCache
+### Phase 3: Replace RepositoryCache ✅ COMPLETE
 
-`RepositoryCache` is used by `EventServerManager` for path → repository lookups.
+`RepositoryCache` was used by `EventServerManager` for path → repository lookups. This dependency has been removed.
 
-#### 3.1 Create Lightweight Git Info Cache
-```typescript
-// New: src/main/stores/GitInfoCache.ts
-class GitInfoCache {
-  private cache: Map<string, { remoteUrl: string; owner: string; repo: string }>;
+#### 3.1 Create Lightweight Git Info Cache ✅ (Not Needed)
+The event server (`HttpEventServer`) already has its own self-contained `ServerPathNormalizationAdapter` with:
+- In-memory cache (5-minute TTL)
+- Direct git CLI operations (`git rev-parse`, `git config`, etc.)
+- No dependency on main process for repository info
 
-  async getGitInfoForPath(path: string): Promise<GitInfo | null> {
-    // Check cache first
-    // If miss, call GitService.getGitInfo()
-    // Cache result (in-memory only, no persistence)
-  }
-}
-```
-
-#### 3.2 Update EventServerManager
-- [ ] Replace `repositoryCache.getRepositoryForPath()` with new `GitInfoCache`
-- [ ] Only needs: remote URL, owner, repo name (not full Repository object)
+#### 3.2 Update EventServerManager ✅
+- [x] Removed `repositoryCache` import and dependency
+- [x] Removed dead `handleRepositoryInfoRequest()` method
+- [x] Removed `REPOSITORY_INFO_REQUEST`/`REPOSITORY_INFO_RESPONSE` IPC message types
+- [x] Event server is now fully self-contained for repository info lookups
 
 #### 3.3 Remove RepositoryCache.ts
 - [ ] Delete `src/main/stores/RepositoryCache.ts`
 - [ ] Remove initialization from startup
+
+**Note:** RepositoryCache.ts can now be removed entirely since EventServerManager no longer depends on it. The only remaining consumer is `RepositoryApiEventHandler`, which will be removed in Phase 4.
 
 ---
 
