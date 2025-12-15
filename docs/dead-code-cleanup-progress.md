@@ -23,13 +23,13 @@ npx knip --files 2>&1 | grep "^src/renderer/components/"
 
 ## Current Status (Updated - 2025-12-14)
 
-**Total unused files: 72** ⬇️ **-41 from previous (was 113)**
+**Total unused files: 68** ⬇️ **-45 from previous (was 113)**
 
 ### By Top-Level Directory
 
 | Directory | Unused Files | Change |
 |-----------|--------------|--------|
-| renderer | 36 | ⬇️ **-46** |
+| renderer | 32 | ⬇️ **-50** |
 | shared | 15 | 🆕 New |
 | main | 11 | - |
 | titlebar | 4 | 🆕 New |
@@ -44,7 +44,7 @@ npx knip --files 2>&1 | grep "^src/renderer/components/"
 | main-process-api | 11 | - |
 | utils | 10 | - |
 | services | 7 | ⬇️ **-7** |
-| components | 6 | ⬇️ **-15** |
+| components | 2 | ⬇️ **-19** |
 | global.d.ts | 1 | - |
 | dev-workspace | 1 | - |
 | hooks | ✅ Clean | ⬇️ **-5** 🎉 |
@@ -58,15 +58,11 @@ npx knip --files 2>&1 | grep "^src/renderer/components/"
 
 ## Detailed File Lists
 
-### renderer/components (6 files)
+### renderer/components (2 files)
 
 ```
 src/renderer/components/DeleteWorkspaceConfirmationModal.tsx
-src/renderer/components/landing-page/AnimatedTimelineEvent.tsx
-src/renderer/components/markdown/index.ts
 src/renderer/components/SaveWorkspaceModal.tsx
-src/renderer/components/Titlebar/TitlebarOpenInIDE.tsx
-src/renderer/components/Titlebar/WorkspaceSelector.tsx
 ```
 
 **Status:** ⏳ Pending review
@@ -269,6 +265,7 @@ grep -r "from.*filename" src/
 
 | Date | Files Removed | Notes |
 |------|---------------|-------|
+| 2025-12-14 | 4 | Removed AnimatedTimelineEvent, markdown/index, TitlebarOpenInIDE, WorkspaceSelector |
 | 2025-12-14 | ~41 | Major cleanup - many renderer subdirectories now clean |
 | 2025-11-28 | 2 | Removed `MetricBox.tsx`, `RightPaneContainer.tsx` from renderer/components |
 | 2025-11-28 | 2 | Removed `src/event-processing-server/types/` directory (duplicate of `types.ts`) |
@@ -276,7 +273,7 @@ grep -r "from.*filename" src/
 
 ### 2025-12-14 Summary
 
-**Total:** 113 → 72 files (-41, -36% reduction)
+**Total:** 113 → 68 files (-45, -40% reduction)
 
 **Cleaned renderer subdirectories:**
 - hooks (5 files removed)
