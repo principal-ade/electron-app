@@ -1,4 +1,4 @@
-import { HighlightLayer } from '@principal-ai/code-city-react';
+import { HighlightLayer } from '@principal-ai/file-city-react';
 
 const CUSTOM_LAYERS_KEY_PREFIX = 'customArchitectureLayers';
 

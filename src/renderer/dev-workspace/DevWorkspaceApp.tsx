@@ -94,7 +94,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   const [layout, setLayout] = useState<PanelLayout>({
     left: 'gitChanges',
     middle: 'terminal',
-    right: 'codeCity',
+    right: 'fileCity',
   });
   const [hasGitHubFolder, setHasGitHubFolder] = useState(false);
 
@@ -213,7 +213,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         setLayout({
           left: 'packageComposition',
           middle: 'terminal',
-          right: 'codeCity',
+          right: 'fileCity',
         });
         setCollapsed({ left: false, right: false });
       }),

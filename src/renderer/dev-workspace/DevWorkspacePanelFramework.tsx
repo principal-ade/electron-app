@@ -5,7 +5,7 @@ import {
   type PanelLayout,
 } from '@principal-ade/panel-layouts';
 // CSS is bundled inline in principal-view-panels, no separate import needed
-// Note: code-city-panel CSS is bundled inline, no separate import needed
+// Note: file-city-panel CSS is bundled inline, no separate import needed
 import {
   RepositoryPanelProvider,
   useRepositoryPanelProvider,
@@ -24,7 +24,7 @@ import {
   panels as principalViewPanels,
   ConfigLibraryBrowserPanel,
 } from '@industry-theme/principal-view-panels';
-import { panels as codeCityPanels } from '@industry-theme/code-city-panel';
+import { panels as fileCityPanels } from '@industry-theme/file-city-panel';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import { panels as alexandriaPanels } from '@industry-theme/alexandria-panels';
 import { panels as localhostPanels } from '@industry-theme/localhost-panels';
@@ -99,11 +99,11 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     [context, terminalCtx.terminalSessions, terminalCtx.terminalContext],
   );
 
-  // Create merged context for Code City panel (includes agent highlight layers)
-  const codeCityPanelContext = useMemo(
+  // Create merged context for File City panel (includes agent highlight layers)
+  const fileCityPanelContext = useMemo(
     () => ({
       ...context,
-      // Add agent highlight layers as a data slice for Code City
+      // Add agent highlight layers as a data slice for File City
       slices: new Map([
         ...Array.from(context.slices?.entries() || []),
         [
@@ -125,7 +125,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   );
 
   const PrincipalViewPanelComponent = principalViewPanels[0]?.component;
-  const CodeCityPanelComponent = codeCityPanels[0]?.component;
+  const FileCityPanelComponent = fileCityPanels[0]?.component;
   const DocsPanelComponent = docsPanels[0]?.component;
   const LocalProjectsPanelComponent = alexandriaPanels.find(
     (p) => p.metadata?.id === 'industry-theme.local-projects',
@@ -198,9 +198,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         ),
       },
       {
-        id: 'codeCity',
-        label: 'Code City',
-        content: CodeCityPanelComponent ? (
+        id: 'fileCity',
+        label: 'File City',
+        content: FileCityPanelComponent ? (
           <div
             style={{
               height: '100%',
@@ -211,14 +211,14 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               flexDirection: 'column',
             }}
           >
-            <CodeCityPanelComponent
-              context={codeCityPanelContext}
+            <FileCityPanelComponent
+              context={fileCityPanelContext}
               actions={actions}
               events={events}
             />
           </div>
         ) : (
-          <div>Code City panel not available</div>
+          <div>File City panel not available</div>
         ),
       },
       {
@@ -462,7 +462,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     ],
     [
       PrincipalViewPanelComponent,
-      CodeCityPanelComponent,
+      FileCityPanelComponent,
       DocsPanelComponent,
       LocalProjectsPanelComponent,
       GitChangesPanelComponent,
@@ -479,7 +479,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       terminalDirectory,
       terminalPanelContext,
       terminalActions,
-      codeCityPanelContext,
+      fileCityPanelContext,
     ],
   );
 

@@ -32,7 +32,7 @@ import { useRepositoryGitStatus } from '../hooks/useRepositoryGitStatus';
 const AVAILABLE_PANELS: PanelOption[] = [
   { id: 'codeQuality', label: 'Code Quality' },
   { id: 'docs', label: 'Documentation' },
-  { id: 'codeCity', label: 'File City' },
+  { id: 'fileCity', label: 'File City' },
   { id: 'configLibrary', label: 'Architecture Library' },
   { id: 'gitChanges', label: 'File Tree' },
   { id: 'localhostBrowser', label: 'Localhost Browser' },
@@ -63,13 +63,13 @@ export const DEFAULT_PANEL_PRESETS: PanelPreset[] = [
     id: 'default',
     name: 'Default',
     description: 'Package Composition, Terminal, File City',
-    layout: { left: 'packageComposition', middle: 'terminal', right: 'codeCity' },
+    layout: { left: 'packageComposition', middle: 'terminal', right: 'fileCity' },
   },
   {
     id: 'principal-view',
     name: 'Principal View',
     description: 'Principal View, Terminal, File City',
-    layout: { left: 'principalView', middle: 'terminal', right: 'codeCity' },
+    layout: { left: 'principalView', middle: 'terminal', right: 'fileCity' },
   },
   {
     id: 'docs-focused',
@@ -81,7 +81,7 @@ export const DEFAULT_PANEL_PRESETS: PanelPreset[] = [
     id: 'terminal-focused',
     name: 'Terminal Focus',
     description: 'File City, Terminal, Principal View',
-    layout: { left: 'codeCity', middle: 'terminal', right: 'principalView' },
+    layout: { left: 'fileCity', middle: 'terminal', right: 'principalView' },
   },
   {
     id: 'storybook',

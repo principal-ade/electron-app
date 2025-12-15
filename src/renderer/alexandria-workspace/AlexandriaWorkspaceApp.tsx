@@ -40,7 +40,7 @@ const AlexandriaWorkspaceContent: React.FC = () => {
   const [layout, setLayout] = useState<PanelLayout>({
     left: 'workspace-repos',
     middle: 'terminal',
-    right: 'code-city',
+    right: 'file-city',
   });
 
   // Track the currently selected repository

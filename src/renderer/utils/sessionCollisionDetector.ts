@@ -1,4 +1,4 @@
-import { HighlightLayer, LayerItem } from '@principal-ai/code-city-react';
+import { HighlightLayer, LayerItem } from '@principal-ai/file-city-react';
 
 export interface SessionLayer {
   sessionId: string;

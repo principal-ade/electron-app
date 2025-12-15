@@ -69,7 +69,7 @@ export const repositoryPanelCatalog = [
     id: 'cityVisualization',
     label: 'City Visualization',
     description:
-      'Interactive code-city visualization derived from the repository structure.',
+      'Interactive file-city visualization derived from the repository structure.',
     slices: ['fileTree'] as const,
     surfaces: ['explorer', 'manager', 'agent'] as const,
   },

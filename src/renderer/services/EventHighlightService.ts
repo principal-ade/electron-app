@@ -1,12 +1,12 @@
 /**
- * EventHighlightService - Convert agent events into Code City highlight layers
+ * EventHighlightService - Convert agent events into File City highlight layers
  *
- * This service listens to agent events and creates highlight layers for the Code City visualization.
+ * This service listens to agent events and creates highlight layers for the File City visualization.
  * It maintains an in-memory history of events and allows navigation through them.
  */
 
 import { EventEmitter } from 'events';
-import type { HighlightLayer } from '@principal-ai/code-city-react';
+import type { HighlightLayer } from '@principal-ai/file-city-react';
 import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 import { FileOperation } from '@principal-ai/agent-monitoring';
 

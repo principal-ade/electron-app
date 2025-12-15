@@ -8,7 +8,7 @@ import React, {
   useCallback,
   type ReactNode,
 } from 'react';
-import type { HighlightLayer } from '@principal-ai/code-city-react';
+import type { HighlightLayer } from '@principal-ai/file-city-react';
 import { EventHighlightService } from '../services/EventHighlightService';
 import { AgentSessionSDKService } from '../main-process-api/AgentSessionSDKService';
 

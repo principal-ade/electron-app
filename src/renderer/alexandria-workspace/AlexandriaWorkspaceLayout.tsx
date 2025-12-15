@@ -12,7 +12,7 @@ import { PanelProvider, usePanelProvider } from '../contexts/PanelContext';
 import { TabbedTerminalPanel } from '@industry-theme/xterm-terminal-panel';
 import { panels as workspacePanels } from '@industry-theme/alexandria-panels';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
-import { panels as codeCityPanels } from '@industry-theme/code-city-panel';
+import { panels as fileCityPanels } from '@industry-theme/file-city-panel';
 import { panels as localhostPanels } from '@industry-theme/localhost-panels';
 import { panels as agentDrivenPanels } from '@industry-theme/agent-driven-ui-panels';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
@@ -260,7 +260,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     (p) => p.metadata?.id === 'industry-theme.local-projects',
   )?.component;
   const DocsPanelComponent = docsPanels[0]?.component;
-  const CodeCityPanelComponent = codeCityPanels[0]?.component;
+  const FileCityPanelComponent = fileCityPanels[0]?.component;
   const LocalhostPanelComponent = localhostPanels[0]?.component;
   const EventBusPanelComponent = agentDrivenPanels.find(
     (p) => p.metadata?.id === 'industry-theme.event-bus-panel',
@@ -403,9 +403,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
         ),
       },
       {
-        id: 'code-city',
-        label: 'Code City',
-        content: CodeCityPanelComponent ? (
+        id: 'file-city',
+        label: 'File City',
+        content: FileCityPanelComponent ? (
           <div
             style={{
               width: '100%',
@@ -419,7 +419,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
             {enableKeyboardShortcuts && (
               <FocusIndicator isFocused={isFocused('right')} />
             )}
-            <CodeCityPanelComponent
+            <FileCityPanelComponent
               context={context}
               actions={actions}
               events={events}
@@ -641,7 +641,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       WorkspacePanelComponent,
       LocalProjectsPanelComponent,
       DocsPanelComponent,
-      CodeCityPanelComponent,
+      FileCityPanelComponent,
       LocalhostPanelComponent,
       EventBusPanelComponent,
       AgentToolsPanelComponent,
@@ -688,7 +688,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
 const DEFAULT_LAYOUT: PanelLayout = {
   left: 'workspace-repos',
   middle: 'terminal',
-  right: 'code-city',
+  right: 'file-city',
 };
 
 export const AlexandriaWorkspaceLayout: React.FC<
