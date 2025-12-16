@@ -260,6 +260,14 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                 onToggle={onToggleLeftSidebar}
                 side="left"
                 iconSize={16}
+                style={{
+                  background: theme.colors.backgroundTertiary,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: '6px',
+                  padding: '6px 8px',
+                  minHeight: '34px',
+                  boxSizing: 'border-box',
+                }}
               />
             )}
 
@@ -280,6 +288,14 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                 onSwitch={onSwitchLeftMiddlePanels}
                 variant="left-middle"
                 iconSize={16}
+                style={{
+                  background: theme.colors.backgroundTertiary,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: '6px',
+                  padding: '6px 8px',
+                  minHeight: '34px',
+                  boxSizing: 'border-box',
+                }}
               />
             )}
 
@@ -811,6 +827,12 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
               onSwitch={onSwitchRightMiddlePanels}
               variant="right-middle"
               iconSize={16}
+              style={{
+                background: theme.colors.backgroundTertiary,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: '6px',
+                padding: '6px',
+              }}
             />
           )}
 
@@ -832,6 +854,12 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
               onToggle={onToggleRightSidebar}
               side="right"
               iconSize={16}
+              style={{
+                background: theme.colors.backgroundTertiary,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: '6px',
+                padding: '6px',
+              }}
             />
           )}
         </div>

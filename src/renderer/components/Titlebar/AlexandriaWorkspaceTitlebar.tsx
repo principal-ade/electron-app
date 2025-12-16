@@ -142,6 +142,14 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
             onToggle={onToggleLeftSidebar}
             side="left"
             iconSize={16}
+            style={{
+              background: theme.colors.backgroundTertiary,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: '6px',
+              padding: '6px 8px',
+              minHeight: '34px',
+              boxSizing: 'border-box',
+            }}
           />
         )}
 
@@ -162,6 +170,14 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
             onSwitch={onSwitchLeftMiddlePanels}
             variant="left-middle"
             iconSize={16}
+            style={{
+              background: theme.colors.backgroundTertiary,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: '6px',
+              padding: '6px 8px',
+              minHeight: '34px',
+              boxSizing: 'border-box',
+            }}
           />
         )}
       </div>
@@ -415,6 +431,14 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
             onSwitch={onSwitchRightMiddlePanels}
             variant="right-middle"
             iconSize={16}
+            style={{
+              background: theme.colors.backgroundTertiary,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: '6px',
+              padding: '6px 8px',
+              minHeight: '34px',
+              boxSizing: 'border-box',
+            }}
           />
         )}
 
@@ -436,6 +460,14 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
             onToggle={onToggleRightSidebar}
             side="right"
             iconSize={16}
+            style={{
+              background: theme.colors.backgroundTertiary,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: '6px',
+              padding: '6px 8px',
+              minHeight: '34px',
+              boxSizing: 'border-box',
+            }}
           />
         )}
       </div>
