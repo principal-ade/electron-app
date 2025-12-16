@@ -492,8 +492,6 @@
     "quit": "q"
   },
   "overrides": {
-    "unicorn-magic": "^0.3.0",
-    "ajv": "^8.17.1",
-    "ajv-keywords": "^5.1.0"
+    "unicorn-magic": "^0.3.0"
   }
 }
