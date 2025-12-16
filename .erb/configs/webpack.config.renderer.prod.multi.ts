@@ -331,36 +331,33 @@ const configuration: webpack.Configuration = {
         ],
       },
       {
-        // WOFF Font
+        // WOFF Font - use webpack 5 asset modules
         test: /\.woff(\?v=\d+\.\d+\.\d+)?$/,
-        use: {
-          loader: 'url-loader',
-          options: {
-            limit: 10000,
-            mimetype: 'application/font-woff',
+        type: 'asset',
+        parser: {
+          dataUrlCondition: {
+            maxSize: 10000,
           },
         },
       },
       {
-        // WOFF2 Font
+        // WOFF2 Font - use webpack 5 asset modules
         test: /\.woff2(\?v=\d+\.\d+\.\d+)?$/,
-        use: {
-          loader: 'url-loader',
-          options: {
-            limit: 10000,
-            mimetype: 'application/font-woff',
+        type: 'asset',
+        parser: {
+          dataUrlCondition: {
+            maxSize: 10000,
           },
         },
       },
       {
-        // TTF Font
+        // TTF Font - use webpack 5 asset modules
         test: /\.ttf(\?v=\d+\.\d+\.\d+)?$/,
         exclude: /(^|\/)roboto-mono[^/]*$/i,
-        use: {
-          loader: 'url-loader',
-          options: {
-            limit: 10000,
-            mimetype: 'application/octet-stream',
+        type: 'asset',
+        parser: {
+          dataUrlCondition: {
+            maxSize: 10000,
           },
         },
       },
@@ -369,30 +366,31 @@ const configuration: webpack.Configuration = {
         type: 'asset/source',
       },
       {
-        // EOT Font
+        // EOT Font - use webpack 5 asset modules
         test: /\.eot(\?v=\d+\.\d+\.\d+)?$/,
-        use: 'file-loader',
+        type: 'asset/resource',
       },
       {
-        // SVG Font
+        // SVG Font - use webpack 5 asset modules
         test: /\.svg(\?v=\d+\.\d+\.\d+)?$/,
-        use: {
-          loader: 'url-loader',
-          options: {
-            limit: 10000,
-            mimetype: 'image/svg+xml',
+        type: 'asset',
+        parser: {
+          dataUrlCondition: {
+            maxSize: 10000,
           },
         },
       },
       {
-        // Common Image Formats
+        // Common Image Formats - use webpack 5 asset modules
         test: /\.(png|jpg|jpeg|gif|webp)$/,
-        use: {
-          loader: 'url-loader',
-          options: {
-            limit: 10000,
-            name: 'images/[name].[ext]',
+        type: 'asset',
+        parser: {
+          dataUrlCondition: {
+            maxSize: 10000,
           },
+        },
+        generator: {
+          filename: 'images/[name][ext]',
         },
       },
     ],
