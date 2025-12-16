@@ -249,22 +249,8 @@ const WorkspacesViewContent: React.FC = () => {
           tabPosition: 'top' as const,
         },
       },
-      middle: {
-        type: 'tabs' as const,
-        panels: ['repository-quality-grid'],
-        config: {
-          defaultActiveTab: 0,
-          tabPosition: 'top' as const,
-        },
-      },
-      right: {
-        type: 'tabs' as const,
-        panels: ['workspace-repositories'],
-        config: {
-          defaultActiveTab: 0,
-          tabPosition: 'top' as const,
-        },
-      },
+      middle: 'repository-quality-grid',
+      right: 'workspace-repositories',
     };
   }, [isAuthenticated]);
 
