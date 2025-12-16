@@ -2,6 +2,7 @@ import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { CustomThemeProvider } from '../providers/CustomThemeProvider';
 import { GlobalFeedbackProvider } from '../GlobalFeedbackProvider';
+import { PrincipalEventProvider } from './PrincipalEventContext';
 import { IntegratedShell } from './components/IntegratedShell/IntegratedShell';
 
 export const PrincipalApp: React.FC = () => {
@@ -9,7 +10,9 @@ export const PrincipalApp: React.FC = () => {
     <CustomThemeProvider>
       <GlobalFeedbackProvider>
         <MemoryRouter>
-          <IntegratedShell />
+          <PrincipalEventProvider>
+            <IntegratedShell />
+          </PrincipalEventProvider>
         </MemoryRouter>
       </GlobalFeedbackProvider>
     </CustomThemeProvider>

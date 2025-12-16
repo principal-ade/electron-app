@@ -166,10 +166,10 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     [],
   );
 
-  // Initialize Agent Command Palette (Alt+P to open)
+  // Initialize Agent Command Palette (Cmd+Shift+P to open)
   const agentPalette = useAgentCommandPalette({
     events,
-    keyboard: { key: 'p', altKey: true },
+    keyboard: { key: 'p', metaKey: true, shiftKey: true, altKey: false },
     config: {
       placeholder: 'What would you like to do?',
       autoCloseDelay: 1500,

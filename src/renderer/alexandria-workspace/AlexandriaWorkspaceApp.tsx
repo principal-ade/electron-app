@@ -1,6 +1,10 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type { PanelLayout } from '@principal-ade/panel-layouts';
+import {
+  AgentCommandPalette,
+  useAgentCommandPalette,
+} from '@principal-ade/panel-layouts';
 import type {
   Workspace,
   AlexandriaEntry,
@@ -12,6 +16,10 @@ import { AlexandriaWorkspaceTitlebar } from '../components/Titlebar';
 import { AlexandriaWorkspaceLayout } from './AlexandriaWorkspaceLayout';
 import { CustomThemeProvider } from '../providers/CustomThemeProvider';
 import { GlobalFeedbackProvider } from '../GlobalFeedbackProvider';
+import {
+  AlexandriaWorkspaceEventProvider,
+  useAlexandriaWorkspaceEvents,
+} from './AlexandriaWorkspaceEventContext';
 
 /**
  * Alexandria Workspace Window Content
@@ -29,6 +37,7 @@ interface RepoGitStatus {
 
 const AlexandriaWorkspaceContent: React.FC = () => {
   const { theme } = useTheme();
+  const { events } = useAlexandriaWorkspaceEvents();
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [workspaceRepositories, setWorkspaceRepositories] = useState<
     AlexandriaEntry[]
@@ -76,6 +85,105 @@ const AlexandriaWorkspaceContent: React.FC = () => {
       middle: prev.right,
     }));
   }, []);
+
+  // Quick command handler for Agent Command Palette
+  const handleQuickCommand = useCallback(
+    async (name: string, args: Record<string, unknown>) => {
+      switch (name) {
+        case 'toggle': {
+          const panel = (args.args as string[])?.[0];
+          if (panel === 'left') {
+            setCollapsed((prev) => ({ ...prev, left: !prev.left }));
+          } else if (panel === 'right') {
+            setCollapsed((prev) => ({ ...prev, right: !prev.right }));
+          }
+          return { success: true };
+        }
+        case 'collapse':
+          setCollapsed({ left: true, right: true });
+          return { success: true };
+        case 'expand':
+          setCollapsed({ left: false, right: false });
+          return { success: true };
+        case 'switch': {
+          const [slot, panelName] = (args.args as string[]) || [];
+          if (slot && panelName) {
+            setLayout((prev) => ({ ...prev, [slot]: panelName }));
+          }
+          return { success: true };
+        }
+        case 'reset':
+          setLayout({
+            left: 'workspace-repos',
+            middle: 'terminal',
+            right: 'file-city',
+          });
+          setCollapsed({ left: false, right: false });
+          return { success: true };
+        default:
+          return { error: `Unknown command: ${name}` };
+      }
+    },
+    [],
+  );
+
+  // Event listeners for panel events from Agent Command Palette
+  useEffect(() => {
+    if (!events) return;
+
+    const unsubscribers = [
+      events.on('panel:toggle', (event) => {
+        const payload = event.payload as { panel?: string };
+        const panelId = payload.panel;
+        if (panelId === 'left') {
+          setCollapsed((prev) => ({ ...prev, left: !prev.left }));
+        } else if (panelId === 'right') {
+          setCollapsed((prev) => ({ ...prev, right: !prev.right }));
+        }
+      }),
+      events.on('panel:collapse-all', () => {
+        setCollapsed({ left: true, right: true });
+      }),
+      events.on('panel:expand-all', () => {
+        setCollapsed({ left: false, right: false });
+      }),
+      events.on('panel:switch', (event) => {
+        const payload = event.payload as { slot?: string; panel?: string };
+        if (payload.slot && payload.panel) {
+          setLayout((prev) => ({ ...prev, [payload.slot!]: payload.panel }));
+        }
+      }),
+      events.on('panel:reset-layout', () => {
+        setLayout({
+          left: 'workspace-repos',
+          middle: 'terminal',
+          right: 'file-city',
+        });
+        setCollapsed({ left: false, right: false });
+      }),
+    ];
+
+    return () => {
+      unsubscribers.forEach((unsub) => unsub());
+    };
+  }, [events]);
+
+  // Initialize Agent Command Palette (Cmd+Shift+P to open)
+  const agentPalette = useAgentCommandPalette({
+    events,
+    keyboard: { key: 'p', metaKey: true, shiftKey: true, altKey: false },
+    config: {
+      placeholder: 'What would you like to do?',
+      autoCloseDelay: 1500,
+    },
+    onExecuteTool: handleQuickCommand,
+    initialSuggestions: [
+      'hide sidebars',
+      'show terminal',
+      'collapse panels',
+      'expand panels',
+    ],
+  });
 
   useEffect(() => {
     // Get workspace ID from URL parameters
@@ -455,6 +563,14 @@ const AlexandriaWorkspaceContent: React.FC = () => {
         onLayoutChange={setLayout}
         onRepositorySelected={setSelectedRepository}
       />
+
+      {/* Agent Command Palette - Cmd+Shift+P to open */}
+      <AgentCommandPalette
+        palette={agentPalette}
+        config={{
+          placeholder: 'What would you like to do?',
+        }}
+      />
     </div>
   );
 };
@@ -524,7 +640,9 @@ export const AlexandriaWorkspaceApp: React.FC = () => {
   return (
     <CustomThemeProvider workspaceThemeName={workspaceTheme}>
       <GlobalFeedbackProvider>
-        <AlexandriaWorkspaceContent />
+        <AlexandriaWorkspaceEventProvider>
+          <AlexandriaWorkspaceContent />
+        </AlexandriaWorkspaceEventProvider>
       </GlobalFeedbackProvider>
     </CustomThemeProvider>
   );

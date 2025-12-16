@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { NavigationSidebar } from './NavigationSidebar';
 import { IntegratedTitlebar } from './IntegratedTitlebar';
 import { useTheme } from '@principal-ade/industry-theme';
@@ -12,6 +12,11 @@ import { UserPreferencesService } from '../../../main-process-api/UserPreference
 import { PresenceService } from '../../../main-process-api/PresenceService';
 import { SecureAuthService } from '../../../services/SecureAuthService';
 import type { InteractiveShellNavigationView } from '../../../../shared/types/userPreferences.types';
+import {
+  AgentCommandPalette,
+  useAgentCommandPalette,
+} from '@principal-ade/panel-layouts';
+import { usePrincipalEvents } from '../../PrincipalEventContext';
 import './IntegratedShell.css';
 
 export type NavigationView = InteractiveShellNavigationView;
@@ -42,6 +47,7 @@ export const IntegratedShell: React.FC = () => {
   const [activeView, setActiveView] = useState<NavigationView>('workspaces');
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const { theme, mode } = useTheme();
+  const { events } = usePrincipalEvents();
 
   // Store collapsed states per view to avoid animation glitches when switching
   const [viewCollapsedStates, setViewCollapsedStates] = useState<
@@ -249,6 +255,136 @@ export const IntegratedShell: React.FC = () => {
     }
   };
 
+  // Handle quick commands from Agent Command Palette
+  const handleQuickCommand = useCallback(
+    async (name: string, args: Record<string, unknown>) => {
+      switch (name) {
+        case 'toggle': {
+          const panel = (args.args as string[])?.[0];
+          if (panel === 'left') {
+            handleToggleSidebar();
+          } else if (panel === 'right') {
+            handleToggleRightSidebar();
+          }
+          return { success: true };
+        }
+        case 'collapse':
+          setViewCollapsedStates((prev) => {
+            const newStates = { ...prev };
+            Object.keys(newStates).forEach((key) => {
+              newStates[key] = { left: true, right: true };
+            });
+            return newStates;
+          });
+          return { success: true };
+        case 'expand':
+          setViewCollapsedStates((prev) => {
+            const newStates = { ...prev };
+            Object.keys(newStates).forEach((key) => {
+              newStates[key] = { left: false, right: false };
+            });
+            return newStates;
+          });
+          return { success: true };
+        case 'switch': {
+          const viewName = (args.args as string[])?.[0] as NavigationView;
+          if (viewName) {
+            handleViewChange(viewName);
+          }
+          return { success: true };
+        }
+        case 'reset':
+          setActiveView('workspaces');
+          setViewCollapsedStates({
+            auth: { left: false, right: false },
+            monitoring: { left: false, right: false },
+            search: { left: false, right: false },
+            settings: { left: false, right: false },
+            workspaces: { left: false, right: false },
+            network: { left: false, right: false },
+          });
+          return { success: true };
+        default:
+          return { error: `Unknown command: ${name}` };
+      }
+    },
+    [handleToggleSidebar, handleToggleRightSidebar, handleViewChange],
+  );
+
+  // Event listeners for panel events from Agent Command Palette
+  useEffect(() => {
+    if (!events) return;
+
+    const unsubscribers = [
+      events.on('panel:toggle', (event) => {
+        const payload = event.payload as { panel?: string };
+        const panelId = payload.panel;
+        if (panelId === 'left') {
+          handleToggleSidebar();
+        } else if (panelId === 'right') {
+          handleToggleRightSidebar();
+        }
+      }),
+      events.on('panel:collapse-all', () => {
+        setViewCollapsedStates((prev) => {
+          const newStates = { ...prev };
+          Object.keys(newStates).forEach((key) => {
+            newStates[key] = { left: true, right: true };
+          });
+          return newStates;
+        });
+      }),
+      events.on('panel:expand-all', () => {
+        setViewCollapsedStates((prev) => {
+          const newStates = { ...prev };
+          Object.keys(newStates).forEach((key) => {
+            newStates[key] = { left: false, right: false };
+          });
+          return newStates;
+        });
+      }),
+      events.on('panel:switch', (event) => {
+        const payload = event.payload as { view?: string };
+        if (payload.view) {
+          handleViewChange(payload.view as NavigationView);
+        }
+      }),
+      events.on('panel:reset-layout', () => {
+        setActiveView('workspaces');
+        setViewCollapsedStates({
+          auth: { left: false, right: false },
+          monitoring: { left: false, right: false },
+          search: { left: false, right: false },
+          settings: { left: false, right: false },
+          workspaces: { left: false, right: false },
+          network: { left: false, right: false },
+        });
+      }),
+    ];
+
+    return () => {
+      unsubscribers.forEach((unsub) => unsub());
+    };
+  }, [events, handleToggleSidebar, handleToggleRightSidebar, handleViewChange]);
+
+  // Agent Command Palette - Cmd+Shift+P to open
+  const agentPalette = useAgentCommandPalette({
+    events,
+    keyboard: { key: 'p', metaKey: true, shiftKey: true, altKey: false },
+    config: {
+      placeholder: 'What would you like to do?',
+      autoCloseDelay: 1500,
+    },
+    onExecuteTool: handleQuickCommand,
+    initialSuggestions: [
+      'switch to workspaces',
+      'switch to settings',
+      'switch to monitoring',
+      'collapse sidebars',
+      'expand sidebars',
+    ],
+  });
+
   const backgroundColor =
     mode === 'dark' && theme.modes?.dark?.background
       ? theme.modes.dark.background
@@ -327,6 +463,14 @@ export const IntegratedShell: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Agent Command Palette - Cmd+Shift+P to open */}
+      <AgentCommandPalette
+        palette={agentPalette}
+        config={{
+          placeholder: 'What would you like to do?',
+        }}
+      />
     </div>
   );
 };
