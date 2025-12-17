@@ -15,6 +15,8 @@ import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import { panels as fileCityPanels } from '@industry-theme/file-city-panel';
 import { panels as localhostPanels } from '@industry-theme/localhost-panels';
 import { panels as agentDrivenPanels } from '@industry-theme/agent-driven-ui-panels';
+import { panels as markdownPanels } from '@industry-theme/markdown-panels';
+import { panels as principalViewPanels } from '@industry-theme/principal-view-panels';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { WindowService } from '../main-process-api/WindowService';
 
@@ -233,9 +235,18 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
         }
 
         try {
-          // Use the new function that handles relative paths in the main process
+          // Convert absolute path to relative for the handler
+          let relativeFilePath = filePath;
+          const repoPrefix = repositoryPath.endsWith('/')
+            ? repositoryPath
+            : repositoryPath + '/';
+
+          if (filePath.startsWith(repoPrefix)) {
+            relativeFilePath = filePath.substring(repoPrefix.length);
+          }
+
           await WindowService.openMarkdownViewFromRepository(
-            filePath,
+            relativeFilePath,
             repositoryPath,
             {
               viewMode: 'single',
@@ -253,6 +264,57 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     return unsubscribe;
   }, [events, context]);
 
+  // Listen for doc:openInRightPanel events (from Alexandria docs panel context menu)
+  useEffect(() => {
+    const unsubscribe = events.on('doc:openInRightPanel', async (event) => {
+      const doc = event.payload as {
+        path: string;
+        relativePath: string;
+        name: string;
+      };
+
+      console.info(
+        '[AlexandriaWorkspaceLayout] Open in right panel event received:',
+        doc,
+      );
+
+      // Get the file path (prefer absolute path, fall back to relative)
+      const filePath = doc.path || doc.relativePath;
+
+      if (!filePath) {
+        console.warn(
+          '[AlexandriaWorkspaceLayout] No file path in doc:openInRightPanel event',
+        );
+        return;
+      }
+
+      try {
+        // Set the active file (reads content and updates slice)
+        await actions.setActiveFile?.(filePath);
+
+        // Switch the right panel to markdown-viewer
+        onLayoutChange({ ...layout, right: 'markdown-viewer' });
+
+        // Expand the right panel if it's collapsed
+        if (collapsed.right) {
+          onCollapsedChange({ ...collapsed, right: false });
+        }
+
+        console.info(
+          '[AlexandriaWorkspaceLayout] Switched right panel to markdown-viewer for:',
+          filePath,
+        );
+      } catch (error) {
+        console.error(
+          '[AlexandriaWorkspaceLayout] Failed to open in right panel:',
+          error,
+        );
+      }
+    });
+
+    return unsubscribe;
+  }, [events, actions, layout, onLayoutChange, collapsed, onCollapsedChange]);
+
   // Get panel components
   // Use WorkspaceRepositoriesPanel (panels[1]) which expects workspace + workspaceRepositories slices
   const WorkspacePanelComponent = workspacePanels[1]?.component;
@@ -268,6 +330,8 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   const AgentToolsPanelComponent = agentDrivenPanels.find(
     (p) => p.metadata?.id === 'industry-theme.agent-tools-panel',
   )?.component;
+  const MarkdownPanelComponent = markdownPanels[0]?.component;
+  const PrincipalViewPanelComponent = principalViewPanels[0]?.component;
 
   // Get terminal directory from context
   const terminalDirectory =
@@ -632,6 +696,98 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
           </div>
         ),
       },
+      {
+        id: 'markdown-viewer',
+        label: 'Markdown Viewer',
+        content: MarkdownPanelComponent ? (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('right')} />
+            )}
+            <MarkdownPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: '16px',
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+              height: '100%',
+              overflow: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('right')} />
+            )}
+            <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
+              Markdown Viewer panel not available
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: 'principal-view',
+        label: 'Architecture',
+        content: PrincipalViewPanelComponent ? (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <PrincipalViewPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: '16px',
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+              height: '100%',
+              overflow: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
+              Architecture panel not available
+            </p>
+          </div>
+        ),
+      },
     ],
     [
       theme,
@@ -645,6 +801,8 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       LocalhostPanelComponent,
       EventBusPanelComponent,
       AgentToolsPanelComponent,
+      MarkdownPanelComponent,
+      PrincipalViewPanelComponent,
       isFocused,
       enableKeyboardShortcuts,
       terminalContext,

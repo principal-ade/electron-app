@@ -156,7 +156,7 @@ export class RemoteAgentWindowManager {
     }
 
     // Hide all views first
-    for (const [id, otherAgent] of this.remoteAgents.entries()) {
+    for (const [_id, otherAgent] of this.remoteAgents.entries()) {
       if (otherAgent.view) {
         otherAgent.view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
       }

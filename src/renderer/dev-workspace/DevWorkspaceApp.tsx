@@ -224,72 +224,6 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     };
   }, [events]);
 
-  // Monitoring status state
-  const [monitoringStatus, setMonitoringStatus] = useState<{
-    registered: boolean;
-    gitWatching: boolean;
-    loading: boolean;
-    error?: string;
-  }>({ registered: false, gitWatching: false, loading: true });
-
-  // Initialize repository monitoring on mount
-  useEffect(() => {
-    if (!repositoryPath) return;
-
-    const initializeMonitoring = async () => {
-      // Watch lifecycle is managed by main process window handlers
-      // Just check the current monitoring status
-      try {
-        const status = await RepositoryMonitoringService.getMonitoringStatus();
-        const repoInfo = status.repositories.find((r) => r.path === repositoryPath);
-
-        setMonitoringStatus({
-          registered: !!repoInfo,
-          gitWatching: repoInfo?.isWatching || false,
-          loading: false,
-        });
-        console.log('[DevWorkspaceApp] Monitoring status:', repoInfo);
-      } catch (error) {
-        console.error(
-          '[DevWorkspaceApp] Failed to get monitoring status:',
-          error,
-        );
-        setMonitoringStatus({
-          registered: false,
-          gitWatching: false,
-          loading: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
-      }
-    };
-
-    initializeMonitoring();
-  }, [repositoryPath]);
-
-  // Refresh monitoring status
-  const refreshMonitoringStatus = useCallback(async () => {
-    if (!repositoryPath) return;
-
-    setMonitoringStatus((prev) => ({ ...prev, loading: true }));
-
-    try {
-      const status = await RepositoryMonitoringService.getMonitoringStatus();
-      const repoInfo = status.repositories.find((r) => r.path === repositoryPath);
-
-      setMonitoringStatus({
-        registered: !!repoInfo,
-        gitWatching: repoInfo?.isWatching || false,
-        loading: false,
-      });
-    } catch (error) {
-      setMonitoringStatus((prev) => ({
-        ...prev,
-        loading: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      }));
-    }
-  }, [repositoryPath]);
-
   // Check for .github folder on mount
   useEffect(() => {
     if (!repositoryPath) return;
@@ -623,8 +557,6 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         }
         onLayoutChange={(newLayout) => setLayout(newLayout)}
         onCollapsedChange={setCollapsed}
-        monitoringStatus={monitoringStatus}
-        onRefreshMonitoring={refreshMonitoringStatus}
         repositoryPath={repositoryPath}
       />
       <div className="flex-1 overflow-hidden">

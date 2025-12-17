@@ -17,12 +17,14 @@ import {
 } from './PanelSelectorDropdown';
 
 // Available panels for Alexandria workspace
+// Ordered to match dev workspace panel options
 const AVAILABLE_PANELS: PanelOption[] = [
-  { id: 'workspace-repos', label: 'Repositories' },
-  { id: 'local-projects', label: 'Local Projects' },
+  { id: 'principal-view', label: 'Architecture' },
   { id: 'alexandria-docs', label: 'Documentation' },
   { id: 'file-city', label: 'File City' },
+  { id: 'local-projects', label: 'Local Projects' },
   { id: 'localhost-browser', label: 'Localhost Browser' },
+  { id: 'workspace-repos', label: 'Repositories' },
   { id: 'terminal', label: 'Terminal' },
 ];
 

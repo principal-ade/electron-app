@@ -37,20 +37,20 @@ npm run lint 2>&1 | grep -E "^/Users/griever/Developer/desktop-app/electron-app/
 npm run typecheck 2>&1 | grep "error TS" | grep "src/renderer/" | sed 's|.*src/renderer/||' | cut -d'/' -f1 | sort | uniq -c | sort -nr
 ```
 
-## Current Status (Updated - 2025-12-16)
+## Current Status (Updated - 2025-12-17)
 
 ### Overall Issues
 
-* **ESLint**: 789 total issues (490 errors, 299 warnings) ⬇️ **-3 total, -11 errors (prev: 792 total, 501 errors, 291 warnings)**
-* **TypeScript**: 128 errors ⬇️ **-2 from previous (was 130)**
-* **Console.log warnings**: 232 ⬇️ **-1 (was 233)**
+* **ESLint**: 754 total issues (455 errors, 299 warnings) ⬇️ **-35 total, -35 errors (prev: 789 total, 490 errors, 299 warnings)**
+* **TypeScript**: 129 errors ⬆️ **+1 from previous (was 128)**
+* **Console.log warnings**: 232 (unchanged)
 
 ### Recent Changes
 
-* Components ESLint issues reduced from 15 to 12 (-3)
-* Components TypeScript errors reduced from 24 to 20 (-4)
-* Main directory TypeScript errors increased by 2 (33 → 35)
-* Overall slight improvement - continued progress on components cleanup
+* Main directory ESLint issues reduced from 53 to 47 (-6) - unused imports/vars cleanup
+* Deleted unused `fetchRemoteInfo` method from GitBranchService
+* Removed unused imports across multiple main process files
+* TypeScript errors slightly increased due to stricter checking
 
 ### By Top-Level Directory
 
@@ -58,9 +58,9 @@ npm run typecheck 2>&1 | grep "error TS" | grep "src/renderer/" | sed 's|.*src/r
 
 | Directory                    | Issues | % of Total | Change       |
 | ---------------------------- | ------ | ---------- | ------------ |
-| renderer                     | 69     | 54.8%      | ⬇️ **-2**    |
-| main                         | 53     | 42.1%      | ⬆️ **+1**    |
-| window                       | 3      | 2.4%       | -            |
+| renderer                     | 69     | 57.5%      | -            |
+| main                         | 47     | 39.2%      | ⬇️ **-6**    |
+| window                       | 3      | 2.5%       | -            |
 | shared                       | 1      | 0.8%       | -            |
 | repository-monitoring-server | 0      | ✅ Clean    | -            |
 | titlebar                     | 0      | ✅ Clean    | -            |
@@ -70,8 +70,8 @@ npm run typecheck 2>&1 | grep "error TS" | grep "src/renderer/" | sed 's|.*src/r
 
 | Directory                    | Errors   | % of Total | Change       |
 | ---------------------------- | -------- | ---------- | ------------ |
-| renderer                     | 87       | 68.0%      | ⬇️ **-4**    |
-| main                         | 35       | 27.3%      | ⬆️ **+2**    |
+| renderer                     | 87       | 67.4%      | -            |
+| main                         | 36       | 27.9%      | ⬆️ **+1**    |
 | shared                       | 4        | 3.1%       | -            |
 | window                       | 2        | 1.6%       | -            |
 | repository-monitoring-server | 0        | ✅ Clean    | -            |
@@ -152,7 +152,7 @@ npm run typecheck 2>&1 | grep "error TS" | grep "src/renderer/" | sed 's|.*src/r
 
 1. **shared** - 1 ESLint issue + 4 TypeScript errors = 5 total
 2. **window** - 3 ESLint issues + 2 TypeScript errors = 5 total
-3. **main** - 53 ESLint issues + 35 TypeScript errors = 88 total ⬆️ **+3**
+3. **main** - 47 ESLint issues + 36 TypeScript errors = 83 total ⬇️ **-5**
 4. **repository-monitoring-server** - 0 ESLint issues + 0 TypeScript errors = ✅ **Clean!**
 
 ### Priority 4: Large Renderer Areas
@@ -172,13 +172,11 @@ npm run typecheck 2>&1 | grep "error TS" | grep "src/renderer/" | sed 's|.*src/r
 
 🎯 **Improved Directories** (since last update):
 
-* **renderer/components** - ESLint issues decreased -3 (from 15 to 12)
-* **renderer/components** - TypeScript errors decreased -4 (from 24 to 20)
+* **main** - ESLint issues decreased -6 (from 53 to 47) - unused imports/vars cleanup
 
 ⚠️ **Areas Needing Attention**:
 
-* **main** - TypeScript errors increased +2 (33 → 35)
-* **main** - ESLint issues increased +1 (52 → 53)
+* **main** - TypeScript errors slightly increased +1 (35 → 36)
 
 ## Cleanup Best Practices
 
@@ -220,7 +218,26 @@ Many "services" are just stubs that should be removed:
 * Have "STUB:" comments
 * These can often be simplified or removed entirely
 
-## Recent Changes (2025-12-16 - Latest)
+## Recent Changes (2025-12-17 - Latest)
+
+### Overall Progress
+
+- **ESLint**: 789 → 754 (-35 issues, -4.4% reduction)
+- **TypeScript**: 128 → 129 (+1 error)
+- **Console.log**: 232 (unchanged)
+
+### Summary
+
+Major cleanup of unused imports and variables in main process files.
+
+- **main** improved: ESLint 53 → 47 (-6)
+- Deleted unused `fetchRemoteInfo` method from `GitBranchService`
+- Removed unused imports: `setupQuickOpenHandlers`, `EnvironmentConfig`, `TOKEN_KEYS`, `gitStatusService`, `GitRemote`, `BrowserWindow`, `MenuItem`, `applicationWindows`, `app`, `RepositorySecrets`, `TypedNamespaceRegistry`, `packageManager` destructuring
+- Fixed unused caught errors by prefixing with `_`
+
+---
+
+## Changes (2025-12-16)
 
 ### Overall Progress
 

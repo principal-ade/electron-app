@@ -71,6 +71,8 @@ interface RepositoryPanelActions extends PanelActions {
   registerRepository?: (name: string, path: string) => Promise<void>;
   removeRepository?: (name: string, deleteLocal: boolean) => Promise<void>;
   openRepository?: (entry: AlexandriaEntry) => Promise<void>;
+  // Active file management for markdown panel
+  setActiveFile?: (filePath: string | null) => Promise<void>;
 }
 
 // Extended context for repository panels
@@ -140,6 +142,15 @@ export const RepositoryPanelProvider: React.FC<
 
   // Loading state
   const [loading] = useState(false);
+
+  // Track active file for markdown panel (and other file viewers)
+  const [activeFileData, setActiveFileData] = useState<{
+    path: string;
+    content: string;
+    type: string;
+  } | null>(null);
+  const [activeFileLoading, setActiveFileLoading] = useState(false);
+  const [activeFileError, setActiveFileError] = useState<Error | null>(null);
 
   // Helper to extract owner/repo from git remote URL
   const parseGitHubRemote = (
@@ -579,6 +590,61 @@ export const RepositoryPanelProvider: React.FC<
           throw error;
         }
       },
+
+      // Active file management for markdown panel
+      setActiveFile: async (filePath: string | null) => {
+        if (!filePath) {
+          // Clear the active file
+          setActiveFileData(null);
+          setActiveFileError(null);
+          return;
+        }
+
+        setActiveFileLoading(true);
+        setActiveFileError(null);
+
+        try {
+          const absolutePath = filePath.startsWith('/')
+            ? filePath
+            : `${repositoryPath}/${filePath}`;
+
+          console.info(
+            '[RepositoryPanelProvider] Setting active file:',
+            absolutePath,
+          );
+
+          const result = await FileSystemService.readFile(absolutePath);
+
+          if (!result) {
+            throw new Error(`Failed to read file: ${filePath}`);
+          }
+
+          // Determine file type from extension
+          const extension = filePath.split('.').pop()?.toLowerCase() || '';
+          const type =
+            extension === 'md' ||
+            extension === 'mdx' ||
+            extension === 'markdown'
+              ? 'markdown'
+              : extension;
+
+          setActiveFileData({
+            path: absolutePath,
+            content: result.content,
+            type,
+          });
+        } catch (error) {
+          console.error(
+            '[RepositoryPanelProvider] Failed to set active file:',
+            error,
+          );
+          setActiveFileError(
+            error instanceof Error ? error : new Error('Failed to read file'),
+          );
+        } finally {
+          setActiveFileLoading(false);
+        }
+      },
     }),
     [repositoryPath, events],
   );
@@ -847,6 +913,47 @@ export const RepositoryPanelProvider: React.FC<
             },
           },
         ],
+        [
+          'active-file',
+          {
+            scope: 'repository' as const,
+            name: 'active-file',
+            data: activeFileData,
+            loading: activeFileLoading,
+            error: activeFileError,
+            refresh: async () => {
+              // Re-read the file if there's an active file
+              if (activeFileData?.path) {
+                setActiveFileLoading(true);
+                try {
+                  const absolutePath = activeFileData.path.startsWith('/')
+                    ? activeFileData.path
+                    : `${repositoryPath}/${activeFileData.path}`;
+                  const result =
+                    await FileSystemService.readFile(absolutePath);
+                  if (result) {
+                    setActiveFileData({
+                      ...activeFileData,
+                      content: result.content,
+                    });
+                  }
+                } catch (error) {
+                  console.error(
+                    '[RepositoryPanelProvider] Failed to refresh active file:',
+                    error,
+                  );
+                  setActiveFileError(
+                    error instanceof Error
+                      ? error
+                      : new Error('Failed to refresh file'),
+                  );
+                } finally {
+                  setActiveFileLoading(false);
+                }
+              }
+            },
+          },
+        ],
       ]),
     [
       repositoryPath,
@@ -861,6 +968,9 @@ export const RepositoryPanelProvider: React.FC<
       alexandriaRepositoriesLoading,
       qualityData,
       qualityLoading,
+      activeFileData,
+      activeFileLoading,
+      activeFileError,
     ],
   );
 

@@ -6,9 +6,6 @@ import {
   Terminal,
   Globe,
   Check,
-  Eye,
-  EyeOff,
-  Loader2,
   Copy,
   Play,
 } from 'lucide-react';
@@ -124,14 +121,6 @@ export interface DevWorkspaceTitlebarProps {
     right: string;
   }) => void;
   onCollapsedChange?: (collapsed: { left: boolean; right: boolean }) => void;
-  // Monitoring status
-  monitoringStatus?: {
-    registered: boolean;
-    gitWatching: boolean;
-    loading: boolean;
-    error?: string;
-  };
-  onRefreshMonitoring?: () => void;
   // Repository path for copy
   repositoryPath?: string;
 }
@@ -155,8 +144,6 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
   currentLayout,
   onLayoutChange,
   onCollapsedChange,
-  monitoringStatus,
-  onRefreshMonitoring,
   repositoryPath,
 }) => {
   const { theme } = useTheme();
@@ -298,7 +285,7 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
               />
             )}
 
-            {/* Hover-reveal buttons: Monitoring Status & Copy Path */}
+            {/* Hover-reveal button: Copy Path */}
             <div
               style={{
                 display: 'flex',
@@ -309,77 +296,6 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                 transition: 'opacity 0.2s ease, visibility 0.2s ease',
               }}
             >
-              {/* Monitoring Status Button */}
-              {monitoringStatus && (
-                <button
-                  onClick={onRefreshMonitoring}
-                  disabled={monitoringStatus.loading}
-                  title={
-                    monitoringStatus.loading
-                      ? 'Initializing monitoring...'
-                      : monitoringStatus.registered &&
-                          monitoringStatus.gitWatching
-                        ? 'Monitoring active - Click to refresh'
-                        : monitoringStatus.error
-                          ? `Monitoring error: ${monitoringStatus.error} - Click to retry`
-                          : 'Monitoring inactive - Click to retry'
-                  }
-                  style={{
-                    // @ts-ignore - WebkitAppRegion is not in CSSProperties
-                    WebkitAppRegion: 'no-drag',
-                    background: theme.colors.backgroundTertiary,
-                    border: `1px solid ${theme.colors.border}`,
-                    color: theme.colors.textSecondary,
-                    cursor: monitoringStatus.loading
-                      ? 'not-allowed'
-                      : 'pointer',
-                    padding: '6px 12px',
-                    borderRadius: '6px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    transition: 'all 0.2s',
-                    fontSize: `${theme.fontSizes[1]}px`,
-                    fontWeight: theme.fontWeights.medium,
-                    opacity: monitoringStatus.loading ? 0.7 : 1,
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!monitoringStatus.loading) {
-                      e.currentTarget.style.backgroundColor =
-                        theme.colors.backgroundSecondary;
-                      e.currentTarget.style.borderColor = theme.colors.primary;
-                      e.currentTarget.style.color = theme.colors.text;
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor =
-                      theme.colors.backgroundTertiary;
-                    e.currentTarget.style.borderColor = theme.colors.border;
-                    e.currentTarget.style.color = theme.colors.textSecondary;
-                  }}
-                >
-                  {monitoringStatus.loading ? (
-                    <Loader2
-                      size={14}
-                      style={{ animation: 'spin 1s linear infinite' }}
-                    />
-                  ) : monitoringStatus.registered &&
-                    monitoringStatus.gitWatching ? (
-                    <Eye size={14} style={{ color: theme.colors.success }} />
-                  ) : (
-                    <EyeOff size={14} style={{ color: theme.colors.warning }} />
-                  )}
-                  <span>
-                    {monitoringStatus.loading
-                      ? 'Starting...'
-                      : monitoringStatus.registered &&
-                          monitoringStatus.gitWatching
-                        ? 'Watching'
-                        : 'Inactive'}
-                  </span>
-                </button>
-              )}
-
               {/* Copy Path Button */}
               {repositoryPath && (
                 <button

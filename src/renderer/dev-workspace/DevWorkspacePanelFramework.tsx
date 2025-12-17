@@ -28,6 +28,7 @@ import { panels as localhostPanels } from '@industry-theme/localhost-panels';
 import { panels as agentDrivenPanels } from '@industry-theme/agent-driven-ui-panels';
 import { panels as repositoryCompositionPanels } from '@industry-theme/repository-composition-panels';
 import { panels as codeQualityPanels } from '@principal-ade/code-quality-panels';
+import { panels as markdownPanels } from '@industry-theme/markdown-panels';
 import type { Repository } from '../../shared/types/repository.types';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 
@@ -143,6 +144,58 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   const CodeQualityPanelComponent = codeQualityPanels.find(
     (p) => p.metadata?.id === 'principal-ade.quality-hexagon-panel',
   )?.component;
+  const MarkdownPanelComponent = markdownPanels[0]?.component;
+
+  // Listen for doc:openInRightPanel events (from Alexandria docs panel context menu)
+  useEffect(() => {
+    const unsubscribe = events.on('doc:openInRightPanel', async (event) => {
+      const doc = event.payload as {
+        path: string;
+        relativePath: string;
+        name: string;
+      };
+
+      console.info(
+        '[DevWorkspacePanelFramework] Open in right panel event received:',
+        doc,
+      );
+
+      // Get the file path (prefer absolute path, fall back to relative)
+      const filePath = doc.path || doc.relativePath;
+
+      if (!filePath) {
+        console.warn(
+          '[DevWorkspacePanelFramework] No file path in doc:openInRightPanel event',
+        );
+        return;
+      }
+
+      try {
+        // Set the active file (reads content and updates slice)
+        await actions.setActiveFile?.(filePath);
+
+        // Switch the right panel to markdown-viewer
+        onLayoutChange({ ...layout, right: 'markdown-viewer' });
+
+        // Expand the right panel if it's collapsed
+        if (collapsed.right) {
+          onCollapsedChange({ ...collapsed, right: false });
+        }
+
+        console.info(
+          '[DevWorkspacePanelFramework] Switched right panel to markdown-viewer for:',
+          filePath,
+        );
+      } catch (error) {
+        console.error(
+          '[DevWorkspacePanelFramework] Failed to open in right panel:',
+          error,
+        );
+      }
+    });
+
+    return unsubscribe;
+  }, [events, actions, layout, onLayoutChange, collapsed, onCollapsedChange]);
 
   // Define all panels using panel framework components
   const allPanels = useMemo(
@@ -434,6 +487,30 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           <div>Package Composition panel not available</div>
         ),
       },
+      {
+        id: 'markdown-viewer',
+        label: 'Markdown Viewer',
+        content: MarkdownPanelComponent ? (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <MarkdownPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div>Markdown Viewer panel not available</div>
+        ),
+      },
     ],
     [
       PrincipalViewPanelComponent,
@@ -446,6 +523,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       AgentToolsPanelComponent,
       CodeQualityPanelComponent,
       PackageCompositionPanelComponent,
+      MarkdownPanelComponent,
       context,
       actions,
       events,

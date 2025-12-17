@@ -131,6 +131,8 @@ interface ExtendedPanelActions extends PanelActions {
   registerRepository?: (name: string, path: string) => Promise<void>;
   removeRepository?: (name: string, deleteLocal: boolean) => Promise<void>;
   openRepository?: (entryOrId: AlexandriaEntry | string) => Promise<void>;
+  // Active file management for markdown panel
+  setActiveFile?: (filePath: string | null) => Promise<void>;
 }
 
 // Extended context interface that panels actually expect
@@ -225,6 +227,15 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
   >([]);
   const [alexandriaRepositoriesLoading, setAlexandriaRepositoriesLoading] =
     useState(false);
+
+  // Track active file for markdown panel (and other file viewers)
+  const [activeFileData, setActiveFileData] = useState<{
+    path: string;
+    content: string;
+    type: string;
+  } | null>(null);
+  const [activeFileLoading, setActiveFileLoading] = useState(false);
+  const [activeFileError, setActiveFileError] = useState<Error | null>(null);
 
   // Fetch markdown files when repository changes
   useEffect(() => {
@@ -710,6 +721,48 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
             },
           },
         ],
+        [
+          'active-file',
+          {
+            scope: 'repository' as const,
+            name: 'active-file',
+            data: activeFileData,
+            loading: activeFileLoading,
+            error: activeFileError,
+            refresh: async () => {
+              // Re-read the file if there's an active file
+              if (activeFileData?.path) {
+                setActiveFileLoading(true);
+                try {
+                  const repoPath = repository?.path || workspace?.path || '';
+                  const absolutePath = activeFileData.path.startsWith('/')
+                    ? activeFileData.path
+                    : `${repoPath}/${activeFileData.path}`;
+                  const result =
+                    await window.mainProcess.fileSystem.readFile(absolutePath);
+                  if (result) {
+                    setActiveFileData({
+                      ...activeFileData,
+                      content: result.content,
+                    });
+                  }
+                } catch (error) {
+                  console.error(
+                    '[PanelContext] Failed to refresh active file:',
+                    error,
+                  );
+                  setActiveFileError(
+                    error instanceof Error
+                      ? error
+                      : new Error('Failed to refresh file'),
+                  );
+                } finally {
+                  setActiveFileLoading(false);
+                }
+              }
+            },
+          },
+        ],
       ]),
     [
       workspace,
@@ -724,6 +777,9 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       localhostServersLoading,
       alexandriaRepositories,
       alexandriaRepositoriesLoading,
+      activeFileData,
+      activeFileLoading,
+      activeFileError,
     ],
   );
 
@@ -1200,6 +1256,55 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
           } catch (error) {
             console.error('[PanelContext] Failed to remove repository:', error);
             throw error;
+          }
+        },
+
+        // Active file management for markdown panel
+        setActiveFile: async (filePath: string | null) => {
+          if (!filePath) {
+            // Clear the active file
+            setActiveFileData(null);
+            setActiveFileError(null);
+            return;
+          }
+
+          setActiveFileLoading(true);
+          setActiveFileError(null);
+
+          try {
+            const repoPath = repository?.path || workspace?.path || '';
+            const absolutePath = filePath.startsWith('/')
+              ? filePath
+              : `${repoPath}/${filePath}`;
+
+            console.info('[PanelContext] Setting active file:', absolutePath);
+
+            const result =
+              await window.mainProcess.fileSystem.readFile(absolutePath);
+
+            if (!result) {
+              throw new Error(`Failed to read file: ${filePath}`);
+            }
+
+            // Determine file type from extension
+            const extension = filePath.split('.').pop()?.toLowerCase() || '';
+            const type =
+              extension === 'md' || extension === 'mdx' || extension === 'markdown'
+                ? 'markdown'
+                : extension;
+
+            setActiveFileData({
+              path: absolutePath,
+              content: result.content,
+              type,
+            });
+          } catch (error) {
+            console.error('[PanelContext] Failed to set active file:', error);
+            setActiveFileError(
+              error instanceof Error ? error : new Error('Failed to read file'),
+            );
+          } finally {
+            setActiveFileLoading(false);
           }
         },
       };
