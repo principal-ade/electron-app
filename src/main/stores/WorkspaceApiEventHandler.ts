@@ -86,7 +86,7 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
       const monitoringManager = getMonitoringManager();
       const status = await monitoringManager.getMonitoringStatus();
       const repoInfo = status.repositories.find((r) => r.path === repoPath);
-      return repoInfo?.gitWatchingEnabled || false;
+      return repoInfo?.isWatching || false;
     } catch (error) {
       console.error('[Workspace] Failed to check git watching status:', error);
       return false;
@@ -333,10 +333,10 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
     try {
       const monitoringManager = getMonitoringManager();
 
-      // Step 1: Disable git watching if it was enabled
+      // Step 1: Release watch if it was enabled
       if (wasGitWatching) {
-        console.log(`[Workspace] Disabling git watching for ${oldPath}`);
-        await monitoringManager.disableGitWatching(oldPath);
+        console.log(`[Workspace] Releasing watch for ${oldPath}`);
+        await monitoringManager.releaseWatch(oldPath, 'workspace-move-handler');
       }
 
       // Step 2: Unregister repository from monitoring server
@@ -376,10 +376,10 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
       );
       await monitoringManager.registerRepository(targetPath);
 
-      // Step 8: Re-enable git watching if it was enabled before
+      // Step 8: Re-acquire watch if it was enabled before
       if (wasGitWatching) {
-        console.log(`[Workspace] Re-enabling git watching for ${targetPath}`);
-        await monitoringManager.enableGitWatching(targetPath);
+        console.log(`[Workspace] Re-acquiring watch for ${targetPath}`);
+        await monitoringManager.acquireWatch(targetPath, 'workspace-move-handler');
       }
 
       // Step 9: Broadcast REPOSITORY_UPDATED event (Alexandria) for Feed panels
@@ -418,7 +418,7 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
           const monitoringManager = getMonitoringManager();
           await monitoringManager.registerRepository(oldPath);
           if (wasGitWatching) {
-            await monitoringManager.enableGitWatching(oldPath);
+            await monitoringManager.acquireWatch(oldPath, 'workspace-move-handler');
           }
 
           console.log(`[Workspace] Successfully rolled back repository move`);

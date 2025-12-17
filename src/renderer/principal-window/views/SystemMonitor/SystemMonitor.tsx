@@ -42,9 +42,6 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
   const [gitStatusData, setGitStatusData] = useState<
     Map<string, GitStatus | null>
   >(new Map());
-  const [gitWatchingState, setGitWatchingState] = useState<
-    Map<string, 'enabling' | 'disabling' | null>
-  >(new Map());
   const [packageData, setPackageData] = useState<
     Map<string, { packages: number; monorepo: boolean; loading: boolean }>
   >(new Map());
@@ -231,39 +228,6 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
     }
   };
 
-  const handleToggleGitWatching = async (repoPath: string) => {
-    const currentStatus = gitStatusData.get(repoPath);
-    const isWatching = currentStatus?.watchingEnabled || false;
-
-    // Set loading state
-    setGitWatchingState((prev) =>
-      new Map(prev).set(repoPath, isWatching ? 'disabling' : 'enabling'),
-    );
-
-    try {
-      let result;
-      if (isWatching) {
-        // Disable watching
-        result = await RepositoryMonitoringService.disableGitWatching(repoPath);
-      } else {
-        // Enable watching
-        result = await RepositoryMonitoringService.enableGitWatching(repoPath);
-      }
-
-      if (result.success) {
-        // Fetch updated status
-        const newStatus =
-          await RepositoryMonitoringService.getGitStatus(repoPath);
-        setGitStatusData((prev) => new Map(prev).set(repoPath, newStatus));
-      } else {
-        console.error('Failed to toggle git watching:', result.error);
-      }
-    } catch (error) {
-      console.error('Failed to toggle git watching:', error);
-    } finally {
-      setGitWatchingState((prev) => new Map(prev).set(repoPath, null));
-    }
-  };
 
   const fetchGitStatus = async (repoPath: string) => {
     try {
@@ -883,7 +847,6 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
               status.repositories.map((repo, index) => {
                 const treeData = fileTreeData.get(repo.path);
                 const gitStatus = gitStatusData.get(repo.path);
-                const gitToggling = gitWatchingState.get(repo.path);
                 const repoPackageData = packageData.get(repo.path);
                 return (
                   <div
@@ -982,7 +945,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                               {gitStatus.behind > 0 && (
                                 <span>↓{gitStatus.behind}</span>
                               )}
-                              {repo.gitWatchingEnabled && (
+                              {repo.isWatching && (
                                 <span
                                   style={{
                                     color: theme.colors.success,
@@ -1075,13 +1038,8 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                             Status
                           </button>
 
-                          {/* Toggle Git Watching button */}
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              handleToggleGitWatching(repo.path);
-                            }}
-                            disabled={!!gitToggling}
+                          {/* Git Watching Status (read-only) */}
+                          <div
                             style={{
                               display: 'flex',
                               alignItems: 'center',
@@ -1091,50 +1049,25 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                               border: `1px solid ${theme.colors.border}`,
                               borderRadius: '4px',
                               backgroundColor: theme.colors.background,
-                              color: gitStatus?.watchingEnabled
+                              color: repo.isWatching
                                 ? theme.colors.success
                                 : theme.colors.textSecondary,
-                              cursor: gitToggling ? 'not-allowed' : 'pointer',
-                              opacity: gitToggling ? 0.5 : 1,
-                              transition: 'all 0.15s ease',
-                            }}
-                            onMouseEnter={(e) => {
-                              if (!gitToggling) {
-                                e.currentTarget.style.backgroundColor =
-                                  gitStatus?.watchingEnabled
-                                    ? `${theme.colors.error}10`
-                                    : `${theme.colors.success}10`;
-                                e.currentTarget.style.borderColor =
-                                  gitStatus?.watchingEnabled
-                                    ? theme.colors.error
-                                    : theme.colors.success;
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor =
-                                theme.colors.background;
-                              e.currentTarget.style.borderColor =
-                                theme.colors.border;
                             }}
                             title={
-                              gitStatus?.watchingEnabled
-                                ? 'Disable git watching'
-                                : 'Enable git watching'
+                              repo.isWatching
+                                ? `Watching (${repo.watchReferenceCount} window${repo.watchReferenceCount !== 1 ? 's' : ''})`
+                                : 'Not watching'
                             }
                           >
-                            {gitStatus?.watchingEnabled ? (
-                              <EyeOff size={14} />
-                            ) : (
+                            {repo.isWatching ? (
                               <Eye size={14} />
+                            ) : (
+                              <EyeOff size={14} />
                             )}
-                            {gitToggling === 'enabling'
-                              ? 'Enabling...'
-                              : gitToggling === 'disabling'
-                                ? 'Disabling...'
-                                : gitStatus?.watchingEnabled
-                                  ? 'Watching'
-                                  : 'Watch'}
-                          </button>
+                            {repo.isWatching
+                              ? `Watching (${repo.watchReferenceCount})`
+                              : 'Not watching'}
+                          </div>
 
                           {/* Build FileTree button */}
                           <button

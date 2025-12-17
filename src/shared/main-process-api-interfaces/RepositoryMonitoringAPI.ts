@@ -126,8 +126,8 @@ export enum RepositoryMonitoringAPIEvent {
   STOP_MONITORING = 'repository-monitoring:stop',
   GET_GIT_STATUS = 'repository-monitoring:get-git-status',
   GET_GIT_STATUS_WITH_FILES = 'repository-monitoring:get-git-status-with-files',
-  ENABLE_GIT_WATCHING = 'repository-monitoring:enable-git-watching',
-  DISABLE_GIT_WATCHING = 'repository-monitoring:disable-git-watching',
+  ACQUIRE_WATCH = 'repository-monitoring:acquire-watch',
+  RELEASE_WATCH = 'repository-monitoring:release-watch',
   GIT_STATUS_CHANGED = 'repository-monitoring:git-status-changed',
   GIT_STATE_EVENT = 'repository-monitoring:git-state-event',
   WORKSPACE_CHANGED = 'repository-monitoring:workspace-change',
@@ -182,7 +182,8 @@ export interface ResourceSnapshot {
 
 export interface RepositoryInfo {
   path: string;
-  gitWatchingEnabled: boolean;
+  isWatching: boolean;
+  watchReferenceCount: number;
   fsMonitorEnabled: boolean;
   watchingMode: 'minimal' | 'fallback' | 'none';
 }
@@ -229,8 +230,8 @@ export interface RepositoryMonitoringAPI {
   stopMonitoring(): Promise<void>;
   getGitStatus(repoPath: string): Promise<GitStatusMetadata | null>;
   getGitStatusWithFiles(repoPath: string): Promise<GitStatusWithFiles | null>;
-  enableGitWatching(repoPath: string): Promise<RepositoryMonitoringResult>;
-  disableGitWatching(repoPath: string): Promise<RepositoryMonitoringResult>;
+  acquireWatch(repoPath: string, referenceId: string): Promise<RepositoryMonitoringResult>;
+  releaseWatch(repoPath: string, referenceId: string): Promise<RepositoryMonitoringResult>;
   onGitStatusChanged(callback: (status: GitStatusMetadata) => void): () => void;
   onWorkspaceChange(
     callback: (event: WorkspaceChangeEventPayload) => void,

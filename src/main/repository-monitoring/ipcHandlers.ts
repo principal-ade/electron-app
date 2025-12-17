@@ -411,19 +411,19 @@ export function registerRepositoryMonitoringHandlers(): void {
     },
   );
 
-  // Enable git watching for a repository
+  // Acquire a watch reference for a repository
   ipcMain.handle(
-    RepositoryMonitoringAPIEvent.ENABLE_GIT_WATCHING,
-    async (_event, repoPath: string) => {
+    RepositoryMonitoringAPIEvent.ACQUIRE_WATCH,
+    async (_event, repoPath: string, referenceId: string) => {
       console.log(
-        `[RepositoryMonitoring] ENABLE_GIT_WATCHING request for: ${repoPath}`,
+        `[RepositoryMonitoring] ACQUIRE_WATCH request for: ${repoPath} (reference: ${referenceId})`,
       );
       try {
-        await manager.enableGitWatching(repoPath);
+        await manager.acquireWatch(repoPath, referenceId);
         return { success: true };
       } catch (error) {
         console.error(
-          '[RepositoryMonitoring] Error enabling git watching:',
+          '[RepositoryMonitoring] Error acquiring watch:',
           error,
         );
         return {
@@ -434,19 +434,19 @@ export function registerRepositoryMonitoringHandlers(): void {
     },
   );
 
-  // Disable git watching for a repository
+  // Release a watch reference for a repository
   ipcMain.handle(
-    RepositoryMonitoringAPIEvent.DISABLE_GIT_WATCHING,
-    async (_event, repoPath: string) => {
+    RepositoryMonitoringAPIEvent.RELEASE_WATCH,
+    async (_event, repoPath: string, referenceId: string) => {
       console.log(
-        `[RepositoryMonitoring] DISABLE_GIT_WATCHING request for: ${repoPath}`,
+        `[RepositoryMonitoring] RELEASE_WATCH request for: ${repoPath} (reference: ${referenceId})`,
       );
       try {
-        await manager.disableGitWatching(repoPath);
+        await manager.releaseWatch(repoPath, referenceId);
         return { success: true };
       } catch (error) {
         console.error(
-          '[RepositoryMonitoring] Error disabling git watching:',
+          '[RepositoryMonitoring] Error releasing watch:',
           error,
         );
         return {

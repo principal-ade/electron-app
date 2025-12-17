@@ -239,18 +239,23 @@ export class RepositoryMonitoringService {
   }
 
   /**
-   * Enable git watching for a repository
+   * Acquire a watch reference for a repository.
+   * Starts watching if this is the first reference.
+   * @param repoPath - Path to the repository
+   * @param referenceId - Unique identifier for this watch reference (e.g., workspace ID)
    */
-  static async enableGitWatching(
+  static async acquireWatch(
     repoPath: string,
+    referenceId: string,
   ): Promise<RepositoryMonitoringResult> {
     try {
-      return await window.mainProcess.repositoryMonitoring.enableGitWatching(
+      return await window.mainProcess.repositoryMonitoring.acquireWatch(
         repoPath,
+        referenceId,
       );
     } catch (error) {
       console.error(
-        '[RepositoryMonitoring] Error enabling git watching:',
+        '[RepositoryMonitoring] Error acquiring watch:',
         error,
       );
       return {
@@ -261,18 +266,23 @@ export class RepositoryMonitoringService {
   }
 
   /**
-   * Disable git watching for a repository
+   * Release a watch reference for a repository.
+   * Stops watching if this was the last reference.
+   * @param repoPath - Path to the repository
+   * @param referenceId - Unique identifier for the watch reference to release
    */
-  static async disableGitWatching(
+  static async releaseWatch(
     repoPath: string,
+    referenceId: string,
   ): Promise<RepositoryMonitoringResult> {
     try {
-      return await window.mainProcess.repositoryMonitoring.disableGitWatching(
+      return await window.mainProcess.repositoryMonitoring.releaseWatch(
         repoPath,
+        referenceId,
       );
     } catch (error) {
       console.error(
-        '[RepositoryMonitoring] Error disabling git watching:',
+        '[RepositoryMonitoring] Error releasing watch:',
         error,
       );
       return {

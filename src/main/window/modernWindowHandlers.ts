@@ -15,6 +15,7 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import type { IModernApplicationWindow, WindowMetadata } from './types';
 import { PrimaryWindowType } from './types';
 import { gitStatusService } from '../services/GitStatusService';
+import { getManager as getMonitoringManager } from '../repository-monitoring/ipcHandlers';
 
 /**
  * Repository window state
@@ -474,6 +475,59 @@ export function registerModernWindowHandlers(): void {
       console.log(
         `[modernWindowHandlers] Registered Alexandria Workspace window ${window.window.id} with terminal manager`,
       );
+
+      // Acquire watches for all repositories in the workspace
+      const watchReferenceId = `alexandria-workspace:${window.window.id}`;
+      const registeredRepoPaths: string[] = [];
+
+      try {
+        const {
+          AlexandriaRegistryService,
+        } = require('../stores/AlexandriaRegistryService');
+        const service = AlexandriaRegistryService.getInstance();
+        const repositories = await service.getRepositoriesInWorkspace(workspaceId);
+        const monitoringManager = getMonitoringManager();
+
+        for (const repo of repositories) {
+          if (!repo.path) continue;
+          const repoPath = repo.path as string;
+
+          try {
+            await monitoringManager.registerRepository(repoPath);
+            await monitoringManager.acquireWatch(repoPath, watchReferenceId);
+            registeredRepoPaths.push(repoPath);
+            console.log(
+              `[modernWindowHandlers] Acquired watch for ${repoPath} (reference: ${watchReferenceId})`,
+            );
+          } catch (repoError) {
+            console.error(
+              `[modernWindowHandlers] Failed to acquire watch for ${repoPath}:`,
+              repoError,
+            );
+          }
+        }
+      } catch (error) {
+        console.error(
+          '[modernWindowHandlers] Failed to acquire watches for workspace repositories:',
+          error,
+        );
+      }
+
+      // Release watches when window closes
+      window.window.once('closed', () => {
+        const monitoringManager = getMonitoringManager();
+        for (const repoPath of registeredRepoPaths) {
+          monitoringManager.releaseWatch(repoPath, watchReferenceId).catch((err: unknown) => {
+            console.error(
+              `[modernWindowHandlers] Failed to release watch for ${repoPath}:`,
+              err,
+            );
+          });
+        }
+        console.log(
+          `[modernWindowHandlers] Released watches for ${registeredRepoPaths.length} repositories (reference: ${watchReferenceId})`,
+        );
+      });
 
       // Pass workspace ID to the window via URL parameter
       const encodedWorkspaceId = encodeURIComponent(workspaceId);

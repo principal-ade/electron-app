@@ -78,17 +78,19 @@ export const repositoryMonitoringAPI: RepositoryMonitoringAPI = {
     );
   },
 
-  enableGitWatching: async (repoPath: string) => {
+  acquireWatch: async (repoPath: string, referenceId: string) => {
     return ipcRenderer.invoke(
-      RepositoryMonitoringAPIEvent.ENABLE_GIT_WATCHING,
+      RepositoryMonitoringAPIEvent.ACQUIRE_WATCH,
       repoPath,
+      referenceId,
     );
   },
 
-  disableGitWatching: async (repoPath: string) => {
+  releaseWatch: async (repoPath: string, referenceId: string) => {
     return ipcRenderer.invoke(
-      RepositoryMonitoringAPIEvent.DISABLE_GIT_WATCHING,
+      RepositoryMonitoringAPIEvent.RELEASE_WATCH,
       repoPath,
+      referenceId,
     );
   },
 

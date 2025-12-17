@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type { PanelLayout } from '@principal-ade/panel-layouts';
 import {
@@ -66,8 +66,6 @@ const AlexandriaWorkspaceContent: React.FC = () => {
     Map<string, RepoGitStatus>
   >(new Map());
 
-  // Track which repositories have been registered for monitoring
-  const registeredReposRef = useRef<Set<string>>(new Set());
 
   // Switch handlers for panel swapping
   const handleSwitchLeftMiddle = useCallback(() => {
@@ -310,32 +308,16 @@ const AlexandriaWorkspaceContent: React.FC = () => {
     };
   }, []);
 
-  // Register workspace repositories for monitoring and enable git watching
+  // Fetch git status for workspace repositories
+  // Watch lifecycle is managed by main process window handlers
   useEffect(() => {
     if (workspaceRepositories.length === 0) return;
 
-    const initializeMonitoring = async () => {
-      // Start monitoring service if not already started
-      try {
-        await RepositoryMonitoringService.startMonitoring();
-      } catch (err) {
-        console.error(
-          '[AlexandriaWorkspaceApp] Failed to start monitoring service:',
-          err,
-        );
-        return;
-      }
-
-      // Register each repository and enable git watching
+    const fetchGitStatuses = async () => {
       for (const repo of workspaceRepositories) {
-        if (!repo.path || registeredReposRef.current.has(repo.path)) continue;
+        if (!repo.path) continue;
 
         try {
-          await RepositoryMonitoringService.registerRepository(repo.path);
-          await RepositoryMonitoringService.enableGitWatching(repo.path);
-          registeredReposRef.current.add(repo.path);
-
-          // Fetch initial git status
           const gitStatus = await RepositoryMonitoringService.getGitStatus(
             repo.path,
           );
@@ -350,14 +332,9 @@ const AlexandriaWorkspaceContent: React.FC = () => {
               return next;
             });
           }
-
-          console.info(
-            '[AlexandriaWorkspaceApp] Registered repository for monitoring:',
-            repo.path,
-          );
         } catch (err) {
           console.error(
-            '[AlexandriaWorkspaceApp] Failed to register repository:',
+            '[AlexandriaWorkspaceApp] Failed to fetch git status:',
             repo.path,
             err,
           );
@@ -365,23 +342,7 @@ const AlexandriaWorkspaceContent: React.FC = () => {
       }
     };
 
-    initializeMonitoring();
-
-    // Cleanup: unregister repositories when component unmounts
-    return () => {
-      for (const repoPath of registeredReposRef.current) {
-        RepositoryMonitoringService.disableGitWatching(repoPath).catch(
-          (err) => {
-            console.error(
-              '[AlexandriaWorkspaceApp] Failed to disable git watching:',
-              repoPath,
-              err,
-            );
-          },
-        );
-      }
-      registeredReposRef.current.clear();
-    };
+    fetchGitStatuses();
   }, [workspaceRepositories]);
 
   // Subscribe to git status changes for all workspace repositories

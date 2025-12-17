@@ -17,6 +17,7 @@ import { PrimaryWindowType, WindowMetadata } from './types';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { broadcastRepositoryWindowsChanged } from './modernWindowHandlers';
+import { getManager as getMonitoringManager } from '../repository-monitoring/ipcHandlers';
 
 const DEV_WORKSPACE_PURPOSE = 'dev-workspace';
 
@@ -126,9 +127,46 @@ export async function openDevWorkspaceWindow(
     broadcastRepositoryWindowsChanged();
   });
 
-  // Broadcast when window closes
+  // Acquire watch for the repository when window opens
+  const repoPath = alexandriaEntry.path as string;
+  const watchReferenceId = `dev-workspace:${appWindow.window.id}`;
+
+  try {
+    const monitoringManager = getMonitoringManager();
+    await monitoringManager.registerRepository(repoPath);
+    await monitoringManager.acquireWatch(repoPath, watchReferenceId);
+    console.log(
+      `[DevWorkspaceWindow] Acquired watch for ${repoPath} (reference: ${watchReferenceId})`,
+    );
+  } catch (error) {
+    console.error(
+      `[DevWorkspaceWindow] Failed to acquire watch for ${repoPath}:`,
+      error,
+    );
+  }
+
+  // Release watch and broadcast when window closes
   appWindow.window.once('closed', () => {
     broadcastRepositoryWindowsChanged();
+
+    // Release watch for the repository
+    try {
+      const monitoringManager = getMonitoringManager();
+      monitoringManager.releaseWatch(repoPath, watchReferenceId).catch((err: unknown) => {
+        console.error(
+          `[DevWorkspaceWindow] Failed to release watch for ${repoPath}:`,
+          err,
+        );
+      });
+      console.log(
+        `[DevWorkspaceWindow] Released watch for ${repoPath} (reference: ${watchReferenceId})`,
+      );
+    } catch (error) {
+      console.error(
+        `[DevWorkspaceWindow] Failed to release watch for ${repoPath}:`,
+        error,
+      );
+    }
   });
 
   return { windowId: appWindow.window.id };

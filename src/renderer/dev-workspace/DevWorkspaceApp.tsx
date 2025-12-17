@@ -237,53 +237,21 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     if (!repositoryPath) return;
 
     const initializeMonitoring = async () => {
-      setMonitoringStatus((prev) => ({
-        ...prev,
-        loading: true,
-        error: undefined,
-      }));
-
+      // Watch lifecycle is managed by main process window handlers
+      // Just check the current monitoring status
       try {
-        // Start monitoring service if not already started
-        console.log('[DevWorkspaceApp] Starting monitoring service...');
-        await RepositoryMonitoringService.startMonitoring();
-        console.log('[DevWorkspaceApp] Monitoring service started');
+        const status = await RepositoryMonitoringService.getMonitoringStatus();
+        const repoInfo = status.repositories.find((r) => r.path === repositoryPath);
 
-        // Register repository with monitoring service
-        console.log(
-          '[DevWorkspaceApp] Registering repository:',
-          repositoryPath,
-        );
-        await RepositoryMonitoringService.registerRepository(repositoryPath);
-        console.log('[DevWorkspaceApp] Repository registered successfully');
-
-        // Enable git watching for the repository
-        console.log('[DevWorkspaceApp] Enabling git watching:', repositoryPath);
-        const result =
-          await RepositoryMonitoringService.enableGitWatching(repositoryPath);
-
-        if (result.success) {
-          console.log('[DevWorkspaceApp] Git watching enabled successfully');
-          setMonitoringStatus({
-            registered: true,
-            gitWatching: true,
-            loading: false,
-          });
-        } else {
-          console.warn(
-            '[DevWorkspaceApp] Failed to enable git watching:',
-            result.error,
-          );
-          setMonitoringStatus({
-            registered: true,
-            gitWatching: false,
-            loading: false,
-            error: result.error,
-          });
-        }
+        setMonitoringStatus({
+          registered: !!repoInfo,
+          gitWatching: repoInfo?.isWatching || false,
+          loading: false,
+        });
+        console.log('[DevWorkspaceApp] Monitoring status:', repoInfo);
       } catch (error) {
         console.error(
-          '[DevWorkspaceApp] Failed to initialize monitoring:',
+          '[DevWorkspaceApp] Failed to get monitoring status:',
           error,
         );
         setMonitoringStatus({
@@ -305,16 +273,13 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     setMonitoringStatus((prev) => ({ ...prev, loading: true }));
 
     try {
-      // Re-register and re-enable watching
-      await RepositoryMonitoringService.registerRepository(repositoryPath);
-      const result =
-        await RepositoryMonitoringService.enableGitWatching(repositoryPath);
+      const status = await RepositoryMonitoringService.getMonitoringStatus();
+      const repoInfo = status.repositories.find((r) => r.path === repositoryPath);
 
       setMonitoringStatus({
-        registered: true,
-        gitWatching: result.success,
+        registered: !!repoInfo,
+        gitWatching: repoInfo?.isWatching || false,
         loading: false,
-        error: result.success ? undefined : result.error,
       });
     } catch (error) {
       setMonitoringStatus((prev) => ({
