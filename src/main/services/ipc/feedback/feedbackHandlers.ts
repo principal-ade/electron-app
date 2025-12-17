@@ -1,5 +1,4 @@
-import { ipcMain, Menu, BrowserWindow, MenuItem } from 'electron';
-import { applicationWindows } from '../../../window/modernWindowManager';
+import { ipcMain, Menu, BrowserWindow } from 'electron';
 import { FeedbackEvent } from '../../../../shared/ipc-events/FeedbackEvents';
 import type {
   ContextMenuParams,

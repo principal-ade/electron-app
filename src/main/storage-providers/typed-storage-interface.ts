@@ -1,9 +1,5 @@
 import { StorageProvider, StorageResult, StaticNamespaces } from './types';
-import {
-  NamespaceDataTypes,
-  TypedNamespaceRegistry,
-  NamespaceData,
-} from './typed-namespaces';
+import { NamespaceDataTypes, NamespaceData } from './typed-namespaces';
 import { StorageNamespaces } from './all-namespaces';
 import { StorageStats } from '../../shared/main-process-api-interfaces/StoreAPI';
 

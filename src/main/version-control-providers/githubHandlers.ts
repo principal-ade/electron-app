@@ -3,10 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import fetch from 'node-fetch';
 import { electronCLI } from '../electron-cli-bridge';
-import {
-  UnifiedSecureStorage,
-  TOKEN_KEYS,
-} from '../services/UnifiedSecureStorage';
+import { UnifiedSecureStorage } from '../services/UnifiedSecureStorage';
 import { authService } from '../services/AuthService';
 import {
   GitHubAPIEvent,

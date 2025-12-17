@@ -11,10 +11,8 @@ import {
   GitLens,
   type Lens,
   type LensResult,
-  type ExecuteResult,
-  type Issue,
 } from '@principal-ai/codebase-quality-lenses';
-import type { PackageCommand } from '@principal-ai/codebase-composition';
+
 import { ElectronCLIBridgeExecutor } from './ElectronCLIBridgeExecutor';
 import type {
   ToolExecutionRequest,

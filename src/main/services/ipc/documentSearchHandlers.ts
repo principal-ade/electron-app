@@ -71,7 +71,7 @@ class DocumentSearchHandlerService {
       ipcMain.removeHandler(DocumentSearchChannel.GET_DOCUMENT);
       ipcMain.removeHandler(DocumentSearchChannel.REFRESH_INDEX);
       ipcMain.removeHandler(DocumentSearchChannel.CLEAR_INDEX);
-    } catch (e) {
+    } catch (_e) {
       // Ignore errors if handlers don't exist
     }
 
@@ -163,7 +163,7 @@ class DocumentSearchHandlerService {
     // Refresh index for a repository
     ipcMain.handle(
       DocumentSearchChannel.REFRESH_INDEX,
-      async (_event, repositoryId?: string) => {
+      async (_event, _repositoryId?: string) => {
         const service = this.getIndexingService();
         // Always refresh all repositories (ignore individual repository ID)
         await service.refreshIndex();

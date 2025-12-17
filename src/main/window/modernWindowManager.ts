@@ -13,7 +13,6 @@ import {
 import path from 'path';
 import log from 'electron-log';
 import { resolveHtmlPath } from '../util';
-import { EnvironmentConfig } from '../utils/environmentConfig';
 import { ElectronFileSystemAdapter } from '../file-system/fileSystemHandlers';
 import { ElectronWindowManagerAdapter } from './windowManagerHandlers';
 import { GitHubAdapter } from '../version-control-providers/githubHandlers';

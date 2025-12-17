@@ -316,31 +316,4 @@ export class GitBranchService {
       return undefined;
     }
   }
-
-  /**
-   * Fetch latest information from remote (if possible)
-   * This is useful to ensure we have the latest branch information
-   */
-  async fetchRemoteInfo(directory: string): Promise<boolean> {
-    // TODO: BLOCKING - git fetch is a blocking network operation
-    // This should be moved to gitRemote cache slice
-    // See: docs/design/GIT_REMOTE_INFORMATION_ARCHITECTURE.md
-
-    console.warn(
-      '[GitBranchService] fetchRemoteInfo is currently disabled to prevent blocking operations',
-    );
-    return false;
-
-    // try {
-    //   const gitRoot = await this.getGitRoot(directory);
-    //   if (!gitRoot) return false;
-
-    //   // Try to fetch with a short timeout
-    //   await execAsync('git fetch --timeout=5', { cwd: gitRoot });
-    //   return true;
-    // } catch {
-    //   // Fetch failed (network issue, auth issue, etc.)
-    //   return false;
-    // }
-  }
 }

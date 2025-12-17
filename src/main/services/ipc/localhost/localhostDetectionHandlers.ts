@@ -1,4 +1,4 @@
-import { ipcMain, BrowserWindow } from 'electron';
+import { ipcMain } from 'electron';
 import { createConnection, Socket } from 'net';
 import { exec } from 'child_process';
 import { promisify } from 'util';

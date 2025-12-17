@@ -21,20 +21,20 @@ npx knip --files
 npx knip --files 2>&1 | grep "^src/renderer/components/"
 ```
 
-## Current Status (Updated - 2025-12-14)
+## Current Status (Updated - 2025-12-16)
 
-**Total unused files: 68** ⬇️ **-45 from previous (was 113)**
+**Total unused files: 70** ⬆️ **+2 from previous (was 68)**
 
 ### By Top-Level Directory
 
 | Directory | Unused Files | Change |
 |-----------|--------------|--------|
-| renderer | 32 | ⬇️ **-50** |
-| shared | 15 | 🆕 New |
-| main | 11 | - |
-| titlebar | 4 | 🆕 New |
-| window | 3 | 🆕 New |
-| setupTests.js | 1 | 🆕 New |
+| renderer | 32 | - |
+| shared | 15 | - |
+| main | 15 | ⬆️ **+4** |
+| titlebar | 4 | - |
+| window | 3 | - |
+| setupTests.js | 1 | - |
 | event-processing-server | ✅ Clean | - |
 
 ### Renderer Breakdown
@@ -135,10 +135,14 @@ src/renderer/dev-workspace/global.d.ts
 
 ---
 
-## Main Process Unused Files (11 files)
+## Main Process Unused Files (15 files)
 
 ```
 src/main/quality-lenses/PackageLayerToToolConfigBridge.ts
+src/main/services/GitSyncIPC.ts
+src/main/services/OrbitIPC.ts
+src/main/services/PresenceIPC.ts
+src/main/services/SecureTokenIPC.ts
 src/main/services/store/types/index.ts
 src/main/services/store/types/session.types.ts
 src/main/system/clipboardHandler.ts
@@ -156,6 +160,7 @@ src/main/window/windowTypes.ts
 **Notes:**
 - `terminal/phase2-future/*` - WIP worker implementation, keep for now
 - `services/store/types/*` - May be imported dynamically or needed for type definitions
+- `services/*IPC.ts` - 🆕 4 new IPC files detected as unused (GitSync, Orbit, Presence, SecureToken)
 
 ---
 
@@ -265,11 +270,29 @@ grep -r "from.*filename" src/
 
 | Date | Files Removed | Notes |
 |------|---------------|-------|
+| 2025-12-16 | 0 | Status update - 4 new IPC files detected as unused in main |
 | 2025-12-14 | 4 | Removed AnimatedTimelineEvent, markdown/index, TitlebarOpenInIDE, WorkspaceSelector |
 | 2025-12-14 | ~41 | Major cleanup - many renderer subdirectories now clean |
 | 2025-11-28 | 2 | Removed `MetricBox.tsx`, `RightPaneContainer.tsx` from renderer/components |
 | 2025-11-28 | 2 | Removed `src/event-processing-server/types/` directory (duplicate of `types.ts`) |
 | 2025-11-28 | 0 | Initial audit |
+
+### 2025-12-16 Summary
+
+**Total:** 68 → 70 files (+2, +3% increase)
+
+**New unused files detected in main:**
+- `src/main/services/GitSyncIPC.ts`
+- `src/main/services/OrbitIPC.ts`
+- `src/main/services/PresenceIPC.ts`
+- `src/main/services/SecureTokenIPC.ts`
+
+**Notes:**
+- These 4 IPC service files are now detected as unused
+- May indicate these features are disabled or not currently in use
+- All other directories unchanged
+
+---
 
 ### 2025-12-14 Summary
 

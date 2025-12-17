@@ -14,7 +14,6 @@ import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import type { IModernApplicationWindow, WindowMetadata } from './types';
 import { PrimaryWindowType } from './types';
-import { gitStatusService } from '../services/GitStatusService';
 import { getManager as getMonitoringManager } from '../repository-monitoring/ipcHandlers';
 
 /**

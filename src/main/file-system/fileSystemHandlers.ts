@@ -825,7 +825,7 @@ export class ElectronFileSystemAdapter {
           files.push(entryPath);
         }
       }
-    } catch (error) {
+    } catch (_error) {
       // console.warn(`[File System] Error finding files in ${dirPath}:`, error);
     }
     return files;
@@ -910,7 +910,7 @@ export class ElectronFileSystemAdapter {
           }
         }
       }
-    } catch (error) {
+    } catch (_error) {
       // console.warn(`[File System] Error in glob pattern matching for ${dirPath}:`, error);
     }
     return files;

@@ -9,7 +9,7 @@ export function registerPackageManagerHandlers() {
   ipcMain.handle(
     PackageManagerAPIEvent.CHECK_VERSIONS,
     async (event, params) => {
-      const { packages, packageManager, options } = params;
+      const { packages, options } = params;
       const results: any[] = [];
 
       try {
@@ -39,7 +39,7 @@ export function registerPackageManagerHandlers() {
   ipcMain.handle(
     PackageManagerAPIEvent.CHECK_VULNERABILITIES,
     async (event, params) => {
-      const { packages, packageManager, options } = params;
+      const { packages, options } = params;
       const results: any[] = [];
 
       try {
@@ -72,7 +72,7 @@ export function registerPackageManagerHandlers() {
   ipcMain.handle(
     PackageManagerAPIEvent.CHECK_LICENSES,
     async (event, params) => {
-      const { packages, packageManager, options } = params;
+      const { packages, options } = params;
       const results: any[] = [];
 
       try {

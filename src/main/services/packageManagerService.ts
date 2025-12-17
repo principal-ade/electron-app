@@ -85,7 +85,7 @@ export class PackageManagerService {
             const data = JSON.parse(responseData);
             versionCache.set(cacheKey, { data, timestamp: Date.now() });
             resolve(data);
-          } catch (error) {
+          } catch (_error) {
             reject(new Error('Failed to parse NPM registry response'));
           }
         });
@@ -195,7 +195,7 @@ export class PackageManagerService {
 
   async *checkVulnerabilities(
     packages: PackageVersionInfo[],
-    batchSize: number = 5,
+    _batchSize: number = 5,
   ): AsyncGenerator<VulnerabilityCheckResult, void, unknown> {
     // For now, we'll use npm audit API or return empty results
     // In a real implementation, this would query vulnerability databases

@@ -76,7 +76,7 @@ export class GitLensAdapter {
       // Parse the raw results to get full hash (not shortened)
       const results = JSON.parse(executeResult.stdout);
       return results.commit || null;
-    } catch (error) {
+    } catch (_error) {
       // Silently return null if not a git repo or no commits
       return null;
     }
@@ -114,7 +114,7 @@ export class GitLensAdapter {
 
       // Return the commit details (includes date for sorting)
       return gitInfo.commitDetails || null;
-    } catch (error) {
+    } catch (_error) {
       // Silently return null if not a git repo or no commits
       return null;
     }
@@ -156,7 +156,7 @@ export class GitLensAdapter {
         untracked: (gitInfo.untracked || []).map((path: string) => ({ path })),
         deleted: (gitInfo.deleted || []).map((path: string) => ({ path })),
       };
-    } catch (error) {
+    } catch (_error) {
       // Return empty arrays if not a git repo or error
       return {
         staged: [],
@@ -196,7 +196,7 @@ export class GitLensAdapter {
 
       // Return the branch name
       return gitInfo.branch || null;
-    } catch (error) {
+    } catch (_error) {
       // Return null if not a git repo or error
       return null;
     }

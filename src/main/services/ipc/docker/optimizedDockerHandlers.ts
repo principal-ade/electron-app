@@ -267,7 +267,6 @@ export function registerOptimizedDockerHandlers() {
   ipcMain.handle('docker:health-check', async () => {
     try {
       const dockerService = await OptimizedDockerService.getInstance();
-      const storeService = await DockerStoreService.getInstance();
 
       const containers = await dockerService.getActiveContainers();
       const healthStatus = {

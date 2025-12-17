@@ -10,7 +10,7 @@
  * - Export a "panels" array with panel definitions
  */
 
-import { app, ipcMain, BrowserWindow } from 'electron';
+import { ipcMain, BrowserWindow } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -77,7 +77,7 @@ export class ExtensionDiscoveryService {
       if (prefs.extensionsDirectory) {
         this.extensionsDirectory = prefs.extensionsDirectory;
       }
-    } catch (error) {
+    } catch (_error) {
       // UserPreferencesHandler may not be initialized yet, use default
       console.log(
         '[ExtensionDiscoveryService] Using default extensions directory',

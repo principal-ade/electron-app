@@ -4,7 +4,7 @@
  */
 
 import { electronCLI } from '../electron-cli-bridge';
-import type { GitExecutor, GitRemote } from '../electron-cli-bridge';
+import type { GitExecutor } from '../electron-cli-bridge';
 import { gitLensAdapter } from '../quality-lenses/GitLensAdapter';
 import type { CommitInfo } from '../quality-lenses/GitLensAdapter';
 import type { GitStatus } from '../../shared/types/repository.types';

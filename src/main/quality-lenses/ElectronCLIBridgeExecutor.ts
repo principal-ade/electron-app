@@ -137,7 +137,7 @@ export class ElectronCLIBridgeExecutor implements Executor {
         timeout: 5000,
       });
       return result.exitCode === 0;
-    } catch (error) {
+    } catch (_error) {
       // If execution fails, command is not available
       return false;
     }

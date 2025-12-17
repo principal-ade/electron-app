@@ -12,7 +12,7 @@ import path from 'path';
 import { app, protocol, ipcMain, dialog, BrowserWindow } from 'electron';
 import log from 'electron-log';
 import { windowSwitcher } from './window/windowSwitcher';
-import { quickOpen, setupQuickOpenHandlers } from './window/quickOpen';
+import { quickOpen } from './window/quickOpen';
 import {
   createWindow,
   applicationWindows,
@@ -105,7 +105,6 @@ async function handleDeepLink(url: string): Promise<void> {
     if (command === 'open-workspace') {
       const params = parsedUrl.searchParams;
       const path = params.get('path');
-      const name = params.get('name');
       const owner = params.get('owner');
       const repo = params.get('repo');
 

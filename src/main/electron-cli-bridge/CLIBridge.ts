@@ -357,7 +357,7 @@ export class CLIBridge extends EventEmitter {
   /**
    * Select appropriate worker for command
    */
-  private selectWorker(command: string): UtilityProcess | undefined {
+  private selectWorker(_command: string): UtilityProcess | undefined {
     // For now, always use universal worker
     // Later we can add routing logic for specialized workers
     return this.workers.get('universal');
@@ -385,7 +385,7 @@ export class CLIBridge extends EventEmitter {
     this.workers.clear();
 
     // Reject all pending calls
-    for (const [id, call] of this.pendingCalls.entries()) {
+    for (const [_id, call] of this.pendingCalls.entries()) {
       call.reject(new Error('CLIBridge shutting down'));
     }
     this.pendingCalls.clear();
