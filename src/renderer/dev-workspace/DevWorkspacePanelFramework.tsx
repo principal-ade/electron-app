@@ -20,10 +20,7 @@ import {
 } from '../contexts/AgentHighlightContext';
 import { TabbedTerminalPanel } from '@industry-theme/xterm-terminal-panel';
 import { TabbedGhosttyTerminal } from '@industry-theme/ghostty-terminal-panel';
-import {
-  panels as principalViewPanels,
-  ConfigLibraryBrowserPanel,
-} from '@industry-theme/principal-view-panels';
+import { panels as principalViewPanels } from '@industry-theme/principal-view-panels';
 import { panels as fileCityPanels } from '@industry-theme/file-city-panel';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import { panels as alexandriaPanels } from '@industry-theme/alexandria-panels';
@@ -315,28 +312,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           </div>
         ) : (
           <div>Localhost Browser panel not available</div>
-        ),
-      },
-      {
-        id: 'configLibrary',
-        label: 'Config Library',
-        content: (
-          <div
-            style={{
-              height: '100%',
-              width: '100%',
-              overflow: 'hidden',
-              position: 'relative',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <ConfigLibraryBrowserPanel
-              context={context}
-              actions={actions}
-              events={events}
-            />
-          </div>
         ),
       },
       {
