@@ -19,6 +19,10 @@ import type {
   AlexandriaEntry,
 } from '@principal-ai/alexandria-core-library';
 import { getManager as getMonitoringManager } from '../repository-monitoring/ipcHandlers';
+import {
+  applicationWindows,
+  PrimaryWindowType,
+} from '../window/types';
 
 export class WorkspaceApiEventHandler implements WorkspaceAPI {
   private service: AlexandriaRegistryService;
@@ -76,6 +80,79 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
         window.webContents.send(eventType, data);
       }
     });
+  }
+
+  /**
+   * Get all open workspace windows for a given workspace ID
+   */
+  private getOpenWorkspaceWindows(workspaceId: string): number[] {
+    const windowIds: number[] = [];
+    for (const [id, appWindow] of applicationWindows.entries()) {
+      if (
+        appWindow.metadata?.primaryType === PrimaryWindowType.WORKSPACE &&
+        appWindow.metadata?.workspaceId === workspaceId &&
+        !appWindow.window.isDestroyed()
+      ) {
+        windowIds.push(id);
+      }
+    }
+    return windowIds;
+  }
+
+  /**
+   * Acquire watch for a repository on behalf of open workspace windows
+   */
+  private async acquireWatchForWorkspaceWindows(
+    repoPath: string,
+    workspaceId: string,
+  ): Promise<void> {
+    const openWindowIds = this.getOpenWorkspaceWindows(workspaceId);
+    if (openWindowIds.length === 0) return;
+
+    const monitoringManager = getMonitoringManager();
+
+    for (const windowId of openWindowIds) {
+      const watchReferenceId = `alexandria-workspace:${windowId}`;
+      try {
+        await monitoringManager.acquireWatch(repoPath, watchReferenceId);
+        console.log(
+          `[Workspace] Acquired watch for ${repoPath} on window ${windowId}`,
+        );
+      } catch (error) {
+        console.error(
+          `[Workspace] Failed to acquire watch for ${repoPath} on window ${windowId}:`,
+          error,
+        );
+      }
+    }
+  }
+
+  /**
+   * Release watch for a repository from open workspace windows
+   */
+  private async releaseWatchForWorkspaceWindows(
+    repoPath: string,
+    workspaceId: string,
+  ): Promise<void> {
+    const openWindowIds = this.getOpenWorkspaceWindows(workspaceId);
+    if (openWindowIds.length === 0) return;
+
+    const monitoringManager = getMonitoringManager();
+
+    for (const windowId of openWindowIds) {
+      const watchReferenceId = `alexandria-workspace:${windowId}`;
+      try {
+        await monitoringManager.releaseWatch(repoPath, watchReferenceId);
+        console.log(
+          `[Workspace] Released watch for ${repoPath} on window ${windowId}`,
+        );
+      } catch (error) {
+        console.error(
+          `[Workspace] Failed to release watch for ${repoPath} on window ${windowId}:`,
+          error,
+        );
+      }
+    }
   }
 
   /**
@@ -189,10 +266,21 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
       workspaceId,
       metadata,
     );
-    const repoId =
+
+    // Get the full repository entry to access the path
+    const repoEntry =
       typeof repository === 'string'
-        ? repository
-        : repository.github?.id || repository.name;
+        ? await this.service.getRepository(repository)
+        : repository;
+    const repoId = repoEntry?.github?.id || repoEntry?.name || (typeof repository === 'string' ? repository : repository.name);
+
+    // Acquire watch for any open workspace windows (non-blocking)
+    if (repoEntry?.path) {
+      this.acquireWatchForWorkspaceWindows(repoEntry.path as string, workspaceId).catch(
+        (error) => console.error('[Workspace] Failed to acquire watches on add:', error),
+      );
+    }
+
     this.broadcastWorkspaceChange(
       'membership-changed',
       undefined,
@@ -205,11 +293,20 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
     repository: AlexandriaEntry | string,
     workspaceId: string,
   ): Promise<void> {
-    await this.service.removeRepositoryFromWorkspace(repository, workspaceId);
-    const repoId =
+    // Get the full repository entry BEFORE removing (to access the path)
+    const repoEntry =
       typeof repository === 'string'
-        ? repository
-        : repository.github?.id || repository.name;
+        ? await this.service.getRepository(repository)
+        : repository;
+    const repoId = repoEntry?.github?.id || repoEntry?.name || (typeof repository === 'string' ? repository : repository.name);
+
+    // Release watch for any open workspace windows BEFORE removing
+    if (repoEntry?.path) {
+      await this.releaseWatchForWorkspaceWindows(repoEntry.path as string, workspaceId);
+    }
+
+    await this.service.removeRepositoryFromWorkspace(repository, workspaceId);
+
     this.broadcastWorkspaceChange(
       'membership-changed',
       undefined,

@@ -127,13 +127,12 @@ export async function openDevWorkspaceWindow(
     broadcastRepositoryWindowsChanged();
   });
 
-  // Acquire watch for the repository when window opens
+  // Acquire watch for the repository when window opens (acquireWatch auto-registers if needed)
   const repoPath = alexandriaEntry.path as string;
   const watchReferenceId = `dev-workspace:${appWindow.window.id}`;
 
   try {
     const monitoringManager = getMonitoringManager();
-    await monitoringManager.registerRepository(repoPath);
     await monitoringManager.acquireWatch(repoPath, watchReferenceId);
     console.log(
       `[DevWorkspaceWindow] Acquired watch for ${repoPath} (reference: ${watchReferenceId})`,

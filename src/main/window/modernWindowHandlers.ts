@@ -476,42 +476,57 @@ export function registerModernWindowHandlers(): void {
         `[modernWindowHandlers] Registered Alexandria Workspace window ${window.window.id} with terminal manager`,
       );
 
-      // Acquire watches for all repositories in the workspace
+      // Acquire watches for all repositories in the workspace (in parallel, non-blocking)
       const watchReferenceId = `alexandria-workspace:${window.window.id}`;
       const registeredRepoPaths: string[] = [];
 
-      try {
-        const {
-          AlexandriaRegistryService,
-        } = require('../stores/AlexandriaRegistryService');
-        const service = AlexandriaRegistryService.getInstance();
-        const repositories = await service.getRepositoriesInWorkspace(workspaceId);
-        const monitoringManager = getMonitoringManager();
+      // Fire off watch acquisition in background - don't block window loading
+      (async () => {
+        try {
+          const {
+            AlexandriaRegistryService,
+          } = require('../stores/AlexandriaRegistryService');
+          const service = AlexandriaRegistryService.getInstance();
+          const repositories = await service.getRepositoriesInWorkspace(workspaceId);
+          const monitoringManager = getMonitoringManager();
 
-        for (const repo of repositories) {
-          if (!repo.path) continue;
-          const repoPath = repo.path as string;
+          // Filter repos with valid paths
+          const reposWithPaths = repositories.filter((repo): repo is typeof repo & { path: string } => !!repo.path);
 
-          try {
-            await monitoringManager.registerRepository(repoPath);
-            await monitoringManager.acquireWatch(repoPath, watchReferenceId);
-            registeredRepoPaths.push(repoPath);
-            console.log(
-              `[modernWindowHandlers] Acquired watch for ${repoPath} (reference: ${watchReferenceId})`,
-            );
-          } catch (repoError) {
-            console.error(
-              `[modernWindowHandlers] Failed to acquire watch for ${repoPath}:`,
-              repoError,
-            );
+          // Acquire watches in parallel (acquireWatch auto-registers if needed)
+          const results = await Promise.allSettled(
+            reposWithPaths.map(async (repo) => {
+              const repoPath = repo.path as string;
+              await monitoringManager.acquireWatch(repoPath, watchReferenceId);
+              return repoPath;
+            })
+          );
+
+          // Track successful registrations for cleanup on window close
+          for (const result of results) {
+            if (result.status === 'fulfilled') {
+              registeredRepoPaths.push(result.value);
+              console.log(
+                `[modernWindowHandlers] Acquired watch for ${result.value} (reference: ${watchReferenceId})`,
+              );
+            } else {
+              console.error(
+                `[modernWindowHandlers] Failed to acquire watch:`,
+                result.reason,
+              );
+            }
           }
+
+          console.log(
+            `[modernWindowHandlers] Acquired watches for ${registeredRepoPaths.length}/${reposWithPaths.length} repositories`,
+          );
+        } catch (error) {
+          console.error(
+            '[modernWindowHandlers] Failed to acquire watches for workspace repositories:',
+            error,
+          );
         }
-      } catch (error) {
-        console.error(
-          '[modernWindowHandlers] Failed to acquire watches for workspace repositories:',
-          error,
-        );
-      }
+      })();
 
       // Release watches when window closes
       window.window.once('closed', () => {
