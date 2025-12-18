@@ -133,6 +133,9 @@ interface ExtendedPanelActions extends PanelActions {
   openRepository?: (entryOrId: AlexandriaEntry | string) => Promise<void>;
   // Active file management for markdown panel
   setActiveFile?: (filePath: string | null) => Promise<void>;
+  // File operations for panels (e.g., principal-view-panels)
+  // Matches framework signature: (path: string) => string | Promise<string>
+  readFile?: (path: string) => Promise<string>;
 }
 
 // Extended context interface that panels actually expect
@@ -1306,6 +1309,26 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
           } finally {
             setActiveFileLoading(false);
           }
+        },
+
+        // File operations for panels (e.g., principal-view-panels Architecture panel)
+        // Returns string directly to match framework signature
+        readFile: async (path: string): Promise<string> => {
+          const repoPath = repository?.path || workspace?.path || '';
+          const absolutePath = path.startsWith('/')
+            ? path
+            : `${repoPath}/${path}`;
+
+          console.info('[PanelContext] Reading file:', absolutePath);
+
+          const result =
+            await window.mainProcess.fileSystem.readFile(absolutePath);
+
+          if (!result) {
+            throw new Error(`Failed to read file: ${path}`);
+          }
+
+          return result.content;
         },
       };
     },
