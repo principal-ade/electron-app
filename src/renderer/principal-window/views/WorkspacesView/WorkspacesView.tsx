@@ -28,10 +28,17 @@ import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 /**
  * Inner content component that uses the panel context
  */
+// Type for middle panel view options
+export type MiddlePanelView = 'quality' | 'remote' | 'starred';
+
 const WorkspacesViewContent: React.FC = () => {
   const { theme } = useTheme();
   const { context, actions, events } = useWorkspacesPanelProvider();
   const { isAuthenticated } = useAuth();
+
+  // State for middle panel view selection
+  const [middlePanelView, setMiddlePanelView] =
+    useState<MiddlePanelView>('quality');
 
   // State for clone modal
   const [isCloneModalOpen, setIsCloneModalOpen] = useState(false);
@@ -143,8 +150,9 @@ const WorkspacesViewContent: React.FC = () => {
   });
 
   // Define panels using alexandria-panels components
-  const panels = useMemo(() => {
-    const basePanels = [
+  // All panels are always registered so they can be switched to via header buttons
+  const panels = useMemo(
+    () => [
       {
         id: 'workspaces-list',
         label: 'Workspaces',
@@ -193,52 +201,46 @@ const WorkspacesViewContent: React.FC = () => {
           />
         ),
       },
-    ];
-
-    // Add GitHub panels when authenticated
-    if (isAuthenticated) {
-      basePanels.push(
-        {
-          id: 'github-projects',
-          label: 'GitHub Projects',
-          icon: <FolderGit2 size={16} />,
-          content: (
-            <GitHubProjectsPanel
-              context={context}
-              actions={actions}
-              events={events}
-            />
-          ),
-        },
-        {
-          id: 'github-starred',
-          label: 'Starred',
-          icon: <Star size={16} />,
-          content: (
-            <GitHubStarredPanel
-              context={context}
-              actions={actions}
-              events={events}
-            />
-          ),
-        },
-      );
-    }
-
-    return basePanels;
-  }, [context, actions, overriddenActions, events, isAuthenticated]);
+      {
+        id: 'github-projects',
+        label: 'GitHub Projects',
+        icon: <FolderGit2 size={16} />,
+        content: (
+          <GitHubProjectsPanel
+            context={context}
+            actions={actions}
+            events={events}
+          />
+        ),
+      },
+      {
+        id: 'github-starred',
+        label: 'Starred',
+        icon: <Star size={16} />,
+        content: (
+          <GitHubStarredPanel
+            context={context}
+            actions={actions}
+            events={events}
+          />
+        ),
+      },
+    ],
+    [context, actions, overriddenActions, events],
+  );
 
   // Define layout configuration
   const layout = useMemo(() => {
-    // Build left panel tabs based on authentication
-    const leftPanels = isAuthenticated
-      ? [
-          'workspaces-list',
-          'local-projects',
-          'github-projects',
-          'github-starred',
-        ]
-      : ['workspaces-list', 'local-projects'];
+    // Left panel only has workspaces and local projects now
+    // GitHub panels are accessed via middle panel toggle buttons
+    const leftPanels = ['workspaces-list', 'local-projects'];
+
+    // Map middle panel view to panel id
+    const middlePanelMap: Record<MiddlePanelView, string> = {
+      quality: 'repository-quality-grid',
+      remote: 'github-projects',
+      starred: 'github-starred',
+    };
 
     return {
       left: {
@@ -249,10 +251,10 @@ const WorkspacesViewContent: React.FC = () => {
           tabPosition: 'top' as const,
         },
       },
-      middle: 'repository-quality-grid',
+      middle: middlePanelMap[middlePanelView],
       right: 'workspace-repositories',
     };
-  }, [isAuthenticated]);
+  }, [middlePanelView]);
 
   return (
     <>
@@ -265,7 +267,11 @@ const WorkspacesViewContent: React.FC = () => {
         }}
       >
         {/* Header */}
-        <WorkspacesViewHeader />
+        <WorkspacesViewHeader
+          middlePanelView={middlePanelView}
+          onMiddlePanelViewChange={setMiddlePanelView}
+          isAuthenticated={isAuthenticated}
+        />
 
         {/* Panel Layout */}
         <ConfigurablePanelLayout

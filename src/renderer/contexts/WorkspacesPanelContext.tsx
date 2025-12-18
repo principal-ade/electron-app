@@ -286,8 +286,14 @@ export const WorkspacesPanelProvider: React.FC<
         GithubService.getUserOrganizations(),
       ]);
 
+      // Filter to only include repos owned by the current user (not org repos)
+      // GitHub's /user/repos returns all repos the user can access, including org repos
+      const personalRepos = user
+        ? userRepos.filter((repo) => repo.owner?.login === user.login)
+        : userRepos;
+
       // Cast to panels package types (structurally compatible)
-      setUserRepositories(userRepos as unknown as GitHubRepository[]);
+      setUserRepositories(personalRepos as unknown as GitHubRepository[]);
       setOrganizations(orgs as unknown as GitHubOrganization[]);
 
       // Fetch repositories for each organization
