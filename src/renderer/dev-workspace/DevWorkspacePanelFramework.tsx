@@ -6,6 +6,7 @@ import {
 } from '@principal-ade/panel-layouts';
 // CSS is bundled inline in principal-view-panels, no separate import needed
 // Note: file-city-panel CSS is bundled inline, no separate import needed
+import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import {
   RepositoryPanelProvider,
   useRepositoryPanelProvider,
@@ -39,6 +40,8 @@ export interface DevWorkspacePanelFrameworkProps {
   onCollapsedChange: (collapsed: { left: boolean; right: boolean }) => void;
   layout: PanelLayout;
   onLayoutChange: (layout: PanelLayout) => void;
+  /** Event bus for panel communication */
+  events: PanelEventEmitter;
 }
 
 interface DevWorkspacePanelFrameworkInnerProps {
@@ -580,6 +583,7 @@ export const DevWorkspacePanelFramework: React.FC<
   onCollapsedChange,
   layout,
   onLayoutChange,
+  events,
 }) => {
   // Use the same terminal context format as legacy MultiTerminalPanel
   // Legacy uses: terminal:${owner}/${name}
@@ -604,6 +608,7 @@ export const DevWorkspacePanelFramework: React.FC<
     <RepositoryPanelProvider
       repositoryPath={repositoryPath}
       repository={repositoryMetadata}
+      events={events}
     >
       <TerminalProvider
         repositoryPath={repositoryPath}

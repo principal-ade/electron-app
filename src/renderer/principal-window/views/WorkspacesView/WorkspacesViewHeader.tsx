@@ -96,7 +96,7 @@ export const WorkspacesViewHeader: React.FC<WorkspacesViewHeaderProps> = ({
       }}
     >
       {/* Left: Title */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
         <LayoutGrid size={20} color={theme.colors.text} />
         <h2
           style={{
@@ -171,18 +171,19 @@ export const WorkspacesViewHeader: React.FC<WorkspacesViewHeaderProps> = ({
       </div>
 
       {/* Right: Base Default Directory */}
-      <div
-        onClick={handleSelectBaseDirectory}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          padding: '6px 12px',
-          borderRadius: '6px',
-          backgroundColor: theme.colors.backgroundSecondary,
-          cursor: 'pointer',
-          transition: 'background-color 0.2s',
-        }}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flex: 1 }}>
+        <div
+          onClick={handleSelectBaseDirectory}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '6px 12px',
+            borderRadius: '6px',
+            backgroundColor: theme.colors.backgroundSecondary,
+            cursor: 'pointer',
+            transition: 'background-color 0.2s',
+          }}
         onMouseEnter={(e) => {
           e.currentTarget.style.backgroundColor =
             theme.colors.backgroundTertiary;
@@ -192,19 +193,20 @@ export const WorkspacesViewHeader: React.FC<WorkspacesViewHeaderProps> = ({
             theme.colors.backgroundSecondary;
         }}
         title={baseDefaultDirectory || 'Click to set base directory'}
-      >
-        <FolderOpen size={16} color={theme.colors.textSecondary} />
-        <span
-          style={{
-            fontSize: theme.fontSizes[1],
-            color: theme.colors.textSecondary,
-            fontFamily: theme.fonts.monospace,
-          }}
         >
-          {baseDefaultDirectory
-            ? getDirectoryDisplayName(baseDefaultDirectory)
-            : 'Set base directory'}
-        </span>
+          <FolderOpen size={16} color={theme.colors.textSecondary} />
+          <span
+            style={{
+              fontSize: theme.fontSizes[1],
+              color: theme.colors.textSecondary,
+              fontFamily: theme.fonts.monospace,
+            }}
+          >
+            {baseDefaultDirectory
+              ? getDirectoryDisplayName(baseDefaultDirectory)
+              : 'Set base directory'}
+          </span>
+        </div>
       </div>
     </div>
   );

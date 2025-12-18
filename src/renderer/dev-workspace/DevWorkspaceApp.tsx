@@ -11,12 +11,9 @@ import {
   AgentCommandPalette,
   useAgentCommandPalette,
 } from '@principal-ade/panel-layouts';
+import { PanelEventBus } from '@principal-ade/panel-framework-core';
 import { DevWorkspacePanelFramework } from './DevWorkspacePanelFramework';
 import { DevWorkspaceTitlebar } from './DevWorkspaceTitlebar';
-import {
-  DevWorkspaceEventProvider,
-  useDevWorkspaceEvents,
-} from './DevWorkspaceEventContext';
 import type { Repository } from '../../shared/types/repository.types';
 import type { FileTreeSource } from '../types/file-tree-source';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
@@ -67,9 +64,7 @@ function useWindowData(): AlexandriaEntryData | null {
 }
 
 /**
- * Inner content component that has access to the event context.
- * This separation is necessary because useDevWorkspaceEvents must be
- * called inside the DevWorkspaceEventProvider.
+ * Inner content component for the dev workspace.
  */
 interface DevWorkspaceContentProps {
   alexandriaEntry: AlexandriaEntryData;
@@ -84,7 +79,9 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     remoteUrl,
     github,
   } = alexandriaEntry;
-  const { events } = useDevWorkspaceEvents();
+
+  // Single event bus for all panel communication
+  const events = useMemo(() => new PanelEventBus(), []);
   const [currentBranch, setCurrentBranch] = useState<string | undefined>();
   const [terminalImplementation, setTerminalImplementation] = useState<
     'xterm' | 'ghostty'
@@ -217,12 +214,21 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         });
         setCollapsed({ left: false, right: false });
       }),
+      // Listen for terminal shortcut events (e.g., Cmd+Shift+P from terminal)
+      events.on('terminal:shortcut', (event) => {
+        console.log('[DevWorkspaceApp] Received terminal:shortcut event:', event);
+        const payload = event.payload as { shortcut: string; sessionId: string };
+        if (payload.shortcut === 'command-palette') {
+          console.log('[DevWorkspaceApp] Opening command palette from terminal shortcut');
+          agentPalette.open();
+        }
+      }),
     ];
 
     return () => {
       unsubscribers.forEach((unsub) => unsub());
     };
-  }, [events]);
+  }, [events, agentPalette]);
 
   // Check for .github folder on mount
   useEffect(() => {
@@ -567,6 +573,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           onCollapsedChange={setCollapsed}
           layout={layout}
           onLayoutChange={setLayout}
+          events={events}
         />
       </div>
 
@@ -583,7 +590,6 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
 
 /**
  * Main DevWorkspaceApp component.
- * Wraps the content in the event provider so hooks can access the event bus.
  */
 export const DevWorkspaceApp: React.FC = () => {
   const alexandriaEntry = useWindowData();
@@ -600,9 +606,5 @@ export const DevWorkspaceApp: React.FC = () => {
     );
   }
 
-  return (
-    <DevWorkspaceEventProvider>
-      <DevWorkspaceContent alexandriaEntry={alexandriaEntry} />
-    </DevWorkspaceEventProvider>
-  );
+  return <DevWorkspaceContent alexandriaEntry={alexandriaEntry} />;
 };

@@ -96,13 +96,13 @@ interface RepositoryPanelProviderProps {
   children: ReactNode;
   repositoryPath: string;
   repository: RepositoryMetadata;
+  /** Event bus for panel communication - must be provided by parent */
+  events: PanelEventEmitter;
 }
 
 export const RepositoryPanelProvider: React.FC<
   RepositoryPanelProviderProps
-> = ({ children, repositoryPath, repository }) => {
-  // Initialize event bus
-  const events = useMemo(() => new PanelEventBus(), []);
+> = ({ children, repositoryPath, repository, events }) => {
 
   // Track file tree for the current repository
   const [fileTreeData, setFileTreeData] = useState<FileTree | null>(null);
