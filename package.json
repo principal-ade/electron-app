@@ -1,6 +1,6 @@
 {
   "name": "principal-ade",
-  "version": "0.0.264",
+  "version": "0.0.266",
   "description": "Principal ADE - The future of Agentic Development Environment",
   "type": "module",
   "keywords": [
@@ -201,7 +201,7 @@
     "@principal-ai/observability-sdk": "^0.6.0",
     "@principal-ai/repository-abstraction": "^0.2.6",
     "@principal-ai/repository-monitoring": "^0.1.4",
-    "@principal-ai/repository-monitoring-server": "^2.1.2",
+    "@principal-ai/repository-monitoring-server": "^2.1.5",
     "@radix-ui/react-tabs": "^1.1.13",
     "@types/jsonwebtoken": "^9.0.10",
     "@xterm/addon-fit": "^0.10.0",

@@ -232,7 +232,7 @@ export interface RepositoryMonitoringAPI {
   getGitStatusWithFiles(repoPath: string): Promise<GitStatusWithFiles | null>;
   acquireWatch(repoPath: string, referenceId: string): Promise<RepositoryMonitoringResult>;
   releaseWatch(repoPath: string, referenceId: string): Promise<RepositoryMonitoringResult>;
-  onGitStatusChanged(callback: (status: GitStatusMetadata) => void): () => void;
+  onGitStatusChanged(callback: (status: GitStatusWithFiles) => void): () => void;
   onWorkspaceChange(
     callback: (event: WorkspaceChangeEventPayload) => void,
   ): () => void;

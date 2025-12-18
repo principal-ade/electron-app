@@ -115,42 +115,6 @@ export function registerGitHandlers(): void {
     },
   );
 
-  // Get git status
-  ipcMain.handle(GitEvents.GET_STATUS, async (_event, directory: string) => {
-    try {
-      return await gitService.getGitStatus(directory);
-    } catch (error) {
-      console.error('[Git] Failed to get git status:', error);
-      throw error;
-    }
-  });
-
-  // Get detailed changes (lines added/removed, files created/modified/deleted)
-  ipcMain.handle(
-    GitEvents.GET_DETAILED_CHANGES,
-    async (_event, directory: string, files?: string[]) => {
-      try {
-        return await gitService.getDetailedChanges(directory, files);
-      } catch (error) {
-        console.error('[Git] Failed to get detailed changes:', error);
-        throw error;
-      }
-    },
-  );
-
-  // Get uncommitted changes
-  ipcMain.handle(
-    GitEvents.GET_UNCOMMITTED_CHANGES,
-    async (_event, directory: string) => {
-      try {
-        return await gitService.getUncommittedChanges(directory);
-      } catch (error) {
-        console.error('[Git] Failed to get uncommitted changes:', error);
-        throw error;
-      }
-    },
-  );
-
   // Get commit history
   ipcMain.handle(
     GitEvents.GET_COMMIT_HISTORY,

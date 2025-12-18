@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
-import type {
-  GitStatus,
-  GitStatusWithFiles,
-} from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+import type { GitStatusWithFiles } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+
+// GitStatus is just GitStatusMetadata (subset of GitStatusWithFiles)
+type GitStatus = GitStatusWithFiles;
 
 /**
  * Hook to get git status with file lists from the repository monitoring service
@@ -40,13 +40,11 @@ export function useRepositoryGitStatus(repoPath: string | null) {
     setError(null);
 
     try {
-      // Get both basic status and status with files
-      const [basicStatus, statusWithFiles] = await Promise.all([
-        RepositoryMonitoringService.getGitStatus(repoPath),
-        RepositoryMonitoringService.getGitStatusWithFiles(repoPath),
-      ]);
+      // GitStatusWithFiles extends GitStatusMetadata, so one call gives us everything
+      const statusWithFiles =
+        await RepositoryMonitoringService.getGitStatusWithFiles(repoPath);
 
-      setGitStatus(basicStatus);
+      setGitStatus(statusWithFiles);
       setGitStatusWithFiles(statusWithFiles);
     } catch (err) {
       console.error('[useRepositoryGitStatus] Error loading git status:', err);
@@ -68,26 +66,14 @@ export function useRepositoryGitStatus(repoPath: string | null) {
     if (!repoPath) return;
 
     // Subscribe to git status changes from monitoring service
+    // Event now includes file arrays (GitStatusWithFiles), no extra fetch needed
     const unsubscribe =
       window.mainProcess.repositoryMonitoring.onGitStatusChanged(
-        async (status: GitStatus) => {
+        (status: GitStatusWithFiles) => {
           // Only update if the status is for our repository
           if (status.repoPath === repoPath) {
             setGitStatus(status);
-
-            // Fetch the detailed status with files
-            try {
-              const statusWithFiles =
-                await RepositoryMonitoringService.getGitStatusWithFiles(
-                  repoPath,
-                );
-              setGitStatusWithFiles(statusWithFiles);
-            } catch (err) {
-              console.error(
-                '[useRepositoryGitStatus] Error fetching updated status with files:',
-                err,
-              );
-            }
+            setGitStatusWithFiles(status);
           }
         },
       );

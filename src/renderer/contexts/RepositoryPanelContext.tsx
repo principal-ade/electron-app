@@ -4,7 +4,6 @@ import React, {
   useMemo,
   useState,
   useEffect,
-  useRef,
   type ReactNode,
 } from 'react';
 import { PanelEventBus } from '@principal-ade/panel-framework-core';
@@ -304,8 +303,7 @@ export const RepositoryPanelProvider: React.FC<
 
     fetchGitStatus();
 
-    // Subscribe to git status changes - onGitStatusChanged only provides metadata,
-    // so we need to fetch the full status with files when notified
+    // Subscribe to git status changes - event now includes full GitStatusWithFiles
     const unsubscribe = RepositoryMonitoringService.onGitStatusChanged(
       (data) => {
         if (data.repoPath === repositoryPath) {
@@ -313,17 +311,8 @@ export const RepositoryPanelProvider: React.FC<
             '[RepositoryPanelProvider] Git status changed for repository:',
             repositoryPath,
           );
-          // Fetch full status with files since the event only has metadata
-          RepositoryMonitoringService.getGitStatusWithFiles(repositoryPath)
-            .then((status) => {
-              setGitStatusData(mapGitStatusToSliceData(status));
-            })
-            .catch((error) => {
-              console.error(
-                '[RepositoryPanelProvider] Failed to refresh git status after change:',
-                error,
-              );
-            });
+          // Use the event data directly - it now includes file arrays
+          setGitStatusData(mapGitStatusToSliceData(data));
         }
       },
     );
@@ -461,8 +450,11 @@ export const RepositoryPanelProvider: React.FC<
       // File system actions
       readFile: async (filePath: string) => {
         try {
-          const content = await FileSystemService.readFile(filePath);
-          return content;
+          const result = await FileSystemService.readFile(filePath);
+          if (!result) {
+            throw new Error(`File not found: ${filePath}`);
+          }
+          return result.content;
         } catch (error) {
           console.error(
             '[RepositoryPanelProvider] Failed to read file:',
@@ -664,7 +656,9 @@ export const RepositoryPanelProvider: React.FC<
           /\.md$/i,
           '',
         ),
-        lastModified: file.mtime ? new Date(file.mtime).getTime() : undefined,
+        lastModified: file.lastModified
+          ? new Date(file.lastModified).getTime()
+          : undefined,
       }));
   }, [fileTreeData]);
 

@@ -338,7 +338,7 @@ export class RepositoryMonitoringService {
    * @param callback Function to call when git status changes
    * @returns Cleanup function to unsubscribe
    */
-  static onGitStatusChanged(callback: (status: GitStatus) => void): () => void {
+  static onGitStatusChanged(callback: (status: GitStatusWithFiles) => void): () => void {
     return window.mainProcess.repositoryMonitoring.onGitStatusChanged(callback);
   }
 

@@ -7,7 +7,7 @@ import { ipcMain, BrowserWindow } from 'electron';
 import { RepositoryMonitoringManager } from '@principal-ai/repository-monitoring-server';
 import {
   RepositoryMonitoringAPIEvent,
-  GitStatusMetadata,
+  GitStatusWithFiles,
   type ToolExecutionRequest,
   type WorkspaceChangeEventPayload,
   type RepositoryCacheSyncEvent,
@@ -69,7 +69,7 @@ async function shouldWindowReceiveRepoEvent(
       // Single repo windows: check if event matches their repo
       return metadata.localPath === repoPath;
 
-    case PrimaryWindowType.WORKSPACE:
+    case PrimaryWindowType.WORKSPACE: {
       // Workspace windows: check if repo is in workspace
       if (!metadata.workspaceId) {
         return false;
@@ -103,6 +103,7 @@ async function shouldWindowReceiveRepoEvent(
         );
         return false;
       }
+    }
 
     default:
       return false;
@@ -565,9 +566,10 @@ export function registerRepositoryMonitoringHandlers(): void {
   });
 
   // Forward git status change events to relevant renderer windows only
+  // Event now includes file arrays (GitStatusWithFiles) for efficiency
   manager.on(
     MonitoringInternalEvent.GIT_STATUS_CHANGED,
-    (data: GitStatusMetadata) => {
+    (data: GitStatusWithFiles) => {
       broadcastToRelevantWindows(
         RepositoryMonitoringAPIEvent.GIT_STATUS_CHANGED,
         data,

@@ -1,11 +1,8 @@
-import type { GitStatus, Repository } from '../types/repository.types';
+import type { Repository } from '../types/repository.types';
 
 export enum GitEvents {
   GET_REPOSITORY_INFO = 'git:get-repository-info',
   CHECK_IF_PRIVATE_REPO = 'git:check-if-private-repo',
-  GET_STATUS = 'git:get-status',
-  GET_DETAILED_CHANGES = 'git:get-detailed-changes',
-  GET_UNCOMMITTED_CHANGES = 'git:get-uncommitted-changes',
   GET_COMMIT_HISTORY = 'git:get-commit-history',
   EXECUTE_COMMAND = 'git:exec-command',
   CLONE_REPOSITORY = 'git:clone-repository',
@@ -27,19 +24,6 @@ export interface GitAPI {
     }>;
   } | null>;
   checkIfPrivateRepo: (remoteUrl: string) => Promise<boolean>;
-  getStatus: (directory: string) => Promise<GitStatus>;
-  getDetailedChanges: (
-    directory: string,
-    files?: string[],
-  ) => Promise<{
-    created: string[];
-    modified: string[];
-    deleted: string[];
-    renamed: Array<{ from: string; to: string }>;
-    stats: { additions: number; deletions: number };
-    fileStats: Record<string, { additions: number; deletions: number }>;
-  }>;
-  getUncommittedChanges: (directory: string) => Promise<string[]>;
   getCommitHistory: (
     directory: string,
     limit?: number,
@@ -76,7 +60,6 @@ export interface GitAPI {
     success: boolean;
     error?: string;
   }>;
-  onStatusUpdate?: (callback: (status: GitStatus) => void) => () => void;
 
   // Event listeners for repository changes
   onRepositoryUpdated: (

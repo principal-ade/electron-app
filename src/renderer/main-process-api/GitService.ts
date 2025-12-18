@@ -1,7 +1,4 @@
-import {
-  Repository,
-  GitStatus as GitWatcherStatus,
-} from '../../shared/types/repository.types';
+import { Repository } from '../../shared/types/repository.types';
 
 export interface GitRemote {
   name: string;
@@ -26,17 +23,6 @@ export interface GitBranchStatus {
   hasUpstream: boolean;
   canFastForward?: boolean;
   hasUncommittedChanges?: boolean;
-}
-
-// GitStatus is now imported from repository.types
-
-export interface GitDetailedChanges {
-  created: string[];
-  modified: string[];
-  deleted: string[];
-  renamed: Array<{ from: string; to: string }>;
-  stats: { additions: number; deletions: number };
-  fileStats: Record<string, { additions: number; deletions: number }>;
 }
 
 export interface GitCommitInfo {
@@ -120,24 +106,6 @@ export class GitService {
     return window.mainProcess.git.forceDeleteGitRepository(repoPath);
   }
 
-  static async getStatus(directory: string): Promise<GitWatcherStatus> {
-    console.log(`[GitService] Getting git status for: ${directory}`);
-    return window.mainProcess.git.getStatus(directory);
-  }
-
-  static async getDetailedChanges(
-    directory: string,
-    files?: string[],
-  ): Promise<GitDetailedChanges> {
-    console.log(`[GitService] Getting detailed changes for: ${directory}`);
-    return window.mainProcess.git.getDetailedChanges(directory, files);
-  }
-
-  static async getUncommittedChanges(directory: string): Promise<string[]> {
-    console.log(`[GitService] Getting uncommitted changes for: ${directory}`);
-    return window.mainProcess.git.getUncommittedChanges(directory);
-  }
-
   static async getCommitHistory(
     directory: string,
     limit = 50,
@@ -167,11 +135,11 @@ export class GitService {
         success: true,
         message: result.stdout || 'Fast-forward successful',
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[GitService] Fast-forward failed:', error);
       return {
         success: false,
-        message: error.message || 'Fast-forward failed',
+        message: error instanceof Error ? error.message : 'Fast-forward failed',
       };
     }
   }
@@ -214,9 +182,9 @@ export class GitService {
           'origin',
           branch,
         ]);
-      } catch (fetchError) {
+      } catch (_fetchError) {
         // Ignore fetch errors - we'll use the local cached info
-        console.log(
+        console.info(
           '[GitService] Could not fetch remote info (may be offline), using cached info',
         );
       }
@@ -240,8 +208,8 @@ export class GitService {
           ['status', '--porcelain'],
         );
         hasUncommittedChanges = statusResult.stdout.trim().length > 0;
-      } catch (error) {
-        console.log('[GitService] Could not check git status');
+      } catch (_error) {
+        console.info('[GitService] Could not check git status');
       }
 
       // Can fast-forward if: behind > 0, ahead == 0, and no uncommitted changes
@@ -284,9 +252,9 @@ export class GitService {
           success: true,
           message: 'Fetched from upstream',
         };
-      } catch (upstreamError) {
+      } catch (_upstreamError) {
         // If upstream doesn't exist, try origin
-        console.log('[GitService] No upstream remote, trying origin');
+        console.info('[GitService] No upstream remote, trying origin');
         await window.mainProcess.git.execCommand(directory, [
           'fetch',
           'origin',
@@ -296,11 +264,11 @@ export class GitService {
           message: 'Fetched from origin',
         };
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[GitService] Fetch failed:', error);
       return {
         success: false,
-        message: error.message || 'Fetch failed',
+        message: error instanceof Error ? error.message : 'Fetch failed',
       };
     }
   }
@@ -331,7 +299,7 @@ export class GitService {
         branch: branch.stdout.trim(),
         upstream: upstream?.trim(),
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[GitService] Failed to get current branch:', error);
       return { branch: 'unknown' };
     }
@@ -369,7 +337,7 @@ export class GitService {
         author: author.stdout.trim(),
         date: date.stdout.trim(),
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[GitService] Failed to get latest commit:', error);
       return {
         hash: '',
@@ -403,11 +371,11 @@ export class GitService {
         success: true,
         message: 'Changes committed successfully',
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[GitService] Commit failed:', error);
       return {
         success: false,
-        message: error.message || 'Commit failed',
+        message: error instanceof Error ? error.message : 'Commit failed',
       };
     }
   }
@@ -423,11 +391,11 @@ export class GitService {
         success: true,
         message: 'Fetched successfully',
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[GitService] Fetch failed:', error);
       return {
         success: false,
-        message: error.message || 'Fetch failed',
+        message: error instanceof Error ? error.message : 'Fetch failed',
       };
     }
   }
@@ -444,11 +412,11 @@ export class GitService {
         success: true,
         message: `Merged ${branch} successfully`,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[GitService] Merge failed:', error);
       return {
         success: false,
-        message: error.message || 'Merge failed',
+        message: error instanceof Error ? error.message : 'Merge failed',
       };
     }
   }
@@ -486,11 +454,19 @@ export class GitService {
         success: true,
         message: result.stdout || 'Push successful',
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[GitService] Push failed:', error);
 
       // Parse common push errors
-      const errorMessage = error.message || error.stderr || 'Push failed';
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : typeof error === 'object' &&
+              error !== null &&
+              'stderr' in error &&
+              typeof (error as { stderr: unknown }).stderr === 'string'
+            ? (error as { stderr: string }).stderr
+            : 'Push failed';
 
       if (errorMessage.includes('no upstream branch')) {
         return {
@@ -588,7 +564,7 @@ export class GitService {
         needsUpstream: false,
         reason: 'Already up to date with remote.',
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[GitService] Failed to check push safety:', error);
       return {
         safe: false,
@@ -597,20 +573,6 @@ export class GitService {
         reason: 'Failed to check push status.',
       };
     }
-  }
-
-  /**
-   * Subscribe to git status updates
-   * @returns Unsubscribe function
-   */
-  static onStatusUpdate(
-    callback: (status: GitWatcherStatus) => void,
-  ): () => void {
-    if (window.mainProcess.git.onStatusUpdate) {
-      return window.mainProcess.git.onStatusUpdate(callback);
-    }
-    // Return no-op unsubscribe if not available
-    return () => {};
   }
 
   /**

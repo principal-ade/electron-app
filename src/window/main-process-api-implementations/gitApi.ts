@@ -1,9 +1,6 @@
 import { ipcRenderer, type IpcRendererEvent } from 'electron';
 import { GitEvents } from '../../shared/main-process-api-interfaces/GitAPI';
-import type {
-  Repository,
-  GitStatus,
-} from '../../shared/types/repository.types';
+import type { Repository } from '../../shared/types/repository.types';
 
 export interface GitRepositoryInfo {
   root: string;
@@ -15,17 +12,6 @@ export interface GitRepositoryInfo {
     owner?: string;
     repo?: string;
   }>;
-}
-
-// GitStatus is now imported from repository.types
-
-export interface GitDetailedChanges {
-  created: string[];
-  modified: string[];
-  deleted: string[];
-  renamed: Array<{ from: string; to: string }>;
-  stats: { additions: number; deletions: number };
-  fileStats: Record<string, { additions: number; deletions: number }>;
 }
 
 export interface GitCommand {
@@ -42,21 +28,6 @@ export const gitAPI = {
 
   checkIfPrivateRepo: async (remoteUrl: string): Promise<boolean> => {
     return ipcRenderer.invoke(GitEvents.CHECK_IF_PRIVATE_REPO, remoteUrl);
-  },
-
-  getStatus: async (directory: string): Promise<GitStatus> => {
-    return ipcRenderer.invoke(GitEvents.GET_STATUS, directory);
-  },
-
-  getDetailedChanges: async (
-    directory: string,
-    files?: string[],
-  ): Promise<GitDetailedChanges> => {
-    return ipcRenderer.invoke(GitEvents.GET_DETAILED_CHANGES, directory, files);
-  },
-
-  getUncommittedChanges: async (directory: string): Promise<string[]> => {
-    return ipcRenderer.invoke(GitEvents.GET_UNCOMMITTED_CHANGES, directory);
   },
 
   getCommitHistory: async (
@@ -116,18 +87,6 @@ export const gitAPI = {
     error?: string;
   }> => {
     return ipcRenderer.invoke(GitEvents.FORCE_DELETE_GIT_REPOSITORY, repoPath);
-  },
-
-  // Add listener for git status updates from GitRepositoryWatcher
-  onStatusUpdate: (callback: (status: GitStatus) => void) => {
-    const handler = (_event: IpcRendererEvent, status: GitStatus) =>
-      callback(status);
-    ipcRenderer.on('git:status-update', handler);
-
-    // Return cleanup function
-    return () => {
-      ipcRenderer.removeListener('git:status-update', handler);
-    };
   },
 
   // Event listeners for repository changes

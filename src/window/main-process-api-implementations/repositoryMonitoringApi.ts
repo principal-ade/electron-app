@@ -2,7 +2,7 @@ import { ipcRenderer } from 'electron';
 import {
   RepositoryMonitoringAPI,
   RepositoryMonitoringAPIEvent,
-  GitStatusMetadata,
+  GitStatusWithFiles,
   type WorkspaceChangeEventPayload,
   type ToolExecutionRequest,
   type RepositoryCacheSyncEvent,
@@ -109,11 +109,11 @@ export const repositoryMonitoringAPI: RepositoryMonitoringAPI = {
   },
 
   onGitStatusChanged: (
-    callback: (status: GitStatusMetadata) => void,
+    callback: (status: GitStatusWithFiles) => void,
   ): (() => void) => {
     const handler = (
       _event: Electron.IpcRendererEvent,
-      status: GitStatusMetadata,
+      status: GitStatusWithFiles,
     ) => callback(status);
     ipcRenderer.on(RepositoryMonitoringAPIEvent.GIT_STATUS_CHANGED, handler);
     return () => {
