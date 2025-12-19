@@ -44,6 +44,14 @@ interface GitStatusSliceData {
   deleted: string[];
 }
 
+// Color mode for file city visualization
+type FileCityColorMode = 'fileTypes' | 'git' | 'coverage' | 'eslint' | 'typescript' | 'prettier' | 'knip' | 'alexandria';
+
+// File city color modes slice data
+interface FileCityColorModesSliceData {
+  selectedColorMode: FileCityColorMode | null;
+}
+
 // Helper to convert GitStatusWithFiles to GitStatusSliceData
 function mapGitStatusToSliceData(
   status: GitStatusWithFiles | null,
@@ -119,6 +127,9 @@ export const RepositoryPanelProvider: React.FC<
     null,
   );
   const [gitStatusLoading, setGitStatusLoading] = useState(false);
+
+  // Track selected color mode for file city visualization
+  const [fileCityColorMode, setFileCityColorMode] = useState<FileCityColorMode | null>(null);
 
   // Track all Alexandria repositories (for Local Projects panel)
   const [alexandriaRepositories, setAlexandriaRepositories] = useState<
@@ -360,6 +371,40 @@ export const RepositoryPanelProvider: React.FC<
       unsubscribe();
     };
   }, []);
+
+  // Compute effective color mode: use explicit selection, or auto-select 'git' if there are changes
+  const effectiveColorMode = useMemo((): FileCityColorMode => {
+    // If explicitly set, use that
+    if (fileCityColorMode) {
+      return fileCityColorMode;
+    }
+    // Auto-select 'git' mode if there are any git changes
+    if (gitStatusData) {
+      const hasChanges =
+        gitStatusData.staged.length > 0 ||
+        gitStatusData.unstaged.length > 0 ||
+        gitStatusData.untracked.length > 0 ||
+        gitStatusData.deleted.length > 0;
+      if (hasChanges) {
+        return 'git';
+      }
+    }
+    // Default to file types
+    return 'fileTypes';
+  }, [fileCityColorMode, gitStatusData]);
+
+  // Listen for color mode change events from panels (e.g., quality hexagon clicks)
+  useEffect(() => {
+    const unsubscribe = events.on('filecity:colormode', (event) => {
+      const mode = event.payload as FileCityColorMode | null;
+      console.info('[RepositoryPanelProvider] Color mode changed via event:', mode);
+      setFileCityColorMode(mode);
+    });
+
+    return () => {
+      unsubscribe?.();
+    };
+  }, [events]);
 
   // Fetch quality metrics from GitHub Actions artifacts when repository changes
   useEffect(() => {
@@ -948,6 +993,21 @@ export const RepositoryPanelProvider: React.FC<
             },
           },
         ],
+        [
+          'fileCityColorModes',
+          {
+            scope: 'repository' as const,
+            name: 'fileCityColorModes',
+            data: {
+              selectedColorMode: effectiveColorMode,
+            } as FileCityColorModesSliceData,
+            loading: false,
+            error: null,
+            refresh: async () => {
+              // No async refresh needed - color mode is computed from other state
+            },
+          },
+        ],
       ]),
     [
       repositoryPath,
@@ -965,6 +1025,7 @@ export const RepositoryPanelProvider: React.FC<
       activeFileData,
       activeFileLoading,
       activeFileError,
+      effectiveColorMode,
     ],
   );
 
