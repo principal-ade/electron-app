@@ -41,6 +41,10 @@ declare global {
           newOwnerWindowId: number;
         }) => void,
       ) => () => void;
+      // Fast terminal write using MessagePort (no IPC round-trip)
+      writeToTerminalPort: (sessionId: string, data: string) => boolean;
+      // Check if MessagePort is available for a session
+      hasTerminalPort: (sessionId: string) => boolean;
     };
   }
 }
@@ -116,4 +120,22 @@ export const onOwnershipLost = (
   callback: (data: { sessionId: string; newOwnerWindowId: number }) => void,
 ) => {
   return window.electron.onOwnershipLost(callback);
+};
+
+/**
+ * Fast terminal write using MessagePort (no IPC round-trip).
+ * Returns true if write was sent via port, false if port not available.
+ */
+export const writeToTerminalPort = (
+  sessionId: string,
+  data: string,
+): boolean => {
+  return window.electron.writeToTerminalPort(sessionId, data);
+};
+
+/**
+ * Check if MessagePort is available for a session.
+ */
+export const hasTerminalPort = (sessionId: string): boolean => {
+  return window.electron.hasTerminalPort(sessionId);
 };

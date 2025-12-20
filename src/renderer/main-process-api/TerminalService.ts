@@ -9,6 +9,7 @@ import {
   terminalClient,
   onTerminalData,
   onOwnershipLost,
+  writeToTerminalPort,
 } from '../tipc/terminalClient';
 import type {
   TerminalInfo,
@@ -56,6 +57,11 @@ export class TerminalService {
   }
 
   static async write(id: string, data: string): Promise<void> {
+    // Try fast path via MessagePort first (no IPC round-trip)
+    if (writeToTerminalPort(id, data)) {
+      return;
+    }
+    // Fall back to IPC if port not available yet
     return terminalClient.writeToTerminal({ sessionId: id, data });
   }
 

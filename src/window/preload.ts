@@ -353,6 +353,21 @@ try {
         console.log('[preload] Unsubscribed from ownership lost events');
       };
     },
+
+    // Fast terminal write using MessagePort (no IPC round-trip)
+    writeToTerminalPort: (sessionId: string, data: string): boolean => {
+      const port = terminalPorts.get(sessionId);
+      if (port) {
+        port.postMessage({ type: 'WRITE', data });
+        return true;
+      }
+      return false;
+    },
+
+    // Check if MessagePort is available for a session
+    hasTerminalPort: (sessionId: string): boolean => {
+      return terminalPorts.has(sessionId);
+    },
   });
   console.info('[Preload] ✅ TIPC + Terminal APIs exposed');
 } catch (error) {
