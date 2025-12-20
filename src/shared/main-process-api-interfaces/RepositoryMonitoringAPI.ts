@@ -184,7 +184,6 @@ export interface RepositoryInfo {
   path: string;
   isWatching: boolean;
   watchReferenceCount: number;
-  fsMonitorEnabled: boolean;
   watchingMode: 'minimal' | 'fallback' | 'none';
 }
 

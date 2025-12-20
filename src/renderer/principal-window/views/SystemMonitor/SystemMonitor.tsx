@@ -952,12 +952,9 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                                     fontSize: '10px',
                                   }}
                                 >
-                                  {repo.watchingMode === 'minimal' &&
-                                  repo.fsMonitorEnabled
-                                    ? 'WATCHING (FSMonitor)'
-                                    : repo.watchingMode === 'fallback'
-                                      ? 'WATCHING (Fallback)'
-                                      : 'WATCHING'}
+                                  {repo.watchingMode === 'fallback'
+                                    ? 'WATCHING (Fallback)'
+                                    : 'WATCHING'}
                                 </span>
                               )}
                             </div>

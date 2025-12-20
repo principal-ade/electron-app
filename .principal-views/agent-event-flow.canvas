@@ -88,8 +88,8 @@
     {
       "id": "group-main",
       "type": "group",
-      "x": -71,
-      "y": 341,
+      "x": -100,
+      "y": -258,
       "width": 720,
       "height": 380,
       "label": "Main Process"
