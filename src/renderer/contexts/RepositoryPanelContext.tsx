@@ -21,6 +21,10 @@ import { FileSystemService } from '../main-process-api/FileSystemService';
 import { WindowService } from '../main-process-api/WindowService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { GitHubArtifactService } from '../main-process-api/GitHubArtifactService';
+import {
+  LocalhostDetectionService,
+  type RunningServer,
+} from '../main-process-api/LocalhostDetectionService';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { PackageLayer } from '@principal-ai/codebase-composition';
@@ -152,6 +156,10 @@ export const RepositoryPanelProvider: React.FC<
 
   // Loading state
   const [loading] = useState(false);
+
+  // Track localhost servers
+  const [localhostServers, setLocalhostServers] = useState<RunningServer[]>([]);
+  const [localhostServersLoading, setLocalhostServersLoading] = useState(false);
 
   // Track active file for markdown panel (and other file viewers)
   const [activeFileData, setActiveFileData] = useState<{
@@ -483,6 +491,59 @@ export const RepositoryPanelProvider: React.FC<
 
     fetchQualityMetrics();
   }, [repositoryPath]);
+
+  // Initialize localhost server detection
+  useEffect(() => {
+    let unsubscribeUpdates: (() => void) | null = null;
+    let watchId: string | null = null;
+
+    const initLocalhostDetection = async () => {
+      setLocalhostServersLoading(true);
+      try {
+        // Start watching for localhost servers
+        const { watchId: id } = await LocalhostDetectionService.startWatching(
+          undefined,
+          5000,
+        );
+        watchId = id;
+
+        // Subscribe to updates
+        unsubscribeUpdates = LocalhostDetectionService.onServersUpdated(
+          (result) => {
+            setLocalhostServers(result.servers);
+          },
+        );
+
+        // Fetch initial servers
+        const result = await LocalhostDetectionService.detectRunningServers();
+        setLocalhostServers(result.servers);
+      } catch (error) {
+        console.error(
+          '[RepositoryPanelContext] Failed to initialize localhost detection:',
+          error,
+        );
+      } finally {
+        setLocalhostServersLoading(false);
+      }
+    };
+
+    initLocalhostDetection();
+
+    return () => {
+      // Cleanup: stop watching and unsubscribe
+      if (watchId) {
+        LocalhostDetectionService.stopWatching(watchId).catch((err) => {
+          console.error(
+            '[RepositoryPanelContext] Failed to stop localhost watching:',
+            err,
+          );
+        });
+      }
+      if (unsubscribeUpdates) {
+        unsubscribeUpdates();
+      }
+    };
+  }, []);
 
   // Create actions object
   // Note: Terminal actions have been moved to TerminalContext
@@ -1008,6 +1069,32 @@ export const RepositoryPanelProvider: React.FC<
             },
           },
         ],
+        [
+          'localhostServers',
+          {
+            scope: 'workspace' as const,
+            name: 'localhostServers',
+            data: localhostServers,
+            loading: localhostServersLoading,
+            error: null,
+            refresh: async () => {
+              // Refetch localhost servers
+              setLocalhostServersLoading(true);
+              try {
+                const result =
+                  await LocalhostDetectionService.detectRunningServers();
+                setLocalhostServers(result.servers);
+              } catch (error) {
+                console.error(
+                  '[RepositoryPanelContext] Failed to refresh localhost servers:',
+                  error,
+                );
+              } finally {
+                setLocalhostServersLoading(false);
+              }
+            },
+          },
+        ],
       ]),
     [
       repositoryPath,
@@ -1026,6 +1113,8 @@ export const RepositoryPanelProvider: React.FC<
       activeFileLoading,
       activeFileError,
       effectiveColorMode,
+      localhostServers,
+      localhostServersLoading,
     ],
   );
 

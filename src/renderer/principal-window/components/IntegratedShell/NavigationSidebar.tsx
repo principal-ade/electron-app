@@ -6,6 +6,7 @@ import {
   User,
   LayoutGrid,
   Users,
+  Globe,
 } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuthState';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
@@ -116,6 +117,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   const navItems: NavItem[] = [
     { id: 'workspaces', icon: <LayoutGrid size={20} />, label: 'Workspaces' },
     { id: 'network', icon: <Users size={20} />, label: 'Network' },
+    { id: 'processes', icon: <Globe size={20} />, label: 'Processes' },
     // Only include search button if user has enabled it in preferences
     ...(showSearchButton
       ? [

@@ -9,7 +9,6 @@ import { createClient } from '@egoist/tipc/renderer';
 import type {
   CreateTerminalSessionInput,
   DestroyTerminalSessionInput,
-  WriteToTerminalInput,
   ResizeTerminalInput,
   RefreshTerminalInput,
   OwnershipInput,
@@ -45,6 +44,13 @@ declare global {
       writeToTerminalPort: (sessionId: string, data: string) => boolean;
       // Check if MessagePort is available for a session
       hasTerminalPort: (sessionId: string) => boolean;
+      // Subscribe to port ready events (for direct MessagePort access)
+      onPortReady: (
+        callback: (
+          data: { sessionId: string; writable: boolean },
+          port: MessagePort,
+        ) => void,
+      ) => () => void;
     };
   }
 }
@@ -55,7 +61,6 @@ export interface TerminalClient {
   createTerminalSession: (input: CreateTerminalSessionInput) => Promise<string>;
   destroyTerminalSession: (input: DestroyTerminalSessionInput) => Promise<void>;
   listTerminalSessions: () => Promise<TerminalSessionInfo[]>;
-  writeToTerminal: (input: WriteToTerminalInput) => Promise<void>;
   resizeTerminal: (input: ResizeTerminalInput) => Promise<void>;
   refreshTerminal: (input: RefreshTerminalInput) => Promise<RefreshResult>;
   checkTerminalOwnership: (input: { sessionId: string }) => Promise<{
@@ -138,4 +143,17 @@ export const writeToTerminalPort = (
  */
 export const hasTerminalPort = (sessionId: string): boolean => {
   return window.electron.hasTerminalPort(sessionId);
+};
+
+/**
+ * Subscribe to port ready events for direct MessagePort access.
+ * This allows components to receive the MessagePort directly for optimal performance.
+ */
+export const onPortReady = (
+  callback: (
+    data: { sessionId: string; writable: boolean },
+    port: MessagePort,
+  ) => void,
+): (() => void) => {
+  return window.electron.onPortReady(callback);
 };

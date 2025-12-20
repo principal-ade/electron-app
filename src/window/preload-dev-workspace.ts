@@ -107,6 +107,10 @@ const terminalSubscribers = new Map<string, Set<(data: string) => void>>();
 const ownershipLostSubscribers = new Set<
   (data: { sessionId: string; newOwnerWindowId: number }) => void
 >();
+// Port ready callbacks - for delivering MessagePort directly to components
+const portReadyCallbacks = new Set<
+  (data: { sessionId: string; writable: boolean }, port: MessagePort) => void
+>();
 
 // Listen for MessagePort delivery from main process (matching testing app pattern)
 ipcRenderer.on('terminal:port', (event, sessionId: string) => {
@@ -118,17 +122,20 @@ ipcRenderer.on('terminal:port', (event, sessionId: string) => {
     return;
   }
 
-  console.log(
-    `[preload-dev-workspace] Received MessagePort for session ${sessionId}`,
-  );
-
-  // Store the port
+  // Store the port for writes
   terminalPorts.set(sessionId, port);
 
   // Start the port to enable messaging
   port.start();
 
-  // Route incoming data to subscribers
+  // Notify port ready callbacks (for direct MessagePort access)
+  if (portReadyCallbacks.size > 0) {
+    portReadyCallbacks.forEach((cb) =>
+      cb({ sessionId, writable: true }, port),
+    );
+  }
+
+  // Route incoming data to subscribers (fallback for components not using direct port)
   port.onmessage = (e: MessageEvent) => {
     if (e.data?.type === 'DATA') {
       const subscribers = terminalSubscribers.get(sessionId);
@@ -136,21 +143,10 @@ ipcRenderer.on('terminal:port', (event, sessionId: string) => {
         subscribers.forEach((cb) => cb(e.data.data));
       }
     } else if (e.data?.type === 'EXIT') {
-      console.log(
-        `[preload-dev-workspace] Terminal session ${sessionId} exited`,
-      );
       terminalPorts.delete(sessionId);
       terminalSubscribers.delete(sessionId);
     }
   };
-
-  // Check if there are already subscribers waiting for this port
-  const existingSubscribers = terminalSubscribers.get(sessionId);
-  if (existingSubscribers && existingSubscribers.size > 0) {
-    console.log(
-      `[preload-dev-workspace] Port ready, ${existingSubscribers.size} subscriber(s) waiting for session ${sessionId}`,
-    );
-  }
 });
 
 // Listen for ownership lost events from main process
@@ -243,6 +239,19 @@ try {
     // Check if MessagePort is available for a session
     hasTerminalPort: (sessionId: string): boolean => {
       return terminalPorts.has(sessionId);
+    },
+
+    // Subscribe to port ready events (for direct MessagePort access)
+    onPortReady: (
+      callback: (
+        data: { sessionId: string; writable: boolean },
+        port: MessagePort,
+      ) => void,
+    ): (() => void) => {
+      portReadyCallbacks.add(callback);
+      return () => {
+        portReadyCallbacks.delete(callback);
+      };
     },
   });
   console.info('[Preload-DevWorkspace] ✅ TIPC + Terminal APIs exposed');

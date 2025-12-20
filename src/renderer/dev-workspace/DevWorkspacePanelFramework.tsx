@@ -25,7 +25,7 @@ import { panels as principalViewPanels } from '@industry-theme/principal-view-pa
 import { panels as fileCityPanels } from '@industry-theme/file-city-panel';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import { panels as alexandriaPanels } from '@industry-theme/alexandria-panels';
-import { panels as localhostPanels } from '@industry-theme/localhost-panels';
+import { localhostProcessesPanels } from '../panels';
 import { panels as agentDrivenPanels } from '@industry-theme/agent-driven-ui-panels';
 import { panels as repositoryCompositionPanels } from '@industry-theme/repository-composition-panels';
 import { panels as codeQualityPanels } from '@principal-ade/code-quality-panels';
@@ -131,7 +131,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   const LocalProjectsPanelComponent = alexandriaPanels.find(
     (p) => p.metadata?.id === 'industry-theme.local-projects',
   )?.component;
-  const LocalhostPanelComponent = localhostPanels[0]?.component;
+  const LocalhostPanelComponent = localhostProcessesPanels[0]?.component;
   const EventBusPanelComponent = agentDrivenPanels.find(
     (p) => p.metadata?.id === 'industry-theme.event-bus-panel',
   )?.component;

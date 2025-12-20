@@ -84,12 +84,6 @@ export const terminalRouter = {
     return sessions;
   }),
 
-  writeToTerminal: t.procedure
-    .input<{ sessionId: string; data: string }>()
-    .action(async ({ input }) => {
-      sessionManager.writeToSession(input.sessionId, input.data);
-    }),
-
   resizeTerminal: t.procedure
     .input<{ sessionId: string; cols: number; rows: number; force?: boolean }>()
     .action(async ({ input }) => {

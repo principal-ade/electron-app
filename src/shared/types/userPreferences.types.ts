@@ -26,7 +26,8 @@ export type InteractiveShellNavigationView =
   | 'monitoring'
   | 'auth'
   | 'workspaces'
-  | 'network';
+  | 'network'
+  | 'processes';
 
 // Repository view right pane modes
 export type RightPaneMode = 'city' | 'terminal' | 'session-detail' | 'document';

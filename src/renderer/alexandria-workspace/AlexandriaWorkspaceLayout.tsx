@@ -13,7 +13,7 @@ import { TabbedTerminalPanel } from '@industry-theme/xterm-terminal-panel';
 import { panels as workspacePanels } from '@industry-theme/alexandria-panels';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import { panels as fileCityPanels } from '@industry-theme/file-city-panel';
-import { panels as localhostPanels } from '@industry-theme/localhost-panels';
+import { localhostProcessesPanels } from '../panels';
 import { panels as agentDrivenPanels } from '@industry-theme/agent-driven-ui-panels';
 import { panels as markdownPanels } from '@industry-theme/markdown-panels';
 import { panels as principalViewPanels } from '@industry-theme/principal-view-panels';
@@ -323,7 +323,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   )?.component;
   const DocsPanelComponent = docsPanels[0]?.component;
   const FileCityPanelComponent = fileCityPanels[0]?.component;
-  const LocalhostPanelComponent = localhostPanels[0]?.component;
+  const LocalhostPanelComponent = localhostProcessesPanels[0]?.component;
   const EventBusPanelComponent = agentDrivenPanels.find(
     (p) => p.metadata?.id === 'industry-theme.event-bus-panel',
   )?.component;

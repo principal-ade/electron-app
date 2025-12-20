@@ -8,6 +8,7 @@ import { SystemMonitor } from '../../views/SystemMonitor/SystemMonitor';
 import { AuthView } from '../../views/AuthView';
 import { WorkspacesView } from '../../views/WorkspacesView';
 import { GitSyncView } from '../../views/GitSyncView';
+import { LocalhostProcessesView } from '../../views/LocalhostProcessesView';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { PresenceService } from '../../../main-process-api/PresenceService';
 import { SecureAuthService } from '../../../services/SecureAuthService';
@@ -59,6 +60,7 @@ export const IntegratedShell: React.FC = () => {
     settings: { left: false, right: false },
     workspaces: { left: false, right: false },
     network: { left: false, right: false },
+    processes: { left: false, right: false },
   });
 
   // Get current view's collapsed states
@@ -302,6 +304,7 @@ export const IntegratedShell: React.FC = () => {
             settings: { left: false, right: false },
             workspaces: { left: false, right: false },
             network: { left: false, right: false },
+            processes: { left: false, right: false },
           });
           return { success: true };
         default:
@@ -358,6 +361,7 @@ export const IntegratedShell: React.FC = () => {
           settings: { left: false, right: false },
           workspaces: { left: false, right: false },
           network: { left: false, right: false },
+          processes: { left: false, right: false },
         });
       }),
     ];
@@ -460,6 +464,7 @@ export const IntegratedShell: React.FC = () => {
             {activeView === 'auth' && <AuthView />}
             {activeView === 'workspaces' && <WorkspacesView />}
             {activeView === 'network' && <GitSyncView />}
+            {activeView === 'processes' && <LocalhostProcessesView />}
           </div>
         </div>
       </div>

@@ -17,11 +17,6 @@ export interface DestroyTerminalSessionInput {
   sessionId: string;
 }
 
-export interface WriteToTerminalInput {
-  sessionId: string;
-  data: string;
-}
-
 export interface ResizeTerminalInput {
   sessionId: string;
   cols: number;

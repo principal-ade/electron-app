@@ -10,6 +10,7 @@ import {
   onTerminalData,
   onOwnershipLost,
   writeToTerminalPort,
+  onPortReady,
 } from '../tipc/terminalClient';
 import type {
   TerminalInfo,
@@ -56,13 +57,8 @@ export class TerminalService {
     return terminalClient.destroyTerminalSession({ sessionId: id });
   }
 
-  static async write(id: string, data: string): Promise<void> {
-    // Try fast path via MessagePort first (no IPC round-trip)
-    if (writeToTerminalPort(id, data)) {
-      return;
-    }
-    // Fall back to IPC if port not available yet
-    return terminalClient.writeToTerminal({ sessionId: id, data });
+  static write(id: string, data: string): void {
+    writeToTerminalPort(id, data);
   }
 
   /**
@@ -139,7 +135,7 @@ export class TerminalService {
 
   /**
    * Listen for MessagePort delivery.
-   * Not needed with TIPC pattern - ports are delivered automatically.
+   * Allows components to receive the MessagePort directly for optimal performance.
    */
   static onPortReady(
     callback: (
@@ -147,7 +143,6 @@ export class TerminalService {
       port: MessagePort,
     ) => void,
   ): () => void {
-    // Port delivery is handled by preload's 'terminal:port' listener
-    return () => {};
+    return onPortReady(callback);
   }
 }
