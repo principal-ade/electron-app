@@ -4,7 +4,12 @@
  */
 
 import { HttpEventServer } from './HttpEventServer';
-import type { MainToServerMessage, ServerToMainMessage } from './types';
+import type {
+  MainToServerMessage,
+  ServerToMainMessage,
+  RegisterPortMessage,
+  UnregisterPortMessage,
+} from './types';
 
 interface ReadyMessage {
   type: 'ready';
@@ -14,6 +19,14 @@ interface ReadyMessage {
 
 type OutgoingMessage = ServerToMainMessage | ReadyMessage;
 
+// MessagePort type for utility process (from Electron's MessagePortMain)
+type MessagePortLike = {
+  postMessage: (message: unknown) => void;
+  on: (event: 'message', handler: (event: { data: unknown }) => void) => void;
+  start: () => void;
+  close: () => void;
+};
+
 console.info(
   '[EventProcessingWorker] Script loaded, HttpEventServer:',
   typeof HttpEventServer,
@@ -22,11 +35,21 @@ console.info(
 // Track if we've sent the ready signal
 let readySent = false;
 
+// Track registered ports: Map<repository, Map<windowId, MessagePort>>
+const registeredPorts: Map<string, Map<number, MessagePortLike>> = new Map();
+
 function extractMessage(raw: unknown): unknown {
   if (raw && typeof raw === 'object' && 'data' in raw) {
     return (raw as { data: unknown }).data;
   }
   return raw;
+}
+
+function extractPorts(raw: unknown): MessagePortLike[] {
+  if (raw && typeof raw === 'object' && 'ports' in raw) {
+    return (raw as { ports: MessagePortLike[] }).ports || [];
+  }
+  return [];
 }
 
 function isMainToServerMessage(
@@ -40,9 +63,95 @@ function isMainToServerMessage(
   );
 }
 
+function isRegisterPortMessage(
+  message: MainToServerMessage,
+): message is RegisterPortMessage {
+  return message.type === 'REGISTER_PORT';
+}
+
+function isUnregisterPortMessage(
+  message: MainToServerMessage,
+): message is UnregisterPortMessage {
+  return message.type === 'UNREGISTER_PORT';
+}
+
+/**
+ * Register a MessagePort for a window+repository
+ */
+function registerPort(
+  windowId: number,
+  repository: string,
+  port: MessagePortLike,
+): void {
+  if (!registeredPorts.has(repository)) {
+    registeredPorts.set(repository, new Map());
+  }
+  registeredPorts.get(repository)!.set(windowId, port);
+
+  // Start the port to enable message receiving (if needed later)
+  port.start();
+
+  console.info(
+    `[EventProcessingWorker] Registered port for window ${windowId} -> repo ${repository}`,
+  );
+}
+
+/**
+ * Unregister a MessagePort for a window+repository
+ */
+function unregisterPort(windowId: number, repository: string): void {
+  const repoPorts = registeredPorts.get(repository);
+  if (!repoPorts) return;
+
+  const port = repoPorts.get(windowId);
+  if (port) {
+    try {
+      port.close();
+    } catch (e) {
+      // Port may already be closed
+    }
+    repoPorts.delete(windowId);
+    console.info(
+      `[EventProcessingWorker] Unregistered port for window ${windowId} -> repo ${repository}`,
+    );
+  }
+
+  if (repoPorts.size === 0) {
+    registeredPorts.delete(repository);
+  }
+}
+
+/**
+ * Send an event to all ports registered for a repository
+ */
+function sendEventToPorts(repository: string, event: unknown): void {
+  const repoPorts = registeredPorts.get(repository);
+  if (!repoPorts || repoPorts.size === 0) {
+    return;
+  }
+
+  for (const [windowId, port] of repoPorts) {
+    try {
+      port.postMessage({ type: 'AGENT_EVENT', event });
+    } catch (error) {
+      console.error(
+        `[EventProcessingWorker] Failed to send event to window ${windowId}:`,
+        error,
+      );
+      // Remove broken port
+      repoPorts.delete(windowId);
+    }
+  }
+}
+
+// Export for HttpEventServer to use
+(global as unknown as { sendEventToPorts: typeof sendEventToPorts }).sendEventToPorts = sendEventToPorts;
+
 // Message handler for communication with main process
 function handleMessage(rawMessage: unknown): void {
   const message = extractMessage(rawMessage);
+  const ports = extractPorts(rawMessage);
+
   if (!isMainToServerMessage(message)) {
     console.warn(
       '[EventProcessingWorker] Ignoring message with unexpected shape:',
@@ -55,6 +164,17 @@ function handleMessage(rawMessage: unknown): void {
     '[EventProcessingWorker] Received message from main:',
     message.type,
   );
+
+  // Handle port registration/unregistration
+  if (isRegisterPortMessage(message) && ports.length > 0) {
+    registerPort(message.windowId, message.repository, ports[0]);
+    return;
+  }
+
+  if (isUnregisterPortMessage(message)) {
+    unregisterPort(message.windowId, message.repository);
+    return;
+  }
 
   if (server) {
     server.handleMainResponse(message);

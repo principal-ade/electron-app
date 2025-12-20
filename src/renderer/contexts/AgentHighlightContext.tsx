@@ -99,24 +99,8 @@ export const AgentHighlightProvider: React.FC<AgentHighlightProviderProps> = ({
     // Set repository context
     service.setRepository(repositoryPath);
 
-    // Subscribe to processed agent events
-    const unsubscribeEvents = AgentSessionSDKService.onProcessedEvent(
-      (event) => {
-        console.log(
-          '[AgentHighlightProvider] Received agent event:',
-          event.eventType,
-          event.toolName,
-        );
-        service.processEvent(event);
-      },
-    );
-
     // Listen for highlight layer updates from the service
     const handleHighlightUpdate = (layers: HighlightLayer[]) => {
-      console.log(
-        '[AgentHighlightProvider] Agent highlight layers updated:',
-        layers.length,
-      );
       setHighlightLayers(layers);
       // Update navigation state
       const navState = service.getNavigationState();
@@ -125,12 +109,56 @@ export const AgentHighlightProvider: React.FC<AgentHighlightProviderProps> = ({
 
     service.on('highlight-update', handleHighlightUpdate);
 
+    // Register for direct MessagePort events for this repository
+    let unsubscribeEvents: (() => void) | null = null;
+
+    const setupEventPort = async () => {
+      try {
+        // Register the port
+        const success =
+          await AgentSessionSDKService.registerEventPort(repositoryPath);
+        if (!success) {
+          console.error(
+            '[AgentHighlightProvider] Failed to register event port for:',
+            repositoryPath,
+          );
+          return;
+        }
+
+        // Subscribe to events for this repository
+        unsubscribeEvents = AgentSessionSDKService.subscribeToRepositoryEvents(
+          repositoryPath,
+          (event) => {
+            service.processEvent(event);
+          },
+        );
+      } catch (error) {
+        console.error(
+          '[AgentHighlightProvider] Error setting up event port:',
+          error,
+        );
+      }
+    };
+
+    setupEventPort();
+
     return () => {
-      console.log(
-        '[AgentHighlightProvider] Cleaning up event highlight service',
-      );
-      unsubscribeEvents();
       service.off('highlight-update', handleHighlightUpdate);
+
+      // Unsubscribe from events
+      if (unsubscribeEvents) {
+        unsubscribeEvents();
+      }
+
+      // Unregister the port
+      AgentSessionSDKService.unregisterEventPort(repositoryPath).catch(
+        (error) => {
+          console.error(
+            '[AgentHighlightProvider] Error unregistering event port:',
+            error,
+          );
+        },
+      );
     };
   }, [repositoryPath]);
 

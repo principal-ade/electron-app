@@ -134,12 +134,33 @@ export interface GetStatsMessage extends BaseClientMessage {
   type: 'GET_STATS';
 }
 
+/**
+ * Message to register a MessagePort for a specific repository
+ * The port is transferred separately via postMessage transfer list
+ */
+export interface RegisterPortMessage extends BaseClientMessage {
+  type: 'REGISTER_PORT';
+  windowId: number;
+  repository: string;
+}
+
+/**
+ * Message to unregister a port when window closes or changes repo
+ */
+export interface UnregisterPortMessage extends BaseClientMessage {
+  type: 'UNREGISTER_PORT';
+  windowId: number;
+  repository: string;
+}
+
 export type MainToServerMessage =
   | ProcessEventMessage
   | StorageResponseMessage
   | ShutdownMessage
   | PingMessage
-  | GetStatsMessage;
+  | GetStatsMessage
+  | RegisterPortMessage
+  | UnregisterPortMessage;
 
 /**
  * Helper functions
@@ -220,4 +241,16 @@ export function isProcessedEventMessage(
   msg: ServerToMainMessage,
 ): msg is ProcessedEventMessage {
   return msg.type === 'PROCESSED_EVENT';
+}
+
+export function isRegisterPortMessage(
+  msg: MainToServerMessage,
+): msg is RegisterPortMessage {
+  return msg.type === 'REGISTER_PORT';
+}
+
+export function isUnregisterPortMessage(
+  msg: MainToServerMessage,
+): msg is UnregisterPortMessage {
+  return msg.type === 'UNREGISTER_PORT';
 }

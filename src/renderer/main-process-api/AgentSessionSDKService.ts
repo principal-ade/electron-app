@@ -97,27 +97,57 @@ export class AgentSessionSDKService {
 
   /**
    * Subscribe to processed events
-   * Returns an unsubscribe function
+   * @deprecated Use registerEventPort instead for direct MessagePort communication
    */
   static onProcessedEvent(
     callback: (event: RepoNormalizedUniversalAgentSessionEvent) => void,
   ): () => void {
     this.recordCall('onProcessedEvent');
+    return window.mainProcess.agentSessionSDK.onProcessedEvent(callback);
+  }
+
+  /**
+   * Register for events from a specific repository via direct MessagePort
+   * This bypasses the main process for event delivery
+   */
+  static async registerEventPort(repository: string): Promise<boolean> {
+    this.recordCall('registerEventPort');
+    return window.mainProcess.agentSessionSDK.registerEventPort(repository);
+  }
+
+  /**
+   * Unregister from events for a repository
+   */
+  static async unregisterEventPort(repository: string): Promise<void> {
+    this.recordCall('unregisterEventPort');
     console.log(
-      '[AgentSessionSDKService] Setting up onProcessedEvent subscription',
+      `[AgentSessionSDKService] Unregistering event port for: ${repository}`,
     );
-    const unsubscribe = window.mainProcess.agentSessionSDK.onProcessedEvent(
-      (event) => {
-        console.log(
-          '[AgentSessionSDKService] Event received from IPC:',
-          event.eventType,
-        );
-        callback(event);
-      },
+    return window.mainProcess.agentSessionSDK.unregisterEventPort(repository);
+  }
+
+  /**
+   * Callback for when a MessagePort is ready for use
+   */
+  static onEventPortReady(
+    callback: (data: { repository: string }) => void,
+  ): () => void {
+    this.recordCall('onEventPortReady');
+    return window.mainProcess.agentSessionSDK.onEventPortReady(callback);
+  }
+
+  /**
+   * Subscribe to events for a specific repository
+   * Call this after registerEventPort succeeds
+   */
+  static subscribeToRepositoryEvents(
+    repository: string,
+    callback: (event: RepoNormalizedUniversalAgentSessionEvent) => void,
+  ): () => void {
+    this.recordCall('subscribeToRepositoryEvents');
+    return window.mainProcess.agentSessionSDK.subscribeToRepositoryEvents(
+      repository,
+      callback,
     );
-    console.log(
-      '[AgentSessionSDKService] Subscription set up, unsubscribe function created',
-    );
-    return unsubscribe;
   }
 }

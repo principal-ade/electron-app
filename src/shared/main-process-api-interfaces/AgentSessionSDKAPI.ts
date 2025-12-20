@@ -62,6 +62,11 @@ export enum AgentSessionSDKAPIEvents {
   SESSION_UPDATED = 'sdk-sessions:updated',
   CLI_PROVIDER_EVENT = 'sdk-sessions:cli-event',
   PROCESSED_EVENT = 'sdk-sessions:processed-event',
+
+  // Direct MessagePort registration
+  REGISTER_EVENT_PORT = 'sdk-sessions:register-event-port',
+  UNREGISTER_EVENT_PORT = 'sdk-sessions:unregister-event-port',
+  EVENT_PORT_READY = 'sdk-sessions:event-port-ready',
 }
 
 /**
@@ -96,6 +101,24 @@ export interface AgentSessionSDKAPI {
   }>;
 
   onProcessedEvent: (
+    callback: (event: RepoNormalizedUniversalAgentSessionEvent) => void,
+  ) => () => void;
+
+  // Direct MessagePort registration for a repository
+  // Returns true if registration succeeded
+  registerEventPort: (repository: string) => Promise<boolean>;
+
+  // Unregister from receiving events for a repository
+  unregisterEventPort: (repository: string) => Promise<void>;
+
+  // Callback for when a MessagePort is ready for use
+  onEventPortReady: (
+    callback: (data: { repository: string }) => void,
+  ) => () => void;
+
+  // Subscribe to events for a specific repository (after registerEventPort)
+  subscribeToRepositoryEvents: (
+    repository: string,
     callback: (event: RepoNormalizedUniversalAgentSessionEvent) => void,
   ) => () => void;
 }

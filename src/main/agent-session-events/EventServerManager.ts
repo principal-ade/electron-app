@@ -3,7 +3,14 @@
  * Handles storage requests and window broadcasts from the server
  */
 
-import { app, utilityProcess, UtilityProcess, BrowserWindow } from 'electron';
+import {
+  app,
+  utilityProcess,
+  UtilityProcess,
+  BrowserWindow,
+  MessageChannelMain,
+  ipcMain,
+} from 'electron';
 import { EventEmitter } from 'events';
 import * as path from 'path';
 
@@ -52,6 +59,10 @@ export class EventServerManager extends EventEmitter {
   private observability: ObservabilityIntegration | null = null;
   private observabilityInitialized = false;
 
+  // Track which windows are registered for which repos (for cleanup on window close)
+  // Ports are transferred and not stored here - just tracking the relationship
+  private registeredWindows: Map<string, Set<number>> = new Map();
+
   constructor(config: Partial<EventServerManagerConfig> = {}) {
     super();
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -59,10 +70,139 @@ export class EventServerManager extends EventEmitter {
     // Set up observability integration
     this.setupObservability();
 
+    // Set up IPC handlers for port registration
+    this.setupPortRegistrationHandlers();
+
     if (this.config.autoStart) {
       this.start().catch((error) => {
         this.log('error', `Failed to auto-start event server: ${error}`);
       });
+    }
+  }
+
+  /**
+   * Set up IPC handlers for MessagePort registration
+   */
+  private setupPortRegistrationHandlers(): void {
+    // Handle registration request from renderer
+    ipcMain.handle(
+      AgentSessionSDKAPIEvents.REGISTER_EVENT_PORT,
+      async (event, repository: string) => {
+        const window = BrowserWindow.fromWebContents(event.sender);
+        if (!window) {
+          this.log('error', 'Could not determine window for port registration');
+          return false;
+        }
+
+        return this.registerPortForWindow(window.id, repository, event.sender);
+      },
+    );
+
+    // Handle unregistration request from renderer
+    ipcMain.handle(
+      AgentSessionSDKAPIEvents.UNREGISTER_EVENT_PORT,
+      async (event, repository: string) => {
+        const window = BrowserWindow.fromWebContents(event.sender);
+        if (!window) {
+          return;
+        }
+
+        this.unregisterPortForWindow(window.id, repository);
+      },
+    );
+  }
+
+  /**
+   * Register a MessagePort for a window to receive events for a repository
+   */
+  private registerPortForWindow(
+    windowId: number,
+    repository: string,
+    webContents: Electron.WebContents,
+  ): boolean {
+    if (!this.worker) {
+      this.log('error', 'Cannot register port: worker not running');
+      return false;
+    }
+
+    // Clean up any existing registration for this window+repo
+    this.unregisterPortForWindow(windowId, repository);
+
+    // Create MessageChannel
+    const { port1, port2 } = new MessageChannelMain();
+
+    // Track the registration
+    if (!this.registeredWindows.has(repository)) {
+      this.registeredWindows.set(repository, new Set());
+    }
+    this.registeredWindows.get(repository)!.add(windowId);
+
+    // Transfer port1 to the utility process
+    this.worker.postMessage(
+      {
+        type: 'REGISTER_PORT',
+        id: `register-${windowId}-${repository}-${Date.now()}`,
+        timestamp: Date.now(),
+        windowId,
+        repository,
+      },
+      [port1],
+    );
+
+    // Transfer port2 to the renderer
+    webContents.postMessage(
+      AgentSessionSDKAPIEvents.EVENT_PORT_READY,
+      { repository },
+      [port2],
+    );
+
+    this.log(
+      'debug',
+      `Registered event port for window ${windowId} -> ${repository}`,
+    );
+
+    return true;
+  }
+
+  /**
+   * Unregister a MessagePort for a window
+   */
+  private unregisterPortForWindow(windowId: number, repository: string): void {
+    const repoWindows = this.registeredWindows.get(repository);
+    if (!repoWindows || !repoWindows.has(windowId)) return;
+
+    repoWindows.delete(windowId);
+
+    // Notify utility process to clean up its port
+    if (this.worker) {
+      this.worker.postMessage({
+        type: 'UNREGISTER_PORT',
+        id: `unregister-${windowId}-${repository}-${Date.now()}`,
+        timestamp: Date.now(),
+        windowId,
+        repository,
+      });
+    }
+
+    this.log(
+      'info',
+      `Unregistered event port for window ${windowId} -> repository ${repository}`,
+    );
+
+    // Clean up empty sets
+    if (repoWindows.size === 0) {
+      this.registeredWindows.delete(repository);
+    }
+  }
+
+  /**
+   * Clean up all ports for a window (called when window closes)
+   */
+  cleanupWindowPorts(windowId: number): void {
+    for (const [repository, windows] of this.registeredWindows) {
+      if (windows.has(windowId)) {
+        this.unregisterPortForWindow(windowId, repository);
+      }
     }
   }
 
@@ -336,34 +476,14 @@ export class EventServerManager extends EventEmitter {
         });
     }
 
-    // Step 2: Emit event for SDK handlers and UI
-    // The SDK handlers will maintain their own in-memory cache
+    // Step 2: Emit event for SDK handlers (in-memory cache, etc.)
     this.emit('processed-event', repoNormalizedEvent);
 
-    // Step 3: Broadcast to windows for real-time updates
-    const windows = BrowserWindow.getAllWindows();
-    const isNewSession = repoNormalizedEvent.eventType === 'session-start';
-    const eventName = isNewSession
-      ? AgentSessionSDKAPIEvents.SESSION_CREATED
-      : AgentSessionSDKAPIEvents.SESSION_UPDATED;
-
-    windows.forEach((window) => {
-      window.webContents.send(eventName, {
-        sessionId: normalizedSessionId,
-        repository:
-          repoNormalizedEvent.repository?.root ||
-          repoNormalizedEvent.workingDirectory,
-      });
-
-      window.webContents.send(
-        AgentSessionSDKAPIEvents.PROCESSED_EVENT,
-        repoNormalizedEvent,
-      );
-    });
-
+    // Note: Events are now sent directly from utility process to renderers via MessagePorts
+    // No IPC broadcast needed - the utility process routes events to registered ports
     this.log(
       'debug',
-      `Broadcast ${repoNormalizedEvent.eventType} to ${windows.length} windows`,
+      `Processed ${repoNormalizedEvent.eventType} for session ${normalizedSessionId}`,
     );
   }
 

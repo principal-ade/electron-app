@@ -63,31 +63,14 @@ export class EventHighlightService extends EventEmitter {
 
   /**
    * Process incoming agent event
-   * Filters by repository and creates highlight layer
+   * Events now come pre-filtered via direct MessagePort per repository
    */
   processEvent(event: RepoNormalizedUniversalAgentSessionEvent): void {
-    // Filter by current repository
-    const eventRepoRoot = event.repository?.root;
-    if (
-      !this.currentRepositoryRoot ||
-      eventRepoRoot !== this.currentRepositoryRoot
-    ) {
-      console.log(
-        '[EventHighlightService] Event filtered out - different repository',
-        {
-          eventRepo: eventRepoRoot,
-          currentRepo: this.currentRepositoryRoot,
-        },
-      );
+    // Events are already filtered by repository at the source (utility process)
+    // Just verify we have a repository context set
+    if (!this.currentRepositoryRoot) {
       return;
     }
-
-    console.log('[EventHighlightService] Processing event:', {
-      type: event.eventType,
-      tool: event.toolName,
-      operation: event.operation,
-      filesCount: event.files?.length || 0,
-    });
 
     // Create highlight layer
     const layer = this.createHighlightLayer(event);
@@ -107,12 +90,6 @@ export class EventHighlightService extends EventEmitter {
       this.eventHistory.shift();
     }
 
-    console.log('[EventHighlightService] Event added to history:', {
-      historySize: this.eventHistory.length,
-      hasLayer: !!layer,
-      layerItemsCount: layer?.items.length || 0,
-    });
-
     // If in live mode, emit the new layer
     if (this.currentIndex === -1) {
       this.emitCurrentLayers();
@@ -130,14 +107,8 @@ export class EventHighlightService extends EventEmitter {
     const paths = this.extractFilePaths(event);
 
     if (paths.length === 0) {
-      console.log(
-        '[EventHighlightService] No files to highlight for event:',
-        event.eventType,
-      );
       return null;
     }
-
-    console.log('[EventHighlightService] Creating layer with paths:', paths);
 
     return {
       id: `event-${event.sessionId}-${event.timestamp}`,
@@ -183,12 +154,6 @@ export class EventHighlightService extends EventEmitter {
         return true;
       })
       .map((file) => file.repository!.relativePath);
-
-    console.log('[EventHighlightService] Extracted paths:', {
-      totalFiles: event.files.length,
-      repoFiles: paths.length,
-      paths,
-    });
 
     return paths;
   }
@@ -331,7 +296,6 @@ export class EventHighlightService extends EventEmitter {
    */
   private emitCurrentLayers(): void {
     const layers = this.getCurrentHighlightLayers();
-    console.log('[EventHighlightService] Emitting layers:', layers.length);
     this.emit('highlight-update', layers);
 
     // Emit current event if in history mode
@@ -358,7 +322,6 @@ export class EventHighlightService extends EventEmitter {
    * Clear all history
    */
   clear(): void {
-    console.log('[EventHighlightService] Clearing history');
     this.eventHistory = [];
     this.eventCounter = 0;
     this.currentIndex = -1;

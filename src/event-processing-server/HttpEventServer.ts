@@ -475,10 +475,22 @@ export class HttpEventServer extends EventEmitter {
       );
       this.log('info', `[processAgentEvent] Pipeline processing complete`);
 
-      // Step 2: Send the repo-normalized event to main for SDK and storage
-      // Main process will handle observability SDK and storage
+      // Step 2: Send directly to registered renderer ports (for real-time UI updates)
+      const repository = repoNormalizedEvent.repository?.root;
+      if (repository) {
+        const sendEventToPorts = (
+          global as unknown as {
+            sendEventToPorts?: (repo: string, event: unknown) => void;
+          }
+        ).sendEventToPorts;
+        if (sendEventToPorts) {
+          sendEventToPorts(repository, repoNormalizedEvent);
+        }
+      }
+
+      // Step 3: Send to main for observability SDK and session caching
       this.log(
-        'info',
+        'debug',
         `Sending processed event to main - session: ${repoNormalizedEvent.sessionId}`,
       );
       this.sendToMain({
@@ -490,8 +502,8 @@ export class HttpEventServer extends EventEmitter {
       });
 
       this.log(
-        'info',
-        `Event sent to main for session ${repoNormalizedEvent.sessionId}`,
+        'debug',
+        `Event processed for session ${repoNormalizedEvent.sessionId}`,
       );
     } catch (error) {
       this.log('error', `Event processing failed: ${error}`);
