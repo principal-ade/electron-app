@@ -40,51 +40,51 @@ jobs:
             echo "═══════════════════════════════════════════════════════════════"
             echo "                    QUALITY LENS RESULTS"
             echo "═══════════════════════════════════════════════════════════════"
-            node -e "
-              const fs = require('fs');
-              const results = JSON.parse(fs.readFileSync('results.json', 'utf8'));
+            node -e '
+              const fs = require("fs");
+              const results = JSON.parse(fs.readFileSync("results.json", "utf8"));
 
               // Show hexagon scores (use first package for single-package repos)
               const hex = results.qualityMetrics?.packages?.[0]?.hexagon || {};
-              console.log('');
-              console.log('Quality Hexagon Scores:');
-              console.log('───────────────────────');
-              const dimensions = ['tests', 'linting', 'types', 'formatting', 'deadCode', 'documentation'];
+              console.log("");
+              console.log("Quality Hexagon Scores:");
+              console.log("───────────────────────");
+              const dimensions = ["tests", "linting", "types", "formatting", "deadCode", "documentation"];
               for (const dim of dimensions) {
                 const score = hex[dim] ?? 0;
-                const bar = '█'.repeat(Math.floor(score / 10)) + '░'.repeat(10 - Math.floor(score / 10));
-                const status = score === 0 ? '⚠️  NEEDS SETUP' : score >= 80 ? '✅' : score >= 50 ? '⚡' : '⚠️';
-                console.log(`  ${dim.padEnd(14)} ${bar} ${score.toString().padStart(3)}% ${status}`);
+                const bar = "█".repeat(Math.floor(score / 10)) + "░".repeat(10 - Math.floor(score / 10));
+                const status = score === 0 ? "⚠️  NEEDS SETUP" : score >= 80 ? "✅" : score >= 50 ? "⚡" : "⚠️";
+                console.log("  " + dim.padEnd(14) + " " + bar + " " + score.toString().padStart(3) + "% " + status);
               }
 
               // Show lens details
-              console.log('');
-              console.log('Lens Execution Details:');
-              console.log('───────────────────────');
+              console.log("");
+              console.log("Lens Execution Details:");
+              console.log("───────────────────────");
               for (const r of results.results) {
                 const success = r.execution?.success;
                 const hasIssues = (r.issues?.length || 0) > 0;
                 const hasMetrics = r.metrics && Object.keys(r.metrics).length > 0;
                 const exitCode = r.execution?.exitCode;
 
-                let status = '✅ OK';
-                let note = '';
+                let status = "✅ OK";
+                let note = "";
 
                 if (!success) {
-                  status = '❌ FAILED';
-                  note = ' - Tool could not run';
+                  status = "❌ FAILED";
+                  note = " - Tool could not run";
                 } else if (!hasMetrics && !hasIssues) {
-                  status = '⚠️  NO DATA';
+                  status = "⚠️  NO DATA";
                   if (exitCode === 2) {
-                    note = ' - Config error (check eslint/tsconfig)';
+                    note = " - Config error (check eslint/tsconfig)";
                   } else {
-                    note = ' - Could not parse output';
+                    note = " - Could not parse output";
                   }
                 } else if (hasIssues) {
-                  status = `📋 ${r.issues.length} issues`;
+                  status = "📋 " + r.issues.length + " issues";
                 }
 
-                console.log(`  ${r.lens.id.padEnd(12)} ${status}${note}`);
+                console.log("  " + r.lens.id.padEnd(12) + " " + status + note);
               }
 
               // Show action items if needed
@@ -94,18 +94,18 @@ jobs:
               );
 
               if (needsAttention.length > 0) {
-                console.log('');
-                console.log('⚠️  ACTION REQUIRED:');
-                console.log('───────────────────────');
-                console.log('Some lenses could not run properly. Common fixes:');
-                console.log('  • ESLint: Ensure .eslintrc or eslint.config.js exists');
-                console.log('  • Jest: Ensure jest.config.js and test files exist');
-                console.log('  • TypeScript: Ensure tsconfig.json is valid');
-                console.log('  • Run "npm ci" locally to verify dependencies');
+                console.log("");
+                console.log("⚠️  ACTION REQUIRED:");
+                console.log("───────────────────────");
+                console.log("Some lenses could not run properly. Common fixes:");
+                console.log("  • ESLint: Ensure .eslintrc or eslint.config.js exists");
+                console.log("  • Jest: Ensure jest.config.js and test files exist");
+                console.log("  • TypeScript: Ensure tsconfig.json is valid");
+                console.log("  • Run npm ci locally to verify dependencies");
               }
 
-              console.log('');
-            "
+              console.log("");
+            '
             echo "═══════════════════════════════════════════════════════════════"
           fi
 
