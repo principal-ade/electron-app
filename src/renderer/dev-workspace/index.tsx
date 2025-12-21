@@ -65,7 +65,15 @@ window.addEventListener('error', (event) => {
     return;
   }
 
-  console.error('[DevWorkspace] Global error:', event.error);
+  // Log detailed error information even when event.error is null
+  console.error('[DevWorkspace] Global error:', {
+    error: event.error,
+    message: event.message,
+    filename: event.filename,
+    lineno: event.lineno,
+    colno: event.colno,
+    type: event.type,
+  });
 });
 
 const container = document.getElementById('root');
