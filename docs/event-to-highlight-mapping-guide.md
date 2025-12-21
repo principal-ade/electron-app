@@ -92,7 +92,7 @@ function createHighlightLayer(
   }
 
   return {
-    id: `event-${event.sessionId}-${event.timestamp}`,
+    id: `event-highlight-${event.sessionId}-${event.timestamp}`,
     name: `${event.provider} - ${event.toolName || event.eventType}`,
     enabled: true,
     color: getEventColor(event),

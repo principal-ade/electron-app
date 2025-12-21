@@ -66,14 +66,34 @@ export class EventHighlightService extends EventEmitter {
    * Events now come pre-filtered via direct MessagePort per repository
    */
   processEvent(event: RepoNormalizedUniversalAgentSessionEvent): void {
+    console.log('[EventHighlightService] processEvent called:', {
+      eventType: event.eventType,
+      toolName: event.toolName,
+      operation: event.operation,
+      provider: event.provider,
+      filesCount: event.files?.length ?? 0,
+      files: event.files?.map((f) => ({
+        path: f.repository?.relativePath,
+        context: f.context,
+      })),
+    });
+
     // Events are already filtered by repository at the source (utility process)
     // Just verify we have a repository context set
     if (!this.currentRepositoryRoot) {
+      console.log('[EventHighlightService] No repository root set, ignoring event');
       return;
     }
 
     // Create highlight layer
     const layer = this.createHighlightLayer(event);
+    console.log('[EventHighlightService] Created layer:', layer ? {
+      id: layer.id,
+      name: layer.name,
+      color: layer.color,
+      itemsCount: layer.items.length,
+      items: layer.items.map((i) => i.path),
+    } : null);
 
     // Add to history
     const entry: EventHistoryEntry = {
@@ -111,7 +131,7 @@ export class EventHighlightService extends EventEmitter {
     }
 
     return {
-      id: `event-${event.sessionId}-${event.timestamp}`,
+      id: `event-highlight-${event.sessionId}-${event.timestamp}`,
       name: this.getEventDisplayName(event),
       enabled: true,
       color: this.getEventColor(event),
@@ -296,6 +316,14 @@ export class EventHighlightService extends EventEmitter {
    */
   private emitCurrentLayers(): void {
     const layers = this.getCurrentHighlightLayers();
+    console.log('[EventHighlightService] Emitting highlight-update:', {
+      layerCount: layers.length,
+      layers: layers.map((l) => ({
+        id: l.id,
+        name: l.name,
+        itemsCount: l.items.length,
+      })),
+    });
     this.emit('highlight-update', layers);
 
     // Emit current event if in history mode

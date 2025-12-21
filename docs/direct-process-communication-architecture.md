@@ -10,7 +10,7 @@ This document describes the architecture for direct MessagePort communication be
 |-------|-----------|--------|
 | Phase 1 | Agent Events | ✅ Complete |
 | Phase 2 | Terminal PTY | ✅ Complete |
-| Phase 3 | Git & File Events | Planned |
+| Phase 3 | Git & File Events | ✅ Already Optimized (no changes needed) |
 
 ---
 
@@ -260,16 +260,40 @@ Utility process handles all PTY operations, with direct MessagePort to renderer:
 
 ---
 
-## Phase 3: Git & File Events (Planned)
+## Phase 3: Git & File Events (Not Needed)
 
-Move file watching to utility process.
+**Status:** ✅ Already Optimized
 
-**Current:** Main process watches files, sends IPC
-**Target:** Utility process watches files, MessagePorts to renderers
+Upon investigation, the git/file watching system already has intelligent event routing:
 
-**Considerations:**
-- Could consolidate with agent event utility process
-- Lower priority than agent events
+### Current Architecture
+
+The `RepositoryMonitoringManager` already routes events only to windows associated with specific repositories:
+
+```typescript
+// From repository-monitoring/ipcHandlers.ts
+manager.on('event', (event) => {
+  // Find window(s) that own this repository
+  // Only send to relevant windows, not broadcast
+});
+```
+
+The monitoring server uses `chokidar` for file watching and sends events through a controlled pipeline that:
+1. Associates file watchers with specific repository paths
+2. Maintains a mapping of windows to their monitored repositories
+3. Only notifies windows that have registered interest in a repository
+
+### Why MessagePorts Aren't Needed Here
+
+Unlike the agent events system (which previously broadcast to all windows) or terminal PTY (which had crash isolation concerns), the git/file monitoring:
+
+- **Already routes to specific windows** - No broadcast-to-all problem
+- **Has low event frequency** - File change events are relatively infrequent compared to terminal data
+- **Runs in a separate process** - Uses `@principal-ai/repository-monitoring-server`
+
+### Conclusion
+
+The original assumption that git/file events had a "broadcast to all windows" problem was incorrect. The existing architecture already handles targeted delivery efficiently.
 
 ---
 

@@ -101,6 +101,14 @@ export const AgentHighlightProvider: React.FC<AgentHighlightProviderProps> = ({
 
     // Listen for highlight layer updates from the service
     const handleHighlightUpdate = (layers: HighlightLayer[]) => {
+      console.log('[AgentHighlightContext] Received highlight-update:', {
+        layerCount: layers.length,
+        layers: layers.map((l) => ({
+          id: l.id,
+          name: l.name,
+          itemsCount: l.items.length,
+        })),
+      });
       setHighlightLayers(layers);
       // Update navigation state
       const navState = service.getNavigationState();
@@ -129,6 +137,12 @@ export const AgentHighlightProvider: React.FC<AgentHighlightProviderProps> = ({
         unsubscribeEvents = AgentSessionSDKService.subscribeToRepositoryEvents(
           repositoryPath,
           (event) => {
+            console.log('[AgentHighlightContext] Received event from SDK:', {
+              eventType: event.eventType,
+              toolName: event.toolName,
+              provider: event.provider,
+              filesCount: event.files?.length ?? 0,
+            });
             service.processEvent(event);
           },
         );
