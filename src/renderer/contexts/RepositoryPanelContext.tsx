@@ -49,7 +49,15 @@ interface GitStatusSliceData {
 }
 
 // Color mode for file city visualization
-type FileCityColorMode = 'fileTypes' | 'git' | 'coverage' | 'eslint' | 'typescript' | 'prettier' | 'knip' | 'alexandria';
+type FileCityColorMode =
+  | 'fileTypes'
+  | 'git'
+  | 'coverage'
+  | 'eslint'
+  | 'typescript'
+  | 'prettier'
+  | 'knip'
+  | 'alexandria';
 
 // File city color modes slice data
 interface FileCityColorModesSliceData {
@@ -115,7 +123,6 @@ interface RepositoryPanelProviderProps {
 export const RepositoryPanelProvider: React.FC<
   RepositoryPanelProviderProps
 > = ({ children, repositoryPath, repository, events }) => {
-
   // Track file tree for the current repository
   const [fileTreeData, setFileTreeData] = useState<FileTree | null>(null);
   const [fileTreeLoading, setFileTreeLoading] = useState(false);
@@ -133,7 +140,8 @@ export const RepositoryPanelProvider: React.FC<
   const [gitStatusLoading, setGitStatusLoading] = useState(false);
 
   // Track selected color mode for file city visualization
-  const [fileCityColorMode, setFileCityColorMode] = useState<FileCityColorMode | null>(null);
+  const [fileCityColorMode, setFileCityColorMode] =
+    useState<FileCityColorMode | null>(null);
 
   // Track all Alexandria repositories (for Local Projects panel)
   const [alexandriaRepositories, setAlexandriaRepositories] = useState<
@@ -405,7 +413,10 @@ export const RepositoryPanelProvider: React.FC<
   useEffect(() => {
     const unsubscribe = events.on('filecity:colormode', (event) => {
       const mode = event.payload as FileCityColorMode | null;
-      console.info('[RepositoryPanelProvider] Color mode changed via event:', mode);
+      console.info(
+        '[RepositoryPanelProvider] Color mode changed via event:',
+        mode,
+      );
       setFileCityColorMode(mode);
     });
 
@@ -452,11 +463,12 @@ export const RepositoryPanelProvider: React.FC<
         );
 
         // Fetch from GitHub artifacts
-        const artifactData = await GitHubArtifactService.getLatestQualityMetrics(
-          githubInfo.owner,
-          githubInfo.repo,
-          branch,
-        );
+        const artifactData =
+          await GitHubArtifactService.getLatestQualityMetrics(
+            githubInfo.owner,
+            githubInfo.repo,
+            branch,
+          );
 
         if (artifactData) {
           // Transform to the format expected by the quality slice
@@ -974,7 +986,9 @@ export const RepositoryPanelProvider: React.FC<
                 }
 
                 const gitStatus =
-                  await RepositoryMonitoringService.getGitStatus(repositoryPath);
+                  await RepositoryMonitoringService.getGitStatus(
+                    repositoryPath,
+                  );
                 const branch = gitStatus?.branch || 'main';
 
                 // Clear cache to force fresh fetch
@@ -1029,8 +1043,7 @@ export const RepositoryPanelProvider: React.FC<
                   const absolutePath = activeFileData.path.startsWith('/')
                     ? activeFileData.path
                     : `${repositoryPath}/${activeFileData.path}`;
-                  const result =
-                    await FileSystemService.readFile(absolutePath);
+                  const result = await FileSystemService.readFile(absolutePath);
                   if (result) {
                     setActiveFileData({
                       ...activeFileData,

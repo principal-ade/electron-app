@@ -59,7 +59,11 @@ export const DEFAULT_PANEL_PRESETS: PanelPreset[] = [
     id: 'default',
     name: 'Default',
     description: 'Package Composition, Terminal, File City',
-    layout: { left: 'packageComposition', middle: 'terminal', right: 'fileCity' },
+    layout: {
+      left: 'packageComposition',
+      middle: 'terminal',
+      right: 'fileCity',
+    },
   },
   {
     id: 'principal-view',

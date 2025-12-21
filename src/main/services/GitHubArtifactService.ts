@@ -240,8 +240,7 @@ export class GitHubArtifactService {
         limit: 50,
       });
       const matching = allArtifacts.find(
-        (a) =>
-          a.commitSha?.startsWith(commitSha) || a.name.includes(commitSha),
+        (a) => a.commitSha?.startsWith(commitSha) || a.name.includes(commitSha),
       );
 
       if (!matching) {

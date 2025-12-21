@@ -228,7 +228,6 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
     }
   };
 
-
   const fetchGitStatus = async (repoPath: string) => {
     try {
       const status = await RepositoryMonitoringService.getGitStatus(repoPath);

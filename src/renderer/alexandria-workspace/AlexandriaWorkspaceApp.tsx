@@ -66,7 +66,6 @@ const AlexandriaWorkspaceContent: React.FC = () => {
     Map<string, RepoGitStatus>
   >(new Map());
 
-
   // Switch handlers for panel swapping
   const handleSwitchLeftMiddle = useCallback(() => {
     setLayout((prev) => ({

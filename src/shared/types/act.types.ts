@@ -54,13 +54,11 @@ export interface ActRunnerWorkflowEventBase {
   timestamp: number;
 }
 
-export interface ActRunnerWorkflowStartEvent
-  extends ActRunnerWorkflowEventBase {
+export interface ActRunnerWorkflowStartEvent extends ActRunnerWorkflowEventBase {
   type: 'start';
 }
 
-export interface ActRunnerWorkflowProgressEvent
-  extends ActRunnerWorkflowEventBase {
+export interface ActRunnerWorkflowProgressEvent extends ActRunnerWorkflowEventBase {
   type: 'progress';
   stream: 'stdout' | 'stderr';
   message: string;
@@ -74,15 +72,13 @@ export interface ActRunnerWorkflowStepEvent extends ActRunnerWorkflowEventBase {
   raw: string;
 }
 
-export interface ActRunnerWorkflowErrorEvent
-  extends ActRunnerWorkflowEventBase {
+export interface ActRunnerWorkflowErrorEvent extends ActRunnerWorkflowEventBase {
   type: 'error';
   message: string;
   raw: string;
 }
 
-export interface ActRunnerWorkflowCompleteEvent
-  extends ActRunnerWorkflowEventBase {
+export interface ActRunnerWorkflowCompleteEvent extends ActRunnerWorkflowEventBase {
   type: 'complete';
   success: boolean;
   exitCode: number | null;

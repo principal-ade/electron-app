@@ -229,9 +229,17 @@ export interface RepositoryMonitoringAPI {
   stopMonitoring(): Promise<void>;
   getGitStatus(repoPath: string): Promise<GitStatusMetadata | null>;
   getGitStatusWithFiles(repoPath: string): Promise<GitStatusWithFiles | null>;
-  acquireWatch(repoPath: string, referenceId: string): Promise<RepositoryMonitoringResult>;
-  releaseWatch(repoPath: string, referenceId: string): Promise<RepositoryMonitoringResult>;
-  onGitStatusChanged(callback: (status: GitStatusWithFiles) => void): () => void;
+  acquireWatch(
+    repoPath: string,
+    referenceId: string,
+  ): Promise<RepositoryMonitoringResult>;
+  releaseWatch(
+    repoPath: string,
+    referenceId: string,
+  ): Promise<RepositoryMonitoringResult>;
+  onGitStatusChanged(
+    callback: (status: GitStatusWithFiles) => void,
+  ): () => void;
   onWorkspaceChange(
     callback: (event: WorkspaceChangeEventPayload) => void,
   ): () => void;

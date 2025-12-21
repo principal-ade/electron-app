@@ -71,9 +71,7 @@ export class AlexandriaRegistryService {
    * Fetch GitHub metadata for a repository from GitHub API
    * Falls back to parsing owner/repo from URL for private repos
    */
-  private async fetchGitHubMetadata(
-    remoteUrl?: string,
-  ): Promise<{
+  private async fetchGitHubMetadata(remoteUrl?: string): Promise<{
     owner?: string;
     name?: string;
     description?: string;
@@ -590,7 +588,9 @@ export class AlexandriaRegistryService {
         );
 
         try {
-          const githubMetadata = await this.fetchGitHubMetadata(entry.remoteUrl);
+          const githubMetadata = await this.fetchGitHubMetadata(
+            entry.remoteUrl,
+          );
           if (githubMetadata) {
             await this.outpostManager.updateGitHubMetadata(
               entry.name,

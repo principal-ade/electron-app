@@ -308,7 +308,9 @@ const QuickOpenApp: React.FC = () => {
                             const target = e.target as HTMLImageElement;
                             target.style.display = 'none';
                             if (target.nextSibling) {
-                              (target.nextSibling as HTMLElement).style.display = 'flex';
+                              (
+                                target.nextSibling as HTMLElement
+                              ).style.display = 'flex';
                             }
                           }}
                         />

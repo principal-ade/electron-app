@@ -262,9 +262,7 @@ ipcRenderer.on('terminal:port', (event, sessionId: string) => {
 
   // Notify port ready callbacks (for direct MessagePort access)
   if (portReadyCallbacks.size > 0) {
-    portReadyCallbacks.forEach((cb) =>
-      cb({ sessionId, writable: true }, port),
-    );
+    portReadyCallbacks.forEach((cb) => cb({ sessionId, writable: true }, port));
   }
 
   // Route incoming data to subscribers (fallback for components not using direct port)

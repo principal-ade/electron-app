@@ -19,10 +19,7 @@ import type {
   AlexandriaEntry,
 } from '@principal-ai/alexandria-core-library';
 import { getManager as getMonitoringManager } from '../repository-monitoring/ipcHandlers';
-import {
-  applicationWindows,
-  PrimaryWindowType,
-} from '../window/types';
+import { applicationWindows, PrimaryWindowType } from '../window/types';
 
 export class WorkspaceApiEventHandler implements WorkspaceAPI {
   private service: AlexandriaRegistryService;
@@ -272,12 +269,18 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
       typeof repository === 'string'
         ? await this.service.getRepository(repository)
         : repository;
-    const repoId = repoEntry?.github?.id || repoEntry?.name || (typeof repository === 'string' ? repository : repository.name);
+    const repoId =
+      repoEntry?.github?.id ||
+      repoEntry?.name ||
+      (typeof repository === 'string' ? repository : repository.name);
 
     // Acquire watch for any open workspace windows (non-blocking)
     if (repoEntry?.path) {
-      this.acquireWatchForWorkspaceWindows(repoEntry.path as string, workspaceId).catch(
-        (error) => console.error('[Workspace] Failed to acquire watches on add:', error),
+      this.acquireWatchForWorkspaceWindows(
+        repoEntry.path as string,
+        workspaceId,
+      ).catch((error) =>
+        console.error('[Workspace] Failed to acquire watches on add:', error),
       );
     }
 
@@ -298,11 +301,17 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
       typeof repository === 'string'
         ? await this.service.getRepository(repository)
         : repository;
-    const repoId = repoEntry?.github?.id || repoEntry?.name || (typeof repository === 'string' ? repository : repository.name);
+    const repoId =
+      repoEntry?.github?.id ||
+      repoEntry?.name ||
+      (typeof repository === 'string' ? repository : repository.name);
 
     // Release watch for any open workspace windows BEFORE removing
     if (repoEntry?.path) {
-      await this.releaseWatchForWorkspaceWindows(repoEntry.path as string, workspaceId);
+      await this.releaseWatchForWorkspaceWindows(
+        repoEntry.path as string,
+        workspaceId,
+      );
     }
 
     await this.service.removeRepositoryFromWorkspace(repository, workspaceId);
@@ -476,7 +485,10 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
       // Step 8: Re-acquire watch if it was enabled before
       if (wasGitWatching) {
         console.log(`[Workspace] Re-acquiring watch for ${targetPath}`);
-        await monitoringManager.acquireWatch(targetPath, 'workspace-move-handler');
+        await monitoringManager.acquireWatch(
+          targetPath,
+          'workspace-move-handler',
+        );
       }
 
       // Step 9: Broadcast REPOSITORY_UPDATED event (Alexandria) for Feed panels
@@ -515,7 +527,10 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
           const monitoringManager = getMonitoringManager();
           await monitoringManager.registerRepository(oldPath);
           if (wasGitWatching) {
-            await monitoringManager.acquireWatch(oldPath, 'workspace-move-handler');
+            await monitoringManager.acquireWatch(
+              oldPath,
+              'workspace-move-handler',
+            );
           }
 
           console.log(`[Workspace] Successfully rolled back repository move`);

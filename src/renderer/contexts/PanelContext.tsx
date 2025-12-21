@@ -1292,7 +1292,9 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
             // Determine file type from extension
             const extension = filePath.split('.').pop()?.toLowerCase() || '';
             const type =
-              extension === 'md' || extension === 'mdx' || extension === 'markdown'
+              extension === 'md' ||
+              extension === 'mdx' ||
+              extension === 'markdown'
                 ? 'markdown'
                 : extension;
 

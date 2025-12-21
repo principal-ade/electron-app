@@ -42,9 +42,8 @@ describe('IPC Bridge Real-World Test', () => {
 
     // Now test what the ElectronFileSystemAdapter would do
     try {
-      const { ElectronFileSystemAdapter } = await import(
-        '../adapters/ElectronFileSystemAdapter'
-      );
+      const { ElectronFileSystemAdapter } =
+        await import('../adapters/ElectronFileSystemAdapter');
       const adapter = new ElectronFileSystemAdapter();
 
       console.log('✅ ElectronFileSystemAdapter created successfully');
@@ -99,9 +98,8 @@ describe('IPC Bridge Real-World Test', () => {
 
     try {
       // Test local approach
-      const { ElectronFileSystemAdapter } = await import(
-        '../adapters/ElectronFileSystemAdapter'
-      );
+      const { ElectronFileSystemAdapter } =
+        await import('../adapters/ElectronFileSystemAdapter');
       const localAdapter = new ElectronFileSystemAdapter();
       const localResult = await localAdapter.buildFilteredFileTree(
         '/local',
@@ -110,9 +108,8 @@ describe('IPC Bridge Real-World Test', () => {
       console.log('✅ Local file tree result:', localResult);
 
       // Test remote approach (GitHubFileSystemAdapter)
-      const { GitHubFileSystemAdapter } = await import(
-        '../adapters/github/GitHubFileSystemAdapter'
-      );
+      const { GitHubFileSystemAdapter } =
+        await import('../adapters/github/GitHubFileSystemAdapter');
       const remoteAdapter = new GitHubFileSystemAdapter(
         'owner',
         'repo',

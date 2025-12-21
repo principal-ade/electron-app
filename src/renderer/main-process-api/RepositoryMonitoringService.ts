@@ -254,10 +254,7 @@ export class RepositoryMonitoringService {
         referenceId,
       );
     } catch (error) {
-      console.error(
-        '[RepositoryMonitoring] Error acquiring watch:',
-        error,
-      );
+      console.error('[RepositoryMonitoring] Error acquiring watch:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -281,10 +278,7 @@ export class RepositoryMonitoringService {
         referenceId,
       );
     } catch (error) {
-      console.error(
-        '[RepositoryMonitoring] Error releasing watch:',
-        error,
-      );
+      console.error('[RepositoryMonitoring] Error releasing watch:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -338,7 +332,9 @@ export class RepositoryMonitoringService {
    * @param callback Function to call when git status changes
    * @returns Cleanup function to unsubscribe
    */
-  static onGitStatusChanged(callback: (status: GitStatusWithFiles) => void): () => void {
+  static onGitStatusChanged(
+    callback: (status: GitStatusWithFiles) => void,
+  ): () => void {
     return window.mainProcess.repositoryMonitoring.onGitStatusChanged(callback);
   }
 

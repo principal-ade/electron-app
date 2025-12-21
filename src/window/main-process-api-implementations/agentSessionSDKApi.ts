@@ -36,7 +36,9 @@ interface MessagePortLike {
  */
 function handleEventPort(repository: string, port: MessagePortLike): void {
   // Clean up existing port if any
-  const existingPort = eventPorts.get(repository) as MessagePortLike | undefined;
+  const existingPort = eventPorts.get(repository) as
+    | MessagePortLike
+    | undefined;
   if (existingPort) {
     existingPort.close();
   }
@@ -48,8 +50,7 @@ function handleEventPort(repository: string, port: MessagePortLike): void {
   port.onmessage = (event: { data: unknown }) => {
     const data = event.data as { type?: string; event?: unknown } | undefined;
     if (data?.type === 'AGENT_EVENT' && data.event) {
-      const agentEvent =
-        data.event as RepoNormalizedUniversalAgentSessionEvent;
+      const agentEvent = data.event as RepoNormalizedUniversalAgentSessionEvent;
 
       // Notify subscribers for this repository
       const subscribers = eventSubscribers.get(repository);
@@ -76,7 +77,10 @@ function handleEventPort(repository: string, port: MessagePortLike): void {
     try {
       callback({ repository });
     } catch (error) {
-      console.error('[AgentSessionSDKApi] Error in port ready callback:', error);
+      console.error(
+        '[AgentSessionSDKApi] Error in port ready callback:',
+        error,
+      );
     }
   });
 }

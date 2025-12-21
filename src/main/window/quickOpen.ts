@@ -245,7 +245,9 @@ class QuickOpen {
         const openRepo = openRepoUrls.find((r) => r.url === repo.remoteUrl);
         // Build avatar URL from GitHub owner (GitHub's reliable avatar endpoint)
         const owner = repo.github?.owner;
-        const avatarUrl = owner ? `https://github.com/${owner}.png?size=80` : undefined;
+        const avatarUrl = owner
+          ? `https://github.com/${owner}.png?size=80`
+          : undefined;
 
         items.push({
           id: repo.remoteUrl,

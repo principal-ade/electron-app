@@ -32,31 +32,45 @@ function isMainToWorkerMessage(msg: unknown): msg is MainToWorkerMessage {
   );
 }
 
-function isCreateSessionMessage(msg: MainToWorkerMessage): msg is CreateSessionMessage {
+function isCreateSessionMessage(
+  msg: MainToWorkerMessage,
+): msg is CreateSessionMessage {
   return msg.type === 'CREATE_SESSION';
 }
 
-function isDestroySessionMessage(msg: MainToWorkerMessage): msg is DestroySessionMessage {
+function isDestroySessionMessage(
+  msg: MainToWorkerMessage,
+): msg is DestroySessionMessage {
   return msg.type === 'DESTROY_SESSION';
 }
 
-function isWriteToSessionMessage(msg: MainToWorkerMessage): msg is WriteToSessionMessage {
+function isWriteToSessionMessage(
+  msg: MainToWorkerMessage,
+): msg is WriteToSessionMessage {
   return msg.type === 'WRITE';
 }
 
-function isResizeSessionMessage(msg: MainToWorkerMessage): msg is ResizeSessionMessage {
+function isResizeSessionMessage(
+  msg: MainToWorkerMessage,
+): msg is ResizeSessionMessage {
   return msg.type === 'RESIZE';
 }
 
-function isRefreshSessionMessage(msg: MainToWorkerMessage): msg is RefreshSessionMessage {
+function isRefreshSessionMessage(
+  msg: MainToWorkerMessage,
+): msg is RefreshSessionMessage {
   return msg.type === 'REFRESH';
 }
 
-function isRegisterPortMessage(msg: MainToWorkerMessage): msg is RegisterPortMessage {
+function isRegisterPortMessage(
+  msg: MainToWorkerMessage,
+): msg is RegisterPortMessage {
   return msg.type === 'REGISTER_PORT';
 }
 
-function isUnregisterPortMessage(msg: MainToWorkerMessage): msg is UnregisterPortMessage {
+function isUnregisterPortMessage(
+  msg: MainToWorkerMessage,
+): msg is UnregisterPortMessage {
   return msg.type === 'UNREGISTER_PORT';
 }
 
@@ -94,11 +108,7 @@ interface PtySpawnOptions {
 }
 
 interface PtyModule {
-  spawn: (
-    shell: string,
-    args: string[],
-    options: PtySpawnOptions,
-  ) => IPty;
+  spawn: (shell: string, args: string[], options: PtySpawnOptions) => IPty;
 }
 
 // Session state
@@ -153,10 +163,7 @@ function sendToMain(message: WorkerToMainMessage): void {
   }
 }
 
-function sendToRenderer(
-  sessionId: string,
-  data: string,
-): void {
+function sendToRenderer(sessionId: string, data: string): void {
   const session = sessions.get(sessionId);
   if (!session) return;
 
@@ -478,7 +485,12 @@ function handleMessage(rawMessage: unknown): void {
     refreshSession(message.sessionId);
   } else if (isRegisterPortMessage(message)) {
     if (ports.length > 0) {
-      registerPort(message.sessionId, message.windowId, ports[0], message.isOwner);
+      registerPort(
+        message.sessionId,
+        message.windowId,
+        ports[0],
+        message.isOwner,
+      );
     }
   } else if (isUnregisterPortMessage(message)) {
     unregisterPort(message.sessionId, message.windowId);

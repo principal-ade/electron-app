@@ -206,9 +206,8 @@ export class GitSyncClient extends EventEmitter {
       console.log(`Getting room token for repository: ${repository}`);
 
       // Import GitSyncService dynamically to avoid circular imports
-      const { GitSyncService } = await import(
-        '../../main-process-api/GitSyncService'
-      );
+      const { GitSyncService } =
+        await import('../../main-process-api/GitSyncService');
 
       const result = await GitSyncService.getRoomToken({
         repositoryId: repository,

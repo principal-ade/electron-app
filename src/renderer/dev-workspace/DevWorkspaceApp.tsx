@@ -216,10 +216,18 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
       }),
       // Listen for terminal shortcut events (e.g., Cmd+Shift+P from terminal)
       events.on('terminal:shortcut', (event) => {
-        console.log('[DevWorkspaceApp] Received terminal:shortcut event:', event);
-        const payload = event.payload as { shortcut: string; sessionId: string };
+        console.log(
+          '[DevWorkspaceApp] Received terminal:shortcut event:',
+          event,
+        );
+        const payload = event.payload as {
+          shortcut: string;
+          sessionId: string;
+        };
         if (payload.shortcut === 'command-palette') {
-          console.log('[DevWorkspaceApp] Opening command palette from terminal shortcut');
+          console.log(
+            '[DevWorkspaceApp] Opening command palette from terminal shortcut',
+          );
           agentPalette.open();
         }
       }),

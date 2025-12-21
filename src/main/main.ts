@@ -109,9 +109,8 @@ async function handleDeepLink(url: string): Promise<void> {
       const repo = params.get('repo');
 
       // Import the dev workspace handler dynamically to avoid circular deps
-      const { openDevWorkspaceWindow } = await import(
-        './window/devWorkspaceWindowHandlers'
-      );
+      const { openDevWorkspaceWindow } =
+        await import('./window/devWorkspaceWindowHandlers');
 
       if (path) {
         // Open local workspace by path - look up Alexandria entry first
@@ -119,9 +118,8 @@ async function handleDeepLink(url: string): Promise<void> {
         console.log(`[Main] Opening dev workspace at path: ${decodedPath}`);
 
         // Look up the Alexandria entry for this path
-        const { AlexandriaRegistryService } = await import(
-          './stores/AlexandriaRegistryService'
-        );
+        const { AlexandriaRegistryService } =
+          await import('./stores/AlexandriaRegistryService');
         const service = AlexandriaRegistryService.getInstance();
         const alexandriaEntry = await service.getRepositoryByPath(decodedPath);
 
@@ -134,9 +132,8 @@ async function handleDeepLink(url: string): Promise<void> {
         }
       } else if (owner && repo) {
         // Look up Alexandria entry by owner/repo
-        const { AlexandriaRegistryService } = await import(
-          './stores/AlexandriaRegistryService'
-        );
+        const { AlexandriaRegistryService } =
+          await import('./stores/AlexandriaRegistryService');
         const service = AlexandriaRegistryService.getInstance();
         const repositories = await service.getRepositories();
         const alexandriaEntry = repositories.find(

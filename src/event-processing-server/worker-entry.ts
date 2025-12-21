@@ -57,9 +57,9 @@ function isMainToServerMessage(
 ): message is MainToServerMessage {
   return Boolean(
     message &&
-      typeof message === 'object' &&
-      'type' in message &&
-      typeof (message as { type: unknown }).type === 'string',
+    typeof message === 'object' &&
+    'type' in message &&
+    typeof (message as { type: unknown }).type === 'string',
   );
 }
 
@@ -145,7 +145,9 @@ function sendEventToPorts(repository: string, event: unknown): void {
 }
 
 // Export for HttpEventServer to use
-(global as unknown as { sendEventToPorts: typeof sendEventToPorts }).sendEventToPorts = sendEventToPorts;
+(
+  global as unknown as { sendEventToPorts: typeof sendEventToPorts }
+).sendEventToPorts = sendEventToPorts;
 
 // Message handler for communication with main process
 function handleMessage(rawMessage: unknown): void {

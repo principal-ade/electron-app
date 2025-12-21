@@ -81,19 +81,26 @@ export class EventHighlightService extends EventEmitter {
     // Events are already filtered by repository at the source (utility process)
     // Just verify we have a repository context set
     if (!this.currentRepositoryRoot) {
-      console.log('[EventHighlightService] No repository root set, ignoring event');
+      console.log(
+        '[EventHighlightService] No repository root set, ignoring event',
+      );
       return;
     }
 
     // Create highlight layer
     const layer = this.createHighlightLayer(event);
-    console.log('[EventHighlightService] Created layer:', layer ? {
-      id: layer.id,
-      name: layer.name,
-      color: layer.color,
-      itemsCount: layer.items.length,
-      items: layer.items.map((i) => i.path),
-    } : null);
+    console.log(
+      '[EventHighlightService] Created layer:',
+      layer
+        ? {
+            id: layer.id,
+            name: layer.name,
+            color: layer.color,
+            itemsCount: layer.items.length,
+            items: layer.items.map((i) => i.path),
+          }
+        : null,
+    );
 
     // Add to history
     const entry: EventHistoryEntry = {

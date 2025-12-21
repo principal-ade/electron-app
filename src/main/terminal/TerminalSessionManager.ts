@@ -77,7 +77,9 @@ export class TerminalSessionManager {
     if (!app.isPackaged) {
       // Development: use the webpack-compiled bundle
       workerPath = path.join(__dirname, 'terminal-worker.bundle.dev.js');
-      console.log(`[Terminal] Looking for development worker at: ${workerPath}`);
+      console.log(
+        `[Terminal] Looking for development worker at: ${workerPath}`,
+      );
     } else {
       // Production: use the webpack-compiled bundle
       workerPath = path.join(__dirname, 'terminal-worker.js');
@@ -140,7 +142,9 @@ export class TerminalSessionManager {
 
       // Reject ready promise if worker exits before ready
       if (!this.isWorkerReady && this.workerReadyReject) {
-        this.workerReadyReject(new Error(`Terminal worker exited with code ${code}`));
+        this.workerReadyReject(
+          new Error(`Terminal worker exited with code ${code}`),
+        );
       }
 
       this.isWorkerReady = false;
@@ -581,7 +585,9 @@ export class TerminalSessionManager {
       this.worker?.postMessage(registerMsg, [channel.port1]);
 
       // Send port2 to renderer
-      window.webContents.postMessage('terminal:port', sessionId, [channel.port2]);
+      window.webContents.postMessage('terminal:port', sessionId, [
+        channel.port2,
+      ]);
 
       console.log(
         `[Terminal] Created MessagePort for session ${sessionId} -> window ${windowId}`,

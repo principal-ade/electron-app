@@ -16,8 +16,9 @@ interface PrincipalEventContextValue {
   events: PanelEventEmitter;
 }
 
-const PrincipalEventContext =
-  createContext<PrincipalEventContextValue | null>(null);
+const PrincipalEventContext = createContext<PrincipalEventContextValue | null>(
+  null,
+);
 
 interface PrincipalEventProviderProps {
   children: React.ReactNode;

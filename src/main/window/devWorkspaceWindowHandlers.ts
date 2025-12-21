@@ -151,12 +151,14 @@ export async function openDevWorkspaceWindow(
     // Release watch for the repository
     try {
       const monitoringManager = getMonitoringManager();
-      monitoringManager.releaseWatch(repoPath, watchReferenceId).catch((err: unknown) => {
-        console.error(
-          `[DevWorkspaceWindow] Failed to release watch for ${repoPath}:`,
-          err,
-        );
-      });
+      monitoringManager
+        .releaseWatch(repoPath, watchReferenceId)
+        .catch((err: unknown) => {
+          console.error(
+            `[DevWorkspaceWindow] Failed to release watch for ${repoPath}:`,
+            err,
+          );
+        });
       console.log(
         `[DevWorkspaceWindow] Released watch for ${repoPath} (reference: ${watchReferenceId})`,
       );

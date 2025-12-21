@@ -45,8 +45,9 @@ export interface TypedStorageProvider<T = any> extends StorageProvider {
 /**
  * Type-safe storage result
  */
-export interface TypedStorageResult<K extends StorageNamespaces>
-  extends StorageResult {
+export interface TypedStorageResult<
+  K extends StorageNamespaces,
+> extends StorageResult {
   data?: NamespaceData<K>;
   namespace: K;
 }

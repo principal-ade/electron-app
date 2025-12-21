@@ -96,7 +96,9 @@ export const WorkspacesViewHeader: React.FC<WorkspacesViewHeaderProps> = ({
       }}
     >
       {/* Left: Title */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+      <div
+        style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}
+      >
         <LayoutGrid size={20} color={theme.colors.text} />
         <h2
           style={{
@@ -171,7 +173,14 @@ export const WorkspacesViewHeader: React.FC<WorkspacesViewHeaderProps> = ({
       </div>
 
       {/* Right: Base Default Directory */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flex: 1 }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          flex: 1,
+        }}
+      >
         <div
           onClick={handleSelectBaseDirectory}
           style={{
@@ -184,15 +193,15 @@ export const WorkspacesViewHeader: React.FC<WorkspacesViewHeaderProps> = ({
             cursor: 'pointer',
             transition: 'background-color 0.2s',
           }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor =
-            theme.colors.backgroundTertiary;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor =
-            theme.colors.backgroundSecondary;
-        }}
-        title={baseDefaultDirectory || 'Click to set base directory'}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor =
+              theme.colors.backgroundTertiary;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor =
+              theme.colors.backgroundSecondary;
+          }}
+          title={baseDefaultDirectory || 'Click to set base directory'}
         >
           <FolderOpen size={16} color={theme.colors.textSecondary} />
           <span

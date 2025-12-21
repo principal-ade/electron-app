@@ -8,7 +8,8 @@ export const localhostProcessesPanelDefinition: PanelDefinition = {
   metadata: {
     id: 'principal-ade.localhost-processes',
     name: 'Localhost Processes',
-    description: 'Displays running localhost development servers with process info',
+    description:
+      'Displays running localhost development servers with process info',
     version: '1.0.0',
     author: 'Principal ADE',
     icon: 'globe',

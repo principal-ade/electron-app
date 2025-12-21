@@ -42,7 +42,8 @@ import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonit
  * Combines workspace list actions with repository actions and GitHub actions
  */
 interface WorkspacesPanelActions
-  extends PanelActions,
+  extends
+    PanelActions,
     WorkspacesListPanelActions,
     GitHubStarredPanelActions,
     GitHubProjectsPanelActions {
@@ -389,8 +390,9 @@ export const WorkspacesPanelProvider: React.FC<
             if (!githubInfo) return;
 
             // Get current branch
-            const gitStatus =
-              await RepositoryMonitoringService.getGitStatus(repo.path);
+            const gitStatus = await RepositoryMonitoringService.getGitStatus(
+              repo.path,
+            );
             const branch = gitStatus?.branch || 'main';
 
             // Fetch quality metrics

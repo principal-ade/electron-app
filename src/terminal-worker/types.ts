@@ -148,4 +148,3 @@ export type RendererToWorkerPortMessage =
   | TerminalResizeMessage;
 
 export type WorkerToRendererPortMessage = TerminalDataMessage;
-

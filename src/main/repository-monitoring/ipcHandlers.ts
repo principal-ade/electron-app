@@ -423,10 +423,7 @@ export function registerRepositoryMonitoringHandlers(): void {
         await manager.acquireWatch(repoPath, referenceId);
         return { success: true };
       } catch (error) {
-        console.error(
-          '[RepositoryMonitoring] Error acquiring watch:',
-          error,
-        );
+        console.error('[RepositoryMonitoring] Error acquiring watch:', error);
         return {
           success: false,
           error: error instanceof Error ? error.message : 'Unknown error',
@@ -446,10 +443,7 @@ export function registerRepositoryMonitoringHandlers(): void {
         await manager.releaseWatch(repoPath, referenceId);
         return { success: true };
       } catch (error) {
-        console.error(
-          '[RepositoryMonitoring] Error releasing watch:',
-          error,
-        );
+        console.error('[RepositoryMonitoring] Error releasing watch:', error);
         return {
           success: false,
           error: error instanceof Error ? error.message : 'Unknown error',

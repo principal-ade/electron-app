@@ -486,11 +486,14 @@ export function registerModernWindowHandlers(): void {
             AlexandriaRegistryService,
           } = require('../stores/AlexandriaRegistryService');
           const service = AlexandriaRegistryService.getInstance();
-          const repositories = await service.getRepositoriesInWorkspace(workspaceId);
+          const repositories =
+            await service.getRepositoriesInWorkspace(workspaceId);
           const monitoringManager = getMonitoringManager();
 
           // Filter repos with valid paths
-          const reposWithPaths = repositories.filter((repo): repo is typeof repo & { path: string } => !!repo.path);
+          const reposWithPaths = repositories.filter(
+            (repo): repo is typeof repo & { path: string } => !!repo.path,
+          );
 
           // Acquire watches in parallel (acquireWatch auto-registers if needed)
           const results = await Promise.allSettled(
@@ -498,7 +501,7 @@ export function registerModernWindowHandlers(): void {
               const repoPath = repo.path as string;
               await monitoringManager.acquireWatch(repoPath, watchReferenceId);
               return repoPath;
-            })
+            }),
           );
 
           // Track successful registrations for cleanup on window close
@@ -531,12 +534,14 @@ export function registerModernWindowHandlers(): void {
       window.window.once('closed', () => {
         const monitoringManager = getMonitoringManager();
         for (const repoPath of registeredRepoPaths) {
-          monitoringManager.releaseWatch(repoPath, watchReferenceId).catch((err: unknown) => {
-            console.error(
-              `[modernWindowHandlers] Failed to release watch for ${repoPath}:`,
-              err,
-            );
-          });
+          monitoringManager
+            .releaseWatch(repoPath, watchReferenceId)
+            .catch((err: unknown) => {
+              console.error(
+                `[modernWindowHandlers] Failed to release watch for ${repoPath}:`,
+                err,
+              );
+            });
         }
         console.log(
           `[modernWindowHandlers] Released watches for ${registeredRepoPaths.length} repositories (reference: ${watchReferenceId})`,

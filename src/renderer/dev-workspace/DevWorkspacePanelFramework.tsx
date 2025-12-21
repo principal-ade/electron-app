@@ -102,14 +102,17 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
   // Log agent highlight layers changes
   useEffect(() => {
-    console.log('[DevWorkspacePanelFramework] Agent highlight layers updated:', {
-      layerCount: agentHighlightCtx.highlightLayers.length,
-      layers: agentHighlightCtx.highlightLayers.map((l) => ({
-        id: l.id,
-        name: l.name,
-        itemsCount: l.items.length,
-      })),
-    });
+    console.log(
+      '[DevWorkspacePanelFramework] Agent highlight layers updated:',
+      {
+        layerCount: agentHighlightCtx.highlightLayers.length,
+        layers: agentHighlightCtx.highlightLayers.map((l) => ({
+          id: l.id,
+          name: l.name,
+          itemsCount: l.items.length,
+        })),
+      },
+    );
   }, [agentHighlightCtx.highlightLayers]);
 
   // Create merged context for File City panel (includes agent highlight layers)
