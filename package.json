@@ -175,7 +175,7 @@
     "@industry-theme/git-sync-panels": "^0.1.4",
     "@industry-theme/localhost-panels": "^0.1.7",
     "@industry-theme/markdown-panels": "^0.2.12",
-    "@industry-theme/principal-view-panels": "^0.1.25",
+    "@industry-theme/principal-view-panels": "^0.1.26",
     "@industry-theme/repository-composition-panels": "^0.2.14",
     "@industry-theme/xterm-terminal-panel": "^0.2.1",
     "@mdxeditor/editor": "^3.50.0",
