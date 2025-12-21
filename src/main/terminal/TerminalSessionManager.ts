@@ -1,23 +1,253 @@
 import { v4 as uuidv4 } from 'uuid';
-import * as os from 'os';
-import { BrowserWindow, MessageChannelMain } from 'electron';
+import * as path from 'path';
+import * as fs from 'fs';
+import {
+  app,
+  BrowserWindow,
+  MessageChannelMain,
+  utilityProcess,
+  UtilityProcess,
+} from 'electron';
 import { TerminalSession } from './types';
-import { pty } from './utils/ptyLoader';
 import { ownershipManager } from './TerminalOwnershipManager';
 import { terminalEnvironment } from '../terminalEnvironment';
 import { TerminalAPIEvents } from '../../shared/main-process-api-interfaces/TerminalService';
+import type {
+  MainToWorkerMessage,
+  WorkerToMainMessage,
+  CreateSessionMessage,
+  DestroySessionMessage,
+  WriteToSessionMessage,
+  ResizeSessionMessage,
+  RefreshSessionMessage,
+  RegisterPortMessage,
+  UnregisterPortMessage,
+  SetOwnerMessage,
+} from '../../terminal-worker/types';
 
 export class TerminalSessionManager {
+  // Minimal session state in main - just enough to track existence and metadata
   private sessions: Map<string, TerminalSession> = new Map();
   private sessionsByRepo: Map<string, string> = new Map(); // "repoPath:context" -> sessionId
   private maxSessions = 20;
   private rendererWindows: Set<BrowserWindow> = new Set();
 
-  // MessagePort support - track ports per session per window
+  // Utility process worker
+  private worker: UtilityProcess | null = null;
+  private isWorkerReady = false;
+  private pendingMessages: MainToWorkerMessage[] = [];
+  private workerReadyPromise: Promise<void> | null = null;
+  private workerReadyResolve: (() => void) | null = null;
+
+  // Pending session creation callbacks
+  private pendingSessionCallbacks: Map<
+    string,
+    { resolve: (sessionId: string) => void; reject: (error: Error) => void }
+  > = new Map();
+  private workerReadyReject: ((error: Error) => void) | null = null;
+
+  // Track MessageChannels - we only keep track of which ports exist, the actual data flows worker<->renderer
   private sessionPorts: Map<string, Map<number, MessageChannelMain>> =
     new Map();
 
-  // Renderer window tracking
+  constructor() {
+    this.initializeWorker();
+  }
+
+  // =============================================================================
+  // Worker Management
+  // =============================================================================
+
+  private async initializeWorker(): Promise<void> {
+    if (this.worker) return;
+
+    // Create promise for ready state
+    this.workerReadyPromise = new Promise((resolve, reject) => {
+      this.workerReadyResolve = resolve;
+      this.workerReadyReject = reject;
+    });
+
+    // Ensure app is ready
+    if (!app.isReady()) {
+      await app.whenReady();
+    }
+
+    let workerPath: string;
+
+    if (!app.isPackaged) {
+      // Development: use the webpack-compiled bundle
+      workerPath = path.join(__dirname, 'terminal-worker.bundle.dev.js');
+      console.log(`[Terminal] Looking for development worker at: ${workerPath}`);
+    } else {
+      // Production: use the webpack-compiled bundle
+      workerPath = path.join(__dirname, 'terminal-worker.js');
+      console.log(`[Terminal] Looking for production worker at: ${workerPath}`);
+    }
+
+    // Verify the worker file exists
+    if (!fs.existsSync(workerPath)) {
+      const error = new Error(
+        `Worker bundle not found at: ${workerPath}. Terminal will not be available.`,
+      );
+      console.error(`[Terminal] ${error.message}`);
+      if (this.workerReadyReject) {
+        this.workerReadyReject(error);
+      }
+      return;
+    }
+
+    console.log(`[Terminal] Spawning terminal worker from: ${workerPath}`);
+
+    this.worker = utilityProcess.fork(workerPath, [], {
+      serviceName: 'terminal-worker',
+      stdio: 'pipe',
+      env: {
+        ...process.env,
+        NODE_ENV: process.env.NODE_ENV || 'development',
+      },
+    });
+
+    this.worker.on('spawn', () => {
+      console.log('[Terminal] Worker spawned successfully');
+    });
+
+    this.worker.on('message', (msg: WorkerToMainMessage) => {
+      this.handleWorkerMessage(msg);
+    });
+
+    // Handle stdout/stderr
+    if (this.worker.stdout) {
+      this.worker.stdout.on('data', (data: Buffer) => {
+        const output = data.toString().trim();
+        if (output) {
+          console.log(`[TerminalWorker stdout] ${output}`);
+        }
+      });
+    }
+
+    if (this.worker.stderr) {
+      this.worker.stderr.on('data', (data: Buffer) => {
+        const output = data.toString().trim();
+        if (output) {
+          console.error(`[TerminalWorker stderr] ${output}`);
+        }
+      });
+    }
+
+    this.worker.on('exit', (code: number) => {
+      console.warn(`[Terminal] Worker exited with code ${code}`);
+      this.worker = null;
+
+      // Reject ready promise if worker exits before ready
+      if (!this.isWorkerReady && this.workerReadyReject) {
+        this.workerReadyReject(new Error(`Terminal worker exited with code ${code}`));
+      }
+
+      this.isWorkerReady = false;
+
+      // Fail any pending session callbacks
+      for (const [, callback] of this.pendingSessionCallbacks) {
+        callback.reject(new Error('Terminal worker exited'));
+      }
+      this.pendingSessionCallbacks.clear();
+    });
+  }
+
+  private handleWorkerMessage(msg: WorkerToMainMessage): void {
+    switch (msg.type) {
+      case 'READY':
+        console.log('[Terminal] Worker is ready');
+        this.isWorkerReady = true;
+        if (this.workerReadyResolve) {
+          this.workerReadyResolve();
+        }
+        // Flush pending messages
+        for (const pending of this.pendingMessages) {
+          this.sendToWorker(pending);
+        }
+        this.pendingMessages = [];
+        break;
+
+      case 'SESSION_CREATED': {
+        const callback = this.pendingSessionCallbacks.get(msg.sessionId);
+        if (callback) {
+          if (msg.success) {
+            callback.resolve(msg.sessionId);
+          } else {
+            callback.reject(new Error(msg.error || 'Failed to create session'));
+          }
+          this.pendingSessionCallbacks.delete(msg.sessionId);
+        }
+        break;
+      }
+
+      case 'SESSION_EXIT':
+        this.broadcastToRendererWindows(TerminalAPIEvents.ON_EXIT, {
+          sessionId: msg.sessionId,
+          code: msg.exitCode,
+        });
+        this.cleanupSession(msg.sessionId);
+        break;
+
+      case 'SESSION_ERROR':
+        console.error(
+          `[Terminal] Session error for ${msg.sessionId}: ${msg.error}`,
+        );
+        break;
+
+      case 'WORKER_ERROR':
+        console.error(`[Terminal] Worker error: ${msg.error}`, msg.context);
+        break;
+    }
+  }
+
+  private sendToWorker(message: MainToWorkerMessage): void {
+    if (!this.worker) {
+      console.error('[Terminal] Cannot send message: worker not available');
+      return;
+    }
+
+    if (!this.isWorkerReady) {
+      this.pendingMessages.push(message);
+      return;
+    }
+
+    try {
+      this.worker.postMessage(message);
+    } catch (error) {
+      console.error('[Terminal] Failed to send message to worker:', error);
+    }
+  }
+
+  private async ensureWorkerReady(): Promise<boolean> {
+    if (this.isWorkerReady) return true;
+
+    if (!this.workerReadyPromise) {
+      await this.initializeWorker();
+    }
+
+    if (this.workerReadyPromise) {
+      // Wait for worker with timeout
+      const timeoutPromise = new Promise<void>((_, reject) => {
+        setTimeout(() => reject(new Error('Worker ready timeout')), 10000);
+      });
+
+      try {
+        await Promise.race([this.workerReadyPromise, timeoutPromise]);
+        return this.isWorkerReady;
+      } catch (error) {
+        console.error('[Terminal] Worker ready failed:', error);
+        return false;
+      }
+    }
+
+    return false;
+  }
+
+  // =============================================================================
+  // Renderer Window Tracking
+  // =============================================================================
+
   addRendererWindow(window: BrowserWindow): void {
     if (!window || this.rendererWindows.has(window)) {
       return;
@@ -35,7 +265,6 @@ export class TerminalSessionManager {
     window.on('closed', cleanup);
   }
 
-  // Broadcasting to all renderer windows (for exit events, etc.)
   broadcastToRendererWindows(channel: string, payload: unknown): void {
     for (const rendererWindow of Array.from(this.rendererWindows)) {
       if (rendererWindow.isDestroyed()) {
@@ -54,79 +283,34 @@ export class TerminalSessionManager {
     }
   }
 
-  /**
-   * Send terminal data to the owner window only.
-   * This avoids sizing conflicts from multiple windows receiving data.
-   */
-  private sendToOwner(sessionId: string, data: string): void {
-    const ownerWindowId = ownershipManager.getOwner(sessionId);
-    if (ownerWindowId === undefined) {
-      // Only log occasionally to avoid spam
-      if (data.length > 0 && data.charCodeAt(0) !== 27) {
-        // Skip escape sequences
-        console.warn(
-          `[Terminal] No owner for session ${sessionId}, dropping ${data.length} bytes`,
-        );
-      }
-      return;
-    }
+  // =============================================================================
+  // Session Management
+  // =============================================================================
 
-    const windowPorts = this.sessionPorts.get(sessionId);
-    if (!windowPorts) {
-      console.warn(`[Terminal] No ports map for session ${sessionId}`);
-      return;
-    }
-
-    const channel = windowPorts.get(ownerWindowId);
-    if (!channel) {
-      console.warn(
-        `[Terminal] No MessagePort found for owner window ${ownerWindowId} on session ${sessionId}. ` +
-          `Available windows: ${Array.from(windowPorts.keys()).join(', ')}`,
-      );
-      return;
-    }
-
-    try {
-      channel.port1.postMessage({ type: 'DATA', data });
-    } catch (error) {
-      console.error(
-        `[Terminal] Failed to send data via MessagePort for session ${sessionId}:`,
-        error,
-      );
-    }
-  }
-
-  // Helper to generate session key from directory and context
   getSessionKey(directory: string, context?: string): string {
     return `${directory}:${context || 'default'}`;
   }
 
-  // Get existing session by repo key
   getSessionByRepoKey(sessionKey: string): TerminalSession | null {
     const sessionId = this.sessionsByRepo.get(sessionKey);
     if (sessionId && this.sessions.has(sessionId)) {
-      const session = this.sessions.get(sessionId);
-      return session ?? null;
+      return this.sessions.get(sessionId) ?? null;
     }
     return null;
   }
 
-  // Get session by ID
   getSession(sessionId: string): TerminalSession | undefined {
     return this.sessions.get(sessionId);
   }
 
-  // Check if session exists
   hasSession(sessionId: string): boolean {
     return this.sessions.has(sessionId);
   }
 
-  // Get all sessions
   getAllSessions(): Map<string, TerminalSession> {
     return this.sessions;
   }
 
-  // Check session limit
   canCreateSession(): boolean {
     return this.sessions.size < this.maxSessions;
   }
@@ -135,142 +319,92 @@ export class TerminalSessionManager {
     return this.maxSessions;
   }
 
-  // Create a new terminal session
   async createSession(
     directory: string,
     context?: string,
     command?: string,
   ): Promise<string> {
-    const sessionId = uuidv4();
+    const isReady = await this.ensureWorkerReady();
+    if (!isReady) {
+      throw new Error('Terminal worker not available');
+    }
 
-    // Generate a Claude-compatible session ID for hooks
+    const sessionId = uuidv4();
     const claudeSessionId = `terminal-${sessionId}`;
+
     console.log(
-      `[Terminal] Creating terminal ${sessionId} with CLAUDE_SESSION_ID=${claudeSessionId} in directory: ${directory}`,
+      `[Terminal] Creating session ${sessionId} with CLAUDE_SESSION_ID=${claudeSessionId} in: ${directory}`,
     );
 
-    // Get shell from environment manager
-    const shell = terminalEnvironment.getUserShell();
-    const args: string[] = [];
-
-    // Validate and sanitize directory
-    const fs = require('fs');
+    // Validate directory
     let workingDirectory = directory;
-
     if (!workingDirectory || !fs.existsSync(workingDirectory)) {
       console.warn(
-        `Directory ${workingDirectory} does not exist, using home directory`,
+        `[Terminal] Directory ${workingDirectory} does not exist, using home`,
       );
+      const os = require('os');
       workingDirectory =
         process.env.HOME || process.env.USERPROFILE || os.homedir();
     }
 
-    // Get properly configured environment with user's full PATH
-    const env = await terminalEnvironment.getTerminalEnvironment(
+    // Get shell and environment
+    const shell = terminalEnvironment.getUserShell();
+    const rawEnv = await terminalEnvironment.getTerminalEnvironment(
       workingDirectory,
       claudeSessionId,
     );
-
-    console.log(
-      `[Terminal] Using shell: ${shell} in directory: ${workingDirectory}`,
-    );
-
-    // Create PTY process
-    let ptyProcess;
-    try {
-      ptyProcess = pty.spawn(shell, args, {
-        name: 'xterm-256color',
-        cols: 80,
-        rows: 30,
-        cwd: workingDirectory,
-        env,
-      });
-    } catch (spawnError) {
-      console.error('Failed to spawn shell, trying fallback:', spawnError);
-
-      // Try fallback shell
-      const fallbackShell =
-        process.platform === 'darwin' ? '/bin/bash' : '/bin/sh';
-      console.log(`Trying fallback shell: ${fallbackShell}`);
-
-      ptyProcess = pty.spawn(fallbackShell, args, {
-        name: 'xterm-256color',
-        cols: 80,
-        rows: 30,
-        cwd: workingDirectory,
-        env,
-      });
+    // Filter out undefined values for worker
+    const env: Record<string, string> = {};
+    for (const [key, value] of Object.entries(rawEnv)) {
+      if (value !== undefined) {
+        env[key] = value;
+      }
     }
 
+    // Create session tracking in main (minimal state)
     const now = Date.now();
     const session: TerminalSession = {
       id: sessionId,
-      pty: ptyProcess,
-      directory,
+      pty: null as unknown as ReturnType<typeof import('node-pty').spawn>, // PTY is in worker
+      directory: workingDirectory,
       context,
       createdAt: now,
       lastActivity: now,
     };
     this.sessions.set(sessionId, session);
-
-    // Initialize port tracking for this session
     this.sessionPorts.set(sessionId, new Map());
 
-    // Handle PTY data - send only to owner
-    ptyProcess.onData((data: string) => {
-      session.lastActivity = Date.now();
-      this.sendToOwner(sessionId, data);
+    // Create promise for session creation result
+    const resultPromise = new Promise<string>((resolve, reject) => {
+      this.pendingSessionCallbacks.set(sessionId, { resolve, reject });
     });
 
-    // Handle PTY exit
-    ptyProcess.onExit((exitCode: { exitCode: number }) => {
-      this.broadcastToRendererWindows(TerminalAPIEvents.ON_EXIT, {
-        sessionId,
-        code: exitCode.exitCode,
-      });
+    // Send creation message to worker
+    const message: CreateSessionMessage = {
+      type: 'CREATE_SESSION',
+      id: `create-${sessionId}`,
+      timestamp: Date.now(),
+      sessionId,
+      directory: workingDirectory,
+      context,
+      command,
+      shell,
+      env,
+    };
+    this.sendToWorker(message);
 
-      this.cleanupSession(sessionId);
-    });
-
-    console.log(`Terminal session created successfully: ${sessionId}`);
-
-    // Send a newline to trigger the shell prompt (only if no command will be sent)
-    if (!command) {
-      setTimeout(() => {
-        console.log(
-          `[Terminal] Sending initial newline to trigger prompt for ${sessionId}`,
-        );
-        ptyProcess.write('\r');
-      }, 200);
-    } else {
-      // Send the initial command after a delay to ensure the terminal is ready
-      setTimeout(() => {
-        console.log(
-          `[Terminal] Sending command for session ${sessionId}: ${command}`,
-        );
-        ptyProcess.write(`${command}\r`);
-      }, 500);
-    }
-
-    return sessionId;
+    return resultPromise;
   }
 
-  // Track session by repo key
   trackSessionByRepo(sessionKey: string, sessionId: string): void {
     this.sessionsByRepo.set(sessionKey, sessionId);
   }
 
-  // Clean up a session and its repo tracking
   cleanupSession(sessionId: string): void {
-    // Close all MessageChannels for this session
     this.closeAllPortsForSession(sessionId);
-
-    // Clean up ownership
     ownershipManager.removeSession(sessionId);
-
     this.sessions.delete(sessionId);
 
-    // Clean up repo tracking
     for (const [repo, sid] of Array.from(this.sessionsByRepo.entries())) {
       if (sid === sessionId) {
         this.sessionsByRepo.delete(repo);
@@ -279,94 +413,105 @@ export class TerminalSessionManager {
     }
   }
 
-  // Destroy a specific session
   destroySession(sessionId: string): void {
     const session = this.sessions.get(sessionId);
     if (session) {
-      session.pty.kill();
+      const message: DestroySessionMessage = {
+        type: 'DESTROY_SESSION',
+        id: `destroy-${sessionId}`,
+        timestamp: Date.now(),
+        sessionId,
+      };
+      this.sendToWorker(message);
       this.cleanupSession(sessionId);
-      console.log(`Terminal session destroyed: ${sessionId}`);
+      console.log(`[Terminal] Session destroyed: ${sessionId}`);
     }
   }
 
-  // Clean up all sessions
   destroyAllSessions(): void {
-    this.sessions.forEach((session, sessionId) => {
-      try {
-        session.pty.kill();
-        this.closeAllPortsForSession(sessionId);
-      } catch (_error) {
-        // Ignore errors during cleanup
-      }
-    });
+    for (const sessionId of this.sessions.keys()) {
+      this.destroySession(sessionId);
+    }
     this.sessions.clear();
     this.sessionsByRepo.clear();
     this.sessionPorts.clear();
+    // Note: Don't shutdown worker here - it should stay running for future sessions
   }
 
-  // Write data to a session
+  /**
+   * Shutdown the terminal worker completely (called on app quit)
+   */
+  shutdown(): void {
+    this.destroyAllSessions();
+
+    // Shutdown worker
+    if (this.worker) {
+      this.worker.postMessage({
+        type: 'SHUTDOWN',
+        id: 'shutdown',
+        timestamp: Date.now(),
+      });
+    }
+  }
+
   writeToSession(sessionId: string, data: string): void {
     const session = this.sessions.get(sessionId);
     if (session) {
       session.lastActivity = Date.now();
-      session.pty.write(data);
+      const message: WriteToSessionMessage = {
+        type: 'WRITE',
+        id: `write-${sessionId}-${Date.now()}`,
+        timestamp: Date.now(),
+        sessionId,
+        data,
+      };
+      this.sendToWorker(message);
     }
   }
 
-  // Resize a session
   resizeSession(
     sessionId: string,
     cols: number,
     rows: number,
     force: boolean = false,
   ): void {
-    const session = this.sessions.get(sessionId);
-    if (session) {
-      if (force) {
-        // Force SIGWINCH by temporarily changing dimensions
-        // This ensures the shell redraws even if dimensions match
-        session.pty.resize(cols + 1, rows);
-        session.pty.resize(cols, rows);
-      } else {
-        session.pty.resize(cols, rows);
-      }
+    if (this.sessions.has(sessionId)) {
+      const message: ResizeSessionMessage = {
+        type: 'RESIZE',
+        id: `resize-${sessionId}-${Date.now()}`,
+        timestamp: Date.now(),
+        sessionId,
+        cols,
+        rows,
+        force,
+      };
+      this.sendToWorker(message);
     }
   }
 
-  // Refresh a session (send Ctrl+L)
   refreshSession(sessionId: string): boolean {
-    const session = this.sessions.get(sessionId);
-    if (session && session.pty) {
-      try {
-        session.pty.write('\x0c');
-        return true;
-      } catch (error) {
-        console.error('Failed to refresh terminal:', error);
-        return false;
-      }
+    if (this.sessions.has(sessionId)) {
+      const message: RefreshSessionMessage = {
+        type: 'REFRESH',
+        id: `refresh-${sessionId}`,
+        timestamp: Date.now(),
+        sessionId,
+      };
+      this.sendToWorker(message);
+      return true;
     }
     return false;
   }
 
-  // MessagePort support methods
+  // =============================================================================
+  // MessagePort Management
+  // =============================================================================
 
   /**
-   * Create a MessageChannel for a session and transfer port to renderer.
-   * Also claims ownership for the window.
-   * @deprecated Use createPortForSession instead (matches terminal-testing-app pattern)
-   */
-  createMessageChannelForSession(sessionId: string, windowId: number): boolean {
-    // Delegate to createPortForSession with claimOwnership=true for backward compat
-    return this.createPortForSession(sessionId, windowId, true);
-  }
-
-  /**
-   * Create and send a new MessagePort for a session to a window.
-   * Matches the terminal-testing-app pattern where ownership is managed separately.
-   *
-   * @param sessionId - The session to create a port for
-   * @param windowId - The window to send the port to
-   * @param claimOwnership - Whether to also claim ownership (default: false)
+   * Create a MessageChannel for a session and transfer ports:
+   * - port1 goes to utility process (worker)
+   * - port2 goes to renderer
+   * This allows direct PTY data flow without going through main process.
    */
   createPortForSession(
     sessionId: string,
@@ -374,94 +519,73 @@ export class TerminalSessionManager {
     claimOwnership: boolean = false,
   ): boolean {
     console.log(
-      `[Terminal] createPortForSession called: sessionId=${sessionId}, windowId=${windowId}, claimOwnership=${claimOwnership}`,
+      `[Terminal] createPortForSession: sessionId=${sessionId}, windowId=${windowId}, claimOwnership=${claimOwnership}`,
     );
 
-    const session = this.sessions.get(sessionId);
-    if (!session) {
-      console.error(
-        `[Terminal] Cannot create port: session ${sessionId} not found`,
-      );
-      console.error(
-        `[Terminal] Available sessions: ${Array.from(this.sessions.keys()).join(', ')}`,
-      );
+    if (!this.sessions.has(sessionId)) {
+      console.error(`[Terminal] Session ${sessionId} not found`);
       return false;
     }
 
     const window = BrowserWindow.fromId(windowId);
     if (!window || window.isDestroyed()) {
-      console.error(
-        `[Terminal] Cannot create port: window ${windowId} not found or destroyed`,
-      );
-      console.error(
-        `[Terminal] All windows: ${BrowserWindow.getAllWindows()
-          .map((w) => w.id)
-          .join(', ')}`,
-      );
+      console.error(`[Terminal] Window ${windowId} not found or destroyed`);
       return false;
     }
 
-    // Check if this window already has a port for this session (matches testing app)
+    // Check if port already exists
     const existingPorts = this.sessionPorts.get(sessionId);
     if (existingPorts?.has(windowId)) {
       console.log(
         `[Terminal] Window ${windowId} already has a port for session ${sessionId}`,
       );
-      // Still claim ownership if requested
       if (claimOwnership) {
         ownershipManager.claimOwnership(sessionId, windowId);
+        // Notify worker of ownership change
+        const ownerMsg: SetOwnerMessage = {
+          type: 'SET_OWNER',
+          id: `set-owner-${sessionId}-${windowId}`,
+          timestamp: Date.now(),
+          sessionId,
+          windowId,
+        };
+        this.sendToWorker(ownerMsg);
       }
       return true;
     }
-
-    console.log(
-      `[Terminal] Session and window validated, creating new MessageChannel`,
-    );
 
     try {
       // Create MessageChannel
       const channel = new MessageChannelMain();
 
-      // Store the channel
+      // Store the channel reference
       if (!this.sessionPorts.has(sessionId)) {
         this.sessionPorts.set(sessionId, new Map());
       }
       this.sessionPorts.get(sessionId)!.set(windowId, channel);
 
-      console.log(
-        `[Terminal] Created MessageChannel for session ${sessionId} -> window ${windowId}`,
-      );
-
-      // Start listening on port1 (main process side)
-      channel.port1.start();
-
-      // Listen for messages from renderer (via port2 -> port1)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- MessageChannelMain event type is not exported by Electron
-      channel.port1.on('message', (event: any) => {
-        this.handlePortMessage(sessionId, event.data);
-      });
-
-      // Claim ownership only if requested
+      // Claim ownership if requested
       if (claimOwnership) {
         ownershipManager.claimOwnership(sessionId, windowId);
       }
 
-      // Transfer port2 to renderer using 'terminal:port' channel (matches testing app)
-      console.log(
-        `[Terminal] Sending port to window ${windowId} for session ${sessionId}`,
-      );
+      // Send port1 to utility process worker
+      const registerMsg: RegisterPortMessage = {
+        type: 'REGISTER_PORT',
+        id: `register-port-${sessionId}-${windowId}`,
+        timestamp: Date.now(),
+        sessionId,
+        windowId,
+        isOwner: claimOwnership,
+      };
+      this.worker?.postMessage(registerMsg, [channel.port1]);
 
-      try {
-        window.webContents.postMessage('terminal:port', sessionId, [
-          channel.port2,
-        ]);
-        console.log(
-          `[Terminal] ✅ Port sent successfully to window ${windowId} for session ${sessionId}`,
-        );
-      } catch (postError) {
-        console.error(`[Terminal] ❌ Failed to send port:`, postError);
-        return false;
-      }
+      // Send port2 to renderer
+      window.webContents.postMessage('terminal:port', sessionId, [channel.port2]);
+
+      console.log(
+        `[Terminal] Created MessagePort for session ${sessionId} -> window ${windowId}`,
+      );
 
       return true;
     } catch (error) {
@@ -474,46 +598,30 @@ export class TerminalSessionManager {
   }
 
   /**
-   * Handle messages received from renderer via MessagePort
+   * @deprecated Use createPortForSession instead
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Using TerminalPortMessage type here causes module load failures
-  private handlePortMessage(sessionId: string, message: any): void {
-    const session = this.sessions.get(sessionId);
-    if (!session) {
-      console.warn(
-        `[Terminal] Received message for non-existent session ${sessionId}`,
-      );
-      return;
-    }
-
-    try {
-      if (message.type === 'WRITE') {
-        session.lastActivity = Date.now();
-        session.pty.write(message.data);
-      } else if (message.type === 'RESIZE') {
-        session.pty.resize(message.cols, message.rows);
-      } else {
-        console.warn(
-          `[Terminal] Unknown message type from port: ${message.type}`,
-        );
-      }
-    } catch (error) {
-      console.error(
-        `[Terminal] Error handling port message for session ${sessionId}:`,
-        error,
-      );
-    }
+  createMessageChannelForSession(sessionId: string, windowId: number): boolean {
+    return this.createPortForSession(sessionId, windowId, true);
   }
 
-  /**
-   * Close all MessageChannels for a session
-   */
   private closeAllPortsForSession(sessionId: string): void {
     const windowPorts = this.sessionPorts.get(sessionId);
     if (windowPorts) {
       for (const [windowId, channel] of windowPorts.entries()) {
         try {
-          channel.port1.close();
+          // Notify worker to unregister port
+          const unregisterMsg: UnregisterPortMessage = {
+            type: 'UNREGISTER_PORT',
+            id: `unregister-port-${sessionId}-${windowId}`,
+            timestamp: Date.now(),
+            sessionId,
+            windowId,
+          };
+          this.sendToWorker(unregisterMsg);
+
+          // Close our end (port2 was already transferred)
+          // Note: port1 was transferred to worker, port2 to renderer
+          // We just need to notify them to clean up
         } catch (error) {
           console.error(
             `[Terminal] Error closing port for window ${windowId} on session ${sessionId}:`,
@@ -522,22 +630,22 @@ export class TerminalSessionManager {
         }
       }
       this.sessionPorts.delete(sessionId);
-      console.log(`[Terminal] Closed all ports for session ${sessionId}`);
     }
   }
 
-  /**
-   * Clean up ports for a specific window (called when window closes)
-   */
   private cleanupWindowPorts(windowId: number): void {
     for (const [sessionId, windowPorts] of this.sessionPorts.entries()) {
-      const channel = windowPorts.get(windowId);
-      if (channel) {
-        try {
-          channel.port1.close();
-        } catch {
-          // Port may already be closed
-        }
+      if (windowPorts.has(windowId)) {
+        // Notify worker
+        const unregisterMsg: UnregisterPortMessage = {
+          type: 'UNREGISTER_PORT',
+          id: `unregister-port-${sessionId}-${windowId}`,
+          timestamp: Date.now(),
+          sessionId,
+          windowId,
+        };
+        this.sendToWorker(unregisterMsg);
+
         windowPorts.delete(windowId);
         console.log(
           `[Terminal] Cleaned up port for window ${windowId} on session ${sessionId}`,

@@ -77,10 +77,17 @@ class TerminalManager {
   }
 
   /**
-   * Clean up all sessions
+   * Clean up all sessions (keeps worker running)
    */
   destroyAllSessions(): void {
     this.sessionManager.destroyAllSessions();
+  }
+
+  /**
+   * Shutdown terminal system completely (called on app quit)
+   */
+  shutdown(): void {
+    this.sessionManager.shutdown();
   }
 }
 

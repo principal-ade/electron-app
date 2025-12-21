@@ -29,20 +29,33 @@ const configuration: webpack.Configuration = {
     main: path.join(webpackPaths.srcMainPath, 'main.ts'),
     preload: path.join(webpackPaths.srcWindowPath, 'preload.ts'),
     'event-worker': path.join(webpackPaths.srcPath, 'event-processing-server', 'worker-entry.ts'),
+    'terminal-worker': path.join(webpackPaths.srcPath, 'terminal-worker', 'worker-entry.ts'),
   },
 
   // Override externals - don't externalize dependencies for workers
   // The worker bundles need to be self-contained
   externals: [
     ({ request, context, contextInfo, getResolve }, callback) => {
-      // For the worker entries, bundle everything
-      // Check if the request is coming from a worker entry or its dependencies
-      const isWorkerBundle =
+      // For the worker entries, bundle everything except native modules
+      const isEventWorker =
         context?.includes('event-processing-server') ||
         contextInfo?.issuer?.includes('event-processing-server');
 
-      if (isWorkerBundle) {
-        return callback(); // Bundle everything for workers
+      const isTerminalWorker =
+        context?.includes('terminal-worker') ||
+        contextInfo?.issuer?.includes('terminal-worker');
+
+      // Event worker bundles everything (no native modules)
+      if (isEventWorker) {
+        return callback();
+      }
+
+      // Terminal worker bundles everything EXCEPT node-pty
+      if (isTerminalWorker) {
+        if (request === 'node-pty') {
+          return callback(null, `commonjs ${request}`);
+        }
+        return callback(); // Bundle everything else
       }
 
       // For main and preload, externalize node_modules as usual

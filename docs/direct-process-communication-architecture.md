@@ -2,416 +2,309 @@
 
 ## Overview
 
-This document captures the current state of inter-process communication (IPC) for high-frequency data streams and outlines the target architecture using direct MessagePort connections between utility processes and renderers.
-
-## Problem Statement
-
-Currently, high-frequency events flow through the main process, causing:
-
-1. **Main thread contention** - Serialization/deserialization on every event
-2. **Unnecessary broadcast** - Events sent to all windows, filtered in renderer
-3. **Wasted CPU cycles** - Windows process events they don't care about
-4. **Console noise** - Filtered events still log, cluttering developer tools
-
-Example from agent events:
-```
-[AgentSessionSDKService] Event received from IPC: user-prompt-submit
-[EventHighlightService] Event filtered out - different repository
-```
-This pattern repeats for every event, in every window, even when irrelevant.
-
----
-
-## Current State
-
-### 1. Terminal Data
-
-| Aspect | Current Implementation |
-|--------|----------------------|
-| **Process** | PTY runs in **main process** |
-| **Transport** | MessagePorts (direct to owning window) |
-| **Filtering** | Ownership-based - only owner receives data |
-| **Status** | ✅ Good - already using MessagePorts |
-
-**Architecture:**
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     Main Process                            │
-│  ┌──────────────┐         ┌─────────────────┐              │
-│  │ PTY Process  │────────>│ MessageChannel  │              │
-│  │  (node-pty)  │  onData │   port1 | port2 │              │
-│  └──────────────┘         └────────┬────────┘              │
-└────────────────────────────────────┼────────────────────────┘
-                                     │ port2 transferred
-                                     ▼
-┌────────────────────────────────────────────────────────────┐
-│                   Renderer Process                          │
-│  ┌─────────────┐         ┌──────────────┐                  │
-│  │ MessagePort │────────>│   xterm.js   │                  │
-│  └─────────────┘         └──────────────┘                  │
-└────────────────────────────────────────────────────────────┘
-```
-
-**Files:**
-- `src/main/terminal/TerminalSessionManager.ts` - Session and port management
-- `src/main/terminal/TerminalOwnershipManager.ts` - Ownership tracking
-- `src/main/terminal/handlers/ownershipHandlers.ts` - Port creation on claim
-
-**Limitation:** PTY is in main process. Phase 2 (utility process) was deferred due to complexity of proxying MessagePorts.
-
----
-
-### 2. Agent Events
-
-| Aspect | Current Implementation |
-|--------|----------------------|
-| **Process** | HTTP server in **utility process** ✅ |
-| **Transport** | IPC broadcast via main process ❌ |
-| **Filtering** | In renderer after receiving ❌ |
-| **Status** | ⚠️ Partial - utility process exists but broadcast is inefficient |
-
-**Architecture:**
-```
-┌──────────────────┐
-│  Utility Process │
-│  (EventServer)   │
-│  - HTTP server   │
-│  - Event parsing │
-└────────┬─────────┘
-         │ postMessage (processed event)
-         ▼
-┌────────────────────────────────────────────────────────────┐
-│                      Main Process                           │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │ EventServerManager.handleProcessedEvent()           │   │
-│  │                                                     │   │
-│  │ const windows = BrowserWindow.getAllWindows();      │   │
-│  │ windows.forEach(window => {                         │   │
-│  │   window.webContents.send(PROCESSED_EVENT, event);  │   │  ← PROBLEM
-│  │ });                                                 │   │
-│  └─────────────────────────────────────────────────────┘   │
-└────────────────────────────────────────────────────────────┘
-         │ IPC to ALL windows
-         ▼
-┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
-│   Renderer A    │  │   Renderer B    │  │   Renderer C    │
-│   (repo: foo)   │  │   (repo: bar)   │  │   (repo: foo)   │
-│                 │  │                 │  │                 │
-│ if (event.repo  │  │ if (event.repo  │  │ if (event.repo  │
-│   !== 'foo')    │  │   !== 'bar')    │  │   !== 'foo')    │
-│   return; ✓     │  │   return; ✗     │  │   return; ✓     │
-└─────────────────┘  └─────────────────┘  └─────────────────┘
-```
-
-**Files:**
-- `src/main/agent-session-events/EventServerManager.ts:344-362` - Broadcast to all windows
-- `src/renderer/services/EventHighlightService.ts:68-83` - Filters by repository
-- `src/renderer/contexts/AgentHighlightContext.tsx` - Subscribes to events
-
----
-
-### 3. Git Status Updates
-
-| Aspect | Current Implementation |
-|--------|----------------------|
-| **Process** | File watching in **main process** |
-| **Transport** | IPC via `webContents.send()` |
-| **Filtering** | Targeted by path, but still IPC |
-| **Status** | ⚠️ Could benefit from MessagePorts for high-frequency updates |
-
-**Architecture:**
-```
-┌────────────────────────────────────────────────────────────┐
-│                      Main Process                           │
-│  ┌──────────────────────┐                                  │
-│  │ FileSystemHandlers   │                                  │
-│  │ - chokidar watchers  │                                  │
-│  │ - git status checks  │                                  │
-│  └──────────┬───────────┘                                  │
-│             │                                               │
-│  window.webContents.send('git-status-change', {...})       │
-└─────────────┼──────────────────────────────────────────────┘
-              │ IPC
-              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                     Renderer Process                         │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │ RepositoryPanelContext                              │    │
-│  │ - Receives git-status-change                        │    │
-│  │ - Updates panel state                               │    │
-│  └─────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Files:**
-- `src/main/file-system/fileSystemHandlers.ts:501, 637` - Sends git-status-change
-- `src/renderer/contexts/RepositoryPanelContext.tsx` - Receives updates
-
----
-
-## Target Architecture
-
-### Goal: Direct Utility Process ↔ Renderer Communication
-
-Use MessagePorts to establish direct channels between utility processes and renderers, bypassing the main process for data flow after initial setup.
-
-```
-┌─────────────────┐                      ┌─────────────────┐
-│ Utility Process │◄────MessagePort─────►│    Renderer     │
-│                 │     (direct!)        │                 │
-└─────────────────┘                      └─────────────────┘
-         ▲                                        ▲
-         │ port1                          port2   │
-         └──────────┐              ┌──────────────┘
-                    │   (setup)    │
-               ┌────┴──────────────┴────┐
-               │      Main Process      │
-               │  1. Creates channel    │
-               │  2. Transfers ports    │
-               │  3. Done - out of loop │
-               └────────────────────────┘
-```
-
-### Key Insight
-
-From [Electron MessagePorts documentation](https://www.electronjs.org/docs/latest/tutorial/message-ports):
-
-> MessagePort objects can be created in either the renderer or the main process, and passed back and forth using the `postMessage` methods.
-
-From [utilityProcess API](https://www.electronjs.org/docs/latest/api/utility-process):
-
-> You can send a message to the child process, optionally transferring ownership of zero or more `MessagePortMain` objects.
-
-**The main process can broker a direct connection:**
-1. Create `MessageChannelMain` → gets `port1` and `port2`
-2. Transfer `port1` to utility process via `utilityProcess.postMessage(msg, [port1])`
-3. Transfer `port2` to renderer via `webContents.postMessage(channel, msg, [port2])`
-4. Utility process and renderer now communicate directly
-
----
+This document describes the architecture for direct MessagePort communication between utility processes and renderers, bypassing the main process for high-frequency data streams.
 
 ## Implementation Status
 
-### Phase 1: Agent Events ✅ COMPLETE
+| Phase | Component | Status |
+|-------|-----------|--------|
+| Phase 1 | Agent Events | ✅ Complete |
+| Phase 2 | Terminal PTY | ✅ Complete |
+| Phase 3 | Git & File Events | Planned |
 
-Direct MessagePort communication between utility process and renderers is now implemented.
+---
 
-## Implementation Plan
+## Phase 1: Agent Events (Complete)
 
-### Phase 1: Agent Events (Highest Impact) - IMPLEMENTED
+### Problem Solved
 
-**Previous problem:** All windows received all events, filtered locally.
+Previously, agent events were broadcast to all windows via IPC, causing:
+- Main thread contention from serialization on every event
+- Unnecessary processing in windows that didn't care about the event
+- Console noise from filtered events
 
-**Solution implemented:**
+### Solution
+
+Direct MessagePort communication from utility process to renderer:
+
+```
+┌──────────────────┐                      ┌─────────────────┐
+│ Utility Process  │◄────MessagePort─────►│    Renderer     │
+│  (EventServer)   │     (direct!)        │  (repo: foo)    │
+└──────────────────┘                      └─────────────────┘
+         │                                        │
+    Events filtered at source              Only foo events
+    by repository                          reach this window
+```
+
+### Architecture
+
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │                     Utility Process                           │
 │  ┌─────────────────────────────────────────────────────────┐ │
-│  │ EventServer                                             │ │
+│  │ worker-entry.ts                                         │ │
 │  │                                                         │ │
-│  │ // Map of repo -> MessagePorts for interested windows   │ │
-│  │ private repoPorts: Map<string, MessagePortMain[]>       │ │
+│  │ registeredPorts: Map<repository, Map<windowId, port>>   │ │
 │  │                                                         │ │
-│  │ onProcessedEvent(event) {                               │ │
-│  │   const ports = this.repoPorts.get(event.repository);   │ │
-│  │   ports?.forEach(port => port.postMessage(event));      │ │
+│  │ sendEventToPorts(repository, event) {                   │ │
+│  │   ports.get(repository)?.forEach(p => p.postMessage())  │ │
+│  │ }                                                       │ │
+│  └─────────────────────────────────────────────────────────┘ │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │ HttpEventServer.ts                                      │ │
+│  │                                                         │ │
+│  │ processAgentEvent() {                                   │ │
+│  │   // Process through pipeline                           │ │
+│  │   // Send directly to ports for this repo               │ │
+│  │   sendEventToPorts(event.repository.root, event)        │ │
+│  │   // Also send to main for observability/caching        │ │
 │  │ }                                                       │ │
 │  └─────────────────────────────────────────────────────────┘ │
 └──────────────────────────────────────────────────────────────┘
-         │                              │
-    port (repo: foo)              port (repo: bar)
-         │                              │
+         ▲                              ▲
+         │ port1                        │ port1
+         │ (per window+repo)            │
+    ┌────┴──────────────────────────────┴────┐
+    │            Main Process                 │
+    │  EventServerManager.ts                  │
+    │                                         │
+    │  registerPortForWindow(windowId, repo) {│
+    │    const {port1, port2} = new Channel() │
+    │    worker.postMessage({...}, [port1])   │
+    │    webContents.postMessage({...},[port2])│
+    │  }                                      │
+    └────┬──────────────────────────────┬────┘
+         │ port2                        │ port2
          ▼                              ▼
 ┌─────────────────┐            ┌─────────────────┐
 │   Renderer A    │            │   Renderer B    │
 │   (repo: foo)   │            │   (repo: bar)   │
 │                 │            │                 │
-│ Only receives   │            │ Only receives   │
-│ foo events! ✓   │            │ bar events! ✓   │
+│ agentSessionSDK │            │ agentSessionSDK │
+│ Api.ts stores   │            │ Api.ts stores   │
+│ port, dispatches│            │ port, dispatches│
+│ to subscribers  │            │ to subscribers  │
 └─────────────────┘            └─────────────────┘
 ```
 
-**Steps:**
-1. Add `registerForRepository(repoPath)` IPC handler in main
-2. Main creates MessageChannel, transfers port1 to EventServer, port2 to renderer
-3. EventServer maintains `Map<repoPath, MessagePort[]>`
-4. Events route directly to interested renderers
-5. Remove broadcast loop from `EventServerManager.handleProcessedEvent()`
+### Registration Flow
 
-**Files to modify:**
-- `src/main/agent-session-events/EventServerManager.ts`
-- `src/event-processing-server/HttpEventServer.ts` (utility process)
-- `src/renderer/contexts/AgentHighlightContext.tsx`
-- `src/window/preload.ts` or `preload-dev-workspace.ts`
+1. **Renderer mounts** `AgentHighlightProvider` with a `repositoryPath`
+2. **Renderer calls** `AgentSessionSDKService.registerEventPort(repositoryPath)`
+3. **Main process** receives IPC, creates `MessageChannelMain`
+4. **Main process** transfers `port1` to utility process with repo info
+5. **Main process** transfers `port2` to renderer
+6. **Utility process** stores port in `registeredPorts` map
+7. **Renderer** stores port, sets up `onmessage` handler
+8. **Events flow directly** from utility process to renderer
 
----
+### Files Modified
 
-### Phase 2: Terminal PTY (Process Isolation)
+**Types:**
+- `src/event-processing-server/types.ts` - `RegisterPortMessage`, `UnregisterPortMessage`
+- `src/shared/main-process-api-interfaces/AgentSessionSDKAPI.ts` - New IPC events and API methods
 
-**Current:** PTY in main process, MessagePorts to renderer.
+**Main Process:**
+- `src/main/agent-session-events/EventServerManager.ts` - Port registration handlers, removed IPC broadcast
 
-**Target:** PTY in utility process, MessagePorts to renderer.
+**Utility Process:**
+- `src/event-processing-server/worker-entry.ts` - Port management, `sendEventToPorts()`
+- `src/event-processing-server/HttpEventServer.ts` - Calls `sendEventToPorts()` on event
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                   Utility Process                             │
-│  ┌─────────────────────────────────────────────────────────┐ │
-│  │ PTY Worker                                              │ │
-│  │ - node-pty spawns shell                                 │ │
-│  │ - Receives MessagePort per session                      │ │
-│  │ - Sends data directly to renderer                       │ │
-│  └─────────────────────────────────────────────────────────┘ │
-└──────────────────────────────────────────────────────────────┘
-         │
-    MessagePort (direct)
-         │
-         ▼
-┌─────────────────────────────────────────────────────────────┐
-│                     Renderer Process                         │
-│  ┌─────────────────────────────────────────────────────────┐│
-│  │ xterm.js                                                ││
-│  │ - Receives data via MessagePort                         ││
-│  │ - Sends input via MessagePort                           ││
-│  └─────────────────────────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────────┘
-```
+**Preload:**
+- `src/window/main-process-api-implementations/agentSessionSDKApi.ts` - MessagePort handling
 
-**Benefits:**
-- PTY crash doesn't affect main process
-- Better CPU distribution
-- True process isolation
+**Renderer:**
+- `src/renderer/main-process-api/AgentSessionSDKService.ts` - New static methods
+- `src/renderer/contexts/AgentHighlightContext.tsx` - Registers port on mount
+- `src/renderer/services/EventHighlightService.ts` - Removed filtering (now at source)
 
-**Complexity:**
-- Need to handle PTY lifecycle in utility process
-- Session management coordination
-- Error recovery across process boundary
-
-**Files to modify:**
-- `src/main/terminal/TerminalSessionManager.ts`
-- `src/main/terminal/phase2-future/worker/` (promote to active)
-- New: `src/utility-processes/pty-worker.ts`
-
----
-
-### Phase 3: Git & File System Events
-
-**Current:** Main process watches files, sends IPC.
-
-**Target:** Utility process watches files, MessagePorts to interested renderers.
-
-```
-┌──────────────────────────────────────────────────────────────┐
-│                   Utility Process                             │
-│  ┌─────────────────────────────────────────────────────────┐ │
-│  │ FileWatcher                                             │ │
-│  │ - chokidar watches registered paths                     │ │
-│  │ - git status polling                                    │ │
-│  │ - MessagePort per repo/window                           │ │
-│  └─────────────────────────────────────────────────────────┘ │
-└──────────────────────────────────────────────────────────────┘
-         │
-    MessagePort (per repo)
-         │
-         ▼
-┌─────────────────────────────────────────────────────────────┐
-│                     Renderer Process                         │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Considerations:**
-- File watching is already reasonably efficient
-- May be lower priority than agent events
-- Could consolidate with agent event utility process
-
----
-
-## Message Protocol
-
-### Registration Message (Renderer → Main → Utility)
+### API
 
 ```typescript
-interface RegisterInterestMessage {
-  type: 'REGISTER_INTEREST';
-  windowId: number;
-  repository: string;
-  interests: ('agent-events' | 'git-status' | 'file-changes')[];
-}
-```
+// Register for events from a repository
+await AgentSessionSDKService.registerEventPort(repositoryPath);
 
-### Port Transfer (Main orchestrates)
-
-```typescript
-// Main process
-const { port1, port2 } = new MessageChannelMain();
-
-// Send to utility process
-utilityProcess.postMessage(
-  { type: 'PORT_FOR_WINDOW', windowId, repository },
-  [port1]
+// Subscribe to events (after registration)
+const unsubscribe = AgentSessionSDKService.subscribeToRepositoryEvents(
+  repositoryPath,
+  (event) => { /* handle event */ }
 );
 
-// Send to renderer
-webContents.postMessage('event-port', { repository }, [port2]);
-```
-
-### Event Messages (Utility → Renderer via port)
-
-```typescript
-interface EventMessage {
-  type: 'AGENT_EVENT' | 'GIT_STATUS' | 'FILE_CHANGE';
-  payload: unknown;
-  timestamp: number;
-}
+// Cleanup
+unsubscribe();
+await AgentSessionSDKService.unregisterEventPort(repositoryPath);
 ```
 
 ---
 
-## Migration Strategy
+## Phase 2: Terminal PTY (Complete)
 
-### Backward Compatibility
+### Problem Solved
 
-During migration, support both paths:
+Previously, PTY operations ran in the main process, causing:
+- PTY hangs/crashes could block main process
+- CPU contention from PTY data processing on main thread
+- Risk of main process instability from shell process issues
 
-```typescript
-// EventServerManager.ts
-private handleProcessedEvent(event: RepoNormalizedUniversalAgentSessionEvent) {
-  const repo = event.repository?.root;
+### Solution
 
-  // New path: direct MessagePort
-  if (this.hasDirectPort(repo)) {
-    this.sendViaPort(repo, event);
-    return;
-  }
+Utility process handles all PTY operations, with direct MessagePort to renderer:
 
-  // Legacy path: broadcast IPC
-  this.broadcastToAllWindows(event);
-}
+```
+┌──────────────────┐                      ┌─────────────────┐
+│ Utility Process  │◄────MessagePort─────►│    Renderer     │
+│  (TerminalWorker)│     (direct!)        │    (xterm.js)   │
+└──────────────────┘                      └─────────────────┘
+         │                                        │
+    node-pty runs here                   Terminal data flows
+    (spawn, write, resize)               directly to/from UI
 ```
 
-### Feature Flag
+### Architecture
 
-```typescript
-// settings or environment
-const USE_DIRECT_PORTS = process.env.DIRECT_PORTS === 'true';
+```
+┌──────────────────────────────────────────────────────────────┐
+│                     Utility Process                           │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │ terminal-worker/worker-entry.ts                         │ │
+│  │                                                         │ │
+│  │ sessions: Map<sessionId, {pty, ownerWindowId, ...}>     │ │
+│  │ sessionPorts: Map<sessionId, Map<windowId, port>>       │ │
+│  │                                                         │ │
+│  │ createSession() - spawns node-pty process               │ │
+│  │ pty.onData() -> port.postMessage({type: 'DATA'})        │ │
+│  │ port.onmessage({type: 'WRITE'}) -> pty.write()          │ │
+│  └─────────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────┘
+         ▲                              ▲
+         │ port1                        │ messages (CREATE, etc)
+         │ (per session+window)         │
+    ┌────┴──────────────────────────────┴────┐
+    │            Main Process                 │
+    │  TerminalSessionManager.ts              │
+    │                                         │
+    │  - Spawns utility process on init       │
+    │  - Minimal session state (tracking)     │
+    │  - Brokers MessagePort connections      │
+    │  - Forwards session operations          │
+    └────┬──────────────────────────────┬────┘
+         │ port2                        │ IPC (create, destroy)
+         ▼                              ▼
+┌─────────────────┐            ┌─────────────────┐
+│   Renderer A    │            │   Renderer B    │
+│   (owner)       │            │   (viewer)      │
+│                 │            │                 │
+│ preload stores  │            │ preload stores  │
+│ port, routes    │            │ port, routes    │
+│ data to xterm   │            │ data to xterm   │
+└─────────────────┘            └─────────────────┘
 ```
 
-### Gradual Rollout
+### Session Lifecycle
 
-1. Implement for agent events first (most noisy)
-2. Validate performance improvement
-3. Extend to git status
-4. Finally, terminal PTY (most complex)
+1. **Renderer requests session** via IPC (`terminal:getOrCreate`)
+2. **Main process** generates sessionId, forwards `CREATE_SESSION` to worker
+3. **Worker** spawns node-pty process, stores session state
+4. **Worker** sends `SESSION_CREATED` message back to main
+5. **Main process** resolves promise, returns sessionId to renderer
+6. **Renderer requests port** via IPC (`terminal:claimOwnership` or `requestDataPort`)
+7. **Main process** creates `MessageChannelMain`, transfers ports
+8. **PTY data flows directly** from worker to renderer via MessagePort
+
+### Message Types
+
+**Main → Worker:**
+- `CREATE_SESSION` - Spawn new PTY
+- `DESTROY_SESSION` - Kill PTY
+- `WRITE` - Write data to PTY (fallback when no port)
+- `RESIZE` - Resize PTY
+- `REFRESH` - Send Ctrl+L
+- `REGISTER_PORT` - Register MessagePort for session+window
+- `UNREGISTER_PORT` - Clean up port
+- `SET_OWNER` - Change data owner window
+
+**Worker → Main:**
+- `READY` - Worker initialized
+- `SESSION_CREATED` - PTY spawned (success/failure)
+- `SESSION_EXIT` - PTY exited
+- `SESSION_ERROR` - Error in session
+- `WORKER_ERROR` - Worker-level error
+
+**Port Messages (Worker ↔ Renderer):**
+- `DATA` (worker→renderer) - PTY output
+- `WRITE` (renderer→worker) - User input
+- `RESIZE` (renderer→worker) - Terminal resize
+
+### Files Created/Modified
+
+**New Files:**
+- `src/terminal-worker/types.ts` - Message type definitions
+- `src/terminal-worker/worker-entry.ts` - Utility process entry point
+
+**Modified Files:**
+- `src/main/terminal/TerminalSessionManager.ts` - Refactored to delegate to worker
+- `.erb/configs/webpack.config.main.dev.ts` - Added terminal-worker entry
+- `.erb/configs/webpack.config.main.prod.ts` - Added terminal-worker entry
+- `tsconfig.main.json` - Added terminal-worker to includes
+
+### Benefits Achieved
+
+| Metric | Before | After |
+|--------|--------|-------|
+| PTY crash risk to main | High | Isolated |
+| Main thread CPU from PTY | Moderate | Zero |
+| Data transfer hops | 2 (main→render) | 0 (direct) |
+| PTY operation blocking main | Yes | No |
 
 ---
 
-## Success Metrics
+## Phase 3: Git & File Events (Planned)
 
-| Metric | Current | Target |
-|--------|---------|--------|
+Move file watching to utility process.
+
+**Current:** Main process watches files, sends IPC
+**Target:** Utility process watches files, MessagePorts to renderers
+
+**Considerations:**
+- Could consolidate with agent event utility process
+- Lower priority than agent events
+
+---
+
+## Key Insights
+
+### MessagePort Transfer Pattern
+
+```typescript
+// Main process creates channel
+const { port1, port2 } = new MessageChannelMain();
+
+// Transfer port1 to utility process
+utilityProcess.postMessage(
+  { type: 'REGISTER_PORT', windowId, repository },
+  [port1]  // Transfer list
+);
+
+// Transfer port2 to renderer
+webContents.postMessage(
+  'event-port-ready',
+  { repository },
+  [port2]  // Transfer list
+);
+
+// Now utility process and renderer communicate directly!
+```
+
+### Benefits Achieved
+
+| Metric | Before | After |
+|--------|--------|-------|
 | Console noise from filtered events | High | Zero |
-| Main process CPU during agent activity | ~15% | <5% |
-| Event delivery latency | ~5ms (IPC hop) | <1ms (direct) |
+| Main process involvement in event delivery | Every event | Setup only |
 | Windows processing irrelevant events | All | None |
+| IPC hops per event | 2 (utility→main→renderer) | 0 (direct) |
 
 ---
 
@@ -420,27 +313,3 @@ const USE_DIRECT_PORTS = process.env.DIRECT_PORTS === 'true';
 - [Electron MessagePorts Tutorial](https://www.electronjs.org/docs/latest/tutorial/message-ports)
 - [Electron utilityProcess API](https://www.electronjs.org/docs/latest/api/utility-process)
 - [VS Code Issue #131798](https://github.com/microsoft/vscode/issues/131798) - Direct helper process to renderer communication
-- `src/main/terminal/README.md` - Current terminal architecture
-- `src/main/agent-session-events/EventServerManager.ts` - Current event server
-
----
-
-## Open Questions
-
-1. **Single utility process or multiple?**
-   - One process for all event types (simpler lifecycle)
-   - Separate processes per concern (better isolation)
-
-2. **Port lifecycle management**
-   - When to create/destroy ports
-   - Handling window close/reload
-   - Reconnection strategy
-
-3. **Error handling**
-   - What happens if utility process crashes?
-   - Port disconnection detection
-   - Automatic reconnection
-
-4. **Debugging**
-   - How to inspect MessagePort traffic
-   - Logging without reintroducing overhead

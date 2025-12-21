@@ -18,7 +18,7 @@ export function getSessionManagerInstance(): TerminalSessionManager {
 
 export function destroySessionManagerInstance(): void {
   if (instance) {
-    instance.destroyAllSessions();
+    instance.shutdown();
     instance = null;
   }
 }

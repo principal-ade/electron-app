@@ -320,11 +320,11 @@ export const initializeServices = async () => {
 export const shutdownServices = async () => {
   console.log('[Main Process] Shutting down services.');
 
-  // Clean up terminal sessions if terminal manager is available
+  // Shutdown terminal system (stops worker) if terminal manager is available
   const terminalManager = getTerminalManager();
   if (terminalManager) {
-    console.log('[Main Process] Cleaning up terminal sessions...');
-    terminalManager.destroyAllSessions();
+    console.log('[Main Process] Shutting down terminal system...');
+    terminalManager.shutdown();
   }
 
   // Stop the event processing server
