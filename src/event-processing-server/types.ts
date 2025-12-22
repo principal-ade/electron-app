@@ -39,6 +39,10 @@ export interface ServerStats {
   pendingRequests: number;
   averageProcessingTime: number;
   lastProcessedEvent?: number;
+  gitCache?: {
+    repoCacheSize: number;
+    dirCacheSize: number;
+  };
 }
 
 interface BaseMessage {

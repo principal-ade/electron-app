@@ -297,7 +297,9 @@
     {
       "id": "renderer-to-preload",
       "fromNode": "renderer-process",
+      "fromSide": "bottom",
       "toNode": "preload",
+      "toSide": "top",
       "label": "window.mainProcess.*",
       "pv": {
         "edgeType": "ipc"
@@ -306,7 +308,9 @@
     {
       "id": "preload-to-main",
       "fromNode": "preload",
+      "fromSide": "bottom",
       "toNode": "main-process",
+      "toSide": "top",
       "label": "ipcRenderer.invoke()",
       "pv": {
         "edgeType": "ipc"
@@ -315,7 +319,9 @@
     {
       "id": "main-to-preload-events",
       "fromNode": "main-process",
+      "fromSide": "top",
       "toNode": "preload",
+      "toSide": "bottom",
       "label": "webContents.send()",
       "pv": {
         "edgeType": "ipc-event"
@@ -324,7 +330,9 @@
     {
       "id": "principal-renders-renderer",
       "fromNode": "principal-window",
+      "fromSide": "bottom",
       "toNode": "renderer-process",
+      "toSide": "top",
       "label": "loads",
       "pv": {
         "edgeType": "renders"
@@ -333,7 +341,9 @@
     {
       "id": "repo-renders-renderer",
       "fromNode": "repo-manager",
+      "fromSide": "bottom",
       "toNode": "renderer-process",
+      "toSide": "top",
       "label": "loads",
       "pv": {
         "edgeType": "renders"
@@ -342,7 +352,9 @@
     {
       "id": "alexandria-renders-renderer",
       "fromNode": "alexandria-workspace",
+      "fromSide": "bottom",
       "toNode": "renderer-process",
+      "toSide": "top",
       "label": "loads",
       "pv": {
         "edgeType": "renders"
@@ -351,7 +363,9 @@
     {
       "id": "dev-renders-renderer",
       "fromNode": "dev-workspace",
+      "fromSide": "bottom",
       "toNode": "renderer-process",
+      "toSide": "top",
       "label": "loads",
       "pv": {
         "edgeType": "renders"
@@ -360,7 +374,9 @@
     {
       "id": "main-uses-fs-adapter",
       "fromNode": "main-process",
+      "fromSide": "bottom",
       "toNode": "file-system-adapter",
+      "toSide": "top",
       "label": "per-window",
       "pv": {
         "edgeType": "uses"
@@ -369,7 +385,9 @@
     {
       "id": "main-uses-wm-adapter",
       "fromNode": "main-process",
+      "fromSide": "bottom",
       "toNode": "window-manager-adapter",
+      "toSide": "top",
       "label": "per-window",
       "pv": {
         "edgeType": "uses"
@@ -378,7 +396,9 @@
     {
       "id": "main-uses-gh-adapter",
       "fromNode": "main-process",
+      "fromSide": "bottom",
       "toNode": "github-adapter",
+      "toSide": "top",
       "label": "per-window",
       "pv": {
         "edgeType": "uses"
@@ -387,7 +407,9 @@
     {
       "id": "main-uses-terminal",
       "fromNode": "main-process",
+      "fromSide": "bottom",
       "toNode": "terminal-manager",
+      "toSide": "top",
       "label": "per-window",
       "pv": {
         "edgeType": "uses"
@@ -396,7 +418,9 @@
     {
       "id": "main-uses-window-manager",
       "fromNode": "main-process",
+      "fromSide": "bottom",
       "toNode": "modern-window-manager",
+      "toSide": "top",
       "label": "creates windows",
       "pv": {
         "edgeType": "uses"
@@ -405,7 +429,9 @@
     {
       "id": "main-uses-handlers",
       "fromNode": "main-process",
+      "fromSide": "right",
       "toNode": "ipc-handlers",
+      "toSide": "left",
       "label": "registers",
       "pv": {
         "edgeType": "uses"
@@ -414,7 +440,9 @@
     {
       "id": "preload-uses-interfaces",
       "fromNode": "preload",
+      "fromSide": "left",
       "toNode": "api-interfaces",
+      "toSide": "right",
       "label": "implements",
       "pv": {
         "edgeType": "uses"
@@ -423,7 +451,9 @@
     {
       "id": "preload-uses-implementations",
       "fromNode": "preload",
+      "fromSide": "right",
       "toNode": "api-implementations",
+      "toSide": "left",
       "label": "exports",
       "pv": {
         "edgeType": "uses"
@@ -432,7 +462,9 @@
     {
       "id": "handlers-use-channels",
       "fromNode": "ipc-handlers",
+      "fromSide": "right",
       "toNode": "event-channels",
+      "toSide": "left",
       "label": "listens to",
       "pv": {
         "edgeType": "uses"
@@ -441,7 +473,9 @@
     {
       "id": "implementations-use-channels",
       "fromNode": "api-implementations",
+      "fromSide": "right",
       "toNode": "event-channels",
+      "toSide": "left",
       "label": "invokes",
       "pv": {
         "edgeType": "uses"

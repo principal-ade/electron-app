@@ -323,7 +323,9 @@
     {
       "id": "view-to-hook",
       "fromNode": "auth-view",
+      "fromSide": "bottom",
       "toNode": "use-auth-state",
+      "toSide": "top",
       "label": "uses",
       "pv": {
         "edgeType": "uses"
@@ -332,7 +334,9 @@
     {
       "id": "hook-to-service",
       "fromNode": "use-auth-state",
+      "fromSide": "bottom",
       "toNode": "authentication-service",
+      "toSide": "top",
       "label": "calls",
       "pv": {
         "edgeType": "uses"
@@ -341,7 +345,9 @@
     {
       "id": "service-to-api",
       "fromNode": "authentication-service",
+      "fromSide": "left",
       "toNode": "authentication-api",
+      "toSide": "top",
       "label": "window.mainProcess",
       "pv": {
         "edgeType": "uses"
@@ -350,7 +356,9 @@
     {
       "id": "api-to-events",
       "fromNode": "authentication-api",
+      "fromSide": "left",
       "toNode": "auth-events",
+      "toSide": "top",
       "label": "uses channels",
       "pv": {
         "edgeType": "uses"
@@ -359,7 +367,9 @@
     {
       "id": "api-to-auth-service",
       "fromNode": "authentication-api",
+      "fromSide": "bottom",
       "toNode": "auth-service",
+      "toSide": "top",
       "label": "ipcRenderer.invoke(LOGIN)",
       "pv": {
         "edgeType": "ipc-invoke"
@@ -368,7 +378,9 @@
     {
       "id": "state-to-api",
       "fromNode": "auth-state-manager",
+      "fromSide": "left",
       "toNode": "authentication-api",
+      "toSide": "right",
       "label": "auth-state:changed",
       "pv": {
         "edgeType": "ipc-event"
@@ -377,7 +389,9 @@
     {
       "id": "auth-service-to-state",
       "fromNode": "auth-service",
+      "fromSide": "right",
       "toNode": "auth-state-manager",
+      "toSide": "left",
       "label": "setAuthenticated()",
       "pv": {
         "edgeType": "uses"
@@ -386,7 +400,9 @@
     {
       "id": "auth-service-to-oauth",
       "fromNode": "auth-service",
+      "fromSide": "left",
       "toNode": "oauth-client",
+      "toSide": "top",
       "label": "authenticate()",
       "pv": {
         "edgeType": "uses"
@@ -395,7 +411,9 @@
     {
       "id": "auth-service-to-token-ipc",
       "fromNode": "auth-service",
+      "fromSide": "bottom",
       "toNode": "secure-token-ipc",
+      "toSide": "top",
       "label": "store tokens",
       "pv": {
         "edgeType": "uses"
@@ -404,7 +422,9 @@
     {
       "id": "auth-service-to-jwt",
       "fromNode": "auth-service",
+      "fromSide": "right",
       "toNode": "jwt-service",
+      "toSide": "top",
       "label": "createJWT()",
       "pv": {
         "edgeType": "uses"
@@ -413,7 +433,9 @@
     {
       "id": "oauth-to-workos",
       "fromNode": "oauth-client",
+      "fromSide": "bottom",
       "toNode": "workos-api",
+      "toSide": "top",
       "label": "POST /start, /token, /refresh",
       "pv": {
         "edgeType": "http"
@@ -422,7 +444,9 @@
     {
       "id": "oauth-to-browser",
       "fromNode": "oauth-client",
+      "fromSide": "left",
       "toNode": "browser",
+      "toSide": "top",
       "label": "shell.openExternal()",
       "pv": {
         "edgeType": "uses"
@@ -431,7 +455,9 @@
     {
       "id": "auth-service-to-github",
       "fromNode": "auth-service",
+      "fromSide": "bottom",
       "toNode": "github-api",
+      "toSide": "top",
       "label": "GET /user",
       "pv": {
         "edgeType": "http"
@@ -440,7 +466,9 @@
     {
       "id": "token-ipc-to-storage",
       "fromNode": "secure-token-ipc",
+      "fromSide": "bottom",
       "toNode": "unified-storage",
+      "toSide": "top",
       "label": "setToken/getToken",
       "pv": {
         "edgeType": "uses"
@@ -449,7 +477,9 @@
     {
       "id": "storage-to-keychain",
       "fromNode": "unified-storage",
+      "fromSide": "bottom",
       "toNode": "keychain",
+      "toSide": "top",
       "label": "safeStorage.encrypt/decrypt",
       "pv": {
         "edgeType": "stores"
@@ -458,7 +488,9 @@
     {
       "id": "storage-to-file",
       "fromNode": "unified-storage",
+      "fromSide": "right",
       "toNode": "storage-file",
+      "toSide": "left",
       "label": "write/read",
       "pv": {
         "edgeType": "stores"
@@ -467,7 +499,9 @@
     {
       "id": "jwt-to-github-token-auth",
       "fromNode": "jwt-service",
+      "fromSide": "right",
       "toNode": "github-token-auth",
+      "toSide": "left",
       "label": "provides token",
       "pv": {
         "edgeType": "uses"
@@ -476,7 +510,9 @@
     {
       "id": "file-to-token-github",
       "fromNode": "storage-file",
+      "fromSide": "bottom",
       "toNode": "token-github",
+      "toSide": "top",
       "label": "contains",
       "pv": {
         "edgeType": "stores"
@@ -485,7 +521,9 @@
     {
       "id": "file-to-token-workos",
       "fromNode": "storage-file",
+      "fromSide": "left",
       "toNode": "token-workos",
+      "toSide": "top",
       "label": "contains",
       "pv": {
         "edgeType": "stores"
@@ -494,7 +532,9 @@
     {
       "id": "file-to-token-refresh",
       "fromNode": "storage-file",
+      "fromSide": "bottom",
       "toNode": "token-refresh",
+      "toSide": "top",
       "label": "contains",
       "pv": {
         "edgeType": "stores"

@@ -5,7 +5,9 @@
 
 import { EventEmitter } from 'events';
 import * as os from 'os';
+import * as path from 'path';
 import { machineIdSync } from 'node-machine-id';
+import simpleGit, { SimpleGit } from 'simple-git';
 import {
   RepositoryInfo,
   PathNormalizationAdapter,
@@ -37,21 +39,150 @@ import {
 // import { ObservabilityIntegration } from '../main/observability/ObservabilityIntegration';
 
 /**
+ * Simple LRU-style cache for git repository information
+ * Caches by git root to avoid repeated lookups for files in the same repo
+ */
+class GitRepoCache {
+  // Map from git root path to repository info
+  private repoCache = new Map<string, RepositoryInfo>();
+  // Map from directory path to git root (or null if not in a repo)
+  private dirToRootCache = new Map<string, string | null>();
+
+  /**
+   * Get repository info for an absolute path
+   * Uses caching to avoid repeated git lookups
+   */
+  async getRepoInfo(absolutePath: string): Promise<RepositoryInfo | null> {
+    const dir = path.dirname(absolutePath);
+
+    // Check if we already know the git root for this directory
+    const directCacheHit = this.dirToRootCache.get(dir);
+    if (directCacheHit !== undefined) {
+      if (directCacheHit === null) return null;
+      return this.repoCache.get(directCacheHit) || null;
+    }
+
+    // Walk up to check if any parent is already cached
+    let checkDir = dir;
+    while (checkDir !== path.dirname(checkDir)) {
+      const parentCacheHit = this.dirToRootCache.get(checkDir);
+      if (parentCacheHit !== undefined) {
+        // Cache the original dir pointing to same root
+        this.dirToRootCache.set(dir, parentCacheHit);
+        if (parentCacheHit === null) return null;
+        return this.repoCache.get(parentCacheHit) || null;
+      }
+      checkDir = path.dirname(checkDir);
+    }
+
+    // Cache miss - do the git lookup
+    try {
+      const info = await this.lookupGitInfo(dir);
+      if (info) {
+        this.repoCache.set(info.root, info);
+        this.dirToRootCache.set(dir, info.root);
+      } else {
+        this.dirToRootCache.set(dir, null);
+      }
+      return info;
+    } catch (error) {
+      console.error('[GitRepoCache] Error looking up git info:', error);
+      this.dirToRootCache.set(dir, null);
+      return null;
+    }
+  }
+
+  /**
+   * Perform actual git lookup for a directory
+   */
+  private async lookupGitInfo(dir: string): Promise<RepositoryInfo | null> {
+    try {
+      const git: SimpleGit = simpleGit(dir);
+
+      const isRepo = await git.checkIsRepo();
+      if (!isRepo) return null;
+
+      const root = (await git.revparse(['--show-toplevel'])).trim();
+      const remotes = await git.getRemotes(true);
+      const originRemote = remotes.find(
+        (r: { name: string }) => r.name === 'origin',
+      );
+
+      let owner: string | undefined;
+      let repo: string | undefined;
+      const remoteUrl = originRemote?.refs?.fetch;
+
+      // Parse owner/repo from remote URL
+      if (remoteUrl) {
+        const parsed = this.parseGitRemoteUrl(remoteUrl);
+        owner = parsed.owner;
+        repo = parsed.repo;
+      }
+
+      return {
+        root,
+        remoteUrl,
+        owner,
+        repo,
+      };
+    } catch (error) {
+      // Not a git repo or git not available
+      return null;
+    }
+  }
+
+  /**
+   * Parse owner and repo from a git remote URL
+   */
+  private parseGitRemoteUrl(url: string): { owner?: string; repo?: string } {
+    // Handle SSH format: git@github.com:owner/repo.git
+    const sshMatch = url.match(/git@[^:]+:([^/]+)\/(.+?)(?:\.git)?$/);
+    if (sshMatch) {
+      return { owner: sshMatch[1], repo: sshMatch[2] };
+    }
+
+    // Handle HTTPS format: https://github.com/owner/repo.git
+    const httpsMatch = url.match(/https?:\/\/[^/]+\/([^/]+)\/(.+?)(?:\.git)?$/);
+    if (httpsMatch) {
+      return { owner: httpsMatch[1], repo: httpsMatch[2] };
+    }
+
+    return {};
+  }
+
+  /**
+   * Clear the cache (useful for testing or if repos change)
+   */
+  clear(): void {
+    this.repoCache.clear();
+    this.dirToRootCache.clear();
+  }
+
+  /**
+   * Get cache stats for debugging
+   */
+  getStats(): { repoCacheSize: number; dirCacheSize: number } {
+    return {
+      repoCacheSize: this.repoCache.size,
+      dirCacheSize: this.dirToRootCache.size,
+    };
+  }
+}
+
+/**
  * Server-side implementation of PathNormalizationAdapter
- * Makes requests to main process for repository information
+ * Uses local GitRepoCache instead of IPC to main process
  */
 class ServerPathNormalizationAdapter implements PathNormalizationAdapter {
   constructor(
     private homeDir: string,
-    private requestRepositoryInfo: (
-      absolutePath: string,
-    ) => Promise<RepositoryInfo | null>,
+    private gitRepoCache: GitRepoCache,
   ) {}
 
   async getRawRepositoryInfo(
     absolutePath: string,
   ): Promise<RepositoryInfo | null> {
-    return this.requestRepositoryInfo(absolutePath);
+    return this.gitRepoCache.getRepoInfo(absolutePath);
   }
 
   getSystemInfo(): SystemInfo {
@@ -116,6 +247,9 @@ export class EventProcessingServer extends EventEmitter {
   private lastProcessedEvent?: number;
   private pipeline!: AgentEventPipeline;
 
+  // Git repository cache for fast lookups
+  private gitRepoCache: GitRepoCache;
+
   // Request management
   private pendingRequests: Map<string, PendingRequest> = new Map();
   private requestCounter = 0;
@@ -130,6 +264,9 @@ export class EventProcessingServer extends EventEmitter {
     this.sendToMain = sendToMain;
     this.startTime = Date.now();
 
+    // Initialize git repo cache for fast lookups
+    this.gitRepoCache = new GitRepoCache();
+
     // Initialize event queue for serialized session writes
     this.log('info', 'EventProcessingServer initializing...');
     this.setupPipeline();
@@ -142,12 +279,10 @@ export class EventProcessingServer extends EventEmitter {
    * Set up the event processing pipeline
    */
   private setupPipeline(): void {
-    // Create the path normalization adapter that communicates with main process
+    // Create the path normalization adapter with local git cache
     const adapter = new ServerPathNormalizationAdapter(
       os.homedir(),
-      async (absolutePath: string): Promise<RepositoryInfo | null> => {
-        return this.requestRepositoryInfo(absolutePath);
-      },
+      this.gitRepoCache,
     );
 
     // Create metrics for monitoring
@@ -263,17 +398,6 @@ export class EventProcessingServer extends EventEmitter {
         ),
       );
     }
-  }
-
-  /**
-   * Request repository information from main process
-   */
-  private requestRepositoryInfo(
-    absolutePath: string,
-  ): Promise<RepositoryInfo | null> {
-    return this.makeRequest('REPOSITORY_INFO_REQUEST', {
-      absolutePath,
-    }) as Promise<RepositoryInfo | null>;
   }
 
   /**
@@ -477,6 +601,7 @@ export class EventProcessingServer extends EventEmitter {
           ? this.totalProcessingTime / this.processedEventCount
           : 0,
       lastProcessedEvent: this.lastProcessedEvent,
+      gitCache: this.gitRepoCache.getStats(),
     };
   }
 

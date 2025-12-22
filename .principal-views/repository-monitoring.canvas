@@ -326,7 +326,9 @@
     {
       "id": "context-to-service-1",
       "fromNode": "git-changes-context",
+      "fromSide": "bottom",
       "toNode": "repository-monitoring-service",
+      "toSide": "top",
       "label": "uses",
       "pv": {
         "edgeType": "uses"
@@ -335,7 +337,9 @@
     {
       "id": "context-to-service-2",
       "fromNode": "repository-panel-context",
+      "fromSide": "bottom",
       "toNode": "repository-monitoring-service",
+      "toSide": "top",
       "label": "uses",
       "pv": {
         "edgeType": "uses"
@@ -344,7 +348,9 @@
     {
       "id": "context-to-service-3",
       "fromNode": "workspaces-panel-context",
+      "fromSide": "bottom",
       "toNode": "repository-monitoring-service",
+      "toSide": "top",
       "label": "uses",
       "pv": {
         "edgeType": "uses"
@@ -353,7 +359,9 @@
     {
       "id": "service-to-api",
       "fromNode": "repository-monitoring-service",
+      "fromSide": "left",
       "toNode": "repository-monitoring-api",
+      "toSide": "top",
       "label": "window.mainProcess",
       "pv": {
         "edgeType": "uses"
@@ -362,7 +370,9 @@
     {
       "id": "api-to-enum",
       "fromNode": "repository-monitoring-api",
+      "fromSide": "bottom",
       "toNode": "monitoring-events-enum",
+      "toSide": "top",
       "label": "uses channels",
       "pv": {
         "edgeType": "uses"
@@ -371,7 +381,9 @@
     {
       "id": "api-to-handlers",
       "fromNode": "repository-monitoring-api",
+      "fromSide": "right",
       "toNode": "ipc-handlers",
+      "toSide": "left",
       "label": "ipcRenderer.invoke()",
       "pv": {
         "edgeType": "ipc-invoke"
@@ -380,7 +392,9 @@
     {
       "id": "handlers-to-api-events",
       "fromNode": "ipc-handlers",
+      "fromSide": "left",
       "toNode": "repository-monitoring-api",
+      "toSide": "right",
       "label": "webContents.send()",
       "pv": {
         "edgeType": "ipc-event"
@@ -389,7 +403,9 @@
     {
       "id": "handlers-to-manager",
       "fromNode": "ipc-handlers",
+      "fromSide": "bottom",
       "toNode": "monitoring-manager",
+      "toSide": "top",
       "label": "delegates",
       "pv": {
         "edgeType": "uses"
@@ -398,7 +414,9 @@
     {
       "id": "handlers-to-windows",
       "fromNode": "ipc-handlers",
+      "fromSide": "right",
       "toNode": "browser-windows",
+      "toSide": "left",
       "label": "broadcasts",
       "pv": {
         "edgeType": "uses"
@@ -407,7 +425,9 @@
     {
       "id": "manager-to-worker",
       "fromNode": "monitoring-manager",
+      "fromSide": "left",
       "toNode": "worker-process",
+      "toSide": "right",
       "label": "postMessage",
       "pv": {
         "edgeType": "post-message"
@@ -416,7 +436,9 @@
     {
       "id": "worker-to-manager",
       "fromNode": "worker-process",
+      "fromSide": "right",
       "toNode": "monitoring-manager",
+      "toSide": "left",
       "label": "parentPort.postMessage",
       "pv": {
         "edgeType": "post-message"
@@ -425,7 +447,9 @@
     {
       "id": "worker-uses-git-watcher",
       "fromNode": "worker-process",
+      "fromSide": "bottom",
       "toNode": "git-watcher",
+      "toSide": "top",
       "label": "uses",
       "pv": {
         "edgeType": "uses"
@@ -434,7 +458,9 @@
     {
       "id": "worker-uses-filetree",
       "fromNode": "worker-process",
+      "fromSide": "bottom",
       "toNode": "file-tree-builder",
+      "toSide": "top",
       "label": "uses",
       "pv": {
         "edgeType": "uses"
@@ -443,7 +469,9 @@
     {
       "id": "worker-uses-packages",
       "fromNode": "worker-process",
+      "fromSide": "bottom",
       "toNode": "package-processor",
+      "toSide": "top",
       "label": "uses",
       "pv": {
         "edgeType": "uses"
@@ -452,7 +480,9 @@
     {
       "id": "worker-uses-remote",
       "fromNode": "worker-process",
+      "fromSide": "bottom",
       "toNode": "git-remote-service",
+      "toSide": "top",
       "label": "uses",
       "pv": {
         "edgeType": "uses"
@@ -461,7 +491,9 @@
     {
       "id": "git-watcher-emits",
       "fromNode": "git-watcher",
+      "fromSide": "bottom",
       "toNode": "cache-registry",
+      "toSide": "top",
       "label": "updates",
       "pv": {
         "edgeType": "emits"
@@ -470,7 +502,9 @@
     {
       "id": "filetree-emits",
       "fromNode": "file-tree-builder",
+      "fromSide": "bottom",
       "toNode": "cache-registry",
+      "toSide": "top",
       "label": "updates",
       "pv": {
         "edgeType": "emits"
@@ -479,7 +513,9 @@
     {
       "id": "packages-emits",
       "fromNode": "package-processor",
+      "fromSide": "bottom",
       "toNode": "cache-registry",
+      "toSide": "top",
       "label": "updates",
       "pv": {
         "edgeType": "emits"
@@ -488,7 +524,9 @@
     {
       "id": "remote-emits",
       "fromNode": "git-remote-service",
+      "fromSide": "bottom",
       "toNode": "cache-registry",
+      "toSide": "top",
       "label": "updates",
       "pv": {
         "edgeType": "emits"
@@ -497,7 +535,9 @@
     {
       "id": "cache-to-slice-git",
       "fromNode": "cache-registry",
+      "fromSide": "bottom",
       "toNode": "cache-slice-git",
+      "toSide": "top",
       "label": "contains",
       "pv": {
         "edgeType": "uses"
@@ -506,7 +546,9 @@
     {
       "id": "cache-to-slice-filetree",
       "fromNode": "cache-registry",
+      "fromSide": "bottom",
       "toNode": "cache-slice-filetree",
+      "toSide": "top",
       "label": "contains",
       "pv": {
         "edgeType": "uses"
@@ -515,7 +557,9 @@
     {
       "id": "cache-to-slice-packages",
       "fromNode": "cache-registry",
+      "fromSide": "bottom",
       "toNode": "cache-slice-packages",
+      "toSide": "top",
       "label": "contains",
       "pv": {
         "edgeType": "uses"
@@ -524,7 +568,9 @@
     {
       "id": "cache-to-slice-remote",
       "fromNode": "cache-registry",
+      "fromSide": "bottom",
       "toNode": "cache-slice-remote",
+      "toSide": "top",
       "label": "contains",
       "pv": {
         "edgeType": "uses"
@@ -533,7 +579,9 @@
     {
       "id": "cache-emits-sync",
       "fromNode": "cache-registry",
+      "fromSide": "top",
       "toNode": "worker-process",
+      "toSide": "bottom",
       "label": "CACHE_SYNC",
       "pv": {
         "edgeType": "emits"

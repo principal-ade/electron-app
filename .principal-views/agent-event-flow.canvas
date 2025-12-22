@@ -326,7 +326,9 @@
     {
       "id": "server-to-manager",
       "fromNode": "event-server",
+      "fromSide": "bottom",
       "toNode": "event-server-manager",
+      "toSide": "top",
       "label": "ProcessedEventMessage",
       "pv": {
         "edgeType": "event-flow"
@@ -335,7 +337,9 @@
     {
       "id": "manager-to-cache",
       "fromNode": "event-server-manager",
+      "fromSide": "bottom",
       "toNode": "session-cache",
+      "toSide": "top",
       "label": "emit('processed-event')",
       "pv": {
         "edgeType": "event-flow"
@@ -344,7 +348,9 @@
     {
       "id": "cache-to-handlers",
       "fromNode": "session-cache",
+      "fromSide": "bottom",
       "toNode": "sdk-handlers",
+      "toSide": "top",
       "label": "provides data",
       "pv": {
         "edgeType": "uses"
@@ -353,7 +359,9 @@
     {
       "id": "manager-to-broadcast",
       "fromNode": "event-server-manager",
+      "fromSide": "right",
       "toNode": "broadcast-node",
+      "toSide": "left",
       "label": "handleProcessedEvent()",
       "pv": {
         "edgeType": "event-flow"
@@ -362,7 +370,9 @@
     {
       "id": "broadcast-to-events",
       "fromNode": "broadcast-node",
+      "fromSide": "bottom",
       "toNode": "event-types",
+      "toSide": "top",
       "pv": {
         "edgeType": "uses"
       }
@@ -370,7 +380,9 @@
     {
       "id": "broadcast-to-preload",
       "fromNode": "broadcast-node",
+      "fromSide": "right",
       "toNode": "preload",
+      "toSide": "left",
       "label": "IPC Channel",
       "pv": {
         "edgeType": "broadcast"
@@ -379,7 +391,9 @@
     {
       "id": "preload-to-api",
       "fromNode": "preload",
+      "fromSide": "bottom",
       "toNode": "renderer-api-impl",
+      "toSide": "top",
       "label": "exposes API",
       "pv": {
         "edgeType": "ipc"
@@ -388,7 +402,9 @@
     {
       "id": "api-to-service",
       "fromNode": "renderer-api-impl",
+      "fromSide": "bottom",
       "toNode": "sdk-service",
+      "toSide": "top",
       "label": "wrapped by",
       "pv": {
         "edgeType": "uses"
@@ -397,7 +413,9 @@
     {
       "id": "service-to-context",
       "fromNode": "sdk-service",
+      "fromSide": "bottom",
       "toNode": "agent-highlight-context",
+      "toSide": "top",
       "label": "onProcessedEvent()",
       "pv": {
         "edgeType": "subscribe"
@@ -406,7 +424,9 @@
     {
       "id": "context-to-highlight",
       "fromNode": "agent-highlight-context",
+      "fromSide": "right",
       "toNode": "event-highlight-service",
+      "toSide": "left",
       "label": "service.processEvent()",
       "pv": {
         "edgeType": "event-flow"
@@ -415,7 +435,9 @@
     {
       "id": "context-to-view",
       "fromNode": "agent-highlight-context",
+      "fromSide": "bottom",
       "toNode": "session-events-view",
+      "toSide": "top",
       "label": "provides events",
       "pv": {
         "edgeType": "uses"
@@ -424,7 +446,9 @@
     {
       "id": "highlight-to-codacity",
       "fromNode": "event-highlight-service",
+      "fromSide": "bottom",
       "toNode": "code-city",
+      "toSide": "top",
       "label": "emit('highlight-update')",
       "pv": {
         "edgeType": "event-flow"
@@ -433,7 +457,9 @@
     {
       "id": "manager-uses-interface",
       "fromNode": "event-server-manager",
+      "fromSide": "left",
       "toNode": "event-interface",
+      "toSide": "top",
       "pv": {
         "edgeType": "uses"
       }

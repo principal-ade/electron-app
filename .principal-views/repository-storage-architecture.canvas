@@ -306,7 +306,9 @@
     {
       "id": "namespace-to-handler",
       "fromNode": "repositories-namespace",
+      "fromSide": "right",
       "toNode": "repository-api-handler",
+      "toSide": "left",
       "pv": {
         "edgeType": "reads"
       }
@@ -314,7 +316,9 @@
     {
       "id": "handler-to-namespace",
       "fromNode": "repository-api-handler",
+      "fromSide": "left",
       "toNode": "repositories-namespace",
+      "toSide": "right",
       "pv": {
         "edgeType": "writes"
       }
@@ -322,7 +326,9 @@
     {
       "id": "cache-to-namespace",
       "fromNode": "repository-cache",
+      "fromSide": "bottom",
       "toNode": "repositories-namespace",
+      "toSide": "top",
       "label": "loads on init",
       "pv": {
         "edgeType": "reads"
@@ -331,7 +337,9 @@
     {
       "id": "cache-writes",
       "fromNode": "repository-cache",
+      "fromSide": "bottom",
       "toNode": "repositories-namespace",
+      "toSide": "top",
       "label": "auto-creates repos",
       "pv": {
         "edgeType": "writes"
@@ -340,7 +348,9 @@
     {
       "id": "service-to-handler",
       "fromNode": "repository-service",
+      "fromSide": "bottom",
       "toNode": "repository-api-handler",
+      "toSide": "top",
       "label": "IPC",
       "pv": {
         "edgeType": "ipc"
@@ -349,7 +359,9 @@
     {
       "id": "alexandria-to-service",
       "fromNode": "alexandria-registry",
+      "fromSide": "left",
       "toNode": "alexandria-service",
+      "toSide": "right",
       "pv": {
         "edgeType": "reads"
       }
@@ -357,7 +369,9 @@
     {
       "id": "service-to-alexandria",
       "fromNode": "alexandria-service",
+      "fromSide": "right",
       "toNode": "alexandria-registry",
+      "toSide": "left",
       "pv": {
         "edgeType": "writes"
       }
@@ -365,7 +379,9 @@
     {
       "id": "handler-to-alex-service",
       "fromNode": "alexandria-handler",
+      "fromSide": "bottom",
       "toNode": "alexandria-service",
+      "toSide": "top",
       "pv": {
         "edgeType": "uses"
       }
@@ -373,7 +389,9 @@
     {
       "id": "renderer-to-handler",
       "fromNode": "alexandria-renderer",
+      "fromSide": "bottom",
       "toNode": "alexandria-handler",
+      "toSide": "top",
       "label": "IPC",
       "pv": {
         "edgeType": "ipc"
@@ -382,7 +400,9 @@
     {
       "id": "no-sync-edge",
       "fromNode": "repository-api-handler",
+      "fromSide": "right",
       "toNode": "alexandria-handler",
+      "toSide": "left",
       "label": "No data sync!",
       "pv": {
         "edgeType": "no-sync"
@@ -391,7 +411,9 @@
     {
       "id": "event-server-to-cache",
       "fromNode": "event-server",
+      "fromSide": "bottom",
       "toNode": "repository-cache",
+      "toSide": "top",
       "label": "getRepositoryForPath()",
       "pv": {
         "edgeType": "uses"
@@ -400,7 +422,9 @@
     {
       "id": "avatar-to-service",
       "fromNode": "repository-avatar",
+      "fromSide": "bottom",
       "toNode": "repository-service",
+      "toSide": "top",
       "label": "getAvatarUrl()",
       "pv": {
         "edgeType": "uses"
@@ -409,7 +433,9 @@
     {
       "id": "panels-to-alexandria",
       "fromNode": "panel-contexts",
+      "fromSide": "bottom",
       "toNode": "alexandria-renderer",
+      "toSide": "top",
       "label": "getRepositories()",
       "pv": {
         "edgeType": "uses"
