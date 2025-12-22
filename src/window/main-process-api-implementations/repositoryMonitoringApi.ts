@@ -1,13 +1,13 @@
 import { ipcRenderer } from 'electron';
 import {
-  RepositoryMonitoringAPI,
   RepositoryMonitoringAPIEvent,
-  GitStatusWithFiles,
+  type RepositoryMonitoringAPI,
+  type GitStatusWithFiles,
   type WorkspaceChangeEventPayload,
   type ToolExecutionRequest,
   type RepositoryCacheSyncEvent,
   type BuildArtifactsDetectedPayload,
-} from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+} from '@principal-ai/repository-monitoring-server';
 
 export const repositoryMonitoringAPI: RepositoryMonitoringAPI = {
   getFileTree: async (repoPath: string) => {

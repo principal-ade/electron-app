@@ -12,12 +12,13 @@ import {
   type Lens,
   type LensResult,
 } from '@principal-ai/codebase-quality-lenses';
+import type { PackageCommand } from '@principal-ai/codebase-composition';
 
 import { ElectronCLIBridgeExecutor } from './ElectronCLIBridgeExecutor';
 import type {
   ToolExecutionRequest,
   ToolExecutionResponse,
-} from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+} from '@principal-ai/repository-monitoring-server';
 
 /**
  * Singleton service for executing quality tools through lenses

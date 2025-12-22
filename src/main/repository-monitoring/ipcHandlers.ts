@@ -4,14 +4,14 @@
  */
 
 import { ipcMain, BrowserWindow } from 'electron';
-import { RepositoryMonitoringManager } from '@principal-ai/repository-monitoring-server';
 import {
+  RepositoryMonitoringManager,
   RepositoryMonitoringAPIEvent,
-  GitStatusWithFiles,
+  type GitStatusWithFiles,
   type ToolExecutionRequest,
   type WorkspaceChangeEventPayload,
   type RepositoryCacheSyncEvent,
-} from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+} from '@principal-ai/repository-monitoring-server';
 import { QualityLensService } from '../quality-lenses/QualityLensService';
 import { applicationWindows, PrimaryWindowType } from '../window/types';
 import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
@@ -630,7 +630,7 @@ export function registerRepositoryMonitoringHandlers(): void {
   manager.on(
     MonitoringInternalEvent.BUILD_ARTIFACTS_DETECTED,
     (
-      payload: import('../../shared/main-process-api-interfaces/RepositoryMonitoringAPI').BuildArtifactsDetectedPayload,
+      payload: import('@principal-ai/repository-monitoring-server').BuildArtifactsDetectedPayload,
     ) => {
       console.log(
         `[RepositoryMonitoring] Forwarding build artifacts detected to renderer: ${payload.repoPath} - ${payload.artifacts.length} artifacts`,

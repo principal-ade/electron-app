@@ -18,7 +18,7 @@ import type {
   RepositoryCacheSnapshot,
   RepositoryCacheSyncEvent,
   WorkspaceChangeEventPayload,
-} from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+} from '@principal-ai/repository-monitoring-server';
 
 export class RepositoryMonitoringService {
   /**
@@ -363,7 +363,7 @@ export class RepositoryMonitoringService {
    */
   static onBuildArtifactsDetected(
     callback: (
-      payload: import('../../shared/main-process-api-interfaces/RepositoryMonitoringAPI').BuildArtifactsDetectedPayload,
+      payload: import('@principal-ai/repository-monitoring-server').BuildArtifactsDetectedPayload,
     ) => void,
   ): () => void {
     return window.mainProcess.repositoryMonitoring.onBuildArtifactsDetected(

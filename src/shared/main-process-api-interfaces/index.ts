@@ -14,7 +14,7 @@ import type { FileSystemAPI } from './FileSystemAPI';
 import type { GitAPI } from './GitAPI';
 import type { GitHubAPI } from './GitHubAPI';
 import type { AppVersionManagerAPI } from './AppVersionManagerAPI';
-import type { RepositoryMonitoringAPI } from './RepositoryMonitoringAPI';
+import type { RepositoryMonitoringAPI } from '@principal-ai/repository-monitoring-server';
 import type { SecretsAPI } from './SecretsAPI';
 import type { LinksAPI } from './LinksAPI';
 import type { ShellAPI } from './ShellAPI';

@@ -31,7 +31,7 @@ import type { PackageLayer } from '@principal-ai/codebase-composition';
 import type {
   PackageSummary,
   GitStatusWithFiles,
-} from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+} from '@principal-ai/repository-monitoring-server';
 import { minimatch } from 'minimatch';
 
 // Types for packages slice data (matches @industry-theme/alexandria-panels DependenciesPanel expectations)

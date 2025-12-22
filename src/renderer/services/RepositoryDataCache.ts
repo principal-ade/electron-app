@@ -20,7 +20,7 @@ import type {
   CacheSliceDataMap,
   PackageSummary,
   PackagesData,
-} from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+} from '@principal-ai/repository-monitoring-server';
 import type {
   AlexandriaChangeEvent,
   AlexandriaEventType,

@@ -17,7 +17,7 @@
 
 import type { TerminalAPI } from './TerminalService';
 import type { FileSystemAPI } from './FileSystemAPI';
-import type { RepositoryMonitoringAPI } from './RepositoryMonitoringAPI';
+import type { RepositoryMonitoringAPI } from '@principal-ai/repository-monitoring-server';
 import type { UserPreferencesAPI } from './UserPreferencesAPI';
 import type { ShellAPI } from './ShellAPI';
 import type { WindowAPI } from './WindowAPI';
@@ -44,7 +44,7 @@ export interface DevWorkspaceMainProcessAPI {
 // Re-export the individual API types for convenience
 export type { TerminalAPI } from './TerminalService';
 export type { FileSystemAPI } from './FileSystemAPI';
-export type { RepositoryMonitoringAPI } from './RepositoryMonitoringAPI';
+export type { RepositoryMonitoringAPI } from '@principal-ai/repository-monitoring-server';
 export type { UserPreferencesAPI } from './UserPreferencesAPI';
 export type { ShellAPI } from './ShellAPI';
 export type { WindowAPI } from './WindowAPI';

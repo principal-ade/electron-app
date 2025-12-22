@@ -18,7 +18,7 @@ import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 import type {
   MonitoringStatus,
   GitStatus,
-} from '../../../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+} from '@principal-ai/repository-monitoring-server';
 
 interface SystemMonitorProps {
   sidebarCollapsed?: boolean;

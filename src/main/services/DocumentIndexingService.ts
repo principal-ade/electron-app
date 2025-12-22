@@ -36,7 +36,7 @@ import {
   type IndexErrorEvent,
   type RepositoryIndexStatus,
 } from '../../shared/ipc/DocumentSearchIPC';
-import type { WorkspaceChangeEventPayload } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+import type { WorkspaceChangeEventPayload } from '@principal-ai/repository-monitoring-server';
 import { getManager as getRepositoryMonitoringManager } from '../repository-monitoring/ipcHandlers';
 
 // MonitoringInternalEvent constants (matching the package)

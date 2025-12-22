@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
-import type { GitStatusWithFiles } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 
 // GitStatus is just GitStatusMetadata (subset of GitStatusWithFiles)
 type GitStatus = GitStatusWithFiles;
