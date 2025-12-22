@@ -201,7 +201,7 @@
     "@principal-ai/observability-sdk": "^0.6.1",
     "@principal-ai/repository-abstraction": "^0.4.0",
     "@principal-ai/repository-monitoring": "^0.1.10",
-    "@principal-ai/repository-monitoring-server": "^2.1.16",
+    "@principal-ai/repository-monitoring-server": "^2.1.17",
     "@radix-ui/react-tabs": "^1.1.13",
     "@types/jsonwebtoken": "^9.0.10",
     "@xterm/addon-fit": "^0.10.0",
