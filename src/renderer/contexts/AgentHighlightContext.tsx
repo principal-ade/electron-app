@@ -137,12 +137,6 @@ export const AgentHighlightProvider: React.FC<AgentHighlightProviderProps> = ({
         unsubscribeEvents = AgentSessionSDKService.subscribeToRepositoryEvents(
           repositoryPath,
           (event) => {
-            console.log('[AgentHighlightContext] Received event from SDK:', {
-              eventType: event.eventType,
-              toolName: event.toolName,
-              provider: event.provider,
-              filesCount: event.files?.length ?? 0,
-            });
             service.processEvent(event);
           },
         );

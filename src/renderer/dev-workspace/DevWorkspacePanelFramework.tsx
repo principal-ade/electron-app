@@ -116,29 +116,34 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   }, [agentHighlightCtx.highlightLayers]);
 
   // Create merged context for File City panel (includes agent highlight layers)
-  const fileCityPanelContext = useMemo(
-    () => ({
-      ...context,
-      // Add agent highlight layers as a data slice for File City
-      slices: new Map([
-        ...Array.from(context.slices?.entries() || []),
-        [
-          'agentHighlightLayers',
-          {
-            scope: 'repository' as const,
-            name: 'agentHighlightLayers',
-            data: agentHighlightCtx.highlightLayers,
-            loading: false,
-            error: null,
-            refresh: async () => {
-              // Agent highlight layers are updated reactively from events
-            },
+  const fileCityPanelContext = useMemo(() => {
+    // Create a new slices Map that includes agent highlight layers
+    const mergedSlices = new Map([
+      ...Array.from(context.slices?.entries() || []),
+      [
+        'agentHighlightLayers',
+        {
+          scope: 'repository' as const,
+          name: 'agentHighlightLayers',
+          data: agentHighlightCtx.highlightLayers,
+          loading: false,
+          error: null,
+          refresh: async () => {
+            // Agent highlight layers are updated reactively from events
           },
-        ],
-      ]),
-    }),
-    [context, agentHighlightCtx.highlightLayers],
-  );
+        },
+      ],
+    ]);
+
+    return {
+      ...context,
+      slices: mergedSlices,
+      // Override getSlice to use our merged slices Map (the original getSlice is a closure over the original slices)
+      getSlice: <T = unknown>(name: string) => {
+        return mergedSlices.get(name) as { scope: string; name: string; data: T; loading: boolean; error: unknown; refresh: () => Promise<void> } | undefined;
+      },
+    };
+  }, [context, agentHighlightCtx.highlightLayers]);
 
   const PrincipalViewPanelComponent = principalViewPanels[0]?.component;
   const FileCityPanelComponent = fileCityPanels[0]?.component;
