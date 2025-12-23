@@ -28,8 +28,6 @@ const QuickOpenApp: React.FC = () => {
   const [filteredItems, setFilteredItems] = useState<QuickOpenItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [animatingItemId, setAnimatingItemId] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const selectedItemRef = useRef<HTMLDivElement>(null);
 
@@ -93,15 +91,7 @@ const QuickOpenApp: React.FC = () => {
 
   const handleSelectItem = (item: QuickOpenItem) => {
     console.log('[Quick Open] Selected item:', item);
-
-    // Trigger animation
-    setIsAnimating(true);
-    setAnimatingItemId(item.id);
-
-    // Send selection to main process - keep window visible during 2s animation
-    setTimeout(() => {
-      window.electronAPI?.selectQuickOpenItem?.(item);
-    }, 2000);
+    window.electronAPI?.selectQuickOpenItem?.(item);
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -156,8 +146,6 @@ const QuickOpenApp: React.FC = () => {
         alignItems: 'flex-start',
         paddingTop: '20vh',
         background: 'transparent',
-        opacity: isAnimating ? 0 : 1,
-        transition: 'opacity 1.5s ease-out',
       }}
     >
       <div
@@ -221,7 +209,6 @@ const QuickOpenApp: React.FC = () => {
           ) : (
             filteredItems.map((item, index) => {
               const isSelected = index === selectedIndex;
-              const isAnimatingItem = animatingItemId === item.id;
               return (
                 <div
                   key={item.id}
@@ -238,17 +225,10 @@ const QuickOpenApp: React.FC = () => {
                     borderLeft: isSelected
                       ? `3px solid ${theme.colors.primary}`
                       : '3px solid transparent',
-                    opacity:
-                      isAnimating && !isAnimatingItem
-                        ? 0.3
-                        : item.isOpen
-                          ? 0.7
-                          : 1,
-                    overflow: 'visible',
-                    zIndex: isAnimatingItem ? 1000 : 1,
+                    opacity: item.isOpen ? 0.7 : 1,
                   }}
                 >
-                  {/* Growing background */}
+                  {/* Selection background */}
                   <div
                     style={{
                       position: 'absolute',
@@ -256,28 +236,18 @@ const QuickOpenApp: React.FC = () => {
                       left: 0,
                       right: 0,
                       bottom: 0,
-                      background: isAnimatingItem
-                        ? theme.colors.primary
-                        : isSelected
-                          ? `${theme.colors.primary}20`
-                          : 'transparent',
-                      transform: isAnimatingItem ? 'scaleY(20)' : 'scaleY(1)',
-                      transformOrigin: 'center',
-                      boxShadow: isAnimatingItem
-                        ? `0 0 20px ${theme.colors.primary}, 0 0 40px ${theme.colors.primary}80`
-                        : 'none',
-                      transition: 'all 2s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                      background: isSelected
+                        ? `${theme.colors.primary}20`
+                        : 'transparent',
                       zIndex: -1,
                     }}
                   />
-                  {/* Content stays normal - no transforms */}
+                  {/* Content */}
                   <div
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       width: '100%',
-                      position: 'relative',
-                      zIndex: 1,
                     }}
                   >
                     <div
@@ -327,12 +297,10 @@ const QuickOpenApp: React.FC = () => {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div
                         style={{
-                          color: isAnimatingItem
-                            ? theme.colors.background
-                            : theme.colors.text,
+                          color: theme.colors.text,
                           fontSize: theme.fontSizes[3],
                           fontFamily: theme.fonts.body,
-                          fontWeight: isAnimatingItem ? 600 : 500,
+                          fontWeight: 500,
                           display: 'flex',
                           alignItems: 'center',
                           gap: '8px',
@@ -344,12 +312,8 @@ const QuickOpenApp: React.FC = () => {
                             style={{
                               display: 'inline-block',
                               padding: '2px 6px',
-                              background: isAnimatingItem
-                                ? theme.colors.background
-                                : theme.colors.primary,
-                              color: isAnimatingItem
-                                ? theme.colors.primary
-                                : theme.colors.background,
+                              background: theme.colors.primary,
+                              color: theme.colors.background,
                               fontSize: theme.fontSizes[1],
                               fontFamily: theme.fonts.body,
                               borderRadius: '3px',
@@ -363,9 +327,7 @@ const QuickOpenApp: React.FC = () => {
                       {item.description && (
                         <div
                           style={{
-                            color: isAnimatingItem
-                              ? `${theme.colors.background}cc`
-                              : theme.colors.textSecondary,
+                            color: theme.colors.textSecondary,
                             fontSize: theme.fontSizes[2],
                             fontFamily: theme.fonts.body,
                             marginTop: '4px',
@@ -380,9 +342,7 @@ const QuickOpenApp: React.FC = () => {
                     </div>
                     <div
                       style={{
-                        color: isAnimatingItem
-                          ? `${theme.colors.background}cc`
-                          : theme.colors.textSecondary,
+                        color: theme.colors.textSecondary,
                         fontSize: theme.fontSizes[1],
                         fontFamily: theme.fonts.body,
                         textTransform: 'uppercase',

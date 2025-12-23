@@ -30,6 +30,9 @@ import { panels as agentDrivenPanels } from '@industry-theme/agent-driven-ui-pan
 import { panels as repositoryCompositionPanels } from '@industry-theme/repository-composition-panels';
 import { panels as codeQualityPanels } from '@principal-ade/code-quality-panels';
 import { panels as markdownPanels } from '@industry-theme/markdown-panels';
+// TODO: Uncomment once @industry-theme/file-editing-panels exports panels array
+// See: PANEL_FRAMEWORK_INTEGRATION.md in that project
+// import { panels as fileEditingPanels } from '@industry-theme/file-editing-panels';
 import type { Repository } from '../../shared/types/repository.types';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 
@@ -168,6 +171,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     (p) => p.metadata?.id === 'principal-ade.quality-hexagon-panel',
   )?.component;
   const MarkdownPanelComponent = markdownPanels[0]?.component;
+  // TODO: Uncomment once @industry-theme/file-editing-panels exports panels array
+  // const FileEditorPanelComponent = fileEditingPanels.find(
+  //   (p) => p.metadata?.id === 'industry-theme.file-editor',
+  // )?.component;
 
   // Listen for doc:openInRightPanel events (from Alexandria docs panel context menu)
   useEffect(() => {
@@ -534,6 +541,31 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           <div>Markdown Viewer panel not available</div>
         ),
       },
+      {
+        id: 'fileEditor',
+        label: 'File Editor',
+        // TODO: Replace with FileEditorPanelComponent once @industry-theme/file-editing-panels
+        // exports a panel framework compatible version. See PANEL_FRAMEWORK_INTEGRATION.md
+        content: (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: theme.colors.muted,
+              flexDirection: 'column',
+              gap: '8px',
+            }}
+          >
+            <span>File Editor panel coming soon</span>
+            <span style={{ fontSize: '12px', opacity: 0.7 }}>
+              Pending: @industry-theme/file-editing-panels integration
+            </span>
+          </div>
+        ),
+      },
     ],
     [
       PrincipalViewPanelComponent,
@@ -547,6 +579,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       CodeQualityPanelComponent,
       PackageCompositionPanelComponent,
       MarkdownPanelComponent,
+      // FileEditorPanelComponent, // TODO: Add once available
       context,
       actions,
       events,
@@ -556,6 +589,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       terminalPanelContext,
       terminalActions,
       fileCityPanelContext,
+      theme,
     ],
   );
 

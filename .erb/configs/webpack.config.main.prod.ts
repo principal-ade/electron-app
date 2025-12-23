@@ -35,6 +35,14 @@ const configuration: webpack.Configuration = {
       webpackPaths.srcWindowPath,
       'preload-extension-window.ts',
     ),
+    'preload-quick-open': path.join(
+      webpackPaths.srcWindowPath,
+      'preload-quick-open.ts',
+    ),
+    'preload-window-switcher': path.join(
+      webpackPaths.srcWindowPath,
+      'preload-window-switcher.ts',
+    ),
     terminal: path.join(webpackPaths.srcMainPath, 'terminal', 'index.ts'),
     'event-worker': path.join(
       webpackPaths.srcPath,

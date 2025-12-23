@@ -13,7 +13,10 @@ import {
 } from '@principal-ade/panel-layouts';
 import { PanelEventBus } from '@principal-ade/panel-framework-core';
 import { DevWorkspacePanelFramework } from './DevWorkspacePanelFramework';
-import { DevWorkspaceTitlebar } from './DevWorkspaceTitlebar';
+import {
+  DevWorkspaceTitlebar,
+  DEFAULT_PANEL_PRESETS,
+} from './DevWorkspaceTitlebar';
 import type { Repository } from '../../shared/types/repository.types';
 import type { FileTreeSource } from '../types/file-tree-source';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
@@ -156,6 +159,23 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           }
           return { success: true };
         }
+        case 'preset': {
+          const presetId = (args.args as string[])?.[0];
+          const preset = DEFAULT_PANEL_PRESETS.find(
+            (p) =>
+              p.id === presetId ||
+              p.name.toLowerCase().replace(/\s+/g, '-') === presetId ||
+              p.name.toLowerCase().includes(presetId?.toLowerCase() || ''),
+          );
+          if (preset) {
+            setLayout(preset.layout);
+            if (preset.collapsed) {
+              setCollapsed(preset.collapsed);
+            }
+            return { success: true, message: `Applied preset: ${preset.name}` };
+          }
+          return { error: `Unknown preset: ${presetId}` };
+        }
         default:
           return { error: `Unknown command: ${name}` };
       }
@@ -173,10 +193,11 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     },
     onExecuteTool: handleQuickCommand,
     initialSuggestions: [
+      'file editor layout',
+      'terminal focus',
       'hide sidebars',
       'show validation panel',
-      'focus on terminal',
-      'switch to visual validation',
+      'switch to docs',
     ],
   });
 

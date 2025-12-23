@@ -115,10 +115,10 @@ class QuickOpen {
     const primaryDisplay = screen.getPrimaryDisplay();
     const { width, height } = primaryDisplay.workArea;
 
-    // Use the correct preload path based on whether app is packaged or in development
+    // Use the Quick Open specific preload (minimal dependencies)
     const preloadPath = app.isPackaged
-      ? path.join(__dirname, 'preload.js')
-      : path.join(__dirname, '../../.erb/dll/preload.js');
+      ? path.join(__dirname, 'preload-quick-open.js')
+      : path.join(__dirname, '../../.erb/dll/preload-quick-open.js');
 
     log.info(`[Quick Open] Preload path: ${preloadPath}`);
     log.info(`[Quick Open] Screen bounds: ${width}x${height}`);

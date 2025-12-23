@@ -31,6 +31,7 @@ const AVAILABLE_PANELS: PanelOption[] = [
   { id: 'codeQuality', label: 'Code Quality' },
   { id: 'docs', label: 'Documentation' },
   { id: 'fileCity', label: 'File City' },
+  { id: 'fileEditor', label: 'File Editor' },
   { id: 'gitChanges', label: 'File Tree' },
   { id: 'localhostBrowser', label: 'Localhost Browser' },
   { id: 'localProjects', label: 'Local Projects' },
@@ -93,6 +94,16 @@ export const DEFAULT_PANEL_PRESETS: PanelPreset[] = [
       right: 'localhostBrowserAlt',
     },
     collapsed: { left: true, right: false },
+  },
+  {
+    id: 'file-editor',
+    name: 'File Editor',
+    description: 'File Tree, File Editor, Terminal',
+    layout: {
+      left: 'gitChanges',
+      middle: 'fileEditor',
+      right: 'terminal',
+    },
   },
 ];
 

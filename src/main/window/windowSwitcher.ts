@@ -248,10 +248,10 @@ class WindowSwitcher {
     const primaryDisplay = screen.getPrimaryDisplay();
     const { width, height } = primaryDisplay.workArea;
 
-    // Use the correct preload path based on whether app is packaged or in development
+    // Use the Window Switcher specific preload (minimal dependencies)
     const preloadPath = app.isPackaged
-      ? path.join(__dirname, 'preload.js')
-      : path.join(__dirname, '../../.erb/dll/preload.js');
+      ? path.join(__dirname, 'preload-window-switcher.js')
+      : path.join(__dirname, '../../.erb/dll/preload-window-switcher.js');
 
     log.info(`[Window Switcher] Preload path: ${preloadPath}`);
     log.info(`[Window Switcher] Screen bounds: ${width}x${height}`);
