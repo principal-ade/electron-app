@@ -33,8 +33,10 @@ const AVAILABLE_PANELS: PanelOption[] = [
   { id: 'fileCity', label: 'File City' },
   { id: 'fileEditor', label: 'File Editor' },
   { id: 'gitChanges', label: 'File Tree' },
+  { id: 'gitDiff', label: 'Git Diff' },
   { id: 'localhostBrowser', label: 'Localhost Browser' },
   { id: 'localProjects', label: 'Local Projects' },
+  { id: 'mdxEditor', label: 'MDX Editor' },
   { id: 'packageComposition', label: 'Package Composition' },
   { id: 'terminal', label: 'Terminal' },
 ];

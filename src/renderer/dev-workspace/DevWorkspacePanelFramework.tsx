@@ -30,9 +30,7 @@ import { panels as agentDrivenPanels } from '@industry-theme/agent-driven-ui-pan
 import { panels as repositoryCompositionPanels } from '@industry-theme/repository-composition-panels';
 import { panels as codeQualityPanels } from '@principal-ade/code-quality-panels';
 import { panels as markdownPanels } from '@industry-theme/markdown-panels';
-// TODO: Uncomment once @industry-theme/file-editing-panels exports panels array
-// See: PANEL_FRAMEWORK_INTEGRATION.md in that project
-// import { panels as fileEditingPanels } from '@industry-theme/file-editing-panels';
+import { panels as fileEditingPanels } from '@industry-theme/file-editing-panels';
 import type { Repository } from '../../shared/types/repository.types';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 
@@ -171,10 +169,15 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     (p) => p.metadata?.id === 'principal-ade.quality-hexagon-panel',
   )?.component;
   const MarkdownPanelComponent = markdownPanels[0]?.component;
-  // TODO: Uncomment once @industry-theme/file-editing-panels exports panels array
-  // const FileEditorPanelComponent = fileEditingPanels.find(
-  //   (p) => p.metadata?.id === 'industry-theme.file-editor',
-  // )?.component;
+  const FileEditorPanelComponent = fileEditingPanels.find(
+    (p) => p.metadata?.id === 'industry-theme.file-editor',
+  )?.component;
+  const GitDiffPanelComponent = fileEditingPanels.find(
+    (p) => p.metadata?.id === 'industry-theme.git-diff',
+  )?.component;
+  const MDXEditorPanelComponent = fileEditingPanels.find(
+    (p) => p.metadata?.id === 'industry-theme.mdx-editor',
+  )?.component;
 
   // Listen for doc:openInRightPanel events (from Alexandria docs panel context menu)
   useEffect(() => {
@@ -544,26 +547,73 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       {
         id: 'fileEditor',
         label: 'File Editor',
-        // TODO: Replace with FileEditorPanelComponent once @industry-theme/file-editing-panels
-        // exports a panel framework compatible version. See PANEL_FRAMEWORK_INTEGRATION.md
-        content: (
+        content: FileEditorPanelComponent ? (
           <div
             style={{
               height: '100%',
               width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: theme.colors.muted,
               flexDirection: 'column',
-              gap: '8px',
             }}
           >
-            <span>File Editor panel coming soon</span>
-            <span style={{ fontSize: '12px', opacity: 0.7 }}>
-              Pending: @industry-theme/file-editing-panels integration
-            </span>
+            <FileEditorPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
           </div>
+        ) : (
+          <div>File Editor panel not available</div>
+        ),
+      },
+      {
+        id: 'gitDiff',
+        label: 'Git Diff',
+        content: GitDiffPanelComponent ? (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <GitDiffPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div>Git Diff panel not available</div>
+        ),
+      },
+      {
+        id: 'mdxEditor',
+        label: 'MDX Editor',
+        content: MDXEditorPanelComponent ? (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <MDXEditorPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div>MDX Editor panel not available</div>
         ),
       },
     ],
@@ -579,7 +629,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       CodeQualityPanelComponent,
       PackageCompositionPanelComponent,
       MarkdownPanelComponent,
-      // FileEditorPanelComponent, // TODO: Add once available
+      FileEditorPanelComponent,
+      GitDiffPanelComponent,
+      MDXEditorPanelComponent,
       context,
       actions,
       events,

@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import type { PanelLayout } from '@principal-ade/panel-layouts';
+import type { PanelLayout, QuickCommand } from '@principal-ade/panel-layouts';
 import {
   AgentCommandPalette,
   useAgentCommandPalette,
@@ -65,6 +65,76 @@ function useWindowData(): AlexandriaEntryData | null {
 
   return data;
 }
+
+// Available panel IDs for switch command
+const PANEL_IDS = [
+  'terminal',
+  'principalView',
+  'fileCity',
+  'docs',
+  'gitChanges',
+  'localhostBrowser',
+  'localProjects',
+  'codeQuality',
+  'packageComposition',
+  'fileEditor',
+  'gitDiff',
+  'mdxEditor',
+];
+
+// Quick commands for the command palette autocomplete
+const QUICK_COMMANDS: QuickCommand[] = [
+  {
+    name: 'toggle',
+    description: 'Toggle a sidebar panel',
+    args: [
+      {
+        name: 'panel',
+        description: 'Which panel to toggle',
+        required: true,
+        options: ['left', 'right'],
+      },
+    ],
+  },
+  {
+    name: 'collapse',
+    description: 'Collapse all sidebars',
+  },
+  {
+    name: 'expand',
+    description: 'Expand all sidebars',
+  },
+  {
+    name: 'switch',
+    description: 'Switch a panel slot to a different panel',
+    args: [
+      {
+        name: 'slot',
+        description: 'Which slot to change',
+        required: true,
+        options: ['left', 'middle', 'right'],
+      },
+      {
+        name: 'panel',
+        description: 'Panel to show',
+        required: true,
+        options: PANEL_IDS,
+      },
+    ],
+  },
+  {
+    name: 'preset',
+    description: `Apply a layout preset (${DEFAULT_PANEL_PRESETS.map((p) => p.id).join(', ')})`,
+    args: [
+      {
+        name: 'preset',
+        description: 'Preset name',
+        required: true,
+        options: DEFAULT_PANEL_PRESETS.map((p) => p.id),
+      },
+    ],
+  },
+];
 
 /**
  * Inner content component for the dev workspace.
@@ -188,16 +258,17 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     events,
     keyboard: { key: 'p', metaKey: true, shiftKey: true, altKey: false },
     config: {
-      placeholder: 'What would you like to do?',
+      placeholder: 'Type / for commands or describe what you want',
       autoCloseDelay: 1500,
     },
     onExecuteTool: handleQuickCommand,
+    quickCommands: QUICK_COMMANDS,
+    agentAvailable: false, // No AI backend connected yet
     initialSuggestions: [
-      'file editor layout',
-      'terminal focus',
-      'hide sidebars',
-      'show validation panel',
-      'switch to docs',
+      '/preset file-editor',
+      '/preset default',
+      '/collapse',
+      '/switch middle fileEditor',
     ],
   });
 
