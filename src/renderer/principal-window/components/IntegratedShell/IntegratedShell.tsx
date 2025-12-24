@@ -13,6 +13,7 @@ import { UserPreferencesService } from '../../../main-process-api/UserPreference
 import { PresenceService } from '../../../main-process-api/PresenceService';
 import { SecureAuthService } from '../../../services/SecureAuthService';
 import type { InteractiveShellNavigationView } from '../../../../shared/types/userPreferences.types';
+import type { QuickCommand } from '@principal-ade/panel-layouts';
 import {
   AgentCommandPalette,
   useAgentCommandPalette,
@@ -21,6 +22,57 @@ import { usePrincipalEvents } from '../../PrincipalEventContext';
 import './IntegratedShell.css';
 
 export type NavigationView = InteractiveShellNavigationView;
+
+// Available views for switch command
+const VIEW_OPTIONS = [
+  'workspaces',
+  'search',
+  'settings',
+  'monitoring',
+  'auth',
+  'network',
+  'processes',
+];
+
+// Quick commands for the command palette autocomplete
+const QUICK_COMMANDS: QuickCommand[] = [
+  {
+    name: 'toggle',
+    description: 'Toggle a sidebar panel',
+    args: [
+      {
+        name: 'panel',
+        description: 'Which panel to toggle',
+        required: true,
+        options: ['left', 'right'],
+      },
+    ],
+  },
+  {
+    name: 'collapse',
+    description: 'Collapse all sidebars',
+  },
+  {
+    name: 'expand',
+    description: 'Expand all sidebars',
+  },
+  {
+    name: 'switch',
+    description: 'Switch to a different view',
+    args: [
+      {
+        name: 'view',
+        description: 'View to switch to',
+        required: true,
+        options: VIEW_OPTIONS,
+      },
+    ],
+  },
+  {
+    name: 'reset',
+    description: 'Reset to default view',
+  },
+];
 
 // Helper to map view to panel layout key
 const getViewKey = (view: NavigationView): 'authView' | null => {
@@ -376,16 +428,17 @@ export const IntegratedShell: React.FC = () => {
     events,
     keyboard: { key: 'p', metaKey: true, shiftKey: true, altKey: false },
     config: {
-      placeholder: 'What would you like to do?',
+      placeholder: 'Type / for commands or describe what you want',
       autoCloseDelay: 1500,
     },
     onExecuteTool: handleQuickCommand,
+    quickCommands: QUICK_COMMANDS,
+    agentAvailable: false,
     initialSuggestions: [
-      'switch to workspaces',
-      'switch to settings',
-      'switch to monitoring',
-      'collapse sidebars',
-      'expand sidebars',
+      '/switch workspaces',
+      '/switch settings',
+      '/collapse',
+      '/reset',
     ],
   });
 

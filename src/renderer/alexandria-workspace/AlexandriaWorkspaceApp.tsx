@@ -1,10 +1,65 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import type { PanelLayout } from '@principal-ade/panel-layouts';
+import type { PanelLayout, QuickCommand } from '@principal-ade/panel-layouts';
 import {
   AgentCommandPalette,
   useAgentCommandPalette,
 } from '@principal-ade/panel-layouts';
+
+// Available panel IDs for switch command
+const PANEL_IDS = [
+  'workspace-repos',
+  'terminal',
+  'file-city',
+  'code-quality',
+  'package-composition',
+];
+
+// Quick commands for the command palette autocomplete
+const QUICK_COMMANDS: QuickCommand[] = [
+  {
+    name: 'toggle',
+    description: 'Toggle a sidebar panel',
+    args: [
+      {
+        name: 'panel',
+        description: 'Which panel to toggle',
+        required: true,
+        options: ['left', 'right'],
+      },
+    ],
+  },
+  {
+    name: 'collapse',
+    description: 'Collapse all sidebars',
+  },
+  {
+    name: 'expand',
+    description: 'Expand all sidebars',
+  },
+  {
+    name: 'switch',
+    description: 'Switch a panel slot to a different panel',
+    args: [
+      {
+        name: 'slot',
+        description: 'Which slot to change',
+        required: true,
+        options: ['left', 'middle', 'right'],
+      },
+      {
+        name: 'panel',
+        description: 'Panel to show',
+        required: true,
+        options: PANEL_IDS,
+      },
+    ],
+  },
+  {
+    name: 'reset',
+    description: 'Reset layout to default',
+  },
+];
 import type {
   Workspace,
   AlexandriaEntry,
@@ -170,15 +225,17 @@ const AlexandriaWorkspaceContent: React.FC = () => {
     events,
     keyboard: { key: 'p', metaKey: true, shiftKey: true, altKey: false },
     config: {
-      placeholder: 'What would you like to do?',
+      placeholder: 'Type / for commands or describe what you want',
       autoCloseDelay: 1500,
     },
     onExecuteTool: handleQuickCommand,
+    quickCommands: QUICK_COMMANDS,
+    agentAvailable: false,
     initialSuggestions: [
-      'hide sidebars',
-      'show terminal',
-      'collapse panels',
-      'expand panels',
+      '/toggle left',
+      '/switch middle terminal',
+      '/collapse',
+      '/reset',
     ],
   });
 
