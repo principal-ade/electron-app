@@ -18,6 +18,7 @@
     "@industry-theme/alexandria-docs-panel": "^0.4.23",
     "@industry-theme/alexandria-panels": "^0.1.22",
     "@industry-theme/file-city-panel": "^0.2.15",
+    "@industry-theme/file-editing-panels": "^0.2.1",
     "@industry-theme/ghostty-terminal-panel": "^0.1.18",
     "@industry-theme/git-sync-panels": "^0.1.4",
     "@industry-theme/localhost-panels": "^0.1.7",
