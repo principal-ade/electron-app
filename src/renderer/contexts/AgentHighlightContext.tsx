@@ -101,14 +101,6 @@ export const AgentHighlightProvider: React.FC<AgentHighlightProviderProps> = ({
 
     // Listen for highlight layer updates from the service
     const handleHighlightUpdate = (layers: HighlightLayer[]) => {
-      console.log('[AgentHighlightContext] Received highlight-update:', {
-        layerCount: layers.length,
-        layers: layers.map((l) => ({
-          id: l.id,
-          name: l.name,
-          itemsCount: l.items.length,
-        })),
-      });
       setHighlightLayers(layers);
       // Update navigation state
       const navState = service.getNavigationState();

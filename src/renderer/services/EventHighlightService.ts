@@ -38,11 +38,6 @@ export class EventHighlightService extends EventEmitter {
       defaultPriority: 50,
       ...config,
     };
-
-    console.log(
-      '[EventHighlightService] Initialized with config:',
-      this.config,
-    );
   }
 
   /**
@@ -51,10 +46,6 @@ export class EventHighlightService extends EventEmitter {
    */
   setRepository(repositoryRoot: string): void {
     if (this.currentRepositoryRoot !== repositoryRoot) {
-      console.log(
-        '[EventHighlightService] Repository changed:',
-        repositoryRoot,
-      );
       this.currentRepositoryRoot = repositoryRoot;
       this.clear();
       this.emit('repository-changed', repositoryRoot);
@@ -66,41 +57,14 @@ export class EventHighlightService extends EventEmitter {
    * Events now come pre-filtered via direct MessagePort per repository
    */
   processEvent(event: RepoNormalizedUniversalAgentSessionEvent): void {
-    console.log('[EventHighlightService] processEvent called:', {
-      eventType: event.eventType,
-      toolName: event.toolName,
-      operation: event.operation,
-      provider: event.provider,
-      filesCount: event.files?.length ?? 0,
-      files: event.files?.map((f) => ({
-        path: f.repository?.relativePath,
-        context: f.context,
-      })),
-    });
-
     // Events are already filtered by repository at the source (utility process)
     // Just verify we have a repository context set
     if (!this.currentRepositoryRoot) {
-      console.log(
-        '[EventHighlightService] No repository root set, ignoring event',
-      );
       return;
     }
 
     // Create highlight layer
     const layer = this.createHighlightLayer(event);
-    console.log(
-      '[EventHighlightService] Created layer:',
-      layer
-        ? {
-            id: layer.id,
-            name: layer.name,
-            color: layer.color,
-            itemsCount: layer.items.length,
-            items: layer.items.map((i) => i.path),
-          }
-        : null,
-    );
 
     // Add to history
     const entry: EventHistoryEntry = {
@@ -247,10 +211,6 @@ export class EventHighlightService extends EventEmitter {
       this.currentIndex--;
     }
 
-    console.log(
-      '[EventHighlightService] Navigate previous:',
-      this.currentIndex,
-    );
     this.emitCurrentLayers();
   }
 
@@ -267,15 +227,12 @@ export class EventHighlightService extends EventEmitter {
       // Switch back to live mode
       this.goLive();
     }
-
-    console.log('[EventHighlightService] Navigate next:', this.currentIndex);
   }
 
   /**
    * Return to live mode
    */
   goLive(): void {
-    console.log('[EventHighlightService] Go live');
     this.currentIndex = -1;
     this.emitCurrentLayers();
   }
@@ -323,14 +280,6 @@ export class EventHighlightService extends EventEmitter {
    */
   private emitCurrentLayers(): void {
     const layers = this.getCurrentHighlightLayers();
-    console.log('[EventHighlightService] Emitting highlight-update:', {
-      layerCount: layers.length,
-      layers: layers.map((l) => ({
-        id: l.id,
-        name: l.name,
-        itemsCount: l.items.length,
-      })),
-    });
     this.emit('highlight-update', layers);
 
     // Emit current event if in history mode

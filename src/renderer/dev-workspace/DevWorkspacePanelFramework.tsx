@@ -53,7 +53,85 @@ interface DevWorkspacePanelFrameworkInnerProps {
 }
 
 /**
- * Inner component that uses RepositoryPanelProvider, TerminalProvider, and AgentHighlightProvider contexts
+ * Isolated wrapper for File City panel that consumes agent highlight context.
+ *
+ * This component is defined outside DevWorkspacePanelFrameworkInner to prevent
+ * the parent from re-rendering when highlight layers change. Only this wrapper
+ * and the File City panel will re-render on agent events.
+ */
+const FileCityWithHighlights: React.FC<{
+  context: ReturnType<typeof useRepositoryPanelProvider>['context'];
+  actions: ReturnType<typeof useRepositoryPanelProvider>['actions'];
+  events: ReturnType<typeof useRepositoryPanelProvider>['events'];
+  FileCityPanelComponent: React.ComponentType<{
+    context: unknown;
+    actions: unknown;
+    events: unknown;
+  }>;
+}> = ({ context, actions, events, FileCityPanelComponent }) => {
+  const { context: agentHighlightCtx } = useAgentHighlightProvider();
+
+  // Create merged context for File City panel (includes agent highlight layers)
+  const fileCityPanelContext = useMemo(() => {
+    // Create a new slices Map that includes agent highlight layers
+    const mergedSlices = new Map([
+      ...Array.from(context.slices?.entries() || []),
+      [
+        'agentHighlightLayers',
+        {
+          scope: 'repository' as const,
+          name: 'agentHighlightLayers',
+          data: agentHighlightCtx.highlightLayers,
+          loading: false,
+          error: null,
+          refresh: async () => {
+            // Agent highlight layers are updated reactively from events
+          },
+        },
+      ],
+    ]);
+
+    return {
+      ...context,
+      slices: mergedSlices,
+      // Override getSlice to use our merged slices Map
+      getSlice: <T = unknown>(name: string) => {
+        return mergedSlices.get(name) as
+          | {
+              scope: string;
+              name: string;
+              data: T;
+              loading: boolean;
+              error: unknown;
+              refresh: () => Promise<void>;
+            }
+          | undefined;
+      },
+    };
+  }, [context, agentHighlightCtx.highlightLayers]);
+
+  return (
+    <div
+      style={{
+        height: '100%',
+        width: '100%',
+        overflow: 'hidden',
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      <FileCityPanelComponent
+        context={fileCityPanelContext}
+        actions={actions}
+        events={events}
+      />
+    </div>
+  );
+};
+
+/**
+ * Inner component that uses RepositoryPanelProvider and TerminalProvider contexts
  */
 const DevWorkspacePanelFrameworkInner: React.FC<
   DevWorkspacePanelFrameworkInnerProps
@@ -62,7 +140,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   const { context, actions, events } = useRepositoryPanelProvider();
   const { context: terminalCtx, actions: terminalActions } =
     useTerminalProvider();
-  const { context: agentHighlightCtx } = useAgentHighlightProvider();
 
   // Load terminal implementation preference (default to xterm)
   const [terminalImplementation, setTerminalImplementation] = useState<
@@ -100,51 +177,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     }),
     [context, terminalCtx.terminalSessions, terminalCtx.terminalContext],
   );
-
-  // Log agent highlight layers changes
-  useEffect(() => {
-    console.log(
-      '[DevWorkspacePanelFramework] Agent highlight layers updated:',
-      {
-        layerCount: agentHighlightCtx.highlightLayers.length,
-        layers: agentHighlightCtx.highlightLayers.map((l) => ({
-          id: l.id,
-          name: l.name,
-          itemsCount: l.items.length,
-        })),
-      },
-    );
-  }, [agentHighlightCtx.highlightLayers]);
-
-  // Create merged context for File City panel (includes agent highlight layers)
-  const fileCityPanelContext = useMemo(() => {
-    // Create a new slices Map that includes agent highlight layers
-    const mergedSlices = new Map([
-      ...Array.from(context.slices?.entries() || []),
-      [
-        'agentHighlightLayers',
-        {
-          scope: 'repository' as const,
-          name: 'agentHighlightLayers',
-          data: agentHighlightCtx.highlightLayers,
-          loading: false,
-          error: null,
-          refresh: async () => {
-            // Agent highlight layers are updated reactively from events
-          },
-        },
-      ],
-    ]);
-
-    return {
-      ...context,
-      slices: mergedSlices,
-      // Override getSlice to use our merged slices Map (the original getSlice is a closure over the original slices)
-      getSlice: <T = unknown>(name: string) => {
-        return mergedSlices.get(name) as { scope: string; name: string; data: T; loading: boolean; error: unknown; refresh: () => Promise<void> } | undefined;
-      },
-    };
-  }, [context, agentHighlightCtx.highlightLayers]);
 
   const PrincipalViewPanelComponent = principalViewPanels[0]?.component;
   const FileCityPanelComponent = fileCityPanels[0]?.component;
@@ -284,22 +316,12 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         id: 'fileCity',
         label: 'File City',
         content: FileCityPanelComponent ? (
-          <div
-            style={{
-              height: '100%',
-              width: '100%',
-              overflow: 'hidden',
-              position: 'relative',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <FileCityPanelComponent
-              context={fileCityPanelContext}
-              actions={actions}
-              events={events}
-            />
-          </div>
+          <FileCityWithHighlights
+            context={context}
+            actions={actions}
+            events={events}
+            FileCityPanelComponent={FileCityPanelComponent}
+          />
         ) : (
           <div>File City panel not available</div>
         ),
@@ -640,7 +662,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       terminalDirectory,
       terminalPanelContext,
       terminalActions,
-      fileCityPanelContext,
       theme,
     ],
   );
