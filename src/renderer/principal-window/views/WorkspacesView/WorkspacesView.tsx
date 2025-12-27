@@ -162,6 +162,7 @@ const WorkspacesViewContent: React.FC = () => {
             context={context}
             actions={actions}
             events={events}
+            defaultShowSearch
           />
         ),
       },
@@ -174,6 +175,7 @@ const WorkspacesViewContent: React.FC = () => {
             context={context}
             actions={overriddenActions}
             events={events}
+            defaultShowSearch
           />
         ),
       },
@@ -210,6 +212,7 @@ const WorkspacesViewContent: React.FC = () => {
             context={context}
             actions={actions}
             events={events}
+            defaultShowSearch
           />
         ),
       },
@@ -222,6 +225,7 @@ const WorkspacesViewContent: React.FC = () => {
             context={context}
             actions={actions}
             events={events}
+            defaultShowSearch
           />
         ),
       },
