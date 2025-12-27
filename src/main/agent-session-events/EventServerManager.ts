@@ -467,7 +467,7 @@ export class EventServerManager extends EventEmitter {
 
     const normalizedSessionId = repoNormalizedEvent.sessionId.trim();
 
-    // Step 1: Forward to observability SDK if initialized
+    // Forward to observability SDK if initialized
     if (this.observabilityInitialized && this.observability) {
       this.observability
         .processRepoEvent(repoNormalizedEvent)
@@ -476,11 +476,8 @@ export class EventServerManager extends EventEmitter {
         });
     }
 
-    // Step 2: Emit event for SDK handlers (in-memory cache, etc.)
-    this.emit('processed-event', repoNormalizedEvent);
-
-    // Note: Events are now sent directly from utility process to renderers via MessagePorts
-    // No IPC broadcast needed - the utility process routes events to registered ports
+    // Note: Events are sent directly from utility process to renderers via MessagePorts
+    // SessionCache removed for performance - was blocking main process on every event
     this.log(
       'debug',
       `Processed ${repoNormalizedEvent.eventType} for session ${normalizedSessionId}`,
