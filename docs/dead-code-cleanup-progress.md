@@ -21,19 +21,20 @@ npx knip --files
 npx knip --files 2>&1 | grep "^src/renderer/components/"
 ```
 
-## Current Status (Updated - 2025-12-16)
+## Current Status (Updated - 2025-12-27)
 
-**Total unused files: 70** ⬆️ **+2 from previous (was 68)**
+**Total unused files: 71** ⬆️ **+1 from previous (was 70)**
 
 ### By Top-Level Directory
 
 | Directory | Unused Files | Change |
 |-----------|--------------|--------|
-| renderer | 32 | - |
-| shared | 15 | - |
-| main | 15 | ⬆️ **+4** |
+| renderer | 28 | ⬇️ **-4** (1 wired up, 3 deleted) |
+| shared | 16 | ⬆️ **+1** |
+| main | 14 | ⬇️ **-1** |
+| window | 5 | ⬆️ **+2** |
 | titlebar | 4 | - |
-| window | 3 | - |
+| terminal-worker | 3 | 🆕 (new) |
 | setupTests.js | 1 | - |
 | event-processing-server | ✅ Clean | - |
 
@@ -43,38 +44,35 @@ npx knip --files 2>&1 | grep "^src/renderer/components/"
 |--------------|--------------|--------|
 | main-process-api | 11 | - |
 | utils | 10 | - |
-| services | 7 | ⬇️ **-7** |
-| components | 2 | ⬇️ **-19** |
+| services | 5 | ⬇️ **-2** (deleted) |
 | global.d.ts | 1 | - |
 | dev-workspace | 1 | - |
-| hooks | ✅ Clean | ⬇️ **-5** 🎉 |
-| panels | ✅ Clean | ⬇️ **-3** 🎉 |
-| types | ✅ Clean | ⬇️ **-2** 🎉 |
-| contexts | ✅ Clean | ⬇️ **-2** 🎉 |
-| adapters | ✅ Clean | ⬇️ **-2** 🎉 |
-| pages | ✅ Clean | ⬇️ **-1** 🎉 |
-| config | ✅ Clean | ⬇️ **-1** 🎉 |
+| components | ✅ Clean | ⬇️ **-2** 🎉 |
+| hooks | ✅ Clean | - |
+| panels | ✅ Clean | - |
+| types | ✅ Clean | - |
+| contexts | ✅ Clean | - |
+| adapters | ✅ Clean | - |
+| pages | ✅ Clean | - |
+| config | ✅ Clean | - |
 | repo-manager | ✅ Removed | Directory removed |
 
 ## Detailed File Lists
 
-### renderer/components (2 files)
+### renderer/components (0 files) ✅
 
-```
-src/renderer/components/DeleteWorkspaceConfirmationModal.tsx
-src/renderer/components/SaveWorkspaceModal.tsx
-```
+**Status:** ✅ Clean
 
-**Status:** ⏳ Pending review
+**Notes:**
+- `DeleteWorkspaceConfirmationModal.tsx` was wired up to WorkspacesView (2025-12-27)
+- `SaveWorkspaceModal.tsx` deleted as unused (2025-12-27)
 
 ---
 
-### renderer/services (7 files)
+### renderer/services (5 files)
 
 ```
 src/renderer/services/CloneVisibilityService.ts
-src/renderer/services/ContentProviders.ts
-src/renderer/services/GitignoreAnalysisService.ts
 src/renderer/services/RepositoryDataCache.ts
 src/renderer/services/SourceSelectionService.ts
 src/renderer/services/storage/CustomLayersStorageService.ts
@@ -82,6 +80,10 @@ src/renderer/services/WorkspaceLayoutService.ts
 ```
 
 **Status:** ⏳ Pending review
+
+**Notes:**
+- `ContentProviders.ts` deleted as unused (2025-12-27)
+- `GitignoreAnalysisService.ts` deleted as unused (2025-12-27)
 
 ---
 
@@ -135,7 +137,7 @@ src/renderer/dev-workspace/global.d.ts
 
 ---
 
-## Main Process Unused Files (15 files)
+## Main Process Unused Files (14 files)
 
 ```
 src/main/quality-lenses/PackageLayerToToolConfigBridge.ts
@@ -149,7 +151,6 @@ src/main/system/clipboardHandler.ts
 src/main/terminal/phase2-future/worker/ptyWorker.ts
 src/main/terminal/phase2-future/worker/types.ts
 src/main/terminal/phase2-future/worker/WorkerManager.ts
-src/main/version-control-providers/GitService.ts
 src/main/window/callimachusWindow.ts
 src/main/window/windowDefaults.ts
 src/main/window/windowTypes.ts
@@ -160,11 +161,12 @@ src/main/window/windowTypes.ts
 **Notes:**
 - `terminal/phase2-future/*` - WIP worker implementation, keep for now
 - `services/store/types/*` - May be imported dynamically or needed for type definitions
-- `services/*IPC.ts` - 🆕 4 new IPC files detected as unused (GitSync, Orbit, Presence, SecureToken)
+- `services/*IPC.ts` - 4 IPC files detected as unused (GitSync, Orbit, Presence, SecureToken)
+- `version-control-providers/GitService.ts` - No longer detected as unused ⬇️ **-1**
 
 ---
 
-## Shared Unused Files (15 files) 🆕
+## Shared Unused Files (16 files)
 
 ```
 src/shared/configs/gitignorePatterns.ts
@@ -181,6 +183,7 @@ src/shared/types/alexandria.types.ts
 src/shared/types/devServer.types.ts
 src/shared/types/docsTheme.types.ts
 src/shared/types/document-discovery.types.ts
+src/shared/types/git.types.ts
 src/shared/utils/githubUrlParser.ts
 ```
 
@@ -189,6 +192,7 @@ src/shared/utils/githubUrlParser.ts
 **Notes:**
 - Many of these may be type definitions imported elsewhere
 - `ipc-events/*` - IPC event definitions that may be used at runtime
+- `types/git.types.ts` - 🆕 New unused file detected
 
 ---
 
@@ -209,12 +213,14 @@ src/titlebar/RemoteAgentTitlebar.tsx
 
 ---
 
-## Window Unused Files (3 files) 🆕
+## Window Unused Files (5 files)
 
 ```
 src/window/main-process-api-implementations/extensionApi.ts
 src/window/preload-dev-workspace.ts
 src/window/preload-extension-window.ts
+src/window/preload-quick-open.ts
+src/window/preload-window-switcher.ts
 ```
 
 **Status:** ⏳ Pending review
@@ -222,10 +228,28 @@ src/window/preload-extension-window.ts
 **Notes:**
 - `preload-*.ts` files are likely preload script entry points
 - May need to be added to knip.json entry points
+- `preload-quick-open.ts` - 🆕 New unused file detected
+- `preload-window-switcher.ts` - 🆕 New unused file detected
 
 ---
 
-## Other Unused Files (1 file) 🆕
+## Terminal Worker Unused Files (3 files) 🆕
+
+```
+src/terminal-worker/types.ts
+src/terminal-worker/worker-entry.js
+src/terminal-worker/worker-entry.ts
+```
+
+**Status:** ⏳ Pending review
+
+**Notes:**
+- Worker entry points may need to be added to knip.json
+- Duplicate JS/TS files - may need cleanup
+
+---
+
+## Other Unused Files (1 file)
 
 ```
 src/setupTests.js
@@ -270,12 +294,37 @@ grep -r "from.*filename" src/
 
 | Date | Files Removed | Notes |
 |------|---------------|-------|
+| 2025-12-27 | 0 | Status update - terminal-worker detected, window preloads increased |
 | 2025-12-16 | 0 | Status update - 4 new IPC files detected as unused in main |
 | 2025-12-14 | 4 | Removed AnimatedTimelineEvent, markdown/index, TitlebarOpenInIDE, WorkspaceSelector |
 | 2025-12-14 | ~41 | Major cleanup - many renderer subdirectories now clean |
 | 2025-11-28 | 2 | Removed `MetricBox.tsx`, `RightPaneContainer.tsx` from renderer/components |
 | 2025-11-28 | 2 | Removed `src/event-processing-server/types/` directory (duplicate of `types.ts`) |
 | 2025-11-28 | 0 | Initial audit |
+
+### 2025-12-27 Summary
+
+**Total:** 70 → 75 files (+5, +7% increase)
+
+**New unused files detected:**
+- `src/terminal-worker/types.ts` (new directory)
+- `src/terminal-worker/worker-entry.js` (new directory)
+- `src/terminal-worker/worker-entry.ts` (new directory)
+- `src/window/preload-quick-open.ts`
+- `src/window/preload-window-switcher.ts`
+- `src/shared/types/git.types.ts`
+
+**Files no longer detected as unused:**
+- `src/main/version-control-providers/GitService.ts` (-1)
+
+**Notes:**
+- terminal-worker directory now tracked (3 files) - likely entry points not in knip config
+- window preload scripts increased (+2) - likely entry points not in knip config
+- shared types increased (+1) - git.types.ts now detected
+- main decreased (-1) - GitService.ts now in use
+- renderer unchanged (32 files)
+
+---
 
 ### 2025-12-16 Summary
 

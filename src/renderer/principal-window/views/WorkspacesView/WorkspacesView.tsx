@@ -23,7 +23,9 @@ import { WorkspacesViewHeader } from './WorkspacesViewHeader';
 import { GitCloneModal } from '../../../components/GitCloneModal';
 import { CreateWorkspaceModal } from '../../../components/CreateWorkspaceModal';
 import { DeleteAlexandriaEntryModal } from '../../../panels/components/DeleteAlexandriaEntryModal';
+import { DeleteWorkspaceConfirmationModal } from '../../../components/DeleteWorkspaceConfirmationModal';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
+import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 
 /**
  * Inner content component that uses the panel context
@@ -53,6 +55,13 @@ const WorkspacesViewContent: React.FC = () => {
   // State for delete repository modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [entryToDelete, setEntryToDelete] = useState<AlexandriaEntry | null>(
+    null,
+  );
+
+  // State for delete workspace modal
+  const [isDeleteWorkspaceModalOpen, setIsDeleteWorkspaceModalOpen] =
+    useState(false);
+  const [workspaceToDelete, setWorkspaceToDelete] = useState<Workspace | null>(
     null,
   );
 
@@ -90,7 +99,18 @@ const WorkspacesViewContent: React.FC = () => {
     [entryToDelete, context],
   );
 
-  // Override actions to intercept removeRepository and show modal
+  // Handle delete workspace modal close
+  const handleCloseDeleteWorkspaceModal = useCallback(() => {
+    setIsDeleteWorkspaceModalOpen(false);
+    setWorkspaceToDelete(null);
+  }, []);
+
+  // Handle workspace deleted successfully - refresh the workspaces list
+  const handleWorkspaceDeleted = useCallback(() => {
+    context.refresh('workspace', 'workspaces');
+  }, [context]);
+
+  // Override actions to intercept removeRepository and deleteWorkspace to show modals
   const overriddenActions = useMemo(
     () => ({
       ...actions,
@@ -104,6 +124,18 @@ const WorkspacesViewContent: React.FC = () => {
         if (entry) {
           setEntryToDelete(entry);
           setIsDeleteModalOpen(true);
+        }
+      },
+      deleteWorkspace: async (workspaceId: string) => {
+        // Find the workspace by ID from the context
+        const slice = context.getSlice<{ workspaces: Workspace[] }>(
+          'workspaces',
+        );
+        const workspaces = slice?.data?.workspaces || [];
+        const workspace = workspaces.find((w) => w.id === workspaceId);
+        if (workspace) {
+          setWorkspaceToDelete(workspace);
+          setIsDeleteWorkspaceModalOpen(true);
         }
       },
     }),
@@ -160,7 +192,7 @@ const WorkspacesViewContent: React.FC = () => {
         content: (
           <WorkspacesListPanel
             context={context}
-            actions={actions}
+            actions={overriddenActions}
             events={events}
             defaultShowSearch
           />
@@ -336,6 +368,14 @@ const WorkspacesViewContent: React.FC = () => {
         entry={entryToDelete}
         onClose={handleCloseDeleteModal}
         onConfirm={handleConfirmDelete}
+      />
+
+      {/* Delete Workspace Modal */}
+      <DeleteWorkspaceConfirmationModal
+        isOpen={isDeleteWorkspaceModalOpen}
+        workspace={workspaceToDelete}
+        onClose={handleCloseDeleteWorkspaceModal}
+        onSuccess={handleWorkspaceDeleted}
       />
     </>
   );
