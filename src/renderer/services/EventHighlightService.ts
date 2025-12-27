@@ -113,6 +113,7 @@ export class EventHighlightService extends EventEmitter {
         type: 'file' as const,
         renderStrategy: 'fill' as const,
       })),
+      timestamp: event.timestamp,
     };
   }
 
@@ -155,9 +156,16 @@ export class EventHighlightService extends EventEmitter {
   private getEventDisplayName(
     event: RepoNormalizedUniversalAgentSessionEvent,
   ): string {
-    const timestamp = new Date(event.timestamp).toLocaleTimeString();
     const toolOrType = event.toolName || event.eventType;
-    return `${event.provider} - ${toolOrType} (${timestamp})`;
+
+    // If there's exactly one file, include its name
+    const files = event.files?.filter(f => f.repository?.relativePath) || [];
+    if (files.length === 1) {
+      const fileName = files[0].repository!.relativePath.split('/').pop();
+      return `${toolOrType}: ${fileName}`;
+    }
+
+    return toolOrType;
   }
 
   /**
