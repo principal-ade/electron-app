@@ -47,6 +47,10 @@ export interface PackageQualityMetrics {
   name: string;
   path?: string;
   hexagon: QualityHexagonMetrics;
+  /** List of lens IDs that actually ran for this package */
+  lensesRan?: string[];
+  /** True if this is a monorepo orchestrator package (config-only, no source) */
+  isOrchestrator?: boolean;
 }
 
 /**

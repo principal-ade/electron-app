@@ -27,10 +27,14 @@ type MessagePortLike = {
   close: () => void;
 };
 
-console.info(
-  '[EventProcessingWorker] Script loaded, HttpEventServer:',
-  typeof HttpEventServer,
-);
+// Debug logging controlled by environment variable
+const DEBUG = process.env.DEBUG_EVENT_SERVER === 'true';
+
+function debugLog(...args: unknown[]): void {
+  if (DEBUG) {
+    console.info('[EventProcessingWorker]', ...args);
+  }
+}
 
 // Track if we've sent the ready signal
 let readySent = false;
@@ -91,9 +95,7 @@ function registerPort(
   // Start the port to enable message receiving (if needed later)
   port.start();
 
-  console.info(
-    `[EventProcessingWorker] Registered port for window ${windowId} -> repo ${repository}`,
-  );
+  debugLog(`Registered port for window ${windowId} -> repo ${repository}`);
 }
 
 /**
@@ -111,9 +113,7 @@ function unregisterPort(windowId: number, repository: string): void {
       // Port may already be closed
     }
     repoPorts.delete(windowId);
-    console.info(
-      `[EventProcessingWorker] Unregistered port for window ${windowId} -> repo ${repository}`,
-    );
+    debugLog(`Unregistered port for window ${windowId} -> repo ${repository}`);
   }
 
   if (repoPorts.size === 0) {
@@ -155,17 +155,8 @@ function handleMessage(rawMessage: unknown): void {
   const ports = extractPorts(rawMessage);
 
   if (!isMainToServerMessage(message)) {
-    console.warn(
-      '[EventProcessingWorker] Ignoring message with unexpected shape:',
-      rawMessage,
-    );
     return;
   }
-
-  console.info(
-    '[EventProcessingWorker] Received message from main:',
-    message.type,
-  );
 
   // Handle port registration/unregistration
   if (isRegisterPortMessage(message) && ports.length > 0) {
@@ -185,25 +176,13 @@ function handleMessage(rawMessage: unknown): void {
 
 // Function to send messages to main process
 function sendToMain(message: OutgoingMessage): void {
-  console.info(
-    '[EventProcessingWorker] Attempting to send message to main:',
-    message.type,
-  );
   try {
     // Electron utility processes use process.parentPort
     if (process.parentPort) {
-      console.info(
-        '[EventProcessingWorker] Using process.parentPort.postMessage',
-      );
       process.parentPort.postMessage(message);
-      console.info(
-        '[EventProcessingWorker] Message sent via process.parentPort',
-      );
     } else if (process.send) {
       // Fallback to process.send for child processes
-      console.info('[EventProcessingWorker] Using process.send');
       process.send(message);
-      console.info('[EventProcessingWorker] Message sent via process.send');
     } else {
       console.error('[EventProcessingWorker] No IPC mechanism available');
     }
@@ -220,14 +199,6 @@ let server: HttpEventServer;
 
 async function initialize(): Promise<void> {
   try {
-    console.info(
-      '[EventProcessingWorker] Initializing HTTP event processing server...',
-    );
-    console.info(
-      '[EventProcessingWorker] HttpEventServer available:',
-      typeof HttpEventServer,
-    );
-
     server = new HttpEventServer(sendToMain, {
       logLevel: process.env.DEBUG_EVENT_SERVER === 'true' ? 'debug' : 'info',
       enableObservability: process.env.DISABLE_OBSERVABILITY !== 'true',
@@ -241,8 +212,6 @@ async function initialize(): Promise<void> {
     // Start the HTTP server
     await server.start();
 
-    console.info('[EventProcessingWorker] HTTP server started successfully');
-
     // Send ready signal to main process with port info
     if (!readySent) {
       const stats = server.getStats();
@@ -252,10 +221,6 @@ async function initialize(): Promise<void> {
         port: stats.port,
       });
       readySent = true;
-      console.info(
-        '[EventProcessingWorker] Ready signal sent to main process, listening on port',
-        stats.port,
-      );
     }
   } catch (error) {
     console.error(
@@ -281,15 +246,13 @@ if (process.parentPort) {
 
 // Handle process termination gracefully
 process.on('SIGTERM', () => {
-  console.info('[EventProcessingWorker] Received SIGTERM, shutting down...');
   if (server) {
     server
       .stop()
       .then(() => {
         process.exit(0);
       })
-      .catch((error) => {
-        console.error('[EventProcessingWorker] Error during shutdown:', error);
+      .catch(() => {
         process.exit(1);
       });
   } else {
@@ -298,15 +261,13 @@ process.on('SIGTERM', () => {
 });
 
 process.on('SIGINT', () => {
-  console.info('[EventProcessingWorker] Received SIGINT, shutting down...');
   if (server) {
     server
       .stop()
       .then(() => {
         process.exit(0);
       })
-      .catch((error) => {
-        console.error('[EventProcessingWorker] Error during shutdown:', error);
+      .catch(() => {
         process.exit(1);
       });
   } else {
@@ -337,5 +298,3 @@ process.on('unhandledRejection', (reason, _promise) => {
     context: { stack: reason instanceof Error ? reason.stack : undefined },
   });
 });
-
-console.info('[EventProcessingWorker] Worker entry point initialized');

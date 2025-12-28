@@ -17,17 +17,10 @@ import * as path from 'path';
 import {
   ServerToMainMessage,
   MainToServerMessage,
-  ProcessedEventMessage,
   WindowBroadcastMessage,
   isWindowBroadcastMessage,
-  isProcessedEventMessage,
 } from '../../event-processing-server/types';
 import { AgentSessionSDKAPIEvents } from '../../shared/main-process-api-interfaces/AgentSessionSDKAPI';
-import {
-  getObservabilityIntegration,
-  ObservabilityIntegration,
-} from '../observability/ObservabilityIntegration';
-import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 
 /**
  * Configuration for EventServerManager
@@ -56,8 +49,6 @@ export class EventServerManager extends EventEmitter {
   private serverPort: number | null = null;
   private restartAttempts = 0;
   private shutdownRequested = false;
-  private observability: ObservabilityIntegration | null = null;
-  private observabilityInitialized = false;
 
   // Track which windows are registered for which repos (for cleanup on window close)
   // Ports are transferred and not stored here - just tracking the relationship
@@ -66,9 +57,6 @@ export class EventServerManager extends EventEmitter {
   constructor(config: Partial<EventServerManagerConfig> = {}) {
     super();
     this.config = { ...DEFAULT_CONFIG, ...config };
-
-    // Set up observability integration
-    this.setupObservability();
 
     // Set up IPC handlers for port registration
     this.setupPortRegistrationHandlers();
@@ -363,9 +351,7 @@ export class EventServerManager extends EventEmitter {
         return;
       }
 
-      if (isProcessedEventMessage(msg)) {
-        await this.handleProcessedEvent(msg);
-      } else if (isWindowBroadcastMessage(msg)) {
+      if (isWindowBroadcastMessage(msg)) {
         this.handleWindowBroadcast(msg);
       } else if (msg.type === 'SERVER_ERROR') {
         this.log('error', `Server error: ${msg.error}`);
@@ -376,112 +362,6 @@ export class EventServerManager extends EventEmitter {
     } catch (error) {
       this.log('error', `Error handling worker message: ${error}`);
     }
-  }
-
-  /**
-   * Set up observability integration
-   */
-  private setupObservability(): void {
-    // Get singleton instance but don't initialize yet
-    this.observability = getObservabilityIntegration({
-      debug: process.env.DEBUG_OBSERVABILITY === 'true',
-    });
-
-    // Listen for observability errors
-    this.observability.on('error', (error) => {
-      this.log('error', `Observability error: ${error}`);
-    });
-
-    // Listen for initialization events
-    this.observability.on('initialized', () => {
-      this.observabilityInitialized = true;
-      this.log(
-        'info',
-        'Observability integration is now active and forwarding events',
-      );
-    });
-
-    // Listen for shutdown events
-    this.observability.on('shutdown', () => {
-      this.observabilityInitialized = false;
-      this.log('info', 'Observability integration has been shut down');
-    });
-
-    // Try to initialize if already configured
-    this.tryInitializeObservability();
-  }
-
-  /**
-   * Try to initialize observability if configured
-   */
-  private async tryInitializeObservability(): Promise<void> {
-    try {
-      // Check if already initialized
-      if (this.observabilityInitialized) {
-        return;
-      }
-
-      // Try to initialize (will only succeed if configured)
-      await this.observability?.initialize();
-
-      // Check if it actually initialized
-      const stats = this.observability?.getStats();
-      if (stats?.isInitialized) {
-        this.observabilityInitialized = true;
-        this.log('info', 'Observability integration initialized and ready');
-      } else {
-        this.log(
-          'debug',
-          'Observability not configured yet - waiting for configuration',
-        );
-      }
-    } catch (error) {
-      this.log('debug', `Observability not ready: ${error}`);
-      // This is expected if not configured yet
-    }
-  }
-
-  /**
-   * Handle processed events from server
-   */
-  private async handleProcessedEvent(
-    msg: ProcessedEventMessage,
-  ): Promise<void> {
-    // The event-processing-server sends RepoNormalizedUniversalAgentSessionEvent
-    // but ProcessedEventMessage.event is typed as unknown for flexibility
-    const repoNormalizedEvent =
-      msg.event as RepoNormalizedUniversalAgentSessionEvent;
-
-    // Validate session ID
-    if (
-      !repoNormalizedEvent.sessionId ||
-      typeof repoNormalizedEvent.sessionId !== 'string' ||
-      repoNormalizedEvent.sessionId.trim() === ''
-    ) {
-      this.log(
-        'error',
-        `Invalid session ID, skipping event: ${repoNormalizedEvent.sessionId}`,
-      );
-      return;
-    }
-
-    const normalizedSessionId = repoNormalizedEvent.sessionId.trim();
-
-    // Forward to observability SDK if initialized
-    if (this.observabilityInitialized && this.observability) {
-      this.observability
-        .processRepoEvent(repoNormalizedEvent)
-        .catch((error) => {
-          this.log('error', `Failed to send event to observability: ${error}`);
-        });
-    }
-
-    // Note: Events are sent directly from utility process to renderers via MessagePorts
-    // SessionCache removed for performance - was blocking main process on every event
-    this.log(
-      'debug',
-      `Processed ${repoNormalizedEvent.eventType} for session ${normalizedSessionId}`,
-    );
   }
 
   /**

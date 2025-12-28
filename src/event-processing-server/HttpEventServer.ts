@@ -35,35 +35,39 @@ import {
  * Server-side implementation of PathNormalizationAdapter
  */
 class ServerPathNormalizationAdapter implements PathNormalizationAdapter {
+  // Cache by git root, not by working directory - all subdirs share one cache entry
   private repositoryCache: Map<
     string,
     { info: RepositoryInfo | null; timestamp: number }
   > = new Map();
-  private cacheTimeout = 5 * 60 * 1000; // 5 minutes
+  // Map working directory to git root for fast lookups
+  private gitRootCache: Map<string, string | null> = new Map();
+  private cacheTimeout = 10 * 60 * 1000; // 10 minutes
 
   constructor(private homeDir: string) {}
 
   async getRawRepositoryInfo(
     absolutePath: string,
   ): Promise<RepositoryInfo | null> {
-    // Check cache first
-    const cached = this.repositoryCache.get(absolutePath);
-    if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
-      return cached.info;
-    }
-
     try {
-      // Find git root
-      const gitRoot = await this.findGitRoot(absolutePath);
+      // Step 1: Find git root (check cache first)
+      let gitRoot = this.gitRootCache.get(absolutePath);
+      if (gitRoot === undefined) {
+        gitRoot = await this.findGitRoot(absolutePath);
+        this.gitRootCache.set(absolutePath, gitRoot);
+      }
+
       if (!gitRoot) {
-        this.repositoryCache.set(absolutePath, {
-          info: null,
-          timestamp: Date.now(),
-        });
         return null;
       }
 
-      // Get git info in parallel
+      // Step 2: Check repository cache by git root
+      const cached = this.repositoryCache.get(gitRoot);
+      if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
+        return cached.info;
+      }
+
+      // Step 3: Fetch git info (cache miss)
       const [remoteUrl, branch, headCommit] = await Promise.all([
         this.getGitRemoteUrl(gitRoot),
         this.getGitBranch(gitRoot),
@@ -71,7 +75,7 @@ class ServerPathNormalizationAdapter implements PathNormalizationAdapter {
       ]);
 
       if (!remoteUrl) {
-        this.repositoryCache.set(absolutePath, {
+        this.repositoryCache.set(gitRoot, {
           info: null,
           timestamp: Date.now(),
         });
@@ -90,18 +94,14 @@ class ServerPathNormalizationAdapter implements PathNormalizationAdapter {
         headCommit,
       };
 
-      // Cache the result
-      this.repositoryCache.set(absolutePath, { info, timestamp: Date.now() });
+      // Cache by git root
+      this.repositoryCache.set(gitRoot, { info, timestamp: Date.now() });
       return info;
     } catch (error) {
       console.error(
         '[ServerPathNormalizationAdapter] Error getting repository info:',
         error,
       );
-      this.repositoryCache.set(absolutePath, {
-        info: null,
-        timestamp: Date.now(),
-      });
       return null;
     }
   }
@@ -344,11 +344,14 @@ export class HttpEventServer extends EventEmitter {
       }
     });
 
-    // Request logging middleware
-    this.app.use((req: Request, _res: Response, next: NextFunction) => {
-      this.log('debug', `${req.method} ${req.path}`);
-      next();
-    });
+    // Request logging middleware - disabled for performance
+    // Enable via DEBUG_EVENT_SERVER=true if needed
+    if (this.config.logLevel === 'debug') {
+      this.app.use((req: Request, _res: Response, next: NextFunction) => {
+        this.log('debug', `${req.method} ${req.path}`);
+        next();
+      });
+    }
   }
 
   /**
@@ -380,24 +383,16 @@ export class HttpEventServer extends EventEmitter {
               : agent === 'droid'
                 ? 'droid-hook'
                 : agent; // fallback to agent name
-      this.log('info', `Setting up route for ${agent} at /${routePath}`);
 
       // POST endpoint for agent events
       this.app.post(`/${routePath}`, async (req: Request, res: Response) => {
         const startTime = Date.now();
 
         try {
-          this.log('info', `Received ${agent} event at /${routePath}`);
-          this.log(
-            'debug',
-            `Event body: ${JSON.stringify(req.body).substring(0, 200)}`,
-          );
-
           // Process the event
           await this.processAgentEvent(agent, req.body);
 
           const duration = Date.now() - startTime;
-          this.log('info', `Processed ${agent} event in ${duration}ms`);
 
           // Return success response
           res.status(200).json({
@@ -444,38 +439,19 @@ export class HttpEventServer extends EventEmitter {
     provider: SupportedAgent,
     rawData: unknown,
   ): Promise<void> {
-    this.log(
-      'info',
-      `[processAgentEvent] Starting to process ${provider} event`,
-    );
-
     try {
       // Validate raw data
       if (!rawData || typeof rawData !== 'object') {
-        this.log(
-          'error',
-          `Invalid raw data from ${provider}: expected object, got ${typeof rawData}`,
-        );
         throw new Error('Invalid raw data: expected object');
       }
 
-      this.log(
-        'info',
-        `[processAgentEvent] Raw data validated, processing through pipeline...`,
-      );
-
-      // Step 1: Process through pipeline
-      this.log(
-        'info',
-        `[processAgentEvent] Calling pipeline.processRawEvent...`,
-      );
+      // Process through pipeline
       const repoNormalizedEvent = await this.pipeline.processRawEvent(
         provider,
         rawData,
       );
-      this.log('info', `[processAgentEvent] Pipeline processing complete`);
 
-      // Step 2: Send directly to registered renderer ports (for real-time UI updates)
+      // Send directly to registered renderer ports (for real-time UI updates)
       const repository = repoNormalizedEvent.repository?.root;
       if (repository) {
         const sendEventToPorts = (
@@ -487,24 +463,6 @@ export class HttpEventServer extends EventEmitter {
           sendEventToPorts(repository, repoNormalizedEvent);
         }
       }
-
-      // Step 3: Send to main for observability SDK and session caching
-      this.log(
-        'debug',
-        `Sending processed event to main - session: ${repoNormalizedEvent.sessionId}`,
-      );
-      this.sendToMain({
-        type: 'PROCESSED_EVENT',
-        id: `event-${Date.now()}`,
-        timestamp: Date.now(),
-        event: repoNormalizedEvent,
-        provider: provider,
-      });
-
-      this.log(
-        'debug',
-        `Event processed for session ${repoNormalizedEvent.sessionId}`,
-      );
     } catch (error) {
       this.log('error', `Event processing failed: ${error}`);
       throw error;
@@ -649,13 +607,17 @@ export class HttpEventServer extends EventEmitter {
   }
 
   /**
-   * Logging utility
+   * Logging utility - only logs errors and warnings in production
    */
   private log(
     level: string,
     message: string,
     context?: Record<string, unknown>,
   ): void {
+    // Only log errors and warnings unless debug is enabled
+    if (level !== 'error' && level !== 'warn' && this.config.logLevel !== 'debug') {
+      return;
+    }
     const timestamp = new Date().toISOString();
     const contextStr = context ? ` ${JSON.stringify(context)}` : '';
     console.info(

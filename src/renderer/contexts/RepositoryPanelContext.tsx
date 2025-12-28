@@ -155,8 +155,13 @@ export const RepositoryPanelProvider: React.FC<
   const [qualityData, setQualityData] = useState<{
     packages: Array<{
       name: string;
+      path?: string;
       version?: string;
       metrics: Record<string, number>;
+      /** List of lens IDs that actually ran for this package */
+      lensesRan?: string[];
+      /** True if this is a monorepo orchestrator package (config-only, no source) */
+      isOrchestrator?: boolean;
     }>;
     lastUpdated: string;
   } | null>(null);
@@ -472,9 +477,13 @@ export const RepositoryPanelProvider: React.FC<
 
         if (artifactData) {
           // Transform to the format expected by the quality slice
+          // Include lensesRan and isOrchestrator so the panel knows which metrics are configured
           const packages = artifactData.qualityMetrics.packages.map((pkg) => ({
             name: pkg.name,
+            path: pkg.path,
             metrics: pkg.hexagon as unknown as Record<string, number>,
+            lensesRan: pkg.lensesRan,
+            isOrchestrator: pkg.isOrchestrator,
           }));
 
           console.log(
