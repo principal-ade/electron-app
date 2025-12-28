@@ -8,6 +8,7 @@ import {
   Check,
   Copy,
   Play,
+  Focus,
 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
@@ -140,6 +141,9 @@ export interface DevWorkspaceTitlebarProps {
   onCollapsedChange?: (collapsed: { left: boolean; right: boolean }) => void;
   // Repository path for copy
   repositoryPath?: string;
+  // Focus mode
+  focusModeEnabled?: boolean;
+  onToggleFocusMode?: () => void;
 }
 
 export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
@@ -162,6 +166,8 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
   onLayoutChange,
   onCollapsedChange,
   repositoryPath,
+  focusModeEnabled,
+  onToggleFocusMode,
 }) => {
   const { theme } = useTheme();
   const [copiedPath, setCopiedPath] = useState(false);
@@ -596,6 +602,53 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
               transition: 'opacity 0.2s ease, visibility 0.2s ease',
             }}
           >
+            {/* Focus Mode Toggle Button */}
+            {onToggleFocusMode && (
+              <button
+                onClick={onToggleFocusMode}
+                title={focusModeEnabled ? 'Exit Focus Mode' : 'Enter Focus Mode'}
+                style={{
+                  // @ts-ignore - WebkitAppRegion is not in CSSProperties
+                  WebkitAppRegion: 'no-drag',
+                  background: focusModeEnabled
+                    ? theme.colors.primary
+                    : theme.colors.backgroundTertiary,
+                  border: `1px solid ${focusModeEnabled ? theme.colors.primary : theme.colors.border}`,
+                  color: focusModeEnabled
+                    ? theme.colors.background
+                    : theme.colors.textSecondary,
+                  cursor: 'pointer',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s',
+                  fontSize: `${theme.fontSizes[1]}px`,
+                  fontWeight: theme.fontWeights.medium,
+                }}
+                onMouseEnter={(e) => {
+                  if (!focusModeEnabled) {
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.backgroundSecondary;
+                    e.currentTarget.style.borderColor = theme.colors.primary;
+                    e.currentTarget.style.color = theme.colors.text;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!focusModeEnabled) {
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.backgroundTertiary;
+                    e.currentTarget.style.borderColor = theme.colors.border;
+                    e.currentTarget.style.color = theme.colors.textSecondary;
+                  }
+                }}
+              >
+                <Focus size={14} />
+                <span>Focus</span>
+              </button>
+            )}
+
             {/* Open in Web-ADE Button */}
             {onOpenInWebADE && (
               <button

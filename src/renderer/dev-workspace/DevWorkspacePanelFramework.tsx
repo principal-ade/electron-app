@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   EditableConfigurablePanelLayout,
+  FocusModeOverlay,
   type PanelLayout,
 } from '@principal-ade/panel-layouts';
 // CSS is bundled inline in principal-view-panels, no separate import needed
@@ -43,6 +44,8 @@ export interface DevWorkspacePanelFrameworkProps {
   onLayoutChange: (layout: PanelLayout) => void;
   /** Event bus for panel communication */
   events: PanelEventEmitter;
+  /** Whether focus mode is enabled (dims side panels) */
+  focusModeEnabled?: boolean;
 }
 
 interface DevWorkspacePanelFrameworkInnerProps {
@@ -50,6 +53,7 @@ interface DevWorkspacePanelFrameworkInnerProps {
   onCollapsedChange: (collapsed: { left: boolean; right: boolean }) => void;
   layout: PanelLayout;
   onLayoutChange: (layout: PanelLayout) => void;
+  focusModeEnabled?: boolean;
 }
 
 /**
@@ -135,7 +139,7 @@ const FileCityWithHighlights: React.FC<{
  */
 const DevWorkspacePanelFrameworkInner: React.FC<
   DevWorkspacePanelFrameworkInnerProps
-> = ({ collapsed, onCollapsedChange, layout, onLayoutChange }) => {
+> = ({ collapsed, onCollapsedChange, layout, onLayoutChange, focusModeEnabled }) => {
   const { theme } = useTheme();
   const { context, actions, events } = useRepositoryPanelProvider();
   const { context: terminalCtx, actions: terminalActions } =
@@ -675,6 +679,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         display: 'flex',
         flexDirection: 'column',
         background: theme.colors.background,
+        position: 'relative',
       }}
     >
       <EditableConfigurablePanelLayout
@@ -689,6 +694,48 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         showCollapseButtons={false}
         theme={theme}
       />
+
+      {/* Focus Mode Overlays - cover left and right panels when enabled */}
+      {focusModeEnabled && !collapsed.left && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '25%',
+            height: '100%',
+            pointerEvents: 'none',
+            zIndex: 100,
+          }}
+        >
+          <FocusModeOverlay
+            active={true}
+            variant="soft-fade"
+            effects={['snowfall']}
+            opacity={0.92}
+          />
+        </div>
+      )}
+      {focusModeEnabled && !collapsed.right && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            width: '25%',
+            height: '100%',
+            pointerEvents: 'none',
+            zIndex: 100,
+          }}
+        >
+          <FocusModeOverlay
+            active={true}
+            variant="soft-fade"
+            effects={['snowfall']}
+            opacity={0.92}
+          />
+        </div>
+      )}
     </div>
   );
 };
@@ -712,6 +759,7 @@ export const DevWorkspacePanelFramework: React.FC<
   layout,
   onLayoutChange,
   events,
+  focusModeEnabled,
 }) => {
   // Use the same terminal context format as legacy MultiTerminalPanel
   // Legacy uses: terminal:${owner}/${name}
@@ -748,6 +796,7 @@ export const DevWorkspacePanelFramework: React.FC<
             onCollapsedChange={onCollapsedChange}
             layout={layout}
             onLayoutChange={onLayoutChange}
+            focusModeEnabled={focusModeEnabled}
           />
         </AgentHighlightProvider>
       </TerminalProvider>

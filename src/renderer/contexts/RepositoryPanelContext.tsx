@@ -33,6 +33,7 @@ import type {
   GitStatusWithFiles,
 } from '@principal-ai/repository-monitoring-server';
 import { minimatch } from 'minimatch';
+import type { ColorMode } from '@principal-ai/quality-lens-registry';
 
 // Types for packages slice data (matches @industry-theme/alexandria-panels DependenciesPanel expectations)
 interface PackagesSliceData {
@@ -48,16 +49,9 @@ interface GitStatusSliceData {
   deleted: string[];
 }
 
-// Color mode for file city visualization
-type FileCityColorMode =
-  | 'fileTypes'
-  | 'git'
-  | 'coverage'
-  | 'eslint'
-  | 'typescript'
-  | 'prettier'
-  | 'knip'
-  | 'alexandria';
+// Color mode for file city visualization - imported from registry
+// The registry's ColorMode type includes all built-in and lens-based modes
+type FileCityColorMode = ColorMode;
 
 // File city color modes slice data
 interface FileCityColorModesSliceData {
@@ -415,18 +409,36 @@ export const RepositoryPanelProvider: React.FC<
   }, [fileCityColorMode, gitStatusData]);
 
   // Listen for color mode change events from panels (e.g., quality hexagon clicks)
+  // The QualityHexagonPanel emits 'quality:colorMode:select' with payload { colorMode }
   useEffect(() => {
-    const unsubscribe = events.on('filecity:colormode', (event) => {
+    // Listen for the event emitted by QualityHexagonPanel
+    const unsubColorMode = events.on<{ colorMode: string }>(
+      'quality:colorMode:select',
+      (event) => {
+        const { colorMode } = event.payload;
+        if (colorMode) {
+          console.info(
+            '[RepositoryPanelProvider] Color mode changed via quality:colorMode:select:',
+            colorMode,
+          );
+          setFileCityColorMode(colorMode as FileCityColorMode);
+        }
+      },
+    );
+
+    // Also listen for legacy 'filecity:colormode' events for backwards compatibility
+    const unsubLegacy = events.on('filecity:colormode', (event) => {
       const mode = event.payload as FileCityColorMode | null;
       console.info(
-        '[RepositoryPanelProvider] Color mode changed via event:',
+        '[RepositoryPanelProvider] Color mode changed via filecity:colormode:',
         mode,
       );
       setFileCityColorMode(mode);
     });
 
     return () => {
-      unsubscribe?.();
+      unsubColorMode?.();
+      unsubLegacy?.();
     };
   }, [events]);
 

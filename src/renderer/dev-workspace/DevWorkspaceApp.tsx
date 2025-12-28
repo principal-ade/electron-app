@@ -167,6 +167,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     right: 'fileCity',
   });
   const [hasGitHubFolder, setHasGitHubFolder] = useState(false);
+  const [focusModeEnabled, setFocusModeEnabled] = useState(false);
 
   // Create repository object from Alexandria entry data
   const repository: Repository = useMemo(
@@ -664,6 +665,8 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         onLayoutChange={(newLayout) => setLayout(newLayout)}
         onCollapsedChange={setCollapsed}
         repositoryPath={repositoryPath}
+        focusModeEnabled={focusModeEnabled}
+        onToggleFocusMode={() => setFocusModeEnabled((prev) => !prev)}
       />
       <div className="flex-1 overflow-hidden">
         <DevWorkspacePanelFramework
@@ -674,6 +677,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           layout={layout}
           onLayoutChange={setLayout}
           events={events}
+          focusModeEnabled={focusModeEnabled}
         />
       </div>
 

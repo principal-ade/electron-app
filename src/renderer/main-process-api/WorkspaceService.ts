@@ -130,4 +130,12 @@ export class WorkspaceService {
       workspaceId,
     );
   }
+
+  static async moveRepositoryToDefaultDirectory(
+    repository: AlexandriaEntry,
+  ): Promise<string> {
+    return window.mainProcess.workspace.moveRepositoryToDefaultDirectory(
+      repository,
+    );
+  }
 }

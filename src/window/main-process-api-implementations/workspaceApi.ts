@@ -154,4 +154,11 @@ export const workspaceApi: WorkspaceAPI = {
       workspaceId,
     );
   },
+
+  moveRepositoryToDefaultDirectory(repository: AlexandriaEntry): Promise<string> {
+    return ipcRenderer.invoke(
+      WorkspaceAPIEvent.MOVE_REPOSITORY_TO_DEFAULT_DIRECTORY,
+      repository,
+    );
+  },
 };

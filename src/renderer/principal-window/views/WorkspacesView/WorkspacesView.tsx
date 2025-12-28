@@ -23,8 +23,10 @@ import { WorkspacesViewHeader } from './WorkspacesViewHeader';
 import { GitCloneModal } from '../../../components/GitCloneModal';
 import { CreateWorkspaceModal } from '../../../components/CreateWorkspaceModal';
 import { DeleteAlexandriaEntryModal } from '../../../panels/components/DeleteAlexandriaEntryModal';
+import { RemoveFromWorkspaceModal } from '../../../panels/components/RemoveFromWorkspaceModal';
 import { DeleteWorkspaceConfirmationModal } from '../../../components/DeleteWorkspaceConfirmationModal';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
+import { WorkspaceService } from '../../../main-process-api/WorkspaceService';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 
 /**
@@ -64,6 +66,14 @@ const WorkspacesViewContent: React.FC = () => {
   const [workspaceToDelete, setWorkspaceToDelete] = useState<Workspace | null>(
     null,
   );
+
+  // State for remove from workspace modal
+  const [isRemoveFromWorkspaceModalOpen, setIsRemoveFromWorkspaceModalOpen] =
+    useState(false);
+  const [entryToRemoveFromWorkspace, setEntryToRemoveFromWorkspace] =
+    useState<AlexandriaEntry | null>(null);
+  const [workspaceForRemoval, setWorkspaceForRemoval] =
+    useState<Workspace | null>(null);
 
   // Handle clone modal close
   const handleCloseCloneModal = useCallback(() => {
@@ -110,6 +120,46 @@ const WorkspacesViewContent: React.FC = () => {
     context.refresh('workspace', 'workspaces');
   }, [context]);
 
+  // Handle remove from workspace modal close
+  const handleCloseRemoveFromWorkspaceModal = useCallback(() => {
+    setIsRemoveFromWorkspaceModalOpen(false);
+    setEntryToRemoveFromWorkspace(null);
+    setWorkspaceForRemoval(null);
+  }, []);
+
+  // Handle remove from workspace confirmation
+  const handleConfirmRemoveFromWorkspace = useCallback(
+    async (moveToDefault: boolean) => {
+      if (!entryToRemoveFromWorkspace || !workspaceForRemoval) return;
+
+      try {
+        // Remove from workspace first (while entry still has original path)
+        // Pass full entry so core library can extract github.id for matching
+        await WorkspaceService.removeRepositoryFromWorkspace(
+          entryToRemoveFromWorkspace,
+          workspaceForRemoval.id,
+        );
+
+        // Refresh the workspace repositories in context
+        context.refresh('workspace', 'workspaceRepositories');
+
+        // Then move to default directory if requested
+        if (moveToDefault) {
+          await WorkspaceService.moveRepositoryToDefaultDirectory(
+            entryToRemoveFromWorkspace,
+          );
+        }
+      } catch (error) {
+        console.error(
+          '[WorkspacesView] Failed to remove from workspace:',
+          error,
+        );
+        throw error;
+      }
+    },
+    [entryToRemoveFromWorkspace, workspaceForRemoval, actions],
+  );
+
   // Override actions to intercept removeRepository and deleteWorkspace to show modals
   const overriddenActions = useMemo(
     () => ({
@@ -136,6 +186,41 @@ const WorkspacesViewContent: React.FC = () => {
         if (workspace) {
           setWorkspaceToDelete(workspace);
           setIsDeleteWorkspaceModalOpen(true);
+        }
+      },
+      removeRepositoryFromWorkspace: async (
+        repositoryId: string,
+        workspaceId: string,
+      ) => {
+        // Find the entry from workspace repositories slice
+        // In WorkspacesPanelContext, workspaceRepositories.data is AlexandriaEntry[] directly
+        const repoSlice = context.getSlice<AlexandriaEntry[]>(
+          'workspaceRepositories',
+        );
+        const repositories = repoSlice?.data || [];
+        const entry = repositories.find((r) => r.name === repositoryId);
+
+        // Find the workspace from workspaces slice
+        // In WorkspacesPanelContext, workspaces.data has { workspaces: Workspace[], ... }
+        const wsSlice = context.getSlice<{ workspaces: Workspace[] }>(
+          'workspaces',
+        );
+        const workspaces = wsSlice?.data?.workspaces || [];
+        const workspace = workspaces.find((w) => w.id === workspaceId);
+
+        if (entry && workspace) {
+          setEntryToRemoveFromWorkspace(entry);
+          setWorkspaceForRemoval(workspace);
+          setIsRemoveFromWorkspaceModalOpen(true);
+        } else {
+          // Fallback to direct removal if we can't find the entry/workspace
+          console.warn(
+            '[WorkspacesView] Could not find entry or workspace for removal modal, proceeding with direct removal',
+          );
+          await actions.removeRepositoryFromWorkspace?.(
+            repositoryId,
+            workspaceId,
+          );
         }
       },
     }),
@@ -218,7 +303,7 @@ const WorkspacesViewContent: React.FC = () => {
         content: (
           <WorkspaceRepositoriesPanel
             context={context}
-            actions={actions}
+            actions={overriddenActions}
             events={events}
           />
         ),
@@ -376,6 +461,15 @@ const WorkspacesViewContent: React.FC = () => {
         workspace={workspaceToDelete}
         onClose={handleCloseDeleteWorkspaceModal}
         onSuccess={handleWorkspaceDeleted}
+      />
+
+      {/* Remove from Workspace Modal */}
+      <RemoveFromWorkspaceModal
+        isOpen={isRemoveFromWorkspaceModalOpen}
+        entry={entryToRemoveFromWorkspace}
+        workspace={workspaceForRemoval}
+        onClose={handleCloseRemoveFromWorkspaceModal}
+        onConfirm={handleConfirmRemoveFromWorkspace}
       />
     </>
   );

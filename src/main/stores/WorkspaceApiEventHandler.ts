@@ -13,6 +13,7 @@ import {
 } from '../../shared/main-process-api-interfaces/WorkspaceAPI';
 import { AlexandriaAPIEvent } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
 import { AlexandriaRegistryService } from './AlexandriaRegistryService';
+import { UserPreferencesHandler } from './userPreferencesHandler';
 import type {
   Workspace,
   WorkspaceMembership,
@@ -555,6 +556,159 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
     }
   }
 
+  async moveRepositoryToDefaultDirectory(
+    repository: AlexandriaEntry,
+  ): Promise<string> {
+    // Get the default clone directory from user preferences
+    const preferencesHandler = UserPreferencesHandler.getInstance();
+    const preferences = await preferencesHandler.getUserPreferences();
+
+    if (!preferences.defaultCloneDirectory) {
+      throw new Error(
+        'No default clone directory configured. Please set a default clone directory in settings.',
+      );
+    }
+
+    // CRITICAL: Check if repository has an open window - prevent move if true
+    if (this.isRepositoryWindowOpen(repository)) {
+      throw new Error(
+        `Cannot move repository "${repository.name}" while it has an open window. ` +
+          'Please close the repository window first.',
+      );
+    }
+
+    // Get the repository directory name
+    const repoName = path.basename(repository.path);
+    const targetPath = path.join(preferences.defaultCloneDirectory, repoName);
+
+    // Check if target already exists
+    if (await fs.pathExists(targetPath)) {
+      throw new Error(`Target path ${targetPath} already exists`);
+    }
+
+    const oldPath = repository.path as string;
+
+    // Check if git watching is currently enabled (so we can restore it)
+    const wasGitWatching = await this.isGitWatchingEnabled(oldPath);
+    console.log(
+      `[Workspace] Git watching ${wasGitWatching ? 'enabled' : 'disabled'} for ${oldPath}`,
+    );
+
+    try {
+      const monitoringManager = getMonitoringManager();
+
+      // Step 1: Release watch if it was enabled
+      if (wasGitWatching) {
+        console.log(`[Workspace] Releasing watch for ${oldPath}`);
+        await monitoringManager.releaseWatch(
+          oldPath,
+          'default-directory-move-handler',
+        );
+      }
+
+      // Step 2: Unregister repository from monitoring server
+      console.log(
+        `[Workspace] Unregistering repository from monitoring server: ${oldPath}`,
+      );
+      await monitoringManager.unregisterRepository(oldPath);
+
+      // Step 3: Ensure the default directory exists
+      await fs.ensureDir(preferences.defaultCloneDirectory);
+
+      // Step 4: Move the repository files
+      console.log(
+        `[Workspace] Moving repository from ${oldPath} to ${targetPath}`,
+      );
+      await fs.move(oldPath, targetPath, { overwrite: false });
+
+      // Step 5: Update the repository entry in the registry with the new path
+      console.log(
+        `[Workspace] Updating Alexandria registry with new path: ${targetPath}`,
+      );
+      await this.service.updateRepository(repository.name, {
+        path: targetPath as typeof repository.path,
+      });
+
+      // Step 6: Get updated entry from registry for event broadcasting
+      const updatedEntry = await this.service.getRepository(repository.name);
+      if (!updatedEntry) {
+        throw new Error(
+          `Failed to retrieve updated repository entry for ${repository.name}`,
+        );
+      }
+
+      // Step 7: Re-register repository with new path
+      console.log(
+        `[Workspace] Re-registering repository with new path: ${targetPath}`,
+      );
+      await monitoringManager.registerRepository(targetPath);
+
+      // Step 8: Re-acquire watch if it was enabled before
+      if (wasGitWatching) {
+        console.log(`[Workspace] Re-acquiring watch for ${targetPath}`);
+        await monitoringManager.acquireWatch(
+          targetPath,
+          'default-directory-move-handler',
+        );
+      }
+
+      // Step 9: Broadcast REPOSITORY_UPDATED event (Alexandria) for Feed panels
+      console.log(
+        `[Workspace] Broadcasting REPOSITORY_UPDATED event for ${repository.name}`,
+      );
+      this.broadcastAlexandriaEvent(
+        AlexandriaAPIEvent.REPOSITORY_UPDATED,
+        updatedEntry,
+      );
+
+      console.log(
+        `[Workspace] Successfully moved repository ${repository.name} to default directory: ${targetPath}`,
+      );
+      return targetPath;
+    } catch (error) {
+      // If we fail after moving files, attempt to move them back
+      if (await fs.pathExists(targetPath)) {
+        console.error(
+          `[Workspace] Move to default directory failed, attempting rollback...`,
+        );
+        try {
+          await fs.move(targetPath, oldPath);
+
+          // Re-register with old path
+          const monitoringManager = getMonitoringManager();
+          await monitoringManager.registerRepository(oldPath);
+          if (wasGitWatching) {
+            await monitoringManager.acquireWatch(
+              oldPath,
+              'default-directory-move-handler',
+            );
+          }
+
+          console.log(`[Workspace] Successfully rolled back repository move`);
+        } catch (rollbackError) {
+          console.error(
+            `[Workspace] CRITICAL: Failed to rollback repository move:`,
+            rollbackError,
+          );
+          throw new Error(
+            `Failed to move repository and rollback also failed. ` +
+              `Repository may be in an inconsistent state. ` +
+              `Original error: ${error instanceof Error ? error.message : String(error)}. ` +
+              `Rollback error: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`,
+          );
+        }
+      }
+
+      console.error(
+        `[Workspace] Failed to move repository to default directory:`,
+        error,
+      );
+      throw new Error(
+        `Failed to move repository to default directory: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
   /**
    * Clean up handlers when shutting down
    */
@@ -578,6 +732,9 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
     );
     ipcMain.removeHandler(
       WorkspaceAPIEvent.MOVE_REPOSITORY_TO_WORKSPACE_DIRECTORY,
+    );
+    ipcMain.removeHandler(
+      WorkspaceAPIEvent.MOVE_REPOSITORY_TO_DEFAULT_DIRECTORY,
     );
   }
 }
@@ -696,6 +853,12 @@ export function registerWorkspaceHandlers(): void {
       repository: AlexandriaEntry,
       workspaceId: string,
     ) => handler.moveRepositoryToWorkspaceDirectory(repository, workspaceId),
+  );
+
+  ipcMain.handle(
+    WorkspaceAPIEvent.MOVE_REPOSITORY_TO_DEFAULT_DIRECTORY,
+    (_event: IpcMainInvokeEvent, repository: AlexandriaEntry) =>
+      handler.moveRepositoryToDefaultDirectory(repository),
   );
 
   console.log('[Workspace] IPC handlers registered');

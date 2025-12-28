@@ -19,6 +19,8 @@ import { panels as markdownPanels } from '@industry-theme/markdown-panels';
 import { panels as principalViewPanels } from '@industry-theme/principal-view-panels';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { WindowService } from '../main-process-api/WindowService';
+import { WorkspaceService } from '../main-process-api/WorkspaceService';
+import { RemoveFromWorkspaceModal } from '../panels/components/RemoveFromWorkspaceModal';
 
 type PanelDefinition = {
   id: string;
@@ -92,6 +94,92 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
 
   const [isEditMode, _setIsEditMode] = useState(false);
   const [showAllTerminals, setShowAllTerminals] = useState(false);
+
+  // State for remove from workspace modal
+  const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
+  const [entryToRemove, setEntryToRemove] = useState<AlexandriaEntry | null>(
+    null,
+  );
+  const [workspaceForRemoval, setWorkspaceForRemoval] =
+    useState<Workspace | null>(null);
+
+  // Handle removal modal close
+  const handleCloseRemoveModal = useCallback(() => {
+    setIsRemoveModalOpen(false);
+    setEntryToRemove(null);
+    setWorkspaceForRemoval(null);
+  }, []);
+
+  // Handle removal confirmation
+  const handleConfirmRemove = useCallback(
+    async (moveToDefault: boolean) => {
+      if (!entryToRemove || !workspaceForRemoval) return;
+
+      try {
+        // Remove from workspace first (while entry still has original path)
+        // Pass full entry so core library can extract github.id for matching
+        await WorkspaceService.removeRepositoryFromWorkspace(
+          entryToRemove,
+          workspaceForRemoval.id,
+        );
+
+        // Refresh the workspace repositories in context
+        context.refresh('workspace', 'workspaceRepositories');
+
+        // Then move to default directory if requested
+        if (moveToDefault) {
+          await WorkspaceService.moveRepositoryToDefaultDirectory(entryToRemove);
+        }
+      } catch (error) {
+        console.error(
+          '[AlexandriaWorkspaceLayout] Failed to remove from workspace:',
+          error,
+        );
+        throw error;
+      }
+    },
+    [entryToRemove, workspaceForRemoval, actions],
+  );
+
+  // Override actions to intercept removeRepositoryFromWorkspace
+  const overriddenActions = useMemo(
+    () => ({
+      ...actions,
+      removeRepositoryFromWorkspace: async (
+        repositoryId: string,
+        workspaceId: string,
+      ) => {
+        // Find the entry from workspace repositories slice
+        // In PanelContext, workspaceRepositories.data is AlexandriaEntry[] directly
+        const slice = context.getSlice<AlexandriaEntry[]>(
+          'workspaceRepositories',
+        );
+        const repositories = slice?.data || [];
+        const entry = repositories.find((r) => r.name === repositoryId);
+
+        // Get workspace info from context
+        // In PanelContext, workspace.data is Workspace directly
+        const workspaceSlice = context.getSlice<Workspace>('workspace');
+        const workspace = workspaceSlice?.data;
+
+        if (entry && workspace) {
+          setEntryToRemove(entry);
+          setWorkspaceForRemoval(workspace);
+          setIsRemoveModalOpen(true);
+        } else {
+          // Fallback to direct removal if we can't find the entry/workspace
+          console.warn(
+            '[AlexandriaWorkspaceLayout] Could not find entry or workspace for removal modal, proceeding with direct removal',
+          );
+          await actions.removeRepositoryFromWorkspace?.(
+            repositoryId,
+            workspaceId,
+          );
+        }
+      },
+    }),
+    [actions, context],
+  );
 
   // Panel focus management for keyboard shortcuts
   const { focusedPanel, setFocus, isFocused } = usePanelFocus({
@@ -364,7 +452,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
             )}
             <WorkspacePanelComponent
               context={context}
-              actions={actions}
+              actions={overriddenActions}
               events={events}
             />
           </div>
@@ -794,6 +882,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       theme,
       context,
       actions,
+      overriddenActions,
       events,
       WorkspacePanelComponent,
       LocalProjectsPanelComponent,
@@ -813,29 +902,40 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   );
 
   return (
-    <div
-      style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        backgroundColor: theme.colors.background,
-        color: theme.colors.text,
-        overflow: 'hidden',
-      }}
-    >
-      <EditableConfigurablePanelLayout
-        theme={theme}
-        panels={panels}
-        layout={layout}
-        isEditMode={isEditMode}
-        onLayoutChange={onLayoutChange}
-        defaultSizes={{ left: 25, middle: 50, right: 25 }}
-        minSizes={{ left: 15, middle: 30, right: 20 }}
-        collapsed={collapsed}
-        collapsiblePanels={{ left: true, right: true }}
-        showCollapseButtons={false}
+    <>
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          backgroundColor: theme.colors.background,
+          color: theme.colors.text,
+          overflow: 'hidden',
+        }}
+      >
+        <EditableConfigurablePanelLayout
+          theme={theme}
+          panels={panels}
+          layout={layout}
+          isEditMode={isEditMode}
+          onLayoutChange={onLayoutChange}
+          defaultSizes={{ left: 25, middle: 50, right: 25 }}
+          minSizes={{ left: 15, middle: 30, right: 20 }}
+          collapsed={collapsed}
+          collapsiblePanels={{ left: true, right: true }}
+          showCollapseButtons={false}
+        />
+      </div>
+
+      {/* Remove from Workspace Modal */}
+      <RemoveFromWorkspaceModal
+        isOpen={isRemoveModalOpen}
+        entry={entryToRemove}
+        workspace={workspaceForRemoval}
+        onClose={handleCloseRemoveModal}
+        onConfirm={handleConfirmRemove}
       />
-    </div>
+    </>
   );
 };
 
