@@ -81,8 +81,8 @@ interface RepositoryPanelActions extends PanelActions {
   /** Read file content - supports all file types (not just markdown) */
   readFile?: (filePath: string) => Promise<string>;
   writeFile?: (filePath: string, content: string) => Promise<void>;
-  /** Open file in viewer (markdown) or return content (other files) */
-  openFile?: (filePath: string) => Promise<string | void>;
+  /** Open file in viewer - only supports markdown files */
+  openFile?: (filePath: string) => Promise<void>;
   // Local Projects panel actions
   selectDirectory?: () => Promise<{ path: string; name: string } | null>;
   registerRepository?: (name: string, path: string) => Promise<void>;
@@ -643,7 +643,7 @@ export const RepositoryPanelProvider: React.FC<
         }
       },
 
-      openFile: async (filePath: string): Promise<string | void> => {
+      openFile: async (filePath: string): Promise<void> => {
         try {
           // Resolve relative paths against the repository path
           const absolutePath = filePath.startsWith('/')
@@ -660,17 +660,12 @@ export const RepositoryPanelProvider: React.FC<
               },
             );
           } else {
-            // For non-markdown files (like config.yml), return the content
-            // The Kanban panel expects openFile to return file content for reading
+            // For non-markdown files, log but don't fail
+            // Use adapters.readFile or actions.readFile for content reading
             console.log(
-              '[RepositoryPanelProvider] openFile reading non-markdown:',
+              '[RepositoryPanelProvider] openFile called for non-markdown:',
               filePath,
             );
-            const result = await FileSystemService.readFile(absolutePath);
-            if (result) {
-              return result.content;
-            }
-            throw new Error(`File not found: ${filePath}`);
           }
         } catch (error) {
           console.error(
