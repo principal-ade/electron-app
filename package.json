@@ -277,7 +277,7 @@
     "@playwright/test": "^1.52.0",
     "@pmmmwh/react-refresh-webpack-plugin": "^0.5.15",
     "@principal-ai/codebase-quality-lenses": "^0.1.45",
-    "@principal-ai/quality-lens-registry": "^0.2.4",
+    "@principal-ai/quality-lens-registry": "^0.3.0",
     "@storybook/addon-docs": "^9.1.13",
     "@storybook/addon-webpack5-compiler-swc": "^4.0.1",
     "@storybook/react": "^9.1.13",

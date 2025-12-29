@@ -12,6 +12,11 @@ import type {
   QualityHexagonMetrics,
   FormattedResults,
 } from '@principal-ai/codebase-quality-lenses';
+import {
+  extractQualityDataFromResults,
+  type FileMetricData,
+  type LensResultInput,
+} from '@principal-ai/quality-lens-registry';
 
 /**
  * Artifact info returned when listing
@@ -23,21 +28,6 @@ export interface ArtifactInfo {
   created_at: string;
   expires_at: string;
   commitSha: string | null;
-}
-
-/**
- * Per-file quality metric from a lens
- */
-export interface FileMetricData {
-  file: string;
-  score: number;
-  issueCount: number;
-  errorCount: number;
-  warningCount: number;
-  infoCount: number;
-  hintCount: number;
-  fixableCount?: number;
-  categories?: Record<string, number>;
 }
 
 /**
@@ -402,49 +392,10 @@ export class GitHubArtifactService {
     // Extract and parse results.json
     const results = await extractResultsFromZip(zipData as ArrayBuffer);
 
-    // Extract file coverage and file metrics from lens results
-    const fileCoverage: Record<string, number> = {};
-    const fileMetrics: QualityArtifactResponse['fileMetrics'] = {};
-
-    for (const result of results.results) {
-      // Use type assertion since these fields may not be in the published npm types yet
-      const resultWithExtras = result as typeof result & {
-        coverage?: { files?: Array<{ file: string; lines: number }> };
-        fileMetrics?: FileMetricData[];
-      };
-
-      // Extract coverage data (Jest)
-      if (resultWithExtras.coverage?.files) {
-        for (const file of resultWithExtras.coverage.files) {
-          fileCoverage[file.file] = file.lines;
-        }
-      }
-
-      // Extract fileMetrics by lens type
-      if (
-        resultWithExtras.fileMetrics &&
-        resultWithExtras.fileMetrics.length > 0
-      ) {
-        const lensId = result.lens.id.toLowerCase();
-        switch (lensId) {
-          case 'eslint':
-            fileMetrics.eslint = resultWithExtras.fileMetrics;
-            break;
-          case 'typescript':
-            fileMetrics.typescript = resultWithExtras.fileMetrics;
-            break;
-          case 'prettier':
-            fileMetrics.prettier = resultWithExtras.fileMetrics;
-            break;
-          case 'knip':
-            fileMetrics.knip = resultWithExtras.fileMetrics;
-            break;
-          case 'alexandria':
-            fileMetrics.alexandria = resultWithExtras.fileMetrics;
-            break;
-        }
-      }
-    }
+    // Extract file coverage and file metrics using registry utility
+    const { fileCoverage, fileMetrics } = extractQualityDataFromResults(
+      results.results as LensResultInput[],
+    );
 
     // Get per-package hexagons from CLI output
     const packages =
