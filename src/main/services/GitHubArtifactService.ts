@@ -452,7 +452,9 @@ export class GitHubArtifactService {
         ?.packages ?? [];
 
     console.log(
-      `[GitHubArtifactService] Parsed artifact with ${packages.length} packages`,
+      `[GitHubArtifactService] Parsed artifact with ${packages.length} packages, ` +
+        `fileCoverage: ${Object.keys(fileCoverage).length} files, ` +
+        `fileMetrics: ${Object.keys(fileMetrics).join(', ') || 'none'}`,
     );
 
     return {

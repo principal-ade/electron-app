@@ -33,7 +33,7 @@ import type {
   GitStatusWithFiles,
 } from '@principal-ai/repository-monitoring-server';
 import { minimatch } from 'minimatch';
-import type { ColorMode } from '@principal-ai/quality-lens-registry';
+import type { ColorMode, FileMetricData, QualitySliceData } from '@principal-ai/quality-lens-registry';
 
 // Types for packages slice data (matches @industry-theme/alexandria-panels DependenciesPanel expectations)
 interface PackagesSliceData {
@@ -56,6 +56,8 @@ type FileCityColorMode = ColorMode;
 // File city color modes slice data
 interface FileCityColorModesSliceData {
   selectedColorMode: FileCityColorMode | null;
+  /** Quality data for quality-based color modes (from registry's QualitySliceData) */
+  qualityData?: QualitySliceData;
 }
 
 // Helper to convert GitStatusWithFiles to GitStatusSliceData
@@ -76,9 +78,11 @@ function mapGitStatusToSliceData(
 // Extend PanelActions with file system actions
 // Note: Terminal actions have been moved to TerminalContext
 interface RepositoryPanelActions extends PanelActions {
+  /** Read file content - supports all file types (not just markdown) */
   readFile?: (filePath: string) => Promise<string>;
   writeFile?: (filePath: string, content: string) => Promise<void>;
-  openFile?: (filePath: string) => Promise<void>;
+  /** Open file in viewer (markdown) or return content (other files) */
+  openFile?: (filePath: string) => Promise<string | void>;
   // Local Projects panel actions
   selectDirectory?: () => Promise<{ path: string; name: string } | null>;
   registerRepository?: (name: string, path: string) => Promise<void>;
@@ -158,6 +162,10 @@ export const RepositoryPanelProvider: React.FC<
       isOrchestrator?: boolean;
     }>;
     lastUpdated: string;
+    /** Per-file coverage percentages from test runners */
+    fileCoverage?: Record<string, number>;
+    /** Per-file metrics from all lenses, keyed by lens ID */
+    fileMetrics?: Record<string, FileMetricData[]>;
   } | null>(null);
   const [qualityLoading, setQualityLoading] = useState(false);
 
@@ -498,12 +506,22 @@ export const RepositoryPanelProvider: React.FC<
             isOrchestrator: pkg.isOrchestrator,
           }));
 
+          // Log what file metrics we received
+          const fileMetricsKeys = artifactData.fileMetrics
+            ? Object.keys(artifactData.fileMetrics)
+            : [];
           console.log(
-            `[RepositoryPanelProvider] Quality metrics loaded: ${packages.length} packages`,
+            `[RepositoryPanelProvider] Quality metrics loaded: ${packages.length} packages, ` +
+              `fileCoverage: ${artifactData.fileCoverage ? Object.keys(artifactData.fileCoverage).length : 0} files, ` +
+              `fileMetrics: ${fileMetricsKeys.join(', ') || 'none'}`,
           );
+
           setQualityData({
             packages,
             lastUpdated: artifactData.timestamp,
+            // Include per-file data for File City visualization
+            fileCoverage: artifactData.fileCoverage,
+            fileMetrics: artifactData.fileMetrics as Record<string, FileMetricData[]> | undefined,
           });
         } else {
           console.log(
@@ -586,10 +604,14 @@ export const RepositoryPanelProvider: React.FC<
         events.emit(event);
       },
 
-      // File system actions
+      // File system actions - readFile supports both absolute and relative paths
       readFile: async (filePath: string) => {
         try {
-          const result = await FileSystemService.readFile(filePath);
+          // Resolve relative paths against the repository path
+          const absolutePath = filePath.startsWith('/')
+            ? filePath
+            : `${repositoryPath}/${filePath}`;
+          const result = await FileSystemService.readFile(absolutePath);
           if (!result) {
             throw new Error(`File not found: ${filePath}`);
           }
@@ -606,7 +628,11 @@ export const RepositoryPanelProvider: React.FC<
 
       writeFile: async (filePath: string, content: string) => {
         try {
-          await FileSystemService.writeFile(filePath, content);
+          // Resolve relative paths against the repository path
+          const absolutePath = filePath.startsWith('/')
+            ? filePath
+            : `${repositoryPath}/${filePath}`;
+          await FileSystemService.writeFile(absolutePath, content);
         } catch (error) {
           console.error(
             '[RepositoryPanelProvider] Failed to write file:',
@@ -617,23 +643,34 @@ export const RepositoryPanelProvider: React.FC<
         }
       },
 
-      openFile: async (filePath: string) => {
+      openFile: async (filePath: string): Promise<string | void> => {
         try {
+          // Resolve relative paths against the repository path
+          const absolutePath = filePath.startsWith('/')
+            ? filePath
+            : `${repositoryPath}/${filePath}`;
+
           // Check if it's a markdown file
           if (filePath.toLowerCase().endsWith('.md')) {
             await WindowService.openMarkdownViewFromRepository(
-              filePath,
+              absolutePath,
               repositoryPath,
               {
                 viewMode: 'single',
               },
             );
           } else {
-            // For non-markdown files, could open in editor or emit event
+            // For non-markdown files (like config.yml), return the content
+            // The Kanban panel expects openFile to return file content for reading
             console.log(
-              '[RepositoryPanelProvider] openFile called for non-markdown:',
+              '[RepositoryPanelProvider] openFile reading non-markdown:',
               filePath,
             );
+            const result = await FileSystemService.readFile(absolutePath);
+            if (result) {
+              return result.content;
+            }
+            throw new Error(`File not found: ${filePath}`);
           }
         } catch (error) {
           console.error(
@@ -803,24 +840,71 @@ export const RepositoryPanelProvider: React.FC<
 
   // Create adapters for panels to use
   const adapters: PanelAdapters = useMemo(
-    () => ({
-      // readFile accepts relative paths and resolves them against the repository path
-      readFile: async (relativePath: string): Promise<string> => {
+    () => {
+      // Shared readFile implementation
+      const readFileImpl = async (relativePath: string): Promise<string> => {
         const absolutePath = relativePath.startsWith('/')
           ? relativePath
           : `${repositoryPath}/${relativePath}`;
+        console.log('[RepositoryPanelProvider] adapters.readFile called:', {
+          relativePath,
+          absolutePath,
+          repositoryPath,
+        });
         // FileSystemService.readFile returns { content, filePath } or null
         const result = await FileSystemService.readFile(absolutePath);
         if (!result) {
-          throw new Error(`File not found: ${absolutePath}`);
+          console.log('[RepositoryPanelProvider] File not found:', absolutePath);
+          throw new Error(`Failed to fetch content for ${relativePath}`);
         }
+        console.log('[RepositoryPanelProvider] File read successfully:', absolutePath);
         // Extract content from the result object
         return typeof result === 'string' ? result : result.content;
-      },
-      matchesPath: (pattern: string, filePath: string): boolean => {
-        return minimatch(filePath, pattern);
-      },
-    }),
+      };
+
+      // Shared writeFile implementation
+      const writeFileImpl = async (relativePath: string, content: string): Promise<void> => {
+        const absolutePath = relativePath.startsWith('/')
+          ? relativePath
+          : `${repositoryPath}/${relativePath}`;
+        await FileSystemService.writeFile(absolutePath, content);
+      };
+
+      return {
+        // readFile accepts relative paths and resolves them against the repository path
+        readFile: readFileImpl,
+        matchesPath: (pattern: string, filePath: string): boolean => {
+          return minimatch(filePath, pattern);
+        },
+        // fileSystem adapter for panels that need full file system access (e.g., Kanban panel)
+        fileSystem: {
+          exists: async (relativePath: string): Promise<boolean> => {
+            try {
+              const absolutePath = relativePath.startsWith('/')
+                ? relativePath
+                : `${repositoryPath}/${relativePath}`;
+              const result = await FileSystemService.readFile(absolutePath);
+              return result !== null;
+            } catch {
+              return false;
+            }
+          },
+          readFile: readFileImpl,
+          writeFile: writeFileImpl,
+          createDir: async (_relativePath: string): Promise<void> => {
+            // Directories are created implicitly when files are written
+            // No explicit directory creation needed for local filesystem
+            return;
+          },
+          deleteFile: async (relativePath: string): Promise<void> => {
+            const absolutePath = relativePath.startsWith('/')
+              ? relativePath
+              : `${repositoryPath}/${relativePath}`;
+            await FileSystemService.deleteFile(absolutePath);
+          },
+        },
+      };
+    },
     [repositoryPath],
   );
 
@@ -1095,6 +1179,13 @@ export const RepositoryPanelProvider: React.FC<
             name: 'fileCityColorModes',
             data: {
               selectedColorMode: effectiveColorMode,
+              // Include quality data for File City to render layers
+              qualityData: qualityData
+                ? {
+                    fileCoverage: qualityData.fileCoverage,
+                    fileMetrics: qualityData.fileMetrics,
+                  }
+                : undefined,
             } as FileCityColorModesSliceData,
             loading: false,
             error: null,

@@ -35,10 +35,13 @@ const AVAILABLE_PANELS: PanelOption[] = [
   { id: 'fileEditor', label: 'File Editor' },
   { id: 'gitChanges', label: 'File Tree' },
   { id: 'gitDiff', label: 'Git Diff' },
+  { id: 'kanban', label: 'Kanban' },
   { id: 'localhostBrowser', label: 'Localhost Browser' },
   { id: 'localProjects', label: 'Local Projects' },
   { id: 'mdxEditor', label: 'MDX Editor' },
+  { id: 'milestones', label: 'Milestones' },
   { id: 'packageComposition', label: 'Package Composition' },
+  { id: 'task-detail', label: 'Task Detail' },
   { id: 'terminal', label: 'Terminal' },
 ];
 
@@ -106,6 +109,16 @@ export const DEFAULT_PANEL_PRESETS: PanelPreset[] = [
       left: 'gitChanges',
       middle: 'fileEditor',
       right: 'terminal',
+    },
+  },
+  {
+    id: 'backlog',
+    name: 'Backlog.md',
+    description: 'Milestones, Kanban, Task Detail',
+    layout: {
+      left: 'milestones',
+      middle: 'kanban',
+      right: 'task-detail',
     },
   },
 ];

@@ -32,6 +32,7 @@ import { panels as repositoryCompositionPanels } from '@industry-theme/repositor
 import { panels as codeQualityPanels } from '@principal-ade/code-quality-panels';
 import { panels as markdownPanels } from '@industry-theme/markdown-panels';
 import { panels as fileEditingPanels } from '@industry-theme/file-editing-panels';
+import { panels as backlogPanels } from '@industry-theme/backlogmd-kanban-panel';
 import type { Repository } from '../../shared/types/repository.types';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 
@@ -214,6 +215,11 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   const MDXEditorPanelComponent = fileEditingPanels.find(
     (p) => p.metadata?.id === 'industry-theme.mdx-editor',
   )?.component;
+
+  // Backlog.md panels (Kanban, TaskDetail, Milestone)
+  const KanbanPanelComponent = backlogPanels[0]?.component;
+  const TaskDetailPanelComponent = backlogPanels[1]?.component;
+  const MilestonePanelComponent = backlogPanels[2]?.component;
 
   // Listen for doc:openInRightPanel events (from Alexandria docs panel context menu)
   useEffect(() => {
@@ -643,6 +649,78 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           <div>MDX Editor panel not available</div>
         ),
       },
+      {
+        id: 'kanban',
+        label: 'Kanban',
+        content: KanbanPanelComponent ? (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <KanbanPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div>Kanban panel not available</div>
+        ),
+      },
+      {
+        id: 'task-detail',
+        label: 'Task Detail',
+        content: TaskDetailPanelComponent ? (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <TaskDetailPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div>Task Detail panel not available</div>
+        ),
+      },
+      {
+        id: 'milestones',
+        label: 'Milestones',
+        content: MilestonePanelComponent ? (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <MilestonePanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div>Milestones panel not available</div>
+        ),
+      },
     ],
     [
       PrincipalViewPanelComponent,
@@ -659,6 +737,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       FileEditorPanelComponent,
       GitDiffPanelComponent,
       MDXEditorPanelComponent,
+      KanbanPanelComponent,
+      TaskDetailPanelComponent,
+      MilestonePanelComponent,
       context,
       actions,
       events,
