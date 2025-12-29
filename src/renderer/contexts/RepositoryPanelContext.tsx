@@ -645,15 +645,17 @@ export const RepositoryPanelProvider: React.FC<
 
       openFile: async (filePath: string): Promise<void> => {
         try {
-          // Resolve relative paths against the repository path
-          const absolutePath = filePath.startsWith('/')
-            ? filePath
-            : `${repositoryPath}/${filePath}`;
+          // Extract relative path - if already absolute, strip the repository path prefix
+          const relativeFilePath = filePath.startsWith('/')
+            ? filePath.startsWith(repositoryPath)
+              ? filePath.substring(repositoryPath.length).replace(/^\//, '')
+              : filePath.substring(1) // Fallback: strip leading slash
+            : filePath;
 
           // Check if it's a markdown file
           if (filePath.toLowerCase().endsWith('.md')) {
             await WindowService.openMarkdownViewFromRepository(
-              absolutePath,
+              relativeFilePath,
               repositoryPath,
               {
                 viewMode: 'single',

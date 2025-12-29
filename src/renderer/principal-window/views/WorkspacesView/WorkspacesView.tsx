@@ -8,11 +8,12 @@ import {
   LocalProjectsPanel,
   GitHubStarredPanel,
   GitHubProjectsPanel,
+  UserCollectionsPanel,
 } from '@industry-theme/alexandria-panels';
 import { RepositoryQualityGridPanel } from '@principal-ade/code-quality-panels';
 import type { GitHubRepository } from '@industry-theme/alexandria-panels';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import { DoorClosed, FolderGit2, Folder, Star, Hexagon } from 'lucide-react';
+import { DoorClosed, FolderGit2, Folder, FolderOpen, Star, Hexagon } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuthState';
 import {
   WorkspacesPanelProvider,
@@ -28,6 +29,7 @@ import { DeleteWorkspaceConfirmationModal } from '../../../components/DeleteWork
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 import { WorkspaceService } from '../../../main-process-api/WorkspaceService';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
+import { CollectionRepositoriesPanel } from '../../../panels/CollectionRepositoriesPanel';
 
 /**
  * Inner content component that uses the panel context
@@ -346,15 +348,42 @@ const WorkspacesViewContent: React.FC = () => {
           />
         ),
       },
+      {
+        id: 'user-collections',
+        label: 'Collections',
+        icon: <FolderOpen size={16} />,
+        content: (
+          <UserCollectionsPanel
+            context={context}
+            actions={actions}
+            events={events}
+          />
+        ),
+      },
+      {
+        id: 'collection-repositories',
+        label: 'Collection Repos',
+        icon: <FolderOpen size={16} />,
+        content: (
+          <CollectionRepositoriesPanel
+            context={context}
+            actions={actions}
+            events={events}
+          />
+        ),
+      },
     ],
     [context, actions, overriddenActions, events],
   );
 
+  // Get selected collection from context to determine right panel
+  const selectedCollection = (context as { selectedCollection?: unknown }).selectedCollection;
+
   // Define layout configuration
   const layout = useMemo(() => {
-    // Left panel only has workspaces and local projects now
+    // Left panel has collections, local projects, and workspaces
     // GitHub panels are accessed via middle panel toggle buttons
-    const leftPanels = ['workspaces-list', 'local-projects'];
+    const leftPanels = ['user-collections', 'local-projects', 'workspaces-list'];
 
     // Map middle panel view to panel id
     const middlePanelMap: Record<MiddlePanelView, string> = {
@@ -362,6 +391,11 @@ const WorkspacesViewContent: React.FC = () => {
       remote: 'github-projects',
       starred: 'github-starred',
     };
+
+    // Right panel shows collection repos if a collection is selected, otherwise workspace repos
+    const rightPanel = selectedCollection
+      ? 'collection-repositories'
+      : 'workspace-repositories';
 
     return {
       left: {
@@ -373,9 +407,9 @@ const WorkspacesViewContent: React.FC = () => {
         },
       },
       middle: middlePanelMap[middlePanelView],
-      right: 'workspace-repositories',
+      right: rightPanel,
     };
-  }, [middlePanelView]);
+  }, [middlePanelView, selectedCollection]);
 
   return (
     <>

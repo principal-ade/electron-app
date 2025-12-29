@@ -28,6 +28,9 @@ import type {
   GitHubProjectsPanelActions,
   GitHubRepository,
   GitHubOrganization,
+  UserCollectionsSlice,
+  UserCollectionsPanelActions,
+  Collection,
 } from '@industry-theme/alexandria-panels';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { WindowService } from '../main-process-api/WindowService';
@@ -36,17 +39,22 @@ import { FileSystemService } from '../main-process-api/FileSystemService';
 import { GithubService } from '../main-process-api/GithubService';
 import { GitHubArtifactService } from '../main-process-api/GitHubArtifactService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
+import { CollectionsService } from '../main-process-api/CollectionsService';
+import type { CollectionMembership } from '@principal-ai/alexandria-collections';
 
 /**
  * Extended actions for WorkspacesPanelProvider
  * Combines workspace list actions with repository actions and GitHub actions
+ * Note: UserCollectionsPanelActions.removeRepository conflicts with LocalProjectsPanel.removeRepository
+ * so we omit it and provide collection-specific actions manually
  */
 interface WorkspacesPanelActions
   extends
     PanelActions,
     WorkspacesListPanelActions,
     GitHubStarredPanelActions,
-    GitHubProjectsPanelActions {
+    GitHubProjectsPanelActions,
+    Omit<UserCollectionsPanelActions, 'removeRepository'> {
   removeRepositoryFromWorkspace?: (
     repositoryId: string,
     workspaceId: string,
@@ -60,6 +68,11 @@ interface WorkspacesPanelActions
     repository: AlexandriaEntry,
     workspaceId: string,
   ) => Promise<string>;
+  // Collections-specific removeRepository (named differently to avoid conflict)
+  removeCollectionRepository?: (
+    collectionId: string,
+    repositoryId: string,
+  ) => Promise<void>;
 }
 
 /**
@@ -69,6 +82,9 @@ interface WorkspacesPanelContextValue extends PanelContextValue {
   // Selected workspace (for coordination between panels)
   selectedWorkspace: Workspace | null;
   setSelectedWorkspace: (workspace: Workspace | null) => void;
+  // Selected collection (for coordination between panels)
+  selectedCollection: Collection | null;
+  setSelectedCollection: (collection: Collection | null) => void;
 }
 
 /**
@@ -105,6 +121,10 @@ export const WorkspacesPanelProvider: React.FC<
   const [selectedWorkspace, setSelectedWorkspace] = useState<Workspace | null>(
     null,
   );
+
+  // State for selected collection
+  const [selectedCollection, setSelectedCollection] =
+    useState<Collection | null>(null);
 
   // State for workspace repositories
   const [workspaceRepositories, setWorkspaceRepositories] = useState<
@@ -153,6 +173,20 @@ export const WorkspacesPanelProvider: React.FC<
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState<string | undefined>();
   const [currentUser, setCurrentUser] = useState<string>('');
+
+  // State for user collections
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [collectionMemberships, setCollectionMemberships] = useState<
+    CollectionMembership[]
+  >([]);
+  const [collectionsLoading, setCollectionsLoading] = useState(false);
+  const [collectionsSaving, setCollectionsSaving] = useState(false);
+  const [collectionsError, setCollectionsError] = useState<string | undefined>();
+  const [collectionsGitHubRepoExists, setCollectionsGitHubRepoExists] =
+    useState<boolean | undefined>();
+  const [collectionsGitHubRepoUrl, setCollectionsGitHubRepoUrl] = useState<
+    string | null | undefined
+  >();
 
   // Fetch workspaces on mount
   useEffect(() => {
@@ -334,10 +368,48 @@ export const WorkspacesPanelProvider: React.FC<
     }
   };
 
+  // Fetch user collections
+  const fetchCollections = async () => {
+    setCollectionsLoading(true);
+    setCollectionsError(undefined);
+    try {
+      // Check if GitHub repo exists first
+      const repoStatusResult = await CollectionsService.checkGitHubRepo();
+      if (repoStatusResult.success && repoStatusResult.data) {
+        setCollectionsGitHubRepoExists(repoStatusResult.data.exists);
+        setCollectionsGitHubRepoUrl(repoStatusResult.data.repoUrl);
+      }
+
+      // Load collections
+      const collectionsResult = await CollectionsService.getCollections();
+      if (collectionsResult.success && collectionsResult.data) {
+        setCollections(collectionsResult.data.collections as Collection[]);
+        setCollectionMemberships(collectionsResult.data.memberships);
+      } else {
+        // No collections yet - start empty
+        setCollections([]);
+        setCollectionMemberships([]);
+      }
+    } catch (error) {
+      console.error(
+        '[WorkspacesPanelProvider] Failed to fetch collections:',
+        error,
+      );
+      setCollectionsError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to load collections.',
+      );
+    } finally {
+      setCollectionsLoading(false);
+    }
+  };
+
   // Fetch GitHub data on mount (these will silently fail if not authenticated)
   useEffect(() => {
     void fetchStarredRepositories();
     void fetchGitHubProjects();
+    void fetchCollections();
   }, []);
 
   // Helper to extract owner/repo from git remote URL
@@ -491,6 +563,30 @@ export const WorkspacesPanelProvider: React.FC<
           workspace,
         );
         setSelectedWorkspace(workspace);
+        // Clear collection selection when workspace is selected
+        setSelectedCollection(null);
+      },
+    );
+
+    return unsubscribe;
+  }, [events]);
+
+  // Listen for collection:selected events from UserCollectionsPanel
+  useEffect(() => {
+    const unsubscribe = events.on(
+      'industry-theme.user-collections:collection:selected',
+      (event) => {
+        const { collection } = event.payload as {
+          collectionId: string;
+          collection: Collection;
+        };
+        console.info(
+          '[WorkspacesPanelProvider] Collection selected event:',
+          collection,
+        );
+        setSelectedCollection(collection);
+        // Clear workspace selection when collection is selected
+        setSelectedWorkspace(null);
       },
     );
 
@@ -768,6 +864,44 @@ export const WorkspacesPanelProvider: React.FC<
             },
           },
         ],
+        [
+          'userCollections',
+          {
+            scope: 'global' as const,
+            name: 'userCollections',
+            data: {
+              collections,
+              memberships: collectionMemberships,
+              loading: collectionsLoading,
+              saving: collectionsSaving,
+              error: collectionsError,
+              gitHubRepoExists: collectionsGitHubRepoExists,
+              gitHubRepoUrl: collectionsGitHubRepoUrl,
+            } as UserCollectionsSlice,
+            loading: collectionsLoading,
+            error: (collectionsError ?? null) as string | null,
+            refresh: fetchCollections,
+          },
+        ],
+        [
+          'collectionRepositories',
+          {
+            scope: 'global' as const,
+            name: 'collectionRepositories',
+            data: {
+              collection: selectedCollection,
+              // Get repository IDs for the selected collection
+              repositoryIds: selectedCollection
+                ? collectionMemberships
+                    .filter((m) => m.collectionId === selectedCollection.id)
+                    .map((m) => m.repositoryId)
+                : [],
+            },
+            loading: collectionsLoading,
+            error: null,
+            refresh: fetchCollections,
+          },
+        ],
       ]) as Map<string, DataSlice>,
     [
       workspaces,
@@ -789,6 +923,14 @@ export const WorkspacesPanelProvider: React.FC<
       currentUser,
       qualityDataByRepo,
       qualityLoading,
+      collections,
+      collectionMemberships,
+      collectionsLoading,
+      collectionsSaving,
+      collectionsError,
+      collectionsGitHubRepoExists,
+      collectionsGitHubRepoUrl,
+      selectedCollection,
     ],
   );
 
@@ -1095,6 +1237,194 @@ export const WorkspacesPanelProvider: React.FC<
       refreshStarred: fetchStarredRepositories,
 
       refreshProjects: fetchGitHubProjects,
+
+      // Collections actions
+      createCollection: async (
+        name: string,
+        description?: string,
+        icon?: string,
+      ) => {
+        console.info('[WorkspacesPanelProvider] Creating collection:', name);
+        setCollectionsSaving(true);
+        try {
+          const result = await CollectionsService.createCollection({
+            name,
+            description,
+            icon,
+          });
+
+          // Refresh collections to get updated list
+          await fetchCollections();
+
+          if (result.success && result.data) {
+            events.emit({
+              type: 'industry-theme.user-collections:collection:created',
+              source: 'workspaces-view',
+              timestamp: Date.now(),
+              payload: { collectionId: result.data.id, collection: result.data },
+            });
+            return result.data as Collection;
+          }
+          return null;
+        } catch (error) {
+          console.error(
+            '[WorkspacesPanelProvider] Failed to create collection:',
+            error,
+          );
+          throw error;
+        } finally {
+          setCollectionsSaving(false);
+        }
+      },
+
+      updateCollection: async (
+        collectionId: string,
+        updates: Partial<Omit<Collection, 'id' | 'createdAt' | 'updatedAt'>>,
+      ) => {
+        console.info(
+          '[WorkspacesPanelProvider] Updating collection:',
+          collectionId,
+          updates,
+        );
+        setCollectionsSaving(true);
+        try {
+          await CollectionsService.updateCollection(collectionId, updates);
+          await fetchCollections();
+        } catch (error) {
+          console.error(
+            '[WorkspacesPanelProvider] Failed to update collection:',
+            error,
+          );
+          throw error;
+        } finally {
+          setCollectionsSaving(false);
+        }
+      },
+
+      deleteCollection: async (collectionId: string) => {
+        console.info(
+          '[WorkspacesPanelProvider] Deleting collection:',
+          collectionId,
+        );
+        setCollectionsSaving(true);
+        try {
+          await CollectionsService.deleteCollection(collectionId);
+          await fetchCollections();
+
+          events.emit({
+            type: 'industry-theme.user-collections:collection:deleted',
+            source: 'workspaces-view',
+            timestamp: Date.now(),
+            payload: { collectionId },
+          });
+        } catch (error) {
+          console.error(
+            '[WorkspacesPanelProvider] Failed to delete collection:',
+            error,
+          );
+          throw error;
+        } finally {
+          setCollectionsSaving(false);
+        }
+      },
+
+      addRepository: async (
+        collectionId: string,
+        repositoryId: string,
+        metadata?: { pinned?: boolean; notes?: string },
+      ) => {
+        console.info(
+          '[WorkspacesPanelProvider] Adding repository to collection:',
+          repositoryId,
+          collectionId,
+        );
+        setCollectionsSaving(true);
+        try {
+          await CollectionsService.addRepository({
+            collectionId,
+            repositoryId,
+            metadata,
+          });
+          await fetchCollections();
+
+          events.emit({
+            type: 'industry-theme.user-collections:collection:repository-added',
+            source: 'workspaces-view',
+            timestamp: Date.now(),
+            payload: { collectionId, repositoryId },
+          });
+        } catch (error) {
+          console.error(
+            '[WorkspacesPanelProvider] Failed to add repository to collection:',
+            error,
+          );
+          throw error;
+        } finally {
+          setCollectionsSaving(false);
+        }
+      },
+
+      // Note: removeRepository conflicts with LocalProjectsPanel's removeRepository
+      // The panel interface needs updating to use a unique name like removeCollectionRepository
+      removeCollectionRepository: async (
+        collectionId: string,
+        repositoryId: string,
+      ) => {
+        console.info(
+          '[WorkspacesPanelProvider] Removing repository from collection:',
+          repositoryId,
+          collectionId,
+        );
+        setCollectionsSaving(true);
+        try {
+          await CollectionsService.removeRepository(collectionId, repositoryId);
+          await fetchCollections();
+
+          events.emit({
+            type: 'industry-theme.user-collections:collection:repository-removed',
+            source: 'workspaces-view',
+            timestamp: Date.now(),
+            payload: { collectionId, repositoryId },
+          });
+        } catch (error) {
+          console.error(
+            '[WorkspacesPanelProvider] Failed to remove repository from collection:',
+            error,
+          );
+          throw error;
+        } finally {
+          setCollectionsSaving(false);
+        }
+      },
+
+      enableGitHubSync: async () => {
+        console.info('[WorkspacesPanelProvider] Enabling GitHub sync');
+        setCollectionsSaving(true);
+        try {
+          await CollectionsService.enableGitHubSync();
+          await fetchCollections();
+        } catch (error) {
+          console.error(
+            '[WorkspacesPanelProvider] Failed to enable GitHub sync:',
+            error,
+          );
+          throw error;
+        } finally {
+          setCollectionsSaving(false);
+        }
+      },
+
+      refreshCollections: fetchCollections,
+
+      navigateToRepository: (repositoryId: string) => {
+        console.info(
+          '[WorkspacesPanelProvider] Navigating to repository:',
+          repositoryId,
+        );
+        // Open in browser
+        const url = `https://github.com/${repositoryId}`;
+        window.open(url, '_blank');
+      },
     }),
     [events, selectedWorkspace, localRepositories],
   );
@@ -1160,8 +1490,10 @@ export const WorkspacesPanelProvider: React.FC<
       // Extended properties
       selectedWorkspace,
       setSelectedWorkspace,
+      selectedCollection,
+      setSelectedCollection,
     }),
-    [slices, selectedWorkspace],
+    [slices, selectedWorkspace, selectedCollection],
   );
 
   // Combine into provider value

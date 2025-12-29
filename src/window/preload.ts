@@ -52,6 +52,7 @@ import { observabilityAPI } from './main-process-api-implementations/observabili
 import { remoteAgentWindowAPI } from './main-process-api-implementations/remoteAgentWindowApi';
 import { localhostDetectionAPI } from './main-process-api-implementations/localhostDetectionApi';
 import { githubArtifactAPI } from './main-process-api-implementations/githubArtifactApi';
+import { collectionsAPI } from './main-process-api-implementations/collectionsApi';
 // Removed mermaid import - it uses 'debug' which isn't available in preload context
 // import mermaid from 'mermaid';
 
@@ -92,6 +93,7 @@ const mainProcessExposure: MainProcessAPI = {
   agentInstallation: agentInstallationAPI,
   agentConfig: agentConfigAPI,
   alexandria: alexandriaAPI,
+  collections: collectionsAPI,
   alexandriaDocs: alexandriaDocsAPI,
   workspace: workspaceApi,
   agentSession: agentSessionApi,

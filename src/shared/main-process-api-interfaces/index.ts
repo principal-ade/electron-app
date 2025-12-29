@@ -1,4 +1,5 @@
 import type { A24zAPI } from './A24zAPI';
+import type { CollectionsAPI } from './CollectionsAPI';
 import type { ActRunnerAPI } from './ActRunnerAPI';
 import type { ActWorkflowAPI } from './ActWorkflowAPI';
 import type { AgentConfigAPI } from './AgentConfigAPI';
@@ -62,6 +63,7 @@ export interface MainProcessAPI {
   actRunner: ActRunnerAPI;
   actWorkflow: ActWorkflowAPI;
   a24z: A24zAPI;
+  collections: CollectionsAPI;
   agentConfig: AgentConfigAPI;
   alexandria: AlexandriaAPI;
   alexandriaDocs: AlexandriaDocsAPI;
