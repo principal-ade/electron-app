@@ -162,9 +162,9 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   const [showTerminalToggle, setShowTerminalToggle] = useState(false);
   const [collapsed, setCollapsed] = useState({ left: false, right: false });
   const [layout, setLayout] = useState<PanelLayout>({
-    left: 'gitChanges',
+    left: 'fileCity',
     middle: 'terminal',
-    right: 'fileCity',
+    right: 'packageComposition',
   });
   const [hasGitHubFolder, setHasGitHubFolder] = useState(false);
   const [focusModeEnabled, setFocusModeEnabled] = useState(false);
@@ -301,9 +301,9 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
       }),
       events.on('panel:reset-layout', () => {
         setLayout({
-          left: 'packageComposition',
+          left: 'fileCity',
           middle: 'terminal',
-          right: 'fileCity',
+          right: 'packageComposition',
         });
         setCollapsed({ left: false, right: false });
       }),
