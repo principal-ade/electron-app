@@ -162,12 +162,11 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   const [showTerminalToggle, setShowTerminalToggle] = useState(false);
   const [collapsed, setCollapsed] = useState({ left: false, right: false });
   const [layout, setLayout] = useState<PanelLayout>({
-    left: 'fileCity',
+    left: 'localProjects',
     middle: 'terminal',
-    right: 'packageComposition',
+    right: 'fileCity',
   });
   const [hasGitHubFolder, setHasGitHubFolder] = useState(false);
-  const [focusModeEnabled, setFocusModeEnabled] = useState(false);
 
   // Create repository object from Alexandria entry data
   const repository: Repository = useMemo(
@@ -301,9 +300,9 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
       }),
       events.on('panel:reset-layout', () => {
         setLayout({
-          left: 'fileCity',
+          left: 'localProjects',
           middle: 'terminal',
-          right: 'packageComposition',
+          right: 'fileCity',
         });
         setCollapsed({ left: false, right: false });
       }),
@@ -634,6 +633,21 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     setCollapsed((prev) => ({ ...prev, left: false }));
   }, []);
 
+  // Per-panel focus state (dims that panel)
+  const [panelFocus, setPanelFocus] = useState<{ left: boolean; right: boolean }>({
+    left: true,
+    right: false,
+  });
+
+  // Focus handlers - dim the panel on that side
+  const handleFocusLeft = useCallback(() => {
+    setPanelFocus((prev) => ({ ...prev, left: !prev.left }));
+  }, []);
+
+  const handleFocusRight = useCallback(() => {
+    setPanelFocus((prev) => ({ ...prev, right: !prev.right }));
+  }, []);
+
   return (
     <div className="h-screen w-screen overflow-hidden bg-gray-900 flex flex-col">
       <DevWorkspaceTitlebar
@@ -665,8 +679,9 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         onLayoutChange={(newLayout) => setLayout(newLayout)}
         onCollapsedChange={setCollapsed}
         repositoryPath={repositoryPath}
-        focusModeEnabled={focusModeEnabled}
-        onToggleFocusMode={() => setFocusModeEnabled((prev) => !prev)}
+        panelFocus={panelFocus}
+        onFocusLeft={handleFocusLeft}
+        onFocusRight={handleFocusRight}
       />
       <div className="flex-1 overflow-hidden">
         <DevWorkspacePanelFramework
@@ -677,7 +692,9 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           layout={layout}
           onLayoutChange={setLayout}
           events={events}
-          focusModeEnabled={focusModeEnabled}
+          panelFocus={panelFocus}
+          onFocusLeft={handleFocusLeft}
+          onFocusRight={handleFocusRight}
         />
       </div>
 

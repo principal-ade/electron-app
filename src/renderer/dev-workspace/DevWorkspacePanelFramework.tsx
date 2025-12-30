@@ -45,8 +45,12 @@ export interface DevWorkspacePanelFrameworkProps {
   onLayoutChange: (layout: PanelLayout) => void;
   /** Event bus for panel communication */
   events: PanelEventEmitter;
-  /** Whether focus mode is enabled (dims side panels) */
-  focusModeEnabled?: boolean;
+  /** Per-panel focus state (dims individual panels) */
+  panelFocus?: { left: boolean; right: boolean };
+  /** Toggle focus on left panel (dim left) */
+  onFocusLeft?: () => void;
+  /** Toggle focus on right panel (dim right) */
+  onFocusRight?: () => void;
 }
 
 interface DevWorkspacePanelFrameworkInnerProps {
@@ -54,7 +58,9 @@ interface DevWorkspacePanelFrameworkInnerProps {
   onCollapsedChange: (collapsed: { left: boolean; right: boolean }) => void;
   layout: PanelLayout;
   onLayoutChange: (layout: PanelLayout) => void;
-  focusModeEnabled?: boolean;
+  panelFocus?: { left: boolean; right: boolean };
+  onFocusLeft?: () => void;
+  onFocusRight?: () => void;
 }
 
 /**
@@ -140,7 +146,7 @@ const FileCityWithHighlights: React.FC<{
  */
 const DevWorkspacePanelFrameworkInner: React.FC<
   DevWorkspacePanelFrameworkInnerProps
-> = ({ collapsed, onCollapsedChange, layout, onLayoutChange, focusModeEnabled }) => {
+> = ({ collapsed, onCollapsedChange, layout, onLayoutChange, panelFocus, onFocusLeft, onFocusRight }) => {
   const { theme } = useTheme();
   const { context, actions, events } = useRepositoryPanelProvider();
   const { context: terminalCtx, actions: terminalActions } =
@@ -776,8 +782,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         theme={theme}
       />
 
-      {/* Focus Mode Overlays - cover left and right panels when enabled */}
-      {focusModeEnabled && !collapsed.left && (
+      {/* Focus Mode Overlays - dim panels when focus is enabled */}
+      {panelFocus?.left && !collapsed.left && (
         <div
           style={{
             position: 'absolute',
@@ -797,7 +803,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           />
         </div>
       )}
-      {focusModeEnabled && !collapsed.right && (
+      {panelFocus?.right && !collapsed.right && (
         <div
           style={{
             position: 'absolute',
@@ -817,6 +823,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           />
         </div>
       )}
+
     </div>
   );
 };
@@ -840,7 +847,9 @@ export const DevWorkspacePanelFramework: React.FC<
   layout,
   onLayoutChange,
   events,
-  focusModeEnabled,
+  panelFocus,
+  onFocusLeft,
+  onFocusRight,
 }) => {
   // Use the same terminal context format as legacy MultiTerminalPanel
   // Legacy uses: terminal:${owner}/${name}
@@ -877,7 +886,9 @@ export const DevWorkspacePanelFramework: React.FC<
             onCollapsedChange={onCollapsedChange}
             layout={layout}
             onLayoutChange={onLayoutChange}
-            focusModeEnabled={focusModeEnabled}
+            panelFocus={panelFocus}
+            onFocusLeft={onFocusLeft}
+            onFocusRight={onFocusRight}
           />
         </AgentHighlightProvider>
       </TerminalProvider>

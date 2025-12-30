@@ -8,7 +8,8 @@ import {
   Check,
   Copy,
   Play,
-  Focus,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
@@ -65,9 +66,9 @@ export const DEFAULT_PANEL_PRESETS: PanelPreset[] = [
   {
     id: 'default',
     name: 'Default',
-    description: 'Package Composition, Terminal, File City',
+    description: 'Local Projects, Terminal, File City',
     layout: {
-      left: 'packageComposition',
+      left: 'localProjects',
       middle: 'terminal',
       right: 'fileCity',
     },
@@ -154,9 +155,10 @@ export interface DevWorkspaceTitlebarProps {
   onCollapsedChange?: (collapsed: { left: boolean; right: boolean }) => void;
   // Repository path for copy
   repositoryPath?: string;
-  // Focus mode
-  focusModeEnabled?: boolean;
-  onToggleFocusMode?: () => void;
+  // Panel focus (dim that panel)
+  panelFocus?: { left: boolean; right: boolean };
+  onFocusLeft?: () => void;
+  onFocusRight?: () => void;
 }
 
 export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
@@ -179,8 +181,9 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
   onLayoutChange,
   onCollapsedChange,
   repositoryPath,
-  focusModeEnabled,
-  onToggleFocusMode,
+  panelFocus,
+  onFocusLeft,
+  onFocusRight,
 }) => {
   const { theme } = useTheme();
   const [copiedPath, setCopiedPath] = useState(false);
@@ -291,6 +294,50 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                   boxSizing: 'border-box',
                 }}
               />
+            )}
+
+            {/* Left Focus Button - dim the left panel */}
+            {onFocusLeft && !collapsed?.left && (
+              <button
+                onClick={onFocusLeft}
+                title={panelFocus?.left ? 'Show left panel' : 'Dim left panel'}
+                style={{
+                  background: panelFocus?.left
+                    ? theme.colors.primary
+                    : theme.colors.backgroundTertiary,
+                  border: `1px solid ${panelFocus?.left ? theme.colors.primary : theme.colors.border}`,
+                  color: panelFocus?.left
+                    ? theme.colors.background
+                    : theme.colors.textSecondary,
+                  cursor: 'pointer',
+                  padding: '6px 8px',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minHeight: '34px',
+                  boxSizing: 'border-box',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  if (!panelFocus?.left) {
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.backgroundSecondary;
+                    e.currentTarget.style.borderColor = theme.colors.primary;
+                    e.currentTarget.style.color = theme.colors.text;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!panelFocus?.left) {
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.backgroundTertiary;
+                    e.currentTarget.style.borderColor = theme.colors.border;
+                    e.currentTarget.style.color = theme.colors.textSecondary;
+                  }
+                }}
+              >
+                {panelFocus?.left ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             )}
 
             {/* Left Panel Selector */}
@@ -615,53 +662,6 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
               transition: 'opacity 0.2s ease, visibility 0.2s ease',
             }}
           >
-            {/* Focus Mode Toggle Button */}
-            {onToggleFocusMode && (
-              <button
-                onClick={onToggleFocusMode}
-                title={focusModeEnabled ? 'Exit Focus Mode' : 'Enter Focus Mode'}
-                style={{
-                  // @ts-ignore - WebkitAppRegion is not in CSSProperties
-                  WebkitAppRegion: 'no-drag',
-                  background: focusModeEnabled
-                    ? theme.colors.primary
-                    : theme.colors.backgroundTertiary,
-                  border: `1px solid ${focusModeEnabled ? theme.colors.primary : theme.colors.border}`,
-                  color: focusModeEnabled
-                    ? theme.colors.background
-                    : theme.colors.textSecondary,
-                  cursor: 'pointer',
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  transition: 'all 0.2s',
-                  fontSize: `${theme.fontSizes[1]}px`,
-                  fontWeight: theme.fontWeights.medium,
-                }}
-                onMouseEnter={(e) => {
-                  if (!focusModeEnabled) {
-                    e.currentTarget.style.backgroundColor =
-                      theme.colors.backgroundSecondary;
-                    e.currentTarget.style.borderColor = theme.colors.primary;
-                    e.currentTarget.style.color = theme.colors.text;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!focusModeEnabled) {
-                    e.currentTarget.style.backgroundColor =
-                      theme.colors.backgroundTertiary;
-                    e.currentTarget.style.borderColor = theme.colors.border;
-                    e.currentTarget.style.color = theme.colors.textSecondary;
-                  }
-                }}
-              >
-                <Focus size={14} />
-                <span>Focus</span>
-              </button>
-            )}
-
             {/* Open in Web-ADE Button */}
             {onOpenInWebADE && (
               <button
@@ -843,6 +843,48 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
               onPanelChange={handleRightPanelChange}
               onExpand={handleExpandRightPanel}
             />
+          )}
+
+          {/* Right Focus Button - dim the right panel */}
+          {onFocusRight && !collapsed?.right && (
+            <button
+              onClick={onFocusRight}
+              title={panelFocus?.right ? 'Show right panel' : 'Dim right panel'}
+              style={{
+                background: panelFocus?.right
+                  ? theme.colors.primary
+                  : theme.colors.backgroundTertiary,
+                border: `1px solid ${panelFocus?.right ? theme.colors.primary : theme.colors.border}`,
+                color: panelFocus?.right
+                  ? theme.colors.background
+                  : theme.colors.textSecondary,
+                cursor: 'pointer',
+                padding: '6px',
+                borderRadius: '6px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                if (!panelFocus?.right) {
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundSecondary;
+                  e.currentTarget.style.borderColor = theme.colors.primary;
+                  e.currentTarget.style.color = theme.colors.text;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!panelFocus?.right) {
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundTertiary;
+                  e.currentTarget.style.borderColor = theme.colors.border;
+                  e.currentTarget.style.color = theme.colors.textSecondary;
+                }
+              }}
+            >
+              {panelFocus?.right ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
           )}
 
           {/* Right Collapse Button - outside the panel selector */}
