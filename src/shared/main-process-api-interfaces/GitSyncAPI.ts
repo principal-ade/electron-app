@@ -168,4 +168,14 @@ export interface GitSyncAPI {
    * Get the current environment
    */
   getEnvironment(): Promise<'development' | 'production'>;
+
+  /**
+   * Get server presence data from the traffic controller
+   * Fetches via main process to avoid CORS issues
+   */
+  getServerPresence(): Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+  }>;
 }

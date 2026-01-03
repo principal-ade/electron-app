@@ -176,6 +176,58 @@ class GitSyncIPC {
       },
     );
 
+    // Handler for git-sync:get-server-presence
+    ipcMain.handle(
+      GitSyncEvent.GET_SERVER_PRESENCE,
+      async (): Promise<{
+        success: boolean;
+        data?: unknown;
+        error?: string;
+      }> => {
+        console.log('[GitSyncIPC] Fetching server presence');
+
+        try {
+          const fetch = (await import('node-fetch')).default;
+
+          // Get the current server URL and convert to HTTP
+          const wsUrl = gitSyncWebSocketManager.getServerUrl();
+          const httpUrl = wsUrl
+            .replace('wss://', 'https://')
+            .replace('ws://', 'http://')
+            .replace(/\/ws$/, '');
+
+          if (!httpUrl) {
+            return { success: false, error: 'No server URL configured' };
+          }
+
+          console.log(
+            `[GitSyncIPC] Fetching presence from: ${httpUrl}/api/presence/users`,
+          );
+
+          const response = await fetch(`${httpUrl}/api/presence/users`, {
+            method: 'GET',
+            headers: { Accept: 'application/json' },
+            signal: AbortSignal.timeout(10000),
+          });
+
+          if (!response.ok) {
+            return {
+              success: false,
+              error: `Server returned ${response.status}: ${response.statusText}`,
+            };
+          }
+
+          const data = await response.json();
+          return { success: true, data };
+        } catch (error) {
+          console.error('[GitSyncIPC] Failed to fetch server presence:', error);
+          const errorMsg =
+            error instanceof Error ? error.message : String(error);
+          return { success: false, error: errorMsg };
+        }
+      },
+    );
+
     // Handler for git-sync:check-service
     ipcMain.handle(
       GitSyncEvent.CHECK_SERVICE,

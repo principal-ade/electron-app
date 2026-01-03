@@ -13,6 +13,7 @@ export enum GitSyncEvent {
   CHECK_SERVICE = 'git-sync:check-service',
   SET_ENVIRONMENT = 'git-sync:set-environment',
   GET_ENVIRONMENT = 'git-sync:get-environment',
+  GET_SERVER_PRESENCE = 'git-sync:get-server-presence',
 
   // Events (from main to renderer)
   ON_MESSAGE = 'git-sync:message',
@@ -88,4 +89,6 @@ export const gitSyncAPI: GitSyncAPI = {
         subscription,
       );
   },
+
+  getServerPresence: () => ipcRenderer.invoke(GitSyncEvent.GET_SERVER_PRESENCE),
 };

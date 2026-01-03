@@ -243,4 +243,24 @@ export class GitSyncService {
       return 'development';
     }
   }
+
+  /**
+   * Get server presence data from the traffic controller
+   * This fetches via the main process to avoid CORS issues
+   */
+  static async getServerPresence(): Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+  }> {
+    try {
+      return await window.mainProcess.gitSync.getServerPresence();
+    } catch (error) {
+      console.error('[GitSyncService] Failed to get server presence:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
 }
