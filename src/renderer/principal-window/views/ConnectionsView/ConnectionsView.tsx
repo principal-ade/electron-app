@@ -24,7 +24,10 @@ import {
   Users,
   Monitor,
   Cloud,
+  Webhook,
+  FileText,
 } from 'lucide-react';
+import { GitSyncWebhookEvent } from '../../../shared/main-process-api-interfaces/GitSyncAPI';
 
 interface ConnectionInfo {
   connectionId: string;
@@ -124,6 +127,12 @@ export const ConnectionsView: React.FC = () => {
   const [isLoadingServerPresence, setIsLoadingServerPresence] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
+  // Webhook events state
+  const [webhookEvents, setWebhookEvents] = useState<GitSyncWebhookEvent[]>([]);
+  const [isLoadingWebhookEvents, setIsLoadingWebhookEvents] = useState(false);
+  const [webhookError, setWebhookError] = useState<string | null>(null);
+  const [expandedWebhookEvent, setExpandedWebhookEvent] = useState<string | null>(null);
+
   const textColor = mode === 'dark' ? theme.colors.text : theme.colors.text;
   const textSecondary =
     mode === 'dark' ? theme.colors.textSecondary : theme.colors.textSecondary;
@@ -187,17 +196,40 @@ export const ConnectionsView: React.FC = () => {
     }
   }, []);
 
+  // Fetch webhook events from traffic controller via IPC (avoids CORS)
+  const fetchWebhookEvents = useCallback(async () => {
+    setIsLoadingWebhookEvents(true);
+    setWebhookError(null);
+    try {
+      const result = await GitSyncService.getWebhookEvents(50);
+
+      if (result.success) {
+        setWebhookEvents(result.events);
+      } else {
+        setWebhookError(result.error || 'Unknown error');
+        setWebhookEvents([]);
+      }
+    } catch (error) {
+      console.error('[ConnectionsView] Failed to fetch webhook events:', error);
+      setWebhookError(String(error));
+      setWebhookEvents([]);
+    } finally {
+      setIsLoadingWebhookEvents(false);
+    }
+  }, []);
+
   // Initial load
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  // Auto-fetch server presence when serverUrl changes
+  // Auto-fetch server presence and webhook events when serverUrl changes
   useEffect(() => {
     if (serverUrl) {
       fetchServerPresence();
+      fetchWebhookEvents();
     }
-  }, [serverUrl, fetchServerPresence]);
+  }, [serverUrl, fetchServerPresence, fetchWebhookEvents]);
 
   // Subscribe to connection events
   useEffect(() => {
@@ -227,25 +259,48 @@ export const ConnectionsView: React.FC = () => {
     };
   }, [loadData, addActionResult, fetchServerPresence]);
 
-  // Subscribe to messages
+  // Subscribe to messages (including webhook events)
   useEffect(() => {
     const unsubscribe = GitSyncService.onMessage((connectionKey, message) => {
+      const messageType =
+        typeof message === 'object' && message !== null && 'type' in message
+          ? String((message as { type: unknown }).type)
+          : 'unknown';
+
       const entry: MessageLogEntry = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         timestamp: new Date(),
         connectionId: connectionKey,
         direction: 'incoming',
-        type:
-          typeof message === 'object' && message !== null && 'type' in message
-            ? String((message as { type: unknown }).type)
-            : 'unknown',
+        type: messageType,
         preview: JSON.stringify(message).slice(0, 100),
         data: message,
       };
       setMessageLog((prev) => [...prev.slice(-99), entry]);
+
+      // Handle real-time webhook events
+      if (messageType === 'webhook:github_event') {
+        const webhookPayload = (message as { payload?: unknown }).payload;
+        if (webhookPayload && typeof webhookPayload === 'object') {
+          const payload = webhookPayload as Record<string, unknown>;
+          const webhookEvent: GitSyncWebhookEvent = {
+            id: String(payload.eventId || entry.id),
+            event: String(payload.event || 'unknown'),
+            deliveryId: String(payload.deliveryId || ''),
+            repository: String(payload.repository || 'unknown'),
+            branch: payload.branch ? String(payload.branch) : undefined,
+            timestamp: Number(payload.timestamp) || Date.now(),
+            processed: Boolean(payload.processed),
+            message: payload.message ? String(payload.message) : undefined,
+            backlogChanges: payload.backlogChanges as GitSyncWebhookEvent['backlogChanges'],
+          };
+          setWebhookEvents((prev) => [webhookEvent, ...prev.slice(0, 49)]);
+          addActionResult('info', `Webhook: ${webhookEvent.event} from ${webhookEvent.repository}`);
+        }
+      }
     });
     return unsubscribe;
-  }, []);
+  }, [addActionResult]);
 
   // Subscribe to presence events
   useEffect(() => {
@@ -1130,6 +1185,194 @@ export const ConnectionsView: React.FC = () => {
                     </div>
                   );
                 })
+              )}
+            </div>
+          </div>
+
+          {/* Webhook Events */}
+          <div
+            style={{
+              flex: 1,
+              borderRadius: '6px',
+              border: `1px solid ${borderColor}`,
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              minHeight: '200px',
+            }}
+          >
+            <div
+              style={{
+                padding: '8px 12px',
+                borderBottom: `1px solid ${borderColor}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Webhook size={12} color={textSecondary} />
+                <span style={{ fontSize: '12px', fontWeight: 500, color: textColor }}>
+                  Webhook Events ({webhookEvents.length})
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <button
+                  onClick={() => setWebhookEvents([])}
+                  style={{
+                    padding: '2px 6px',
+                    borderRadius: '3px',
+                    border: `1px solid ${borderColor}`,
+                    background: 'transparent',
+                    color: textSecondary,
+                    cursor: 'pointer',
+                    fontSize: '10px',
+                  }}
+                >
+                  Clear
+                </button>
+                <button
+                  onClick={fetchWebhookEvents}
+                  disabled={isLoadingWebhookEvents}
+                  style={{
+                    padding: '2px 6px',
+                    borderRadius: '3px',
+                    border: `1px solid ${borderColor}`,
+                    background: 'transparent',
+                    color: textSecondary,
+                    cursor: isLoadingWebhookEvents ? 'not-allowed' : 'pointer',
+                    fontSize: '10px',
+                  }}
+                >
+                  {isLoadingWebhookEvents ? <Loader2 size={10} className="animate-spin" /> : <RefreshCw size={10} />}
+                </button>
+              </div>
+            </div>
+            <div style={{ flex: 1, overflow: 'auto', padding: '8px', fontSize: '11px' }}>
+              {webhookError ? (
+                <div
+                  style={{
+                    padding: '16px',
+                    textAlign: 'center',
+                    color: theme.colors.error || '#ef4444',
+                    fontSize: '11px',
+                  }}
+                >
+                  <AlertCircle size={20} style={{ marginBottom: '6px' }} />
+                  <div>{webhookError}</div>
+                </div>
+              ) : isLoadingWebhookEvents && webhookEvents.length === 0 ? (
+                <div style={{ padding: '16px', textAlign: 'center', color: textSecondary }}>
+                  <Loader2 size={20} className="animate-spin" />
+                </div>
+              ) : webhookEvents.length === 0 ? (
+                <div style={{ padding: '16px', textAlign: 'center', color: textSecondary, fontSize: '11px' }}>
+                  <Webhook size={20} style={{ marginBottom: '6px', opacity: 0.5 }} />
+                  <div>No webhook events received</div>
+                </div>
+              ) : (
+                webhookEvents.map((event) => (
+                  <div
+                    key={event.id}
+                    onClick={() => setExpandedWebhookEvent(expandedWebhookEvent === event.id ? null : event.id)}
+                    style={{
+                      padding: '8px',
+                      marginBottom: '6px',
+                      borderRadius: '4px',
+                      border: `1px solid ${borderColor}`,
+                      cursor: 'pointer',
+                      backgroundColor: expandedWebhookEvent === event.id ? (mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)') : 'transparent',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                      <span
+                        style={{
+                          fontSize: '9px',
+                          padding: '2px 5px',
+                          borderRadius: '3px',
+                          backgroundColor: theme.colors.primary + '20',
+                          color: theme.colors.primary,
+                          fontWeight: 600,
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        {event.event}
+                      </span>
+                      <span style={{ fontSize: '10px', color: textSecondary }}>
+                        {new Date(event.timestamp).toLocaleTimeString()}
+                      </span>
+                      {event.processed && (
+                        <CheckCircle size={10} color={theme.colors.success || '#22c55e'} />
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: textColor }}>
+                      <FolderGit size={10} />
+                      <span style={{ fontSize: '11px' }}>{event.repository}</span>
+                      {event.branch && (
+                        <>
+                          <GitBranch size={10} style={{ marginLeft: '4px' }} />
+                          <span style={{ fontSize: '10px', color: textSecondary }}>{event.branch}</span>
+                        </>
+                      )}
+                    </div>
+                    {event.message && (
+                      <div style={{ fontSize: '10px', color: textSecondary, marginTop: '4px' }}>
+                        {event.message}
+                      </div>
+                    )}
+                    {expandedWebhookEvent === event.id && (
+                      <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: `1px solid ${borderColor}` }}>
+                        <div style={{ fontSize: '10px', color: textSecondary, marginBottom: '4px' }}>
+                          Delivery ID: {event.deliveryId}
+                        </div>
+                        {event.backlogChanges && event.backlogChanges.length > 0 && (
+                          <div style={{ marginTop: '6px' }}>
+                            <div style={{ fontSize: '10px', fontWeight: 500, color: textColor, marginBottom: '4px' }}>
+                              Backlog Changes ({event.backlogChanges.length}):
+                            </div>
+                            {event.backlogChanges.map((change, idx) => (
+                              <div
+                                key={idx}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  fontSize: '10px',
+                                  padding: '2px 0',
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    padding: '1px 4px',
+                                    borderRadius: '2px',
+                                    fontSize: '9px',
+                                    backgroundColor:
+                                      change.changeType === 'added'
+                                        ? (theme.colors.success || '#22c55e') + '20'
+                                        : change.changeType === 'removed'
+                                          ? (theme.colors.error || '#ef4444') + '20'
+                                          : theme.colors.primary + '20',
+                                    color:
+                                      change.changeType === 'added'
+                                        ? theme.colors.success || '#22c55e'
+                                        : change.changeType === 'removed'
+                                          ? theme.colors.error || '#ef4444'
+                                          : theme.colors.primary,
+                                  }}
+                                >
+                                  {change.changeType}
+                                </span>
+                                <FileText size={10} />
+                                <span style={{ color: textColor }}>{change.taskPath}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))
               )}
             </div>
           </div>

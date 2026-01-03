@@ -307,6 +307,73 @@ class GitSyncIPC {
         }
       },
     );
+
+    // Handler for git-sync:get-webhook-events
+    ipcMain.handle(
+      GitSyncEvent.GET_WEBHOOK_EVENTS,
+      async (
+        event,
+        limit?: number,
+      ): Promise<{
+        success: boolean;
+        events: unknown[];
+        meta?: unknown;
+        error?: string;
+      }> => {
+        console.log('[GitSyncIPC] Fetching webhook events, limit:', limit);
+
+        try {
+          const fetch = (await import('node-fetch')).default;
+
+          // Get the current server URL and convert to HTTP
+          const wsUrl = gitSyncWebSocketManager.getServerUrl();
+          const httpUrl = wsUrl
+            .replace('wss://', 'https://')
+            .replace('ws://', 'http://')
+            .replace(/\/ws$/, '');
+
+          if (!httpUrl) {
+            return { success: false, events: [], error: 'No server URL configured' };
+          }
+
+          const queryParams = limit ? `?limit=${limit}` : '';
+          console.log(
+            `[GitSyncIPC] Fetching events from: ${httpUrl}/api/webhooks/events${queryParams}`,
+          );
+
+          const response = await fetch(`${httpUrl}/api/webhooks/events${queryParams}`, {
+            method: 'GET',
+            headers: { Accept: 'application/json' },
+            signal: AbortSignal.timeout(10000),
+          });
+
+          if (!response.ok) {
+            return {
+              success: false,
+              events: [],
+              error: `Server returned ${response.status}: ${response.statusText}`,
+            };
+          }
+
+          const data = await response.json() as {
+            success: boolean;
+            events: unknown[];
+            meta?: unknown;
+            error?: string;
+          };
+          return {
+            success: true,
+            events: data.events || [],
+            meta: data.meta,
+          };
+        } catch (error) {
+          console.error('[GitSyncIPC] Failed to fetch webhook events:', error);
+          const errorMsg =
+            error instanceof Error ? error.message : String(error);
+          return { success: false, events: [], error: errorMsg };
+        }
+      },
+    );
   }
 
   /**

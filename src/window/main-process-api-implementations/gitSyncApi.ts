@@ -14,6 +14,7 @@ export enum GitSyncEvent {
   SET_ENVIRONMENT = 'git-sync:set-environment',
   GET_ENVIRONMENT = 'git-sync:get-environment',
   GET_SERVER_PRESENCE = 'git-sync:get-server-presence',
+  GET_WEBHOOK_EVENTS = 'git-sync:get-webhook-events',
 
   // Events (from main to renderer)
   ON_MESSAGE = 'git-sync:message',
@@ -91,4 +92,7 @@ export const gitSyncAPI: GitSyncAPI = {
   },
 
   getServerPresence: () => ipcRenderer.invoke(GitSyncEvent.GET_SERVER_PRESENCE),
+
+  getWebhookEvents: (limit?: number) =>
+    ipcRenderer.invoke(GitSyncEvent.GET_WEBHOOK_EVENTS, limit),
 };

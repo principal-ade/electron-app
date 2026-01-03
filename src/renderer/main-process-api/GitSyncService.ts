@@ -5,6 +5,7 @@ import {
   GitSyncMessage,
   GitSyncRoomTokenRequest,
   GitSyncRoomTokenResponse,
+  GitSyncWebhookEventsResponse,
 } from '../../shared/main-process-api-interfaces/GitSyncAPI';
 
 /**
@@ -259,6 +260,25 @@ export class GitSyncService {
       console.error('[GitSyncService] Failed to get server presence:', error);
       return {
         success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Get recent webhook events from the traffic controller
+   * This fetches via the main process to avoid CORS issues
+   */
+  static async getWebhookEvents(
+    limit?: number,
+  ): Promise<GitSyncWebhookEventsResponse> {
+    try {
+      return await window.mainProcess.gitSync.getWebhookEvents(limit);
+    } catch (error) {
+      console.error('[GitSyncService] Failed to get webhook events:', error);
+      return {
+        success: false,
+        events: [],
         error: error instanceof Error ? error.message : 'Unknown error',
       };
     }

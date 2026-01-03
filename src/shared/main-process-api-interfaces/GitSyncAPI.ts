@@ -75,6 +75,38 @@ export interface GitSyncRoomTokenResponse {
   error?: string;
 }
 
+export interface BacklogTaskChange {
+  taskId: string;
+  taskPath: string;
+  changeType: 'added' | 'modified' | 'removed';
+  commitSha: string;
+  commitMessage: string;
+  author: string;
+}
+
+export interface GitSyncWebhookEvent {
+  id: string;
+  event: string;
+  deliveryId: string;
+  repository: string;
+  branch?: string;
+  timestamp: number;
+  processed: boolean;
+  message?: string;
+  backlogChanges?: BacklogTaskChange[];
+}
+
+export interface GitSyncWebhookEventsResponse {
+  success: boolean;
+  events: GitSyncWebhookEvent[];
+  meta?: {
+    returned: number;
+    total: number;
+    stats: Record<string, number>;
+  };
+  error?: string;
+}
+
 export interface GitSyncAPI {
   /**
    * Connect to git-sync server for a repository
@@ -178,4 +210,10 @@ export interface GitSyncAPI {
     data?: unknown;
     error?: string;
   }>;
+
+  /**
+   * Get recent webhook events from the traffic controller
+   * Fetches via main process to avoid CORS issues
+   */
+  getWebhookEvents(limit?: number): Promise<GitSyncWebhookEventsResponse>;
 }
