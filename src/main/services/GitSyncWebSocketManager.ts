@@ -346,7 +346,7 @@ export class GitSyncWebSocketManager {
           };
           await transport.send({
             type: 'authenticate',
-            payload: { token },
+            payload: { token, clientType: 'desktop' },
             timestamp: Date.now(),
           });
           console.log(
@@ -888,7 +888,7 @@ export class GitSyncWebSocketManager {
           };
           await transport.send({
             type: 'authenticate',
-            payload: { token },
+            payload: { token, clientType: 'desktop' },
             timestamp: Date.now(),
           });
           console.log('[GitSyncWebSocketManager] Auth message sent to server');
