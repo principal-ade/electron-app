@@ -9,6 +9,9 @@ export enum GitEvents {
   CHECK_AUTH_METHODS = 'git:check-auth-methods',
   DELETE_GIT_REPOSITORY = 'git:delete-git-repository',
   FORCE_DELETE_GIT_REPOSITORY = 'git:force-delete-git-repository',
+  // Repository discovery
+  SCAN_FOLDER_FOR_REPOS = 'git:scan-folder-for-repos',
+  GET_DISCOVERED_REPOS = 'git:get-discovered-repos',
 }
 
 export interface GitAPI {
@@ -60,6 +63,22 @@ export interface GitAPI {
     success: boolean;
     error?: string;
   }>;
+
+  // Repository discovery
+  scanFolderForRepos: (
+    folderPath: string,
+    maxDepth?: number,
+  ) => Promise<string[]>;
+  getDiscoveredRepos: (
+    basePath: string,
+    maxDepth?: number,
+  ) => Promise<
+    Array<{
+      path: string;
+      name: string;
+      isTracked: false;
+    }>
+  >;
 
   // Event listeners for repository changes
   onRepositoryUpdated: (

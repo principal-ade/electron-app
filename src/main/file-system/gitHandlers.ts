@@ -1,5 +1,6 @@
 import { ipcMain, net } from 'electron';
 import { GitRepositoryService } from './gitRepositoryService';
+import { GitRepositoryScannerService } from './gitRepositoryScannerService';
 import { gitClientFactory } from '../utils/gitClientFactory';
 import { GitEvents } from '../../shared/main-process-api-interfaces/GitAPI';
 import { GitRemoteService } from '@principal-ai/repository-monitoring-server';
@@ -848,6 +849,52 @@ export function registerGitHandlers(): void {
               ? error.message
               : 'Failed to delete repository',
         };
+      }
+    },
+  );
+
+  // Scan folder for git repositories
+  ipcMain.handle(
+    GitEvents.SCAN_FOLDER_FOR_REPOS,
+    async (_event, folderPath: string, maxDepth?: number) => {
+      try {
+        console.log(
+          `[Git] Scanning folder for repos: ${folderPath} (depth: ${maxDepth ?? 2})`,
+        );
+        const scannerService = GitRepositoryScannerService.getInstance();
+        const repos = await scannerService.scanFolderForGitRepos(
+          folderPath,
+          maxDepth ?? 2,
+        );
+        console.log(`[Git] Found ${repos.length} git repositories`);
+        return repos;
+      } catch (error) {
+        console.error('[Git] Failed to scan folder for repos:', error);
+        throw error;
+      }
+    },
+  );
+
+  // Get discovered (untracked) repositories
+  ipcMain.handle(
+    GitEvents.GET_DISCOVERED_REPOS,
+    async (_event, basePath: string, maxDepth?: number) => {
+      try {
+        console.log(
+          `[Git] Getting discovered repos in: ${basePath} (depth: ${maxDepth ?? 2})`,
+        );
+        const scannerService = GitRepositoryScannerService.getInstance();
+        const discoveredRepos = await scannerService.getDiscoveredRepositories(
+          basePath,
+          maxDepth ?? 2,
+        );
+        console.log(
+          `[Git] Found ${discoveredRepos.length} untracked repositories`,
+        );
+        return discoveredRepos;
+      } catch (error) {
+        console.error('[Git] Failed to get discovered repos:', error);
+        throw error;
       }
     },
   );

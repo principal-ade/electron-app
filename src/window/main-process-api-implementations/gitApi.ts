@@ -89,6 +89,29 @@ export const gitAPI = {
     return ipcRenderer.invoke(GitEvents.FORCE_DELETE_GIT_REPOSITORY, repoPath);
   },
 
+  // Repository discovery
+  scanFolderForRepos: async (
+    folderPath: string,
+    maxDepth?: number,
+  ): Promise<string[]> => {
+    return ipcRenderer.invoke(
+      GitEvents.SCAN_FOLDER_FOR_REPOS,
+      folderPath,
+      maxDepth,
+    );
+  },
+
+  getDiscoveredRepos: async (
+    basePath: string,
+    maxDepth?: number,
+  ): Promise<Array<{ path: string; name: string; isTracked: false }>> => {
+    return ipcRenderer.invoke(
+      GitEvents.GET_DISCOVERED_REPOS,
+      basePath,
+      maxDepth,
+    );
+  },
+
   // Event listeners for repository changes
   onRepositoryUpdated: (callback: (updatedRepo: Repository) => void) => {
     const handler = (_event: IpcRendererEvent, updatedRepo: Repository) =>

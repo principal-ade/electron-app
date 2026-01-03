@@ -106,6 +106,39 @@ export class GitService {
     return window.mainProcess.git.forceDeleteGitRepository(repoPath);
   }
 
+  /**
+   * Scan a folder for git repositories
+   * @param folderPath - Base folder to scan
+   * @param maxDepth - Maximum depth to scan (default: 2)
+   * @returns Array of absolute paths to git repositories
+   */
+  static async scanFolderForRepos(
+    folderPath: string,
+    maxDepth?: number,
+  ): Promise<string[]> {
+    console.log(
+      `[GitService] Scanning folder for repos: ${folderPath} (depth: ${maxDepth ?? 2})`,
+    );
+    return window.mainProcess.git.scanFolderForRepos(folderPath, maxDepth);
+  }
+
+  /**
+   * Get discovered (untracked) repositories in a folder
+   * Filters out repositories already registered in Alexandria
+   * @param basePath - Base folder to scan
+   * @param maxDepth - Maximum depth to scan (default: 2)
+   * @returns Array of discovered repositories not in Alexandria
+   */
+  static async getDiscoveredRepos(
+    basePath: string,
+    maxDepth?: number,
+  ): Promise<Array<{ path: string; name: string; isTracked: false }>> {
+    console.log(
+      `[GitService] Getting discovered repos: ${basePath} (depth: ${maxDepth ?? 2})`,
+    );
+    return window.mainProcess.git.getDiscoveredRepos(basePath, maxDepth);
+  }
+
   static async getCommitHistory(
     directory: string,
     limit = 50,

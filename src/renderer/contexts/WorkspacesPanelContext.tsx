@@ -40,7 +40,10 @@ import { GithubService } from '../main-process-api/GithubService';
 import { GitHubArtifactService } from '../main-process-api/GitHubArtifactService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { CollectionsService } from '../main-process-api/CollectionsService';
+import { GitService } from '../main-process-api/GitService';
+import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import type { CollectionMembership } from '@principal-ai/alexandria-collections';
+import type { DiscoveredRepository } from '@industry-theme/alexandria-panels';
 
 /**
  * Extended actions for WorkspacesPanelProvider
@@ -73,6 +76,8 @@ interface WorkspacesPanelActions
     collectionId: string,
     repositoryId: string,
   ) => Promise<void>;
+  // Track a discovered repository (add to Alexandria)
+  trackRepository?: (name: string, path: string) => Promise<void>;
 }
 
 /**
@@ -138,6 +143,14 @@ export const WorkspacesPanelProvider: React.FC<
   );
   const [localRepositoriesLoading, setLocalRepositoriesLoading] =
     useState(true);
+
+  // State for discovered (untracked) repositories
+  const [discoveredRepositories, setDiscoveredRepositories] = useState<
+    DiscoveredRepository[]
+  >([]);
+  const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<
+    string | null
+  >(null);
 
   // State for GitHub starred repositories
   const [starredRepositories, setStarredRepositories] = useState<
@@ -272,6 +285,67 @@ export const WorkspacesPanelProvider: React.FC<
 
     return unsubscribe;
   }, []);
+
+  // Fetch discovered repositories when baseDefaultDirectory changes
+  useEffect(() => {
+    const fetchDiscoveredRepositories = async () => {
+      // First get the baseDefaultDirectory from preferences
+      const preferences = await UserPreferencesService.getPreferences();
+      const basePath = preferences.baseDefaultDirectory;
+      setBaseDefaultDirectory(basePath || null);
+
+      if (!basePath) {
+        setDiscoveredRepositories([]);
+        return;
+      }
+
+      try {
+        console.info(
+          '[WorkspacesPanelProvider] Scanning for discovered repositories in:',
+          basePath,
+        );
+        const discovered = await GitService.getDiscoveredRepos(basePath, 2);
+        console.info(
+          '[WorkspacesPanelProvider] Found discovered repositories:',
+          discovered.length,
+        );
+        setDiscoveredRepositories(discovered);
+      } catch (error) {
+        console.error(
+          '[WorkspacesPanelProvider] Failed to fetch discovered repositories:',
+          error,
+        );
+        setDiscoveredRepositories([]);
+      }
+    };
+
+    fetchDiscoveredRepositories();
+
+    // Also refetch when local repositories change (a repo may have been tracked)
+    // Listen for preference changes to update when baseDefaultDirectory changes
+    const unsubscribe = UserPreferencesService.onPreferencesUpdated(
+      (preferences) => {
+        const newBasePath = preferences.baseDefaultDirectory;
+        if (newBasePath !== baseDefaultDirectory) {
+          setBaseDefaultDirectory(newBasePath || null);
+          if (newBasePath) {
+            GitService.getDiscoveredRepos(newBasePath, 2)
+              .then(setDiscoveredRepositories)
+              .catch((error) => {
+                console.error(
+                  '[WorkspacesPanelProvider] Failed to refresh discovered repos:',
+                  error,
+                );
+              });
+          } else {
+            setDiscoveredRepositories([]);
+          }
+        }
+      },
+    );
+
+    return unsubscribe;
+  }, [localRepositories]); // Re-run when local repos change to update discovered list
 
   // Fetch GitHub starred repositories
   const fetchStarredRepositories = async () => {
@@ -650,6 +724,7 @@ export const WorkspacesPanelProvider: React.FC<
             name: 'alexandriaRepositories',
             data: {
               repositories: localRepositories,
+              discoveredRepositories,
               loading: localRepositoriesLoading,
             },
             loading: localRepositoriesLoading,
@@ -659,6 +734,15 @@ export const WorkspacesPanelProvider: React.FC<
               try {
                 const repos = await AlexandriaService.getRepositories();
                 setLocalRepositories(repos);
+
+                // Also refresh discovered repositories
+                if (baseDefaultDirectory) {
+                  const discovered = await GitService.getDiscoveredRepos(
+                    baseDefaultDirectory,
+                    2,
+                  );
+                  setDiscoveredRepositories(discovered);
+                }
               } catch (error) {
                 console.error(
                   '[WorkspacesPanelProvider] Failed to refresh local repositories:',
@@ -912,6 +996,8 @@ export const WorkspacesPanelProvider: React.FC<
       repositoriesLoading,
       localRepositories,
       localRepositoriesLoading,
+      discoveredRepositories,
+      baseDefaultDirectory,
       starredRepositories,
       starredLoading,
       starredError,
@@ -1014,6 +1100,20 @@ export const WorkspacesPanelProvider: React.FC<
         await AlexandriaService.removeRepository(name, deleteLocal);
 
         // Refresh local repositories
+        const repos = await AlexandriaService.getRepositories();
+        setLocalRepositories(repos);
+      },
+
+      // Track a discovered repository (add to Alexandria)
+      trackRepository: async (name: string, path: string) => {
+        console.info(
+          '[WorkspacesPanelProvider] Tracking repository:',
+          name,
+          path,
+        );
+        await AlexandriaService.registerRepository(name, path);
+
+        // Refresh local repositories (this will also trigger discovered repos refresh)
         const repos = await AlexandriaService.getRepositories();
         setLocalRepositories(repos);
       },
