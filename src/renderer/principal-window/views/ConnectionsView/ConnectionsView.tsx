@@ -133,6 +133,10 @@ export const ConnectionsView: React.FC = () => {
   const [webhookError, setWebhookError] = useState<string | null>(null);
   const [expandedWebhookEvent, setExpandedWebhookEvent] = useState<string | null>(null);
 
+  // Current user state
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserName, setCurrentUserName] = useState<string | null>(null);
+
   const textColor = mode === 'dark' ? theme.colors.text : theme.colors.text;
   const textSecondary =
     mode === 'dark' ? theme.colors.textSecondary : theme.colors.textSecondary;
@@ -222,6 +226,23 @@ export const ConnectionsView: React.FC = () => {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Fetch current user info
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const authService = SecureAuthService.getInstance();
+        const authResult = await authService.checkAuth();
+        if (authResult.authenticated && authResult.user) {
+          setCurrentUserId(authResult.user.githubHandle);
+          setCurrentUserName(authResult.user.name || authResult.user.githubHandle);
+        }
+      } catch (error) {
+        console.error('[ConnectionsView] Failed to get current user:', error);
+      }
+    };
+    fetchCurrentUser();
+  }, []);
 
   // Auto-fetch server presence and webhook events when serverUrl changes
   useEffect(() => {
@@ -993,6 +1014,141 @@ export const ConnectionsView: React.FC = () => {
               Refresh
             </button>
           </div>
+
+          {/* Your Connection Status */}
+          {currentUserId && (
+            <div
+              style={{
+                padding: '12px',
+                borderRadius: '6px',
+                border: `1px solid ${borderColor}`,
+                backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <Monitor size={14} color={theme.colors.primary} />
+                <span style={{ fontSize: '12px', fontWeight: 600, color: textColor }}>
+                  Your Connection
+                </span>
+              </div>
+              {(() => {
+                const currentUserPresence = serverPresence?.users?.find(
+                  (u) => u.userId === currentUserId
+                );
+
+                if (!currentUserPresence) {
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: textSecondary }}>
+                      <Circle size={8} fill={textSecondary} color={textSecondary} />
+                      <span style={{ fontSize: '11px' }}>Not connected to server</span>
+                    </div>
+                  );
+                }
+
+                const devices = Object.values(currentUserPresence.devices || {});
+                const statusColor =
+                  currentUserPresence.status === 'online'
+                    ? theme.colors.success || '#22c55e'
+                    : currentUserPresence.status === 'away'
+                      ? theme.colors.warning || '#f59e0b'
+                      : textSecondary;
+
+                return (
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                      <Circle size={8} fill={statusColor} color={statusColor} />
+                      <span style={{ fontSize: '11px', color: textColor, fontWeight: 500 }}>
+                        {currentUserName || currentUserId}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: '9px',
+                          padding: '2px 6px',
+                          borderRadius: '3px',
+                          backgroundColor: statusColor + '20',
+                          color: statusColor,
+                          textTransform: 'uppercase',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {currentUserPresence.status}
+                      </span>
+                    </div>
+
+                    {/* Devices */}
+                    <div style={{ marginTop: '8px' }}>
+                      <div style={{ fontSize: '10px', color: textSecondary, marginBottom: '6px' }}>
+                        {devices.length} device{devices.length !== 1 ? 's' : ''} connected
+                      </div>
+                      {devices.map((device, idx) => (
+                        <div
+                          key={device.deviceId || idx}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '6px 8px',
+                            marginBottom: '4px',
+                            borderRadius: '4px',
+                            backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                            fontSize: '10px',
+                          }}
+                        >
+                          <Monitor size={12} color={textSecondary} />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ color: textColor, fontWeight: 500 }}>
+                              {device.type || 'Unknown Device'}
+                            </div>
+                            <div style={{ color: textSecondary, fontSize: '9px' }}>
+                              ID: {device.deviceId?.slice(0, 12)}...
+                            </div>
+                          </div>
+                          <div style={{ textAlign: 'right', color: textSecondary }}>
+                            <div style={{ fontSize: '9px' }}>
+                              Connected {formatRelativeTime(device.connectedAt)}
+                            </div>
+                            <div style={{ fontSize: '9px' }}>
+                              Active {formatRelativeTime(device.lastActivity)}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Open Repositories */}
+                    {currentUserPresence.extended?.openRepositories &&
+                     currentUserPresence.extended.openRepositories.length > 0 && (
+                      <div style={{ marginTop: '8px' }}>
+                        <div style={{ fontSize: '10px', color: textSecondary, marginBottom: '4px' }}>
+                          Open Repositories
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                          {currentUserPresence.extended.openRepositories.map((repo, idx) => (
+                            <span
+                              key={idx}
+                              style={{
+                                fontSize: '10px',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                backgroundColor: theme.colors.primary + '20',
+                                color: theme.colors.primary,
+                              }}
+                            >
+                              <FolderGit size={10} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+                              {repo.repoId}
+                              {repo.branch && repo.branch !== 'main' && (
+                                <span style={{ opacity: 0.7 }}>:{repo.branch}</span>
+                              )}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
 
           {/* Server Stats */}
           {serverPresence?.stats && (
