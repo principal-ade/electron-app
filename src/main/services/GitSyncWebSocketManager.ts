@@ -1059,15 +1059,16 @@ export class GitSyncWebSocketManager {
       // Forward webhook events to renderers
       if (event.type === 'webhook:github_event') {
         console.log('[GitSyncWebSocketManager] 🔔 Webhook event received:', event);
+        // ConnectionsView expects data under 'payload' property
         this.broadcastToRenderers(GitSyncEvent.ON_MESSAGE, connectionId, {
           type: 'webhook:github_event',
-          ...(event.data || {}),
+          payload: event.data || {},
         });
       } else {
         // Forward other events as generic event_received
         this.broadcastToRenderers(GitSyncEvent.ON_MESSAGE, connectionId, {
           type: event.type,
-          ...(event.data || {}),
+          payload: event.data || {},
         });
       }
     });
