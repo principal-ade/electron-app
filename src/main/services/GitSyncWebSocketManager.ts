@@ -1046,6 +1046,31 @@ export class GitSyncWebSocketManager {
         users: data.users,
       });
     });
+
+    // Event received - handles broadcasts from server (including webhook events)
+    // The server sends event_broadcast messages which trigger this handler
+    client.on('event_received', (data: { event: { type: string; data?: Record<string, unknown> } }) => {
+      const event = data.event;
+      console.log(
+        '[GitSyncWebSocketManager] 📡 event_received:',
+        event.type,
+      );
+
+      // Forward webhook events to renderers
+      if (event.type === 'webhook:github_event') {
+        console.log('[GitSyncWebSocketManager] 🔔 Webhook event received:', event);
+        this.broadcastToRenderers(GitSyncEvent.ON_MESSAGE, connectionId, {
+          type: 'webhook:github_event',
+          ...(event.data || {}),
+        });
+      } else {
+        // Forward other events as generic event_received
+        this.broadcastToRenderers(GitSyncEvent.ON_MESSAGE, connectionId, {
+          type: event.type,
+          ...(event.data || {}),
+        });
+      }
+    });
   }
 
   /**
