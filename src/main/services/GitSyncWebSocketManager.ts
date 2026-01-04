@@ -135,6 +135,7 @@ export class GitSyncWebSocketManager {
   private serverUrl: string;
   private authServerUrl: string;
   private presenceRoomJoinInProgress: boolean = false;
+  private presenceConnectionInProgress: boolean = false;
   private presenceRoomState: { users: Map<string, RoomUser> } | null = null;
 
   // Hardcoded defaults
@@ -761,24 +762,85 @@ export class GitSyncWebSocketManager {
   }> {
     const connectionId = '__presence_only__';
 
-    // Check if already connected
+    // Check if already connected or connecting
     const existing = this.connections.get(connectionId);
-    if (existing && existing.client.getConnectionState() === 'connected') {
-      console.log('[GitSyncWebSocketManager] Already connected to presence');
+    if (existing) {
+      const state = existing.client.getConnectionState();
+      if (state === 'connected') {
+        console.log('[GitSyncWebSocketManager] Already connected to presence');
 
-      // Make sure we're subscribed to the global presence room
-      await this.subscribeToPresence();
+        // Make sure we're subscribed to the global presence room
+        await this.subscribeToPresence();
 
-      return {
-        success: true,
-        connectionId,
-        message: 'Already connected to presence',
-      };
+        return {
+          success: true,
+          connectionId,
+          message: 'Already connected to presence',
+        };
+      } else if (state === 'connecting') {
+        console.log('[GitSyncWebSocketManager] Already connecting to presence, waiting...');
+        // Wait for connection to complete
+        await new Promise<void>((resolve) => {
+          const checkInterval = setInterval(() => {
+            const currentState = existing.client.getConnectionState();
+            if (currentState === 'connected' || currentState === 'disconnected') {
+              clearInterval(checkInterval);
+              resolve();
+            }
+          }, 100);
+          setTimeout(() => {
+            clearInterval(checkInterval);
+            resolve();
+          }, 10000);
+        });
+
+        if (existing.client.getConnectionState() === 'connected') {
+          await this.subscribeToPresence();
+          return {
+            success: true,
+            connectionId,
+            message: 'Connected to presence (waited for connecting state)',
+          };
+        }
+      }
     }
+
+    // Check if connection is already in progress (prevents race condition from multiple callers)
+    if (this.presenceConnectionInProgress) {
+      console.log('[GitSyncWebSocketManager] Presence connection already in progress, waiting...');
+      // Wait for the in-progress connection to complete
+      await new Promise<void>((resolve) => {
+        const checkInterval = setInterval(() => {
+          if (!this.presenceConnectionInProgress) {
+            clearInterval(checkInterval);
+            resolve();
+          }
+        }, 100);
+        // Timeout after 10 seconds
+        setTimeout(() => {
+          clearInterval(checkInterval);
+          resolve();
+        }, 10000);
+      });
+
+      // Check if we're now connected
+      const nowExisting = this.connections.get(connectionId);
+      if (nowExisting && nowExisting.client.getConnectionState() === 'connected') {
+        return {
+          success: true,
+          connectionId,
+          message: 'Connected to presence (waited for in-progress connection)',
+        };
+      }
+    }
+
+    // Mark connection as in progress
+    this.presenceConnectionInProgress = true;
 
     try {
       // Validate token
       if (!token) {
+        this.presenceConnectionInProgress = false;
         return {
           success: false,
           error: 'GitHub token is required',
@@ -838,6 +900,9 @@ export class GitSyncWebSocketManager {
       // Connect the client - auth adapter will provide token automatically
       await client.connect(wsUrl);
 
+      // Connection successful, clear the in-progress flag
+      this.presenceConnectionInProgress = false;
+
       return {
         success: true,
         connectionId,
@@ -853,6 +918,7 @@ export class GitSyncWebSocketManager {
 
       // Clean up on error
       this.connections.delete(connectionId);
+      this.presenceConnectionInProgress = false;
 
       return {
         success: false,
