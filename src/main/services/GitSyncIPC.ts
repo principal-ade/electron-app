@@ -376,40 +376,42 @@ class GitSyncIPC {
     );
 
     // Handler for git-sync:send-test-webhook-event
+    // Injects a mock webhook event locally to test the IPC → renderer flow
     ipcMain.handle(
       GitSyncEvent.SEND_TEST_WEBHOOK_EVENT,
       async (): Promise<{ success: boolean; eventId?: string; error?: string }> => {
         try {
-          const serverUrl = gitSyncWebSocketManager.getServerUrl();
-          // Convert WebSocket URL to HTTP URL
-          let httpUrl = serverUrl;
-          if (httpUrl.startsWith('wss://')) {
-            httpUrl = httpUrl.replace('wss://', 'https://');
-          } else if (httpUrl.startsWith('ws://')) {
-            httpUrl = httpUrl.replace('ws://', 'http://');
-          }
+          const testEventId = `local_test_${Date.now()}`;
 
-          const response = await fetch(`${httpUrl}/api/webhooks/events`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+          // Inject mock event directly to renderers (bypasses server)
+          const allWindows = BrowserWindow.getAllWindows();
+          const mockEvent = {
+            type: 'webhook:github_event',
+            payload: {
+              eventId: testEventId,
               event: 'test',
-              repository: 'test/webhook-test',
+              deliveryId: `test-delivery-${Date.now()}`,
+              repository: 'test/local-mock',
               branch: 'main',
-              message: 'Test webhook event triggered from desktop app',
-            }),
+              processed: true,
+              message: 'Local mock event (tests IPC flow only)',
+              timestamp: Date.now(),
+              backlogChanges: [],
+            },
+          };
+
+          allWindows.forEach((window) => {
+            if (window.webContents && !window.webContents.isDestroyed()) {
+              window.webContents.send(
+                GitSyncEvent.ON_MESSAGE,
+                '__presence_only__',
+                mockEvent,
+              );
+            }
           });
 
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-          }
-
-          const data = (await response.json()) as {
-            success: boolean;
-            eventId?: string;
-            error?: string;
-          };
-          return data;
+          console.log('[GitSyncIPC] Injected local test webhook event:', testEventId);
+          return { success: true, eventId: testEventId };
         } catch (error) {
           console.error('[GitSyncIPC] Failed to send test webhook event:', error);
           const errorMsg =
