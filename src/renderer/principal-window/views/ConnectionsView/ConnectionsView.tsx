@@ -1403,6 +1403,29 @@ export const ConnectionsView: React.FC = () => {
                 >
                   {isLoadingWebhookEvents ? <Loader2 size={10} className="animate-spin" /> : <RefreshCw size={10} />}
                 </button>
+                <button
+                  onClick={async () => {
+                    addActionResult('info', 'Sending test webhook event...');
+                    const result = await GitSyncService.sendTestWebhookEvent();
+                    if (result.success) {
+                      addActionResult('success', `Test event sent: ${result.eventId}`);
+                    } else {
+                      addActionResult('error', `Failed to send test event: ${result.error}`);
+                    }
+                  }}
+                  style={{
+                    padding: '2px 6px',
+                    borderRadius: '3px',
+                    border: `1px solid ${borderColor}`,
+                    background: 'transparent',
+                    color: textSecondary,
+                    cursor: 'pointer',
+                    fontSize: '10px',
+                  }}
+                  title="Send test webhook event"
+                >
+                  Test
+                </button>
               </div>
             </div>
             <div style={{ flex: 1, overflow: 'auto', padding: '8px', fontSize: '11px' }}>

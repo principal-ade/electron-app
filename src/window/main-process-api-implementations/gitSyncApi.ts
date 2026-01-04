@@ -15,6 +15,7 @@ export enum GitSyncEvent {
   GET_ENVIRONMENT = 'git-sync:get-environment',
   GET_SERVER_PRESENCE = 'git-sync:get-server-presence',
   GET_WEBHOOK_EVENTS = 'git-sync:get-webhook-events',
+  SEND_TEST_WEBHOOK_EVENT = 'git-sync:send-test-webhook-event',
 
   // Events (from main to renderer)
   ON_MESSAGE = 'git-sync:message',
@@ -95,4 +96,7 @@ export const gitSyncAPI: GitSyncAPI = {
 
   getWebhookEvents: (limit?: number) =>
     ipcRenderer.invoke(GitSyncEvent.GET_WEBHOOK_EVENTS, limit),
+
+  sendTestWebhookEvent: () =>
+    ipcRenderer.invoke(GitSyncEvent.SEND_TEST_WEBHOOK_EVENT),
 };

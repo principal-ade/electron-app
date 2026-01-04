@@ -374,6 +374,50 @@ class GitSyncIPC {
         }
       },
     );
+
+    // Handler for git-sync:send-test-webhook-event
+    ipcMain.handle(
+      GitSyncEvent.SEND_TEST_WEBHOOK_EVENT,
+      async (): Promise<{ success: boolean; eventId?: string; error?: string }> => {
+        try {
+          const serverUrl = gitSyncWebSocketManager.getServerUrl();
+          // Convert WebSocket URL to HTTP URL
+          let httpUrl = serverUrl;
+          if (httpUrl.startsWith('wss://')) {
+            httpUrl = httpUrl.replace('wss://', 'https://');
+          } else if (httpUrl.startsWith('ws://')) {
+            httpUrl = httpUrl.replace('ws://', 'http://');
+          }
+
+          const response = await fetch(`${httpUrl}/api/webhooks/events`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              event: 'test',
+              repository: 'test/webhook-test',
+              branch: 'main',
+              message: 'Test webhook event triggered from desktop app',
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const data = (await response.json()) as {
+            success: boolean;
+            eventId?: string;
+            error?: string;
+          };
+          return data;
+        } catch (error) {
+          console.error('[GitSyncIPC] Failed to send test webhook event:', error);
+          const errorMsg =
+            error instanceof Error ? error.message : String(error);
+          return { success: false, error: errorMsg };
+        }
+      },
+    );
   }
 
   /**

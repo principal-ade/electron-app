@@ -216,4 +216,13 @@ export interface GitSyncAPI {
    * Fetches via main process to avoid CORS issues
    */
   getWebhookEvents(limit?: number): Promise<GitSyncWebhookEventsResponse>;
+
+  /**
+   * Send a test webhook event to verify real-time event flow
+   */
+  sendTestWebhookEvent(): Promise<{
+    success: boolean;
+    eventId?: string;
+    error?: string;
+  }>;
 }

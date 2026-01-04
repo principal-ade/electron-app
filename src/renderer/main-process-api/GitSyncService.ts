@@ -283,4 +283,23 @@ export class GitSyncService {
       };
     }
   }
+
+  /**
+   * Send a test webhook event to verify real-time event flow
+   */
+  static async sendTestWebhookEvent(): Promise<{
+    success: boolean;
+    eventId?: string;
+    error?: string;
+  }> {
+    try {
+      return await window.mainProcess.gitSync.sendTestWebhookEvent();
+    } catch (error) {
+      console.error('[GitSyncService] Failed to send test webhook event:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
 }
