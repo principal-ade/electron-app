@@ -465,6 +465,7 @@ app
     const { gitSyncIPC } = require('./services/GitSyncIPC');
     const { presenceIPC } = require('./services/PresenceIPC');
     const { orbitIPC } = require('./services/OrbitIPC');
+    const { fastForwardIPC } = require('./services/FastForwardIPC');
 
     // Force initialization
     const authStateManager = AuthStateManager.getInstance();
@@ -474,6 +475,7 @@ app
       gitSyncIPC: !!gitSyncIPC,
       presenceIPC: !!presenceIPC,
       orbitIPC: !!orbitIPC,
+      fastForwardIPC: !!fastForwardIPC,
     });
 
     // Initialize auth state from stored credentials

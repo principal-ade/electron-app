@@ -19,6 +19,7 @@ import type {
 } from '../../shared/main-process-api-interfaces/GitSyncAPI';
 import fetch from 'node-fetch';
 import { deviceIdService } from './DeviceIdService';
+import { fastForwardService } from './FastForwardService';
 import jwt from 'jsonwebtoken';
 import { APP_BRANDING } from '../../shared/config/appBranding';
 
@@ -72,6 +73,7 @@ interface ConnectionInfo {
   client: BaseClient; // Using Control Tower Core's BaseClient
   status: GitSyncStatus;
   token: string; // GitHub token for re-authentication
+  hasJoinedRoom: boolean; // Track if we've already joined the room (prevent re-join on reconnect)
 }
 
 interface RoomTokenInfo {
@@ -277,6 +279,7 @@ export class GitSyncWebSocketManager {
         windowId,
         client,
         token: config.token,
+        hasJoinedRoom: false,
         status: {
           connected: false,
           authenticated: false,
@@ -358,16 +361,25 @@ export class GitSyncWebSocketManager {
 
           // Join the repository room so presence extension tracks this repo as open
           // The repoId format is "owner/repo" which matches the room ID expected by RepositoryPresenceExtension
-          try {
-            await client.joinRoom(connectionInfo.repoId);
+          // Only join if we haven't already joined (prevents duplicate registrations on reconnect)
+          if (!connectionInfo.hasJoinedRoom) {
+            try {
+              await client.joinRoom(connectionInfo.repoId);
+              connectionInfo.hasJoinedRoom = true;
+              console.log(
+                '[GitSyncWebSocketManager] Joined repository room:',
+                connectionInfo.repoId,
+              );
+            } catch (joinError) {
+              console.error(
+                '[GitSyncWebSocketManager] Failed to join repository room:',
+                joinError,
+              );
+            }
+          } else {
             console.log(
-              '[GitSyncWebSocketManager] Joined repository room:',
+              '[GitSyncWebSocketManager] Already joined room, skipping re-join:',
               connectionInfo.repoId,
-            );
-          } catch (joinError) {
-            console.error(
-              '[GitSyncWebSocketManager] Failed to join repository room:',
-              joinError,
             );
           }
         } else {
@@ -880,6 +892,7 @@ export class GitSyncWebSocketManager {
         windowId,
         client,
         token, // Store GitHub token for re-authentication
+        hasJoinedRoom: false,
         status: {
           connected: false,
           authenticated: false,
@@ -1064,6 +1077,21 @@ export class GitSyncWebSocketManager {
           type: 'webhook:github_event',
           payload: event.data || {},
         });
+
+        // Trigger fast-forward check for matching local repos
+        if (event.data) {
+          fastForwardService.handleWebhookEvent({
+            eventId: String(event.data.eventId || ''),
+            event: String(event.data.event || 'unknown'),
+            deliveryId: String(event.data.deliveryId || ''),
+            repository: String(event.data.repository || ''),
+            branch: event.data.branch ? String(event.data.branch) : undefined,
+            processed: Boolean(event.data.processed),
+            message: event.data.message ? String(event.data.message) : undefined,
+          }).catch((error) => {
+            console.error('[GitSyncWebSocketManager] Fast-forward check failed:', error);
+          });
+        }
       } else {
         // Forward other events as generic event_received
         this.broadcastToRenderers(GitSyncEvent.ON_MESSAGE, connectionId, {

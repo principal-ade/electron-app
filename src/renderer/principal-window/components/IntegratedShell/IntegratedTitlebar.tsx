@@ -3,6 +3,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { ThemeDropdown } from './ThemeDropdown';
 import { ThemeCustomizationButton } from '../../../components/Titlebar/ThemeCustomizationButton';
 import { ViewSidebarControls } from '../ViewSidebarControls/ViewSidebarControls';
+import { PullMailbox } from '../PullMailbox';
 import { Bot } from 'lucide-react';
 import { remoteAgentService } from '../../../services/RemoteAgentService';
 import type { RemoteAgentConfig } from '../../../../shared/types/remoteAgent.types';
@@ -307,6 +308,7 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
             </button>
           )}
         </div>
+        <PullMailbox />
         {showThemeButton && <ThemeDropdown />}
         {showCustomizeButton && <ThemeCustomizationButton />}
         {showSidebarControl && onToggleSidebar && (
