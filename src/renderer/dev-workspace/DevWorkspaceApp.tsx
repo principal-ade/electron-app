@@ -635,7 +635,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
 
   // Per-panel focus state (dims that panel)
   const [panelFocus, setPanelFocus] = useState<{ left: boolean; right: boolean }>({
-    left: true,
+    left: false,
     right: false,
   });
 
