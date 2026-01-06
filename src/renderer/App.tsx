@@ -46,6 +46,11 @@ const CallimachusWindow = React.lazy(() =>
     default: m.CallimachusWindow,
   })),
 );
+const RemoteTerminalViewer = React.lazy(() =>
+  import('./pages/RemoteTerminalViewer').then((m) => ({
+    default: m.RemoteTerminalViewer,
+  })),
+);
 
 function AppContent({
   _setHasUpdateAvailable,
@@ -63,6 +68,7 @@ function AppContent({
     | 'multiFileEditor'
     | 'callimachus'
     | 'search'
+    | 'remoteTerminalViewer'
     | null
   >(null);
   // const [useNewUI, setUseNewUI] = React.useState(false); // No longer needed
@@ -76,9 +82,13 @@ function AppContent({
   //   [],
   // );
 
-  // Check for updates on app startup
+  // Check for updates on app startup (only for main windows, not utility windows)
   React.useEffect(() => {
-    AppVersionManagerService.checkForUpdateSilently();
+    const { hash } = window.location;
+    // Skip update check for utility windows like remote terminal viewer
+    if (!hash.startsWith('#/remote-terminal-viewer')) {
+      AppVersionManagerService.checkForUpdateSilently();
+    }
   }, []);
   // Check for special routes in hash
   React.useEffect(() => {
@@ -119,6 +129,9 @@ function AppContent({
       } else if (hash === '#/search' || hash.startsWith('#/search')) {
         // Alexandria Search route
         setCurrentView('search');
+      } else if (hash === '#/remote-terminal-viewer' || hash.startsWith('#/remote-terminal-viewer')) {
+        // Remote Terminal Viewer route (for testing WebSocket terminal streaming)
+        setCurrentView('remoteTerminalViewer');
       }
       // No default view - windows should have specific hashes
     };
@@ -206,6 +219,14 @@ function AppContent({
     return (
       <Suspense fallback={<LoadingFallback />}>
         <CallimachusWindow />
+      </Suspense>
+    );
+  }
+
+  if (currentView === 'remoteTerminalViewer') {
+    return (
+      <Suspense fallback={<LoadingFallback />}>
+        <RemoteTerminalViewer />
       </Suspense>
     );
   }

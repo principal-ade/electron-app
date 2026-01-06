@@ -28,6 +28,10 @@ const configuration: webpack.Configuration = {
   entry: {
     main: path.join(webpackPaths.srcMainPath, 'main.ts'),
     preload: path.join(webpackPaths.srcWindowPath, 'preload.ts'),
+    'preload-remote-terminal-viewer': path.join(
+      webpackPaths.srcWindowPath,
+      'preload-remote-terminal-viewer.ts',
+    ),
     'event-worker': path.join(webpackPaths.srcPath, 'event-processing-server', 'worker-entry.ts'),
     'terminal-worker': path.join(webpackPaths.srcPath, 'terminal-worker', 'worker-entry.ts'),
   },

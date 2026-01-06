@@ -1,6 +1,6 @@
 {
   "name": "principal-ade",
-  "version": "0.0.302",
+  "version": "0.0.303",
   "description": "Principal ADE - The future of Agentic Development Environment",
   "type": "module",
   "keywords": [
@@ -197,7 +197,7 @@
     "@principal-ai/alexandria-collections": "^0.1.0",
     "@principal-ai/alexandria-core-library": "^0.2.4",
     "@principal-ai/codebase-composition": "^0.2.28",
-    "@principal-ai/control-tower-core": "^0.1.25",
+    "@principal-ai/control-tower-core": "^0.2.0",
     "@principal-ai/file-city-react": "^0.4.4",
     "@principal-ai/markdown-search": "^2.0.7",
     "@principal-ai/observability-sdk": "^0.6.1",

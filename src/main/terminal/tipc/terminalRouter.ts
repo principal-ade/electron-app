@@ -67,13 +67,16 @@ export const terminalRouter = {
   listTerminalSessions: t.procedure.action(async () => {
     const sessions = Array.from(sessionManager.getAllSessions().entries()).map(
       ([id, session]) => {
-        const ownerWindowId = ownershipManager.getOwner(id);
+        const owner = ownershipManager.getOwner(id);
+        // Convert owner to windowId for backwards compatibility
+        const ownerWindowId =
+          owner && owner.type === 'local' ? parseInt(owner.id, 10) : undefined;
         return {
           id,
           cwd: session.directory,
           directory: session.directory,
           context: session.context,
-          agentSessionId: session.agentSessionId,
+          agentSessionId: undefined, // TODO: Add agentSessionId to TerminalSession type
           createdAt: session.createdAt,
           lastActivity: session.lastActivity,
           status: 'active' as const,
@@ -177,11 +180,16 @@ export const terminalRouter = {
       console.log(`[TIPC] claimTerminalOwnership result:`, result);
 
       // If ownership was taken from another window, notify them
-      if (result.success && result.previousOwner !== undefined) {
-        const previousWindow = BrowserWindow.fromId(result.previousOwner);
+      if (
+        result.success &&
+        result.previousOwner !== undefined &&
+        result.previousOwner.type === 'local'
+      ) {
+        const previousWindowId = parseInt(result.previousOwner.id, 10);
+        const previousWindow = BrowserWindow.fromId(previousWindowId);
         if (previousWindow && !previousWindow.isDestroyed()) {
           console.log(
-            `[TIPC] Notifying previous owner window ${result.previousOwner}`,
+            `[TIPC] Notifying previous owner window ${previousWindowId}`,
           );
           previousWindow.webContents.send('terminal:ownershipLost', {
             sessionId: input.sessionId,

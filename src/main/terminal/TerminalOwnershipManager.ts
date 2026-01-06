@@ -2,125 +2,263 @@
  * Terminal Ownership Manager
  *
  * Enforces single-writer model for terminal sessions.
- * Only the owner window can send input to the PTY and receives output.
+ * Supports both local (Electron window) and remote (browser) owners.
+ * Only the owner can send input to the PTY and receives output.
  */
 
 import { BrowserWindow } from 'electron';
-import { OwnershipStatus, OwnershipResult } from './types';
+import {
+  OwnershipStatus,
+  OwnershipResult,
+  TerminalOwner,
+  OwnerType,
+  RemoteClientInfo,
+} from './types';
 
 export class TerminalOwnershipManager {
-  // Map of sessionId -> ownerWindowId
-  private ownership = new Map<string, number>();
+  // Map of sessionId -> owner info
+  private ownership = new Map<string, TerminalOwner>();
+
+  // Track remote client connections for validation
+  private remoteClients = new Map<string, RemoteClientInfo>();
 
   /**
-   * Check ownership status for a session.
+   * Register a remote client connection
+   */
+  registerRemoteClient(clientInfo: RemoteClientInfo): void {
+    this.remoteClients.set(clientInfo.clientId, clientInfo);
+    console.log(
+      `[OwnershipManager] Registered remote client ${clientInfo.clientId} (${clientInfo.githubHandle})`,
+    );
+  }
+
+  /**
+   * Unregister a remote client connection
+   */
+  unregisterRemoteClient(clientId: string): void {
+    this.remoteClients.delete(clientId);
+    console.log(
+      `[OwnershipManager] Unregistered remote client ${clientId}`,
+    );
+  }
+
+  /**
+   * Check ownership status for a session (local window).
    */
   checkOwnership(
     sessionId: string,
     requestingWindowId: number,
   ): OwnershipStatus {
-    const ownerWindowId = this.ownership.get(sessionId) ?? null;
+    const owner = this.ownership.get(sessionId) ?? null;
 
-    // Check if owner window still exists
-    let ownerWindowExists = false;
-    if (ownerWindowId !== null) {
-      const ownerWindow = BrowserWindow.fromId(ownerWindowId);
-      ownerWindowExists = ownerWindow !== null && !ownerWindow.isDestroyed();
+    // Check if owner still exists
+    let ownerExists = false;
+    if (owner !== null) {
+      ownerExists = this.doesOwnerExist(owner);
     }
 
-    // Can claim if: no owner or owner window is gone
-    const canClaim = ownerWindowId === null || !ownerWindowExists;
+    // Can claim if: no owner or owner is gone
+    const canClaim = owner === null || !ownerExists;
 
     return {
       exists: this.ownership.has(sessionId),
-      ownedByWindowId: ownerWindowId,
-      ownedByThisWindow: ownerWindowId === requestingWindowId,
+      owner,
+      ownedByThisClient:
+        owner !== null &&
+        owner.type === 'local' &&
+        owner.id === requestingWindowId.toString(),
       canClaim,
-      ownerWindowExists,
+      ownerExists,
+      remoteClients: 0, // TODO: Track remote attachments separately
     };
   }
 
   /**
-   * Claim ownership of a session.
-   * Returns the previous owner's windowId if ownership was taken.
+   * Check ownership status for a session (generic - local or remote).
+   */
+  checkOwnershipGeneric(
+    sessionId: string,
+    requestingId: string,
+    requestingType: OwnerType,
+  ): OwnershipStatus {
+    const owner = this.ownership.get(sessionId) ?? null;
+
+    // Check if owner still exists
+    let ownerExists = false;
+    if (owner !== null) {
+      ownerExists = this.doesOwnerExist(owner);
+    }
+
+    // Can claim if: no owner or owner is gone
+    const canClaim = owner === null || !ownerExists;
+
+    return {
+      exists: this.ownership.has(sessionId),
+      owner,
+      ownedByThisClient:
+        owner !== null &&
+        owner.type === requestingType &&
+        owner.id === requestingId,
+      canClaim,
+      ownerExists,
+      remoteClients: 0, // TODO: Track remote attachments separately
+    };
+  }
+
+  /**
+   * Check if an owner still exists (window not closed / remote client connected)
+   */
+  private doesOwnerExist(owner: TerminalOwner): boolean {
+    if (owner.type === 'local') {
+      const windowId = parseInt(owner.id, 10);
+      const window = BrowserWindow.fromId(windowId);
+      return window !== null && !window.isDestroyed();
+    } else {
+      // Remote client - check if still registered
+      return this.remoteClients.has(owner.id);
+    }
+  }
+
+  /**
+   * Claim ownership of a session (legacy - for local windows).
    */
   claimOwnership(
     sessionId: string,
     windowId: number,
     force: boolean = false,
   ): OwnershipResult {
+    const owner: TerminalOwner = {
+      type: 'local',
+      id: windowId.toString(),
+      userId: 'local-user', // TODO: Get actual user ID from auth
+      githubHandle: 'local', // TODO: Get actual GitHub handle
+      claimedAt: Date.now(),
+    };
+
+    return this.claimOwnershipGeneric(sessionId, owner, force);
+  }
+
+  /**
+   * Claim ownership of a session (generic - local or remote).
+   */
+  claimOwnershipGeneric(
+    sessionId: string,
+    newOwner: TerminalOwner,
+    force: boolean = false,
+  ): OwnershipResult {
     const currentOwner = this.ownership.get(sessionId);
 
     // Already own it
-    if (currentOwner === windowId) {
-      return { success: true, ownedByWindowId: windowId };
+    if (
+      currentOwner &&
+      currentOwner.type === newOwner.type &&
+      currentOwner.id === newOwner.id
+    ) {
+      return { success: true, owner: currentOwner };
     }
 
-    // Check if current owner's window still exists
+    // Check if current owner still exists
     let currentOwnerExists = false;
     if (currentOwner !== undefined) {
-      const ownerWindow = BrowserWindow.fromId(currentOwner);
-      currentOwnerExists = ownerWindow !== null && !ownerWindow.isDestroyed();
+      currentOwnerExists = this.doesOwnerExist(currentOwner);
     }
 
-    // Can't claim if owned by existing window and not forcing
+    // Can't claim if owned by existing client and not forcing
     if (currentOwnerExists && !force) {
       return {
         success: false,
-        reason: 'Session is owned by another window',
-        ownedByWindowId: currentOwner,
+        reason: `Session is owned by another ${currentOwner!.type} client`,
+        owner: currentOwner,
       };
     }
 
     // Claim ownership
     const previousOwner = currentOwner;
-    this.ownership.set(sessionId, windowId);
+    this.ownership.set(sessionId, newOwner);
 
     console.log(
-      `[OwnershipManager] Window ${windowId} claimed ownership of session ${sessionId}` +
-        (previousOwner !== undefined ? ` (from window ${previousOwner})` : ''),
+      `[OwnershipManager] ${newOwner.type} client ${newOwner.id} (${newOwner.githubHandle}) claimed ownership of session ${sessionId}` +
+        (previousOwner !== undefined
+          ? ` (from ${previousOwner.type} ${previousOwner.id})`
+          : ''),
     );
 
     return {
       success: true,
-      ownedByWindowId: windowId,
+      owner: newOwner,
       previousOwner: currentOwnerExists ? previousOwner : undefined,
     };
   }
 
   /**
-   * Release ownership of a session.
+   * Release ownership of a session (legacy - for local windows).
    */
   releaseOwnership(sessionId: string, windowId: number): OwnershipResult {
+    return this.releaseOwnershipGeneric(sessionId, windowId.toString(), 'local');
+  }
+
+  /**
+   * Release ownership of a session (generic - local or remote).
+   */
+  releaseOwnershipGeneric(
+    sessionId: string,
+    ownerId: string,
+    ownerType: OwnerType,
+  ): OwnershipResult {
     const currentOwner = this.ownership.get(sessionId);
 
-    if (currentOwner !== windowId) {
+    if (
+      !currentOwner ||
+      currentOwner.type !== ownerType ||
+      currentOwner.id !== ownerId
+    ) {
       return {
         success: false,
         reason: 'Not the owner of this session',
-        ownedByWindowId: currentOwner,
+        owner: currentOwner,
       };
     }
 
     this.ownership.delete(sessionId);
     console.log(
-      `[OwnershipManager] Window ${windowId} released ownership of session ${sessionId}`,
+      `[OwnershipManager] ${ownerType} client ${ownerId} released ownership of session ${sessionId}`,
     );
 
-    return { success: true };
+    return { success: true, previousOwner: currentOwner };
   }
 
   /**
    * Check if a window owns a session (for write permission).
    */
   isOwner(sessionId: string, windowId: number): boolean {
-    return this.ownership.get(sessionId) === windowId;
+    const owner = this.ownership.get(sessionId);
+    return (
+      owner !== undefined &&
+      owner.type === 'local' &&
+      owner.id === windowId.toString()
+    );
   }
 
   /**
-   * Get the owner window ID for a session.
+   * Check if a client owns a session (generic - local or remote).
    */
-  getOwner(sessionId: string): number | undefined {
+  isOwnerGeneric(
+    sessionId: string,
+    ownerId: string,
+    ownerType: OwnerType,
+  ): boolean {
+    const owner = this.ownership.get(sessionId);
+    return (
+      owner !== undefined &&
+      owner.type === ownerType &&
+      owner.id === ownerId
+    );
+  }
+
+  /**
+   * Get the owner for a session.
+   */
+  getOwner(sessionId: string): TerminalOwner | undefined {
     return this.ownership.get(sessionId);
   }
 
@@ -137,9 +275,10 @@ export class TerminalOwnershipManager {
    */
   cleanupWindow(windowId: number): string[] {
     const releasedSessions: string[] = [];
+    const windowIdStr = windowId.toString();
 
     for (const [sessionId, owner] of this.ownership.entries()) {
-      if (owner === windowId) {
+      if (owner.type === 'local' && owner.id === windowIdStr) {
         this.ownership.delete(sessionId);
         releasedSessions.push(sessionId);
       }
@@ -152,6 +291,54 @@ export class TerminalOwnershipManager {
     }
 
     return releasedSessions;
+  }
+
+  /**
+   * Clean up ownership for a disconnected remote client.
+   * Returns list of session IDs that were released.
+   */
+  cleanupRemoteClient(clientId: string): string[] {
+    const releasedSessions: string[] = [];
+
+    for (const [sessionId, owner] of this.ownership.entries()) {
+      if (owner.type === 'remote' && owner.id === clientId) {
+        this.ownership.delete(sessionId);
+        releasedSessions.push(sessionId);
+      }
+    }
+
+    // Unregister the remote client
+    this.unregisterRemoteClient(clientId);
+
+    if (releasedSessions.length > 0) {
+      console.log(
+        `[OwnershipManager] Cleaned up ${releasedSessions.length} sessions for disconnected remote client ${clientId}`,
+      );
+    }
+
+    return releasedSessions;
+  }
+
+  /**
+   * Get all sessions owned by a remote client
+   */
+  getRemoteClientSessions(clientId: string): string[] {
+    const sessions: string[] = [];
+
+    for (const [sessionId, owner] of this.ownership.entries()) {
+      if (owner.type === 'remote' && owner.id === clientId) {
+        sessions.push(sessionId);
+      }
+    }
+
+    return sessions;
+  }
+
+  /**
+   * Get all registered remote clients
+   */
+  getRemoteClients(): Map<string, RemoteClientInfo> {
+    return new Map(this.remoteClients);
   }
 }
 

@@ -132,6 +132,15 @@ export default class MenuBuilder {
             this.mainWindow.webContents.toggleDevTools();
           },
         },
+        { type: 'separator' },
+        {
+          label: 'Remote Terminal Viewer',
+          click: async () => {
+            const { getRemoteTerminalWindow } = await import('./window/RemoteTerminalWindow');
+            const window = getRemoteTerminalWindow();
+            window.create();
+          },
+        },
       ],
     };
     const subMenuViewProd: MenuItemConstructorOptions = {
@@ -294,6 +303,15 @@ export default class MenuBuilder {
                   accelerator: 'Alt+Ctrl+I',
                   click: () => {
                     this.mainWindow.webContents.toggleDevTools();
+                  },
+                },
+                { type: 'separator' },
+                {
+                  label: 'Remote Terminal Viewer',
+                  click: async () => {
+                    const { getRemoteTerminalWindow } = await import('./window/RemoteTerminalWindow');
+                    const window = getRemoteTerminalWindow();
+                    window.create();
                   },
                 },
               ]

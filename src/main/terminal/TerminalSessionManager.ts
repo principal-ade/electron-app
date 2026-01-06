@@ -32,6 +32,15 @@ export class TerminalSessionManager {
   private maxSessions = 20;
   private rendererWindows: Set<BrowserWindow> = new Set();
 
+  // WebSocket bridge for remote terminal access (optional)
+  private wsBridge: any | null = null; // Using any to avoid circular dependency
+
+  // Data listeners for PTY output (for remote streaming)
+  private dataListeners: Map<
+    string,
+    (sessionId: string, data: string) => void
+  > = new Map();
+
   // Utility process worker
   private worker: UtilityProcess | null = null;
   private isWorkerReady = false;
@@ -52,6 +61,55 @@ export class TerminalSessionManager {
 
   constructor() {
     this.initializeWorker();
+  }
+
+  /**
+   * Set the WebSocket bridge for remote terminal access
+   */
+  setWebSocketBridge(bridge: any): void {
+    this.wsBridge = bridge;
+    console.log('[TerminalSessionManager] WebSocket bridge set');
+  }
+
+  /**
+   * Add a listener for PTY data output (for remote streaming)
+   * Returns a listener ID that can be used to remove the listener
+   */
+  addDataListener(
+    listenerId: string,
+    callback: (sessionId: string, data: string) => void,
+  ): void {
+    this.dataListeners.set(listenerId, callback);
+    console.log(
+      `[TerminalSessionManager] Added data listener: ${listenerId}`,
+    );
+  }
+
+  /**
+   * Remove a data listener
+   */
+  removeDataListener(listenerId: string): void {
+    this.dataListeners.delete(listenerId);
+    console.log(
+      `[TerminalSessionManager] Removed data listener: ${listenerId}`,
+    );
+  }
+
+  /**
+   * Notify all data listeners about PTY output
+   * This should be called when PTY data is received
+   */
+  private notifyDataListeners(sessionId: string, data: string): void {
+    for (const [listenerId, callback] of this.dataListeners.entries()) {
+      try {
+        callback(sessionId, data);
+      } catch (error) {
+        console.error(
+          `[TerminalSessionManager] Error in data listener ${listenerId}:`,
+          error,
+        );
+      }
+    }
   }
 
   // =============================================================================
@@ -365,6 +423,10 @@ export class TerminalSessionManager {
       }
     }
 
+    // Determine repository info from directory
+    const repoPath = await this.findGitRoot(workingDirectory);
+    const repoId = repoPath ? await this.getRepoIdFromPath(repoPath) : undefined;
+
     // Create session tracking in main (minimal state)
     const now = Date.now();
     const session: TerminalSession = {
@@ -374,6 +436,11 @@ export class TerminalSessionManager {
       context,
       createdAt: now,
       lastActivity: now,
+      // WebSocket integration fields
+      repoPath,
+      repoId,
+      owner: null,
+      remoteAttachments: new Set(),
     };
     this.sessions.set(sessionId, session);
     this.sessionPorts.set(sessionId, new Map());
@@ -397,7 +464,22 @@ export class TerminalSessionManager {
     };
     this.sendToWorker(message);
 
-    return resultPromise;
+    // Wait for session creation and notify bridge
+    const createdSessionId = await resultPromise;
+
+    // Notify WebSocket bridge of new session
+    if (this.wsBridge) {
+      try {
+        await this.wsBridge.onSessionCreated(createdSessionId);
+      } catch (error) {
+        console.error(
+          '[TerminalSessionManager] Error notifying bridge of session creation:',
+          error,
+        );
+      }
+    }
+
+    return createdSessionId;
   }
 
   trackSessionByRepo(sessionKey: string, sessionId: string): void {
@@ -417,7 +499,7 @@ export class TerminalSessionManager {
     }
   }
 
-  destroySession(sessionId: string): void {
+  async destroySession(sessionId: string): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (session) {
       const message: DestroySessionMessage = {
@@ -429,6 +511,18 @@ export class TerminalSessionManager {
       this.sendToWorker(message);
       this.cleanupSession(sessionId);
       console.log(`[Terminal] Session destroyed: ${sessionId}`);
+
+      // Notify WebSocket bridge of session destruction
+      if (this.wsBridge) {
+        try {
+          await this.wsBridge.onSessionDestroyed(sessionId);
+        } catch (error) {
+          console.error(
+            '[TerminalSessionManager] Error notifying bridge of session destruction:',
+            error,
+          );
+        }
+      }
     }
   }
 
@@ -610,6 +704,54 @@ export class TerminalSessionManager {
     return this.createPortForSession(sessionId, windowId, true);
   }
 
+  /**
+   * Create a monitoring port for the bridge to intercept PTY data
+   * This allows remote streaming without affecting renderer ports
+   */
+  createMonitoringPort(sessionId: string): boolean {
+    if (!this.sessions.has(sessionId)) {
+      console.error(`[Terminal] Session ${sessionId} not found`);
+      return false;
+    }
+
+    try {
+      // Create MessageChannel for monitoring
+      const channel = new MessageChannelMain();
+
+      // Set up port2 listener to intercept data and notify listeners
+      channel.port2.on('message', (event) => {
+        if (event.data && event.data.type === 'DATA') {
+          this.notifyDataListeners(sessionId, event.data.data);
+        }
+      });
+
+      channel.port2.start();
+
+      // Send port1 to worker with a special monitoring windowId (-1)
+      const registerMsg: RegisterPortMessage = {
+        type: 'REGISTER_PORT',
+        id: `register-monitor-${sessionId}`,
+        timestamp: Date.now(),
+        sessionId,
+        windowId: -1, // Special ID for monitoring
+        isOwner: false,
+      };
+      this.worker?.postMessage(registerMsg, [channel.port1]);
+
+      console.log(
+        `[Terminal] Created monitoring port for session ${sessionId}`,
+      );
+
+      return true;
+    } catch (error) {
+      console.error(
+        `[Terminal] Failed to create monitoring port for session ${sessionId}:`,
+        error,
+      );
+      return false;
+    }
+  }
+
   private closeAllPortsForSession(sessionId: string): void {
     const windowPorts = this.sessionPorts.get(sessionId);
     if (windowPorts) {
@@ -657,6 +799,64 @@ export class TerminalSessionManager {
           `[Terminal] Cleaned up port for window ${windowId} on session ${sessionId}`,
         );
       }
+    }
+  }
+
+  // =============================================================================
+  // Repository Detection (for WebSocket room organization)
+  // =============================================================================
+
+  /**
+   * Find the git root directory from a given path
+   */
+  private async findGitRoot(directory: string): Promise<string | undefined> {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      let currentDir = directory;
+
+      // Walk up the directory tree looking for .git
+      while (currentDir !== path.dirname(currentDir)) {
+        const gitDir = path.join(currentDir, '.git');
+        if (fs.existsSync(gitDir)) {
+          return currentDir;
+        }
+        currentDir = path.dirname(currentDir);
+      }
+
+      return undefined;
+    } catch (error) {
+      console.error('[TerminalSessionManager] Error finding git root:', error);
+      return undefined;
+    }
+  }
+
+  /**
+   * Get repository ID (owner/repo) from git remote
+   */
+  private async getRepoIdFromPath(
+    repoPath: string,
+  ): Promise<string | undefined> {
+    try {
+      const { execSync } = require('child_process');
+      const remoteUrl = execSync('git config --get remote.origin.url', {
+        cwd: repoPath,
+        encoding: 'utf-8',
+      }).trim();
+
+      // Parse GitHub URL to get owner/repo
+      // Handles: git@github.com:owner/repo.git or https://github.com/owner/repo.git
+      const match = remoteUrl.match(
+        /github\.com[:/]([^/]+)\/(.+?)(\.git)?$/,
+      );
+      if (match) {
+        return `${match[1]}/${match[2]}`;
+      }
+
+      return undefined;
+    } catch (error) {
+      // Not a git repo or no remote configured
+      return undefined;
     }
   }
 }

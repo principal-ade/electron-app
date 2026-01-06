@@ -447,6 +447,31 @@ protocol.registerSchemesAsPrivileged([
   },
 ]);
 
+// Allow self-signed certificates for Control Tower server in development
+app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
+  console.log('[Main] Certificate error event fired:', {
+    url,
+    error,
+    hostname: new URL(url).hostname,
+  });
+
+  const hostname = new URL(url).hostname;
+
+  // Allow certificates for production Control Tower server
+  if (
+    hostname.includes('amazonlightsail.com') ||
+    hostname.includes('repository-traffic-controller') ||
+    (process.env.NODE_ENV === 'development' && hostname === 'localhost')
+  ) {
+    console.log(`[Main] ✅ Bypassing certificate error for ${hostname}`);
+    event.preventDefault();
+    callback(true); // Trust the certificate
+  } else {
+    console.log(`[Main] ❌ Not bypassing certificate error for ${hostname}`);
+    callback(false); // Use default verification
+  }
+});
+
 // Handle deep links on macOS (open-url event)
 // This must be set up before app is ready
 app.on('open-url', (event, url) => {

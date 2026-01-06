@@ -214,12 +214,15 @@ export function setupSessionHandlers(
     const terminals: TerminalInfo[] = Array.from(
       sessionManager.getAllSessions().entries(),
     ).map(([id, session]) => {
-      const ownerWindowId = ownershipManager.getOwner(id);
+      const owner = ownershipManager.getOwner(id);
+      // Convert owner to windowId for backwards compatibility
+      const ownerWindowId =
+        owner && owner.type === 'local' ? parseInt(owner.id, 10) : undefined;
       return {
         id,
         directory: session.directory,
         context: session.context,
-        agentSessionId: session.agentSessionId,
+        agentSessionId: undefined, // TODO: Add agentSessionId to TerminalSession type
         createdAt: session.createdAt,
         lastActivity: session.lastActivity,
         status: 'active' as const,

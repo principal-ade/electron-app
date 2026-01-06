@@ -43,6 +43,10 @@ const configuration: webpack.Configuration = {
       webpackPaths.srcWindowPath,
       'preload-window-switcher.ts',
     ),
+    'preload-remote-terminal-viewer': path.join(
+      webpackPaths.srcWindowPath,
+      'preload-remote-terminal-viewer.ts',
+    ),
     terminal: path.join(webpackPaths.srcMainPath, 'terminal', 'index.ts'),
     'event-worker': path.join(
       webpackPaths.srcPath,
