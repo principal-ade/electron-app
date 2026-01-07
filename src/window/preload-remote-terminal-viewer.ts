@@ -11,11 +11,18 @@ import { windowAPI } from './main-process-api-implementations/windowApi';
 
 console.info('[RemoteTerminalViewer Preload] Imports successful');
 
+// Terminal Bridge API for remote viewer connection
+const terminalBridgeAPI = {
+  connectBridge: (args: { token: string; userId: string; githubHandle: string }) =>
+    ipcRenderer.invoke('terminal:connectBridge', args),
+};
+
 // Expose minimal API needed for remote terminal viewer
 try {
   contextBridge.exposeInMainWorld('mainProcess', {
     authentication: authenticationAPI,
     window: windowAPI,
+    terminalBridge: terminalBridgeAPI,
   });
   console.info('[RemoteTerminalViewer Preload] ✅ Minimal API exposed');
 } catch (error) {

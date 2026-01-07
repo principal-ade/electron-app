@@ -65,9 +65,8 @@ class TerminalJWTAuthAdapter implements IAuthAdapter {
 
 interface TerminalConnection {
   connectionId: string;
-  repoId: string;
   client: BaseClient;
-  roomId: string; // Format: "terminals:owner/repo"
+  roomId: string; // Format: "terminals:user:{userId}"
   hasJoinedRoom: boolean;
   userId: string;
   githubHandle: string;
@@ -80,8 +79,8 @@ interface DataBuffer {
 }
 
 export class TerminalWebSocketBridge {
-  // Active connections to terminal rooms (one per repository)
-  private connections = new Map<string, TerminalConnection>();
+  // Active user connection (single connection per user)
+  private userConnection: TerminalConnection | null = null;
 
   // Track which sessions have remote attachments: sessionId -> Set<clientId>
   private remoteAttachments = new Map<string, Set<string>>();
@@ -130,25 +129,25 @@ export class TerminalWebSocketBridge {
   // =============================================================================
 
   /**
-   * Connect to a terminal room for a repository
+   * Connect to user's terminal discovery room
+   * This allows discovering all terminal sessions across all repositories for this user
    */
-  async connectToTerminalRoom(
-    repoId: string,
+  async connectToUserRoom(
     token: string,
     userId: string,
     githubHandle: string,
   ): Promise<{ success: boolean; connectionId?: string; error?: string }> {
-    const connectionId = `terminal-${repoId}-${Date.now()}`;
-    const roomId = `terminals:${repoId}`;
+    const connectionId = `terminal-user-${userId}-${Date.now()}`;
+    const roomId = `terminals:user:${userId}`;
 
     console.log(
-      `[TerminalWebSocketBridge] Connecting to room ${roomId} for user ${githubHandle}`,
+      `[TerminalWebSocketBridge] Connecting to user discovery room ${roomId} for user ${githubHandle}`,
     );
 
     try {
       // TODO: Exchange GitHub token for terminal-specific token
       // For now, use the provided token directly
-      const terminalToken = await this.getTerminalToken(token, repoId);
+      const terminalToken = await this.getTerminalToken(token);
 
       // Create Control Tower client
       const authAdapter = new TerminalJWTAuthAdapter(terminalToken);
@@ -160,36 +159,57 @@ export class TerminalWebSocketBridge {
         .build();
 
       // Set up event handlers
-      this.setupClientEventHandlers(client, connectionId, repoId);
+      this.setupClientEventHandlers(client, connectionId);
 
       // Connect to server
       await client.connect(this.wsServerUrl);
 
-      // Join the terminals room
-      await client.joinRoom(roomId);
+      // Wait for room join to complete
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('Room join timeout'));
+        }, 10000);
+
+        // Listen for room_joined event
+        client.once('room_joined' as any, () => {
+          clearTimeout(timeout);
+          resolve();
+        });
+
+        // Listen for errors
+        client.once('error' as any, (err: any) => {
+          clearTimeout(timeout);
+          reject(new Error(err?.error?.message || 'Failed to join room'));
+        });
+
+        // Send join room request
+        client.joinRoom(roomId).catch((err) => {
+          clearTimeout(timeout);
+          reject(err);
+        });
+      });
 
       // Store connection info
-      this.connections.set(connectionId, {
+      this.userConnection = {
         connectionId,
-        repoId,
         client,
         roomId,
         hasJoinedRoom: true,
         userId,
         githubHandle,
-      });
+      };
 
       console.log(
-        `[TerminalWebSocketBridge] Successfully connected to room ${roomId}`,
+        `[TerminalWebSocketBridge] Successfully connected to user discovery room ${roomId}`,
       );
 
-      // Broadcast current session list to room
-      await this.broadcastSessionList(connectionId);
+      // Broadcast current session list to room (all sessions for this user)
+      await this.broadcastSessionList();
 
       return { success: true, connectionId };
     } catch (error) {
       console.error(
-        `[TerminalWebSocketBridge] Failed to connect to room ${roomId}:`,
+        `[TerminalWebSocketBridge] Failed to connect to user discovery room ${roomId}:`,
         error,
       );
       return {
@@ -200,20 +220,19 @@ export class TerminalWebSocketBridge {
   }
 
   /**
-   * Disconnect from a terminal room
+   * Disconnect from user discovery room
    */
-  async disconnectFromTerminalRoom(connectionId: string): Promise<void> {
-    const connection = this.connections.get(connectionId);
-    if (!connection) {
+  async disconnectFromUserRoom(): Promise<void> {
+    if (!this.userConnection) {
       return;
     }
 
     console.log(
-      `[TerminalWebSocketBridge] Disconnecting from room ${connection.roomId}`,
+      `[TerminalWebSocketBridge] Disconnecting from room ${this.userConnection.roomId}`,
     );
 
     try {
-      await connection.client.disconnect();
+      await this.userConnection.client.disconnect();
     } catch (error) {
       console.error(
         `[TerminalWebSocketBridge] Error disconnecting:`,
@@ -221,17 +240,14 @@ export class TerminalWebSocketBridge {
       );
     }
 
-    this.connections.delete(connectionId);
+    this.userConnection = null;
   }
 
   /**
    * Get terminal-specific JWT token
    * TODO: Implement actual token exchange with auth server
    */
-  private async getTerminalToken(
-    githubToken: string,
-    repoId: string,
-  ): Promise<string> {
+  private async getTerminalToken(githubToken: string): Promise<string> {
     // TODO: Exchange with auth server endpoint /api/auth/cli/terminal-token
     // For now, return the GitHub token directly
     console.warn(
@@ -250,7 +266,6 @@ export class TerminalWebSocketBridge {
   private setupClientEventHandlers(
     client: BaseClient,
     connectionId: string,
-    repoId: string,
   ): void {
     // Handle terminal events from remote clients
     client.on('event_received', (data: { event: Event }) => {
@@ -266,7 +281,7 @@ export class TerminalWebSocketBridge {
       console.log(
         `[TerminalWebSocketBridge] Client disconnected: ${connectionId}`,
       );
-      this.connections.delete(connectionId);
+      this.userConnection = null;
     });
 
     // Handle errors
@@ -291,6 +306,11 @@ export class TerminalWebSocketBridge {
 
     try {
       switch (event.type) {
+        case 'terminal:session_list':
+          // Respond to session list request by broadcasting current sessions
+          console.log(`[TerminalWebSocketBridge] Handling session list request`);
+          await this.broadcastSessionList();
+          break;
         case 'terminal:attach':
           await this.handleAttach(connectionId, event);
           break;
@@ -340,17 +360,16 @@ export class TerminalWebSocketBridge {
   ): Promise<void> {
     const payload = event.data as TerminalAttachPayload;
     const { sessionId, asOwner } = payload;
-    const connection = this.connections.get(connectionId);
 
-    if (!connection) {
+    if (!this.userConnection) {
       console.error(
-        `[TerminalWebSocketBridge] Connection ${connectionId} not found`,
+        `[TerminalWebSocketBridge] No user connection available`,
       );
       return;
     }
 
     console.log(
-      `[TerminalWebSocketBridge] Client ${connectionId} (${connection.githubHandle}) attaching to session ${sessionId} (asOwner: ${asOwner})`,
+      `[TerminalWebSocketBridge] Client ${connectionId} (${this.userConnection.githubHandle}) attaching to session ${sessionId} (asOwner: ${asOwner})`,
     );
 
     // 1. Check if session exists
@@ -403,8 +422,8 @@ export class TerminalWebSocketBridge {
       const owner: TerminalOwner = {
         type: 'remote',
         id: event.userId,
-        userId: connection.userId,
-        githubHandle: connection.githubHandle,
+        userId: this.userConnection.userId,
+        githubHandle: this.userConnection.githubHandle,
         claimedAt: Date.now(),
       };
 
@@ -413,8 +432,8 @@ export class TerminalWebSocketBridge {
         this.ownershipManager.registerRemoteClient({
           clientId: event.userId,
           connectionId: connectionId,
-          githubHandle: connection.githubHandle,
-          userId: connection.userId,
+          githubHandle: this.userConnection.githubHandle,
+          userId: this.userConnection.userId,
           attachedAt: Date.now(),
         });
       }
@@ -509,9 +528,8 @@ export class TerminalWebSocketBridge {
   ): Promise<void> {
     const payload = event.data as TerminalClaimOwnershipPayload;
     const { sessionId, force } = payload;
-    const connection = this.connections.get(connectionId);
 
-    if (!connection) {
+    if (!this.userConnection) {
       return;
     }
 
@@ -522,8 +540,8 @@ export class TerminalWebSocketBridge {
     const owner: TerminalOwner = {
       type: 'remote',
       id: event.userId,
-      userId: connection.userId,
-      githubHandle: connection.githubHandle,
+      userId: this.userConnection.userId,
+      githubHandle: this.userConnection.githubHandle,
       claimedAt: Date.now(),
     };
 
@@ -532,8 +550,8 @@ export class TerminalWebSocketBridge {
       this.ownershipManager.registerRemoteClient({
         clientId: event.userId,
         connectionId: connectionId,
-        githubHandle: connection.githubHandle,
-        userId: connection.userId,
+        githubHandle: this.userConnection.githubHandle,
+        userId: this.userConnection.userId,
         attachedAt: Date.now(),
       });
     }
@@ -712,11 +730,11 @@ export class TerminalWebSocketBridge {
   // =============================================================================
 
   /**
-   * Broadcast session list to room
+   * Broadcast session list to user discovery room
+   * Includes ALL terminal sessions for this user across all repositories
    */
-  async broadcastSessionList(connectionId: string): Promise<void> {
-    const connection = this.connections.get(connectionId);
-    if (!connection) {
+  async broadcastSessionList(): Promise<void> {
+    if (!this.userConnection) {
       return;
     }
 
@@ -728,7 +746,7 @@ export class TerminalWebSocketBridge {
       const sessionInfo = this.toSessionInfo(
         session,
         sessionId,
-        connection.userId,
+        this.userConnection.userId,
       );
       sessionList.push(sessionInfo);
     }
@@ -737,17 +755,15 @@ export class TerminalWebSocketBridge {
       id: `session-list-${Date.now()}`,
       type: 'terminal:session_list',
       timestamp: Date.now(),
-      userId: connection.userId,
-      roomId: connection.roomId,
+      userId: this.userConnection.userId,
+      roomId: this.userConnection.roomId,
       data: { sessions: sessionList },
-      metadata: {
-        repoId: connection.repoId,
-      },
+      metadata: {},
     };
 
-    await connection.client.broadcast(event as unknown as Event);
+    await this.userConnection.client.broadcast(event as unknown as Event);
     console.log(
-      `[TerminalWebSocketBridge] Broadcasted ${sessionList.length} sessions to room ${connection.roomId}`,
+      `[TerminalWebSocketBridge] Broadcasted ${sessionList.length} sessions to user discovery room ${this.userConnection.roomId}`,
     );
   }
 
@@ -776,41 +792,29 @@ export class TerminalWebSocketBridge {
   }
 
   /**
-   * Broadcast ownership change to all clients in room
+   * Broadcast ownership change to all clients in user discovery room
    */
   private async broadcastOwnershipChange(
     sessionId: string,
     newOwner: TerminalOwner | null,
     previousOwner: TerminalOwner | null,
   ): Promise<void> {
-    // Find which connection(s) to broadcast from based on session's repo
+    if (!this.userConnection) {
+      console.warn(
+        `[TerminalWebSocketBridge] Cannot broadcast ownership change - no user connection`,
+      );
+      return;
+    }
+
     const session = this.sessionManager.getSession(sessionId);
-    if (!session || !session.repoId) {
-      console.warn(
-        `[TerminalWebSocketBridge] Cannot broadcast ownership change - session or repoId missing`,
-      );
-      return;
-    }
-
-    // Find connection for this repo
-    const roomId = `terminals:${session.repoId}`;
-    const connection = Array.from(this.connections.values()).find(
-      (c) => c.roomId === roomId,
-    );
-
-    if (!connection) {
-      console.warn(
-        `[TerminalWebSocketBridge] No connection found for room ${roomId}`,
-      );
-      return;
-    }
+    const repoId = session?.repoId || 'unknown';
 
     const event: TerminalEvent = {
       id: `ownership-changed-${Date.now()}`,
       type: 'terminal:ownership_changed',
       timestamp: Date.now(),
-      userId: connection.userId,
-      roomId: connection.roomId,
+      userId: this.userConnection.userId,
+      roomId: this.userConnection.roomId,
       data: {
         sessionId,
         newOwner: ownerToWireFormat(newOwner),
@@ -818,11 +822,11 @@ export class TerminalWebSocketBridge {
       },
       metadata: {
         sessionId,
-        repoId: session.repoId,
+        repoId,
       },
     };
 
-    await connection.client.broadcast(event as unknown as Event);
+    await this.userConnection.client.broadcast(event as unknown as Event);
     console.log(
       `[TerminalWebSocketBridge] Broadcasted ownership change for session ${sessionId}`,
     );
@@ -836,28 +840,30 @@ export class TerminalWebSocketBridge {
     sessionId: string,
     error: string,
   ): Promise<void> {
-    const connection = this.connections.get(connectionId);
-    if (!connection) {
+    if (!this.userConnection) {
       return;
     }
+
+    const session = this.sessionManager.getSession(sessionId);
+    const repoId = session?.repoId || 'unknown';
 
     const event: TerminalEvent = {
       id: `error-${Date.now()}`,
       type: 'terminal:error',
       timestamp: Date.now(),
-      userId: connection.userId,
-      roomId: connection.roomId,
+      userId: this.userConnection.userId,
+      roomId: this.userConnection.roomId,
       data: {
         sessionId,
         error,
       },
       metadata: {
         sessionId,
-        repoId: connection.repoId,
+        repoId,
       },
     };
 
-    await connection.client.broadcast(event as unknown as Event);
+    await this.userConnection.client.broadcast(event as unknown as Event);
   }
 
   // =============================================================================
@@ -872,39 +878,33 @@ export class TerminalWebSocketBridge {
       `[TerminalWebSocketBridge] Session created: ${sessionId}`,
     );
 
+    if (!this.userConnection) {
+      return; // No browser clients connected yet
+    }
+
     const session = this.sessionManager.getSession(sessionId);
-    if (!session || !session.repoId) {
+    if (!session) {
       return;
     }
 
-    // Find connection for this repo
-    const roomId = `terminals:${session.repoId}`;
-    const connection = Array.from(this.connections.values()).find(
-      (c) => c.roomId === roomId,
-    );
-
-    if (!connection) {
-      return; // No browser clients connected to this repo yet
-    }
-
-    const sessionInfo = this.toSessionInfo(session, sessionId, connection.userId);
+    const sessionInfo = this.toSessionInfo(session, sessionId, this.userConnection.userId);
 
     const event: TerminalEvent = {
       id: `session-created-${Date.now()}`,
       type: 'terminal:session_created',
       timestamp: Date.now(),
-      userId: connection.userId,
-      roomId: connection.roomId,
+      userId: this.userConnection.userId,
+      roomId: this.userConnection.roomId,
       data: {
         session: sessionInfo,
       },
       metadata: {
         sessionId,
-        repoId: session.repoId,
+        repoId: session.repoId || 'unknown',
       },
     };
 
-    await connection.client.broadcast(event as unknown as Event);
+    await this.userConnection.client.broadcast(event as unknown as Event);
     console.log(
       `[TerminalWebSocketBridge] Broadcasted session_created for ${sessionId}`,
     );
@@ -922,37 +922,35 @@ export class TerminalWebSocketBridge {
     this.remoteAttachments.delete(sessionId);
     this.dataSequences.delete(sessionId);
 
-    // Broadcast to all connected rooms (session might not exist anymore to get repoId)
-    // So we broadcast to all connections
-    for (const connection of this.connections.values()) {
-      const event: TerminalEvent = {
-        id: `session-destroyed-${Date.now()}`,
-        type: 'terminal:session_destroyed',
-        timestamp: Date.now(),
-        userId: connection.userId,
-        roomId: connection.roomId,
-        data: {
-          sessionId,
-        },
-        metadata: {
-          sessionId,
-          repoId: connection.repoId,
-        },
-      };
-
-      try {
-        await connection.client.broadcast(event as unknown as Event);
-      } catch (error) {
-        console.error(
-          `[TerminalWebSocketBridge] Error broadcasting session_destroyed:`,
-          error,
-        );
-      }
+    if (!this.userConnection) {
+      return; // No browser clients connected
     }
 
-    console.log(
-      `[TerminalWebSocketBridge] Broadcasted session_destroyed for ${sessionId}`,
-    );
+    const event: TerminalEvent = {
+      id: `session-destroyed-${Date.now()}`,
+      type: 'terminal:session_destroyed',
+      timestamp: Date.now(),
+      userId: this.userConnection.userId,
+      roomId: this.userConnection.roomId,
+      data: {
+        sessionId,
+      },
+      metadata: {
+        sessionId,
+      },
+    };
+
+    try {
+      await this.userConnection.client.broadcast(event as unknown as Event);
+      console.log(
+        `[TerminalWebSocketBridge] Broadcasted session_destroyed for ${sessionId}`,
+      );
+    } catch (error) {
+      console.error(
+        `[TerminalWebSocketBridge] Error broadcasting session_destroyed:`,
+        error,
+      );
+    }
   }
 
   /**
@@ -967,10 +965,11 @@ export class TerminalWebSocketBridge {
       return; // No remote clients attached
     }
 
-    const session = this.sessionManager.getSession(sessionId);
-    if (!session || !session.repoId) {
-      return;
+    if (!this.userConnection) {
+      return; // No user connection
     }
+
+    const session = this.sessionManager.getSession(sessionId);
 
     // Get next sequence number
     const sequence = this.getNextSequence(sessionId);
@@ -978,23 +977,13 @@ export class TerminalWebSocketBridge {
     // Base64 encode the data for wire safety
     const encodedData = Buffer.from(data).toString('base64');
 
-    // Find connection for this repo
-    const roomId = `terminals:${session.repoId}`;
-    const connection = Array.from(this.connections.values()).find(
-      (c) => c.roomId === roomId,
-    );
-
-    if (!connection) {
-      return;
-    }
-
-    // Broadcast data to all clients in the room
+    // Broadcast data to all clients in the user discovery room
     const event: TerminalEvent = {
       id: `data-${sessionId}-${sequence}`,
       type: 'terminal:data',
       timestamp: Date.now(),
-      userId: connection.userId,
-      roomId: connection.roomId,
+      userId: this.userConnection.userId,
+      roomId: this.userConnection.roomId,
       data: {
         sessionId,
         data: encodedData,
@@ -1002,12 +991,12 @@ export class TerminalWebSocketBridge {
       },
       metadata: {
         sessionId,
-        repoId: session.repoId,
+        repoId: session?.repoId || 'unknown',
       },
     };
 
     try {
-      await connection.client.broadcast(event as unknown as Event);
+      await this.userConnection.client.broadcast(event as unknown as Event);
 
       // Log only periodically to avoid spam
       if (sequence % 100 === 0) {
@@ -1038,16 +1027,16 @@ export class TerminalWebSocketBridge {
   }
 
   /**
-   * Get active connections count
+   * Check if user connection is active
    */
-  getConnectionsCount(): number {
-    return this.connections.size;
+  isConnected(): boolean {
+    return this.userConnection !== null;
   }
 
   /**
-   * Get all active connections
+   * Get active user connection
    */
-  getConnections(): Map<string, TerminalConnection> {
-    return new Map(this.connections);
+  getUserConnection(): TerminalConnection | null {
+    return this.userConnection;
   }
 }

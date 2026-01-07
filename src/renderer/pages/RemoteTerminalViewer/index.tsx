@@ -52,7 +52,33 @@ async function getDeviceId(): Promise<string> {
   return deviceId;
 }
 
-// Exchange GitHub token for JWT room token
+// Exchange GitHub token for JWT user discovery token
+async function getUserToken(githubToken: string): Promise<string> {
+  const authServerUrl =
+    process.env.AUTH_SERVER_URL || 'https://auth.principal-ade.com';
+
+  const response = await fetch(`${authServerUrl}/api/auth/browser/user-token`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      github_token: githubToken,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      errorData.error || `Failed to get user token: ${response.status}`
+    );
+  }
+
+  const data = await response.json();
+  return data.access_token;
+}
+
+// Exchange GitHub token for JWT room token (for specific repository)
 async function getRoomToken(
   githubToken: string,
   repository: string,
@@ -120,7 +146,6 @@ export function RemoteTerminalViewer() {
   const [sessions, setSessions] = useState<TerminalSessionInfo[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [authInfo, setAuthInfo] = useState<{ token: string; userId: string; githubHandle: string } | null>(null);
-  const [currentRepo, setCurrentRepo] = useState<string | null>(null);
   const [attachedTerminals, setAttachedTerminals] = useState<Map<string, AttachedTerminal>>(new Map());
 
   const clientRef = useRef<BaseClient | null>(null);
@@ -165,20 +190,14 @@ export function RemoteTerminalViewer() {
           githubHandle,
         });
 
-        // Get the current repository from the workspace
-        // For now, use a test repository that should be accessible
-        // TODO: Get from active workspace when that's implemented
-        const repoId = 'griever989/test-repo'; // Replace with your test repository
-        console.log('[RemoteTerminalViewer] Using repository:', repoId);
-        setCurrentRepo(repoId);
+        // Exchange GitHub token for JWT user discovery token
+        // This doesn't require a repository since we're joining user-specific discovery room
+        console.log('[RemoteTerminalViewer] Getting user discovery token...');
+        const userToken = await getUserToken(authResult.token);
+        console.log('[RemoteTerminalViewer] User discovery token obtained');
 
-        // Exchange GitHub token for JWT room token
-        console.log('[RemoteTerminalViewer] Getting room token...');
-        const roomToken = await getRoomToken(authResult.token, repoId, userId);
-        console.log('[RemoteTerminalViewer] Room token obtained');
-
-        // Create WebSocket client
-        await connectToTerminalRoom(roomToken, repoId, userId, githubHandle);
+        // Create WebSocket client and connect to user discovery room
+        await connectToUserDiscoveryRoom(userToken, userId, githubHandle);
 
       } catch (err: any) {
         console.error('[RemoteTerminalViewer] Failed to initialize:', err);
@@ -205,10 +224,9 @@ export function RemoteTerminalViewer() {
     };
   }, []);
 
-  // Connect to terminal room via WebSocket
-  async function connectToTerminalRoom(
+  // Connect to user discovery room via WebSocket
+  async function connectToUserDiscoveryRoom(
     token: string,
-    repoId: string,
     userId: string,
     githubHandle: string,
   ): Promise<void> {
@@ -217,7 +235,8 @@ export function RemoteTerminalViewer() {
         process.env.CONTROL_TOWER_WS_URL ||
         'wss://repository-traffic-controller-production.rj36caac972nm.us-east-1.cs.amazonlightsail.com/ws';
 
-      console.log('[RemoteTerminalViewer] Connecting to terminal room:', repoId);
+      const userRoomId = `terminals:user:${userId}`;
+      console.log('[RemoteTerminalViewer] Connecting to user discovery room:', userRoomId);
       console.log('[RemoteTerminalViewer] WebSocket URL:', wsServerUrl);
       console.log('[RemoteTerminalViewer] Token length:', token?.length);
 
@@ -399,49 +418,75 @@ export function RemoteTerminalViewer() {
         throw new Error(`Failed to connect to WebSocket server: ${connectError?.message || 'Unknown error'}`);
       }
 
-      // Join terminal room
-      const roomId = `terminals:${repoId}`;
-      console.log('[RemoteTerminalViewer] Joining room:', roomId);
+      // Join user discovery room
+      console.log('[RemoteTerminalViewer] Joining room:', userRoomId);
+
+      // Listen for ALL events to debug
+      client.on('message' as any, (msg: any) => {
+        console.log('[RemoteTerminalViewer] 🔍 Received message:', msg);
+      });
 
       // Listen for room join confirmation
       await new Promise<void>((resolve, reject) => {
         const timeout = setTimeout(() => {
+          console.error('[RemoteTerminalViewer] ❌ Room join timeout after 10 seconds');
+          console.error('[RemoteTerminalViewer] Room we tried to join:', userRoomId);
           reject(new Error('Room join timeout'));
-        }, 5000);
+        }, 10000); // Increased to 10 seconds
 
-        // Listen for join success
-        client.on('room:joined' as any, (event: any) => {
-          console.log('[RemoteTerminalViewer] Room joined event:', event);
+        // Listen for join success (correct event name: room_joined with underscore)
+        client.on('room_joined' as any, (event: any) => {
+          console.log('[RemoteTerminalViewer] ✅ Room joined event:', event);
           clearTimeout(timeout);
           resolve();
         });
 
         // Listen for join error
-        client.on('room:error' as any, (event: any) => {
-          console.error('[RemoteTerminalViewer] Room join error:', event);
+        client.on('error' as any, (event: any) => {
+          console.error('[RemoteTerminalViewer] ❌ Error event:', event);
           clearTimeout(timeout);
-          reject(new Error(`Failed to join room: ${event?.message || 'Unknown error'}`));
+          reject(new Error(`Failed to join room: ${event?.error?.message || 'Unknown error'}`));
         });
 
         // Attempt to join
-        client.joinRoom(roomId).catch((err) => {
+        console.log('[RemoteTerminalViewer] 📤 Sending join room request for:', userRoomId);
+        client.joinRoom(userRoomId).catch((err) => {
+          console.error('[RemoteTerminalViewer] ❌ Join room threw error:', err);
           clearTimeout(timeout);
           reject(err);
         });
       });
 
-      console.log('[RemoteTerminalViewer] Successfully joined room:', roomId);
+      console.log('[RemoteTerminalViewer] Successfully joined user discovery room:', userRoomId);
 
       const connectionId = userId; // Use userId as connection identifier
       connectionIdRef.current = connectionId;
 
       setStatus('connected');
 
-      // Small delay to ensure room state is fully updated
+      // Tell main process to connect its bridge to the same user room (ONE-TIME IPC call for setup)
+      // After this, all communication happens through WebSocket only
+      console.log('[RemoteTerminalViewer] Telling main process to connect bridge (one-time setup)...');
+      try {
+        const bridgeResult = await window.mainProcess.terminalBridge.connectBridge({
+          token,
+          userId,
+          githubHandle,
+        });
+        if (bridgeResult.success) {
+          console.log('[RemoteTerminalViewer] ✅ Main process bridge connected - all subsequent communication via WebSocket');
+        } else {
+          console.warn('[RemoteTerminalViewer] ⚠️ Bridge connection failed:', bridgeResult.error);
+        }
+      } catch (err) {
+        console.error('[RemoteTerminalViewer] ❌ Failed to connect bridge:', err);
+      }
+
+      // Small delay to ensure bridge connection and room state is fully updated
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Request session list
-      console.log('[RemoteTerminalViewer] Requesting session list...');
+      // Request session list via WebSocket (not IPC)
+      console.log('[RemoteTerminalViewer] Requesting session list via WebSocket...');
       await requestSessionList(client);
       console.log('[RemoteTerminalViewer] Session list requested');
 
@@ -455,75 +500,81 @@ export function RemoteTerminalViewer() {
   function setupEventHandlers(client: BaseClient): void {
     console.log('[RemoteTerminalViewer] Setting up event handlers');
 
-    // Session list event
-    client.on('terminal:session_list' as any, (event: any) => {
-      console.log('[RemoteTerminalViewer] Received session list:', event.data);
-      if (event.data && Array.isArray(event.data.sessions)) {
-        setSessions(event.data.sessions);
-      }
-    });
+    // Listen for all events via event_received
+    client.on('event_received' as any, (data: any) => {
+      const event = data.event;
+      console.log('[RemoteTerminalViewer] 📨 Event received:', event.type, event);
 
-    // Session created event
-    client.on('terminal:session_created' as any, (event: any) => {
-      console.log('[RemoteTerminalViewer] Session created:', event.data);
-      if (event.data && event.data.session) {
-        setSessions((prev) => [...prev, event.data.session]);
-      }
-    });
+      // Handle different terminal event types
+      switch (event.type) {
+        case 'terminal:session_list':
+          console.log('[RemoteTerminalViewer] ✅ Received session list:', event.data);
+          if (event.data && Array.isArray(event.data.sessions)) {
+            setSessions(event.data.sessions);
+          }
+          break;
 
-    // Session destroyed event
-    client.on('terminal:session_destroyed' as any, (event: any) => {
-      console.log('[RemoteTerminalViewer] Session destroyed:', event.data);
-      if (event.data && event.data.sessionId) {
-        const sessionId = event.data.sessionId;
-        setSessions((prev) => prev.filter((s) => s.sessionId !== sessionId));
+        case 'terminal:session_created':
+          console.log('[RemoteTerminalViewer] ➕ Session created:', event.data);
+          if (event.data && event.data.session) {
+            setSessions((prev) => [...prev, event.data.session]);
+          }
+          break;
 
-        // Cleanup attached terminal if exists
-        const attached = attachedTerminals.get(sessionId);
-        if (attached) {
-          attached.terminal.dispose();
-          setAttachedTerminals((prev) => {
-            const newMap = new Map(prev);
-            newMap.delete(sessionId);
-            return newMap;
-          });
-        }
-      }
-    });
+        case 'terminal:session_destroyed':
+          console.log('[RemoteTerminalViewer] ➖ Session destroyed:', event.data);
+          if (event.data && event.data.sessionId) {
+            const sessionId = event.data.sessionId;
+            setSessions((prev) => prev.filter((s) => s.sessionId !== sessionId));
 
-    // Terminal data event
-    client.on('terminal:data' as any, (event: any) => {
-      if (event.data && event.data.sessionId && event.data.data) {
-        const { sessionId, data } = event.data;
-        const attached = attachedTerminals.get(sessionId);
-        if (attached) {
-          // Decode Base64 data
-          const decoded = atob(data);
-          attached.terminal.write(decoded);
-        }
-      }
-    });
+            // Cleanup attached terminal if exists
+            const attached = attachedTerminals.get(sessionId);
+            if (attached) {
+              attached.terminal.dispose();
+              setAttachedTerminals((prev) => {
+                const newMap = new Map(prev);
+                newMap.delete(sessionId);
+                return newMap;
+              });
+            }
+          }
+          break;
 
-    // Ownership changed event
-    client.on('terminal:ownership_changed' as any, (event: any) => {
-      console.log('[RemoteTerminalViewer] Ownership changed:', event.data);
-      // Update session ownership in list
-      if (event.data && event.data.sessionId) {
-        setSessions((prev) =>
-          prev.map((session) =>
-            session.sessionId === event.data.sessionId
-              ? { ...session, owner: event.data.newOwner }
-              : session,
-          ),
-        );
-      }
-    });
+        case 'terminal:data':
+          if (event.data && event.data.sessionId && event.data.data) {
+            const { sessionId, data } = event.data;
+            const attached = attachedTerminals.get(sessionId);
+            if (attached) {
+              // Decode Base64 data
+              const decoded = atob(data);
+              attached.terminal.write(decoded);
+            }
+          }
+          break;
 
-    // Error event
-    client.on('terminal:error' as any, (event: any) => {
-      console.error('[RemoteTerminalViewer] Terminal error:', event.data);
-      if (event.data && event.data.error) {
-        setError(event.data.error);
+        case 'terminal:ownership_changed':
+          console.log('[RemoteTerminalViewer] 🔑 Ownership changed:', event.data);
+          // Update session ownership in list
+          if (event.data && event.data.sessionId) {
+            setSessions((prev) =>
+              prev.map((session) =>
+                session.sessionId === event.data.sessionId
+                  ? { ...session, owner: event.data.newOwner }
+                  : session,
+              ),
+            );
+          }
+          break;
+
+        case 'terminal:error':
+          console.error('[RemoteTerminalViewer] ❌ Terminal error:', event.data);
+          if (event.data && event.data.error) {
+            setError(event.data.error);
+          }
+          break;
+
+        default:
+          console.log('[RemoteTerminalViewer] Unhandled terminal event:', event.type);
       }
     });
   }
@@ -534,8 +585,8 @@ export function RemoteTerminalViewer() {
     data: any,
     sessionId?: string,
   ): any {
-    const roomId = currentRepo ? `terminals:${currentRepo}` : '';
     const userId = authInfo?.userId || '';
+    const roomId = `terminals:user:${userId}`;
 
     return {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -758,15 +809,15 @@ export function RemoteTerminalViewer() {
           <span style={{ fontWeight: 500 }}>
             Status: {status === 'connected' ? 'Connected' : status === 'connecting' ? 'Connecting...' : 'Disconnected'}
           </span>
-          {currentRepo && (
+          {authInfo && (
             <span style={{ marginLeft: 'auto', color: theme.colors.textSecondary }}>
-              Room: terminals:{currentRepo}
+              Room: terminals:user:{authInfo.userId}
             </span>
           )}
         </div>
         {authInfo && (
           <div style={{ marginTop: '5px', fontSize: '13px', color: theme.colors.textSecondary }}>
-            Authenticated as: {authInfo.githubHandle} (ID: {authInfo.userId})
+            Authenticated as: {authInfo.githubHandle} (User Discovery Mode - All Repositories)
           </div>
         )}
         {error && (
@@ -831,6 +882,11 @@ export function RemoteTerminalViewer() {
                       <div style={{ fontSize: '13px', color: theme.colors.textSecondary }}>
                         {session.directory}
                       </div>
+                      {session.repoId && (
+                        <div style={{ fontSize: '12px', color: theme.colors.primary, marginTop: '2px' }}>
+                          📁 {session.repoId}
+                        </div>
+                      )}
                       {hasOwner && (
                         <div style={{ fontSize: '12px', color: theme.colors.textSecondary, marginTop: '4px' }}>
                           Owner: {session.owner?.type} - {session.owner?.githubHandle}

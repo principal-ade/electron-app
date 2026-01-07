@@ -162,7 +162,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   const [showTerminalToggle, setShowTerminalToggle] = useState(false);
   const [collapsed, setCollapsed] = useState({ left: false, right: false });
   const [layout, setLayout] = useState<PanelLayout>({
-    left: 'localProjects',
+    left: 'kanban',
     middle: 'terminal',
     right: 'fileCity',
   });
@@ -300,7 +300,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
       }),
       events.on('panel:reset-layout', () => {
         setLayout({
-          left: 'localProjects',
+          left: 'kanban',
           middle: 'terminal',
           right: 'fileCity',
         });

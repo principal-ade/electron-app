@@ -33,16 +33,11 @@ const AVAILABLE_PANELS: PanelOption[] = [
   { id: 'codeQuality', label: 'Code Quality' },
   { id: 'docs', label: 'Documentation' },
   { id: 'fileCity', label: 'File City' },
-  { id: 'fileEditor', label: 'File Editor' },
   { id: 'gitChanges', label: 'File Tree' },
-  { id: 'gitDiff', label: 'Git Diff' },
   { id: 'kanban', label: 'Kanban' },
   { id: 'localhostBrowser', label: 'Localhost Browser' },
   { id: 'localProjects', label: 'Local Projects' },
-  { id: 'mdxEditor', label: 'MDX Editor' },
-  { id: 'milestones', label: 'Milestones' },
   { id: 'packageComposition', label: 'Package Composition' },
-  { id: 'task-detail', label: 'Task Detail' },
   { id: 'terminal', label: 'Terminal' },
 ];
 
@@ -66,9 +61,9 @@ export const DEFAULT_PANEL_PRESETS: PanelPreset[] = [
   {
     id: 'default',
     name: 'Default',
-    description: 'Local Projects, Terminal, File City',
+    description: 'Kanban, Terminal, File City',
     layout: {
-      left: 'localProjects',
+      left: 'kanban',
       middle: 'terminal',
       right: 'fileCity',
     },

@@ -39,6 +39,23 @@ export async function initializeTerminalBridge(): Promise<void> {
     return { success: true };
   });
 
+  // Register IPC handler for one-time bridge connection setup
+  // After this initial setup, all communication happens via WebSocket
+  ipcMain.handle('terminal:connectBridge', async (_event, args: {
+    token: string;
+    userId: string;
+    githubHandle: string;
+  }) => {
+    console.log('[BridgeInitializer] Connecting bridge to user discovery room for:', args.githubHandle);
+    if (!bridgeInstance) {
+      return {
+        success: false,
+        error: 'Bridge not initialized',
+      };
+    }
+    return bridgeInstance.connectToUserRoom(args.token, args.userId, args.githubHandle);
+  });
+
   console.log('[BridgeInitializer] Terminal WebSocket bridge initialized');
 }
 
@@ -50,11 +67,10 @@ export function getBridgeInstance(): TerminalWebSocketBridge | null {
 }
 
 /**
- * Connect to a terminal room for a specific repository
- * This would typically be called when a repository is opened
+ * Connect to user's terminal discovery room
+ * This allows discovering all terminal sessions across all repositories for this user
  */
-export async function connectToTerminalRoom(
-  repoId: string,
+export async function connectToUserRoom(
   token: string,
   userId: string,
   githubHandle: string,
@@ -66,5 +82,19 @@ export async function connectToTerminalRoom(
     };
   }
 
-  return bridgeInstance.connectToTerminalRoom(repoId, token, userId, githubHandle);
+  return bridgeInstance.connectToUserRoom(token, userId, githubHandle);
+}
+
+/**
+ * @deprecated Use connectToUserRoom instead
+ * Connect to a terminal room for a specific repository
+ */
+export async function connectToTerminalRoom(
+  repoId: string,
+  token: string,
+  userId: string,
+  githubHandle: string,
+): Promise<{ success: boolean; connectionId?: string; error?: string }> {
+  // Forward to new method, ignoring repoId
+  return connectToUserRoom(token, userId, githubHandle);
 }
