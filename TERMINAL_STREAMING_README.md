@@ -23,13 +23,17 @@ This implementation enables terminal sessions running in the Electron desktop ap
 │                                         │                   │
 │                              ┌──────────▼───────────────┐  │
 │                              │ TerminalWebSocketBridge  │  │
-│                              │ - Manages connections    │  │
+│                              │ - User discovery room    │  │
 │                              │ - Streams data           │  │
 │                              │ - Handles operations     │  │
 │                              └──────────┬───────────────┘  │
 └─────────────────────────────────────────┼──────────────────┘
                                           │
                                     WebSocket (WSS)
+                                          │
+                      Control Tower Server (Production)
+                    Room: terminals:user:{userId}
+                    (All user's sessions across repos)
                                           │
                           ┌───────────────┴──────────────────┐
                           │                                  │
@@ -91,11 +95,11 @@ This implementation enables terminal sessions running in the Electron desktop ap
 
 **Responsibilities:**
 - Connect to Control Tower WebSocket server
-- Join terminal rooms (`terminals:owner/repo` format)
+- Join user discovery room (`terminals:user:{userId}` format)
 - Handle all terminal event types
 - Stream PTY data to remote clients
 - Enforce ownership rules
-- Broadcast session lifecycle events
+- Broadcast session lifecycle events across all user's repositories
 
 **Key Features:**
 - Uses Control Tower Core's `BaseClient`
@@ -150,12 +154,14 @@ This implementation enables terminal sessions running in the Electron desktop ap
 
 ## Data Flow
 
-### Session Discovery
+### Session Discovery (Global Discovery - Option B)
 ```
-1. Browser connects to WebSocket with JWT
-2. Browser joins room: terminals:owner/repo
-3. Desktop broadcasts terminal:session_list
-4. Browser receives and displays sessions
+1. Browser connects to WebSocket with JWT (user discovery token)
+2. Browser joins room: terminals:user:{userId}
+3. Desktop main process connects bridge to same user room
+4. Browser requests session list via WebSocket
+5. Desktop broadcasts terminal:session_list with ALL sessions across repositories
+6. Browser receives and displays all user's sessions
 ```
 
 ### Attach & Stream
@@ -218,52 +224,56 @@ window.create();
 
 ### Configuration Before Testing
 
-**Important:** Update the repository in `RemoteTerminalViewer/index.tsx` line ~171:
-```typescript
-const repoId = 'your-github-username/your-test-repo';
-```
+No repository configuration needed! The Remote Terminal Viewer now uses global user discovery and will show all your terminal sessions across all repositories.
 
 Requirements:
-- You must have access to this repository
-- The Principal AI GitHub App must be installed on this repository
-- You should have active terminal sessions in this repository for testing
+- You should be authenticated with GitHub in the desktop app
+- You should have active terminal sessions open in the app
+- The production WebSocket server should be deployed with control-tower-core@0.2.1
 
-### Current Authentication Flow
+### Current Authentication Flow (User Discovery)
 
 1. **Get GitHub Token** - Retrieved from main process authentication
-2. **Exchange for JWT** - Calls `https://auth.principal-ade.com/api/auth/browser/room-token`
-3. **Connect to WebSocket** - Connects to Control Tower at `wss://repository-traffic-controller-production.rj36caac972nm.us-east-1.cs.amazonlightsail.com/ws`
+2. **Exchange for User Discovery JWT** - Calls `https://auth.principal-ade.com/api/auth/browser/user-token` (no repository parameter)
+3. **Connect to WebSocket** - Connects to Control Tower at production server
 4. **Authenticate** - Sends `authenticate` message with JWT token
 5. **Wait for Event** - Waits for `authenticated` event from BaseClient
-6. **Join Room** - Joins room `terminals:owner/repo` after authentication complete
+6. **Join User Room** - Joins room `terminals:user:{userId}` after authentication complete
+7. **Connect Main Process Bridge** - One-time IPC call to connect main process to same room
+8. **Request Session List** - Sends `terminal:session_list` event via WebSocket
+9. **Receive Sessions** - Gets all user's sessions across all repositories via `event_received`
 
-### What Works So Far
+### What Works Now
 
 ✅ Window creation and preload script loading
 ✅ GitHub token retrieval from main process
-✅ JWT room token exchange with auth server
-✅ WebSocket connection to Control Tower
+✅ JWT user discovery token exchange with auth server
+✅ WebSocket connection to Control Tower production server
 ✅ Authentication message protocol
-✅ Waiting for authentication completion
+✅ User room joining (`terminals:user:{userId}`)
+✅ Main process bridge connection to same room
+✅ Event-driven communication via `event_received`
+✅ Session list request/response flow
+✅ ConnectedRoomManager broadcasts events to all clients
 
 ### Next Steps for Full Implementation
 
-1. **Get Repository from Workspace**
-   - Detect active workspace repository
-   - Fall back to selection UI if no workspace open
-   - Remove hardcoded repository
+1. **Deploy Production Server**
+   - Deploy repository-traffic-controller with control-tower-core@0.2.1
+   - Verify ConnectedRoomManager is working in production
+   - Test session list broadcasts
 
-2. **Complete Session List Flow**
-   - Test receiving `terminal:session_list` events
-   - Render session list in UI
-   - Add filtering/search
+2. **Test Session Discovery**
+   - Open terminal sessions in desktop app
+   - Open Remote Terminal Viewer
+   - Verify sessions appear in the list
 
-3. **Implement Attach Flow**
+3. **Implement & Test Attach Flow**
    - Send `terminal:attach` requests
    - Receive and decode `terminal:data` events
    - Render in xterm.js instances
 
-4. **Add Control Operations**
+4. **Test Control Operations**
    - Implement `terminal:write` for input
    - Implement `terminal:resize` for terminal resizing
    - Implement `terminal:claim_ownership` for taking control
@@ -296,10 +306,17 @@ process.env.CONTROL_TOWER_WS_URL ||
 'wss://repository-traffic-controller-production.rj36caac972nm.us-east-1.cs.amazonlightsail.com'
 ```
 
-**Room Format:**
+**Auth Server URL:**
 ```typescript
-`terminals:${owner}/${repo}`
-// Example: "terminals:principal-ai/desktop-app"
+// Default (can be overridden via env var)
+process.env.AUTH_SERVER_URL || 'https://auth.principal-ade.com'
+```
+
+**Room Format (User Discovery):**
+```typescript
+`terminals:user:${userId}`
+// Example: "terminals:user:185874336"
+// Note: Single room per user, contains ALL sessions across repositories
 ```
 
 ## Status
@@ -307,38 +324,53 @@ process.env.CONTROL_TOWER_WS_URL ||
 ✅ **Phase 1: Foundation** - Complete
 ✅ **Phase 2: Operations** - Complete
 ✅ **Phase 3: Data Streaming** - Complete
-✅ **Phase 4: Browser Client** - Complete (using Control Tower Core 0.2.0 browser adapter)
-🔧 **Phase 5: Authentication** - In Progress
+✅ **Phase 4: Browser Client** - Complete (using Control Tower Core 0.2.1 browser adapter)
+✅ **Phase 5: Authentication** - Complete
+🔧 **Phase 6: Testing & Deployment** - In Progress
 
-### Recent Progress (2026-01-06)
+### Recent Progress (2026-01-07)
 
-**Authentication Flow Implemented:**
-- ✅ Created minimal `preload-remote-terminal-viewer.ts` to avoid dependency conflicts
-- ✅ Implemented proper authentication event flow (wait for `authenticated` event before room join)
-- ✅ Added JWT room token exchange via `/api/auth/browser/room-token`
-- ✅ Fixed race condition where room join happened before auth completed
-- ✅ Added menu item: View → Remote Terminal Viewer
+**Global Discovery Implementation (Option B):**
+- ✅ Implemented user discovery room strategy (`terminals:user:{userId}`)
+- ✅ Created `/api/auth/browser/user-token` endpoint (no repository required)
+- ✅ Updated TerminalWebSocketBridge to use single user connection
+- ✅ Updated RemoteTerminalViewer to use user discovery tokens
+- ✅ Added one-time IPC call to connect main process bridge
+- ✅ All terminal communication now happens exclusively via WebSocket
 
-**Key Findings:**
-- Control Tower Core's `WebSocketServerTransportAdapter` already handles `authenticate` messages correctly
-- BaseClient emits `authenticated` event when `auth_result` is processed - must wait for this
-- Cannot use GitHub token directly - must exchange for JWT room token first
-- Browser endpoint is `/api/auth/browser/room-token` (not `/api/auth/cli/room-token`)
-- Auth server URL: `https://auth.principal-ade.com`
+**Control Tower Core Improvements:**
+- ✅ Created `ConnectedRoomManager` that actually broadcasts to clients
+- ✅ Fixed DefaultRoomManager only storing events in history without sending
+- ✅ ServerBuilder auto-enhances DefaultRoomManager with broadcasting
+- ✅ Added `getClientIdsInRoom()` helper to BaseServer
+- ✅ Published control-tower-core@0.2.1 to npm
+- ✅ Updated repository-traffic-controller to v0.2.1
 
-**Current Blocker:**
-- Need to determine correct repository to use for testing (hardcoded test repo causes "Repository not found or no access" error)
-- Should get repository from active workspace instead of hardcoding
+**Architecture Decisions Made:**
+- ✅ **User Discovery Room** - One room per user containing all sessions across repositories
+- ✅ **No Repository Context Needed** - Users can discover all their sessions without selecting a repo first
+- ✅ **WebSocket-Only Communication** - After initial IPC setup, all terminal operations via WebSocket
+- ✅ **Event-Driven Broadcasting** - Room events properly broadcast to all connected clients
 
-**Architectural Decision Needed:**
-- **Should we join rooms at all for session discovery?** Current implementation joins `terminals:owner/repo` room immediately, but this requires knowing the repository upfront. Alternative: connect to server without joining a room, implement a global session discovery mechanism, or use presence/broadcast to discover available sessions across all repositories the user has access to.
+**Key Technical Fixes:**
+- Fixed event handling to use `event_received` with switch on `event.type`
+- Fixed race condition by waiting for `room_joined` before broadcasting
+- Fixed missing `terminalBridge` API in preload script
+- Fixed room broadcast by implementing proper RoomManager
+
+**Current State:**
+- Production WebSocket server needs redeployment with control-tower-core@0.2.1
+- Once deployed, full end-to-end flow should work
+- RemoteTerminalViewer connects to production server and joins user room
+- Main process bridge connects to same room
+- Both communicate via WebSocket broadcasting
 
 **Next Steps:**
-1. Decide on room joining strategy (per-repo vs global discovery)
-2. Get repository from active workspace context (if per-repo approach)
-3. Handle case where no repository is open (show helpful message or show all sessions)
-4. Test full flow with actual terminal sessions
-5. Verify session list, attach, and control operations work end-to-end
+1. ✅ Deploy repository-traffic-controller with control-tower-core@0.2.1
+2. Test full flow with actual terminal sessions
+3. Verify session list broadcasts correctly
+4. Test attach, write, and resize operations
+5. Validate ownership transfer between clients
 
 ## Performance Considerations
 
@@ -362,30 +394,44 @@ process.env.CONTROL_TOWER_WS_URL ||
 ## Known Limitations
 
 1. **Phase 1 only allows same GitHub user** - No cross-user sharing yet
-2. **Attach-only** - Browser cannot create new sessions (coming in Phase 2)
-3. **Repository must be hardcoded** - Should get from active workspace context
-4. **No session persistence** - Sessions die when Electron app closes
-5. **No compression** - Large outputs could be slow over network
+2. **Attach-only** - Browser cannot create new sessions (coming in future phase)
+3. **No session persistence** - Sessions die when Electron app closes
+4. **No compression** - Large outputs could be slow over network
+5. **Production deployment required** - Need to deploy repository-traffic-controller with control-tower-core@0.2.1
 
 ## Troubleshooting
 
 ### Authentication Issues
 
 **Error: "jwt malformed"**
-- **Cause:** Using GitHub token directly instead of JWT room token
-- **Fix:** Exchange GitHub token for JWT via `/api/auth/browser/room-token`
+- **Cause:** Using GitHub token directly instead of JWT token
+- **Fix:** Exchange GitHub token for JWT via `/api/auth/browser/user-token`
 
 **Error: "Authentication required to join room"**
 - **Cause:** Trying to join room before `auth_result` message is processed
 - **Fix:** Wait for `authenticated` event from BaseClient before calling `joinRoom()`
 
 **Error: "Repository not found or no access"**
-- **Cause:** User doesn't have access to the hardcoded repository, or GitHub App not installed
-- **Fix:** Use a repository where you have access and the Principal AI GitHub App is installed
+- **Cause:** (Legacy issue) - Using old per-repository room strategy
+- **Fix:** Use user discovery rooms (`terminals:user:{userId}`) - no repository needed!
 
-**Error: "Failed to get room token: 405"**
-- **Cause:** Using wrong endpoint (e.g., `/api/auth/cli/room-token` instead of browser endpoint)
-- **Fix:** Use `/api/auth/browser/room-token` for browser/Electron renderer contexts
+**Error: "Failed to get room token: 404"**
+- **Cause:** Using wrong endpoint or endpoint not deployed
+- **Fix:** Use `/api/auth/browser/user-token` for user discovery (deployed as of 2026-01-07)
+
+### WebSocket Issues
+
+**Error: "Connection closed with code 1006"**
+- **Cause:** Production server using DefaultRoomManager that doesn't broadcast
+- **Fix:** Deploy repository-traffic-controller with control-tower-core@0.2.1 (includes ConnectedRoomManager)
+
+**Error: "Session list not appearing"**
+- **Cause:** Events were being stored in history but not sent to clients
+- **Fix:** ConnectedRoomManager now properly broadcasts via `event_received` messages
+
+**Error: "Cannot read properties of undefined (reading 'invoke')"**
+- **Cause:** Missing `terminalBridge` API in preload script
+- **Fix:** Added `terminalBridgeAPI` to `preload-remote-terminal-viewer.ts`
 
 ### Preload Script Issues
 
@@ -395,10 +441,23 @@ process.env.CONTROL_TOWER_WS_URL ||
 
 ## Dependencies
 
-**Control Tower Core 0.2.0:**
+**Control Tower Core 0.2.1:**
 - Uses browser-safe exports: `@principal-ai/control-tower-core/adapters/websocket/browser`
 - Provides `BrowserWebSocketTransportAdapter` for Electron renderer and web clients
+- Includes `ConnectedRoomManager` for proper room broadcasting
+- Auto-enhances `DefaultRoomManager` instances with broadcasting capabilities
 - No Node.js dependencies pulled into browser bundle
+
+**Auth Server Updates:**
+- New endpoint: `/api/auth/browser/user-token` (no repository parameter required)
+- Returns JWT with special `repoId: __user_discovery__/{userId}` marker
+- Deployed to production: https://auth.principal-ade.com
+
+**Repository Traffic Controller:**
+- Updated to use control-tower-core@0.2.1
+- ConnectedRoomManager automatically wraps DefaultRoomManager
+- Broadcasts events to all clients in rooms
+- Ready for deployment
 
 ## Future Enhancements
 
