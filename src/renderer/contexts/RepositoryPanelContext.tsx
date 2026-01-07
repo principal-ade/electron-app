@@ -416,6 +416,37 @@ export const RepositoryPanelProvider: React.FC<
     return 'fileTypes';
   }, [fileCityColorMode, gitStatusData]);
 
+  // Listen for workspace file change events and refresh fileTree
+  // This ensures panels like Kanban get updated when files change
+  useEffect(() => {
+    const unsubWorkspaceChanged = events.on('workspace:changed', async (event) => {
+      const payload = event.payload as { repoPath: string; changes?: unknown[] };
+      if (payload.repoPath === repositoryPath) {
+        console.info(
+          '[RepositoryPanelProvider] Workspace changed, refreshing fileTree for repository:',
+          repositoryPath,
+        );
+        // Refresh the file tree to pick up new/changed/deleted files
+        setFileTreeLoading(true);
+        try {
+          const tree = await RepositoryMonitoringService.getFileTree(repositoryPath);
+          setFileTreeData(tree);
+        } catch (error) {
+          console.error(
+            '[RepositoryPanelProvider] Failed to refresh file tree after workspace change:',
+            error,
+          );
+        } finally {
+          setFileTreeLoading(false);
+        }
+      }
+    });
+
+    return () => {
+      unsubWorkspaceChanged?.();
+    };
+  }, [events, repositoryPath]);
+
   // Listen for color mode change events from panels (e.g., quality hexagon clicks)
   // The QualityHexagonPanel emits 'quality:colorMode:select' with payload { colorMode }
   useEffect(() => {
