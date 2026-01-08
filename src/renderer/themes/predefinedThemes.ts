@@ -2,7 +2,6 @@ import {
   type Theme,
   terminalTheme,
   regalTheme,
-  glassmorphismTheme,
   matrixTheme,
   matrixMinimalTheme,
   slateTheme,
@@ -42,11 +41,6 @@ export const predefinedThemes: Record<
     name: 'Regal',
     description: 'Dark Academia theme with warm amber gold accents',
     theme: regalTheme,
-  },
-  glassmorphism: {
-    name: 'Glassmorphism',
-    description: 'Modern transparent theme with blur effects',
-    theme: glassmorphismTheme,
   },
   matrix: {
     name: 'Matrix',

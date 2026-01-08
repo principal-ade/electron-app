@@ -1,13 +1,13 @@
 import {
   PackageLayerModule,
-  FileSystemTree,
+  FileTree,
 } from '@principal-ai/codebase-composition';
 
 /**
  * Options for loading manifest contents
  */
 interface LoadManifestOptions {
-  fileSystemTree: FileSystemTree;
+  fileSystemTree: FileTree;
   fileSystemAdapter: any; // FileSystem adapter (GitHub or Electron)
   packageModule?: PackageLayerModule; // Optional: provide existing module to reuse
   rootPath?: string; // Optional: absolute repo root for local sources
