@@ -37,20 +37,21 @@ npm run lint 2>&1 | grep -E "^/Users/griever/Developer/desktop-app/electron-app/
 npm run typecheck 2>&1 | grep "error TS" | grep "src/renderer/" | sed 's|.*src/renderer/||' | cut -d'/' -f1 | sort | uniq -c | sort -nr
 ```
 
-## Current Status (Updated - 2025-12-27)
+## Current Status (Updated - 2026-01-09)
 
 ### Overall Issues
 
-* **ESLint**: 721 total issues (448 errors, 273 warnings) ⬇️ **-9 total (+5 errors, -14 warnings) (prev: 730 total, 443 errors, 287 warnings)**
-* **TypeScript**: 127 errors ⬆️ **+2 from previous (was 125)**
-* **Console.log warnings**: 203 ⬇️ **-12 from previous (was 215)**
+* **ESLint**: 897 total issues (510 errors, 387 warnings) ⬆️ **+176 total (+62 errors, +114 warnings) (prev: 721 total, 448 errors, 273 warnings)**
+* **TypeScript**: 151 errors ⬆️ **+24 from previous (was 127)**
+* **Console.log warnings**: 298 ⬆️ **+95 from previous (was 203)**
 
 ### Recent Changes
 
-* Console.log warnings reduced by 12 across the codebase
-* ESLint total decreased by 9 (more warnings fixed)
-* TypeScript errors slightly increased +2 (renderer +3, main -1)
-* event-processing-server ESLint issues +1 (now 2)
+* ⚠️ **MAJOR REGRESSION**: Significant increase across all metrics
+* ESLint total increased by 176 (+24.4% regression)
+* TypeScript errors increased by 24 (+18.9% regression)
+* Console.log warnings increased by 95 (+46.8% regression)
+* renderer/principal-window had major TypeScript regression: 6 → 19 (+13 errors)
 
 ### By Top-Level Directory
 
@@ -58,12 +59,12 @@ npm run typecheck 2>&1 | grep "error TS" | grep "src/renderer/" | sed 's|.*src/r
 
 | Directory                    | Issues | % of Total | Change       |
 | ---------------------------- | ------ | ---------- | ------------ |
-| renderer                     | 71     | 55.9%      | -            |
-| main                         | 46     | 36.2%      | ⬇️ **-1**    |
-| window                       | 5      | 3.9%       | ⬆️ **+1**    |
-| terminal-worker              | 2      | 1.6%       | -            |
-| event-processing-server      | 2      | 1.6%       | ⬆️ **+1**    |
-| shared                       | 1      | 0.8%       | -            |
+| renderer                     | 84     | 58.0%      | ⬆️ **+13**   |
+| main                         | 50     | 34.5%      | ⬆️ **+4**    |
+| window                       | 6      | 4.1%       | ⬆️ **+1**    |
+| terminal-worker              | 2      | 1.4%       | -            |
+| event-processing-server      | 2      | 1.4%       | -            |
+| shared                       | 1      | 0.7%       | -            |
 | repository-monitoring-server | 0      | ✅ Clean    | -            |
 | titlebar                     | 0      | ✅ Clean    | -            |
 
@@ -71,10 +72,10 @@ npm run typecheck 2>&1 | grep "error TS" | grep "src/renderer/" | sed 's|.*src/r
 
 | Directory                    | Errors   | % of Total | Change       |
 | ---------------------------- | -------- | ---------- | ------------ |
-| renderer                     | 86       | 67.7%      | ⬆️ **+3**    |
-| main                         | 35       | 27.6%      | ⬇️ **-1**    |
-| shared                       | 4        | 3.1%       | -            |
-| window                       | 2        | 1.6%       | -            |
+| renderer                     | 105      | 69.5%      | ⬆️ **+19**   |
+| main                         | 39       | 25.8%      | ⬆️ **+4**    |
+| shared                       | 4        | 2.6%       | -            |
+| window                       | 3        | 2.0%       | ⬆️ **+1**    |
 | repository-monitoring-server | 0        | ✅ Clean    | -            |
 | titlebar                     | 0        | ✅ Clean    | -            |
 | event-processing-server      | 0        | ✅ Clean    | -            |

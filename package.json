@@ -1,6 +1,6 @@
 {
   "name": "principal-ade",
-  "version": "0.0.305",
+  "version": "0.0.306",
   "description": "Principal ADE - The future of Agentic Development Environment",
   "type": "module",
   "keywords": [
@@ -171,7 +171,7 @@
     "@industry-theme/agent-panels": "^0.1.8",
     "@industry-theme/alexandria-docs-panel": "^0.4.25",
     "@industry-theme/alexandria-panels": "^0.1.32",
-    "@industry-theme/backlogmd-kanban-panel": "^1.0.36",
+    "@industry-theme/backlogmd-kanban-panel": "^1.0.37",
     "@industry-theme/file-city-panel": "^0.2.47",
     "@industry-theme/file-editing-panels": "^0.2.2",
     "@industry-theme/ghostty-terminal-panel": "^0.1.18",
