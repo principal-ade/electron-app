@@ -307,14 +307,6 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
     }
   }, [repositoryPath, packages]);
 
-  // Test terminal API on mount
-  useEffect(() => {
-    console.log('[DevWorkspaceTitlebar] Testing terminal API availability...');
-    console.log('[DevWorkspaceTitlebar] window.mainProcess:', window.mainProcess);
-    console.log('[DevWorkspaceTitlebar] window.mainProcess.terminal:', window.mainProcess?.terminal);
-    console.log('[DevWorkspaceTitlebar] terminal.createWithCommand:', window.mainProcess?.terminal?.createWithCommand);
-  }, []);
-
   // Handler for Storybook button click (or dropdown item click)
   const handleStorybookClick = async (packageToStart?: StorybookPackage) => {
     // Use provided package or selected package

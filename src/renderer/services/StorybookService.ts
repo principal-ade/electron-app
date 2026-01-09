@@ -130,11 +130,11 @@ export function getStorybookCommand(
   // If "storybook" script exists, use npm run
   if (storybookPackage.hasScript) {
     console.log('[StorybookService] Using npm run storybook command');
-    command = `npm run storybook -- --port ${port}`;
+    command = `npm run storybook -- --port ${port} --no-open`;
   } else {
     // Fall back to npx storybook dev
     console.log('[StorybookService] Using npx storybook dev command');
-    command = `npx storybook dev --port ${port}`;
+    command = `npx storybook dev --port ${port} --no-open`;
   }
 
   console.log(`[StorybookService] Generated command: ${command}`);

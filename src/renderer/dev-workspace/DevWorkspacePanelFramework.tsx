@@ -26,7 +26,7 @@ import { panels as principalViewPanels } from '@industry-theme/principal-view-pa
 import { panels as fileCityPanels } from '@industry-theme/file-city-panel';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import { panels as alexandriaPanels } from '@industry-theme/alexandria-panels';
-import { localhostProcessesPanels } from '../panels';
+import { panels as localhostBrowserPanels } from '@industry-theme/localhost-panels';
 import { panels as agentDrivenPanels } from '@industry-theme/agent-driven-ui-panels';
 import { panels as repositoryCompositionPanels } from '@industry-theme/repository-composition-panels';
 import { panels as codeQualityPanels } from '@principal-ade/code-quality-panels';
@@ -202,7 +202,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   const LocalProjectsPanelComponent = alexandriaPanels.find(
     (p) => p.metadata?.id === 'industry-theme.local-projects',
   )?.component;
-  const LocalhostPanelComponent = localhostProcessesPanels[0]?.component;
+  const LocalhostBrowserPanelComponent = localhostBrowserPanels.find(
+    (p) => p.metadata?.id === 'principal-ade.localhost-browser',
+  )?.component;
   const EventBusPanelComponent = agentDrivenPanels.find(
     (p) => p.metadata?.id === 'industry-theme.event-bus-panel',
   )?.component;
@@ -456,7 +458,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       {
         id: 'localhostBrowser',
         label: 'Localhost Browser',
-        content: LocalhostPanelComponent ? (
+        content: LocalhostBrowserPanelComponent ? (
           <div
             style={{
               height: '100%',
@@ -467,7 +469,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               flexDirection: 'column',
             }}
           >
-            <LocalhostPanelComponent
+            <LocalhostBrowserPanelComponent
               context={context}
               actions={actions}
               events={events}
@@ -480,7 +482,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       {
         id: 'localhostBrowserAlt',
         label: 'Localhost Browser (Alt)',
-        content: LocalhostPanelComponent ? (
+        content: LocalhostBrowserPanelComponent ? (
           <div
             style={{
               height: '100%',
@@ -491,7 +493,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               flexDirection: 'column',
             }}
           >
-            <LocalhostPanelComponent
+            <LocalhostBrowserPanelComponent
               context={context}
               actions={actions}
               events={events}
@@ -845,7 +847,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       DocsPanelComponent,
       LocalProjectsPanelComponent,
       GitChangesPanelComponent,
-      LocalhostPanelComponent,
+      LocalhostBrowserPanelComponent,
       EventBusPanelComponent,
       AgentToolsPanelComponent,
       CodeQualityPanelComponent,
