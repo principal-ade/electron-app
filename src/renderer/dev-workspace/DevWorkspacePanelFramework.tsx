@@ -33,6 +33,7 @@ import { panels as codeQualityPanels } from '@principal-ade/code-quality-panels'
 import { panels as markdownPanels } from '@industry-theme/markdown-panels';
 import { panels as fileEditingPanels } from '@industry-theme/file-editing-panels';
 import { panels as backlogPanels } from '@industry-theme/backlogmd-kanban-panel';
+import { panels as agentPanels } from '@industry-theme/agent-panels';
 import type { Repository } from '../../shared/types/repository.types';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 
@@ -190,6 +191,12 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   );
 
   const PrincipalViewPanelComponent = principalViewPanels[0]?.component;
+  const TraceViewerPanelComponent = principalViewPanels.find(
+    (p) => p.metadata?.id === 'principal-ai.trace-viewer',
+  )?.component;
+  const ExecutionViewerPanelComponent = principalViewPanels.find(
+    (p) => p.metadata?.id === 'principal-ai.execution-viewer',
+  )?.component;
   const FileCityPanelComponent = fileCityPanels[0]?.component;
   const DocsPanelComponent = docsPanels[0]?.component;
   const LocalProjectsPanelComponent = alexandriaPanels.find(
@@ -226,6 +233,14 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   const KanbanPanelComponent = backlogPanels[0]?.component;
   const TaskDetailPanelComponent = backlogPanels[1]?.component;
   const MilestonePanelComponent = backlogPanels[2]?.component;
+
+  // Agent Skills panels
+  const SkillsListPanelComponent = agentPanels.find(
+    (p) => p.metadata?.id === 'industry-theme.skills-list',
+  )?.component;
+  const SkillDetailPanelComponent = agentPanels.find(
+    (p) => p.metadata?.id === 'industry-theme.skill-detail',
+  )?.component;
 
   // Listen for doc:openInRightPanel events (from Alexandria docs panel context menu)
   useEffect(() => {
@@ -326,6 +341,54 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           </div>
         ) : (
           <div>Principal View panel not available</div>
+        ),
+      },
+      {
+        id: 'traceViewer',
+        label: 'Trace Viewer',
+        content: TraceViewerPanelComponent ? (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <TraceViewerPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div>Trace Viewer panel not available</div>
+        ),
+      },
+      {
+        id: 'executionViewer',
+        label: 'Execution Viewer',
+        content: ExecutionViewerPanelComponent ? (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <ExecutionViewerPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div>Execution Viewer panel not available</div>
         ),
       },
       {
@@ -727,6 +790,54 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           <div>Milestones panel not available</div>
         ),
       },
+      {
+        id: 'skillsList',
+        label: 'Skills List',
+        content: SkillsListPanelComponent ? (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <SkillsListPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div>Skills List panel not available</div>
+        ),
+      },
+      {
+        id: 'skillDetail',
+        label: 'Skill Detail',
+        content: SkillDetailPanelComponent ? (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <SkillDetailPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div>Skill Detail panel not available</div>
+        ),
+      },
     ],
     [
       PrincipalViewPanelComponent,
@@ -746,6 +857,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       KanbanPanelComponent,
       TaskDetailPanelComponent,
       MilestonePanelComponent,
+      SkillsListPanelComponent,
+      SkillDetailPanelComponent,
       context,
       actions,
       events,

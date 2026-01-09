@@ -32,13 +32,17 @@ const AVAILABLE_PANELS: PanelOption[] = [
   { id: 'principalView', label: 'Architecture' },
   { id: 'codeQuality', label: 'Code Quality' },
   { id: 'docs', label: 'Documentation' },
+  { id: 'executionViewer', label: 'Execution Viewer' },
   { id: 'fileCity', label: 'File City' },
   { id: 'gitChanges', label: 'File Tree' },
   { id: 'kanban', label: 'Kanban' },
   { id: 'localhostBrowser', label: 'Localhost Browser' },
   { id: 'localProjects', label: 'Local Projects' },
   { id: 'packageComposition', label: 'Package Composition' },
+  { id: 'skillDetail', label: 'Skill Detail' },
+  { id: 'skillsList', label: 'Skills List' },
   { id: 'terminal', label: 'Terminal' },
+  { id: 'traceViewer', label: 'Trace Viewer' },
 ];
 
 // Panel configuration presets
@@ -115,6 +119,26 @@ export const DEFAULT_PANEL_PRESETS: PanelPreset[] = [
       left: 'milestones',
       middle: 'kanban',
       right: 'task-detail',
+    },
+  },
+  {
+    id: 'agent-skills',
+    name: 'Agent Skills',
+    description: 'Skills List, Terminal, Skill Detail',
+    layout: {
+      left: 'skillsList',
+      middle: 'terminal',
+      right: 'skillDetail',
+    },
+  },
+  {
+    id: 'execution-viewer',
+    name: 'Execution Viewer',
+    description: 'Architecture, Execution Viewer, Terminal',
+    layout: {
+      left: 'principalView',
+      middle: 'executionViewer',
+      right: 'terminal',
     },
   },
 ];
