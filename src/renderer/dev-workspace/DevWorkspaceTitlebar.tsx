@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Layers,
   Cloud,
@@ -10,6 +10,8 @@ import {
   Play,
   Eye,
   EyeOff,
+  BookOpen,
+  ChevronDown,
 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
@@ -26,6 +28,9 @@ import {
 import type { Repository } from '../../shared/types/repository.types';
 import type { FileTreeSource } from '../types/file-tree-source';
 import { useRepositoryGitStatus } from '../hooks/useRepositoryGitStatus';
+import { findAvailablePort, waitForPortReady } from '../utils/portDetection';
+import { StorybookService, type StorybookPackage } from '../services/StorybookService';
+import type { PackageLayer } from '@principal-ai/codebase-composition';
 
 // Available panels for Dev workspace
 const AVAILABLE_PANELS: PanelOption[] = [
@@ -178,6 +183,17 @@ export interface DevWorkspaceTitlebarProps {
   panelFocus?: { left: boolean; right: boolean };
   onFocusLeft?: () => void;
   onFocusRight?: () => void;
+  // Panel event emitter for inter-panel communication
+  events?: {
+    emit: (event: {
+      type: string;
+      source: string;
+      payload: any;
+      timestamp: number;
+    }) => void;
+  };
+  // Packages data from codebase-composition
+  packages?: PackageLayer[];
 }
 
 export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
@@ -203,10 +219,24 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
   panelFocus,
   onFocusLeft,
   onFocusRight,
+  events,
+  packages,
 }) => {
   const { theme } = useTheme();
   const [copiedPath, setCopiedPath] = useState(false);
   const [isTitlebarHovered, setIsTitlebarHovered] = useState(false);
+
+  // Storybook state
+  const [storybookStatus, setStorybookStatus] = useState<
+    'idle' | 'starting' | 'running' | 'error'
+  >('idle');
+  const [storybookSessionId, setStorybookSessionId] = useState<string | null>(
+    null,
+  );
+  const [storybookPort, setStorybookPort] = useState<number | null>(null);
+  const [storybookPackages, setStorybookPackages] = useState<StorybookPackage[]>([]);
+  const [selectedPackage, setSelectedPackage] = useState<StorybookPackage | null>(null);
+  const [showPackageDropdown, setShowPackageDropdown] = useState(false);
 
   // Handle copy repository path
   const handleCopyPath = async () => {
@@ -245,6 +275,151 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
   const handleExpandRightPanel = () => {
     if (collapsed?.right && onCollapsedChange) {
       onCollapsedChange({ ...collapsed, right: false });
+    }
+  };
+
+  // Detect Storybook packages from codebase-composition data
+  useEffect(() => {
+    console.log('[DevWorkspaceTitlebar] Packages data:', packages);
+    console.log('[DevWorkspaceTitlebar] Repository path:', repositoryPath);
+
+    if (repositoryPath && packages) {
+      const foundPackages = StorybookService.findStorybookPackages(
+        packages,
+        repositoryPath,
+      );
+      console.log('[DevWorkspaceTitlebar] Found Storybook packages:', foundPackages);
+      setStorybookPackages(foundPackages);
+
+      // Auto-select first package if only one exists
+      if (foundPackages.length === 1) {
+        setSelectedPackage(foundPackages[0]);
+      } else if (foundPackages.length > 1) {
+        // If multiple packages, default to first but allow user to change
+        setSelectedPackage(foundPackages[0]);
+      } else {
+        setSelectedPackage(null);
+      }
+    } else {
+      console.log('[DevWorkspaceTitlebar] No packages or repositoryPath');
+      setStorybookPackages([]);
+      setSelectedPackage(null);
+    }
+  }, [repositoryPath, packages]);
+
+  // Test terminal API on mount
+  useEffect(() => {
+    console.log('[DevWorkspaceTitlebar] Testing terminal API availability...');
+    console.log('[DevWorkspaceTitlebar] window.mainProcess:', window.mainProcess);
+    console.log('[DevWorkspaceTitlebar] window.mainProcess.terminal:', window.mainProcess?.terminal);
+    console.log('[DevWorkspaceTitlebar] terminal.createWithCommand:', window.mainProcess?.terminal?.createWithCommand);
+  }, []);
+
+  // Handler for Storybook button click (or dropdown item click)
+  const handleStorybookClick = async (packageToStart?: StorybookPackage) => {
+    // Use provided package or selected package
+    const targetPackage = packageToStart || selectedPackage;
+
+    if (!targetPackage) {
+      console.error('[DevWorkspaceTitlebar] No Storybook package selected');
+      return;
+    }
+
+    if (storybookStatus === 'running' && storybookSessionId) {
+      // Stop Storybook
+      try {
+        await window.mainProcess.terminal.destroy(storybookSessionId);
+        setStorybookStatus('idle');
+        setStorybookSessionId(null);
+        setStorybookPort(null);
+      } catch (error) {
+        console.error(
+          '[DevWorkspaceTitlebar] Failed to stop Storybook:',
+          error,
+        );
+      }
+      return;
+    }
+
+    try {
+      setStorybookStatus('starting');
+      setSelectedPackage(targetPackage); // Update selected package
+
+      console.log('[DevWorkspaceTitlebar] Starting Storybook for package:', targetPackage.name);
+      console.log('[DevWorkspaceTitlebar] Package path:', targetPackage.path);
+
+      // Find available port
+      const port = await findAvailablePort(6006, 6020);
+      console.log('[DevWorkspaceTitlebar] Found available port:', port);
+      setStorybookPort(port);
+
+      // Get command for this specific package
+      const command = StorybookService.getStorybookCommand(targetPackage, port);
+      console.log('[DevWorkspaceTitlebar] Command to execute:', command);
+
+      // Create terminal session with storybook context in the package directory
+      // Use the same context pattern as TerminalProvider: terminal:owner/repo:storybook
+      const terminalContext = `terminal:${repositoryOwner}/${repositoryName}:storybook`;
+      console.log('[DevWorkspaceTitlebar] Creating terminal session with context:', terminalContext);
+
+      const sessionId = await window.mainProcess.terminal.createWithCommand(
+        targetPackage.path, // Use package path instead of repository path
+        command,
+        terminalContext,
+      );
+      console.log('[DevWorkspaceTitlebar] Terminal session created:', sessionId);
+      setStorybookSessionId(sessionId || null);
+
+      // Emit custom event to notify TerminalProvider to refresh
+      window.dispatchEvent(
+        new CustomEvent('terminal-session-created', {
+          detail: { sessionId, context: terminalContext },
+        }),
+      );
+
+      // Give the terminal panel a moment to detect the new session
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Wait for port to become responsive (30s timeout)
+      console.log('[DevWorkspaceTitlebar] Waiting for Storybook to become responsive on port', port);
+      await waitForPortReady(port, 30000, 1000);
+      console.log('[DevWorkspaceTitlebar] Storybook is now responsive!');
+
+      // Navigate browser panel to Storybook port using existing event
+      if (events) {
+        console.log('[DevWorkspaceTitlebar] Navigating browser panel to port', port);
+        events.emit({
+          type: 'principal-ade.localhost-browser:navigate',
+          source: 'dev-workspace-titlebar',
+          payload: { port, path: '/' },
+          timestamp: Date.now(),
+        });
+      }
+
+      // Switch right panel to localhost browser
+      if (currentLayout && onLayoutChange) {
+        console.log('[DevWorkspaceTitlebar] Switching right panel to localhost browser');
+        onLayoutChange({ ...currentLayout, right: 'localhostBrowser' });
+      }
+
+      // Expand right panel if collapsed
+      if (collapsed?.right && onCollapsedChange) {
+        console.log('[DevWorkspaceTitlebar] Expanding right panel');
+        onCollapsedChange({ ...collapsed, right: false });
+      }
+
+      setStorybookStatus('running');
+      console.log('[DevWorkspaceTitlebar] ✅ Storybook started successfully!');
+    } catch (error) {
+      console.error('[DevWorkspaceTitlebar] ❌ Failed to start Storybook:', error);
+      console.error('[DevWorkspaceTitlebar] Error details:', {
+        package: targetPackage.name,
+        path: targetPackage.path,
+        port: storybookPort,
+        sessionId: storybookSessionId,
+      });
+      setStorybookStatus('error');
+      // TODO: Show error notification to user
     }
   };
 
@@ -757,6 +932,163 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                 <Play size={14} />
                 <span>Actions</span>
               </button>
+            )}
+
+            {/* Storybook Button/Dropdown */}
+            {storybookPackages.length > 0 && (
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={() => {
+                    if (storybookPackages.length === 1) {
+                      handleStorybookClick();
+                    } else {
+                      setShowPackageDropdown(!showPackageDropdown);
+                    }
+                  }}
+                  disabled={storybookStatus === 'starting'}
+                  title={
+                    storybookStatus === 'running'
+                      ? 'Stop Storybook'
+                      : storybookPackages.length === 1
+                        ? `Start Storybook (${selectedPackage?.name})`
+                        : 'Start Storybook (select package)'
+                  }
+                  style={{
+                    // @ts-ignore - WebkitAppRegion is not in CSSProperties
+                    WebkitAppRegion: 'no-drag',
+                    background:
+                      storybookStatus === 'running'
+                        ? theme.colors.success + '20'
+                        : theme.colors.backgroundTertiary,
+                    border: `1px solid ${
+                      storybookStatus === 'running'
+                        ? theme.colors.success
+                        : theme.colors.border
+                    }`,
+                    color:
+                      storybookStatus === 'running'
+                        ? theme.colors.success
+                        : theme.colors.textSecondary,
+                    cursor:
+                      storybookStatus === 'starting'
+                        ? 'not-allowed'
+                        : 'pointer',
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s',
+                    fontSize: `${theme.fontSizes[1]}px`,
+                    fontWeight: theme.fontWeights.medium,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (storybookStatus !== 'starting') {
+                      e.currentTarget.style.backgroundColor =
+                        theme.colors.backgroundSecondary;
+                      e.currentTarget.style.borderColor = theme.colors.primary;
+                      e.currentTarget.style.color = theme.colors.text;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor =
+                      storybookStatus === 'running'
+                        ? theme.colors.success + '20'
+                        : theme.colors.backgroundTertiary;
+                    e.currentTarget.style.borderColor =
+                      storybookStatus === 'running'
+                        ? theme.colors.success
+                        : theme.colors.border;
+                    e.currentTarget.style.color =
+                      storybookStatus === 'running'
+                        ? theme.colors.success
+                        : theme.colors.textSecondary;
+                  }}
+                >
+                  <BookOpen size={14} />
+                  <span>
+                    {storybookStatus === 'starting' && 'Starting...'}
+                    {storybookStatus === 'running' && 'Stop SB'}
+                    {storybookStatus === 'idle' && 'Storybook'}
+                    {storybookStatus === 'error' && 'Error'}
+                  </span>
+                  {storybookPackages.length > 1 && (
+                    <ChevronDown size={12} />
+                  )}
+                </button>
+
+                {/* Dropdown for multiple packages */}
+                {showPackageDropdown && storybookPackages.length > 1 && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      right: 0,
+                      marginTop: '4px',
+                      backgroundColor: theme.colors.backgroundSecondary,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: '6px',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                      zIndex: 1000,
+                      minWidth: '200px',
+                    }}
+                  >
+                    {storybookPackages.map((pkg) => (
+                      <button
+                        key={pkg.path}
+                        onClick={() => {
+                          setShowPackageDropdown(false);
+                          handleStorybookClick(pkg);
+                        }}
+                        style={{
+                          // @ts-ignore - WebkitAppRegion is not in CSSProperties
+                          WebkitAppRegion: 'no-drag',
+                          width: '100%',
+                          padding: '8px 12px',
+                          border: 'none',
+                          background:
+                            selectedPackage?.path === pkg.path
+                              ? theme.colors.primary + '20'
+                              : 'transparent',
+                          color: theme.colors.text,
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          fontSize: `${theme.fontSizes[1]}px`,
+                          borderBottom:
+                            storybookPackages[storybookPackages.length - 1] !== pkg
+                              ? `1px solid ${theme.colors.border}`
+                              : 'none',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (selectedPackage?.path !== pkg.path) {
+                            e.currentTarget.style.backgroundColor =
+                              theme.colors.backgroundTertiary;
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (selectedPackage?.path !== pkg.path) {
+                            e.currentTarget.style.backgroundColor =
+                              'transparent';
+                          }
+                        }}
+                      >
+                        <div style={{ fontWeight: theme.fontWeights.medium }}>
+                          {pkg.name}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: `${theme.fontSizes[0]}px`,
+                            color: theme.colors.textTertiary,
+                            marginTop: '2px',
+                          }}
+                        >
+                          {pkg.path.replace(repositoryPath || '', '').replace(/^\//, '') || '/'}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Terminal Implementation Toggle */}

@@ -14,6 +14,8 @@ import type {
   GitHubLicenseTemplate,
   GitHubRepositoryWithPermissions,
   ForkRepositoryOptions,
+  InstallSkillOptions,
+  InstallSkillResult,
 } from '../../shared/main-process-api-interfaces/GitHubAPI';
 
 export class GithubService {
@@ -245,6 +247,16 @@ export class GithubService {
       repo,
       options,
     );
+    return result;
+  }
+
+  /**
+   * Install a skill from GitHub to a local directory
+   */
+  static async installSkill(
+    options: InstallSkillOptions,
+  ): Promise<InstallSkillResult> {
+    const result = await window.mainProcess.github.installSkill(options);
     return result;
   }
 }

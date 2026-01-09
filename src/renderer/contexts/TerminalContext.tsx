@@ -93,6 +93,12 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
     const loadTerminalSessions = async () => {
       try {
         const sessions = await TerminalService.list();
+        console.log('[TerminalProvider] Loaded terminal sessions:', sessions.map(s => ({
+          id: s.id,
+          directory: s.directory,
+          context: s.context,
+        })));
+        console.log('[TerminalProvider] Expected terminalContext:', terminalContext);
         setTerminalSessions(sessions);
       } catch (error) {
         console.error(
@@ -103,7 +109,21 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
     };
 
     loadTerminalSessions();
-  }, []);
+
+    // Listen for external session creation events
+    const handleSessionCreated = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      console.log('[TerminalProvider] Detected new terminal session:', customEvent.detail);
+      console.log('[TerminalProvider] Refreshing list...');
+      loadTerminalSessions();
+    };
+
+    window.addEventListener('terminal-session-created', handleSessionCreated);
+
+    return () => {
+      window.removeEventListener('terminal-session-created', handleSessionCreated);
+    };
+  }, [terminalContext]);
 
   // Create actions object matching TerminalPanelActions interface
   const actions: TerminalPanelActions = useMemo(

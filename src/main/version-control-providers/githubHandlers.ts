@@ -1,5 +1,6 @@
-import { BrowserWindow, ipcMain } from 'electron';
+import { BrowserWindow, ipcMain, app } from 'electron';
 import * as fs from 'fs';
+import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import fetch from 'node-fetch';
 import { electronCLI } from '../electron-cli-bridge';
@@ -16,6 +17,8 @@ import {
   CreateRepositoryInput,
   GitHubRepositoryCreated,
   GitHubLicenseTemplate,
+  InstallSkillOptions,
+  InstallSkillResult,
 } from '../../shared/main-process-api-interfaces/GitHubAPI';
 import type { IModernApplicationWindow } from '../window/types';
 
@@ -1030,6 +1033,13 @@ export class GitHubAdapter {
         exitCode: 1,
       };
     }
+  }
+
+  /**
+   * Get repository tree (alias for getTreeForPublicRepo)
+   */
+  async getTree(owner: string, repo: string, ref: string) {
+    return this.getTreeForPublicRepo(owner, repo, ref);
   }
 
   async getTreeForPublicRepo(
@@ -3239,6 +3249,222 @@ export function registerGitHubIpcHandlers(
         return null;
       }
       return adapter.forkRepository(owner, repo, options);
+    },
+  );
+
+  ipcMain.handle(
+    GitHubAPIEvent.INSTALL_SKILL,
+    async (event, options: InstallSkillOptions): Promise<InstallSkillResult> => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for INSTALL_SKILL');
+        return {
+          success: false,
+          error: 'GitHub adapter not available',
+        };
+      }
+
+      try {
+        const { githubUrl, skillPath, destination, repositoryPath, skillName } = options;
+
+        console.log('[GitHub] installSkill called with:', {
+          githubUrl,
+          skillPath,
+          destination,
+          skillName,
+        });
+
+        // Parse GitHub URL
+        const urlMatch = githubUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
+        if (!urlMatch) {
+          return {
+            success: false,
+            error: 'Invalid GitHub URL format',
+          };
+        }
+
+        const owner = urlMatch[1];
+        const repo = urlMatch[2].replace(/\.git$/, '');
+
+        // Get repository default branch
+        const repoInfo = await adapter.getRepository(owner, repo);
+        const branch = repoInfo?.default_branch || 'main';
+
+        // Get file tree for the skill folder
+        const treeResult = await adapter.getTree(owner, repo, branch);
+        if (!treeResult?.success || !treeResult.data) {
+          return {
+            success: false,
+            error: 'Failed to fetch repository tree',
+          };
+        }
+
+        // Normalize skillPath to remove leading/trailing slashes and repo prefix
+        let normalizedSkillPath = skillPath.trim();
+
+        // Remove any leading repo path like "/owner/repo/"
+        const repoPrefix = `/${owner}/${repo}/`;
+        if (normalizedSkillPath.startsWith(repoPrefix)) {
+          normalizedSkillPath = normalizedSkillPath.substring(repoPrefix.length);
+        }
+
+        // Remove leading slash
+        normalizedSkillPath = normalizedSkillPath.replace(/^\/+/, '');
+
+        console.log('[GitHub] Normalized skill path:', {
+          original: skillPath,
+          normalized: normalizedSkillPath,
+        });
+
+        // Filter files in skill folder
+        const skillFiles = treeResult.data.tree.filter(
+          (file) => file.path?.startsWith(normalizedSkillPath) && file.type === 'blob'
+        );
+
+        if (skillFiles.length === 0) {
+          return {
+            success: false,
+            error: `No files found in skill path: ${skillPath}`,
+          };
+        }
+
+        // Download each file
+        const downloadedFiles: Array<{ path: string; content: string }> = [];
+        for (const file of skillFiles) {
+          if (file.path) {
+            const content = await adapter.getFileContent(owner, repo, file.path, branch);
+            if (content) {
+              downloadedFiles.push({
+                path: file.path,
+                content,
+              });
+            }
+          }
+        }
+
+        // Determine installation destination
+        const homeDir = app.getPath('home');
+        let destPath: string;
+
+        const extractedSkillName = skillName || path.basename(skillPath);
+
+        switch (destination) {
+          case 'global-universal':
+            destPath = path.join(homeDir, '.agent', 'skills', extractedSkillName);
+            break;
+          case 'global-claude':
+            destPath = path.join(homeDir, '.claude', 'skills', extractedSkillName);
+            break;
+          case 'project-universal':
+            if (!repositoryPath) {
+              return {
+                success: false,
+                error: 'Repository path required for project installation',
+              };
+            }
+            destPath = path.join(repositoryPath, '.agent', 'skills', extractedSkillName);
+            break;
+          case 'project-claude':
+            if (!repositoryPath) {
+              return {
+                success: false,
+                error: 'Repository path required for project installation',
+              };
+            }
+            destPath = path.join(repositoryPath, '.claude', 'skills', extractedSkillName);
+            break;
+          default:
+            return {
+              success: false,
+              error: `Invalid destination: ${destination}`,
+            };
+        }
+
+        // Create destination directory
+        await fsPromises.mkdir(destPath, { recursive: true });
+
+        // Copy files to destination
+        const installedFiles: string[] = [];
+        for (const file of downloadedFiles) {
+          // Calculate relative path by removing the skill path prefix
+          let relativePath = file.path;
+
+          console.log('[GitHub] Processing file:', {
+            filePath: file.path,
+            normalizedSkillPath,
+          });
+
+          // Ensure skill path ends with / for proper prefix matching
+          const skillPathWithSlash = normalizedSkillPath.endsWith('/')
+            ? normalizedSkillPath
+            : normalizedSkillPath + '/';
+
+          if (relativePath.startsWith(skillPathWithSlash)) {
+            relativePath = relativePath.substring(skillPathWithSlash.length);
+          } else if (relativePath === normalizedSkillPath) {
+            // Handle case where file.path might be exactly skillPath (shouldn't happen with blobs)
+            console.warn(`[GitHub] File path equals skill path, skipping: ${file.path}`);
+            continue;
+          } else {
+            // This shouldn't happen since we filtered by startsWith, but handle it
+            console.warn(`[GitHub] File path doesn't start with skill path: ${file.path}`);
+            continue;
+          }
+
+          // Remove leading slash if present
+          relativePath = relativePath.replace(/^\/+/, '');
+
+          // Skip if no relative path (defensive check)
+          if (!relativePath) {
+            console.warn(`[GitHub] Skipping file with empty relative path: ${file.path}`);
+            continue;
+          }
+
+          console.log('[GitHub] Calculated relative path:', relativePath);
+
+          const fullPath = path.join(destPath, relativePath);
+
+          // Create parent directories
+          await fsPromises.mkdir(path.dirname(fullPath), { recursive: true });
+
+          // Write file
+          await fsPromises.writeFile(fullPath, file.content, 'utf-8');
+          installedFiles.push(relativePath);
+
+          console.log(`[GitHub] Installed skill file: ${relativePath}`);
+        }
+
+        // Create metadata file for tracking provenance
+        const metadata = {
+          installedFrom: githubUrl,
+          skillPath: normalizedSkillPath,
+          owner,
+          repo,
+          branch,
+          installedAt: new Date().toISOString(),
+          destination,
+          sha: treeResult.data.sha,
+          files: installedFiles,
+        };
+
+        const metadataPath = path.join(destPath, '.metadata.json');
+        await fsPromises.writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
+        console.log(`[GitHub] Created metadata file: ${metadataPath}`);
+
+        console.log(`[GitHub] Skill installed successfully to: ${destPath}`);
+
+        return {
+          success: true,
+          installedPath: destPath,
+          filesInstalled: installedFiles,
+        };
+      } catch (error) {
+        console.error('[GitHub] Failed to install skill:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
+      }
     },
   );
 

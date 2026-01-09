@@ -31,6 +31,7 @@ import { gitSyncAPI } from './main-process-api-implementations/gitSyncApi';
 import { authenticationAPI } from './main-process-api-implementations/authenticationApi';
 import { agentSessionSDKApi } from './main-process-api-implementations/agentSessionSDKApi';
 import { githubArtifactAPI } from './main-process-api-implementations/githubArtifactApi';
+import { localhostDetectionAPI } from './main-process-api-implementations/localhostDetectionApi';
 
 console.info('[Preload-DevWorkspace] API imports successful');
 
@@ -50,6 +51,7 @@ const devWorkspaceAPI: DevWorkspaceMainProcessAPI = {
   authentication: authenticationAPI,
   agentSessionSDK: agentSessionSDKApi,
   githubArtifact: githubArtifactAPI,
+  localhostDetection: localhostDetectionAPI,
 };
 
 // Expose the mainProcess API

@@ -36,6 +36,8 @@ export enum GitHubAPIEvent {
   // Repository info and forking
   GET_REPOSITORY = 'github:get-repository',
   FORK_REPOSITORY = 'github:fork-repository',
+  // Skill installation
+  INSTALL_SKILL = 'github:install-skill',
 }
 
 // Config fetching types (formerly from ConfigAPI)
@@ -309,6 +311,29 @@ export interface GitHubLicenseTemplate {
   url?: string;
 }
 
+// Skill installation types
+export interface ParsedGitHubUrl {
+  owner: string;
+  repo: string;
+  branch?: string;
+  path?: string;
+}
+
+export interface InstallSkillOptions {
+  githubUrl: string;
+  skillPath: string;
+  destination: 'global-universal' | 'global-claude' | 'project-universal' | 'project-claude';
+  repositoryPath?: string;
+  skillName?: string;
+}
+
+export interface InstallSkillResult {
+  success: boolean;
+  installedPath?: string;
+  filesInstalled?: string[];
+  error?: string;
+}
+
 export interface GitHubAPI {
   detectRepository: (path: string) => Promise<{
     isGitRepository: boolean;
@@ -447,4 +472,6 @@ export interface GitHubAPI {
     repo: string,
     options?: ForkRepositoryOptions,
   ) => Promise<GitHubRepositoryCreated | null>;
+  /** Install a skill from GitHub to local directory */
+  installSkill: (options: InstallSkillOptions) => Promise<InstallSkillResult>;
 }

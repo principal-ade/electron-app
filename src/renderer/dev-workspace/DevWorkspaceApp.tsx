@@ -20,6 +20,7 @@ import {
 import type { Repository } from '../../shared/types/repository.types';
 import type { FileTreeSource } from '../types/file-tree-source';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
+import type { PackageLayer } from '@principal-ai/codebase-composition';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { FileSystemService } from '../main-process-api/FileSystemService';
@@ -80,6 +81,11 @@ const PANEL_IDS = [
   'fileEditor',
   'gitDiff',
   'mdxEditor',
+  'kanban',
+  'task-detail',
+  'milestones',
+  'skillsList',
+  'skillDetail',
 ];
 
 // Quick commands for the command palette autocomplete
@@ -167,6 +173,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     right: 'fileCity',
   });
   const [hasGitHubFolder, setHasGitHubFolder] = useState(false);
+  const [packages, setPackages] = useState<PackageLayer[]>([]);
 
   // Create repository object from Alexandria entry data
   const repository: Repository = useMemo(
@@ -356,6 +363,30 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     };
 
     checkGitHubFolder();
+  }, [repositoryPath]);
+
+  // Fetch packages data for Storybook detection
+  useEffect(() => {
+    if (!repositoryPath) return;
+
+    const fetchPackages = async () => {
+      try {
+        console.log('[DevWorkspaceApp] Fetching packages for:', repositoryPath);
+        const packagesData =
+          await RepositoryMonitoringService.getPackages(repositoryPath);
+        console.log('[DevWorkspaceApp] Received packages data:', packagesData);
+        if (packagesData?.packages) {
+          console.log('[DevWorkspaceApp] Setting packages:', packagesData.packages);
+          setPackages(packagesData.packages);
+        } else {
+          console.log('[DevWorkspaceApp] No packages in response');
+        }
+      } catch (error) {
+        console.error('[DevWorkspaceApp] Failed to fetch packages:', error);
+      }
+    };
+
+    fetchPackages();
   }, [repositoryPath]);
 
   // Load current branch on mount
@@ -682,6 +713,8 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         panelFocus={panelFocus}
         onFocusLeft={handleFocusLeft}
         onFocusRight={handleFocusRight}
+        events={events}
+        packages={packages}
       />
       <div className="flex-1 overflow-hidden">
         <DevWorkspacePanelFramework

@@ -5,7 +5,7 @@ import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 
-import { FileSystemAPIEvent } from '../../shared/main-process-api-interfaces/FileSystemAPI';
+import { FileSystemAPIEvent, type GlobalSkill } from '../../shared/main-process-api-interfaces/FileSystemAPI';
 import type { IModernApplicationWindow } from '../window/types';
 import { GitHubAdapter } from '../version-control-providers/githubHandlers';
 
@@ -1618,6 +1618,180 @@ export function registerFileSystemIpcHandlers(
       return appWindow.fileSystemAdapter.getCurrentWorkingDirectory();
     },
   );
+
+  // Handler for getting global skills from ~/.claude and ~/.agent
+  ipcMain.handle(FileSystemAPIEvent.GET_GLOBAL_SKILLS, async () => {
+    try {
+      const homeDir = app.getPath('home');
+      const skills: GlobalSkill[] = [];
+
+      // Helper function to find all SKILL.md files recursively
+      const findSkillFiles = async (dir: string): Promise<string[]> => {
+        const skillFiles: string[] = [];
+        try {
+          const entries = await fsPromises.readdir(dir, { withFileTypes: true });
+          for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+            if (entry.isDirectory()) {
+              const subSkills = await findSkillFiles(fullPath);
+              skillFiles.push(...subSkills);
+            } else if (entry.name === 'SKILL.md') {
+              skillFiles.push(fullPath);
+            }
+          }
+        } catch (error) {
+          // Ignore permission errors and continue
+          console.warn(`[getGlobalSkills] Could not read directory ${dir}:`, error);
+        }
+        return skillFiles;
+      };
+
+      // Helper function to analyze skill folder structure
+      const analyzeSkillStructure = async (skillPath: string) => {
+        const skillDir = path.dirname(skillPath);
+        const scriptFiles: string[] = [];
+        const referenceFiles: string[] = [];
+        const assetFiles: string[] = [];
+
+        try {
+          const scriptsDir = path.join(skillDir, 'scripts');
+          if (fs.existsSync(scriptsDir)) {
+            const files = await fsPromises.readdir(scriptsDir);
+            scriptFiles.push(...files);
+          }
+        } catch (error) {
+          // Ignore errors
+        }
+
+        try {
+          const referencesDir = path.join(skillDir, 'references');
+          if (fs.existsSync(referencesDir)) {
+            const files = await fsPromises.readdir(referencesDir);
+            referenceFiles.push(...files);
+          }
+        } catch (error) {
+          // Ignore errors
+        }
+
+        try {
+          const assetsDir = path.join(skillDir, 'assets');
+          if (fs.existsSync(assetsDir)) {
+            const files = await fsPromises.readdir(assetsDir);
+            assetFiles.push(...files);
+          }
+        } catch (error) {
+          // Ignore errors
+        }
+
+        return {
+          skillFolderPath: skillDir,
+          hasScripts: scriptFiles.length > 0,
+          hasReferences: referenceFiles.length > 0,
+          hasAssets: assetFiles.length > 0,
+          scriptFiles,
+          referenceFiles,
+          assetFiles,
+        };
+      };
+
+      // Helper function to parse SKILL.md content
+      const parseSkillContent = async (skillPath: string, source: 'global-universal' | 'global-claude'): Promise<GlobalSkill | null> => {
+        try {
+          const content = await fsPromises.readFile(skillPath, 'utf-8');
+          const skillDir = path.dirname(skillPath);
+          const skillDirName = path.basename(skillDir);
+
+          // Extract description from first paragraph after heading
+          let description = '';
+          const lines = content.split('\n');
+          let foundHeading = false;
+
+          for (const line of lines) {
+            if (line.startsWith('#')) {
+              foundHeading = true;
+              continue;
+            }
+            if (foundHeading && line.trim() && !line.startsWith('#')) {
+              description = line.trim();
+              break;
+            }
+          }
+
+          // Extract capabilities (bullet points)
+          const capabilities: string[] = [];
+          for (const line of lines) {
+            const bulletMatch = line.match(/^[\s]*[-*]\s+(.+)/);
+            if (bulletMatch) {
+              capabilities.push(bulletMatch[1].trim());
+            }
+          }
+
+          // Analyze folder structure
+          const structure = await analyzeSkillStructure(skillPath);
+
+          // Try to read .metadata.json if it exists
+          let metadata: any;
+          try {
+            const metadataPath = path.join(skillDir, '.metadata.json');
+            if (fs.existsSync(metadataPath)) {
+              const metadataContent = await fsPromises.readFile(metadataPath, 'utf-8');
+              metadata = JSON.parse(metadataContent);
+              console.log(`[getGlobalSkills] Loaded metadata for skill: ${skillDirName}`, metadata);
+            }
+          } catch (error) {
+            // .metadata.json doesn't exist or couldn't be read - this is fine
+            console.debug(`[getGlobalSkills] No metadata file for skill: ${skillDirName}`);
+          }
+
+          return {
+            id: skillPath,
+            name: skillDirName.replace(/-/g, ' ').replace(/_/g, ' '),
+            path: skillPath,
+            description: description || 'No description available',
+            content,
+            capabilities: capabilities.slice(0, 3),
+            ...structure,
+            source,
+            priority: source === 'global-universal' ? 2 : 4,
+            metadata,
+          };
+        } catch (error) {
+          console.error(`[getGlobalSkills] Failed to parse skill at ${skillPath}:`, error);
+          return null;
+        }
+      };
+
+      // Scan ~/.agent/skills/
+      const agentSkillsDir = path.join(homeDir, '.agent', 'skills');
+      if (fs.existsSync(agentSkillsDir)) {
+        const agentSkillFiles = await findSkillFiles(agentSkillsDir);
+        for (const skillPath of agentSkillFiles) {
+          const skill = await parseSkillContent(skillPath, 'global-universal');
+          if (skill) {
+            skills.push(skill);
+          }
+        }
+      }
+
+      // Scan ~/.claude/skills/
+      const claudeSkillsDir = path.join(homeDir, '.claude', 'skills');
+      if (fs.existsSync(claudeSkillsDir)) {
+        const claudeSkillFiles = await findSkillFiles(claudeSkillsDir);
+        for (const skillPath of claudeSkillFiles) {
+          const skill = await parseSkillContent(skillPath, 'global-claude');
+          if (skill) {
+            skills.push(skill);
+          }
+        }
+      }
+
+      console.log(`[getGlobalSkills] Found ${skills.length} global skills`);
+      return skills;
+    } catch (error) {
+      console.error('[getGlobalSkills] Failed to get global skills:', error);
+      return [];
+    }
+  });
 
   console.log('[File System] Global IPC handlers registered.');
 }

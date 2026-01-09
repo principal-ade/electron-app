@@ -7,6 +7,7 @@ import {
   CreateIssueRequest,
   CreateRepositoryInput,
   ForkRepositoryOptions,
+  InstallSkillOptions,
 } from '../../shared/main-process-api-interfaces/GitHubAPI';
 
 export const githubAPI: GitHubAPI = {
@@ -200,5 +201,9 @@ export const githubAPI: GitHubAPI = {
       repo,
       options,
     );
+  },
+
+  installSkill: async (options: InstallSkillOptions) => {
+    return ipcRenderer.invoke(GitHubAPIEvent.INSTALL_SKILL, options);
   },
 };

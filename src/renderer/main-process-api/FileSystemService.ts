@@ -89,4 +89,8 @@ export class FileSystemService {
   static async getCurrentWorkingDirectory(): Promise<string> {
     return window.mainProcess.fileSystem.getCurrentWorkingDirectory();
   }
+
+  static async getGlobalSkills() {
+    return window.mainProcess.fileSystem.getGlobalSkills();
+  }
 }

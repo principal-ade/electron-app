@@ -34,6 +34,7 @@ import type {
 } from '@principal-ai/repository-monitoring-server';
 import { minimatch } from 'minimatch';
 import type { ColorMode, FileMetricData, QualitySliceData } from '@principal-ai/quality-lens-registry';
+import type { GlobalSkill } from '../../shared/main-process-api-interfaces/FileSystemAPI';
 
 // Types for packages slice data (matches @industry-theme/alexandria-panels DependenciesPanel expectations)
 interface PackagesSliceData {
@@ -112,8 +113,8 @@ const RepositoryPanelContext =
 
 interface RepositoryPanelProviderProps {
   children: ReactNode;
-  repositoryPath: string;
-  repository: RepositoryMetadata;
+  repositoryPath: string | null;
+  repository: RepositoryMetadata | null;
   /** Event bus for panel communication - must be provided by parent */
   events: PanelEventEmitter;
 }
@@ -184,6 +185,10 @@ export const RepositoryPanelProvider: React.FC<
   } | null>(null);
   const [activeFileLoading, setActiveFileLoading] = useState(false);
   const [activeFileError, setActiveFileError] = useState<Error | null>(null);
+
+  // Track global skills from ~/.claude and ~/.agent
+  const [globalSkillsData, setGlobalSkillsData] = useState<GlobalSkill[]>([]);
+  const [globalSkillsLoading, setGlobalSkillsLoading] = useState(false);
 
   // Helper to extract owner/repo from git remote URL
   const parseGitHubRemote = (
@@ -419,6 +424,10 @@ export const RepositoryPanelProvider: React.FC<
   // Listen for workspace file change events and refresh fileTree
   // This ensures panels like Kanban get updated when files change
   useEffect(() => {
+    if (!repositoryPath) {
+      return;
+    }
+
     const unsubWorkspaceChanged = events.on('workspace:changed', async (event) => {
       const payload = event.payload as { repoPath: string; changes?: unknown[] };
       if (payload.repoPath === repositoryPath) {
@@ -625,6 +634,31 @@ export const RepositoryPanelProvider: React.FC<
         unsubscribeUpdates();
       }
     };
+  }, []);
+
+  // Fetch global skills from ~/.claude and ~/.agent
+  useEffect(() => {
+    const fetchGlobalSkills = async () => {
+      setGlobalSkillsLoading(true);
+      try {
+        const skills = await FileSystemService.getGlobalSkills();
+        console.info(
+          '[RepositoryPanelProvider] Fetched global skills:',
+          skills.length,
+        );
+        setGlobalSkillsData(skills);
+      } catch (error) {
+        console.error(
+          '[RepositoryPanelProvider] Failed to fetch global skills:',
+          error,
+        );
+        setGlobalSkillsData([]);
+      } finally {
+        setGlobalSkillsLoading(false);
+      }
+    };
+
+    fetchGlobalSkills();
   }, []);
 
   // Create actions object
@@ -1248,6 +1282,31 @@ export const RepositoryPanelProvider: React.FC<
             },
           },
         ],
+        [
+          'globalSkills',
+          {
+            scope: 'workspace' as const,
+            name: 'globalSkills',
+            data: { skills: globalSkillsData },
+            loading: globalSkillsLoading,
+            error: null,
+            refresh: async () => {
+              // Refetch global skills
+              setGlobalSkillsLoading(true);
+              try {
+                const skills = await FileSystemService.getGlobalSkills();
+                setGlobalSkillsData(skills);
+              } catch (error) {
+                console.error(
+                  '[RepositoryPanelContext] Failed to refresh global skills:',
+                  error,
+                );
+              } finally {
+                setGlobalSkillsLoading(false);
+              }
+            },
+          },
+        ],
       ]),
     [
       repositoryPath,
@@ -1268,6 +1327,8 @@ export const RepositoryPanelProvider: React.FC<
       effectiveColorMode,
       localhostServers,
       localhostServersLoading,
+      globalSkillsData,
+      globalSkillsLoading,
     ],
   );
 

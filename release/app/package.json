@@ -15,7 +15,7 @@
     "@electron/notarize": "^3.0.0",
     "@excalidraw/excalidraw": "^0.18.0",
     "@industry-theme/agent-driven-ui-panels": "^0.1.0",
-    "@industry-theme/agent-panels": "^0.1.5",
+    "@industry-theme/agent-panels": "^0.1.6",
     "@industry-theme/alexandria-docs-panel": "^0.4.25",
     "@industry-theme/alexandria-panels": "^0.1.32",
     "@industry-theme/file-city-panel": "^0.2.47",

@@ -10,6 +10,7 @@ import { WorkspacesView } from '../../views/WorkspacesView';
 import { GitSyncView } from '../../views/GitSyncView';
 import { LocalhostProcessesView } from '../../views/LocalhostProcessesView';
 import { ConnectionsView } from '../../views/ConnectionsView';
+import { SkillBrowserView } from '../../views/SkillBrowserView';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { PresenceService } from '../../../main-process-api/PresenceService';
 import { SecureAuthService } from '../../../services/SecureAuthService';
@@ -34,6 +35,7 @@ const VIEW_OPTIONS = [
   'network',
   'processes',
   'connections',
+  'skills',
 ];
 
 // Quick commands for the command palette autocomplete
@@ -116,6 +118,7 @@ export const IntegratedShell: React.FC = () => {
     network: { left: false, right: false },
     processes: { left: false, right: false },
     connections: { left: false, right: false },
+    skills: { left: false, right: false },
   });
 
   // Get current view's collapsed states
@@ -361,6 +364,7 @@ export const IntegratedShell: React.FC = () => {
             network: { left: false, right: false },
             processes: { left: false, right: false },
             connections: { left: false, right: false },
+            skills: { left: false, right: false },
           });
           return { success: true };
         default:
@@ -419,6 +423,7 @@ export const IntegratedShell: React.FC = () => {
           network: { left: false, right: false },
           processes: { left: false, right: false },
           connections: { left: false, right: false },
+          skills: { left: false, right: false },
         });
       }),
     ];
@@ -524,6 +529,7 @@ export const IntegratedShell: React.FC = () => {
             {activeView === 'network' && <GitSyncView />}
             {activeView === 'processes' && <LocalhostProcessesView />}
             {activeView === 'connections' && <ConnectionsView />}
+            {activeView === 'skills' && <SkillBrowserView />}
           </div>
         </div>
       </div>

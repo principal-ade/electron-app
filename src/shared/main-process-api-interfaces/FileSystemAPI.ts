@@ -18,6 +18,7 @@ export enum FileSystemAPIEvent {
   GET_HOME_PATH = 'file-system:get-home-path',
   GET_CURRENT_WORKING_DIRECTORY = 'file-system:get-current-working-directory',
   GET_DIRECTORY_STATS = 'file-system:get-directory-stats',
+  GET_GLOBAL_SKILLS = 'file-system:get-global-skills',
 }
 
 export interface FileStats {
@@ -31,6 +32,44 @@ export interface SerializedFileStats {
   size: number;
   isDirectory: boolean;
   lastModified: string; // IPC serialization converts Date to string
+}
+
+export type SkillSource =
+  | 'project-universal'  // ./.agent/skills/
+  | 'global-universal'   // ~/.agent/skills/
+  | 'project-claude'     // ./.claude/skills/
+  | 'global-claude'      // ~/.claude/skills/
+  | 'project-other';     // any other location in project
+
+export interface SkillMetadata {
+  installedFrom?: string;
+  skillPath?: string;
+  owner?: string;
+  repo?: string;
+  branch?: string;
+  installedAt?: string;
+  destination?: string;
+  sha?: string;
+  files?: string[];
+}
+
+export interface GlobalSkill {
+  id: string;
+  name: string;
+  path: string;
+  description?: string;
+  content?: string;
+  capabilities?: string[];
+  skillFolderPath: string;
+  hasScripts: boolean;
+  hasReferences: boolean;
+  hasAssets: boolean;
+  scriptFiles?: string[];
+  referenceFiles?: string[];
+  assetFiles?: string[];
+  source: 'global-universal' | 'global-claude';
+  priority: 2 | 4;  // 2=global-universal, 4=global-claude
+  metadata?: SkillMetadata;
 }
 
 // File watching interfaces
@@ -111,4 +150,5 @@ export interface FileSystemAPI {
     totalDirectories: number;
     totalSize: number;
   } | null>;
+  getGlobalSkills: () => Promise<GlobalSkill[]>;
 }
