@@ -38,14 +38,14 @@ def apply_rounded_corners(img, corner_radius_percent=0.18):
 
     return output
 
-def process_icon_with_padding(source_img, target_size, padding_percent=0.12, corner_radius_percent=0.18):
+def process_icon_with_padding(source_img, target_size, padding_percent=0.10, corner_radius_percent=0.18):
     """
     Process an icon with padding and rounded corners
 
     Args:
         source_img: PIL Image object
         target_size: Final size of the icon (including padding)
-        padding_percent: Percentage of padding (0.12 = 12%)
+        padding_percent: Percentage of padding (0.10 = 10%, Apple's standard)
         corner_radius_percent: Corner radius as percentage of icon size (0.18 = 18%)
     """
     # Calculate content size (icon size minus padding)
