@@ -299,7 +299,7 @@ const SkillBrowserViewContent: React.FC = () => {
   // Use panel persistence for two-panel layout
   const panelState = usePanelPersistence({
     viewKey: 'skillBrowserView',
-    defaultSizes: { left: 50, right: 50 },
+    defaultSizes: { left: 30, right: 70 },
     collapsed: { left: false, right: false },
     panelType: 'two-panel',
   });
@@ -412,7 +412,7 @@ const SkillBrowserViewContent: React.FC = () => {
           defaultSizes={
             panelState.type === 'two-panel'
               ? panelState.sizes
-              : { left: 50, right: 50 }
+              : { left: 30, right: 70 }
           }
           minSizes={{ left: 30, right: 30 }}
           collapsed={

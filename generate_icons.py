@@ -146,7 +146,7 @@ def generate_electron_icons(source_img, output_dir):
         }
 
         for filename, size in icon_mapping.items():
-            img = process_icon_with_padding(source_img, size)
+            img = process_icon_no_padding(source_img, size)
             dst = os.path.join(iconset_dir, filename)
             img.save(dst, 'PNG')
 

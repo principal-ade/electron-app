@@ -56,6 +56,11 @@ coverage/
 electron-builder.yml
 electron-builder.json
 
+# Generated icons (created by generate_icons.py)
+assets/icon.icns
+assets/icon.ico
+assets/icons/
+
 # Database files
 *.db
 *.db-info
