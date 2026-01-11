@@ -17,7 +17,7 @@ import {
  * Inner content component that uses the panel context
  */
 const GitSyncViewContent: React.FC = () => {
-  const { theme } = useTheme();
+  const { theme, mode } = useTheme();
   const { context, actions, events, isConnected } = useGitSyncPanelProvider();
 
   // Fixed panel sizes - no persistence needed for this view
@@ -25,6 +25,11 @@ const GitSyncViewContent: React.FC = () => {
   const minSizes = useMemo(() => ({ left: 0, middle: 300, right: 280 }), []);
   const collapsed = useMemo(() => ({ left: true, right: false }), []);
   const collapsiblePanels = useMemo(() => ({ left: false, right: false }), []);
+
+  const borderColor =
+    mode === 'dark' && theme.modes?.dark?.border
+      ? theme.modes.dark.border
+      : theme.colors.border;
 
   // Define panels using git-sync-panels and alexandria-panels components
   // When connected to presence server, show CurrentProjectsPanel
@@ -105,6 +110,23 @@ const GitSyncViewContent: React.FC = () => {
         overflow: 'hidden',
       }}
     >
+      {/* Header */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '8px',
+          padding: '20px 24px',
+          borderBottom: `1px solid ${borderColor}`,
+          flexShrink: 0,
+        }}
+      >
+        <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: theme.colors.text }}>
+          Network
+        </h2>
+      </div>
+
       {/* Panel Layout */}
       <ConfigurablePanelLayout
         panels={panels}

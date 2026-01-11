@@ -10,16 +10,24 @@ import shutil
 from PIL import Image, ImageDraw
 
 def create_rounded_rectangle_mask(size, radius):
-    """Create a mask for rounded corners"""   
-    mask = Image.new('L', (size, size), 0)
+    """Create a mask for rounded corners with anti-aliasing"""
+    # Create mask at 4x resolution for better anti-aliasing
+    scale = 4
+    large_size = size * scale
+    large_radius = radius * scale
+
+    mask = Image.new('L', (large_size, large_size), 0)
     draw = ImageDraw.Draw(mask)
 
-    # Draw a rounded rectangle
+    # Draw a rounded rectangle at high resolution
     draw.rounded_rectangle(
-        [(0, 0), (size-1, size-1)],
-        radius=radius,
+        [(0, 0), (large_size-1, large_size-1)],
+        radius=large_radius,
         fill=255
     )
+
+    # Downscale with high-quality resampling for smooth edges
+    mask = mask.resize((size, size), Image.Resampling.LANCZOS)
 
     return mask
 
