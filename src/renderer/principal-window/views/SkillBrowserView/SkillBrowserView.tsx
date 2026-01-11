@@ -336,6 +336,7 @@ const SkillBrowserViewContent: React.FC = () => {
             context={context}
             actions={actions}
             events={events}
+            browseMode={true}
           />
         ),
       },
