@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { LayoutGrid, FolderOpen, Github, Star, Hexagon } from 'lucide-react';
+import { FolderOpen, Github, Star, Hexagon } from 'lucide-react';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
 import type { MiddlePanelView } from './WorkspacesView';
@@ -95,20 +95,53 @@ export const WorkspacesViewHeader: React.FC<WorkspacesViewHeaderProps> = ({
         flexShrink: 0,
       }}
     >
-      {/* Left: Title */}
+      {/* Left: Home Folder */}
       <div
         style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}
       >
-        <LayoutGrid size={20} color={theme.colors.text} />
-        <h2
+        <span
           style={{
-            fontSize: theme.fontSizes[4],
-            fontWeight: theme.fontWeights.semibold,
-            margin: 0,
+            fontSize: theme.fontSizes[1],
+            color: theme.colors.textSecondary,
           }}
         >
-          Workspaces
-        </h2>
+          Home Folder:
+        </span>
+        <div
+          onClick={handleSelectBaseDirectory}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '6px 12px',
+            borderRadius: '6px',
+            backgroundColor: theme.colors.backgroundSecondary,
+            cursor: 'pointer',
+            transition: 'background-color 0.2s',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor =
+              theme.colors.backgroundTertiary;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor =
+              theme.colors.backgroundSecondary;
+          }}
+          title={baseDefaultDirectory || 'Click to set base directory'}
+        >
+          <FolderOpen size={16} color={theme.colors.textSecondary} />
+          <span
+            style={{
+              fontSize: theme.fontSizes[1],
+              color: theme.colors.textSecondary,
+              fontFamily: theme.fonts.monospace,
+            }}
+          >
+            {baseDefaultDirectory
+              ? getDirectoryDisplayName(baseDefaultDirectory)
+              : 'Set Directory'}
+          </span>
+        </div>
       </div>
 
       {/* Center: Middle Panel Toggle Buttons */}
@@ -172,7 +205,7 @@ export const WorkspacesViewHeader: React.FC<WorkspacesViewHeaderProps> = ({
         </button>
       </div>
 
-      {/* Right: Base Default Directory */}
+      {/* Right: Empty space for balance */}
       <div
         style={{
           display: 'flex',
@@ -180,43 +213,7 @@ export const WorkspacesViewHeader: React.FC<WorkspacesViewHeaderProps> = ({
           justifyContent: 'flex-end',
           flex: 1,
         }}
-      >
-        <div
-          onClick={handleSelectBaseDirectory}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '6px 12px',
-            borderRadius: '6px',
-            backgroundColor: theme.colors.backgroundSecondary,
-            cursor: 'pointer',
-            transition: 'background-color 0.2s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor =
-              theme.colors.backgroundTertiary;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor =
-              theme.colors.backgroundSecondary;
-          }}
-          title={baseDefaultDirectory || 'Click to set base directory'}
-        >
-          <FolderOpen size={16} color={theme.colors.textSecondary} />
-          <span
-            style={{
-              fontSize: theme.fontSizes[1],
-              color: theme.colors.textSecondary,
-              fontFamily: theme.fonts.monospace,
-            }}
-          >
-            {baseDefaultDirectory
-              ? getDirectoryDisplayName(baseDefaultDirectory)
-              : 'Set base directory'}
-          </span>
-        </div>
-      </div>
+      />
     </div>
   );
 };

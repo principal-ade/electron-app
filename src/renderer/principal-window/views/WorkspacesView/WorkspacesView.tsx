@@ -348,32 +348,37 @@ const WorkspacesViewContent: React.FC = () => {
           />
         ),
       },
-      {
-        id: 'user-collections',
-        label: 'Collections',
-        icon: <FolderOpen size={16} />,
-        content: (
-          <UserCollectionsPanel
-            context={context}
-            actions={actions}
-            events={events}
-          />
-        ),
-      },
-      {
-        id: 'collection-repositories',
-        label: 'Collection Repos',
-        icon: <FolderOpen size={16} />,
-        content: (
-          <CollectionRepositoriesPanel
-            context={context}
-            actions={actions}
-            events={events}
-          />
-        ),
-      },
+      // Only include collections panels if user is authenticated
+      ...(isAuthenticated
+        ? [
+            {
+              id: 'user-collections',
+              label: 'Collections',
+              icon: <FolderOpen size={16} />,
+              content: (
+                <UserCollectionsPanel
+                  context={context}
+                  actions={actions}
+                  events={events}
+                />
+              ),
+            },
+            {
+              id: 'collection-repositories',
+              label: 'Collection Repos',
+              icon: <FolderOpen size={16} />,
+              content: (
+                <CollectionRepositoriesPanel
+                  context={context}
+                  actions={actions}
+                  events={events}
+                />
+              ),
+            },
+          ]
+        : []),
     ],
-    [context, actions, overriddenActions, events],
+    [context, actions, overriddenActions, events, isAuthenticated],
   );
 
   // Get selected collection from context to determine right panel
@@ -381,9 +386,11 @@ const WorkspacesViewContent: React.FC = () => {
 
   // Define layout configuration
   const layout = useMemo(() => {
-    // Left panel has collections, local projects, and workspaces
+    // Left panel has collections (if authenticated), local projects, and workspaces
     // GitHub panels are accessed via middle panel toggle buttons
-    const leftPanels = ['user-collections', 'local-projects', 'workspaces-list'];
+    const leftPanels = isAuthenticated
+      ? ['user-collections', 'local-projects', 'workspaces-list']
+      : ['local-projects', 'workspaces-list'];
 
     // Map middle panel view to panel id
     const middlePanelMap: Record<MiddlePanelView, string> = {
@@ -409,7 +416,7 @@ const WorkspacesViewContent: React.FC = () => {
       middle: middlePanelMap[middlePanelView],
       right: rightPanel,
     };
-  }, [middlePanelView, selectedCollection]);
+  }, [middlePanelView, selectedCollection, isAuthenticated]);
 
   return (
     <>

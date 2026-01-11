@@ -99,6 +99,7 @@ export interface UserPreferences {
   showRepoFilterBar?: boolean; // Show/hide the filter bar in repos view
   showMonitorButton?: boolean; // Show/hide the monitor button in side nav (default: false)
   showSearchButton?: boolean; // Show/hide the search button in side nav (default: false)
+  showConnectionsButton?: boolean; // Show/hide the connections button in side nav (default: false)
   showGitSyncPanel?: boolean; // Show/hide the git sync panel (default: false)
   showTerminalDebugButton?: boolean; // Show/hide the debug button in terminal panels (default: false)
   showTerminalShowAllButton?: boolean; // Show/hide the show all terminals button in terminal panels (default: true)

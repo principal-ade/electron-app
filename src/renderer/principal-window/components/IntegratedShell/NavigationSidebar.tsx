@@ -35,12 +35,14 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   const { isAuthenticated, user } = useAuth();
   const [showMonitorButton, setShowMonitorButton] = useState(false);
   const [showSearchButton, setShowSearchButton] = useState(false);
+  const [showConnectionsButton, setShowConnectionsButton] = useState(false);
 
   useEffect(() => {
     // Load user preferences for showing buttons
     UserPreferencesService.getPreferences().then((prefs) => {
       setShowMonitorButton(prefs.showMonitorButton ?? false);
       setShowSearchButton(prefs.showSearchButton ?? false);
+      setShowConnectionsButton(prefs.showConnectionsButton ?? false);
     });
 
     // Listen for preference changes
@@ -52,6 +54,9 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         }
         if ('showSearchButton' in detail) {
           setShowSearchButton(detail.showSearchButton ?? false);
+        }
+        if ('showConnectionsButton' in detail) {
+          setShowConnectionsButton(detail.showConnectionsButton ?? false);
         }
       }
     };
@@ -117,11 +122,20 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
     );
 
   const navItems: NavItem[] = [
-    { id: 'workspaces', icon: <LayoutGrid size={20} />, label: 'Workspaces' },
+    { id: 'workspaces', icon: <LayoutGrid size={20} />, label: 'Projects' },
+    { id: 'skills', icon: <Zap size={20} />, label: 'Skills' },
     { id: 'network', icon: <Users size={20} />, label: 'Network' },
     { id: 'processes', icon: <Globe size={20} />, label: 'Processes' },
-    { id: 'connections', icon: <Radio size={20} />, label: 'Connections' },
-    { id: 'skills', icon: <Zap size={20} />, label: 'Skills' },
+    // Only include connections button if user has enabled it in preferences
+    ...(showConnectionsButton
+      ? [
+          {
+            id: 'connections' as NavigationView,
+            icon: <Radio size={20} />,
+            label: 'Connections',
+          },
+        ]
+      : []),
     // Only include search button if user has enabled it in preferences
     ...(showSearchButton
       ? [
