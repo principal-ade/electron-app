@@ -31,7 +31,7 @@ const SkillDetailPanelComponent = agentPanels.find(
 const SkillBrowserViewContent: React.FC = () => {
   const { theme } = useTheme();
   const { context, actions, events } = useSkillBrowserPanelProvider();
-  const { isConfigured, getConfig } = useSkillsSync();
+  const { isConfigured, config, getConfig } = useSkillsSync();
 
   // State for onboarding
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -437,6 +437,7 @@ const SkillBrowserViewContent: React.FC = () => {
         onFetchSkills={handleFetchSkills}
         isLoading={isLoading}
         syncEnabled={isConfigured}
+        syncConfig={config}
         onEnableSync={() => setShowOnboarding(true)}
       />
 

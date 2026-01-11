@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Zap, Github, Download, RefreshCw } from 'lucide-react';
+import { ShellService } from '../../../main-process-api/ShellService';
 
 interface SkillBrowserViewHeaderProps {
   githubUrl: string;
@@ -8,6 +9,7 @@ interface SkillBrowserViewHeaderProps {
   onFetchSkills: (url?: string) => void;
   isLoading?: boolean;
   syncEnabled?: boolean;
+  syncConfig?: { repoUrl: string; enabled: boolean } | null;
   onEnableSync?: () => void;
 }
 
@@ -17,6 +19,7 @@ export const SkillBrowserViewHeader: React.FC<SkillBrowserViewHeaderProps> = ({
   onFetchSkills,
   isLoading = false,
   syncEnabled = false,
+  syncConfig,
   onEnableSync,
 }) => {
   const { theme } = useTheme();
@@ -32,6 +35,35 @@ export const SkillBrowserViewHeader: React.FC<SkillBrowserViewHeaderProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleSubmit(e);
+    }
+  };
+
+  const handleOpenInGitHub = async () => {
+    if (!syncConfig || !syncConfig.repoUrl) {
+      return;
+    }
+
+    // Convert repo URL to GitHub web URL
+    // Handle formats like:
+    // - https://github.com/owner/repo.git
+    // - https://github.com/owner/repo
+    // - git@github.com:owner/repo.git
+    let githubUrl = syncConfig.repoUrl;
+
+    // If it's a git SSH URL, convert to HTTPS
+    if (githubUrl.startsWith('git@github.com:')) {
+      githubUrl = githubUrl
+        .replace('git@github.com:', 'https://github.com/')
+        .replace(/\.git$/, '');
+    } else {
+      // Remove .git suffix if present
+      githubUrl = githubUrl.replace(/\.git$/, '');
+    }
+
+    try {
+      await ShellService.openExternal(githubUrl);
+    } catch (error) {
+      console.error('[SkillBrowserViewHeader] Failed to open GitHub URL:', error);
     }
   };
 
@@ -194,6 +226,35 @@ export const SkillBrowserViewHeader: React.FC<SkillBrowserViewHeaderProps> = ({
           <RefreshCw size={16} />
           Sync Enabled
         </div>
+      )}
+      {syncEnabled && syncConfig?.repoUrl && (
+        <button
+          onClick={handleOpenInGitHub}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '8px 16px',
+            borderRadius: '6px',
+            backgroundColor: 'transparent',
+            color: theme.colors.primary,
+            cursor: 'pointer',
+            border: `1px solid ${theme.colors.primary}`,
+            fontSize: theme.fontSizes[1],
+            fontWeight: theme.fontWeights.medium,
+            transition: 'all 0.2s',
+            whiteSpace: 'nowrap',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = theme.colors.primary + '10';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
+        >
+          <Github size={16} />
+          Open in GitHub
+        </button>
       )}
     </div>
   );

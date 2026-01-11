@@ -158,6 +158,12 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     'xterm' | 'ghostty'
   >('xterm');
 
+  // Modal state for task detail
+  const [taskDetailModal, setTaskDetailModal] = useState<{
+    isOpen: boolean;
+    task: any;
+  } | null>(null);
+
   useEffect(() => {
     const loadPreference = async () => {
       const prefs = await UserPreferencesService.getPreferences();
@@ -302,6 +308,48 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
     return unsubscribe;
   }, [events, actions, layout, onLayoutChange, collapsed, onCollapsedChange]);
+
+  // Listen for task:selected events to show modal
+  useEffect(() => {
+    const unsubscribe = events.on('task:selected', (event) => {
+      console.log('[DevWorkspacePanelFramework] Received task:selected event:', event);
+      const payload = event.payload as { task: any; taskId: string };
+      setTaskDetailModal({
+        isOpen: true,
+        task: payload.task,
+      });
+    });
+
+    return unsubscribe;
+  }, [events]);
+
+  // Re-emit task:selected event when modal opens so TaskDetailPanel can receive it
+  useEffect(() => {
+    if (taskDetailModal?.isOpen && taskDetailModal?.task) {
+      // Use setTimeout to ensure the TaskDetailPanel component is mounted first
+      setTimeout(() => {
+        events.emit({
+          type: 'task:selected',
+          source: 'modal',
+          timestamp: Date.now(),
+          payload: {
+            task: taskDetailModal.task,
+            taskId: taskDetailModal.task.id,
+          },
+        });
+      }, 0);
+    }
+  }, [taskDetailModal?.isOpen, taskDetailModal?.task, events]);
+
+  // Listen for task:deselected event to close the modal (from panel's X button)
+  useEffect(() => {
+    const unsubscribe = events.on('task:deselected', () => {
+      console.log('[DevWorkspacePanelFramework] Task deselected, closing modal');
+      setTaskDetailModal(null);
+    });
+
+    return unsubscribe;
+  }, [events]);
 
   // Define all panels using panel framework components
   const allPanels = useMemo(
@@ -994,6 +1042,47 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             effects={['snowfall']}
             opacity={0.92}
           />
+        </div>
+      )}
+
+      {/* Task Detail Modal */}
+      {taskDetailModal?.isOpen && TaskDetailPanelComponent && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+          }}
+          onClick={() => setTaskDetailModal(null)}
+        >
+          <div
+            style={{
+              backgroundColor: theme.colors.background,
+              borderRadius: '8px',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+              maxWidth: '1200px',
+              width: '90%',
+              maxHeight: '90vh',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              position: 'relative',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Render TaskDetailPanel (has its own X button) */}
+            <div style={{ flex: 1, overflow: 'auto' }}>
+              <TaskDetailPanelComponent
+                context={context}
+                actions={actions}
+                events={events}
+              />
+            </div>
+          </div>
         </div>
       )}
 
