@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Zap, Github, Download } from 'lucide-react';
+import { Zap, Github, Download, RefreshCw } from 'lucide-react';
 
 interface SkillBrowserViewHeaderProps {
   githubUrl: string;
   onGithubUrlChange: (url: string) => void;
   onFetchSkills: (url?: string) => void;
   isLoading?: boolean;
+  syncEnabled?: boolean;
+  onEnableSync?: () => void;
 }
 
 export const SkillBrowserViewHeader: React.FC<SkillBrowserViewHeaderProps> = ({
@@ -14,6 +16,8 @@ export const SkillBrowserViewHeader: React.FC<SkillBrowserViewHeaderProps> = ({
   onGithubUrlChange,
   onFetchSkills,
   isLoading = false,
+  syncEnabled = false,
+  onEnableSync,
 }) => {
   const { theme } = useTheme();
   const [inputValue, setInputValue] = useState(githubUrl);
@@ -148,8 +152,49 @@ export const SkillBrowserViewHeader: React.FC<SkillBrowserViewHeaderProps> = ({
         </button>
       </div>
 
-      {/* Right: Placeholder for future actions */}
-      <div style={{ width: '100px' }} />
+      {/* Right: Enable Sync button */}
+      {!syncEnabled && onEnableSync && (
+        <button
+          onClick={onEnableSync}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '8px 16px',
+            borderRadius: '6px',
+            backgroundColor: 'transparent',
+            color: theme.colors.primary,
+            cursor: 'pointer',
+            border: `1px solid ${theme.colors.primary}`,
+            fontSize: '14px',
+            fontWeight: 500,
+            transition: 'all 0.2s',
+            whiteSpace: 'nowrap',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = theme.colors.primary + '10';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
+        >
+          <RefreshCw size={16} />
+          Enable Sync
+        </button>
+      )}
+      {syncEnabled && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          color: theme.colors.success || theme.colors.primary,
+          fontSize: '14px',
+          fontWeight: 500,
+        }}>
+          <RefreshCw size={16} />
+          Sync Enabled
+        </div>
+      )}
     </div>
   );
 };

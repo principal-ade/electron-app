@@ -14,6 +14,8 @@ import { InstallSkillToolbar, type SkillDestination } from './InstallSkillToolba
 import { GithubService } from '../../../main-process-api/GithubService';
 import type { FileTree } from '../../../contexts/RepositoryPanelContext';
 import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
+import { useSkillsSync } from '../../../hooks/useSkillsSync';
+import { SkillsRepoOnboarding } from './SkillsRepoOnboarding';
 
 // Extract panel components from agent-panels package
 const SkillsListPanelComponent = agentPanels.find(
@@ -29,6 +31,11 @@ const SkillDetailPanelComponent = agentPanels.find(
 const SkillBrowserViewContent: React.FC = () => {
   const { theme } = useTheme();
   const { context, actions, events } = useSkillBrowserPanelProvider();
+  const { isConfigured, getConfig } = useSkillsSync();
+
+  // State for onboarding
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [checkingConfig, setCheckingConfig] = useState(true);
 
   // State for GitHub URL and loading
   const [githubUrl, setGithubUrl] = useState('');
@@ -44,6 +51,16 @@ const SkillBrowserViewContent: React.FC = () => {
     repo: string;
     branch: string;
   } | null>(null);
+
+  // Check if sync is configured on mount
+  useEffect(() => {
+    const checkConfig = async () => {
+      await getConfig();
+      setCheckingConfig(false);
+      // Don't auto-show onboarding - users should click "Enable Sync" button
+    };
+    checkConfig();
+  }, []);
 
   /**
    * Parse GitHub URL to extract owner, repo, and optional path
@@ -371,6 +388,38 @@ const SkillBrowserViewContent: React.FC = () => {
     [],
   );
 
+  // Show onboarding if not configured
+  if (checkingConfig) {
+    return (
+      <div
+        style={{
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: theme.colors.textSecondary,
+        }}
+      >
+        Loading...
+      </div>
+    );
+  }
+
+  if (showOnboarding) {
+    return (
+      <SkillsRepoOnboarding
+        onComplete={() => {
+          setShowOnboarding(false);
+          // Refresh config
+          getConfig();
+        }}
+        onCancel={() => {
+          setShowOnboarding(false);
+        }}
+      />
+    );
+  }
+
   return (
     <div
       style={{
@@ -386,6 +435,8 @@ const SkillBrowserViewContent: React.FC = () => {
         onGithubUrlChange={setGithubUrl}
         onFetchSkills={handleFetchSkills}
         isLoading={isLoading}
+        syncEnabled={isConfigured}
+        onEnableSync={() => setShowOnboarding(true)}
       />
 
       {/* Error message */}

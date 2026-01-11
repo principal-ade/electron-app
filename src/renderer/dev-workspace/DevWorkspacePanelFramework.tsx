@@ -244,6 +244,14 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     (p) => p.metadata?.id === 'industry-theme.skill-detail',
   )?.component;
 
+  // Agent Documentation panels (AGENTS.md + Subagents)
+  const AgentsListPanelComponent = agentPanels.find(
+    (p) => p.metadata?.id === 'industry-theme.agents-list',
+  )?.component;
+  const AgentDetailPanelComponent = agentPanels.find(
+    (p) => p.metadata?.id === 'industry-theme.agent-detail',
+  )?.component;
+
   // Listen for doc:openInRightPanel events (from Alexandria docs panel context menu)
   useEffect(() => {
     const unsubscribe = events.on('doc:openInRightPanel', async (event) => {
@@ -840,6 +848,54 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           <div>Skill Detail panel not available</div>
         ),
       },
+      {
+        id: 'agentsList',
+        label: 'Agents List',
+        content: AgentsListPanelComponent ? (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <AgentsListPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div>Agents List panel not available</div>
+        ),
+      },
+      {
+        id: 'agentDetail',
+        label: 'Agent Detail',
+        content: AgentDetailPanelComponent ? (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <AgentDetailPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div>Agent Detail panel not available</div>
+        ),
+      },
     ],
     [
       PrincipalViewPanelComponent,
@@ -861,6 +917,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       MilestonePanelComponent,
       SkillsListPanelComponent,
       SkillDetailPanelComponent,
+      AgentsListPanelComponent,
+      AgentDetailPanelComponent,
       context,
       actions,
       events,

@@ -166,6 +166,34 @@ export const repositoryPanelCatalog = [
     slices: [] as const,
     surfaces: ['principal'] as const,
   },
+  {
+    id: 'agentsList',
+    label: 'Agents',
+    description: 'View AGENTS.md documentation and Claude Code subagents.',
+    slices: ['fileTree'] as const,
+    surfaces: ['manager', 'agent'] as const,
+  },
+  {
+    id: 'agentDetail',
+    label: 'Agent Detail',
+    description: 'View detailed information about selected agent or subagent.',
+    slices: ['fileTree'] as const,
+    surfaces: ['viewer', 'agent'] as const,
+  },
+  {
+    id: 'skillsList',
+    label: 'Skills',
+    description: 'View and manage Agent Skills from SKILL.md files.',
+    slices: ['fileTree'] as const,
+    surfaces: ['manager', 'agent'] as const,
+  },
+  {
+    id: 'skillDetail',
+    label: 'Skill Detail',
+    description: 'View detailed information about a selected Agent Skill.',
+    slices: ['fileTree'] as const,
+    surfaces: ['viewer', 'agent'] as const,
+  },
 ] as const satisfies readonly RepositoryPanelDefinitionBase[];
 
 export type RepositoryPanelCatalogEntry =

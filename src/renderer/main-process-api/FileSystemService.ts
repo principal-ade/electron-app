@@ -93,4 +93,46 @@ export class FileSystemService {
   static async getGlobalSkills() {
     return window.mainProcess.fileSystem.getGlobalSkills();
   }
+
+  // Skills Git sync methods
+  static async syncGlobalSkills() {
+    return window.mainProcess.fileSystem.syncGlobalSkills();
+  }
+
+  static async getSyncStatus() {
+    return window.mainProcess.fileSystem.getSyncStatus();
+  }
+
+  static async getSyncConfig() {
+    return window.mainProcess.fileSystem.getSyncConfig();
+  }
+
+  static async updateSyncConfig(updates: any) {
+    return window.mainProcess.fileSystem.updateSyncConfig(updates);
+  }
+
+  static async enableSkillSync(skillPath: string, syncSource: 'git-global' | 'github') {
+    return window.mainProcess.fileSystem.enableSkillSync({ skillPath, syncSource });
+  }
+
+  static async disableSkillSync(skillPath: string) {
+    return window.mainProcess.fileSystem.disableSkillSync({ skillPath });
+  }
+
+  static async resolveSkillConflict(skillPath: string, resolution: 'keep-local' | 'use-remote') {
+    return window.mainProcess.fileSystem.resolveSkillConflict({ skillPath, resolution });
+  }
+
+  // Skills repository initialization
+  static async getAllLocalSkills() {
+    return window.mainProcess.fileSystem.getAllLocalSkills();
+  }
+
+  static async initializeSkillsRepo(repoUrl?: string) {
+    return window.mainProcess.fileSystem.initializeSkillsRepo({ repoUrl });
+  }
+
+  static async migrateSkillsToRepo(skillPaths: string[]) {
+    return window.mainProcess.fileSystem.migrateSkillsToRepo({ skillPaths });
+  }
 }

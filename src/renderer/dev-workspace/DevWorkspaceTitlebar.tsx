@@ -34,6 +34,8 @@ import type { PackageLayer } from '@principal-ai/codebase-composition';
 
 // Available panels for Dev workspace
 const AVAILABLE_PANELS: PanelOption[] = [
+  { id: 'agentDetail', label: 'Agent Detail' },
+  { id: 'agentsList', label: 'Agents List' },
   { id: 'principalView', label: 'Architecture' },
   { id: 'codeQuality', label: 'Code Quality' },
   { id: 'docs', label: 'Documentation' },
@@ -134,6 +136,16 @@ export const DEFAULT_PANEL_PRESETS: PanelPreset[] = [
       left: 'skillsList',
       middle: 'terminal',
       right: 'skillDetail',
+    },
+  },
+  {
+    id: 'agents',
+    name: 'Agents & Subagents',
+    description: 'Agents List, Terminal, Agent Detail',
+    layout: {
+      left: 'agentsList',
+      middle: 'terminal',
+      right: 'agentDetail',
     },
   },
   {

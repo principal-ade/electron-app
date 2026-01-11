@@ -19,6 +19,20 @@ export enum FileSystemAPIEvent {
   GET_CURRENT_WORKING_DIRECTORY = 'file-system:get-current-working-directory',
   GET_DIRECTORY_STATS = 'file-system:get-directory-stats',
   GET_GLOBAL_SKILLS = 'file-system:get-global-skills',
+
+  // Skills Git sync events
+  SYNC_GLOBAL_SKILLS = 'file-system:sync-global-skills',
+  GET_SYNC_STATUS = 'file-system:get-sync-status',
+  GET_SYNC_CONFIG = 'file-system:get-sync-config',
+  UPDATE_SYNC_CONFIG = 'file-system:update-sync-config',
+  ENABLE_SKILL_SYNC = 'file-system:enable-skill-sync',
+  DISABLE_SKILL_SYNC = 'file-system:disable-skill-sync',
+  RESOLVE_SKILL_CONFLICT = 'file-system:resolve-skill-conflict',
+
+  // Skills repository initialization
+  GET_ALL_LOCAL_SKILLS = 'file-system:get-all-local-skills',
+  INITIALIZE_SKILLS_REPO = 'file-system:initialize-skills-repo',
+  MIGRATE_SKILLS_TO_REPO = 'file-system:migrate-skills-to-repo',
 }
 
 export interface FileStats {
@@ -42,6 +56,7 @@ export type SkillSource =
   | 'project-other';     // any other location in project
 
 export interface SkillMetadata {
+  // Existing fields (GitHub installation)
   installedFrom?: string;
   skillPath?: string;
   owner?: string;
@@ -51,7 +66,46 @@ export interface SkillMetadata {
   destination?: string;
   sha?: string;
   files?: string[];
+
+  // NEW: Sync tracking fields
+  syncEnabled?: boolean;
+  syncSource?: 'git-global' | 'github';
+  lastSyncedAt?: string;
+  lastSyncedSha?: string;
+  syncStrategy?: 'auto' | 'manual';
+  conflictResolution?: 'overwrite' | 'preserve-local' | 'prompt';
 }
+
+/**
+ * Configuration for the global skills Git repository
+ */
+export interface SkillsRepoConfig {
+  enabled: boolean;
+  repoUrl: string;
+  branch: string;
+  localPath: string;
+  lastSyncedAt?: string;
+  autoSyncInterval?: number;  // Minutes (0 = manual only)
+  syncOnStartup?: boolean;
+  credentialProvider?: 'system' | 'oauth';
+}
+
+/**
+ * Sync status and state information
+ */
+export interface SyncState {
+  isSyncing: boolean;
+  lastSyncAttempt?: string;
+  lastSyncSuccess?: string;
+  lastError?: string;
+  changedSkills: string[];
+  conflictingSkills: string[];
+}
+
+/**
+ * Sync status for individual skills
+ */
+export type SkillSyncStatus = 'synced' | 'update-available' | 'modified' | 'disabled' | 'conflict';
 
 export interface GlobalSkill {
   id: string;
@@ -151,4 +205,18 @@ export interface FileSystemAPI {
     totalSize: number;
   } | null>;
   getGlobalSkills: () => Promise<GlobalSkill[]>;
+
+  // Skills Git sync methods
+  syncGlobalSkills: () => Promise<{ success: boolean; error?: string }>;
+  getSyncStatus: () => Promise<SyncState | null>;
+  getSyncConfig: () => Promise<SkillsRepoConfig | null>;
+  updateSyncConfig: (updates: Partial<SkillsRepoConfig>) => Promise<SkillsRepoConfig | null>;
+  enableSkillSync: (options: { skillPath: string; syncSource: 'git-global' | 'github' }) => Promise<{ success: boolean; error?: string }>;
+  disableSkillSync: (options: { skillPath: string }) => Promise<{ success: boolean; error?: string }>;
+  resolveSkillConflict: (options: { skillPath: string; resolution: 'keep-local' | 'use-remote' }) => Promise<{ success: boolean; error?: string }>;
+
+  // Skills repository initialization
+  getAllLocalSkills: () => Promise<{ skills: Array<{ path: string; name: string; source: 'agent' | 'claude' }>; error?: string }>;
+  initializeSkillsRepo: (options: { repoUrl?: string }) => Promise<{ success: boolean; error?: string }>;
+  migrateSkillsToRepo: (options: { skillPaths: string[] }) => Promise<{ success: boolean; error?: string }>;
 }

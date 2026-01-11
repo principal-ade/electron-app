@@ -180,4 +180,36 @@ export const fileSystemAPI: FileSystemAPI = {
   getGlobalSkills: async () => {
     return ipcRenderer.invoke(FileSystemAPIEvent.GET_GLOBAL_SKILLS);
   },
+  // Skills Git sync methods
+  syncGlobalSkills: async () => {
+    return ipcRenderer.invoke(FileSystemAPIEvent.SYNC_GLOBAL_SKILLS);
+  },
+  getSyncStatus: async () => {
+    return ipcRenderer.invoke(FileSystemAPIEvent.GET_SYNC_STATUS);
+  },
+  getSyncConfig: async () => {
+    return ipcRenderer.invoke(FileSystemAPIEvent.GET_SYNC_CONFIG);
+  },
+  updateSyncConfig: async (updates: any) => {
+    return ipcRenderer.invoke(FileSystemAPIEvent.UPDATE_SYNC_CONFIG, updates);
+  },
+  enableSkillSync: async (options: { skillPath: string; syncSource: 'git-global' | 'github' }) => {
+    return ipcRenderer.invoke(FileSystemAPIEvent.ENABLE_SKILL_SYNC, options);
+  },
+  disableSkillSync: async (options: { skillPath: string }) => {
+    return ipcRenderer.invoke(FileSystemAPIEvent.DISABLE_SKILL_SYNC, options);
+  },
+  resolveSkillConflict: async (options: { skillPath: string; resolution: 'keep-local' | 'use-remote' }) => {
+    return ipcRenderer.invoke(FileSystemAPIEvent.RESOLVE_SKILL_CONFLICT, options);
+  },
+  // Skills repository initialization
+  getAllLocalSkills: async () => {
+    return ipcRenderer.invoke(FileSystemAPIEvent.GET_ALL_LOCAL_SKILLS);
+  },
+  initializeSkillsRepo: async (options: { repoUrl?: string }) => {
+    return ipcRenderer.invoke(FileSystemAPIEvent.INITIALIZE_SKILLS_REPO, options);
+  },
+  migrateSkillsToRepo: async (options: { skillPaths: string[] }) => {
+    return ipcRenderer.invoke(FileSystemAPIEvent.MIGRATE_SKILLS_TO_REPO, options);
+  },
 };

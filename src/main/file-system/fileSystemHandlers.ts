@@ -8,6 +8,9 @@ import * as path from 'path';
 import { FileSystemAPIEvent, type GlobalSkill } from '../../shared/main-process-api-interfaces/FileSystemAPI';
 import type { IModernApplicationWindow } from '../window/types';
 import { GitHubAdapter } from '../version-control-providers/githubHandlers';
+import { SkillsConfigService } from '../services/SkillsConfigService';
+import { SkillsGitService } from '../services/SkillsGitService';
+import { SkillsSyncService } from '../services/SkillsSyncService';
 
 export class ElectronFileSystemAdapter {
   private rootPath: string | null = null;
@@ -1134,6 +1137,15 @@ export function registerFileSystemIpcHandlers(
 ) {
   console.log('[File System] Registering global IPC handlers...');
 
+  // Initialize skills sync services
+  const configService = new SkillsConfigService();
+  const gitService = new SkillsGitService(configService);
+  const syncService = new SkillsSyncService(configService, gitService);
+
+  // Initialize services asynchronously
+  configService.initialize().catch(console.error);
+  syncService.initialize().catch(console.error);
+
   ipcMain.handle(FileSystemAPIEvent.SELECT_FILE, async (event) => {
     const senderWindow = BrowserWindow.fromWebContents(event.sender);
     if (!senderWindow) {
@@ -1792,6 +1804,217 @@ export function registerFileSystemIpcHandlers(
       return [];
     }
   });
+
+  // Handler for syncing global skills from Git repository
+  ipcMain.handle(FileSystemAPIEvent.SYNC_GLOBAL_SKILLS, async () => {
+    try {
+      console.log('[syncGlobalSkills] Starting sync...');
+      const success = await syncService.sync();
+      return { success };
+    } catch (error) {
+      console.error('[syncGlobalSkills] Failed to sync:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // Handler for getting sync status
+  ipcMain.handle(FileSystemAPIEvent.GET_SYNC_STATUS, async () => {
+    try {
+      const state = syncService.getSyncState();
+      return state;
+    } catch (error) {
+      console.error('[getSyncStatus] Failed to get status:', error);
+      return null;
+    }
+  });
+
+  // Handler for getting sync configuration
+  ipcMain.handle(FileSystemAPIEvent.GET_SYNC_CONFIG, async () => {
+    try {
+      const config = await configService.getConfig();
+      return config;
+    } catch (error) {
+      console.error('[getSyncConfig] Failed to get config:', error);
+      return null;
+    }
+  });
+
+  // Handler for updating sync configuration
+  ipcMain.handle(FileSystemAPIEvent.UPDATE_SYNC_CONFIG, async (event, updates) => {
+    try {
+      console.log('[updateSyncConfig] Updating config:', updates);
+      const config = await configService.updateConfig(updates);
+      return config;
+    } catch (error) {
+      console.error('[updateSyncConfig] Failed to update config:', error);
+      return null;
+    }
+  });
+
+  // Handler for enabling sync for a skill
+  ipcMain.handle(FileSystemAPIEvent.ENABLE_SKILL_SYNC, async (event, { skillPath, syncSource }) => {
+    try {
+      console.log('[enableSkillSync] Enabling sync for:', skillPath);
+      const success = await syncService.enableSkillSync(skillPath, syncSource);
+      return { success };
+    } catch (error) {
+      console.error('[enableSkillSync] Failed to enable sync:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // Handler for disabling sync for a skill
+  ipcMain.handle(FileSystemAPIEvent.DISABLE_SKILL_SYNC, async (event, { skillPath }) => {
+    try {
+      console.log('[disableSkillSync] Disabling sync for:', skillPath);
+      const success = await syncService.disableSkillSync(skillPath);
+      return { success };
+    } catch (error) {
+      console.error('[disableSkillSync] Failed to disable sync:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // Handler for resolving skill conflicts
+  ipcMain.handle(FileSystemAPIEvent.RESOLVE_SKILL_CONFLICT, async (event, { skillPath, resolution }) => {
+    try {
+      console.log('[resolveSkillConflict] Resolving conflict for:', skillPath, 'with:', resolution);
+      const success = await syncService.resolveConflict(skillPath, resolution);
+      return { success };
+    } catch (error) {
+      console.error('[resolveSkillConflict] Failed to resolve conflict:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // Handler for getting all local skills (for migration)
+  ipcMain.handle(FileSystemAPIEvent.GET_ALL_LOCAL_SKILLS, async () => {
+    try {
+      const homeDir = app.getPath('home');
+      const skillDirs: Array<{ path: string; name: string; source: 'agent' | 'claude' }> = [];
+
+      // Helper to find skill directories
+      const findSkillDirs = async (baseDir: string, source: 'agent' | 'claude') => {
+        try {
+          if (!fs.existsSync(baseDir)) {
+            return;
+          }
+
+          const entries = await fsPromises.readdir(baseDir, { withFileTypes: true });
+          for (const entry of entries) {
+            if (entry.isDirectory()) {
+              const skillPath = path.join(baseDir, entry.name);
+              // Check if it contains SKILL.md or any .md file
+              const files = await fsPromises.readdir(skillPath);
+              if (files.some(f => f.endsWith('.md'))) {
+                skillDirs.push({
+                  path: skillPath,
+                  name: entry.name,
+                  source,
+                });
+              }
+            }
+          }
+        } catch (error) {
+          console.warn(`[getAllLocalSkills] Error reading ${baseDir}:`, error);
+        }
+      };
+
+      // Scan both global directories
+      await findSkillDirs(path.join(homeDir, '.agent', 'skills'), 'agent');
+      await findSkillDirs(path.join(homeDir, '.claude', 'skills'), 'claude');
+
+      console.log(`[getAllLocalSkills] Found ${skillDirs.length} local skills`);
+      return { skills: skillDirs };
+    } catch (error) {
+      console.error('[getAllLocalSkills] Failed:', error);
+      return { skills: [], error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // Handler for initializing a new skills repository
+  ipcMain.handle(FileSystemAPIEvent.INITIALIZE_SKILLS_REPO, async (event, { repoUrl }) => {
+    try {
+      console.log('[initializeSkillsRepo] Initializing with URL:', repoUrl);
+
+      // Update config with the repo URL
+      await configService.updateConfig({
+        enabled: true,
+        repoUrl: repoUrl || '',
+        branch: 'main',
+      });
+
+      // Initialize the local Git repository
+      const success = await gitService.initializeRepository();
+
+      if (!success) {
+        throw new Error('Failed to initialize repository');
+      }
+
+      // If a remote URL is provided, set it
+      if (repoUrl) {
+        await gitService.setRemote(repoUrl);
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('[initializeSkillsRepo] Failed:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // Handler for migrating skills to the repository
+  ipcMain.handle(FileSystemAPIEvent.MIGRATE_SKILLS_TO_REPO, async (event, { skillPaths }) => {
+    try {
+      console.log('[migrateSkillsToRepo] Migrating', skillPaths.length, 'skills');
+
+      const config = await configService.getConfig();
+      const repoPath = config.localPath;
+
+      // Copy each skill to the repository
+      for (const skillPath of skillPaths) {
+        const skillName = path.basename(skillPath);
+        const targetPath = path.join(repoPath, skillName);
+
+        console.log(`[migrateSkillsToRepo] Copying ${skillName}`);
+
+        // Use recursive copy
+        await copyDir(skillPath, targetPath);
+      }
+
+      // Commit all skills
+      const success = await gitService.commitSkills('Migrate existing skills');
+
+      if (!success) {
+        throw new Error('Failed to commit skills');
+      }
+
+      // Sync to global directories
+      await gitService.syncToGlobalDirectories();
+
+      return { success: true };
+    } catch (error) {
+      console.error('[migrateSkillsToRepo] Failed:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // Helper function for recursive directory copy
+  async function copyDir(source: string, target: string): Promise<void> {
+    await fsPromises.mkdir(target, { recursive: true });
+    const entries = await fsPromises.readdir(source, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const sourcePath = path.join(source, entry.name);
+      const targetPath = path.join(target, entry.name);
+
+      if (entry.isDirectory()) {
+        await copyDir(sourcePath, targetPath);
+      } else {
+        await fsPromises.copyFile(sourcePath, targetPath);
+      }
+    }
+  }
 
   console.log('[File System] Global IPC handlers registered.');
 }
