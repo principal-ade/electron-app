@@ -57,8 +57,6 @@ import {
   shutdownDocumentSearch,
 } from './services/ipc/documentSearchHandlers';
 import { registerObservabilityHandlers } from './observability/observabilityHandlers';
-import { RemoteAgentWindowManager } from './window/remoteAgentWindowManager';
-import { registerRemoteAgentWindowHandlers } from './window/remoteAgentWindowHandlers';
 import { registerActIntegrationHandlers } from './services/ipc/act/actIntegrationHandlers';
 import { setupWindowSwitcherHandlers } from './window/windowSwitcher';
 import { setupQuickOpenHandlers } from './window/quickOpen';
@@ -74,7 +72,6 @@ import { registerCollectionsHandlers } from './services/CollectionsService';
 
 // let agentSessionEventsHttpBridge: AgentSessionEventsHttpBridge | null = null;
 let principalMCPBridgePort: number | null = null;
-let remoteAgentWindowManager: RemoteAgentWindowManager | null = null;
 
 // Setup app version handler
 const setupAppVersionHandler = () => {
@@ -224,10 +221,6 @@ const registerAllIpcHandlers = async () => {
   registerDocumentSearchHandlers();
   registerObservabilityHandlers();
 
-  // Initialize remote agent window manager
-  remoteAgentWindowManager = new RemoteAgentWindowManager();
-  registerRemoteAgentWindowHandlers(remoteAgentWindowManager);
-
   // LLM Models handlers have been removed
   const typedStore = await getTypedStorageManager();
 
@@ -352,10 +345,4 @@ export const shutdownServices = async () => {
   // Cleanup localhost detection watchers
   cleanupLocalhostWatchers();
   console.log('[Main Process] Localhost detection watchers cleaned up.');
-
-  // Close all remote agent windows
-  if (remoteAgentWindowManager) {
-    await remoteAgentWindowManager.closeAllRemoteAgents();
-    console.log('[Main Process] Remote agent windows closed.');
-  }
 };

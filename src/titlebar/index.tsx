@@ -1,6 +1,5 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { RemoteAgentTitlebar } from './RemoteAgentTitlebar';
 import { CustomThemeProvider } from '../renderer/providers/CustomThemeProvider';
 import '../renderer/index.css';
 
@@ -13,10 +12,11 @@ if (!container) {
 
 const root = createRoot(container);
 
+// Remote Agent Titlebar has been removed
 root.render(
   <React.StrictMode>
     <CustomThemeProvider>
-      <RemoteAgentTitlebar />
+      <div />
     </CustomThemeProvider>
   </React.StrictMode>,
 );

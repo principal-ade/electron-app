@@ -3,15 +3,15 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { FolderOpen, Github, Star, Hexagon } from 'lucide-react';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
-import type { MiddlePanelView } from './WorkspacesView';
+import type { MiddlePanelView } from './ProjectsView';
 
-interface WorkspacesViewHeaderProps {
+interface ProjectsViewHeaderProps {
   middlePanelView: MiddlePanelView;
   onMiddlePanelViewChange: (view: MiddlePanelView) => void;
   isAuthenticated: boolean;
 }
 
-export const WorkspacesViewHeader: React.FC<WorkspacesViewHeaderProps> = ({
+export const ProjectsViewHeader: React.FC<ProjectsViewHeaderProps> = ({
   middlePanelView,
   onMiddlePanelViewChange,
   isAuthenticated,

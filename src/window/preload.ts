@@ -50,7 +50,6 @@ import { feedbackAPI } from './main-process-api-implementations/feedbackApi';
 import { testDebugAPI } from './main-process-api-implementations/testDebugApi';
 import { documentSearchAPI } from './main-process-api-implementations/documentSearchApi';
 import { observabilityAPI } from './main-process-api-implementations/observabilityApi';
-import { remoteAgentWindowAPI } from './main-process-api-implementations/remoteAgentWindowApi';
 import { localhostDetectionAPI } from './main-process-api-implementations/localhostDetectionApi';
 import { githubArtifactAPI } from './main-process-api-implementations/githubArtifactApi';
 import { collectionsAPI } from './main-process-api-implementations/collectionsApi';
@@ -132,7 +131,6 @@ const mainProcessExposure: MainProcessAPI = {
   testDebug: testDebugAPI,
   documentSearch: documentSearchAPI,
   observability: observabilityAPI,
-  remoteAgentWindow: remoteAgentWindowAPI,
   localhostDetection: localhostDetectionAPI,
   githubArtifact: githubArtifactAPI,
 };

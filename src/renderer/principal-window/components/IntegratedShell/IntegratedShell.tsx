@@ -6,7 +6,7 @@ import { MarkdownSearch } from '../../views/MarkdownSearch';
 import { Settings } from '../../views/Settings';
 import { SystemMonitor } from '../../views/SystemMonitor/SystemMonitor';
 import { AuthView } from '../../views/AuthView';
-import { WorkspacesView } from '../../views/WorkspacesView';
+import { ProjectsView } from '../../views/ProjectsView';
 import { GitSyncView } from '../../views/GitSyncView';
 import { LocalhostProcessesView } from '../../views/LocalhostProcessesView';
 import { ConnectionsView } from '../../views/ConnectionsView';
@@ -525,7 +525,7 @@ export const IntegratedShell: React.FC = () => {
             )}
             {activeView === 'settings' && <Settings />}
             {activeView === 'auth' && <AuthView />}
-            {activeView === 'workspaces' && <WorkspacesView />}
+            {activeView === 'workspaces' && <ProjectsView />}
             {activeView === 'network' && <GitSyncView />}
             {activeView === 'processes' && <LocalhostProcessesView />}
             {activeView === 'connections' && <ConnectionsView />}

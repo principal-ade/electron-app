@@ -46,12 +46,12 @@ import type { CollectionMembership } from '@principal-ai/alexandria-collections'
 import type { DiscoveredRepository } from '@industry-theme/alexandria-panels';
 
 /**
- * Extended actions for WorkspacesPanelProvider
+ * Extended actions for ProjectsPanelProvider
  * Combines workspace list actions with repository actions and GitHub actions
  * Note: UserCollectionsPanelActions.removeRepository conflicts with LocalProjectsPanel.removeRepository
  * so we omit it and provide collection-specific actions manually
  */
-interface WorkspacesPanelActions
+interface ProjectsPanelActions
   extends
     PanelActions,
     WorkspacesListPanelActions,
@@ -83,7 +83,7 @@ interface WorkspacesPanelActions
 /**
  * Extended context interface for workspaces panels
  */
-interface WorkspacesPanelContextValue extends PanelContextValue {
+interface ProjectsPanelContextValue extends PanelContextValue {
   // Selected workspace (for coordination between panels)
   selectedWorkspace: Workspace | null;
   setSelectedWorkspace: (workspace: Workspace | null) => void;
@@ -95,22 +95,22 @@ interface WorkspacesPanelContextValue extends PanelContextValue {
 /**
  * Provider value containing context, actions, and events
  */
-interface WorkspacesPanelProviderValue {
-  context: WorkspacesPanelContextValue;
-  actions: WorkspacesPanelActions;
+interface ProjectsPanelProviderValue {
+  context: ProjectsPanelContextValue;
+  actions: ProjectsPanelActions;
   events: PanelEventEmitter;
 }
 
-const WorkspacesPanelContext =
-  createContext<WorkspacesPanelProviderValue | null>(null);
+const ProjectsPanelContext =
+  createContext<ProjectsPanelProviderValue | null>(null);
 
-interface WorkspacesPanelProviderProps {
+interface ProjectsPanelProviderProps {
   children: ReactNode;
   theme?: Theme;
 }
 
-export const WorkspacesPanelProvider: React.FC<
-  WorkspacesPanelProviderProps
+export const ProjectsPanelProvider: React.FC<
+  ProjectsPanelProviderProps
 > = ({ children, theme: _theme }) => {
   // Initialize event bus
   const events = useMemo(() => new PanelEventBus(), []);
@@ -219,7 +219,7 @@ export const WorkspacesPanelProvider: React.FC<
         }
       } catch (error) {
         console.error(
-          '[WorkspacesPanelProvider] Failed to fetch workspaces:',
+          '[ProjectsPanelProvider] Failed to fetch workspaces:',
           error,
         );
       } finally {
@@ -246,7 +246,7 @@ export const WorkspacesPanelProvider: React.FC<
         setWorkspaceRepositories(repos);
       } catch (error) {
         console.error(
-          '[WorkspacesPanelProvider] Failed to fetch workspace repositories:',
+          '[ProjectsPanelProvider] Failed to fetch workspace repositories:',
           error,
         );
         setWorkspaceRepositories([]);
@@ -267,7 +267,7 @@ export const WorkspacesPanelProvider: React.FC<
         setLocalRepositories(repos);
       } catch (error) {
         console.error(
-          '[WorkspacesPanelProvider] Failed to fetch local repositories:',
+          '[ProjectsPanelProvider] Failed to fetch local repositories:',
           error,
         );
         setLocalRepositories([]);
@@ -301,18 +301,18 @@ export const WorkspacesPanelProvider: React.FC<
 
       try {
         console.info(
-          '[WorkspacesPanelProvider] Scanning for discovered repositories in:',
+          '[ProjectsPanelProvider] Scanning for discovered repositories in:',
           basePath,
         );
         const discovered = await GitService.getDiscoveredRepos(basePath, 2);
         console.info(
-          '[WorkspacesPanelProvider] Found discovered repositories:',
+          '[ProjectsPanelProvider] Found discovered repositories:',
           discovered.length,
         );
         setDiscoveredRepositories(discovered);
       } catch (error) {
         console.error(
-          '[WorkspacesPanelProvider] Failed to fetch discovered repositories:',
+          '[ProjectsPanelProvider] Failed to fetch discovered repositories:',
           error,
         );
         setDiscoveredRepositories([]);
@@ -333,7 +333,7 @@ export const WorkspacesPanelProvider: React.FC<
               .then(setDiscoveredRepositories)
               .catch((error) => {
                 console.error(
-                  '[WorkspacesPanelProvider] Failed to refresh discovered repos:',
+                  '[ProjectsPanelProvider] Failed to refresh discovered repos:',
                   error,
                 );
               });
@@ -361,7 +361,7 @@ export const WorkspacesPanelProvider: React.FC<
       setStarredRepositories(starred as unknown as GitHubRepository[]);
     } catch (error) {
       console.error(
-        '[WorkspacesPanelProvider] Failed to fetch starred repositories:',
+        '[ProjectsPanelProvider] Failed to fetch starred repositories:',
         error,
       );
       setStarredError(
@@ -419,7 +419,7 @@ export const WorkspacesPanelProvider: React.FC<
             orgReposMap[org.login] = repos as unknown as GitHubRepository[];
           } catch (error) {
             console.error(
-              `[WorkspacesPanelProvider] Failed to fetch repos for org ${org.login}:`,
+              `[ProjectsPanelProvider] Failed to fetch repos for org ${org.login}:`,
               error,
             );
             orgReposMap[org.login] = [];
@@ -429,7 +429,7 @@ export const WorkspacesPanelProvider: React.FC<
       setOrgRepositories(orgReposMap);
     } catch (error) {
       console.error(
-        '[WorkspacesPanelProvider] Failed to fetch GitHub projects:',
+        '[ProjectsPanelProvider] Failed to fetch GitHub projects:',
         error,
       );
       setProjectsError(
@@ -466,7 +466,7 @@ export const WorkspacesPanelProvider: React.FC<
       }
     } catch (error) {
       console.error(
-        '[WorkspacesPanelProvider] Failed to fetch collections:',
+        '[ProjectsPanelProvider] Failed to fetch collections:',
         error,
       );
       setCollectionsError(
@@ -563,12 +563,12 @@ export const WorkspacesPanelProvider: React.FC<
               };
 
               console.info(
-                `[WorkspacesPanelProvider] Quality loaded for ${repo.name}`,
+                `[ProjectsPanelProvider] Quality loaded for ${repo.name}`,
               );
             }
           } catch (error) {
             console.error(
-              `[WorkspacesPanelProvider] Failed to fetch quality for ${repo.name}:`,
+              `[ProjectsPanelProvider] Failed to fetch quality for ${repo.name}:`,
               error,
             );
           }
@@ -595,7 +595,7 @@ export const WorkspacesPanelProvider: React.FC<
   // Listen for workspace changes from other parts of the app
   useEffect(() => {
     const unsubscribe = WorkspaceService.onWorkspaceChange((event) => {
-      console.info('[WorkspacesPanelProvider] Workspace change event:', event);
+      console.info('[ProjectsPanelProvider] Workspace change event:', event);
 
       if (
         event.type === 'added' ||
@@ -633,7 +633,7 @@ export const WorkspacesPanelProvider: React.FC<
           workspace: Workspace;
         };
         console.info(
-          '[WorkspacesPanelProvider] Workspace selected event:',
+          '[ProjectsPanelProvider] Workspace selected event:',
           workspace,
         );
         setSelectedWorkspace(workspace);
@@ -655,7 +655,7 @@ export const WorkspacesPanelProvider: React.FC<
           collection: Collection;
         };
         console.info(
-          '[WorkspacesPanelProvider] Collection selected event:',
+          '[ProjectsPanelProvider] Collection selected event:',
           collection,
         );
         setSelectedCollection(collection);
@@ -677,7 +677,7 @@ export const WorkspacesPanelProvider: React.FC<
           workspace: Workspace;
         };
         console.info(
-          '[WorkspacesPanelProvider] Workspace opened event:',
+          '[ProjectsPanelProvider] Workspace opened event:',
           workspace,
         );
 
@@ -699,7 +699,7 @@ export const WorkspacesPanelProvider: React.FC<
         repository: AlexandriaEntry;
       };
       console.info(
-        '[WorkspacesPanelProvider] Repository opened event:',
+        '[ProjectsPanelProvider] Repository opened event:',
         repository,
       );
 
@@ -745,7 +745,7 @@ export const WorkspacesPanelProvider: React.FC<
                 }
               } catch (error) {
                 console.error(
-                  '[WorkspacesPanelProvider] Failed to refresh local repositories:',
+                  '[ProjectsPanelProvider] Failed to refresh local repositories:',
                   error,
                 );
               } finally {
@@ -777,7 +777,7 @@ export const WorkspacesPanelProvider: React.FC<
                 setDefaultWorkspaceId(defaultWs?.id ?? null);
               } catch (error) {
                 console.error(
-                  '[WorkspacesPanelProvider] Failed to refresh workspaces:',
+                  '[ProjectsPanelProvider] Failed to refresh workspaces:',
                   error,
                 );
               } finally {
@@ -818,7 +818,7 @@ export const WorkspacesPanelProvider: React.FC<
                   setWorkspaceRepositories(repos);
                 } catch (error) {
                   console.error(
-                    '[WorkspacesPanelProvider] Failed to refresh repositories:',
+                    '[ProjectsPanelProvider] Failed to refresh repositories:',
                     error,
                   );
                 } finally {
@@ -936,7 +936,7 @@ export const WorkspacesPanelProvider: React.FC<
                     }
                   } catch (error) {
                     console.error(
-                      `[WorkspacesPanelProvider] Failed to refresh quality for ${repo.name}:`,
+                      `[ProjectsPanelProvider] Failed to refresh quality for ${repo.name}:`,
                       error,
                     );
                   }
@@ -1021,13 +1021,13 @@ export const WorkspacesPanelProvider: React.FC<
   );
 
   // Define actions
-  const actions: WorkspacesPanelActions = useMemo(
+  const actions: ProjectsPanelActions = useMemo(
     () => ({
       openFile: (filePath: string) => {
-        console.info('[WorkspacesPanelProvider] Opening file:', filePath);
+        console.info('[ProjectsPanelProvider] Opening file:', filePath);
         events.emit({
           type: 'file:opened',
-          source: 'workspaces-view',
+          source: 'projects-view',
           timestamp: Date.now(),
           payload: { filePath },
         });
@@ -1035,23 +1035,23 @@ export const WorkspacesPanelProvider: React.FC<
 
       openGitDiff: (filePath: string, status?: string) => {
         console.info(
-          '[WorkspacesPanelProvider] Opening git diff:',
+          '[ProjectsPanelProvider] Opening git diff:',
           filePath,
           status,
         );
         events.emit({
           type: 'git:diff',
-          source: 'workspaces-view',
+          source: 'projects-view',
           timestamp: Date.now(),
           payload: { filePath, status },
         });
       },
 
       navigateToPanel: (panelId: string) => {
-        console.info('[WorkspacesPanelProvider] Navigating to panel:', panelId);
+        console.info('[ProjectsPanelProvider] Navigating to panel:', panelId);
         events.emit({
           type: 'panel:focus',
-          source: 'workspaces-view',
+          source: 'projects-view',
           timestamp: Date.now(),
           payload: { panelId },
         });
@@ -1080,7 +1080,7 @@ export const WorkspacesPanelProvider: React.FC<
 
       registerRepository: async (name: string, path: string) => {
         console.info(
-          '[WorkspacesPanelProvider] Registering repository:',
+          '[ProjectsPanelProvider] Registering repository:',
           name,
           path,
         );
@@ -1093,7 +1093,7 @@ export const WorkspacesPanelProvider: React.FC<
 
       removeRepository: async (name: string, deleteLocal: boolean) => {
         console.info(
-          '[WorkspacesPanelProvider] Removing repository:',
+          '[ProjectsPanelProvider] Removing repository:',
           name,
           deleteLocal,
         );
@@ -1107,7 +1107,7 @@ export const WorkspacesPanelProvider: React.FC<
       // Track a discovered repository (add to Alexandria)
       trackRepository: async (name: string, path: string) => {
         console.info(
-          '[WorkspacesPanelProvider] Tracking repository:',
+          '[ProjectsPanelProvider] Tracking repository:',
           name,
           path,
         );
@@ -1128,7 +1128,7 @@ export const WorkspacesPanelProvider: React.FC<
           suggestedClonePath?: string;
         },
       ) => {
-        console.info('[WorkspacesPanelProvider] Creating workspace:', name);
+        console.info('[ProjectsPanelProvider] Creating workspace:', name);
         const workspace = await WorkspaceService.createWorkspace({
           name,
           description: options?.description,
@@ -1149,7 +1149,7 @@ export const WorkspacesPanelProvider: React.FC<
         updates: Partial<Omit<Workspace, 'id' | 'createdAt' | 'updatedAt'>>,
       ) => {
         console.info(
-          '[WorkspacesPanelProvider] Updating workspace:',
+          '[ProjectsPanelProvider] Updating workspace:',
           workspaceId,
           updates,
         );
@@ -1170,7 +1170,7 @@ export const WorkspacesPanelProvider: React.FC<
 
       deleteWorkspace: async (workspaceId: string) => {
         console.info(
-          '[WorkspacesPanelProvider] Deleting workspace:',
+          '[ProjectsPanelProvider] Deleting workspace:',
           workspaceId,
         );
         await WorkspaceService.deleteWorkspace(workspaceId);
@@ -1187,7 +1187,7 @@ export const WorkspacesPanelProvider: React.FC<
 
       setDefaultWorkspace: async (workspaceId: string) => {
         console.info(
-          '[WorkspacesPanelProvider] Setting default workspace:',
+          '[ProjectsPanelProvider] Setting default workspace:',
           workspaceId,
         );
         await WorkspaceService.setDefaultWorkspace(workspaceId);
@@ -1196,7 +1196,7 @@ export const WorkspacesPanelProvider: React.FC<
 
       openWorkspace: async (workspaceId: string) => {
         console.info(
-          '[WorkspacesPanelProvider] Opening workspace:',
+          '[ProjectsPanelProvider] Opening workspace:',
           workspaceId,
         );
         await WindowService.openAlexandriaWorkspace(workspaceId);
@@ -1214,7 +1214,7 @@ export const WorkspacesPanelProvider: React.FC<
         workspaceId: string,
       ) => {
         console.info(
-          '[WorkspacesPanelProvider] Removing repository from workspace:',
+          '[ProjectsPanelProvider] Removing repository from workspace:',
           repositoryId,
           workspaceId,
         );
@@ -1232,14 +1232,14 @@ export const WorkspacesPanelProvider: React.FC<
 
         events.emit({
           type: 'workspace:membership-changed',
-          source: 'workspaces-view',
+          source: 'projects-view',
           timestamp: Date.now(),
           payload: { repositoryId, workspaceId, action: 'removed' },
         });
       },
 
       copyToClipboard: async (text: string) => {
-        console.info('[WorkspacesPanelProvider] Copying to clipboard');
+        console.info('[ProjectsPanelProvider] Copying to clipboard');
         await navigator.clipboard.writeText(text);
       },
 
@@ -1272,7 +1272,7 @@ export const WorkspacesPanelProvider: React.FC<
 
         events.emit({
           type: 'repository:moved',
-          source: 'workspaces-view',
+          source: 'projects-view',
           timestamp: Date.now(),
           payload: {
             repositoryId: repository.github?.id || repository.name,
@@ -1287,13 +1287,13 @@ export const WorkspacesPanelProvider: React.FC<
       // GitHub panel actions
       cloneRepository: async (repo: GitHubRepository) => {
         console.info(
-          '[WorkspacesPanelProvider] Clone requested for:',
+          '[ProjectsPanelProvider] Clone requested for:',
           repo.full_name,
         );
         // Emit event for clone modal to handle
         events.emit({
           type: 'github:clone-requested',
-          source: 'workspaces-view',
+          source: 'projects-view',
           timestamp: Date.now(),
           payload: { repository: repo },
         });
@@ -1310,7 +1310,7 @@ export const WorkspacesPanelProvider: React.FC<
           entry = localRepositories.find((r) => r.path === entryOrPath);
           if (!entry) {
             console.error(
-              '[WorkspacesPanelProvider] Could not find repository at path:',
+              '[ProjectsPanelProvider] Could not find repository at path:',
               entryOrPath,
             );
             return;
@@ -1320,7 +1320,7 @@ export const WorkspacesPanelProvider: React.FC<
         }
 
         console.info(
-          '[WorkspacesPanelProvider] Opening repository:',
+          '[ProjectsPanelProvider] Opening repository:',
           entry.name,
         );
         await WindowService.openDevWorkspace({
@@ -1328,7 +1328,7 @@ export const WorkspacesPanelProvider: React.FC<
         });
         events.emit({
           type: 'repository:opened',
-          source: 'workspaces-view',
+          source: 'projects-view',
           timestamp: Date.now(),
           payload: { repositoryId: entry.name, repository: entry },
         });
@@ -1344,7 +1344,7 @@ export const WorkspacesPanelProvider: React.FC<
         description?: string,
         icon?: string,
       ) => {
-        console.info('[WorkspacesPanelProvider] Creating collection:', name);
+        console.info('[ProjectsPanelProvider] Creating collection:', name);
         setCollectionsSaving(true);
         try {
           const result = await CollectionsService.createCollection({
@@ -1359,7 +1359,7 @@ export const WorkspacesPanelProvider: React.FC<
           if (result.success && result.data) {
             events.emit({
               type: 'industry-theme.user-collections:collection:created',
-              source: 'workspaces-view',
+              source: 'projects-view',
               timestamp: Date.now(),
               payload: { collectionId: result.data.id, collection: result.data },
             });
@@ -1368,7 +1368,7 @@ export const WorkspacesPanelProvider: React.FC<
           return null;
         } catch (error) {
           console.error(
-            '[WorkspacesPanelProvider] Failed to create collection:',
+            '[ProjectsPanelProvider] Failed to create collection:',
             error,
           );
           throw error;
@@ -1382,7 +1382,7 @@ export const WorkspacesPanelProvider: React.FC<
         updates: Partial<Omit<Collection, 'id' | 'createdAt' | 'updatedAt'>>,
       ) => {
         console.info(
-          '[WorkspacesPanelProvider] Updating collection:',
+          '[ProjectsPanelProvider] Updating collection:',
           collectionId,
           updates,
         );
@@ -1392,7 +1392,7 @@ export const WorkspacesPanelProvider: React.FC<
           await fetchCollections();
         } catch (error) {
           console.error(
-            '[WorkspacesPanelProvider] Failed to update collection:',
+            '[ProjectsPanelProvider] Failed to update collection:',
             error,
           );
           throw error;
@@ -1403,7 +1403,7 @@ export const WorkspacesPanelProvider: React.FC<
 
       deleteCollection: async (collectionId: string) => {
         console.info(
-          '[WorkspacesPanelProvider] Deleting collection:',
+          '[ProjectsPanelProvider] Deleting collection:',
           collectionId,
         );
         setCollectionsSaving(true);
@@ -1413,13 +1413,13 @@ export const WorkspacesPanelProvider: React.FC<
 
           events.emit({
             type: 'industry-theme.user-collections:collection:deleted',
-            source: 'workspaces-view',
+            source: 'projects-view',
             timestamp: Date.now(),
             payload: { collectionId },
           });
         } catch (error) {
           console.error(
-            '[WorkspacesPanelProvider] Failed to delete collection:',
+            '[ProjectsPanelProvider] Failed to delete collection:',
             error,
           );
           throw error;
@@ -1434,7 +1434,7 @@ export const WorkspacesPanelProvider: React.FC<
         metadata?: { pinned?: boolean; notes?: string },
       ) => {
         console.info(
-          '[WorkspacesPanelProvider] Adding repository to collection:',
+          '[ProjectsPanelProvider] Adding repository to collection:',
           repositoryId,
           collectionId,
         );
@@ -1449,13 +1449,13 @@ export const WorkspacesPanelProvider: React.FC<
 
           events.emit({
             type: 'industry-theme.user-collections:collection:repository-added',
-            source: 'workspaces-view',
+            source: 'projects-view',
             timestamp: Date.now(),
             payload: { collectionId, repositoryId },
           });
         } catch (error) {
           console.error(
-            '[WorkspacesPanelProvider] Failed to add repository to collection:',
+            '[ProjectsPanelProvider] Failed to add repository to collection:',
             error,
           );
           throw error;
@@ -1471,7 +1471,7 @@ export const WorkspacesPanelProvider: React.FC<
         repositoryId: string,
       ) => {
         console.info(
-          '[WorkspacesPanelProvider] Removing repository from collection:',
+          '[ProjectsPanelProvider] Removing repository from collection:',
           repositoryId,
           collectionId,
         );
@@ -1482,13 +1482,13 @@ export const WorkspacesPanelProvider: React.FC<
 
           events.emit({
             type: 'industry-theme.user-collections:collection:repository-removed',
-            source: 'workspaces-view',
+            source: 'projects-view',
             timestamp: Date.now(),
             payload: { collectionId, repositoryId },
           });
         } catch (error) {
           console.error(
-            '[WorkspacesPanelProvider] Failed to remove repository from collection:',
+            '[ProjectsPanelProvider] Failed to remove repository from collection:',
             error,
           );
           throw error;
@@ -1498,14 +1498,14 @@ export const WorkspacesPanelProvider: React.FC<
       },
 
       enableGitHubSync: async () => {
-        console.info('[WorkspacesPanelProvider] Enabling GitHub sync');
+        console.info('[ProjectsPanelProvider] Enabling GitHub sync');
         setCollectionsSaving(true);
         try {
           await CollectionsService.enableGitHubSync();
           await fetchCollections();
         } catch (error) {
           console.error(
-            '[WorkspacesPanelProvider] Failed to enable GitHub sync:',
+            '[ProjectsPanelProvider] Failed to enable GitHub sync:',
             error,
           );
           throw error;
@@ -1518,7 +1518,7 @@ export const WorkspacesPanelProvider: React.FC<
 
       navigateToRepository: (repositoryId: string) => {
         console.info(
-          '[WorkspacesPanelProvider] Navigating to repository:',
+          '[ProjectsPanelProvider] Navigating to repository:',
           repositoryId,
         );
         // Open in browser
@@ -1530,7 +1530,7 @@ export const WorkspacesPanelProvider: React.FC<
   );
 
   // Create context value
-  const context: WorkspacesPanelContextValue = useMemo(
+  const context: ProjectsPanelContextValue = useMemo(
     () => ({
       currentScope: {
         type: 'workspace' as const,
@@ -1597,7 +1597,7 @@ export const WorkspacesPanelProvider: React.FC<
   );
 
   // Combine into provider value
-  const value: WorkspacesPanelProviderValue = useMemo(
+  const value: ProjectsPanelProviderValue = useMemo(
     () => ({
       context,
       actions,
@@ -1607,20 +1607,20 @@ export const WorkspacesPanelProvider: React.FC<
   );
 
   return (
-    <WorkspacesPanelContext.Provider value={value}>
+    <ProjectsPanelContext.Provider value={value}>
       {children}
-    </WorkspacesPanelContext.Provider>
+    </ProjectsPanelContext.Provider>
   );
 };
 
-export const useWorkspacesPanelProvider = (): WorkspacesPanelProviderValue => {
-  const value = useContext(WorkspacesPanelContext);
+export const useProjectsPanelProvider = (): ProjectsPanelProviderValue => {
+  const value = useContext(ProjectsPanelContext);
   if (!value) {
     throw new Error(
-      'useWorkspacesPanelProvider must be used within a WorkspacesPanelProvider',
+      'useProjectsPanelProvider must be used within a ProjectsPanelProvider',
     );
   }
   return value;
 };
 
-export default WorkspacesPanelContext;
+export default ProjectsPanelContext;

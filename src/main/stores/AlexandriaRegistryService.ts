@@ -183,8 +183,8 @@ export class AlexandriaRegistryService {
       }
     }
 
-    // Register with optional remote URL
-    await this.outpostManager.registerRepository(name, path, remoteUrl);
+    // Register with optional remote URL (new API: path, remoteUrl, customName)
+    await this.outpostManager.registerRepository(path, remoteUrl, name);
 
     // Fetch and update GitHub metadata if it's a GitHub repo
     if (remoteUrl && remoteUrl.includes('github.com')) {

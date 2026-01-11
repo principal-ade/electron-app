@@ -40,7 +40,6 @@ import type { PrincipalAPI } from './PrincipalAPI';
 import type { FeedbackAPI } from './FeedbackAPI';
 import type { DocumentSearchAPI } from '../ipc/DocumentSearchIPC';
 import type { ObservabilityAPI } from './ObservabilityAPI';
-import type { RemoteAgentWindowAPI } from './RemoteAgentWindowAPI';
 import type { LocalhostDetectionAPI } from './LocalhostDetectionAPI';
 import type { GitHubArtifactAPI } from './GitHubArtifactAPI';
 
@@ -104,7 +103,6 @@ export interface MainProcessAPI {
   testDebug: TestDebugAPI;
   documentSearch: DocumentSearchAPI;
   observability: ObservabilityAPI;
-  remoteAgentWindow: RemoteAgentWindowAPI;
   localhostDetection: LocalhostDetectionAPI;
   githubArtifact: GitHubArtifactAPI;
 }

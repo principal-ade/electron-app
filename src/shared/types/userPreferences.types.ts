@@ -107,12 +107,6 @@ export interface UserPreferences {
   // Presence preferences
   presenceAutoConnect?: boolean; // Automatically connect to presence server on startup (default: true)
 
-  // Remote agent quick access buttons
-  remoteAgentButtons?: {
-    jules?: boolean;
-    codex?: boolean;
-  };
-
   // Titlebar button visibility
   titlebarButtons?: {
     theme?: boolean;

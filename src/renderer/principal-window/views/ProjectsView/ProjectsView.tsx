@@ -16,11 +16,11 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/type
 import { DoorClosed, FolderGit2, Folder, FolderOpen, Star, Hexagon } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuthState';
 import {
-  WorkspacesPanelProvider,
-  useWorkspacesPanelProvider,
-} from '../../../contexts/WorkspacesPanelContext';
+  ProjectsPanelProvider,
+  useProjectsPanelProvider,
+} from '../../../contexts/ProjectsPanelContext';
 import { usePanelPersistence } from '../../../hooks/usePanelPersistence';
-import { WorkspacesViewHeader } from './WorkspacesViewHeader';
+import { ProjectsViewHeader } from './ProjectsViewHeader';
 import { GitCloneModal } from '../../../components/GitCloneModal';
 import { CreateWorkspaceModal } from '../../../components/CreateWorkspaceModal';
 import { DeleteAlexandriaEntryModal } from '../../../panels/components/DeleteAlexandriaEntryModal';
@@ -37,9 +37,9 @@ import { CollectionRepositoriesPanel } from '../../../panels/CollectionRepositor
 // Type for middle panel view options
 export type MiddlePanelView = 'quality' | 'remote' | 'starred';
 
-const WorkspacesViewContent: React.FC = () => {
+const ProjectsViewContent: React.FC = () => {
   const { theme } = useTheme();
-  const { context, actions, events } = useWorkspacesPanelProvider();
+  const { context, actions, events } = useProjectsPanelProvider();
   const { isAuthenticated } = useAuth();
 
   // State for middle panel view selection
@@ -153,7 +153,7 @@ const WorkspacesViewContent: React.FC = () => {
         }
       } catch (error) {
         console.error(
-          '[WorkspacesView] Failed to remove from workspace:',
+          '[ProjectsView] Failed to remove from workspace:',
           error,
         );
         throw error;
@@ -217,7 +217,7 @@ const WorkspacesViewContent: React.FC = () => {
         } else {
           // Fallback to direct removal if we can't find the entry/workspace
           console.warn(
-            '[WorkspacesView] Could not find entry or workspace for removal modal, proceeding with direct removal',
+            '[ProjectsView] Could not find entry or workspace for removal modal, proceeding with direct removal',
           );
           await actions.removeRepositoryFromWorkspace?.(
             repositoryId,
@@ -234,7 +234,7 @@ const WorkspacesViewContent: React.FC = () => {
     const unsubscribe = events.on('github:clone-requested', (event) => {
       const { repository } = event.payload as { repository: GitHubRepository };
       console.info(
-        '[WorkspacesView] Clone requested for:',
+        '[ProjectsView] Clone requested for:',
         repository.full_name,
       );
 
@@ -252,7 +252,7 @@ const WorkspacesViewContent: React.FC = () => {
     const unsubscribe = events.on(
       'industry-theme.workspaces-list:create-workspace-requested',
       () => {
-        console.info('[WorkspacesView] Create workspace requested');
+        console.info('[ProjectsView] Create workspace requested');
         setIsCreateWorkspaceModalOpen(true);
       },
     );
@@ -262,7 +262,7 @@ const WorkspacesViewContent: React.FC = () => {
 
   // Use panel persistence for three-panel layout
   const panelState = usePanelPersistence({
-    viewKey: 'workspacesView',
+    viewKey: 'projectsView',
     defaultSizes: { left: 25, middle: 50, right: 25 },
     collapsed: { left: false, right: false },
     panelType: 'three-panel',
@@ -429,7 +429,7 @@ const WorkspacesViewContent: React.FC = () => {
         }}
       >
         {/* Header */}
-        <WorkspacesViewHeader
+        <ProjectsViewHeader
           middlePanelView={middlePanelView}
           onMiddlePanelViewChange={setMiddlePanelView}
           isAuthenticated={isAuthenticated}
@@ -517,15 +517,15 @@ const WorkspacesViewContent: React.FC = () => {
 };
 
 /**
- * WorkspacesView - Panel framework version of workspace management
+ * ProjectsView - Panel framework version of workspace management
  *
  * Uses @industry-theme/alexandria-panels for workspace and repository panels
  * with the ConfigurablePanelLayout for the three-panel layout.
  */
-export const WorkspacesView: React.FC = () => {
+export const ProjectsView: React.FC = () => {
   return (
-    <WorkspacesPanelProvider>
-      <WorkspacesViewContent />
-    </WorkspacesPanelProvider>
+    <ProjectsPanelProvider>
+      <ProjectsViewContent />
+    </ProjectsPanelProvider>
   );
 };

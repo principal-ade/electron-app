@@ -1,12 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ThemeDropdown } from './ThemeDropdown';
 import { ThemeCustomizationButton } from '../../../components/Titlebar/ThemeCustomizationButton';
 import { ViewSidebarControls } from '../ViewSidebarControls/ViewSidebarControls';
 import { PullMailbox } from '../PullMailbox';
-import { Bot } from 'lucide-react';
-import { remoteAgentService } from '../../../services/RemoteAgentService';
-import type { RemoteAgentConfig } from '../../../../shared/types/remoteAgent.types';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import type { UserPreferences } from '../../../../shared/types/userPreferences.types';
 
@@ -41,12 +38,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
   showRightSidebarControl = false,
 }) => {
   const [isMaximized, setIsMaximized] = useState(false);
-  const [openAgentIds, setOpenAgentIds] = useState<Set<string>>(new Set());
-  const [remoteAgentButtonVisibility, setRemoteAgentButtonVisibility] =
-    useState({
-      jules: false,
-      codex: false,
-    });
   const [showThemeButton, setShowThemeButton] = useState(true);
   const [showCustomizeButton, setShowCustomizeButton] = useState(true);
   const { theme, mode } = useTheme();
@@ -59,28 +50,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
     }
   }, []);
 
-  useEffect(() => {
-    const updateAgentIds = (agents: RemoteAgentConfig[]) => {
-      setOpenAgentIds(new Set(agents.map((agent) => agent.id)));
-    };
-
-    const unsubscribe = remoteAgentService.onAgentListChange(
-      (agents, _activeAgentId) => {
-        updateAgentIds(agents);
-      },
-    );
-
-    remoteAgentService
-      .listRemoteAgents()
-      .then(updateAgentIds)
-      .catch((error) => {
-        console.error('Failed to fetch remote agent list:', error);
-      });
-
-    return () => {
-      unsubscribe();
-    };
-  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -90,10 +59,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         return;
       }
 
-      setRemoteAgentButtonVisibility({
-        jules: preferences.remoteAgentButtons?.jules ?? false,
-        codex: preferences.remoteAgentButtons?.codex ?? false,
-      });
       setShowThemeButton(preferences.titlebarButtons?.theme ?? true);
       setShowCustomizeButton(preferences.titlebarButtons?.customize ?? true);
     };
@@ -125,45 +90,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
     mode === 'dark' && theme.modes?.dark?.accent
       ? theme.modes.dark.accent
       : theme.colors.accent;
-
-  const agentDefinitions = useMemo(
-    () => ({
-      jules: {
-        id: 'jules',
-        name: 'Jules',
-        url: 'https://jules.google.com',
-        buttonLabel: 'Jules',
-      },
-      chatgpt: {
-        id: 'chatgpt',
-        name: 'ChatGPT Codex',
-        url: 'https://chatgpt.com/codex',
-        buttonLabel: 'Codex',
-      },
-    }),
-    [],
-  );
-
-  const isAgentOpen = useCallback(
-    (agentId: string) => openAgentIds.has(agentId),
-    [openAgentIds],
-  );
-
-  const openRemoteAgent = useCallback(
-    async (type: 'jules' | 'chatgpt') => {
-      const config = agentDefinitions[type];
-
-      try {
-        await remoteAgentService.openRemoteAgent(config);
-      } catch (error) {
-        console.error(
-          `Error opening ${type === 'jules' ? 'Jules' : 'Codex'}:`,
-          error,
-        );
-      }
-    },
-    [agentDefinitions],
-  );
 
   // Static title - Principal Workspace
 
@@ -217,97 +143,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
           gap: '8px',
         }}
       >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            WebkitAppRegion:
-              'no-drag' as React.CSSProperties['WebkitAppRegion'],
-          }}
-        >
-          {remoteAgentButtonVisibility.jules && (
-            <button
-              onClick={() => openRemoteAgent('jules')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '6px 12px',
-                backgroundColor: theme.colors.primary,
-                color: theme.colors.background,
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '13px',
-                fontWeight: 500,
-                cursor: 'pointer',
-                opacity: isAgentOpen(agentDefinitions.jules.id) ? 0.85 : 1,
-                transition: 'opacity 0.2s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.opacity = '0.9';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = isAgentOpen(
-                  agentDefinitions.jules.id,
-                )
-                  ? '0.85'
-                  : '1';
-              }}
-              title={
-                isAgentOpen(agentDefinitions.jules.id)
-                  ? 'Focus the existing Jules remote agent window'
-                  : 'Open a Jules remote agent window'
-              }
-            >
-              <Bot size={14} />
-              {isAgentOpen(agentDefinitions.jules.id)
-                ? 'Focus Jules'
-                : agentDefinitions.jules.buttonLabel}
-            </button>
-          )}
-
-          {remoteAgentButtonVisibility.codex && (
-            <button
-              onClick={() => openRemoteAgent('chatgpt')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '6px 12px',
-                backgroundColor: theme.colors.secondary,
-                color: theme.colors.background,
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '13px',
-                fontWeight: 500,
-                cursor: 'pointer',
-                opacity: isAgentOpen(agentDefinitions.chatgpt.id) ? 0.85 : 1,
-                transition: 'opacity 0.2s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.opacity = '0.9';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = isAgentOpen(
-                  agentDefinitions.chatgpt.id,
-                )
-                  ? '0.85'
-                  : '1';
-              }}
-              title={
-                isAgentOpen(agentDefinitions.chatgpt.id)
-                  ? 'Focus the existing Codex remote agent window'
-                  : 'Open a Codex remote agent window'
-              }
-            >
-              <Bot size={14} />
-              {isAgentOpen(agentDefinitions.chatgpt.id)
-                ? 'Focus Codex'
-                : agentDefinitions.chatgpt.buttonLabel}
-            </button>
-          )}
-        </div>
         <PullMailbox />
         {showThemeButton && <ThemeDropdown />}
         {showCustomizeButton && <ThemeCustomizationButton />}
