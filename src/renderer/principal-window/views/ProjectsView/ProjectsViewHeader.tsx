@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { FolderOpen, Github, Star, Hexagon } from 'lucide-react';
+import { FolderOpen, Github, Star, Folder } from 'lucide-react';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
-import type { MiddlePanelView } from './ProjectsView';
+import type { LeftPanelView } from './ProjectsView';
 
 interface ProjectsViewHeaderProps {
-  middlePanelView: MiddlePanelView;
-  onMiddlePanelViewChange: (view: MiddlePanelView) => void;
+  leftPanelView: LeftPanelView;
+  onLeftPanelViewChange: (view: LeftPanelView) => void;
   isAuthenticated: boolean;
 }
 
 export const ProjectsViewHeader: React.FC<ProjectsViewHeaderProps> = ({
-  middlePanelView,
-  onMiddlePanelViewChange,
+  leftPanelView,
+  onLeftPanelViewChange,
   isAuthenticated,
 }) => {
   const { theme } = useTheme();
@@ -95,9 +95,70 @@ export const ProjectsViewHeader: React.FC<ProjectsViewHeaderProps> = ({
         flexShrink: 0,
       }}
     >
-      {/* Left: Home Folder */}
+      {/* Left: Panel View Toggle Buttons */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <button
+          onClick={() => onLeftPanelViewChange('local')}
+          style={getButtonStyle(leftPanelView === 'local')}
+          onMouseEnter={(e) => {
+            if (leftPanelView !== 'local') {
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (leftPanelView !== 'local') {
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundSecondary;
+            }
+          }}
+        >
+          <Folder size={16} />
+          Local
+        </button>
+        <button
+          onClick={() => onLeftPanelViewChange('remote')}
+          style={getButtonStyle(leftPanelView === 'remote')}
+          onMouseEnter={(e) => {
+            if (leftPanelView !== 'remote') {
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (leftPanelView !== 'remote') {
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundSecondary;
+            }
+          }}
+        >
+          <Github size={16} />
+          Remote
+        </button>
+        <button
+          onClick={() => onLeftPanelViewChange('starred')}
+          style={getButtonStyle(leftPanelView === 'starred')}
+          onMouseEnter={(e) => {
+            if (leftPanelView !== 'starred') {
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (leftPanelView !== 'starred') {
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundSecondary;
+            }
+          }}
+        >
+          <Star size={16} />
+          Starred
+        </button>
+      </div>
+
+      {/* Right: Home Folder */}
       <div
-        style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}
+        style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, justifyContent: 'flex-end' }}
       >
         <span
           style={{
@@ -143,77 +204,6 @@ export const ProjectsViewHeader: React.FC<ProjectsViewHeaderProps> = ({
           </span>
         </div>
       </div>
-
-      {/* Center: Middle Panel Toggle Buttons */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <button
-          onClick={() => onMiddlePanelViewChange('quality')}
-          style={getButtonStyle(middlePanelView === 'quality')}
-          onMouseEnter={(e) => {
-            if (middlePanelView !== 'quality') {
-              e.currentTarget.style.backgroundColor =
-                theme.colors.backgroundTertiary;
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (middlePanelView !== 'quality') {
-              e.currentTarget.style.backgroundColor =
-                theme.colors.backgroundSecondary;
-            }
-          }}
-        >
-          <Hexagon size={16} />
-          Quality
-        </button>
-        <button
-          onClick={() => onMiddlePanelViewChange('remote')}
-          style={getButtonStyle(middlePanelView === 'remote')}
-          onMouseEnter={(e) => {
-            if (middlePanelView !== 'remote') {
-              e.currentTarget.style.backgroundColor =
-                theme.colors.backgroundTertiary;
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (middlePanelView !== 'remote') {
-              e.currentTarget.style.backgroundColor =
-                theme.colors.backgroundSecondary;
-            }
-          }}
-        >
-          <Github size={16} />
-          Remote
-        </button>
-        <button
-          onClick={() => onMiddlePanelViewChange('starred')}
-          style={getButtonStyle(middlePanelView === 'starred')}
-          onMouseEnter={(e) => {
-            if (middlePanelView !== 'starred') {
-              e.currentTarget.style.backgroundColor =
-                theme.colors.backgroundTertiary;
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (middlePanelView !== 'starred') {
-              e.currentTarget.style.backgroundColor =
-                theme.colors.backgroundSecondary;
-            }
-          }}
-        >
-          <Star size={16} />
-          Starred
-        </button>
-      </div>
-
-      {/* Right: Empty space for balance */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'flex-end',
-          flex: 1,
-        }}
-      />
     </div>
   );
 };

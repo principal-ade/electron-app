@@ -10,10 +10,9 @@ import {
   GitHubProjectsPanel,
   UserCollectionsPanel,
 } from '@industry-theme/alexandria-panels';
-import { RepositoryQualityGridPanel } from '@principal-ade/code-quality-panels';
 import type { GitHubRepository } from '@industry-theme/alexandria-panels';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import { DoorClosed, FolderGit2, Folder, FolderOpen, Star, Hexagon } from 'lucide-react';
+import { DoorClosed, FolderGit2, Folder, FolderOpen, Star } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuthState';
 import {
   ProjectsPanelProvider,
@@ -30,21 +29,22 @@ import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 import { WorkspaceService } from '../../../main-process-api/WorkspaceService';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 import { CollectionRepositoriesPanel } from '../../../panels/CollectionRepositoriesPanel';
+import { ProjectInfoPanel } from '../../../panels/ProjectInfoPanel';
 
 /**
  * Inner content component that uses the panel context
  */
-// Type for middle panel view options
-export type MiddlePanelView = 'quality' | 'remote' | 'starred';
+// Type for left panel view options
+export type LeftPanelView = 'local' | 'remote' | 'starred';
 
 const ProjectsViewContent: React.FC = () => {
   const { theme } = useTheme();
   const { context, actions, events } = useProjectsPanelProvider();
   const { isAuthenticated } = useAuth();
 
-  // State for middle panel view selection
-  const [middlePanelView, setMiddlePanelView] =
-    useState<MiddlePanelView>('quality');
+  // State for left panel view selection
+  const [leftPanelView, setLeftPanelView] =
+    useState<LeftPanelView>('local');
 
   // State for clone modal
   const [isCloneModalOpen, setIsCloneModalOpen] = useState(false);
@@ -264,7 +264,7 @@ const ProjectsViewContent: React.FC = () => {
   const panelState = usePanelPersistence({
     viewKey: 'projectsView',
     defaultSizes: { left: 25, middle: 50, right: 25 },
-    collapsed: { left: false, right: false },
+    collapsed: { left: false, right: true },
     panelType: 'three-panel',
   });
 
@@ -311,11 +311,11 @@ const ProjectsViewContent: React.FC = () => {
         ),
       },
       {
-        id: 'repository-quality-grid',
-        label: 'Quality',
-        icon: <Hexagon size={16} />,
+        id: 'project-info',
+        label: 'Project Info',
+        icon: <FolderGit2 size={16} />,
         content: (
-          <RepositoryQualityGridPanel
+          <ProjectInfoPanel
             context={context}
             actions={actions}
             events={events}
@@ -386,15 +386,9 @@ const ProjectsViewContent: React.FC = () => {
 
   // Define layout configuration
   const layout = useMemo(() => {
-    // Left panel has local projects, collections (if authenticated), and workspaces
-    // GitHub panels are accessed via middle panel toggle buttons
-    const leftPanels = isAuthenticated
-      ? ['local-projects', 'user-collections', 'workspaces-list']
-      : ['local-projects', 'workspaces-list'];
-
-    // Map middle panel view to panel id
-    const middlePanelMap: Record<MiddlePanelView, string> = {
-      quality: 'repository-quality-grid',
+    // Map left panel view to panel id
+    const leftPanelMap: Record<LeftPanelView, string> = {
+      local: 'local-projects',
       remote: 'github-projects',
       starred: 'github-starred',
     };
@@ -405,18 +399,11 @@ const ProjectsViewContent: React.FC = () => {
       : 'workspace-repositories';
 
     return {
-      left: {
-        type: 'tabs' as const,
-        panels: leftPanels,
-        config: {
-          defaultActiveTab: 0, // Default to 'local-projects' (always at index 0)
-          tabPosition: 'top' as const,
-        },
-      },
-      middle: middlePanelMap[middlePanelView],
+      left: leftPanelMap[leftPanelView],
+      middle: 'project-info',
       right: rightPanel,
     };
-  }, [middlePanelView, selectedCollection, isAuthenticated]);
+  }, [leftPanelView, selectedCollection, isAuthenticated]);
 
   return (
     <>
@@ -430,8 +417,8 @@ const ProjectsViewContent: React.FC = () => {
       >
         {/* Header */}
         <ProjectsViewHeader
-          middlePanelView={middlePanelView}
-          onMiddlePanelViewChange={setMiddlePanelView}
+          leftPanelView={leftPanelView}
+          onLeftPanelViewChange={setLeftPanelView}
           isAuthenticated={isAuthenticated}
         />
 

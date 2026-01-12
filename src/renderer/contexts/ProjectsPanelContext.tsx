@@ -78,6 +78,8 @@ interface ProjectsPanelActions
   ) => Promise<void>;
   // Track a discovered repository (add to Alexandria)
   trackRepository?: (name: string, path: string) => Promise<void>;
+  // Select a repository without opening a new window (for ProjectInfoPanel)
+  selectRepository?: (entryOrPath: AlexandriaEntry | string) => Promise<void>;
 }
 
 /**
@@ -130,6 +132,21 @@ export const ProjectsPanelProvider: React.FC<
   // State for selected collection
   const [selectedCollection, setSelectedCollection] =
     useState<Collection | null>(null);
+
+  // State for selected repository (for ProjectInfoPanel)
+  const [selectedRepository, setSelectedRepository] =
+    useState<AlexandriaEntry | null>(null);
+
+  // State for git status of selected repository
+  const [gitStatus, setGitStatus] = useState<{
+    branch?: string;
+    staged?: string[];
+    unstaged?: string[];
+    untracked?: string[];
+    ahead?: number;
+    behind?: number;
+  } | null>(null);
+  const [gitStatusLoading, setGitStatusLoading] = useState(false);
 
   // State for workspace repositories
   const [workspaceRepositories, setWorkspaceRepositories] = useState<
@@ -229,6 +246,45 @@ export const ProjectsPanelProvider: React.FC<
 
     fetchWorkspaces();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch git status when selected repository changes
+  useEffect(() => {
+    const fetchGitStatus = async () => {
+      if (!selectedRepository) {
+        setGitStatus(null);
+        return;
+      }
+
+      setGitStatusLoading(true);
+      try {
+        const status = await RepositoryMonitoringService.getGitStatus(
+          selectedRepository.path,
+        );
+        if (status) {
+          setGitStatus({
+            branch: status.branch,
+            staged: status.staged || [],
+            unstaged: status.unstaged || [],
+            untracked: status.untracked || [],
+            ahead: status.ahead,
+            behind: status.behind,
+          });
+        } else {
+          setGitStatus(null);
+        }
+      } catch (error) {
+        console.error(
+          '[ProjectsPanelProvider] Failed to fetch git status:',
+          error,
+        );
+        setGitStatus(null);
+      } finally {
+        setGitStatusLoading(false);
+      }
+    };
+
+    void fetchGitStatus();
+  }, [selectedRepository]);
 
   // Fetch repositories when selected workspace changes
   useEffect(() => {
@@ -706,6 +762,22 @@ export const ProjectsPanelProvider: React.FC<
     return unsubscribe;
   }, [events]);
 
+  // Listen for repository:selected events from LocalProjectsPanel to select repository for ProjectInfoPanel
+  useEffect(() => {
+    const unsubscribe = events.on<{ entry: AlexandriaEntry }>(
+      'industry-theme.local-projects:repository-selected',
+      (event) => {
+        const entry = event.payload?.entry;
+        if (entry) {
+          console.info('[ProjectsPanelProvider] Repository selected:', entry.name);
+          setSelectedRepository(entry);
+        }
+      },
+    );
+
+    return unsubscribe;
+  }, [events]);
+
   // Listen for repository:opened events to open dev workspace
   useEffect(() => {
     const unsubscribe = events.on('repository:opened', (event) => {
@@ -1001,6 +1073,46 @@ export const ProjectsPanelProvider: React.FC<
             refresh: fetchCollections,
           },
         ],
+        [
+          'git',
+          {
+            scope: 'repository' as const,
+            name: 'git',
+            data: gitStatus,
+            loading: gitStatusLoading,
+            error: null,
+            refresh: async () => {
+              if (selectedRepository) {
+                setGitStatusLoading(true);
+                try {
+                  const status = await RepositoryMonitoringService.getGitStatus(
+                    selectedRepository.path,
+                  );
+                  if (status) {
+                    setGitStatus({
+                      branch: status.branch,
+                      staged: status.staged || [],
+                      unstaged: status.unstaged || [],
+                      untracked: status.untracked || [],
+                      ahead: status.ahead,
+                      behind: status.behind,
+                    });
+                  } else {
+                    setGitStatus(null);
+                  }
+                } catch (error) {
+                  console.error(
+                    '[ProjectsPanelProvider] Failed to refresh git status:',
+                    error,
+                  );
+                  setGitStatus(null);
+                } finally {
+                  setGitStatusLoading(false);
+                }
+              }
+            },
+          },
+        ],
       ]) as Map<string, DataSlice>,
     [
       workspaces,
@@ -1032,6 +1144,9 @@ export const ProjectsPanelProvider: React.FC<
       collectionsGitHubRepoExists,
       collectionsGitHubRepoUrl,
       selectedCollection,
+      selectedRepository,
+      gitStatus,
+      gitStatusLoading,
     ],
   );
 
@@ -1314,6 +1429,38 @@ export const ProjectsPanelProvider: React.FC<
         });
       },
 
+      // selectRepository - Sets the current repository without opening a new window
+      selectRepository: async (entryOrPath: AlexandriaEntry | string) => {
+        let entry: AlexandriaEntry | undefined;
+
+        if (typeof entryOrPath === 'string') {
+          // Find the local repo entry by path
+          entry = localRepositories.find((r) => r.path === entryOrPath);
+          if (!entry) {
+            console.error(
+              '[ProjectsPanelProvider] Could not find repository at path:',
+              entryOrPath,
+            );
+            return;
+          }
+        } else {
+          entry = entryOrPath;
+        }
+
+        console.info(
+          '[ProjectsPanelProvider] Selecting repository:',
+          entry.name,
+        );
+
+        setSelectedRepository(entry);
+        events.emit({
+          type: 'repository:selected',
+          source: 'projects-view',
+          timestamp: Date.now(),
+          payload: { repositoryId: entry.name, repository: entry },
+        });
+      },
+
       // openRepository for GitHub panels (takes localPath string)
       // Note: This overloads the existing openRepository that takes AlexandriaEntry
       // The GitHub panels call this with a path string, so we find the matching entry
@@ -1338,6 +1485,9 @@ export const ProjectsPanelProvider: React.FC<
           '[ProjectsPanelProvider] Opening repository:',
           entry.name,
         );
+
+        // Also select the repository for the info panel
+        setSelectedRepository(entry);
 
         // Update lastOpenedAt timestamp
         try {
@@ -1568,7 +1718,12 @@ export const ProjectsPanelProvider: React.FC<
               path: selectedWorkspace.suggestedClonePath || '',
             }
           : undefined,
-        repository: undefined,
+        repository: selectedRepository
+          ? {
+              name: selectedRepository.name,
+              path: selectedRepository.path,
+            }
+          : undefined,
       },
       slices,
       adapters: {},
@@ -1620,7 +1775,7 @@ export const ProjectsPanelProvider: React.FC<
       selectedCollection,
       setSelectedCollection,
     }),
-    [slices, selectedWorkspace, selectedCollection],
+    [slices, selectedWorkspace, selectedCollection, selectedRepository],
   );
 
   // Combine into provider value

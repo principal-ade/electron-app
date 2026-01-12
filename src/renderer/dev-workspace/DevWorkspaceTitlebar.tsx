@@ -34,18 +34,18 @@ import type { PackageLayer } from '@principal-ai/codebase-composition';
 
 // Available panels for Dev workspace
 const AVAILABLE_PANELS: PanelOption[] = [
-  { id: 'agentsList', label: 'Agents List' },
+  { id: 'agentsList', label: 'Agents' },
   { id: 'principalView', label: 'Architecture' },
   { id: 'codeQuality', label: 'Code Quality' },
   { id: 'docs', label: 'Documentation' },
   { id: 'executionViewer', label: 'Execution Viewer' },
   { id: 'fileCity', label: 'File City' },
   { id: 'gitChanges', label: 'File Tree' },
-  { id: 'kanban', label: 'Kanban' },
+  { id: 'kanban', label: 'Backlog' },
   { id: 'localhostBrowser', label: 'Localhost Browser' },
   { id: 'localProjects', label: 'Local Projects' },
   { id: 'packageComposition', label: 'Package Composition' },
-  { id: 'skillsList', label: 'Skills List' },
+  { id: 'skillsList', label: 'Skills' },
   { id: 'terminal', label: 'Terminal' },
   { id: 'traceViewer', label: 'Trace Viewer' },
 ];
