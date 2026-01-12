@@ -387,7 +387,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
           <div>
             <h2
               style={{
-                fontSize: '24px',
+                fontSize: '20px',
                 fontWeight: 600,
                 margin: 0,
                 fontFamily: theme.fonts.heading,
@@ -396,7 +396,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                 gap: '8px',
               }}
             >
-              <Activity size={24} style={{ color: theme.colors.primary }} />
+              <Activity size={20} style={{ color: theme.colors.primary }} />
               Repository Monitoring
             </h2>
             <p

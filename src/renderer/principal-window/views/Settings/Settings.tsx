@@ -43,10 +43,11 @@ export const Settings: React.FC = () => {
           gap: '8px',
           padding: '20px 24px',
           borderBottom: `1px solid ${theme.colors.border}`,
+          backgroundColor: theme.colors.backgroundSecondary,
           flexShrink: 0,
         }}
       >
-        <SettingsIcon size={20} color={theme.colors.text} />
+        <SettingsIcon size={20} color={theme.colors.primary} />
         <h2 style={{ fontSize: '20px', fontWeight: 600, margin: 0 }}>
           Settings
         </h2>

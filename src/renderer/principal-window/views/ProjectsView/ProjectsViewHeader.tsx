@@ -90,8 +90,10 @@ export const ProjectsViewHeader: React.FC<ProjectsViewHeaderProps> = ({
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: '8px',
-        padding: '20px 24px',
+        padding: '0 24px',
+        height: '64px',
         borderBottom: `1px solid ${theme.colors.border}`,
+        backgroundColor: theme.colors.backgroundSecondary,
         flexShrink: 0,
       }}
     >

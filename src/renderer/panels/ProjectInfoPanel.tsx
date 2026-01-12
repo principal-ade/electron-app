@@ -98,10 +98,10 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
           size={48}
           style={{ marginBottom: spacing.md, opacity: 0.5 }}
         />
-        <p style={{ margin: 0, fontSize: '14px' }}>
+        <p style={{ margin: 0, fontSize: theme.fontSizes[2] }}>
           No project selected
         </p>
-        <p style={{ margin: `${spacing.xs}px 0 0`, fontSize: '12px' }}>
+        <p style={{ margin: `${spacing.xs}px 0 0`, fontSize: theme.fontSizes[2] }}>
           Select a project from the left panel to view its information
         </p>
       </div>
@@ -113,6 +113,9 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
   const unstagedCount = gitData?.unstaged?.length || 0;
   const untrackedCount = gitData?.untracked?.length || 0;
   const totalChanges = stagedCount + unstagedCount + untrackedCount;
+  const ahead = gitData?.ahead || 0;
+  const behind = gitData?.behind || 0;
+  const isSynced = ahead === 0 && behind === 0;
 
   return (
     <div
@@ -139,7 +142,7 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
           <h3
             style={{
               margin: 0,
-              fontSize: '16px',
+              fontSize: theme.fontSizes[3],
               fontWeight: 600,
               color: theme.colors.text,
             }}
@@ -189,7 +192,7 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
           <h4
             style={{
               margin: `0 0 ${spacing.sm}px 0`,
-              fontSize: '14px',
+              fontSize: theme.fontSizes[2],
               fontWeight: 600,
               color: theme.colors.text,
             }}
@@ -200,7 +203,7 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
             <div>
               <span
                 style={{
-                  fontSize: '12px',
+                  fontSize: theme.fontSizes[2],
                   fontWeight: 500,
                   color: theme.colors.textSecondary,
                 }}
@@ -209,7 +212,7 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
               </span>{' '}
               <span
                 style={{
-                  fontSize: '12px',
+                  fontSize: theme.fontSizes[2],
                   color: theme.colors.text,
                 }}
               >
@@ -219,7 +222,7 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
             <div>
               <span
                 style={{
-                  fontSize: '12px',
+                  fontSize: theme.fontSizes[2],
                   fontWeight: 500,
                   color: theme.colors.textSecondary,
                 }}
@@ -228,7 +231,7 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
               </span>{' '}
               <code
                 style={{
-                  fontSize: '11px',
+                  fontSize: theme.fontSizes[1],
                   fontFamily: theme.fonts.monospace,
                   color: theme.colors.textSecondary,
                   backgroundColor: theme.colors.background,
@@ -265,7 +268,7 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
               <h4
                 style={{
                   margin: 0,
-                  fontSize: '14px',
+                  fontSize: theme.fontSizes[2],
                   fontWeight: 600,
                   color: theme.colors.text,
                 }}
@@ -278,7 +281,7 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
               <p
                 style={{
                   margin: 0,
-                  fontSize: '12px',
+                  fontSize: theme.fontSizes[2],
                   color: theme.colors.textSecondary,
                 }}
               >
@@ -288,122 +291,177 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
               <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
                 {/* Branch */}
                 {gitData.branch && (
-                  <div>
-                    <span
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
+                    <div>
+                      <span
+                        style={{
+                          fontSize: theme.fontSizes[2],
+                          fontWeight: 500,
+                          color: theme.colors.textSecondary,
+                        }}
+                      >
+                        Branch:
+                      </span>{' '}
+                      <code
+                        style={{
+                          fontSize: theme.fontSizes[1],
+                          fontFamily: theme.fonts.monospace,
+                          color: theme.colors.primary,
+                          backgroundColor: theme.colors.background,
+                          padding: '2px 6px',
+                          borderRadius: '2px',
+                        }}
+                      >
+                        {gitData.branch}
+                      </code>
+                    </div>
+                    {/* Sync status */}
+                    <div
                       style={{
-                        fontSize: '12px',
-                        fontWeight: 500,
-                        color: theme.colors.textSecondary,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: spacing.xs,
+                        fontSize: theme.fontSizes[1],
                       }}
                     >
-                      Branch:
-                    </span>{' '}
-                    <code
-                      style={{
-                        fontSize: '11px',
-                        fontFamily: theme.fonts.monospace,
-                        color: theme.colors.primary,
-                        backgroundColor: theme.colors.background,
-                        padding: '2px 6px',
-                        borderRadius: '2px',
-                      }}
-                    >
-                      {gitData.branch}
-                    </code>
+                      {isSynced ? (
+                        <>
+                          <div
+                            style={{
+                              width: '6px',
+                              height: '6px',
+                              borderRadius: '50%',
+                              backgroundColor: theme.colors.success,
+                            }}
+                          />
+                          <span style={{ color: theme.colors.textSecondary }}>
+                            Up to date with remote
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          {ahead > 0 && (
+                            <span
+                              style={{
+                                color: theme.colors.info,
+                                fontWeight: 500,
+                              }}
+                            >
+                              ↑ {ahead} {ahead === 1 ? 'commit' : 'commits'} ahead
+                            </span>
+                          )}
+                          {ahead > 0 && behind > 0 && (
+                            <span style={{ color: theme.colors.textSecondary }}>•</span>
+                          )}
+                          {behind > 0 && (
+                            <span
+                              style={{
+                                color: theme.colors.warning,
+                                fontWeight: 500,
+                              }}
+                            >
+                              ↓ {behind} {behind === 1 ? 'commit' : 'commits'} behind
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 )}
 
-                {/* Changes Summary */}
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(3, 1fr)',
-                    gap: spacing.xs,
-                    marginTop: spacing.xs,
-                  }}
-                >
+                {/* Changes Summary - only show if there are changes */}
+                {totalChanges > 0 && (
                   <div
                     style={{
-                      padding: spacing.xs,
-                      backgroundColor: theme.colors.background,
-                      borderRadius: borderRadius,
-                      textAlign: 'center',
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(3, 1fr)',
+                      gap: spacing.xs,
+                      marginTop: spacing.xs,
                     }}
                   >
                     <div
                       style={{
-                        fontSize: '18px',
-                        fontWeight: 600,
-                        color: theme.colors.success,
+                        padding: spacing.xs,
+                        backgroundColor: theme.colors.background,
+                        borderRadius: borderRadius,
+                        textAlign: 'center',
                       }}
                     >
-                      {stagedCount}
+                      <div
+                        style={{
+                          fontSize: theme.fontSizes[4],
+                          fontWeight: 600,
+                          color: theme.colors.success,
+                        }}
+                      >
+                        {stagedCount}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: theme.fontSizes[1],
+                          color: theme.colors.textSecondary,
+                          marginTop: '2px',
+                        }}
+                      >
+                        Staged
+                      </div>
                     </div>
                     <div
                       style={{
-                        fontSize: '10px',
-                        color: theme.colors.textSecondary,
-                        marginTop: '2px',
+                        padding: spacing.xs,
+                        backgroundColor: theme.colors.background,
+                        borderRadius: borderRadius,
+                        textAlign: 'center',
                       }}
                     >
-                      Staged
+                      <div
+                        style={{
+                          fontSize: theme.fontSizes[4],
+                          fontWeight: 600,
+                          color: theme.colors.warning,
+                        }}
+                      >
+                        {unstagedCount}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: theme.fontSizes[1],
+                          color: theme.colors.textSecondary,
+                          marginTop: '2px',
+                        }}
+                      >
+                        Modified
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        padding: spacing.xs,
+                        backgroundColor: theme.colors.background,
+                        borderRadius: borderRadius,
+                        textAlign: 'center',
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: theme.fontSizes[4],
+                          fontWeight: 600,
+                          color: theme.colors.info,
+                        }}
+                      >
+                        {untrackedCount}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: theme.fontSizes[1],
+                          color: theme.colors.textSecondary,
+                          marginTop: '2px',
+                        }}
+                      >
+                        Untracked
+                      </div>
                     </div>
                   </div>
-                  <div
-                    style={{
-                      padding: spacing.xs,
-                      backgroundColor: theme.colors.background,
-                      borderRadius: borderRadius,
-                      textAlign: 'center',
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: '18px',
-                        fontWeight: 600,
-                        color: theme.colors.warning,
-                      }}
-                    >
-                      {unstagedCount}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: '10px',
-                        color: theme.colors.textSecondary,
-                        marginTop: '2px',
-                      }}
-                    >
-                      Modified
-                    </div>
-                  </div>
-                  <div
-                    style={{
-                      padding: spacing.xs,
-                      backgroundColor: theme.colors.background,
-                      borderRadius: borderRadius,
-                      textAlign: 'center',
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: '18px',
-                        fontWeight: 600,
-                        color: theme.colors.info,
-                      }}
-                    >
-                      {untrackedCount}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: '10px',
-                        color: theme.colors.textSecondary,
-                        marginTop: '2px',
-                      }}
-                    >
-                      Untracked
-                    </div>
-                  </div>
-                </div>
+                )}
 
                 {/* Status message */}
                 {totalChanges === 0 ? (
@@ -428,7 +486,7 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
                     />
                     <span
                       style={{
-                        fontSize: '11px',
+                        fontSize: theme.fontSizes[1],
                         color: theme.colors.textSecondary,
                       }}
                     >
@@ -450,7 +508,7 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
                     <AlertCircle size={12} color={theme.colors.warning} />
                     <span
                       style={{
-                        fontSize: '11px',
+                        fontSize: theme.fontSizes[1],
                         color: theme.colors.textSecondary,
                       }}
                     >
@@ -463,7 +521,7 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
               <p
                 style={{
                   margin: 0,
-                  fontSize: '12px',
+                  fontSize: theme.fontSizes[2],
                   color: theme.colors.textSecondary,
                 }}
               >

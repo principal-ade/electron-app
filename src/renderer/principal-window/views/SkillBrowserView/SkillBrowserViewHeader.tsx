@@ -138,18 +138,20 @@ export const SkillBrowserViewHeader: React.FC<SkillBrowserViewHeaderProps> = ({
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: '12px',
-          padding: '20px 24px',
+          padding: '0 24px',
+          height: '64px',
           borderBottom: `1px solid ${theme.colors.border}`,
+          backgroundColor: theme.colors.backgroundSecondary,
           flexShrink: 0,
         }}
       >
       {/* Left: Title */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <Zap size={20} color={theme.colors.text} />
+        <Zap size={20} color={theme.colors.primary} />
         <h2
           style={{
-            fontSize: theme.fontSizes[4],
-            fontWeight: theme.fontWeights.semibold,
+            fontSize: '20px',
+            fontWeight: 600,
             margin: 0,
           }}
         >

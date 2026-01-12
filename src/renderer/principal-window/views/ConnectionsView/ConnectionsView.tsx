@@ -501,8 +501,6 @@ export const ConnectionsView: React.FC = () => {
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        padding: '16px',
-        gap: '12px',
       }}
     >
       {/* Header */}
@@ -511,12 +509,15 @@ export const ConnectionsView: React.FC = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '16px',
+          padding: '0 24px',
+          height: '64px',
+          borderBottom: `1px solid ${borderColor}`,
+          backgroundColor: theme.colors.backgroundSecondary,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Radio size={24} color={theme.colors.primary} />
-          <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: textColor }}>
+          <Radio size={20} color={theme.colors.primary} />
+          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 600, color: textColor }}>
             Socket Connections
           </h2>
         </div>
@@ -580,6 +581,7 @@ export const ConnectionsView: React.FC = () => {
           gridTemplateColumns: '1fr 1fr',
           gap: '16px',
           minHeight: 0,
+          padding: '16px',
         }}
       >
         {/* LEFT SIDE: Desktop App Activity */}

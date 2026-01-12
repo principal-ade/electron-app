@@ -9,6 +9,7 @@ import {
   GitSyncPanelProvider,
   useGitSyncPanelProvider,
 } from '../../../contexts/GitSyncPanelContext';
+import { usePanelPersistence } from '../../../hooks/usePanelPersistence';
 
 /**
  * Inner content component that uses the panel context
@@ -17,10 +18,15 @@ const GitSyncViewContent: React.FC = () => {
   const { theme, mode } = useTheme();
   const { context, actions, events } = useGitSyncPanelProvider();
 
-  // Fixed panel sizes - no persistence needed for this view
-  const panelSizes = useMemo(() => ({ left: 0, middle: 50, right: 50 }), []);
-  const minSizes = useMemo(() => ({ left: 0, middle: 300, right: 280 }), []);
-  const collapsed = useMemo(() => ({ left: true, right: false }), []);
+  // Use panel persistence for saving panel sizes
+  const panelState = usePanelPersistence({
+    viewKey: 'gitSyncView',
+    defaultSizes: { left: 30, right: 70 },
+    collapsed: { left: false },
+    panelType: 'two-panel',
+  });
+
+  const minSizes = useMemo(() => ({ left: 280, right: 300 }), []);
   const collapsiblePanels = useMemo(() => ({ left: false, right: false }), []);
 
   const borderColor =
@@ -60,11 +66,10 @@ const GitSyncViewContent: React.FC = () => {
     [context, actions, events],
   );
 
-  // Define layout configuration - network in middle, user profile on right
+  // Define layout configuration - network on left (30%), user profile on right (70%)
   const layout = useMemo(
     () => ({
-      left: [],
-      middle: 'github-social',
+      left: 'github-social',
       right: 'user-profile',
     }),
     [],
@@ -86,12 +91,14 @@ const GitSyncViewContent: React.FC = () => {
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: '8px',
-          padding: '20px 24px',
+          padding: '0 24px',
+          height: '64px',
           borderBottom: `1px solid ${borderColor}`,
+          backgroundColor: theme.colors.backgroundSecondary,
           flexShrink: 0,
         }}
       >
-        <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: theme.colors.text }}>
+        <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 600, color: theme.colors.text }}>
           Network
         </h2>
       </div>
@@ -101,9 +108,12 @@ const GitSyncViewContent: React.FC = () => {
         panels={panels}
         layout={layout}
         collapsiblePanels={collapsiblePanels}
-        defaultSizes={panelSizes}
+        defaultSizes={panelState.sizes}
         minSizes={minSizes}
-        collapsed={collapsed}
+        collapsed={panelState.collapsed}
+        onPanelResize={panelState.handlePanelResize}
+        onLeftCollapseComplete={panelState.handleLeftCollapseComplete}
+        onLeftExpandComplete={panelState.handleLeftExpandComplete}
         style={{ flex: 1, width: '100%', minHeight: 0 }}
         theme={theme}
         showCollapseButtons={false}

@@ -257,15 +257,15 @@ export const ProjectsPanelProvider: React.FC<
 
       setGitStatusLoading(true);
       try {
-        const status = await RepositoryMonitoringService.getGitStatus(
+        const status = await RepositoryMonitoringService.getGitStatusWithFiles(
           selectedRepository.path,
         );
         if (status) {
           setGitStatus({
             branch: status.branch,
-            staged: status.staged || [],
-            unstaged: status.unstaged || [],
-            untracked: status.untracked || [],
+            staged: status.stagedFiles || [],
+            unstaged: status.modifiedFiles || [],
+            untracked: status.untrackedFiles || [],
             ahead: status.ahead,
             behind: status.behind,
           });
@@ -1085,15 +1085,15 @@ export const ProjectsPanelProvider: React.FC<
               if (selectedRepository) {
                 setGitStatusLoading(true);
                 try {
-                  const status = await RepositoryMonitoringService.getGitStatus(
+                  const status = await RepositoryMonitoringService.getGitStatusWithFiles(
                     selectedRepository.path,
                   );
                   if (status) {
                     setGitStatus({
                       branch: status.branch,
-                      staged: status.staged || [],
-                      unstaged: status.unstaged || [],
-                      untracked: status.untracked || [],
+                      staged: status.stagedFiles || [],
+                      unstaged: status.modifiedFiles || [],
+                      untracked: status.untrackedFiles || [],
                       ahead: status.ahead,
                       behind: status.behind,
                     });

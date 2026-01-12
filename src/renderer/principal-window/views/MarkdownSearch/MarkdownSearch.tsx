@@ -160,7 +160,7 @@ export const MarkdownSearch: React.FC = () => {
     >
       {/* Header */}
       <div
-        className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0"
+        className="flex items-center justify-between px-6 py-5 border-b flex-shrink-0"
         style={{
           borderColor: theme.colors.border,
           backgroundColor: theme.colors.backgroundSecondary,
