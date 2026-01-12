@@ -161,10 +161,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     'xterm' | 'ghostty'
   >('xterm');
 
-  // Modal state for task detail
-  const [taskDetailModal, setTaskDetailModal] = useState<{
-    isOpen: boolean;
-    task: any;
+  // Unified modal state for detail panels
+  const [detailModal, setDetailModal] = useState<{
+    panelId: 'task-detail' | 'skillDetail' | 'agentDetail' | 'gitDiff' | 'fileEditor';
+    data: any;
   } | null>(null);
 
   useEffect(() => {
@@ -312,47 +312,173 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     return unsubscribe;
   }, [events, actions, layout, onLayoutChange, collapsed, onCollapsedChange]);
 
-  // Listen for task:selected events to show modal
+  // Listen for detail panel events to show modals
   useEffect(() => {
-    const unsubscribe = events.on('task:selected', (event) => {
-      console.log('[DevWorkspacePanelFramework] Received task:selected event:', event);
-      const payload = event.payload as { task: any; taskId: string };
-      setTaskDetailModal({
-        isOpen: true,
-        task: payload.task,
-      });
-    });
+    const unsubscribers = [
+      // Task detail
+      events.on('task:selected', (event) => {
+        // Ignore re-emitted events from modal to prevent loop
+        if (event.source === 'modal') return;
 
-    return unsubscribe;
+        console.log('[DevWorkspacePanelFramework] Received task:selected event:', event);
+        const payload = event.payload as { task: any; taskId: string };
+        setDetailModal({
+          panelId: 'task-detail',
+          data: payload.task,
+        });
+      }),
+      // Skill detail
+      events.on('skill:selected', (event) => {
+        // Ignore re-emitted events from modal to prevent loop
+        if (event.source === 'modal') return;
+
+        console.log('[DevWorkspacePanelFramework] Received skill:selected event:', event);
+        const payload = event.payload as { skill: any };
+        setDetailModal({
+          panelId: 'skillDetail',
+          data: payload.skill,
+        });
+      }),
+      // Agent detail
+      events.on('agent:selected', (event) => {
+        // Ignore re-emitted events from modal to prevent loop
+        if (event.source === 'modal') return;
+
+        console.log('[DevWorkspacePanelFramework] Received agent:selected event:', event);
+        const payload = event.payload as { agent: any };
+        setDetailModal({
+          panelId: 'agentDetail',
+          data: payload.agent,
+        });
+      }),
+      // File open from git changes panel
+      events.on('file:open', (event) => {
+        // Ignore re-emitted events from modal to prevent loop
+        if (event.source === 'modal') return;
+
+        console.log('[DevWorkspacePanelFramework] Received file:open event:', event);
+        const payload = event.payload as { path: string; gitStatus?: string };
+
+        // Use git diff panel for modified files (staged or unstaged), file editor for new/untracked files
+        const isModified = payload.gitStatus === 'unstaged' || payload.gitStatus === 'staged';
+        const panelId = isModified ? 'gitDiff' : 'fileEditor';
+
+        console.log('[DevWorkspacePanelFramework] Git status:', payload.gitStatus, '-> Opening panel:', panelId);
+
+        setDetailModal({
+          panelId,
+          data: payload,
+        });
+      }),
+    ];
+
+    return () => {
+      unsubscribers.forEach((unsub) => unsub());
+    };
   }, [events]);
 
-  // Re-emit task:selected event when modal opens so TaskDetailPanel can receive it
+  // Re-emit selection events when modal opens so detail panels can receive them
   useEffect(() => {
-    if (taskDetailModal?.isOpen && taskDetailModal?.task) {
-      // Use setTimeout to ensure the TaskDetailPanel component is mounted first
+    if (detailModal) {
+      console.log('[DevWorkspacePanelFramework] Modal opened with data:', detailModal);
+      // Use setTimeout to ensure the detail panel component is mounted first
       setTimeout(() => {
-        events.emit({
-          type: 'task:selected',
-          source: 'modal',
-          timestamp: Date.now(),
-          payload: {
-            task: taskDetailModal.task,
-            taskId: taskDetailModal.task.id,
-          },
-        });
+        if (detailModal.panelId === 'task-detail') {
+          events.emit({
+            type: 'task:selected',
+            source: 'modal',
+            timestamp: Date.now(),
+            payload: {
+              task: detailModal.data,
+              taskId: detailModal.data.id,
+            },
+          });
+        } else if (detailModal.panelId === 'skillDetail') {
+          console.log('[DevWorkspacePanelFramework] Re-emitting skill:selected with data:', detailModal.data);
+          events.emit({
+            type: 'skill:selected',
+            source: 'modal',
+            timestamp: Date.now(),
+            payload: {
+              skillId: detailModal.data.id,
+            },
+          });
+        } else if (detailModal.panelId === 'agentDetail') {
+          console.log('[DevWorkspacePanelFramework] Re-emitting agent:selected with data:', detailModal.data);
+          events.emit({
+            type: 'agent:selected',
+            source: 'modal',
+            timestamp: Date.now(),
+            payload: {
+              id: detailModal.data.id,
+              data: detailModal.data,
+            },
+          });
+        } else if (detailModal.panelId === 'gitDiff') {
+          console.log('[DevWorkspacePanelFramework] Emitting git:diff event:', detailModal.data);
+          // GitDiffPanel listens for git:diff events
+          events.emit({
+            type: 'git:diff',
+            source: 'modal',
+            timestamp: Date.now(),
+            payload: {
+              path: detailModal.data.path,
+              status: detailModal.data.gitStatus,
+            },
+          });
+        } else if (detailModal.panelId === 'fileEditor') {
+          console.log('[DevWorkspacePanelFramework] Setting active file for editor:', detailModal.data.path);
+          // Set the active file via actions
+          if (actions.setActiveFile) {
+            actions.setActiveFile(detailModal.data.path);
+          }
+          // Emit file:open event for file editor
+          events.emit({
+            type: 'file:open',
+            source: 'modal',
+            timestamp: Date.now(),
+            payload: detailModal.data,
+          });
+        }
       }, 0);
     }
-  }, [taskDetailModal?.isOpen, taskDetailModal?.task, events]);
+  }, [detailModal, events]);
 
-  // Listen for task:deselected event to close the modal (from panel's X button)
+  // Listen for deselection events to close the modal (from panel's X button)
   useEffect(() => {
-    const unsubscribe = events.on('task:deselected', () => {
-      console.log('[DevWorkspacePanelFramework] Task deselected, closing modal');
-      setTaskDetailModal(null);
-    });
+    const unsubscribers = [
+      events.on('task:deselected', () => {
+        console.log('[DevWorkspacePanelFramework] Task deselected, closing modal');
+        setDetailModal(null);
+      }),
+      events.on('skill:deselected', () => {
+        console.log('[DevWorkspacePanelFramework] Skill deselected, closing modal');
+        setDetailModal(null);
+      }),
+      events.on('agent:deselected', () => {
+        console.log('[DevWorkspacePanelFramework] Agent deselected, closing modal');
+        setDetailModal(null);
+      }),
+    ];
 
-    return unsubscribe;
+    return () => {
+      unsubscribers.forEach((unsub) => unsub());
+    };
   }, [events]);
+
+  // Close modal on Escape key
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && detailModal) {
+        setDetailModal(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [detailModal]);
 
   // Define all panels using panel framework components
   const allPanels = useMemo(
@@ -1048,43 +1174,95 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         </div>
       )}
 
-      {/* Task Detail Modal */}
-      {taskDetailModal?.isOpen && TaskDetailPanelComponent && (
+      {/* Detail Panel Modal */}
+      {detailModal && (
         <div
           style={{
             position: 'fixed',
             inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backgroundColor: 'rgba(0, 0, 0, 0.92)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 9999,
           }}
-          onClick={() => setTaskDetailModal(null)}
+          onClick={() => setDetailModal(null)}
         >
           <div
             style={{
               backgroundColor: theme.colors.background,
               borderRadius: '8px',
               boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-              maxWidth: '1200px',
-              width: '90%',
+              maxWidth: '900px',
+              width: '85%',
               maxHeight: '90vh',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
+              overflow: 'auto',
               position: 'relative',
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Render TaskDetailPanel (has its own X button) */}
-            <div style={{ flex: 1, overflow: 'auto' }}>
+            {/* Render appropriate detail panel based on panelId */}
+            {detailModal.panelId === 'task-detail' && TaskDetailPanelComponent && (
               <TaskDetailPanelComponent
                 context={context}
                 actions={actions}
                 events={events}
               />
-            </div>
+            )}
+            {detailModal.panelId === 'skillDetail' && SkillDetailPanelComponent && (
+              <SkillDetailPanelComponent
+                context={{
+                  ...context,
+                  slices: new Map([
+                    ...Array.from(context.slices?.entries() || []),
+                    ['selectedSkill', {
+                      scope: 'repository' as const,
+                      name: 'selectedSkill',
+                      data: detailModal.data,
+                      loading: false,
+                    }],
+                  ]),
+                }}
+                actions={actions}
+                events={events}
+              />
+            )}
+            {detailModal.panelId === 'agentDetail' && AgentDetailPanelComponent && (
+              <AgentDetailPanelComponent
+                context={{
+                  ...context,
+                  slices: new Map([
+                    ...Array.from(context.slices?.entries() || []),
+                    ['selectedAgent', {
+                      scope: 'repository' as const,
+                      name: 'selectedAgent',
+                      data: detailModal.data,
+                      loading: false,
+                    }],
+                  ]),
+                }}
+                actions={actions}
+                events={events}
+              />
+            )}
+            {detailModal.panelId === 'gitDiff' && GitDiffPanelComponent && (
+              <div style={{ height: '80vh', display: 'flex', flexDirection: 'column' }}>
+                <GitDiffPanelComponent
+                  context={context}
+                  actions={actions}
+                  events={events}
+                />
+              </div>
+            )}
+            {detailModal.panelId === 'fileEditor' && FileEditorPanelComponent && (
+              <div style={{ height: '80vh', display: 'flex', flexDirection: 'column' }}>
+                <FileEditorPanelComponent
+                  context={context}
+                  actions={actions}
+                  events={events}
+                />
+              </div>
+            )}
           </div>
         </div>
       )}

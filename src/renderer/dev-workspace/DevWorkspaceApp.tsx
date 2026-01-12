@@ -85,7 +85,7 @@ const PANEL_IDS = [
   'task-detail',
   'milestones',
   'skillsList',
-  'skillDetail',
+  'agentsList',
 ];
 
 // Quick commands for the command palette autocomplete
