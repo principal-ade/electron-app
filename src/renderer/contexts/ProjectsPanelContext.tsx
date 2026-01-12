@@ -264,7 +264,22 @@ export const ProjectsPanelProvider: React.FC<
       setLocalRepositoriesLoading(true);
       try {
         const repos = await AlexandriaService.getRepositories();
-        setLocalRepositories(repos);
+
+        // Sort by lastOpenedAt (most recent first)
+        const sorted = repos.sort((a, b) => {
+          // Projects with lastOpenedAt come before those without
+          if (a.lastOpenedAt && !b.lastOpenedAt) return -1;
+          if (!a.lastOpenedAt && b.lastOpenedAt) return 1;
+
+          // If both have lastOpenedAt or both don't, sort by timestamp
+          const aTime = a.lastOpenedAt || a.registeredAt;
+          const bTime = b.lastOpenedAt || b.registeredAt;
+
+          // Sort by timestamp (most recent first)
+          return new Date(bTime).getTime() - new Date(aTime).getTime();
+        });
+
+        setLocalRepositories(sorted);
       } catch (error) {
         console.error(
           '[ProjectsPanelProvider] Failed to fetch local repositories:',
@@ -1323,6 +1338,18 @@ export const ProjectsPanelProvider: React.FC<
           '[ProjectsPanelProvider] Opening repository:',
           entry.name,
         );
+
+        // Update lastOpenedAt timestamp
+        try {
+          await AlexandriaService.updateLastOpened(entry.name);
+        } catch (error) {
+          console.error(
+            '[ProjectsPanelProvider] Failed to update lastOpenedAt:',
+            error,
+          );
+          // Don't block opening the project if update fails
+        }
+
         await WindowService.openDevWorkspace({
           alexandriaEntry: entry,
         });

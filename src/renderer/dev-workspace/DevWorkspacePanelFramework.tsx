@@ -44,6 +44,8 @@ export interface DevWorkspacePanelFrameworkProps {
   onCollapsedChange: (collapsed: { left: boolean; right: boolean }) => void;
   layout: PanelLayout;
   onLayoutChange: (layout: PanelLayout) => void;
+  /** Panel sizes */
+  panelSizes?: { left: number; middle: number; right: number };
   /** Event bus for panel communication */
   events: PanelEventEmitter;
   /** Per-panel focus state (dims individual panels) */
@@ -59,6 +61,7 @@ interface DevWorkspacePanelFrameworkInnerProps {
   onCollapsedChange: (collapsed: { left: boolean; right: boolean }) => void;
   layout: PanelLayout;
   onLayoutChange: (layout: PanelLayout) => void;
+  panelSizes?: { left: number; middle: number; right: number };
   panelFocus?: { left: boolean; right: boolean };
   onFocusLeft?: () => void;
   onFocusRight?: () => void;
@@ -147,7 +150,7 @@ const FileCityWithHighlights: React.FC<{
  */
 const DevWorkspacePanelFrameworkInner: React.FC<
   DevWorkspacePanelFrameworkInnerProps
-> = ({ collapsed, onCollapsedChange, layout, onLayoutChange, panelFocus, onFocusLeft, onFocusRight }) => {
+> = ({ collapsed, onCollapsedChange, layout, onLayoutChange, panelSizes, panelFocus, onFocusLeft, onFocusRight }) => {
   const { theme } = useTheme();
   const { context, actions, events } = useRepositoryPanelProvider();
   const { context: terminalCtx, actions: terminalActions } =
@@ -996,7 +999,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         onLayoutChange={onLayoutChange}
         isEditMode={false}
         collapsiblePanels={{ left: true, right: true }}
-        defaultSizes={{ left: 25, middle: 50, right: 25 }}
+        defaultSizes={panelSizes || { left: 25, middle: 50, right: 25 }}
         minSizes={{ left: 15, middle: 30, right: 15 }}
         collapsed={collapsed}
         showCollapseButtons={false}
@@ -1108,6 +1111,7 @@ export const DevWorkspacePanelFramework: React.FC<
   onCollapsedChange,
   layout,
   onLayoutChange,
+  panelSizes,
   events,
   panelFocus,
   onFocusLeft,
@@ -1148,6 +1152,7 @@ export const DevWorkspacePanelFramework: React.FC<
             onCollapsedChange={onCollapsedChange}
             layout={layout}
             onLayoutChange={onLayoutChange}
+            panelSizes={panelSizes}
             panelFocus={panelFocus}
             onFocusLeft={onFocusLeft}
             onFocusRight={onFocusRight}

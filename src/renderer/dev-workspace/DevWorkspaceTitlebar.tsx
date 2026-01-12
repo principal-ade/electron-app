@@ -189,6 +189,9 @@ export interface DevWorkspaceTitlebarProps {
     right: string;
   }) => void;
   onCollapsedChange?: (collapsed: { left: boolean; right: boolean }) => void;
+  // Panel sizes
+  panelSizes?: { left: number; middle: number; right: number };
+  onPanelSizesChange?: (sizes: { left: number; middle: number; right: number }) => void;
   // Repository path for copy
   repositoryPath?: string;
   // Panel focus (dim that panel)
@@ -227,6 +230,8 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
   currentLayout,
   onLayoutChange,
   onCollapsedChange,
+  panelSizes,
+  onPanelSizesChange,
   repositoryPath,
   panelFocus,
   onFocusLeft,
@@ -384,20 +389,16 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
       // Give the terminal panel a moment to detect the new session
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      // Wait for port to become responsive (30s timeout)
-      console.log('[DevWorkspaceTitlebar] Waiting for Storybook to become responsive on port', port);
-      await waitForPortReady(port, 30000, 1000);
-      console.log('[DevWorkspaceTitlebar] Storybook is now responsive!');
+      // Collapse left panel FIRST (before switching panels)
+      if (!collapsed?.left && onCollapsedChange) {
+        console.log('[DevWorkspaceTitlebar] Collapsing left panel');
+        onCollapsedChange({ left: true, right: collapsed?.right ?? false });
+      }
 
-      // Navigate browser panel to Storybook port using existing event
-      if (events) {
-        console.log('[DevWorkspaceTitlebar] Navigating browser panel to port', port);
-        events.emit({
-          type: 'principal-ade.localhost-browser:navigate',
-          source: 'dev-workspace-titlebar',
-          payload: { port, path: '/' },
-          timestamp: Date.now(),
-        });
+      // Set panel sizes to 50/50 split between middle and right
+      if (onPanelSizesChange) {
+        console.log('[DevWorkspaceTitlebar] Setting panel sizes to 50/50 split');
+        onPanelSizesChange({ left: 0, middle: 50, right: 50 });
       }
 
       // Switch right panel to localhost browser
@@ -409,7 +410,38 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
       // Expand right panel if collapsed
       if (collapsed?.right && onCollapsedChange) {
         console.log('[DevWorkspaceTitlebar] Expanding right panel');
-        onCollapsedChange({ ...collapsed, right: false });
+        onCollapsedChange({ left: true, right: false });
+      }
+
+      // Give the panel time to mount and subscribe to events
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      // Wait for port to become responsive (30s timeout)
+      console.log('[DevWorkspaceTitlebar] Waiting for Storybook to become responsive on port', port);
+      await waitForPortReady(port, 30000, 1000);
+      console.log('[DevWorkspaceTitlebar] Storybook is now responsive!');
+
+      // Navigate browser panel to Storybook port using existing event
+      // Emit multiple times to ensure the panel receives it
+      if (events) {
+        console.log('[DevWorkspaceTitlebar] Navigating browser panel to port', port);
+        const navigatePayload = {
+          type: 'principal-ade.localhost-browser:navigate' as const,
+          source: 'dev-workspace-titlebar',
+          payload: { port, path: '/' },
+          timestamp: Date.now(),
+        };
+
+        // Emit immediately
+        events.emit(navigatePayload);
+
+        // Emit again after a short delay to catch any late subscribers
+        setTimeout(() => {
+          events.emit({
+            ...navigatePayload,
+            timestamp: Date.now(),
+          });
+        }, 100);
       }
 
       setStorybookStatus('running');

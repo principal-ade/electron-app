@@ -1,7 +1,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { GitClientFactory } from '../utils/gitClientFactory';
-import type { SkillsRepoConfig } from './SkillsConfigService';
+import type { SkillsRepoConfig, GlobalSkillDirectory } from '../../shared/main-process-api-interfaces/FileSystemAPI';
 import { SkillsConfigService } from './SkillsConfigService';
 
 /**
@@ -52,8 +52,7 @@ export class SkillsGitService {
    * Check if the repository is already cloned locally
    */
   async isRepositoryCloned(): Promise<boolean> {
-    const config = await this.configService.getConfig();
-    const localPath = config.localPath;
+    const localPath = await this.configService.getLocalPath();
 
     try {
       // Check if .git directory exists
@@ -78,18 +77,20 @@ export class SkillsGitService {
       return false;
     }
 
+    const localPath = await this.configService.getLocalPath();
+
     try {
       // Ensure parent directory exists
-      const parentDir = path.dirname(config.localPath);
+      const parentDir = path.dirname(localPath);
       await fs.mkdir(parentDir, { recursive: true });
 
-      console.log(`[SkillsGit] Cloning ${config.repoUrl} to ${config.localPath}`);
+      console.log(`[SkillsGit] Cloning ${config.repoUrl} to ${localPath}`);
 
       // Get the Git executor
-      const git = await GitClientFactory.getClient(config.localPath);
+      const git = await GitClientFactory.getClient(localPath);
 
       // Clone with shallow depth for performance
-      const success = await git.raw(['clone', '--depth', '1', '--branch', config.branch, config.repoUrl, config.localPath]);
+      const success = await git.raw(['clone', '--depth', '1', '--branch', config.branch, config.repoUrl, localPath]);
 
       if (success !== undefined && success !== false) {
         console.log('[SkillsGit] Repository cloned successfully');
@@ -117,7 +118,7 @@ export class SkillsGitService {
     }
 
     try {
-      const localPath = config.localPath;
+      const localPath = await this.configService.getLocalPath();
 
       // Get current commit SHA before fetching
       const beforeSha = await this.getCurrentCommitSha();
@@ -176,7 +177,7 @@ export class SkillsGitService {
     }
 
     try {
-      const localPath = config.localPath;
+      const localPath = await this.configService.getLocalPath();
       console.log('[SkillsGit] Pulling changes from remote...');
 
       const git = await GitClientFactory.getClient(localPath);
@@ -207,7 +208,8 @@ export class SkillsGitService {
     }
 
     try {
-      return await GitClientFactory.getCurrentCommit(config.localPath);
+      const localPath = await this.configService.getLocalPath();
+      return await GitClientFactory.getCurrentCommit(localPath);
     } catch (error) {
       console.error('[SkillsGit] Error getting current commit:', error);
       return null;
@@ -225,7 +227,7 @@ export class SkillsGitService {
     }
 
     try {
-      const localPath = config.localPath;
+      const localPath = await this.configService.getLocalPath();
       const git = await GitClientFactory.getClient(localPath);
 
       const currentSha = await this.getCurrentCommitSha();
@@ -281,68 +283,140 @@ export class SkillsGitService {
   }
 
   /**
-   * Sync the repository to global skills directories
-   * Copies skills from the Git repo to ~/.agent/skills and ~/.claude/skills
+   * Sync the repository to all enabled global skills directories
+   * Each directory gets its own clone and syncs independently
    */
   async syncToGlobalDirectories(): Promise<boolean> {
-    const config = await this.configService.getConfig();
-
-    if (!await this.isRepositoryCloned()) {
-      console.error('[SkillsGit] Repository not cloned');
-      return false;
-    }
-
     try {
-      const localPath = config.localPath;
-      const home = process.env.HOME || process.env.USERPROFILE;
+      const enabledDirs = await this.configService.getEnabledDirectories();
 
-      if (!home) {
-        console.error('[SkillsGit] Cannot determine home directory');
-        return false;
+      if (enabledDirs.length === 0) {
+        console.log('[SkillsGit] No directories enabled for syncing');
+        return true;
       }
 
-      const globalDirs = [
-        path.join(home, '.agent', 'skills'),
-        path.join(home, '.claude', 'skills'),
-      ];
+      console.log(`[SkillsGit] Syncing to ${enabledDirs.length} directories...`);
 
-      // Ensure global directories exist
-      for (const dir of globalDirs) {
-        await fs.mkdir(dir, { recursive: true });
+      for (const directory of enabledDirs) {
+        await this.syncSingleDirectory(directory);
       }
 
-      // Copy skills from repo to global directories
-      // NOTE: This is a simple copy - in Phase 2, we'll add smart syncing
-      console.log('[SkillsGit] Syncing to global directories...');
-
-      // Read skills from the repo
-      const repoSkills = await fs.readdir(localPath);
-
-      for (const globalDir of globalDirs) {
-        for (const skill of repoSkills) {
-          // Skip .git directory
-          if (skill === '.git' || skill.startsWith('.')) {
-            continue;
-          }
-
-          const sourcePath = path.join(localPath, skill);
-          const targetPath = path.join(globalDir, skill);
-
-          // Check if it's a directory (skill folder)
-          const stat = await fs.stat(sourcePath);
-          if (stat.isDirectory()) {
-            // Copy the entire skill directory
-            await this.copyDirectory(sourcePath, targetPath);
-            console.log(`[SkillsGit] Synced ${skill} to ${globalDir}`);
-          }
-        }
-      }
-
-      console.log('[SkillsGit] Sync to global directories completed');
+      console.log('[SkillsGit] Sync to all global directories completed');
       return true;
     } catch (error) {
-      console.error('[SkillsGit] Error syncing to global directories:', error);
+      console.error('[SkillsGit] Error syncing directories:', error);
       return false;
+    }
+  }
+
+  /**
+   * Sync a single directory
+   * Clones if needed, pulls latest changes, and copies to target directory
+   */
+  async syncSingleDirectory(directory: GlobalSkillDirectory): Promise<boolean> {
+    try {
+      const config = await this.configService.getConfig();
+
+      console.log(`[SkillsGit] Syncing ${directory.displayName}...`);
+
+      // Ensure directory's git repo is cloned
+      if (!await this.isDirectoryRepositoryCloned(directory)) {
+        console.log(`[SkillsGit] Cloning repository for ${directory.displayName}...`);
+        await this.cloneDirectoryRepository(directory, config);
+      }
+
+      // Pull latest changes
+      await this.pullDirectoryChanges(directory, config);
+
+      // Copy from clone to actual directory
+      await this.copyDirectoryFiles(directory);
+
+      // Update last sync timestamp
+      await this.configService.updateDirectory(directory.id, {
+        lastSyncedAt: new Date().toISOString(),
+      });
+
+      console.log(`[SkillsGit] Successfully synced ${directory.displayName}`);
+      return true;
+    } catch (error) {
+      console.error(`[SkillsGit] Error syncing ${directory.displayName}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Check if a directory's repository is cloned
+   */
+  private async isDirectoryRepositoryCloned(directory: GlobalSkillDirectory): Promise<boolean> {
+    if (!directory.localClonePath) return false;
+
+    try {
+      await fs.access(path.join(directory.localClonePath, '.git'));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Clone the repository for a specific directory
+   */
+  private async cloneDirectoryRepository(directory: GlobalSkillDirectory, config: SkillsRepoConfig): Promise<void> {
+    const gitClient = await GitClientFactory.getClient(directory.localClonePath);
+
+    // Ensure parent directory exists
+    await fs.mkdir(directory.localClonePath, { recursive: true });
+
+    console.log(`[SkillsGit] Cloning ${config.repoUrl} to ${directory.localClonePath}`);
+
+    await gitClient.raw([
+      'clone',
+      '--depth', '1',
+      '--branch', config.branch,
+      config.repoUrl,
+      directory.localClonePath
+    ]);
+  }
+
+  /**
+   * Pull latest changes for a directory's repository
+   */
+  private async pullDirectoryChanges(directory: GlobalSkillDirectory, config: SkillsRepoConfig): Promise<void> {
+    const gitClient = await GitClientFactory.getClient(directory.localClonePath);
+
+    console.log(`[SkillsGit] Pulling latest changes for ${directory.displayName}`);
+
+    await gitClient.raw(['pull', 'origin', config.branch], {
+      cwd: directory.localClonePath,
+    });
+  }
+
+  /**
+   * Copy files from directory's clone to the actual target directory
+   */
+  private async copyDirectoryFiles(directory: GlobalSkillDirectory): Promise<void> {
+    // Ensure target directory exists
+    await fs.mkdir(directory.path, { recursive: true });
+
+    console.log(`[SkillsGit] Copying skills from ${directory.localClonePath} to ${directory.path}`);
+
+    // Read skills from clone
+    const cloneContents = await fs.readdir(directory.localClonePath);
+
+    for (const item of cloneContents) {
+      // Skip .git directory and hidden files
+      if (item === '.git' || item.startsWith('.')) {
+        continue;
+      }
+
+      const sourcePath = path.join(directory.localClonePath, item);
+      const targetPath = path.join(directory.path, item);
+
+      const stat = await fs.stat(sourcePath);
+      if (stat.isDirectory()) {
+        await this.copyDirectory(sourcePath, targetPath);
+        console.log(`[SkillsGit] Copied ${item} to ${directory.path}`);
+      }
     }
   }
 
@@ -354,7 +428,7 @@ export class SkillsGitService {
     const config = await this.configService.getConfig();
 
     try {
-      const localPath = config.localPath;
+      const localPath = await this.configService.getLocalPath();
       console.log(`[SkillsGit] Initializing repository at ${localPath}`);
 
       // Ensure directory exists
@@ -414,7 +488,7 @@ Skills copied to project directories can optionally auto-sync from this reposito
     const config = await this.configService.getConfig();
 
     try {
-      const localPath = config.localPath;
+      const localPath = await this.configService.getLocalPath();
       const git = await GitClientFactory.getClient(localPath);
 
       // Add all files
@@ -439,7 +513,7 @@ Skills copied to project directories can optionally auto-sync from this reposito
     const config = await this.configService.getConfig();
 
     try {
-      const localPath = config.localPath;
+      const localPath = await this.configService.getLocalPath();
       const git = await GitClientFactory.getClient(localPath);
 
       // Remove existing remote if it exists
@@ -462,21 +536,35 @@ Skills copied to project directories can optionally auto-sync from this reposito
 
   /**
    * Push to remote repository
+   * @param force - If true, force push (use for initial setup when remote has diverged)
    */
-  async pushToRemote(remoteName: string = 'origin', branch: string = 'main'): Promise<boolean> {
+  async pushToRemote(remoteName: string = 'origin', branch: string = 'main', force: boolean = false): Promise<boolean> {
     const config = await this.configService.getConfig();
 
     try {
-      const localPath = config.localPath;
+      const localPath = await this.configService.getLocalPath();
       const git = await GitClientFactory.getClient(localPath);
 
-      // Push to remote
-      await git.raw(['push', '-u', remoteName, branch], { cwd: localPath });
+      // Build push command
+      const pushArgs = ['push', '-u', remoteName, branch];
+      if (force) {
+        pushArgs.push('--force');
+      }
 
-      console.log(`[SkillsGit] Pushed to ${remoteName}/${branch}`);
+      // Push to remote
+      await git.raw(pushArgs, { cwd: localPath });
+
+      console.log(`[SkillsGit] Pushed to ${remoteName}/${branch}${force ? ' (forced)' : ''}`);
       return true;
     } catch (error) {
       console.error('[SkillsGit] Error pushing to remote:', error);
+
+      // If push failed due to diverged histories and we haven't tried force yet, suggest it
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      if (!force && errorMsg.includes('rejected')) {
+        console.log('[SkillsGit] Push rejected, may need force push for initial setup');
+      }
+
       return false;
     }
   }

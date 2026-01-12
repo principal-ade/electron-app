@@ -309,6 +309,16 @@ export class AlexandriaRegistryService {
   }
 
   /**
+   * Update the lastOpenedAt timestamp for a repository
+   * @param name - Repository name
+   */
+  async updateLastOpened(name: string): Promise<void> {
+    await this.outpostManager.updateRepository(name, {
+      lastOpenedAt: new Date().toISOString(),
+    });
+  }
+
+  /**
    * Get total repository count
    */
   async getRepositoryCount(): Promise<number> {

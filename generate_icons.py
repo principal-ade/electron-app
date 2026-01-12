@@ -71,6 +71,7 @@ def process_icon_with_padding(source_img, target_size, padding_percent=100/1024,
     img = apply_rounded_corners(img, corner_radius_percent)
 
     # Create a new image with transparent background for the final output
+    # The source image already has its background, this is just for the padding area
     final_img = Image.new('RGBA', (target_size, target_size), (0, 0, 0, 0))
 
     # Calculate position to center the rounded image

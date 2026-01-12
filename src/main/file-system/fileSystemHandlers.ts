@@ -5,7 +5,7 @@ import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 
-import { FileSystemAPIEvent, type GlobalSkill } from '../../shared/main-process-api-interfaces/FileSystemAPI';
+import { FileSystemAPIEvent, type GlobalSkill, PRESET_SKILL_DIRECTORIES } from '../../shared/main-process-api-interfaces/FileSystemAPI';
 import type { IModernApplicationWindow } from '../window/types';
 import { GitHubAdapter } from '../version-control-providers/githubHandlers';
 import { SkillsConfigService } from '../services/SkillsConfigService';
@@ -1969,7 +1969,12 @@ export function registerFileSystemIpcHandlers(
       console.log('[migrateSkillsToRepo] Migrating', skillPaths.length, 'skills');
 
       const config = await configService.getConfig();
-      const repoPath = config.localPath;
+      // Use localPath if it exists (backwards compatibility), otherwise use first directory's clone path
+      const repoPath = config.localPath || (config.directories.length > 0 ? config.directories[0].localClonePath : null);
+
+      if (!repoPath) {
+        throw new Error('No repository path configured');
+      }
 
       // Copy each skill to the repository
       for (const skillPath of skillPaths) {
@@ -1983,10 +1988,24 @@ export function registerFileSystemIpcHandlers(
       }
 
       // Commit all skills
-      const success = await gitService.commitSkills('Migrate existing skills');
+      const commitSuccess = await gitService.commitSkills('Migrate existing skills');
 
-      if (!success) {
+      if (!commitSuccess) {
         throw new Error('Failed to commit skills');
+      }
+
+      // Push to remote if configured
+      if (config.repoUrl) {
+        console.log('[migrateSkillsToRepo] Pushing to remote...');
+
+        // Try pushing to remote (normal push should work now that we don't auto_init repos)
+        const pushSuccess = await gitService.pushToRemote('origin', config.branch);
+
+        if (!pushSuccess) {
+          throw new Error('Failed to push skills to GitHub. Please check your network connection and repository access.');
+        }
+
+        console.log('[migrateSkillsToRepo] Successfully pushed to remote');
       }
 
       // Sync to global directories
@@ -1995,6 +2014,279 @@ export function registerFileSystemIpcHandlers(
       return { success: true };
     } catch (error) {
       console.error('[migrateSkillsToRepo] Failed:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // Handler for getting all skill directories
+  ipcMain.handle(FileSystemAPIEvent.GET_SKILL_DIRECTORIES, async () => {
+    try {
+      console.log('[getSkillDirectories] Getting skill directories...');
+      const config = await configService.getConfig();
+      console.log('[getSkillDirectories] Config loaded, directories:', config.directories?.length || 0);
+      return config.directories || [];
+    } catch (error) {
+      console.error('[getSkillDirectories] Failed with error:', error);
+      console.error('[getSkillDirectories] Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+      return [];
+    }
+  });
+
+  // Handler for adding a skill directory
+  ipcMain.handle(FileSystemAPIEvent.ADD_SKILL_DIRECTORY, async (event, directory) => {
+    try {
+      const result = await configService.addDirectory(directory);
+      return { success: true, directory: result };
+    } catch (error) {
+      console.error('[addSkillDirectory] Failed:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // Handler for updating a skill directory
+  ipcMain.handle(FileSystemAPIEvent.UPDATE_SKILL_DIRECTORY, async (event, { id, updates }) => {
+    try {
+      const result = await configService.updateDirectory(id, updates);
+      return { success: true, directory: result };
+    } catch (error) {
+      console.error('[updateSkillDirectory] Failed:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // Handler for removing a skill directory
+  ipcMain.handle(FileSystemAPIEvent.REMOVE_SKILL_DIRECTORY, async (event, id) => {
+    try {
+      const success = await configService.removeDirectory(id);
+      return { success };
+    } catch (error) {
+      console.error('[removeSkillDirectory] Failed:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // Handler for detecting preset directories that have skills
+  ipcMain.handle(FileSystemAPIEvent.DETECT_PRESET_DIRECTORIES, async () => {
+    try {
+      const homeDir = app.getPath('home');
+      const detectedDirs = [];
+
+      for (const preset of PRESET_SKILL_DIRECTORIES) {
+        const dirPath = preset.path.replace('{HOME}', homeDir);
+
+        if (fs.existsSync(dirPath)) {
+          const files = await fsPromises.readdir(dirPath);
+          const skillDirs = [];
+
+          for (const file of files) {
+            const skillPath = path.join(dirPath, file);
+            const skillMdPath = path.join(skillPath, 'SKILL.md');
+
+            try {
+              const stat = await fsPromises.stat(skillPath);
+              if (stat.isDirectory() && fs.existsSync(skillMdPath)) {
+                skillDirs.push(file);
+              }
+            } catch {
+              // Skip files that can't be accessed
+              continue;
+            }
+          }
+
+          if (skillDirs.length > 0) {
+            detectedDirs.push({
+              ...preset,
+              path: dirPath,
+              skillCount: skillDirs.length,
+              skills: skillDirs,
+            });
+          }
+        }
+      }
+
+      return detectedDirs;
+    } catch (error) {
+      console.error('[detectPresetDirectories] Failed:', error);
+      return [];
+    }
+  });
+
+  // Handler for pushing repository to remote
+  ipcMain.handle(FileSystemAPIEvent.PUSH_SKILLS_REPO, async () => {
+    try {
+      const config = await configService.getConfig();
+
+      if (!config.repoUrl) {
+        return { success: false, error: 'No remote repository configured' };
+      }
+
+      console.log('[pushSkillsRepo] Pushing to remote...');
+
+      // Try normal push first
+      let success = await gitService.pushToRemote('origin', config.branch);
+
+      // If it fails (likely due to diverged history), try force push
+      if (!success) {
+        console.log('[pushSkillsRepo] Normal push failed, trying force push...');
+        success = await gitService.pushToRemote('origin', config.branch, true);
+      }
+
+      if (success) {
+        console.log('[pushSkillsRepo] Successfully pushed to remote');
+        return { success: true };
+      } else {
+        return { success: false, error: 'Failed to push to remote' };
+      }
+    } catch (error) {
+      console.error('[pushSkillsRepo] Failed:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // Handler for detecting skills in global directories that aren't in the repo
+  ipcMain.handle(FileSystemAPIEvent.DETECT_UNSYNCED_SKILLS, async () => {
+    try {
+      const config = await configService.getConfig();
+
+      if (!config.enabled || !config.repoUrl) {
+        return { skills: [] };
+      }
+
+      const repoPath = await configService.getLocalPath();
+
+      // Get skills in the repo
+      const repoSkills = new Set<string>();
+      try {
+        const repoContents = await fsPromises.readdir(repoPath);
+        for (const item of repoContents) {
+          if (item === '.git' || item.startsWith('.') || item === 'README.md') {
+            continue;
+          }
+          const itemPath = path.join(repoPath, item);
+          const stat = await fsPromises.stat(itemPath);
+          if (stat.isDirectory()) {
+            repoSkills.add(item);
+          }
+        }
+      } catch (error) {
+        console.error('[detectUnsyncedSkills] Error reading repo:', error);
+        return { skills: [], error: 'Failed to read repository' };
+      }
+
+      // Check each enabled global directory for unsynced skills
+      const unsyncedSkills: Array<{ name: string; path: string; directory: string }> = [];
+      const enabledDirs = await configService.getEnabledDirectories();
+
+      for (const directory of enabledDirs) {
+        try {
+          if (!fs.existsSync(directory.path)) {
+            continue;
+          }
+
+          const dirContents = await fsPromises.readdir(directory.path);
+          for (const item of dirContents) {
+            if (item.startsWith('.')) continue;
+
+            const itemPath = path.join(directory.path, item);
+            const stat = await fsPromises.stat(itemPath);
+
+            if (stat.isDirectory()) {
+              // Check if this skill has a SKILL.md file
+              const skillMdPath = path.join(itemPath, 'SKILL.md');
+              if (fs.existsSync(skillMdPath)) {
+                // Check if it's NOT in the repo
+                if (!repoSkills.has(item)) {
+                  unsyncedSkills.push({
+                    name: item,
+                    path: itemPath,
+                    directory: directory.displayName,
+                  });
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.warn(`[detectUnsyncedSkills] Error reading directory ${directory.path}:`, error);
+        }
+      }
+
+      // Remove duplicates (same skill in multiple directories)
+      const uniqueSkills = Array.from(
+        new Map(unsyncedSkills.map(skill => [skill.name, skill])).values()
+      );
+
+      console.log(`[detectUnsyncedSkills] Found ${uniqueSkills.length} unsynced skills`);
+      return { skills: uniqueSkills };
+    } catch (error) {
+      console.error('[detectUnsyncedSkills] Failed:', error);
+      return { skills: [], error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // Handler for adding skills to the repository
+  ipcMain.handle(FileSystemAPIEvent.ADD_SKILLS_TO_REPO, async (event, { skillPaths }) => {
+    try {
+      console.log('[addSkillsToRepo] Adding', skillPaths.length, 'skills to repo');
+
+      const config = await configService.getConfig();
+      const repoPath = await configService.getLocalPath();
+
+      if (!repoPath) {
+        throw new Error('No repository path configured');
+      }
+
+      // Copy each skill to the repository
+      for (const skillPath of skillPaths) {
+        const skillName = path.basename(skillPath);
+        const targetPath = path.join(repoPath, skillName);
+
+        console.log(`[addSkillsToRepo] Copying ${skillName}`);
+
+        // Use recursive copy
+        await copyDir(skillPath, targetPath);
+      }
+
+      // Commit the new skills
+      const commitSuccess = await gitService.commitSkills(`Add ${skillPaths.length} skill${skillPaths.length !== 1 ? 's' : ''} to repository`);
+
+      if (!commitSuccess) {
+        throw new Error('Failed to commit skills');
+      }
+
+      // Push to remote if configured
+      if (config.repoUrl) {
+        console.log('[addSkillsToRepo] Pushing to remote...');
+        const pushSuccess = await gitService.pushToRemote('origin', config.branch);
+
+        if (!pushSuccess) {
+          throw new Error('Failed to push skills to GitHub');
+        }
+
+        console.log('[addSkillsToRepo] Successfully pushed to remote');
+      }
+
+      // Sync to global directories
+      await gitService.syncToGlobalDirectories();
+
+      return { success: true };
+    } catch (error) {
+      console.error('[addSkillsToRepo] Failed:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // Handler for syncing a single directory
+  ipcMain.handle(FileSystemAPIEvent.SYNC_SINGLE_DIRECTORY, async (event, directoryId) => {
+    try {
+      const directory = await configService.getDirectory(directoryId);
+      if (!directory) {
+        return { success: false, error: 'Directory not found' };
+      }
+
+      const success = await gitService.syncSingleDirectory(directory);
+      return { success };
+    } catch (error) {
+      console.error('[syncSingleDirectory] Failed:', error);
       return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   });

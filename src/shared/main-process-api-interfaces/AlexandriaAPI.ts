@@ -28,6 +28,7 @@ export enum AlexandriaAPIEvent {
   SEARCH = 'alexandria:search',
   GET_WITH_VIEWS = 'alexandria:get-with-views',
   REFRESH = 'alexandria:refresh',
+  UPDATE_LAST_OPENED = 'alexandria:update-last-opened',
   GET_COUNT = 'alexandria:get-count',
   GET_CODEBASE_VIEWS = 'alexandria:get-codebase-views',
   GET_CODEBASE_VIEW = 'alexandria:get-codebase-view',
@@ -87,6 +88,11 @@ export interface AlexandriaAPI {
    * Refresh repository metadata (re-scan for views, etc)
    */
   refreshRepository(name: string): Promise<AlexandriaEntry | null>;
+
+  /**
+   * Update the lastOpenedAt timestamp for a repository
+   */
+  updateLastOpened(name: string): Promise<void>;
 
   /**
    * Get total repository count

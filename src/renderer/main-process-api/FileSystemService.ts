@@ -135,4 +135,41 @@ export class FileSystemService {
   static async migrateSkillsToRepo(skillPaths: string[]) {
     return window.mainProcess.fileSystem.migrateSkillsToRepo({ skillPaths });
   }
+
+  static async pushSkillsRepo() {
+    return window.mainProcess.fileSystem.pushSkillsRepo();
+  }
+
+  static async detectUnsyncedSkills() {
+    return window.mainProcess.fileSystem.detectUnsyncedSkills();
+  }
+
+  static async addSkillsToRepo(skillPaths: string[]) {
+    return window.mainProcess.fileSystem.addSkillsToRepo({ skillPaths });
+  }
+
+  // Global skill directories management
+  static async getSkillDirectories() {
+    return window.mainProcess.fileSystem.getSkillDirectories();
+  }
+
+  static async addSkillDirectory(directory: any) {
+    return window.mainProcess.fileSystem.addSkillDirectory(directory);
+  }
+
+  static async updateSkillDirectory(id: string, updates: any) {
+    return window.mainProcess.fileSystem.updateSkillDirectory({ id, updates });
+  }
+
+  static async removeSkillDirectory(id: string) {
+    return window.mainProcess.fileSystem.removeSkillDirectory(id);
+  }
+
+  static async detectPresetDirectories() {
+    return window.mainProcess.fileSystem.detectPresetDirectories();
+  }
+
+  static async syncSingleDirectory(directoryId: string) {
+    return window.mainProcess.fileSystem.syncSingleDirectory(directoryId);
+  }
 }

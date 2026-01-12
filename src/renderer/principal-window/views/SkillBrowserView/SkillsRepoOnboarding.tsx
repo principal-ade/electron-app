@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import { useSkillsSync } from '../../../hooks/useSkillsSync';
 import { useAuthState } from '../../../hooks/useAuthState';
 import { GithubService } from '../../../main-process-api/GithubService';
+import { FileSystemService } from '../../../main-process-api/FileSystemService';
 
 interface SkillsRepoOnboardingProps {
   onComplete: () => void;
@@ -31,11 +32,14 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [creatingRepo, setCreatingRepo] = useState(false);
   const [createRepoError, setCreateRepoError] = useState<string | null>(null);
+  const [detectedPresets, setDetectedPresets] = useState<any[]>([]);
+  const [selectedPresets, setSelectedPresets] = useState<string[]>([]);
 
   // Load existing skills when moving to that step
   useEffect(() => {
     if (step === 'existing-skills') {
       loadExistingSkills();
+      loadDetectedPresets();
     }
   }, [step]);
 
@@ -44,6 +48,17 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
     setExistingSkills(skills);
     // Select all by default
     setSelectedSkills(skills.map(s => s.path));
+  };
+
+  const loadDetectedPresets = async () => {
+    try {
+      const detected = await FileSystemService.detectPresetDirectories();
+      setDetectedPresets(detected || []);
+      // Auto-select all detected presets
+      setSelectedPresets((detected || []).map((d: any) => d.id));
+    } catch (err) {
+      console.error('Failed to detect preset directories:', err);
+    }
   };
 
   const handleInitializeAndMigrate = async () => {
@@ -64,6 +79,23 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
         }
       }
 
+      // Step 3: Add selected preset directories
+      for (const presetId of selectedPresets) {
+        const preset = detectedPresets.find(p => p.id === presetId);
+        if (preset) {
+          try {
+            await FileSystemService.addSkillDirectory({
+              path: preset.path,
+              displayName: preset.displayName,
+              enabled: true,
+              isCustom: false,
+            });
+          } catch (err) {
+            console.error(`Failed to add directory ${preset.displayName}:`, err);
+          }
+        }
+      }
+
       setStep('complete');
     } catch (err) {
       console.error('[SkillsRepoOnboarding] Failed:', err);
@@ -76,6 +108,14 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
       prev.includes(skillPath)
         ? prev.filter(p => p !== skillPath)
         : [...prev, skillPath]
+    );
+  };
+
+  const togglePresetSelection = (presetId: string) => {
+    setSelectedPresets(prev =>
+      prev.includes(presetId)
+        ? prev.filter(p => p !== presetId)
+        : [...prev, presetId]
     );
   };
 
@@ -96,7 +136,7 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
           name: repoName,
           description: 'My agent skills repository - synced across projects',
           private: true,
-          auto_init: true,
+          auto_init: false, // Don't create with README - we'll push our own content
         },
         false // isOrganization
       );
@@ -106,7 +146,19 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
       setCreatingRepo(false);
     } catch (err: any) {
       console.error('[SkillsRepoOnboarding] Failed to create GitHub repo:', err);
-      setCreateRepoError(err.message || 'Failed to create repository');
+
+      // Check if it's a 422 error (repository already exists)
+      if (err.message && err.message.includes('422')) {
+        setCreateRepoError(
+          `Repository "agent-skills" already exists in your GitHub account. ` +
+          `You can use the existing repository by entering its URL below: https://github.com/${user.login}/agent-skills`
+        );
+        // Automatically set the URL to the existing repo
+        setRepoUrl(`https://github.com/${user.login}/agent-skills`);
+      } else {
+        setCreateRepoError(err.message || 'Failed to create repository');
+      }
+
       setCreatingRepo(false);
     }
   };
@@ -173,14 +225,76 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
   const renderExistingSkills = () => (
     <div style={{ maxWidth: 700, margin: '0 auto' }}>
       <h2 style={{ color: theme.colors.text, marginBottom: 12 }}>
-        Existing Skills
+        Configure Skill Directories
       </h2>
       <p style={{ color: theme.colors.textSecondary, marginBottom: 24 }}>
-        We found {existingSkills.length} skill{existingSkills.length !== 1 ? 's' : ''} in your global directories.
-        Select which ones you'd like to migrate to the repository.
+        Select which directories should sync skills from your repository.
       </p>
 
-      {existingSkills.length === 0 ? (
+      {/* Detected preset directories */}
+      {detectedPresets.length > 0 && (
+        <div style={{ marginBottom: 32 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, color: theme.colors.text }}>
+            Detected Directories with Skills
+          </h3>
+          <p style={{ fontSize: 14, color: theme.colors.textSecondary, marginBottom: 16 }}>
+            We found skills in these directories:
+          </p>
+          <div style={{
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: 6,
+            marginBottom: 24,
+          }}>
+            {detectedPresets.map((preset, index) => (
+              <div
+                key={preset.id}
+                onClick={() => togglePresetSelection(preset.id)}
+                style={{
+                  padding: 16,
+                  borderBottom: index < detectedPresets.length - 1 ? `1px solid ${theme.colors.border}` : 'none',
+                  cursor: 'pointer',
+                  backgroundColor: selectedPresets.includes(preset.id)
+                    ? theme.colors.primary + '10'
+                    : 'transparent',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedPresets.includes(preset.id)}
+                  onChange={() => {}}
+                  style={{ cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: 20 }}>{preset.icon}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: theme.colors.text }}>
+                    {preset.displayName}
+                  </div>
+                  <div style={{ fontSize: 12, color: theme.colors.textSecondary }}>
+                    {preset.skillCount} skill{preset.skillCount !== 1 ? 's' : ''} found • {preset.path}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Existing skills to migrate */}
+      {existingSkills.length > 0 && (
+        <div>
+          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, color: theme.colors.text }}>
+            Existing Skills to Migrate
+          </h3>
+          <p style={{ fontSize: 14, color: theme.colors.textSecondary, marginBottom: 16 }}>
+            Select which skills to copy to the repository:
+          </p>
+        </div>
+      )}
+
+      {existingSkills.length === 0 && detectedPresets.length === 0 ? (
         <div style={{
           padding: 24,
           backgroundColor: theme.colors.backgroundSecondary,

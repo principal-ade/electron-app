@@ -212,4 +212,32 @@ export const fileSystemAPI: FileSystemAPI = {
   migrateSkillsToRepo: async (options: { skillPaths: string[] }) => {
     return ipcRenderer.invoke(FileSystemAPIEvent.MIGRATE_SKILLS_TO_REPO, options);
   },
+  pushSkillsRepo: async () => {
+    return ipcRenderer.invoke(FileSystemAPIEvent.PUSH_SKILLS_REPO);
+  },
+  detectUnsyncedSkills: async () => {
+    return ipcRenderer.invoke(FileSystemAPIEvent.DETECT_UNSYNCED_SKILLS);
+  },
+  addSkillsToRepo: async (options: { skillPaths: string[] }) => {
+    return ipcRenderer.invoke(FileSystemAPIEvent.ADD_SKILLS_TO_REPO, options);
+  },
+  // Global skill directories management
+  getSkillDirectories: async () => {
+    return ipcRenderer.invoke(FileSystemAPIEvent.GET_SKILL_DIRECTORIES);
+  },
+  addSkillDirectory: async (directory: any) => {
+    return ipcRenderer.invoke(FileSystemAPIEvent.ADD_SKILL_DIRECTORY, directory);
+  },
+  updateSkillDirectory: async (options: { id: string; updates: any }) => {
+    return ipcRenderer.invoke(FileSystemAPIEvent.UPDATE_SKILL_DIRECTORY, options);
+  },
+  removeSkillDirectory: async (id: string) => {
+    return ipcRenderer.invoke(FileSystemAPIEvent.REMOVE_SKILL_DIRECTORY, id);
+  },
+  detectPresetDirectories: async () => {
+    return ipcRenderer.invoke(FileSystemAPIEvent.DETECT_PRESET_DIRECTORIES);
+  },
+  syncSingleDirectory: async (directoryId: string) => {
+    return ipcRenderer.invoke(FileSystemAPIEvent.SYNC_SINGLE_DIRECTORY, directoryId);
+  },
 };

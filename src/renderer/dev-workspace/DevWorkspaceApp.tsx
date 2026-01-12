@@ -172,6 +172,11 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     middle: 'terminal',
     right: 'fileCity',
   });
+  const [panelSizes, setPanelSizes] = useState<{ left: number; middle: number; right: number }>({
+    left: 25,
+    middle: 50,
+    right: 25,
+  });
   const [hasGitHubFolder, setHasGitHubFolder] = useState(false);
   const [packages, setPackages] = useState<PackageLayer[]>([]);
 
@@ -709,6 +714,8 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         }
         onLayoutChange={(newLayout) => setLayout(newLayout)}
         onCollapsedChange={setCollapsed}
+        panelSizes={panelSizes}
+        onPanelSizesChange={setPanelSizes}
         repositoryPath={repositoryPath}
         panelFocus={panelFocus}
         onFocusLeft={handleFocusLeft}
@@ -724,6 +731,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           onCollapsedChange={setCollapsed}
           layout={layout}
           onLayoutChange={setLayout}
+          panelSizes={panelSizes}
           events={events}
           panelFocus={panelFocus}
           onFocusLeft={handleFocusLeft}

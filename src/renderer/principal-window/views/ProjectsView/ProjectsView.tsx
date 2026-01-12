@@ -386,10 +386,10 @@ const ProjectsViewContent: React.FC = () => {
 
   // Define layout configuration
   const layout = useMemo(() => {
-    // Left panel has collections (if authenticated), local projects, and workspaces
+    // Left panel has local projects, collections (if authenticated), and workspaces
     // GitHub panels are accessed via middle panel toggle buttons
     const leftPanels = isAuthenticated
-      ? ['user-collections', 'local-projects', 'workspaces-list']
+      ? ['local-projects', 'user-collections', 'workspaces-list']
       : ['local-projects', 'workspaces-list'];
 
     // Map middle panel view to panel id
@@ -409,7 +409,7 @@ const ProjectsViewContent: React.FC = () => {
         type: 'tabs' as const,
         panels: leftPanels,
         config: {
-          defaultActiveTab: 0,
+          defaultActiveTab: 0, // Default to 'local-projects' (always at index 0)
           tabPosition: 'top' as const,
         },
       },

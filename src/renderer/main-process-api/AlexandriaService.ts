@@ -58,6 +58,10 @@ export class AlexandriaService {
     return window.mainProcess.alexandria.refreshRepository(name);
   }
 
+  static async updateLastOpened(name: string): Promise<void> {
+    return window.mainProcess.alexandria.updateLastOpened(name);
+  }
+
   static async getRepositoryCount(): Promise<number> {
     return window.mainProcess.alexandria.getRepositoryCount();
   }

@@ -111,6 +111,10 @@ export class AlexandriaApiEventHandler implements AlexandriaAPI {
     return repo;
   }
 
+  async updateLastOpened(name: string) {
+    await this.registryService.updateLastOpened(name);
+  }
+
   async getRepositoryCount() {
     return this.registryService.getRepositoryCount();
   }
@@ -254,6 +258,7 @@ export class AlexandriaApiEventHandler implements AlexandriaAPI {
     ipcMain.removeHandler(AlexandriaAPIEvent.SEARCH);
     ipcMain.removeHandler(AlexandriaAPIEvent.GET_WITH_VIEWS);
     ipcMain.removeHandler(AlexandriaAPIEvent.REFRESH);
+    ipcMain.removeHandler(AlexandriaAPIEvent.UPDATE_LAST_OPENED);
     ipcMain.removeHandler(AlexandriaAPIEvent.GET_COUNT);
     ipcMain.removeHandler(AlexandriaAPIEvent.GET_CODEBASE_VIEWS);
     ipcMain.removeHandler(AlexandriaAPIEvent.GET_CODEBASE_VIEW);
@@ -290,6 +295,9 @@ export function registerAlexandriaHandlers(): void {
   );
   ipcMain.handle(AlexandriaAPIEvent.REFRESH, (_, name: string) =>
     handler.refreshRepository(name),
+  );
+  ipcMain.handle(AlexandriaAPIEvent.UPDATE_LAST_OPENED, (_, name: string) =>
+    handler.updateLastOpened(name),
   );
   ipcMain.handle(AlexandriaAPIEvent.GET_COUNT, () =>
     handler.getRepositoryCount(),

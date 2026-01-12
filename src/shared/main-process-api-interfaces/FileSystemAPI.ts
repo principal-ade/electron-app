@@ -33,6 +33,17 @@ export enum FileSystemAPIEvent {
   GET_ALL_LOCAL_SKILLS = 'file-system:get-all-local-skills',
   INITIALIZE_SKILLS_REPO = 'file-system:initialize-skills-repo',
   MIGRATE_SKILLS_TO_REPO = 'file-system:migrate-skills-to-repo',
+  PUSH_SKILLS_REPO = 'file-system:push-skills-repo',
+  DETECT_UNSYNCED_SKILLS = 'file-system:detect-unsynced-skills',
+  ADD_SKILLS_TO_REPO = 'file-system:add-skills-to-repo',
+
+  // Global skill directories management
+  GET_SKILL_DIRECTORIES = 'file-system:get-skill-directories',
+  ADD_SKILL_DIRECTORY = 'file-system:add-skill-directory',
+  UPDATE_SKILL_DIRECTORY = 'file-system:update-skill-directory',
+  REMOVE_SKILL_DIRECTORY = 'file-system:remove-skill-directory',
+  DETECT_PRESET_DIRECTORIES = 'file-system:detect-preset-directories',
+  SYNC_SINGLE_DIRECTORY = 'file-system:sync-single-directory',
 }
 
 export interface FileStats {
@@ -77,17 +88,83 @@ export interface SkillMetadata {
 }
 
 /**
+ * Individual directory configuration for skill syncing
+ */
+export interface GlobalSkillDirectory {
+  id: string;                    // UUID
+  path: string;                  // Full path (e.g., ~/.agent/skills)
+  displayName: string;           // User-friendly name
+  enabled: boolean;              // Active status
+  isCustom: boolean;             // true if user-added
+  localClonePath: string;        // Unique clone location per directory
+  lastSyncedAt?: string;         // Last sync timestamp for this directory
+}
+
+/**
+ * Preset directory definition
+ */
+export interface PresetDirectory {
+  id: string;
+  path: string;                  // Template with {HOME}
+  displayName: string;
+  description: string;
+  icon?: string;
+}
+
+/**
+ * Predefined skill directory presets for different AI assistants
+ */
+export const PRESET_SKILL_DIRECTORIES: PresetDirectory[] = [
+  {
+    id: 'agent-universal',
+    path: '{HOME}/.agent/skills',
+    displayName: 'Agent Skills (Universal)',
+    description: 'Universal agent skills compatible with all AI assistants',
+    icon: '🤖',
+  },
+  {
+    id: 'claude-specific',
+    path: '{HOME}/.claude/skills',
+    displayName: 'Claude Skills',
+    description: 'Claude-specific skills for Anthropic\'s Claude',
+    icon: '🎯',
+  },
+  {
+    id: 'cursor-ide',
+    path: '{HOME}/.cursor/skills',
+    displayName: 'Cursor IDE Skills',
+    description: 'Skills for Cursor IDE AI assistant',
+    icon: '⌨️',
+  },
+  {
+    id: 'windsurf',
+    path: '{HOME}/.windsurf/skills',
+    displayName: 'Windsurf Skills',
+    description: 'Skills for Windsurf AI assistant',
+    icon: '🌊',
+  },
+];
+
+/**
  * Configuration for the global skills Git repository
  */
 export interface SkillsRepoConfig {
+  version: number;               // For migrations
+
+  // Global git configuration (shared by all directories)
   enabled: boolean;
   repoUrl: string;
   branch: string;
-  localPath: string;
-  lastSyncedAt?: string;
-  autoSyncInterval?: number;  // Minutes (0 = manual only)
+  autoSyncInterval?: number;     // Minutes (0 = manual only)
   syncOnStartup?: boolean;
   credentialProvider?: 'system' | 'oauth';
+
+  // List of target directories
+  directories: GlobalSkillDirectory[];
+
+  // Deprecated fields (for migration)
+  localPath?: string;
+  lastSyncedAt?: string;
 }
 
 /**
@@ -219,4 +296,15 @@ export interface FileSystemAPI {
   getAllLocalSkills: () => Promise<{ skills: Array<{ path: string; name: string; source: 'agent' | 'claude' }>; error?: string }>;
   initializeSkillsRepo: (options: { repoUrl?: string }) => Promise<{ success: boolean; error?: string }>;
   migrateSkillsToRepo: (options: { skillPaths: string[] }) => Promise<{ success: boolean; error?: string }>;
+  pushSkillsRepo: () => Promise<{ success: boolean; error?: string }>;
+  detectUnsyncedSkills: () => Promise<{ skills: Array<{ name: string; path: string; directory: string }>; error?: string }>;
+  addSkillsToRepo: (options: { skillPaths: string[] }) => Promise<{ success: boolean; error?: string }>;
+
+  // Global skill directories management
+  getSkillDirectories: () => Promise<GlobalSkillDirectory[]>;
+  addSkillDirectory: (directory: Omit<GlobalSkillDirectory, 'id' | 'localClonePath'>) => Promise<{ success: boolean; directory?: GlobalSkillDirectory; error?: string }>;
+  updateSkillDirectory: (options: { id: string; updates: Partial<GlobalSkillDirectory> }) => Promise<{ success: boolean; directory?: GlobalSkillDirectory; error?: string }>;
+  removeSkillDirectory: (id: string) => Promise<{ success: boolean; error?: string }>;
+  detectPresetDirectories: () => Promise<Array<PresetDirectory & { path: string; skillCount: number; skills: string[] }>>;
+  syncSingleDirectory: (directoryId: string) => Promise<{ success: boolean; error?: string }>;
 }
