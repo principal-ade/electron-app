@@ -61,6 +61,14 @@ const ProjectsViewContent: React.FC = () => {
   const [entryToDelete, setEntryToDelete] = useState<AlexandriaEntry | null>(
     null,
   );
+  const [deleteEntryGitStatus, setDeleteEntryGitStatus] = useState<{
+    branch?: string;
+    staged?: string[];
+    unstaged?: string[];
+    untracked?: string[];
+    ahead?: number;
+    behind?: number;
+  } | null>(null);
 
   // State for delete workspace modal
   const [isDeleteWorkspaceModalOpen, setIsDeleteWorkspaceModalOpen] =
@@ -98,6 +106,7 @@ const ProjectsViewContent: React.FC = () => {
   const handleCloseDeleteModal = useCallback(() => {
     setIsDeleteModalOpen(false);
     setEntryToDelete(null);
+    setDeleteEntryGitStatus(null);
   }, []);
 
   // Handle delete confirmation
@@ -256,6 +265,29 @@ const ProjectsViewContent: React.FC = () => {
         setIsCreateWorkspaceModalOpen(true);
       },
     );
+
+    return unsubscribe;
+  }, [events]);
+
+  // Listen for delete-requested events from ProjectInfoPanel
+  useEffect(() => {
+    const unsubscribe = events.on('project-info:delete-requested', (event) => {
+      const { repository, gitStatus } = event.payload as {
+        repository: AlexandriaEntry;
+        gitStatus?: {
+          branch?: string;
+          staged?: string[];
+          unstaged?: string[];
+          untracked?: string[];
+          ahead?: number;
+          behind?: number;
+        };
+      };
+      console.info('[ProjectsView] Delete requested for:', repository.name);
+      setEntryToDelete(repository);
+      setDeleteEntryGitStatus(gitStatus || null);
+      setIsDeleteModalOpen(true);
+    });
 
     return unsubscribe;
   }, [events]);
@@ -479,6 +511,7 @@ const ProjectsViewContent: React.FC = () => {
       <DeleteAlexandriaEntryModal
         isOpen={isDeleteModalOpen}
         entry={entryToDelete}
+        gitStatus={deleteEntryGitStatus}
         onClose={handleCloseDeleteModal}
         onConfirm={handleConfirmDelete}
       />

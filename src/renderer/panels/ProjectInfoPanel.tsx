@@ -12,7 +12,7 @@ import type {
   PanelActions,
   PanelEventEmitter,
 } from '@principal-ade/panel-framework-core';
-import { FolderGit2, GitBranch, RefreshCw, AlertCircle } from 'lucide-react';
+import { FolderGit2, GitBranch, RefreshCw, AlertCircle, Trash2 } from 'lucide-react';
 
 interface ProjectInfoPanelProps {
   context: PanelContextValue;
@@ -64,6 +64,28 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
       console.error('Failed to refresh:', error);
     } finally {
       setIsRefreshing(false);
+    }
+  };
+
+  // Handle delete request
+  const handleDeleteRequest = () => {
+    if (repository) {
+      events.emit({
+        type: 'project-info:delete-requested',
+        source: 'project-info-panel',
+        timestamp: Date.now(),
+        payload: {
+          repository,
+          gitStatus: gitData ? {
+            branch: gitData.branch,
+            staged: gitData.staged,
+            unstaged: gitData.unstaged,
+            untracked: gitData.untracked,
+            ahead: gitData.ahead,
+            behind: gitData.behind,
+          } : undefined,
+        },
+      });
     }
   };
 
@@ -515,6 +537,41 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
                       {totalChanges} {totalChanges === 1 ? 'file' : 'files'} with changes
                     </span>
                   </div>
+                )}
+
+                {/* Delete button - only show when repo is clean and up to date */}
+                {isSynced && totalChanges === 0 && (
+                  <button
+                    onClick={handleDeleteRequest}
+                    style={{
+                      marginTop: spacing.sm,
+                      padding: `${spacing.sm}px ${spacing.md}px`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: spacing.xs,
+                      width: '100%',
+                      border: `1px solid ${theme.colors.error}`,
+                      borderRadius: borderRadius,
+                      background: 'transparent',
+                      color: theme.colors.error,
+                      cursor: 'pointer',
+                      fontSize: theme.fontSizes[2],
+                      fontWeight: 500,
+                      transition: 'all 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = theme.colors.error;
+                      e.currentTarget.style.color = theme.colors.background;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = theme.colors.error;
+                    }}
+                  >
+                    <Trash2 size={16} />
+                    Delete Repository
+                  </button>
                 )}
               </div>
             ) : (

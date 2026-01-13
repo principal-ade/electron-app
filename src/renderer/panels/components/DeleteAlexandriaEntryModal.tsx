@@ -16,21 +16,61 @@ import type {
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { getWorkspaceThemeColor } from '../../themes/predefinedThemes';
 
+interface GitStatus {
+  branch?: string;
+  staged?: string[];
+  unstaged?: string[];
+  untracked?: string[];
+  ahead?: number;
+  behind?: number;
+}
+
 interface DeleteAlexandriaEntryModalProps {
   isOpen: boolean;
-  entry: AlexandriaEntry | null;
+  entry: (AlexandriaEntry & { isTracked?: boolean }) | null;
+  gitStatus?: GitStatus | null;
   onClose: () => void;
   onConfirm: (deleteLocal: boolean) => Promise<void>;
 }
 
 export const DeleteAlexandriaEntryModal: React.FC<
   DeleteAlexandriaEntryModalProps
-> = ({ isOpen, entry, onClose, onConfirm }) => {
+> = ({ isOpen, entry, gitStatus, onClose, onConfirm }) => {
   const { theme } = useTheme();
+
+  // Check if this is a real Alexandria entry (not just a discovered repo)
+  // Discovered repos have isTracked: false, Alexandria entries have registeredAt
+  // Try both checks to be safe
+  const isAlexandriaEntry = entry?.isTracked !== false && ('registeredAt' in (entry || {}));
+
+  // Debug logging
+  console.log('[DeleteAlexandriaEntryModal] Entry:', entry);
+  console.log('[DeleteAlexandriaEntryModal] isTracked:', entry?.isTracked);
+  console.log('[DeleteAlexandriaEntryModal] registeredAt:', (entry as any)?.registeredAt);
+  console.log('[DeleteAlexandriaEntryModal] isAlexandriaEntry:', isAlexandriaEntry);
+
+  // Calculate if repo is clean and synced for default selection
+  const isCleanAndSynced = gitStatus ? (
+    (gitStatus.staged?.length || 0) === 0 &&
+    (gitStatus.unstaged?.length || 0) === 0 &&
+    (gitStatus.untracked?.length || 0) === 0 &&
+    (gitStatus.ahead || 0) === 0 &&
+    (gitStatus.behind || 0) === 0
+  ) : false;
+
   const [deleteLocal, setDeleteLocal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [loadingWorkspaces, setLoadingWorkspaces] = useState(false);
+
+  // Set default based on git status when modal opens
+  useEffect(() => {
+    if (isOpen && isCleanAndSynced) {
+      setDeleteLocal(true);
+    } else if (isOpen) {
+      setDeleteLocal(false);
+    }
+  }, [isOpen, isCleanAndSynced]);
 
   const handleConfirm = async () => {
     try {
@@ -139,13 +179,13 @@ export const DeleteAlexandriaEntryModal: React.FC<
             <h3
               style={{
                 margin: 0,
-                fontSize: '18px',
-                fontWeight: 600,
-                color: theme.colors.text,
+                fontSize: theme.fontSizes[3],
+                fontWeight: theme.fontWeights.semibold,
+                color: theme.colors.textSecondary,
                 fontFamily: theme.fonts.body,
               }}
             >
-              Delete Repository Entry
+              {isAlexandriaEntry ? 'Delete Repository Entry' : 'Delete Repository'}
             </h3>
           </div>
           <button
@@ -180,9 +220,10 @@ export const DeleteAlexandriaEntryModal: React.FC<
           >
             <div
               style={{
-                fontSize: '14px',
-                fontWeight: 600,
-                color: theme.colors.text,
+                fontSize: theme.fontSizes[2],
+                fontFamily: theme.fonts.body,
+                fontWeight: theme.fontWeights.semibold,
+                color: theme.colors.textSecondary,
                 marginBottom: '4px',
               }}
             >
@@ -190,9 +231,9 @@ export const DeleteAlexandriaEntryModal: React.FC<
             </div>
             <div
               style={{
-                fontSize: '12px',
+                fontSize: theme.fontSizes[1],
                 color: theme.colors.textSecondary,
-                fontFamily: 'monospace',
+                fontFamily: theme.fonts.monospace,
                 wordBreak: 'break-all',
               }}
             >
@@ -223,29 +264,38 @@ export const DeleteAlexandriaEntryModal: React.FC<
             <div>
               <div
                 style={{
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  color: theme.colors.text,
+                  fontSize: theme.fontSizes[2],
+                  fontFamily: theme.fonts.body,
+                  fontWeight: theme.fontWeights.semibold,
+                  color: theme.colors.textSecondary,
                   marginBottom: '4px',
                 }}
               >
-                Choose deletion option
+                {!isAlexandriaEntry
+                  ? 'Delete discovered repository'
+                  : isCleanAndSynced
+                    ? 'Repository is ready for deletion'
+                    : 'Choose deletion option'}
               </div>
               <div
                 style={{
-                  fontSize: '13px',
+                  fontSize: theme.fontSizes[1],
+                  fontFamily: theme.fonts.body,
                   color: theme.colors.textSecondary,
                   lineHeight: '1.5',
                 }}
               >
-                You can either remove this entry from Alexandria while keeping
-                the local files, or permanently delete everything.
+                {!isAlexandriaEntry
+                  ? 'This repository was discovered in your home directory but is not registered in Alexandria. You can only delete the local files.'
+                  : isCleanAndSynced
+                    ? 'This repository is clean and up to date with the remote. You can safely delete the local clone or just remove it from Alexandria.'
+                    : 'You can either remove this entry from Alexandria while keeping the local files, or permanently delete everything.'}
               </div>
             </div>
           </div>
 
-          {/* Workspace Memberships */}
-          {loadingWorkspaces ? (
+          {/* Workspace Memberships - Only for Alexandria entries */}
+          {isAlexandriaEntry && loadingWorkspaces ? (
             <div
               style={{
                 padding: '12px 16px',
@@ -253,14 +303,15 @@ export const DeleteAlexandriaEntryModal: React.FC<
                 backgroundColor: theme.colors.backgroundSecondary,
                 border: `1px solid ${theme.colors.border}`,
                 marginBottom: '20px',
-                fontSize: '13px',
+                fontSize: theme.fontSizes[1],
+                fontFamily: theme.fonts.body,
                 color: theme.colors.textSecondary,
                 textAlign: 'center',
               }}
             >
               Loading workspaces...
             </div>
-          ) : workspaces.length > 0 ? (
+          ) : isAlexandriaEntry && workspaces.length > 0 ? (
             <div
               style={{
                 padding: '12px 16px',
@@ -284,9 +335,10 @@ export const DeleteAlexandriaEntryModal: React.FC<
                 />
                 <span
                   style={{
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    color: theme.colors.text,
+                    fontSize: theme.fontSizes[1],
+                    fontFamily: theme.fonts.body,
+                    fontWeight: theme.fontWeights.semibold,
+                    color: theme.colors.textSecondary,
                   }}
                 >
                   Will be removed from {workspaces.length} workspace
@@ -316,13 +368,14 @@ export const DeleteAlexandriaEntryModal: React.FC<
                         borderRadius: '4px',
                         backgroundColor: `${workspaceColor}20`,
                         border: `1px solid ${workspaceColor}40`,
-                        fontSize: '12px',
-                        fontWeight: 500,
-                        color: theme.colors.text,
+                        fontSize: theme.fontSizes[1],
+                        fontFamily: theme.fonts.body,
+                        fontWeight: theme.fontWeights.medium,
+                        color: theme.colors.textSecondary,
                       }}
                     >
                       {workspace.icon && (
-                        <span style={{ fontSize: '14px' }}>
+                        <span style={{ fontSize: theme.fontSizes[2] }}>
                           {workspace.icon}
                         </span>
                       )}
@@ -332,7 +385,7 @@ export const DeleteAlexandriaEntryModal: React.FC<
                 })}
               </div>
             </div>
-          ) : (
+          ) : isAlexandriaEntry ? (
             <div
               style={{
                 padding: '12px 16px',
@@ -340,7 +393,8 @@ export const DeleteAlexandriaEntryModal: React.FC<
                 backgroundColor: theme.colors.backgroundSecondary,
                 border: `1px solid ${theme.colors.border}`,
                 marginBottom: '20px',
-                fontSize: '13px',
+                fontSize: theme.fontSizes[1],
+                fontFamily: theme.fonts.body,
                 color: theme.colors.textSecondary,
               }}
             >
@@ -354,14 +408,15 @@ export const DeleteAlexandriaEntryModal: React.FC<
                 Not currently in any workspaces
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* Options */}
           <div
             style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
           >
-            {/* Option 1: Just Unregister */}
-            <label
+            {/* Option 1: Just Unregister - Only for Alexandria entries */}
+            {isAlexandriaEntry && (
+              <label
               style={{
                 display: 'flex',
                 alignItems: 'flex-start',
@@ -401,17 +456,19 @@ export const DeleteAlexandriaEntryModal: React.FC<
                   <Database size={16} style={{ color: theme.colors.primary }} />
                   <span
                     style={{
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      color: theme.colors.text,
+                      fontSize: theme.fontSizes[2],
+                      fontFamily: theme.fonts.body,
+                      fontWeight: theme.fontWeights.semibold,
+                      color: theme.colors.textSecondary,
                     }}
                   >
                     Unregister Only
                   </span>
                   <span
                     style={{
-                      fontSize: '11px',
-                      fontWeight: 600,
+                      fontSize: theme.fontSizes[0],
+                      fontFamily: theme.fonts.body,
+                      fontWeight: theme.fontWeights.semibold,
                       padding: '2px 8px',
                       borderRadius: '4px',
                       backgroundColor: `${theme.colors.success || '#10b981'}20`,
@@ -423,7 +480,8 @@ export const DeleteAlexandriaEntryModal: React.FC<
                 </div>
                 <div
                   style={{
-                    fontSize: '13px',
+                    fontSize: theme.fontSizes[1],
+                    fontFamily: theme.fonts.body,
                     color: theme.colors.textSecondary,
                     lineHeight: '1.5',
                   }}
@@ -434,6 +492,7 @@ export const DeleteAlexandriaEntryModal: React.FC<
                 </div>
               </div>
             </label>
+            )}
 
             {/* Option 2: Delete Everything */}
             <label
@@ -443,27 +502,29 @@ export const DeleteAlexandriaEntryModal: React.FC<
                 gap: '12px',
                 padding: '16px',
                 borderRadius: '8px',
-                border: `2px solid ${deleteLocal ? theme.colors.error : theme.colors.border}`,
-                backgroundColor: deleteLocal
+                border: `2px solid ${(deleteLocal || !isAlexandriaEntry) ? theme.colors.error : theme.colors.border}`,
+                backgroundColor: (deleteLocal || !isAlexandriaEntry)
                   ? `${theme.colors.error || '#ef4444'}10`
                   : theme.colors.backgroundSecondary,
-                cursor: isDeleting ? 'not-allowed' : 'pointer',
+                cursor: (isDeleting || !isAlexandriaEntry) ? 'not-allowed' : 'pointer',
                 transition: 'all 0.2s',
                 opacity: isDeleting ? 0.6 : 1,
               }}
-              onClick={() => !isDeleting && setDeleteLocal(true)}
+              onClick={() => isAlexandriaEntry && !isDeleting && setDeleteLocal(true)}
             >
-              <input
-                type="radio"
-                name="deleteOption"
-                checked={deleteLocal}
-                onChange={() => setDeleteLocal(true)}
-                disabled={isDeleting}
-                style={{
-                  marginTop: '2px',
-                  cursor: isDeleting ? 'not-allowed' : 'pointer',
-                }}
-              />
+              {isAlexandriaEntry && (
+                <input
+                  type="radio"
+                  name="deleteOption"
+                  checked={deleteLocal}
+                  onChange={() => setDeleteLocal(true)}
+                  disabled={isDeleting}
+                  style={{
+                    marginTop: '2px',
+                    cursor: isDeleting ? 'not-allowed' : 'pointer',
+                  }}
+                />
+              )}
               <div style={{ flex: 1 }}>
                 <div
                   style={{
@@ -479,17 +540,19 @@ export const DeleteAlexandriaEntryModal: React.FC<
                   />
                   <span
                     style={{
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      color: theme.colors.text,
+                      fontSize: theme.fontSizes[2],
+                      fontFamily: theme.fonts.body,
+                      fontWeight: theme.fontWeights.semibold,
+                      color: theme.colors.textSecondary,
                     }}
                   >
                     Delete Local Clone
                   </span>
                   <span
                     style={{
-                      fontSize: '11px',
-                      fontWeight: 600,
+                      fontSize: theme.fontSizes[0],
+                      fontFamily: theme.fonts.body,
+                      fontWeight: theme.fontWeights.semibold,
                       padding: '2px 8px',
                       borderRadius: '4px',
                       backgroundColor: `${theme.colors.error || '#ef4444'}20`,
@@ -501,13 +564,15 @@ export const DeleteAlexandriaEntryModal: React.FC<
                 </div>
                 <div
                   style={{
-                    fontSize: '13px',
+                    fontSize: theme.fontSizes[1],
+                    fontFamily: theme.fonts.body,
                     color: theme.colors.textSecondary,
                     lineHeight: '1.5',
                   }}
                 >
-                  Permanently delete all local files and remove from Alexandria.
-                  This action cannot be undone.
+                  {isAlexandriaEntry
+                    ? 'Permanently delete all local files and remove from Alexandria. This action cannot be undone.'
+                    : 'Permanently delete all local files. This action cannot be undone.'}
                 </div>
               </div>
             </label>
@@ -535,8 +600,8 @@ export const DeleteAlexandriaEntryModal: React.FC<
               backgroundColor: 'transparent',
               color: theme.colors.text,
               cursor: isDeleting ? 'not-allowed' : 'pointer',
-              fontSize: '14px',
-              fontWeight: 500,
+              fontSize: theme.fontSizes[2],
+              fontWeight: theme.fontWeights.medium,
               fontFamily: theme.fonts.body,
               opacity: isDeleting ? 0.5 : 1,
             }}
@@ -556,8 +621,8 @@ export const DeleteAlexandriaEntryModal: React.FC<
                 : theme.colors.primary,
               color: theme.colors.background,
               cursor: isDeleting ? 'not-allowed' : 'pointer',
-              fontSize: '14px',
-              fontWeight: 500,
+              fontSize: theme.fontSizes[2],
+              fontWeight: theme.fontWeights.medium,
               fontFamily: theme.fonts.body,
               display: 'flex',
               alignItems: 'center',
@@ -568,9 +633,11 @@ export const DeleteAlexandriaEntryModal: React.FC<
             <Trash2 size={16} />
             {isDeleting
               ? 'Deleting...'
-              : deleteLocal
-                ? 'Delete Everything'
-                : 'Unregister'}
+              : !isAlexandriaEntry
+                ? 'Delete'
+                : deleteLocal
+                  ? 'Delete Everything'
+                  : 'Unregister'}
           </button>
         </div>
       </div>

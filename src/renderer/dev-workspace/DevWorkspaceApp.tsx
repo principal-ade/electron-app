@@ -166,6 +166,14 @@ const QUICK_COMMANDS: QuickCommand[] = [
     name: 'issues',
     description: 'Switch left panel to GitHub issues',
   },
+  {
+    name: 'file-city',
+    description: 'Switch right panel to file city visualization',
+  },
+  {
+    name: 'reset',
+    description: 'Reset panel sizes to defaults',
+  },
 ];
 
 /**
@@ -308,6 +316,13 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           setLayout((prev) => ({ ...prev, left: 'githubIssues' }));
           setCollapsed((prev) => ({ ...prev, left: false }));
           return { success: true, message: 'Switched to issues' };
+        case 'file-city':
+          setLayout((prev) => ({ ...prev, right: 'fileCity' }));
+          setCollapsed((prev) => ({ ...prev, right: false }));
+          return { success: true, message: 'Switched to file city' };
+        case 'reset':
+          setPanelSizes({ left: 25, middle: 50, right: 25 });
+          return { success: true, message: 'Reset panel sizes' };
         default:
           return { error: `Unknown command: ${name}` };
       }
@@ -333,9 +348,10 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
       '/projects',
       '/files',
       '/issues',
+      '/file-city',
+      '/reset',
       '/preset file-editor',
       '/collapse',
-      '/switch middle fileEditor',
     ],
   });
 
