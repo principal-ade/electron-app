@@ -1142,6 +1142,17 @@ export function registerFileSystemIpcHandlers(
   const gitService = new SkillsGitService(configService);
   const syncService = new SkillsSyncService(configService, gitService);
 
+  // Set up pending changes emitter
+  syncService.setPendingChangesEmitter((directoryId, changes) => {
+    // Broadcast pending changes to all windows
+    BrowserWindow.getAllWindows().forEach((window) => {
+      window.webContents.send(FileSystemAPIEvent.PENDING_CHANGES_UPDATED, {
+        directoryId,
+        changes,
+      });
+    });
+  });
+
   // Initialize services asynchronously
   configService.initialize().catch(console.error);
   syncService.initialize().catch(console.error);
@@ -2024,7 +2035,21 @@ export function registerFileSystemIpcHandlers(
       console.log('[getSkillDirectories] Getting skill directories...');
       const config = await configService.getConfig();
       console.log('[getSkillDirectories] Config loaded, directories:', config.directories?.length || 0);
-      return config.directories || [];
+
+      // Enrich directories with status information
+      const directoriesWithStatus = await Promise.all(
+        (config.directories || []).map(async (dir) => {
+          try {
+            const status = await gitService.getDirectoryStatus(dir.id);
+            return { ...dir, status };
+          } catch (error) {
+            console.error(`[getSkillDirectories] Failed to get status for ${dir.displayName}:`, error);
+            return dir; // Return directory without status on error
+          }
+        })
+      );
+
+      return directoriesWithStatus;
     } catch (error) {
       console.error('[getSkillDirectories] Failed with error:', error);
       console.error('[getSkillDirectories] Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
@@ -2287,6 +2312,33 @@ export function registerFileSystemIpcHandlers(
       return { success };
     } catch (error) {
       console.error('[syncSingleDirectory] Failed:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // Handler for getting pending changes
+  ipcMain.handle(FileSystemAPIEvent.GET_PENDING_CHANGES, async () => {
+    try {
+      const pendingChanges = syncService.getPendingChanges();
+      // Convert Map to array of objects for serialization
+      return Array.from(pendingChanges.entries()).map(([directoryId, changes]) => ({
+        directoryId,
+        changes: changes.changes,
+        lastDetected: changes.lastDetected,
+      }));
+    } catch (error) {
+      console.error('[getPendingChanges] Failed:', error);
+      return [];
+    }
+  });
+
+  // Handler for clearing pending changes for a directory
+  ipcMain.handle(FileSystemAPIEvent.CLEAR_PENDING_CHANGES, async (event, directoryId) => {
+    try {
+      syncService.clearPendingChanges(directoryId);
+      return { success: true };
+    } catch (error) {
+      console.error('[clearPendingChanges] Failed:', error);
       return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   });

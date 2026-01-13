@@ -86,6 +86,8 @@ const PANEL_IDS = [
   'milestones',
   'skillsList',
   'agentsList',
+  'githubIssues',
+  'githubIssueDetail',
 ];
 
 // Quick commands for the command palette autocomplete
@@ -139,6 +141,30 @@ const QUICK_COMMANDS: QuickCommand[] = [
         options: DEFAULT_PANEL_PRESETS.map((p) => p.id),
       },
     ],
+  },
+  {
+    name: 'backlog',
+    description: 'Switch left panel to backlog (kanban)',
+  },
+  {
+    name: 'skills',
+    description: 'Switch left panel to skills list',
+  },
+  {
+    name: 'agents',
+    description: 'Switch left panel to agents list',
+  },
+  {
+    name: 'projects',
+    description: 'Switch left panel to local projects',
+  },
+  {
+    name: 'files',
+    description: 'Switch left panel to file tree',
+  },
+  {
+    name: 'issues',
+    description: 'Switch left panel to GitHub issues',
   },
 ];
 
@@ -258,6 +284,30 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           }
           return { error: `Unknown preset: ${presetId}` };
         }
+        case 'backlog':
+          setLayout((prev) => ({ ...prev, left: 'kanban' }));
+          setCollapsed((prev) => ({ ...prev, left: false }));
+          return { success: true, message: 'Switched to backlog' };
+        case 'skills':
+          setLayout((prev) => ({ ...prev, left: 'skillsList' }));
+          setCollapsed((prev) => ({ ...prev, left: false }));
+          return { success: true, message: 'Switched to skills' };
+        case 'agents':
+          setLayout((prev) => ({ ...prev, left: 'agentsList' }));
+          setCollapsed((prev) => ({ ...prev, left: false }));
+          return { success: true, message: 'Switched to agents' };
+        case 'projects':
+          setLayout((prev) => ({ ...prev, left: 'localProjects' }));
+          setCollapsed((prev) => ({ ...prev, left: false }));
+          return { success: true, message: 'Switched to projects' };
+        case 'files':
+          setLayout((prev) => ({ ...prev, left: 'fileCity' }));
+          setCollapsed((prev) => ({ ...prev, left: false }));
+          return { success: true, message: 'Switched to files' };
+        case 'issues':
+          setLayout((prev) => ({ ...prev, left: 'githubIssues' }));
+          setCollapsed((prev) => ({ ...prev, left: false }));
+          return { success: true, message: 'Switched to issues' };
         default:
           return { error: `Unknown command: ${name}` };
       }
@@ -277,8 +327,13 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     quickCommands: QUICK_COMMANDS,
     agentAvailable: false, // No AI backend connected yet
     initialSuggestions: [
+      '/backlog',
+      '/skills',
+      '/agents',
+      '/projects',
+      '/files',
+      '/issues',
       '/preset file-editor',
-      '/preset default',
       '/collapse',
       '/switch middle fileEditor',
     ],

@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Plus, Trash2, RefreshCw, FolderOpen, CheckCircle2, Circle } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, FolderOpen, CheckCircle2, Circle, GitBranch, AlertTriangle, Info } from 'lucide-react';
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
 
 interface GlobalDirectoriesConfigProps {
   onClose: () => void;
   onDirectoriesChanged?: () => void;
+}
+
+interface DirectoryStatus {
+  targetExists: boolean;
+  targetIsGit: boolean;
+  cloneExists: boolean;
+  cloneIsGit: boolean;
 }
 
 interface Directory {
@@ -16,6 +23,7 @@ interface Directory {
   isCustom: boolean;
   localClonePath: string;
   lastSyncedAt?: string;
+  status?: DirectoryStatus;
 }
 
 interface DetectedPreset {
@@ -166,6 +174,122 @@ export const GlobalDirectoriesConfig: React.FC<GlobalDirectoriesConfigProps> = (
     } finally {
       setSyncingDirectoryId(null);
     }
+  };
+
+  // Render status indicator badges
+  const renderStatusBadge = (status?: DirectoryStatus) => {
+    if (!status) {
+      return (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          padding: '4px 8px',
+          borderRadius: '4px',
+          backgroundColor: theme.colors.backgroundSecondary,
+          fontSize: '11px',
+          color: theme.colors.textSecondary,
+        }}>
+          <Info size={12} />
+          Checking...
+        </div>
+      );
+    }
+
+    const badges = [];
+
+    // Clone status
+    if (!status.cloneExists) {
+      badges.push(
+        <div key="clone-missing" style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          padding: '4px 8px',
+          borderRadius: '4px',
+          backgroundColor: '#f59e0b20',
+          color: '#f59e0b',
+          fontSize: '11px',
+          fontWeight: 500,
+        }}>
+          <AlertTriangle size={12} />
+          Clone Missing
+        </div>
+      );
+    } else if (!status.cloneIsGit) {
+      badges.push(
+        <div key="clone-not-git" style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          padding: '4px 8px',
+          borderRadius: '4px',
+          backgroundColor: '#ef444420',
+          color: '#ef4444',
+          fontSize: '11px',
+          fontWeight: 500,
+        }}>
+          <AlertTriangle size={12} />
+          Clone Not Git
+        </div>
+      );
+    } else {
+      badges.push(
+        <div key="clone-ok" style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          padding: '4px 8px',
+          borderRadius: '4px',
+          backgroundColor: '#10b98120',
+          color: '#10b981',
+          fontSize: '11px',
+          fontWeight: 500,
+        }}>
+          <GitBranch size={12} />
+          Clone Ready
+        </div>
+      );
+    }
+
+    // Target directory status
+    if (!status.targetExists) {
+      badges.push(
+        <div key="target-missing" style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          padding: '4px 8px',
+          borderRadius: '4px',
+          backgroundColor: '#6b728020',
+          color: '#6b7280',
+          fontSize: '11px',
+          fontWeight: 500,
+        }}>
+          <FolderOpen size={12} />
+          Target Missing
+        </div>
+      );
+    } else if (status.targetIsGit) {
+      badges.push(
+        <div key="target-git" style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          padding: '4px 8px',
+          borderRadius: '4px',
+          backgroundColor: '#3b82f620',
+          color: '#3b82f6',
+          fontSize: '11px',
+          fontWeight: 500,
+        }}>
+          <GitBranch size={12} />
+          Target is Git
+        </div>
+      );
+    }
+
+    return <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>{badges}</div>;
   };
 
   return (
@@ -397,10 +521,12 @@ export const GlobalDirectoriesConfig: React.FC<GlobalDirectoriesConfigProps> = (
                       display: 'flex',
                       alignItems: 'center',
                       gap: '8px',
+                      marginBottom: '8px',
                     }}>
                       <FolderOpen size={12} />
                       {dir.path}
                     </div>
+                    {renderStatusBadge(dir.status)}
                     {dir.lastSyncedAt && (
                       <div style={{
                         fontSize: '11px',

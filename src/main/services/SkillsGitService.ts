@@ -320,7 +320,7 @@ export class SkillsGitService {
       console.log(`[SkillsGit] Syncing ${directory.displayName}...`);
 
       // Ensure directory's git repo is cloned
-      if (!await this.isDirectoryRepositoryCloned(directory)) {
+      if (!await this.isDirectoryRepositoryCloned(directory.id)) {
         console.log(`[SkillsGit] Cloning repository for ${directory.displayName}...`);
         await this.cloneDirectoryRepository(directory, config);
       }
@@ -346,9 +346,13 @@ export class SkillsGitService {
 
   /**
    * Check if a directory's repository is cloned
+   * Public method for use by SkillsSyncService
    */
-  private async isDirectoryRepositoryCloned(directory: GlobalSkillDirectory): Promise<boolean> {
-    if (!directory.localClonePath) return false;
+  async isDirectoryRepositoryCloned(directoryId: string): Promise<boolean> {
+    const config = await this.configService.getConfig();
+    const directory = config.directories.find((d) => d.id === directoryId);
+
+    if (!directory || !directory.localClonePath) return false;
 
     try {
       await fs.access(path.join(directory.localClonePath, '.git'));
@@ -356,6 +360,87 @@ export class SkillsGitService {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Ensure a clone exists for a specific directory
+   * Public method for use by SkillsSyncService initialization
+   */
+  async ensureCloneExists(directoryId: string): Promise<void> {
+    const config = await this.configService.getConfig();
+    const directory = config.directories.find((d) => d.id === directoryId);
+
+    if (!directory) {
+      throw new Error(`Directory not found: ${directoryId}`);
+    }
+
+    if (!directory.localClonePath) {
+      throw new Error(`No local clone path configured for ${directory.displayName}`);
+    }
+
+    // Clone the repository
+    await this.cloneDirectoryRepository(directory, config);
+  }
+
+  /**
+   * Get status information for a directory
+   * Checks if target and clone directories exist and are git repos
+   */
+  async getDirectoryStatus(directoryId: string): Promise<{
+    targetExists: boolean;
+    targetIsGit: boolean;
+    cloneExists: boolean;
+    cloneIsGit: boolean;
+  }> {
+    const config = await this.configService.getConfig();
+    const directory = config.directories.find((d) => d.id === directoryId);
+
+    const status = {
+      targetExists: false,
+      targetIsGit: false,
+      cloneExists: false,
+      cloneIsGit: false,
+    };
+
+    if (!directory) {
+      return status;
+    }
+
+    // Check target directory
+    try {
+      await fs.access(directory.path);
+      status.targetExists = true;
+
+      // Check if target is a git repo
+      try {
+        await fs.access(path.join(directory.path, '.git'));
+        status.targetIsGit = await GitClientFactory.isGitRepository(directory.path);
+      } catch {
+        status.targetIsGit = false;
+      }
+    } catch {
+      status.targetExists = false;
+    }
+
+    // Check clone directory
+    if (directory.localClonePath) {
+      try {
+        await fs.access(directory.localClonePath);
+        status.cloneExists = true;
+
+        // Check if clone is a git repo
+        try {
+          await fs.access(path.join(directory.localClonePath, '.git'));
+          status.cloneIsGit = await GitClientFactory.isGitRepository(directory.localClonePath);
+        } catch {
+          status.cloneIsGit = false;
+        }
+      } catch {
+        status.cloneExists = false;
+      }
+    }
+
+    return status;
   }
 
   /**

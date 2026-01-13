@@ -34,6 +34,7 @@ import { panels as markdownPanels } from '@industry-theme/markdown-panels';
 import { panels as fileEditingPanels } from '@industry-theme/file-editing-panels';
 import { panels as backlogPanels } from '@industry-theme/backlogmd-kanban-panel';
 import { panels as agentPanels } from '@industry-theme/agent-panels';
+import { panels as githubPanels } from '@industry-theme/github-panels';
 import type { Repository } from '../../shared/types/repository.types';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 
@@ -163,7 +164,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
   // Unified modal state for detail panels
   const [detailModal, setDetailModal] = useState<{
-    panelId: 'task-detail' | 'skillDetail' | 'agentDetail' | 'gitDiff' | 'fileEditor';
+    panelId: 'task-detail' | 'skillDetail' | 'agentDetail' | 'gitDiff' | 'fileEditor' | 'githubIssueDetail';
     data: any;
   } | null>(null);
 
@@ -261,6 +262,14 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     (p) => p.metadata?.id === 'industry-theme.agent-detail',
   )?.component;
 
+  // GitHub panels
+  const GitHubIssuesPanelComponent = githubPanels.find(
+    (p) => p.metadata?.id === 'industry-theme.github-issues',
+  )?.component;
+  const GitHubIssueDetailPanelComponent = githubPanels.find(
+    (p) => p.metadata?.id === 'industry-theme.github-issue-detail',
+  )?.component;
+
   // Listen for doc:openInRightPanel events (from Alexandria docs panel context menu)
   useEffect(() => {
     const unsubscribe = events.on('doc:openInRightPanel', async (event) => {
@@ -351,6 +360,18 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           data: payload.agent,
         });
       }),
+      // GitHub issue detail
+      events.on('issue:selected', (event) => {
+        // Ignore re-emitted events from modal to prevent loop
+        if (event.source === 'modal') return;
+
+        console.log('[DevWorkspacePanelFramework] Received issue:selected event:', event);
+        const payload = event.payload as { issue: any };
+        setDetailModal({
+          panelId: 'githubIssueDetail',
+          data: payload.issue,
+        });
+      }),
       // File open from git changes panel
       events.on('file:open', (event) => {
         // Ignore re-emitted events from modal to prevent loop
@@ -414,6 +435,16 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               data: detailModal.data,
             },
           });
+        } else if (detailModal.panelId === 'githubIssueDetail') {
+          console.log('[DevWorkspacePanelFramework] Re-emitting issue:selected with data:', detailModal.data);
+          events.emit({
+            type: 'issue:selected',
+            source: 'modal',
+            timestamp: Date.now(),
+            payload: {
+              issue: detailModal.data,
+            },
+          });
         } else if (detailModal.panelId === 'gitDiff') {
           console.log('[DevWorkspacePanelFramework] Emitting git:diff event:', detailModal.data);
           // GitDiffPanel listens for git:diff events
@@ -457,6 +488,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       }),
       events.on('agent:deselected', () => {
         console.log('[DevWorkspacePanelFramework] Agent deselected, closing modal');
+        setDetailModal(null);
+      }),
+      events.on('issue:deselected', () => {
+        console.log('[DevWorkspacePanelFramework] Issue deselected, closing modal');
         setDetailModal(null);
       }),
     ];
@@ -1073,6 +1108,54 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           <div>Agent Detail panel not available</div>
         ),
       },
+      {
+        id: 'githubIssues',
+        label: 'GitHub Issues',
+        content: GitHubIssuesPanelComponent ? (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <GitHubIssuesPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div>GitHub Issues panel not available</div>
+        ),
+      },
+      {
+        id: 'githubIssueDetail',
+        label: 'GitHub Issue Detail',
+        content: GitHubIssueDetailPanelComponent ? (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <GitHubIssueDetailPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div>GitHub Issue Detail panel not available</div>
+        ),
+      },
     ],
     [
       PrincipalViewPanelComponent,
@@ -1096,6 +1179,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       SkillDetailPanelComponent,
       AgentsListPanelComponent,
       AgentDetailPanelComponent,
+      GitHubIssuesPanelComponent,
+      GitHubIssueDetailPanelComponent,
       context,
       actions,
       events,
@@ -1262,6 +1347,24 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                   events={events}
                 />
               </div>
+            )}
+            {detailModal.panelId === 'githubIssueDetail' && GitHubIssueDetailPanelComponent && (
+              <GitHubIssueDetailPanelComponent
+                context={{
+                  ...context,
+                  slices: new Map([
+                    ...Array.from(context.slices?.entries() || []),
+                    ['selectedIssue', {
+                      scope: 'repository' as const,
+                      name: 'selectedIssue',
+                      data: detailModal.data,
+                      loading: false,
+                    }],
+                  ]),
+                }}
+                actions={actions}
+                events={events}
+              />
             )}
           </div>
         </div>

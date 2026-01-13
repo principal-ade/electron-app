@@ -240,4 +240,18 @@ export const fileSystemAPI: FileSystemAPI = {
   syncSingleDirectory: async (directoryId: string) => {
     return ipcRenderer.invoke(FileSystemAPIEvent.SYNC_SINGLE_DIRECTORY, directoryId);
   },
+  // Pending changes methods (watch-notify-confirm workflow)
+  getPendingChanges: async () => {
+    return ipcRenderer.invoke(FileSystemAPIEvent.GET_PENDING_CHANGES);
+  },
+  clearPendingChanges: async (directoryId: string) => {
+    return ipcRenderer.invoke(FileSystemAPIEvent.CLEAR_PENDING_CHANGES, directoryId);
+  },
+  onPendingChangesUpdated: (callback: (event: any) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: any) => callback(payload);
+    ipcRenderer.on(FileSystemAPIEvent.PENDING_CHANGES_UPDATED, handler);
+    return () => {
+      ipcRenderer.removeListener(FileSystemAPIEvent.PENDING_CHANGES_UPDATED, handler);
+    };
+  },
 };

@@ -4,6 +4,8 @@ import { Zap, Github, Download, RefreshCw, Settings, Upload, AlertCircle } from 
 import { ShellService } from '../../../main-process-api/ShellService';
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
 import { GlobalDirectoriesConfig } from './GlobalDirectoriesConfig';
+import { PendingChangesPanel } from './PendingChangesPanel';
+import { useSkillsPendingChanges } from '../../../hooks/useSkillsPendingChanges';
 
 interface SkillBrowserViewHeaderProps {
   githubUrl: string;
@@ -27,10 +29,12 @@ export const SkillBrowserViewHeader: React.FC<SkillBrowserViewHeaderProps> = ({
   const { theme } = useTheme();
   const [inputValue, setInputValue] = useState(githubUrl);
   const [showDirectoriesConfig, setShowDirectoriesConfig] = useState(false);
+  const [showPendingChanges, setShowPendingChanges] = useState(false);
   const [isPushing, setIsPushing] = useState(false);
   const [pushStatus, setPushStatus] = useState<{ success?: boolean; error?: string } | null>(null);
   const [unsyncedSkills, setUnsyncedSkills] = useState<Array<{ name: string; path: string; directory: string }>>([]);
   const [isAddingSkills, setIsAddingSkills] = useState(false);
+  const { totalPendingCount } = useSkillsPendingChanges();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -359,31 +363,83 @@ export const SkillBrowserViewHeader: React.FC<SkillBrowserViewHeaderProps> = ({
       )}
       {syncEnabled && (
         <button
-          onClick={() => setShowDirectoriesConfig(true)}
+          onClick={() => setShowPendingChanges(true)}
           style={{
+            position: 'relative',
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
             padding: '8px 16px',
             borderRadius: '6px',
-            backgroundColor: 'transparent',
-            color: theme.colors.primary,
+            backgroundColor: totalPendingCount > 0 ? '#f59e0b' + '20' : 'transparent',
+            color: totalPendingCount > 0 ? '#f59e0b' : theme.colors.primary,
             cursor: 'pointer',
-            border: `1px solid ${theme.colors.primary}`,
+            border: `1px solid ${totalPendingCount > 0 ? '#f59e0b' : theme.colors.primary}`,
             fontSize: theme.fontSizes[1],
             fontWeight: theme.fontWeights.medium,
             transition: 'all 0.2s',
             whiteSpace: 'nowrap',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = theme.colors.primary + '10';
+            e.currentTarget.style.backgroundColor = (totalPendingCount > 0 ? '#f59e0b' : theme.colors.primary) + '20';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = totalPendingCount > 0 ? '#f59e0b' + '20' : 'transparent';
+          }}
+        >
+          <Settings size={16} />
+          Directories
+          {totalPendingCount > 0 && (
+            <span
+              style={{
+                position: 'absolute',
+                top: '-6px',
+                right: '-6px',
+                minWidth: '20px',
+                height: '20px',
+                borderRadius: '10px',
+                backgroundColor: '#f59e0b',
+                color: '#fff',
+                fontSize: '11px',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '0 6px',
+                border: `2px solid ${theme.colors.backgroundSecondary}`,
+              }}
+            >
+              {totalPendingCount}
+            </span>
+          )}
+        </button>
+      )}
+      {syncEnabled && (
+        <button
+          onClick={() => setShowDirectoriesConfig(true)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '8px 12px',
+            borderRadius: '6px',
+            backgroundColor: 'transparent',
+            color: theme.colors.textSecondary,
+            cursor: 'pointer',
+            border: `1px solid ${theme.colors.border}`,
+            fontSize: theme.fontSizes[1],
+            fontWeight: theme.fontWeights.medium,
+            transition: 'all 0.2s',
+            whiteSpace: 'nowrap',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.05)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = 'transparent';
           }}
         >
           <Settings size={16} />
-          Directories
         </button>
       )}
       </div>
@@ -465,6 +521,39 @@ export const SkillBrowserViewHeader: React.FC<SkillBrowserViewHeaderProps> = ({
             detectUnsyncedSkills();
           }}
         />
+      )}
+
+      {showPendingChanges && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+          }}
+          onClick={() => setShowPendingChanges(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '90%',
+              maxWidth: '800px',
+              height: '80%',
+              maxHeight: '600px',
+              borderRadius: '12px',
+              overflow: 'hidden',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+            }}
+          >
+            <PendingChangesPanel onClose={() => setShowPendingChanges(false)} />
+          </div>
+        </div>
       )}
     </>
   );

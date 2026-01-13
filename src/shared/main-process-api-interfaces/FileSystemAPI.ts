@@ -44,6 +44,11 @@ export enum FileSystemAPIEvent {
   REMOVE_SKILL_DIRECTORY = 'file-system:remove-skill-directory',
   DETECT_PRESET_DIRECTORIES = 'file-system:detect-preset-directories',
   SYNC_SINGLE_DIRECTORY = 'file-system:sync-single-directory',
+
+  // Skills pending changes (watch-notify-confirm workflow)
+  GET_PENDING_CHANGES = 'file-system:get-pending-changes',
+  PENDING_CHANGES_UPDATED = 'file-system:pending-changes-updated', // Event
+  CLEAR_PENDING_CHANGES = 'file-system:clear-pending-changes',
 }
 
 export interface FileStats {
@@ -98,6 +103,19 @@ export interface GlobalSkillDirectory {
   isCustom: boolean;             // true if user-added
   localClonePath: string;        // Unique clone location per directory
   lastSyncedAt?: string;         // Last sync timestamp for this directory
+
+  // Repository monitoring integration
+  isMonitored?: boolean;         // Registered with repository monitoring
+  watchReference?: string;       // Watch reference ID
+  pendingChangesCount?: number;  // Number of pending changes
+
+  // Status information
+  status?: {
+    targetExists: boolean;       // Target directory exists
+    targetIsGit: boolean;        // Target directory is a git repo
+    cloneExists: boolean;        // Clone directory exists
+    cloneIsGit: boolean;         // Clone directory is a git repo
+  };
 }
 
 /**
@@ -307,4 +325,19 @@ export interface FileSystemAPI {
   removeSkillDirectory: (id: string) => Promise<{ success: boolean; error?: string }>;
   detectPresetDirectories: () => Promise<Array<PresetDirectory & { path: string; skillCount: number; skills: string[] }>>;
   syncSingleDirectory: (directoryId: string) => Promise<{ success: boolean; error?: string }>;
+
+  // Pending changes methods (watch-notify-confirm workflow)
+  getPendingChanges: () => Promise<Array<{
+    directoryId: string;
+    changes: Array<{ path: string; type: string }>;
+    lastDetected: Date;
+  }>>;
+  clearPendingChanges: (directoryId: string) => Promise<{ success: boolean; error?: string }>;
+  onPendingChangesUpdated: (callback: (event: {
+    directoryId: string;
+    changes: {
+      changes: Array<{ path: string; type: string }>;
+      lastDetected: Date;
+    };
+  }) => void) => () => void;
 }

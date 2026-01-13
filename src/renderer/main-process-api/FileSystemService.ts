@@ -172,4 +172,25 @@ export class FileSystemService {
   static async syncSingleDirectory(directoryId: string) {
     return window.mainProcess.fileSystem.syncSingleDirectory(directoryId);
   }
+
+  // Pending changes methods (watch-notify-confirm workflow)
+  static async getPendingChanges() {
+    return window.mainProcess.fileSystem.getPendingChanges();
+  }
+
+  static async clearPendingChanges(directoryId: string) {
+    return window.mainProcess.fileSystem.clearPendingChanges(directoryId);
+  }
+
+  static onPendingChangesUpdated(
+    callback: (event: {
+      directoryId: string;
+      changes: {
+        changes: Array<{ path: string; type: string }>;
+        lastDetected: Date;
+      };
+    }) => void,
+  ): () => void {
+    return window.mainProcess.fileSystem.onPendingChangesUpdated(callback);
+  }
 }

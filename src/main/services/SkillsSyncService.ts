@@ -7,7 +7,13 @@ import type {
   SyncState,
   SkillSyncStatus,
   SkillMetadata,
+  GlobalSkillDirectory,
 } from '../../shared/main-process-api-interfaces/FileSystemAPI';
+import { getManager as getRepositoryMonitoringManager } from '../repository-monitoring/ipcHandlers';
+import type {
+  WorkspaceChangeEventPayload,
+  GitStatusWithFiles,
+} from '@principal-ai/repository-monitoring-server';
 
 /**
  * Result of detecting changes for a skill
@@ -21,14 +27,41 @@ export interface ChangeDetectionResult {
 }
 
 /**
+ * Pending skill changes detected by file watching
+ */
+export interface PendingSkillChanges {
+  directoryId: string;
+  changes: Array<{
+    path: string;
+    type: 'added' | 'modified' | 'deleted';
+  }>;
+  lastDetected: Date;
+}
+
+/**
+ * Callback to emit pending changes events to renderer
+ */
+export type PendingChangesEmitter = (
+  directoryId: string,
+  changes: PendingSkillChanges
+) => void;
+
+/**
  * Service for orchestrating skills synchronization
  * Manages sync state, change detection, and conflict resolution
+ * Integrates with Repository Monitoring Server for file watching
  */
 export class SkillsSyncService {
   private configService: SkillsConfigService;
   private gitService: SkillsGitService;
   private syncState: SyncState;
   private syncInterval: NodeJS.Timeout | null = null;
+
+  // Repository monitoring integration
+  private pendingChanges: Map<string, PendingSkillChanges> = new Map();
+  private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
+  private watchReferences: Map<string, string> = new Map(); // directoryId -> watchReferenceId
+  private pendingChangesEmitter: PendingChangesEmitter | null = null;
 
   constructor(configService: SkillsConfigService, gitService: SkillsGitService) {
     this.configService = configService;
@@ -41,8 +74,16 @@ export class SkillsSyncService {
   }
 
   /**
+   * Set the emitter for pending changes events
+   * Called by IPC handler to enable event emission to renderer
+   */
+  setPendingChangesEmitter(emitter: PendingChangesEmitter): void {
+    this.pendingChangesEmitter = emitter;
+  }
+
+  /**
    * Initialize the sync service
-   * Sets up periodic sync if configured
+   * Ensures clone directories exist, then registers them with Repository Monitoring Server
    */
   async initialize(): Promise<void> {
     const config = await this.configService.getConfig();
@@ -50,15 +91,268 @@ export class SkillsSyncService {
     // Initialize git service
     await this.gitService.initialize();
 
-    // Set up periodic sync if enabled
-    if (config.autoSyncInterval && config.autoSyncInterval > 0) {
-      this.startPeriodicSync(config.autoSyncInterval);
+    // Only proceed if sync is enabled and repo URL is configured
+    if (!config.enabled || !config.repoUrl) {
+      console.log('[SkillsSync] Sync not enabled or no repo URL configured, skipping initialization');
+      return;
     }
 
-    // Sync on startup if enabled
-    if (config.syncOnStartup) {
-      setTimeout(() => this.sync().catch(console.error), 5000); // 5s delay
+    console.log('[SkillsSync] Ensuring clone directories exist...');
+
+    // First, ensure all clone directories exist as git repositories
+    for (const directory of config.directories) {
+      if (directory.enabled && directory.localClonePath) {
+        try {
+          // Check if clone exists
+          const isCloned = await this.gitService.isDirectoryRepositoryCloned(directory.id);
+
+          if (!isCloned) {
+            console.log(
+              `[SkillsSync] Clone doesn't exist for ${directory.displayName}, creating initial clone...`
+            );
+            // Perform initial clone without copying to target directory
+            await this.gitService.ensureCloneExists(directory.id);
+          } else {
+            console.log(
+              `[SkillsSync] Clone already exists for ${directory.displayName}`
+            );
+          }
+        } catch (error) {
+          console.error(
+            `[SkillsSync] Failed to ensure clone exists for ${directory.displayName}:`,
+            error
+          );
+          // Continue with other directories
+          continue;
+        }
+      }
     }
+
+    console.log('[SkillsSync] Registering clone directories with Repository Monitoring...');
+
+    // Now register clone directories with Repository Monitoring Server
+    const repoMonitoringManager = getRepositoryMonitoringManager();
+
+    for (const directory of config.directories) {
+      if (directory.enabled && directory.localClonePath) {
+        try {
+          console.log(
+            `[SkillsSync] Registering clone directory: ${directory.localClonePath}`
+          );
+
+          // Register the repository
+          await repoMonitoringManager.registerRepository(directory.localClonePath);
+
+          // Acquire a watch reference
+          const watchRef = `skills-sync-${directory.id}`;
+          await repoMonitoringManager.acquireWatch(directory.localClonePath, watchRef);
+
+          // Store the watch reference for cleanup
+          this.watchReferences.set(directory.id, watchRef);
+
+          console.log(
+            `[SkillsSync] Successfully registered ${directory.displayName} for monitoring`
+          );
+        } catch (error) {
+          console.error(
+            `[SkillsSync] Failed to register ${directory.displayName} for monitoring:`,
+            error
+          );
+        }
+      }
+    }
+
+    // Set up event listeners for file changes
+    this.setupRepositoryMonitoringListeners();
+
+    // Note: We no longer start automatic periodic sync
+    // All syncing is now user-confirmed via pending changes UI
+    console.log('[SkillsSync] Initialized with file watching (no auto-sync)');
+  }
+
+  /**
+   * Set up event listeners for Repository Monitoring events
+   * Listens for file changes and git status changes in clone directories
+   */
+  private setupRepositoryMonitoringListeners(): void {
+    const repoMonitoringManager = getRepositoryMonitoringManager();
+
+    // Listen for workspace changes (file add/change/delete)
+    repoMonitoringManager.on('workspace-changed', (payload: WorkspaceChangeEventPayload) => {
+      if (payload.changes) {
+        this.handleCloneChange(payload.repoPath, payload.changes);
+      }
+    });
+
+    // Listen for git status changes (commits, branch switches)
+    repoMonitoringManager.on('git-status-changed', (payload: GitStatusWithFiles) => {
+      this.handleGitStatusChange(payload.repoPath, payload);
+    });
+
+    console.log('[SkillsSync] Repository monitoring event listeners registered');
+  }
+
+  /**
+   * Handle file changes detected in a clone directory
+   * Accumulates changes as "pending" for user review
+   */
+  private async handleCloneChange(
+    clonePath: string,
+    changes: Array<{ path: string; type: string }>
+  ): Promise<void> {
+    // Find the directory that owns this clone
+    const config = await this.configService.getConfig();
+    const directory = config.directories.find(
+      (d: GlobalSkillDirectory) => d.localClonePath === clonePath
+    );
+
+    if (!directory || !directory.enabled) {
+      return;
+    }
+
+    console.log(`[SkillsSync] File changes detected in ${directory.displayName}:`, changes);
+
+    // Filter to only skill files (*.md)
+    const skillChanges = changes.filter((change) => {
+      const fileName = path.basename(change.path);
+      return fileName.endsWith('.md');
+    });
+
+    if (skillChanges.length === 0) {
+      console.log('[SkillsSync] No skill file changes detected, ignoring');
+      return;
+    }
+
+    // Debounce rapid changes (batch within 1 second)
+    clearTimeout(this.debounceTimers.get(directory.id));
+
+    this.debounceTimers.set(
+      directory.id,
+      setTimeout(async () => {
+        // Store pending changes for UI
+        const pendingChange: PendingSkillChanges = {
+          directoryId: directory.id,
+          changes: skillChanges.map((c) => ({
+            path: c.path,
+            type: c.type as 'added' | 'modified' | 'deleted',
+          })),
+          lastDetected: new Date(),
+        };
+
+        this.pendingChanges.set(directory.id, pendingChange);
+
+        console.log(
+          `[SkillsSync] Stored ${skillChanges.length} pending changes for ${directory.displayName}`
+        );
+
+        // Emit event to UI to notify user of pending changes
+        if (this.pendingChangesEmitter) {
+          this.pendingChangesEmitter(directory.id, pendingChange);
+        }
+      }, 1000)
+    );
+  }
+
+  /**
+   * Handle git status changes in a clone directory
+   * This is triggered when commits, branch switches, etc. occur
+   */
+  private async handleGitStatusChange(
+    clonePath: string,
+    status: GitStatusWithFiles
+  ): Promise<void> {
+    // Find the directory
+    const config = await this.configService.getConfig();
+    const directory = config.directories.find(
+      (d: GlobalSkillDirectory) => d.localClonePath === clonePath
+    );
+
+    if (!directory || !directory.enabled) {
+      return;
+    }
+
+    // Log git status for debugging
+    console.log(`[SkillsSync] Git status changed in ${directory.displayName}:`, {
+      branch: status.branch,
+      ahead: status.ahead,
+      behind: status.behind,
+      isDirty: status.isDirty,
+    });
+
+    // Note: We don't auto-sync here
+    // User will manually trigger sync via the pending changes UI
+  }
+
+  /**
+   * Cleanup on shutdown
+   * Releases all watch references and clears timers
+   */
+  async cleanup(): Promise<void> {
+    console.log('[SkillsSync] Cleaning up...');
+
+    const repoMonitoringManager = getRepositoryMonitoringManager();
+    const config = await this.configService.getConfig();
+
+    // Release all watch references
+    for (const directory of config.directories) {
+      if (directory.localClonePath) {
+        const watchRef = this.watchReferences.get(directory.id);
+        if (watchRef) {
+          try {
+            await repoMonitoringManager.releaseWatch(directory.localClonePath, watchRef);
+            console.log(`[SkillsSync] Released watch for ${directory.displayName}`);
+          } catch (error) {
+            console.error(
+              `[SkillsSync] Failed to release watch for ${directory.displayName}:`,
+              error
+            );
+          }
+        }
+
+        // Optionally unregister (if no other watchers)
+        try {
+          await repoMonitoringManager.unregisterRepository(directory.localClonePath);
+        } catch (error) {
+          // Ignore errors - other watchers might still be using it
+        }
+      }
+    }
+
+    // Clear debounce timers
+    this.debounceTimers.forEach((timer) => clearTimeout(timer));
+    this.debounceTimers.clear();
+
+    // Clear watch references
+    this.watchReferences.clear();
+
+    // Clear pending changes
+    this.pendingChanges.clear();
+
+    console.log('[SkillsSync] Cleanup complete');
+  }
+
+  /**
+   * Get pending changes for UI display
+   */
+  getPendingChanges(): Map<string, PendingSkillChanges> {
+    return new Map(this.pendingChanges);
+  }
+
+  /**
+   * Clear pending changes for a specific directory
+   * Called after user confirms sync
+   */
+  clearPendingChanges(directoryId: string): void {
+    this.pendingChanges.delete(directoryId);
+    console.log(`[SkillsSync] Cleared pending changes for directory: ${directoryId}`);
+  }
+
+  /**
+   * Clear all pending changes
+   */
+  clearAllPendingChanges(): void {
+    this.pendingChanges.clear();
+    console.log('[SkillsSync] Cleared all pending changes');
   }
 
   /**
