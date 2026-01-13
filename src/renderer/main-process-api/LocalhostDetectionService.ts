@@ -60,6 +60,15 @@ export const LocalhostDetectionService = {
   ): (() => void) => {
     return window.mainProcess.localhostDetection.onServersUpdated(callback);
   },
+
+  /**
+   * Kill a server process by its PID
+   */
+  killServer: async (
+    pid: number,
+  ): Promise<{ success: boolean; error?: string }> => {
+    return window.mainProcess.localhostDetection.killServer(pid);
+  },
 };
 
 // Re-export types for convenience

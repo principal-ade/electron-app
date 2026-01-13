@@ -288,6 +288,30 @@ export function registerLocalhostDetectionHandlers() {
     },
   );
 
+  // Kill server by PID
+  ipcMain.handle(
+    LocalhostDetectionEvents.KILL_SERVER,
+    async (
+      _,
+      pid: number,
+    ): Promise<{ success: boolean; error?: string }> => {
+      try {
+        // Use kill command to terminate the process
+        await execAsync(`kill ${pid}`);
+        console.log(`[LocalhostDetection] Killed server with PID ${pid}`);
+        return { success: true };
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
+        console.error(
+          `[LocalhostDetection] Failed to kill server with PID ${pid}:`,
+          errorMessage,
+        );
+        return { success: false, error: errorMessage };
+      }
+    },
+  );
+
   console.log('[LocalhostDetection] Handlers registered');
 }
 

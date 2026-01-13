@@ -46,6 +46,7 @@ export enum LocalhostDetectionEvents {
   SERVERS_UPDATED = 'localhost:servers-updated',
   START_WATCHING = 'localhost:start-watching',
   STOP_WATCHING = 'localhost:stop-watching',
+  KILL_SERVER = 'localhost:kill-server',
 }
 
 export interface LocalhostDetectionAPI {
@@ -86,4 +87,9 @@ export interface LocalhostDetectionAPI {
   onServersUpdated: (
     callback: (result: ServerScanResult) => void,
   ) => () => void;
+
+  /**
+   * Kill a server process by its PID
+   */
+  killServer: (pid: number) => Promise<{ success: boolean; error?: string }>;
 }
