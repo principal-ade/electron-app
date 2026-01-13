@@ -1,6 +1,7 @@
 ---
-status: To Do
+status: In Progress
 priority: medium
+references: [https://github.com/principal-ade/electron-app/issues/8]
 createdDate: 2026-01-13
 ---
 
