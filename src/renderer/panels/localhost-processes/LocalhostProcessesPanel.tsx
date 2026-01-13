@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { RefreshCw, Globe, ExternalLink, Terminal, Folder } from 'lucide-react';
+import { RefreshCw, Globe, ExternalLink, Terminal, Folder, X } from 'lucide-react';
 import type {
   PanelComponentProps,
   DataSlice,
 } from '@principal-ade/panel-framework-core';
+import { LocalhostDetectionService } from '../../main-process-api/LocalhostDetectionService';
 
 export interface RunningServer {
   port: number;
@@ -34,6 +35,7 @@ export const LocalhostProcessesPanel: React.FC<PanelComponentProps> = ({
 }) => {
   const { theme } = useTheme();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [killingPids, setKillingPids] = useState<Set<number>>(new Set());
 
   // Get localhost servers from context slice
   const serversSlice = context?.getSlice<RunningServer[]>('localhostServers');
@@ -93,6 +95,63 @@ export const LocalhostProcessesPanel: React.FC<PanelComponentProps> = ({
 
     // Also open in browser directly
     window.open(url, '_blank');
+  };
+
+  const handleKillServer = async (server: RunningServer) => {
+    if (!server.pid) {
+      console.warn('[LocalhostProcessesPanel] Cannot kill server without PID');
+      return;
+    }
+
+    // Confirm before killing
+    const confirmed = window.confirm(
+      `Are you sure you want to kill the server on port ${server.port}?\n\nPID: ${server.pid}\nCommand: ${server.command || 'Unknown'}`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    // Add to killing set for UI feedback
+    setKillingPids((prev) => new Set(prev).add(server.pid!));
+
+    try {
+      const result = await LocalhostDetectionService.killServer(server.pid);
+
+      if (result.success) {
+        console.log(
+          `[LocalhostProcessesPanel] Successfully killed server with PID ${server.pid}`,
+        );
+
+        // Emit event for tracking
+        events.emit({
+          type: 'principal-ade.localhost-processes:server-killed',
+          source: 'principal-ade.localhost-processes',
+          payload: { server },
+          timestamp: Date.now(),
+        });
+
+        // Trigger refresh to update the list
+        setTimeout(() => {
+          handleRefresh();
+        }, 500);
+      } else {
+        console.error(
+          `[LocalhostProcessesPanel] Failed to kill server: ${result.error}`,
+        );
+        alert(`Failed to kill server: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('[LocalhostProcessesPanel] Error killing server:', error);
+      alert(`Error killing server: ${error}`);
+    } finally {
+      // Remove from killing set
+      setKillingPids((prev) => {
+        const next = new Set(prev);
+        next.delete(server.pid!);
+        return next;
+      });
+    }
   };
 
   return (
@@ -341,30 +400,62 @@ export const LocalhostProcessesPanel: React.FC<PanelComponentProps> = ({
                   </div>
                 </div>
 
-                <button
-                  onClick={() => handleOpenServer(server)}
-                  disabled={server.responsive === false}
+                <div
                   style={{
-                    padding: '6px',
-                    backgroundColor: theme.colors.background,
-                    border: `1px solid ${theme.colors.border}`,
-                    borderRadius: theme.radii[1],
-                    cursor:
-                      server.responsive === false ? 'not-allowed' : 'pointer',
                     display: 'flex',
-                    alignItems: 'center',
-                    color:
-                      server.responsive === false
-                        ? theme.colors.textTertiary
-                        : theme.colors.text,
+                    gap: '8px',
                     flexShrink: 0,
                     marginLeft: '12px',
-                    opacity: server.responsive === false ? 0.5 : 1,
                   }}
-                  title="Open server"
                 >
-                  <ExternalLink size={14} />
-                </button>
+                  <button
+                    onClick={() => handleOpenServer(server)}
+                    disabled={server.responsive === false}
+                    style={{
+                      padding: '6px',
+                      backgroundColor: theme.colors.background,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: theme.radii[1],
+                      cursor:
+                        server.responsive === false ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      color:
+                        server.responsive === false
+                          ? theme.colors.textTertiary
+                          : theme.colors.text,
+                      opacity: server.responsive === false ? 0.5 : 1,
+                    }}
+                    title="Open server"
+                  >
+                    <ExternalLink size={14} />
+                  </button>
+
+                  {server.pid && (
+                    <button
+                      onClick={() => handleKillServer(server)}
+                      disabled={killingPids.has(server.pid)}
+                      style={{
+                        padding: '6px',
+                        backgroundColor: theme.colors.background,
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: theme.radii[1],
+                        cursor: killingPids.has(server.pid)
+                          ? 'not-allowed'
+                          : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        color: killingPids.has(server.pid)
+                          ? theme.colors.textTertiary
+                          : theme.colors.danger,
+                        opacity: killingPids.has(server.pid) ? 0.5 : 1,
+                      }}
+                      title={`Kill server (PID: ${server.pid})`}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>

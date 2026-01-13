@@ -55,4 +55,10 @@ export const localhostDetectionAPI: LocalhostDetectionAPI = {
         subscription,
       );
   },
+
+  killServer: async (
+    pid: number,
+  ): Promise<{ success: boolean; error?: string }> => {
+    return ipcRenderer.invoke(LocalhostDetectionEvents.KILL_SERVER, pid);
+  },
 };
