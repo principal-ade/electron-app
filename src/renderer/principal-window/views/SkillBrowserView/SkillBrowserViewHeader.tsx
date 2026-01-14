@@ -1,23 +1,35 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Zap, Github, Download, RefreshCw, Settings, Upload, AlertCircle, ChevronDown, FileText, FolderCog } from 'lucide-react';
-import { FileSystemService } from '../../../main-process-api/FileSystemService';
-import { GlobalDirectoriesConfig } from './GlobalDirectoriesConfig';
-import { PendingChangesPanel } from './PendingChangesPanel';
-import { useSkillsPendingChanges } from '../../../hooks/useSkillsPendingChanges';
+import { Zap, Github, Download, X, FolderPlus, Plus } from 'lucide-react';
 
 export type ViewMode = 'installed' | 'browse';
+
+export interface DetectedDirectory {
+  id: string;
+  path: string;
+  displayName: string;
+  icon: string;
+  skillCount: number;
+  skills: string[];
+}
 
 interface SkillBrowserViewHeaderProps {
   githubUrl: string;
   onGithubUrlChange: (url: string) => void;
   onFetchSkills: (url?: string) => void;
   isLoading?: boolean;
-  syncEnabled?: boolean;
-  syncConfig?: { repoUrl: string; enabled: boolean } | null;
-  onEnableSync?: () => void;
   viewMode?: ViewMode;
   onViewModeChange?: (mode: ViewMode) => void;
+  showGithubInput?: boolean;
+  currentRepo?: {
+    owner: string;
+    repo: string;
+    branch: string;
+  } | null;
+  onClearRepo?: () => void;
+  hasDetectedDirectories?: boolean;
+  onOpenSetup?: () => void;
+  detectedDirectories?: DetectedDirectory[];
 }
 
 export const SkillBrowserViewHeader: React.FC<SkillBrowserViewHeaderProps> = ({
@@ -25,21 +37,17 @@ export const SkillBrowserViewHeader: React.FC<SkillBrowserViewHeaderProps> = ({
   onGithubUrlChange,
   onFetchSkills,
   isLoading = false,
-  syncEnabled = false,
-  syncConfig,
-  onEnableSync,
   viewMode = 'installed',
   onViewModeChange,
+  showGithubInput = true,
+  currentRepo,
+  onClearRepo,
+  hasDetectedDirectories = true,
+  onOpenSetup,
+  detectedDirectories = [],
 }) => {
   const { theme } = useTheme();
   const [inputValue, setInputValue] = useState(githubUrl);
-  const [showDirectoriesConfig, setShowDirectoriesConfig] = useState(false);
-  const [showPendingChanges, setShowPendingChanges] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [unsyncedSkills, setUnsyncedSkills] = useState<Array<{ name: string; path: string; directory: string }>>([]);
-  const [isAddingSkills, setIsAddingSkills] = useState(false);
-  const { totalPendingCount } = useSkillsPendingChanges();
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,56 +61,6 @@ export const SkillBrowserViewHeader: React.FC<SkillBrowserViewHeaderProps> = ({
       handleSubmit(e);
     }
   };
-
-  const detectUnsyncedSkills = async () => {
-    if (!syncEnabled || !syncConfig?.repoUrl) return;
-
-    try {
-      const result = await FileSystemService.detectUnsyncedSkills();
-      if (result.skills) {
-        setUnsyncedSkills(result.skills);
-      }
-    } catch (error) {
-      console.error('[SkillBrowserViewHeader] Failed to detect unsynced skills:', error);
-    }
-  };
-
-  const handleAddUnsyncedSkills = async () => {
-    try {
-      setIsAddingSkills(true);
-
-      const skillPaths = unsyncedSkills.map(skill => skill.path);
-      const result = await FileSystemService.addSkillsToRepo(skillPaths);
-
-      if (result.success) {
-        setUnsyncedSkills([]);
-        // Trigger a refresh or show success message
-      }
-    } catch (error) {
-      console.error('[SkillBrowserViewHeader] Failed to add unsynced skills:', error);
-    } finally {
-      setIsAddingSkills(false);
-    }
-  };
-
-  // Detect unsynced skills when sync is enabled
-  useEffect(() => {
-    detectUnsyncedSkills();
-  }, [syncEnabled, syncConfig]);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowDropdown(false);
-      }
-    };
-
-    if (showDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [showDropdown]);
 
   return (
     <>
@@ -182,8 +140,84 @@ export const SkillBrowserViewHeader: React.FC<SkillBrowserViewHeaderProps> = ({
         </div>
       </div>
 
-      {/* Center: GitHub URL Input (only in Browse mode) */}
-      {viewMode === 'browse' && (
+      {/* Center: Current Repo or GitHub URL Input */}
+      {viewMode === 'browse' && currentRepo ? (
+        /* Show current repo info with clear button */
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            paddingLeft: '24px',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              backgroundColor: theme.colors.backgroundSecondary,
+              border: `1px solid ${theme.colors.border}`,
+            }}
+          >
+            <Github size={16} color={theme.colors.primary} />
+            <span
+              style={{
+                fontSize: theme.fontSizes[1],
+                fontFamily: theme.fonts.monospace,
+                color: theme.colors.text,
+                fontWeight: theme.fontWeights.medium,
+              }}
+            >
+              {currentRepo.owner}/{currentRepo.repo}
+            </span>
+            <span
+              style={{
+                fontSize: theme.fontSizes[0],
+                color: theme.colors.textSecondary,
+                fontFamily: theme.fonts.monospace,
+              }}
+            >
+              @{currentRepo.branch}
+            </span>
+          </div>
+          {onClearRepo && (
+            <button
+              onClick={onClearRepo}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                backgroundColor: 'transparent',
+                border: `1px solid ${theme.colors.border}`,
+                color: theme.colors.textSecondary,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                fontSize: theme.fontSizes[1],
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                e.currentTarget.style.borderColor = theme.colors.error;
+                e.currentTarget.style.color = theme.colors.error;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.borderColor = theme.colors.border;
+                e.currentTarget.style.color = theme.colors.textSecondary;
+              }}
+            >
+              <X size={14} />
+              Clear
+            </button>
+          )}
+        </div>
+      ) : viewMode === 'browse' && showGithubInput ? (
+        /* Show GitHub URL input in Browse mode when showing input */
         <div
           style={{
             flex: 1,
@@ -273,309 +307,102 @@ export const SkillBrowserViewHeader: React.FC<SkillBrowserViewHeaderProps> = ({
             {isLoading ? 'Loading...' : 'Browse Skills'}
           </button>
         </div>
-      )}
+      ) : null}
 
-      {/* Spacer when in Installed mode */}
-      {viewMode === 'installed' && <div style={{ flex: 1 }} />}
+      {/* Spacer */}
+      {(viewMode === 'installed' || (viewMode === 'browse' && !showGithubInput && !currentRepo)) && <div style={{ flex: 1 }} />}
 
-      {/* Right: Enable Sync button */}
-      {!syncEnabled && onEnableSync && (
+      {/* Setup button when no directories detected in Installed mode */}
+      {viewMode === 'installed' && !hasDetectedDirectories && onOpenSetup && (
         <button
-          onClick={onEnableSync}
+          onClick={onOpenSetup}
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
+            gap: '8px',
             padding: '8px 16px',
             borderRadius: '6px',
-            backgroundColor: 'transparent',
-            color: theme.colors.primary,
+            backgroundColor: theme.colors.primary,
+            color: theme.colors.background,
+            border: 'none',
             cursor: 'pointer',
-            border: `1px solid ${theme.colors.primary}`,
-            fontSize: '14px',
-            fontWeight: 500,
+            fontSize: theme.fontSizes[1],
+            fontWeight: theme.fontWeights.medium,
             transition: 'all 0.2s',
             whiteSpace: 'nowrap',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = theme.colors.primary + '10';
+            e.currentTarget.style.opacity = '0.85';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.opacity = '1';
           }}
         >
-          <RefreshCw size={16} />
-          Enable Sync
+          <FolderPlus size={16} />
+          Set Up Agent Skills
         </button>
       )}
-      {syncEnabled && (
+
+      {/* Detected directories info when in Installed mode */}
+      {viewMode === 'installed' && hasDetectedDirectories && detectedDirectories.length > 0 && (
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '6px',
-          color: theme.colors.success || theme.colors.primary,
-          fontSize: '14px',
-          fontWeight: 500,
+          gap: '12px',
         }}>
-          <RefreshCw size={16} />
-          Sync Enabled
-        </div>
-      )}
-      {syncEnabled && (
-        <div ref={dropdownRef} style={{ position: 'relative' }}>
-          <button
-            onClick={() => setShowDropdown(!showDropdown)}
-            style={{
-              position: 'relative',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              backgroundColor: totalPendingCount > 0 ? '#f59e0b' + '20' : 'transparent',
-              color: totalPendingCount > 0 ? '#f59e0b' : theme.colors.primary,
-              cursor: 'pointer',
-              border: `1px solid ${totalPendingCount > 0 ? '#f59e0b' : theme.colors.primary}`,
-              fontSize: theme.fontSizes[1],
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: theme.fontSizes[1],
+            color: theme.colors.textSecondary,
+            whiteSpace: 'nowrap',
+          }}>
+            <span>Identified Agent Skills:</span>
+            <span style={{
+              color: theme.colors.text,
               fontWeight: theme.fontWeights.medium,
-              transition: 'all 0.2s',
-              whiteSpace: 'nowrap',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = (totalPendingCount > 0 ? '#f59e0b' : theme.colors.primary) + '20';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = totalPendingCount > 0 ? '#f59e0b' + '20' : 'transparent';
-            }}
-          >
-            <Settings size={16} />
-            Directories
-            <ChevronDown size={16} />
-            {totalPendingCount > 0 && (
-              <span
-                style={{
-                  position: 'absolute',
-                  top: '-6px',
-                  right: '-6px',
-                  minWidth: '20px',
-                  height: '20px',
-                  borderRadius: '10px',
-                  backgroundColor: '#f59e0b',
-                  color: '#fff',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '0 6px',
-                  border: `2px solid ${theme.colors.backgroundSecondary}`,
-                }}
-              >
-                {totalPendingCount}
-              </span>
-            )}
-          </button>
-
-          {showDropdown && (
-            <div
+            }}>
+              {detectedDirectories
+                .filter(dir => dir.id !== 'agent-universal')
+                .map(dir => dir.displayName)
+                .join(', ')}
+            </span>
+          </div>
+          {onOpenSetup && (
+            <button
+              onClick={onOpenSetup}
+              title="Add more agent directories"
               style={{
-                position: 'absolute',
-                top: 'calc(100% + 4px)',
-                right: 0,
-                minWidth: '200px',
-                backgroundColor: theme.colors.backgroundSecondary,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '24px',
+                height: '24px',
+                borderRadius: '4px',
+                backgroundColor: 'transparent',
                 border: `1px solid ${theme.colors.border}`,
-                borderRadius: '8px',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                zIndex: 1000,
-                overflow: 'hidden',
+                color: theme.colors.textSecondary,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                e.currentTarget.style.borderColor = theme.colors.primary;
+                e.currentTarget.style.color = theme.colors.primary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.borderColor = theme.colors.border;
+                e.currentTarget.style.color = theme.colors.textSecondary;
               }}
             >
-              <button
-                onClick={() => {
-                  setShowPendingChanges(true);
-                  setShowDropdown(false);
-                }}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '12px 16px',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  color: theme.colors.text,
-                  fontSize: theme.fontSizes[1],
-                  cursor: 'pointer',
-                  transition: 'background-color 0.2s',
-                  textAlign: 'left',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = theme.colors.background;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                }}
-              >
-                <FileText size={16} color={totalPendingCount > 0 ? '#f59e0b' : theme.colors.textSecondary} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: theme.fontWeights.medium }}>Pending Changes</div>
-                  {totalPendingCount > 0 && (
-                    <div style={{ fontSize: theme.fontSizes[0], color: theme.colors.textSecondary, marginTop: '2px' }}>
-                      {totalPendingCount} file{totalPendingCount !== 1 ? 's' : ''}
-                    </div>
-                  )}
-                </div>
-              </button>
-
-              <div style={{ height: '1px', backgroundColor: theme.colors.border }} />
-
-              <button
-                onClick={() => {
-                  setShowDirectoriesConfig(true);
-                  setShowDropdown(false);
-                }}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '12px 16px',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  color: theme.colors.text,
-                  fontSize: theme.fontSizes[1],
-                  cursor: 'pointer',
-                  transition: 'background-color 0.2s',
-                  textAlign: 'left',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = theme.colors.background;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                }}
-              >
-                <FolderCog size={16} color={theme.colors.textSecondary} />
-                <div style={{ fontWeight: theme.fontWeights.medium }}>Configure Directories</div>
-              </button>
-            </div>
+              <Plus size={14} />
+            </button>
           )}
         </div>
       )}
       </div>
-
-      {/* Unsynced Skills Banner */}
-      {syncEnabled && unsyncedSkills.length > 0 && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '12px',
-            padding: '12px 24px',
-            backgroundColor: theme.colors.warning ? theme.colors.warning + '20' : theme.colors.primary + '20',
-            borderBottom: `1px solid ${theme.colors.warning || theme.colors.primary}`,
-            flexShrink: 0,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
-            <AlertCircle size={20} color={theme.colors.warning || theme.colors.primary} />
-            <div>
-              <div style={{
-                fontSize: theme.fontSizes[2],
-                fontWeight: theme.fontWeights.semibold,
-                color: theme.colors.text,
-                marginBottom: '4px',
-              }}>
-                {unsyncedSkills.length} skill{unsyncedSkills.length !== 1 ? 's' : ''} not in repository
-              </div>
-              <div style={{
-                fontSize: theme.fontSizes[1],
-                color: theme.colors.textSecondary,
-              }}>
-                Found in your global directories: {unsyncedSkills.map(s => s.name).join(', ')}
-              </div>
-            </div>
-          </div>
-          <button
-            onClick={handleAddUnsyncedSkills}
-            disabled={isAddingSkills}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              backgroundColor: theme.colors.warning || theme.colors.primary,
-              color: theme.colors.background,
-              cursor: isAddingSkills ? 'not-allowed' : 'pointer',
-              border: 'none',
-              fontSize: theme.fontSizes[1],
-              fontWeight: theme.fontWeights.medium,
-              transition: 'all 0.2s',
-              whiteSpace: 'nowrap',
-              opacity: isAddingSkills ? 0.6 : 1,
-            }}
-            onMouseEnter={(e) => {
-              if (!isAddingSkills) {
-                e.currentTarget.style.opacity = '0.8';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isAddingSkills) {
-                e.currentTarget.style.opacity = '1';
-              }
-            }}
-          >
-            <Upload size={16} />
-            {isAddingSkills ? 'Adding...' : 'Add to Repository'}
-          </button>
-        </div>
-      )}
-
-      {showDirectoriesConfig && (
-        <GlobalDirectoriesConfig
-          onClose={() => setShowDirectoriesConfig(false)}
-          onDirectoriesChanged={() => {
-            // Refresh unsynced skills detection
-            detectUnsyncedSkills();
-          }}
-        />
-      )}
-
-      {showPendingChanges && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 10000,
-          }}
-          onClick={() => setShowPendingChanges(false)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              width: '90%',
-              maxWidth: '800px',
-              height: '80%',
-              maxHeight: '600px',
-              borderRadius: '12px',
-              overflow: 'hidden',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-            }}
-          >
-            <PendingChangesPanel onClose={() => setShowPendingChanges(false)} />
-          </div>
-        </div>
-      )}
     </>
   );
 };

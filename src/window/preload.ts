@@ -53,6 +53,7 @@ import { observabilityAPI } from './main-process-api-implementations/observabili
 import { localhostDetectionAPI } from './main-process-api-implementations/localhostDetectionApi';
 import { githubArtifactAPI } from './main-process-api-implementations/githubArtifactApi';
 import { collectionsAPI } from './main-process-api-implementations/collectionsApi';
+import { recentReposAPI } from './main-process-api-implementations/recentReposApi';
 // Removed mermaid import - it uses 'debug' which isn't available in preload context
 // import mermaid from 'mermaid';
 
@@ -133,6 +134,7 @@ const mainProcessExposure: MainProcessAPI = {
   observability: observabilityAPI,
   localhostDetection: localhostDetectionAPI,
   githubArtifact: githubArtifactAPI,
+  recentRepos: recentReposAPI,
 };
 
 // Mermaid removed from preload - will be loaded in renderer instead

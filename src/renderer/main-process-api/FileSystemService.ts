@@ -169,6 +169,14 @@ export class FileSystemService {
     return window.mainProcess.fileSystem.detectPresetDirectories();
   }
 
+  static async createAgentDirectories(agentIds: string[]) {
+    return window.mainProcess.fileSystem.createAgentDirectories(agentIds);
+  }
+
+  static async deleteAgentDirectory(agentId: string) {
+    return window.mainProcess.fileSystem.deleteAgentDirectory(agentId);
+  }
+
   static async syncSingleDirectory(directoryId: string) {
     return window.mainProcess.fileSystem.syncSingleDirectory(directoryId);
   }

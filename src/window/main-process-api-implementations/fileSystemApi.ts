@@ -237,6 +237,12 @@ export const fileSystemAPI: FileSystemAPI = {
   detectPresetDirectories: async () => {
     return ipcRenderer.invoke(FileSystemAPIEvent.DETECT_PRESET_DIRECTORIES);
   },
+  createAgentDirectories: async (agentIds: string[]) => {
+    return ipcRenderer.invoke(FileSystemAPIEvent.CREATE_AGENT_DIRECTORIES, agentIds);
+  },
+  deleteAgentDirectory: async (agentId: string) => {
+    return ipcRenderer.invoke(FileSystemAPIEvent.DELETE_AGENT_DIRECTORY, agentId);
+  },
   syncSingleDirectory: async (directoryId: string) => {
     return ipcRenderer.invoke(FileSystemAPIEvent.SYNC_SINGLE_DIRECTORY, directoryId);
   },

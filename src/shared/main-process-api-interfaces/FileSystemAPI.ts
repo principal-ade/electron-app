@@ -44,6 +44,8 @@ export enum FileSystemAPIEvent {
   REMOVE_SKILL_DIRECTORY = 'file-system:remove-skill-directory',
   DETECT_PRESET_DIRECTORIES = 'file-system:detect-preset-directories',
   SYNC_SINGLE_DIRECTORY = 'file-system:sync-single-directory',
+  CREATE_AGENT_DIRECTORIES = 'file-system:create-agent-directories',
+  DELETE_AGENT_DIRECTORY = 'file-system:delete-agent-directory',
 
   // Skills pending changes (watch-notify-confirm workflow)
   GET_PENDING_CHANGES = 'file-system:get-pending-changes',
@@ -202,6 +204,16 @@ export interface SyncState {
  */
 export type SkillSyncStatus = 'synced' | 'update-available' | 'modified' | 'disabled' | 'conflict';
 
+/**
+ * Validation status for skill frontmatter
+ */
+export interface FrontmatterValidation {
+  isValid: boolean;
+  hasStructure: boolean;
+  missingFields: string[];
+  errorMessage?: string;
+}
+
 export interface GlobalSkill {
   id: string;
   name: string;
@@ -219,6 +231,7 @@ export interface GlobalSkill {
   source: 'global-universal' | 'global-claude';
   priority: 2 | 4;  // 2=global-universal, 4=global-claude
   metadata?: SkillMetadata;
+  frontmatterValidation: FrontmatterValidation;
 }
 
 // File watching interfaces

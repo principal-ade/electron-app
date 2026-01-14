@@ -3355,6 +3355,15 @@ export function registerGitHubIpcHandlers(
           case 'global-claude':
             destPath = path.join(homeDir, '.claude', 'skills', extractedSkillName);
             break;
+          case 'global-opencode':
+            destPath = path.join(homeDir, '.config', 'opencode', 'skill', extractedSkillName);
+            break;
+          case 'global-cursor':
+            destPath = path.join(homeDir, '.cursor', 'skills', extractedSkillName);
+            break;
+          case 'global-windsurf':
+            destPath = path.join(homeDir, '.windsurf', 'skills', extractedSkillName);
+            break;
           case 'project-universal':
             if (!repositoryPath) {
               return {

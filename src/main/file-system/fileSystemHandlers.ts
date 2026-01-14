@@ -5,12 +5,15 @@ import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 
-import { FileSystemAPIEvent, type GlobalSkill, PRESET_SKILL_DIRECTORIES } from '../../shared/main-process-api-interfaces/FileSystemAPI';
+import { FileSystemAPIEvent, type GlobalSkill } from '../../shared/main-process-api-interfaces/FileSystemAPI';
 import type { IModernApplicationWindow } from '../window/types';
 import { GitHubAdapter } from '../version-control-providers/githubHandlers';
 import { SkillsConfigService } from '../services/SkillsConfigService';
 import { SkillsGitService } from '../services/SkillsGitService';
 import { SkillsSyncService } from '../services/SkillsSyncService';
+import { SkillsDetectionService } from '../services/SkillsDetectionService';
+import { RecentReposService } from '../services/RecentReposService';
+import { RecentReposAPIEvent } from '../../shared/main-process-api-interfaces/RecentReposAPI';
 
 export class ElectronFileSystemAdapter {
   private rootPath: string | null = null;
@@ -1141,6 +1144,7 @@ export function registerFileSystemIpcHandlers(
   const configService = new SkillsConfigService();
   const gitService = new SkillsGitService(configService);
   const syncService = new SkillsSyncService(configService, gitService);
+  const detectionService = new SkillsDetectionService();
 
   // Set up pending changes emitter
   syncService.setPendingChangesEmitter((directoryId, changes) => {
@@ -1717,6 +1721,29 @@ export function registerFileSystemIpcHandlers(
         };
       };
 
+      // Helper function to validate skill frontmatter
+      const validateFrontmatter = (content: string, skillName: string): { isValid: boolean; hasStructure: boolean; missingFields: string[]; errorMessage?: string } => {
+        const missingFields: string[] = [];
+
+        // Check for basic structure (heading)
+        const hasHeading = /^#\s+.+/m.test(content);
+
+        // For now, we consider a skill valid if it has content and a heading
+        // More sophisticated frontmatter validation can be added later
+        const isValid = content.length > 0 && hasHeading;
+
+        if (!hasHeading) {
+          missingFields.push('heading');
+        }
+
+        return {
+          isValid,
+          hasStructure: hasHeading,
+          missingFields,
+          errorMessage: isValid ? undefined : 'Skill is missing required structure',
+        };
+      };
+
       // Helper function to parse SKILL.md content
       const parseSkillContent = async (skillPath: string, source: 'global-universal' | 'global-claude'): Promise<GlobalSkill | null> => {
         try {
@@ -1766,6 +1793,9 @@ export function registerFileSystemIpcHandlers(
             console.debug(`[getGlobalSkills] No metadata file for skill: ${skillDirName}`);
           }
 
+          // Validate frontmatter
+          const frontmatterValidation = validateFrontmatter(content, skillDirName);
+
           return {
             id: skillPath,
             name: skillDirName.replace(/-/g, ' ').replace(/_/g, ' '),
@@ -1777,6 +1807,7 @@ export function registerFileSystemIpcHandlers(
             source,
             priority: source === 'global-universal' ? 2 : 4,
             metadata,
+            frontmatterValidation,
           };
         } catch (error) {
           console.error(`[getGlobalSkills] Failed to parse skill at ${skillPath}:`, error);
@@ -1901,42 +1932,9 @@ export function registerFileSystemIpcHandlers(
   // Handler for getting all local skills (for migration)
   ipcMain.handle(FileSystemAPIEvent.GET_ALL_LOCAL_SKILLS, async () => {
     try {
-      const homeDir = app.getPath('home');
-      const skillDirs: Array<{ path: string; name: string; source: 'agent' | 'claude' }> = [];
-
-      // Helper to find skill directories
-      const findSkillDirs = async (baseDir: string, source: 'agent' | 'claude') => {
-        try {
-          if (!fs.existsSync(baseDir)) {
-            return;
-          }
-
-          const entries = await fsPromises.readdir(baseDir, { withFileTypes: true });
-          for (const entry of entries) {
-            if (entry.isDirectory()) {
-              const skillPath = path.join(baseDir, entry.name);
-              // Check if it contains SKILL.md or any .md file
-              const files = await fsPromises.readdir(skillPath);
-              if (files.some(f => f.endsWith('.md'))) {
-                skillDirs.push({
-                  path: skillPath,
-                  name: entry.name,
-                  source,
-                });
-              }
-            }
-          }
-        } catch (error) {
-          console.warn(`[getAllLocalSkills] Error reading ${baseDir}:`, error);
-        }
-      };
-
-      // Scan both global directories
-      await findSkillDirs(path.join(homeDir, '.agent', 'skills'), 'agent');
-      await findSkillDirs(path.join(homeDir, '.claude', 'skills'), 'claude');
-
-      console.log(`[getAllLocalSkills] Found ${skillDirs.length} local skills`);
-      return { skills: skillDirs };
+      const skills = await detectionService.getAllLocalSkills();
+      console.log(`[getAllLocalSkills] Found ${skills.length} local skills`);
+      return { skills };
     } catch (error) {
       console.error('[getAllLocalSkills] Failed:', error);
       return { skills: [], error: error instanceof Error ? error.message : String(error) };
@@ -2093,46 +2091,128 @@ export function registerFileSystemIpcHandlers(
   // Handler for detecting preset directories that have skills
   ipcMain.handle(FileSystemAPIEvent.DETECT_PRESET_DIRECTORIES, async () => {
     try {
-      const homeDir = app.getPath('home');
-      const detectedDirs = [];
-
-      for (const preset of PRESET_SKILL_DIRECTORIES) {
-        const dirPath = preset.path.replace('{HOME}', homeDir);
-
-        if (fs.existsSync(dirPath)) {
-          const files = await fsPromises.readdir(dirPath);
-          const skillDirs = [];
-
-          for (const file of files) {
-            const skillPath = path.join(dirPath, file);
-            const skillMdPath = path.join(skillPath, 'SKILL.md');
-
-            try {
-              const stat = await fsPromises.stat(skillPath);
-              if (stat.isDirectory() && fs.existsSync(skillMdPath)) {
-                skillDirs.push(file);
-              }
-            } catch {
-              // Skip files that can't be accessed
-              continue;
-            }
-          }
-
-          if (skillDirs.length > 0) {
-            detectedDirs.push({
-              ...preset,
-              path: dirPath,
-              skillCount: skillDirs.length,
-              skills: skillDirs,
-            });
-          }
-        }
-      }
-
+      const detectedDirs = await detectionService.detectPresetDirectories();
       return detectedDirs;
     } catch (error) {
       console.error('[detectPresetDirectories] Failed:', error);
       return [];
+    }
+  });
+
+  // Handler for creating agent skill directories
+  ipcMain.handle(FileSystemAPIEvent.CREATE_AGENT_DIRECTORIES, async (_event, agentIds: string[]) => {
+    try {
+      const homeDir = app.getPath('home');
+      const createdDirs: string[] = [];
+
+      const directoryMap: Record<string, string> = {
+        'claude-specific': path.join(homeDir, '.claude', 'skills'),
+        'opencode': path.join(homeDir, '.config', 'opencode', 'skill'),
+        'cursor-ide': path.join(homeDir, '.cursor', 'skills'),
+        'windsurf': path.join(homeDir, '.windsurf', 'skills'),
+      };
+
+      const agentNames: Record<string, string> = {
+        'claude-specific': 'Claude',
+        'opencode': 'OpenCode',
+        'cursor-ide': 'Cursor',
+        'windsurf': 'Windsurf',
+      };
+
+      for (const agentId of agentIds) {
+        const dirPath = directoryMap[agentId];
+        if (!dirPath) {
+          console.warn(`[createAgentDirectories] Unknown agent ID: ${agentId}`);
+          continue;
+        }
+
+        // Create directory if it doesn't exist
+        await fsPromises.mkdir(dirPath, { recursive: true });
+        createdDirs.push(dirPath);
+        console.log(`[createAgentDirectories] Created directory: ${dirPath}`);
+
+        // Create a placeholder skill directory so the directory is detected
+        // This allows the directory to show up in "Identified Agent Skills"
+        const placeholderDir = path.join(dirPath, '.placeholder');
+        const placeholderReadme = path.join(placeholderDir, 'SKILL.md');
+
+        const readmeContent = `# ${agentNames[agentId] || 'Agent'} Skills Directory
+
+This directory has been set up to store skills for ${agentNames[agentId] || 'your AI agent'}.
+
+## Getting Started
+
+You can install skills to this directory by:
+1. Browsing GitHub repositories in the Skill Browser
+2. Selecting a skill you want to install
+3. Choosing "${agentNames[agentId]}" as the installation destination
+
+This placeholder skill can be safely deleted once you've installed your first skill.
+`;
+
+        try {
+          await fsPromises.mkdir(placeholderDir, { recursive: true });
+          await fsPromises.writeFile(placeholderReadme, readmeContent, 'utf-8');
+          console.log(`[createAgentDirectories] Created placeholder in: ${placeholderDir}`);
+        } catch (placeholderError) {
+          console.warn(`[createAgentDirectories] Failed to create placeholder:`, placeholderError);
+          // Continue even if placeholder fails
+        }
+      }
+
+      return { success: true, createdDirectories: createdDirs };
+    } catch (error) {
+      console.error('[createAgentDirectories] Failed:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  });
+
+  // Handler for deleting agent skill directories (only if empty or only contains placeholder)
+  ipcMain.handle(FileSystemAPIEvent.DELETE_AGENT_DIRECTORY, async (_event, agentId: string) => {
+    try {
+      const homeDir = app.getPath('home');
+
+      const directoryMap: Record<string, string> = {
+        'claude-specific': path.join(homeDir, '.claude', 'skills'),
+        'opencode': path.join(homeDir, '.config', 'opencode', 'skill'),
+        'cursor-ide': path.join(homeDir, '.cursor', 'skills'),
+        'windsurf': path.join(homeDir, '.windsurf', 'skills'),
+      };
+
+      const dirPath = directoryMap[agentId];
+      if (!dirPath) {
+        return { success: false, error: `Unknown agent ID: ${agentId}` };
+      }
+
+      // Check if directory exists
+      try {
+        await fsPromises.access(dirPath);
+      } catch {
+        return { success: false, error: 'Directory does not exist' };
+      }
+
+      // Read directory contents
+      const contents = await fsPromises.readdir(dirPath);
+
+      // Only allow deletion if directory is empty or only contains .placeholder
+      const hasOnlyPlaceholder = contents.length === 0 ||
+        (contents.length === 1 && contents[0] === '.placeholder');
+
+      if (!hasOnlyPlaceholder) {
+        return {
+          success: false,
+          error: 'Directory contains skills and cannot be deleted. Please remove all skills first.'
+        };
+      }
+
+      // Delete the directory
+      await fsPromises.rm(dirPath, { recursive: true, force: true });
+      console.log(`[deleteAgentDirectory] Deleted directory: ${dirPath}`);
+
+      return { success: true };
+    } catch (error) {
+      console.error('[deleteAgentDirectory] Failed:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   });
 
@@ -2359,6 +2439,49 @@ export function registerFileSystemIpcHandlers(
       }
     }
   }
+
+  // Recent repositories handlers
+  const recentReposService = new RecentReposService();
+
+  ipcMain.handle(RecentReposAPIEvent.GET_RECENT_REPOS, async () => {
+    try {
+      const repos = recentReposService.getRecentRepos();
+      return repos;
+    } catch (error) {
+      console.error('[getRecentRepos] Failed:', error);
+      return [];
+    }
+  });
+
+  ipcMain.handle(RecentReposAPIEvent.ADD_RECENT_REPO, async (event, repo) => {
+    try {
+      recentReposService.addRecentRepo(repo);
+      return { success: true };
+    } catch (error) {
+      console.error('[addRecentRepo] Failed:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  ipcMain.handle(RecentReposAPIEvent.REMOVE_RECENT_REPO, async (event, { owner, repo }) => {
+    try {
+      recentReposService.removeRecentRepo(owner, repo);
+      return { success: true };
+    } catch (error) {
+      console.error('[removeRecentRepo] Failed:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  ipcMain.handle(RecentReposAPIEvent.CLEAR_RECENT_REPOS, async () => {
+    try {
+      recentReposService.clearRecentRepos();
+      return { success: true };
+    } catch (error) {
+      console.error('[clearRecentRepos] Failed:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
 
   console.log('[File System] Global IPC handlers registered.');
 }

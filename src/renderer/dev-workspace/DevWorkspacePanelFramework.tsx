@@ -47,6 +47,8 @@ export interface DevWorkspacePanelFrameworkProps {
   onLayoutChange: (layout: PanelLayout) => void;
   /** Panel sizes */
   panelSizes?: { left: number; middle: number; right: number };
+  /** Callback when panel sizes change */
+  onPanelSizesChange?: (sizes: { left: number; middle: number; right: number }) => void;
   /** Event bus for panel communication */
   events: PanelEventEmitter;
   /** Per-panel focus state (dims individual panels) */
@@ -63,6 +65,7 @@ interface DevWorkspacePanelFrameworkInnerProps {
   layout: PanelLayout;
   onLayoutChange: (layout: PanelLayout) => void;
   panelSizes?: { left: number; middle: number; right: number };
+  onPanelSizesChange?: (sizes: { left: number; middle: number; right: number }) => void;
   panelFocus?: { left: boolean; right: boolean };
   onFocusLeft?: () => void;
   onFocusRight?: () => void;
@@ -151,7 +154,7 @@ const FileCityWithHighlights: React.FC<{
  */
 const DevWorkspacePanelFrameworkInner: React.FC<
   DevWorkspacePanelFrameworkInnerProps
-> = ({ collapsed, onCollapsedChange, layout, onLayoutChange, panelSizes, panelFocus, onFocusLeft, onFocusRight }) => {
+> = ({ collapsed, onCollapsedChange, layout, onLayoutChange, panelSizes, onPanelSizesChange, panelFocus, onFocusLeft, onFocusRight }) => {
   const { theme } = useTheme();
   const { context, actions, events } = useRepositoryPanelProvider();
   const { context: terminalCtx, actions: terminalActions } =
@@ -1215,6 +1218,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         collapsed={collapsed}
         showCollapseButtons={false}
         theme={theme}
+        onPanelResize={onPanelSizesChange}
       />
 
       {/* Focus Mode Overlays - dim panels when focus is enabled */}
@@ -1393,6 +1397,7 @@ export const DevWorkspacePanelFramework: React.FC<
   layout,
   onLayoutChange,
   panelSizes,
+  onPanelSizesChange,
   events,
   panelFocus,
   onFocusLeft,
@@ -1434,6 +1439,7 @@ export const DevWorkspacePanelFramework: React.FC<
             layout={layout}
             onLayoutChange={onLayoutChange}
             panelSizes={panelSizes}
+            onPanelSizesChange={onPanelSizesChange}
             panelFocus={panelFocus}
             onFocusLeft={onFocusLeft}
             onFocusRight={onFocusRight}

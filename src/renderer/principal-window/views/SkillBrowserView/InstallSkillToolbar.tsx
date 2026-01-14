@@ -1,6 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Download, Check, AlertCircle } from 'lucide-react';
+import { Download, Check, AlertCircle, RefreshCw } from 'lucide-react';
+
+interface DetectedDirectory {
+  id: string;
+  path: string;
+  displayName: string;
+  skillCount: number;
+}
 
 interface InstallSkillToolbarProps {
   skillName: string;
@@ -9,41 +16,91 @@ interface InstallSkillToolbarProps {
     repo: string;
     branch: string;
     skillPath: string;
+    currentSha?: string; // Current SHA from GitHub repo
   };
   isInstalled?: boolean;
+  installedMetadata?: {
+    sha: string;
+    installedAt: string;
+    installedFrom: string;
+  };
   onInstall: (destination: SkillDestination) => Promise<void>;
+  detectedDirectories?: DetectedDirectory[];
 }
 
 export type SkillDestination =
   | 'global-universal'
   | 'global-claude'
+  | 'global-opencode'
+  | 'global-cursor'
+  | 'global-windsurf'
   | 'project-universal'
   | 'project-claude';
 
-const DESTINATIONS: Array<{
+// Map directory IDs to destination types
+const DIRECTORY_ID_TO_DESTINATION: Record<string, SkillDestination> = {
+  'agent-universal': 'global-universal',
+  'claude-specific': 'global-claude',
+  'opencode': 'global-opencode',
+  'cursor-ide': 'global-cursor',
+  'windsurf': 'global-windsurf',
+};
+
+const ALL_DESTINATIONS: Array<{
   value: SkillDestination;
+  directoryId: string;
   label: string;
   description: string;
+  path: string;
 }> = [
   {
     value: 'global-universal',
-    label: 'Global Universal (~/.agent/skills/)',
+    directoryId: 'agent-universal',
+    label: 'Agent',
     description: 'Available to all AI agents globally',
+    path: '~/.agent/skills/',
   },
   {
     value: 'global-claude',
-    label: 'Global Claude (~/.claude/skills/)',
+    directoryId: 'claude-specific',
+    label: 'Claude',
     description: 'Available to Claude globally',
+    path: '~/.claude/skills/',
+  },
+  {
+    value: 'global-opencode',
+    directoryId: 'opencode',
+    label: 'OpenCode',
+    description: 'Available to OpenCode globally',
+    path: '~/.config/opencode/skill/',
+  },
+  {
+    value: 'global-cursor',
+    directoryId: 'cursor-ide',
+    label: 'Cursor',
+    description: 'Available to Cursor IDE globally',
+    path: '~/.cursor/skills/',
+  },
+  {
+    value: 'global-windsurf',
+    directoryId: 'windsurf',
+    label: 'Windsurf',
+    description: 'Available to Windsurf globally',
+    path: '~/.windsurf/skills/',
   },
   {
     value: 'project-universal',
-    label: 'Project Universal (.agent/skills/)',
+    directoryId: 'project-universal',
+    label: 'Project Universal',
     description: 'Available to all agents in current project',
+    path: '.agent/skills/',
   },
   {
     value: 'project-claude',
-    label: 'Project Claude (.claude/skills/)',
+    directoryId: 'project-claude',
+    label: 'Project Claude',
     description: 'Available to Claude in current project',
+    path: '.claude/skills/',
   },
 ];
 
@@ -51,13 +108,40 @@ export const InstallSkillToolbar: React.FC<InstallSkillToolbarProps> = ({
   skillName,
   skillSource,
   isInstalled = false,
+  installedMetadata,
   onInstall,
+  detectedDirectories = [],
 }) => {
   const { theme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [installing, setInstalling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // Check if an update is available
+  const hasUpdate = useMemo(() => {
+    if (!isInstalled || !installedMetadata || !skillSource?.currentSha) {
+      return false;
+    }
+    return installedMetadata.sha !== skillSource.currentSha;
+  }, [isInstalled, installedMetadata, skillSource?.currentSha]);
+
+  // Filter destinations to only show detected directories (excluding agent-universal)
+  // and always include project-level options
+  const detectedDirectoryIds = new Set(
+    detectedDirectories
+      .filter(dir => dir.id !== 'agent-universal') // Exclude Agent directory
+      .map(dir => dir.id)
+  );
+
+  const availableDestinations = ALL_DESTINATIONS.filter(dest => {
+    // Exclude project-level destinations
+    if (dest.value.startsWith('project-')) {
+      return false;
+    }
+    // Only include global destinations that were detected
+    return detectedDirectoryIds.has(dest.directoryId);
+  });
 
   const handleInstall = async (destination: SkillDestination) => {
     setInstalling(true);
@@ -145,36 +229,43 @@ export const InstallSkillToolbar: React.FC<InstallSkillToolbarProps> = ({
           <>
             <button
               onClick={() => setIsOpen(!isOpen)}
-              disabled={installing || isInstalled}
+              disabled={installing || (isInstalled && !hasUpdate)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
                 padding: '8px 16px',
                 borderRadius: '6px',
-                backgroundColor: isInstalled
-                  ? theme.colors.backgroundSecondary
-                  : theme.colors.primary,
-                color: isInstalled ? theme.colors.textSecondary : theme.colors.background,
-                cursor: installing || isInstalled ? 'not-allowed' : 'pointer',
+                backgroundColor: hasUpdate
+                  ? theme.colors.warning
+                  : isInstalled
+                    ? theme.colors.success
+                    : theme.colors.primary,
+                color: theme.colors.background,
+                cursor: installing || (isInstalled && !hasUpdate) ? 'not-allowed' : 'pointer',
                 transition: 'all 0.2s',
-                border: `1px solid ${isInstalled ? theme.colors.border : theme.colors.primary}`,
+                border: 'none',
                 fontSize: theme.fontSizes[1],
                 fontWeight: theme.fontWeights.medium,
-                opacity: installing || isInstalled ? 0.6 : 1,
+                opacity: installing || (isInstalled && !hasUpdate) ? 0.7 : 1,
               }}
               onMouseEnter={(e) => {
-                if (!installing && !isInstalled) {
-                  e.currentTarget.style.opacity = '0.8';
+                if (!installing && (!isInstalled || hasUpdate)) {
+                  e.currentTarget.style.opacity = '0.85';
                 }
               }}
               onMouseLeave={(e) => {
-                if (!installing && !isInstalled) {
+                if (!installing && (!isInstalled || hasUpdate)) {
                   e.currentTarget.style.opacity = '1';
                 }
               }}
             >
-              {isInstalled ? (
+              {hasUpdate ? (
+                <>
+                  <RefreshCw size={16} />
+                  <span>Update Available</span>
+                </>
+              ) : isInstalled ? (
                 <>
                   <Check size={16} />
                   <span>Installed</span>
@@ -188,7 +279,7 @@ export const InstallSkillToolbar: React.FC<InstallSkillToolbarProps> = ({
             </button>
 
             {/* Dropdown Menu */}
-            {isOpen && !installing && !isInstalled && (
+            {isOpen && !installing && (!isInstalled || hasUpdate) && (
               <div
                 style={{
                   position: 'absolute',
@@ -212,9 +303,9 @@ export const InstallSkillToolbar: React.FC<InstallSkillToolbarProps> = ({
                     fontWeight: theme.fontWeights.medium,
                   }}
                 >
-                  Choose Installation Destination
+                  {hasUpdate ? 'Choose Destination to Update' : 'Choose Installation Destination'}
                 </div>
-                {DESTINATIONS.map((dest) => (
+                {availableDestinations.map((dest) => (
                   <button
                     key={dest.value}
                     onClick={() => handleInstall(dest.value)}
@@ -249,9 +340,10 @@ export const InstallSkillToolbar: React.FC<InstallSkillToolbarProps> = ({
                       style={{
                         fontSize: theme.fontSizes[0],
                         color: theme.colors.textSecondary,
+                        fontFamily: theme.fonts.monospace,
                       }}
                     >
-                      {dest.description}
+                      {dest.path}
                     </div>
                   </button>
                 ))}

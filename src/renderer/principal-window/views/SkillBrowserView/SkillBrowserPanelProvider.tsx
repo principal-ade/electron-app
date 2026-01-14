@@ -12,6 +12,7 @@ import { FileSystemService } from '../../../main-process-api/FileSystemService';
 import type { GlobalSkill } from '../../../../shared/main-process-api-interfaces/FileSystemAPI';
 import type { FileTree } from '../../../contexts/RepositoryPanelContext';
 import { GitHubFileSystemAdapter } from './GitHubFileSystemAdapter';
+import { LocalSkillsFileSystemAdapter } from './LocalSkillsFileSystemAdapter';
 
 interface GitHubRepoInfo {
   owner: string;
@@ -44,6 +45,9 @@ export const SkillBrowserPanelProvider: React.FC<
   const [globalSkillsData, setGlobalSkillsData] = useState<GlobalSkill[]>([]);
   const [globalSkillsLoading, setGlobalSkillsLoading] = useState(false);
 
+  // Track installed skills for LocalSkillsFileSystemAdapter
+  const [installedSkills, setInstalledSkills] = useState<Array<{ path: string; name: string; source: string }>>([]);
+
   // Track file tree from GitHub
   const [fileTreeData, setFileTreeData] = useState<FileTree | null>(null);
   const [fileTreeLoading, setFileTreeLoading] = useState(false);
@@ -62,6 +66,14 @@ export const SkillBrowserPanelProvider: React.FC<
     }
     return null;
   }, [githubRepoInfo]);
+
+  // Create Local skills file system adapter
+  const localSkillsAdapter = useMemo(() => {
+    if (installedSkills.length > 0) {
+      return new LocalSkillsFileSystemAdapter(installedSkills);
+    }
+    return null;
+  }, [installedSkills]);
 
   // Fetch global skills on mount
   useEffect(() => {
@@ -82,6 +94,32 @@ export const SkillBrowserPanelProvider: React.FC<
     fetchGlobalSkills();
   }, []);
 
+  // Fetch installed skills on mount and when skill:installed event fires
+  useEffect(() => {
+    const fetchInstalledSkills = async () => {
+      try {
+        const result = await FileSystemService.getAllLocalSkills();
+        if (result && result.skills) {
+          console.info('[SkillBrowserPanelProvider] Fetched installed skills:', result.skills.length);
+          setInstalledSkills(result.skills);
+        }
+      } catch (error) {
+        console.error('[SkillBrowserPanelProvider] Failed to fetch installed skills:', error);
+        setInstalledSkills([]);
+      }
+    };
+
+    fetchInstalledSkills();
+
+    // Listen for skill installation events to refresh
+    const unsubscribe = events.on('skill:installed', () => {
+      console.log('[SkillBrowserPanelProvider] Skill installed, refreshing installed skills');
+      fetchInstalledSkills();
+    });
+
+    return unsubscribe;
+  }, [events]);
+
   // Create adapters
   const adapters: PanelAdapters = useMemo(
     () => ({
@@ -100,6 +138,23 @@ export const SkillBrowserPanelProvider: React.FC<
             }
           }
 
+          // Check if it's a virtual skill path (source/skill-name/file.md)
+          // These paths don't start with / or ~ and typically have 3+ parts
+          if (!filePath.startsWith('/') && !filePath.startsWith('~') && localSkillsAdapter) {
+            const parts = filePath.split('/');
+            // Virtual skill paths are: source/skill-name/file.md
+            if (parts.length >= 3) {
+              try {
+                console.log('[SkillBrowserPanelProvider] Reading installed skill:', filePath);
+                const content = await localSkillsAdapter.readFile(filePath);
+                return content;
+              } catch (error) {
+                console.error('[SkillBrowserPanelProvider] Failed to read local skill:', error);
+                // Fall through to try GitHub adapter
+              }
+            }
+          }
+
           // For GitHub files, use the GitHub adapter
           if (githubAdapter) {
             try {
@@ -111,7 +166,7 @@ export const SkillBrowserPanelProvider: React.FC<
             }
           }
 
-          throw new Error('GitHub repository not configured. Please fetch a repository first.');
+          throw new Error('No suitable file system adapter available for path: ' + filePath);
         },
         writeFile: async () => {
           throw new Error('File writing not supported in Skill Browser');
@@ -127,7 +182,7 @@ export const SkillBrowserPanelProvider: React.FC<
         },
       },
     }),
-    [githubAdapter],
+    [githubAdapter, localSkillsAdapter],
   );
 
   // Create data slices

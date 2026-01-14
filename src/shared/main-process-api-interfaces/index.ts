@@ -42,6 +42,7 @@ import type { DocumentSearchAPI } from '../ipc/DocumentSearchIPC';
 import type { ObservabilityAPI } from './ObservabilityAPI';
 import type { LocalhostDetectionAPI } from './LocalhostDetectionAPI';
 import type { GitHubArtifactAPI } from './GitHubArtifactAPI';
+import type { RecentReposAPI } from './RecentReposAPI';
 
 // Re-export for convenience
 export type {
@@ -105,6 +106,7 @@ export interface MainProcessAPI {
   observability: ObservabilityAPI;
   localhostDetection: LocalhostDetectionAPI;
   githubArtifact: GitHubArtifactAPI;
+  recentRepos: RecentReposAPI;
 }
 
 /**

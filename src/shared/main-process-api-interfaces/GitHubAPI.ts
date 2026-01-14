@@ -322,7 +322,7 @@ export interface ParsedGitHubUrl {
 export interface InstallSkillOptions {
   githubUrl: string;
   skillPath: string;
-  destination: 'global-universal' | 'global-claude' | 'project-universal' | 'project-claude';
+  destination: 'global-universal' | 'global-claude' | 'global-opencode' | 'global-cursor' | 'global-windsurf' | 'project-universal' | 'project-claude';
   repositoryPath?: string;
   skillName?: string;
 }

@@ -215,6 +215,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     middle: 50,
     right: 25,
   });
+  const [resetKey, setResetKey] = useState(0);
   const [hasGitHubFolder, setHasGitHubFolder] = useState(false);
   const [packages, setPackages] = useState<PackageLayer[]>([]);
 
@@ -326,6 +327,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           return { success: true, message: 'Switched to file city' };
         case 'reset':
           setPanelSizes({ left: 25, middle: 50, right: 25 });
+          setResetKey((prev) => prev + 1);
           return { success: true, message: 'Reset panel sizes' };
         case 'storybook': {
           const storybookPreset = DEFAULT_PANEL_PRESETS.find(
@@ -876,6 +878,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
       />
       <div className="flex-1 overflow-hidden">
         <DevWorkspacePanelFramework
+          key={resetKey}
           repositoryPath={repositoryPath}
           repository={repository}
           collapsed={collapsed}
@@ -883,6 +886,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           layout={layout}
           onLayoutChange={setLayout}
           panelSizes={panelSizes}
+          onPanelSizesChange={setPanelSizes}
           events={events}
           panelFocus={panelFocus}
           onFocusLeft={handleFocusLeft}
