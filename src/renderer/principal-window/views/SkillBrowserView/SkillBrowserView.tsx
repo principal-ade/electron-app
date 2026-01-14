@@ -9,7 +9,7 @@ import {
   useSkillBrowserPanelProvider,
 } from './SkillBrowserPanelProvider';
 import { usePanelPersistence } from '../../../hooks/usePanelPersistence';
-import { SkillBrowserViewHeader } from './SkillBrowserViewHeader';
+import { SkillBrowserViewHeader, type ViewMode } from './SkillBrowserViewHeader';
 import { InstallSkillToolbar, type SkillDestination } from './InstallSkillToolbar';
 import { GithubService } from '../../../main-process-api/GithubService';
 import type { FileTree } from '../../../contexts/RepositoryPanelContext';
@@ -36,6 +36,9 @@ const SkillBrowserViewContent: React.FC = () => {
   // State for onboarding
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [checkingConfig, setCheckingConfig] = useState(true);
+
+  // State for view mode
+  const [viewMode, setViewMode] = useState<ViewMode>('installed');
 
   // State for GitHub URL and loading
   const [githubUrl, setGithubUrl] = useState('');
@@ -439,6 +442,8 @@ const SkillBrowserViewContent: React.FC = () => {
         syncEnabled={isConfigured}
         syncConfig={config}
         onEnableSync={() => setShowOnboarding(true)}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
       />
 
       {/* Error message */}
