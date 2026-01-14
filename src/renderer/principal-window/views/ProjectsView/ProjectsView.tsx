@@ -113,11 +113,26 @@ const ProjectsViewContent: React.FC = () => {
   const handleConfirmDelete = useCallback(
     async (deleteLocal: boolean) => {
       if (!entryToDelete) return;
-      await AlexandriaService.removeRepository(entryToDelete.name, deleteLocal);
-      // Refresh the repositories list
-      context.refresh('repository', 'alexandriaRepositories');
+
+      try {
+        await AlexandriaService.removeRepository(entryToDelete.name, deleteLocal);
+
+        // Clear the selected repository
+        events.emit({
+          type: 'industry-theme.local-projects:repository-selected',
+          source: 'projects-view',
+          timestamp: Date.now(),
+          payload: { entry: null },
+        });
+
+        // Refresh the repositories list
+        await context.refresh('repository', 'alexandriaRepositories');
+      } catch (error) {
+        console.error('[ProjectsView] Failed to delete repository:', error);
+        throw error; // Re-throw so modal knows it failed
+      }
     },
-    [entryToDelete, context],
+    [entryToDelete, context, events],
   );
 
   // Handle delete workspace modal close

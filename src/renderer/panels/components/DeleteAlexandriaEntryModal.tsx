@@ -39,15 +39,8 @@ export const DeleteAlexandriaEntryModal: React.FC<
   const { theme } = useTheme();
 
   // Check if this is a real Alexandria entry (not just a discovered repo)
-  // Discovered repos have isTracked: false, Alexandria entries have registeredAt
-  // Try both checks to be safe
-  const isAlexandriaEntry = entry?.isTracked !== false && ('registeredAt' in (entry || {}));
-
-  // Debug logging
-  console.log('[DeleteAlexandriaEntryModal] Entry:', entry);
-  console.log('[DeleteAlexandriaEntryModal] isTracked:', entry?.isTracked);
-  console.log('[DeleteAlexandriaEntryModal] registeredAt:', (entry as any)?.registeredAt);
-  console.log('[DeleteAlexandriaEntryModal] isAlexandriaEntry:', isAlexandriaEntry);
+  // Discovered repos have isDiscovered: true
+  const isAlexandriaEntry = !(entry as any)?.isDiscovered;
 
   // Calculate if repo is clean and synced for default selection
   const isCleanAndSynced = gitStatus ? (
@@ -76,12 +69,13 @@ export const DeleteAlexandriaEntryModal: React.FC<
     try {
       setIsDeleting(true);
       await onConfirm(deleteLocal);
-      onClose();
     } catch (error) {
       console.error('Error deleting Alexandria entry:', error);
+      alert(`Failed to delete repository: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsDeleting(false);
       setDeleteLocal(false);
+      onClose(); // Always close the modal
     }
   };
 

@@ -174,6 +174,10 @@ const QUICK_COMMANDS: QuickCommand[] = [
     name: 'reset',
     description: 'Reset panel sizes to defaults',
   },
+  {
+    name: 'storybook',
+    description: 'Apply Storybook layout preset',
+  },
 ];
 
 /**
@@ -323,6 +327,19 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         case 'reset':
           setPanelSizes({ left: 25, middle: 50, right: 25 });
           return { success: true, message: 'Reset panel sizes' };
+        case 'storybook': {
+          const storybookPreset = DEFAULT_PANEL_PRESETS.find(
+            (p) => p.id === 'storybook',
+          );
+          if (storybookPreset) {
+            setLayout(storybookPreset.layout);
+            if (storybookPreset.collapsed) {
+              setCollapsed(storybookPreset.collapsed);
+            }
+            return { success: true, message: 'Applied Storybook layout' };
+          }
+          return { error: 'Storybook preset not found' };
+        }
         default:
           return { error: `Unknown command: ${name}` };
       }
@@ -349,6 +366,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
       '/files',
       '/issues',
       '/file-city',
+      '/storybook',
       '/reset',
       '/preset file-editor',
       '/collapse',
@@ -553,6 +571,68 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
 
     return () => unsubscribe();
   }, [repositoryPath, events]);
+
+  // Handle task deletion requests from kanban panel
+  useEffect(() => {
+    if (!events) return;
+
+    const unsubscribers = [
+      // Handle delete request - actually delete the file
+      events.on('task:delete-requested', async (event) => {
+        const { taskId, task } = event.payload as {
+          taskId: string;
+          task: { filePath?: string };
+        };
+
+        console.log('[DevWorkspaceApp] Task delete requested:', {
+          taskId,
+          filePath: task.filePath,
+        });
+
+        try {
+          // Check if we have a file path to delete
+          if (!task.filePath) {
+            throw new Error('Task has no file path');
+          }
+
+          // Delete the task file
+          await FileSystemService.deleteFile(task.filePath);
+
+          console.log('[DevWorkspaceApp] Task file deleted successfully:', task.filePath);
+
+          // Emit success event
+          events.emit({
+            type: 'task:deleted:success',
+            source: 'dev-workspace-app',
+            timestamp: Date.now(),
+            payload: { taskId },
+          });
+        } catch (error) {
+          console.error('[DevWorkspaceApp] Failed to delete task:', error);
+
+          // Emit error event
+          events.emit({
+            type: 'task:deleted:error',
+            source: 'dev-workspace-app',
+            timestamp: Date.now(),
+            payload: {
+              taskId,
+              error: error instanceof Error ? error.message : 'Failed to delete task',
+            },
+          });
+        }
+      }),
+
+      // Handle task deleted - switch back to kanban panel
+      events.on('task:deleted', () => {
+        console.log('[DevWorkspaceApp] Task deleted, switching back to kanban panel');
+        setLayout((prev) => ({ ...prev, left: 'kanban' }));
+        setCollapsed((prev) => ({ ...prev, left: false }));
+      }),
+    ];
+
+    return () => unsubscribers.forEach((unsub) => unsub());
+  }, [events]);
 
   // Auto-connect to git-sync traffic controller when workspace opens
   useEffect(() => {

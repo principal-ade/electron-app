@@ -12,7 +12,7 @@ import type {
   PanelActions,
   PanelEventEmitter,
 } from '@principal-ade/panel-framework-core';
-import { FolderGit2, GitBranch, RefreshCw, AlertCircle, Trash2 } from 'lucide-react';
+import { FolderGit2, GitBranch, RefreshCw, AlertCircle, Trash2, ExternalLink } from 'lucide-react';
 
 interface ProjectInfoPanelProps {
   context: PanelContextValue;
@@ -89,6 +89,43 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
     }
   };
 
+  // Get GitHub URL from repository
+  const getGitHubUrl = (): string | null => {
+    if (!repository) return null;
+
+    // Try using github metadata first
+    if ((repository as any).github?.owner && (repository as any).github?.name) {
+      return `https://github.com/${(repository as any).github.owner}/${(repository as any).github.name}`;
+    }
+
+    // Fall back to parsing remoteUrl
+    if ((repository as any).remoteUrl) {
+      const url = (repository as any).remoteUrl as string;
+      // Handle https://github.com/owner/repo.git
+      const httpsMatch = url.match(/https:\/\/github\.com\/([^\/]+)\/([^\/\.]+)/);
+      if (httpsMatch) {
+        return `https://github.com/${httpsMatch[1]}/${httpsMatch[2]}`;
+      }
+      // Handle git@github.com:owner/repo.git
+      const sshMatch = url.match(/git@github\.com:([^\/]+)\/([^\/\.]+)/);
+      if (sshMatch) {
+        return `https://github.com/${sshMatch[1]}/${sshMatch[2]}`;
+      }
+    }
+
+    return null;
+  };
+
+  // Handle open in GitHub
+  const handleOpenInGitHub = () => {
+    const githubUrl = getGitHubUrl();
+    if (githubUrl) {
+      window.open(githubUrl, '_blank');
+    }
+  };
+
+  const githubUrl = getGitHubUrl();
+
   // Subscribe to events
   useEffect(() => {
     const unsubscribers = [
@@ -160,7 +197,33 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
-          <FolderGit2 size={20} color={theme.colors.primary} />
+          {(repository as any).github?.owner ? (
+            <>
+              <img
+                src={`https://github.com/${(repository as any).github.owner}.png`}
+                alt={`${(repository as any).github.owner} avatar`}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '6px',
+                  objectFit: 'cover',
+                }}
+                onError={(e) => {
+                  // Fallback to icon if image fails to load
+                  e.currentTarget.style.display = 'none';
+                  const fallbackIcon = e.currentTarget.nextElementSibling as HTMLElement;
+                  if (fallbackIcon) fallbackIcon.style.display = 'block';
+                }}
+              />
+              <FolderGit2
+                size={20}
+                color={theme.colors.primary}
+                style={{ display: 'none' }}
+              />
+            </>
+          ) : (
+            <FolderGit2 size={20} color={theme.colors.primary} />
+          )}
           <h3
             style={{
               margin: 0,
@@ -169,7 +232,7 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
               color: theme.colors.text,
             }}
           >
-            Project Info
+            {repository.name}
           </h3>
         </div>
         <button
@@ -211,36 +274,28 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
             border: `1px solid ${theme.colors.border}`,
           }}
         >
-          <h4
-            style={{
-              margin: `0 0 ${spacing.sm}px 0`,
-              fontSize: theme.fontSizes[2],
-              fontWeight: 600,
-              color: theme.colors.text,
-            }}
-          >
-            Repository
-          </h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
-            <div>
-              <span
-                style={{
-                  fontSize: theme.fontSizes[2],
-                  fontWeight: 500,
-                  color: theme.colors.textSecondary,
-                }}
-              >
-                Name:
-              </span>{' '}
-              <span
-                style={{
-                  fontSize: theme.fontSizes[2],
-                  color: theme.colors.text,
-                }}
-              >
-                {repository.name}
-              </span>
-            </div>
+            {(repository as any).github?.owner && (
+              <div>
+                <span
+                  style={{
+                    fontSize: theme.fontSizes[2],
+                    fontWeight: 500,
+                    color: theme.colors.textSecondary,
+                  }}
+                >
+                  Owner:
+                </span>{' '}
+                <span
+                  style={{
+                    fontSize: theme.fontSizes[2],
+                    color: theme.colors.text,
+                  }}
+                >
+                  {(repository as any).github.owner}
+                </span>
+              </div>
+            )}
             <div>
               <span
                 style={{
@@ -264,6 +319,40 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
                 {repository.path}
               </code>
             </div>
+
+            {/* Open in GitHub button */}
+            {githubUrl && (
+              <div style={{ marginTop: spacing.sm }}>
+                <button
+                  onClick={handleOpenInGitHub}
+                  style={{
+                    padding: `${spacing.xs}px ${spacing.sm}px`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: spacing.xs,
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: borderRadius,
+                    background: theme.colors.background,
+                    color: theme.colors.primary,
+                    cursor: 'pointer',
+                    fontSize: theme.fontSizes[1],
+                    fontWeight: 500,
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = theme.colors.primary;
+                    e.currentTarget.style.color = theme.colors.background;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = theme.colors.background;
+                    e.currentTarget.style.color = theme.colors.primary;
+                  }}
+                >
+                  <ExternalLink size={14} />
+                  Open in GitHub
+                </button>
+              </div>
+            )}
           </div>
         </section>
 

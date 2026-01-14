@@ -771,6 +771,9 @@ export const ProjectsPanelProvider: React.FC<
         if (entry) {
           console.info('[ProjectsPanelProvider] Repository selected:', entry.name);
           setSelectedRepository(entry);
+        } else {
+          console.info('[ProjectsPanelProvider] Repository deselected');
+          setSelectedRepository(null);
         }
       },
     );
@@ -1718,12 +1721,7 @@ export const ProjectsPanelProvider: React.FC<
               path: selectedWorkspace.suggestedClonePath || '',
             }
           : undefined,
-        repository: selectedRepository
-          ? {
-              name: selectedRepository.name,
-              path: selectedRepository.path,
-            }
-          : undefined,
+        repository: selectedRepository || undefined,
       },
       slices,
       adapters: {},
