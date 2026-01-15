@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   EditableConfigurablePanelLayout,
@@ -20,7 +20,7 @@ import {
   AgentHighlightProvider,
   useAgentHighlightProvider,
 } from '../contexts/AgentHighlightContext';
-import { TabbedTerminalPanel } from '@industry-theme/xterm-terminal-panel';
+import { TabbedTerminalPanel, type BaseTab, type TerminalTab } from '@industry-theme/xterm-terminal-panel';
 import { TabbedGhosttyTerminal } from '@industry-theme/ghostty-terminal-panel';
 import { panels as principalViewPanels } from '@industry-theme/principal-view-panels';
 import { panels as fileCityPanels } from '@industry-theme/file-city-panel';
@@ -37,6 +37,20 @@ import { panels as agentPanels } from '@industry-theme/agent-panels';
 import { panels as githubPanels } from '@industry-theme/github-panels';
 import type { Repository } from '../../shared/types/repository.types';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
+
+/**
+ * Tab type for displaying skill detail panels
+ */
+interface SkillTab extends BaseTab {
+  contentType: 'skill';
+  skillId: string;
+  skillName: string;
+}
+
+/**
+ * Union type of all tab types used in DevWorkspace
+ */
+type DevWorkspaceTab = TerminalTab | SkillTab;
 
 export interface DevWorkspacePanelFrameworkProps {
   repositoryPath: string;
@@ -167,7 +181,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
   // Unified modal state for detail panels
   const [detailModal, setDetailModal] = useState<{
-    panelId: 'task-detail' | 'skillDetail' | 'agentDetail' | 'gitDiff' | 'fileEditor' | 'githubIssueDetail';
+    panelId: 'task-detail' | 'agentDetail' | 'gitDiff' | 'fileEditor' | 'githubIssueDetail';
     data: any;
   } | null>(null);
 
@@ -202,6 +216,30 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     }),
     [context, terminalCtx.terminalSessions, terminalCtx.terminalContext],
   );
+
+  // Tab state for TabbedTerminalPanel (skills only - terminals are managed by the panel from context)
+  const [tabs, setTabs] = useState<DevWorkspaceTab[]>([]);
+
+  // Stable onTabsChange that prevents infinite loops
+  const handleTabsChange = useCallback((newTabs: DevWorkspaceTab[]) => {
+    setTabs(prevTabs => {
+      // Only keep custom tabs from the update (filter out terminal tabs)
+      // Terminal tabs are managed by TabbedTerminalPanel, we only care about custom tabs
+      const newCustomTabs = newTabs.filter(t => t.contentType !== 'terminal');
+      const prevCustomTabs = prevTabs.filter(t => t.contentType !== 'terminal');
+
+      // Check if custom tabs actually changed
+      const customTabsChanged =
+        newCustomTabs.length !== prevCustomTabs.length ||
+        !newCustomTabs.every(tab => prevCustomTabs.some(prev => prev.id === tab.id));
+
+      if (!customTabsChanged) {
+        return prevTabs; // No change
+      }
+
+      return newCustomTabs; // Only store custom tabs
+    });
+  }, []);
 
   const PrincipalViewPanelComponent = principalViewPanels[0]?.component;
   const TraceViewerPanelComponent = principalViewPanels.find(
@@ -326,6 +364,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
   // Listen for detail panel events to show modals
   useEffect(() => {
+    console.log('[DevWorkspacePanelFramework] Registering event handlers, events object:', events);
+
     const unsubscribers = [
       // Task detail
       events.on('task:selected', (event) => {
@@ -339,16 +379,54 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           data: payload.task,
         });
       }),
-      // Skill detail
+      // Skill detail - create tab instead of modal
       events.on('skill:selected', (event) => {
-        // Ignore re-emitted events from modal to prevent loop
-        if (event.source === 'modal') return;
+        console.log('[DevWorkspacePanelFramework] ===== SKILL SELECTED EVENT FIRED =====');
+        console.log('[DevWorkspacePanelFramework] Event source:', event.source);
+        console.log('[DevWorkspacePanelFramework] Event payload:', event.payload);
+        console.log('[DevWorkspacePanelFramework] Full event:', event);
+
+        // Ignore re-emitted events from tabs to prevent loop
+        if (event.source === 'tab') {
+          console.log('[DevWorkspacePanelFramework] Ignoring tab re-emission');
+          return;
+        }
 
         console.log('[DevWorkspacePanelFramework] Received skill:selected event:', event);
-        const payload = event.payload as { skill: any };
-        setDetailModal({
-          panelId: 'skillDetail',
-          data: payload.skill,
+        const payload = event.payload as { skill?: any; skillId?: string };
+
+        // Extract skill data
+        const skill = payload.skill;
+        if (!skill) {
+          console.warn('[DevWorkspacePanelFramework] No skill in payload:', payload);
+          return;
+        }
+
+        setTabs((prevTabs) => {
+          // Check if tab already exists for this skill
+          const existingTab = prevTabs.find(
+            (t) => t.contentType === 'skill' && (t as SkillTab).skillId === skill.id
+          );
+
+          if (existingTab) {
+            // Tab exists - no action needed, TabbedTerminalPanel will auto-activate it
+            console.log('[DevWorkspacePanelFramework] Skill tab already exists:', existingTab.id);
+            return prevTabs; // No change to tabs array
+          }
+
+          // Create new skill tab
+          const newTab: SkillTab = {
+            id: `skill-${skill.id}-${Date.now()}`,
+            label: skill.name || 'Skill',
+            contentType: 'skill',
+            skillId: skill.id,
+            skillName: skill.name || '',
+            closable: true,
+          };
+
+          console.log('[DevWorkspacePanelFramework] Creating new skill tab:', newTab);
+          // TabbedTerminalPanel will auto-activate the new tab via its internal logic
+          return [...prevTabs, newTab];
         });
       }),
       // Agent detail
@@ -417,16 +495,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               taskId: detailModal.data.id,
             },
           });
-        } else if (detailModal.panelId === 'skillDetail') {
-          console.log('[DevWorkspacePanelFramework] Re-emitting skill:selected with data:', detailModal.data);
-          events.emit({
-            type: 'skill:selected',
-            source: 'modal',
-            timestamp: Date.now(),
-            payload: {
-              skillId: detailModal.data.id,
-            },
-          });
         } else if (detailModal.panelId === 'agentDetail') {
           console.log('[DevWorkspacePanelFramework] Re-emitting agent:selected with data:', detailModal.data);
           events.emit({
@@ -485,10 +553,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         console.log('[DevWorkspacePanelFramework] Task deselected, closing modal');
         setDetailModal(null);
       }),
-      events.on('skill:deselected', () => {
-        console.log('[DevWorkspacePanelFramework] Skill deselected, closing modal');
-        setDetailModal(null);
-      }),
       events.on('agent:deselected', () => {
         console.log('[DevWorkspacePanelFramework] Agent deselected, closing modal');
         setDetailModal(null);
@@ -518,6 +582,79 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     };
   }, [detailModal]);
 
+  // Use refs for provider values to avoid recreating renderTabContent callback
+  const contextRef = React.useRef(context);
+  const actionsRef = React.useRef(actions);
+  const eventsRef = React.useRef(events);
+
+  // Update refs on every render (refs don't trigger re-renders)
+  React.useEffect(() => {
+    contextRef.current = context;
+    actionsRef.current = actions;
+    eventsRef.current = events;
+  });
+
+  // Render custom content for non-terminal tabs
+  // NOTE: Uses refs for context/actions/events to avoid recreating this callback
+  // when provider values change, which would cause unnecessary re-renders of all tabs
+  const renderTabContent = useCallback(
+    (tab: DevWorkspaceTab, isActive: boolean, sessionId?: string | null) => {
+      switch (tab.contentType) {
+        case 'terminal':
+          // Return null to use default terminal rendering
+          return null;
+
+        case 'skill': {
+          // Type assertion for TypeScript
+          const skillTab = tab as SkillTab;
+
+          if (!SkillDetailPanelComponent) {
+            return (
+              <div style={{ padding: '2rem', color: theme.colors.textSecondary }}>
+                Skill Detail panel not available
+              </div>
+            );
+          }
+
+          console.log('[DevWorkspacePanelFramework] Rendering skill tab:', {
+            skillId: skillTab.skillId,
+            skillName: skillTab.skillName,
+            isActive,
+          });
+
+          return (
+            <div
+              style={{
+                height: '100%',
+                width: '100%',
+                overflow: 'hidden',
+                position: 'relative',
+                display: isActive ? 'flex' : 'none', // Only show when active
+                flexDirection: 'column',
+              }}
+            >
+              <SkillDetailPanelComponent
+                context={contextRef.current}
+                actions={actionsRef.current}
+                events={eventsRef.current}
+                selectedSkillId={skillTab.skillId}
+              />
+            </div>
+          );
+        }
+
+        default:
+          console.warn('[DevWorkspacePanelFramework] Unknown tab type:', (tab as any).contentType);
+          return (
+            <div style={{ padding: '2rem', color: theme.colors.error }}>
+              Unknown tab type: {(tab as any).contentType}
+            </div>
+          );
+      }
+    },
+    [theme, SkillDetailPanelComponent],
+  );
+
   // Define all panels using panel framework components
   const allPanels = useMemo(
     () => [
@@ -535,12 +672,15 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               directory={terminalDirectory}
             />
           ) : (
-            <TabbedTerminalPanel
+            <TabbedTerminalPanel<DevWorkspaceTab>
               context={terminalPanelContext}
               actions={terminalActions}
               events={events}
               terminalContext={terminalContext}
               directory={terminalDirectory}
+              initialTabs={tabs}
+              onTabsChange={handleTabsChange}
+              renderTabContent={renderTabContent}
             />
           ),
       },
@@ -1160,6 +1300,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         ),
       },
     ],
+    // NOTE: tabs, handleTabsChange, and renderTabContent are intentionally excluded
+    // from dependencies to prevent unnecessary re-renders of all panels when tabs change.
+    // These are only used by the terminal panel and don't affect other panels.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       PrincipalViewPanelComponent,
       FileCityPanelComponent,
@@ -1294,24 +1438,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             {detailModal.panelId === 'task-detail' && TaskDetailPanelComponent && (
               <TaskDetailPanelComponent
                 context={context}
-                actions={actions}
-                events={events}
-              />
-            )}
-            {detailModal.panelId === 'skillDetail' && SkillDetailPanelComponent && (
-              <SkillDetailPanelComponent
-                context={{
-                  ...context,
-                  slices: new Map([
-                    ...Array.from(context.slices?.entries() || []),
-                    ['selectedSkill', {
-                      scope: 'repository' as const,
-                      name: 'selectedSkill',
-                      data: detailModal.data,
-                      loading: false,
-                    }],
-                  ]),
-                }}
                 actions={actions}
                 events={events}
               />
