@@ -180,13 +180,16 @@ const SkillBrowserViewContent: React.FC = () => {
       });
 
       // Override metadata with local-specific info
+      // Use timestamp as SHA to ensure uniqueness on each load
+      const uniqueSha = `local-${Date.now()}-${skills.length}`;
       const fileTreeData: FileTree = {
         ...builtTree,
+        sha: uniqueSha, // Update root SHA to trigger reload
         metadata: {
           ...builtTree.metadata,
           id: 'local:installed-skills',
           sourceType: 'local',
-          sourceSha: Date.now().toString(), // Use timestamp as version
+          sourceSha: uniqueSha,
           sourceInfo: {
             type: 'local-skills',
             skillCount: skills.length,
@@ -392,6 +395,41 @@ const SkillBrowserViewContent: React.FC = () => {
     loadRecentRepos();
     loadInstalledSkills();
   }, [loadInstalledSkills]);
+
+  // Listen for refresh requests from SkillsListPanel
+  useEffect(() => {
+    const unsubscribe = events.on('skills:refresh', () => {
+      console.log('[SkillBrowserView] Received skills refresh request, reloading installed skills from filesystem');
+      loadInstalledSkills();
+    });
+
+    return unsubscribe;
+  }, [events, loadInstalledSkills]);
+
+  // Auto-refresh installed skills when view becomes visible (helps catch new skills)
+  useEffect(() => {
+    if (viewMode !== 'installed') return;
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('[SkillBrowserView] Document became visible, refreshing installed skills');
+        loadInstalledSkills();
+      }
+    };
+
+    const handleFocus = () => {
+      console.log('[SkillBrowserView] Window focused, refreshing installed skills');
+      loadInstalledSkills();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [viewMode, loadInstalledSkills]);
 
   const convertGithubTreeToFileTree = useCallback(
     (

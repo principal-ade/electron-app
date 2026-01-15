@@ -201,8 +201,9 @@ export const SkillBrowserPanelProvider: React.FC<
             loading: fileTreeLoading,
             error: null,
             refresh: async () => {
-              // No automatic refresh for GitHub file tree
-              // Must be manually fetched via setFileTree action
+              // Refresh is handled by skills:refresh event from SkillsListPanel
+              // This is here for API compatibility but not actively used
+              console.log('[SkillBrowserPanelProvider] fileTree refresh called (no-op)');
             },
           },
         ],
