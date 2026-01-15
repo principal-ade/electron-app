@@ -167,6 +167,10 @@ const QUICK_COMMANDS: QuickCommand[] = [
     description: 'Switch left panel to GitHub issues',
   },
   {
+    name: 'docs',
+    description: 'Switch left panel to documentation',
+  },
+  {
     name: 'file-city',
     description: 'Switch right panel to file city visualization',
   },
@@ -321,6 +325,10 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           setLayout((prev) => ({ ...prev, left: 'githubIssues' }));
           setCollapsed((prev) => ({ ...prev, left: false }));
           return { success: true, message: 'Switched to issues' };
+        case 'docs':
+          setLayout((prev) => ({ ...prev, left: 'docs' }));
+          setCollapsed((prev) => ({ ...prev, left: false }));
+          return { success: true, message: 'Switched to docs' };
         case 'file-city':
           setLayout((prev) => ({ ...prev, right: 'fileCity' }));
           setCollapsed((prev) => ({ ...prev, right: false }));
@@ -367,6 +375,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
       '/projects',
       '/files',
       '/issues',
+      '/docs',
       '/file-city',
       '/storybook',
       '/reset',

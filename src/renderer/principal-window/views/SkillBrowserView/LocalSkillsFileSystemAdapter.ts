@@ -56,14 +56,18 @@ export class LocalSkillsFileSystemAdapter {
       });
 
       // Read from local filesystem
-      const content = await FileSystemService.readFile(actualPath);
+      const result = await FileSystemService.readFile(actualPath);
+
+      if (!result || !result.content) {
+        throw new Error('Failed to read file content');
+      }
 
       console.log('[LocalSkillsFileSystemAdapter] Successfully read file:', {
         path: actualPath,
-        contentLength: content.length,
+        contentLength: result.content.length,
       });
 
-      return content;
+      return result.content;
     } catch (error) {
       console.error(`[LocalSkillsFileSystemAdapter] Failed to read ${path}:`, error);
       throw error;

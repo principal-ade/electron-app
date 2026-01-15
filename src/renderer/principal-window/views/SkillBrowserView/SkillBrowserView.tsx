@@ -20,6 +20,7 @@ import { SkillsRepoOnboarding } from './SkillsRepoOnboarding';
 import { RecentSkillsPanel, type RecentRepo } from './RecentSkillsPanel';
 import { RecentReposService } from '../../../main-process-api/RecentReposService';
 import { AgentSetupModal } from './AgentSetupModal';
+import { SkillInstallationModal } from './SkillInstallationModal';
 
 // Extract panel components from agent-panels package
 const SkillsListPanelComponent = agentPanels.find(
@@ -89,6 +90,9 @@ const SkillBrowserViewContent: React.FC = () => {
   // State for agent setup modal
   const [showSetupModal, setShowSetupModal] = useState(false);
 
+  // State for skill installation modal
+  const [showInstallModal, setShowInstallModal] = useState(false);
+
   // Check if sync is configured on mount
   useEffect(() => {
     const checkConfig = async () => {
@@ -98,6 +102,20 @@ const SkillBrowserViewContent: React.FC = () => {
     };
     checkConfig();
   }, []);
+
+  // Clear selected skill when switching view modes
+  useEffect(() => {
+    setSelectedSkill(null);
+    setSelectedSkillMetadata(null);
+  }, [viewMode]);
+
+  // Clear selected skill when loading a new GitHub repo
+  useEffect(() => {
+    if (viewMode === 'browse' && githubRepoInfo) {
+      setSelectedSkill(null);
+      setSelectedSkillMetadata(null);
+    }
+  }, [githubRepoInfo, viewMode]);
 
   /**
    * Parse GitHub URL to extract owner, repo, and optional path
@@ -556,6 +574,32 @@ const SkillBrowserViewContent: React.FC = () => {
   );
 
   /**
+   * Get which directories a skill is installed in
+   */
+  const getSkillInstalledDirectories = useCallback(
+    (skillName: string): string[] => {
+      // Find all instances of this skill in installedSkillsData
+      const skillInstances = installedSkillsData.filter((skill) => skill.name === skillName);
+
+      // Map each instance to its directory ID
+      const directoryIds: string[] = [];
+
+      for (const skill of skillInstances) {
+        // Find which detected directory this skill path belongs to
+        for (const dir of detectedDirectories) {
+          if (skill.path.startsWith(dir.path)) {
+            directoryIds.push(dir.id);
+            break;
+          }
+        }
+      }
+
+      return directoryIds;
+    },
+    [installedSkillsData, detectedDirectories],
+  );
+
+  /**
    * Get metadata for an installed skill
    */
   const getInstalledSkillMetadata = useCallback(
@@ -569,8 +613,13 @@ const SkillBrowserViewContent: React.FC = () => {
       try {
         // Read .metadata.json from the skill directory
         const metadataPath = `${installedSkill.path}/.metadata.json`;
-        const metadataContent = await FileSystemService.readFile(metadataPath);
-        const metadata = JSON.parse(metadataContent);
+        const result = await FileSystemService.readFile(metadataPath);
+
+        if (!result || !result.content) {
+          return null;
+        }
+
+        const metadata = JSON.parse(result.content);
 
         return {
           sha: metadata.sha,
@@ -648,6 +697,98 @@ const SkillBrowserViewContent: React.FC = () => {
     [selectedSkill, githubRepoInfo, actions],
   );
 
+  /**
+   * Install skill to multiple directories
+   */
+  const handleInstallSkillToDirectories = useCallback(
+    async (directoryIds: string[]) => {
+      if (!selectedSkill || !githubRepoInfo) {
+        throw new Error('No skill selected or GitHub repo info missing');
+      }
+
+      const githubUrl = `https://github.com/${githubRepoInfo.owner}/${githubRepoInfo.repo}`;
+
+      // Install to each directory
+      for (const directoryId of directoryIds) {
+        console.log('[SkillBrowserView] Installing skill to directory:', {
+          skillName: selectedSkill.name,
+          skillPath: selectedSkill.path,
+          directoryId,
+          githubUrl,
+        });
+
+        const result = await GithubService.installSkill({
+          githubUrl,
+          skillPath: selectedSkill.path,
+          destination: directoryId as SkillDestination,
+          skillName: selectedSkill.name,
+        });
+
+        if (!result.success) {
+          throw new Error(result.error || `Installation to ${directoryId} failed`);
+        }
+
+        console.log('[SkillBrowserView] Skill installed successfully to:', directoryId);
+
+        // Emit event to refresh global skills cache
+        actions.notifyPanels({
+          type: 'skill:installed',
+          payload: {
+            skillName: selectedSkill.name,
+            destination: directoryId as SkillDestination,
+            installedPath: result.installedPath,
+          },
+        });
+      }
+
+      // Refresh installed skills
+      await loadInstalledSkills();
+    },
+    [selectedSkill, githubRepoInfo, actions, loadInstalledSkills],
+  );
+
+  /**
+   * Uninstall skill from specific directories
+   */
+  const handleUninstallSkillFromDirectories = useCallback(
+    async (directoryIds: string[]) => {
+      if (!selectedSkill) {
+        throw new Error('No skill selected');
+      }
+
+      // Find all instances of this skill in the specified directories
+      for (const directoryId of directoryIds) {
+        const skillInstances = installedSkillsData.filter((skill) => {
+          if (skill.name !== selectedSkill.name) return false;
+
+          // Find which directory this skill belongs to
+          const directory = detectedDirectories.find((dir) => skill.path.startsWith(dir.path));
+          return directory?.id === directoryId;
+        });
+
+        for (const skillInstance of skillInstances) {
+          console.log('[SkillBrowserView] Uninstalling skill from:', {
+            skillName: skillInstance.name,
+            skillPath: skillInstance.path,
+            directoryId,
+          });
+
+          const result = await FileSystemService.deleteDirectory(skillInstance.path);
+
+          if (!result.success) {
+            throw new Error(result.error || `Uninstallation from ${directoryId} failed`);
+          }
+
+          console.log('[SkillBrowserView] Skill uninstalled successfully from:', directoryId);
+        }
+      }
+
+      // Refresh installed skills
+      await loadInstalledSkills();
+    },
+    [selectedSkill, installedSkillsData, detectedDirectories, loadInstalledSkills],
+  );
+
   // Use panel persistence for two-panel layout
   const panelState = usePanelPersistence({
     viewKey: 'skillBrowserView',
@@ -719,8 +860,9 @@ const SkillBrowserViewContent: React.FC = () => {
                   currentSha: githubRepoInfo.treeSha,
                 }}
                 isInstalled={isSkillInstalled(selectedSkill.name)}
+                installedDirectoryIds={getSkillInstalledDirectories(selectedSkill.name)}
                 installedMetadata={selectedSkillMetadata || undefined}
-                onInstall={handleInstallSkill}
+                onOpenInstallModal={() => setShowInstallModal(true)}
                 detectedDirectories={detectedDirectories}
               />
             )}
@@ -737,7 +879,7 @@ const SkillBrowserViewContent: React.FC = () => {
         ),
       },
     ];
-  }, [context, actions, events, selectedSkill, githubRepoInfo, handleInstallSkill, isSkillInstalled, viewMode, browseFileTree, recentRepos, handleSelectRecentRepo, detectedDirectories, githubUrl, handleFetchSkills, isLoading]);
+  }, [context, actions, events, selectedSkill, githubRepoInfo, isSkillInstalled, getSkillInstalledDirectories, viewMode, browseFileTree, recentRepos, handleSelectRecentRepo, detectedDirectories, githubUrl, handleFetchSkills, isLoading, selectedSkillMetadata]);
 
   // Define layout configuration (simple left/right split or single panel for recent)
   const layout = useMemo(() => {
@@ -908,6 +1050,19 @@ const SkillBrowserViewContent: React.FC = () => {
         detectedDirectories={detectedDirectories}
         onRemove={handleRemoveAgentDirectory}
       />
+
+      {/* Skill Installation Modal */}
+      {selectedSkill && (
+        <SkillInstallationModal
+          isOpen={showInstallModal}
+          onClose={() => setShowInstallModal(false)}
+          skillName={selectedSkill.name}
+          detectedDirectories={detectedDirectories}
+          installedDirectories={getSkillInstalledDirectories(selectedSkill.name)}
+          onInstall={handleInstallSkillToDirectories}
+          onUninstall={handleUninstallSkillFromDirectories}
+        />
+      )}
     </div>
   );
 };

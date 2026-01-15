@@ -130,8 +130,11 @@ export const SkillBrowserPanelProvider: React.FC<
           // If it's an absolute path (global skills), read directly
           if (filePath.startsWith('/') || filePath.startsWith('~')) {
             try {
-              const content = await FileSystemService.readFile(filePath);
-              return content;
+              const result = await FileSystemService.readFile(filePath);
+              if (!result || !result.content) {
+                throw new Error('Failed to read file content');
+              }
+              return result.content;
             } catch (error) {
               console.error('[SkillBrowserPanelProvider] Failed to read file:', error);
               throw error;
