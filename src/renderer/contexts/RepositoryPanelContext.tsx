@@ -710,30 +710,20 @@ export const RepositoryPanelProvider: React.FC<
 
       openFile: async (filePath: string): Promise<void> => {
         try {
-          // Extract relative path - if already absolute, strip the repository path prefix
-          const relativeFilePath = filePath.startsWith('/')
-            ? filePath.startsWith(repositoryPath)
-              ? filePath.substring(repositoryPath.length).replace(/^\//, '')
-              : filePath.substring(1) // Fallback: strip leading slash
-            : filePath;
+          // Make absolute path if needed
+          const absolutePath = filePath.startsWith('/')
+            ? filePath
+            : `${repositoryPath}/${filePath}`;
 
-          // Check if it's a markdown file
-          if (filePath.toLowerCase().endsWith('.md')) {
-            await WindowService.openMarkdownViewFromRepository(
-              relativeFilePath,
-              repositoryPath,
-              {
-                viewMode: 'single',
-              },
-            );
-          } else {
-            // For non-markdown files, log but don't fail
-            // Use adapters.readFile or actions.readFile for content reading
-            console.log(
-              '[RepositoryPanelProvider] openFile called for non-markdown:',
-              filePath,
-            );
-          }
+          console.log('[RepositoryPanelProvider] Opening file:', absolutePath);
+
+          // Emit file:opened event - let the workspace layouts decide how to handle it
+          events.emit({
+            type: 'file:opened',
+            source: 'repository-panel',
+            timestamp: Date.now(),
+            payload: { filePath: absolutePath },
+          });
         } catch (error) {
           console.error(
             '[RepositoryPanelProvider] Failed to open file:',

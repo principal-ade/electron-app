@@ -48,9 +48,18 @@ interface SkillTab extends BaseTab {
 }
 
 /**
+ * Tab type for displaying markdown files
+ */
+interface MarkdownTab extends BaseTab {
+  contentType: 'markdown';
+  filePath: string;
+  fileName: string;
+}
+
+/**
  * Union type of all tab types used in DevWorkspace
  */
-type DevWorkspaceTab = TerminalTab | SkillTab;
+type DevWorkspaceTab = TerminalTab | SkillTab | MarkdownTab;
 
 export interface DevWorkspacePanelFrameworkProps {
   repositoryPath: string;
@@ -472,6 +481,56 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           data: payload,
         });
       }),
+      // Markdown file open in tab (from docs panel clicks)
+      events.on('file:opened', (event) => {
+        // Ignore re-emitted events from tabs to prevent loop
+        if (event.source === 'tab') {
+          console.log('[DevWorkspacePanelFramework] Ignoring tab re-emission');
+          return;
+        }
+
+        const payload = event.payload as { filePath?: string; path?: string };
+        const filePath = payload.filePath || payload.path;
+
+        if (!filePath) {
+          console.warn('[DevWorkspacePanelFramework] No file path in file:opened event:', payload);
+          return;
+        }
+
+        // Only handle markdown files - open them in tabs
+        if (!filePath.endsWith('.md')) {
+          return; // Ignore non-markdown files
+        }
+
+        console.log('[DevWorkspacePanelFramework] Received file:opened event for markdown:', filePath);
+        const fileName = filePath.split('/').pop() || 'Markdown';
+
+        setTabs((prevTabs) => {
+          // Check if tab already exists for this markdown file
+          const existingTab = prevTabs.find(
+            (t) => t.contentType === 'markdown' && (t as MarkdownTab).filePath === filePath
+          );
+
+          if (existingTab) {
+            // Tab exists - TabbedTerminalPanel will auto-activate it
+            console.log('[DevWorkspacePanelFramework] Markdown tab already exists:', existingTab.id);
+            return prevTabs; // No change to tabs array
+          }
+
+          // Create new markdown tab
+          const newTab: MarkdownTab = {
+            id: `markdown-${Date.now()}`,
+            label: fileName,
+            contentType: 'markdown',
+            filePath: filePath,
+            fileName: fileName,
+            closable: true,
+          };
+
+          console.log('[DevWorkspacePanelFramework] Creating new markdown tab:', newTab);
+          return [...prevTabs, newTab];
+        });
+      }),
     ];
 
     return () => {
@@ -643,6 +702,45 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           );
         }
 
+        case 'markdown': {
+          // Type assertion for TypeScript
+          const markdownTab = tab as MarkdownTab;
+
+          if (!MarkdownPanelComponent) {
+            return (
+              <div style={{ padding: '2rem', color: theme.colors.textSecondary }}>
+                Markdown Viewer panel not available
+              </div>
+            );
+          }
+
+          console.log('[DevWorkspacePanelFramework] Rendering markdown tab:', {
+            filePath: markdownTab.filePath,
+            fileName: markdownTab.fileName,
+            isActive,
+          });
+
+          return (
+            <div
+              style={{
+                height: '100%',
+                width: '100%',
+                overflow: 'hidden',
+                position: 'relative',
+                display: isActive ? 'flex' : 'none', // Only show when active
+                flexDirection: 'column',
+              }}
+            >
+              <MarkdownPanelComponent
+                context={contextRef.current}
+                actions={actionsRef.current}
+                events={eventsRef.current}
+                filePath={markdownTab.filePath}
+              />
+            </div>
+          );
+        }
+
         default:
           console.warn('[DevWorkspacePanelFramework] Unknown tab type:', (tab as any).contentType);
           return (
@@ -652,7 +750,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           );
       }
     },
-    [theme, SkillDetailPanelComponent],
+    [theme, SkillDetailPanelComponent, MarkdownPanelComponent],
   );
 
   // Define all panels using panel framework components
