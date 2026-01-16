@@ -230,6 +230,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   // Tab state for TabbedTerminalPanel (skills only - terminals are managed by the panel from context)
   const [tabs, setTabs] = useState<DevWorkspaceTab[]>([]);
 
+  // Track markdown files currently being loaded to prevent duplicate tabs
+  const loadingMarkdownFilesRef = React.useRef<Set<string>>(new Set());
+
   // Track terminal panel container width using ResizeObserver
   const [terminalPanelWidth, setTerminalPanelWidth] = useState<number>(0);
   const terminalPanelRef = React.useRef<HTMLDivElement>(null);
@@ -527,36 +530,71 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         console.log('[DevWorkspacePanelFramework] Received file:opened event for markdown:', filePath);
         const fileName = filePath.split('/').pop() || 'Markdown';
 
-        // Check if tab already exists
-        const existingTab = tabs.find(
-          (t) => t.contentType === 'markdown' && (t as MarkdownTab).filePath === filePath
-        );
-
-        if (existingTab) {
-          console.log('[DevWorkspacePanelFramework] Markdown tab already exists:', existingTab.id);
-          return; // Tab exists, don't create new one
+        // Check if this file is already being loaded (prevents duplicate tabs on rapid clicks)
+        if (loadingMarkdownFilesRef.current.has(filePath)) {
+          console.log('[DevWorkspacePanelFramework] Markdown file already being loaded:', filePath);
+          return;
         }
 
-        // PRE-LOAD the file BEFORE creating the tab to avoid delay
-        console.log('[DevWorkspacePanelFramework] Pre-loading markdown file:', filePath);
-        if (actions.setActiveFile) {
-          await actions.setActiveFile(filePath);
+        // Mark this file as being loaded
+        loadingMarkdownFilesRef.current.add(filePath);
+
+        try {
+          // Check if tab already exists (use callback to get latest state)
+          let shouldCreateTab = false;
+          setTabs((prevTabs) => {
+            const existingTab = prevTabs.find(
+              (t) => t.contentType === 'markdown' && (t as MarkdownTab).filePath === filePath
+            );
+
+            if (existingTab) {
+              console.log('[DevWorkspacePanelFramework] Markdown tab already exists:', existingTab.id);
+              shouldCreateTab = false;
+              return prevTabs; // No change
+            }
+
+            shouldCreateTab = true;
+            return prevTabs; // No change yet, will create after loading
+          });
+
+          if (!shouldCreateTab) {
+            return; // Tab exists, don't create new one
+          }
+
+          // PRE-LOAD the file BEFORE creating the tab to avoid delay
+          console.log('[DevWorkspacePanelFramework] Pre-loading markdown file:', filePath);
+          if (actions.setActiveFile) {
+            await actions.setActiveFile(filePath);
+          }
+
+          // Now create the tab with the file already loaded
+          setTabs((prevTabs) => {
+            // Double-check tab doesn't exist (in case created while loading)
+            const existingTab = prevTabs.find(
+              (t) => t.contentType === 'markdown' && (t as MarkdownTab).filePath === filePath
+            );
+
+            if (existingTab) {
+              console.log('[DevWorkspacePanelFramework] Markdown tab created while loading:', existingTab.id);
+              return prevTabs;
+            }
+
+            const newTab: MarkdownTab = {
+              id: `markdown-${Date.now()}`,
+              label: fileName,
+              contentType: 'markdown',
+              filePath: filePath,
+              fileName: fileName,
+              closable: true,
+            };
+
+            console.log('[DevWorkspacePanelFramework] Creating new markdown tab (file pre-loaded):', newTab);
+            return [...prevTabs, newTab];
+          });
+        } finally {
+          // Always remove from loading set when done
+          loadingMarkdownFilesRef.current.delete(filePath);
         }
-
-        // Now create the tab with the file already loaded
-        setTabs((prevTabs) => {
-          const newTab: MarkdownTab = {
-            id: `markdown-${Date.now()}`,
-            label: fileName,
-            contentType: 'markdown',
-            filePath: filePath,
-            fileName: fileName,
-            closable: true,
-          };
-
-          console.log('[DevWorkspacePanelFramework] Creating new markdown tab (file pre-loaded):', newTab);
-          return [...prevTabs, newTab];
-        });
       }),
     ];
 
