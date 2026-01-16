@@ -33,7 +33,7 @@ import { panels as codeQualityPanels } from '@principal-ade/code-quality-panels'
 import { panels as markdownPanels } from '@industry-theme/markdown-panels';
 import { panels as fileEditingPanels } from '@industry-theme/file-editing-panels';
 import { panels as backlogPanels } from '@industry-theme/backlogmd-kanban-panel';
-import { panels as agentPanels } from '@industry-theme/agent-panels';
+import { panels as agentPanels, type Skill } from '@industry-theme/agent-panels';
 import { panels as githubPanels } from '@industry-theme/github-panels';
 import type { Repository } from '../../shared/types/repository.types';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
@@ -45,6 +45,7 @@ interface SkillTab extends BaseTab {
   contentType: 'skill';
   skillId: string;
   skillName: string;
+  skill?: Skill; // Full skill object for instant loading
 }
 
 /**
@@ -228,6 +229,26 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
   // Tab state for TabbedTerminalPanel (skills only - terminals are managed by the panel from context)
   const [tabs, setTabs] = useState<DevWorkspaceTab[]>([]);
+
+  // Track terminal panel container width using ResizeObserver
+  const [terminalPanelWidth, setTerminalPanelWidth] = useState<number>(0);
+  const terminalPanelRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!terminalPanelRef.current) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setTerminalPanelWidth(entry.contentRect.width);
+      }
+    });
+
+    resizeObserver.observe(terminalPanelRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   // Stable onTabsChange that prevents infinite loops
   const handleTabsChange = useCallback((newTabs: DevWorkspaceTab[]) => {
@@ -423,17 +444,18 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             return prevTabs; // No change to tabs array
           }
 
-          // Create new skill tab
+          // Create new skill tab with full skill object for instant loading
           const newTab: SkillTab = {
             id: `skill-${skill.id}-${Date.now()}`,
             label: skill.name || 'Skill',
             contentType: 'skill',
             skillId: skill.id,
             skillName: skill.name || '',
+            skill: skill, // Pass full skill object for instant display
             closable: true,
           };
 
-          console.log('[DevWorkspacePanelFramework] Creating new skill tab:', newTab);
+          console.log('[DevWorkspacePanelFramework] Creating new skill tab (skill pre-loaded):', newTab);
           // TabbedTerminalPanel will auto-activate the new tab via its internal logic
           return [...prevTabs, newTab];
         });
@@ -662,7 +684,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   // NOTE: Uses refs for context/actions/events to avoid recreating this callback
   // when provider values change, which would cause unnecessary re-renders of all tabs
   const renderTabContent = useCallback(
-    (tab: DevWorkspaceTab, isActive: boolean, sessionId?: string | null) => {
+    (tab: DevWorkspaceTab, isActive: boolean, sessionId?: string | null, width?: number) => {
       switch (tab.contentType) {
         case 'terminal':
           // Return null to use default terminal rendering
@@ -683,6 +705,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           console.log('[DevWorkspacePanelFramework] Rendering skill tab:', {
             skillId: skillTab.skillId,
             skillName: skillTab.skillName,
+            hasSkillData: !!skillTab.skill,
             isActive,
           });
 
@@ -702,6 +725,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 actions={actionsRef.current}
                 events={eventsRef.current}
                 selectedSkillId={skillTab.skillId}
+                skill={skillTab.skill}
               />
             </div>
           );
@@ -741,6 +765,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 actions={actionsRef.current}
                 events={eventsRef.current}
                 filePath={markdownTab.filePath}
+                width={width}
               />
             </div>
           );
@@ -775,16 +800,28 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               directory={terminalDirectory}
             />
           ) : (
-            <TabbedTerminalPanel<DevWorkspaceTab>
-              context={terminalPanelContext}
-              actions={terminalActions}
-              events={events}
-              terminalContext={terminalContext}
-              directory={terminalDirectory}
-              initialTabs={tabs}
-              onTabsChange={handleTabsChange}
-              renderTabContent={renderTabContent}
-            />
+            <div
+              ref={terminalPanelRef}
+              style={{
+                height: '100%',
+                width: '100%',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              <TabbedTerminalPanel<DevWorkspaceTab>
+                context={terminalPanelContext}
+                actions={terminalActions}
+                events={events}
+                terminalContext={terminalContext}
+                directory={terminalDirectory}
+                initialTabs={tabs}
+                onTabsChange={handleTabsChange}
+                renderTabContent={renderTabContent}
+                width={terminalPanelWidth}
+              />
+            </div>
           ),
       },
       {
