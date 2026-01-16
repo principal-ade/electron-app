@@ -482,7 +482,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         });
       }),
       // Markdown file open in tab (from docs panel clicks)
-      events.on('file:opened', (event) => {
+      events.on('file:opened', async (event) => {
         // Ignore re-emitted events from tabs to prevent loop
         if (event.source === 'tab') {
           console.log('[DevWorkspacePanelFramework] Ignoring tab re-emission');
@@ -505,19 +505,24 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         console.log('[DevWorkspacePanelFramework] Received file:opened event for markdown:', filePath);
         const fileName = filePath.split('/').pop() || 'Markdown';
 
+        // Check if tab already exists
+        const existingTab = tabs.find(
+          (t) => t.contentType === 'markdown' && (t as MarkdownTab).filePath === filePath
+        );
+
+        if (existingTab) {
+          console.log('[DevWorkspacePanelFramework] Markdown tab already exists:', existingTab.id);
+          return; // Tab exists, don't create new one
+        }
+
+        // PRE-LOAD the file BEFORE creating the tab to avoid delay
+        console.log('[DevWorkspacePanelFramework] Pre-loading markdown file:', filePath);
+        if (actions.setActiveFile) {
+          await actions.setActiveFile(filePath);
+        }
+
+        // Now create the tab with the file already loaded
         setTabs((prevTabs) => {
-          // Check if tab already exists for this markdown file
-          const existingTab = prevTabs.find(
-            (t) => t.contentType === 'markdown' && (t as MarkdownTab).filePath === filePath
-          );
-
-          if (existingTab) {
-            // Tab exists - TabbedTerminalPanel will auto-activate it
-            console.log('[DevWorkspacePanelFramework] Markdown tab already exists:', existingTab.id);
-            return prevTabs; // No change to tabs array
-          }
-
-          // Create new markdown tab
           const newTab: MarkdownTab = {
             id: `markdown-${Date.now()}`,
             label: fileName,
@@ -527,7 +532,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             closable: true,
           };
 
-          console.log('[DevWorkspacePanelFramework] Creating new markdown tab:', newTab);
+          console.log('[DevWorkspacePanelFramework] Creating new markdown tab (file pre-loaded):', newTab);
           return [...prevTabs, newTab];
         });
       }),
