@@ -230,6 +230,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   // Tab state for TabbedTerminalPanel (skills only - terminals are managed by the panel from context)
   const [tabs, setTabs] = useState<DevWorkspaceTab[]>([]);
 
+  // Track active tab ID for controlled mode
+  const [activeTabId, setActiveTabId] = useState<string | null>(null);
+
   // Track markdown files currently being loaded to prevent duplicate tabs
   const loadingMarkdownFilesRef = React.useRef<Set<string>>(new Set());
 
@@ -541,25 +544,16 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
         try {
           // Check if tab already exists (use callback to get latest state)
-          let tabExists = false;
+          let existingTabId: string | null = null;
           setTabs((prevTabs) => {
-            const existingTabIndex = prevTabs.findIndex(
+            const existingTab = prevTabs.find(
               (t) => t.contentType === 'markdown' && (t as MarkdownTab).filePath === filePath
             );
 
-            if (existingTabIndex !== -1) {
-              console.log('[DevWorkspacePanelFramework] Markdown tab already exists, activating it');
-              tabExists = true;
-
-              // Move existing tab to end to trigger activation by TabbedTerminalPanel
-              const existingTab = prevTabs[existingTabIndex];
-              const updatedTabs = [
-                ...prevTabs.slice(0, existingTabIndex),
-                ...prevTabs.slice(existingTabIndex + 1),
-                existingTab, // Move to end
-              ];
-
-              return updatedTabs;
+            if (existingTab) {
+              console.log('[DevWorkspacePanelFramework] Markdown tab already exists:', existingTab.id);
+              existingTabId = existingTab.id;
+              return prevTabs; // No change
             }
 
             return prevTabs; // No change yet, will create after loading
@@ -572,11 +566,15 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             await actions.setActiveFile(filePath);
           }
 
-          if (tabExists) {
+          if (existingTabId) {
+            // Tab exists - activate it
+            console.log('[DevWorkspacePanelFramework] Activating existing markdown tab:', existingTabId);
+            setActiveTabId(existingTabId);
             return; // Tab existed and was activated, file reloaded
           }
 
           // Now create the tab with the file already loaded
+          let newTabId: string | null = null;
           setTabs((prevTabs) => {
             // Double-check tab doesn't exist (in case created while loading)
             const existingTab = prevTabs.find(
@@ -585,6 +583,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
             if (existingTab) {
               console.log('[DevWorkspacePanelFramework] Markdown tab created while loading:', existingTab.id);
+              newTabId = existingTab.id;
               return prevTabs;
             }
 
@@ -598,8 +597,14 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             };
 
             console.log('[DevWorkspacePanelFramework] Creating new markdown tab (file pre-loaded):', newTab);
+            newTabId = newTab.id;
             return [...prevTabs, newTab];
           });
+
+          // Activate the new tab
+          if (newTabId) {
+            setActiveTabId(newTabId);
+          }
         } finally {
           // Always remove from loading set when done
           loadingMarkdownFilesRef.current.delete(filePath);
@@ -867,6 +872,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 onTabsChange={handleTabsChange}
                 renderTabContent={renderTabContent}
                 width={terminalPanelWidth}
+                activeTabId={activeTabId}
+                onActiveTabChange={setActiveTabId}
               />
             </div>
           ),
