@@ -233,25 +233,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   // Track active tab ID for controlled mode
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
 
-  // Track pending tab activation (to activate after tab is added to state)
-  const pendingActivationRef = React.useRef<string | null>(null);
-
   // Track markdown files currently being loaded to prevent duplicate tabs
   const loadingMarkdownFilesRef = React.useRef<Set<string>>(new Set());
-
-  // Activate pending tab after it's been added to state
-  useEffect(() => {
-    if (pendingActivationRef.current) {
-      const tabId = pendingActivationRef.current;
-      // Check if the tab now exists in the tabs array
-      const tabExists = tabs.some(t => t.id === tabId);
-      if (tabExists) {
-        console.log('[DevWorkspacePanelFramework] Activating pending tab:', tabId);
-        setActiveTabId(tabId);
-        pendingActivationRef.current = null;
-      }
-    }
-  }, [tabs]);
 
   // Track terminal panel container width using ResizeObserver
   const [terminalPanelWidth, setTerminalPanelWidth] = useState<number>(0);
@@ -591,6 +574,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           }
 
           // Now create the tab with the file already loaded
+          let newTabId: string | null = null;
           setTabs((prevTabs) => {
             // Double-check tab doesn't exist (in case created while loading)
             const existingTab = prevTabs.find(
@@ -599,8 +583,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
             if (existingTab) {
               console.log('[DevWorkspacePanelFramework] Markdown tab created while loading:', existingTab.id);
-              // Queue activation for existing tab
-              pendingActivationRef.current = existingTab.id;
+              newTabId = existingTab.id;
               return prevTabs;
             }
 
@@ -614,10 +597,17 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             };
 
             console.log('[DevWorkspacePanelFramework] Creating new markdown tab (file pre-loaded):', newTab);
-            // Queue activation for new tab (will activate in useEffect after state update)
-            pendingActivationRef.current = newTab.id;
+            newTabId = newTab.id;
             return [...prevTabs, newTab];
           });
+
+          // Activate the tab on next tick (after React finishes state updates)
+          if (newTabId) {
+            setTimeout(() => {
+              console.log('[DevWorkspacePanelFramework] Activating new markdown tab:', newTabId);
+              setActiveTabId(newTabId);
+            }, 0);
+          }
         } finally {
           // Always remove from loading set when done
           loadingMarkdownFilesRef.current.delete(filePath);
