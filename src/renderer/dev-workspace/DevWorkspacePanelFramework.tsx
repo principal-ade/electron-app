@@ -58,9 +58,19 @@ interface MarkdownTab extends BaseTab {
 }
 
 /**
+ * Tab type for displaying canvas detail panels
+ */
+interface CanvasTab extends BaseTab {
+  contentType: 'canvas';
+  canvasId: string;
+  canvasPath: string;
+  canvasName: string;
+}
+
+/**
  * Union type of all tab types used in DevWorkspace
  */
-type DevWorkspaceTab = TerminalTab | SkillTab | MarkdownTab;
+type DevWorkspaceTab = TerminalTab | SkillTab | MarkdownTab | CanvasTab;
 
 export interface DevWorkspacePanelFrameworkProps {
   repositoryPath: string;
@@ -278,8 +288,11 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   const TraceViewerPanelComponent = principalViewPanels.find(
     (p) => p.metadata?.id === 'principal-ai.trace-viewer',
   )?.component;
-  const ExecutionViewerPanelComponent = principalViewPanels.find(
-    (p) => p.metadata?.id === 'principal-ai.execution-viewer',
+  const CanvasDetailPanelComponent = principalViewPanels.find(
+    (p) => p.metadata?.id === 'principal-ai.canvas-detail',
+  )?.component;
+  const CanvasListPanelComponent = principalViewPanels.find(
+    (p) => p.metadata?.id === 'principal-ai.canvas-list',
   )?.component;
   const FileCityPanelComponent = fileCityPanels[0]?.component;
   const DocsPanelComponent = docsPanels[0]?.component;
@@ -573,6 +586,47 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           loadingMarkdownFilesRef.current.delete(filePath);
         }
       }),
+      // Canvas selection - create tab (from canvas-list-panel)
+      events.on('custom', (event) => {
+        // Only handle selectCanvas action from canvas-list-panel
+        if (event.payload?.action !== 'selectCanvas' || event.source !== 'canvas-list-panel') {
+          return;
+        }
+
+        console.log('[DevWorkspacePanelFramework] Received canvas selection event:', event);
+        const { canvasId, canvas } = event.payload;
+
+        if (!canvasId || !canvas) {
+          console.warn('[DevWorkspacePanelFramework] No canvas data in event:', event.payload);
+          return;
+        }
+
+        setTabs((prevTabs) => {
+          // Check if tab already exists for this canvas
+          const existingTab = prevTabs.find(
+            (t) => t.contentType === 'canvas' && (t as CanvasTab).canvasId === canvasId
+          );
+
+          if (existingTab) {
+            console.log('[DevWorkspacePanelFramework] Canvas tab already exists:', existingTab.id);
+            return prevTabs; // Tab exists, will auto-activate
+          }
+
+          // Create new canvas tab
+          const newTab: CanvasTab = {
+            id: `canvas-${canvasId}-${Date.now()}`,
+            label: canvas.name || canvasId,
+            contentType: 'canvas',
+            canvasId: canvasId,
+            canvasPath: canvas.path,
+            canvasName: canvas.name || canvasId,
+            closable: true,
+          };
+
+          console.log('[DevWorkspacePanelFramework] Creating new canvas tab:', newTab);
+          return [...prevTabs, newTab];
+        });
+      }),
     ];
 
     return () => {
@@ -786,6 +840,48 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           );
         }
 
+        case 'canvas': {
+          // Type assertion for TypeScript
+          const canvasTab = tab as CanvasTab;
+
+          if (!CanvasDetailPanelComponent) {
+            return (
+              <div style={{ padding: '2rem', color: theme.colors.textSecondary }}>
+                Canvas Detail panel not available
+              </div>
+            );
+          }
+
+          console.log('[DevWorkspacePanelFramework] Rendering canvas tab:', {
+            canvasId: canvasTab.canvasId,
+            canvasPath: canvasTab.canvasPath,
+            canvasName: canvasTab.canvasName,
+            isActive,
+          });
+
+          return (
+            <div
+              style={{
+                height: '100%',
+                width: '100%',
+                overflow: 'hidden',
+                position: 'relative',
+                display: isActive ? 'flex' : 'none', // Only show when active
+                flexDirection: 'column',
+              }}
+            >
+              <CanvasDetailPanelComponent
+                context={contextRef.current}
+                actions={actionsRef.current}
+                events={eventsRef.current}
+                selectedCanvasId={canvasTab.canvasId}
+                canvasPath={canvasTab.canvasPath}
+                canvasName={canvasTab.canvasName}
+              />
+            </div>
+          );
+        }
+
         default:
           console.warn('[DevWorkspacePanelFramework] Unknown tab type:', (tab as any).contentType);
           return (
@@ -795,7 +891,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           );
       }
     },
-    [theme, SkillDetailPanelComponent, MarkdownPanelComponent],
+    [theme, SkillDetailPanelComponent, MarkdownPanelComponent, CanvasDetailPanelComponent],
   );
 
   // Define all panels using panel framework components
@@ -888,9 +984,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         ),
       },
       {
-        id: 'executionViewer',
-        label: 'Execution Viewer',
-        content: ExecutionViewerPanelComponent ? (
+        id: 'canvasList',
+        label: 'Canvas List',
+        content: CanvasListPanelComponent ? (
           <div
             style={{
               height: '100%',
@@ -901,14 +997,14 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               flexDirection: 'column',
             }}
           >
-            <ExecutionViewerPanelComponent
+            <CanvasListPanelComponent
               context={context}
               actions={actions}
               events={events}
             />
           </div>
         ) : (
-          <div>Execution Viewer panel not available</div>
+          <div>Canvas List panel not available</div>
         ),
       },
       {
@@ -1461,6 +1557,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       PrincipalViewPanelComponent,
+      CanvasListPanelComponent,
       FileCityPanelComponent,
       DocsPanelComponent,
       LocalProjectsPanelComponent,
