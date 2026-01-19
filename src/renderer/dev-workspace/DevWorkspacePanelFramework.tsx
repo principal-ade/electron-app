@@ -37,6 +37,7 @@ import { panels as agentPanels, type Skill } from '@industry-theme/agent-panels'
 import { panels as githubPanels } from '@industry-theme/github-panels';
 import type { Repository } from '../../shared/types/repository.types';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
+import { PanelIconSidebar } from '../components/Sidebar/PanelIconSidebar';
 
 /**
  * Tab type for displaying skill detail panels
@@ -1638,160 +1639,179 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         width: '100%',
         height: '100%',
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'row',
         background: theme.colors.background,
         position: 'relative',
       }}
     >
-      <EditableConfigurablePanelLayout
-        panels={allPanels}
-        layout={layout}
-        onLayoutChange={onLayoutChange}
-        isEditMode={false}
-        collapsiblePanels={{ left: true, right: true }}
-        defaultSizes={panelSizes || { left: 25, middle: 50, right: 25 }}
-        minSizes={{ left: 15, middle: 30, right: 15 }}
-        collapsed={collapsed}
-        showCollapseButtons={false}
+      {/* Panel Icon Sidebar */}
+      <PanelIconSidebar
+        currentPanelId={layout.left}
+        onPanelChange={(panelId) => onLayoutChange({ ...layout, left: panelId })}
         theme={theme}
-        onPanelResize={onPanelSizesChange}
+        collapsed={collapsed.left}
+        onExpand={() => onCollapsedChange({ ...collapsed, left: false })}
       />
 
-      {/* Focus Mode Overlays - dim panels when focus is enabled */}
-      {panelFocus?.left && !collapsed.left && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '25%',
-            height: '100%',
-            pointerEvents: 'none',
-            zIndex: 100,
-          }}
-        >
-          <FocusModeOverlay
-            active={true}
-            variant="soft-fade"
-            effects={['snowfall']}
-            opacity={0.92}
-          />
-        </div>
-      )}
-      {panelFocus?.right && !collapsed.right && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            width: '25%',
-            height: '100%',
-            pointerEvents: 'none',
-            zIndex: 100,
-          }}
-        >
-          <FocusModeOverlay
-            active={true}
-            variant="soft-fade"
-            effects={['snowfall']}
-            opacity={0.92}
-          />
-        </div>
-      )}
+      {/* Main panel layout area */}
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        <EditableConfigurablePanelLayout
+          panels={allPanels}
+          layout={layout}
+          onLayoutChange={onLayoutChange}
+          isEditMode={false}
+          collapsiblePanels={{ left: true, right: true }}
+          defaultSizes={panelSizes || { left: 25, middle: 50, right: 25 }}
+          minSizes={{ left: 15, middle: 30, right: 15 }}
+          collapsed={collapsed}
+          showCollapseButtons={false}
+          theme={theme}
+          onPanelResize={onPanelSizesChange}
+        />
 
-      {/* Detail Panel Modal */}
-      {detailModal && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.92)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-          }}
-          onClick={() => setDetailModal(null)}
-        >
+        {/* Focus Mode Overlays - dim panels when focus is enabled */}
+        {panelFocus?.left && !collapsed.left && (
           <div
             style={{
-              backgroundColor: theme.colors.background,
-              borderRadius: '8px',
-              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-              maxWidth: '900px',
-              width: '85%',
-              maxHeight: '90vh',
-              overflow: 'auto',
-              position: 'relative',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '25%',
+              height: '100%',
+              pointerEvents: 'none',
+              zIndex: 100,
             }}
-            onClick={(e) => e.stopPropagation()}
           >
-            {/* Render appropriate detail panel based on panelId */}
-            {detailModal.panelId === 'task-detail' && TaskDetailPanelComponent && (
-              <TaskDetailPanelComponent
-                context={context}
-                actions={actions}
-                events={events}
-              />
-            )}
-            {detailModal.panelId === 'agentDetail' && AgentDetailPanelComponent && (
-              <AgentDetailPanelComponent
-                context={{
-                  ...context,
-                  slices: new Map([
-                    ...Array.from(context.slices?.entries() || []),
-                    ['selectedAgent', {
-                      scope: 'repository' as const,
-                      name: 'selectedAgent',
-                      data: detailModal.data,
-                      loading: false,
-                    }],
-                  ]),
-                }}
-                actions={actions}
-                events={events}
-              />
-            )}
-            {detailModal.panelId === 'gitDiff' && GitDiffPanelComponent && (
-              <div style={{ height: '80vh', display: 'flex', flexDirection: 'column' }}>
-                <GitDiffPanelComponent
-                  context={context}
-                  actions={actions}
-                  events={events}
-                />
-              </div>
-            )}
-            {detailModal.panelId === 'fileEditor' && FileEditorPanelComponent && (
-              <div style={{ height: '80vh', display: 'flex', flexDirection: 'column' }}>
-                <FileEditorPanelComponent
-                  context={context}
-                  actions={actions}
-                  events={events}
-                />
-              </div>
-            )}
-            {detailModal.panelId === 'githubIssueDetail' && GitHubIssueDetailPanelComponent && (
-              <GitHubIssueDetailPanelComponent
-                context={{
-                  ...context,
-                  slices: new Map([
-                    ...Array.from(context.slices?.entries() || []),
-                    ['selectedIssue', {
-                      scope: 'repository' as const,
-                      name: 'selectedIssue',
-                      data: detailModal.data,
-                      loading: false,
-                    }],
-                  ]),
-                }}
-                actions={actions}
-                events={events}
-              />
-            )}
+            <FocusModeOverlay
+              active={true}
+              variant="soft-fade"
+              effects={['snowfall']}
+              opacity={0.92}
+            />
           </div>
-        </div>
-      )}
+        )}
+        {panelFocus?.right && !collapsed.right && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              right: 0,
+              width: '25%',
+              height: '100%',
+              pointerEvents: 'none',
+              zIndex: 100,
+            }}
+          >
+            <FocusModeOverlay
+              active={true}
+              variant="soft-fade"
+              effects={['snowfall']}
+              opacity={0.92}
+            />
+          </div>
+        )}
 
+        {/* Detail Panel Modal */}
+        {detailModal && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.92)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999,
+            }}
+            onClick={() => setDetailModal(null)}
+          >
+            <div
+              style={{
+                backgroundColor: theme.colors.background,
+                borderRadius: '8px',
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                maxWidth: '900px',
+                width: '85%',
+                maxHeight: '90vh',
+                overflow: 'auto',
+                position: 'relative',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Render appropriate detail panel based on panelId */}
+              {detailModal.panelId === 'task-detail' && TaskDetailPanelComponent && (
+                <TaskDetailPanelComponent
+                  context={context}
+                  actions={actions}
+                  events={events}
+                />
+              )}
+              {detailModal.panelId === 'agentDetail' && AgentDetailPanelComponent && (
+                <AgentDetailPanelComponent
+                  context={{
+                    ...context,
+                    slices: new Map([
+                      ...Array.from(context.slices?.entries() || []),
+                      ['selectedAgent', {
+                        scope: 'repository' as const,
+                        name: 'selectedAgent',
+                        data: detailModal.data,
+                        loading: false,
+                      }],
+                    ]),
+                  }}
+                  actions={actions}
+                  events={events}
+                />
+              )}
+              {detailModal.panelId === 'gitDiff' && GitDiffPanelComponent && (
+                <div style={{ height: '80vh', display: 'flex', flexDirection: 'column' }}>
+                  <GitDiffPanelComponent
+                    context={context}
+                    actions={actions}
+                    events={events}
+                  />
+                </div>
+              )}
+              {detailModal.panelId === 'fileEditor' && FileEditorPanelComponent && (
+                <div style={{ height: '80vh', display: 'flex', flexDirection: 'column' }}>
+                  <FileEditorPanelComponent
+                    context={context}
+                    actions={actions}
+                    events={events}
+                  />
+                </div>
+              )}
+              {detailModal.panelId === 'githubIssueDetail' && GitHubIssueDetailPanelComponent && (
+                <GitHubIssueDetailPanelComponent
+                  context={{
+                    ...context,
+                    slices: new Map([
+                      ...Array.from(context.slices?.entries() || []),
+                      ['selectedIssue', {
+                        scope: 'repository' as const,
+                        name: 'selectedIssue',
+                        data: detailModal.data,
+                        loading: false,
+                      }],
+                    ]),
+                  }}
+                  actions={actions}
+                  events={events}
+                />
+              )}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
