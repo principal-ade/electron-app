@@ -136,6 +136,7 @@ const configuration: webpack.Configuration = {
       events: require.resolve('events/'),
       stream: require.resolve('stream-browserify'),
       buffer: require.resolve('buffer/'),
+      child_process: false,
     },
   },
 

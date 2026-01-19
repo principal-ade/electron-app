@@ -35,8 +35,7 @@ import type { PackageLayer } from '@principal-ai/codebase-composition';
 // Available panels for Dev workspace
 const AVAILABLE_PANELS: PanelOption[] = [
   { id: 'agentsList', label: 'Agents' },
-  { id: 'principalView', label: 'Architecture' },
-  { id: 'canvasList', label: 'Canvas List' },
+  { id: 'canvasList', label: 'Architecture' },
   { id: 'codeQuality', label: 'Code Quality' },
   { id: 'docs', label: 'Documentation' },
   { id: 'fileCity', label: 'File City' },
@@ -78,10 +77,10 @@ export const DEFAULT_PANEL_PRESETS: PanelPreset[] = [
     },
   },
   {
-    id: 'principal-view',
-    name: 'Principal View',
-    description: 'Principal View, Terminal, File City',
-    layout: { left: 'principalView', middle: 'terminal', right: 'fileCity' },
+    id: 'canvas-editor',
+    name: 'Canvas Editor',
+    description: 'Canvas Editor, Terminal, File City',
+    layout: { left: 'canvasEditor', middle: 'terminal', right: 'fileCity' },
   },
   {
     id: 'docs-focused',
@@ -92,8 +91,8 @@ export const DEFAULT_PANEL_PRESETS: PanelPreset[] = [
   {
     id: 'terminal-focused',
     name: 'Terminal Focus',
-    description: 'File City, Terminal, Principal View',
-    layout: { left: 'fileCity', middle: 'terminal', right: 'principalView' },
+    description: 'File City, Terminal, Canvas Editor',
+    layout: { left: 'fileCity', middle: 'terminal', right: 'canvasEditor' },
   },
   {
     id: 'storybook',
@@ -149,11 +148,11 @@ export const DEFAULT_PANEL_PRESETS: PanelPreset[] = [
   {
     id: 'canvas-viewer',
     name: 'Canvas Viewer',
-    description: 'Canvas List, Terminal, Architecture',
+    description: 'Architecture, Terminal, Canvas Editor',
     layout: {
       left: 'canvasList',
       middle: 'terminal',
-      right: 'principalView',
+      right: 'canvasEditor',
     },
   },
 ];

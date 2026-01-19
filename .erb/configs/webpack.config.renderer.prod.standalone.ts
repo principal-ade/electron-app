@@ -168,6 +168,7 @@ const configuration: webpack.Configuration = {
       buffer: require.resolve('buffer/'),
       process: require.resolve('process/browser.js'),
       events: require.resolve('events/'),
+      child_process: false,
     },
   },
 

@@ -65,6 +65,7 @@ const configuration: webpack.Configuration = {
       process: require.resolve('process/browser.js'),
       events: require.resolve('events/'),
       util: false,
+      child_process: false,
     },
   },
 

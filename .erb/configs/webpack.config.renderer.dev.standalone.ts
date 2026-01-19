@@ -254,6 +254,8 @@ const configuration: webpack.Configuration = {
       "node:url": false,
       "node:crypto": false,
       "node:os": false,
+      child_process: false,
+      "node:child_process": false,
     },
   },
 

@@ -58,10 +58,20 @@ interface MarkdownTab extends BaseTab {
 }
 
 /**
- * Tab type for displaying canvas detail panels
+ * Tab type for editing canvas files (regular .canvas)
+ */
+interface CanvasEditorTab extends BaseTab {
+  contentType: 'canvas-editor';
+  canvasId: string;
+  canvasPath: string;
+  canvasName: string;
+}
+
+/**
+ * Tab type for viewing canvas detail panels (.otel.canvas with executions)
  */
 interface CanvasTab extends BaseTab {
-  contentType: 'canvas';
+  contentType: 'canvas-detail';
   canvasId: string;
   canvasPath: string;
   canvasName: string;
@@ -70,7 +80,7 @@ interface CanvasTab extends BaseTab {
 /**
  * Union type of all tab types used in DevWorkspace
  */
-type DevWorkspaceTab = TerminalTab | SkillTab | MarkdownTab | CanvasTab;
+type DevWorkspaceTab = TerminalTab | SkillTab | MarkdownTab | CanvasEditorTab | CanvasTab;
 
 export interface DevWorkspacePanelFrameworkProps {
   repositoryPath: string;
@@ -284,7 +294,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     });
   }, []);
 
-  const PrincipalViewPanelComponent = principalViewPanels[0]?.component;
+  const CanvasEditorPanelComponent = principalViewPanels.find(
+    (p) => p.metadata?.id === 'principal-ai.canvas-editor',
+  )?.component;
   const TraceViewerPanelComponent = principalViewPanels.find(
     (p) => p.metadata?.id === 'principal-ai.trace-viewer',
   )?.component;
@@ -602,9 +614,19 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         }
 
         setTabs((prevTabs) => {
+          // Determine content type based on canvas type
+          const isOtelCanvas = canvas.type === 'otel';
+          const contentType = isOtelCanvas ? 'canvas-detail' : 'canvas-editor';
+
           // Check if tab already exists for this canvas
           const existingTab = prevTabs.find(
-            (t) => t.contentType === 'canvas' && (t as CanvasTab).canvasId === canvasId
+            (t) => {
+              if (isOtelCanvas) {
+                return t.contentType === 'canvas-detail' && (t as CanvasTab).canvasId === canvasId;
+              } else {
+                return t.contentType === 'canvas-editor' && (t as CanvasEditorTab).canvasId === canvasId;
+              }
+            }
           );
 
           if (existingTab) {
@@ -612,18 +634,18 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             return prevTabs; // Tab exists, will auto-activate
           }
 
-          // Create new canvas tab
-          const newTab: CanvasTab = {
+          // Create new canvas tab (editor or detail based on type)
+          const newTab: CanvasEditorTab | CanvasTab = {
             id: `canvas-${canvasId}-${Date.now()}`,
             label: canvas.name || canvasId,
-            contentType: 'canvas',
+            contentType: contentType,
             canvasId: canvasId,
             canvasPath: canvas.path,
             canvasName: canvas.name || canvasId,
             closable: true,
-          };
+          } as CanvasEditorTab | CanvasTab;
 
-          console.log('[DevWorkspacePanelFramework] Creating new canvas tab:', newTab);
+          console.log('[DevWorkspacePanelFramework] Creating new', contentType, 'tab:', newTab);
           return [...prevTabs, newTab];
         });
       }),
@@ -840,7 +862,47 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           );
         }
 
-        case 'canvas': {
+        case 'canvas-editor': {
+          // Type assertion for TypeScript
+          const canvasEditorTab = tab as CanvasEditorTab;
+
+          if (!CanvasEditorPanelComponent) {
+            return (
+              <div style={{ padding: '2rem', color: theme.colors.textSecondary }}>
+                Canvas Editor panel not available
+              </div>
+            );
+          }
+
+          console.log('[DevWorkspacePanelFramework] Rendering canvas editor tab:', {
+            canvasId: canvasEditorTab.canvasId,
+            canvasPath: canvasEditorTab.canvasPath,
+            canvasName: canvasEditorTab.canvasName,
+            isActive,
+          });
+
+          return (
+            <div
+              style={{
+                height: '100%',
+                width: '100%',
+                overflow: 'hidden',
+                position: 'relative',
+                display: isActive ? 'flex' : 'none', // Only show when active
+                flexDirection: 'column',
+              }}
+            >
+              <CanvasEditorPanelComponent
+                context={contextRef.current}
+                actions={actionsRef.current}
+                events={eventsRef.current}
+                selectedConfigId={canvasEditorTab.canvasId}
+              />
+            </div>
+          );
+        }
+
+        case 'canvas-detail': {
           // Type assertion for TypeScript
           const canvasTab = tab as CanvasTab;
 
@@ -852,7 +914,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             );
           }
 
-          console.log('[DevWorkspacePanelFramework] Rendering canvas tab:', {
+          console.log('[DevWorkspacePanelFramework] Rendering canvas detail tab:', {
             canvasId: canvasTab.canvasId,
             canvasPath: canvasTab.canvasPath,
             canvasName: canvasTab.canvasName,
@@ -891,7 +953,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           );
       }
     },
-    [theme, SkillDetailPanelComponent, MarkdownPanelComponent, CanvasDetailPanelComponent],
+    [theme, SkillDetailPanelComponent, MarkdownPanelComponent, CanvasEditorPanelComponent, CanvasDetailPanelComponent],
   );
 
   // Define all panels using panel framework components
@@ -936,30 +998,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           ),
       },
       {
-        id: 'principalView',
-        label: 'Principal View',
-        content: PrincipalViewPanelComponent ? (
-          <div
-            style={{
-              height: '100%',
-              width: '100%',
-              overflow: 'hidden',
-              position: 'relative',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <PrincipalViewPanelComponent
-              context={context}
-              actions={actions}
-              events={events}
-            />
-          </div>
-        ) : (
-          <div>Principal View panel not available</div>
-        ),
-      },
-      {
         id: 'traceViewer',
         label: 'Trace Viewer',
         content: TraceViewerPanelComponent ? (
@@ -985,7 +1023,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       },
       {
         id: 'canvasList',
-        label: 'Canvas List',
+        label: 'Architecture',
         content: CanvasListPanelComponent ? (
           <div
             style={{
@@ -1004,7 +1042,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             />
           </div>
         ) : (
-          <div>Canvas List panel not available</div>
+          <div>Architecture panel not available</div>
         ),
       },
       {
@@ -1556,7 +1594,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     // These are only used by the terminal panel and don't affect other panels.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
-      PrincipalViewPanelComponent,
+      CanvasEditorPanelComponent,
       CanvasListPanelComponent,
       FileCityPanelComponent,
       DocsPanelComponent,
