@@ -897,6 +897,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 actions={actionsRef.current}
                 events={eventsRef.current}
                 selectedConfigId={canvasEditorTab.canvasId}
+                canvasPath={canvasEditorTab.canvasPath}
+                canvasName={canvasEditorTab.canvasName}
               />
             </div>
           );
