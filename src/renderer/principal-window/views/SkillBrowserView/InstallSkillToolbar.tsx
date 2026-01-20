@@ -139,10 +139,6 @@ export const InstallSkillToolbar: React.FC<InstallSkillToolbarProps> = ({
     return `Installed in ${installedDirectoryIds.length} directories`;
   }, [isInstalled, installedDirectoryIds, detectedDirectories]);
 
-  if (!skillSource) {
-    return null;
-  }
-
   return (
     <div
       style={{
@@ -169,18 +165,20 @@ export const InstallSkillToolbar: React.FC<InstallSkillToolbarProps> = ({
         >
           {skillName}
         </div>
-        <div
-          style={{
-            fontSize: theme.fontSizes[0],
-            color: theme.colors.textSecondary,
-            fontFamily: theme.fonts.monospace,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {skillSource.owner}/{skillSource.repo}
-        </div>
+        {skillSource && (
+          <div
+            style={{
+              fontSize: theme.fontSizes[0],
+              color: theme.colors.textSecondary,
+              fontFamily: theme.fonts.monospace,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {skillSource.owner}/{skillSource.repo}
+          </div>
+        )}
       </div>
 
       {/* Install Button */}

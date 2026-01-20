@@ -224,6 +224,25 @@ export const RepositoryPanelProvider: React.FC<
           repositoryPath,
           tree,
         );
+
+        // DEBUG: Check if we're getting real timestamps and sizes
+        if (tree?.allFiles) {
+          const testFile = tree.allFiles.find(f =>
+            f.path.includes('SkillsListPanel.tsx')
+          );
+          if (testFile) {
+            console.log('🔍 [FileTree Debug] SkillsListPanel.tsx metadata:', {
+              path: testFile.path,
+              size: testFile.size,
+              sizeType: typeof testFile.size,
+              lastModified: testFile.lastModified,
+              lastModifiedType: typeof testFile.lastModified,
+              parsedDate: testFile.lastModified ? new Date(testFile.lastModified) : null,
+              timestamp: testFile.lastModified ? new Date(testFile.lastModified).getTime() : null,
+            });
+          }
+        }
+
         setFileTreeData(tree);
       } catch (error) {
         console.error(
@@ -246,7 +265,27 @@ export const RepositoryPanelProvider: React.FC<
           repositoryPath,
         );
         if (event.entry.data) {
-          setFileTreeData(event.entry.data as FileTree);
+          const tree = event.entry.data as FileTree;
+
+          // DEBUG: Check if we're getting real timestamps and sizes on updates
+          if (tree?.allFiles) {
+            const testFile = tree.allFiles.find(f =>
+              f.path.includes('SkillsListPanel.tsx')
+            );
+            if (testFile) {
+              console.log('🔄 [FileTree Update] SkillsListPanel.tsx metadata:', {
+                path: testFile.path,
+                size: testFile.size,
+                sizeType: typeof testFile.size,
+                lastModified: testFile.lastModified,
+                lastModifiedType: typeof testFile.lastModified,
+                parsedDate: testFile.lastModified ? new Date(testFile.lastModified) : null,
+                timestamp: testFile.lastModified ? new Date(testFile.lastModified).getTime() : null,
+              });
+            }
+          }
+
+          setFileTreeData(tree);
         }
       }
     });

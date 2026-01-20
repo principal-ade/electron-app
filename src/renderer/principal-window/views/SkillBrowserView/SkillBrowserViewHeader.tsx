@@ -118,7 +118,7 @@ export const SkillBrowserViewHeader: React.FC<SkillBrowserViewHeaderProps> = ({
               whiteSpace: 'nowrap',
             }}
           >
-            Installed
+            My Skills
           </button>
           <button
             onClick={() => onViewModeChange?.('browse')}

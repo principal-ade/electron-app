@@ -3,7 +3,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { ConfigurablePanelLayout } from '@principal-ade/panels';
 import '@principal-ade/panels/panels.css';
 import { PanelEventBus } from '@principal-ade/panel-framework-core';
-import { panels as agentPanels } from '@industry-theme/agent-panels';
+import { panels as agentPanels, type Skill } from '@industry-theme/agent-panels';
 import {
   SkillBrowserPanelProvider,
   useSkillBrowserPanelProvider,
@@ -68,11 +68,7 @@ const SkillBrowserViewContent: React.FC = () => {
   const [githubUrl, setGithubUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedSkill, setSelectedSkill] = useState<{
-    id: string;
-    name: string;
-    path: string;
-  } | null>(null);
+  const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
   const [githubRepoInfo, setGithubRepoInfo] = useState<{
     owner: string;
     repo: string;
@@ -317,33 +313,20 @@ const SkillBrowserViewContent: React.FC = () => {
   // Listen for skill selection events
   useEffect(() => {
     const unsubscribe = events.on('skill:selected', (event) => {
-      const payload = event.payload as { skillId?: string; skill?: any } | undefined;
+      const payload = event.payload as { skill: Skill } | undefined;
       if (payload?.skill) {
-        // skill.path is the SKILL.md file path (e.g., "skills/brand-guidelines/SKILL.md")
-        // We need the folder path for installation (e.g., "skills/brand-guidelines")
-        const skillPath = payload.skill.path || '';
-        const folderPath = skillPath.endsWith('/SKILL.md')
-          ? skillPath.substring(0, skillPath.length - '/SKILL.md'.length)
-          : skillPath.substring(0, skillPath.lastIndexOf('/'));
-
         console.log('[SkillBrowserView] Skill selected:', {
           skillId: payload.skill.id,
           skillName: payload.skill.name,
-          fullPath: skillPath,
-          folderPath,
+          skillPath: payload.skill.path,
+          skillFolderPath: payload.skill.skillFolderPath,
+          hasScripts: payload.skill.hasScripts,
+          hasReferences: payload.skill.hasReferences,
+          hasAssets: payload.skill.hasAssets,
         });
 
-        setSelectedSkill({
-          id: payload.skill.id || payload.skillId || '',
-          name: payload.skill.name || '',
-          path: folderPath || skillPath,
-        });
-      } else if (payload?.skillId) {
-        setSelectedSkill({
-          id: payload.skillId,
-          name: '',
-          path: '',
-        });
+        // Store the full skill object with all file structure information
+        setSelectedSkill(payload.skill);
       }
     });
 
@@ -601,14 +584,24 @@ const SkillBrowserViewContent: React.FC = () => {
   }, [handleFetchSkills]);
 
   /**
+   * Normalize skill name for comparison (convert hyphens/underscores to spaces, lowercase)
+   */
+  const normalizeSkillName = useCallback((name: string): string => {
+    return name.toLowerCase().replace(/[-_]/g, ' ').trim();
+  }, []);
+
+  /**
    * Check if a skill is already installed
    */
   const isSkillInstalled = useCallback(
     (skillName: string): boolean => {
+      const normalizedName = normalizeSkillName(skillName);
       // Check if the skill name exists in any of the installed skills
-      return installedSkillsData.some((installedSkill) => installedSkill.name === skillName);
+      return installedSkillsData.some((installedSkill) =>
+        normalizeSkillName(installedSkill.name) === normalizedName
+      );
     },
-    [installedSkillsData],
+    [installedSkillsData, normalizeSkillName],
   );
 
   /**
@@ -616,8 +609,11 @@ const SkillBrowserViewContent: React.FC = () => {
    */
   const getSkillInstalledDirectories = useCallback(
     (skillName: string): string[] => {
+      const normalizedName = normalizeSkillName(skillName);
       // Find all instances of this skill in installedSkillsData
-      const skillInstances = installedSkillsData.filter((skill) => skill.name === skillName);
+      const skillInstances = installedSkillsData.filter((skill) =>
+        normalizeSkillName(skill.name) === normalizedName
+      );
 
       // Map each instance to its directory ID
       const directoryIds: string[] = [];
@@ -634,7 +630,7 @@ const SkillBrowserViewContent: React.FC = () => {
 
       return directoryIds;
     },
-    [installedSkillsData, detectedDirectories],
+    [installedSkillsData, detectedDirectories, normalizeSkillName],
   );
 
   /**
@@ -642,8 +638,11 @@ const SkillBrowserViewContent: React.FC = () => {
    */
   const getInstalledSkillMetadata = useCallback(
     async (skillName: string): Promise<{ sha: string; installedAt: string; installedFrom: string } | null> => {
+      const normalizedName = normalizeSkillName(skillName);
       // Find the installed skill
-      const installedSkill = installedSkillsData.find((skill) => skill.name === skillName);
+      const installedSkill = installedSkillsData.find((skill) =>
+        normalizeSkillName(skill.name) === normalizedName
+      );
       if (!installedSkill) {
         return null;
       }
@@ -669,7 +668,7 @@ const SkillBrowserViewContent: React.FC = () => {
         return null;
       }
     },
-    [installedSkillsData],
+    [installedSkillsData, normalizeSkillName],
   );
 
   // Load metadata when selected skill changes
@@ -696,24 +695,32 @@ const SkillBrowserViewContent: React.FC = () => {
    */
   const handleInstallSkill = useCallback(
     async (destination: SkillDestination) => {
-      if (!selectedSkill || !githubRepoInfo) {
-        throw new Error('No skill selected or GitHub repo info missing');
+      if (!selectedSkill || !githubRepoInfo || !browseFileTree) {
+        throw new Error('No skill selected, GitHub repo info missing, or file tree not loaded');
       }
 
       const githubUrl = `https://github.com/${githubRepoInfo.owner}/${githubRepoInfo.repo}`;
 
+      // Build complete file list for the skill from the file tree
+      const skillFolderPath = selectedSkill.skillFolderPath;
+      const fileList = browseFileTree.allFiles
+        .filter(file => file.relativePath.startsWith(skillFolderPath + '/'))
+        .map(file => file.relativePath);
+
       console.log('[SkillBrowserView] Installing skill:', {
         skillName: selectedSkill.name,
-        skillPath: selectedSkill.path,
+        skillPath: selectedSkill.skillFolderPath,
         destination,
         githubUrl,
+        fileCount: fileList.length,
       });
 
       const result = await GithubService.installSkill({
         githubUrl,
-        skillPath: selectedSkill.path,
+        skillPath: selectedSkill.skillFolderPath,
         destination,
         skillName: selectedSkill.name,
+        fileList, // Pass the complete file list
       });
 
       if (!result.success) {
@@ -732,7 +739,7 @@ const SkillBrowserViewContent: React.FC = () => {
         },
       });
     },
-    [selectedSkill, githubRepoInfo, actions],
+    [selectedSkill, githubRepoInfo, browseFileTree, actions],
   );
 
   /**
@@ -740,26 +747,42 @@ const SkillBrowserViewContent: React.FC = () => {
    */
   const handleInstallSkillToDirectories = useCallback(
     async (directoryIds: string[]) => {
-      if (!selectedSkill || !githubRepoInfo) {
-        throw new Error('No skill selected or GitHub repo info missing');
+      if (!selectedSkill || !githubRepoInfo || !browseFileTree) {
+        throw new Error('No skill selected, GitHub repo info missing, or file tree not loaded');
       }
 
       const githubUrl = `https://github.com/${githubRepoInfo.owner}/${githubRepoInfo.repo}`;
+
+      // Build complete file list for the skill from the file tree
+      // The skill folder contains all files under skillFolderPath
+      const skillFolderPath = selectedSkill.skillFolderPath;
+      const fileList = browseFileTree.allFiles
+        .filter(file => file.relativePath.startsWith(skillFolderPath + '/'))
+        .map(file => file.relativePath);
+
+      console.log('[SkillBrowserView] Building file list for skill installation:', {
+        skillName: selectedSkill.name,
+        skillFolderPath,
+        totalFiles: fileList.length,
+        files: fileList,
+      });
 
       // Install to each directory
       for (const directoryId of directoryIds) {
         console.log('[SkillBrowserView] Installing skill to directory:', {
           skillName: selectedSkill.name,
-          skillPath: selectedSkill.path,
+          skillPath: selectedSkill.skillFolderPath,
           directoryId,
           githubUrl,
+          fileCount: fileList.length,
         });
 
         const result = await GithubService.installSkill({
           githubUrl,
-          skillPath: selectedSkill.path,
+          skillPath: selectedSkill.skillFolderPath,
           destination: directoryId as SkillDestination,
           skillName: selectedSkill.name,
+          fileList, // Pass the complete file list
         });
 
         if (!result.success) {
@@ -782,7 +805,7 @@ const SkillBrowserViewContent: React.FC = () => {
       // Refresh installed skills
       await loadInstalledSkills();
     },
-    [selectedSkill, githubRepoInfo, actions, loadInstalledSkills],
+    [selectedSkill, githubRepoInfo, browseFileTree, actions, loadInstalledSkills],
   );
 
   /**
@@ -794,10 +817,13 @@ const SkillBrowserViewContent: React.FC = () => {
         throw new Error('No skill selected');
       }
 
+      const normalizedSelectedName = normalizeSkillName(selectedSkill.name);
+
       // Find all instances of this skill in the specified directories
       for (const directoryId of directoryIds) {
         const skillInstances = installedSkillsData.filter((skill) => {
-          if (skill.name !== selectedSkill.name) return false;
+          // Use normalized comparison to handle name variations (hyphens vs spaces)
+          if (normalizeSkillName(skill.name) !== normalizedSelectedName) return false;
 
           // Find which directory this skill belongs to
           const directory = detectedDirectories.find((dir) => skill.path.startsWith(dir.path));
@@ -811,20 +837,30 @@ const SkillBrowserViewContent: React.FC = () => {
             directoryId,
           });
 
-          const result = await FileSystemService.deleteDirectory(skillInstance.path);
+          const result = await FileSystemService.deleteSkill(skillInstance.path);
 
           if (!result.success) {
             throw new Error(result.error || `Uninstallation from ${directoryId} failed`);
           }
 
           console.log('[SkillBrowserView] Skill uninstalled successfully from:', directoryId);
+
+          // Emit event to refresh global skills cache
+          actions.notifyPanels({
+            type: 'skill:uninstalled',
+            payload: {
+              skillName: skillInstance.name,
+              skillPath: skillInstance.path,
+              directoryId,
+            },
+          });
         }
       }
 
       // Refresh installed skills
       await loadInstalledSkills();
     },
-    [selectedSkill, installedSkillsData, detectedDirectories, loadInstalledSkills],
+    [selectedSkill, installedSkillsData, detectedDirectories, loadInstalledSkills, actions, normalizeSkillName],
   );
 
   // Use panel persistence for two-panel layout
@@ -887,16 +923,16 @@ const SkillBrowserViewContent: React.FC = () => {
             }}
           >
             {/* Install Toolbar */}
-            {selectedSkill && githubRepoInfo && (
+            {selectedSkill && (
               <InstallSkillToolbar
                 skillName={selectedSkill.name}
-                skillSource={{
+                skillSource={githubRepoInfo ? {
                   owner: githubRepoInfo.owner,
                   repo: githubRepoInfo.repo,
                   branch: githubRepoInfo.branch,
                   skillPath: selectedSkill.path,
                   currentSha: githubRepoInfo.treeSha,
-                }}
+                } : undefined}
                 isInstalled={isSkillInstalled(selectedSkill.name)}
                 installedDirectoryIds={getSkillInstalledDirectories(selectedSkill.name)}
                 installedMetadata={selectedSkillMetadata || undefined}

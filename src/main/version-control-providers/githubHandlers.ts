@@ -3265,13 +3265,15 @@ export function registerGitHubIpcHandlers(
       }
 
       try {
-        const { githubUrl, skillPath, destination, repositoryPath, skillName } = options;
+        const { githubUrl, skillPath, destination, repositoryPath, skillName, fileList } = options;
 
         console.log('[GitHub] installSkill called with:', {
           githubUrl,
           skillPath,
           destination,
           skillName,
+          fileListProvided: !!fileList,
+          fileCount: fileList?.length,
         });
 
         // Parse GitHub URL
@@ -3290,15 +3292,6 @@ export function registerGitHubIpcHandlers(
         const repoInfo = await adapter.getRepository(owner, repo);
         const branch = repoInfo?.default_branch || 'main';
 
-        // Get file tree for the skill folder
-        const treeResult = await adapter.getTree(owner, repo, branch);
-        if (!treeResult?.success || !treeResult.data) {
-          return {
-            success: false,
-            error: 'Failed to fetch repository tree',
-          };
-        }
-
         // Normalize skillPath to remove leading/trailing slashes and repo prefix
         let normalizedSkillPath = skillPath.trim();
 
@@ -3316,29 +3309,30 @@ export function registerGitHubIpcHandlers(
           normalized: normalizedSkillPath,
         });
 
-        // Filter files in skill folder
-        const skillFiles = treeResult.data.tree.filter(
-          (file) => file.path?.startsWith(normalizedSkillPath) && file.type === 'blob'
-        );
-
-        if (skillFiles.length === 0) {
+        // File list is required - the renderer has the expertise to know what files belong to a skill
+        if (!fileList || fileList.length === 0) {
           return {
             success: false,
-            error: `No files found in skill path: ${skillPath}`,
+            error: 'File list is required for skill installation. The main process does not have the expertise to determine skill structure.',
           };
         }
 
+        console.log('[GitHub] Using provided file list:', {
+          totalFiles: fileList.length,
+          files: fileList,
+        });
+
         // Download each file
         const downloadedFiles: Array<{ path: string; content: string }> = [];
-        for (const file of skillFiles) {
-          if (file.path) {
-            const content = await adapter.getFileContent(owner, repo, file.path, branch);
-            if (content) {
-              downloadedFiles.push({
-                path: file.path,
-                content,
-              });
-            }
+        for (const filePath of fileList) {
+          const content = await adapter.getFileContent(owner, repo, filePath, branch);
+          if (content) {
+            downloadedFiles.push({
+              path: filePath,
+              content,
+            });
+          } else {
+            console.warn(`[GitHub] Failed to download file: ${filePath}`);
           }
         }
 
@@ -3452,7 +3446,6 @@ export function registerGitHubIpcHandlers(
           branch,
           installedAt: new Date().toISOString(),
           destination,
-          sha: treeResult.data.sha,
           files: installedFiles,
         };
 

@@ -325,6 +325,7 @@ export interface InstallSkillOptions {
   destination: 'global-universal' | 'global-claude' | 'global-opencode' | 'global-cursor' | 'global-windsurf' | 'project-universal' | 'project-claude';
   repositoryPath?: string;
   skillName?: string;
+  fileList: string[]; // List of all files in the skill folder (relative paths) - REQUIRED
 }
 
 export interface InstallSkillResult {

@@ -243,6 +243,9 @@ export const fileSystemAPI: FileSystemAPI = {
   deleteAgentDirectory: async (agentId: string) => {
     return ipcRenderer.invoke(FileSystemAPIEvent.DELETE_AGENT_DIRECTORY, agentId);
   },
+  deleteSkill: async (skillPath: string) => {
+    return ipcRenderer.invoke(FileSystemAPIEvent.DELETE_SKILL, skillPath);
+  },
   syncSingleDirectory: async (directoryId: string) => {
     return ipcRenderer.invoke(FileSystemAPIEvent.SYNC_SINGLE_DIRECTORY, directoryId);
   },

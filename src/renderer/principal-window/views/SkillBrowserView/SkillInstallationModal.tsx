@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { X, Check, Loader2 } from 'lucide-react';
+import { X, Check, Loader2, Plus, Trash2 } from 'lucide-react';
 
 interface DetectedDirectory {
   id: string;
@@ -219,6 +219,64 @@ export const SkillInstallationModal: React.FC<SkillInstallationModalProps> = ({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {detectedDirectories.map((directory) => {
                 const isSelected = selectedDirectories.has(directory.id);
+                const wasInstalled = installedDirectories.includes(directory.id);
+
+                // Determine the action
+                const willInstall = isSelected && !wasInstalled;
+                const willUninstall = !isSelected && wasInstalled;
+                const noChange = isSelected === wasInstalled;
+
+                // Determine colors based on action
+                let borderColor = theme.colors.border;
+                let backgroundColor = theme.colors.background;
+                let actionBadge: React.ReactNode = null;
+
+                if (willInstall) {
+                  borderColor = theme.colors.success;
+                  backgroundColor = `${theme.colors.success}10`;
+                  actionBadge = (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        backgroundColor: theme.colors.success,
+                        color: theme.colors.background,
+                        fontSize: theme.fontSizes[0],
+                        fontWeight: theme.fontWeights.medium,
+                      }}
+                    >
+                      <Plus size={12} />
+                      Will Install
+                    </div>
+                  );
+                } else if (willUninstall) {
+                  borderColor = theme.colors.error;
+                  backgroundColor = `${theme.colors.error}10`;
+                  actionBadge = (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        backgroundColor: theme.colors.error,
+                        color: theme.colors.background,
+                        fontSize: theme.fontSizes[0],
+                        fontWeight: theme.fontWeights.medium,
+                      }}
+                    >
+                      <Trash2 size={12} />
+                      Will Uninstall
+                    </div>
+                  );
+                } else if (isSelected) {
+                  borderColor = theme.colors.primary;
+                  backgroundColor = `${theme.colors.primary}10`;
+                }
 
                 return (
                   <button
@@ -226,13 +284,9 @@ export const SkillInstallationModal: React.FC<SkillInstallationModalProps> = ({
                     onClick={() => toggleDirectory(directory.id)}
                     style={{
                       padding: '16px',
-                      border: `2px solid ${
-                        isSelected ? theme.colors.primary : theme.colors.border
-                      }`,
+                      border: `2px solid ${borderColor}`,
                       borderRadius: '8px',
-                      backgroundColor: isSelected
-                        ? `${theme.colors.primary}10`
-                        : theme.colors.background,
+                      backgroundColor,
                       cursor: 'pointer',
                       textAlign: 'left',
                       transition: 'all 0.2s',
@@ -241,12 +295,12 @@ export const SkillInstallationModal: React.FC<SkillInstallationModalProps> = ({
                       gap: '12px',
                     }}
                     onMouseEnter={(e) => {
-                      if (!isSelected) {
+                      if (noChange && !isSelected) {
                         e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
                       }
                     }}
                     onMouseLeave={(e) => {
-                      if (!isSelected) {
+                      if (noChange && !isSelected) {
                         e.currentTarget.style.backgroundColor = theme.colors.background;
                       }
                     }}
@@ -257,10 +311,8 @@ export const SkillInstallationModal: React.FC<SkillInstallationModalProps> = ({
                         width: '20px',
                         height: '20px',
                         borderRadius: '4px',
-                        border: `2px solid ${
-                          isSelected ? theme.colors.primary : theme.colors.border
-                        }`,
-                        backgroundColor: isSelected ? theme.colors.primary : 'transparent',
+                        border: `2px solid ${borderColor}`,
+                        backgroundColor: isSelected ? borderColor : 'transparent',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -292,6 +344,9 @@ export const SkillInstallationModal: React.FC<SkillInstallationModalProps> = ({
                         {directory.path}
                       </div>
                     </div>
+
+                    {/* Action badge */}
+                    {actionBadge}
                   </button>
                 );
               })}

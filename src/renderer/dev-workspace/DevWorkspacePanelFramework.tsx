@@ -599,10 +599,11 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           loadingMarkdownFilesRef.current.delete(filePath);
         }
       }),
-      // Canvas selection - create tab (from canvas-list-panel)
+      // Canvas selection - create tab (from canvas-list-panel or canvas-detail-panel)
       events.on('custom', (event) => {
-        // Only handle selectCanvas action from canvas-list-panel
-        if (event.payload?.action !== 'selectCanvas' || event.source !== 'canvas-list-panel') {
+        // Only handle selectCanvas action from canvas-list-panel or canvas-detail-panel
+        if (event.payload?.action !== 'selectCanvas' ||
+            (event.source !== 'canvas-list-panel' && event.source !== 'canvas-detail-panel')) {
           return;
         }
 

@@ -1,7 +1,6 @@
 import React from 'react';
 import type { Theme } from '@principal-ade/industry-theme';
 import {
-  Terminal,
   GitBranch,
   BookOpen,
   KanbanSquare,
@@ -37,15 +36,14 @@ export interface PanelIconSidebarProps {
  */
 const PANEL_ICONS = [
   { id: 'agentsList', Icon: Bot, label: 'Agents' },
-  { id: 'canvasList', Icon: Network, label: 'Architecture' },
   { id: 'kanban', Icon: KanbanSquare, label: 'Backlog' },
   { id: 'docs', Icon: BookOpen, label: 'Docs' },
   { id: 'gitChanges', Icon: GitBranch, label: 'Files' },
-  { id: 'localProjects', Icon: FolderOpen, label: 'Local Projects' },
-  { id: 'packageComposition', Icon: Package, label: 'Package Composition' },
   { id: 'codeQuality', Icon: CheckCircle, label: 'Quality' },
+  { id: 'localProjects', Icon: FolderOpen, label: 'Repos' },
   { id: 'skillsList', Icon: Wand2, label: 'Skills' },
-  { id: 'terminal', Icon: Terminal, label: 'Terminal' },
+  { id: 'packageComposition', Icon: Package, label: 'Stack' },
+  { id: 'canvasList', Icon: Network, label: 'Stories' },
 ] as const;
 
 /**

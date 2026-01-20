@@ -46,6 +46,7 @@ export enum FileSystemAPIEvent {
   SYNC_SINGLE_DIRECTORY = 'file-system:sync-single-directory',
   CREATE_AGENT_DIRECTORIES = 'file-system:create-agent-directories',
   DELETE_AGENT_DIRECTORY = 'file-system:delete-agent-directory',
+  DELETE_SKILL = 'file-system:delete-skill',
 
   // Skills pending changes (watch-notify-confirm workflow)
   GET_PENDING_CHANGES = 'file-system:get-pending-changes',
@@ -337,6 +338,9 @@ export interface FileSystemAPI {
   updateSkillDirectory: (options: { id: string; updates: Partial<GlobalSkillDirectory> }) => Promise<{ success: boolean; directory?: GlobalSkillDirectory; error?: string }>;
   removeSkillDirectory: (id: string) => Promise<{ success: boolean; error?: string }>;
   detectPresetDirectories: () => Promise<Array<PresetDirectory & { path: string; skillCount: number; skills: string[] }>>;
+  createAgentDirectories: (agentIds: string[]) => Promise<{ success: boolean; createdDirectories?: string[]; error?: string }>;
+  deleteAgentDirectory: (agentId: string) => Promise<{ success: boolean; error?: string }>;
+  deleteSkill: (skillPath: string) => Promise<{ success: boolean; error?: string }>;
   syncSingleDirectory: (directoryId: string) => Promise<{ success: boolean; error?: string }>;
 
   // Pending changes methods (watch-notify-confirm workflow)

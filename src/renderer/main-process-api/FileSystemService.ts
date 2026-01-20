@@ -177,6 +177,10 @@ export class FileSystemService {
     return window.mainProcess.fileSystem.deleteAgentDirectory(agentId);
   }
 
+  static async deleteSkill(skillPath: string): Promise<{ success: boolean; error?: string }> {
+    return window.mainProcess.fileSystem.deleteSkill(skillPath);
+  }
+
   static async syncSingleDirectory(directoryId: string) {
     return window.mainProcess.fileSystem.syncSingleDirectory(directoryId);
   }

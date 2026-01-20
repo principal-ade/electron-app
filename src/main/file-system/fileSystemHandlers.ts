@@ -2216,6 +2216,46 @@ This placeholder skill can be safely deleted once you've installed your first sk
     }
   });
 
+  // Handler for deleting a skill directory
+  ipcMain.handle(FileSystemAPIEvent.DELETE_SKILL, async (_event, skillPath: string) => {
+    try {
+      console.log(`[deleteSkill] Deleting skill at: ${skillPath}`);
+
+      // Verify the path exists
+      try {
+        await fsPromises.access(skillPath);
+      } catch {
+        console.log(`[deleteSkill] Skill directory does not exist: ${skillPath}`);
+        // Consider this a success - the skill is already gone
+        return { success: true };
+      }
+
+      // Verify this is actually a skill directory by checking for SKILL.md or .metadata.json
+      const contents = await fsPromises.readdir(skillPath);
+      const hasSkillFile = contents.some(file =>
+        file === 'SKILL.md' ||
+        file.toLowerCase() === 'skill.md' ||
+        file === '.metadata.json'
+      );
+
+      if (!hasSkillFile) {
+        return {
+          success: false,
+          error: 'Directory does not appear to be a skill (missing SKILL.md or .metadata.json)'
+        };
+      }
+
+      // Delete the skill directory recursively
+      await fsPromises.rm(skillPath, { recursive: true, force: true });
+      console.log(`[deleteSkill] Successfully deleted skill at: ${skillPath}`);
+
+      return { success: true };
+    } catch (error) {
+      console.error('[deleteSkill] Failed:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  });
+
   // Handler for pushing repository to remote
   ipcMain.handle(FileSystemAPIEvent.PUSH_SKILLS_REPO, async () => {
     try {
