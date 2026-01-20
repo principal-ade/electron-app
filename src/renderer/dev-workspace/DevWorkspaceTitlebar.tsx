@@ -505,24 +505,6 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
               WebkitAppRegion: 'no-drag',
             }}
           >
-            {/* Left Collapse Button - outside the panel selector */}
-            {onToggleLeftSidebar && (
-              <PanelCollapseButton
-                isCollapsed={collapsed?.left ?? false}
-                onToggle={onToggleLeftSidebar}
-                side="left"
-                iconSize={16}
-                style={{
-                  background: theme.colors.backgroundTertiary,
-                  border: `1px solid ${theme.colors.border}`,
-                  borderRadius: '6px',
-                  padding: '6px 8px',
-                  minHeight: '34px',
-                  boxSizing: 'border-box',
-                }}
-              />
-            )}
-
             {/* Left Focus Button - dim the left panel */}
             {onFocusLeft && !collapsed?.left && (
               <button
@@ -565,34 +547,6 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
               >
                 {panelFocus?.left ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
-            )}
-
-            {/* Left Panel Selector */}
-            {currentLayout && (
-              <PanelSelectorDropdown
-                side="left"
-                currentPanelId={currentLayout.left}
-                availablePanels={AVAILABLE_PANELS}
-                onPanelChange={handleLeftPanelChange}
-                onExpand={handleExpandLeftPanel}
-              />
-            )}
-
-            {/* Left-Middle Switch Button */}
-            {onSwitchLeftMiddlePanels && (
-              <PanelSwitchButton
-                onSwitch={onSwitchLeftMiddlePanels}
-                variant="left-middle"
-                iconSize={16}
-                style={{
-                  background: theme.colors.backgroundTertiary,
-                  border: `1px solid ${theme.colors.border}`,
-                  borderRadius: '6px',
-                  padding: '6px 8px',
-                  minHeight: '34px',
-                  boxSizing: 'border-box',
-                }}
-              />
             )}
 
             {/* Hover-reveal button: Copy Path */}

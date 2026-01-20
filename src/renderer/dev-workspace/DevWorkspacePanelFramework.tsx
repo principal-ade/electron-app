@@ -1651,6 +1651,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         theme={theme}
         collapsed={collapsed.left}
         onExpand={() => onCollapsedChange({ ...collapsed, left: false })}
+        onCollapse={() => onCollapsedChange({ ...collapsed, left: true })}
       />
 
       {/* Main panel layout area */}

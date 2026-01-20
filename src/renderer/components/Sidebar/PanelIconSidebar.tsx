@@ -27,6 +27,8 @@ export interface PanelIconSidebarProps {
   collapsed?: boolean;
   /** Callback to expand left panel if collapsed */
   onExpand?: () => void;
+  /** Callback to collapse left panel */
+  onCollapse?: () => void;
 }
 
 /**
@@ -58,14 +60,20 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
   theme,
   collapsed,
   onExpand,
+  onCollapse,
 }) => {
   const handlePanelClick = (panelId: string) => {
-    // If left panel is collapsed, expand it first
-    if (collapsed && onExpand) {
-      onExpand();
+    // If clicking on the same panel that's already visible and panel is expanded, collapse it
+    if (!collapsed && currentPanelId === panelId && onCollapse) {
+      onCollapse();
+    } else {
+      // If panel is collapsed, expand it first
+      if (collapsed && onExpand) {
+        onExpand();
+      }
+      // Switch to the selected panel
+      onPanelChange(panelId);
     }
-    // Switch to the selected panel
-    onPanelChange(panelId);
   };
 
   return (
