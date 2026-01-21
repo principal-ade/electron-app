@@ -39,7 +39,7 @@ export type SkillDestination =
   | 'project-claude';
 
 // Map directory IDs to destination types
-const DIRECTORY_ID_TO_DESTINATION: Record<string, SkillDestination> = {
+export const DIRECTORY_ID_TO_DESTINATION: Record<string, SkillDestination> = {
   'agent-universal': 'global-universal',
   'claude-specific': 'global-claude',
   'opencode': 'global-opencode',

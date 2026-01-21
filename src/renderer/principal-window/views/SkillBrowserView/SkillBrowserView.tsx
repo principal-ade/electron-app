@@ -10,7 +10,7 @@ import {
 } from './SkillBrowserPanelProvider';
 import { usePanelPersistence } from '../../../hooks/usePanelPersistence';
 import { SkillBrowserViewHeader, type ViewMode } from './SkillBrowserViewHeader';
-import { InstallSkillToolbar, type SkillDestination } from './InstallSkillToolbar';
+import { InstallSkillToolbar, type SkillDestination, DIRECTORY_ID_TO_DESTINATION } from './InstallSkillToolbar';
 import { GithubService } from '../../../main-process-api/GithubService';
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
 import type { FileTree } from '../../../contexts/RepositoryPanelContext';
@@ -584,44 +584,47 @@ const SkillBrowserViewContent: React.FC = () => {
   }, [handleFetchSkills]);
 
   /**
-   * Normalize skill name for comparison (convert hyphens/underscores to spaces, lowercase)
+   * Extract folder name from skill folder path
+   * Examples:
+   * - "skills/code-review" → "code-review"
+   * - "/Users/me/.agent/skills/code-review" → "code-review"
    */
-  const normalizeSkillName = useCallback((name: string): string => {
-    return name.toLowerCase().replace(/[-_]/g, ' ').trim();
+  const getSkillFolderName = useCallback((folderPath: string): string => {
+    return folderPath.split('/').filter(p => p).pop() || '';
   }, []);
 
   /**
    * Check if a skill is already installed
    */
   const isSkillInstalled = useCallback(
-    (skillName: string): boolean => {
-      const normalizedName = normalizeSkillName(skillName);
-      // Check if the skill name exists in any of the installed skills
+    (skill: { skillFolderPath: string }): boolean => {
+      const selectedFolderName = getSkillFolderName(skill.skillFolderPath);
+      // Check if the skill folder name exists in any of the installed skills
       return installedSkillsData.some((installedSkill) =>
-        normalizeSkillName(installedSkill.name) === normalizedName
+        installedSkill.name === selectedFolderName
       );
     },
-    [installedSkillsData, normalizeSkillName],
+    [installedSkillsData, getSkillFolderName],
   );
 
   /**
    * Get which directories a skill is installed in
    */
   const getSkillInstalledDirectories = useCallback(
-    (skillName: string): string[] => {
-      const normalizedName = normalizeSkillName(skillName);
+    (skill: { skillFolderPath: string }): string[] => {
+      const selectedFolderName = getSkillFolderName(skill.skillFolderPath);
       // Find all instances of this skill in installedSkillsData
-      const skillInstances = installedSkillsData.filter((skill) =>
-        normalizeSkillName(skill.name) === normalizedName
+      const skillInstances = installedSkillsData.filter((installedSkill) =>
+        installedSkill.name === selectedFolderName
       );
 
       // Map each instance to its directory ID
       const directoryIds: string[] = [];
 
-      for (const skill of skillInstances) {
+      for (const installedSkill of skillInstances) {
         // Find which detected directory this skill path belongs to
         for (const dir of detectedDirectories) {
-          if (skill.path.startsWith(dir.path)) {
+          if (installedSkill.path.startsWith(dir.path)) {
             directoryIds.push(dir.id);
             break;
           }
@@ -630,18 +633,18 @@ const SkillBrowserViewContent: React.FC = () => {
 
       return directoryIds;
     },
-    [installedSkillsData, detectedDirectories, normalizeSkillName],
+    [installedSkillsData, detectedDirectories, getSkillFolderName],
   );
 
   /**
    * Get metadata for an installed skill
    */
   const getInstalledSkillMetadata = useCallback(
-    async (skillName: string): Promise<{ sha: string; installedAt: string; installedFrom: string } | null> => {
-      const normalizedName = normalizeSkillName(skillName);
+    async (skill: { skillFolderPath: string }): Promise<{ sha: string; installedAt: string; installedFrom: string } | null> => {
+      const selectedFolderName = getSkillFolderName(skill.skillFolderPath);
       // Find the installed skill
-      const installedSkill = installedSkillsData.find((skill) =>
-        normalizeSkillName(skill.name) === normalizedName
+      const installedSkill = installedSkillsData.find((installedSkill) =>
+        installedSkill.name === selectedFolderName
       );
       if (!installedSkill) {
         return null;
@@ -664,11 +667,11 @@ const SkillBrowserViewContent: React.FC = () => {
           installedFrom: metadata.installedFrom,
         };
       } catch (error) {
-        console.error(`[SkillBrowserView] Failed to read metadata for ${skillName}:`, error);
+        console.error(`[SkillBrowserView] Failed to read metadata:`, error);
         return null;
       }
     },
-    [installedSkillsData, normalizeSkillName],
+    [installedSkillsData, getSkillFolderName],
   );
 
   // Load metadata when selected skill changes
@@ -679,8 +682,8 @@ const SkillBrowserViewContent: React.FC = () => {
     }
 
     const loadMetadata = async () => {
-      if (isSkillInstalled(selectedSkill.name)) {
-        const metadata = await getInstalledSkillMetadata(selectedSkill.name);
+      if (isSkillInstalled(selectedSkill)) {
+        const metadata = await getInstalledSkillMetadata(selectedSkill);
         setSelectedSkillMetadata(metadata);
       } else {
         setSelectedSkillMetadata(null);
@@ -769,10 +772,17 @@ const SkillBrowserViewContent: React.FC = () => {
 
       // Install to each directory
       for (const directoryId of directoryIds) {
+        // Map directory ID to destination
+        const destination = DIRECTORY_ID_TO_DESTINATION[directoryId];
+        if (!destination) {
+          throw new Error(`Invalid directory ID: ${directoryId}. No destination mapping found.`);
+        }
+
         console.log('[SkillBrowserView] Installing skill to directory:', {
           skillName: selectedSkill.name,
           skillPath: selectedSkill.skillFolderPath,
           directoryId,
+          destination,
           githubUrl,
           fileCount: fileList.length,
         });
@@ -780,7 +790,7 @@ const SkillBrowserViewContent: React.FC = () => {
         const result = await GithubService.installSkill({
           githubUrl,
           skillPath: selectedSkill.skillFolderPath,
-          destination: directoryId as SkillDestination,
+          destination,
           skillName: selectedSkill.name,
           fileList, // Pass the complete file list
         });
@@ -789,14 +799,18 @@ const SkillBrowserViewContent: React.FC = () => {
           throw new Error(result.error || `Installation to ${directoryId} failed`);
         }
 
-        console.log('[SkillBrowserView] Skill installed successfully to:', directoryId);
+        console.log('[SkillBrowserView] Skill installed successfully to:', {
+          directoryId,
+          destination,
+          installedPath: result.installedPath,
+        });
 
         // Emit event to refresh global skills cache
         actions.notifyPanels({
           type: 'skill:installed',
           payload: {
             skillName: selectedSkill.name,
-            destination: directoryId as SkillDestination,
+            destination,
             installedPath: result.installedPath,
           },
         });
@@ -817,50 +831,62 @@ const SkillBrowserViewContent: React.FC = () => {
         throw new Error('No skill selected');
       }
 
-      const normalizedSelectedName = normalizeSkillName(selectedSkill.name);
+      const selectedFolderName = getSkillFolderName(selectedSkill.skillFolderPath);
 
-      // Find all instances of this skill in the specified directories
+      console.log('[handleUninstallSkillFromDirectories] Uninstalling skill:', {
+        skillName: selectedSkill.name,
+        skillFolderPath: selectedSkill.skillFolderPath,
+        folderName: selectedFolderName,
+        fromDirectories: directoryIds,
+      });
+
+      // Track deleted paths for event emission
+      const deletedPaths: Array<{ skillPath: string; directoryId: string }> = [];
+
+      // For each directory, construct the expected skill path and delete it
       for (const directoryId of directoryIds) {
-        const skillInstances = installedSkillsData.filter((skill) => {
-          // Use normalized comparison to handle name variations (hyphens vs spaces)
-          if (normalizeSkillName(skill.name) !== normalizedSelectedName) return false;
+        // Find the directory's base path
+        const directory = detectedDirectories.find((dir) => dir.id === directoryId);
+        if (!directory) {
+          console.warn(`[handleUninstallSkillFromDirectories] Directory not found: ${directoryId}`);
+          continue;
+        }
 
-          // Find which directory this skill belongs to
-          const directory = detectedDirectories.find((dir) => skill.path.startsWith(dir.path));
-          return directory?.id === directoryId;
+        // Construct the full path to the skill in this directory
+        const skillPath = `${directory.path}/${selectedFolderName}`;
+
+        console.log('[handleUninstallSkillFromDirectories] Deleting skill at:', {
+          directoryId,
+          directoryPath: directory.path,
+          skillPath,
         });
 
-        for (const skillInstance of skillInstances) {
-          console.log('[SkillBrowserView] Uninstalling skill from:', {
-            skillName: skillInstance.name,
-            skillPath: skillInstance.path,
-            directoryId,
-          });
+        const result = await FileSystemService.deleteSkill(skillPath);
 
-          const result = await FileSystemService.deleteSkill(skillInstance.path);
-
-          if (!result.success) {
-            throw new Error(result.error || `Uninstallation from ${directoryId} failed`);
-          }
-
-          console.log('[SkillBrowserView] Skill uninstalled successfully from:', directoryId);
-
-          // Emit event to refresh global skills cache
-          actions.notifyPanels({
-            type: 'skill:uninstalled',
-            payload: {
-              skillName: skillInstance.name,
-              skillPath: skillInstance.path,
-              directoryId,
-            },
-          });
+        if (!result.success) {
+          throw new Error(result.error || `Uninstallation from ${directoryId} failed`);
         }
+
+        console.log('[handleUninstallSkillFromDirectories] Skill uninstalled successfully from:', directoryId);
+        deletedPaths.push({ skillPath, directoryId });
       }
 
-      // Refresh installed skills
+      // Refresh installed skills BEFORE emitting events
       await loadInstalledSkills();
+
+      // Now emit events so panels refresh with the updated data
+      for (const { skillPath, directoryId } of deletedPaths) {
+        actions.notifyPanels({
+          type: 'skill:uninstalled',
+          payload: {
+            skillName: selectedSkill.name,
+            skillPath,
+            directoryId,
+          },
+        });
+      }
     },
-    [selectedSkill, installedSkillsData, detectedDirectories, loadInstalledSkills, actions, normalizeSkillName],
+    [selectedSkill, detectedDirectories, loadInstalledSkills, actions, getSkillFolderName],
   );
 
   // Use panel persistence for two-panel layout
@@ -933,8 +959,8 @@ const SkillBrowserViewContent: React.FC = () => {
                   skillPath: selectedSkill.path,
                   currentSha: githubRepoInfo.treeSha,
                 } : undefined}
-                isInstalled={isSkillInstalled(selectedSkill.name)}
-                installedDirectoryIds={getSkillInstalledDirectories(selectedSkill.name)}
+                isInstalled={isSkillInstalled(selectedSkill)}
+                installedDirectoryIds={getSkillInstalledDirectories(selectedSkill)}
                 installedMetadata={selectedSkillMetadata || undefined}
                 onOpenInstallModal={() => setShowInstallModal(true)}
                 detectedDirectories={detectedDirectories}
@@ -1132,7 +1158,7 @@ const SkillBrowserViewContent: React.FC = () => {
           onClose={() => setShowInstallModal(false)}
           skillName={selectedSkill.name}
           detectedDirectories={detectedDirectories}
-          installedDirectories={getSkillInstalledDirectories(selectedSkill.name)}
+          installedDirectories={getSkillInstalledDirectories(selectedSkill)}
           onInstall={handleInstallSkillToDirectories}
           onUninstall={handleUninstallSkillFromDirectories}
         />
