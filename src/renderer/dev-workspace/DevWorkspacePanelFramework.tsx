@@ -79,9 +79,28 @@ interface CanvasTab extends BaseTab {
 }
 
 /**
+ * Tab type for file editor
+ */
+interface FileEditorTab extends BaseTab {
+  contentType: 'file-editor';
+  filePath: string;
+  fileName: string;
+}
+
+/**
+ * Tab type for git diff viewer
+ */
+interface GitDiffTab extends BaseTab {
+  contentType: 'git-diff';
+  filePath: string;
+  fileName: string;
+  gitStatus?: string;
+}
+
+/**
  * Union type of all tab types used in DevWorkspace
  */
-type DevWorkspaceTab = TerminalTab | SkillTab | MarkdownTab | CanvasEditorTab | CanvasTab;
+type DevWorkspaceTab = TerminalTab | SkillTab | MarkdownTab | CanvasEditorTab | CanvasTab | FileEditorTab | GitDiffTab;
 
 export interface DevWorkspacePanelFrameworkProps {
   repositoryPath: string;
@@ -212,7 +231,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
   // Unified modal state for detail panels
   const [detailModal, setDetailModal] = useState<{
-    panelId: 'task-detail' | 'agentDetail' | 'gitDiff' | 'fileEditor' | 'githubIssueDetail';
+    panelId: 'task-detail' | 'agentDetail' | 'githubIssueDetail';
     data: any;
   } | null>(null);
 
@@ -515,21 +534,55 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       }),
       // File open from git changes panel
       events.on('file:open', (event) => {
-        // Ignore re-emitted events from modal to prevent loop
-        if (event.source === 'modal') return;
+        // Ignore re-emitted events from tabs to prevent loop
+        if (event.source === 'tab') return;
 
         console.log('[DevWorkspacePanelFramework] Received file:open event:', event);
         const payload = event.payload as { path: string; gitStatus?: string };
+        const filePath = payload.path;
+        const fileName = filePath.split('/').pop() || 'File';
 
         // Use git diff panel for modified files (staged or unstaged), file editor for new/untracked files
         const isModified = payload.gitStatus === 'unstaged' || payload.gitStatus === 'staged';
-        const panelId = isModified ? 'gitDiff' : 'fileEditor';
+        const contentType = isModified ? 'git-diff' : 'file-editor';
 
-        console.log('[DevWorkspacePanelFramework] Git status:', payload.gitStatus, '-> Opening panel:', panelId);
+        console.log('[DevWorkspacePanelFramework] Git status:', payload.gitStatus, '-> Opening tab:', contentType);
 
-        setDetailModal({
-          panelId,
-          data: payload,
+        setTabs((prevTabs) => {
+          // Check if tab already exists
+          const existingTab = prevTabs.find(
+            (t) =>
+              ((t.contentType === 'file-editor' && (t as FileEditorTab).filePath === filePath) ||
+                (t.contentType === 'git-diff' && (t as GitDiffTab).filePath === filePath))
+          );
+
+          if (existingTab) {
+            console.log('[DevWorkspacePanelFramework] Tab already exists');
+            return prevTabs;
+          }
+
+          // Create new tab
+          const newTab: FileEditorTab | GitDiffTab = isModified
+            ? {
+                id: `git-diff-${Date.now()}`,
+                label: fileName,
+                contentType: 'git-diff',
+                filePath: filePath,
+                fileName: fileName,
+                gitStatus: payload.gitStatus,
+                closable: true,
+              }
+            : {
+                id: `file-editor-${Date.now()}`,
+                label: fileName,
+                contentType: 'file-editor',
+                filePath: filePath,
+                fileName: fileName,
+                closable: true,
+              };
+
+          console.log('[DevWorkspacePanelFramework] Creating new tab:', newTab);
+          return [...prevTabs, newTab];
         });
       }),
       // Markdown file open in tab (from docs panel clicks)
@@ -715,31 +768,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             payload: {
               issue: detailModal.data,
             },
-          });
-        } else if (detailModal.panelId === 'gitDiff') {
-          console.log('[DevWorkspacePanelFramework] Emitting git:diff event:', detailModal.data);
-          // GitDiffPanel listens for git:diff events
-          events.emit({
-            type: 'git:diff',
-            source: 'modal',
-            timestamp: Date.now(),
-            payload: {
-              path: detailModal.data.path,
-              status: detailModal.data.gitStatus,
-            },
-          });
-        } else if (detailModal.panelId === 'fileEditor') {
-          console.log('[DevWorkspacePanelFramework] Setting active file for editor:', detailModal.data.path);
-          // Set the active file via actions
-          if (actions.setActiveFile) {
-            actions.setActiveFile(detailModal.data.path);
-          }
-          // Emit file:open event for file editor
-          events.emit({
-            type: 'file:open',
-            source: 'modal',
-            timestamp: Date.now(),
-            payload: detailModal.data,
           });
         } else if (detailModal.panelId === 'mdxEditor') {
           console.log('[DevWorkspacePanelFramework] Setting active file for MDX editor:', detailModal.data.path);
@@ -975,6 +1003,87 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           );
         }
 
+        case 'file-editor': {
+          // Type assertion for TypeScript
+          const fileEditorTab = tab as FileEditorTab;
+
+          if (!FileEditorPanelComponent) {
+            return (
+              <div style={{ padding: '2rem', color: theme.colors.textSecondary }}>
+                File Editor panel not available
+              </div>
+            );
+          }
+
+          console.log('[DevWorkspacePanelFramework] Rendering file editor tab:', {
+            filePath: fileEditorTab.filePath,
+            fileName: fileEditorTab.fileName,
+            isActive,
+          });
+
+          return (
+            <div
+              style={{
+                height: '100%',
+                width: '100%',
+                overflow: 'hidden',
+                position: 'relative',
+                display: isActive ? 'flex' : 'none', // Only show when active
+                flexDirection: 'column',
+              }}
+            >
+              <FileEditorPanelComponent
+                context={contextRef.current}
+                actions={actionsRef.current}
+                events={eventsRef.current}
+                filePath={fileEditorTab.filePath}
+                showCloseButton={false}
+              />
+            </div>
+          );
+        }
+
+        case 'git-diff': {
+          // Type assertion for TypeScript
+          const gitDiffTab = tab as GitDiffTab;
+
+          if (!GitDiffPanelComponent) {
+            return (
+              <div style={{ padding: '2rem', color: theme.colors.textSecondary }}>
+                Git Diff panel not available
+              </div>
+            );
+          }
+
+          console.log('[DevWorkspacePanelFramework] Rendering git diff tab:', {
+            filePath: gitDiffTab.filePath,
+            fileName: gitDiffTab.fileName,
+            gitStatus: gitDiffTab.gitStatus,
+            isActive,
+          });
+
+          return (
+            <div
+              style={{
+                height: '100%',
+                width: '100%',
+                overflow: 'hidden',
+                position: 'relative',
+                display: isActive ? 'flex' : 'none', // Only show when active
+                flexDirection: 'column',
+              }}
+            >
+              <GitDiffPanelComponent
+                context={contextRef.current}
+                actions={actionsRef.current}
+                events={eventsRef.current}
+                filePath={gitDiffTab.filePath}
+                showCloseButton={false}
+              />
+            </div>
+          );
+        }
+
         default:
           console.warn('[DevWorkspacePanelFramework] Unknown tab type:', (tab as any).contentType);
           return (
@@ -984,7 +1093,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           );
       }
     },
-    [theme, SkillDetailPanelComponent, MarkdownPanelComponent, CanvasEditorPanelComponent, CanvasDetailPanelComponent],
+    [theme, SkillDetailPanelComponent, MarkdownPanelComponent, CanvasEditorPanelComponent, CanvasDetailPanelComponent, FileEditorPanelComponent, GitDiffPanelComponent],
   );
 
   // Define all panels using panel framework components
@@ -1800,24 +1909,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                   actions={actions}
                   events={events}
                 />
-              )}
-              {detailModal.panelId === 'gitDiff' && GitDiffPanelComponent && (
-                <div style={{ height: '80vh', display: 'flex', flexDirection: 'column' }}>
-                  <GitDiffPanelComponent
-                    context={context}
-                    actions={actions}
-                    events={events}
-                  />
-                </div>
-              )}
-              {detailModal.panelId === 'fileEditor' && FileEditorPanelComponent && (
-                <div style={{ height: '80vh', display: 'flex', flexDirection: 'column' }}>
-                  <FileEditorPanelComponent
-                    context={context}
-                    actions={actions}
-                    events={events}
-                  />
-                </div>
               )}
               {detailModal.panelId === 'githubIssueDetail' && GitHubIssueDetailPanelComponent && (
                 <GitHubIssueDetailPanelComponent
