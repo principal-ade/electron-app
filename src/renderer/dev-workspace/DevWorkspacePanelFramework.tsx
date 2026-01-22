@@ -599,6 +599,27 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           loadingMarkdownFilesRef.current.delete(filePath);
         }
       }),
+      // Open file in MDX editor - create modal
+      events.on('file:openInMdxEditor', async (event) => {
+        // Ignore re-emitted events from modal to prevent loop
+        if (event.source === 'modal') return;
+
+        const payload = event.payload as { filePath?: string };
+        const filePath = payload?.filePath;
+
+        if (!filePath) {
+          console.warn('[DevWorkspacePanelFramework] No file path in file:openInMdxEditor event');
+          return;
+        }
+
+        console.log('[DevWorkspacePanelFramework] Opening file in MDX editor:', filePath);
+
+        // Open MDX editor modal
+        setDetailModal({
+          panelId: 'mdxEditor',
+          data: { path: filePath },
+        });
+      }),
       // Canvas selection - create tab (from canvas-list-panel or canvas-detail-panel)
       events.on('custom', (event) => {
         // Only handle selectCanvas action from canvas-list-panel or canvas-detail-panel
@@ -720,6 +741,12 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             timestamp: Date.now(),
             payload: detailModal.data,
           });
+        } else if (detailModal.panelId === 'mdxEditor') {
+          console.log('[DevWorkspacePanelFramework] Setting active file for MDX editor:', detailModal.data.path);
+          // Set the active file via actions
+          if (actions.setActiveFile) {
+            actions.setActiveFile(detailModal.data.path);
+          }
         }
       }, 0);
     }
@@ -1809,6 +1836,16 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                   actions={actions}
                   events={events}
                 />
+              )}
+              {detailModal.panelId === 'mdxEditor' && MDXEditorPanelComponent && (
+                <div style={{ height: '100%' }}>
+                  <MDXEditorPanelComponent
+                    context={context}
+                    actions={actions}
+                    events={events}
+                    filePath={detailModal.data.path}
+                  />
+                </div>
               )}
             </div>
           </div>
