@@ -226,14 +226,14 @@ if (releasePackageModified) {
   // Run npm install in release/app to update the actual packages
   console.log('📦 Running npm install in release/app to update packages...\n');
   try {
-    execSync('npm install', {
+    execSync('npm install --legacy-peer-deps', {
       cwd: path.join(__dirname, '..', 'release', 'app'),
       stdio: 'inherit'
     });
     console.log('✅ Dependencies updated successfully!\n');
   } catch (error) {
     console.error('❌ Failed to update dependencies in release/app');
-    console.error('   Please run: cd release/app && npm install\n');
+    console.error('   Please run: cd release/app && npm install --legacy-peer-deps\n');
     process.exit(1);
   }
 }
@@ -242,7 +242,7 @@ if (releasePackageModified) {
 // This ensures we're using the same versions as the root package
 console.log('🔄 Updating to latest patch versions in release/app...\n');
 try {
-  execSync('npm update', {
+  execSync('npm update --legacy-peer-deps', {
     cwd: path.join(__dirname, '..', 'release', 'app'),
     stdio: 'inherit'
   });
