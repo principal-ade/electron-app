@@ -179,7 +179,7 @@
     "@industry-theme/github-panels": "^0.1.59",
     "@industry-theme/localhost-panels": "^0.1.7",
     "@industry-theme/markdown-panels": "^0.2.21",
-    "@industry-theme/principal-view-panels": "^0.4.0",
+    "@industry-theme/principal-view-panels": "^0.4.2",
     "@industry-theme/repository-composition-panels": "^0.2.43",
     "@industry-theme/xterm-terminal-panel": "^0.3.0",
     "@mdxeditor/editor": "^3.50.0",
@@ -500,6 +500,9 @@
     "quit": "q"
   },
   "overrides": {
-    "unicorn-magic": "^0.3.0"
+    "unicorn-magic": "^0.3.0",
+    "ajv-keywords": {
+      "ajv": "^8.8.2"
+    }
   }
 }
