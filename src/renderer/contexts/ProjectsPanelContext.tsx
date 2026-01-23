@@ -753,7 +753,7 @@ export const ProjectsPanelProvider: React.FC<
         );
 
         // Open workspace in Alexandria workspace window
-        WindowService.openAlexandriaWorkspace(workspace.id).catch(
+        WindowService.openAlexandriaWorkspace({ workspaceId: workspace.id }).catch(
           console.error,
         );
       },
@@ -1332,7 +1332,7 @@ export const ProjectsPanelProvider: React.FC<
           '[ProjectsPanelProvider] Opening workspace:',
           workspaceId,
         );
-        await WindowService.openAlexandriaWorkspace(workspaceId);
+        await WindowService.openAlexandriaWorkspace({ workspaceId });
       },
 
       getWorkspaceRepositories: async (workspaceId: string) => {

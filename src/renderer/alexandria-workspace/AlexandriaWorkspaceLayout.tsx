@@ -17,10 +17,16 @@ import { localhostProcessesPanels } from '../panels';
 import { panels as agentDrivenPanels } from '@industry-theme/agent-driven-ui-panels';
 import { panels as markdownPanels } from '@industry-theme/markdown-panels';
 import { panels as principalViewPanels } from '@industry-theme/principal-view-panels';
+import { panels as backlogPanels } from '@industry-theme/backlogmd-kanban-panel';
+import { panels as agentPanels } from '@industry-theme/agent-panels';
+import { panels as githubPanels } from '@industry-theme/github-panels';
+import { panels as repositoryCompositionPanels } from '@industry-theme/repository-composition-panels';
+import { panels as codeQualityPanels } from '@principal-ade/code-quality-panels';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { WindowService } from '../main-process-api/WindowService';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { RemoveFromWorkspaceModal } from '../panels/components/RemoveFromWorkspaceModal';
+import { PanelIconSidebar } from '../components/Sidebar/PanelIconSidebar';
 
 type PanelDefinition = {
   id: string;
@@ -420,6 +426,41 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   )?.component;
   const MarkdownPanelComponent = markdownPanels[0]?.component;
   const PrincipalViewPanelComponent = principalViewPanels[0]?.component;
+
+  // Dev workspace panels
+  const KanbanPanelComponent = backlogPanels[0]?.component;
+  const TaskDetailPanelComponent = backlogPanels[1]?.component;
+  const MilestonePanelComponent = backlogPanels[2]?.component;
+  const SkillsListPanelComponent = agentPanels.find(
+    (p) => p.metadata?.id === 'industry-theme.skills-list',
+  )?.component;
+  const SkillDetailPanelComponent = agentPanels.find(
+    (p) => p.metadata?.id === 'industry-theme.skill-detail',
+  )?.component;
+  const AgentsListPanelComponent = agentPanels.find(
+    (p) => p.metadata?.id === 'industry-theme.agents-list',
+  )?.component;
+  const AgentDetailPanelComponent = agentPanels.find(
+    (p) => p.metadata?.id === 'industry-theme.agent-detail',
+  )?.component;
+  const GitHubIssuesPanelComponent = githubPanels.find(
+    (p) => p.metadata?.id === 'industry-theme.github-issues',
+  )?.component;
+  const GitHubIssueDetailPanelComponent = githubPanels.find(
+    (p) => p.metadata?.id === 'industry-theme.github-issue-detail',
+  )?.component;
+  const GitChangesPanelComponent = repositoryCompositionPanels.find(
+    (p) => p.metadata?.id === 'industry-theme.git-changes',
+  )?.component;
+  const PackageCompositionPanelComponent = repositoryCompositionPanels.find(
+    (p) => p.metadata?.id === 'industry-theme.package-composition',
+  )?.component;
+  const CodeQualityPanelComponent = codeQualityPanels.find(
+    (p) => p.metadata?.id === 'principal-ade.quality-hexagon-panel',
+  )?.component;
+  const CanvasListPanelComponent = principalViewPanels.find(
+    (p) => p.metadata?.id === 'principal-ai.canvas-list',
+  )?.component;
 
   // Get terminal directory from context
   const terminalDirectory =
@@ -877,6 +918,604 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
           </div>
         ),
       },
+      {
+        id: 'canvasList',
+        label: 'Architecture List',
+        content: CanvasListPanelComponent ? (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <CanvasListPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: '16px',
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+              height: '100%',
+              overflow: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
+              Architecture List panel not available
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: 'kanban',
+        label: 'Kanban',
+        content: KanbanPanelComponent ? (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <KanbanPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: '16px',
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+              height: '100%',
+              overflow: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
+              Kanban panel not available
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: 'task-detail',
+        label: 'Task Detail',
+        content: TaskDetailPanelComponent ? (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <TaskDetailPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: '16px',
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+              height: '100%',
+              overflow: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
+              Task Detail panel not available
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: 'milestones',
+        label: 'Milestones',
+        content: MilestonePanelComponent ? (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <MilestonePanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: '16px',
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+              height: '100%',
+              overflow: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
+              Milestones panel not available
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: 'skillsList',
+        label: 'Skills List',
+        content: SkillsListPanelComponent ? (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <SkillsListPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: '16px',
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+              height: '100%',
+              overflow: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
+              Skills List panel not available
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: 'skillDetail',
+        label: 'Skill Detail',
+        content: SkillDetailPanelComponent ? (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <SkillDetailPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: '16px',
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+              height: '100%',
+              overflow: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
+              Skill Detail panel not available
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: 'agentsList',
+        label: 'Agents List',
+        content: AgentsListPanelComponent ? (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <AgentsListPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: '16px',
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+              height: '100%',
+              overflow: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
+              Agents List panel not available
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: 'agentDetail',
+        label: 'Agent Detail',
+        content: AgentDetailPanelComponent ? (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <AgentDetailPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: '16px',
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+              height: '100%',
+              overflow: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
+              Agent Detail panel not available
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: 'githubIssues',
+        label: 'GitHub Issues',
+        content: GitHubIssuesPanelComponent ? (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <GitHubIssuesPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: '16px',
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+              height: '100%',
+              overflow: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
+              GitHub Issues panel not available
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: 'githubIssueDetail',
+        label: 'GitHub Issue Detail',
+        content: GitHubIssueDetailPanelComponent ? (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <GitHubIssueDetailPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: '16px',
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+              height: '100%',
+              overflow: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
+              GitHub Issue Detail panel not available
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: 'gitChanges',
+        label: 'Git Changes',
+        content: GitChangesPanelComponent ? (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <GitChangesPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: '16px',
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+              height: '100%',
+              overflow: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
+              Git Changes panel not available
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: 'packageComposition',
+        label: 'Package Composition',
+        content: PackageCompositionPanelComponent ? (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <PackageCompositionPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: '16px',
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+              height: '100%',
+              overflow: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
+              Package Composition panel not available
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: 'codeQuality',
+        label: 'Code Quality',
+        content: CodeQualityPanelComponent ? (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <CodeQualityPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: '16px',
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+              height: '100%',
+              overflow: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+            }}
+          >
+            {enableKeyboardShortcuts && (
+              <FocusIndicator isFocused={isFocused('left')} />
+            )}
+            <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
+              Code Quality panel not available
+            </p>
+          </div>
+        ),
+      },
     ],
     [
       theme,
@@ -893,6 +1532,19 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       AgentToolsPanelComponent,
       MarkdownPanelComponent,
       PrincipalViewPanelComponent,
+      CanvasListPanelComponent,
+      KanbanPanelComponent,
+      TaskDetailPanelComponent,
+      MilestonePanelComponent,
+      SkillsListPanelComponent,
+      SkillDetailPanelComponent,
+      AgentsListPanelComponent,
+      AgentDetailPanelComponent,
+      GitHubIssuesPanelComponent,
+      GitHubIssueDetailPanelComponent,
+      GitChangesPanelComponent,
+      PackageCompositionPanelComponent,
+      CodeQualityPanelComponent,
       isFocused,
       enableKeyboardShortcuts,
       terminalContext,
@@ -907,24 +1559,44 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
         style={{
           flex: 1,
           display: 'flex',
-          flexDirection: 'column',
+          flexDirection: 'row',
           backgroundColor: theme.colors.background,
           color: theme.colors.text,
           overflow: 'hidden',
         }}
       >
-        <EditableConfigurablePanelLayout
+        {/* Panel Icon Sidebar */}
+        <PanelIconSidebar
+          currentPanelId={layout.left}
+          onPanelChange={(panelId) => onLayoutChange({ ...layout, left: panelId })}
           theme={theme}
-          panels={panels}
-          layout={layout}
-          isEditMode={isEditMode}
-          onLayoutChange={onLayoutChange}
-          defaultSizes={{ left: 25, middle: 50, right: 25 }}
-          minSizes={{ left: 15, middle: 30, right: 20 }}
-          collapsed={collapsed}
-          collapsiblePanels={{ left: true, right: true }}
-          showCollapseButtons={false}
+          collapsed={collapsed.left}
+          onExpand={() => onCollapsedChange({ ...collapsed, left: false })}
+          onCollapse={() => onCollapsedChange({ ...collapsed, left: true })}
         />
+
+        {/* Main panel layout area */}
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          }}
+        >
+          <EditableConfigurablePanelLayout
+            theme={theme}
+            panels={panels}
+            layout={layout}
+            isEditMode={isEditMode}
+            onLayoutChange={onLayoutChange}
+            defaultSizes={{ left: 25, middle: 50, right: 25 }}
+            minSizes={{ left: 15, middle: 30, right: 20 }}
+            collapsed={collapsed}
+            collapsiblePanels={{ left: true, right: true }}
+            showCollapseButtons={false}
+          />
+        </div>
       </div>
 
       {/* Remove from Workspace Modal */}

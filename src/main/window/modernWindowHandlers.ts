@@ -409,39 +409,63 @@ export function registerModernWindowHandlers(): void {
   // Alexandria Workspace Window
   ipcMain.handle(
     WindowEvent.OPEN_ALEXANDRIA_WORKSPACE,
-    async (_event, workspaceId: string) => {
-      if (!workspaceId) {
+    async (_event, options: { workspaceId?: string; repositoryPath?: string; repositoryId?: string }) => {
+      const { workspaceId, repositoryPath, repositoryId } = options;
+
+      // Determine window name and display name
+      let windowName: string;
+      let workspaceName: string;
+
+      if (workspaceId) {
+        // Standard workspace mode
+        windowName = `alexandria-workspace-${workspaceId}`;
+
+        // Fetch workspace name from the registry
+        workspaceName = 'Alexandria Workspace';
+        try {
+          const {
+            AlexandriaRegistryService,
+          } = require('../stores/AlexandriaRegistryService');
+          const service = AlexandriaRegistryService.getInstance();
+          const workspace = await service.getWorkspace(workspaceId);
+          if (workspace?.name) {
+            workspaceName = workspace.name;
+          }
+        } catch (error) {
+          console.error(
+            '[modernWindowHandlers] Failed to fetch workspace name:',
+            error,
+          );
+        }
+      } else if (repositoryPath || repositoryId) {
+        // Temp workspace mode (single repository)
+        const repoIdentifier = repositoryId || repositoryPath || `temp-${Date.now()}`;
+        // Sanitize for window name (remove special characters)
+        const sanitized = repoIdentifier.replace(/[^a-zA-Z0-9-_]/g, '-');
+        windowName = `alexandria-workspace-temp-${sanitized}`;
+
+        // Extract repo name from path or ID for display
+        if (repositoryPath) {
+          const pathParts = repositoryPath.split('/');
+          workspaceName = pathParts[pathParts.length - 1] || 'Repository Workspace';
+        } else if (repositoryId) {
+          const idParts = repositoryId.split('/');
+          workspaceName = idParts[idParts.length - 1] || 'Repository Workspace';
+        } else {
+          workspaceName = 'Repository Workspace';
+        }
+      } else {
         console.error(
-          '[modernWindowHandlers] OPEN_ALEXANDRIA_WORKSPACE called without workspaceId',
+          '[modernWindowHandlers] OPEN_ALEXANDRIA_WORKSPACE called without workspaceId or repository info',
         );
         return;
-      }
-
-      const windowName = `alexandria-workspace-${workspaceId}`;
-
-      // Fetch workspace name from the registry
-      let workspaceName = 'Alexandria Workspace';
-      try {
-        const {
-          AlexandriaRegistryService,
-        } = require('../stores/AlexandriaRegistryService');
-        const service = AlexandriaRegistryService.getInstance();
-        const workspace = await service.getWorkspace(workspaceId);
-        if (workspace?.name) {
-          workspaceName = workspace.name;
-        }
-      } catch (error) {
-        console.error(
-          '[modernWindowHandlers] Failed to fetch workspace name:',
-          error,
-        );
       }
 
       // Create metadata for workspace window
       const metadata: WindowMetadata = {
         primaryType: PrimaryWindowType.WORKSPACE,
         displayName: workspaceName,
-        workspaceId,
+        workspaceId: workspaceId || undefined,
         purpose: windowName,
       };
 
@@ -475,56 +499,67 @@ export function registerModernWindowHandlers(): void {
         `[modernWindowHandlers] Registered Alexandria Workspace window ${window.window.id} with terminal manager`,
       );
 
-      // Acquire watches for all repositories in the workspace (in parallel, non-blocking)
+      // Acquire watches for repositories (in parallel, non-blocking)
       const watchReferenceId = `alexandria-workspace:${window.window.id}`;
       const registeredRepoPaths: string[] = [];
 
       // Fire off watch acquisition in background - don't block window loading
       (async () => {
         try {
-          const {
-            AlexandriaRegistryService,
-          } = require('../stores/AlexandriaRegistryService');
-          const service = AlexandriaRegistryService.getInstance();
-          const repositories =
-            await service.getRepositoriesInWorkspace(workspaceId);
           const monitoringManager = getMonitoringManager();
 
-          // Filter repos with valid paths
-          const reposWithPaths = repositories.filter(
-            (repo): repo is typeof repo & { path: string } => !!repo.path,
-          );
+          if (workspaceId) {
+            // Workspace mode - watch all repositories in the workspace
+            const {
+              AlexandriaRegistryService,
+            } = require('../stores/AlexandriaRegistryService');
+            const service = AlexandriaRegistryService.getInstance();
+            const repositories =
+              await service.getRepositoriesInWorkspace(workspaceId);
 
-          // Acquire watches in parallel (acquireWatch auto-registers if needed)
-          const results = await Promise.allSettled(
-            reposWithPaths.map(async (repo) => {
-              const repoPath = repo.path as string;
-              await monitoringManager.acquireWatch(repoPath, watchReferenceId);
-              return repoPath;
-            }),
-          );
+            // Filter repos with valid paths
+            const reposWithPaths = repositories.filter(
+              (repo): repo is typeof repo & { path: string } => !!repo.path,
+            );
 
-          // Track successful registrations for cleanup on window close
-          for (const result of results) {
-            if (result.status === 'fulfilled') {
-              registeredRepoPaths.push(result.value);
-              console.log(
-                `[modernWindowHandlers] Acquired watch for ${result.value} (reference: ${watchReferenceId})`,
-              );
-            } else {
-              console.error(
-                `[modernWindowHandlers] Failed to acquire watch:`,
-                result.reason,
-              );
+            // Acquire watches in parallel (acquireWatch auto-registers if needed)
+            const results = await Promise.allSettled(
+              reposWithPaths.map(async (repo) => {
+                const repoPath = repo.path as string;
+                await monitoringManager.acquireWatch(repoPath, watchReferenceId);
+                return repoPath;
+              }),
+            );
+
+            // Track successful registrations for cleanup on window close
+            for (const result of results) {
+              if (result.status === 'fulfilled') {
+                registeredRepoPaths.push(result.value);
+                console.log(
+                  `[modernWindowHandlers] Acquired watch for ${result.value} (reference: ${watchReferenceId})`,
+                );
+              } else {
+                console.error(
+                  `[modernWindowHandlers] Failed to acquire watch:`,
+                  result.reason,
+                );
+              }
             }
-          }
 
-          console.log(
-            `[modernWindowHandlers] Acquired watches for ${registeredRepoPaths.length}/${reposWithPaths.length} repositories`,
-          );
+            console.log(
+              `[modernWindowHandlers] Acquired watches for ${registeredRepoPaths.length}/${reposWithPaths.length} repositories`,
+            );
+          } else if (repositoryPath) {
+            // Temp mode - watch only the single repository
+            await monitoringManager.acquireWatch(repositoryPath, watchReferenceId);
+            registeredRepoPaths.push(repositoryPath);
+            console.log(
+              `[modernWindowHandlers] Acquired watch for single repository: ${repositoryPath} (reference: ${watchReferenceId})`,
+            );
+          }
         } catch (error) {
           console.error(
-            '[modernWindowHandlers] Failed to acquire watches for workspace repositories:',
+            '[modernWindowHandlers] Failed to acquire watches for repositories:',
             error,
           );
         }
@@ -548,9 +583,19 @@ export function registerModernWindowHandlers(): void {
         );
       });
 
-      // Pass workspace ID to the window via URL parameter
-      const encodedWorkspaceId = encodeURIComponent(workspaceId);
-      const url = `${resolveHtmlPath('alexandria-workspace.html')}?workspaceId=${encodedWorkspaceId}`;
+      // Pass parameters to the window via URL
+      const urlParams = new URLSearchParams();
+      if (workspaceId) {
+        urlParams.set('workspaceId', workspaceId);
+      }
+      if (repositoryPath) {
+        urlParams.set('repositoryPath', repositoryPath);
+      }
+      if (repositoryId) {
+        urlParams.set('repositoryId', repositoryId);
+      }
+
+      const url = `${resolveHtmlPath('alexandria-workspace.html')}?${urlParams.toString()}`;
       window.window.loadURL(url);
     },
   );

@@ -240,41 +240,96 @@ const AlexandriaWorkspaceContent: React.FC = () => {
   });
 
   useEffect(() => {
-    // Get workspace ID from URL parameters
+    // Get parameters from URL
     const urlParams = new URLSearchParams(window.location.search);
     const workspaceId = urlParams.get('workspaceId');
+    const repositoryPath = urlParams.get('repositoryPath');
+    const repositoryId = urlParams.get('repositoryId');
 
-    if (!workspaceId) {
-      setError('No workspace ID provided');
-      setLoading(false);
-      return;
-    }
-
-    // Load workspace data
+    // Load workspace data (either real workspace or temp single-repo mode)
     const loadWorkspace = async () => {
       try {
         setLoading(true);
-        const workspaces = await WorkspaceService.getWorkspaces();
-        const foundWorkspace = workspaces.find((w) => w.id === workspaceId);
 
-        if (!foundWorkspace) {
-          setError('Workspace not found');
-        } else {
-          setWorkspace(foundWorkspace);
+        if (workspaceId) {
+          // Standard workspace mode
+          const workspaces = await WorkspaceService.getWorkspaces();
+          const foundWorkspace = workspaces.find((w) => w.id === workspaceId);
 
-          // Load workspace repositories
+          if (!foundWorkspace) {
+            setError('Workspace not found');
+          } else {
+            setWorkspace(foundWorkspace);
+
+            // Load workspace repositories
+            try {
+              const repos = await WorkspaceService.getRepositoriesInWorkspace(
+                foundWorkspace.id,
+              );
+              setWorkspaceRepositories(repos);
+
+              // Auto-select repository if specified
+              if (repositoryPath) {
+                const selectedRepo = repos.find((r) => r.path === repositoryPath);
+                if (selectedRepo) {
+                  setSelectedRepository({
+                    name: selectedRepo.name,
+                    path: selectedRepo.path,
+                  });
+                }
+              }
+            } catch (repoErr) {
+              console.error(
+                '[AlexandriaWorkspaceApp] Error loading repositories:',
+                repoErr,
+              );
+              setWorkspaceRepositories([]);
+            }
+          }
+        } else if (repositoryPath) {
+          // Temp single-repository mode
+          console.info(
+            '[AlexandriaWorkspaceApp] Opening in temp mode for repository:',
+            repositoryPath,
+          );
+
+          // Create a temporary workspace
+          const tempWorkspace: Workspace = {
+            id: `temp-${Date.now()}`,
+            name: 'Repository Workspace',
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          };
+          setWorkspace(tempWorkspace);
+
+          // Load the single repository from Alexandria
           try {
-            const repos = await WorkspaceService.getRepositoriesInWorkspace(
-              foundWorkspace.id,
-            );
-            setWorkspaceRepositories(repos);
+            const allRepos = await AlexandriaService.getRepositories();
+            const repository = allRepos.find((r) => r.path === repositoryPath);
+
+            if (repository) {
+              setWorkspaceRepositories([repository]);
+              // Auto-select this repository
+              setSelectedRepository({
+                name: repository.name,
+                path: repository.path,
+              });
+            } else {
+              console.warn(
+                '[AlexandriaWorkspaceApp] Repository not found in Alexandria:',
+                repositoryPath,
+              );
+              setWorkspaceRepositories([]);
+            }
           } catch (repoErr) {
             console.error(
-              '[AlexandriaWorkspaceApp] Error loading repositories:',
+              '[AlexandriaWorkspaceApp] Error loading repository:',
               repoErr,
             );
             setWorkspaceRepositories([]);
           }
+        } else {
+          setError('No workspace ID or repository path provided');
         }
       } catch (err) {
         console.error('[AlexandriaWorkspaceApp] Error loading workspace:', err);
@@ -286,38 +341,40 @@ const AlexandriaWorkspaceContent: React.FC = () => {
 
     loadWorkspace();
 
-    // Subscribe to workspace changes
-    const unsubscribeWorkspace = WorkspaceService.onWorkspaceChange((event) => {
-      console.info(
-        '[AlexandriaWorkspaceApp] Workspace change event received:',
-        event,
-      );
+    // Subscribe to workspace changes (only for real workspaces, not temp mode)
+    const unsubscribeWorkspace = workspaceId
+      ? WorkspaceService.onWorkspaceChange((event) => {
+          console.info(
+            '[AlexandriaWorkspaceApp] Workspace change event received:',
+            event,
+          );
 
-      if (event.workspaceId === workspaceId) {
-        if (event.type === 'updated') {
-          // Reload workspace metadata for 'updated' events
-          console.info(
-            '[AlexandriaWorkspaceApp] Workspace metadata updated, reloading',
-          );
-          loadWorkspace();
-        } else if (event.type === 'membership-changed') {
-          // Reload repositories when membership changes
-          console.info(
-            '[AlexandriaWorkspaceApp] Workspace membership changed, reloading repositories',
-          );
-          WorkspaceService.getRepositoriesInWorkspace(workspaceId)
-            .then((repos) => {
-              setWorkspaceRepositories(repos);
-            })
-            .catch((err) => {
-              console.error(
-                '[AlexandriaWorkspaceApp] Error reloading repositories:',
-                err,
+          if (event.workspaceId === workspaceId) {
+            if (event.type === 'updated') {
+              // Reload workspace metadata for 'updated' events
+              console.info(
+                '[AlexandriaWorkspaceApp] Workspace metadata updated, reloading',
               );
-            });
-        }
-      }
-    });
+              loadWorkspace();
+            } else if (event.type === 'membership-changed') {
+              // Reload repositories when membership changes
+              console.info(
+                '[AlexandriaWorkspaceApp] Workspace membership changed, reloading repositories',
+              );
+              WorkspaceService.getRepositoriesInWorkspace(workspaceId)
+                .then((repos) => {
+                  setWorkspaceRepositories(repos);
+                })
+                .catch((err) => {
+                  console.error(
+                    '[AlexandriaWorkspaceApp] Error reloading repositories:',
+                    err,
+                  );
+                });
+            }
+          }
+        })
+      : () => {}; // No-op for temp mode
 
     // Subscribe to Alexandria repository changes to handle stale references
     // This catches cases where a repository is moved/updated from another workspace window

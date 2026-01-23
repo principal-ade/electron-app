@@ -14,6 +14,7 @@ import type {
   RepositoryWindowState,
   DevWorkspaceOptions,
   ExtensionWindowOptions,
+  AlexandriaWorkspaceOptions,
 } from '../../shared/main-process-api-interfaces/WindowAPI';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
@@ -140,13 +141,14 @@ export class WindowService {
   }
 
   /**
-   * Open Alexandria Workspace window for a specific workspace
-   * Opens a dedicated window for managing a single workspace and its repository members
-   * @param workspaceId - The ID of the workspace to open
+   * Open Alexandria Workspace window
+   * Opens a dedicated window for managing a workspace and its repository members
+   * Can open with a specific workspace, or create a temporary workspace for a single repository
+   * @param options - Options for opening the workspace (workspaceId, repositoryPath, etc.)
    */
-  static async openAlexandriaWorkspace(workspaceId: string): Promise<void> {
+  static async openAlexandriaWorkspace(options: AlexandriaWorkspaceOptions): Promise<void> {
     try {
-      await window.mainProcess.window.openAlexandriaWorkspace(workspaceId);
+      await window.mainProcess.window.openAlexandriaWorkspace(options);
     } catch (error) {
       console.error(
         '[WindowService] Failed to open Alexandria Workspace window:',
@@ -154,6 +156,22 @@ export class WindowService {
       );
       throw new Error('Failed to open Alexandria Workspace window');
     }
+  }
+
+  /**
+   * Open Alexandria Workspace window from a repository
+   * Creates a temporary single-repository workspace
+   * @param repositoryPath - Path to the repository
+   * @param repositoryId - Repository identifier (PURL or github.id)
+   */
+  static async openAlexandriaWorkspaceFromRepository(
+    repositoryPath: string,
+    repositoryId?: string,
+  ): Promise<void> {
+    return this.openAlexandriaWorkspace({
+      repositoryPath,
+      repositoryId,
+    });
   }
 
   /**

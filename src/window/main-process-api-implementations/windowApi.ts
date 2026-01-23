@@ -12,6 +12,7 @@ import type {
   RepositoryWindowState,
   DevWorkspaceOptions,
   ExtensionWindowOptions,
+  AlexandriaWorkspaceOptions,
 } from '../../shared/main-process-api-interfaces/WindowAPI';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
@@ -75,10 +76,10 @@ export const windowAPI: WindowAPI = {
     ipcRenderer.invoke(WindowEvent.OPEN_CALLIMACHUS_WINDOW),
 
   /**
-   * Open Alexandria Workspace window for a specific workspace
+   * Open Alexandria Workspace window
    */
-  openAlexandriaWorkspace: (workspaceId: string) =>
-    ipcRenderer.invoke(WindowEvent.OPEN_ALEXANDRIA_WORKSPACE, workspaceId),
+  openAlexandriaWorkspace: (options: AlexandriaWorkspaceOptions) =>
+    ipcRenderer.invoke(WindowEvent.OPEN_ALEXANDRIA_WORKSPACE, options),
 
   /**
    * Focus the main window if it exists, otherwise create it

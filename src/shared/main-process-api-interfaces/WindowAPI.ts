@@ -29,6 +29,18 @@ export interface DevWorkspaceOptions {
 }
 
 /**
+ * Options for opening an Alexandria workspace window
+ */
+export interface AlexandriaWorkspaceOptions {
+  /** Workspace ID (optional - if not provided, creates temp workspace) */
+  workspaceId?: string;
+  /** Repository path to auto-select (optional) */
+  repositoryPath?: string;
+  /** Repository ID (PURL or github.id) for identifying the repo (optional) */
+  repositoryId?: string;
+}
+
+/**
  * Options for opening an extension window
  */
 export interface ExtensionWindowOptions {
@@ -129,11 +141,12 @@ export interface WindowAPI {
   openCallimachusWindow(): Promise<void>;
 
   /**
-   * Open Alexandria Workspace window for a specific workspace
-   * Opens a dedicated window for managing a single workspace and its repository members
-   * @param workspaceId - The ID of the workspace to open
+   * Open Alexandria Workspace window
+   * Opens a dedicated window for managing a workspace and its repository members
+   * Can open with a specific workspace, or create a temporary workspace for a single repository
+   * @param options - Options for opening the workspace (workspaceId, repositoryPath, etc.)
    */
-  openAlexandriaWorkspace(workspaceId: string): Promise<void>;
+  openAlexandriaWorkspace(options: AlexandriaWorkspaceOptions): Promise<void>;
 
   /**
    * Focus the main window if it exists, otherwise create it

@@ -24,6 +24,7 @@ import type { PackageLayer } from '@principal-ai/codebase-composition';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { FileSystemService } from '../main-process-api/FileSystemService';
+import { WindowService } from '../main-process-api/WindowService';
 import { gitSyncConnectionManager } from '../services/git-sync/GitSyncConnectionManager';
 import { APP_BRANDING } from '../../shared/config/appBranding';
 import { AlexandriaEventType } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
@@ -825,6 +826,28 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     }
   }, [githubInfo]);
 
+  // Open Alexandria Workspace for this repository
+  const handleOpenAlexandriaWorkspace = useCallback(async () => {
+    if (!repositoryPath) return;
+
+    try {
+      // Get repository ID (PURL format if available)
+      const repositoryId = githubInfo
+        ? `pkg:github/${githubInfo.owner}/${githubInfo.repo}`
+        : undefined;
+
+      await WindowService.openAlexandriaWorkspaceFromRepository(
+        repositoryPath,
+        repositoryId,
+      );
+    } catch (error) {
+      console.error(
+        '[DevWorkspaceApp] Failed to open Alexandria Workspace:',
+        error,
+      );
+    }
+  }, [repositoryPath, githubInfo]);
+
   // Show git changes panel
   const handleShowGitChanges = useCallback(() => {
     setLayout((prev) => ({ ...prev, left: 'gitChanges' }));
@@ -871,6 +894,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         onOpenGitHubActions={
           githubInfo && hasGitHubFolder ? handleOpenGitHubActions : undefined
         }
+        onOpenAlexandriaWorkspace={handleOpenAlexandriaWorkspace}
         currentLayout={
           layout as { left: string; middle: string; right: string }
         }
