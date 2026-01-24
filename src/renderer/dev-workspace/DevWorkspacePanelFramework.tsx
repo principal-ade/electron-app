@@ -88,6 +88,15 @@ interface FileEditorTab extends BaseTab {
 }
 
 /**
+ * Tab type for MDX editor (markdown files)
+ */
+interface MDXEditorTab extends BaseTab {
+  contentType: 'mdx-editor';
+  filePath: string;
+  fileName: string;
+}
+
+/**
  * Tab type for git diff viewer
  */
 interface GitDiffTab extends BaseTab {
@@ -100,7 +109,7 @@ interface GitDiffTab extends BaseTab {
 /**
  * Union type of all tab types used in DevWorkspace
  */
-type DevWorkspaceTab = TerminalTab | SkillTab | MarkdownTab | CanvasEditorTab | CanvasTab | FileEditorTab | GitDiffTab;
+type DevWorkspaceTab = TerminalTab | SkillTab | MarkdownTab | CanvasEditorTab | CanvasTab | FileEditorTab | MDXEditorTab | GitDiffTab;
 
 export interface DevWorkspacePanelFrameworkProps {
   repositoryPath: string;
@@ -542,9 +551,18 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         const filePath = payload.path;
         const fileName = filePath.split('/').pop() || 'File';
 
-        // Use git diff panel for modified files (staged or unstaged), file editor for new/untracked files
-        const isModified = payload.gitStatus === 'unstaged' || payload.gitStatus === 'staged';
-        const contentType = isModified ? 'git-diff' : 'file-editor';
+        // Check if file is markdown
+        const isMarkdown = filePath.endsWith('.md') || filePath.endsWith('.mdx');
+
+        // Markdown files always open in MDX editor, regardless of git status
+        // For other files: use git diff panel for modified files (staged or unstaged), file editor for new/untracked files
+        let contentType: 'mdx-editor' | 'git-diff' | 'file-editor';
+        if (isMarkdown) {
+          contentType = 'mdx-editor';
+        } else {
+          const isModified = payload.gitStatus === 'unstaged' || payload.gitStatus === 'staged';
+          contentType = isModified ? 'git-diff' : 'file-editor';
+        }
 
         console.log('[DevWorkspacePanelFramework] Git status:', payload.gitStatus, '-> Opening tab:', contentType);
 
@@ -553,6 +571,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           const existingTab = prevTabs.find(
             (t) =>
               ((t.contentType === 'file-editor' && (t as FileEditorTab).filePath === filePath) ||
+                (t.contentType === 'mdx-editor' && (t as MDXEditorTab).filePath === filePath) ||
                 (t.contentType === 'git-diff' && (t as GitDiffTab).filePath === filePath))
           );
 
@@ -562,24 +581,36 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           }
 
           // Create new tab
-          const newTab: FileEditorTab | GitDiffTab = isModified
-            ? {
-                id: `git-diff-${Date.now()}`,
-                label: fileName,
-                contentType: 'git-diff',
-                filePath: filePath,
-                fileName: fileName,
-                gitStatus: payload.gitStatus,
-                closable: true,
-              }
-            : {
-                id: `file-editor-${Date.now()}`,
-                label: fileName,
-                contentType: 'file-editor',
-                filePath: filePath,
-                fileName: fileName,
-                closable: true,
-              };
+          let newTab: FileEditorTab | MDXEditorTab | GitDiffTab;
+          if (contentType === 'mdx-editor') {
+            newTab = {
+              id: `mdx-editor-${Date.now()}`,
+              label: fileName,
+              contentType: 'mdx-editor',
+              filePath: filePath,
+              fileName: fileName,
+              closable: true,
+            };
+          } else if (contentType === 'git-diff') {
+            newTab = {
+              id: `git-diff-${Date.now()}`,
+              label: fileName,
+              contentType: 'git-diff',
+              filePath: filePath,
+              fileName: fileName,
+              gitStatus: payload.gitStatus,
+              closable: true,
+            };
+          } else {
+            newTab = {
+              id: `file-editor-${Date.now()}`,
+              label: fileName,
+              contentType: 'file-editor',
+              filePath: filePath,
+              fileName: fileName,
+              closable: true,
+            };
+          }
 
           console.log('[DevWorkspacePanelFramework] Creating new tab:', newTab);
           return [...prevTabs, newTab];
@@ -1037,6 +1068,46 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 actions={actionsRef.current}
                 events={eventsRef.current}
                 filePath={fileEditorTab.filePath}
+                showCloseButton={false}
+              />
+            </div>
+          );
+        }
+
+        case 'mdx-editor': {
+          // Type assertion for TypeScript
+          const mdxEditorTab = tab as MDXEditorTab;
+
+          if (!MDXEditorPanelComponent) {
+            return (
+              <div style={{ padding: '2rem', color: theme.colors.textSecondary }}>
+                MDX Editor panel not available
+              </div>
+            );
+          }
+
+          console.log('[DevWorkspacePanelFramework] Rendering MDX editor tab:', {
+            filePath: mdxEditorTab.filePath,
+            fileName: mdxEditorTab.fileName,
+            isActive,
+          });
+
+          return (
+            <div
+              style={{
+                height: '100%',
+                width: '100%',
+                overflow: 'hidden',
+                position: 'relative',
+                display: isActive ? 'flex' : 'none', // Only show when active
+                flexDirection: 'column',
+              }}
+            >
+              <MDXEditorPanelComponent
+                context={contextRef.current}
+                actions={actionsRef.current}
+                events={eventsRef.current}
+                filePath={mdxEditorTab.filePath}
                 showCloseButton={false}
               />
             </div>

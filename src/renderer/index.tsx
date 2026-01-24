@@ -5,8 +5,8 @@ import { ThemeProvider } from '@principal-ade/industry-theme';
 import './styles/tailwind.css';
 import './index.css';
 import 'highlight.js/styles/atom-one-dark.css';
-import './styles/mdx-editor';
 import 'themed-markdown/dist/index.css';
+import '@industry-theme/file-editing-panels/dist/panels.bundle.css';
 
 import App from './App';
 import { AppErrorBoundary } from './AppErrorBoundary';
