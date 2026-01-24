@@ -1,4 +1,19 @@
 import type { MainProcessAPI } from '../shared/main-process-api-interfaces/index';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
+
+// QuickOpenItem type for Quick Open API
+interface QuickOpenItem {
+  id: string;
+  type: 'repository' | 'workspace';
+  name: string;
+  description?: string;
+  remoteUrl?: string;
+  localPath?: string;
+  isOpen: boolean;
+  openWindowId?: number;
+  avatarUrl?: string;
+  alexandriaEntry?: AlexandriaEntry;
+}
 
 declare global {
   interface Window {
@@ -29,11 +44,12 @@ declare global {
       cycleSelection?: (direction: 'next' | 'previous') => void;
       // Quick Open API
       onQuickOpenItems?: (
-        callback: (event: any, items: any[]) => void,
+        callback: (event: Electron.IpcRendererEvent, items: QuickOpenItem[]) => void,
       ) => void | (() => void);
       requestQuickOpenItems?: () => void;
-      selectQuickOpenItem?: (item: any) => void;
+      selectQuickOpenItem?: (item: QuickOpenItem) => void;
       closeQuickOpen?: () => void;
+      copyToClipboard?: (text: string) => void;
     };
     // Window init data for routing
     windowInitData?: unknown;

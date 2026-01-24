@@ -87,7 +87,8 @@ const configuration: webpack.Configuration = {
           'globby', // Node.js file globbing library
           'glob', // Node.js file globbing library
           'keytar', // Native Node.js module for credential storage
-          'jsonwebtoken' // Uses Node.js crypto module
+          'jsonwebtoken', // Uses Node.js crypto module
+          '@principal-ai/principal-view-core' // Uses /browser subpath exports, has Node.js code in main export
         ];
         
         // Exclude if in the list or contains electron

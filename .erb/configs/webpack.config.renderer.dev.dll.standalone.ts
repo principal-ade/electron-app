@@ -94,7 +94,8 @@ const configuration: webpack.Configuration = {
           'globby', // File system globbing - Node.js only, uses native fs
           'glob', // Glob pattern matching - Node.js only, uses native fs
           'minipass', // Stream library that uses Node.js internals
-          '@a24z/markdown-search' // Has Node.js dependencies for indexing
+          '@a24z/markdown-search', // Has Node.js dependencies for indexing
+          '@principal-ai/principal-view-core' // Uses /browser subpath exports, has Node.js code in main export
         ];
         
         // Exclude if in the list or contains electron

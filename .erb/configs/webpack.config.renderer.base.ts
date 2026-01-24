@@ -66,6 +66,7 @@ const configuration: webpack.Configuration = {
       events: require.resolve('events/'),
       util: false,
       child_process: false,
+      url: require.resolve('url/'),
     },
   },
 

@@ -22,6 +22,25 @@ interface QuickOpenItem {
   alexandriaEntry?: AlexandriaEntry;
 }
 
+// Quick Open specific window type - electronAPI is always defined in this context
+interface QuickOpenWindow extends Window {
+  electronAPI: {
+    onQuickOpenItems: (
+      callback: (
+        event: Electron.IpcRendererEvent,
+        items: QuickOpenItem[],
+      ) => void,
+    ) => void | (() => void);
+    requestQuickOpenItems: () => void;
+    selectQuickOpenItem: (item: QuickOpenItem) => void;
+    closeQuickOpen: () => void;
+    copyToClipboard: (text: string) => void;
+  };
+}
+
+// Cast window to QuickOpenWindow since we know electronAPI is always present
+const quickOpenWindow = window as QuickOpenWindow;
+
 const QuickOpenApp: React.FC = () => {
   const { theme } = useTheme();
   const [items, setItems] = useState<QuickOpenItem[]>([]);
@@ -33,16 +52,19 @@ const QuickOpenApp: React.FC = () => {
 
   useEffect(() => {
     // Listen for items from main process
-    const handleItems = (_event: any, receivedItems: QuickOpenItem[]) => {
+    const handleItems = (
+      _event: Electron.IpcRendererEvent,
+      receivedItems: QuickOpenItem[],
+    ) => {
       setItems(receivedItems);
       setFilteredItems(receivedItems);
     };
 
     const removeItemsListener =
-      window.electronAPI.onQuickOpenItems?.(handleItems);
+      quickOpenWindow.electronAPI.onQuickOpenItems(handleItems);
 
     // Request items now that listener is ready
-    window.electronAPI.requestQuickOpenItems?.();
+    quickOpenWindow.electronAPI.requestQuickOpenItems();
 
     // Focus search input on mount
     searchInputRef.current?.focus();
@@ -50,7 +72,7 @@ const QuickOpenApp: React.FC = () => {
     // Handle Escape key at window level (other keys handled in input)
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        window.electronAPI.closeQuickOpen?.();
+        quickOpenWindow.electronAPI.closeQuickOpen();
       }
     };
 
@@ -90,8 +112,8 @@ const QuickOpenApp: React.FC = () => {
   }, [selectedIndex]);
 
   const handleSelectItem = (item: QuickOpenItem) => {
-    console.log('[Quick Open] Selected item:', item);
-    window.electronAPI?.selectQuickOpenItem?.(item);
+    console.info('[Quick Open] Selected item:', item);
+    quickOpenWindow.electronAPI.selectQuickOpenItem(item);
   };
 
   const handleContextMenu = (
@@ -100,9 +122,9 @@ const QuickOpenApp: React.FC = () => {
   ) => {
     e.preventDefault();
     if (item.localPath) {
-      console.log('[Quick Open] Copying path to clipboard:', item.localPath);
-      window.electronAPI?.copyToClipboard?.(item.localPath);
-      window.electronAPI?.closeQuickOpen?.();
+      console.info('[Quick Open] Copying path to clipboard:', item.localPath);
+      quickOpenWindow.electronAPI.copyToClipboard(item.localPath);
+      quickOpenWindow.electronAPI.closeQuickOpen();
     }
   };
 
@@ -111,34 +133,34 @@ const QuickOpenApp: React.FC = () => {
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    console.log('[Quick Open] Key pressed:', e.key);
+    console.info('[Quick Open] Key pressed:', e.key);
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      console.log('[Quick Open] Arrow Down - moving selection down');
+      console.info('[Quick Open] Arrow Down - moving selection down');
       setSelectedIndex((prev) => {
         const newIndex = prev < filteredItems.length - 1 ? prev + 1 : prev;
-        console.log('[Quick Open] New index:', newIndex);
+        console.info('[Quick Open] New index:', newIndex);
         return newIndex;
       });
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      console.log('[Quick Open] Arrow Up - moving selection up');
+      console.info('[Quick Open] Arrow Up - moving selection up');
       setSelectedIndex((prev) => {
         const newIndex = prev > 0 ? prev - 1 : prev;
-        console.log('[Quick Open] New index:', newIndex);
+        console.info('[Quick Open] New index:', newIndex);
         return newIndex;
       });
     } else if (e.key === 'Tab') {
       e.preventDefault();
-      console.log('[Quick Open] Tab - cycling selection');
+      console.info('[Quick Open] Tab - cycling selection');
       setSelectedIndex((prev) => {
         const newIndex = prev < filteredItems.length - 1 ? prev + 1 : 0;
-        console.log('[Quick Open] New index:', newIndex);
+        console.info('[Quick Open] New index:', newIndex);
         return newIndex;
       });
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      console.log(
+      console.info(
         '[Quick Open] Enter - selecting item at index:',
         selectedIndex,
       );
@@ -188,7 +210,7 @@ const QuickOpenApp: React.FC = () => {
             style={{
               width: '100%',
               padding: '12px',
-              background: theme.colors.panelBackground || '#1e1e1e',
+              background: theme.colors.backgroundSecondary || '#1e1e1e',
               border: `1px solid ${theme.colors.border || '#3e3e3e'}`,
               borderRadius: '4px',
               color: theme.colors.text || '#ffffff',
@@ -376,7 +398,7 @@ const QuickOpenApp: React.FC = () => {
             display: 'flex',
             gap: '16px',
             padding: '8px 16px',
-            background: theme.colors.panelBackground,
+            background: theme.colors.backgroundSecondary,
             borderTop: `1px solid ${theme.colors.border}`,
           }}
         >

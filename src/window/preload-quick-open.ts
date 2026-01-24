@@ -8,7 +8,7 @@
 console.info('[Preload-QuickOpen] Script starting...');
 
 import { contextBridge, ipcRenderer, clipboard } from 'electron';
-import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 
 console.info('[Preload-QuickOpen] Electron imports successful');
 
