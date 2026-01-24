@@ -36,6 +36,7 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
 }) => {
   const { theme } = useTheme();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showWarningModal, setShowWarningModal] = useState(false);
 
   // Get repository info from context
   const repository = context.currentScope?.repository;
@@ -70,6 +71,48 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
   // Handle delete request
   const handleDeleteRequest = () => {
     if (repository) {
+      // Check if repo has uncommitted changes or is not synced
+      const gitData = gitSlice?.data;
+      const stagedCount = gitData?.staged?.length || 0;
+      const unstagedCount = gitData?.unstaged?.length || 0;
+      const untrackedCount = gitData?.untracked?.length || 0;
+      const totalChanges = stagedCount + unstagedCount + untrackedCount;
+      const ahead = gitData?.ahead || 0;
+      const behind = gitData?.behind || 0;
+      const isSynced = ahead === 0 && behind === 0;
+      const isClean = totalChanges === 0 && isSynced;
+
+      // Show warning modal if not clean
+      if (!isClean) {
+        setShowWarningModal(true);
+        return;
+      }
+
+      // Proceed with delete request
+      events.emit({
+        type: 'project-info:delete-requested',
+        source: 'project-info-panel',
+        timestamp: Date.now(),
+        payload: {
+          repository,
+          gitStatus: gitData ? {
+            branch: gitData.branch,
+            staged: gitData.staged,
+            unstaged: gitData.unstaged,
+            untracked: gitData.untracked,
+            ahead: gitData.ahead,
+            behind: gitData.behind,
+          } : undefined,
+        },
+      });
+    }
+  };
+
+  // Handle delete confirmation from warning modal
+  const handleDeleteConfirmation = () => {
+    setShowWarningModal(false);
+    if (repository) {
+      const gitData = gitSlice?.data;
       events.emit({
         type: 'project-info:delete-requested',
         source: 'project-info-panel',
@@ -628,40 +671,38 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
                   </div>
                 )}
 
-                {/* Delete button - only show when repo is clean and up to date */}
-                {isSynced && totalChanges === 0 && (
-                  <button
-                    onClick={handleDeleteRequest}
-                    style={{
-                      marginTop: spacing.sm,
-                      padding: `${spacing.sm}px ${spacing.md}px`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: spacing.xs,
-                      width: '100%',
-                      border: `1px solid ${theme.colors.error}`,
-                      borderRadius: borderRadius,
-                      background: 'transparent',
-                      color: theme.colors.error,
-                      cursor: 'pointer',
-                      fontSize: theme.fontSizes[2],
-                      fontWeight: 500,
-                      transition: 'all 0.2s ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = theme.colors.error;
-                      e.currentTarget.style.color = theme.colors.background;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.color = theme.colors.error;
-                    }}
-                  >
-                    <Trash2 size={16} />
-                    Delete Repository
-                  </button>
-                )}
+                {/* Delete button - always visible */}
+                <button
+                  onClick={handleDeleteRequest}
+                  style={{
+                    marginTop: spacing.sm,
+                    padding: `${spacing.sm}px ${spacing.md}px`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: spacing.xs,
+                    width: '100%',
+                    border: `1px solid ${theme.colors.error}`,
+                    borderRadius: borderRadius,
+                    background: 'transparent',
+                    color: theme.colors.error,
+                    cursor: 'pointer',
+                    fontSize: theme.fontSizes[2],
+                    fontWeight: 500,
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = theme.colors.error;
+                    e.currentTarget.style.color = theme.colors.background;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = theme.colors.error;
+                  }}
+                >
+                  <Trash2 size={16} />
+                  Delete Repository
+                </button>
               </div>
             ) : (
               <p
@@ -677,6 +718,194 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
           </section>
         )}
       </div>
+
+      {/* Warning Modal */}
+      {showWarningModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => setShowWarningModal(false)}
+        >
+          <div
+            style={{
+              backgroundColor: theme.colors.backgroundSecondary,
+              borderRadius: borderRadius * 2,
+              padding: spacing.lg,
+              maxWidth: '500px',
+              width: '90%',
+              border: `1px solid ${theme.colors.border}`,
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md }}>
+              <AlertCircle size={24} color={theme.colors.warning} />
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: theme.fontSizes[4],
+                  fontWeight: 600,
+                  color: theme.colors.text,
+                }}
+              >
+                Warning: Uncommitted Changes
+              </h3>
+            </div>
+
+            {/* Content */}
+            <div style={{ marginBottom: spacing.lg }}>
+              <p
+                style={{
+                  margin: 0,
+                  marginBottom: spacing.md,
+                  fontSize: theme.fontSizes[2],
+                  color: theme.colors.text,
+                  lineHeight: 1.5,
+                }}
+              >
+                This repository has uncommitted changes or is not synced with the remote.
+              </p>
+
+              {/* Status details */}
+              <div
+                style={{
+                  padding: spacing.md,
+                  backgroundColor: theme.colors.background,
+                  borderRadius: borderRadius,
+                  border: `1px solid ${theme.colors.border}`,
+                  marginBottom: spacing.md,
+                }}
+              >
+                {totalChanges > 0 && (
+                  <div style={{ marginBottom: spacing.xs }}>
+                    <span
+                      style={{
+                        fontSize: theme.fontSizes[2],
+                        color: theme.colors.warning,
+                        fontWeight: 500,
+                      }}
+                    >
+                      • {totalChanges} uncommitted {totalChanges === 1 ? 'file' : 'files'}
+                    </span>
+                    <div style={{ marginLeft: spacing.md, marginTop: spacing.xs }}>
+                      {stagedCount > 0 && (
+                        <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary }}>
+                          {stagedCount} staged
+                        </div>
+                      )}
+                      {unstagedCount > 0 && (
+                        <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary }}>
+                          {unstagedCount} modified
+                        </div>
+                      )}
+                      {untrackedCount > 0 && (
+                        <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary }}>
+                          {untrackedCount} untracked
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {!isSynced && (
+                  <div>
+                    <span
+                      style={{
+                        fontSize: theme.fontSizes[2],
+                        color: theme.colors.warning,
+                        fontWeight: 500,
+                      }}
+                    >
+                      • Not synced with remote
+                    </span>
+                    <div style={{ marginLeft: spacing.md, marginTop: spacing.xs }}>
+                      {ahead > 0 && (
+                        <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary }}>
+                          {ahead} {ahead === 1 ? 'commit' : 'commits'} ahead
+                        </div>
+                      )}
+                      {behind > 0 && (
+                        <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary }}>
+                          {behind} {behind === 1 ? 'commit' : 'commits'} behind
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: theme.fontSizes[2],
+                  color: theme.colors.error,
+                  fontWeight: 500,
+                }}
+              >
+                Deleting this repository will permanently remove all uncommitted changes.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: spacing.sm, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowWarningModal(false)}
+                style={{
+                  padding: `${spacing.sm}px ${spacing.md}px`,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: borderRadius,
+                  background: theme.colors.background,
+                  color: theme.colors.text,
+                  cursor: 'pointer',
+                  fontSize: theme.fontSizes[2],
+                  fontWeight: 500,
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = theme.colors.background;
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteConfirmation}
+                style={{
+                  padding: `${spacing.sm}px ${spacing.md}px`,
+                  border: `1px solid ${theme.colors.error}`,
+                  borderRadius: borderRadius,
+                  background: theme.colors.error,
+                  color: theme.colors.background,
+                  cursor: 'pointer',
+                  fontSize: theme.fontSizes[2],
+                  fontWeight: 500,
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.9';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>
         {`

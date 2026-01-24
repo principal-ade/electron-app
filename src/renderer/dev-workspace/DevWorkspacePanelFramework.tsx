@@ -2,11 +2,11 @@ import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   EditableConfigurablePanelLayout,
-  FocusModeOverlay,
   type PanelLayout,
 } from '@principal-ade/panel-layouts';
 // CSS is bundled inline in principal-view-panels, no separate import needed
 // Note: file-city-panel CSS is bundled inline, no separate import needed
+// Note: file-editing-panels CSS is now inlined in JS, no separate import needed
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import {
   RepositoryPanelProvider,
@@ -23,6 +23,7 @@ import {
 import { TabbedTerminalPanel, type BaseTab, type TerminalTab } from '@industry-theme/xterm-terminal-panel';
 import { TabbedGhosttyTerminal } from '@industry-theme/ghostty-terminal-panel';
 import { panels as principalViewPanels } from '@industry-theme/principal-view-panels';
+import type { NarrativeTemplate } from '@principal-ai/principal-view-core/browser';
 import { panels as fileCityPanels } from '@industry-theme/file-city-panel';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import { panels as alexandriaPanels } from '@industry-theme/alexandria-panels';
@@ -76,6 +77,9 @@ interface CanvasTab extends BaseTab {
   canvasId: string;
   canvasPath: string;
   canvasName: string;
+  selectedNarrativeId?: string | null;
+  narrativePath?: string | null;
+  narrativeTemplate?: NarrativeTemplate | null;
 }
 
 /**
@@ -124,12 +128,6 @@ export interface DevWorkspacePanelFrameworkProps {
   onPanelSizesChange?: (sizes: { left: number; middle: number; right: number }) => void;
   /** Event bus for panel communication */
   events: PanelEventEmitter;
-  /** Per-panel focus state (dims individual panels) */
-  panelFocus?: { left: boolean; right: boolean };
-  /** Toggle focus on left panel (dim left) */
-  onFocusLeft?: () => void;
-  /** Toggle focus on right panel (dim right) */
-  onFocusRight?: () => void;
 }
 
 interface DevWorkspacePanelFrameworkInnerProps {
@@ -139,9 +137,6 @@ interface DevWorkspacePanelFrameworkInnerProps {
   onLayoutChange: (layout: PanelLayout) => void;
   panelSizes?: { left: number; middle: number; right: number };
   onPanelSizesChange?: (sizes: { left: number; middle: number; right: number }) => void;
-  panelFocus?: { left: boolean; right: boolean };
-  onFocusLeft?: () => void;
-  onFocusRight?: () => void;
 }
 
 /**
@@ -227,7 +222,7 @@ const FileCityWithHighlights: React.FC<{
  */
 const DevWorkspacePanelFrameworkInner: React.FC<
   DevWorkspacePanelFrameworkInnerProps
-> = ({ collapsed, onCollapsedChange, layout, onLayoutChange, panelSizes, onPanelSizesChange, panelFocus, onFocusLeft, onFocusRight }) => {
+> = ({ collapsed, onCollapsedChange, layout, onLayoutChange, panelSizes, onPanelSizesChange }) => {
   const { theme } = useTheme();
   const { context, actions, events } = useRepositoryPanelProvider();
   const { context: terminalCtx, actions: terminalActions } =
@@ -713,7 +708,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         }
 
         console.log('[DevWorkspacePanelFramework] Received canvas selection event:', event);
-        const { canvasId, canvas } = event.payload;
+        const { canvasId, canvas, narrativeId, narrative, narrativeTemplate } = event.payload;
 
         if (!canvasId || !canvas) {
           console.warn('[DevWorkspacePanelFramework] No canvas data in event:', event.payload);
@@ -721,14 +716,15 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         }
 
         setTabs((prevTabs) => {
-          // Determine content type based on canvas type
-          const isOtelCanvas = canvas.type === 'otel';
-          const contentType = isOtelCanvas ? 'canvas-detail' : 'canvas-editor';
+          // Determine content type based on whether narrative data is present
+          // If narrative clicked → canvas-detail, if canvas clicked → canvas-editor
+          const hasNarrative = !!(narrativeId && narrativeTemplate);
+          const contentType = hasNarrative ? 'canvas-detail' : 'canvas-editor';
 
           // Check if tab already exists for this canvas
           const existingTab = prevTabs.find(
             (t) => {
-              if (isOtelCanvas) {
+              if (hasNarrative) {
                 return t.contentType === 'canvas-detail' && (t as CanvasTab).canvasId === canvasId;
               } else {
                 return t.contentType === 'canvas-editor' && (t as CanvasEditorTab).canvasId === canvasId;
@@ -741,16 +737,29 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             return prevTabs; // Tab exists, will auto-activate
           }
 
-          // Create new canvas tab (editor or detail based on type)
-          const newTab: CanvasEditorTab | CanvasTab = {
-            id: `canvas-${canvasId}-${Date.now()}`,
-            label: canvas.name || canvasId,
-            contentType: contentType,
-            canvasId: canvasId,
-            canvasPath: canvas.path,
-            canvasName: canvas.name || canvasId,
-            closable: true,
-          } as CanvasEditorTab | CanvasTab;
+          // Create new canvas tab (editor or detail based on narrative presence)
+          const newTab: CanvasEditorTab | CanvasTab = hasNarrative
+            ? {
+                id: `canvas-${canvasId}-${Date.now()}`,
+                label: canvas.name || canvasId,
+                contentType: 'canvas-detail',
+                canvasId: canvasId,
+                canvasPath: canvas.path,
+                canvasName: canvas.name || canvasId,
+                selectedNarrativeId: narrativeId || null,
+                narrativePath: narrative?.path || null,
+                narrativeTemplate: narrativeTemplate || null,
+                closable: true,
+              } as CanvasTab
+            : {
+                id: `canvas-${canvasId}-${Date.now()}`,
+                label: canvas.name || canvasId,
+                contentType: 'canvas-editor',
+                canvasId: canvasId,
+                canvasPath: canvas.path,
+                canvasName: canvas.name || canvasId,
+                closable: true,
+              } as CanvasEditorTab;
 
           console.log('[DevWorkspacePanelFramework] Creating new', contentType, 'tab:', newTab);
           return [...prevTabs, newTab];
@@ -1029,6 +1038,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 selectedCanvasId={canvasTab.canvasId}
                 canvasPath={canvasTab.canvasPath}
                 canvasName={canvasTab.canvasName}
+                selectedNarrativeId={canvasTab.selectedNarrativeId}
+                narrativePath={canvasTab.narrativePath}
+                narrativeTemplate={canvasTab.narrativeTemplate}
               />
             </div>
           );
@@ -1886,48 +1898,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           onPanelResize={onPanelSizesChange}
         />
 
-        {/* Focus Mode Overlays - dim panels when focus is enabled */}
-        {panelFocus?.left && !collapsed.left && (
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '25%',
-              height: '100%',
-              pointerEvents: 'none',
-              zIndex: 100,
-            }}
-          >
-            <FocusModeOverlay
-              active={true}
-              variant="soft-fade"
-              effects={['snowfall']}
-              opacity={0.92}
-            />
-          </div>
-        )}
-        {panelFocus?.right && !collapsed.right && (
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              right: 0,
-              width: '25%',
-              height: '100%',
-              pointerEvents: 'none',
-              zIndex: 100,
-            }}
-          >
-            <FocusModeOverlay
-              active={true}
-              variant="soft-fade"
-              effects={['snowfall']}
-              opacity={0.92}
-            />
-          </div>
-        )}
-
         {/* Detail Panel Modal */}
         {detailModal && (
           <div
@@ -2038,9 +2008,6 @@ export const DevWorkspacePanelFramework: React.FC<
   panelSizes,
   onPanelSizesChange,
   events,
-  panelFocus,
-  onFocusLeft,
-  onFocusRight,
 }) => {
   // Use the same terminal context format as legacy MultiTerminalPanel
   // Legacy uses: terminal:${owner}/${name}
@@ -2079,9 +2046,6 @@ export const DevWorkspacePanelFramework: React.FC<
             onLayoutChange={onLayoutChange}
             panelSizes={panelSizes}
             onPanelSizesChange={onPanelSizesChange}
-            panelFocus={panelFocus}
-            onFocusLeft={onFocusLeft}
-            onFocusRight={onFocusRight}
           />
         </AgentHighlightProvider>
       </TerminalProvider>

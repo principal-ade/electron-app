@@ -94,6 +94,18 @@ const QuickOpenApp: React.FC = () => {
     window.electronAPI?.selectQuickOpenItem?.(item);
   };
 
+  const handleContextMenu = (
+    e: React.MouseEvent<HTMLDivElement>,
+    item: QuickOpenItem,
+  ) => {
+    e.preventDefault();
+    if (item.localPath) {
+      console.log('[Quick Open] Copying path to clipboard:', item.localPath);
+      window.electronAPI?.copyToClipboard?.(item.localPath);
+      window.electronAPI?.closeQuickOpen?.();
+    }
+  };
+
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
   };
@@ -214,6 +226,7 @@ const QuickOpenApp: React.FC = () => {
                   key={item.id}
                   ref={isSelected ? selectedItemRef : null}
                   onClick={() => handleSelectItem(item)}
+                  onContextMenu={(e) => handleContextMenu(e, item)}
                   onMouseEnter={() => setSelectedIndex(index)}
                   style={{
                     position: 'relative',
@@ -393,6 +406,15 @@ const QuickOpenApp: React.FC = () => {
             }}
           >
             Enter Select
+          </span>
+          <span
+            style={{
+              fontSize: theme.fontSizes[1],
+              fontFamily: theme.fonts.body,
+              color: theme.colors.textSecondary,
+            }}
+          >
+            Right-Click Copy Path
           </span>
           <span
             style={{

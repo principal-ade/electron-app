@@ -7,12 +7,27 @@
  */
 console.info('[Preload-QuickOpen] Script starting...');
 
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, clipboard } from 'electron';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
 console.info('[Preload-QuickOpen] Electron imports successful');
 
 // Import only the required API
 import { userPreferencesAPI } from './main-process-api-implementations/userPreferencesApi';
+
+// QuickOpenItem type definition (matches the one in quickOpen.ts)
+interface QuickOpenItem {
+  id: string;
+  type: 'repository' | 'workspace';
+  name: string;
+  description?: string;
+  remoteUrl?: string;
+  localPath?: string;
+  isOpen: boolean;
+  openWindowId?: number;
+  avatarUrl?: string;
+  alexandriaEntry?: AlexandriaEntry;
+}
 
 console.info('[Preload-QuickOpen] API imports successful');
 
@@ -33,18 +48,26 @@ try {
 try {
   contextBridge.exposeInMainWorld('electronAPI', {
     // Quick Open API
-    onQuickOpenItems: (callback: (event: any, items: any[]) => void) => {
-      const listener = (event: Electron.IpcRendererEvent, items: any[]) =>
-        callback(event, items);
+    onQuickOpenItems: (
+      callback: (
+        event: Electron.IpcRendererEvent,
+        items: QuickOpenItem[],
+      ) => void,
+    ) => {
+      const listener = (
+        event: Electron.IpcRendererEvent,
+        items: QuickOpenItem[],
+      ) => callback(event, items);
       ipcRenderer.on('quick-open:items', listener);
       return () => {
         ipcRenderer.removeListener('quick-open:items', listener);
       };
     },
     requestQuickOpenItems: () => ipcRenderer.send('quick-open:request-items'),
-    selectQuickOpenItem: (item: any) =>
+    selectQuickOpenItem: (item: QuickOpenItem) =>
       ipcRenderer.send('quick-open:select', item),
     closeQuickOpen: () => ipcRenderer.send('quick-open:close'),
+    copyToClipboard: (text: string) => clipboard.writeText(text),
   });
   console.info('[Preload-QuickOpen] electronAPI exposed');
 } catch (error) {

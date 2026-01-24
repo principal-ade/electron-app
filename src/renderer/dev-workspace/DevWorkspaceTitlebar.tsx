@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Layers,
   Cloud,
@@ -8,15 +8,14 @@ import {
   Check,
   Copy,
   Play,
-  Eye,
-  EyeOff,
   BookOpen,
   ChevronDown,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   PanelCollapseButton,
-  PanelSwitchButton,
 } from '@principal-ade/panel-layouts';
 import { BaseTitlebar } from '../components/Titlebar/BaseTitlebar';
 import { GitSyncStatusIndicator } from '../components/Titlebar/GitSyncStatusIndicator';
@@ -163,8 +162,6 @@ export interface DevWorkspaceTitlebarProps {
   repositoryName?: string;
   selectedSource?: FileTreeSource | null;
   onShowGitChanges?: () => void;
-  // UI Mode toggle
-  onSwitchToClassic?: () => void;
   // Terminal implementation toggle
   terminalImplementation?: 'xterm' | 'ghostty';
   onToggleTerminalImplementation?: () => void;
@@ -172,8 +169,6 @@ export interface DevWorkspaceTitlebarProps {
   collapsed?: { left: boolean; right: boolean };
   onToggleLeftSidebar?: () => void;
   onToggleRightSidebar?: () => void;
-  onSwitchLeftMiddlePanels?: () => void;
-  onSwitchRightMiddlePanels?: () => void;
   // Web-ADE integration
   onOpenInWebADE?: () => void;
   // GitHub Actions
@@ -193,10 +188,6 @@ export interface DevWorkspaceTitlebarProps {
   onPanelSizesChange?: (sizes: { left: number; middle: number; right: number }) => void;
   // Repository path for copy
   repositoryPath?: string;
-  // Panel focus (dim that panel)
-  panelFocus?: { left: boolean; right: boolean };
-  onFocusLeft?: () => void;
-  onFocusRight?: () => void;
   // Panel event emitter for inter-panel communication
   events?: {
     emit: (event: {
@@ -216,14 +207,11 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
   repositoryName,
   selectedSource,
   onShowGitChanges,
-  onSwitchToClassic,
   terminalImplementation,
   onToggleTerminalImplementation,
   collapsed,
   onToggleLeftSidebar,
   onToggleRightSidebar,
-  onSwitchLeftMiddlePanels,
-  onSwitchRightMiddlePanels,
   onOpenInWebADE,
   onOpenGitHubActions,
   onOpenAlexandriaWorkspace,
@@ -233,15 +221,11 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
   panelSizes,
   onPanelSizesChange,
   repositoryPath,
-  panelFocus,
-  onFocusLeft,
-  onFocusRight,
   events,
   packages,
 }) => {
   const { theme } = useTheme();
   const [copiedPath, setCopiedPath] = useState(false);
-  const [isTitlebarHovered, setIsTitlebarHovered] = useState(false);
 
   // Storybook state
   const [storybookStatus, setStorybookStatus] = useState<
@@ -254,6 +238,7 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
   const [storybookPackages, setStorybookPackages] = useState<StorybookPackage[]>([]);
   const [selectedPackage, setSelectedPackage] = useState<StorybookPackage | null>(null);
   const [showPackageDropdown, setShowPackageDropdown] = useState(false);
+  const storybookDropdownRef = useRef<HTMLDivElement>(null);
 
   // Handle copy repository path
   const handleCopyPath = async () => {
@@ -323,6 +308,25 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
       setSelectedPackage(null);
     }
   }, [repositoryPath, packages]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!showPackageDropdown) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        storybookDropdownRef.current &&
+        !storybookDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowPackageDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showPackageDropdown]);
 
   // Handler for Storybook button click (or dropdown item click)
   const handleStorybookClick = async (packageToStart?: StorybookPackage) => {
@@ -490,8 +494,6 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
 
   return (
     <div
-      onMouseEnter={() => setIsTitlebarHovered(true)}
-      onMouseLeave={() => setIsTitlebarHovered(false)}
       style={{ display: 'contents' }}
     >
       <BaseTitlebar confirmBeforeClose={true}>
@@ -508,61 +510,57 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
               WebkitAppRegion: 'no-drag',
             }}
           >
-            {/* Left Focus Button - dim the left panel */}
-            {onFocusLeft && !collapsed?.left && (
-              <button
-                onClick={onFocusLeft}
-                title={panelFocus?.left ? 'Show left panel' : 'Dim left panel'}
-                style={{
-                  background: panelFocus?.left
-                    ? theme.colors.primary
-                    : theme.colors.backgroundTertiary,
-                  border: `1px solid ${panelFocus?.left ? theme.colors.primary : theme.colors.border}`,
-                  color: panelFocus?.left
-                    ? theme.colors.background
-                    : theme.colors.textSecondary,
-                  cursor: 'pointer',
-                  padding: '6px 8px',
-                  borderRadius: '6px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  minHeight: '34px',
-                  boxSizing: 'border-box',
-                  transition: 'all 0.2s',
-                }}
-                onMouseEnter={(e) => {
-                  if (!panelFocus?.left) {
-                    e.currentTarget.style.backgroundColor =
-                      theme.colors.backgroundSecondary;
-                    e.currentTarget.style.borderColor = theme.colors.primary;
-                    e.currentTarget.style.color = theme.colors.text;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!panelFocus?.left) {
-                    e.currentTarget.style.backgroundColor =
-                      theme.colors.backgroundTertiary;
-                    e.currentTarget.style.borderColor = theme.colors.border;
-                    e.currentTarget.style.color = theme.colors.textSecondary;
-                  }
-                }}
-              >
-                {panelFocus?.left ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            )}
-
             {/* Hover-reveal button: Copy Path */}
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                opacity: isTitlebarHovered ? 1 : 0,
-                visibility: isTitlebarHovered ? 'visible' : 'hidden',
-                transition: 'opacity 0.2s ease, visibility 0.2s ease',
               }}
             >
+              {/* Collapse Left Panel Button */}
+              {onToggleLeftSidebar && (
+                <button
+                  onClick={onToggleLeftSidebar}
+                  title={collapsed?.left ? 'Expand left panel' : 'Collapse left panel'}
+                  style={{
+                    // @ts-ignore - WebkitAppRegion is not in CSSProperties
+                    WebkitAppRegion: 'no-drag',
+                    background: theme.colors.backgroundTertiary,
+                    border: `1px solid ${theme.colors.border}`,
+                    color: theme.colors.textSecondary,
+                    cursor: 'pointer',
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s',
+                    fontSize: `${theme.fontSizes[1]}px`,
+                    fontWeight: theme.fontWeights.medium,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.backgroundSecondary;
+                    e.currentTarget.style.borderColor = theme.colors.primary;
+                    e.currentTarget.style.color = theme.colors.text;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.backgroundTertiary;
+                    e.currentTarget.style.borderColor = theme.colors.border;
+                    e.currentTarget.style.color = theme.colors.textSecondary;
+                  }}
+                >
+                  {collapsed?.left ? (
+                    <PanelLeftOpen size={14} />
+                  ) : (
+                    <PanelLeftClose size={14} />
+                  )}
+                  <span>{collapsed?.left ? 'Expand' : 'Collapse'}</span>
+                </button>
+              )}
+
               {/* Copy Path Button */}
               {repositoryPath && (
                 <button
@@ -841,9 +839,6 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              opacity: isTitlebarHovered ? 1 : 0,
-              visibility: isTitlebarHovered ? 'visible' : 'hidden',
-              transition: 'opacity 0.2s ease, visibility 0.2s ease',
             }}
           >
             {/* Open in Web-ADE Button */}
@@ -965,9 +960,10 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
 
             {/* Storybook Button/Dropdown */}
             {storybookPackages.length > 0 && (
-              <div style={{ position: 'relative' }}>
+              <div ref={storybookDropdownRef} style={{ position: 'relative' }}>
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     if (storybookPackages.length === 1) {
                       handleStorybookClick();
                     } else {
@@ -1049,6 +1045,8 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                 {/* Dropdown for multiple packages */}
                 {showPackageDropdown && storybookPackages.length > 1 && (
                   <div
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
                     style={{
                       position: 'absolute',
                       top: '100%',
@@ -1065,7 +1063,8 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                     {storybookPackages.map((pkg) => (
                       <button
                         key={pkg.path}
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setShowPackageDropdown(false);
                           handleStorybookClick(pkg);
                         }}
@@ -1160,59 +1159,7 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                 </span>
               </button>
             )}
-            {onSwitchToClassic && (
-              <button
-                onClick={onSwitchToClassic}
-                title="Open Legacy View"
-                style={{
-                  // @ts-ignore - WebkitAppRegion is not in CSSProperties
-                  WebkitAppRegion: 'no-drag',
-                  background: theme.colors.backgroundTertiary,
-                  border: `1px solid ${theme.colors.border}`,
-                  color: theme.colors.textSecondary,
-                  cursor: 'pointer',
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  transition: 'all 0.2s',
-                  fontSize: `${theme.fontSizes[1]}px`,
-                  fontWeight: theme.fontWeights.medium,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    theme.colors.backgroundSecondary;
-                  e.currentTarget.style.borderColor = theme.colors.primary;
-                  e.currentTarget.style.color = theme.colors.text;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    theme.colors.backgroundTertiary;
-                  e.currentTarget.style.borderColor = theme.colors.border;
-                  e.currentTarget.style.color = theme.colors.textSecondary;
-                }}
-              >
-                <Layers size={14} />
-                <span>Legacy</span>
-              </button>
-            )}
           </div>
-
-          {/* Right-Middle Switch Button */}
-          {onSwitchRightMiddlePanels && (
-            <PanelSwitchButton
-              onSwitch={onSwitchRightMiddlePanels}
-              variant="right-middle"
-              iconSize={16}
-              style={{
-                background: theme.colors.backgroundTertiary,
-                border: `1px solid ${theme.colors.border}`,
-                borderRadius: '6px',
-                padding: '6px',
-              }}
-            />
-          )}
 
           {/* Right Panel Selector */}
           {currentLayout && onLayoutChange && (
@@ -1223,48 +1170,6 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
               onPanelChange={handleRightPanelChange}
               onExpand={handleExpandRightPanel}
             />
-          )}
-
-          {/* Right Focus Button - dim the right panel */}
-          {onFocusRight && !collapsed?.right && (
-            <button
-              onClick={onFocusRight}
-              title={panelFocus?.right ? 'Show right panel' : 'Dim right panel'}
-              style={{
-                background: panelFocus?.right
-                  ? theme.colors.primary
-                  : theme.colors.backgroundTertiary,
-                border: `1px solid ${panelFocus?.right ? theme.colors.primary : theme.colors.border}`,
-                color: panelFocus?.right
-                  ? theme.colors.background
-                  : theme.colors.textSecondary,
-                cursor: 'pointer',
-                padding: '6px',
-                borderRadius: '6px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                if (!panelFocus?.right) {
-                  e.currentTarget.style.backgroundColor =
-                    theme.colors.backgroundSecondary;
-                  e.currentTarget.style.borderColor = theme.colors.primary;
-                  e.currentTarget.style.color = theme.colors.text;
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!panelFocus?.right) {
-                  e.currentTarget.style.backgroundColor =
-                    theme.colors.backgroundTertiary;
-                  e.currentTarget.style.borderColor = theme.colors.border;
-                  e.currentTarget.style.color = theme.colors.textSecondary;
-                }
-              }}
-            >
-              {panelFocus?.right ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
           )}
 
           {/* Right Collapse Button - outside the panel selector */}
