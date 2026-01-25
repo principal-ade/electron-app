@@ -3,7 +3,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { ConfigurablePanelLayout } from '@principal-ade/panels';
 import '@principal-ade/panels/panels.css';
 import { PanelEventBus } from '@principal-ade/panel-framework-core';
-import { panels as agentPanels, type Skill } from '@industry-theme/agent-panels';
+import { panels as agentPanels, type Skill, SkillsBrowsePanel } from '@industry-theme/agent-panels';
 import {
   SkillBrowserPanelProvider,
   useSkillBrowserPanelProvider,
@@ -923,16 +923,20 @@ const SkillBrowserViewContent: React.FC = () => {
       return [];
     }
 
+    // Use SkillsBrowsePanel for browse mode, SkillsListPanel for installed mode
+    const SkillsPanelComponent = viewMode === 'browse' ? SkillsBrowsePanel : SkillsListPanelComponent;
+    const skillsPanelLabel = viewMode === 'browse' ? 'Browse Skills' : 'Installed Skills';
+
     return [
       {
         id: 'skills-list',
-        label: 'Skills',
+        label: skillsPanelLabel,
         content: (
-          <SkillsListPanelComponent
+          <SkillsPanelComponent
             context={context}
             actions={actions}
             events={events}
-            browseMode={true}
+            browseMode={viewMode === 'browse'}
           />
         ),
       },

@@ -23,7 +23,7 @@ import {
 import { TabbedTerminalPanel, type BaseTab, type TerminalTab } from '@industry-theme/xterm-terminal-panel';
 import { TabbedGhosttyTerminal } from '@industry-theme/ghostty-terminal-panel';
 import { panels as principalViewPanels } from '@industry-theme/principal-view-panels';
-import type { NarrativeTemplate } from '@principal-ai/principal-view-core/browser';
+import type { NarrativeTemplate } from '@principal-ai/principal-view-core';
 import type { FileInfo } from '@principal-ai/repository-abstraction';
 import { panels as fileCityPanels } from '@industry-theme/file-city-panel';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
