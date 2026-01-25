@@ -81,6 +81,13 @@ const configuration: webpack.Configuration = {
     new webpack.DefinePlugin({
       'window.require': 'undefined',
     }),
+    // Handle node: protocol imports by stripping the prefix
+    new webpack.NormalModuleReplacementPlugin(
+      /^node:/,
+      (resource) => {
+        resource.request = resource.request.replace(/^node:/, '');
+      }
+    ),
   ],
 };
 

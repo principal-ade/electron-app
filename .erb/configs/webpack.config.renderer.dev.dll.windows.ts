@@ -88,7 +88,8 @@ const configuration: webpack.Configuration = {
           'glob', // Node.js file globbing library
           'keytar', // Native Node.js module for credential storage
           'jsonwebtoken', // Uses Node.js crypto module
-          '@principal-ai/principal-view-core' // Uses /browser subpath exports, has Node.js code in main export
+          '@principal-ai/principal-view-core', // Uses /browser subpath exports, has Node.js code in main export
+          '@industry-theme/repository-composition-panels' // Imports @principal-ai/principal-view-core which has Node.js dependencies
         ];
         
         // Exclude if in the list or contains electron
@@ -166,6 +167,14 @@ const configuration: webpack.Configuration = {
       'process.platform': JSON.stringify('browser'),
       'process.arch': JSON.stringify('browser'),
     }),
+
+    // Handle node: protocol imports by stripping the prefix
+    new webpack.NormalModuleReplacementPlugin(
+      /^node:/,
+      (resource) => {
+        resource.request = resource.request.replace(/^node:/, '');
+      }
+    ),
 
     new webpack.LoaderOptionsPlugin({
       debug: true,

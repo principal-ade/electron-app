@@ -12,7 +12,7 @@ import type {
   PanelActions,
   PanelEventEmitter,
 } from '@principal-ade/panel-framework-core';
-import { FolderGit2, GitBranch, RefreshCw, AlertCircle, Trash2, ExternalLink } from 'lucide-react';
+import { FolderGit2, GitBranch, RefreshCw, AlertCircle, Trash2, ExternalLink, FolderOpen } from 'lucide-react';
 
 interface ProjectInfoPanelProps {
   context: PanelContextValue;
@@ -65,6 +65,17 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
       console.error('Failed to refresh:', error);
     } finally {
       setIsRefreshing(false);
+    }
+  };
+
+  // Handle open project
+  const handleOpenProject = async () => {
+    if (repository && actions.openRepository) {
+      try {
+        await actions.openRepository(repository);
+      } catch (error) {
+        console.error('Failed to open project:', error);
+      }
     }
   };
 
@@ -277,26 +288,85 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
           >
             {repository.name}
           </h3>
+          {githubUrl && (
+            <button
+              onClick={handleOpenInGitHub}
+              style={{
+                padding: `${spacing.xs}px ${spacing.sm}px`,
+                display: 'flex',
+                alignItems: 'center',
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: borderRadius,
+                background: theme.colors.backgroundSecondary,
+                color: theme.colors.text,
+                cursor: 'pointer',
+                fontSize: theme.fontSizes[1],
+                fontWeight: 500,
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+              }}
+            >
+              Open in GitHub
+            </button>
+          )}
         </div>
-        <button
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-          style={{
-            padding: `${spacing.xs}px ${spacing.sm}px`,
-            display: 'flex',
-            alignItems: 'center',
-            gap: spacing.xs,
-            border: `1px solid ${theme.colors.border}`,
-            borderRadius: borderRadius,
-            background: theme.colors.backgroundSecondary,
-            color: theme.colors.text,
-            cursor: isRefreshing ? 'not-allowed' : 'pointer',
-            opacity: isRefreshing ? 0.6 : 1,
-          }}
-        >
-          <RefreshCw size={14} style={{ animation: isRefreshing ? 'spin 1s linear infinite' : 'none' }} />
-          Refresh
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+          <button
+            onClick={handleOpenProject}
+            style={{
+              padding: `${spacing.xs}px ${spacing.sm}px`,
+              display: 'flex',
+              alignItems: 'center',
+              gap: spacing.xs,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: borderRadius,
+              background: theme.colors.primary,
+              color: theme.colors.background,
+              cursor: 'pointer',
+              transition: 'opacity 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '0.9';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '1';
+            }}
+          >
+            <FolderOpen size={14} />
+            Open
+          </button>
+          <button
+            onClick={handleDeleteRequest}
+            style={{
+              padding: `${spacing.xs}px ${spacing.sm}px`,
+              display: 'flex',
+              alignItems: 'center',
+              gap: spacing.xs,
+              border: `1px solid ${theme.colors.error}`,
+              borderRadius: borderRadius,
+              background: 'transparent',
+              color: theme.colors.error,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = theme.colors.error;
+              e.currentTarget.style.color = theme.colors.background;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = theme.colors.error;
+            }}
+          >
+            <Trash2 size={14} />
+            Delete
+          </button>
+        </div>
       </div>
 
       {/* Content */}
@@ -307,98 +377,6 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
           padding: spacing.md,
         }}
       >
-        {/* Repository Information */}
-        <section
-          style={{
-            padding: spacing.md,
-            marginBottom: spacing.md,
-            background: theme.colors.backgroundSecondary,
-            borderRadius: borderRadius,
-            border: `1px solid ${theme.colors.border}`,
-          }}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
-            {(repository as any).github?.owner && (
-              <div>
-                <span
-                  style={{
-                    fontSize: theme.fontSizes[2],
-                    fontWeight: 500,
-                    color: theme.colors.textSecondary,
-                  }}
-                >
-                  Owner:
-                </span>{' '}
-                <span
-                  style={{
-                    fontSize: theme.fontSizes[2],
-                    color: theme.colors.text,
-                  }}
-                >
-                  {(repository as any).github.owner}
-                </span>
-              </div>
-            )}
-            <div>
-              <span
-                style={{
-                  fontSize: theme.fontSizes[2],
-                  fontWeight: 500,
-                  color: theme.colors.textSecondary,
-                }}
-              >
-                Path:
-              </span>{' '}
-              <code
-                style={{
-                  fontSize: theme.fontSizes[1],
-                  fontFamily: theme.fonts.monospace,
-                  color: theme.colors.textSecondary,
-                  backgroundColor: theme.colors.background,
-                  padding: '2px 4px',
-                  borderRadius: '2px',
-                }}
-              >
-                {repository.path}
-              </code>
-            </div>
-
-            {/* Open in GitHub button */}
-            {githubUrl && (
-              <div style={{ marginTop: spacing.sm }}>
-                <button
-                  onClick={handleOpenInGitHub}
-                  style={{
-                    padding: `${spacing.xs}px ${spacing.sm}px`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: spacing.xs,
-                    border: `1px solid ${theme.colors.border}`,
-                    borderRadius: borderRadius,
-                    background: theme.colors.background,
-                    color: theme.colors.primary,
-                    cursor: 'pointer',
-                    fontSize: theme.fontSizes[1],
-                    fontWeight: 500,
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = theme.colors.primary;
-                    e.currentTarget.style.color = theme.colors.background;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = theme.colors.background;
-                    e.currentTarget.style.color = theme.colors.primary;
-                  }}
-                >
-                  <ExternalLink size={14} />
-                  Open in GitHub
-                </button>
-              </div>
-            )}
-          </div>
-        </section>
-
         {/* Git Status */}
         {hasGitData && (
           <section
@@ -414,21 +392,43 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: spacing.xs,
+                justifyContent: 'space-between',
                 marginBottom: spacing.sm,
               }}
             >
-              <GitBranch size={16} color={theme.colors.primary} />
-              <h4
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+                <GitBranch size={16} color={theme.colors.primary} />
+                <h4
+                  style={{
+                    margin: 0,
+                    fontSize: theme.fontSizes[2],
+                    fontWeight: 600,
+                    color: theme.colors.text,
+                  }}
+                >
+                  Git Status
+                </h4>
+              </div>
+              <button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
                 style={{
-                  margin: 0,
-                  fontSize: theme.fontSizes[2],
-                  fontWeight: 600,
+                  padding: `${spacing.xs}px ${spacing.sm}px`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: borderRadius,
+                  background: theme.colors.background,
                   color: theme.colors.text,
+                  cursor: isRefreshing ? 'not-allowed' : 'pointer',
+                  opacity: isRefreshing ? 0.6 : 1,
+                  fontSize: theme.fontSizes[1],
                 }}
               >
-                Git Status
-              </h4>
+                <RefreshCw size={14} style={{ animation: isRefreshing ? 'spin 1s linear infinite' : 'none' }} />
+                Refresh
+              </button>
             </div>
 
             {isGitLoading ? (
@@ -670,39 +670,6 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
                     </span>
                   </div>
                 )}
-
-                {/* Delete button - always visible */}
-                <button
-                  onClick={handleDeleteRequest}
-                  style={{
-                    marginTop: spacing.sm,
-                    padding: `${spacing.sm}px ${spacing.md}px`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: spacing.xs,
-                    width: '100%',
-                    border: `1px solid ${theme.colors.error}`,
-                    borderRadius: borderRadius,
-                    background: 'transparent',
-                    color: theme.colors.error,
-                    cursor: 'pointer',
-                    fontSize: theme.fontSizes[2],
-                    fontWeight: 500,
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = theme.colors.error;
-                    e.currentTarget.style.color = theme.colors.background;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.color = theme.colors.error;
-                  }}
-                >
-                  <Trash2 size={16} />
-                  Delete Repository
-                </button>
               </div>
             ) : (
               <p

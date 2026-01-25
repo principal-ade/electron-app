@@ -405,7 +405,15 @@ const configuration: webpack.Configuration = {
       Buffer: ['buffer', 'Buffer'],
       global: 'globalThis',
     }),
-    
+
+    // Handle node: protocol imports by stripping the prefix
+    new webpack.NormalModuleReplacementPlugin(
+      /^node:/,
+      (resource) => {
+        resource.request = resource.request.replace(/^node:/, '');
+      }
+    ),
+
     // Add banner to define global and globalThis at the top of the bundle for Windows
     // Exclude worker files using the exclude option
     new webpack.BannerPlugin({

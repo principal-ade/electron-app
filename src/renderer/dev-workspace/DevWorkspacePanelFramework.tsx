@@ -24,6 +24,7 @@ import { TabbedTerminalPanel, type BaseTab, type TerminalTab } from '@industry-t
 import { TabbedGhosttyTerminal } from '@industry-theme/ghostty-terminal-panel';
 import { panels as principalViewPanels } from '@industry-theme/principal-view-panels';
 import type { NarrativeTemplate } from '@principal-ai/principal-view-core/browser';
+import type { FileInfo } from '@principal-ai/repository-abstraction';
 import { panels as fileCityPanels } from '@industry-theme/file-city-panel';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import { panels as alexandriaPanels } from '@industry-theme/alexandria-panels';
@@ -67,6 +68,7 @@ interface CanvasEditorTab extends BaseTab {
   canvasId: string;
   canvasPath: string;
   canvasName: string;
+  canvasFileInfo?: FileInfo | null;
 }
 
 /**
@@ -77,9 +79,11 @@ interface CanvasTab extends BaseTab {
   canvasId: string;
   canvasPath: string;
   canvasName: string;
+  canvasFileInfo?: FileInfo | null;
   selectedNarrativeId?: string | null;
   narrativePath?: string | null;
   narrativeTemplate?: NarrativeTemplate | null;
+  narrativeFileInfo?: FileInfo | null;
 }
 
 /**
@@ -708,7 +712,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         }
 
         console.log('[DevWorkspacePanelFramework] Received canvas selection event:', event);
-        const { canvasId, canvas, narrativeId, narrative, narrativeTemplate } = event.payload;
+        const { canvasId, canvas, canvasFileInfo, narrativeId, narrative, narrativeTemplate, narrativeFileInfo } = event.payload;
 
         if (!canvasId || !canvas) {
           console.warn('[DevWorkspacePanelFramework] No canvas data in event:', event.payload);
@@ -746,9 +750,11 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 canvasId: canvasId,
                 canvasPath: canvas.path,
                 canvasName: canvas.name || canvasId,
+                canvasFileInfo: canvasFileInfo || null,
                 selectedNarrativeId: narrativeId || null,
                 narrativePath: narrative?.path || null,
                 narrativeTemplate: narrativeTemplate || null,
+                narrativeFileInfo: narrativeFileInfo || null,
                 closable: true,
               } as CanvasTab
             : {
@@ -758,6 +764,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 canvasId: canvasId,
                 canvasPath: canvas.path,
                 canvasName: canvas.name || canvasId,
+                canvasFileInfo: canvasFileInfo || null,
                 closable: true,
               } as CanvasEditorTab;
 
@@ -996,6 +1003,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 selectedConfigId={canvasEditorTab.canvasId}
                 canvasPath={canvasEditorTab.canvasPath}
                 canvasName={canvasEditorTab.canvasName}
+                canvasFileInfo={canvasEditorTab.canvasFileInfo}
               />
             </div>
           );
@@ -1038,9 +1046,11 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 selectedCanvasId={canvasTab.canvasId}
                 canvasPath={canvasTab.canvasPath}
                 canvasName={canvasTab.canvasName}
+                canvasFileInfo={canvasTab.canvasFileInfo}
                 selectedNarrativeId={canvasTab.selectedNarrativeId}
                 narrativePath={canvasTab.narrativePath}
                 narrativeTemplate={canvasTab.narrativeTemplate}
+                narrativeFileInfo={canvasTab.narrativeFileInfo}
               />
             </div>
           );
