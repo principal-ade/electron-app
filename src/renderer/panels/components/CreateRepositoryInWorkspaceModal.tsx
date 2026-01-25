@@ -9,6 +9,8 @@ import {
   Building2,
   ArrowLeft,
   Check,
+  Folder,
+  FolderOpen,
 } from 'lucide-react';
 import { GithubService } from '../../main-process-api/GithubService';
 import { GitService } from '../../main-process-api/GitService';
@@ -26,20 +28,25 @@ import path from 'path';
 interface CreateRepositoryInWorkspaceModalProps {
   isOpen: boolean;
   onClose: () => void;
-  workspace: Workspace;
+  workspace?: Workspace;
+  workspaces?: Workspace[];
+  baseDefaultDirectory?: string | null;
 }
 
-type ModalStep = 'select-org' | 'create-repo' | 'progress' | 'complete';
+type ModalStep = 'select-destination' | 'select-org' | 'create-repo' | 'progress' | 'complete';
 
 type ProgressStep = 'creating' | 'cloning' | 'registering' | 'adding' | 'done';
 
 export const CreateRepositoryInWorkspaceModal: React.FC<
   CreateRepositoryInWorkspaceModalProps
-> = ({ isOpen, onClose, workspace }) => {
+> = ({ isOpen, onClose, workspace, workspaces = [], baseDefaultDirectory = null }) => {
   const { theme } = useTheme();
 
   // Step state
-  const [step, setStep] = useState<ModalStep>('select-org');
+  const [step, setStep] = useState<ModalStep>(workspace ? 'select-org' : 'select-destination');
+  const [selectedDestination, setSelectedDestination] = useState<{ type: 'workspace' | 'base'; value: Workspace | string } | null>(
+    workspace ? { type: 'workspace', value: workspace } : null
+  );
   const [selectedOrg, setSelectedOrg] = useState<string | null>(null);
 
   // Organization loading state
@@ -47,6 +54,7 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
   const [isLoadingOrgs, setIsLoadingOrgs] = useState(true);
   const [orgsError, setOrgsError] = useState<string | null>(null);
   const [hoveredOrg, setHoveredOrg] = useState<string | null>(null);
+  const [hoveredDestination, setHoveredDestination] = useState<string | null>(null);
 
   // Repository form state
   const [repositoryName, setRepositoryName] = useState('');
@@ -79,7 +87,8 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
   // Reset state when modal closes
   useEffect(() => {
     if (!isOpen) {
-      setStep('select-org');
+      setStep(workspace ? 'select-org' : 'select-destination');
+      setSelectedDestination(workspace ? { type: 'workspace', value: workspace } : null);
       setSelectedOrg(null);
       setRepositoryName('');
       setDescription('');
@@ -92,7 +101,7 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
       setProgressStep('creating');
       setIsCreating(false);
     }
-  }, [isOpen]);
+  }, [isOpen, workspace]);
 
   const loadOrganizations = async () => {
     setIsLoadingOrgs(true);
@@ -128,15 +137,25 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
     }
   };
 
+  const handleSelectDestination = useCallback((destination: { type: 'workspace' | 'base'; value: Workspace | string }) => {
+    setSelectedDestination(destination);
+    setStep('select-org');
+  }, []);
+
   const handleSelectOrg = useCallback((orgLogin: string) => {
     setSelectedOrg(orgLogin);
     setStep('create-repo');
   }, []);
 
   const handleBack = useCallback(() => {
-    setStep('select-org');
+    if (step === 'select-org' && !workspace) {
+      // Go back to destination selection if we didn't have a pre-selected workspace
+      setStep('select-destination');
+    } else {
+      setStep('select-org');
+    }
     setError(null);
-  }, []);
+  }, [step, workspace]);
 
   const handleCreate = async () => {
     if (!repositoryName.trim()) {
@@ -149,11 +168,32 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
       return;
     }
 
-    if (!workspace.suggestedClonePath) {
-      setError(
-        'This workspace has no clone directory configured. Please set a home directory for the workspace first.',
-      );
+    if (!selectedDestination) {
+      setError('No destination selected');
       return;
+    }
+
+    // Determine the clone path based on selected destination
+    let clonePath: string;
+    let targetWorkspace: Workspace | null = null;
+
+    if (selectedDestination.type === 'workspace') {
+      targetWorkspace = selectedDestination.value as Workspace;
+      if (!targetWorkspace.suggestedClonePath) {
+        setError(
+          'This workspace has no clone directory configured. Please set a home directory for the workspace first.',
+        );
+        return;
+      }
+      clonePath = targetWorkspace.suggestedClonePath;
+    } else {
+      // Using base default directory
+      const basePath = selectedDestination.value as string;
+      if (!basePath) {
+        setError('Base default directory is not set. Please configure it first.');
+        return;
+      }
+      clonePath = basePath;
     }
 
     setIsCreating(true);
@@ -184,7 +224,7 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
 
       // Determine the target path for cloning
       const targetPath = path.join(
-        workspace.suggestedClonePath,
+        clonePath,
         repository.name,
       );
 
@@ -208,13 +248,14 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
         targetPath,
       );
 
-      // Step 4: Add to workspace
-      setProgressStep('adding');
-
-      await WorkspaceService.addRepositoryToWorkspace(
-        registeredRepo,
-        workspace.id,
-      );
+      // Step 4: Add to workspace (if applicable)
+      if (targetWorkspace) {
+        setProgressStep('adding');
+        await WorkspaceService.addRepositoryToWorkspace(
+          registeredRepo,
+          targetWorkspace.id,
+        );
+      }
 
       // Done!
       setProgressStep('done');
@@ -246,6 +287,232 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
   };
 
   if (!isOpen) return null;
+
+  // Get workspaces with suggestedClonePath
+  const workspacesWithClonePath = workspaces.filter(w => w.suggestedClonePath);
+
+  const renderDestinationSelection = () => (
+    <>
+      {/* Body */}
+      <div style={{ padding: '20px', flex: 1, overflowY: 'auto' }}>
+        <p
+          style={{
+            margin: '0 0 16px 0',
+            fontSize: `${theme.fontSizes[1]}px`,
+            fontFamily: theme.fonts.body,
+            color: theme.colors.textSecondary,
+          }}
+        >
+          Where would you like to clone the new repository?
+        </p>
+
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+          }}
+        >
+          {/* Base Default Directory Option */}
+          {baseDefaultDirectory && (
+            <button
+              onClick={() => handleSelectDestination({ type: 'base', value: baseDefaultDirectory })}
+              onMouseEnter={() => setHoveredDestination('base')}
+              onMouseLeave={() => setHoveredDestination(null)}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-start',
+                gap: '6px',
+                padding: '16px',
+                borderRadius: '8px',
+                border: `1px solid ${hoveredDestination === 'base' ? theme.colors.primary : theme.colors.border}`,
+                backgroundColor: hoveredDestination === 'base'
+                  ? theme.colors.backgroundTertiary
+                  : theme.colors.backgroundSecondary,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                textAlign: 'left',
+                width: '100%',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <FolderOpen size={20} style={{ color: theme.colors.textSecondary }} />
+                <span
+                  style={{
+                    fontSize: `${theme.fontSizes[2]}px`,
+                    fontWeight: theme.fontWeights.semibold,
+                    fontFamily: theme.fonts.body,
+                    color: theme.colors.text,
+                  }}
+                >
+                  Home Folder
+                </span>
+              </div>
+              <span
+                style={{
+                  fontSize: `${theme.fontSizes[0]}px`,
+                  fontFamily: theme.fonts.monospace,
+                  color: theme.colors.textSecondary,
+                  marginLeft: '28px',
+                }}
+              >
+                {baseDefaultDirectory}
+              </span>
+            </button>
+          )}
+
+          {/* Workspace Options */}
+          {workspacesWithClonePath.length > 0 && (
+            <>
+              {workspacesWithClonePath.length > 0 && baseDefaultDirectory && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    margin: '8px 0',
+                  }}
+                >
+                  <div style={{ flex: 1, height: '1px', backgroundColor: theme.colors.border }} />
+                  <span
+                    style={{
+                      fontSize: `${theme.fontSizes[0]}px`,
+                      color: theme.colors.textSecondary,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                    }}
+                  >
+                    OR
+                  </span>
+                  <div style={{ flex: 1, height: '1px', backgroundColor: theme.colors.border }} />
+                </div>
+              )}
+
+              {workspacesWithClonePath.map((ws) => (
+                <button
+                  key={ws.id}
+                  onClick={() => handleSelectDestination({ type: 'workspace', value: ws })}
+                  onMouseEnter={() => setHoveredDestination(ws.id)}
+                  onMouseLeave={() => setHoveredDestination(null)}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    gap: '6px',
+                    padding: '16px',
+                    borderRadius: '8px',
+                    border: `1px solid ${hoveredDestination === ws.id ? theme.colors.primary : theme.colors.border}`,
+                    backgroundColor: hoveredDestination === ws.id
+                      ? theme.colors.backgroundTertiary
+                      : theme.colors.backgroundSecondary,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    textAlign: 'left',
+                    width: '100%',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <Folder size={20} style={{ color: theme.colors.primary }} />
+                    <span
+                      style={{
+                        fontSize: `${theme.fontSizes[2]}px`,
+                        fontWeight: theme.fontWeights.semibold,
+                        fontFamily: theme.fonts.body,
+                        color: theme.colors.text,
+                      }}
+                    >
+                      {ws.name}
+                    </span>
+                  </div>
+                  {ws.description && (
+                    <span
+                      style={{
+                        fontSize: `${theme.fontSizes[0]}px`,
+                        fontFamily: theme.fonts.body,
+                        color: theme.colors.textSecondary,
+                        marginLeft: '28px',
+                      }}
+                    >
+                      {ws.description}
+                    </span>
+                  )}
+                  <span
+                    style={{
+                      fontSize: `${theme.fontSizes[0]}px`,
+                      fontFamily: theme.fonts.monospace,
+                      color: theme.colors.textTertiary,
+                      marginLeft: '28px',
+                    }}
+                  >
+                    {ws.suggestedClonePath}
+                  </span>
+                </button>
+              ))}
+            </>
+          )}
+
+          {/* No options available */}
+          {!baseDefaultDirectory && workspacesWithClonePath.length === 0 && (
+            <div
+              style={{
+                padding: '32px',
+                textAlign: 'center',
+                color: theme.colors.textSecondary,
+              }}
+            >
+              <p style={{ margin: 0, marginBottom: '8px' }}>
+                No clone destinations available.
+              </p>
+              <p style={{ margin: 0, fontSize: `${theme.fontSizes[0]}px` }}>
+                Please set a home folder or create a workspace with a home directory first.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'flex-end',
+          gap: '12px',
+          padding: '16px 20px',
+          borderTop: `1px solid ${theme.colors.border}`,
+        }}
+      >
+        <button
+          onClick={onClose}
+          style={{
+            padding: '8px 16px',
+            borderRadius: '6px',
+            border: `1px solid ${theme.colors.border}`,
+            backgroundColor: 'transparent',
+            color: theme.colors.text,
+            fontSize: `${theme.fontSizes[1]}px`,
+            fontWeight: theme.fontWeights.semibold,
+            fontFamily: theme.fonts.body,
+            cursor: 'pointer',
+          }}
+        >
+          Cancel
+        </button>
+      </div>
+    </>
+  );
 
   const renderOrgSelection = () => (
     <>
@@ -890,7 +1157,9 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
           }}
         >
           {step === 'complete'
-            ? `${repositoryName} has been created and added to ${workspace.name}`
+            ? selectedDestination?.type === 'workspace'
+              ? `${repositoryName} has been created and added to ${(selectedDestination.value as Workspace).name}`
+              : `${repositoryName} has been created and cloned successfully`
             : `Creating ${repositoryName} in ${selectedOrg}...`}
         </p>
       </div>
@@ -905,14 +1174,14 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
           }}
         >
           {(
-            ['creating', 'cloning', 'registering', 'adding'] as ProgressStep[]
+            selectedDestination?.type === 'workspace'
+              ? ['creating', 'cloning', 'registering', 'adding'] as ProgressStep[]
+              : ['creating', 'cloning', 'registering'] as ProgressStep[]
           ).map((s) => {
-            const steps: ProgressStep[] = [
-              'creating',
-              'cloning',
-              'registering',
-              'adding',
-            ];
+            const steps: ProgressStep[] =
+              selectedDestination?.type === 'workspace'
+                ? ['creating', 'cloning', 'registering', 'adding']
+                : ['creating', 'cloning', 'registering'];
             const isActive = s === progressStep;
             const isPast = steps.indexOf(s) < steps.indexOf(progressStep);
 
@@ -940,6 +1209,8 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
 
   const renderContent = () => {
     switch (step) {
+      case 'select-destination':
+        return renderDestinationSelection();
       case 'select-org':
         return renderOrgSelection();
       case 'create-repo':
@@ -948,14 +1219,16 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
       case 'complete':
         return renderProgress();
       default:
-        return renderOrgSelection();
+        return workspace ? renderOrgSelection() : renderDestinationSelection();
     }
   };
 
   const getHeaderTitle = () => {
     switch (step) {
-      case 'select-org':
+      case 'select-destination':
         return 'Create New Repository';
+      case 'select-org':
+        return 'Select Organization';
       case 'create-repo':
         return 'Create GitHub Repository';
       case 'progress':
@@ -969,15 +1242,30 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
 
   const getHeaderSubtitle = () => {
     switch (step) {
+      case 'select-destination':
+        return 'Choose where to clone the repository';
       case 'select-org':
-        return `Adding to workspace: ${workspace.name}`;
+        if (selectedDestination?.type === 'workspace') {
+          const ws = selectedDestination.value as Workspace;
+          return `Will be added to: ${ws.name}`;
+        } else {
+          return 'Select organization to create repository';
+        }
       case 'create-repo':
-        return `Will be added to: ${workspace.name}`;
+        if (selectedDestination?.type === 'workspace') {
+          const ws = selectedDestination.value as Workspace;
+          return `Will be added to: ${ws.name}`;
+        } else {
+          return `Will be cloned to home folder`;
+        }
       case 'progress':
       case 'complete':
         return `${selectedOrg}/${repositoryName}`;
       default:
-        return `Adding to workspace: ${workspace.name}`;
+        if (workspace) {
+          return `Adding to workspace: ${workspace.name}`;
+        }
+        return 'Create and clone a new GitHub repository';
     }
   };
 

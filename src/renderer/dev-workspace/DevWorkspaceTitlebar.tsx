@@ -345,6 +345,18 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
         setStorybookStatus('idle');
         setStorybookSessionId(null);
         setStorybookPort(null);
+
+        // Switch right panel back to file-city
+        if (currentLayout && onLayoutChange) {
+          console.log('[DevWorkspaceTitlebar] Switching right panel back to file-city');
+          onLayoutChange({ ...currentLayout, right: 'fileCity' });
+        }
+
+        // Expand left panel back
+        if (collapsed?.left && onCollapsedChange) {
+          console.log('[DevWorkspaceTitlebar] Expanding left panel');
+          onCollapsedChange({ left: false, right: collapsed?.right ?? false });
+        }
       } catch (error) {
         console.error(
           '[DevWorkspaceTitlebar] Failed to stop Storybook:',

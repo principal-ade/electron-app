@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ConfigurablePanelLayout } from '@principal-ade/panels';
 import '@principal-ade/panels/panels.css';
+import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import {
   WorkspacesListPanel,
   WorkspaceRepositoriesPanel,
@@ -25,6 +26,7 @@ import { CreateWorkspaceModal } from '../../../components/CreateWorkspaceModal';
 import { DeleteAlexandriaEntryModal } from '../../../panels/components/DeleteAlexandriaEntryModal';
 import { RemoveFromWorkspaceModal } from '../../../panels/components/RemoveFromWorkspaceModal';
 import { DeleteWorkspaceConfirmationModal } from '../../../components/DeleteWorkspaceConfirmationModal';
+import { CreateRepositoryInWorkspaceModal } from '../../../panels/components/CreateRepositoryInWorkspaceModal';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 import { WorkspaceService } from '../../../main-process-api/WorkspaceService';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
@@ -46,6 +48,9 @@ const ProjectsViewContent: React.FC = () => {
   const [leftPanelView, setLeftPanelView] =
     useState<LeftPanelView>('local');
 
+  // State for base default directory
+  const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string | null>(null);
+
   // State for clone modal
   const [isCloneModalOpen, setIsCloneModalOpen] = useState(false);
   const [cloneModalInitialUrl, setCloneModalInitialUrl] = useState<
@@ -54,6 +59,10 @@ const ProjectsViewContent: React.FC = () => {
 
   // State for create workspace modal
   const [isCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen] =
+    useState(false);
+
+  // State for create repository modal
+  const [isCreateRepositoryModalOpen, setIsCreateRepositoryModalOpen] =
     useState(false);
 
   // State for delete repository modal
@@ -85,6 +94,29 @@ const ProjectsViewContent: React.FC = () => {
   const [workspaceForRemoval, setWorkspaceForRemoval] =
     useState<Workspace | null>(null);
 
+  // Load base default directory
+  useEffect(() => {
+    const loadBaseDirectory = async () => {
+      const preferences = await UserPreferencesService.getPreferences();
+      setBaseDefaultDirectory(preferences.baseDefaultDirectory || null);
+    };
+
+    loadBaseDirectory();
+
+    // Listen for preference updates
+    const unsubscribe = UserPreferencesService.onPreferencesUpdated(
+      (preferences) => {
+        setBaseDefaultDirectory(preferences.baseDefaultDirectory || null);
+      },
+    );
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, []);
+
   // Handle clone modal close
   const handleCloseCloneModal = useCallback(() => {
     setIsCloneModalOpen(false);
@@ -100,6 +132,23 @@ const ProjectsViewContent: React.FC = () => {
   const handleWorkspaceCreated = useCallback(() => {
     // Refresh workspaces slice
     context.refresh('workspace', 'workspaces');
+  }, [context]);
+
+  // Handle create repository request
+  const handleCreateRepository = useCallback(() => {
+    setIsCreateRepositoryModalOpen(true);
+  }, []);
+
+  // Handle create repository modal close
+  const handleCloseCreateRepositoryModal = useCallback(() => {
+    setIsCreateRepositoryModalOpen(false);
+  }, []);
+
+  // Handle repository created successfully - refresh the repositories list
+  const handleRepositoryCreated = useCallback(() => {
+    // Refresh repositories and workspace repositories
+    context.refresh('repository', 'alexandriaRepositories');
+    context.refresh('workspace', 'workspaceRepositories');
   }, [context]);
 
   // Handle delete modal close
@@ -431,6 +480,10 @@ const ProjectsViewContent: React.FC = () => {
   // Get selected collection from context to determine right panel
   const selectedCollection = (context as { selectedCollection?: unknown }).selectedCollection;
 
+  // Get workspaces from context for create repository button
+  const workspacesSlice = context.getSlice<{ workspaces: Workspace[] }>('workspaces');
+  const workspaces = workspacesSlice?.data?.workspaces || [];
+
   // Define layout configuration
   const layout = useMemo(() => {
     // Map left panel view to panel id
@@ -467,6 +520,7 @@ const ProjectsViewContent: React.FC = () => {
           leftPanelView={leftPanelView}
           onLeftPanelViewChange={setLeftPanelView}
           isAuthenticated={isAuthenticated}
+          onCreateRepository={handleCreateRepository}
         />
 
         {/* Panel Layout */}
@@ -546,6 +600,14 @@ const ProjectsViewContent: React.FC = () => {
         workspace={workspaceForRemoval}
         onClose={handleCloseRemoveFromWorkspaceModal}
         onConfirm={handleConfirmRemoveFromWorkspace}
+      />
+
+      {/* Create Repository Modal */}
+      <CreateRepositoryInWorkspaceModal
+        isOpen={isCreateRepositoryModalOpen}
+        onClose={handleCloseCreateRepositoryModal}
+        workspaces={workspaces}
+        baseDefaultDirectory={baseDefaultDirectory}
       />
     </>
   );

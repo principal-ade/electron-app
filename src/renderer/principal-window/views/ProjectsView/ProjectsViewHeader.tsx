@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { FolderOpen, Github, Star, Folder } from 'lucide-react';
+import { FolderOpen, Github, Star, Folder, FilePlus2 } from 'lucide-react';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
 import type { LeftPanelView } from './ProjectsView';
@@ -9,12 +9,14 @@ interface ProjectsViewHeaderProps {
   leftPanelView: LeftPanelView;
   onLeftPanelViewChange: (view: LeftPanelView) => void;
   isAuthenticated: boolean;
+  onCreateRepository?: () => void;
 }
 
 export const ProjectsViewHeader: React.FC<ProjectsViewHeaderProps> = ({
   leftPanelView,
   onLeftPanelViewChange,
   isAuthenticated,
+  onCreateRepository,
 }) => {
   const { theme } = useTheme();
   const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<
@@ -158,10 +160,44 @@ export const ProjectsViewHeader: React.FC<ProjectsViewHeaderProps> = ({
         </button>
       </div>
 
-      {/* Right: Home Folder */}
+      {/* Right: Create Button and Home Folder */}
       <div
         style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, justifyContent: 'flex-end' }}
       >
+        {/* Create Repository Button */}
+        {onCreateRepository && (
+          <button
+            onClick={onCreateRepository}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              borderRadius: '6px',
+              backgroundColor: theme.colors.backgroundSecondary,
+              color: theme.colors.textSecondary,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              border: 'none',
+              fontSize: theme.fontSizes[1],
+              fontWeight: theme.fontWeights.medium,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = theme.colors.primary;
+              e.currentTarget.style.color = theme.colors.background;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundSecondary;
+              e.currentTarget.style.color = theme.colors.textSecondary;
+            }}
+            title="Create new repository"
+          >
+            <FilePlus2 size={16} />
+            Create
+          </button>
+        )}
+
         <span
           style={{
             fontSize: theme.fontSizes[1],
