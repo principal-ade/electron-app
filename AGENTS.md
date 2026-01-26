@@ -2,7 +2,7 @@
 
 ## Alexandria
 
-Alexandria is a unified context management system that helps AI assistants understand your project structure and documentation through structured codebase views.
+Alexandria is a unified context management system that helps AI assistants understand your project structure and documentation through structured codebase views
 
 ### Key Commands
 

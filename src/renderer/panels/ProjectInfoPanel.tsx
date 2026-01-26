@@ -12,21 +12,13 @@ import type {
   PanelActions,
   PanelEventEmitter,
 } from '@principal-ade/panel-framework-core';
+import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
 import { FolderGit2, GitBranch, RefreshCw, AlertCircle, Trash2, ExternalLink, FolderOpen } from 'lucide-react';
 
 interface ProjectInfoPanelProps {
   context: PanelContextValue;
   actions: PanelActions;
   events: PanelEventEmitter;
-}
-
-interface GitStatusData {
-  branch?: string;
-  staged?: string[];
-  unstaged?: string[];
-  untracked?: string[];
-  ahead?: number;
-  behind?: number;
 }
 
 export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
@@ -42,9 +34,9 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
   const repository = context.currentScope?.repository;
 
   // Get git status from context slice
-  const gitSlice = context.getSlice<GitStatusData>('git');
-  const hasGitData = context.hasSlice('git');
-  const isGitLoading = context.isSliceLoading('git');
+  const gitSlice = context.getSlice<GitStatusWithFiles>('gitStatusWithFiles');
+  const hasGitData = context.hasSlice('gitStatusWithFiles');
+  const isGitLoading = context.isSliceLoading('gitStatusWithFiles');
 
   // Use theme space array or fallback values
   const spacing = {
@@ -84,9 +76,9 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
     if (repository) {
       // Check if repo has uncommitted changes or is not synced
       const gitData = gitSlice?.data;
-      const stagedCount = gitData?.staged?.length || 0;
-      const unstagedCount = gitData?.unstaged?.length || 0;
-      const untrackedCount = gitData?.untracked?.length || 0;
+      const stagedCount = gitData?.stagedFiles?.length || 0;
+      const unstagedCount = gitData?.modifiedFiles?.length || 0;
+      const untrackedCount = gitData?.untrackedFiles?.length || 0;
       const totalChanges = stagedCount + unstagedCount + untrackedCount;
       const ahead = gitData?.ahead || 0;
       const behind = gitData?.behind || 0;
@@ -108,9 +100,9 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
           repository,
           gitStatus: gitData ? {
             branch: gitData.branch,
-            staged: gitData.staged,
-            unstaged: gitData.unstaged,
-            untracked: gitData.untracked,
+            staged: gitData.stagedFiles,
+            unstaged: gitData.modifiedFiles,
+            untracked: gitData.untrackedFiles,
             ahead: gitData.ahead,
             behind: gitData.behind,
           } : undefined,
@@ -132,9 +124,9 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
           repository,
           gitStatus: gitData ? {
             branch: gitData.branch,
-            staged: gitData.staged,
-            unstaged: gitData.unstaged,
-            untracked: gitData.untracked,
+            staged: gitData.stagedFiles,
+            unstaged: gitData.modifiedFiles,
+            untracked: gitData.untrackedFiles,
             ahead: gitData.ahead,
             behind: gitData.behind,
           } : undefined,
@@ -222,9 +214,9 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
   }
 
   const gitData = gitSlice?.data;
-  const stagedCount = gitData?.staged?.length || 0;
-  const unstagedCount = gitData?.unstaged?.length || 0;
-  const untrackedCount = gitData?.untracked?.length || 0;
+  const stagedCount = gitData?.stagedFiles?.length || 0;
+  const unstagedCount = gitData?.modifiedFiles?.length || 0;
+  const untrackedCount = gitData?.untrackedFiles?.length || 0;
   const totalChanges = stagedCount + unstagedCount + untrackedCount;
   const ahead = gitData?.ahead || 0;
   const behind = gitData?.behind || 0;

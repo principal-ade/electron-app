@@ -55,25 +55,6 @@ interface FileCityColorModesSliceData {
   qualityData?: QualitySliceData;
 }
 
-// Legacy GitStatus format for backward compatibility with existing panels
-interface GitStatus {
-  staged: string[];
-  unstaged: string[];
-  untracked: string[];
-  deleted: string[];
-}
-
-// Helper to convert GitStatusWithFiles to legacy GitStatus format
-function mapToLegacyGitStatus(status: GitStatusWithFiles | null): GitStatus | null {
-  if (!status) return null;
-  return {
-    staged: status.stagedFiles,
-    unstaged: status.modifiedFiles,
-    untracked: status.untrackedFiles,
-    deleted: status.deletedFiles,
-  };
-}
-
 // Extend PanelActions with file system actions
 // Note: Terminal actions have been moved to TerminalContext
 interface RepositoryPanelActions extends PanelActions {
@@ -1201,36 +1182,6 @@ export const RepositoryPanelProvider: React.FC<
                   setPackagesData(null);
                 } finally {
                   setPackagesLoading(false);
-                }
-              }
-            },
-          },
-        ],
-        [
-          'git',
-          {
-            scope: 'repository' as const,
-            name: 'git',
-            data: mapToLegacyGitStatus(stableGitStatusData),
-            loading: gitStatusLoading,
-            error: null,
-            refresh: async () => {
-              if (repositoryPath) {
-                setGitStatusLoading(true);
-                try {
-                  const status =
-                    await RepositoryMonitoringService.getGitStatusWithFiles(
-                      repositoryPath,
-                    );
-                  setGitStatusData(status);
-                } catch (error) {
-                  console.error(
-                    '[RepositoryPanelProvider] Failed to refresh git status:',
-                    error,
-                  );
-                  setGitStatusData(null);
-                } finally {
-                  setGitStatusLoading(false);
                 }
               }
             },

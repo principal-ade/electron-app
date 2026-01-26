@@ -278,11 +278,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   // Tab state for TabbedTerminalPanel (skills only - terminals are managed by the panel from context)
   const [tabs, setTabs] = useState<DevWorkspaceTab[]>([]);
 
-  // Debug: Log when tabs change
-  useEffect(() => {
-    console.log('[DevWorkspacePanelFramework] Tabs state updated:', tabs.length, 'tabs:', tabs);
-  }, [tabs]);
-
   // Track markdown files currently being loaded to prevent duplicate tabs
   const loadingMarkdownFilesRef = React.useRef<Set<string>>(new Set());
 
@@ -1042,13 +1037,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             );
           }
 
-          console.log('[DevWorkspacePanelFramework] Rendering canvas detail tab:', {
-            canvasId: canvasTab.canvasId,
-            canvasPath: canvasTab.canvasPath,
-            canvasName: canvasTab.canvasName,
-            isActive,
-          });
-
           return (
             <div
               style={{
@@ -1212,9 +1200,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
   // Define all panels using panel framework components
   const allPanels = useMemo(
-    () => {
-      console.log('[DevWorkspacePanelFramework] allPanels useMemo re-running. tabs:', tabs.length);
-      return [
+    () => [
       {
         id: 'terminal',
         label: 'Terminal',
@@ -1844,8 +1830,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           <div>GitHub Issue Detail panel not available</div>
         ),
       },
-    ];
-    },
+    ],
     // NOTE: renderTabContent is intentionally excluded from dependencies since it uses refs.
     // tabs is included so TabbedTerminalPanel receives updated tabs for canvas/skill/agent panels.
     // eslint-disable-next-line react-hooks/exhaustive-deps
