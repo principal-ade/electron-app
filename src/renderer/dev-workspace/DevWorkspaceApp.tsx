@@ -870,7 +870,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   }, []);
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-gray-900 flex flex-col">
+    <div className="h-screen w-screen overflow-hidden bg-transparent flex flex-col">
       <DevWorkspaceTitlebar
         repository={repository}
         repositoryOwner={github?.owner}
@@ -947,7 +947,7 @@ export const DevWorkspaceApp: React.FC = () => {
   // Wait for window data to load
   if (alexandriaEntry === null) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-900 text-white">
+      <div className="flex items-center justify-center h-screen bg-transparent text-white">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4"></div>
           <p>Loading Dev Workspace...</p>

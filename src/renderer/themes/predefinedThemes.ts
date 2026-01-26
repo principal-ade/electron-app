@@ -12,6 +12,136 @@ import {
   landingPageLightTheme,
 } from '@principal-ade/industry-theme';
 
+// Transparent theme for loading state
+const transparentTheme: Theme = {
+  space: [0, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80, 100, 128],
+  fonts: {
+    body: 'system-ui, -apple-system, sans-serif',
+    heading: 'system-ui, -apple-system, sans-serif',
+    monospace: 'monospace',
+  },
+  fontSizes: [12, 14, 16, 18, 20, 24, 32, 48, 64, 96],
+  fontScale: 1,
+  fontWeights: {
+    body: 400,
+    heading: 600,
+    bold: 700,
+    light: 300,
+    medium: 500,
+    semibold: 600,
+  },
+  lineHeights: {
+    body: 1.6,
+    heading: 1.2,
+    tight: 1.05,
+    relaxed: 1.7,
+  },
+  breakpoints: ['640px', '768px', '1024px', '1280px', '1400px'],
+  sizes: [16, 32, 64, 128, 200, 240, 256, 300, 512, 740, 768, 820, 900, 1024, 1200, 1400, 1536],
+  radii: [0, 2, 4, 6, 7, 8, 9, 10, 12, 14, 16, 24],
+  shadows: ['none', 'none', 'none', 'none', 'none', 'none'],
+  zIndices: [0, 1, 10, 20, 30, 40, 50, 1000],
+  colors: {
+    text: 'transparent',
+    background: 'transparent',
+    primary: 'transparent',
+    secondary: 'transparent',
+    accent: 'transparent',
+    highlight: 'transparent',
+    muted: 'transparent',
+    success: 'transparent',
+    warning: 'transparent',
+    error: 'transparent',
+    info: 'transparent',
+    border: 'transparent',
+    backgroundSecondary: 'transparent',
+    backgroundTertiary: 'transparent',
+    backgroundLight: 'transparent',
+    backgroundHover: 'transparent',
+    surface: 'transparent',
+    textSecondary: 'transparent',
+    textTertiary: 'transparent',
+    textMuted: 'transparent',
+    highlightBg: 'transparent',
+    highlightBorder: 'transparent',
+    textOnPrimary: 'transparent',
+  },
+  buttons: {
+    primary: {
+      color: 'transparent',
+      bg: 'transparent',
+      borderWidth: 0,
+      padding: '8px 20px',
+      fontSize: 14,
+      fontWeight: 600,
+      cursor: 'pointer',
+      '&:hover': {
+        bg: 'transparent',
+      },
+    },
+    secondary: {
+      color: 'transparent',
+      bg: 'transparent',
+      borderWidth: 1,
+      borderStyle: 'solid',
+      borderColor: 'transparent',
+      padding: '8px 16px',
+      fontSize: 14,
+      fontWeight: 600,
+      cursor: 'pointer',
+      '&:hover': {
+        bg: 'transparent',
+        borderColor: 'transparent',
+      },
+    },
+    ghost: {
+      color: 'transparent',
+      bg: 'transparent',
+      borderWidth: 0,
+      padding: '8px 16px',
+      fontSize: 14,
+      fontWeight: 500,
+      cursor: 'pointer',
+      '&:hover': {
+        color: 'transparent',
+        bg: 'transparent',
+      },
+    },
+  },
+  text: {
+    heading: {
+      fontFamily: 'heading',
+      fontWeight: 'heading',
+      lineHeight: 'heading',
+      color: 'transparent',
+    },
+    body: {
+      fontFamily: 'body',
+      fontWeight: 'body',
+      lineHeight: 'body',
+      color: 'transparent',
+    },
+    caption: {
+      fontSize: 1,
+      color: 'transparent',
+    },
+  },
+  cards: {
+    primary: {
+      bg: 'transparent',
+      border: '1px solid',
+      borderColor: 'transparent',
+      borderRadius: 4,
+    },
+    secondary: {
+      bg: 'transparent',
+      border: '1px solid',
+      borderColor: 'transparent',
+      borderRadius: 4,
+    },
+  },
+};
+
 // Re-export themes from the library with metadata
 export const predefinedThemes: Record<
   string,
@@ -21,6 +151,11 @@ export const predefinedThemes: Record<
     theme: Theme;
   }
 > = {
+  transparent: {
+    name: 'Transparent',
+    description: 'Transparent theme used during loading',
+    theme: transparentTheme,
+  },
   principalAI: {
     name: 'Principal AI',
     description:
@@ -117,3 +252,6 @@ export const getWorkspaceThemeColor = (
   const theme = getThemeByName(themeName);
   return theme?.colors.primary || fallbackColor;
 };
+
+// Export transparent theme for use as loading state
+export { transparentTheme };

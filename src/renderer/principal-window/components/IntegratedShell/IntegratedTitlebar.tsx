@@ -5,7 +5,9 @@ import { ThemeCustomizationButton } from '../../../components/Titlebar/ThemeCust
 import { ViewSidebarControls } from '../ViewSidebarControls/ViewSidebarControls';
 import { PullMailbox } from '../PullMailbox';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
+import { FileSystemService } from '../../../main-process-api/FileSystemService';
 import type { UserPreferences } from '../../../../shared/types/userPreferences.types';
+import { FolderOpen } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -40,6 +42,7 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
   const [isMaximized, setIsMaximized] = useState(false);
   const [showThemeButton, setShowThemeButton] = useState(true);
   const [showCustomizeButton, setShowCustomizeButton] = useState(true);
+  const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string | null>(null);
   const { theme, mode } = useTheme();
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
@@ -48,6 +51,27 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
       window.electronTitlebar.isMaximized().then(setIsMaximized);
       window.electronTitlebar.onMaximizeChange(setIsMaximized);
     }
+  }, []);
+
+  useEffect(() => {
+    const loadBaseDirectory = async () => {
+      const preferences = await UserPreferencesService.getPreferences();
+      setBaseDefaultDirectory(preferences.baseDefaultDirectory || null);
+    };
+
+    loadBaseDirectory();
+
+    const unsubscribe = UserPreferencesService.onPreferencesUpdated(
+      (preferences) => {
+        setBaseDefaultDirectory(preferences.baseDefaultDirectory || null);
+      },
+    );
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, []);
 
 
@@ -91,6 +115,29 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
       ? theme.modes.dark.accent
       : theme.colors.accent;
 
+  const handleSelectBaseDirectory = async () => {
+    const result = await FileSystemService.selectDirectory({
+      title: 'Select Base Default Directory',
+      buttonLabel: 'Select Directory',
+      properties: ['openDirectory', 'createDirectory'],
+    });
+
+    if (!result || result.canceled || !result.filePaths?.[0]) {
+      return;
+    }
+
+    const selectedPath = result.filePaths[0];
+    await UserPreferencesService.updatePreferences({
+      baseDefaultDirectory: selectedPath,
+    });
+    setBaseDefaultDirectory(selectedPath);
+  };
+
+  const getDirectoryDisplayName = (path: string) => {
+    const parts = path.split('/');
+    return parts[parts.length - 1] || path;
+  };
+
   // Static title - Principal Workspace
 
   return (
@@ -111,6 +158,61 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         zIndex: 100,
       }}
     >
+      {/* Left: Home Folder */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          paddingLeft: '16px',
+          WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
+        }}
+      >
+        <span
+          style={{
+            fontSize: theme.fontSizes[1],
+            color: theme.colors.textSecondary,
+          }}
+        >
+          Home Folder:
+        </span>
+        <div
+          onClick={handleSelectBaseDirectory}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '6px 12px',
+            borderRadius: '6px',
+            backgroundColor: theme.colors.backgroundSecondary,
+            cursor: 'pointer',
+            transition: 'background-color 0.2s',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor =
+              theme.colors.backgroundTertiary;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor =
+              theme.colors.backgroundSecondary;
+          }}
+          title={baseDefaultDirectory || 'Click to set base directory'}
+        >
+          <FolderOpen size={16} color={theme.colors.textSecondary} />
+          <span
+            style={{
+              fontSize: theme.fontSizes[1],
+              color: theme.colors.textSecondary,
+              fontFamily: theme.fonts.monospace,
+            }}
+          >
+            {baseDefaultDirectory
+              ? getDirectoryDisplayName(baseDefaultDirectory)
+              : 'Set Directory'}
+          </span>
+        </div>
+      </div>
+
       {/* Centered Title - Absolutely positioned */}
       <div
         style={{

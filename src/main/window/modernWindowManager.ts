@@ -336,7 +336,7 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
       minHeight: 600,
       icon: iconPath,
       show: false, // Prevent white flash
-      backgroundColor: '#1e1e1e',
+      backgroundColor: '#00000000', // Transparent to prevent color flash
       acceptFirstMouse: true, // Allow hover interactions without focusing window
       webPreferences,
       ...titleBarOptions, // Apply platform-specific titlebar settings

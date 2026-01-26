@@ -11,16 +11,19 @@ import {
   Check,
   Folder,
   FolderOpen,
+  HardDrive,
 } from 'lucide-react';
 import { GithubService } from '../../main-process-api/GithubService';
 import { GitService } from '../../main-process-api/GitService';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
+import { FileSystemService } from '../../main-process-api/FileSystemService';
 import type {
   CreateRepositoryInput,
   GitHubRepositoryCreated,
   GitHubLicenseTemplate,
   GitHubOrganization,
+  GitHubUser,
 } from '../../../shared/main-process-api-interfaces/GitHubAPI';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 import path from 'path';
@@ -35,7 +38,9 @@ interface CreateRepositoryInWorkspaceModalProps {
 
 type ModalStep = 'select-destination' | 'select-org' | 'create-repo' | 'progress' | 'complete';
 
-type ProgressStep = 'creating' | 'cloning' | 'registering' | 'adding' | 'done';
+type ProgressStep = 'creating' | 'cloning' | 'initializing' | 'registering' | 'adding' | 'done';
+
+const LOCAL_ONLY_OPTION = 'LOCAL_ONLY';
 
 export const CreateRepositoryInWorkspaceModal: React.FC<
   CreateRepositoryInWorkspaceModalProps
@@ -48,8 +53,10 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
     workspace ? { type: 'workspace', value: workspace } : null
   );
   const [selectedOrg, setSelectedOrg] = useState<string | null>(null);
+  const [isSelectedOrgUser, setIsSelectedOrgUser] = useState(false);
 
   // Organization loading state
+  const [currentUser, setCurrentUser] = useState<GitHubUser | null>(null);
   const [organizations, setOrganizations] = useState<GitHubOrganization[]>([]);
   const [isLoadingOrgs, setIsLoadingOrgs] = useState(true);
   const [orgsError, setOrgsError] = useState<string | null>(null);
@@ -90,6 +97,7 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
       setStep(workspace ? 'select-org' : 'select-destination');
       setSelectedDestination(workspace ? { type: 'workspace', value: workspace } : null);
       setSelectedOrg(null);
+      setIsSelectedOrgUser(false);
       setRepositoryName('');
       setDescription('');
       setIsPrivate(false);
@@ -107,7 +115,11 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
     setIsLoadingOrgs(true);
     setOrgsError(null);
     try {
-      const orgs = await GithubService.getUserOrganizations();
+      const [user, orgs] = await Promise.all([
+        GithubService.getCurrentUser(),
+        GithubService.getUserOrganizations(),
+      ]);
+      setCurrentUser(user);
       setOrganizations(orgs);
     } catch (err) {
       console.error('Failed to load organizations:', err);
@@ -142,8 +154,9 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
     setStep('select-org');
   }, []);
 
-  const handleSelectOrg = useCallback((orgLogin: string) => {
+  const handleSelectOrg = useCallback((orgLogin: string, isUser: boolean = false) => {
     setSelectedOrg(orgLogin);
+    setIsSelectedOrgUser(isUser);
     setStep('create-repo');
   }, []);
 
@@ -199,72 +212,139 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
     setIsCreating(true);
     setError(null);
     setStep('progress');
-    setProgressStep('creating');
 
     try {
-      // Step 1: Create repository on GitHub
-      const input: CreateRepositoryInput = {
-        name: repositoryName.trim(),
-        description: description.trim() || undefined,
-        private: isPrivate,
-        auto_init: autoInit,
-        gitignore_template: gitignoreTemplate || undefined,
-        license_template: licenseTemplate || undefined,
-      };
+      const repoName = repositoryName.trim();
+      const targetPath = path.join(clonePath, repoName);
 
-      const repository: GitHubRepositoryCreated =
-        await GithubService.createRepository(
-          selectedOrg,
-          input,
-          true, // isOrganization
+      // Check if this is a local-only repository
+      if (selectedOrg === LOCAL_ONLY_OPTION) {
+        // Local-only flow: Create directory, initialize git, register, add to workspace
+
+        // Step 1: Create local directory by writing a placeholder file
+        setProgressStep('creating');
+        const placeholderPath = path.join(targetPath, '.gitkeep');
+        await FileSystemService.writeFile(placeholderPath, '');
+
+        // Step 2: Initialize git repository
+        setProgressStep('initializing');
+        await GitService.execCommand(targetPath, ['init']);
+
+        // Optionally create initial commit if auto_init is enabled
+        if (autoInit) {
+          // Create README.md
+          const readmeContent = description.trim()
+            ? `# ${repoName}\n\n${description.trim()}\n`
+            : `# ${repoName}\n`;
+
+          const readmePath = path.join(targetPath, 'README.md');
+          await FileSystemService.writeFile(readmePath, readmeContent);
+
+          // Create .gitignore if template selected
+          if (gitignoreTemplate) {
+            // Note: We can't easily fetch gitignore templates for local-only repos
+            // so we'll create an empty .gitignore as a placeholder
+            const gitignorePath = path.join(targetPath, '.gitignore');
+            await FileSystemService.writeFile(gitignorePath, `# ${gitignoreTemplate}\n`);
+          }
+
+          // Remove the .gitkeep placeholder
+          await FileSystemService.deleteFile(placeholderPath);
+
+          // Initial commit
+          await GitService.execCommand(targetPath, ['add', '.']);
+          await GitService.execCommand(targetPath, ['commit', '-m', 'Initial commit']);
+        } else {
+          // If not auto-initializing, remove the placeholder
+          await FileSystemService.deleteFile(placeholderPath);
+        }
+
+        // Step 3: Register with Alexandria
+        setProgressStep('registering');
+        const registeredRepo = await AlexandriaService.registerRepository(
+          repoName,
+          targetPath,
         );
 
-      // Step 2: Clone the repository
-      setProgressStep('cloning');
+        // Step 4: Add to workspace (if applicable)
+        if (targetWorkspace) {
+          setProgressStep('adding');
+          await WorkspaceService.addRepositoryToWorkspace(
+            registeredRepo,
+            targetWorkspace.id,
+          );
+        }
 
-      // Determine the target path for cloning
-      const targetPath = path.join(
-        clonePath,
-        repository.name,
-      );
+        // Done!
+        setProgressStep('done');
+        setStep('complete');
 
-      // Use HTTPS clone URL (more reliable in most environments)
-      const cloneUrl = repository.clone_url;
+        // Auto-close after a delay
+        setTimeout(() => {
+          onClose();
+        }, 2000);
+      } else {
+        // GitHub flow: Create on GitHub, clone, register, add to workspace
 
-      const cloneSuccess = await GitService.cloneRepository(
-        cloneUrl,
-        targetPath,
-      );
+        // Step 1: Create repository on GitHub
+        setProgressStep('creating');
+        const input: CreateRepositoryInput = {
+          name: repoName,
+          description: description.trim() || undefined,
+          private: isPrivate,
+          auto_init: autoInit,
+          gitignore_template: gitignoreTemplate || undefined,
+          license_template: licenseTemplate || undefined,
+        };
 
-      if (!cloneSuccess) {
-        throw new Error('Failed to clone repository');
-      }
+        const repository: GitHubRepositoryCreated =
+          await GithubService.createRepository(
+            selectedOrg,
+            input,
+            !isSelectedOrgUser, // isOrganization (false if user account selected)
+          );
 
-      // Step 3: Register with Alexandria
-      setProgressStep('registering');
+        // Step 2: Clone the repository
+        setProgressStep('cloning');
 
-      const registeredRepo = await AlexandriaService.registerRepository(
-        repository.name,
-        targetPath,
-      );
+        // Use HTTPS clone URL (more reliable in most environments)
+        const cloneUrl = repository.clone_url;
 
-      // Step 4: Add to workspace (if applicable)
-      if (targetWorkspace) {
-        setProgressStep('adding');
-        await WorkspaceService.addRepositoryToWorkspace(
-          registeredRepo,
-          targetWorkspace.id,
+        const cloneSuccess = await GitService.cloneRepository(
+          cloneUrl,
+          targetPath,
         );
+
+        if (!cloneSuccess) {
+          throw new Error('Failed to clone repository');
+        }
+
+        // Step 3: Register with Alexandria
+        setProgressStep('registering');
+
+        const registeredRepo = await AlexandriaService.registerRepository(
+          repository.name,
+          targetPath,
+        );
+
+        // Step 4: Add to workspace (if applicable)
+        if (targetWorkspace) {
+          setProgressStep('adding');
+          await WorkspaceService.addRepositoryToWorkspace(
+            registeredRepo,
+            targetWorkspace.id,
+          );
+        }
+
+        // Done!
+        setProgressStep('done');
+        setStep('complete');
+
+        // Auto-close after a delay
+        setTimeout(() => {
+          onClose();
+        }, 2000);
       }
-
-      // Done!
-      setProgressStep('done');
-      setStep('complete');
-
-      // Auto-close after a delay
-      setTimeout(() => {
-        onClose();
-      }, 2000);
     } catch (err) {
       console.error('Failed to create repository:', err);
       setError(
@@ -586,7 +666,7 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
               Try again
             </button>
           </div>
-        ) : organizations.length === 0 ? (
+        ) : !currentUser && organizations.length === 0 ? (
           <div
             style={{
               display: 'flex',
@@ -609,8 +689,7 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
                 textAlign: 'center',
               }}
             >
-              No organizations found. You need to be a member of at least one
-              GitHub organization to create a repository.
+              No organizations found and unable to load user account.
             </span>
           </div>
         ) : (
@@ -629,8 +708,163 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
                 color: theme.colors.textSecondary,
               }}
             >
-              Select an organization to create the repository in:
+              Select where to create the repository:
             </p>
+            {currentUser && (
+              <button
+                key={currentUser.id}
+                onClick={() => handleSelectOrg(currentUser.login, true)}
+                onMouseEnter={() => setHoveredOrg(currentUser.login)}
+                onMouseLeave={() => setHoveredOrg(null)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  border: `1px solid ${hoveredOrg === currentUser.login ? theme.colors.primary : theme.colors.border}`,
+                  backgroundColor: hoveredOrg === currentUser.login
+                    ? theme.colors.backgroundTertiary
+                    : theme.colors.backgroundSecondary,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  textAlign: 'left',
+                  width: '100%',
+                  marginBottom: '8px',
+                }}
+              >
+                {currentUser.avatar_url ? (
+                  <img
+                    src={currentUser.avatar_url}
+                    alt={currentUser.login}
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      backgroundColor: theme.colors.primary,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Building2
+                      size={20}
+                      style={{ color: theme.colors.background }}
+                    />
+                  </div>
+                )}
+                <div style={{ flex: 1 }}>
+                  <div
+                    style={{
+                      fontSize: `${theme.fontSizes[2]}px`,
+                      fontWeight: theme.fontWeights.semibold,
+                      fontFamily: theme.fonts.body,
+                      color: theme.colors.text,
+                    }}
+                  >
+                    {currentUser.login} (Your Account)
+                  </div>
+                  {currentUser.bio && (
+                    <div
+                      style={{
+                        fontSize: `${theme.fontSizes[0]}px`,
+                        fontFamily: theme.fonts.body,
+                        color: theme.colors.textSecondary,
+                        marginTop: '2px',
+                      }}
+                    >
+                      {currentUser.bio}
+                    </div>
+                  )}
+                </div>
+                <ChevronRight
+                  size={20}
+                  style={{
+                    color: hoveredOrg === currentUser.login
+                      ? theme.colors.primary
+                      : theme.colors.textSecondary,
+                  }}
+                />
+              </button>
+            )}
+            {/* Local Only Option */}
+            <button
+              key="local-only"
+              onClick={() => handleSelectOrg(LOCAL_ONLY_OPTION, true)}
+              onMouseEnter={() => setHoveredOrg(LOCAL_ONLY_OPTION)}
+              onMouseLeave={() => setHoveredOrg(null)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px 16px',
+                borderRadius: '8px',
+                border: `1px solid ${hoveredOrg === LOCAL_ONLY_OPTION ? theme.colors.primary : theme.colors.border}`,
+                backgroundColor: hoveredOrg === LOCAL_ONLY_OPTION
+                  ? theme.colors.backgroundTertiary
+                  : theme.colors.backgroundSecondary,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                textAlign: 'left',
+                width: '100%',
+                marginBottom: '8px',
+              }}
+            >
+              <div
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '8px',
+                  backgroundColor: theme.colors.primary,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <HardDrive
+                  size={20}
+                  style={{ color: theme.colors.background }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div
+                  style={{
+                    fontSize: `${theme.fontSizes[2]}px`,
+                    fontWeight: theme.fontWeights.semibold,
+                    fontFamily: theme.fonts.body,
+                    color: theme.colors.text,
+                  }}
+                >
+                  Local Only
+                </div>
+                <div
+                  style={{
+                    fontSize: `${theme.fontSizes[0]}px`,
+                    fontFamily: theme.fonts.body,
+                    color: theme.colors.textSecondary,
+                    marginTop: '2px',
+                  }}
+                >
+                  Create a repository only on your local machine
+                </div>
+              </div>
+              <ChevronRight
+                size={20}
+                style={{
+                  color: hoveredOrg === LOCAL_ONLY_OPTION
+                    ? theme.colors.primary
+                    : theme.colors.textSecondary,
+                }}
+              />
+            </button>
             {organizations.map((org) => {
               const isHovered = hoveredOrg === org.login;
               return (
@@ -1082,11 +1316,15 @@ export const CreateRepositoryInWorkspaceModal: React.FC<
   );
 
   const getProgressLabel = (progressStep: ProgressStep): string => {
+    const isLocalOnly = selectedOrg === LOCAL_ONLY_OPTION;
+
     switch (progressStep) {
       case 'creating':
-        return 'Creating repository on GitHub...';
+        return isLocalOnly ? 'Creating local directory...' : 'Creating repository on GitHub...';
       case 'cloning':
         return 'Cloning repository...';
+      case 'initializing':
+        return 'Initializing git repository...';
       case 'registering':
         return 'Registering with Alexandria...';
       case 'adding':

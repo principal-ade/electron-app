@@ -11,10 +11,10 @@
 import { createRoot } from 'react-dom/client';
 import mermaid from 'mermaid';
 
-import { ThemeProvider } from '@principal-ade/industry-theme';
 import 'themed-markdown/dist/index.css';
 
 import { AppErrorBoundary } from '../AppErrorBoundary';
+import { CustomThemeProvider } from '../providers/CustomThemeProvider';
 import { DevWorkspaceApp } from './DevWorkspaceApp';
 import '../styles/tailwind.css';
 import '../index.css';
@@ -83,9 +83,9 @@ if (!container) {
 
 const root = createRoot(container);
 root.render(
-  <ThemeProvider>
+  <CustomThemeProvider>
     <AppErrorBoundary>
       <DevWorkspaceApp />
     </AppErrorBoundary>
-  </ThemeProvider>,
+  </CustomThemeProvider>,
 );

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ThemeProvider } from '@principal-ade/industry-theme';
 import type { Theme } from '@principal-ade/industry-theme';
 import { ThemeService, ThemeChangeEvent } from '../services/ThemeService';
-import { getThemeByName } from '../themes/predefinedThemes';
+import { transparentTheme } from '../themes/predefinedThemes';
 
 interface CustomThemeProviderProps {
   children: React.ReactNode;
@@ -68,10 +68,9 @@ export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({
     };
   }, [workspaceThemeName]);
 
-  // Show loading or use default theme while loading
+  // Show transparent theme while loading
   if (isLoading || !selectedTheme) {
-    const defaultTheme = getThemeByName('principalAI');
-    return <ThemeProvider theme={defaultTheme}>{children}</ThemeProvider>;
+    return <ThemeProvider theme={transparentTheme}>{children}</ThemeProvider>;
   }
 
   // Render with the selected theme

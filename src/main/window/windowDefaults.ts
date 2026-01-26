@@ -7,7 +7,7 @@ import { BrowserWindow, BrowserWindowConstructorOptions } from 'electron';
 export const getWindowDefaults =
   (): Partial<BrowserWindowConstructorOptions> => {
     return {
-      backgroundColor: '#1f2937', // Dark gray matching the app's theme to prevent white flash
+      backgroundColor: '#00000000', // Transparent to prevent color flash
       show: false, // Don't show until content is loaded
     };
   };

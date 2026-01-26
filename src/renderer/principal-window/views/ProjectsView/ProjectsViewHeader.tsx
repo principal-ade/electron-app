@@ -1,8 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { FolderOpen, Github, Star, Folder, FilePlus2 } from 'lucide-react';
-import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
-import { FileSystemService } from '../../../main-process-api/FileSystemService';
+import { Github, Star, Folder, FilePlus2 } from 'lucide-react';
 import type { LeftPanelView } from './ProjectsView';
 
 interface ProjectsViewHeaderProps {
@@ -19,71 +17,35 @@ export const ProjectsViewHeader: React.FC<ProjectsViewHeaderProps> = ({
   onCreateRepository,
 }) => {
   const { theme } = useTheme();
-  const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<
-    string | null
-  >(null);
 
-  useEffect(() => {
-    const loadBaseDirectory = async () => {
-      const preferences = await UserPreferencesService.getPreferences();
-      setBaseDefaultDirectory(preferences.baseDefaultDirectory || null);
-    };
-
-    loadBaseDirectory();
-
-    // Listen for preference updates
-    const unsubscribe = UserPreferencesService.onPreferencesUpdated(
-      (preferences) => {
-        setBaseDefaultDirectory(preferences.baseDefaultDirectory || null);
-      },
-    );
-
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
-  }, []);
-
-  const handleSelectBaseDirectory = async () => {
-    const result = await FileSystemService.selectDirectory({
-      title: 'Select Base Default Directory',
-      buttonLabel: 'Select Directory',
-      properties: ['openDirectory', 'createDirectory'],
-    });
-
-    if (!result || result.canceled || !result.filePaths?.[0]) {
-      return;
+  const getButtonStyle = (isActive: boolean, position: 'first' | 'middle' | 'last') => {
+    let borderRadius = '0';
+    if (position === 'first') {
+      borderRadius = '0';
+    } else if (position === 'last') {
+      borderRadius = '0';
     }
 
-    const selectedPath = result.filePaths[0];
-    await UserPreferencesService.updatePreferences({
-      baseDefaultDirectory: selectedPath,
-    });
-    setBaseDefaultDirectory(selectedPath);
+    return {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '6px',
+      padding: '0 32px',
+      borderRadius,
+      backgroundColor: isActive
+        ? theme.colors.primary
+        : theme.colors.backgroundSecondary,
+      color: isActive ? theme.colors.background : theme.colors.textSecondary,
+      cursor: 'pointer',
+      transition: 'all 0.2s',
+      border: 'none',
+      fontSize: theme.fontSizes[1],
+      fontWeight: theme.fontWeights.medium,
+      height: '100%',
+      minWidth: 0,
+    };
   };
-
-  const getDirectoryDisplayName = (path: string) => {
-    const parts = path.split('/');
-    return parts[parts.length - 1] || path;
-  };
-
-  const getButtonStyle = (isActive: boolean) => ({
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    padding: '6px 12px',
-    borderRadius: '6px',
-    backgroundColor: isActive
-      ? theme.colors.primary
-      : theme.colors.backgroundSecondary,
-    color: isActive ? theme.colors.background : theme.colors.textSecondary,
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-    border: 'none',
-    fontSize: theme.fontSizes[1],
-    fontWeight: theme.fontWeights.medium,
-  });
 
   return (
     <div
@@ -92,7 +54,7 @@ export const ProjectsViewHeader: React.FC<ProjectsViewHeaderProps> = ({
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: '8px',
-        padding: '0 24px',
+        padding: '0',
         height: '64px',
         borderBottom: `1px solid ${theme.colors.border}`,
         backgroundColor: theme.colors.backgroundSecondary,
@@ -100,10 +62,10 @@ export const ProjectsViewHeader: React.FC<ProjectsViewHeaderProps> = ({
       }}
     >
       {/* Left: Panel View Toggle Buttons */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'stretch', gap: '0', height: '100%' }}>
         <button
           onClick={() => onLeftPanelViewChange('local')}
-          style={getButtonStyle(leftPanelView === 'local')}
+          style={getButtonStyle(leftPanelView === 'local', 'first')}
           onMouseEnter={(e) => {
             if (leftPanelView !== 'local') {
               e.currentTarget.style.backgroundColor =
@@ -122,7 +84,7 @@ export const ProjectsViewHeader: React.FC<ProjectsViewHeaderProps> = ({
         </button>
         <button
           onClick={() => onLeftPanelViewChange('remote')}
-          style={getButtonStyle(leftPanelView === 'remote')}
+          style={getButtonStyle(leftPanelView === 'remote', 'middle')}
           onMouseEnter={(e) => {
             if (leftPanelView !== 'remote') {
               e.currentTarget.style.backgroundColor =
@@ -141,7 +103,7 @@ export const ProjectsViewHeader: React.FC<ProjectsViewHeaderProps> = ({
         </button>
         <button
           onClick={() => onLeftPanelViewChange('starred')}
-          style={getButtonStyle(leftPanelView === 'starred')}
+          style={getButtonStyle(leftPanelView === 'starred', 'last')}
           onMouseEnter={(e) => {
             if (leftPanelView !== 'starred') {
               e.currentTarget.style.backgroundColor =
@@ -160,9 +122,9 @@ export const ProjectsViewHeader: React.FC<ProjectsViewHeaderProps> = ({
         </button>
       </div>
 
-      {/* Right: Create Button and Home Folder */}
+      {/* Right: Create Button */}
       <div
-        style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, justifyContent: 'flex-end' }}
+        style={{ display: 'flex', alignItems: 'stretch', gap: '0', height: '100%' }}
       >
         {/* Create Repository Button */}
         {onCreateRepository && (
@@ -171,9 +133,10 @@ export const ProjectsViewHeader: React.FC<ProjectsViewHeaderProps> = ({
             style={{
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '6px',
-              padding: '6px 12px',
-              borderRadius: '6px',
+              padding: '0 32px',
+              borderRadius: '0',
               backgroundColor: theme.colors.backgroundSecondary,
               color: theme.colors.textSecondary,
               cursor: 'pointer',
@@ -181,6 +144,8 @@ export const ProjectsViewHeader: React.FC<ProjectsViewHeaderProps> = ({
               border: 'none',
               fontSize: theme.fontSizes[1],
               fontWeight: theme.fontWeights.medium,
+              height: '100%',
+              minWidth: 0,
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = theme.colors.primary;
@@ -197,50 +162,6 @@ export const ProjectsViewHeader: React.FC<ProjectsViewHeaderProps> = ({
             Create
           </button>
         )}
-
-        <span
-          style={{
-            fontSize: theme.fontSizes[1],
-            color: theme.colors.textSecondary,
-          }}
-        >
-          Home Folder:
-        </span>
-        <div
-          onClick={handleSelectBaseDirectory}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '6px 12px',
-            borderRadius: '6px',
-            backgroundColor: theme.colors.backgroundSecondary,
-            cursor: 'pointer',
-            transition: 'background-color 0.2s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor =
-              theme.colors.backgroundTertiary;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor =
-              theme.colors.backgroundSecondary;
-          }}
-          title={baseDefaultDirectory || 'Click to set base directory'}
-        >
-          <FolderOpen size={16} color={theme.colors.textSecondary} />
-          <span
-            style={{
-              fontSize: theme.fontSizes[1],
-              color: theme.colors.textSecondary,
-              fontFamily: theme.fonts.monospace,
-            }}
-          >
-            {baseDefaultDirectory
-              ? getDirectoryDisplayName(baseDefaultDirectory)
-              : 'Set Directory'}
-          </span>
-        </div>
       </div>
     </div>
   );
