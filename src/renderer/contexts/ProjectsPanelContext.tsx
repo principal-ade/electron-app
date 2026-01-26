@@ -19,6 +19,7 @@ import type {
   Workspace,
   AlexandriaEntry,
 } from '@principal-ai/alexandria-core-library/types';
+import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
 import type {
   WorkspacesSlice,
   WorkspacesListPanelActions,
@@ -138,14 +139,7 @@ export const ProjectsPanelProvider: React.FC<
     useState<AlexandriaEntry | null>(null);
 
   // State for git status of selected repository
-  const [gitStatus, setGitStatus] = useState<{
-    branch?: string;
-    staged?: string[];
-    unstaged?: string[];
-    untracked?: string[];
-    ahead?: number;
-    behind?: number;
-  } | null>(null);
+  const [gitStatusWithFiles, setGitStatusWithFiles] = useState<GitStatusWithFiles | null>(null);
   const [gitStatusLoading, setGitStatusLoading] = useState(false);
 
   // State for workspace repositories
@@ -251,7 +245,7 @@ export const ProjectsPanelProvider: React.FC<
   useEffect(() => {
     const fetchGitStatus = async () => {
       if (!selectedRepository) {
-        setGitStatus(null);
+        setGitStatusWithFiles(null);
         return;
       }
 
@@ -260,24 +254,13 @@ export const ProjectsPanelProvider: React.FC<
         const status = await RepositoryMonitoringService.getGitStatusWithFiles(
           selectedRepository.path,
         );
-        if (status) {
-          setGitStatus({
-            branch: status.branch,
-            staged: status.stagedFiles || [],
-            unstaged: status.modifiedFiles || [],
-            untracked: status.untrackedFiles || [],
-            ahead: status.ahead,
-            behind: status.behind,
-          });
-        } else {
-          setGitStatus(null);
-        }
+        setGitStatusWithFiles(status);
       } catch (error) {
         console.error(
           '[ProjectsPanelProvider] Failed to fetch git status:',
           error,
         );
-        setGitStatus(null);
+        setGitStatusWithFiles(null);
       } finally {
         setGitStatusLoading(false);
       }
@@ -1077,11 +1060,11 @@ export const ProjectsPanelProvider: React.FC<
           },
         ],
         [
-          'git',
+          'gitStatusWithFiles',
           {
             scope: 'repository' as const,
-            name: 'git',
-            data: gitStatus,
+            name: 'gitStatusWithFiles',
+            data: gitStatusWithFiles,
             loading: gitStatusLoading,
             error: null,
             refresh: async () => {
@@ -1091,24 +1074,13 @@ export const ProjectsPanelProvider: React.FC<
                   const status = await RepositoryMonitoringService.getGitStatusWithFiles(
                     selectedRepository.path,
                   );
-                  if (status) {
-                    setGitStatus({
-                      branch: status.branch,
-                      staged: status.stagedFiles || [],
-                      unstaged: status.modifiedFiles || [],
-                      untracked: status.untrackedFiles || [],
-                      ahead: status.ahead,
-                      behind: status.behind,
-                    });
-                  } else {
-                    setGitStatus(null);
-                  }
+                  setGitStatusWithFiles(status);
                 } catch (error) {
                   console.error(
                     '[ProjectsPanelProvider] Failed to refresh git status:',
                     error,
                   );
-                  setGitStatus(null);
+                  setGitStatusWithFiles(null);
                 } finally {
                   setGitStatusLoading(false);
                 }
@@ -1148,7 +1120,7 @@ export const ProjectsPanelProvider: React.FC<
       collectionsGitHubRepoUrl,
       selectedCollection,
       selectedRepository,
-      gitStatus,
+      gitStatusWithFiles,
       gitStatusLoading,
     ],
   );

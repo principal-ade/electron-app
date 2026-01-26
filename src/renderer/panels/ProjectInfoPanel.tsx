@@ -98,14 +98,7 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
         timestamp: Date.now(),
         payload: {
           repository,
-          gitStatus: gitData ? {
-            branch: gitData.branch,
-            staged: gitData.stagedFiles,
-            unstaged: gitData.modifiedFiles,
-            untracked: gitData.untrackedFiles,
-            ahead: gitData.ahead,
-            behind: gitData.behind,
-          } : undefined,
+          gitStatus: gitData,
         },
       });
     }
@@ -122,14 +115,7 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
         timestamp: Date.now(),
         payload: {
           repository,
-          gitStatus: gitData ? {
-            branch: gitData.branch,
-            staged: gitData.stagedFiles,
-            unstaged: gitData.modifiedFiles,
-            untracked: gitData.untrackedFiles,
-            ahead: gitData.ahead,
-            behind: gitData.behind,
-          } : undefined,
+          gitStatus: gitData,
         },
       });
     }

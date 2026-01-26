@@ -389,6 +389,11 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     (p) => p.metadata?.id === 'industry-theme.agent-detail',
   )?.component;
 
+  // Unified Agentic Resources panel (Agents + Skills combined)
+  const AgenticResourcesPanelComponent = agentPanels.find(
+    (p) => p.metadata?.id === 'industry-theme.agentic-resources',
+  )?.component;
+
   // GitHub panels
   const GitHubIssuesPanelComponent = githubPanels.find(
     (p) => p.metadata?.id === 'industry-theme.github-issues',
@@ -1687,30 +1692,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         ),
       },
       {
-        id: 'skillsList',
-        label: 'Skills List',
-        content: SkillsListPanelComponent ? (
-          <div
-            style={{
-              height: '100%',
-              width: '100%',
-              overflow: 'hidden',
-              position: 'relative',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <SkillsListPanelComponent
-              context={context}
-              actions={actions}
-              events={events}
-            />
-          </div>
-        ) : (
-          <div>Skills List panel not available</div>
-        ),
-      },
-      {
         id: 'skillDetail',
         label: 'Skill Detail',
         content: SkillDetailPanelComponent ? (
@@ -1736,8 +1717,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       },
       {
         id: 'agentsList',
-        label: 'Agents List',
-        content: AgentsListPanelComponent ? (
+        label: 'Agents & Skills',
+        content: AgenticResourcesPanelComponent ? (
           <div
             style={{
               height: '100%',
@@ -1748,14 +1729,14 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               flexDirection: 'column',
             }}
           >
-            <AgentsListPanelComponent
+            <AgenticResourcesPanelComponent
               context={context}
               actions={actions}
               events={events}
             />
           </div>
         ) : (
-          <div>Agents List panel not available</div>
+          <div>Agentic Resources panel not available</div>
         ),
       },
       {
@@ -1853,9 +1834,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       KanbanPanelComponent,
       TaskDetailPanelComponent,
       MilestonePanelComponent,
-      SkillsListPanelComponent,
       SkillDetailPanelComponent,
-      AgentsListPanelComponent,
+      AgenticResourcesPanelComponent,
       AgentDetailPanelComponent,
       GitHubIssuesPanelComponent,
       GitHubIssueDetailPanelComponent,

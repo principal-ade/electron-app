@@ -5,7 +5,6 @@ import {
   BookOpen,
   KanbanSquare,
   Network,
-  Wand2,
   Bot,
   CheckCircle,
   Package,
@@ -41,7 +40,6 @@ const PANEL_ICONS = [
   { id: 'gitChanges', Icon: GitBranch, label: 'Files' },
   { id: 'codeQuality', Icon: CheckCircle, label: 'Quality' },
   { id: 'localProjects', Icon: FolderOpen, label: 'Repos' },
-  { id: 'skillsList', Icon: Wand2, label: 'Skills' },
   { id: 'packageComposition', Icon: Package, label: 'Stack' },
   { id: 'canvasList', Icon: Network, label: 'Stories' },
 ] as const;

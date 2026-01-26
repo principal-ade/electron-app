@@ -10,23 +10,15 @@ import type {
   AlexandriaEntry,
   Workspace,
 } from '@principal-ai/alexandria-core-library/types';
+import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { ShellService } from '../../main-process-api/ShellService';
 import { getWorkspaceThemeColor } from '../../themes/predefinedThemes';
 
-interface GitStatus {
-  branch?: string;
-  staged?: string[];
-  unstaged?: string[];
-  untracked?: string[];
-  ahead?: number;
-  behind?: number;
-}
-
 interface DeleteAlexandriaEntryModalProps {
   isOpen: boolean;
   entry: (AlexandriaEntry & { isTracked?: boolean }) | null;
-  gitStatus?: GitStatus | null;
+  gitStatus?: GitStatusWithFiles | null;
   onClose: () => void;
   onConfirm: (deleteLocal: boolean) => Promise<void>;
 }
@@ -42,9 +34,9 @@ export const DeleteAlexandriaEntryModal: React.FC<
 
   // Calculate if repo is clean and synced for default selection
   const isCleanAndSynced = gitStatus ? (
-    (gitStatus.staged?.length || 0) === 0 &&
-    (gitStatus.unstaged?.length || 0) === 0 &&
-    (gitStatus.untracked?.length || 0) === 0 &&
+    (gitStatus.stagedFiles?.length || 0) === 0 &&
+    (gitStatus.modifiedFiles?.length || 0) === 0 &&
+    (gitStatus.untrackedFiles?.length || 0) === 0 &&
     (gitStatus.ahead || 0) === 0 &&
     (gitStatus.behind || 0) === 0
   ) : false;

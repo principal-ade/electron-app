@@ -13,6 +13,7 @@ import {
 } from '@industry-theme/alexandria-panels';
 import type { GitHubRepository } from '@industry-theme/alexandria-panels';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
 import { DoorClosed, FolderGit2, Folder, FolderOpen, Star } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuthState';
 import {
@@ -70,14 +71,7 @@ const ProjectsViewContent: React.FC = () => {
   const [entryToDelete, setEntryToDelete] = useState<AlexandriaEntry | null>(
     null,
   );
-  const [deleteEntryGitStatus, setDeleteEntryGitStatus] = useState<{
-    branch?: string;
-    staged?: string[];
-    unstaged?: string[];
-    untracked?: string[];
-    ahead?: number;
-    behind?: number;
-  } | null>(null);
+  const [deleteEntryGitStatus, setDeleteEntryGitStatus] = useState<GitStatusWithFiles | null>(null);
 
   // State for delete workspace modal
   const [isDeleteWorkspaceModalOpen, setIsDeleteWorkspaceModalOpen] =
@@ -338,14 +332,7 @@ const ProjectsViewContent: React.FC = () => {
     const unsubscribe = events.on('project-info:delete-requested', (event) => {
       const { repository, gitStatus } = event.payload as {
         repository: AlexandriaEntry;
-        gitStatus?: {
-          branch?: string;
-          staged?: string[];
-          unstaged?: string[];
-          untracked?: string[];
-          ahead?: number;
-          behind?: number;
-        };
+        gitStatus?: GitStatusWithFiles;
       };
       console.info('[ProjectsView] Delete requested for:', repository.name);
       setEntryToDelete(repository);
