@@ -4,6 +4,8 @@ import React, {
   useMemo,
   useState,
   useEffect,
+  useCallback,
+  useRef,
   type ReactNode,
 } from 'react';
 import { PanelEventBus } from '@principal-ade/panel-framework-core';
@@ -42,14 +44,6 @@ interface PackagesSliceData {
   summary: PackageSummary;
 }
 
-// Git status slice data - simple string arrays for file paths
-interface GitStatusSliceData {
-  staged: string[];
-  unstaged: string[];
-  untracked: string[];
-  deleted: string[];
-}
-
 // Color mode for file city visualization - imported from registry
 // The registry's ColorMode type includes all built-in and lens-based modes
 type FileCityColorMode = ColorMode;
@@ -61,18 +55,22 @@ interface FileCityColorModesSliceData {
   qualityData?: QualitySliceData;
 }
 
-// Helper to convert GitStatusWithFiles to GitStatusSliceData
-function mapGitStatusToSliceData(
-  status: GitStatusWithFiles | null,
-): GitStatusSliceData {
-  if (!status) {
-    return { staged: [], unstaged: [], untracked: [], deleted: [] };
-  }
+// Legacy GitStatus format for backward compatibility with existing panels
+interface GitStatus {
+  staged: string[];
+  unstaged: string[];
+  untracked: string[];
+  deleted: string[];
+}
+
+// Helper to convert GitStatusWithFiles to legacy GitStatus format
+function mapToLegacyGitStatus(status: GitStatusWithFiles | null): GitStatus | null {
+  if (!status) return null;
   return {
-    staged: status.stagedFiles ?? [],
-    unstaged: status.modifiedFiles ?? [],
-    untracked: status.untrackedFiles ?? [],
-    deleted: status.deletedFiles ?? [],
+    staged: status.stagedFiles,
+    unstaged: status.modifiedFiles,
+    untracked: status.untrackedFiles,
+    deleted: status.deletedFiles,
   };
 }
 
@@ -133,7 +131,7 @@ export const RepositoryPanelProvider: React.FC<
   const [packagesLoading, setPackagesLoading] = useState(false);
 
   // Track git status for the current repository
-  const [gitStatusData, setGitStatusData] = useState<GitStatusSliceData | null>(
+  const [gitStatusData, setGitStatusData] = useState<GitStatusWithFiles | null>(
     null,
   );
   const [gitStatusLoading, setGitStatusLoading] = useState(false);
@@ -367,7 +365,7 @@ export const RepositoryPanelProvider: React.FC<
           '[RepositoryPanelProvider] Fetched git status for repository:',
           repositoryPath,
         );
-        setGitStatusData(mapGitStatusToSliceData(status));
+        setGitStatusData(status);
       } catch (error) {
         console.error(
           '[RepositoryPanelProvider] Failed to fetch git status:',
@@ -389,8 +387,8 @@ export const RepositoryPanelProvider: React.FC<
             '[RepositoryPanelProvider] Git status changed for repository:',
             repositoryPath,
           );
-          // Use the event data directly - it now includes file arrays
-          setGitStatusData(mapGitStatusToSliceData(data));
+          // Use the event data directly - it now includes file arrays and hash
+          setGitStatusData(data);
         }
       },
     );
@@ -439,6 +437,36 @@ export const RepositoryPanelProvider: React.FC<
     };
   }, []);
 
+  // Extract stable identifiers for memoization (prevents unnecessary re-renders)
+  // Only stabilize data that actually has SHA/timestamp/ID - not arrays
+  const fileTreeSha = fileTreeData?.sha;
+  const qualityDataTimestamp = qualityData?.lastUpdated;
+  const activeFilePath = activeFileData?.path;
+  // Git status hash is now computed at the source (repository-monitoring-server)
+  const gitStatusHash = gitStatusData?.hash;
+
+  // Localhost servers doesn't have a natural stable ID, so compute a hash
+  // This prevents re-renders when the array reference changes but content is the same
+  const localhostServersHash = useMemo(() => {
+    if (!localhostServers || localhostServers.length === 0) return 'empty';
+    // Hash based on port, pid, and name (the identifying characteristics)
+    return JSON.stringify(
+      localhostServers.map(s => ({
+        port: s.port,
+        pid: s.pid,
+        name: s.name,
+      })).sort((a, b) => a.port - b.port)
+    );
+  }, [localhostServers]);
+
+  // Create stable references for data objects - only update when their stable ID changes
+  // This prevents unnecessary re-renders of all panels when object references change
+  const stableFileTreeData = useMemo(() => fileTreeData, [fileTreeSha]);
+  const stableQualityData = useMemo(() => qualityData, [qualityDataTimestamp]);
+  const stableActiveFileData = useMemo(() => activeFileData, [activeFilePath]);
+  const stableGitStatusData = useMemo(() => gitStatusData, [gitStatusHash]);
+  const stableLocalhostServers = useMemo(() => localhostServers, [localhostServersHash]);
+
   // Compute effective color mode: use explicit selection, or auto-select 'git' if there are changes
   const effectiveColorMode = useMemo((): FileCityColorMode => {
     // If explicitly set, use that
@@ -446,19 +474,19 @@ export const RepositoryPanelProvider: React.FC<
       return fileCityColorMode;
     }
     // Auto-select 'git' mode if there are any git changes
-    if (gitStatusData) {
+    if (stableGitStatusData) {
       const hasChanges =
-        gitStatusData.staged.length > 0 ||
-        gitStatusData.unstaged.length > 0 ||
-        gitStatusData.untracked.length > 0 ||
-        gitStatusData.deleted.length > 0;
+        stableGitStatusData.stagedFiles.length > 0 ||
+        stableGitStatusData.modifiedFiles.length > 0 ||
+        stableGitStatusData.untrackedFiles.length > 0 ||
+        stableGitStatusData.deletedFiles.length > 0;
       if (hasChanges) {
         return 'git';
       }
     }
     // Default to file types
     return 'fileTypes';
-  }, [fileCityColorMode, gitStatusData]);
+  }, [fileCityColorMode, stableGitStatusData]);
 
   // Listen for workspace file change events and refresh fileTree
   // This ensures panels like Kanban get updated when files change
@@ -910,9 +938,9 @@ export const RepositoryPanelProvider: React.FC<
 
   // Extract markdown files from file tree
   const markdownFiles = useMemo(() => {
-    if (!fileTreeData?.allFiles) return [];
+    if (!stableFileTreeData?.allFiles) return [];
 
-    return fileTreeData.allFiles
+    return stableFileTreeData.allFiles
       .filter((file) => {
         const name = file.name || file.path.split('/').pop() || '';
         return name.toLowerCase().endsWith('.md');
@@ -927,7 +955,7 @@ export const RepositoryPanelProvider: React.FC<
           ? new Date(file.lastModified).getTime()
           : undefined,
       }));
-  }, [fileTreeData]);
+  }, [stableFileTreeData]);
 
   // Create adapters for panels to use
   const adapters: PanelAdapters = useMemo(
@@ -999,6 +1027,86 @@ export const RepositoryPanelProvider: React.FC<
     [repositoryPath],
   );
 
+  // DEBUG: Track which dependencies are changing to cause slices recreation
+  const slicesDepsRef = useRef<{
+    repositoryPath: string | null;
+    stableFileTreeData: typeof stableFileTreeData;
+    fileTreeLoading: boolean;
+    markdownFiles: typeof markdownFiles;
+    packagesData: typeof packagesData;
+    packagesLoading: boolean;
+    stableGitStatusData: typeof stableGitStatusData;
+    gitStatusLoading: boolean;
+    alexandriaRepositories: typeof alexandriaRepositories;
+    alexandriaRepositoriesLoading: boolean;
+    stableQualityData: typeof stableQualityData;
+    qualityLoading: boolean;
+    stableActiveFileData: typeof stableActiveFileData;
+    activeFileLoading: boolean;
+    activeFileError: typeof activeFileError;
+    effectiveColorMode: FileCityColorMode;
+    stableLocalhostServers: typeof stableLocalhostServers;
+    localhostServersLoading: boolean;
+    globalSkillsData: typeof globalSkillsData;
+    globalSkillsLoading: boolean;
+  } | null>(null);
+
+  if (slicesDepsRef.current) {
+    const depsChanged = {
+      repositoryPath: slicesDepsRef.current.repositoryPath !== repositoryPath,
+      stableFileTreeData: slicesDepsRef.current.stableFileTreeData !== stableFileTreeData,
+      fileTreeLoading: slicesDepsRef.current.fileTreeLoading !== fileTreeLoading,
+      markdownFiles: slicesDepsRef.current.markdownFiles !== markdownFiles,
+      packagesData: slicesDepsRef.current.packagesData !== packagesData,
+      packagesLoading: slicesDepsRef.current.packagesLoading !== packagesLoading,
+      stableGitStatusData: slicesDepsRef.current.stableGitStatusData !== stableGitStatusData,
+      gitStatusLoading: slicesDepsRef.current.gitStatusLoading !== gitStatusLoading,
+      alexandriaRepositories: slicesDepsRef.current.alexandriaRepositories !== alexandriaRepositories,
+      alexandriaRepositoriesLoading: slicesDepsRef.current.alexandriaRepositoriesLoading !== alexandriaRepositoriesLoading,
+      stableQualityData: slicesDepsRef.current.stableQualityData !== stableQualityData,
+      qualityLoading: slicesDepsRef.current.qualityLoading !== qualityLoading,
+      stableActiveFileData: slicesDepsRef.current.stableActiveFileData !== stableActiveFileData,
+      activeFileLoading: slicesDepsRef.current.activeFileLoading !== activeFileLoading,
+      activeFileError: slicesDepsRef.current.activeFileError !== activeFileError,
+      effectiveColorMode: slicesDepsRef.current.effectiveColorMode !== effectiveColorMode,
+      stableLocalhostServers: slicesDepsRef.current.stableLocalhostServers !== stableLocalhostServers,
+      localhostServersLoading: slicesDepsRef.current.localhostServersLoading !== localhostServersLoading,
+      globalSkillsData: slicesDepsRef.current.globalSkillsData !== globalSkillsData,
+      globalSkillsLoading: slicesDepsRef.current.globalSkillsLoading !== globalSkillsLoading,
+    };
+
+    const changedDeps = Object.entries(depsChanged)
+      .filter(([, changed]) => changed)
+      .map(([key]) => key);
+
+    if (changedDeps.length > 0) {
+      console.log('[RepositoryPanelContext] Slices recreated due to:', changedDeps);
+    }
+  }
+
+  slicesDepsRef.current = {
+    repositoryPath,
+    stableFileTreeData,
+    fileTreeLoading,
+    markdownFiles,
+    packagesData,
+    packagesLoading,
+    stableGitStatusData,
+    gitStatusLoading,
+    alexandriaRepositories,
+    alexandriaRepositoriesLoading,
+    stableQualityData,
+    qualityLoading,
+    stableActiveFileData,
+    activeFileLoading,
+    activeFileError,
+    effectiveColorMode,
+    stableLocalhostServers,
+    localhostServersLoading,
+    globalSkillsData,
+    globalSkillsLoading,
+  };
+
   // Create data slices
   const slices = useMemo<Map<string, DataSlice>>(
     () =>
@@ -1008,7 +1116,7 @@ export const RepositoryPanelProvider: React.FC<
           {
             scope: 'repository' as const,
             name: 'fileTree',
-            data: fileTreeData,
+            data: stableFileTreeData,
             loading: fileTreeLoading,
             error: null,
             refresh: async () => {
@@ -1103,7 +1211,7 @@ export const RepositoryPanelProvider: React.FC<
           {
             scope: 'repository' as const,
             name: 'git',
-            data: gitStatusData,
+            data: mapToLegacyGitStatus(stableGitStatusData),
             loading: gitStatusLoading,
             error: null,
             refresh: async () => {
@@ -1114,7 +1222,37 @@ export const RepositoryPanelProvider: React.FC<
                     await RepositoryMonitoringService.getGitStatusWithFiles(
                       repositoryPath,
                     );
-                  setGitStatusData(mapGitStatusToSliceData(status));
+                  setGitStatusData(status);
+                } catch (error) {
+                  console.error(
+                    '[RepositoryPanelProvider] Failed to refresh git status:',
+                    error,
+                  );
+                  setGitStatusData(null);
+                } finally {
+                  setGitStatusLoading(false);
+                }
+              }
+            },
+          },
+        ],
+        [
+          'gitStatusWithFiles',
+          {
+            scope: 'repository' as const,
+            name: 'gitStatusWithFiles',
+            data: stableGitStatusData,
+            loading: gitStatusLoading,
+            error: null,
+            refresh: async () => {
+              if (repositoryPath) {
+                setGitStatusLoading(true);
+                try {
+                  const status =
+                    await RepositoryMonitoringService.getGitStatusWithFiles(
+                      repositoryPath,
+                    );
+                  setGitStatusData(status);
                 } catch (error) {
                   console.error(
                     '[RepositoryPanelProvider] Failed to refresh git status:',
@@ -1158,7 +1296,7 @@ export const RepositoryPanelProvider: React.FC<
           {
             scope: 'repository' as const,
             name: 'quality',
-            data: qualityData,
+            data: stableQualityData,
             loading: qualityLoading,
             error: null,
             refresh: async () => {
@@ -1228,21 +1366,21 @@ export const RepositoryPanelProvider: React.FC<
           {
             scope: 'repository' as const,
             name: 'active-file',
-            data: activeFileData,
+            data: stableActiveFileData,
             loading: activeFileLoading,
             error: activeFileError,
             refresh: async () => {
               // Re-read the file if there's an active file
-              if (activeFileData?.path) {
+              if (stableActiveFileData?.path) {
                 setActiveFileLoading(true);
                 try {
-                  const absolutePath = activeFileData.path.startsWith('/')
-                    ? activeFileData.path
-                    : `${repositoryPath}/${activeFileData.path}`;
+                  const absolutePath = stableActiveFileData.path.startsWith('/')
+                    ? stableActiveFileData.path
+                    : `${repositoryPath}/${stableActiveFileData.path}`;
                   const result = await FileSystemService.readFile(absolutePath);
                   if (result) {
                     setActiveFileData({
-                      ...activeFileData,
+                      ...stableActiveFileData,
                       content: result.content,
                     });
                   }
@@ -1271,10 +1409,10 @@ export const RepositoryPanelProvider: React.FC<
             data: {
               selectedColorMode: effectiveColorMode,
               // Include quality data for File City to render layers
-              qualityData: qualityData
+              qualityData: stableQualityData
                 ? {
-                    fileCoverage: qualityData.fileCoverage,
-                    fileMetrics: qualityData.fileMetrics,
+                    fileCoverage: stableQualityData.fileCoverage,
+                    fileMetrics: stableQualityData.fileMetrics,
                   }
                 : undefined,
             } as FileCityColorModesSliceData,
@@ -1290,7 +1428,7 @@ export const RepositoryPanelProvider: React.FC<
           {
             scope: 'workspace' as const,
             name: 'localhostServers',
-            data: localhostServers,
+            data: stableLocalhostServers,
             loading: localhostServersLoading,
             error: null,
             refresh: async () => {
@@ -1339,26 +1477,87 @@ export const RepositoryPanelProvider: React.FC<
       ]),
     [
       repositoryPath,
-      fileTreeData,
+      stableFileTreeData, // Stable reference - only changes when SHA changes
       fileTreeLoading,
-      markdownFiles,
+      markdownFiles, // Derived from stableFileTreeData, already stable
       packagesData,
       packagesLoading,
-      gitStatusData,
+      stableGitStatusData, // Stable reference - only changes when content hash changes
       gitStatusLoading,
       alexandriaRepositories,
       alexandriaRepositoriesLoading,
-      qualityData,
+      stableQualityData, // Stable reference - only changes when timestamp changes
       qualityLoading,
-      activeFileData,
+      stableActiveFileData, // Stable reference - only changes when path changes
       activeFileLoading,
       activeFileError,
       effectiveColorMode,
-      localhostServers,
+      stableLocalhostServers, // Stable reference - only changes when server list content changes
       localhostServersLoading,
       globalSkillsData,
       globalSkillsLoading,
     ],
+  );
+
+  // Memoize currentScope to prevent recreation
+  const currentScope = useMemo(
+    () => ({
+      type: 'repository' as const,
+      repository,
+    }),
+    [repository],
+  );
+
+  // Memoize callback functions to prevent recreation
+  const getSlice = useCallback(
+    <T = unknown,>(name: string): DataSlice<T> | undefined => {
+      return slices.get(name) as DataSlice<T> | undefined;
+    },
+    [slices],
+  );
+
+  const getWorkspaceSlice = useCallback(() => undefined, []); // No workspace slices in repository context
+
+  const getRepositorySlice = useCallback(
+    <T = unknown,>(name: string): DataSlice<T> | undefined => {
+      const slice = slices.get(name);
+      return slice?.scope === 'repository'
+        ? (slice as DataSlice<T>)
+        : undefined;
+    },
+    [slices],
+  );
+
+  const hasSlice = useCallback(
+    (name: string, scope?: 'workspace' | 'repository'): boolean => {
+      const slice = slices.get(name);
+      if (!slice) return false;
+      return scope ? slice.scope === scope : true;
+    },
+    [slices],
+  );
+
+  const isSliceLoading = useCallback(
+    (name: string, scope?: 'workspace' | 'repository'): boolean => {
+      const slice = slices.get(name);
+      if (!slice) return false;
+      if (scope && slice.scope !== scope) return false;
+      return slice.loading;
+    },
+    [slices],
+  );
+
+  const refresh = useCallback(
+    async (scope?: 'workspace' | 'repository', sliceName?: string): Promise<void> => {
+      const slicesToRefresh = Array.from(slices.values()).filter((slice) => {
+        if (scope && slice.scope !== scope) return false;
+        if (sliceName && slice.name !== sliceName) return false;
+        return true;
+      });
+
+      await Promise.all(slicesToRefresh.map((slice) => slice.refresh()));
+    },
+    [slices],
   );
 
   // Create context value
@@ -1371,52 +1570,30 @@ export const RepositoryPanelProvider: React.FC<
       loading,
 
       // PanelContextValue required properties
-      currentScope: {
-        type: 'repository' as const,
-        repository,
-      },
+      currentScope,
       slices,
       adapters,
-      getSlice: <T = unknown,>(name: string): DataSlice<T> | undefined => {
-        return slices.get(name) as DataSlice<T> | undefined;
-      },
-      getWorkspaceSlice: () => undefined, // No workspace slices in repository context
-      getRepositorySlice: <T = unknown,>(
-        name: string,
-      ): DataSlice<T> | undefined => {
-        const slice = slices.get(name);
-        return slice?.scope === 'repository'
-          ? (slice as DataSlice<T>)
-          : undefined;
-      },
-      hasSlice: (name: string, scope?: 'workspace' | 'repository'): boolean => {
-        const slice = slices.get(name);
-        if (!slice) return false;
-        return scope ? slice.scope === scope : true;
-      },
-      isSliceLoading: (
-        name: string,
-        scope?: 'workspace' | 'repository',
-      ): boolean => {
-        const slice = slices.get(name);
-        if (!slice) return false;
-        if (scope && slice.scope !== scope) return false;
-        return slice.loading;
-      },
-      refresh: async (
-        scope?: 'workspace' | 'repository',
-        sliceName?: string,
-      ): Promise<void> => {
-        const slicesToRefresh = Array.from(slices.values()).filter((slice) => {
-          if (scope && slice.scope !== scope) return false;
-          if (sliceName && slice.name !== sliceName) return false;
-          return true;
-        });
-
-        await Promise.all(slicesToRefresh.map((slice) => slice.refresh()));
-      },
+      getSlice,
+      getWorkspaceSlice,
+      getRepositorySlice,
+      hasSlice,
+      isSliceLoading,
+      refresh,
     }),
-    [repositoryPath, repository, loading, slices, adapters],
+    [
+      repositoryPath,
+      repository,
+      loading,
+      currentScope,
+      slices,
+      adapters,
+      getSlice,
+      getWorkspaceSlice,
+      getRepositorySlice,
+      hasSlice,
+      isSliceLoading,
+      refresh,
+    ],
   );
 
   // Provider value

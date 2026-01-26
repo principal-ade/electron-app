@@ -278,6 +278,11 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   // Tab state for TabbedTerminalPanel (skills only - terminals are managed by the panel from context)
   const [tabs, setTabs] = useState<DevWorkspaceTab[]>([]);
 
+  // Debug: Log when tabs change
+  useEffect(() => {
+    console.log('[DevWorkspacePanelFramework] Tabs state updated:', tabs.length, 'tabs:', tabs);
+  }, [tabs]);
+
   // Track markdown files currently being loaded to prevent duplicate tabs
   const loadingMarkdownFilesRef = React.useRef<Set<string>>(new Set());
 
@@ -726,7 +731,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           const contentType = hasNarrative ? 'canvas-detail' : 'canvas-editor';
 
           // Check if tab already exists for this canvas
-          const existingTab = prevTabs.find(
+          const existingTabIndex = prevTabs.findIndex(
             (t) => {
               if (hasNarrative) {
                 return t.contentType === 'canvas-detail' && (t as CanvasTab).canvasId === canvasId;
@@ -736,8 +741,24 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             }
           );
 
-          if (existingTab) {
-            console.log('[DevWorkspacePanelFramework] Canvas tab already exists:', existingTab.id);
+          if (existingTabIndex !== -1 && hasNarrative) {
+            // Existing canvas-detail tab found - update it with new narrative information
+            console.log('[DevWorkspacePanelFramework] Updating existing canvas tab with new narrative:', prevTabs[existingTabIndex].id);
+            const updatedTabs = [...prevTabs];
+            const existingTab = updatedTabs[existingTabIndex] as CanvasTab;
+
+            updatedTabs[existingTabIndex] = {
+              ...existingTab,
+              selectedNarrativeId: narrativeId || null,
+              narrativePath: narrative?.path || null,
+              narrativeTemplate: narrativeTemplate || null,
+              narrativeFileInfo: narrativeFileInfo || null,
+            };
+
+            return updatedTabs; // Tab updated, will auto-activate
+          } else if (existingTabIndex !== -1) {
+            // Existing tab found (canvas-editor) - just activate it
+            console.log('[DevWorkspacePanelFramework] Canvas tab already exists:', prevTabs[existingTabIndex].id);
             return prevTabs; // Tab exists, will auto-activate
           }
 
@@ -1191,7 +1212,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
   // Define all panels using panel framework components
   const allPanels = useMemo(
-    () => [
+    () => {
+      console.log('[DevWorkspacePanelFramework] allPanels useMemo re-running. tabs:', tabs.length);
+      return [
       {
         id: 'terminal',
         label: 'Terminal',
@@ -1821,10 +1844,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           <div>GitHub Issue Detail panel not available</div>
         ),
       },
-    ],
-    // NOTE: tabs, handleTabsChange, and renderTabContent are intentionally excluded
-    // from dependencies to prevent unnecessary re-renders of all panels when tabs change.
-    // These are only used by the terminal panel and don't affect other panels.
+    ];
+    },
+    // NOTE: renderTabContent is intentionally excluded from dependencies since it uses refs.
+    // tabs is included so TabbedTerminalPanel receives updated tabs for canvas/skill/agent panels.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       CanvasEditorPanelComponent,
@@ -1860,6 +1883,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       terminalPanelContext,
       terminalActions,
       theme,
+      tabs,
+      handleTabsChange,
     ],
   );
 
