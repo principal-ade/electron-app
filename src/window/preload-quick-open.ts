@@ -7,7 +7,8 @@
  */
 console.info('[Preload-QuickOpen] Script starting...');
 
-import { contextBridge, ipcRenderer, clipboard } from 'electron';
+import { contextBridge, ipcRenderer } from 'electron';
+import { ClipboardAPIEvent } from '../shared/main-process-api-interfaces/ClipboardAPI';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 
 console.info('[Preload-QuickOpen] Electron imports successful');
@@ -67,7 +68,8 @@ try {
     selectQuickOpenItem: (item: QuickOpenItem) =>
       ipcRenderer.send('quick-open:select', item),
     closeQuickOpen: () => ipcRenderer.send('quick-open:close'),
-    copyToClipboard: (text: string) => clipboard.writeText(text),
+    copyToClipboard: (text: string) =>
+      ipcRenderer.invoke(ClipboardAPIEvent.WRITE_TEXT, text),
   });
   console.info('[Preload-QuickOpen] electronAPI exposed');
 } catch (error) {

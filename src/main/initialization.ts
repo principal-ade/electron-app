@@ -69,6 +69,7 @@ import {
 } from './services/ipc/localhost/localhostDetectionHandlers';
 import { registerGitHubArtifactHandlers } from './services/ipc/githubArtifactHandlers';
 import { registerCollectionsHandlers } from './services/CollectionsService';
+import { ElectronClipboardAdapter } from './system/clipboardHandler';
 
 // let agentSessionEventsHttpBridge: AgentSessionEventsHttpBridge | null = null;
 let principalMCPBridgePort: number | null = null;
@@ -138,6 +139,9 @@ const registerAllIpcHandlers = async () => {
   // Register SecureTokenIPC handlers (lazy initialization - no keychain access)
   const { registerSecureTokenHandlers } = require('./services/SecureTokenIPC');
   registerSecureTokenHandlers(); // Registers handlers without creating instance
+
+  // Initialize clipboard adapter
+  new ElectronClipboardAdapter();
 
   registerFileSystemIpcHandlers(applicationWindows);
   registerWindowManagerIpcHandlers(applicationWindows);

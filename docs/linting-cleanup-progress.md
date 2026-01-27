@@ -37,22 +37,24 @@ npm run lint 2>&1 | grep -E "^/Users/griever/Developer/desktop-app/electron-app/
 npm run typecheck 2>&1 | grep "error TS" | grep "src/renderer/" | sed 's|.*src/renderer/||' | cut -d'/' -f1 | sort | uniq -c | sort -nr
 ```
 
-## Current Status (Updated - 2026-01-11)
+## Current Status (Updated - 2026-01-26)
 
 ### Overall Issues
 
-* **ESLint**: 901 total issues (510 errors, 391 warnings) ⬆️ **+4 warnings from previous (was 897 total, 510 errors, 387 warnings)**
-* **TypeScript**: 152 errors ⬆️ **+1 from previous (was 151)**
-* **Console.log warnings**: 296 ⬇️ **-2 from previous (was 298)** ✅
+* **ESLint**: 1041 total issues (552 errors, 489 warnings) ⬆️ **+140 from previous (+42 errors, +98 warnings, was 901 total)** 🚨
+* **TypeScript**: 182 errors ⬆️ **+30 from previous (was 152)** 🚨
+* **Console.log warnings**: 372 ⬆️ **+76 from previous (was 296)** 🚨
 
 ### Recent Changes
 
-* **Mostly Stable**: Minimal changes overall, small improvements in some areas
-* ESLint warnings increased by 4 (+1.0%)
-* TypeScript errors increased by 1 (+0.7%)
-* Console.log warnings decreased by 2 (-0.7%) ✅
-* renderer/services ESLint improved: 8 → 7 (-1) ✅
-* Removed remote agent window management system (Jules, Codex)
+* **MAJOR REGRESSION**: Significant increase across all metrics (+13.5% overall)
+* ESLint increased by 140 (+15.5%)
+* TypeScript errors increased by 30 (+19.7%)
+* Console.log warnings increased by 76 (+25.7%)
+* **renderer/dev-workspace** MAJOR REGRESSION: TypeScript 3 → 26 (+23 errors) 🚨
+* **renderer/principal-window** regressed: ESLint 10 → 16 (+6), TypeScript 20 → 30 (+10)
+* **main** improved: TypeScript 39 → 38 (-1) ✅
+* **renderer/contexts** improved: TypeScript 5 → 4 (-1) ✅
 
 ### By Top-Level Directory
 
@@ -60,27 +62,27 @@ npm run typecheck 2>&1 | grep "error TS" | grep "src/renderer/" | sed 's|.*src/r
 
 | Directory                    | Issues | % of Total | Change       |
 | ---------------------------- | ------ | ---------- | ------------ |
-| renderer                     | 85     | 57.8%      | ⬆️ **+1**    |
-| main                         | 51     | 34.7%      | ⬆️ **+1**    |
-| window                       | 7      | 4.8%       | ⬆️ **+1**    |
-| terminal-worker              | 2      | 1.4%       | -            |
-| event-processing-server      | 2      | 1.4%       | -            |
-| shared                       | 1      | 0.7%       | -            |
+| renderer                     | 91     | 59.2%      | ⬆️ **+6**    |
+| main                         | 51     | 33.1%      | -            |
+| window                       | 7      | 4.5%       | -            |
+| terminal-worker              | 2      | 1.3%       | -            |
+| event-processing-server      | 2      | 1.3%       | -            |
+| shared                       | 1      | 0.6%       | -            |
 | repository-monitoring-server | 0      | ✅ Clean    | -            |
 | titlebar                     | 0      | ✅ Clean    | -            |
 
 #### TypeScript Errors
 
-| Directory                    | Errors   | % of Total | Change       |
-| ---------------------------- | -------- | ---------- | ------------ |
-| renderer                     | 106      | 69.7%      | ⬆️ **+1**    |
-| main                         | 39       | 25.7%      | -            |
-| shared                       | 4        | 2.6%       | -            |
-| window                       | 3        | 2.0%       | -            |
-| repository-monitoring-server | 0        | ✅ Clean    | -            |
-| titlebar                     | 0        | ✅ Clean    | -            |
-| event-processing-server      | 0        | ✅ Clean    | -            |
-| pure-core                    | 0        | ✅ Clean    | -            |
+| Directory                    | Errors   | % of Total | Change        |
+| ---------------------------- | -------- | ---------- | ------------- |
+| renderer                     | 137      | 75.3%      | ⬆️ **+31**    |
+| main                         | 38       | 20.9%      | ⬇️ **-1** ✅  |
+| shared                       | 4        | 2.2%       | -             |
+| window                       | 3        | 1.6%       | -             |
+| repository-monitoring-server | 0        | ✅ Clean    | -             |
+| titlebar                     | 0        | ✅ Clean    | -             |
+| event-processing-server      | 0        | ✅ Clean    | -             |
+| pure-core                    | 0        | ✅ Clean    | -             |
 
 ### Renderer Subdirectories
 
@@ -88,104 +90,103 @@ npm run typecheck 2>&1 | grep "error TS" | grep "src/renderer/" | sed 's|.*src/r
 
 | Subdirectory               | Issues  | Change       |
 | -------------------------- | ------- | ------------ |
+| principal-window           | 16      | ⬆️ **+6**    |
 | main-process-api           | 12      | -            |
 | components                 | 12      | -            |
 | utils                      | 10      | -            |
-| principal-window           | 10      | ⬆️ **+1**    |
 | pages                      | 10      | -            |
 | contexts                   | 7       | -            |
-| services                   | 7       | ⬇️ **-1** ✅ |
-| panels                     | 3       | -            |
-| hooks                      | 3       | ⬆️ **+1**    |
+| services                   | 7       | -            |
+| panels                     | 4       | ⬆️ **+1**    |
+| hooks                      | 4       | ⬆️ **+1**    |
 | dev-workspace              | 3       | -            |
 | alexandria-workspace       | 2       | -            |
-| quick-open                 | 2       | -            |
 | extension-window           | 2       | -            |
 | tipc                       | 1       | -            |
 | App.tsx                    | 1       | -            |
 | adapters                   | ✅ Clean | -            |
 | types                      | ✅ Clean | -            |
 | GlobalFeedbackProvider.tsx | ✅ Clean | -            |
+| quick-open                 | 0       | ✅ **Clean** |
 
 #### TypeScript Errors
 
-| Subdirectory               | Errors  | Change        |
-| -------------------------- | ------- | ------------- |
-| services                   | 22      | -             |
-| components                 | 21      | -             |
-| principal-window           | 20      | ⬆️ **+1**     |
-| utils                      | 17      | -             |
-| quick-open                 | 5       | -             |
-| contexts                   | 5       | -             |
-| pages                      | 4       | -             |
-| dev-workspace              | 3       | -             |
-| alexandria-workspace       | 3       | -             |
-| panels                     | 2       | -             |
-| main-process-api           | 2       | -             |
-| extension-window           | 2       | -             |
-| adapters                   | ✅ Clean | -             |
-| hooks                      | ✅ Clean | -             |
-| types                      | ✅ Clean | -             |
-| providers                  | ✅ Clean | -             |
-| GlobalFeedbackProvider.tsx | ✅ Clean | -             |
-| config                     | ✅ Clean | -             |
-| App.tsx                    | ✅ Clean | -             |
+| Subdirectory               | Errors   | Change          |
+| -------------------------- | -------- | --------------- |
+| principal-window           | 30       | ⬆️ **+10**      |
+| dev-workspace              | 26       | ⬆️ **+23** 🚨   |
+| services                   | 22       | -               |
+| components                 | 21       | -               |
+| utils                      | 17       | -               |
+| panels                     | 5        | ⬆️ **+3**       |
+| pages                      | 4        | -               |
+| contexts                   | 4        | ⬇️ **-1** ✅    |
+| alexandria-workspace       | 4        | ⬆️ **+1**       |
+| main-process-api           | 2        | -               |
+| extension-window           | 2        | -               |
+| adapters                   | ✅ Clean  | -               |
+| hooks                      | ✅ Clean  | -               |
+| types                      | ✅ Clean  | -               |
+| providers                  | ✅ Clean  | -               |
+| GlobalFeedbackProvider.tsx | ✅ Clean  | -               |
+| config                     | ✅ Clean  | -               |
+| App.tsx                    | ✅ Clean  | -               |
+| quick-open                 | 0        | ✅ **Clean**    |
 
 ## Priority Areas for Cleanup
 
 ### Priority 1: Quick Wins (\< 20 total issues)
 
 1. **renderer/extension-window** - 2 ESLint + 2 TypeScript = 4 total
-2. **renderer/alexandria-workspace** - 2 ESLint + 3 TypeScript = 5 total
-3. **renderer/hooks** - 3 ESLint + 0 TypeScript = 3 total ⬆️ **+1**
-4. **renderer/panels** - 3 ESLint + 2 TypeScript = 5 total
-5. **renderer/dev-workspace** - 3 ESLint + 3 TypeScript = 6 total
-6. **renderer/quick-open** - 2 ESLint + 5 TypeScript = 7 total
-7. **renderer/contexts** - 7 ESLint + 5 TypeScript = 12 total
-8. **renderer/main-process-api** - 12 ESLint + 2 TypeScript = 14 total
-9. **renderer/pages** - 10 ESLint + 4 TypeScript = 14 total
+2. **renderer/hooks** - 4 ESLint + 0 TypeScript = 4 total
+3. **renderer/alexandria-workspace** - 2 ESLint + 4 TypeScript = 6 total ⬆️ **+1**
+4. **renderer/panels** - 4 ESLint + 5 TypeScript = 9 total ⬆️ **+4**
+5. **renderer/contexts** - 7 ESLint + 4 TypeScript = 11 total ⬇️ **-1** ✅
+6. **renderer/main-process-api** - 12 ESLint + 2 TypeScript = 14 total
+7. **renderer/pages** - 10 ESLint + 4 TypeScript = 14 total
 
 ### Priority 2: Focus Areas
 
 1. **renderer/utils** - 10 ESLint + 17 TypeScript = 27 total
-2. **renderer/services** - 7 ESLint + 22 TypeScript = 29 total ⬇️ **-1** ✅
-3. **renderer/principal-window** - 10 ESLint + 20 TypeScript = 30 total ⬆️ **+2**
+2. **renderer/dev-workspace** - 3 ESLint + 26 TypeScript = 29 total ⬆️ **+23** 🚨
+3. **renderer/services** - 7 ESLint + 22 TypeScript = 29 total
+4. **renderer/components** - 12 ESLint + 21 TypeScript = 33 total
+5. **renderer/principal-window** - 16 ESLint + 30 TypeScript = 46 total ⬆️ **+16** 🚨
 
 ### Priority 3: Non-Renderer Directories
 
 1. **terminal-worker** - 2 ESLint issues + 0 TypeScript errors = 2 total
 2. **event-processing-server** - 2 ESLint issues + 0 TypeScript errors = 2 total
 3. **shared** - 1 ESLint issue + 4 TypeScript errors = 5 total
-4. **window** - 7 ESLint issues + 3 TypeScript errors = 10 total ⬆️ **+1**
-5. **main** - 51 ESLint issues + 39 TypeScript errors = 90 total ⬆️ **+1**
+4. **window** - 7 ESLint issues + 3 TypeScript errors = 10 total
+5. **main** - 51 ESLint issues + 38 TypeScript errors = 89 total ⬇️ **-1** ✅
 6. **repository-monitoring-server** - 0 ESLint issues + 0 TypeScript errors = ✅ **Clean!**
-
-### Priority 4: Large Renderer Areas
-
-1. **renderer/components** - 12 ESLint + 21 TypeScript = 33 total
 
 ✅ **renderer/adapters** - Now clean! (was 14 total)
 
 ✅ **Completed Directories** (TypeScript + ESLint clean): pure-core, titlebar, repository-monitoring-server
 
-✅ **Completed Renderer Subdirectories**: types, GlobalFeedbackProvider.tsx, config, providers, App.tsx (TypeScript clean), adapters
+✅ **Completed Renderer Subdirectories**: types, GlobalFeedbackProvider.tsx, config, providers, App.tsx (TypeScript clean), adapters, quick-open (NEW ✨)
 
 ✅ **Partially Clean Directories**:
 
-* **renderer/hooks** (TypeScript clean - 3 ESLint issues remaining)
+* **renderer/hooks** (TypeScript clean - 4 ESLint issues remaining)
 * **renderer/App.tsx** (TypeScript clean - 1 ESLint issue remaining)
 
 🎯 **Improved Directories** (since last update):
 
-* **renderer/services** - ESLint decreased by 1 (from 8 to 7) ✅
-* **Console.log warnings** - Decreased by 2 (from 298 to 296) ✅
+* **main** - TypeScript decreased by 1 (from 39 to 38) ✅
+* **renderer/contexts** - TypeScript decreased by 1 (from 5 to 4) ✅
+* **renderer/quick-open** - Now fully clean! (was 2 ESLint + 5 TypeScript) ✅
 
-⚠️ **Areas with Minor Regressions**:
+⚠️ **Areas with Major Regressions**:
 
-* **renderer/principal-window** - Combined +2 issues (ESLint +1, TypeScript +1)
+* **renderer/dev-workspace** - TypeScript +23 (from 3 to 26) 🚨 **TOP PRIORITY**
+* **renderer/principal-window** - Combined +16 issues (ESLint +6, TypeScript +10) 🚨
+* **renderer/panels** - Combined +4 issues (ESLint +1, TypeScript +3)
 * **renderer/hooks** - ESLint +1
-* **main** - ESLint +1
-* **window** - ESLint +1
+* **renderer/alexandria-workspace** - TypeScript +1
+* **Console.log warnings** - Increased by 76 (from 296 to 372) 🚨
 
 ## Cleanup Best Practices
 
@@ -227,7 +228,46 @@ Many "services" are just stubs that should be removed:
 * Have "STUB:" comments
 * These can often be simplified or removed entirely
 
-## Recent Changes (2026-01-11 - Latest)
+## Recent Changes (2026-01-26 - Latest)
+
+### Overall Progress
+
+- **ESLint**: 901 → 1041 (+140 issues, +15.5%)
+- **TypeScript**: 152 → 182 (+30 errors, +19.7%)
+- **Console.log**: 296 → 372 (+76 warnings, +25.7%)
+
+### Summary
+
+⚠️ **MAJOR REGRESSION** - Significant increase across all metrics. This is the largest regression since 2026-01-09.
+
+**Major Problem Areas:**
+- **renderer/dev-workspace** TypeScript: 3 → 26 (+23 errors) 🚨 **CRITICAL**
+- **renderer/principal-window**: ESLint 10 → 16 (+6), TypeScript 20 → 30 (+10) - Combined +16 issues 🚨
+- **Console.log warnings**: 296 → 372 (+76 warnings) - Largest single component of regression
+
+**Minor Improvements:**
+- **main** TypeScript: 39 → 38 (-1) ✅
+- **renderer/contexts** TypeScript: 5 → 4 (-1) ✅
+- **renderer/quick-open**: Now fully clean! (was 2 ESLint + 5 TypeScript) ✅
+
+**Other Regressions:**
+- **renderer** overall: ESLint +6, TypeScript +31
+- **renderer/panels**: ESLint 3 → 4 (+1), TypeScript 2 → 5 (+3)
+- **renderer/hooks**: ESLint 3 → 4 (+1)
+- **renderer/alexandria-workspace**: TypeScript 3 → 4 (+1)
+
+**Action Items:**
+1. 🚨 **URGENT**: Investigate renderer/dev-workspace for +23 TypeScript errors
+2. 🚨 **HIGH**: Review renderer/principal-window for +16 combined issues
+3. Review and remove 76 newly added console.log statements
+4. Identify what changes between 2026-01-11 and 2026-01-26 caused these regressions
+
+**Conclusion:**
+Major regression indicates significant new code or refactoring work. The dev-workspace directory should be the top priority for cleanup.
+
+---
+
+## Changes (2026-01-11)
 
 ### Overall Progress
 

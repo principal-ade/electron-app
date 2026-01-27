@@ -34,7 +34,7 @@ interface QuickOpenWindow extends Window {
     requestQuickOpenItems: () => void;
     selectQuickOpenItem: (item: QuickOpenItem) => void;
     closeQuickOpen: () => void;
-    copyToClipboard: (text: string) => void;
+    copyToClipboard: (text: string) => Promise<void>;
   };
 }
 
@@ -47,6 +47,7 @@ const QuickOpenApp: React.FC = () => {
   const [filteredItems, setFilteredItems] = useState<QuickOpenItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [copiedMessage, setCopiedMessage] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const selectedItemRef = useRef<HTMLDivElement>(null);
 
@@ -116,15 +117,33 @@ const QuickOpenApp: React.FC = () => {
     quickOpenWindow.electronAPI.selectQuickOpenItem(item);
   };
 
-  const handleContextMenu = (
+  const handleContextMenu = async (
     e: React.MouseEvent<HTMLDivElement>,
     item: QuickOpenItem,
   ) => {
     e.preventDefault();
     if (item.localPath) {
       console.info('[Quick Open] Copying path to clipboard:', item.localPath);
-      quickOpenWindow.electronAPI.copyToClipboard(item.localPath);
-      quickOpenWindow.electronAPI.closeQuickOpen();
+      try {
+        await quickOpenWindow.electronAPI.copyToClipboard(item.localPath);
+        console.info('[Quick Open] Path copied successfully');
+
+        // Show "Copied!" message
+        setCopiedMessage('Path copied to clipboard!');
+
+        // Close after a brief delay to show the feedback
+        setTimeout(() => {
+          quickOpenWindow.electronAPI.closeQuickOpen();
+        }, 400);
+      } catch (error) {
+        console.error('[Quick Open] Failed to copy to clipboard:', error);
+        setCopiedMessage('Failed to copy path');
+
+        // Clear error message after delay
+        setTimeout(() => {
+          setCopiedMessage(null);
+        }, 2000);
+      }
     }
   };
 
@@ -160,12 +179,29 @@ const QuickOpenApp: React.FC = () => {
       });
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      console.info(
-        '[Quick Open] Enter - selecting item at index:',
-        selectedIndex,
-      );
-      if (filteredItems[selectedIndex]) {
-        handleSelectItem(filteredItems[selectedIndex]);
+      // Check for Cmd+Enter (Mac) or Ctrl+Enter (Windows/Linux) to copy path
+      if (e.metaKey || e.ctrlKey) {
+        console.info(
+          '[Quick Open] Cmd/Ctrl+Enter - copying path at index:',
+          selectedIndex,
+        );
+        if (filteredItems[selectedIndex]) {
+          const item = filteredItems[selectedIndex];
+          if (item.localPath) {
+            handleContextMenu(
+              e as unknown as React.MouseEvent<HTMLDivElement>,
+              item,
+            );
+          }
+        }
+      } else {
+        console.info(
+          '[Quick Open] Enter - selecting item at index:',
+          selectedIndex,
+        );
+        if (filteredItems[selectedIndex]) {
+          handleSelectItem(filteredItems[selectedIndex]);
+        }
       }
     }
   };
@@ -184,6 +220,7 @@ const QuickOpenApp: React.FC = () => {
     >
       <div
         style={{
+          position: 'relative',
           width: '600px',
           background: theme.colors.background,
           border: `1px solid ${theme.colors.border}`,
@@ -222,6 +259,40 @@ const QuickOpenApp: React.FC = () => {
             }}
           />
         </div>
+
+        {/* Copied feedback overlay */}
+        {copiedMessage && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'rgba(0, 0, 0, 0.8)',
+              zIndex: 1000,
+              borderRadius: '8px',
+            }}
+          >
+            <div
+              style={{
+                background: theme.colors.primary,
+                color: theme.colors.background,
+                padding: '16px 32px',
+                borderRadius: '8px',
+                fontSize: theme.fontSizes[4],
+                fontFamily: theme.fonts.body,
+                fontWeight: 600,
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+              }}
+            >
+              ✓ {copiedMessage}
+            </div>
+          </div>
+        )}
 
         <div
           style={{
@@ -436,7 +507,7 @@ const QuickOpenApp: React.FC = () => {
               color: theme.colors.textSecondary,
             }}
           >
-            Right-Click Copy Path
+            ⌘↵ Copy Path
           </span>
           <span
             style={{

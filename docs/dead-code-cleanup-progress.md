@@ -21,20 +21,20 @@ npx knip --files
 npx knip --files 2>&1 | grep "^src/renderer/components/"
 ```
 
-## Current Status (Updated - 2025-12-27)
+## Current Status (Updated - 2026-01-26)
 
-**Total unused files: 71** ⬆️ **+1 from previous (was 70)**
+**Total unused files: 76** ⬆️ **+5 from previous (was 71)** 🚨
 
 ### By Top-Level Directory
 
 | Directory | Unused Files | Change |
 |-----------|--------------|--------|
-| renderer | 28 | ⬇️ **-4** (1 wired up, 3 deleted) |
-| shared | 16 | ⬆️ **+1** |
-| main | 14 | ⬇️ **-1** |
-| window | 5 | ⬆️ **+2** |
-| titlebar | 4 | - |
-| terminal-worker | 3 | 🆕 (new) |
+| renderer | 33 | ⬆️ **+5** 🚨 |
+| shared | 16 | - |
+| main | 15 | ⬆️ **+1** |
+| window | 6 | ⬆️ **+1** |
+| terminal-worker | 3 | - |
+| titlebar | 2 | ⬇️ **-2** ✅ |
 | setupTests.js | 1 | - |
 | event-processing-server | ✅ Clean | - |
 
@@ -44,14 +44,16 @@ npx knip --files 2>&1 | grep "^src/renderer/components/"
 |--------------|--------------|--------|
 | main-process-api | 11 | - |
 | utils | 10 | - |
-| services | 5 | ⬇️ **-2** (deleted) |
+| services | 5 | - |
+| principal-window | 2 | 🆕 **New** 🚨 |
+| styles | 1 | 🆕 **New** |
+| hooks | 1 | 🚨 **Regressed** |
 | global.d.ts | 1 | - |
 | dev-workspace | 1 | - |
-| components | ✅ Clean | ⬇️ **-2** 🎉 |
-| hooks | ✅ Clean | - |
+| contexts | 1 | 🚨 **Regressed** |
+| components | ✅ Clean | - |
 | panels | ✅ Clean | - |
 | types | ✅ Clean | - |
-| contexts | ✅ Clean | - |
 | adapters | ✅ Clean | - |
 | pages | ✅ Clean | - |
 | config | ✅ Clean | - |
@@ -66,6 +68,62 @@ npx knip --files 2>&1 | grep "^src/renderer/components/"
 **Notes:**
 - `DeleteWorkspaceConfirmationModal.tsx` was wired up to WorkspacesView (2025-12-27)
 - `SaveWorkspaceModal.tsx` deleted as unused (2025-12-27)
+
+---
+
+### renderer/principal-window (2 files) 🆕
+
+```
+src/renderer/principal-window/views/SkillBrowserView/GlobalDirectoriesConfig.tsx
+src/renderer/principal-window/views/SkillBrowserView/PendingChangesPanel.tsx
+```
+
+**Status:** ⏳ Pending review
+
+**Notes:**
+- New unused files detected in SkillBrowserView (2026-01-26)
+- Related to skills feature - may be work-in-progress
+
+---
+
+### renderer/contexts (1 file) 🚨
+
+```
+src/renderer/contexts/UserCollectionsContext.tsx
+```
+
+**Status:** ⏳ Pending review
+
+**Notes:**
+- Regressed from clean status (2026-01-26)
+- New unused context file detected
+
+---
+
+### renderer/hooks (1 file) 🚨
+
+```
+src/renderer/hooks/useSkillsPendingChanges.ts
+```
+
+**Status:** ⏳ Pending review
+
+**Notes:**
+- Regressed from clean status (2026-01-26)
+- Related to skills feature
+
+---
+
+### renderer/styles (1 file) 🆕
+
+```
+src/renderer/styles/mdx-editor.ts
+```
+
+**Status:** ⏳ Pending review
+
+**Notes:**
+- New unused styles file detected (2026-01-26)
 
 ---
 
@@ -137,20 +195,21 @@ src/renderer/dev-workspace/global.d.ts
 
 ---
 
-## Main Process Unused Files (14 files)
+## Main Process Unused Files (15 files)
 
 ```
 src/main/quality-lenses/PackageLayerToToolConfigBridge.ts
+src/main/services/FastForwardIPC.ts
 src/main/services/GitSyncIPC.ts
 src/main/services/OrbitIPC.ts
 src/main/services/PresenceIPC.ts
 src/main/services/SecureTokenIPC.ts
 src/main/services/store/types/index.ts
 src/main/services/store/types/session.types.ts
-src/main/system/clipboardHandler.ts
 src/main/terminal/phase2-future/worker/ptyWorker.ts
 src/main/terminal/phase2-future/worker/types.ts
 src/main/terminal/phase2-future/worker/WorkerManager.ts
+src/main/terminal/TerminalAuthorizationService.ts
 src/main/window/callimachusWindow.ts
 src/main/window/windowDefaults.ts
 src/main/window/windowTypes.ts
@@ -161,8 +220,10 @@ src/main/window/windowTypes.ts
 **Notes:**
 - `terminal/phase2-future/*` - WIP worker implementation, keep for now
 - `services/store/types/*` - May be imported dynamically or needed for type definitions
-- `services/*IPC.ts` - 4 IPC files detected as unused (GitSync, Orbit, Presence, SecureToken)
-- `version-control-providers/GitService.ts` - No longer detected as unused ⬇️ **-1**
+- `services/*IPC.ts` - 5 IPC files detected as unused (FastForward, GitSync, Orbit, Presence, SecureToken)
+- `FastForwardIPC.ts` - 🆕 New unused file detected (2026-01-26)
+- `TerminalAuthorizationService.ts` - 🆕 New unused file detected (2026-01-26)
+- `system/clipboardHandler.ts` - No longer detected as unused ✅
 
 ---
 
@@ -196,13 +257,11 @@ src/shared/utils/githubUrlParser.ts
 
 ---
 
-## Titlebar Unused Files (4 files) 🆕
+## Titlebar Unused Files (2 files)
 
 ```
 src/titlebar/index.js
 src/titlebar/index.tsx
-src/titlebar/RemoteAgentTitlebar.js
-src/titlebar/RemoteAgentTitlebar.tsx
 ```
 
 **Status:** ⏳ Pending review
@@ -210,16 +269,18 @@ src/titlebar/RemoteAgentTitlebar.tsx
 **Notes:**
 - Appears to have duplicate JS/TSX files - may need cleanup
 - Could be entry points not configured in knip.json
+- `RemoteAgentTitlebar.js` and `RemoteAgentTitlebar.tsx` no longer detected as unused ✅ (2026-01-26)
 
 ---
 
-## Window Unused Files (5 files)
+## Window Unused Files (6 files)
 
 ```
 src/window/main-process-api-implementations/extensionApi.ts
 src/window/preload-dev-workspace.ts
 src/window/preload-extension-window.ts
 src/window/preload-quick-open.ts
+src/window/preload-remote-terminal-viewer.ts
 src/window/preload-window-switcher.ts
 ```
 
@@ -228,8 +289,7 @@ src/window/preload-window-switcher.ts
 **Notes:**
 - `preload-*.ts` files are likely preload script entry points
 - May need to be added to knip.json entry points
-- `preload-quick-open.ts` - 🆕 New unused file detected
-- `preload-window-switcher.ts` - 🆕 New unused file detected
+- `preload-remote-terminal-viewer.ts` - 🆕 New unused file detected (2026-01-26)
 
 ---
 
@@ -294,6 +354,7 @@ grep -r "from.*filename" src/
 
 | Date | Files Removed | Notes |
 |------|---------------|-------|
+| 2026-01-26 | 0 | Status update - renderer regressed +5, new skills-related files detected |
 | 2025-12-27 | 0 | Status update - terminal-worker detected, window preloads increased |
 | 2025-12-16 | 0 | Status update - 4 new IPC files detected as unused in main |
 | 2025-12-14 | 4 | Removed AnimatedTimelineEvent, markdown/index, TitlebarOpenInIDE, WorkspaceSelector |
@@ -302,9 +363,47 @@ grep -r "from.*filename" src/
 | 2025-11-28 | 2 | Removed `src/event-processing-server/types/` directory (duplicate of `types.ts`) |
 | 2025-11-28 | 0 | Initial audit |
 
+### 2026-01-26 Summary
+
+**Total:** 71 → 76 files (+5, +7% increase) 🚨
+
+**New unused files detected:**
+- `src/renderer/principal-window/views/SkillBrowserView/GlobalDirectoriesConfig.tsx`
+- `src/renderer/principal-window/views/SkillBrowserView/PendingChangesPanel.tsx`
+- `src/renderer/contexts/UserCollectionsContext.tsx`
+- `src/renderer/hooks/useSkillsPendingChanges.ts`
+- `src/renderer/styles/mdx-editor.ts`
+- `src/main/services/FastForwardIPC.ts`
+- `src/main/terminal/TerminalAuthorizationService.ts`
+- `src/window/preload-remote-terminal-viewer.ts`
+
+**Files no longer detected as unused:**
+- `src/main/system/clipboardHandler.ts` ✅
+- `src/titlebar/RemoteAgentTitlebar.js` ✅
+- `src/titlebar/RemoteAgentTitlebar.tsx` ✅
+
+**Directory changes:**
+- **renderer**: 28 → 33 (+5) 🚨
+  - **principal-window**: 0 → 2 (new unused files)
+  - **contexts**: 0 → 1 (regressed from clean)
+  - **hooks**: 0 → 1 (regressed from clean)
+  - **styles**: 0 → 1 (new category)
+- **main**: 14 → 15 (+1)
+- **window**: 5 → 6 (+1)
+- **titlebar**: 4 → 2 (-2) ✅
+
+**Notes:**
+- Major regression in renderer (+5 files) - several skills-related components now unused
+- Three directories regressed from clean status (principal-window, contexts, hooks)
+- Skills feature appears to have unused components (SkillBrowserView files, useSkillsPendingChanges)
+- Titlebar improved with RemoteAgentTitlebar files now in use
+- New IPC service detected as unused (FastForwardIPC)
+
+---
+
 ### 2025-12-27 Summary
 
-**Total:** 70 → 75 files (+5, +7% increase)
+**Total:** 70 → 71 files (+1, +1.4% increase)
 
 **New unused files detected:**
 - `src/terminal-worker/types.ts` (new directory)
@@ -322,7 +421,6 @@ grep -r "from.*filename" src/
 - window preload scripts increased (+2) - likely entry points not in knip config
 - shared types increased (+1) - git.types.ts now detected
 - main decreased (-1) - GitService.ts now in use
-- renderer unchanged (32 files)
 
 ---
 
