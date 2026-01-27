@@ -708,16 +708,16 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           data: { path: filePath },
         });
       }),
-      // Canvas selection - create tab (from canvas-list-panel or canvas-detail-panel)
+      // Canvas open - create tab (from canvas-list-panel or canvas-detail-panel)
       events.on('custom', (event) => {
-        // Only handle selectCanvas action from canvas-list-panel or canvas-detail-panel
-        if (event.payload?.action !== 'selectCanvas' ||
+        // Only handle openCanvas action from canvas-list-panel or canvas-detail-panel
+        if (event.payload?.action !== 'openCanvas' ||
             (event.source !== 'canvas-list-panel' && event.source !== 'canvas-detail-panel')) {
           return;
         }
 
-        console.log('[DevWorkspacePanelFramework] Received canvas selection event:', event);
-        const { canvasId, canvas, canvasFileInfo, narrativeId, narrative, narrativeTemplate, narrativeFileInfo } = event.payload;
+        console.log('[DevWorkspacePanelFramework] Received canvas open event:', event);
+        const { canvasId, canvas, canvasFileInfo, narrativeId, narrative, narrativeTemplate, narrativeFileInfo, openMode } = event.payload;
 
         if (!canvasId || !canvas) {
           console.warn('[DevWorkspacePanelFramework] No canvas data in event:', event.payload);
