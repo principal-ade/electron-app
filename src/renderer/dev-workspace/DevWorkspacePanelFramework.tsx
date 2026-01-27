@@ -144,6 +144,23 @@ interface DevWorkspacePanelFrameworkInnerProps {
 }
 
 /**
+ * Wrapper that only mounts children when active.
+ * This prevents multiple DndProvider instances from existing simultaneously.
+ */
+const ConditionalPanelMount: React.FC<{
+  isActive: boolean;
+  children: React.ReactNode;
+}> = ({ isActive, children }) => {
+  // Render a container that always exists to maintain layout structure
+  // But only render children (which contain DndProviders) when active
+  return (
+    <div style={{ height: '100%', width: '100%', position: 'relative' }}>
+      {isActive ? children : null}
+    </div>
+  );
+};
+
+/**
  * Isolated wrapper for File City panel that consumes agent highlight context.
  *
  * This component is defined outside DevWorkspacePanelFrameworkInner to prevent
@@ -1282,11 +1299,17 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               flexDirection: 'column',
             }}
           >
-            <CanvasListPanelComponent
-              context={context}
-              actions={actions}
-              events={events}
-            />
+            <ConditionalPanelMount
+              key="canvasList-mount"
+              isActive={layout.left === 'canvasList' || layout.middle === 'canvasList' || layout.right === 'canvasList'}
+            >
+              <CanvasListPanelComponent
+                key="canvasList-component"
+                context={context}
+                actions={actions}
+                events={events}
+              />
+            </ConditionalPanelMount>
           </div>
         ) : (
           <div>Architecture panel not available</div>
@@ -1296,12 +1319,18 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         id: 'fileCity',
         label: 'File City',
         content: FileCityPanelComponent ? (
-          <FileCityWithHighlights
-            context={context}
-            actions={actions}
-            events={events}
-            FileCityPanelComponent={FileCityPanelComponent}
-          />
+          <ConditionalPanelMount
+            key="fileCity-mount"
+            isActive={layout.left === 'fileCity' || layout.middle === 'fileCity' || layout.right === 'fileCity'}
+          >
+            <FileCityWithHighlights
+              key="fileCity-component"
+              context={context}
+              actions={actions}
+              events={events}
+              FileCityPanelComponent={FileCityPanelComponent}
+            />
+          </ConditionalPanelMount>
         ) : (
           <div>File City panel not available</div>
         ),
@@ -1320,11 +1349,17 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               flexDirection: 'column',
             }}
           >
-            <DocsPanelComponent
-              context={context}
-              actions={actions}
-              events={events}
-            />
+            <ConditionalPanelMount
+              key="docs-mount"
+              isActive={layout.left === 'docs' || layout.middle === 'docs' || layout.right === 'docs'}
+            >
+              <DocsPanelComponent
+                key="docs-component"
+                context={context}
+                actions={actions}
+                events={events}
+              />
+            </ConditionalPanelMount>
           </div>
         ) : (
           <div>Documentation panel not available</div>
@@ -1850,6 +1885,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       theme,
       tabs,
       handleTabsChange,
+      layout, // CRITICAL: Must include layout so ConditionalPanelMount re-renders with correct isActive
     ],
   );
 
@@ -2039,6 +2075,8 @@ export const DevWorkspacePanelFramework: React.FC<
         terminalContext={terminalContext}
       >
         <AgentHighlightProvider repositoryPath={repositoryPath}>
+          {/* Lazy mounting of panels prevents multiple DndProviders from being active simultaneously,
+              which would cause the "Cannot have two HTML5 backends" error */}
           <DevWorkspacePanelFrameworkInner
             collapsed={collapsed}
             onCollapsedChange={onCollapsedChange}

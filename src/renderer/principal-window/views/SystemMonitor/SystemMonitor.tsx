@@ -14,11 +14,13 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { RepositoryMonitoringService } from '../../../main-process-api/RepositoryMonitoringService';
+import { OtelCollectorService } from '../../../main-process-api/OtelCollectorService';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 import type {
   MonitoringStatus,
   GitStatus,
 } from '@principal-ai/repository-monitoring-server';
+import type { OtelCollectorStatus } from '../../../main-process-api/OtelCollectorService';
 
 interface SystemMonitorProps {
   sidebarCollapsed?: boolean;
@@ -45,6 +47,9 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
   const [packageData, setPackageData] = useState<
     Map<string, { packages: number; monorepo: boolean; loading: boolean }>
   >(new Map());
+  const [otelStatus, setOtelStatus] = useState<OtelCollectorStatus | null>(null);
+  const [otelLoading, setOtelLoading] = useState(true);
+  const [isSendingTestTrace, setIsSendingTestTrace] = useState(false);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -97,6 +102,38 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
       }
     };
     loadAvailableRepos();
+  }, []);
+
+  // Poll OTEL Collector status
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+
+    const fetchOtelStatus = async () => {
+      try {
+        const status = await OtelCollectorService.getStatus();
+        setOtelStatus(status);
+        setOtelLoading(false);
+      } catch (error) {
+        console.error('Failed to fetch OTEL collector status:', error);
+        setOtelStatus({
+          isRunning: false,
+          stats: null,
+        });
+        setOtelLoading(false);
+      }
+    };
+
+    // Initial fetch
+    fetchOtelStatus();
+
+    // Poll every 2 seconds
+    interval = setInterval(fetchOtelStatus, 2000);
+
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
   }, []);
 
   // Listen for git status changes from the monitoring server
@@ -312,6 +349,39 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
       console.error('Failed to toggle monitoring:', error);
     } finally {
       setIsToggling(false);
+    }
+  };
+
+  const handleToggleOtelCollector = async () => {
+    try {
+      if (otelStatus?.isRunning) {
+        await OtelCollectorService.stop();
+      } else {
+        await OtelCollectorService.start();
+      }
+      // Refresh status
+      setTimeout(async () => {
+        const status = await OtelCollectorService.getStatus();
+        setOtelStatus(status);
+      }, 1000);
+    } catch (error) {
+      console.error('Failed to toggle OTEL collector:', error);
+    }
+  };
+
+  const handleSendTestTrace = async () => {
+    setIsSendingTestTrace(true);
+    try {
+      const result = await OtelCollectorService.sendTestTrace('http://localhost:3000');
+      if (result.success) {
+        console.log('Test trace sent successfully');
+      } else {
+        console.error('Failed to send test trace:', result.error);
+      }
+    } catch (error) {
+      console.error('Failed to send test trace:', error);
+    } finally {
+      setIsSendingTestTrace(false);
     }
   };
 
@@ -667,6 +737,200 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
             }}
           >
             Showing last {status.history.length} data points (1 minute history)
+          </div>
+        </section>
+
+        {/* OTEL Collector Section */}
+        <section style={{ marginBottom: '32px' }}>
+          <h3
+            style={{
+              fontSize: '14px',
+              fontWeight: 600,
+              color: theme.colors.textSecondary,
+              marginBottom: '16px',
+              fontFamily: theme.fonts.heading,
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+            }}
+          >
+            OTEL COLLECTOR
+          </h3>
+
+          <div
+            style={{
+              backgroundColor: theme.colors.backgroundSecondary,
+              borderRadius: '12px',
+              padding: '20px',
+              border: `1px solid ${theme.colors.border}`,
+            }}
+          >
+            {/* Status Row */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '20px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div
+                  style={{
+                    width: '12px',
+                    height: '12px',
+                    borderRadius: '50%',
+                    backgroundColor: otelStatus?.isRunning
+                      ? theme.colors.success
+                      : theme.colors.textSecondary,
+                    animation: otelStatus?.isRunning ? 'pulse 2s infinite' : 'none',
+                  }}
+                />
+                <span style={{ fontSize: '14px', fontWeight: 500 }}>
+                  {otelLoading ? 'Loading...' : otelStatus?.isRunning ? 'Running' : 'Stopped'}
+                </span>
+              </div>
+
+              <button
+                onClick={handleToggleOtelCollector}
+                disabled={otelLoading}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  border: `1px solid ${otelStatus?.isRunning ? theme.colors.error : theme.colors.success}`,
+                  backgroundColor: otelStatus?.isRunning
+                    ? `${theme.colors.error}10`
+                    : `${theme.colors.success}10`,
+                  color: otelStatus?.isRunning ? theme.colors.error : theme.colors.success,
+                  cursor: otelLoading ? 'not-allowed' : 'pointer',
+                  opacity: otelLoading ? 0.5 : 1,
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                {otelStatus?.isRunning ? 'Stop' : 'Start'}
+              </button>
+            </div>
+
+            {/* Stats Grid */}
+            {otelStatus?.isRunning && otelStatus.stats && (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr 1fr',
+                  gap: '16px',
+                  marginBottom: '16px',
+                  padding: '16px',
+                  backgroundColor: theme.colors.background,
+                  borderRadius: '8px',
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontSize: '11px',
+                      color: theme.colors.textSecondary,
+                      marginBottom: '4px',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Traces Received
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '20px',
+                      fontWeight: 700,
+                      fontFamily: theme.fonts.monospace,
+                    }}
+                  >
+                    {otelStatus.stats.tracesReceived}
+                  </div>
+                </div>
+                <div>
+                  <div
+                    style={{
+                      fontSize: '11px',
+                      color: theme.colors.textSecondary,
+                      marginBottom: '4px',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Active Windows
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '20px',
+                      fontWeight: 700,
+                      fontFamily: theme.fonts.monospace,
+                    }}
+                  >
+                    {otelStatus.stats.activeRegistrations}
+                  </div>
+                </div>
+                <div>
+                  <div
+                    style={{
+                      fontSize: '11px',
+                      color: theme.colors.textSecondary,
+                      marginBottom: '4px',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Uptime
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '20px',
+                      fontWeight: 700,
+                      fontFamily: theme.fonts.monospace,
+                    }}
+                  >
+                    {Math.floor((otelStatus.stats.uptime || 0) / 1000)}s
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Test Trace Button */}
+            {otelStatus?.isRunning && (
+              <button
+                onClick={handleSendTestTrace}
+                disabled={isSendingTestTrace}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  borderRadius: '6px',
+                  border: `1px solid ${theme.colors.primary}`,
+                  backgroundColor: `${theme.colors.primary}15`,
+                  color: theme.colors.primary,
+                  cursor: isSendingTestTrace ? 'not-allowed' : 'pointer',
+                  opacity: isSendingTestTrace ? 0.5 : 1,
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                {isSendingTestTrace ? 'Sending...' : 'Send Test Trace'}
+              </button>
+            )}
+
+            {/* Endpoints Info */}
+            {otelStatus?.isRunning && (
+              <div
+                style={{
+                  marginTop: '16px',
+                  padding: '12px',
+                  backgroundColor: theme.colors.background,
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  color: theme.colors.textSecondary,
+                  fontFamily: theme.fonts.monospace,
+                }}
+              >
+                <div>OTLP: http://localhost:4318</div>
+                <div style={{ marginTop: '4px' }}>Wrapper: http://localhost:4319</div>
+              </div>
+            )}
           </div>
         </section>
 

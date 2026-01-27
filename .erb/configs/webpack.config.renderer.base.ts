@@ -52,6 +52,9 @@ const configuration: webpack.Configuration = {
     alias: {
       react: path.resolve(webpackPaths.rootPath, 'node_modules/react'),
       'react-dom': path.resolve(webpackPaths.rootPath, 'node_modules/react-dom'),
+      // Deduplicate react-dnd to prevent "Cannot have two HTML5 backends" error
+      'react-dnd': path.resolve(webpackPaths.rootPath, 'node_modules/react-dnd'),
+      'react-dnd-html5-backend': path.resolve(webpackPaths.rootPath, 'node_modules/react-dnd-html5-backend'),
     },
     plugins: [new TsconfigPathsPlugins({
       configFile: path.resolve(__dirname, '../../tsconfig.renderer.json'),

@@ -24,6 +24,7 @@ const configuration: webpack.Configuration = {
   // Bundle everything except observability SDK (which uses Node.js modules)
   externals: [
     '@principal-ai/observability-sdk',
+    '@principal-ai/otel-collector-server',
     /^@types\/.*$/,  // Exclude all @types packages (TypeScript type definitions)
   ],
 
@@ -67,6 +68,7 @@ const configuration: webpack.Configuration = {
           '@principal-ai/control-tower-core', // WebSocket/collaboration library - Node.js only, uses node:module
           '@principal-ai/repository-monitoring', // Node.js only watcher library
           '@principal-ai/repository-monitoring-server', // Main process only - contains pre-bundled worker
+          '@principal-ai/otel-collector-server', // OTEL collector - Main process only, uses http/net modules
           'simple-git', // Git operations library - Node.js only, uses child_process
           'electron-debug',
           'electron-devtools-installer',

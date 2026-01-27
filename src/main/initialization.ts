@@ -45,6 +45,8 @@ import {
 } from './repository-monitoring/ipcHandlers';
 import { RepositoryRegistrationManager } from '@principal-ai/repository-monitoring-server';
 import { registerApiProxyHandlers } from './services/ApiProxyService';
+import { registerOtelCollectorHandlers } from './services/ipc/otelCollectorHandlers';
+import { OtelCollectorService } from './services/OtelCollectorService';
 import { JWTService } from './services/JWTService';
 import { registerGitHubIpcHandlers } from './version-control-providers/githubHandlers';
 import { UserPreferencesHandler } from './stores/userPreferencesHandler';
@@ -153,6 +155,7 @@ const registerAllIpcHandlers = async () => {
   //registerStorageHandlers();
   registerStoreHandlers();
   registerRepositoryMonitoringHandlers(); // Register repository monitoring handlers
+  registerOtelCollectorHandlers(); // Register OTEL collector handlers
   registerActIntegrationHandlers();
   registerSecretHandlers();
   await registerLinksHandlers();
@@ -310,6 +313,16 @@ export const initializeServices = async () => {
         error,
       );
     }
+
+    // Start OTEL Collector Service
+    try {
+      console.log('[Main Process] Starting OTEL Collector Service...');
+      const otelCollector = OtelCollectorService.getInstance();
+      await otelCollector.start();
+      console.log('[Main Process] OTEL Collector Service started successfully.');
+    } catch (error) {
+      console.error('[Main Process] Failed to start OTEL Collector Service:', error);
+    }
   }, 2000); // Delay to ensure storage is fully initialized
 
   // Agent auto-update removed - agents are installed externally
@@ -349,4 +362,13 @@ export const shutdownServices = async () => {
   // Cleanup localhost detection watchers
   cleanupLocalhostWatchers();
   console.log('[Main Process] Localhost detection watchers cleaned up.');
+
+  // Stop OTEL Collector Service
+  try {
+    const otelCollector = OtelCollectorService.getInstance();
+    await otelCollector.stop();
+    console.log('[Main Process] OTEL Collector Service stopped.');
+  } catch (err) {
+    console.error('[Main Process] Failed to stop OTEL Collector:', err);
+  }
 };
