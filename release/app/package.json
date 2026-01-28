@@ -38,7 +38,7 @@
     "@principal-ade/industry-theme": "^0.1.7",
     "@principal-ade/industry-themed-mdx-editor": "^0.1.16",
     "@principal-ade/industry-themed-monaco-editor": "^0.1.10",
-    "@principal-ade/panel-framework-core": "^0.2.0",
+    "@principal-ade/panel-framework-core": "^0.3.0",
     "@principal-ade/panel-layouts": "^0.3.19",
     "@principal-ade/panels": "^1.0.52",
     "@principal-ai/agent-monitoring": "^0.3.11",
