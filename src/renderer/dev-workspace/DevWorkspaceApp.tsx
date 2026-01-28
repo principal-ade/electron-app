@@ -451,6 +451,12 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
       try {
         const fileTree =
           await RepositoryMonitoringService.getFileTree(repositoryPath);
+
+        // Log the file tree for inspection
+        console.log('[DevWorkspaceApp] File tree loaded:', fileTree);
+        console.log('[DevWorkspaceApp] All files count:', fileTree?.allFiles?.length);
+        console.log('[DevWorkspaceApp] All files:', fileTree?.allFiles);
+
         if (fileTree?.allFiles) {
           const hasFolder = fileTree.allFiles.some(
             (file) =>

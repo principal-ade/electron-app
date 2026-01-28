@@ -14,75 +14,107 @@ import { GitFileTreeBuilder } from '@principal-ai/repository-abstraction';
 // Mock file tree data using GitFileTreeBuilder
 const createMockFileTree = () => {
   const builder = new GitFileTreeBuilder();
+
+  // Generate random files to simulate changes
+  const randomNum = Math.floor(Math.random() * 1000);
+  const baseFiles = [
+    { path: 'src/index.ts', size: 1234, lastModified: new Date() },
+    { path: 'src/App.tsx', size: 2345, lastModified: new Date() },
+    { path: 'package.json', size: 567, lastModified: new Date() },
+    { path: 'README.md', size: 890, lastModified: new Date() },
+  ];
+
+  // Add some random files to show changes
+  const extraFiles = [
+    { path: `src/Component${randomNum}.tsx`, size: 500 + randomNum, lastModified: new Date() },
+    { path: `src/utils/helper${randomNum}.ts`, size: 300 + randomNum, lastModified: new Date() },
+  ];
+
+  const files = [...baseFiles, ...extraFiles.slice(0, Math.floor(Math.random() * 2) + 1)];
+
   const tree = builder.build({
-    commitSha: 'mock-sha-abc123',
+    commitSha: `mock-sha-${randomNum}`,
     branch: 'main',
     rootPath: '/mock-repo',
     isDirty: true,
-    files: [
-      {
-        path: '/mock-repo/src/index.ts',
-        size: 1234,
-        lastModified: new Date(),
-      },
-      {
-        path: '/mock-repo/src/App.tsx',
-        size: 2345,
-        lastModified: new Date(),
-      },
-      {
-        path: '/mock-repo/package.json',
-        size: 567,
-        lastModified: new Date(),
-      },
-      {
-        path: '/mock-repo/README.md',
-        size: 890,
-        lastModified: new Date(),
-      },
-    ],
+    files,
   });
 
   // Debug logging
-  console.log('[createMockFileTree] Built tree:', tree);
-  console.log('[createMockFileTree] Root:', tree.root);
-  console.log('[createMockFileTree] Root children:', tree.root.children);
-  if (tree.root.children && tree.root.children[0]) {
-    console.log('[createMockFileTree] First child:', tree.root.children[0]);
-  }
+  console.info('[createMockFileTree] Built tree with', files.length, 'files');
 
   return tree;
 };
 
 // Mock git status data (matches GitStatusWithFiles interface)
-const createMockGitStatus = () => ({
-  repoPath: '/mock-repo',
-  branch: 'main',
-  isDirty: true,
-  hasUntracked: true,
-  hasStaged: true,
-  ahead: 0,
-  behind: 0,
-  watchingEnabled: true,
-  modifiedFiles: ['/mock-repo/src/App.tsx'],
-  untrackedFiles: ['/mock-repo/README.md'],
-  stagedFiles: ['/mock-repo/src/NewComponent.tsx'],
-  createdFiles: ['/mock-repo/src/NewComponent.tsx'],
-  deletedFiles: [],
-  hash: 'mock-hash-123',
-});
+const createMockGitStatus = () => {
+  const randomNum = Math.floor(Math.random() * 1000);
+
+  // Randomly vary the files to show changes
+  const modifiedFiles = ['src/App.tsx'];
+  const untrackedFiles = ['README.md'];
+  const stagedFiles = ['src/NewComponent.tsx'];
+
+  if (randomNum % 3 === 0) {
+    modifiedFiles.push(`src/utils/helper${randomNum}.ts`);
+  }
+  if (randomNum % 2 === 0) {
+    untrackedFiles.push(`temp${randomNum}.log`);
+  }
+
+  return {
+    repoPath: '/mock-repo',
+    branch: 'main',
+    isDirty: true,
+    hasUntracked: untrackedFiles.length > 0,
+    hasStaged: stagedFiles.length > 0,
+    ahead: Math.floor(randomNum % 3),
+    behind: 0,
+    watchingEnabled: true,
+    modifiedFiles,
+    untrackedFiles,
+    stagedFiles,
+    createdFiles: stagedFiles,
+    deletedFiles: [],
+    hash: `mock-hash-${randomNum}`,
+  };
+};
 
 // Mock context provider
 const MockRepositoryPanelProvider: React.FC<{
   children: (props: {
-    context: any;
-    actions: any;
+    context: unknown;
+    actions: Record<string, unknown>;
     events: PanelEventBus;
   }) => React.ReactNode;
 }> = ({ children }) => {
-  const [fileTree] = useState(createMockFileTree());
-  const [gitStatus] = useState(createMockGitStatus());
+  const [fileTree, setFileTree] = useState(createMockFileTree());
+  const [gitStatus, setGitStatus] = useState(createMockGitStatus());
   const events = useMemo(() => new PanelEventBus(), []);
+
+  // Listen for workspace:changed events and regenerate file tree
+  React.useEffect(() => {
+    const unsubscribe = events.on('workspace:changed', () => {
+      console.info('[MockProvider] workspace:changed - regenerating file tree');
+      setFileTree(createMockFileTree());
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [events]);
+
+  // Listen for git:statusChanged events and regenerate git status
+  React.useEffect(() => {
+    const unsubscribe = events.on('git:statusChanged', () => {
+      console.info('[MockProvider] git:statusChanged - regenerating git status');
+      setGitStatus(createMockGitStatus());
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [events]);
 
   const context = useMemo(
     () => ({
@@ -157,8 +189,8 @@ const MockRepositoryPanelProvider: React.FC<{
 // Mock terminal provider
 const MockTerminalProvider: React.FC<{
   children: (props: {
-    terminalContext: { terminalSessions: any[] };
-    terminalActions: any;
+    terminalContext: { terminalSessions: unknown[] };
+    terminalActions: Record<string, unknown>;
   }) => React.ReactNode;
 }> = ({ children }) => {
   const terminalContext = useMemo(
@@ -189,7 +221,7 @@ const PanelInteractionsStoryInner: React.FC = () => {
     right: 'fileCity',
   });
 
-  const [collapsed, setCollapsed] = useState({
+  const [collapsed, _setCollapsed] = useState({
     left: false,
     right: false,
   });
@@ -208,12 +240,12 @@ const PanelInteractionsStoryInner: React.FC = () => {
 
   // Debug logging
   React.useEffect(() => {
-    console.log('GitChangesPanelComponent:', GitChangesPanelComponent);
-    console.log('FileCityPanelComponent:', FileCityPanelComponent);
-    console.log('TabbedTerminalPanel:', TabbedTerminalPanel);
-    console.log('ThemeProvider:', ThemeProvider);
-    console.log('EditableConfigurablePanelLayout:', EditableConfigurablePanelLayout);
-    console.log('theme:', theme);
+    console.info('GitChangesPanelComponent:', GitChangesPanelComponent);
+    console.info('FileCityPanelComponent:', FileCityPanelComponent);
+    console.info('TabbedTerminalPanel:', TabbedTerminalPanel);
+    console.info('ThemeProvider:', ThemeProvider);
+    console.info('EditableConfigurablePanelLayout:', EditableConfigurablePanelLayout);
+    console.info('theme:', theme);
   }, [GitChangesPanelComponent, FileCityPanelComponent, theme]);
 
   return (
@@ -228,11 +260,11 @@ const PanelInteractionsStoryInner: React.FC = () => {
               };
 
               // Debug logging
-              console.log('[Story] Context slices:', context.slices);
-              console.log('[Story] fileTree slice:', context.getSlice('fileTree'));
-              console.log('[Story] gitStatusWithFiles slice:', context.getSlice('gitStatusWithFiles'));
-              console.log('[Story] fileTree data:', context.getSlice('fileTree')?.data);
-              console.log('[Story] gitStatus data:', context.getSlice('gitStatusWithFiles')?.data);
+              console.info('[Story] Context slices:', context.slices);
+              console.info('[Story] fileTree slice:', context.getSlice('fileTree'));
+              console.info('[Story] gitStatusWithFiles slice:', context.getSlice('gitStatusWithFiles'));
+              console.info('[Story] fileTree data:', context.getSlice('fileTree')?.data);
+              console.info('[Story] gitStatus data:', context.getSlice('gitStatusWithFiles')?.data);
 
               // Define panels
               const panels = [
@@ -380,7 +412,7 @@ const PanelInteractionsStoryInner: React.FC = () => {
                           fontSize: '13px',
                         }}
                         onClick={() => {
-                          console.log('Emit workspace:changed event');
+                          console.info('Emit workspace:changed event');
                           events.emit({
                             type: 'workspace:changed',
                             source: 'story-control',
@@ -402,7 +434,7 @@ const PanelInteractionsStoryInner: React.FC = () => {
                           fontSize: '13px',
                         }}
                         onClick={() => {
-                          console.log('Emit git:statusChanged event');
+                          console.info('Emit git:statusChanged event');
                           events.emit({
                             type: 'git:statusChanged',
                             source: 'story-control',

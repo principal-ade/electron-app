@@ -239,7 +239,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
   // Unified modal state for detail panels
   const [detailModal, setDetailModal] = useState<{
-    panelId: 'task-detail' | 'agentDetail' | 'githubIssueDetail';
+    panelId: 'githubIssueDetail';
     data: any;
   } | null>(null);
 
@@ -329,10 +329,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     (p) => p.metadata?.id === 'principal-ai.trace-viewer',
   )?.component;
   const CanvasDetailPanelComponent = principalViewPanels.find(
-    (p) => p.metadata?.id === 'principal-ai.canvas-detail',
+    (p) => p.metadata?.id === 'principal-ai.workflow-scenarios',
   )?.component;
-  const CanvasListPanelComponent = principalViewPanels.find(
-    (p) => p.metadata?.id === 'principal-ai.canvas-list',
+  const StoryboardListPanelComponent = principalViewPanels.find(
+    (p) => p.metadata?.id === 'principal-ai.storyboard-list',
   )?.component;
   const FileCityPanelComponent = fileCityPanels[0]?.component;
   const DocsPanelComponent = docsPanels[0]?.component;
@@ -458,16 +458,48 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     console.log('[DevWorkspacePanelFramework] Registering event handlers, events object:', events);
 
     const unsubscribers = [
-      // Task detail
+      // Task detail - open task markdown file in MDX editor tab
       events.on('task:selected', (event) => {
-        // Ignore re-emitted events from modal to prevent loop
-        if (event.source === 'modal') return;
+        // Ignore re-emitted events from tabs to prevent loop
+        if (event.source === 'tab') return;
 
         console.log('[DevWorkspacePanelFramework] Received task:selected event:', event);
         const payload = event.payload as { task: any; taskId: string };
-        setDetailModal({
-          panelId: 'task-detail',
-          data: payload.task,
+        const task = payload.task;
+
+        if (!task || !task.filePath) {
+          console.warn('[DevWorkspacePanelFramework] No task data or filePath in payload:', payload);
+          return;
+        }
+
+        const filePath = task.filePath;
+        const fileName = task.title || filePath.split('/').pop() || 'Task';
+
+        console.log('[DevWorkspacePanelFramework] Opening task file in MDX editor:', filePath);
+
+        setTabs((prevTabs) => {
+          // Check if tab already exists
+          const existingTab = prevTabs.find(
+            (t) => t.contentType === 'mdx-editor' && (t as MDXEditorTab).filePath === filePath
+          );
+
+          if (existingTab) {
+            console.log('[DevWorkspacePanelFramework] Task MDX editor tab already exists');
+            return prevTabs;
+          }
+
+          // Create new MDX editor tab
+          const newTab: MDXEditorTab = {
+            id: `task-${task.id || Date.now()}`,
+            label: fileName,
+            contentType: 'mdx-editor',
+            filePath: filePath,
+            fileName: fileName,
+            closable: true,
+          };
+
+          console.log('[DevWorkspacePanelFramework] Creating new task MDX editor tab:', newTab);
+          return [...prevTabs, newTab];
         });
       }),
       // Skill detail - create tab instead of modal
@@ -521,16 +553,58 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           return [...prevTabs, newTab];
         });
       }),
-      // Agent detail
-      events.on('agent:selected', (event) => {
-        // Ignore re-emitted events from modal to prevent loop
-        if (event.source === 'modal') return;
+      // Agent detail - open AGENTS.md file in markdown tab
+      events.on('agent:selected', async (event) => {
+        // Ignore re-emitted events from tabs to prevent loop
+        if (event.source === 'tab') return;
 
         console.log('[DevWorkspacePanelFramework] Received agent:selected event:', event);
-        const payload = event.payload as { agent: any };
-        setDetailModal({
-          panelId: 'agentDetail',
-          data: payload.agent,
+        const payload = event.payload as { data?: any };
+        const agent = payload.data;
+
+        if (!agent || !agent.path) {
+          console.warn('[DevWorkspacePanelFramework] No agent data or path in payload:', payload);
+          return;
+        }
+
+        // Get repository path from context
+        const repoPath = context.currentScope?.repository?.path;
+        if (!repoPath) {
+          console.warn('[DevWorkspacePanelFramework] No repository path in context');
+          return;
+        }
+
+        // Construct full file path (agent.path is relative like "AGENTS.md" or "packages/foo/AGENTS.md")
+        const filePath = `${repoPath}/${agent.path}`;
+        const fileName = agent.name || agent.path.split('/').pop() || 'AGENTS.md';
+
+        console.log('[DevWorkspacePanelFramework] Opening agent file in MDX editor:', filePath);
+
+        setTabs((prevTabs) => {
+          // Check if tab already exists (check both mdx-editor and markdown for backwards compat)
+          const existingTab = prevTabs.find(
+            (t) =>
+              (t.contentType === 'mdx-editor' && (t as MDXEditorTab).filePath === filePath) ||
+              (t.contentType === 'markdown' && (t as MarkdownTab).filePath === filePath)
+          );
+
+          if (existingTab) {
+            console.log('[DevWorkspacePanelFramework] Agent MDX editor tab already exists');
+            return prevTabs;
+          }
+
+          // Create new MDX editor tab
+          const newTab: MDXEditorTab = {
+            id: `agent-${agent.id}-${Date.now()}`,
+            label: fileName,
+            contentType: 'mdx-editor',
+            filePath: filePath,
+            fileName: fileName,
+            closable: true,
+          };
+
+          console.log('[DevWorkspacePanelFramework] Creating new agent MDX editor tab:', newTab);
+          return [...prevTabs, newTab];
         });
       }),
       // GitHub issue detail
@@ -708,16 +782,16 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           data: { path: filePath },
         });
       }),
-      // Canvas open - create tab (from canvas-list-panel or canvas-detail-panel)
+      // Canvas open - create tab (from storyboard-list-panel, canvas-list-panel or canvas-detail-panel)
       events.on('custom', (event) => {
-        // Only handle openCanvas action from canvas-list-panel or canvas-detail-panel
+        // Only handle openCanvas action from storyboard-list-panel, canvas-list-panel or canvas-detail-panel
         if (event.payload?.action !== 'openCanvas' ||
-            (event.source !== 'canvas-list-panel' && event.source !== 'canvas-detail-panel')) {
+            (event.source !== 'storyboard-list-panel' && event.source !== 'canvas-list-panel' && event.source !== 'canvas-detail-panel')) {
           return;
         }
 
         console.log('[DevWorkspacePanelFramework] Received canvas open event:', event);
-        const { canvasId, canvas, canvasFileInfo, narrativeId, narrative, narrativeTemplate, narrativeFileInfo, openMode } = event.payload;
+        const { canvasId, canvas, canvasFileInfo, workflowId, workflow, workflowFileInfo, openMode } = event.payload;
 
         if (!canvasId || !canvas) {
           console.warn('[DevWorkspacePanelFramework] No canvas data in event:', event.payload);
@@ -725,15 +799,15 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         }
 
         setTabs((prevTabs) => {
-          // Determine content type based on whether narrative data is present
-          // If narrative clicked → canvas-detail, if canvas clicked → canvas-editor
-          const hasNarrative = !!(narrativeId && narrativeTemplate);
-          const contentType = hasNarrative ? 'canvas-detail' : 'canvas-editor';
+          // Determine content type based on whether workflow data is present
+          // If workflow clicked → canvas-detail, if canvas clicked → canvas-editor
+          const hasWorkflow = !!(workflowId && workflow);
+          const contentType = hasWorkflow ? 'canvas-detail' : 'canvas-editor';
 
           // Check if tab already exists for this canvas
           const existingTabIndex = prevTabs.findIndex(
             (t) => {
-              if (hasNarrative) {
+              if (hasWorkflow) {
                 return t.contentType === 'canvas-detail' && (t as CanvasTab).canvasId === canvasId;
               } else {
                 return t.contentType === 'canvas-editor' && (t as CanvasEditorTab).canvasId === canvasId;
@@ -741,18 +815,18 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             }
           );
 
-          if (existingTabIndex !== -1 && hasNarrative) {
-            // Existing canvas-detail tab found - update it with new narrative information
-            console.log('[DevWorkspacePanelFramework] Updating existing canvas tab with new narrative:', prevTabs[existingTabIndex].id);
+          if (existingTabIndex !== -1 && hasWorkflow) {
+            // Existing canvas-detail tab found - update it with new workflow information
+            console.log('[DevWorkspacePanelFramework] Updating existing canvas tab with new workflow:', prevTabs[existingTabIndex].id);
             const updatedTabs = [...prevTabs];
             const existingTab = updatedTabs[existingTabIndex] as CanvasTab;
 
             updatedTabs[existingTabIndex] = {
               ...existingTab,
-              selectedNarrativeId: narrativeId || null,
-              narrativePath: narrative?.path || null,
-              narrativeTemplate: narrativeTemplate || null,
-              narrativeFileInfo: narrativeFileInfo || null,
+              selectedNarrativeId: workflowId || null,
+              narrativePath: workflow?.path || null,
+              narrativeTemplate: workflow || null,
+              narrativeFileInfo: workflowFileInfo || null,
             };
 
             return updatedTabs; // Tab updated, will auto-activate
@@ -762,8 +836,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             return prevTabs; // Tab exists, will auto-activate
           }
 
-          // Create new canvas tab (editor or detail based on narrative presence)
-          const newTab: CanvasEditorTab | CanvasTab = hasNarrative
+          // Create new canvas tab (editor or detail based on workflow presence)
+          const newTab: CanvasEditorTab | CanvasTab = hasWorkflow
             ? {
                 id: `canvas-${canvasId}-${Date.now()}`,
                 label: canvas.name || canvasId,
@@ -772,10 +846,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 canvasPath: canvas.path,
                 canvasName: canvas.name || canvasId,
                 canvasFileInfo: canvasFileInfo || null,
-                selectedNarrativeId: narrativeId || null,
-                narrativePath: narrative?.path || null,
-                narrativeTemplate: narrativeTemplate || null,
-                narrativeFileInfo: narrativeFileInfo || null,
+                selectedNarrativeId: workflowId || null,
+                narrativePath: workflow?.path || null,
+                narrativeTemplate: workflow || null,
+                narrativeFileInfo: workflowFileInfo || null,
                 closable: true,
               } as CanvasTab
             : {
@@ -806,28 +880,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       console.log('[DevWorkspacePanelFramework] Modal opened with data:', detailModal);
       // Use setTimeout to ensure the detail panel component is mounted first
       setTimeout(() => {
-        if (detailModal.panelId === 'task-detail') {
-          events.emit({
-            type: 'task:selected',
-            source: 'modal',
-            timestamp: Date.now(),
-            payload: {
-              task: detailModal.data,
-              taskId: detailModal.data.id,
-            },
-          });
-        } else if (detailModal.panelId === 'agentDetail') {
-          console.log('[DevWorkspacePanelFramework] Re-emitting agent:selected with data:', detailModal.data);
-          events.emit({
-            type: 'agent:selected',
-            source: 'modal',
-            timestamp: Date.now(),
-            payload: {
-              id: detailModal.data.id,
-              data: detailModal.data,
-            },
-          });
-        } else if (detailModal.panelId === 'githubIssueDetail') {
+        if (detailModal.panelId === 'githubIssueDetail') {
           console.log('[DevWorkspacePanelFramework] Re-emitting issue:selected with data:', detailModal.data);
           events.emit({
             type: 'issue:selected',
@@ -851,14 +904,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   // Listen for deselection events to close the modal (from panel's X button)
   useEffect(() => {
     const unsubscribers = [
-      events.on('task:deselected', () => {
-        console.log('[DevWorkspacePanelFramework] Task deselected, closing modal');
-        setDetailModal(null);
-      }),
-      events.on('agent:deselected', () => {
-        console.log('[DevWorkspacePanelFramework] Agent deselected, closing modal');
-        setDetailModal(null);
-      }),
       events.on('issue:deselected', () => {
         console.log('[DevWorkspacePanelFramework] Issue deselected, closing modal');
         setDetailModal(null);
@@ -1061,10 +1106,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 canvasPath={canvasTab.canvasPath}
                 canvasName={canvasTab.canvasName}
                 canvasFileInfo={canvasTab.canvasFileInfo}
-                selectedNarrativeId={canvasTab.selectedNarrativeId}
-                narrativePath={canvasTab.narrativePath}
-                narrativeTemplate={canvasTab.narrativeTemplate}
-                narrativeFileInfo={canvasTab.narrativeFileInfo}
+                selectedWorkflowId={canvasTab.selectedNarrativeId}
+                workflowPath={canvasTab.narrativePath}
+                workflowTemplate={canvasTab.narrativeTemplate}
+                workflowFileInfo={canvasTab.narrativeFileInfo}
               />
             </div>
           );
@@ -1271,7 +1316,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       {
         id: 'canvasList',
         label: 'Architecture',
-        content: CanvasListPanelComponent ? (
+        content: StoryboardListPanelComponent ? (
           <div
             style={{
               height: '100%',
@@ -1282,7 +1327,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               flexDirection: 'column',
             }}
           >
-            <CanvasListPanelComponent
+            <StoryboardListPanelComponent
               context={context}
               actions={actions}
               events={events}
@@ -1817,7 +1862,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       CanvasEditorPanelComponent,
-      CanvasListPanelComponent,
+      StoryboardListPanelComponent,
       FileCityPanelComponent,
       DocsPanelComponent,
       LocalProjectsPanelComponent,
@@ -1926,31 +1971,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               onClick={(e) => e.stopPropagation()}
             >
               {/* Render appropriate detail panel based on panelId */}
-              {detailModal.panelId === 'task-detail' && TaskDetailPanelComponent && (
-                <TaskDetailPanelComponent
-                  context={context}
-                  actions={actions}
-                  events={events}
-                />
-              )}
-              {detailModal.panelId === 'agentDetail' && AgentDetailPanelComponent && (
-                <AgentDetailPanelComponent
-                  context={{
-                    ...context,
-                    slices: new Map([
-                      ...Array.from(context.slices?.entries() || []),
-                      ['selectedAgent', {
-                        scope: 'repository' as const,
-                        name: 'selectedAgent',
-                        data: detailModal.data,
-                        loading: false,
-                      }],
-                    ]),
-                  }}
-                  actions={actions}
-                  events={events}
-                />
-              )}
               {detailModal.panelId === 'githubIssueDetail' && GitHubIssueDetailPanelComponent && (
                 <GitHubIssueDetailPanelComponent
                   context={{

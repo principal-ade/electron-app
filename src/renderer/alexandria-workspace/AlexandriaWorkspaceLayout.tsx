@@ -458,8 +458,8 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   const CodeQualityPanelComponent = codeQualityPanels.find(
     (p) => p.metadata?.id === 'principal-ade.quality-hexagon-panel',
   )?.component;
-  const CanvasListPanelComponent = principalViewPanels.find(
-    (p) => p.metadata?.id === 'principal-ai.canvas-list',
+  const StoryboardListPanelComponent = principalViewPanels.find(
+    (p) => p.metadata?.id === 'principal-ai.storyboard-list',
   )?.component;
 
   // Get terminal directory from context
@@ -921,7 +921,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       {
         id: 'canvasList',
         label: 'Architecture List',
-        content: CanvasListPanelComponent ? (
+        content: StoryboardListPanelComponent ? (
           <div
             style={{
               width: '100%',
@@ -935,7 +935,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
             {enableKeyboardShortcuts && (
               <FocusIndicator isFocused={isFocused('left')} />
             )}
-            <CanvasListPanelComponent
+            <StoryboardListPanelComponent
               context={context}
               actions={actions}
               events={events}
@@ -1532,7 +1532,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       AgentToolsPanelComponent,
       MarkdownPanelComponent,
       PrincipalViewPanelComponent,
-      CanvasListPanelComponent,
+      StoryboardListPanelComponent,
       KanbanPanelComponent,
       TaskDetailPanelComponent,
       MilestonePanelComponent,

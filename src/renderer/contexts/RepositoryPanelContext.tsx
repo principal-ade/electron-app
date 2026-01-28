@@ -448,6 +448,37 @@ export const RepositoryPanelProvider: React.FC<
   const stableGitStatusData = useMemo(() => gitStatusData, [gitStatusHash]);
   const stableLocalhostServers = useMemo(() => localhostServers, [localhostServersHash]);
 
+  // Augment file tree with deleted files from git status
+  const augmentedFileTreeData = useMemo(() => {
+    if (!stableFileTreeData || !stableGitStatusData?.deletedFiles?.length) {
+      return stableFileTreeData;
+    }
+
+    // Create file entries for deleted files
+    const deletedFileEntries = stableGitStatusData.deletedFiles.map(filePath => ({
+      path: filePath,
+      size: 0,
+      lastModified: 0,
+      isDeleted: true,
+    }));
+
+    // Merge deleted files with existing files
+    // Note: deleted files won't be in the original tree, so no deduplication needed
+    const augmentedAllFiles = [
+      ...stableFileTreeData.allFiles,
+      ...deletedFileEntries,
+    ];
+
+    // Create augmented tree with new SHA that reflects both tree and deleted files
+    const augmentedSha = `${stableFileTreeData.sha}-deleted:${stableGitStatusData.deletedFiles.length}`;
+
+    return {
+      ...stableFileTreeData,
+      allFiles: augmentedAllFiles,
+      sha: augmentedSha,
+    };
+  }, [stableFileTreeData, stableGitStatusData]);
+
   // Compute effective color mode: use explicit selection, or auto-select 'git' if there are changes
   const effectiveColorMode = useMemo((): FileCityColorMode => {
     // If explicitly set, use that
@@ -1097,7 +1128,7 @@ export const RepositoryPanelProvider: React.FC<
           {
             scope: 'repository' as const,
             name: 'fileTree',
-            data: stableFileTreeData,
+            data: augmentedFileTreeData,
             loading: fileTreeLoading,
             error: null,
             refresh: async () => {
@@ -1428,7 +1459,7 @@ export const RepositoryPanelProvider: React.FC<
       ]),
     [
       repositoryPath,
-      stableFileTreeData, // Stable reference - only changes when SHA changes
+      augmentedFileTreeData, // Augmented with deleted files - stable reference that changes when SHA or deleted files change
       fileTreeLoading,
       markdownFiles, // Derived from stableFileTreeData, already stable
       packagesData,
