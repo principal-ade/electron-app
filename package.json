@@ -179,7 +179,7 @@
     "@industry-theme/github-panels": "^0.1.59",
     "@industry-theme/localhost-panels": "^0.1.7",
     "@industry-theme/markdown-panels": "^0.2.23",
-    "@industry-theme/principal-view-panels": "^0.5.0",
+    "@industry-theme/principal-view-panels": "^0.5.1",
     "@industry-theme/repository-composition-panels": "^0.2.51",
     "@industry-theme/xterm-terminal-panel": "^0.3.5",
     "@modelcontextprotocol/sdk": "1.11.4",
