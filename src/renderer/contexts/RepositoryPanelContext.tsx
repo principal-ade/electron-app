@@ -29,6 +29,7 @@ import {
 } from '../main-process-api/LocalhostDetectionService';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { FileTree } from '@principal-ai/repository-abstraction';
+import { FileTreeCore } from '@principal-ai/repository-abstraction';
 import type { PackageLayer } from '@principal-ai/codebase-composition';
 import type {
   PackageSummary,
@@ -455,28 +456,21 @@ export const RepositoryPanelProvider: React.FC<
     }
 
     // Create file entries for deleted files
-    const deletedFileEntries = stableGitStatusData.deletedFiles.map(filePath => ({
+    const deletedFileInfos = stableGitStatusData.deletedFiles.map(filePath => ({
       path: filePath,
       size: 0,
-      lastModified: 0,
-      isDeleted: true,
+      lastModified: new Date(0),
     }));
 
-    // Merge deleted files with existing files
-    // Note: deleted files won't be in the original tree, so no deduplication needed
-    const augmentedAllFiles = [
-      ...stableFileTreeData.allFiles,
-      ...deletedFileEntries,
-    ];
-
-    // Create augmented tree with new SHA that reflects both tree and deleted files
-    const augmentedSha = `${stableFileTreeData.sha}-deleted:${stableGitStatusData.deletedFiles.length}`;
-
-    return {
-      ...stableFileTreeData,
-      allFiles: augmentedAllFiles,
-      sha: augmentedSha,
-    };
+    // Use FileTreeCore.augmentWithFiles() to properly rebuild tree structure
+    return FileTreeCore.augmentWithFiles(
+      stableFileTreeData,
+      deletedFileInfos,
+      {
+        updateSha: (baseSha, count) => `${baseSha}-deleted:${count}`,
+        fileDefaults: { size: 0, lastModified: new Date(0) },
+      }
+    );
   }, [stableFileTreeData, stableGitStatusData]);
 
   // Compute effective color mode: use explicit selection, or auto-select 'git' if there are changes
