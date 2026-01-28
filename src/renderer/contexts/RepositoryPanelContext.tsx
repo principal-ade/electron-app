@@ -1042,7 +1042,7 @@ export const RepositoryPanelProvider: React.FC<
   // DEBUG: Track which dependencies are changing to cause slices recreation
   const slicesDepsRef = useRef<{
     repositoryPath: string | null;
-    stableFileTreeData: typeof stableFileTreeData;
+    augmentedFileTreeData: typeof augmentedFileTreeData;
     fileTreeLoading: boolean;
     markdownFiles: typeof markdownFiles;
     packagesData: typeof packagesData;
@@ -1066,7 +1066,7 @@ export const RepositoryPanelProvider: React.FC<
   if (slicesDepsRef.current) {
     const depsChanged = {
       repositoryPath: slicesDepsRef.current.repositoryPath !== repositoryPath,
-      stableFileTreeData: slicesDepsRef.current.stableFileTreeData !== stableFileTreeData,
+      augmentedFileTreeData: slicesDepsRef.current.augmentedFileTreeData !== augmentedFileTreeData,
       fileTreeLoading: slicesDepsRef.current.fileTreeLoading !== fileTreeLoading,
       markdownFiles: slicesDepsRef.current.markdownFiles !== markdownFiles,
       packagesData: slicesDepsRef.current.packagesData !== packagesData,
@@ -1098,7 +1098,7 @@ export const RepositoryPanelProvider: React.FC<
 
   slicesDepsRef.current = {
     repositoryPath,
-    stableFileTreeData,
+    augmentedFileTreeData,
     fileTreeLoading,
     markdownFiles,
     packagesData,
