@@ -17,6 +17,7 @@ import {
 import { RepositoryMonitoringService } from '../../../main-process-api/RepositoryMonitoringService';
 import { OtelCollectorService } from '../../../main-process-api/OtelCollectorService';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
+import { TraceViewer } from './TraceViewer';
 import type {
   MonitoringStatus,
   GitStatus,
@@ -993,6 +994,13 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
               </div>
             )}
           </div>
+
+          {/* Trace Viewer */}
+          {otelStatus?.isRunning && (
+            <div style={{ marginTop: '24px' }}>
+              <TraceViewer autoRefresh={true} refreshInterval={2000} />
+            </div>
+          )}
         </section>
         )}
 

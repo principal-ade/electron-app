@@ -22,6 +22,18 @@ export interface RegisterPortResponse {
   error?: string;
 }
 
+export interface StoredTrace {
+  timestamp: number;
+  traceId: string;
+  data: any;
+}
+
+export interface GetTracesResponse {
+  success: boolean;
+  traces: StoredTrace[];
+  error?: string;
+}
+
 export const otelCollectorApi = {
   /**
    * Start the OTEL collector
@@ -70,5 +82,19 @@ export const otelCollectorApi = {
    */
   async sendTestTrace(sourceUrl: string): Promise<OtelCollectorResponse> {
     return await ipcRenderer.invoke('otel-collector:sendTestTrace', sourceUrl);
+  },
+
+  /**
+   * Get stored traces
+   */
+  async getTraces(limit?: number): Promise<GetTracesResponse> {
+    return await ipcRenderer.invoke('otel-collector:getTraces', limit);
+  },
+
+  /**
+   * Clear stored traces
+   */
+  async clearTraces(): Promise<OtelCollectorResponse> {
+    return await ipcRenderer.invoke('otel-collector:clearTraces');
   },
 };

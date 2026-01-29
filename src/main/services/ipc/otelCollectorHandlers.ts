@@ -13,6 +13,8 @@ const HANDLERS = {
   UNREGISTER_TRACE_PORT: 'otel-collector:unregisterPort',
   UNREGISTER_TRACE_WINDOW: 'otel-collector:unregisterWindow',
   SEND_TEST_TRACE: 'otel-collector:sendTestTrace',
+  GET_TRACES: 'otel-collector:getTraces',
+  CLEAR_TRACES: 'otel-collector:clearTraces',
 } as const;
 
 export function registerOtelCollectorHandlers(): void {
@@ -118,6 +120,7 @@ export function registerOtelCollectorHandlers(): void {
 
       const traceId = generateHexId(16); // 32 hex chars
       const spanId = generateHexId(8);   // 16 hex chars
+      const now = Date.now();
 
       // Send a test trace to the collector endpoint
       const testTrace = {
@@ -139,8 +142,8 @@ export function registerOtelCollectorHandlers(): void {
                     spanId,
                     name: 'Test trace from SystemMonitor',
                     kind: 1, // INTERNAL
-                    startTimeUnixNano: String(Date.now() * 1000000),
-                    endTimeUnixNano: String((Date.now() + 100) * 1000000),
+                    startTimeUnixNano: String(now * 1000000),
+                    endTimeUnixNano: String((now + 100) * 1000000),
                     attributes: [
                       { key: 'test', value: { boolValue: true } },
                     ],
@@ -158,6 +161,9 @@ export function registerOtelCollectorHandlers(): void {
         ],
       };
 
+      // Store the trace before sending
+      service.storeTrace(testTrace);
+
       // Send to collector endpoint
       const response = await fetch('http://localhost:4318/v1/traces', {
         method: 'POST',
@@ -174,6 +180,28 @@ export function registerOtelCollectorHandlers(): void {
       return { success: true };
     } catch (err) {
       console.error('[IPC] Failed to send test trace:', err);
+      return { success: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  // Get stored traces
+  ipcMain.handle(HANDLERS.GET_TRACES, (event, limit?: number) => {
+    try {
+      const traces = service.getTraces(limit);
+      return { success: true, traces };
+    } catch (err) {
+      console.error('[IPC] Failed to get traces:', err);
+      return { success: false, error: err instanceof Error ? err.message : String(err), traces: [] };
+    }
+  });
+
+  // Clear stored traces
+  ipcMain.handle(HANDLERS.CLEAR_TRACES, () => {
+    try {
+      service.clearTraces();
+      return { success: true };
+    } catch (err) {
+      console.error('[IPC] Failed to clear traces:', err);
       return { success: false, error: err instanceof Error ? err.message : String(err) };
     }
   });

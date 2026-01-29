@@ -15,6 +15,18 @@ export interface OtelCollectorResponse {
   error?: string;
 }
 
+export interface StoredTrace {
+  timestamp: number;
+  traceId: string;
+  data: any; // OTLP trace data
+}
+
+export interface GetTracesResponse {
+  success: boolean;
+  traces: StoredTrace[];
+  error?: string;
+}
+
 export class OtelCollectorService {
   /**
    * Start the OTEL collector
@@ -105,6 +117,30 @@ export class OtelCollectorService {
       return await window.mainProcess.otelCollector.sendTestTrace(sourceUrl);
     } catch (err) {
       console.error('[OtelCollectorService] Failed to send test trace:', err);
+      return { success: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  }
+
+  /**
+   * Get stored traces
+   */
+  static async getTraces(limit?: number): Promise<GetTracesResponse> {
+    try {
+      return await window.mainProcess.otelCollector.getTraces(limit);
+    } catch (err) {
+      console.error('[OtelCollectorService] Failed to get traces:', err);
+      return { success: false, traces: [], error: err instanceof Error ? err.message : String(err) };
+    }
+  }
+
+  /**
+   * Clear stored traces
+   */
+  static async clearTraces(): Promise<OtelCollectorResponse> {
+    try {
+      return await window.mainProcess.otelCollector.clearTraces();
+    } catch (err) {
+      console.error('[OtelCollectorService] Failed to clear traces:', err);
       return { success: false, error: err instanceof Error ? err.message : String(err) };
     }
   }

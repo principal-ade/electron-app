@@ -7,10 +7,18 @@ import { app } from 'electron';
 import path from 'path';
 import os from 'os';
 
+interface StoredTrace {
+  timestamp: number;
+  traceId: string;
+  data: any; // OTLP trace data
+}
+
 export class OtelCollectorService {
   private static instance: OtelCollectorService | null = null;
   private server: OTELCollectorServer | null = null;
   private isRunning: boolean = false;
+  private traces: StoredTrace[] = [];
+  private readonly MAX_TRACES = 50; // Store last 50 traces
 
   private constructor() {
     // Private constructor for singleton
@@ -139,6 +147,64 @@ export class OtelCollectorService {
    */
   getIsRunning(): boolean {
     return this.isRunning && this.server !== null;
+  }
+
+  /**
+   * Store a received trace
+   */
+  storeTrace(traceData: any): void {
+    try {
+      // Extract trace ID from the data
+      const traceId = this.extractTraceId(traceData);
+
+      const trace: StoredTrace = {
+        timestamp: Date.now(),
+        traceId,
+        data: traceData,
+      };
+
+      this.traces.unshift(trace); // Add to beginning
+
+      // Keep only MAX_TRACES
+      if (this.traces.length > this.MAX_TRACES) {
+        this.traces = this.traces.slice(0, this.MAX_TRACES);
+      }
+
+      console.log(`[OtelCollectorService] Stored trace ${traceId}, total: ${this.traces.length}`);
+    } catch (err) {
+      console.error('[OtelCollectorService] Failed to store trace:', err);
+    }
+  }
+
+  /**
+   * Get stored traces
+   */
+  getTraces(limit?: number): StoredTrace[] {
+    const maxLimit = limit && limit > 0 ? Math.min(limit, this.MAX_TRACES) : this.MAX_TRACES;
+    return this.traces.slice(0, maxLimit);
+  }
+
+  /**
+   * Clear stored traces
+   */
+  clearTraces(): void {
+    this.traces = [];
+    console.log('[OtelCollectorService] Cleared all traces');
+  }
+
+  /**
+   * Extract trace ID from OTLP trace data
+   */
+  private extractTraceId(traceData: any): string {
+    try {
+      // OTLP format: resourceSpans[0].scopeSpans[0].spans[0].traceId
+      if (traceData.resourceSpans?.[0]?.scopeSpans?.[0]?.spans?.[0]?.traceId) {
+        return traceData.resourceSpans[0].scopeSpans[0].spans[0].traceId;
+      }
+      return `trace-${Date.now()}`;
+    } catch {
+      return `trace-${Date.now()}`;
+    }
   }
 
   /**
