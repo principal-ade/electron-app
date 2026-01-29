@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Zap, Github, Download, X, FolderPlus, Plus } from 'lucide-react';
+import { Zap, X, FolderPlus, Plus } from 'lucide-react';
 
 export type ViewMode = 'installed' | 'browse';
 
@@ -14,13 +14,8 @@ export interface DetectedDirectory {
 }
 
 interface SkillBrowserViewHeaderProps {
-  githubUrl: string;
-  onGithubUrlChange: (url: string) => void;
-  onFetchSkills: (url?: string) => void;
-  isLoading?: boolean;
   viewMode?: ViewMode;
   onViewModeChange?: (mode: ViewMode) => void;
-  showGithubInput?: boolean;
   currentRepo?: {
     owner: string;
     repo: string;
@@ -33,13 +28,8 @@ interface SkillBrowserViewHeaderProps {
 }
 
 export const SkillBrowserViewHeader: React.FC<SkillBrowserViewHeaderProps> = ({
-  githubUrl,
-  onGithubUrlChange,
-  onFetchSkills,
-  isLoading = false,
   viewMode = 'installed',
   onViewModeChange,
-  showGithubInput = true,
   currentRepo,
   onClearRepo,
   hasDetectedDirectories = true,
@@ -47,20 +37,6 @@ export const SkillBrowserViewHeader: React.FC<SkillBrowserViewHeaderProps> = ({
   detectedDirectories = [],
 }) => {
   const { theme } = useTheme();
-  const [inputValue, setInputValue] = useState(githubUrl);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onGithubUrlChange(inputValue);
-    // Pass the URL directly to avoid race condition with state update
-    onFetchSkills(inputValue);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      handleSubmit(e);
-    }
-  };
 
   return (
     <>
@@ -140,177 +116,8 @@ export const SkillBrowserViewHeader: React.FC<SkillBrowserViewHeaderProps> = ({
         </div>
       </div>
 
-      {/* Center: Current Repo or GitHub URL Input */}
-      {viewMode === 'browse' && currentRepo ? (
-        /* Show current repo info with clear button */
-        <div
-          style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            paddingLeft: '24px',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              backgroundColor: theme.colors.backgroundSecondary,
-              border: `1px solid ${theme.colors.border}`,
-            }}
-          >
-            <Github size={16} color={theme.colors.primary} />
-            <span
-              style={{
-                fontSize: theme.fontSizes[1],
-                fontFamily: theme.fonts.monospace,
-                color: theme.colors.text,
-                fontWeight: theme.fontWeights.medium,
-              }}
-            >
-              {currentRepo.owner}/{currentRepo.repo}
-            </span>
-            <span
-              style={{
-                fontSize: theme.fontSizes[0],
-                color: theme.colors.textSecondary,
-                fontFamily: theme.fonts.monospace,
-              }}
-            >
-              @{currentRepo.branch}
-            </span>
-          </div>
-          {onClearRepo && (
-            <button
-              onClick={onClearRepo}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                backgroundColor: 'transparent',
-                border: `1px solid ${theme.colors.border}`,
-                color: theme.colors.textSecondary,
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                fontSize: theme.fontSizes[1],
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-                e.currentTarget.style.borderColor = theme.colors.error;
-                e.currentTarget.style.color = theme.colors.error;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.borderColor = theme.colors.border;
-                e.currentTarget.style.color = theme.colors.textSecondary;
-              }}
-            >
-              <X size={14} />
-              Clear
-            </button>
-          )}
-        </div>
-      ) : viewMode === 'browse' && showGithubInput ? (
-        /* Show GitHub URL input in Browse mode when showing input */
-        <div
-          style={{
-            flex: 1,
-            maxWidth: '600px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <div
-            style={{
-              position: 'relative',
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-            }}
-          >
-            <Github
-              size={16}
-              color={theme.colors.textSecondary}
-              style={{
-                position: 'absolute',
-                left: '12px',
-                pointerEvents: 'none',
-              }}
-            />
-            <input
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="https://github.com/owner/repo or owner/repo"
-              disabled={isLoading}
-              style={{
-                width: '100%',
-                padding: '8px 12px 8px 36px',
-                borderRadius: '6px',
-                border: `1px solid ${theme.colors.border}`,
-                backgroundColor: theme.colors.backgroundSecondary,
-                color: theme.colors.text,
-                fontSize: theme.fontSizes[1],
-                fontFamily: theme.fonts.monospace,
-                outline: 'none',
-                transition: 'all 0.2s',
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = theme.colors.primary;
-                e.currentTarget.style.backgroundColor = theme.colors.background;
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = theme.colors.border;
-                e.currentTarget.style.backgroundColor =
-                  theme.colors.backgroundSecondary;
-              }}
-            />
-          </div>
-          <button
-            onClick={handleSubmit}
-            disabled={isLoading || !inputValue.trim()}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              backgroundColor: theme.colors.primary,
-              color: theme.colors.background,
-              cursor: isLoading || !inputValue.trim() ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s',
-              border: 'none',
-              fontSize: theme.fontSizes[1],
-              fontWeight: theme.fontWeights.medium,
-              opacity: isLoading || !inputValue.trim() ? 0.5 : 1,
-            }}
-            onMouseEnter={(e) => {
-              if (!isLoading && inputValue.trim()) {
-                e.currentTarget.style.opacity = '0.8';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isLoading && inputValue.trim()) {
-                e.currentTarget.style.opacity = '1';
-              }
-            }}
-          >
-            <Download size={16} />
-            {isLoading ? 'Loading...' : 'Browse Skills'}
-          </button>
-        </div>
-      ) : null}
-
       {/* Spacer */}
-      {(viewMode === 'installed' || (viewMode === 'browse' && !showGithubInput && !currentRepo)) && <div style={{ flex: 1 }} />}
+      <div style={{ flex: 1 }} />
 
       {/* Setup button when no directories detected in Installed mode */}
       {viewMode === 'installed' && !hasDetectedDirectories && onOpenSetup && (
@@ -401,6 +208,39 @@ export const SkillBrowserViewHeader: React.FC<SkillBrowserViewHeaderProps> = ({
             </button>
           )}
         </div>
+      )}
+
+      {/* Clear button when in Browse mode with a repo loaded */}
+      {viewMode === 'browse' && currentRepo && onClearRepo && (
+        <button
+          onClick={onClearRepo}
+          title="Clear repository"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '32px',
+            height: '32px',
+            borderRadius: '6px',
+            backgroundColor: 'transparent',
+            border: `1px solid ${theme.colors.border}`,
+            color: theme.colors.textSecondary,
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+            e.currentTarget.style.borderColor = theme.colors.error;
+            e.currentTarget.style.color = theme.colors.error;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.borderColor = theme.colors.border;
+            e.currentTarget.style.color = theme.colors.textSecondary;
+          }}
+        >
+          <X size={16} />
+        </button>
       )}
       </div>
     </>

@@ -75,7 +75,7 @@ export const SkillBrowserPanelProvider: React.FC<
     return null;
   }, [installedSkills]);
 
-  // Fetch global skills on mount
+  // Fetch global skills on mount and when skills are installed/uninstalled
   useEffect(() => {
     const fetchGlobalSkills = async () => {
       setGlobalSkillsLoading(true);
@@ -92,7 +92,23 @@ export const SkillBrowserPanelProvider: React.FC<
     };
 
     fetchGlobalSkills();
-  }, []);
+
+    // Listen for skill installation/uninstallation events to refresh global skills
+    const unsubscribeInstalled = events.on('skill:installed', () => {
+      console.log('[SkillBrowserPanelProvider] Skill installed, refreshing global skills');
+      fetchGlobalSkills();
+    });
+
+    const unsubscribeUninstalled = events.on('skill:uninstalled', () => {
+      console.log('[SkillBrowserPanelProvider] Skill uninstalled, refreshing global skills');
+      fetchGlobalSkills();
+    });
+
+    return () => {
+      unsubscribeInstalled();
+      unsubscribeUninstalled();
+    };
+  }, [events]);
 
   // Fetch installed skills on mount and when skill:installed event fires
   useEffect(() => {
