@@ -105,6 +105,20 @@ export function registerOtelCollectorHandlers(): void {
   // Send test trace (for testing)
   ipcMain.handle(HANDLERS.SEND_TEST_TRACE, async (event, sourceUrl: string) => {
     try {
+      // Generate valid OTLP trace and span IDs
+      // traceId: 32 hex characters (16 bytes)
+      // spanId: 16 hex characters (8 bytes)
+      const generateHexId = (bytes: number): string => {
+        const hex = [];
+        for (let i = 0; i < bytes; i++) {
+          hex.push(Math.floor(Math.random() * 256).toString(16).padStart(2, '0'));
+        }
+        return hex.join('');
+      };
+
+      const traceId = generateHexId(16); // 32 hex chars
+      const spanId = generateHexId(8);   // 16 hex chars
+
       // Send a test trace to the collector endpoint
       const testTrace = {
         resourceSpans: [
@@ -121,8 +135,8 @@ export function registerOtelCollectorHandlers(): void {
                 scope: { name: 'test-tracer' },
                 spans: [
                   {
-                    traceId: `test-${Date.now()}`,
-                    spanId: `span-${Date.now()}`,
+                    traceId,
+                    spanId,
                     name: 'Test trace from SystemMonitor',
                     kind: 1, // INTERNAL
                     startTimeUnixNano: String(Date.now() * 1000000),

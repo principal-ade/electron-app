@@ -326,6 +326,7 @@ export interface InstallSkillOptions {
   repositoryPath?: string;
   skillName?: string;
   fileList: string[]; // List of all files in the skill folder (relative paths) - REQUIRED
+  skillTreeSha?: string; // Tree SHA for the specific skill folder (for version tracking)
 }
 
 export interface InstallSkillResult {

@@ -12,6 +12,7 @@ import {
   GitBranch,
   Eye,
   EyeOff,
+  Radio,
 } from 'lucide-react';
 import { RepositoryMonitoringService } from '../../../main-process-api/RepositoryMonitoringService';
 import { OtelCollectorService } from '../../../main-process-api/OtelCollectorService';
@@ -50,6 +51,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
   const [otelStatus, setOtelStatus] = useState<OtelCollectorStatus | null>(null);
   const [otelLoading, setOtelLoading] = useState(true);
   const [isSendingTestTrace, setIsSendingTestTrace] = useState(false);
+  const [activeTab, setActiveTab] = useState<'repository' | 'otel'>('repository');
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -454,7 +456,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
             alignItems: 'flex-start',
           }}
         >
-          <div>
+          <div style={{ flex: 1 }}>
             <h2
               style={{
                 fontSize: '20px',
@@ -467,21 +469,73 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
               }}
             >
               <Activity size={20} style={{ color: theme.colors.primary }} />
-              Repository Monitoring
+              System Monitor
             </h2>
             <p
               style={{
                 fontSize: '14px',
                 color: theme.colors.textSecondary,
-                margin: '4px 0 0 32px',
+                margin: '4px 0 12px 32px',
                 fontFamily: theme.fonts.body,
               }}
             >
-              Resource usage and status for background processes
+              Monitor repository and telemetry services
             </p>
+
+            {/* Tab Selector */}
+            <div
+              style={{
+                display: 'flex',
+                gap: '8px',
+                marginLeft: '32px',
+              }}
+            >
+              <button
+                onClick={() => setActiveTab('repository')}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  borderRadius: '6px',
+                  border: `1px solid ${activeTab === 'repository' ? theme.colors.primary : theme.colors.border}`,
+                  backgroundColor: activeTab === 'repository' ? `${theme.colors.primary}15` : 'transparent',
+                  color: activeTab === 'repository' ? theme.colors.primary : theme.colors.text,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  fontFamily: theme.fonts.body,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <HardDrive size={14} />
+                Repository Monitoring
+              </button>
+              <button
+                onClick={() => setActiveTab('otel')}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  borderRadius: '6px',
+                  border: `1px solid ${activeTab === 'otel' ? theme.colors.primary : theme.colors.border}`,
+                  backgroundColor: activeTab === 'otel' ? `${theme.colors.primary}15` : 'transparent',
+                  color: activeTab === 'otel' ? theme.colors.primary : theme.colors.text,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  fontFamily: theme.fonts.body,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <Radio size={14} />
+                OTEL Collector
+              </button>
+            </div>
           </div>
 
-          {/* Power Control */}
+          {/* Power Control - Shows based on active tab */}
           <div
             style={{
               display: 'flex',
@@ -489,67 +543,133 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
               gap: '12px',
             }}
           >
-            {/* Status indicator */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '6px 12px',
-                backgroundColor: isRunning
-                  ? `${theme.colors.success}15`
-                  : `${theme.colors.textSecondary}15`,
-                borderRadius: '6px',
-                fontSize: '13px',
-                fontWeight: 500,
-                color: isRunning
-                  ? theme.colors.success
-                  : theme.colors.textSecondary,
-              }}
-            >
-              <div
-                style={{
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  backgroundColor: isRunning
-                    ? theme.colors.success
-                    : theme.colors.textSecondary,
-                  animation: isRunning ? 'pulse 2s infinite' : 'none',
-                }}
-              />
-              {isRunning ? 'Running' : 'Stopped'}
-            </div>
+            {activeTab === 'repository' ? (
+              <>
+                {/* Repository Monitoring Status */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    backgroundColor: isRunning
+                      ? `${theme.colors.success}15`
+                      : `${theme.colors.textSecondary}15`,
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    color: isRunning
+                      ? theme.colors.success
+                      : theme.colors.textSecondary,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      backgroundColor: isRunning
+                        ? theme.colors.success
+                        : theme.colors.textSecondary,
+                      animation: isRunning ? 'pulse 2s infinite' : 'none',
+                    }}
+                  />
+                  {isRunning ? 'Running' : 'Stopped'}
+                </div>
 
-            {/* Power button */}
-            <button
-              onClick={handleToggleMonitoring}
-              disabled={isToggling}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '40px',
-                height: '40px',
-                borderRadius: '8px',
-                border: `1px solid ${isRunning ? theme.colors.error : theme.colors.success}`,
-                backgroundColor: isRunning
-                  ? `${theme.colors.error}10`
-                  : `${theme.colors.success}10`,
-                color: isRunning ? theme.colors.error : theme.colors.success,
-                cursor: isToggling ? 'not-allowed' : 'pointer',
-                opacity: isToggling ? 0.5 : 1,
-                transition: 'all 0.2s ease',
-              }}
-              title={isRunning ? 'Stop monitoring' : 'Start monitoring'}
-            >
-              <Power size={20} />
-            </button>
+                {/* Repository Power button */}
+                <button
+                  onClick={handleToggleMonitoring}
+                  disabled={isToggling}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '8px',
+                    border: `1px solid ${isRunning ? theme.colors.error : theme.colors.success}`,
+                    backgroundColor: isRunning
+                      ? `${theme.colors.error}10`
+                      : `${theme.colors.success}10`,
+                    color: isRunning ? theme.colors.error : theme.colors.success,
+                    cursor: isToggling ? 'not-allowed' : 'pointer',
+                    opacity: isToggling ? 0.5 : 1,
+                    transition: 'all 0.2s ease',
+                  }}
+                  title={isRunning ? 'Stop monitoring' : 'Start monitoring'}
+                >
+                  <Power size={20} />
+                </button>
+              </>
+            ) : (
+              <>
+                {/* OTEL Collector Status */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    backgroundColor: otelStatus?.isRunning
+                      ? `${theme.colors.success}15`
+                      : `${theme.colors.textSecondary}15`,
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    color: otelStatus?.isRunning
+                      ? theme.colors.success
+                      : theme.colors.textSecondary,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      backgroundColor: otelStatus?.isRunning
+                        ? theme.colors.success
+                        : theme.colors.textSecondary,
+                      animation: otelStatus?.isRunning ? 'pulse 2s infinite' : 'none',
+                    }}
+                  />
+                  {otelLoading ? 'Loading...' : otelStatus?.isRunning ? 'Running' : 'Stopped'}
+                </div>
+
+                {/* OTEL Power button */}
+                <button
+                  onClick={handleToggleOtelCollector}
+                  disabled={otelLoading}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '8px',
+                    border: `1px solid ${otelStatus?.isRunning ? theme.colors.error : theme.colors.success}`,
+                    backgroundColor: otelStatus?.isRunning
+                      ? `${theme.colors.error}10`
+                      : `${theme.colors.success}10`,
+                    color: otelStatus?.isRunning ? theme.colors.error : theme.colors.success,
+                    cursor: otelLoading ? 'not-allowed' : 'pointer',
+                    opacity: otelLoading ? 0.5 : 1,
+                    transition: 'all 0.2s ease',
+                  }}
+                  title={otelStatus?.isRunning ? 'Stop OTEL Collector' : 'Start OTEL Collector'}
+                >
+                  <Power size={20} />
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
 
       <div style={{ padding: '20px' }}>
+        {/* Repository Monitoring Content */}
+        {activeTab === 'repository' && (
+          <>
         {/* Memory Warning */}
         {status && status.currentMemory > 500 * 1024 * 1024 && (
           <div
@@ -739,23 +859,12 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
             Showing last {status.history.length} data points (1 minute history)
           </div>
         </section>
+          </>
+        )}
 
-        {/* OTEL Collector Section */}
+        {/* OTEL Collector Content */}
+        {activeTab === 'otel' && (
         <section style={{ marginBottom: '32px' }}>
-          <h3
-            style={{
-              fontSize: '14px',
-              fontWeight: 600,
-              color: theme.colors.textSecondary,
-              marginBottom: '16px',
-              fontFamily: theme.fonts.heading,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-            }}
-          >
-            OTEL COLLECTOR
-          </h3>
-
           <div
             style={{
               backgroundColor: theme.colors.backgroundSecondary,
@@ -764,54 +873,6 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
               border: `1px solid ${theme.colors.border}`,
             }}
           >
-            {/* Status Row */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '20px',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div
-                  style={{
-                    width: '12px',
-                    height: '12px',
-                    borderRadius: '50%',
-                    backgroundColor: otelStatus?.isRunning
-                      ? theme.colors.success
-                      : theme.colors.textSecondary,
-                    animation: otelStatus?.isRunning ? 'pulse 2s infinite' : 'none',
-                  }}
-                />
-                <span style={{ fontSize: '14px', fontWeight: 500 }}>
-                  {otelLoading ? 'Loading...' : otelStatus?.isRunning ? 'Running' : 'Stopped'}
-                </span>
-              </div>
-
-              <button
-                onClick={handleToggleOtelCollector}
-                disabled={otelLoading}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '6px',
-                  border: `1px solid ${otelStatus?.isRunning ? theme.colors.error : theme.colors.success}`,
-                  backgroundColor: otelStatus?.isRunning
-                    ? `${theme.colors.error}10`
-                    : `${theme.colors.success}10`,
-                  color: otelStatus?.isRunning ? theme.colors.error : theme.colors.success,
-                  cursor: otelLoading ? 'not-allowed' : 'pointer',
-                  opacity: otelLoading ? 0.5 : 1,
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                {otelStatus?.isRunning ? 'Stop' : 'Start'}
-              </button>
-            </div>
-
             {/* Stats Grid */}
             {otelStatus?.isRunning && otelStatus.stats && (
               <div
@@ -933,8 +994,10 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
             )}
           </div>
         </section>
+        )}
 
-        {/* Registered Repositories Section */}
+        {/* Registered Repositories Section - Repository Tab Only */}
+        {activeTab === 'repository' && (
         <section>
           <div
             style={{
@@ -1454,6 +1517,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
             )}
           </div>
         </section>
+        )}
       </div>
     </div>
   );

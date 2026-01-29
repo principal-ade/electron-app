@@ -3227,7 +3227,7 @@ export function registerGitHubIpcHandlers(
       }
 
       try {
-        const { githubUrl, skillPath, destination, repositoryPath, skillName, fileList } = options;
+        const { githubUrl, skillPath, destination, repositoryPath, skillName, fileList, skillTreeSha } = options;
 
         console.log('[GitHub] installSkill called with:', {
           githubUrl,
@@ -3236,6 +3236,7 @@ export function registerGitHubIpcHandlers(
           skillName,
           fileListProvided: !!fileList,
           fileCount: fileList?.length,
+          skillTreeSha,
         });
 
         // Parse GitHub URL
@@ -3406,6 +3407,7 @@ export function registerGitHubIpcHandlers(
           owner,
           repo,
           branch,
+          sha: skillTreeSha, // Store the skill-specific tree SHA for version tracking
           installedAt: new Date().toISOString(),
           destination,
           files: installedFiles,

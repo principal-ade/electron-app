@@ -70,7 +70,8 @@ const SkillBrowserViewContent: React.FC = () => {
     owner: string;
     repo: string;
     branch: string;
-    treeSha?: string; // SHA of the current tree
+    treeSha?: string; // SHA of the root tree
+    treeData?: Array<{ path: string; type: string; sha: string }>; // Raw tree data for extracting skill-specific SHAs
   } | null>(null);
 
   // State for selected skill metadata
@@ -523,12 +524,13 @@ const SkillBrowserViewContent: React.FC = () => {
         return;
       }
 
-      // Update GitHub repo info with tree SHA
+      // Update GitHub repo info with tree SHA and raw tree data
       setGithubRepoInfo({
         owner: parsed.owner,
         repo: parsed.repo,
         branch: parsed.branch,
         treeSha: result.data.sha,
+        treeData: result.data.tree,
       });
 
       // Convert to FileTree format
@@ -586,6 +588,23 @@ const SkillBrowserViewContent: React.FC = () => {
    * - "skills/code-review" → "code-review"
    * - "/Users/me/.agent/skills/code-review" → "code-review"
    */
+  /**
+   * Get the tree SHA for a specific skill folder from the GitHub tree data
+   */
+  const getSkillTreeSha = useCallback((skillFolderPath: string): string | undefined => {
+    if (!githubRepoInfo?.treeData) return undefined;
+
+    // Normalize the path to match GitHub tree format (remove leading/trailing slashes)
+    const normalizedPath = skillFolderPath.replace(/^\/+|\/+$/g, '');
+
+    // Find the tree entry that matches this skill's folder path
+    const treeEntry = githubRepoInfo.treeData.find(
+      (entry) => entry.path === normalizedPath && entry.type === 'tree'
+    );
+
+    return treeEntry?.sha;
+  }, [githubRepoInfo]);
+
   /**
    * Check if a skill is already installed
    */
@@ -710,12 +729,15 @@ const SkillBrowserViewContent: React.FC = () => {
         fileCount: fileList.length,
       });
 
+      const skillTreeSha = getSkillTreeSha(selectedSkill.skillFolderPath);
+
       const result = await GithubService.installSkill({
         githubUrl,
         skillPath: selectedSkill.skillFolderPath,
         destination,
         skillName: selectedSkill.name,
         fileList, // Pass the complete file list
+        skillTreeSha, // Pass the skill-specific tree SHA
       });
 
       if (!result.success) {
@@ -779,12 +801,15 @@ const SkillBrowserViewContent: React.FC = () => {
           fileCount: fileList.length,
         });
 
+        const skillTreeSha = getSkillTreeSha(selectedSkill.skillFolderPath);
+
         const result = await GithubService.installSkill({
           githubUrl,
           skillPath: selectedSkill.skillFolderPath,
           destination,
           skillName: selectedSkill.name,
           fileList, // Pass the complete file list
+          skillTreeSha, // Pass the skill-specific tree SHA
         });
 
         if (!result.success) {
@@ -943,18 +968,53 @@ const SkillBrowserViewContent: React.FC = () => {
             events={events}
             installConfig={selectedSkill ? {
               isInstalled: isSkillInstalled(selectedSkill),
+              hasUpdate: (() => {
+                // Check if update is available by comparing skill-specific SHAs
+                if (!isSkillInstalled(selectedSkill)) return false;
+                const currentSkillSha = getSkillTreeSha(selectedSkill.skillFolderPath);
+                if (!selectedSkillMetadata?.sha || !currentSkillSha) return false;
+                return selectedSkillMetadata.sha !== currentSkillSha;
+              })(),
               installedDirectoryIds: getSkillInstalledDirectories(selectedSkill),
               githubSource: githubRepoInfo ? {
                 owner: githubRepoInfo.owner,
                 repo: githubRepoInfo.repo,
                 branch: githubRepoInfo.branch,
                 skillPath: selectedSkill.path,
-                currentSha: githubRepoInfo.treeSha,
+                currentSha: getSkillTreeSha(selectedSkill.skillFolderPath),
               } : undefined,
-              onInstall: () => setShowInstallModal(true),
-              onUninstall: selectedSkill.installedLocations && selectedSkill.installedLocations.length > 0 ? () => {
-                // TODO: Implement uninstall functionality
-                console.log('Uninstall skill:', selectedSkill.name);
+              onInstall: async () => {
+                // Check if this is an update (skill is already installed)
+                if (isSkillInstalled(selectedSkill)) {
+                  const installedDirs = getSkillInstalledDirectories(selectedSkill);
+                  if (installedDirs.length > 0) {
+                    // Directly update to already-installed directories
+                    try {
+                      await handleInstallSkillToDirectories(installedDirs);
+                      // Refresh metadata after update
+                      const metadata = await getInstalledSkillMetadata(selectedSkill);
+                      setSelectedSkillMetadata(metadata);
+                    } catch (err) {
+                      console.error('[SkillBrowserView] Update failed:', err);
+                      alert(`Update failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+                    }
+                    return;
+                  }
+                }
+                // For new installations, show the modal
+                setShowInstallModal(true);
+              },
+              onUninstall: isSkillInstalled(selectedSkill) ? () => {
+                const installedDirs = getSkillInstalledDirectories(selectedSkill);
+                if (installedDirs.length > 0) {
+                  const dirNames = installedDirs.map(id => {
+                    const dir = detectedDirectories.find(d => d.id === id);
+                    return dir?.displayName || id;
+                  }).join(', ');
+                  if (window.confirm(`Uninstall "${selectedSkill.name}" from: ${dirNames}?`)) {
+                    handleUninstallSkillFromDirectories(installedDirs);
+                  }
+                }
               } : undefined,
             } : undefined}
             hideEditButtons={viewMode === 'browse'}
@@ -962,7 +1022,7 @@ const SkillBrowserViewContent: React.FC = () => {
         ),
       },
     ];
-  }, [context, actions, events, selectedSkill, githubRepoInfo, isSkillInstalled, getSkillInstalledDirectories, viewMode, browseFileTree, recentRepos, handleSelectRecentRepo, detectedDirectories, githubUrl, handleFetchSkills, isLoading, selectedSkillMetadata]);
+  }, [context, actions, events, selectedSkill, githubRepoInfo, isSkillInstalled, getSkillInstalledDirectories, getSkillTreeSha, viewMode, browseFileTree, recentRepos, handleSelectRecentRepo, detectedDirectories, githubUrl, handleFetchSkills, isLoading, selectedSkillMetadata, handleInstallSkillToDirectories, getInstalledSkillMetadata, setSelectedSkillMetadata]);
 
   // Define layout configuration (simple left/right split or single panel for recent)
   const layout = useMemo(() => {

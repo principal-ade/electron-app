@@ -165,18 +165,12 @@ export class OtelCollectorService {
 
     // Check if we're in development or production
     if (app.isPackaged) {
-      // Production: binary bundled with app
-      return path.join(process.resourcesPath, 'binaries', binaryName);
+      // Production: binary bundled with app in resources/bin
+      return path.join(process.resourcesPath, 'bin', binaryName);
     } else {
-      // Development: binary in node_modules
-      return path.join(
-        app.getAppPath(),
-        'node_modules',
-        '@principal-ai',
-        'otel-collector-server',
-        'binaries',
-        binaryName
-      );
+      // Development: binary in resources/bin (from project root)
+      // Use process.cwd() which is the project root in dev mode
+      return path.join(process.cwd(), 'resources', 'bin', binaryName);
     }
   }
 }
