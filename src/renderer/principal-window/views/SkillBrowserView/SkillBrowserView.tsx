@@ -3,7 +3,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { ConfigurablePanelLayout } from '@principal-ade/panels';
 import '@principal-ade/panels/panels.css';
 import { PanelEventBus } from '@principal-ade/panel-framework-core';
-import { panels as agentPanels, type Skill, SkillsBrowsePanel } from '@industry-theme/agent-panels';
+import { panels as agentPanels, type Skill, SkillsBrowsePanel, GlobalSkillsPanel } from '@industry-theme/agent-panels';
 import {
   SkillBrowserPanelProvider,
   useSkillBrowserPanelProvider,
@@ -23,9 +23,6 @@ import { AgentSetupModal } from './AgentSetupModal';
 import { SkillInstallationModal } from './SkillInstallationModal';
 
 // Extract panel components from agent-panels package
-const SkillsListPanelComponent = agentPanels.find(
-  (p) => p.metadata?.id === 'industry-theme.skills-list',
-)?.component;
 const SkillDetailPanelComponent = agentPanels.find(
   (p) => p.metadata?.id === 'industry-theme.skill-detail',
 )?.component;
@@ -919,26 +916,30 @@ const SkillBrowserViewContent: React.FC = () => {
       ];
     }
 
-    if (!SkillsListPanelComponent || !SkillDetailPanelComponent) {
+    if (!SkillDetailPanelComponent) {
       return [];
     }
 
-    // Use SkillsBrowsePanel for browse mode, SkillsListPanel for installed mode
-    const SkillsPanelComponent = viewMode === 'browse' ? SkillsBrowsePanel : SkillsListPanelComponent;
     const skillsPanelLabel = viewMode === 'browse' ? 'Browse Skills' : 'Installed Skills';
 
     return [
       {
         id: 'skills-list',
         label: skillsPanelLabel,
-        content: (
-          <SkillsPanelComponent
-            context={context}
-            actions={actions}
-            events={events}
-            browseMode={viewMode === 'browse'}
-          />
-        ),
+        content:
+          viewMode === 'browse' ? (
+            <SkillsBrowsePanel
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          ) : (
+            <GlobalSkillsPanel
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          ),
       },
       {
         id: 'skill-detail',
@@ -1051,7 +1052,7 @@ const SkillBrowserViewContent: React.FC = () => {
         isLoading={isLoading}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
-        showGithubInput={viewMode !== 'browse'}
+        showGithubInput={viewMode === 'browse'}
         currentRepo={githubRepoInfo}
         onClearRepo={() => {
           setBrowseFileTree(null);

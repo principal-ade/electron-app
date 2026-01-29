@@ -690,10 +690,10 @@ export class GitHubAdapter {
         for (const file of files) trackedFiles.set(file.path, file);
       } else {
         console.warn(
-          '[GitHub:getMarkdownDocuments] gh tree failed, falling back to HTTPS',
+          '[GitHub:getMarkdownDocuments] gh tree failed, falling back to authenticated API',
           { stderr: listResult.stderr },
         );
-        const treeResult = await this.getTreeForPublicRepo(
+        const treeResult = await this.getTree(
           owner,
           repo,
           defaultBranch,
@@ -1036,66 +1036,28 @@ export class GitHubAdapter {
   }
 
   /**
-   * Get repository tree (alias for getTreeForPublicRepo)
+   * Get repository tree with authentication support for private repos
    */
   async getTree(owner: string, repo: string, ref: string) {
-    return this.getTreeForPublicRepo(owner, repo, ref);
-  }
-
-  async getTreeForPublicRepo(
-    owner: string,
-    repo: string,
-    ref: string,
-  ): Promise<{ success: boolean; data?: any; error?: string }> {
     console.log(
-      `[GitHub] Making public API call for ${owner}/${repo} on branch ${ref}`,
+      `[GitHub] Getting tree for ${owner}/${repo} on branch ${ref}`,
     );
-    const https = require('https');
-    const options = {
-      hostname: 'api.github.com',
-      path: `/repos/${owner}/${repo}/git/trees/${ref}?recursive=1`,
-      method: 'GET',
-      headers: {
-        'User-Agent': 'Principle-MD',
-      },
+
+    // Always use authenticated API call (works for both public and private repos)
+    const result = await this.makeGitHubAPICall(
+      `/repos/${owner}/${repo}/git/trees/${ref}?recursive=1`,
+    );
+
+    if (result.success) {
+      return { success: true, data: result.data };
+    }
+
+    return {
+      success: false,
+      error: result.error || 'Failed to fetch repository tree',
     };
-
-    return new Promise((resolve) => {
-      const req = https.request(options, (res: any) => {
-        let data = '';
-        res.on('data', (chunk: any) => {
-          data += chunk;
-        });
-        res.on('end', () => {
-          if (res.statusCode >= 200 && res.statusCode < 300) {
-            try {
-              resolve({ success: true, data: JSON.parse(data) });
-            } catch (e: any) {
-              resolve({
-                success: false,
-                error: `Failed to parse response: ${e.message}`,
-              });
-            }
-          } else {
-            const errorMessage = `Request failed with status code ${res.statusCode}`;
-            console.error(`[GitHub] Public repo fetch failed: ${errorMessage}`);
-            if (res.statusCode === 404) {
-              // Specifically throw for 404 to be caught by the UI
-              resolve({ success: false, error: 'Repository not found (404)' });
-            } else {
-              resolve({ success: false, error: errorMessage });
-            }
-          }
-        });
-      });
-
-      req.on('error', (error: any) => {
-        resolve({ success: false, error: error.message });
-      });
-
-      req.end();
-    });
   }
+
 
   // Create a new GitHub issue
   async createIssue(owner: string, repo: string, issue: any): Promise<any> {
@@ -2690,7 +2652,7 @@ export function registerGitHubIpcHandlers(
           console.log(`[GitHub] Using default branch: ${treeRef}`);
         }
 
-        const result = await adapter.getTreeForPublicRepo(owner, repo, treeRef);
+        const result = await adapter.getTree(owner, repo, treeRef);
 
         if (result.success) {
           return result;
@@ -2698,7 +2660,7 @@ export function registerGitHubIpcHandlers(
 
         // Fallback: use git CLI (Option C: no checkout) with SSH preferred
         console.warn(
-          `[GitHub] Public API failed (likely private). Falling back to git CLI (no checkout) for ${owner}/${repo}@${treeRef}`,
+          `[GitHub] API failed. Falling back to git CLI (no checkout) for ${owner}/${repo}@${treeRef}`,
         );
         const os = require('os');
         const path = require('path');
