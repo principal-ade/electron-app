@@ -10,7 +10,7 @@ import {
 } from './SkillBrowserPanelProvider';
 import { usePanelPersistence } from '../../../hooks/usePanelPersistence';
 import { SkillBrowserViewHeader, type ViewMode } from './SkillBrowserViewHeader';
-import { InstallSkillToolbar, type SkillDestination, DIRECTORY_ID_TO_DESTINATION } from './InstallSkillToolbar';
+import { type SkillDestination, DIRECTORY_ID_TO_DESTINATION } from './InstallSkillToolbar';
 import { GithubService } from '../../../main-process-api/GithubService';
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
 import type { FileTree } from '../../../contexts/RepositoryPanelContext';
@@ -586,33 +586,28 @@ const SkillBrowserViewContent: React.FC = () => {
    * - "skills/code-review" → "code-review"
    * - "/Users/me/.agent/skills/code-review" → "code-review"
    */
-  const getSkillFolderName = useCallback((folderPath: string): string => {
-    return folderPath.split('/').filter(p => p).pop() || '';
-  }, []);
-
   /**
    * Check if a skill is already installed
    */
   const isSkillInstalled = useCallback(
-    (skill: { skillFolderPath: string }): boolean => {
-      const selectedFolderName = getSkillFolderName(skill.skillFolderPath);
-      // Check if the skill folder name exists in any of the installed skills
+    (skill: Skill): boolean => {
+      // Use skill.name directly - it's already the folder name
       return installedSkillsData.some((installedSkill) =>
-        installedSkill.name === selectedFolderName
+        installedSkill.name === skill.name
       );
     },
-    [installedSkillsData, getSkillFolderName],
+    [installedSkillsData],
   );
 
   /**
    * Get which directories a skill is installed in
    */
   const getSkillInstalledDirectories = useCallback(
-    (skill: { skillFolderPath: string }): string[] => {
-      const selectedFolderName = getSkillFolderName(skill.skillFolderPath);
+    (skill: Skill): string[] => {
+      // Use skill.name directly - it's already the folder name
       // Find all instances of this skill in installedSkillsData
       const skillInstances = installedSkillsData.filter((installedSkill) =>
-        installedSkill.name === selectedFolderName
+        installedSkill.name === skill.name
       );
 
       // Map each instance to its directory ID
@@ -630,18 +625,18 @@ const SkillBrowserViewContent: React.FC = () => {
 
       return directoryIds;
     },
-    [installedSkillsData, detectedDirectories, getSkillFolderName],
+    [installedSkillsData, detectedDirectories],
   );
 
   /**
    * Get metadata for an installed skill
    */
   const getInstalledSkillMetadata = useCallback(
-    async (skill: { skillFolderPath: string }): Promise<{ sha: string; installedAt: string; installedFrom: string } | null> => {
-      const selectedFolderName = getSkillFolderName(skill.skillFolderPath);
+    async (skill: Skill): Promise<{ sha: string; installedAt: string; installedFrom: string } | null> => {
+      // Use skill.name directly - it's already the folder name
       // Find the installed skill
       const installedSkill = installedSkillsData.find((installedSkill) =>
-        installedSkill.name === selectedFolderName
+        installedSkill.name === skill.name
       );
       if (!installedSkill) {
         return null;
@@ -668,7 +663,7 @@ const SkillBrowserViewContent: React.FC = () => {
         return null;
       }
     },
-    [installedSkillsData, getSkillFolderName],
+    [installedSkillsData],
   );
 
   // Load metadata when selected skill changes
@@ -828,12 +823,9 @@ const SkillBrowserViewContent: React.FC = () => {
         throw new Error('No skill selected');
       }
 
-      const selectedFolderName = getSkillFolderName(selectedSkill.skillFolderPath);
-
       console.log('[handleUninstallSkillFromDirectories] Uninstalling skill:', {
         skillName: selectedSkill.name,
-        skillFolderPath: selectedSkill.skillFolderPath,
-        folderName: selectedFolderName,
+        folderName: selectedSkill.name,
         fromDirectories: directoryIds,
       });
 
@@ -850,7 +842,7 @@ const SkillBrowserViewContent: React.FC = () => {
         }
 
         // Construct the full path to the skill in this directory
-        const skillPath = `${directory.path}/${selectedFolderName}`;
+        const skillPath = `${directory.path}/${selectedSkill.name}`;
 
         console.log('[handleUninstallSkillFromDirectories] Deleting skill at:', {
           directoryId,
@@ -883,7 +875,7 @@ const SkillBrowserViewContent: React.FC = () => {
         });
       }
     },
-    [selectedSkill, detectedDirectories, loadInstalledSkills, actions, getSkillFolderName],
+    [selectedSkill, detectedDirectories, loadInstalledSkills, actions],
   );
 
   // Use panel persistence for two-panel layout
@@ -945,42 +937,28 @@ const SkillBrowserViewContent: React.FC = () => {
         id: 'skill-detail',
         label: 'Skill Detail',
         content: (
-          <div
-            style={{
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-            }}
-          >
-            {/* Install Toolbar */}
-            {selectedSkill && (
-              <InstallSkillToolbar
-                skillName={selectedSkill.name}
-                skillSource={githubRepoInfo ? {
-                  owner: githubRepoInfo.owner,
-                  repo: githubRepoInfo.repo,
-                  branch: githubRepoInfo.branch,
-                  skillPath: selectedSkill.path,
-                  currentSha: githubRepoInfo.treeSha,
-                } : undefined}
-                isInstalled={isSkillInstalled(selectedSkill)}
-                installedDirectoryIds={getSkillInstalledDirectories(selectedSkill)}
-                installedMetadata={selectedSkillMetadata || undefined}
-                onOpenInstallModal={() => setShowInstallModal(true)}
-                detectedDirectories={detectedDirectories}
-              />
-            )}
-
-            {/* Skill Detail Panel */}
-            <div style={{ flex: 1, overflow: 'hidden' }}>
-              <SkillDetailPanelComponent
-                context={context}
-                actions={actions}
-                events={events}
-              />
-            </div>
-          </div>
+          <SkillDetailPanelComponent
+            context={context}
+            actions={actions}
+            events={events}
+            installConfig={selectedSkill ? {
+              isInstalled: isSkillInstalled(selectedSkill),
+              installedDirectoryIds: getSkillInstalledDirectories(selectedSkill),
+              githubSource: githubRepoInfo ? {
+                owner: githubRepoInfo.owner,
+                repo: githubRepoInfo.repo,
+                branch: githubRepoInfo.branch,
+                skillPath: selectedSkill.path,
+                currentSha: githubRepoInfo.treeSha,
+              } : undefined,
+              onInstall: () => setShowInstallModal(true),
+              onUninstall: selectedSkill.installedLocations && selectedSkill.installedLocations.length > 0 ? () => {
+                // TODO: Implement uninstall functionality
+                console.log('Uninstall skill:', selectedSkill.name);
+              } : undefined,
+            } : undefined}
+            hideEditButtons={viewMode === 'browse'}
+          />
         ),
       },
     ];
