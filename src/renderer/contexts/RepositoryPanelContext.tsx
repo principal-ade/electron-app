@@ -1129,17 +1129,26 @@ export const RepositoryPanelProvider: React.FC<
               if (repositoryPath) {
                 setFileTreeLoading(true);
                 try {
-                  const tree =
-                    await RepositoryMonitoringService.getFileTree(
-                      repositoryPath,
-                    );
-                  setFileTreeData(tree);
+                  // Force cache invalidation and rebuild
+                  // This will emit CACHE_SYNC events that the onCacheSync listener
+                  // (line 241) will handle to update state automatically
+                  await RepositoryMonitoringService.refreshRepository(
+                    repositoryPath,
+                  );
+                  console.log(
+                    '[RepositoryPanelProvider] Refresh triggered for file tree, waiting for cache sync event',
+                  );
                 } catch (error) {
                   console.error(
                     '[RepositoryPanelProvider] Failed to refresh file tree:',
                     error,
                   );
-                  setFileTreeData(null);
+                  // Fallback: try to get whatever is in cache
+                  const tree =
+                    await RepositoryMonitoringService.getFileTree(
+                      repositoryPath,
+                    );
+                  setFileTreeData(tree);
                 } finally {
                   setFileTreeLoading(false);
                 }
@@ -1160,17 +1169,26 @@ export const RepositoryPanelProvider: React.FC<
               if (repositoryPath) {
                 setFileTreeLoading(true);
                 try {
+                  // Force cache invalidation and rebuild
+                  // Markdown files are extracted from the file tree,
+                  // so refreshing the repository will update both
+                  await RepositoryMonitoringService.refreshRepository(
+                    repositoryPath,
+                  );
+                  console.log(
+                    '[RepositoryPanelProvider] Refresh triggered for markdown, waiting for cache sync event',
+                  );
+                } catch (error) {
+                  console.error(
+                    '[RepositoryPanelProvider] Failed to refresh markdown:',
+                    error,
+                  );
+                  // Fallback: try to get whatever is in cache
                   const tree =
                     await RepositoryMonitoringService.getFileTree(
                       repositoryPath,
                     );
                   setFileTreeData(tree);
-                } catch (error) {
-                  console.error(
-                    '[RepositoryPanelProvider] Failed to refresh file tree:',
-                    error,
-                  );
-                  setFileTreeData(null);
                 } finally {
                   setFileTreeLoading(false);
                 }
@@ -1190,6 +1208,21 @@ export const RepositoryPanelProvider: React.FC<
               if (repositoryPath) {
                 setPackagesLoading(true);
                 try {
+                  // Force cache invalidation and rebuild
+                  // This will emit CACHE_SYNC events that the onCacheSync listener
+                  // (line 315) will handle to update state automatically
+                  await RepositoryMonitoringService.refreshRepository(
+                    repositoryPath,
+                  );
+                  console.log(
+                    '[RepositoryPanelProvider] Refresh triggered for packages, waiting for cache sync event',
+                  );
+                } catch (error) {
+                  console.error(
+                    '[RepositoryPanelProvider] Failed to refresh packages:',
+                    error,
+                  );
+                  // Fallback: try to get whatever is in cache
                   const result =
                     await RepositoryMonitoringService.getPackages(
                       repositoryPath,
@@ -1199,12 +1232,6 @@ export const RepositoryPanelProvider: React.FC<
                   } else {
                     setPackagesData(null);
                   }
-                } catch (error) {
-                  console.error(
-                    '[RepositoryPanelProvider] Failed to refresh packages:',
-                    error,
-                  );
-                  setPackagesData(null);
                 } finally {
                   setPackagesLoading(false);
                 }
@@ -1224,17 +1251,26 @@ export const RepositoryPanelProvider: React.FC<
               if (repositoryPath) {
                 setGitStatusLoading(true);
                 try {
-                  const status =
-                    await RepositoryMonitoringService.getGitStatusWithFiles(
-                      repositoryPath,
-                    );
-                  setGitStatusData(status);
+                  // Force cache invalidation and rebuild
+                  // This will emit GIT_STATUS_CHANGED events that the onGitStatusChanged
+                  // listener (line 365) will handle to update state automatically
+                  await RepositoryMonitoringService.refreshRepository(
+                    repositoryPath,
+                  );
+                  console.log(
+                    '[RepositoryPanelProvider] Refresh triggered for git status, waiting for event',
+                  );
                 } catch (error) {
                   console.error(
                     '[RepositoryPanelProvider] Failed to refresh git status:',
                     error,
                   );
-                  setGitStatusData(null);
+                  // Fallback: try to get whatever is in cache
+                  const status =
+                    await RepositoryMonitoringService.getGitStatusWithFiles(
+                      repositoryPath,
+                    );
+                  setGitStatusData(status);
                 } finally {
                   setGitStatusLoading(false);
                 }

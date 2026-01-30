@@ -1,10 +1,12 @@
 # Repository Panel System Migration Guide
 
+> **Note (2026-01-29):** This document references `RepositoryDataCache` which was removed as it was never actually used. The actual implementation uses `RepositoryPanelContext` which directly subscribes to `RepositoryMonitoringService` cache sync events. See `src/renderer/contexts/RepositoryPanelContext.tsx` for the current implementation.
+
 This document summarizes the configurable panel architecture that now powers the Repository Explorer and Repository Manager surfaces. Use it as the reference when migrating existing panels or building new ones.
 
 ## Goals
 
-- **Single source of truth for repository data.** Panels consume repository slices from a shared provider backed by `RepositoryDataCache`, eliminating duplicate polling and cache implementations.
+- **Single source of truth for repository data.** Panels consume repository slices from a shared provider (`RepositoryPanelContext`), eliminating duplicate polling and cache implementations.
 - **Shared panel catalog.** Definitions for every configurable panel live in a single registry so the same panel can be reused across windows without copy/pasting IDs or JSX.
 - **Composability across views.** Any surface can opt into the panel system by wrapping its layout with the provider and selecting the panels it wants from the registry.
 

@@ -21,15 +21,15 @@ npx knip --files
 npx knip --files 2>&1 | grep "^src/renderer/components/"
 ```
 
-## Current Status (Updated - 2026-01-26)
+## Current Status (Updated - 2026-01-29)
 
-**Total unused files: 76** ⬆️ **+5 from previous (was 71)** 🚨
+**Total unused files: 75** ⬇️ **-1 from previous (was 76)** ✅
 
 ### By Top-Level Directory
 
 | Directory | Unused Files | Change |
 |-----------|--------------|--------|
-| renderer | 33 | ⬆️ **+5** 🚨 |
+| renderer | 32 | ⬇️ **-1** ✅ |
 | shared | 16 | - |
 | main | 15 | ⬆️ **+1** |
 | window | 6 | ⬆️ **+1** |
@@ -44,7 +44,7 @@ npx knip --files 2>&1 | grep "^src/renderer/components/"
 |--------------|--------------|--------|
 | main-process-api | 11 | - |
 | utils | 10 | - |
-| services | 5 | - |
+| services | 4 | ⬇️ **-1** ✅ |
 | principal-window | 2 | 🆕 **New** 🚨 |
 | styles | 1 | 🆕 **New** |
 | hooks | 1 | 🚨 **Regressed** |
@@ -127,11 +127,10 @@ src/renderer/styles/mdx-editor.ts
 
 ---
 
-### renderer/services (5 files)
+### renderer/services (4 files)
 
 ```
 src/renderer/services/CloneVisibilityService.ts
-src/renderer/services/RepositoryDataCache.ts
 src/renderer/services/SourceSelectionService.ts
 src/renderer/services/storage/CustomLayersStorageService.ts
 src/renderer/services/WorkspaceLayoutService.ts
@@ -140,6 +139,7 @@ src/renderer/services/WorkspaceLayoutService.ts
 **Status:** ⏳ Pending review
 
 **Notes:**
+- `RepositoryDataCache.ts` deleted as unused (2026-01-29)
 - `ContentProviders.ts` deleted as unused (2025-12-27)
 - `GitignoreAnalysisService.ts` deleted as unused (2025-12-27)
 

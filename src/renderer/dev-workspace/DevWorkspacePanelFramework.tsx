@@ -72,7 +72,7 @@ interface CanvasEditorTab extends BaseTab {
 }
 
 /**
- * Tab type for viewing canvas detail panels (.otel.canvas with executions)
+ * Tab type for viewing canvas detail panels (.otel.canvas with testtraces)
  */
 interface CanvasTab extends BaseTab {
   contentType: 'canvas-detail';

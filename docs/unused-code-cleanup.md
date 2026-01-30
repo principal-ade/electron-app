@@ -65,7 +65,7 @@ Files identified by knip as unused. Grouped by feature area with risk assessment
 | `src/renderer/services/CloneVisibilityService.ts` | Pending |
 | `src/renderer/services/ContentProviders.ts` | Pending |
 | `src/renderer/services/GitignoreAnalysisService.ts` | Pending |
-| `src/renderer/services/RepositoryDataCache.ts` | Pending |
+| `src/renderer/services/RepositoryDataCache.ts` | ✅ Deleted (2026-01-29) |
 | `src/renderer/services/SourceSelectionService.ts` | Pending |
 | `src/renderer/services/storage/CustomLayersStorageService.ts` | Pending |
 | `src/renderer/services/WorkspaceLayoutService.ts` | Pending |
@@ -146,6 +146,7 @@ Files identified by knip as unused. Grouped by feature area with risk assessment
 
 | File | Date |
 |------|------|
+| `src/renderer/services/RepositoryDataCache.ts` | 2026-01-29 |
 | `src/renderer/components/Titlebar/RepositoryTitlebar.tsx` | 2024-12-13 |
 | `src/renderer/components/Titlebar/RepositoryTitlebarSimple.tsx` | 2024-12-13 |
 | `src/renderer/components/FileTreeContextMenu.tsx` | 2024-12-13 |
