@@ -394,7 +394,7 @@ export class GitHubArtifactService {
 
     // Extract file coverage and file metrics using registry utility
     const { fileCoverage, fileMetrics } = extractQualityDataFromResults(
-      results.results as LensResultInput[],
+      (results.results ?? []) as LensResultInput[],
     );
 
     // Get per-package hexagons from CLI output
@@ -402,10 +402,13 @@ export class GitHubArtifactService {
       (results.qualityMetrics as { packages?: PackageQualityMetrics[] })
         ?.packages ?? [];
 
+    const fileCoverageKeys = fileCoverage ? Object.keys(fileCoverage) : [];
+    const fileMetricsKeysList = fileMetrics ? Object.keys(fileMetrics) : [];
+
     console.log(
       `[GitHubArtifactService] Parsed artifact with ${packages.length} packages, ` +
-        `fileCoverage: ${Object.keys(fileCoverage).length} files, ` +
-        `fileMetrics: ${Object.keys(fileMetrics).join(', ') || 'none'}`,
+        `fileCoverage: ${fileCoverageKeys.length} files, ` +
+        `fileMetrics: ${fileMetricsKeysList.join(', ') || 'none'}`,
     );
 
     return {
@@ -416,10 +419,8 @@ export class GitHubArtifactService {
       branch: results.metadata.git?.branch ?? 'unknown',
       timestamp: results.metadata.timestamp,
       qualityMetrics: { packages },
-      fileCoverage:
-        Object.keys(fileCoverage).length > 0 ? fileCoverage : undefined,
-      fileMetrics:
-        Object.keys(fileMetrics).length > 0 ? fileMetrics : undefined,
+      fileCoverage: fileCoverageKeys.length > 0 ? fileCoverage : undefined,
+      fileMetrics: fileMetricsKeysList.length > 0 ? fileMetrics : undefined,
       artifactId,
       artifactName,
     };
