@@ -1,3 +1,7 @@
+// Initialize telemetry before any other code
+import { initializeTelemetry } from '../telemetry';
+initializeTelemetry('principal-window');
+
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { PrincipalApp } from './PrincipalApp';

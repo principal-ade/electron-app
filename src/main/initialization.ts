@@ -320,6 +320,10 @@ export const initializeServices = async () => {
       const otelCollector = OtelCollectorService.getInstance();
       await otelCollector.start();
       console.log('[Main Process] OTEL Collector Service started successfully.');
+
+      // Initialize app's own telemetry after collector is ready
+      const { nodeTelemetry } = await import('./telemetry');
+      await nodeTelemetry.initialize();
     } catch (error) {
       console.error('[Main Process] Failed to start OTEL Collector Service:', error);
     }
@@ -362,6 +366,15 @@ export const shutdownServices = async () => {
   // Cleanup localhost detection watchers
   cleanupLocalhostWatchers();
   console.log('[Main Process] Localhost detection watchers cleaned up.');
+
+  // Flush app telemetry before stopping collector
+  try {
+    const { nodeTelemetry } = await import('./telemetry');
+    await nodeTelemetry.shutdown();
+    console.log('[Main Process] App telemetry flushed and shutdown.');
+  } catch (err) {
+    console.error('[Main Process] Failed to shutdown app telemetry:', err);
+  }
 
   // Stop OTEL Collector Service
   try {

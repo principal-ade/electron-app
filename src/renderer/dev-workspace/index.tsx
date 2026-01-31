@@ -8,6 +8,10 @@
  * - userPreferences
  */
 
+// Initialize telemetry before any other code
+import { initializeTelemetry } from '../telemetry';
+initializeTelemetry('dev-workspace');
+
 import { createRoot } from 'react-dom/client';
 import mermaid from 'mermaid';
 

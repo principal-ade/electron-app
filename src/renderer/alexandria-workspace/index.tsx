@@ -1,3 +1,7 @@
+// Initialize telemetry before any other code
+import { initializeTelemetry } from '../telemetry';
+initializeTelemetry('alexandria');
+
 import { createRoot } from 'react-dom/client';
 import '../styles/tailwind.css';
 import '../index.css';

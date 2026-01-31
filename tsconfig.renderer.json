@@ -15,6 +15,7 @@
     "src/titlebar/**/*",
     "src/window/**/*",
     "src/shared/**/*",
+    "src/telemetry/**/*",
     "src/types/**/*",
     "assets/**/*"
   ],

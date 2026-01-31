@@ -1,3 +1,7 @@
+// Initialize telemetry before any other code
+import { initializeTelemetry } from '../telemetry';
+initializeTelemetry('quick-open');
+
 import { createRoot } from 'react-dom/client';
 import QuickOpenApp from './QuickOpenApp';
 import { CustomThemeProvider } from '../providers/CustomThemeProvider';

@@ -4,6 +4,10 @@
  * This window allows users to browse and launch panel extensions.
  */
 
+// Initialize telemetry before any other code
+import { initializeTelemetry } from '../telemetry';
+initializeTelemetry('extension');
+
 import { createRoot } from 'react-dom/client';
 
 import { ThemeProvider } from '@principal-ade/industry-theme';

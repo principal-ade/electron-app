@@ -1,6 +1,15 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
+  Sparkles,
+  FileText,
+  LayoutDashboard,
+  Workflow,
+  Code,
+  GitBranch,
+  Terminal,
+} from 'lucide-react';
+import {
   EditableConfigurablePanelLayout,
   type PanelLayout,
 } from '@principal-ade/panel-layouts';
@@ -221,6 +230,7 @@ const FileCityWithHighlights: React.FC<{
   );
 };
 
+
 /**
  * Inner component that uses RepositoryPanelProvider and TerminalProvider contexts
  */
@@ -277,6 +287,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
   // Tab state for TabbedTerminalPanel (skills only - terminals are managed by the panel from context)
   const [tabs, setTabs] = useState<DevWorkspaceTab[]>([]);
+
+  // Focus tab state - when set, TabbedTerminalPanel will activate the tab and call onFocusTabHandled
+  const [focusTabId, setFocusTabId] = useState<string | null>(null);
+  const handleFocusTabHandled = useCallback(() => setFocusTabId(null), []);
 
   // Track markdown files currently being loaded to prevent duplicate tabs
   const loadingMarkdownFilesRef = React.useRef<Set<string>>(new Set());
@@ -484,7 +498,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           );
 
           if (existingTab) {
-            console.log('[DevWorkspacePanelFramework] Task MDX editor tab already exists');
+            console.log('[DevWorkspacePanelFramework] Task MDX editor tab already exists, focusing:', existingTab.id);
+            setFocusTabId(existingTab.id);
             return prevTabs;
           }
 
@@ -499,6 +514,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           };
 
           console.log('[DevWorkspacePanelFramework] Creating new task MDX editor tab:', newTab);
+          setFocusTabId(newTab.id);
           return [...prevTabs, newTab];
         });
       }),
@@ -532,8 +548,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           );
 
           if (existingTab) {
-            // Tab exists - no action needed, TabbedTerminalPanel will auto-activate it
-            console.log('[DevWorkspacePanelFramework] Skill tab already exists:', existingTab.id);
+            // Tab exists - focus it
+            console.log('[DevWorkspacePanelFramework] Skill tab already exists, focusing:', existingTab.id);
+            setFocusTabId(existingTab.id);
             return prevTabs; // No change to tabs array
           }
 
@@ -549,7 +566,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           };
 
           console.log('[DevWorkspacePanelFramework] Creating new skill tab (skill pre-loaded):', newTab);
-          // TabbedTerminalPanel will auto-activate the new tab via its internal logic
+          setFocusTabId(newTab.id);
           return [...prevTabs, newTab];
         });
       }),
@@ -589,7 +606,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           );
 
           if (existingTab) {
-            console.log('[DevWorkspacePanelFramework] Agent MDX editor tab already exists');
+            console.log('[DevWorkspacePanelFramework] Agent MDX editor tab already exists, focusing:', existingTab.id);
+            setFocusTabId(existingTab.id);
             return prevTabs;
           }
 
@@ -604,6 +622,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           };
 
           console.log('[DevWorkspacePanelFramework] Creating new agent MDX editor tab:', newTab);
+          setFocusTabId(newTab.id);
           return [...prevTabs, newTab];
         });
       }),
@@ -654,7 +673,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           );
 
           if (existingTab) {
-            console.log('[DevWorkspacePanelFramework] Tab already exists');
+            console.log('[DevWorkspacePanelFramework] Tab already exists, focusing:', existingTab.id);
+            setFocusTabId(existingTab.id);
             return prevTabs;
           }
 
@@ -691,6 +711,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           }
 
           console.log('[DevWorkspacePanelFramework] Creating new tab:', newTab);
+          setFocusTabId(newTab.id);
           return [...prevTabs, newTab];
         });
       }),
@@ -728,34 +749,42 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         loadingMarkdownFilesRef.current.add(filePath);
 
         try {
-          // Check if tab already exists
-          const existingTab = tabs.find(
-            (t) => t.contentType === 'markdown' && (t as MarkdownTab).filePath === filePath
-          );
-
           // Pre-load the file content
           console.log('[DevWorkspacePanelFramework] Pre-loading markdown file:', filePath);
           if (actions.setActiveFile) {
             await actions.setActiveFile(filePath);
           }
 
-          if (existingTab) {
-            console.log('[DevWorkspacePanelFramework] Markdown tab already exists, content refreshed');
-            return; // Tab exists, content was refreshed
-          }
+          // Check for existing tab first
+          const tabId = `markdown-${filePath}`;
 
-          // Create new tab with file already loaded
-          const newTab: MarkdownTab = {
-            id: `markdown-${Date.now()}`,
-            label: fileName,
-            contentType: 'markdown',
-            filePath: filePath,
-            fileName: fileName,
-            closable: true,
-          };
+          setTabs((prevTabs) => {
+            const existingTab = prevTabs.find(
+              (t) => t.contentType === 'markdown' && (t as MarkdownTab).filePath === filePath
+            );
 
-          console.log('[DevWorkspacePanelFramework] Creating new markdown tab:', newTab);
-          setTabs((prevTabs) => [...prevTabs, newTab]);
+            if (existingTab) {
+              console.log('[DevWorkspacePanelFramework] Markdown tab already exists:', existingTab.id);
+              return prevTabs; // Tab exists, don't create new one
+            }
+
+            // Create new tab with file already loaded
+            const newTab: MarkdownTab = {
+              id: tabId,
+              label: fileName,
+              contentType: 'markdown',
+              filePath: filePath,
+              fileName: fileName,
+              closable: true,
+            };
+
+            console.log('[DevWorkspacePanelFramework] Creating new markdown tab:', newTab);
+            return [...prevTabs, newTab];
+          });
+
+          // Focus the tab (existing or new) - do this outside setTabs to avoid batching issues
+          console.log('[DevWorkspacePanelFramework] Focusing markdown tab:', tabId);
+          setFocusTabId(tabId);
         } finally {
           // Always remove from loading set when done
           loadingMarkdownFilesRef.current.delete(filePath);
@@ -829,18 +858,20 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               narrativeFileInfo: workflowFileInfo || null,
             };
 
-            return updatedTabs; // Tab updated, will auto-activate
+            setFocusTabId(prevTabs[existingTabIndex].id);
+            return updatedTabs; // Tab updated, will be focused
           } else if (existingTabIndex !== -1) {
-            // Existing tab found (canvas-editor) - just activate it
-            console.log('[DevWorkspacePanelFramework] Canvas tab already exists:', prevTabs[existingTabIndex].id);
-            return prevTabs; // Tab exists, will auto-activate
+            // Existing tab found (canvas-editor) - focus it
+            console.log('[DevWorkspacePanelFramework] Canvas tab already exists, focusing:', prevTabs[existingTabIndex].id);
+            setFocusTabId(prevTabs[existingTabIndex].id);
+            return prevTabs; // Tab exists, will be focused
           }
 
           // Create new canvas tab (editor or detail based on workflow presence)
           const newTab: CanvasEditorTab | CanvasTab = hasWorkflow
             ? {
                 id: `canvas-${canvasId}-${Date.now()}`,
-                label: canvas.name || canvasId,
+                label: workflow?.name || workflowId || canvas.name || canvasId,
                 contentType: 'canvas-detail',
                 canvasId: canvasId,
                 canvasPath: canvas.path,
@@ -864,6 +895,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               } as CanvasEditorTab;
 
           console.log('[DevWorkspacePanelFramework] Creating new', contentType, 'tab:', newTab);
+          // Also request focus for new tabs to ensure consistent activation
+          setFocusTabId(newTab.id);
           return [...prevTabs, newTab];
         });
       }),
@@ -941,6 +974,42 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     eventsRef.current = events;
   });
 
+  // Render custom icon for tabs based on content type
+  const renderTabIcon = useCallback((tab: DevWorkspaceTab) => {
+    switch (tab.contentType) {
+      case 'terminal':
+        return <Terminal size={14} />;
+      case 'skill':
+        return <Sparkles size={14} />;
+      case 'markdown':
+      case 'mdx-editor':
+        return <FileText size={14} />;
+      case 'canvas-editor':
+        return <LayoutDashboard size={14} />;
+      case 'canvas-detail':
+        return <Workflow size={14} />;
+      case 'file-editor':
+        return <Code size={14} />;
+      case 'git-diff':
+        return <GitBranch size={14} />;
+      default:
+        return undefined; // Return undefined to fall back to tab.icon
+    }
+  }, []);
+
+  // Render custom label for tabs - only override for canvas-detail to show workflow name
+  const renderTabLabel = useCallback((tab: DevWorkspaceTab) => {
+    if (tab.contentType === 'canvas-detail') {
+      const canvasTab = tab as CanvasTab;
+      // Use workflow name, falling back to workflow ID, then canvas name as last resort
+      return canvasTab.narrativeTemplate?.name
+        || canvasTab.selectedNarrativeId
+        || canvasTab.canvasName
+        || undefined;
+    }
+    return undefined; // Fall back to tab.label for all other tabs
+  }, []);
+
   // Render custom content for non-terminal tabs
   // NOTE: Uses refs for context/actions/events to avoid recreating this callback
   // when provider values change, which would cause unnecessary re-renders of all tabs
@@ -977,7 +1046,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 width: '100%',
                 overflow: 'hidden',
                 position: 'relative',
-                display: isActive ? 'flex' : 'none', // Only show when active
+                display: 'flex', // TabbedTerminalPanel handles visibility
                 flexDirection: 'column',
               }}
             >
@@ -1017,7 +1086,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 width: '100%',
                 overflow: 'hidden',
                 position: 'relative',
-                display: isActive ? 'flex' : 'none', // Only show when active
+                display: 'flex', // TabbedTerminalPanel handles visibility
                 flexDirection: 'column',
               }}
             >
@@ -1058,7 +1127,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 width: '100%',
                 overflow: 'hidden',
                 position: 'relative',
-                display: isActive ? 'flex' : 'none', // Only show when active
+                display: 'flex', // TabbedTerminalPanel handles visibility
                 flexDirection: 'column',
               }}
             >
@@ -1094,7 +1163,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 width: '100%',
                 overflow: 'hidden',
                 position: 'relative',
-                display: isActive ? 'flex' : 'none', // Only show when active
+                display: 'flex', // TabbedTerminalPanel handles visibility
                 flexDirection: 'column',
               }}
             >
@@ -1140,7 +1209,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 width: '100%',
                 overflow: 'hidden',
                 position: 'relative',
-                display: isActive ? 'flex' : 'none', // Only show when active
+                display: 'flex', // TabbedTerminalPanel handles visibility
                 flexDirection: 'column',
               }}
             >
@@ -1180,7 +1249,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 width: '100%',
                 overflow: 'hidden',
                 position: 'relative',
-                display: isActive ? 'flex' : 'none', // Only show when active
+                display: 'flex', // TabbedTerminalPanel handles visibility
                 flexDirection: 'column',
               }}
             >
@@ -1221,7 +1290,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 width: '100%',
                 overflow: 'hidden',
                 position: 'relative',
-                display: isActive ? 'flex' : 'none', // Only show when active
+                display: 'flex', // TabbedTerminalPanel handles visibility
                 flexDirection: 'column',
               }}
             >
@@ -1284,7 +1353,12 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 initialTabs={tabs}
                 onTabsChange={handleTabsChange}
                 renderTabContent={renderTabContent}
+                renderTabIcon={renderTabIcon}
+                renderTabLabel={renderTabLabel}
+                defaultScrollLocked={false}
                 width={terminalPanelWidth}
+                requestFocusTabId={focusTabId}
+                onFocusTabHandled={handleFocusTabHandled}
               />
             </div>
           ),
@@ -1895,22 +1969,27 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       theme,
       tabs,
       handleTabsChange,
+      renderTabIcon,
+      renderTabLabel,
+      focusTabId,
+      handleFocusTabHandled,
+      terminalPanelWidth,
     ],
   );
 
   return (
     <div
-      style={{
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'row',
-        background: theme.colors.background,
-        position: 'relative',
-      }}
-    >
-      {/* Panel Icon Sidebar */}
-      <PanelIconSidebar
+        style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'row',
+          background: theme.colors.background,
+          position: 'relative',
+        }}
+      >
+        {/* Panel Icon Sidebar */}
+        <PanelIconSidebar
         currentPanelId={layout.left}
         onPanelChange={(panelId) => onLayoutChange({ ...layout, left: panelId })}
         theme={theme}
