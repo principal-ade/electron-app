@@ -39,7 +39,11 @@ import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import { panels as alexandriaPanels } from '@industry-theme/alexandria-panels';
 import { panels as localhostBrowserPanels } from '@industry-theme/localhost-panels';
 import { panels as agentDrivenPanels } from '@industry-theme/agent-driven-ui-panels';
-import { panels as repositoryCompositionPanels } from '@industry-theme/repository-composition-panels';
+import {
+  panels as repositoryCompositionPanels,
+  DependencyGraphPanelContent,
+  type PackageLayer,
+} from '@industry-theme/repository-composition-panels';
 import { panels as codeQualityPanels } from '@principal-ade/code-quality-panels';
 import { panels as markdownPanels } from '@industry-theme/markdown-panels';
 import { panels as fileEditingPanels } from '@industry-theme/file-editing-panels';
@@ -124,9 +128,17 @@ interface GitDiffTab extends BaseTab {
 }
 
 /**
+ * Tab type for dependency graph panel
+ */
+interface DependencyGraphTab extends BaseTab {
+  contentType: 'dependency-graph';
+  packages: PackageLayer[];
+}
+
+/**
  * Union type of all tab types used in DevWorkspace
  */
-type DevWorkspaceTab = TerminalTab | SkillTab | MarkdownTab | CanvasEditorTab | CanvasTab | FileEditorTab | MDXEditorTab | GitDiffTab;
+type DevWorkspaceTab = TerminalTab | SkillTab | MarkdownTab | CanvasEditorTab | CanvasTab | FileEditorTab | MDXEditorTab | GitDiffTab | DependencyGraphTab;
 
 export interface DevWorkspacePanelFrameworkProps {
   repositoryPath: string;
@@ -948,6 +960,53 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     };
   }, [events]);
 
+  // Listen for dependency-graph:open events to create a new graph tab
+  useEffect(() => {
+    const unsubscribe = events.on('dependency-graph:open', (event) => {
+      console.log('[DevWorkspacePanelFramework] Received dependency-graph:open event:', event);
+      const payload = event.payload as { packages: PackageLayer[] } | undefined;
+      const packages = payload?.packages ?? [];
+
+      if (packages.length === 0) {
+        console.warn('[DevWorkspacePanelFramework] No packages in dependency-graph:open event');
+        return;
+      }
+
+      setTabs((prevTabs) => {
+        // Check if a dependency graph tab already exists
+        const existingTab = prevTabs.find(
+          (t) => t.contentType === 'dependency-graph'
+        );
+
+        if (existingTab) {
+          // Update existing tab with new packages and focus it
+          console.log('[DevWorkspacePanelFramework] Updating existing dependency graph tab:', existingTab.id);
+          setFocusTabId(existingTab.id);
+          return prevTabs.map((t) =>
+            t.id === existingTab.id
+              ? { ...t, packages } as DependencyGraphTab
+              : t
+          );
+        }
+
+        // Create new dependency graph tab
+        const newTab: DependencyGraphTab = {
+          id: 'dependency-graph',
+          label: 'Dependency Graph',
+          contentType: 'dependency-graph',
+          packages,
+          closable: true,
+        };
+
+        console.log('[DevWorkspacePanelFramework] Creating new dependency graph tab:', newTab);
+        setFocusTabId(newTab.id);
+        return [...prevTabs, newTab];
+      });
+    });
+
+    return unsubscribe;
+  }, [events]);
+
   // Close modal on Escape key
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -991,6 +1050,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       case 'file-editor':
         return <Code size={14} />;
       case 'git-diff':
+        return <GitBranch size={14} />;
+      case 'dependency-graph':
         return <GitBranch size={14} />;
       default:
         return undefined; // Return undefined to fall back to tab.icon
@@ -1300,6 +1361,28 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 events={eventsRef.current}
                 filePath={gitDiffTab.filePath}
                 showCloseButton={false}
+              />
+            </div>
+          );
+        }
+
+        case 'dependency-graph': {
+          const dependencyGraphTab = tab as DependencyGraphTab;
+
+          return (
+            <div
+              style={{
+                height: '100%',
+                width: '100%',
+                overflow: 'hidden',
+                position: 'relative',
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              <DependencyGraphPanelContent
+                packages={dependencyGraphTab.packages}
+                isLoading={false}
               />
             </div>
           );
