@@ -100,9 +100,38 @@ class WebTelemetryProvider {
       }
 
       if (config.renderer.instrumentations.userInteraction) {
+        // Track recent events to prevent duplicates from event bubbling
+        const recentEvents = new Map<string, number>();
+        const DEDUPE_WINDOW_MS = 100;
+
         instrumentations.push(
           new UserInteractionInstrumentation({
             eventNames: ['click', 'submit'],
+            shouldPreventSpanCreation: (eventType, element, span) => {
+              // Create a unique key for this event
+              const eventKey = `${eventType}:${element.tagName}:${Date.now()}`;
+              const now = Date.now();
+
+              // Clean up old entries
+              for (const [key, timestamp] of recentEvents.entries()) {
+                if (now - timestamp > DEDUPE_WINDOW_MS) {
+                  recentEvents.delete(key);
+                }
+              }
+
+              // Check if we've seen this event recently
+              const recentKey = `${eventType}:${element.tagName}`;
+              const lastSeen = recentEvents.get(recentKey);
+
+              if (lastSeen && now - lastSeen < DEDUPE_WINDOW_MS) {
+                // Duplicate event - prevent span creation
+                return true;
+              }
+
+              // New event - record it and allow span creation
+              recentEvents.set(recentKey, now);
+              return false;
+            },
           })
         );
       }
@@ -161,11 +190,11 @@ class WebTelemetryProvider {
   }
 
   /**
-   * Get app version from mainProcess API if available
+   * Get app version from preload-exposed window.appVersion
    */
   private getAppVersion(): string {
     try {
-      // This will be available through preload
+      // This is synchronously exposed by the preload script
       if (typeof window !== 'undefined' && (window as any).appVersion) {
         return (window as any).appVersion;
       }

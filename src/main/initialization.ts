@@ -79,7 +79,7 @@ let principalMCPBridgePort: number | null = null;
 
 // Setup app version handler
 const setupAppVersionHandler = () => {
-  ipcMain.handle(AppVersionManagerAPIEvent.GET_VERSION, () => {
+  const getVersion = () => {
     // Try to read from package.json first, fall back to app.getVersion()
     try {
       const packageJsonPath = path.join(__dirname, '../../package.json');
@@ -92,6 +92,30 @@ const setupAppVersionHandler = () => {
       );
       return app.getVersion();
     }
+  };
+
+  // Async handler for invoke()
+  ipcMain.handle(AppVersionManagerAPIEvent.GET_VERSION, () => {
+    return getVersion();
+  });
+
+  // Sync handler for sendSync() (used by preload for telemetry)
+  ipcMain.on(AppVersionManagerAPIEvent.GET_VERSION, (event) => {
+    event.returnValue = getVersion();
+  });
+};
+
+// Setup OTEL endpoint handler
+const setupOtelEndpointHandler = () => {
+  const getOtelEndpoint = () => {
+    const isDev = !app.isPackaged;
+    const otlpPort = parseInt(process.env.OTEL_OTLP_PORT || (isDev ? '14318' : '4318'), 10);
+    return `http://localhost:${otlpPort}`;
+  };
+
+  // Sync handler for sendSync() (used by preload for telemetry)
+  ipcMain.on('get-otel-endpoint', (event) => {
+    event.returnValue = getOtelEndpoint();
   });
 };
 
@@ -274,6 +298,7 @@ export const initializeServices = async () => {
 
   // Setup basic IPC handlers
   setupAppVersionHandler();
+  setupOtelEndpointHandler();
   setupDevModeHandler();
 
   // Initialize storage before setting up bridges

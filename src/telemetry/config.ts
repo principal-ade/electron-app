@@ -27,9 +27,40 @@ export interface TelemetryConfig {
   };
 }
 
+/**
+ * Get the OTLP endpoint based on environment
+ * Dev instances use port 14318, production uses 4318
+ */
+function getCollectorEndpoint(): string {
+  // In renderer process, use the endpoint exposed by preload script
+  if (typeof window !== 'undefined' && (window as any).otelCollectorEndpoint) {
+    return (window as any).otelCollectorEndpoint;
+  }
+
+  // In main process, check for environment variable override
+  if (typeof process !== 'undefined' && process.env?.OTEL_OTLP_PORT) {
+    return `http://localhost:${process.env.OTEL_OTLP_PORT}`;
+  }
+
+  // In main process, auto-detect dev vs production
+  if (typeof process !== 'undefined' && process.type === 'browser') {
+    try {
+      const { app } = require('electron');
+      const isDev = !app.isPackaged;
+      return `http://localhost:${isDev ? '14318' : '4318'}`;
+    } catch {
+      // Fallback if electron not available
+      return 'http://localhost:4318';
+    }
+  }
+
+  // Final fallback
+  return 'http://localhost:4318';
+}
+
 export const defaultTelemetryConfig: TelemetryConfig = {
   enabled: true,
-  collectorEndpoint: 'http://localhost:4318',
+  collectorEndpoint: getCollectorEndpoint(),
   serviceName: 'principal-ade',
   mainProcess: {
     enabled: true,

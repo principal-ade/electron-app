@@ -239,6 +239,28 @@ try {
   console.error('[Preload] ❌ Failed to expose appName:', error);
 }
 
+// Expose app version synchronously for telemetry
+try {
+  const appVersion = ipcRenderer.sendSync('get-app-version');
+  contextBridge.exposeInMainWorld('appVersion', appVersion);
+  console.info('[Preload] ✅ AppVersion exposed:', appVersion);
+} catch (error) {
+  console.error('[Preload] ❌ Failed to expose appVersion:', error);
+  // Fallback to 'unknown'
+  contextBridge.exposeInMainWorld('appVersion', 'unknown');
+}
+
+// Expose OTEL collector endpoint for telemetry
+try {
+  const otelEndpoint = ipcRenderer.sendSync('get-otel-endpoint');
+  contextBridge.exposeInMainWorld('otelCollectorEndpoint', otelEndpoint);
+  console.info('[Preload] ✅ OTEL Endpoint exposed:', otelEndpoint);
+} catch (error) {
+  console.error('[Preload] ❌ Failed to expose OTEL endpoint:', error);
+  // Fallback to default
+  contextBridge.exposeInMainWorld('otelCollectorEndpoint', 'http://localhost:4318');
+}
+
 // ============================================
 // TIPC Support + Terminal MessagePort Management
 // ============================================

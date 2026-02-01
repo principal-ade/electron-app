@@ -977,7 +977,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
             )}
 
             {/* Endpoints Info */}
-            {otelStatus?.isRunning && (
+            {otelStatus?.isRunning && otelStatus.stats && (
               <div
                 style={{
                   marginTop: '16px',
@@ -989,8 +989,8 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                   fontFamily: theme.fonts.monospace,
                 }}
               >
-                <div>OTLP: http://localhost:4318</div>
-                <div style={{ marginTop: '4px' }}>Wrapper: http://localhost:4319</div>
+                <div>OTLP: http://localhost:{otelStatus.stats.otlpPort}</div>
+                <div style={{ marginTop: '4px' }}>Wrapper: http://localhost:{otelStatus.stats.wrapperPort}</div>
               </div>
             )}
           </div>

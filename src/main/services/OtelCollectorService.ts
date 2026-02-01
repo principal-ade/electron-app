@@ -50,11 +50,17 @@ export class OtelCollectorService {
       // Determine binary path
       const binaryPath = this.getBinaryPath();
 
+      // Determine ports based on environment
+      // Dev instances use higher ports to avoid conflicts with production
+      const isDev = !app.isPackaged;
+      const otlpPort = parseInt(process.env.OTEL_OTLP_PORT || (isDev ? '14318' : '4318'), 10);
+      const wrapperPort = parseInt(process.env.OTEL_WRAPPER_PORT || (isDev ? '14319' : '4319'), 10);
+
       // Create server instance
       this.server = new OTELCollectorServer({
         mode: 'electron',
-        otlpPort: 4318,
-        wrapperPort: 4319,
+        otlpPort,
+        wrapperPort,
         binaryPath,
         logLevel: 'info',
         restartOnCrash: true,
@@ -68,8 +74,8 @@ export class OtelCollectorService {
       this.registerMonitorPort();
 
       console.log('[OtelCollectorService] OTEL Collector started successfully');
-      console.log('  - OTLP Endpoint: http://localhost:4318');
-      console.log('  - Wrapper Endpoint: http://localhost:4319');
+      console.log(`  - OTLP Endpoint: http://localhost:${otlpPort}`);
+      console.log(`  - Wrapper Endpoint: http://localhost:${wrapperPort}`);
     } catch (err) {
       console.error('[OtelCollectorService] Failed to start:', err);
       this.isRunning = false;
