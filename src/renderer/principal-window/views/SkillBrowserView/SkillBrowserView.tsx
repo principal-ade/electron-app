@@ -589,6 +589,14 @@ const SkillBrowserViewContent: React.FC = () => {
    * - "skills/code-review" → "code-review"
    * - "/Users/me/.agents/skills/code-review" → "code-review"
    */
+  const getSkillFolderName = useCallback((skill: Skill): string => {
+    // skill.name has hyphens/underscores replaced with spaces for display
+    // We need the actual folder name from skillFolderPath
+    const folderPath = skill.skillFolderPath || skill.path;
+    const parts = folderPath.split('/').filter(Boolean);
+    return parts[parts.length - 1] || skill.name;
+  }, []);
+
   /**
    * Get the tree SHA for a specific skill folder from the GitHub tree data
    */
@@ -611,12 +619,13 @@ const SkillBrowserViewContent: React.FC = () => {
    */
   const isSkillInstalled = useCallback(
     (skill: Skill): boolean => {
-      // Use skill.name directly - it's already the folder name
+      // Use folder name for comparison with installed skills
+      const folderName = getSkillFolderName(skill);
       return installedSkillsData.some((installedSkill) =>
-        installedSkill.name === skill.name
+        installedSkill.name === folderName
       );
     },
-    [installedSkillsData],
+    [installedSkillsData, getSkillFolderName],
   );
 
   /**
@@ -624,10 +633,10 @@ const SkillBrowserViewContent: React.FC = () => {
    */
   const getSkillInstalledDirectories = useCallback(
     (skill: Skill): string[] => {
-      // Use skill.name directly - it's already the folder name
-      // Find all instances of this skill in installedSkillsData
+      // Use folder name for comparison with installed skills
+      const folderName = getSkillFolderName(skill);
       const skillInstances = installedSkillsData.filter((installedSkill) =>
-        installedSkill.name === skill.name
+        installedSkill.name === folderName
       );
 
       // Map each instance to its directory ID
@@ -645,7 +654,7 @@ const SkillBrowserViewContent: React.FC = () => {
 
       return directoryIds;
     },
-    [installedSkillsData, detectedDirectories],
+    [installedSkillsData, detectedDirectories, getSkillFolderName],
   );
 
   /**
@@ -655,7 +664,9 @@ const SkillBrowserViewContent: React.FC = () => {
     async (skill: Skill): Promise<{ sha: string; installedAt: string; installedFrom: string } | null> => {
       try {
         // Read from centralized lock file instead of per-skill .metadata.json
-        const skillEntry = await SkillLockService.getSkillEntry(skill.name);
+        // Use folder name (not display name with spaces)
+        const folderName = getSkillFolderName(skill);
+        const skillEntry = await SkillLockService.getSkillEntry(folderName);
 
         if (!skillEntry) {
           return null;
@@ -671,7 +682,7 @@ const SkillBrowserViewContent: React.FC = () => {
         return null;
       }
     },
-    [],
+    [getSkillFolderName],
   );
 
   // Load metadata when selected skill changes
@@ -710,8 +721,11 @@ const SkillBrowserViewContent: React.FC = () => {
         .filter(file => file.relativePath.startsWith(skillFolderPath + '/'))
         .map(file => file.relativePath);
 
+      // Use folder name (with hyphens) not display name (with spaces) for installation
+      const skillFolderName = getSkillFolderName(selectedSkill);
+
       console.log('[SkillBrowserView] Installing skill:', {
-        skillName: selectedSkill.name,
+        skillName: skillFolderName,
         skillPath: selectedSkill.skillFolderPath,
         destination,
         githubUrl,
@@ -724,7 +738,7 @@ const SkillBrowserViewContent: React.FC = () => {
         githubUrl,
         skillPath: selectedSkill.skillFolderPath,
         destination,
-        skillName: selectedSkill.name,
+        skillName: skillFolderName,
         fileList, // Pass the complete file list
         skillTreeSha, // Pass the skill-specific tree SHA
       });
@@ -739,13 +753,13 @@ const SkillBrowserViewContent: React.FC = () => {
       actions.notifyPanels({
         type: 'skill:installed',
         payload: {
-          skillName: selectedSkill.name,
+          skillName: skillFolderName,
           destination,
           installedPath: result.installedPath,
         },
       });
     },
-    [selectedSkill, githubRepoInfo, browseFileTree, actions],
+    [selectedSkill, githubRepoInfo, browseFileTree, actions, getSkillFolderName],
   );
 
   /**
@@ -766,8 +780,11 @@ const SkillBrowserViewContent: React.FC = () => {
         .filter(file => file.relativePath.startsWith(skillFolderPath + '/'))
         .map(file => file.relativePath);
 
+      // Use folder name (with hyphens) not display name (with spaces) for installation
+      const skillFolderName = getSkillFolderName(selectedSkill);
+
       console.log('[SkillBrowserView] Building file list for skill installation:', {
-        skillName: selectedSkill.name,
+        skillName: skillFolderName,
         skillFolderPath,
         totalFiles: fileList.length,
         files: fileList,
@@ -782,7 +799,7 @@ const SkillBrowserViewContent: React.FC = () => {
         }
 
         console.log('[SkillBrowserView] Installing skill to directory:', {
-          skillName: selectedSkill.name,
+          skillName: skillFolderName,
           skillPath: selectedSkill.skillFolderPath,
           directoryId,
           destination,
@@ -796,7 +813,7 @@ const SkillBrowserViewContent: React.FC = () => {
           githubUrl,
           skillPath: selectedSkill.skillFolderPath,
           destination,
-          skillName: selectedSkill.name,
+          skillName: skillFolderName,
           fileList, // Pass the complete file list
           skillTreeSha, // Pass the skill-specific tree SHA
         });
@@ -815,7 +832,7 @@ const SkillBrowserViewContent: React.FC = () => {
         actions.notifyPanels({
           type: 'skill:installed',
           payload: {
-            skillName: selectedSkill.name,
+            skillName: skillFolderName,
             destination,
             installedPath: result.installedPath,
           },
@@ -825,7 +842,7 @@ const SkillBrowserViewContent: React.FC = () => {
       // Refresh installed skills
       await loadInstalledSkills();
     },
-    [selectedSkill, githubRepoInfo, browseFileTree, actions, loadInstalledSkills],
+    [selectedSkill, githubRepoInfo, browseFileTree, actions, loadInstalledSkills, getSkillFolderName],
   );
 
   /**
@@ -837,9 +854,12 @@ const SkillBrowserViewContent: React.FC = () => {
         throw new Error('No skill selected');
       }
 
+      // Use folder name (with hyphens) for the actual path construction
+      const skillFolderName = getSkillFolderName(selectedSkill);
+
       console.log('[handleUninstallSkillFromDirectories] Uninstalling skill:', {
-        skillName: selectedSkill.name,
-        folderName: selectedSkill.name,
+        displayName: selectedSkill.name,
+        folderName: skillFolderName,
         fromDirectories: directoryIds,
       });
 
@@ -856,7 +876,7 @@ const SkillBrowserViewContent: React.FC = () => {
         }
 
         // Construct the full path to the skill in this directory
-        const skillPath = `${directory.path}/${selectedSkill.name}`;
+        const skillPath = `${directory.path}/${skillFolderName}`;
 
         console.log('[handleUninstallSkillFromDirectories] Deleting skill at:', {
           directoryId,
@@ -882,14 +902,14 @@ const SkillBrowserViewContent: React.FC = () => {
         actions.notifyPanels({
           type: 'skill:uninstalled',
           payload: {
-            skillName: selectedSkill.name,
+            skillName: skillFolderName,
             skillPath,
             directoryId,
           },
         });
       }
     },
-    [selectedSkill, detectedDirectories, loadInstalledSkills, actions],
+    [selectedSkill, detectedDirectories, loadInstalledSkills, actions, getSkillFolderName],
   );
 
   // Use panel persistence for two-panel layout

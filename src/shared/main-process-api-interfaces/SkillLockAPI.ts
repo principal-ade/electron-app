@@ -59,6 +59,13 @@ export interface SkillLockEntry {
 
   /** ISO timestamp when the skill was last updated */
   updatedAt: string;
+
+  /**
+   * Canonical path where the actual skill files are stored.
+   * For global installs: ~/.agents/skills/{skillName}
+   * Agent directories contain symlinks to this path.
+   */
+  canonicalPath?: string;
 }
 
 /**
@@ -146,6 +153,7 @@ export interface InstalledSkillInfo {
   skillFolderHash: string;
   installedAt: string;
   updatedAt: string;
+  canonicalPath?: string;
 }
 
 /**

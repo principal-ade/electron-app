@@ -22,6 +22,7 @@ import {
 } from '../../shared/main-process-api-interfaces/GitHubAPI';
 import { getSkillLockFileService } from '../skills/skillLockFile';
 import { normalizeGitHubSource } from '../../shared/main-process-api-interfaces/SkillLockAPI';
+import { createSkillSymlink } from '../skills/symlinkUtils';
 import type { IModernApplicationWindow } from '../window/types';
 
 export interface GitRepositoryInfo {
@@ -3303,52 +3304,67 @@ export function registerGitHubIpcHandlers(
 
         // Determine installation destination
         const homeDir = app.getPath('home');
-        let destPath: string;
-
         const extractedSkillName = skillName || path.basename(skillPath);
+        const isGlobalInstall = destination.startsWith('global-');
 
-        switch (destination) {
-          case 'global-universal':
-            destPath = path.join(homeDir, '.agents', 'skills', extractedSkillName);
-            break;
-          case 'global-claude':
-            destPath = path.join(homeDir, '.claude', 'skills', extractedSkillName);
-            break;
-          case 'global-opencode':
-            destPath = path.join(homeDir, '.config', 'opencode', 'skill', extractedSkillName);
-            break;
-          case 'global-cursor':
-            destPath = path.join(homeDir, '.cursor', 'skills', extractedSkillName);
-            break;
-          case 'global-windsurf':
-            destPath = path.join(homeDir, '.windsurf', 'skills', extractedSkillName);
-            break;
-          case 'project-universal':
-            if (!repositoryPath) {
-              return {
-                success: false,
-                error: 'Repository path required for project installation',
-              };
+        // Canonical path is always ~/.agents/skills/{skillName} for global installs
+        const canonicalPath = path.join(homeDir, '.agents', 'skills', extractedSkillName);
+
+        let destPath: string;
+        let agentSymlinkPath: string | undefined;
+
+        if (isGlobalInstall) {
+          // GLOBAL INSTALL: Use canonical + symlink approach
+          // Files always go to canonical location
+          destPath = canonicalPath;
+
+          // Determine if we need to create a symlink to an agent directory
+          if (destination !== 'global-universal') {
+            switch (destination) {
+              case 'global-claude':
+                agentSymlinkPath = path.join(homeDir, '.claude', 'skills', extractedSkillName);
+                break;
+              case 'global-opencode':
+                agentSymlinkPath = path.join(homeDir, '.config', 'opencode', 'skill', extractedSkillName);
+                break;
+              case 'global-cursor':
+                agentSymlinkPath = path.join(homeDir, '.cursor', 'skills', extractedSkillName);
+                break;
+              case 'global-windsurf':
+                agentSymlinkPath = path.join(homeDir, '.windsurf', 'skills', extractedSkillName);
+                break;
+              default:
+                return {
+                  success: false,
+                  error: `Invalid global destination: ${destination}`,
+                };
             }
-            destPath = path.join(repositoryPath, '.agents', 'skills', extractedSkillName);
-            break;
-          case 'project-claude':
-            if (!repositoryPath) {
-              return {
-                success: false,
-                error: 'Repository path required for project installation',
-              };
-            }
-            destPath = path.join(repositoryPath, '.claude', 'skills', extractedSkillName);
-            break;
-          default:
+          }
+        } else {
+          // PROJECT INSTALL: Direct copy (no symlinks for git portability)
+          if (!repositoryPath) {
             return {
               success: false,
-              error: `Invalid destination: ${destination}`,
+              error: 'Repository path required for project installation',
             };
+          }
+
+          switch (destination) {
+            case 'project-universal':
+              destPath = path.join(repositoryPath, '.agents', 'skills', extractedSkillName);
+              break;
+            case 'project-claude':
+              destPath = path.join(repositoryPath, '.claude', 'skills', extractedSkillName);
+              break;
+            default:
+              return {
+                success: false,
+                error: `Invalid project destination: ${destination}`,
+              };
+          }
         }
 
-        // Create destination directory
+        // Create destination directory (canonical for global, direct for project)
         await fsPromises.mkdir(destPath, { recursive: true });
 
         // Copy files to destination
@@ -3402,6 +3418,13 @@ export function registerGitHubIpcHandlers(
           console.log(`[GitHub] Installed skill file: ${relativePath}`);
         }
 
+        // Create symlink from agent directory to canonical (for global installs)
+        if (isGlobalInstall && agentSymlinkPath) {
+          console.log(`[GitHub] Creating symlink: ${agentSymlinkPath} -> ${canonicalPath}`);
+          await createSkillSymlink(canonicalPath, agentSymlinkPath);
+          console.log(`[GitHub] Symlink created successfully`);
+        }
+
         // Add skill to centralized lock file (replaces per-skill .metadata.json)
         // Following add-skill convention: https://github.com/vercel-labs/add-skill
         const skillLockService = getSkillLockFileService();
@@ -3413,15 +3436,20 @@ export function registerGitHubIpcHandlers(
             sourceUrl: githubUrl,
             skillPath: normalizedSkillPath,
             skillFolderHash: skillTreeSha || '',
+            // Track canonical path for global installs
+            canonicalPath: isGlobalInstall ? canonicalPath : undefined,
           },
         });
         console.log(`[GitHub] Added skill to lock file: ${extractedSkillName}`);
 
         console.log(`[GitHub] Skill installed successfully to: ${destPath}`);
+        if (agentSymlinkPath) {
+          console.log(`[GitHub] Symlinked to agent directory: ${agentSymlinkPath}`);
+        }
 
         return {
           success: true,
-          installedPath: destPath,
+          installedPath: agentSymlinkPath || destPath,
           filesInstalled: installedFiles,
         };
       } catch (error) {

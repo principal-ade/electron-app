@@ -13,6 +13,7 @@ import { SkillsGitService } from '../services/SkillsGitService';
 import { SkillsSyncService } from '../services/SkillsSyncService';
 import { SkillsDetectionService } from '../services/SkillsDetectionService';
 import { getSkillLockFileService } from '../skills/skillLockFile';
+import { isSymlink, removeSkillSymlink } from '../skills/symlinkUtils';
 import { RecentReposService } from '../services/RecentReposService';
 import { RecentReposAPIEvent } from '../../shared/main-process-api-interfaces/RecentReposAPI';
 
@@ -2225,6 +2226,7 @@ This placeholder skill can be safely deleted once you've installed your first sk
   });
 
   // Handler for deleting a skill directory
+  // Symlink-aware: removes symlinks without touching canonical files
   ipcMain.handle(FileSystemAPIEvent.DELETE_SKILL, async (_event, skillPath: string) => {
     try {
       console.log(`[deleteSkill] Deleting skill at: ${skillPath}`);
@@ -2238,7 +2240,24 @@ This placeholder skill can be safely deleted once you've installed your first sk
         return { success: true };
       }
 
-      // Verify this is actually a skill directory by checking for SKILL.md
+      // Get skill name from path for lock file operations
+      const skillName = path.basename(skillPath);
+      const homeDir = app.getPath('home');
+      const canonicalPath = path.join(homeDir, '.agents', 'skills', skillName);
+
+      // Check if this is a symlink (agent directory pointing to canonical)
+      const pathIsSymlink = await isSymlink(skillPath);
+
+      if (pathIsSymlink) {
+        // This is a symlink - just remove the symlink, not the canonical files
+        console.log(`[deleteSkill] Path is a symlink, removing symlink only`);
+        await removeSkillSymlink(skillPath);
+        console.log(`[deleteSkill] Successfully removed symlink at: ${skillPath}`);
+        // Don't remove from lock file - the canonical files still exist
+        return { success: true };
+      }
+
+      // Not a symlink - verify this is actually a skill directory by checking for SKILL.md
       const contents = await fsPromises.readdir(skillPath);
       const hasSkillFile = contents.some(file =>
         file === 'SKILL.md' ||
@@ -2252,21 +2271,25 @@ This placeholder skill can be safely deleted once you've installed your first sk
         };
       }
 
-      // Get skill name from path for lock file removal
-      const skillName = path.basename(skillPath);
+      // Check if this is the canonical location
+      const isCanonical = path.resolve(skillPath) === path.resolve(canonicalPath);
 
       // Delete the skill directory recursively
       await fsPromises.rm(skillPath, { recursive: true, force: true });
       console.log(`[deleteSkill] Successfully deleted skill at: ${skillPath}`);
 
-      // Remove from lock file
-      try {
-        const lockService = getSkillLockFileService();
-        await lockService.removeSkill(skillName);
-        console.log(`[deleteSkill] Removed skill from lock file: ${skillName}`);
-      } catch (lockError) {
-        // Non-fatal - skill files are deleted, lock file update is best-effort
-        console.warn(`[deleteSkill] Failed to remove from lock file: ${lockError}`);
+      // Only remove from lock file if this was the canonical location
+      if (isCanonical) {
+        try {
+          const lockService = getSkillLockFileService();
+          await lockService.removeSkill(skillName);
+          console.log(`[deleteSkill] Removed skill from lock file: ${skillName}`);
+        } catch (lockError) {
+          // Non-fatal - skill files are deleted, lock file update is best-effort
+          console.warn(`[deleteSkill] Failed to remove from lock file: ${lockError}`);
+        }
+      } else {
+        console.log(`[deleteSkill] Not canonical location, keeping lock file entry`);
       }
 
       return { success: true };

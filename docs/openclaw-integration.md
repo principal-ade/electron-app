@@ -809,3 +809,185 @@ Extend the WebSocket communication to forward tool calls to the Electron main pr
 - [OpenClaw Repository](https://github.com/openclaw/openclaw)
 - [OpenClaw Gateway Protocol](https://docs.openclaw.ai/concepts/architecture)
 - [EventServerManager Pattern](../src/main/agent-session-events/EventServerManager.ts)
+
+---
+
+## Appendix: OpenClaw Ecosystem Analysis
+
+*Last reviewed: January 2026*
+
+This section documents the OpenClaw ecosystem and related projects that were evaluated during the design of this integration.
+
+### Ecosystem Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              OPENCLAW ECOSYSTEM                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌──────────────────────┐                                                   │
+│  │  openclaw/openclaw   │◄── The actual OpenClaw project                    │
+│  │  (upstream source)   │    (gateway, agents, channels)                    │
+│  └──────────┬───────────┘                                                   │
+│             │                                                                │
+│     ┌───────┴───────┬─────────────────┐                                     │
+│     ▼               ▼                 ▼                                     │
+│  ┌──────────┐  ┌──────────────┐  ┌─────────────────┐                       │
+│  │coollabsio│  │jgarzik/      │  │This Electron    │                       │
+│  │/openclaw │  │botmaker      │  │Integration      │                       │
+│  └──────────┘  └──────────────┘  └─────────────────┘                       │
+│       │               │                  │                                  │
+│       ▼               ▼                  ▼                                  │
+│  ┌──────────┐  ┌──────────────┐  ┌─────────────────┐                       │
+│  │ Docker   │  │ Docker       │  │ Child Process   │                       │
+│  │ Image +  │  │ Containers   │  │ + WebSocket     │                       │
+│  │ nginx    │  │ per bot      │  │ + IPC Bridge    │                       │
+│  └──────────┘  └──────────────┘  └─────────────────┘                       │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Project Comparison
+
+| Aspect | **coollabsio/openclaw** | **jgarzik/botmaker** | **This Integration** |
+|--------|------------------------|---------------------|----------------------|
+| **Purpose** | Docker packaging for OpenClaw | Multi-bot management UI | Desktop app with embedded bot |
+| **Relationship** | Wrapper/Packager | Orchestrator | Embedder |
+| **Runs OpenClaw** | Single instance per container | Multiple instances in containers | Single child process |
+| **Author** | Coolify team | Jeff Garzik (Linux kernel maintainer) | — |
+| **License** | MIT | MIT | — |
+| **Codebase size** | ~700 lines | ~6,900 lines | — |
+
+### coollabsio/openclaw
+
+**Repository**: https://github.com/coollabsio/openclaw
+
+A Docker image that packages OpenClaw with production-ready infrastructure:
+
+- **nginx reverse proxy** with HTTP basic auth on port 8080
+- **Environment-to-JSON config translation** via `configure.js` (~626 lines)
+- **Browser sidecar support** (CDP for web automation via kasmweb/chrome)
+- **Auto-build pipeline** that tracks upstream OpenClaw releases every 6 hours
+
+**Architecture**:
+```
+Docker container (coollabsio/openclaw)
+├── nginx (:8080) ──proxy──▶ openclaw gateway (:18789)
+├── entrypoint.sh (startup orchestration)
+├── configure.js (env vars → openclaw.json)
+└── /data volume (state, workspace, credentials)
+```
+
+**Key value for this integration**:
+- Comprehensive channel configuration patterns (Telegram, Discord, Slack, WhatsApp)
+- Provider priority and fallback logic
+- Environment variable naming conventions for OpenClaw config
+
+**Relevant code to adapt**:
+- `scripts/configure.js` - Config generation logic for channels and providers
+
+### jgarzik/botmaker
+
+**Repository**: https://github.com/jgarzik/botmaker
+
+A web dashboard for creating and managing multiple OpenClaw bot instances, each running in isolated Docker containers.
+
+**Tech Stack**:
+- Backend: Fastify + TypeScript + SQLite + Dockerode
+- Frontend: React + Vite
+- Container orchestration with labeled containers (`botmaker.managed=true`)
+
+**Architecture**:
+```
+BotMaker Server
+├── DockerService (container lifecycle)
+├── ReconciliationService (DB ↔ Docker state sync)
+├── SecretsManager (file-based, Unix permissions)
+├── SQLite DB (bot metadata, migrations)
+└── React Dashboard (wizard, monitoring)
+```
+
+**Key patterns worth adopting**:
+
+1. **Secrets Management** (`src/secrets/manager.ts`)
+   - Per-bot directories with `0700` permissions
+   - Secret files with `0600` permissions
+   - Hostname validation to prevent directory traversal
+
+2. **Database Layer** (`src/db/`)
+   - SQLite with WAL mode for concurrent access
+   - Idempotent schema creation
+   - Migration tracking pattern
+
+3. **Reconciliation Service** (`src/services/ReconciliationService.ts`)
+   - Syncs DB state with actual container/process state on startup
+   - Detects orphaned resources
+   - Provides cleanup capabilities
+
+4. **Error Handling** (`src/services/docker-errors.ts`)
+   - Domain-specific error codes
+   - Error wrapping pattern
+
+5. **Gap-Aware Port Allocation** (`src/bots/store.ts:201-216`)
+   - Finds lowest available port
+   - Handles gaps from deleted bots
+
+**Code quality assessment**: Production-grade, well-architected code from an experienced systems programmer. Security considerations are thorough (path traversal prevention, Unix permissions).
+
+### Comparison: What Each Project Provides
+
+| Component | coollabsio/openclaw | jgarzik/botmaker | This Integration |
+|-----------|---------------------|------------------|------------------|
+| Config generation | `configure.js` (comprehensive) | `templates.ts` (basic) | Needs implementation |
+| Secrets management | Container env vars | File-based with permissions | Adapt from botmaker |
+| Process/container lifecycle | Docker + nginx | DockerService | `OpenClawService` |
+| State persistence | Volume mounts | SQLite | Adapt from botmaker |
+| Crash recovery | Docker restart policy | ReconciliationService | Adapt from botmaker |
+| Multi-channel config | Full env var mapping | Telegram/Discord only | Expand using coollabs patterns |
+| WebSocket client | None | None | **Unique to this integration** |
+| Electron API bridge | None | None | **Unique to this integration** |
+
+### Recommendations for Implementation
+
+**From coollabsio/openclaw, adopt**:
+- Channel configuration patterns from `configure.js`
+- Provider priority logic
+- Environment variable conventions for future CLI/config parity
+
+**From jgarzik/botmaker, adopt**:
+- `secrets/manager.ts` → Adapt for `app.getPath('userData')`
+- `db/` layer → Works as-is in Electron main process
+- `ReconciliationService` pattern → Adapt for process state recovery
+- Error handling patterns
+
+**Keep from this design**:
+- Child process approach (simpler than Docker for desktop app)
+- WebSocket client (neither reference project has this)
+- Electron API bridge (unique requirement)
+
+### Security Considerations from Reference Projects
+
+1. **Path Traversal Prevention** (from botmaker)
+   ```typescript
+   const HOSTNAME_REGEX = /^[a-z0-9-]{1,64}$/;
+   function validateHostname(hostname: string): void {
+     if (!HOSTNAME_REGEX.test(hostname)) {
+       throw new Error(`Invalid hostname format: ${hostname}`);
+     }
+   }
+   ```
+
+2. **File Permissions** (from botmaker)
+   - Secrets directories: `0700` (owner read/write/execute only)
+   - Secret files: `0600` (owner read/write only)
+
+3. **Gateway Token** (from coollabs)
+   - Required for API authentication
+   - Should be generated with `openssl rand -hex 32`
+   - Never stored in JSON config, always via env var
+
+### Future Considerations
+
+- **Docker option**: Could offer Docker-based deployment as alternative to child process for users who want stronger isolation
+- **Multi-bot support**: BotMaker's architecture could inform future multi-agent support
+- **Browser automation**: coollabs' CDP sidecar pattern could enable browser tools

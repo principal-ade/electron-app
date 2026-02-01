@@ -204,6 +204,7 @@ export class SkillLockFileService {
       skillFolderHash: entry.skillFolderHash,
       installedAt: entry.installedAt,
       updatedAt: entry.updatedAt,
+      canonicalPath: entry.canonicalPath,
     }));
   }
 
