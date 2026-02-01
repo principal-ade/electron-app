@@ -5,7 +5,7 @@ import { FileSystemService } from '../main-process-api/FileSystemService';
 interface LocalSkill {
   path: string;
   name: string;
-  source: 'agent' | 'claude';
+  source: 'agents' | 'claude';
 }
 
 interface UseSkillsSyncReturn {

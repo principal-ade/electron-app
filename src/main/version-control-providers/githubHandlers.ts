@@ -20,6 +20,8 @@ import {
   InstallSkillOptions,
   InstallSkillResult,
 } from '../../shared/main-process-api-interfaces/GitHubAPI';
+import { getSkillLockFileService } from '../skills/skillLockFile';
+import { normalizeGitHubSource } from '../../shared/main-process-api-interfaces/SkillLockAPI';
 import type { IModernApplicationWindow } from '../window/types';
 
 export interface GitRepositoryInfo {
@@ -3307,7 +3309,7 @@ export function registerGitHubIpcHandlers(
 
         switch (destination) {
           case 'global-universal':
-            destPath = path.join(homeDir, '.agent', 'skills', extractedSkillName);
+            destPath = path.join(homeDir, '.agents', 'skills', extractedSkillName);
             break;
           case 'global-claude':
             destPath = path.join(homeDir, '.claude', 'skills', extractedSkillName);
@@ -3328,7 +3330,7 @@ export function registerGitHubIpcHandlers(
                 error: 'Repository path required for project installation',
               };
             }
-            destPath = path.join(repositoryPath, '.agent', 'skills', extractedSkillName);
+            destPath = path.join(repositoryPath, '.agents', 'skills', extractedSkillName);
             break;
           case 'project-claude':
             if (!repositoryPath) {
@@ -3400,22 +3402,20 @@ export function registerGitHubIpcHandlers(
           console.log(`[GitHub] Installed skill file: ${relativePath}`);
         }
 
-        // Create metadata file for tracking provenance
-        const metadata = {
-          installedFrom: githubUrl,
-          skillPath: normalizedSkillPath,
-          owner,
-          repo,
-          branch,
-          sha: skillTreeSha, // Store the skill-specific tree SHA for version tracking
-          installedAt: new Date().toISOString(),
-          destination,
-          files: installedFiles,
-        };
-
-        const metadataPath = path.join(destPath, '.metadata.json');
-        await fsPromises.writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
-        console.log(`[GitHub] Created metadata file: ${metadataPath}`);
+        // Add skill to centralized lock file (replaces per-skill .metadata.json)
+        // Following add-skill convention: https://github.com/vercel-labs/add-skill
+        const skillLockService = getSkillLockFileService();
+        await skillLockService.addSkill({
+          name: extractedSkillName,
+          entry: {
+            source: normalizeGitHubSource(githubUrl),
+            sourceType: 'github',
+            sourceUrl: githubUrl,
+            skillPath: normalizedSkillPath,
+            skillFolderHash: skillTreeSha || '',
+          },
+        });
+        console.log(`[GitHub] Added skill to lock file: ${extractedSkillName}`);
 
         console.log(`[GitHub] Skill installed successfully to: ${destPath}`);
 

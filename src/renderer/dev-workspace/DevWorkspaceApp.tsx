@@ -565,7 +565,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         // Filter events for this repository
         if (event.repoPath !== repositoryPath) return;
 
-        console.log('[DevWorkspaceApp] Workspace changed:', {
+        console.log(`🟡 [IPC WORKSPACE_CHANGED] Received at ${Date.now()}`, {
           repoPath: event.repoPath,
           changeCount: event.changes?.length ?? 0,
           state: event.state,
@@ -573,6 +573,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
 
         // Emit to the event bus so panels can react to file changes
         if (events) {
+          console.log(`🟡 [BRIDGE] Emitting workspace:changed to PanelEventBus at ${Date.now()}`);
           events.emit({
             type: 'workspace:changed',
             source: 'DevWorkspaceApp',

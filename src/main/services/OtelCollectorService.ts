@@ -2,8 +2,8 @@
  * OTEL Collector Service - Manages OpenTelemetry collector for trace collection
  */
 
-import { OTELCollectorServer, ServerStats } from '@principal-ai/otel-collector-server';
-import { app } from 'electron';
+import { OTELCollectorServer, ServerStats, WILDCARD_SOURCE } from '@principal-ai/otel-collector-server';
+import { app, MessageChannelMain, MessagePortMain } from 'electron';
 import path from 'path';
 import os from 'os';
 
@@ -19,6 +19,7 @@ export class OtelCollectorService {
   private isRunning: boolean = false;
   private traces: StoredTrace[] = [];
   private readonly MAX_TRACES = 50; // Store last 50 traces
+  private monitorPort: MessagePortMain | null = null; // Catch-all port for trace monitoring
 
   private constructor() {
     // Private constructor for singleton
@@ -63,6 +64,9 @@ export class OtelCollectorService {
       await this.server.start();
       this.isRunning = true;
 
+      // Register a catch-all port to receive and store all traces
+      this.registerMonitorPort();
+
       console.log('[OtelCollectorService] OTEL Collector started successfully');
       console.log('  - OTLP Endpoint: http://localhost:4318');
       console.log('  - Wrapper Endpoint: http://localhost:4319');
@@ -70,6 +74,44 @@ export class OtelCollectorService {
       console.error('[OtelCollectorService] Failed to start:', err);
       this.isRunning = false;
       throw err;
+    }
+  }
+
+  /**
+   * Register a catch-all MessagePort to receive and store all traces
+   */
+  private registerMonitorPort(): void {
+    if (!this.server) {
+      return;
+    }
+
+    try {
+      // Create a MessageChannel - port1 goes to server, port2 stays with us
+      const { port1, port2 } = new MessageChannelMain();
+
+      // Listen for trace messages on port2
+      port2.on('message', (event) => {
+        try {
+          const message = event.data;
+          if (message?.type === 'TRACE_BATCH' && message.payload) {
+            this.storeTrace(message.payload);
+          }
+        } catch (err) {
+          console.error('[OtelCollectorService] Failed to process trace message:', err);
+        }
+      });
+
+      // Start the port to receive messages
+      port2.start();
+
+      // Register port1 with the server using wildcard to receive ALL traces
+      // Cast to any since MessagePortMain is API-compatible with worker_threads MessagePort
+      this.server.registerPort('__monitor__', WILDCARD_SOURCE, port1 as unknown as import('worker_threads').MessagePort);
+      this.monitorPort = port2;
+
+      console.log('[OtelCollectorService] Registered catch-all monitor port for trace storage');
+    } catch (err) {
+      console.error('[OtelCollectorService] Failed to register monitor port:', err);
     }
   }
 
@@ -85,6 +127,12 @@ export class OtelCollectorService {
     console.log('[OtelCollectorService] Stopping OTEL Collector...');
 
     try {
+      // Clean up monitor port
+      if (this.monitorPort) {
+        this.monitorPort.close();
+        this.monitorPort = null;
+      }
+
       await this.server.stop();
       this.server = null;
       this.isRunning = false;

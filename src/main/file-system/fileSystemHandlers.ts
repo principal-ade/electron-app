@@ -12,6 +12,7 @@ import { SkillsConfigService } from '../services/SkillsConfigService';
 import { SkillsGitService } from '../services/SkillsGitService';
 import { SkillsSyncService } from '../services/SkillsSyncService';
 import { SkillsDetectionService } from '../services/SkillsDetectionService';
+import { getSkillLockFileService } from '../skills/skillLockFile';
 import { RecentReposService } from '../services/RecentReposService';
 import { RecentReposAPIEvent } from '../../shared/main-process-api-interfaces/RecentReposAPI';
 
@@ -1779,18 +1780,25 @@ export function registerFileSystemIpcHandlers(
           // Analyze folder structure
           const structure = await analyzeSkillStructure(skillPath);
 
-          // Try to read .metadata.json if it exists
+          // Read metadata from centralized lock file (add-skill convention)
           let metadata: any;
           try {
-            const metadataPath = path.join(skillDir, '.metadata.json');
-            if (fs.existsSync(metadataPath)) {
-              const metadataContent = await fsPromises.readFile(metadataPath, 'utf-8');
-              metadata = JSON.parse(metadataContent);
-              console.log(`[getGlobalSkills] Loaded metadata for skill: ${skillDirName}`, metadata);
+            const lockService = getSkillLockFileService();
+            const skillEntry = await lockService.getSkill(skillDirName);
+            if (skillEntry) {
+              metadata = {
+                installedFrom: skillEntry.sourceUrl,
+                skillPath: skillEntry.skillPath,
+                owner: skillEntry.source.split('/')[0],
+                repo: skillEntry.source.split('/')[1],
+                sha: skillEntry.skillFolderHash,
+                installedAt: skillEntry.installedAt,
+              };
+              console.log(`[getGlobalSkills] Loaded metadata from lock file for skill: ${skillDirName}`);
             }
           } catch (error) {
-            // .metadata.json doesn't exist or couldn't be read - this is fine
-            console.debug(`[getGlobalSkills] No metadata file for skill: ${skillDirName}`);
+            // Lock file doesn't exist or skill not found - this is fine
+            console.debug(`[getGlobalSkills] No lock file entry for skill: ${skillDirName}`);
           }
 
           // Validate frontmatter
@@ -1815,8 +1823,8 @@ export function registerFileSystemIpcHandlers(
         }
       };
 
-      // Scan ~/.agent/skills/
-      const agentSkillsDir = path.join(homeDir, '.agent', 'skills');
+      // Scan ~/.agents/skills/
+      const agentSkillsDir = path.join(homeDir, '.agents', 'skills');
       if (fs.existsSync(agentSkillsDir)) {
         const agentSkillFiles = await findSkillFiles(agentSkillsDir);
         for (const skillPath of agentSkillFiles) {
@@ -2230,24 +2238,36 @@ This placeholder skill can be safely deleted once you've installed your first sk
         return { success: true };
       }
 
-      // Verify this is actually a skill directory by checking for SKILL.md or .metadata.json
+      // Verify this is actually a skill directory by checking for SKILL.md
       const contents = await fsPromises.readdir(skillPath);
       const hasSkillFile = contents.some(file =>
         file === 'SKILL.md' ||
-        file.toLowerCase() === 'skill.md' ||
-        file === '.metadata.json'
+        file.toLowerCase() === 'skill.md'
       );
 
       if (!hasSkillFile) {
         return {
           success: false,
-          error: 'Directory does not appear to be a skill (missing SKILL.md or .metadata.json)'
+          error: 'Directory does not appear to be a skill (missing SKILL.md)'
         };
       }
+
+      // Get skill name from path for lock file removal
+      const skillName = path.basename(skillPath);
 
       // Delete the skill directory recursively
       await fsPromises.rm(skillPath, { recursive: true, force: true });
       console.log(`[deleteSkill] Successfully deleted skill at: ${skillPath}`);
+
+      // Remove from lock file
+      try {
+        const lockService = getSkillLockFileService();
+        await lockService.removeSkill(skillName);
+        console.log(`[deleteSkill] Removed skill from lock file: ${skillName}`);
+      } catch (lockError) {
+        // Non-fatal - skill files are deleted, lock file update is best-effort
+        console.warn(`[deleteSkill] Failed to remove from lock file: ${lockError}`);
+      }
 
       return { success: true };
     } catch (error) {

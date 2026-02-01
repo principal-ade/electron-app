@@ -13,6 +13,7 @@ import { SkillBrowserViewHeader, type ViewMode } from './SkillBrowserViewHeader'
 import { type SkillDestination, DIRECTORY_ID_TO_DESTINATION } from './InstallSkillToolbar';
 import { GithubService } from '../../../main-process-api/GithubService';
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
+import { SkillLockService } from '../../../main-process-api/SkillLockService';
 import type { FileTree } from '../../../contexts/RepositoryPanelContext';
 import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
 import { useSkillsSync } from '../../../hooks/useSkillsSync';
@@ -586,7 +587,7 @@ const SkillBrowserViewContent: React.FC = () => {
    * Extract folder name from skill folder path
    * Examples:
    * - "skills/code-review" → "code-review"
-   * - "/Users/me/.agent/skills/code-review" → "code-review"
+   * - "/Users/me/.agents/skills/code-review" → "code-review"
    */
   /**
    * Get the tree SHA for a specific skill folder from the GitHub tree data
@@ -648,41 +649,29 @@ const SkillBrowserViewContent: React.FC = () => {
   );
 
   /**
-   * Get metadata for an installed skill
+   * Get metadata for an installed skill from the lock file
    */
   const getInstalledSkillMetadata = useCallback(
     async (skill: Skill): Promise<{ sha: string; installedAt: string; installedFrom: string } | null> => {
-      // Use skill.name directly - it's already the folder name
-      // Find the installed skill
-      const installedSkill = installedSkillsData.find((installedSkill) =>
-        installedSkill.name === skill.name
-      );
-      if (!installedSkill) {
-        return null;
-      }
-
       try {
-        // Read .metadata.json from the skill directory
-        const metadataPath = `${installedSkill.path}/.metadata.json`;
-        const result = await FileSystemService.readFile(metadataPath);
+        // Read from centralized lock file instead of per-skill .metadata.json
+        const skillEntry = await SkillLockService.getSkillEntry(skill.name);
 
-        if (!result || !result.content) {
+        if (!skillEntry) {
           return null;
         }
 
-        const metadata = JSON.parse(result.content);
-
         return {
-          sha: metadata.sha,
-          installedAt: metadata.installedAt,
-          installedFrom: metadata.installedFrom,
+          sha: skillEntry.skillFolderHash,
+          installedAt: skillEntry.installedAt,
+          installedFrom: skillEntry.sourceUrl,
         };
       } catch (error) {
-        console.error(`[SkillBrowserView] Failed to read metadata:`, error);
+        console.error(`[SkillBrowserView] Failed to read skill from lock file:`, error);
         return null;
       }
     },
-    [installedSkillsData],
+    [],
   );
 
   // Load metadata when selected skill changes

@@ -28,7 +28,7 @@ export interface DetectedDirectory extends PresetDirectory {
 export interface LocalSkill {
   path: string;
   name: string;
-  source: 'agent' | 'claude' | 'opencode' | 'cursor' | 'windsurf';
+  source: 'agents' | 'claude' | 'opencode' | 'cursor' | 'windsurf';
 }
 
 /**
@@ -37,8 +37,8 @@ export interface LocalSkill {
 const PRESET_SKILL_DIRECTORIES: PresetDirectory[] = [
   {
     id: 'agent-universal',
-    path: '{HOME}/.agent/skills',
-    displayName: 'Agent',
+    path: '{HOME}/.agents/skills',
+    displayName: 'Agents',
     description: 'Universal agent skills compatible with all AI assistants',
     icon: '🤖',
   },
@@ -153,7 +153,7 @@ export class SkillsDetectionService {
 
   /**
    * Get all local skills from standard directories
-   * Scans ~/.agent/skills and ~/.claude/skills for skill directories
+   * Scans ~/.agents/skills and ~/.claude/skills for skill directories
    * Returns full path information for each skill
    */
   async getAllLocalSkills(): Promise<LocalSkill[]> {
@@ -187,7 +187,7 @@ export class SkillsDetectionService {
     };
 
     // Scan primary directories
-    await findSkillDirs(path.join(this.homeDir, '.agent', 'skills'), 'agent');
+    await findSkillDirs(path.join(this.homeDir, '.agents', 'skills'), 'agents');
     await findSkillDirs(path.join(this.homeDir, '.claude', 'skills'), 'claude');
     await findSkillDirs(path.join(this.homeDir, '.config', 'opencode', 'skill'), 'opencode');
     await findSkillDirs(path.join(this.homeDir, '.cursor', 'skills'), 'cursor');

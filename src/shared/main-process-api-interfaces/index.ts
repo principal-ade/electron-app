@@ -43,6 +43,7 @@ import type { ObservabilityAPI } from './ObservabilityAPI';
 import type { LocalhostDetectionAPI } from './LocalhostDetectionAPI';
 import type { GitHubArtifactAPI } from './GitHubArtifactAPI';
 import type { RecentReposAPI } from './RecentReposAPI';
+import type { SkillLockAPI } from './SkillLockAPI';
 
 // Re-export for convenience
 export type {
@@ -107,6 +108,7 @@ export interface MainProcessAPI {
   localhostDetection: LocalhostDetectionAPI;
   githubArtifact: GitHubArtifactAPI;
   recentRepos: RecentReposAPI;
+  skillLock: SkillLockAPI;
 }
 
 /**

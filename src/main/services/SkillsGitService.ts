@@ -545,7 +545,7 @@ skill-name/
 ## Syncing
 
 This repository is automatically synced to:
-- \`~/.agent/skills/\` - Universal agent skills
+- \`~/.agents/skills/\` - Universal agent skills
 - \`~/.claude/skills/\` - Claude-specific skills
 
 Skills copied to project directories can optionally auto-sync from this repository.

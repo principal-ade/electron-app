@@ -61,7 +61,6 @@ async function shouldWindowReceiveRepoEvent(
 
   switch (metadata.primaryType) {
     case PrimaryWindowType.MAIN:
-      // Main window gets everything
       return true;
 
     case PrimaryWindowType.REPOSITORY:
@@ -616,9 +615,6 @@ export function registerRepositoryMonitoringHandlers(): void {
   manager.on(
     MonitoringInternalEvent.CACHE_SYNC,
     (event: RepositoryCacheSyncEvent) => {
-      console.log(
-        `[RepositoryMonitoring] Forwarding cache sync to renderer: ${event.repoPath} - ${event.slice}`,
-      );
       broadcastToRelevantWindows(
         RepositoryMonitoringAPIEvent.CACHE_SYNC,
         event,

@@ -9,6 +9,8 @@ import type {
   SkillMetadata,
   GlobalSkillDirectory,
 } from '../../shared/main-process-api-interfaces/FileSystemAPI';
+import { getSkillLockFileService } from '../skills/skillLockFile';
+import type { SkillLockEntry } from '../../shared/main-process-api-interfaces/SkillLockAPI';
 import { getManager as getRepositoryMonitoringManager } from '../repository-monitoring/ipcHandlers';
 import type {
   WorkspaceChangeEventPayload,
@@ -735,28 +737,72 @@ export class SkillsSyncService {
   }
 
   /**
-   * Read skill metadata from .metadata.json
+   * Read skill metadata from centralized lock file
+   * Note: Sync-specific fields are NOT stored in the lock file per add-skill convention
    */
   private async readSkillMetadata(skillPath: string): Promise<SkillMetadata> {
     try {
-      const metadataPath = path.join(skillPath, '.metadata.json');
-      const content = await fs.readFile(metadataPath, 'utf-8');
-      return JSON.parse(content);
+      const skillName = path.basename(skillPath);
+      const lockService = getSkillLockFileService();
+      const entry = await lockService.getSkill(skillName);
+
+      if (!entry) {
+        return {};
+      }
+
+      // Convert lock file entry to SkillMetadata format
+      // Note: Lock file only contains provenance info, not sync state
+      return {
+        installedFrom: entry.sourceUrl,
+        skillPath: entry.skillPath,
+        owner: entry.source.split('/')[0],
+        repo: entry.source.split('/')[1],
+        installedAt: entry.installedAt,
+        sha: entry.skillFolderHash,
+      };
     } catch (error) {
-      // Return empty metadata if file doesn't exist
+      // Return empty metadata if lock file read fails
       return {};
     }
   }
 
   /**
-   * Write skill metadata to .metadata.json
+   * Write skill metadata to centralized lock file
+   * Note: Only updates provenance info; sync state is not persisted per add-skill convention
    */
   private async writeSkillMetadata(
     skillPath: string,
     metadata: SkillMetadata
   ): Promise<void> {
-    const metadataPath = path.join(skillPath, '.metadata.json');
-    await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
+    const skillName = path.basename(skillPath);
+    const lockService = getSkillLockFileService();
+
+    // Check if skill already exists in lock file
+    const existing = await lockService.getSkill(skillName);
+
+    if (existing) {
+      // Update hash if changed
+      if (metadata.sha && metadata.sha !== existing.skillFolderHash) {
+        await lockService.updateSkill({
+          name: skillName,
+          updates: {
+            skillFolderHash: metadata.sha,
+          },
+        });
+      }
+    } else {
+      // Create new entry (for skills not installed via GitHub)
+      await lockService.addSkill({
+        name: skillName,
+        entry: {
+          source: metadata.owner && metadata.repo ? `${metadata.owner}/${metadata.repo}` : 'local',
+          sourceType: 'local',
+          sourceUrl: metadata.installedFrom || '',
+          skillPath: metadata.skillPath,
+          skillFolderHash: metadata.sha || '',
+        },
+      });
+    }
   }
 
   /**
@@ -771,9 +817,9 @@ export class SkillsSyncService {
       return null;
     }
 
-    // For now, check both .agent and .claude directories
+    // For now, check both .agents and .claude directories
     const globalDirs = [
-      path.join(home, '.agent', 'skills'),
+      path.join(home, '.agents', 'skills'),
       path.join(home, '.claude', 'skills'),
     ];
 

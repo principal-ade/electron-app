@@ -55,6 +55,7 @@ import { localhostDetectionAPI } from './main-process-api-implementations/localh
 import { githubArtifactAPI } from './main-process-api-implementations/githubArtifactApi';
 import { collectionsAPI } from './main-process-api-implementations/collectionsApi';
 import { recentReposAPI } from './main-process-api-implementations/recentReposApi';
+import { skillLockAPI } from './main-process-api-implementations/skillLockApi';
 // Removed mermaid import - it uses 'debug' which isn't available in preload context
 // import mermaid from 'mermaid';
 
@@ -137,6 +138,7 @@ const mainProcessExposure: MainProcessAPI = {
   localhostDetection: localhostDetectionAPI,
   githubArtifact: githubArtifactAPI,
   recentRepos: recentReposAPI,
+  skillLock: skillLockAPI,
 };
 
 // Mermaid removed from preload - will be loaded in renderer instead

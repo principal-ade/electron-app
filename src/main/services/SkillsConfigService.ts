@@ -72,7 +72,7 @@ export class SkillsConfigService {
           this.config.directories = [
             {
               id: randomUUID(),
-              path: path.join(homeDir, '.agent', 'skills'),
+              path: path.join(homeDir, '.agents', 'skills'),
               displayName: 'Agent Skills',
               enabled: true,
               isCustom: false,

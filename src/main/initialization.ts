@@ -72,6 +72,7 @@ import {
 import { registerGitHubArtifactHandlers } from './services/ipc/githubArtifactHandlers';
 import { registerCollectionsHandlers } from './services/CollectionsService';
 import { ElectronClipboardAdapter } from './system/clipboardHandler';
+import { registerSkillLockHandlers } from './skills/skillLockHandlers';
 
 // let agentSessionEventsHttpBridge: AgentSessionEventsHttpBridge | null = null;
 let principalMCPBridgePort: number | null = null;
@@ -217,6 +218,7 @@ const registerAllIpcHandlers = async () => {
   );
 
   registerGitHubIpcHandlers(applicationWindows);
+  await registerSkillLockHandlers(); // Register skill lock file handlers
   registerGitHandlers();
   registerSSHSetupHandlers();
   registerAgentSessionSDKHandlers(); // SDK-based handlers replace old session handlers

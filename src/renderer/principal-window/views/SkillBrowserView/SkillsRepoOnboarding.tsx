@@ -341,7 +341,7 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
                   {skill.name}
                 </div>
                 <div style={{ fontSize: theme.fontSizes[0], color: theme.colors.textSecondary }}>
-                  {skill.source === 'agent' ? '~/.agent/skills' : '~/.claude/skills'}
+                  {skill.source === 'agents' ? '~/.agents/skills' : '~/.claude/skills'}
                 </div>
               </div>
             </div>

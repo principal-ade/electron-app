@@ -68,25 +68,43 @@ export interface SerializedFileStats {
 }
 
 export type SkillSource =
-  | 'project-universal'  // ./.agent/skills/
-  | 'global-universal'   // ~/.agent/skills/
+  | 'project-universal'  // ./.agents/skills/
+  | 'global-universal'   // ~/.agents/skills/
   | 'project-claude'     // ./.claude/skills/
   | 'global-claude'      // ~/.claude/skills/
   | 'project-other';     // any other location in project
 
+/**
+ * Skill metadata interface
+ *
+ * @deprecated Installation metadata is now stored in the centralized lock file
+ * (~/.agents/.skill-lock.json). This interface is kept for backward compatibility
+ * and internal use by services that need to convert between formats.
+ *
+ * Use SkillLockEntry from SkillLockAPI.ts for new code.
+ */
 export interface SkillMetadata {
-  // Existing fields (GitHub installation)
+  // Installation fields (now stored in lock file)
+  /** @deprecated Use SkillLockEntry.sourceUrl */
   installedFrom?: string;
+  /** @deprecated Use SkillLockEntry.skillPath */
   skillPath?: string;
+  /** @deprecated Use SkillLockEntry.source (format: "owner/repo") */
   owner?: string;
+  /** @deprecated Use SkillLockEntry.source (format: "owner/repo") */
   repo?: string;
+  /** @deprecated Use SkillLockEntry.branch */
   branch?: string;
+  /** @deprecated Use SkillLockEntry.installedAt */
   installedAt?: string;
+  /** @deprecated Use SkillLockEntry.destination */
   destination?: string;
+  /** @deprecated Use SkillLockEntry.skillFolderHash */
   sha?: string;
+  /** @deprecated Use SkillLockEntry.files */
   files?: string[];
 
-  // NEW: Sync tracking fields
+  // Sync tracking fields (also stored in lock file)
   syncEnabled?: boolean;
   syncSource?: 'git-global' | 'github';
   lastSyncedAt?: string;
@@ -100,7 +118,7 @@ export interface SkillMetadata {
  */
 export interface GlobalSkillDirectory {
   id: string;                    // UUID
-  path: string;                  // Full path (e.g., ~/.agent/skills)
+  path: string;                  // Full path (e.g., ~/.agents/skills)
   displayName: string;           // User-friendly name
   enabled: boolean;              // Active status
   isCustom: boolean;             // true if user-added
@@ -138,8 +156,8 @@ export interface PresetDirectory {
 export const PRESET_SKILL_DIRECTORIES: PresetDirectory[] = [
   {
     id: 'agent-universal',
-    path: '{HOME}/.agent/skills',
-    displayName: 'Agent Skills (Universal)',
+    path: '{HOME}/.agents/skills',
+    displayName: 'Agents Skills (Universal)',
     description: 'Universal agent skills compatible with all AI assistants',
     icon: '🤖',
   },
@@ -325,7 +343,7 @@ export interface FileSystemAPI {
   resolveSkillConflict: (options: { skillPath: string; resolution: 'keep-local' | 'use-remote' }) => Promise<{ success: boolean; error?: string }>;
 
   // Skills repository initialization
-  getAllLocalSkills: () => Promise<{ skills: Array<{ path: string; name: string; source: 'agent' | 'claude' }>; error?: string }>;
+  getAllLocalSkills: () => Promise<{ skills: Array<{ path: string; name: string; source: 'agents' | 'claude' }>; error?: string }>;
   initializeSkillsRepo: (options: { repoUrl?: string }) => Promise<{ success: boolean; error?: string }>;
   migrateSkillsToRepo: (options: { skillPaths: string[] }) => Promise<{ success: boolean; error?: string }>;
   pushSkillsRepo: () => Promise<{ success: boolean; error?: string }>;

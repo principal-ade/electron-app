@@ -202,27 +202,7 @@ export const RepositoryPanelProvider: React.FC<
         console.info(
           '[RepositoryPanelProvider] Fetched file tree for repository:',
           repositoryPath,
-          tree,
         );
-
-        // DEBUG: Check if we're getting real timestamps and sizes
-        if (tree?.allFiles) {
-          const testFile = tree.allFiles.find(f =>
-            f.path.includes('SkillsListPanel.tsx')
-          );
-          if (testFile) {
-            console.log('🔍 [FileTree Debug] SkillsListPanel.tsx metadata:', {
-              path: testFile.path,
-              size: testFile.size,
-              sizeType: typeof testFile.size,
-              lastModified: testFile.lastModified,
-              lastModifiedType: typeof testFile.lastModified,
-              parsedDate: testFile.lastModified ? new Date(testFile.lastModified) : null,
-              timestamp: testFile.lastModified ? new Date(testFile.lastModified).getTime() : null,
-            });
-          }
-        }
-
         setFileTreeData(tree);
       } catch (error) {
         console.error(
@@ -240,31 +220,13 @@ export const RepositoryPanelProvider: React.FC<
     // Subscribe to cache sync events for fileTree updates
     const unsubscribe = RepositoryMonitoringService.onCacheSync((event) => {
       if (event.repoPath === repositoryPath && event.slice === 'fileTree') {
-        console.info(
-          '[RepositoryPanelProvider] File tree cache sync received for repository:',
-          repositoryPath,
-        );
         if (event.entry.data) {
           const tree = event.entry.data as FileTree;
-
-          // DEBUG: Check if we're getting real timestamps and sizes on updates
-          if (tree?.allFiles) {
-            const testFile = tree.allFiles.find(f =>
-              f.path.includes('SkillsListPanel.tsx')
-            );
-            if (testFile) {
-              console.log('🔄 [FileTree Update] SkillsListPanel.tsx metadata:', {
-                path: testFile.path,
-                size: testFile.size,
-                sizeType: typeof testFile.size,
-                lastModified: testFile.lastModified,
-                lastModifiedType: typeof testFile.lastModified,
-                parsedDate: testFile.lastModified ? new Date(testFile.lastModified) : null,
-                timestamp: testFile.lastModified ? new Date(testFile.lastModified).getTime() : null,
-              });
-            }
-          }
-
+          console.info(
+            '[RepositoryPanelProvider] FileTree cache sync received:',
+            repositoryPath,
+            `SHA: ${tree?.sha}`,
+          );
           setFileTreeData(tree);
         }
       }
@@ -494,40 +456,11 @@ export const RepositoryPanelProvider: React.FC<
     return 'fileTypes';
   }, [fileCityColorMode, stableGitStatusData]);
 
-  // Listen for workspace file change events and refresh fileTree
-  // This ensures panels like Kanban get updated when files change
-  useEffect(() => {
-    if (!repositoryPath) {
-      return;
-    }
-
-    const unsubWorkspaceChanged = events.on('workspace:changed', async (event) => {
-      const payload = event.payload as { repoPath: string; changes?: unknown[] };
-      if (payload.repoPath === repositoryPath) {
-        console.info(
-          '[RepositoryPanelProvider] Workspace changed, refreshing fileTree for repository:',
-          repositoryPath,
-        );
-        // Refresh the file tree to pick up new/changed/deleted files
-        setFileTreeLoading(true);
-        try {
-          const tree = await RepositoryMonitoringService.getFileTree(repositoryPath);
-          setFileTreeData(tree);
-        } catch (error) {
-          console.error(
-            '[RepositoryPanelProvider] Failed to refresh file tree after workspace change:',
-            error,
-          );
-        } finally {
-          setFileTreeLoading(false);
-        }
-      }
-    });
-
-    return () => {
-      unsubWorkspaceChanged?.();
-    };
-  }, [events, repositoryPath]);
+  // NOTE: We intentionally do NOT listen for workspace:changed events here.
+  // The CACHE_SYNC event (subscribed in the fileTree useEffect above) provides
+  // fresh file tree data after the cache is rebuilt. Listening to workspace:changed
+  // and calling getFileTree() causes a race condition where stale cached data
+  // is returned before the rebuild completes. See audit in docs/file-operations-data-flow.md.
 
   // Listen for color mode change events from panels (e.g., quality hexagon clicks)
   // The QualityHexagonPanel emits 'quality:colorMode:select' with payload { colorMode }

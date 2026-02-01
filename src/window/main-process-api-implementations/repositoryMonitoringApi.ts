@@ -140,21 +140,48 @@ export const repositoryMonitoringAPI: RepositoryMonitoringAPI = {
     };
   },
 
-  onCacheSync: (
-    callback: (event: RepositoryCacheSyncEvent) => void,
-  ): (() => void) => {
-    const handler = (
-      _event: Electron.IpcRendererEvent,
-      payload: RepositoryCacheSyncEvent,
-    ) => callback(payload);
-    ipcRenderer.on(RepositoryMonitoringAPIEvent.CACHE_SYNC, handler);
-    return () => {
-      ipcRenderer.removeListener(
-        RepositoryMonitoringAPIEvent.CACHE_SYNC,
-        handler,
-      );
+  onCacheSync: (() => {
+    // Deduplication: track recent events to prevent electron-log induced duplicates
+    const recentEvents = new Map<string, number>();
+    const DEDUPE_WINDOW_MS = 50; // Ignore duplicate events within 50ms
+
+    return (callback: (event: RepositoryCacheSyncEvent) => void): (() => void) => {
+      const handler = (
+        _event: Electron.IpcRendererEvent,
+        payload: RepositoryCacheSyncEvent,
+      ) => {
+        // Create a unique key for this event
+        const eventKey = `${payload.repoPath}:${payload.slice}:${payload.entry?.version || ''}`;
+        const now = Date.now();
+        const lastSeen = recentEvents.get(eventKey);
+
+        if (lastSeen && now - lastSeen < DEDUPE_WINDOW_MS) {
+          // Duplicate event, skip
+          return;
+        }
+
+        recentEvents.set(eventKey, now);
+
+        // Clean up old entries periodically
+        if (recentEvents.size > 100) {
+          const cutoff = now - DEDUPE_WINDOW_MS * 2;
+          for (const [key, time] of recentEvents) {
+            if (time < cutoff) recentEvents.delete(key);
+          }
+        }
+
+        callback(payload);
+      };
+
+      ipcRenderer.on(RepositoryMonitoringAPIEvent.CACHE_SYNC, handler);
+      return () => {
+        ipcRenderer.removeListener(
+          RepositoryMonitoringAPIEvent.CACHE_SYNC,
+          handler,
+        );
+      };
     };
-  },
+  })(),
 
   onBuildArtifactsDetected: (
     callback: (payload: BuildArtifactsDetectedPayload) => void,

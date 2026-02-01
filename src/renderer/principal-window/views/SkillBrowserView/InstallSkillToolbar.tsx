@@ -57,9 +57,9 @@ const ALL_DESTINATIONS: Array<{
   {
     value: 'global-universal',
     directoryId: 'agent-universal',
-    label: 'Agent',
+    label: 'Agents',
     description: 'Available to all AI agents globally',
-    path: '~/.agent/skills/',
+    path: '~/.agents/skills/',
   },
   {
     value: 'global-claude',
@@ -94,7 +94,7 @@ const ALL_DESTINATIONS: Array<{
     directoryId: 'project-universal',
     label: 'Project Universal',
     description: 'Available to all agents in current project',
-    path: '.agent/skills/',
+    path: '.agents/skills/',
   },
   {
     value: 'project-claude',
