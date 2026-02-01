@@ -34,6 +34,7 @@ import type { PackageLayer } from '@principal-ai/codebase-composition';
 import type {
   PackageSummary,
   GitStatusWithFiles,
+  WorkspaceChangeEventPayload,
 } from '@principal-ai/repository-monitoring-server';
 import { minimatch } from 'minimatch';
 import type { ColorMode, FileMetricData, QualitySliceData } from '@principal-ai/quality-lens-registry';
@@ -105,6 +106,7 @@ export const RepositoryPanelProvider: React.FC<
   // Track file tree for the current repository
   const [fileTreeData, setFileTreeData] = useState<FileTree | null>(null);
   const [fileTreeLoading, setFileTreeLoading] = useState(false);
+  const [fileTreeVersion, setFileTreeVersion] = useState<number>(0);
 
   // Track packages data for the current repository
   const [packagesData, setPackagesData] = useState<PackagesSliceData | null>(
@@ -192,6 +194,7 @@ export const RepositoryPanelProvider: React.FC<
     const fetchFileTree = async () => {
       if (!repositoryPath) {
         setFileTreeData(null);
+        setFileTreeVersion(0);
         return;
       }
 
@@ -204,12 +207,14 @@ export const RepositoryPanelProvider: React.FC<
           repositoryPath,
         );
         setFileTreeData(tree);
+        setFileTreeVersion((prev) => prev + 1); // Increment version on initial load
       } catch (error) {
         console.error(
           '[RepositoryPanelProvider] Failed to fetch file tree:',
           error,
         );
         setFileTreeData(null);
+        setFileTreeVersion(0);
       } finally {
         setFileTreeLoading(false);
       }
@@ -222,12 +227,14 @@ export const RepositoryPanelProvider: React.FC<
       if (event.repoPath === repositoryPath && event.slice === 'fileTree') {
         if (event.entry.data) {
           const tree = event.entry.data as FileTree;
+          const version = event.entry.version || 0;
           console.info(
             '[RepositoryPanelProvider] FileTree cache sync received:',
             repositoryPath,
             `SHA: ${tree?.sha}`,
           );
           setFileTreeData(tree);
+          setFileTreeVersion(version);
         }
       }
     });
@@ -383,7 +390,9 @@ export const RepositoryPanelProvider: React.FC<
 
   // Extract stable identifiers for memoization (prevents unnecessary re-renders)
   // Only stabilize data that actually has SHA/timestamp/ID - not arrays
-  const fileTreeSha = fileTreeData?.sha;
+  // For fileTree, use cache version instead of git SHA because SHA stays same with -dirty suffix
+  // when files are added/removed (version increments on each cache rebuild)
+  const fileTreeStableId = fileTreeVersion;
   const qualityDataTimestamp = qualityData?.lastUpdated;
   const activeFilePath = activeFileData?.path;
   // Git status hash is now computed at the source (repository-monitoring-server)
@@ -405,7 +414,7 @@ export const RepositoryPanelProvider: React.FC<
 
   // Create stable references for data objects - only update when their stable ID changes
   // This prevents unnecessary re-renders of all panels when object references change
-  const stableFileTreeData = useMemo(() => fileTreeData, [fileTreeSha]);
+  const stableFileTreeData = useMemo(() => fileTreeData, [fileTreeStableId]);
   const stableQualityData = useMemo(() => qualityData, [qualityDataTimestamp]);
   const stableActiveFileData = useMemo(() => activeFileData, [activeFilePath]);
   const stableGitStatusData = useMemo(() => gitStatusData, [gitStatusHash]);
@@ -456,11 +465,35 @@ export const RepositoryPanelProvider: React.FC<
     return 'fileTypes';
   }, [fileCityColorMode, stableGitStatusData]);
 
-  // NOTE: We intentionally do NOT listen for workspace:changed events here.
-  // The CACHE_SYNC event (subscribed in the fileTree useEffect above) provides
-  // fresh file tree data after the cache is rebuilt. Listening to workspace:changed
-  // and calling getFileTree() causes a race condition where stale cached data
-  // is returned before the rebuild completes. See audit in docs/file-operations-data-flow.md.
+  // Listen for workspace file change events and trigger refresh
+  // This ensures file tree updates when files are added/removed
+  // We use refreshRepository() instead of getFileTree() to avoid race conditions
+  useEffect(() => {
+    if (!repositoryPath) {
+      return;
+    }
+
+    const unsubscribe = RepositoryMonitoringService.onWorkspaceChange((event) => {
+      if (event.repoPath === repositoryPath) {
+        console.info(
+          '[RepositoryPanelProvider] Workspace changed, refreshing file tree:',
+          repositoryPath,
+        );
+        // Use refreshRepository() to invalidate cache and wait for CACHE_SYNC
+        // This avoids the race condition of calling getFileTree() which returns stale data
+        RepositoryMonitoringService.refreshRepository(repositoryPath).catch((error) => {
+          console.error(
+            '[RepositoryPanelProvider] Failed to refresh after workspace change:',
+            error,
+          );
+        });
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [repositoryPath]);
 
   // Listen for color mode change events from panels (e.g., quality hexagon clicks)
   // The QualityHexagonPanel emits 'quality:colorMode:select' with payload { colorMode }
