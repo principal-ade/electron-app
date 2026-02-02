@@ -72,7 +72,7 @@
       "pv": {
         "nodeType": "primary-window",
         "shape": "rectangle",
-        "sources": ["src/main/window/modernWindowManager.ts:createWindow"]
+        "sources": ["src/main/window/modernWindowManager.ts"]
       }
     },
     {
@@ -212,7 +212,7 @@
       "pv": {
         "nodeType": "external-window",
         "shape": "rectangle",
-        "sources": ["src/main/window/remoteAgentWindowManager.ts"]
+        "sources": ["src/main/window/RemoteTerminalWindow.ts"]
       }
     }
   ],

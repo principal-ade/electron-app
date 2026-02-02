@@ -113,10 +113,7 @@
       "text": "Event Processing Server\n(Utility Process)",
       "pv": {
         "nodeType": "utility-process",
-        "shape": "rectangle",
-        "sources": [
-          "src/main/agent-session-events/event-processing-server/**"
-        ]
+        "shape": "rectangle"
       }
     },
     {
@@ -286,10 +283,7 @@
       "text": "SessionEventsView\n(Event List UI)",
       "pv": {
         "nodeType": "component",
-        "shape": "rectangle",
-        "sources": [
-          "src/renderer/components/repository-maps/SessionEventsView.tsx"
-        ]
+        "shape": "rectangle"
       }
     },
     {

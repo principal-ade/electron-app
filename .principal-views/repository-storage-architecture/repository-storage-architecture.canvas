@@ -120,10 +120,7 @@
       "text": "RepositoryApiEventHandler",
       "pv": {
         "nodeType": "service",
-        "shape": "rectangle",
-        "sources": [
-          "src/main/stores/RepositoryApiEventHandler.ts"
-        ]
+        "shape": "rectangle"
       }
     },
     {
@@ -136,10 +133,7 @@
       "text": "RepositoryCache\n(in-memory + persistent)",
       "pv": {
         "nodeType": "cache",
-        "shape": "rectangle",
-        "sources": [
-          "src/main/stores/RepositoryCache.ts"
-        ]
+        "shape": "rectangle"
       }
     },
     {
@@ -152,10 +146,7 @@
       "text": "RepositoryService (renderer)",
       "pv": {
         "nodeType": "api",
-        "shape": "rectangle",
-        "sources": [
-          "src/renderer/main-process-api/RepositoryService.ts"
-        ]
+        "shape": "rectangle"
       }
     },
     {

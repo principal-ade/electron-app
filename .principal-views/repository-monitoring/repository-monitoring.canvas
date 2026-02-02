@@ -142,7 +142,7 @@
     {
       "id": "monitoring-events-enum",
       "type": "text",
-      "x": -31,
+      "x": -56,
       "y": 417,
       "width": 200,
       "height": 70,
@@ -181,8 +181,8 @@
     {
       "id": "browser-windows",
       "type": "text",
-      "x": 542,
-      "y": 504,
+      "x": 555,
+      "y": 513,
       "width": 180,
       "height": 70,
       "text": "BrowserWindow.getAllWindows()",
