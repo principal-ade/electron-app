@@ -633,7 +633,7 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
               {onTraceSourceUrlChange && (
                 <div style={{ position: 'relative' }}>
                   <select
-                    value={traceSourceUrl || 'principal-ade'}
+                    value={traceSourceUrl || 'all'}
                     onChange={(e) => onTraceSourceUrlChange(e.target.value)}
                     title="Select trace source URL for routing"
                     style={{
@@ -650,8 +650,7 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                       outline: 'none',
                     }}
                   >
-                    <option value="principal-ade">Traces: principal-ade</option>
-                    <option value="*">Traces: * (all)</option>
+                    <option value="all">Traces: all</option>
                     <option value={repositoryPath || ''}>Traces: {repositoryPath ? repositoryPath.split('/').pop() : 'repo path'}</option>
                   </select>
                 </div>

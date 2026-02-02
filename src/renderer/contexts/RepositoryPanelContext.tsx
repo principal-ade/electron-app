@@ -75,6 +75,8 @@ interface RepositoryPanelActions extends PanelActions {
   openRepository?: (entry: AlexandriaEntry) => Promise<void>;
   // Active file management for markdown panel
   setActiveFile?: (filePath: string | null) => Promise<void>;
+  // Telemetry management
+  clearTelemetry?: () => void;
 }
 
 // Extended context for repository panels
@@ -1044,6 +1046,11 @@ export const RepositoryPanelProvider: React.FC<
         } finally {
           setActiveFileLoading(false);
         }
+      },
+
+      clearTelemetry: () => {
+        console.info('[RepositoryPanelProvider] Clearing telemetry traces');
+        setTelemetryTraces([]);
       },
     }),
     [repositoryPath, events],

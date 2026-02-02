@@ -28,6 +28,7 @@ import { WindowService } from '../main-process-api/WindowService';
 import { gitSyncConnectionManager } from '../services/git-sync/GitSyncConnectionManager';
 import { APP_BRANDING } from '../../shared/config/appBranding';
 import { AlexandriaEventType } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
+import { getDevServerUrl } from '../utils/libraryResourcesLoader';
 
 /**
  * Alexandria entry data passed from main process
@@ -223,15 +224,36 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   const [resetKey, setResetKey] = useState(0);
   const [hasGitHubFolder, setHasGitHubFolder] = useState(false);
   const [packages, setPackages] = useState<PackageLayer[]>([]);
-  const [traceSourceUrl, setTraceSourceUrl] = useState<string>(() => {
-    // Load from localStorage or default to 'principal-ade'
-    return localStorage.getItem('dev-workspace-trace-source-url') || 'principal-ade';
-  });
+  const [traceSourceUrl, setTraceSourceUrl] = useState<string>('all');
 
-  // Save trace source URL to localStorage when it changes
+  // Load trace source URL from library.yaml resources when repository changes
   useEffect(() => {
-    localStorage.setItem('dev-workspace-trace-source-url', traceSourceUrl);
-  }, [traceSourceUrl]);
+    if (!repositoryPath) return;
+
+    const loadTraceSourceUrl = async () => {
+      try {
+        console.log('[DevWorkspaceApp] Loading trace source URL from library.yaml:', repositoryPath);
+
+        // Try to get dev.server.url from library.yaml
+        const devServerUrl = await getDevServerUrl(repositoryPath);
+
+        if (devServerUrl) {
+          console.log('[DevWorkspaceApp] Found dev.server.url in library.yaml:', devServerUrl);
+          setTraceSourceUrl(devServerUrl);
+        } else {
+          console.log('[DevWorkspaceApp] No dev.server.url in library.yaml, defaulting to "all"');
+          // Fall back to "all" if not found in library.yaml
+          setTraceSourceUrl('all');
+        }
+      } catch (error) {
+        console.error('[DevWorkspaceApp] Failed to load trace source URL from library.yaml:', error);
+        // Fall back to "all" on error
+        setTraceSourceUrl('all');
+      }
+    };
+
+    loadTraceSourceUrl();
+  }, [repositoryPath]);
 
   // Create repository object from Alexandria entry data
   const repository: Repository = useMemo(
