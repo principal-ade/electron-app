@@ -111,7 +111,9 @@
       "pv": {
         "nodeType": "file-system",
         "shape": "rectangle",
-        "sources": ["src/main/repository-monitoring/ipcHandlers.ts"],
+        "sources": [
+          "src/main/repository-monitoring/ipcHandlers.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "lifecycle",
@@ -148,7 +150,9 @@
       "pv": {
         "nodeType": "worker",
         "shape": "rectangle",
-        "sources": ["src/main/repository-monitoring/ipcHandlers.ts"],
+        "sources": [
+          "src/main/repository-monitoring/ipcHandlers.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "lifecycle",
@@ -181,7 +185,9 @@
       "pv": {
         "nodeType": "worker",
         "shape": "rectangle",
-        "sources": ["src/main/repository-monitoring/ipcHandlers.ts"],
+        "sources": [
+          "src/main/repository-monitoring/ipcHandlers.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "lifecycle",
@@ -214,7 +220,9 @@
       "pv": {
         "nodeType": "main-process",
         "shape": "rectangle",
-        "sources": ["src/main/repository-monitoring/ipcHandlers.ts"],
+        "sources": [
+          "src/main/repository-monitoring/ipcHandlers.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "ipc",
@@ -247,7 +255,9 @@
       "pv": {
         "nodeType": "cache",
         "shape": "rectangle",
-        "sources": ["src/main/repository-monitoring/ipcHandlers.ts"],
+        "sources": [
+          "src/main/repository-monitoring/ipcHandlers.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "cache",
@@ -276,15 +286,17 @@
     {
       "id": "debounce-timer",
       "type": "text",
-      "x": 530,
-      "y": 250,
+      "x": 527,
+      "y": 323,
       "width": 180,
       "height": 80,
       "text": "250ms Debounce\n(waits for file\noperations to settle)",
       "pv": {
         "nodeType": "timing",
         "shape": "rectangle",
-        "sources": ["src/main/repository-monitoring/ipcHandlers.ts"],
+        "sources": [
+          "src/main/repository-monitoring/ipcHandlers.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "performance",
@@ -313,15 +325,17 @@
     {
       "id": "cache-rebuild",
       "type": "text",
-      "x": 280,
-      "y": 380,
+      "x": 281,
+      "y": 484,
       "width": 200,
       "height": 80,
       "text": "Cache Rebuild\n(file tree builder)\nversion++",
       "pv": {
         "nodeType": "worker",
         "shape": "rectangle",
-        "sources": ["src/main/repository-monitoring/ipcHandlers.ts"],
+        "sources": [
+          "src/main/repository-monitoring/ipcHandlers.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "cache",
@@ -354,15 +368,17 @@
     {
       "id": "cache-sync-event",
       "type": "text",
-      "x": 530,
-      "y": 380,
+      "x": 527,
+      "y": 481,
       "width": 180,
       "height": 80,
       "text": "CACHE_SYNC\nIPC Event\n(with fresh data)",
       "pv": {
         "nodeType": "main-process",
         "shape": "rectangle",
-        "sources": ["src/main/repository-monitoring/ipcHandlers.ts"],
+        "sources": [
+          "src/main/repository-monitoring/ipcHandlers.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "ipc",
@@ -395,15 +411,17 @@
     {
       "id": "preload-bridge",
       "type": "text",
-      "x": 760,
-      "y": 250,
+      "x": 758,
+      "y": 361,
       "width": 200,
       "height": 100,
       "text": "Preload Bridge\n(repositoryMonitoringApi)\n+ Deduplication Guard\n(50ms window)",
       "pv": {
         "nodeType": "preload",
         "shape": "rectangle",
-        "sources": ["src/window/main-process-api-implementations/repositoryMonitoringApi.ts"],
+        "sources": [
+          "src/window/main-process-api-implementations/repositoryMonitoringApi.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "ipc",
@@ -444,7 +462,9 @@
       "pv": {
         "nodeType": "renderer-service",
         "shape": "rectangle",
-        "sources": ["src/renderer/main-process-api/RepositoryMonitoringService.ts"],
+        "sources": [
+          "src/renderer/main-process-api/RepositoryMonitoringService.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "lifecycle",
@@ -477,7 +497,9 @@
       "pv": {
         "nodeType": "renderer-service",
         "shape": "rectangle",
-        "sources": ["src/renderer/main-process-api/RepositoryMonitoringService.ts"],
+        "sources": [
+          "src/renderer/main-process-api/RepositoryMonitoringService.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "cache",
@@ -510,7 +532,9 @@
       "pv": {
         "nodeType": "context",
         "shape": "rectangle",
-        "sources": ["src/renderer/contexts/RepositoryPanelContext.tsx"],
+        "sources": [
+          "src/renderer/contexts/RepositoryPanelContext.tsx"
+        ],
         "otel": {
           "kind": "event",
           "category": "ui",
@@ -540,14 +564,16 @@
       "id": "file-tree-ui",
       "type": "text",
       "x": 1260,
-      "y": 380,
+      "y": 390,
       "width": 180,
       "height": 80,
       "text": "File Tree UI\n(panels, file explorer)\nre-renders",
       "pv": {
         "nodeType": "ui-component",
         "shape": "rectangle",
-        "sources": ["src/renderer/contexts/RepositoryPanelContext.tsx"],
+        "sources": [
+          "src/renderer/contexts/RepositoryPanelContext.tsx"
+        ],
         "otel": {
           "kind": "event",
           "category": "ui",

@@ -1,0 +1,156 @@
+{
+  "version": "1.0.0",
+  "name": "Cache Rebuild Performance Monitor",
+  "description": "Monitors filetree cache rebuild performance and detects slow rebuilds",
+  "mode": "span-tree",
+  "canvas": "filetree-sync.otel.canvas",
+  "scenarios": [
+    {
+      "id": "slow-rebuild",
+      "name": "Slow Cache Rebuild",
+      "description": "Cache rebuild took longer than expected",
+      "priority": 1,
+      "condition": {
+        "requires": ["filetree.cache.rebuild"],
+        "assertions": [
+          {
+            "path": "cache.rebuild.duration_ms",
+            "operator": ">",
+            "value": 500
+          }
+        ]
+      },
+      "severity": "warning",
+      "template": {
+        "introduction": "🐌 **Slow Cache Rebuild Detected**\n\nThe file tree cache rebuild took **{{cache.rebuild.duration_ms}}ms**, which exceeds the 500ms performance target.\n\nThis trace shows the complete flow from file change detection through cache rebuild.",
+        "events": {
+          "filetree.file.changed": "File system change detected: `{{file.path}}` ({{file.event}})",
+          "filetree.watcher.detected": "Chokidar watcher notified worker process",
+          "filetree.worker.notified": "Worker process received notification (PID: {{worker.pid}})",
+          "filetree.workspace.changed": "IPC event emitted immediately at {{event.timestamp}}",
+          "filetree.cache.invalidated": "Cache marked stale (was version {{cache.version.before}}), rebuild scheduled: {{cache.rebuild.scheduled}}",
+          "filetree.debounce.triggered": "Debounce completed after {{debounce.delay_ms}}ms (batched {{debounce.changes_count}} changes)",
+          "filetree.cache.rebuild": "⚠️ **Cache rebuilt in {{cache.rebuild.duration_ms}}ms** ({{filetree.files_count}} files) → version {{cache.version.after}}"
+        },
+        "summary": "**Performance Analysis:**\n- Duration: **{{cache.rebuild.duration_ms}}ms** (target: <500ms)\n- Files processed: {{filetree.files_count}}\n- New cache version: {{cache.version.after}}\n\n**Possible causes:**\n- Large repository ({{filetree.files_count}} files)\n- Slow disk I/O\n- CPU contention\n\n**Recommendations:**\n- Consider incremental cache updates\n- Profile the file tree builder\n- Check disk performance"
+      }
+    },
+    {
+      "id": "large-batch",
+      "name": "Large File Change Batch",
+      "description": "Debounce collected many file changes",
+      "priority": 2,
+      "condition": {
+        "requires": ["filetree.debounce.triggered"],
+        "assertions": [
+          {
+            "path": "debounce.changes_count",
+            "operator": ">",
+            "value": 50
+          }
+        ]
+      },
+      "severity": "info",
+      "template": {
+        "introduction": "📦 **Large Batch Operation**\n\nDetected a batch of **{{debounce.changes_count}} file changes** in repository `{{repository.path}}`.\n\nThis is likely a bulk operation like `git checkout`, `git pull`, or mass file operations. The debounce mechanism successfully batched all changes into a single rebuild.",
+        "events": {
+          "filetree.file.changed": "File changed: `{{file.path}}` ({{file.event}})",
+          "filetree.watcher.detected": "Watcher detected change",
+          "filetree.worker.notified": "Worker notified (PID: {{worker.pid}})",
+          "filetree.cache.invalidated": "Cache invalidated (version {{cache.version.before}})",
+          "filetree.debounce.triggered": "📦 **Debounce completed:** {{debounce.changes_count}} changes batched over {{debounce.delay_ms}}ms"
+        },
+        "summary": "**Batch Operation Summary:**\n- Changes batched: **{{debounce.changes_count}}** files\n- Debounce window: {{debounce.delay_ms}}ms\n- Repository: `{{repository.path}}`\n\n**Benefit:** Instead of {{debounce.changes_count}} separate rebuilds, the system performed just **1 rebuild**, saving significant CPU and I/O."
+      }
+    },
+    {
+      "id": "duplicate-detected",
+      "name": "Duplicate Event Detected",
+      "description": "Deduplication guard caught a duplicate event",
+      "priority": 3,
+      "condition": {
+        "requires": ["filetree.preload.event_received"],
+        "assertions": [
+          {
+            "path": "dedup.is_duplicate",
+            "operator": "==",
+            "value": true
+          }
+        ]
+      },
+      "severity": "debug",
+      "template": {
+        "introduction": "🔄 **Duplicate Event Dropped**\n\nThe deduplication guard in the preload bridge detected and dropped a duplicate event.\n\nEvent key: `{{dedup.event_key}}`\nTime since last seen: {{dedup.time_since_last_ms}}ms (window: {{dedup.window_ms}}ms)",
+        "events": {
+          "filetree.cache.synced": "CACHE_SYNC IPC event emitted with cache version {{cache.version}}",
+          "filetree.preload.event_received": "🔄 **Duplicate detected and dropped** ({{event.type}}, key: {{dedup.event_key}})"
+        },
+        "summary": "**Deduplication Details:**\n- Event type: {{event.type}}\n- Dedup key: `{{dedup.event_key}}`\n- Time since last: {{dedup.time_since_last_ms}}ms\n- Dedup window: {{dedup.window_ms}}ms\n\n**Root Cause:** electron-log's IPC transport mechanism causes duplicate event delivery. The deduplication guard successfully prevented duplicate processing."
+      }
+    },
+    {
+      "id": "full-sync",
+      "name": "Complete FileTree Sync",
+      "description": "Full flow from file change to UI render",
+      "priority": 10,
+      "condition": {
+        "requires": ["filetree.ui.rendered"]
+      },
+      "severity": "info",
+      "template": {
+        "introduction": "✅ **Complete FileTree Synchronization**\n\nSuccessfully synchronized file tree from file system change to UI update.\n\nRepository: `{{repository.path}}`\nTotal files: {{filetree.files_count}}",
+        "events": {
+          "filetree.file.changed": "1️⃣ File changed: `{{file.path}}` ({{file.event}})",
+          "filetree.watcher.detected": "2️⃣ Chokidar watcher detected change",
+          "filetree.worker.notified": "3️⃣ Worker notified (PID: {{worker.pid}})",
+          "filetree.workspace.changed": "4️⃣ workspace:changed IPC event fired",
+          "filetree.cache.invalidated": "5️⃣ Cache invalidated (was v{{cache.version.before}})",
+          "filetree.debounce.triggered": "6️⃣ Debounce: {{debounce.changes_count}} changes over {{debounce.delay_ms}}ms",
+          "filetree.cache.rebuild": "7️⃣ Cache rebuilt in {{cache.rebuild.duration_ms}}ms → v{{cache.version.after}} ({{filetree.files_count}} files)",
+          "filetree.cache.synced": "8️⃣ CACHE_SYNC event sent (v{{cache.version}}, slice: {{cache.slice}})",
+          "filetree.preload.event_received": "9️⃣ Preload received {{event.type}} (duplicate: {{dedup.is_duplicate}})",
+          "filetree.service.subscribed": "🔟 RepositoryMonitoringService subscription: {{subscription.type}}",
+          "filetree.context.updated": "1️⃣1️⃣ React context updated (v{{filetree.version}}, source: {{update.source}})",
+          "filetree.ui.rendered": "1️⃣2️⃣ ✨ **UI rendered in {{render.duration_ms}}ms** (displaying v{{filetree.version}})"
+        },
+        "summary": "**Performance Summary:**\n- Cache rebuild: {{cache.rebuild.duration_ms}}ms\n- Debounce delay: {{debounce.delay_ms}}ms\n- UI render: {{render.duration_ms}}ms\n- **Total latency:** ~{{cache.rebuild.duration_ms + debounce.delay_ms + render.duration_ms}}ms\n\n**Metrics:**\n- Files in tree: {{filetree.files_count}}\n- Cache version: {{filetree.version}}\n- Changes batched: {{debounce.changes_count}}"
+      }
+    },
+    {
+      "id": "manual-refresh",
+      "name": "Manual Refresh Requested",
+      "description": "User or system triggered manual cache refresh",
+      "priority": 4,
+      "condition": {
+        "requires": ["filetree.refresh.requested"]
+      },
+      "severity": "info",
+      "template": {
+        "introduction": "🔄 **Manual Refresh Requested**\n\nAn explicit cache refresh was requested for `{{repository.path}}`.\n\nTrigger: {{refresh.trigger}}",
+        "events": {
+          "filetree.refresh.requested": "Manual refresh triggered (source: {{refresh.trigger}})",
+          "filetree.cache.invalidated": "Cache invalidated immediately (no debounce)",
+          "filetree.cache.rebuild": "Cache rebuilt in {{cache.rebuild.duration_ms}}ms → v{{cache.version.after}}"
+        },
+        "summary": "**Refresh Details:**\n- Trigger: {{refresh.trigger}}\n- Repository: `{{repository.path}}`\n- Duration: {{cache.rebuild.duration_ms}}ms\n\n**Note:** Manual refreshes bypass the debounce timer for immediate updates."
+      }
+    },
+    {
+      "id": "default",
+      "name": "Default Scenario",
+      "description": "Fallback for all other events",
+      "priority": 99,
+      "condition": {
+        "default": true
+      },
+      "severity": "info",
+      "template": {
+        "introduction": "ℹ️ **FileTree Event**\n\nAn event was captured but didn't match any specific scenario.",
+        "events": {
+          "filetree.cache.rebuild": "Event occurred"
+        },
+        "summary": "No specific analysis available for this event pattern."
+      }
+    }
+  ]
+}
