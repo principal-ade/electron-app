@@ -45,7 +45,9 @@ const AVAILABLE_PANELS: PanelOption[] = [
   { id: 'packageComposition', label: 'Package Composition' },
   { id: 'skillsList', label: 'Skills' },
   { id: 'terminal', label: 'Terminal' },
+  { id: 'traceList', label: 'Trace List' },
   { id: 'traceViewer', label: 'Trace Viewer' },
+  { id: 'typeInformation', label: 'Type Information' },
 ];
 
 // Panel configuration presets
@@ -199,6 +201,9 @@ export interface DevWorkspaceTitlebarProps {
   };
   // Packages data from codebase-composition
   packages?: PackageLayer[];
+  // Trace source URL configuration
+  traceSourceUrl?: string;
+  onTraceSourceUrlChange?: (sourceUrl: string) => void;
 }
 
 export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
@@ -223,6 +228,8 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
   repositoryPath,
   events,
   packages,
+  traceSourceUrl,
+  onTraceSourceUrlChange,
 }) => {
   const { theme } = useTheme();
   const [copiedPath, setCopiedPath] = useState(false);
@@ -620,6 +627,34 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                   {copiedPath ? <Check size={14} /> : <Copy size={14} />}
                   <span>{copiedPath ? 'Copied' : 'Path'}</span>
                 </button>
+              )}
+
+              {/* Trace Source Selector */}
+              {onTraceSourceUrlChange && (
+                <div style={{ position: 'relative' }}>
+                  <select
+                    value={traceSourceUrl || 'principal-ade'}
+                    onChange={(e) => onTraceSourceUrlChange(e.target.value)}
+                    title="Select trace source URL for routing"
+                    style={{
+                      // @ts-ignore - WebkitAppRegion is not in CSSProperties
+                      WebkitAppRegion: 'no-drag',
+                      background: theme.colors.backgroundTertiary,
+                      border: `1px solid ${theme.colors.border}`,
+                      color: theme.colors.textSecondary,
+                      cursor: 'pointer',
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      fontSize: `${theme.fontSizes[1]}px`,
+                      fontWeight: theme.fontWeights.medium,
+                      outline: 'none',
+                    }}
+                  >
+                    <option value="principal-ade">Traces: principal-ade</option>
+                    <option value="*">Traces: * (all)</option>
+                    <option value={repositoryPath || ''}>Traces: {repositoryPath ? repositoryPath.split('/').pop() : 'repo path'}</option>
+                  </select>
+                </div>
               )}
             </div>
           </div>

@@ -39,6 +39,9 @@ import type {
 import { minimatch } from 'minimatch';
 import type { ColorMode, FileMetricData, QualitySliceData } from '@principal-ai/quality-lens-registry';
 import type { GlobalSkill } from '../../shared/main-process-api-interfaces/FileSystemAPI';
+import type { TraceInfo } from '@industry-theme/principal-view-panels';
+import { groupSpansByTrace } from '@industry-theme/principal-view-panels';
+import { OtelCollectorService } from '../main-process-api/OtelCollectorService';
 
 // Types for packages slice data (matches @industry-theme/alexandria-panels DependenciesPanel expectations)
 interface PackagesSliceData {
@@ -98,11 +101,13 @@ interface RepositoryPanelProviderProps {
   repository: RepositoryMetadata | null;
   /** Event bus for panel communication - must be provided by parent */
   events: PanelEventEmitter;
+  /** Trace source URL for OTEL MessagePort routing */
+  traceSourceUrl?: string;
 }
 
 export const RepositoryPanelProvider: React.FC<
   RepositoryPanelProviderProps
-> = ({ children, repositoryPath, repository, events }) => {
+> = ({ children, repositoryPath, repository, events, traceSourceUrl }) => {
   // Track file tree for the current repository
   const [fileTreeData, setFileTreeData] = useState<FileTree | null>(null);
   const [fileTreeLoading, setFileTreeLoading] = useState(false);
@@ -171,6 +176,10 @@ export const RepositoryPanelProvider: React.FC<
   // Track global skills from ~/.claude and ~/.agent
   const [globalSkillsData, setGlobalSkillsData] = useState<GlobalSkill[]>([]);
   const [globalSkillsLoading, setGlobalSkillsLoading] = useState(false);
+
+  // Track telemetry traces for trace viewer
+  const [telemetryTraces, setTelemetryTraces] = useState<TraceInfo[]>([]);
+  const [telemetryLoading, setTelemetryLoading] = useState(false);
 
   // Helper to extract owner/repo from git remote URL
   const parseGitHubRemote = (
@@ -699,6 +708,138 @@ export const RepositoryPanelProvider: React.FC<
 
     fetchGlobalSkills();
   }, []);
+
+  // Register MessagePort for OTEL traces
+  useEffect(() => {
+    let windowId: string | null = null;
+    let sourceUrl: string | null = null;
+    let unsubscribe: (() => void) | null = null;
+
+    const registerTelemetryPort = async () => {
+      try {
+        // Generate window ID and determine source URL
+        windowId = `dev-workspace-${Date.now()}`;
+        sourceUrl = traceSourceUrl || 'principal-ade';
+
+        console.info('[RepositoryPanelProvider] Registering telemetry port with sourceUrl:', sourceUrl);
+
+        // Subscribe to OTEL messages (port is handled in preload)
+        unsubscribe = (window as any).electron.onOtelMessage(
+          windowId,
+          sourceUrl,
+          (data: any) => {
+            try {
+              console.log('[RepositoryPanelProvider] Received OTEL message:', data?.type || data);
+
+              // Check if this is a connection confirmation heartbeat from the server
+              if (data?.type === 'CONNECTION_CONFIRMED') {
+                console.info('[RepositoryPanelProvider] 🎉 Server connection confirmed!', {
+                  windowId: data.windowId,
+                  sourceUrl: data.sourceUrl,
+                  timestamp: new Date(data.timestamp).toISOString(),
+                });
+                return;
+              }
+
+              // Check if this is a trace batch from the server
+              if (data?.type === 'TRACE_BATCH') {
+                console.log('[RepositoryPanelProvider] Received TRACE_BATCH from server');
+                // Extract the payload from the wrapper
+                const payload = data.payload;
+                if (!payload || !payload.resourceSpans) {
+                  console.warn('[RepositoryPanelProvider] Invalid TRACE_BATCH payload:', data);
+                  return;
+                }
+                // Process the OTLP payload
+                const newTraces = groupSpansByTrace(payload);
+                console.log('[RepositoryPanelProvider] Converted to TraceInfo[]:', newTraces);
+
+                if (newTraces.length > 0) {
+                  console.info(
+                    `[RepositoryPanelProvider] Received ${newTraces.length} new traces from source: ${data.source}`
+                  );
+
+                  setTelemetryTraces((prev) => {
+                    // Merge new traces with existing, avoiding duplicates
+                    const existingIds = new Set(prev.map((t) => t.traceId));
+                    const uniqueNewTraces = newTraces.filter(
+                      (t) => !existingIds.has(t.traceId)
+                    );
+
+                    // Keep only last 1000 traces
+                    const combined = [...prev, ...uniqueNewTraces];
+                    return combined.slice(-1000);
+                  });
+                }
+                return;
+              }
+
+              // Unknown message type
+              console.warn('[RepositoryPanelProvider] Received unknown message type:', data?.type || data);
+            } catch (error) {
+              console.error(
+                '[RepositoryPanelProvider] Error processing telemetry message:',
+                error
+              );
+            }
+          }
+        );
+
+        // Trigger IPC registration (port will arrive in preload)
+        const response = await OtelCollectorService.registerPort(windowId, sourceUrl);
+
+        if (!response.success) {
+          console.error('[RepositoryPanelProvider] Failed to register telemetry port:', response.error);
+          return;
+        }
+
+        console.info('[RepositoryPanelProvider] ✅ Telemetry port registration initiated');
+        console.info('[RepositoryPanelProvider] Window ID:', windowId);
+        console.info('[RepositoryPanelProvider] Source URL:', sourceUrl);
+
+        // Send ready ping to server after a short delay to ensure subscription is set up
+        setTimeout(() => {
+          console.info('[RepositoryPanelProvider] 📤 Sending RENDERER_READY ping to server');
+          const sent = (window as any).electron.sendOtelMessage(windowId, sourceUrl, {
+            type: 'RENDERER_READY',
+            windowId,
+            sourceUrl,
+            timestamp: Date.now(),
+          });
+          if (!sent) {
+            console.warn('[RepositoryPanelProvider] Failed to send RENDERER_READY - port not ready yet');
+          }
+        }, 100);
+      } catch (error) {
+        console.error(
+          '[RepositoryPanelProvider] Failed to register telemetry port:',
+          error
+        );
+      }
+    };
+
+    registerTelemetryPort();
+
+    // Cleanup on unmount or when traceSourceUrl changes
+    return () => {
+      // Unsubscribe from messages
+      if (unsubscribe) {
+        unsubscribe();
+      }
+
+      // Clean up the port
+      if (windowId && sourceUrl) {
+        (window as any).electron.removeOtelPort(windowId, sourceUrl);
+      }
+
+      // Unregister from main process
+      if (windowId && sourceUrl) {
+        OtelCollectorService.unregisterPort(windowId, sourceUrl).catch((err) => {
+          console.warn('[RepositoryPanelProvider] Error unregistering port:', err);
+        });
+      }
+    };
+  }, [traceSourceUrl]);
 
   // Create actions object
   // Note: Terminal actions have been moved to TerminalContext
@@ -1452,6 +1593,21 @@ export const RepositoryPanelProvider: React.FC<
             },
           },
         ],
+        [
+          'telemetry',
+          {
+            scope: 'workspace' as const,
+            name: 'telemetry',
+            data: telemetryTraces,
+            loading: telemetryLoading,
+            error: null,
+            refresh: async () => {
+              // For now, telemetry refresh is a no-op
+              // Real implementation will fetch from telemetry service
+              setTelemetryLoading(false);
+            },
+          },
+        ],
       ]),
     [
       repositoryPath,
@@ -1474,6 +1630,8 @@ export const RepositoryPanelProvider: React.FC<
       localhostServersLoading,
       globalSkillsData,
       globalSkillsLoading,
+      telemetryTraces,
+      telemetryLoading,
     ],
   );
 

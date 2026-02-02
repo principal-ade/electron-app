@@ -63,18 +63,26 @@ export function registerOtelCollectorHandlers(): void {
   });
 
   // Register port for trace delivery
+  // NOTE: Uses postMessage pattern (like terminal) because MessagePorts can't be returned via invoke
   ipcMain.handle(
     HANDLERS.REGISTER_TRACE_PORT,
-    (event, windowId: string, sourceUrl: string): { success: boolean; port?: MessagePort; error?: string } => {
+    (event, windowId: string, sourceUrl: string): { success: boolean; error?: string } => {
       try {
+        console.log(`[IPC] Registering trace port for window: ${windowId}, sourceUrl: ${sourceUrl}`);
+
         // Create a MessageChannel
         const { port1, port2 } = new MessageChannelMain();
 
-        // Register port1 with the service (service will send messages through this)
+        // Register port1 with the service
+        // The server (PortRouter) will send a CONNECTION_CONFIRMED heartbeat after registration
         service.registerPort(windowId, sourceUrl, port1);
 
-        // Return port2 to the renderer (renderer will receive messages through this)
-        return { success: true, port: port2 };
+        // Send port2 to the renderer via postMessage (same pattern as terminal)
+        event.sender.postMessage('otel-collector:port', { windowId, sourceUrl }, [port2]);
+
+        console.log(`[IPC] ✅ Trace port registered and sent to renderer`);
+
+        return { success: true };
       } catch (err) {
         console.error('[IPC] Failed to register trace port:', err);
         return { success: false, error: err instanceof Error ? err.message : String(err) };

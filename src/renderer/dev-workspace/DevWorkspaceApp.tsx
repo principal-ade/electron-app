@@ -223,6 +223,15 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   const [resetKey, setResetKey] = useState(0);
   const [hasGitHubFolder, setHasGitHubFolder] = useState(false);
   const [packages, setPackages] = useState<PackageLayer[]>([]);
+  const [traceSourceUrl, setTraceSourceUrl] = useState<string>(() => {
+    // Load from localStorage or default to 'principal-ade'
+    return localStorage.getItem('dev-workspace-trace-source-url') || 'principal-ade';
+  });
+
+  // Save trace source URL to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('dev-workspace-trace-source-url', traceSourceUrl);
+  }, [traceSourceUrl]);
 
   // Create repository object from Alexandria entry data
   const repository: Repository = useMemo(
@@ -915,6 +924,8 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         onFocusRight={handleFocusRight}
         events={events}
         packages={packages}
+        traceSourceUrl={traceSourceUrl}
+        onTraceSourceUrlChange={setTraceSourceUrl}
       />
       <div className="flex-1 overflow-hidden">
         <DevWorkspacePanelFramework
@@ -931,6 +942,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           panelFocus={panelFocus}
           onFocusLeft={handleFocusLeft}
           onFocusRight={handleFocusRight}
+          traceSourceUrl={traceSourceUrl}
         />
       </div>
 

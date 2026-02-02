@@ -18,7 +18,6 @@ export interface OtelCollectorResponse {
 
 export interface RegisterPortResponse {
   success: boolean;
-  port?: MessagePort;
   error?: string;
 }
 
@@ -33,6 +32,9 @@ export interface GetTracesResponse {
   traces: StoredTrace[];
   error?: string;
 }
+
+// NOTE: MessagePort handling is done in preload-dev-workspace.ts
+// Ports are kept in preload and messages are routed via onOtelMessage/sendOtelMessage helpers
 
 export const otelCollectorApi = {
   /**
@@ -58,9 +60,25 @@ export const otelCollectorApi = {
 
   /**
    * Register a MessagePort to receive traces for a specific source URL
+   * Port is handled in preload; messages are delivered via window.electron.onOtelMessage()
    */
   async registerPort(windowId: string, sourceUrl: string): Promise<RegisterPortResponse> {
-    return await ipcRenderer.invoke('otel-collector:registerPort', windowId, sourceUrl);
+    const key = `${windowId}:${sourceUrl}`;
+    console.log(`[otelCollectorApi] 🔄 Registering port for ${key}`);
+
+    try {
+      // Trigger the IPC call to register the port (main will send it via postMessage to preload)
+      const response = await ipcRenderer.invoke('otel-collector:registerPort', windowId, sourceUrl);
+      console.log(`[otelCollectorApi] 📥 IPC response for ${key}:`, response);
+
+      return response;
+    } catch (error) {
+      console.error(`[otelCollectorApi] ❌ Failed to register port for ${key}:`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
   },
 
   /**

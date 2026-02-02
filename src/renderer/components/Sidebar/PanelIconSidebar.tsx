@@ -9,6 +9,7 @@ import {
   CheckCircle,
   Package,
   FolderOpen,
+  Activity,
 } from 'lucide-react';
 
 /**
@@ -42,6 +43,7 @@ const PANEL_ICONS = [
   { id: 'localProjects', Icon: FolderOpen, label: 'Repos' },
   { id: 'packageComposition', Icon: Package, label: 'Stack' },
   { id: 'canvasList', Icon: Network, label: 'Stories' },
+  { id: 'traceList', Icon: Activity, label: 'Traces' },
 ] as const;
 
 /**

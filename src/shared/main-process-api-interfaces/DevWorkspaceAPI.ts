@@ -26,6 +26,8 @@ import type { GitSyncAPI } from './GitSyncAPI';
 import type { AuthenticationAPI } from './AuthenticationAPI';
 import type { AgentSessionSDKAPI } from './AgentSessionSDKAPI';
 import type { GitHubArtifactAPI } from './GitHubArtifactAPI';
+import type { LocalhostDetectionAPI } from './LocalhostDetectionAPI';
+import type { OtelCollectorAPI } from './OtelCollectorAPI';
 
 export interface DevWorkspaceMainProcessAPI {
   terminal: TerminalAPI;
@@ -39,6 +41,8 @@ export interface DevWorkspaceMainProcessAPI {
   authentication: AuthenticationAPI;
   agentSessionSDK: AgentSessionSDKAPI;
   githubArtifact: GitHubArtifactAPI;
+  localhostDetection: LocalhostDetectionAPI;
+  otelCollector: OtelCollectorAPI;
 }
 
 // Re-export the individual API types for convenience
@@ -53,3 +57,5 @@ export type { GitSyncAPI } from './GitSyncAPI';
 export type { AuthenticationAPI } from './AuthenticationAPI';
 export type { AgentSessionSDKAPI } from './AgentSessionSDKAPI';
 export type { GitHubArtifactAPI } from './GitHubArtifactAPI';
+export type { LocalhostDetectionAPI } from './LocalhostDetectionAPI';
+export type { OtelCollectorAPI } from './OtelCollectorAPI';

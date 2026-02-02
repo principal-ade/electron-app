@@ -70,18 +70,14 @@ export class OtelCollectorService {
 
   /**
    * Register a MessagePort to receive traces for a specific source URL
+   * The port will be delivered via window.electron.onOtelPortReady callback
    */
-  static async registerPort(windowId: string, sourceUrl: string): Promise<MessagePort | null> {
+  static async registerPort(windowId: string, sourceUrl: string): Promise<OtelCollectorResponse> {
     try {
-      const response = await window.mainProcess.otelCollector.registerPort(windowId, sourceUrl);
-      if (response.success && response.port) {
-        return response.port;
-      }
-      console.error('[OtelCollectorService] Failed to register port:', response.error);
-      return null;
+      return await window.mainProcess.otelCollector.registerPort(windowId, sourceUrl);
     } catch (err) {
       console.error('[OtelCollectorService] Failed to register port:', err);
-      return null;
+      return { success: false, error: err instanceof Error ? err.message : String(err) };
     }
   }
 

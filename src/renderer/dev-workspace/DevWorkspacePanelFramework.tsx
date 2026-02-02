@@ -8,6 +8,7 @@ import {
   Code,
   GitBranch,
   Terminal,
+  Activity,
 } from 'lucide-react';
 import {
   EditableConfigurablePanelLayout,
@@ -31,7 +32,7 @@ import {
 } from '../contexts/AgentHighlightContext';
 import { TabbedTerminalPanel, type BaseTab, type TerminalTab } from '@industry-theme/xterm-terminal-panel';
 import { TabbedGhosttyTerminal } from '@industry-theme/ghostty-terminal-panel';
-import { panels as principalViewPanels } from '@industry-theme/principal-view-panels';
+import { panels as principalViewPanels, TraceDetailsPanel } from '@industry-theme/principal-view-panels';
 import type { NarrativeTemplate } from '@principal-ai/principal-view-core';
 import type { FileInfo } from '@principal-ai/repository-abstraction';
 import { panels as fileCityPanels } from '@industry-theme/file-city-panel';
@@ -50,6 +51,7 @@ import { panels as fileEditingPanels } from '@industry-theme/file-editing-panels
 import { panels as backlogPanels } from '@industry-theme/backlogmd-kanban-panel';
 import { panels as agentPanels, type Skill } from '@industry-theme/agent-panels';
 import { panels as githubPanels } from '@industry-theme/github-panels';
+import { panels as typeInformationPanels } from '../panels/TypeInformationPanel';
 import type { Repository } from '../../shared/types/repository.types';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { PanelIconSidebar } from '../components/Sidebar/PanelIconSidebar';
@@ -136,9 +138,18 @@ interface DependencyGraphTab extends BaseTab {
 }
 
 /**
+ * Tab type for trace details panel
+ */
+interface TraceDetailsTab extends BaseTab {
+  contentType: 'trace-details';
+  traceId: string;
+  traceData?: any; // Full trace object for instant loading
+}
+
+/**
  * Union type of all tab types used in DevWorkspace
  */
-type DevWorkspaceTab = TerminalTab | SkillTab | MarkdownTab | CanvasEditorTab | CanvasTab | FileEditorTab | MDXEditorTab | GitDiffTab | DependencyGraphTab;
+type DevWorkspaceTab = TerminalTab | SkillTab | MarkdownTab | CanvasEditorTab | CanvasTab | FileEditorTab | MDXEditorTab | GitDiffTab | DependencyGraphTab | TraceDetailsTab;
 
 export interface DevWorkspacePanelFrameworkProps {
   repositoryPath: string;
@@ -153,6 +164,8 @@ export interface DevWorkspacePanelFrameworkProps {
   onPanelSizesChange?: (sizes: { left: number; middle: number; right: number }) => void;
   /** Event bus for panel communication */
   events: PanelEventEmitter;
+  /** Trace source URL for OTEL routing */
+  traceSourceUrl?: string;
 }
 
 interface DevWorkspacePanelFrameworkInnerProps {
@@ -360,6 +373,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   const StoryboardListPanelComponent = principalViewPanels.find(
     (p) => p.metadata?.id === 'principal-ai.storyboard-list',
   )?.component;
+  const TraceListPanelComponent = principalViewPanels.find(
+    (p) => p.metadata?.id === 'principal-ai.trace-list',
+  )?.component;
   const FileCityPanelComponent = fileCityPanels[0]?.component;
   const DocsPanelComponent = docsPanels[0]?.component;
   const LocalProjectsPanelComponent = alexandriaPanels.find(
@@ -426,6 +442,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   )?.component;
   const GitHubIssueDetailPanelComponent = githubPanels.find(
     (p) => p.metadata?.id === 'industry-theme.github-issue-detail',
+  )?.component;
+  const TypeInformationPanelComponent = typeInformationPanels.find(
+    (p) => p.metadata?.id === 'principal-ade.type-information',
   )?.component;
 
   // Listen for doc:openInRightPanel events (from Alexandria docs panel context menu)
@@ -578,6 +597,55 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           };
 
           console.log('[DevWorkspacePanelFramework] Creating new skill tab (skill pre-loaded):', newTab);
+          setFocusTabId(newTab.id);
+          return [...prevTabs, newTab];
+        });
+      }),
+      // Trace detail - create tab instead of modal
+      events.on('trace:selected', (event) => {
+        console.log('[DevWorkspacePanelFramework] ===== TRACE SELECTED EVENT FIRED =====');
+        console.log('[DevWorkspacePanelFramework] Event source:', event.source);
+        console.log('[DevWorkspacePanelFramework] Event payload:', event.payload);
+
+        // Ignore re-emitted events from tabs to prevent loop
+        if (event.source === 'tab') {
+          console.log('[DevWorkspacePanelFramework] Ignoring tab re-emission');
+          return;
+        }
+
+        const payload = event.payload as { trace?: any; traceId?: string };
+
+        // Extract trace data
+        const trace = payload.trace;
+        if (!trace || !trace.traceId) {
+          console.warn('[DevWorkspacePanelFramework] No trace data or traceId in payload:', payload);
+          return;
+        }
+
+        setTabs((prevTabs) => {
+          // Check if tab already exists for this trace
+          const existingTab = prevTabs.find(
+            (t) => t.contentType === 'trace-details' && (t as TraceDetailsTab).traceId === trace.traceId
+          );
+
+          if (existingTab) {
+            // Tab exists - focus it
+            console.log('[DevWorkspacePanelFramework] Trace details tab already exists, focusing:', existingTab.id);
+            setFocusTabId(existingTab.id);
+            return prevTabs; // No change to tabs array
+          }
+
+          // Create new trace details tab with full trace object for instant loading
+          const newTab: TraceDetailsTab = {
+            id: `trace-${trace.traceId}-${Date.now()}`,
+            label: trace.name || trace.traceId.substring(0, 8),
+            contentType: 'trace-details',
+            traceId: trace.traceId,
+            traceData: trace, // Pass full trace object for instant display
+            closable: true,
+          };
+
+          console.log('[DevWorkspacePanelFramework] Creating new trace details tab (trace pre-loaded):', newTab);
           setFocusTabId(newTab.id);
           return [...prevTabs, newTab];
         });
@@ -1053,6 +1121,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         return <GitBranch size={14} />;
       case 'dependency-graph':
         return <GitBranch size={14} />;
+      case 'trace-details':
+        return <Activity size={14} />;
       default:
         return undefined; // Return undefined to fall back to tab.icon
     }
@@ -1388,6 +1458,37 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           );
         }
 
+        case 'trace-details': {
+          // Type assertion for TypeScript
+          const traceDetailsTab = tab as TraceDetailsTab;
+
+          console.log('[DevWorkspacePanelFramework] Rendering trace details tab:', {
+            traceId: traceDetailsTab.traceId,
+            hasTraceData: !!traceDetailsTab.traceData,
+            isActive,
+          });
+
+          return (
+            <div
+              style={{
+                height: '100%',
+                width: '100%',
+                overflow: 'hidden',
+                position: 'relative',
+                display: 'flex', // TabbedTerminalPanel handles visibility
+                flexDirection: 'column',
+              }}
+            >
+              <TraceDetailsPanel
+                context={contextRef.current}
+                actions={actionsRef.current}
+                events={eventsRef.current}
+                selectedTrace={traceDetailsTab.traceData || null}
+              />
+            </div>
+          );
+        }
+
         default:
           console.warn('[DevWorkspacePanelFramework] Unknown tab type:', (tab as any).contentType);
           return (
@@ -1492,6 +1593,30 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           </div>
         ) : (
           <div>Architecture panel not available</div>
+        ),
+      },
+      {
+        id: 'traceList',
+        label: 'Traces',
+        content: TraceListPanelComponent ? (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <TraceListPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div>Trace List panel not available</div>
         ),
       },
       {
@@ -2013,6 +2138,30 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           <div>GitHub Issue Detail panel not available</div>
         ),
       },
+      {
+        id: 'typeInformation',
+        label: 'Type Information',
+        content: TypeInformationPanelComponent ? (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <TypeInformationPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div>Type Information panel not available</div>
+        ),
+      },
     ],
     // NOTE: renderTabContent is intentionally excluded from dependencies since it uses refs.
     // tabs is included so TabbedTerminalPanel receives updated tabs for canvas/skill/agent panels.
@@ -2041,6 +2190,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       AgentDetailPanelComponent,
       GitHubIssuesPanelComponent,
       GitHubIssueDetailPanelComponent,
+      TypeInformationPanelComponent,
       context,
       actions,
       events,
@@ -2190,6 +2340,7 @@ export const DevWorkspacePanelFramework: React.FC<
   panelSizes,
   onPanelSizesChange,
   events,
+  traceSourceUrl,
 }) => {
   // Use the same terminal context format as legacy MultiTerminalPanel
   // Legacy uses: terminal:${owner}/${name}
@@ -2215,6 +2366,7 @@ export const DevWorkspacePanelFramework: React.FC<
       repositoryPath={repositoryPath}
       repository={repositoryMetadata}
       events={events}
+      traceSourceUrl={traceSourceUrl}
     >
       <TerminalProvider
         repositoryPath={repositoryPath}
