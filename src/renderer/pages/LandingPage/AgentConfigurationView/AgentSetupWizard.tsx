@@ -49,7 +49,6 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
   claudeTourStepIndex,
 }) => {
   const { theme } = useTheme();
-  const [isInstallingAgent, setIsInstallingAgent] = useState(false);
   const [isConfiguringHooks, setIsConfiguringHooks] = useState(false);
   const [isTogglingMCP, setIsTogglingMCP] = useState(false);
   const [error, setError] = useState<string | null>(null);

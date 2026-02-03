@@ -73,7 +73,7 @@ export class TerminalService {
   }
 
   static async onExit(
-    callback: (exit: { sessionId: string; code: number }) => void,
+    _callback: (exit: { sessionId: string; code: number }) => void,
   ): Promise<() => void> {
     // Exit events come through the MessagePort as EXIT type messages
     // For now, return a no-op since exit is handled by port onmessage

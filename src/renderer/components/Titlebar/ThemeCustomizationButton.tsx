@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Settings } from 'lucide-react';
 import { ThemeService } from '../../services/ThemeService';

@@ -19,7 +19,6 @@ import { BrowserWebSocketTransportAdapter } from '@principal-ai/control-tower-co
 // Import terminal event types
 import type {
   TerminalSessionInfo,
-  TerminalEvent,
   TerminalEventType,
 } from '../../../shared/terminal-events';
 
@@ -42,7 +41,7 @@ class TerminalJWTAuthAdapter {
 }
 
 // Get device ID for room token
-async function getDeviceId(): Promise<string> {
+async function _getDeviceId(): Promise<string> {
   // Use a simple browser-based device ID
   let deviceId = localStorage.getItem('deviceId');
   if (!deviceId) {
@@ -79,10 +78,10 @@ async function getUserToken(githubToken: string): Promise<string> {
 }
 
 // Exchange GitHub token for JWT room token (for specific repository)
-async function getRoomToken(
+async function _getRoomToken(
   githubToken: string,
   repository: string,
-  userId: string
+  _userId: string
 ): Promise<string> {
   const authServerUrl =
     process.env.AUTH_SERVER_URL || 'https://auth.principal-ade.com';

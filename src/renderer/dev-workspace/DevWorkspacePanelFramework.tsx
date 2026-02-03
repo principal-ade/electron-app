@@ -164,8 +164,8 @@ export interface DevWorkspacePanelFrameworkProps {
   onPanelSizesChange?: (sizes: { left: number; middle: number; right: number }) => void;
   /** Event bus for panel communication */
   events: PanelEventEmitter;
-  /** Trace source URL for OTEL routing */
-  traceSourceUrl?: string;
+  /** Trace source service name for OTEL routing */
+  traceSourceServiceName?: string;
 }
 
 interface DevWorkspacePanelFrameworkInnerProps {
@@ -2340,7 +2340,7 @@ export const DevWorkspacePanelFramework: React.FC<
   panelSizes,
   onPanelSizesChange,
   events,
-  traceSourceUrl,
+  traceSourceServiceName,
 }) => {
   // Use the same terminal context format as legacy MultiTerminalPanel
   // Legacy uses: terminal:${owner}/${name}
@@ -2366,7 +2366,7 @@ export const DevWorkspacePanelFramework: React.FC<
       repositoryPath={repositoryPath}
       repository={repositoryMetadata}
       events={events}
-      traceSourceUrl={traceSourceUrl}
+      traceSourceServiceName={traceSourceServiceName}
     >
       <TerminalProvider
         repositoryPath={repositoryPath}

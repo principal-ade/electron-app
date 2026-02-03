@@ -14,7 +14,6 @@ import {
   ObservabilityService,
   ObservabilityConfig,
   ConnectionTestResult,
-  StorageMode,
 } from '../../../../main-process-api/ObservabilityService';
 
 export const ObservabilitySettings: React.FC = () => {

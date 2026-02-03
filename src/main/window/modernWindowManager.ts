@@ -111,6 +111,12 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
       `[ModernWindow] Sandbox explicitly set to:`,
       mergedOptions.webPreferences.sandbox,
     );
+    console.log(`[ModernWindow] Final window dimensions:`, {
+      width: mergedOptions.width,
+      height: mergedOptions.height,
+      x: mergedOptions.x,
+      y: mergedOptions.y,
+    });
 
     // Create the window
     this.window = new BrowserWindow(mergedOptions);
@@ -334,6 +340,15 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
     const primaryDisplay = screen.getPrimaryDisplay();
     const { width: screenWidth, height: screenHeight } =
       primaryDisplay.workAreaSize;
+
+    console.log(`[ModernWindow] Screen dimensions:`, {
+      screenWidth,
+      screenHeight,
+      x: primaryDisplay.workArea.x,
+      y: primaryDisplay.workArea.y,
+      fullBounds: primaryDisplay.bounds,
+      workArea: primaryDisplay.workArea,
+    });
 
     return {
       width: screenWidth,

@@ -5,7 +5,6 @@ import React, {
   useState,
   useEffect,
   useRef,
-  useCallback,
   type ReactNode,
 } from 'react';
 import type { HighlightLayer } from '@principal-ai/file-city-react';

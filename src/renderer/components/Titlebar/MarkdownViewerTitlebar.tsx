@@ -30,7 +30,7 @@ export interface MarkdownViewerTitlebarProps {
 export const MarkdownViewerTitlebar: React.FC<MarkdownViewerTitlebarProps> = ({
   fileName,
   filePath,
-  projectName,
+  _projectName,
   fontSizeScale = 1.0,
   viewMode = 'book',
   onEdit,

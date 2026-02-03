@@ -47,7 +47,7 @@ export const DIRECTORY_ID_TO_DESTINATION: Record<string, SkillDestination> = {
   'windsurf': 'global-windsurf',
 };
 
-const ALL_DESTINATIONS: Array<{
+const _ALL_DESTINATIONS: Array<{
   value: SkillDestination;
   directoryId: string;
   label: string;

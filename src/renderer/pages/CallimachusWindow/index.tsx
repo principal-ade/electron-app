@@ -3,7 +3,6 @@ import { CallimachusClient } from '@a24z/callimachus';
 import type {
   CallimachusConfig,
   SearchResult,
-  AlexandriaLayout,
 } from '@a24z/callimachus';
 import { ConnectionPanel } from './components/ConnectionPanel';
 import { SearchInterface } from './components/SearchInterface';

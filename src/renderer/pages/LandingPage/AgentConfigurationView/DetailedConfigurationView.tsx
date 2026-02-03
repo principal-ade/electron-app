@@ -60,7 +60,7 @@ export const DetailedConfigurationView: React.FC<
   // =========================================================================
   // STATE - File Management
   // =========================================================================
-  const [configFileExists, setConfigFileExists] =
+  const [_configFileExists, setConfigFileExists] =
     React.useState<boolean>(false);
   const [configFilePath, setConfigFilePath] = React.useState<string>('');
   const [hooksFilePath, setHooksFilePath] = React.useState<string>('');
@@ -134,11 +134,11 @@ export const DetailedConfigurationView: React.FC<
 
         // Parse MCP servers from the config
         try {
-          const config = JSON.parse(result.content);
+          const _config = JSON.parse(result.content);
           /*
           // Get current working directory to find the project-specific config
           const projectPath = await fileSystem.getCurrentWorkingDirectory();
-          const projectConfig = config.projects?.[projectPath];
+          const projectConfig = _config.projects?.[projectPath];
           const mcpServersFound = projectConfig?.mcpServers || {};
           setMcpServers(mcpServersFound);
            */
@@ -150,7 +150,7 @@ export const DetailedConfigurationView: React.FC<
         setConfigFileExists(false);
         setMcpServers({});
       }
-    } catch (error) {
+    } catch (_error) {
       setConfigFileExists(false);
       setMcpServers({});
     }

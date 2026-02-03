@@ -5,7 +5,7 @@
  * This window uses a minimal preload with only the APIs it needs.
  */
 
-import { ipcMain, app } from 'electron';
+import { ipcMain, app, screen } from 'electron';
 import path from 'path';
 import { resolveHtmlPath } from '../util';
 import {
@@ -75,12 +75,19 @@ export async function openDevWorkspaceWindow(
     purpose: windowName,
   };
 
+  // Get primary display dimensions for full-screen size
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width: screenWidth, height: screenHeight } =
+    primaryDisplay.workAreaSize;
+
   // Create the window with terminal and file system support
   const appWindow = createSpecialWindow(
     windowName,
     {
-      width: 1200,
-      height: 800,
+      width: screenWidth,
+      height: screenHeight,
+      x: primaryDisplay.workArea.x,
+      y: primaryDisplay.workArea.y,
       minWidth: 800,
       minHeight: 600,
       title: `${alexandriaEntry.name} - Dev Workspace`,

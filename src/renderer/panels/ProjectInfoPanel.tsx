@@ -13,7 +13,7 @@ import type {
   PanelEventEmitter,
 } from '@principal-ade/panel-framework-core';
 import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
-import { FolderGit2, GitBranch, RefreshCw, AlertCircle, Trash2, ExternalLink, FolderOpen } from 'lucide-react';
+import { FolderGit2, GitBranch, RefreshCw, AlertCircle, Trash2, FolderOpen } from 'lucide-react';
 
 interface ProjectInfoPanelProps {
   context: PanelContextValue;

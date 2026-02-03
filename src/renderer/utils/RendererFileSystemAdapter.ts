@@ -49,17 +49,17 @@ export class RendererFileSystemAdapter implements FileSystemAdapter {
   // Sync Variants (optional)
   // ============================================================================
 
-  existsSync(path: string): boolean {
+  existsSync(_path: string): boolean {
     // Note: Sync operations are not truly synchronous in the renderer
     // These are provided for compatibility but will throw if called
     throw new Error('Synchronous file operations are not supported in renderer process. Use async methods instead.');
   }
 
-  readFileSync(path: string): string {
+  readFileSync(_path: string): string {
     throw new Error('Synchronous file operations are not supported in renderer process. Use async methods instead.');
   }
 
-  writeFileSync(path: string, content: string): void {
+  writeFileSync(_path: string, _content: string): void {
     throw new Error('Synchronous file operations are not supported in renderer process. Use async methods instead.');
   }
 
@@ -67,7 +67,7 @@ export class RendererFileSystemAdapter implements FileSystemAdapter {
   // Directory Operations
   // ============================================================================
 
-  async createDir(path: string, options?: { recursive?: boolean }): Promise<void> {
+  async createDir(_path: string, _options?: { recursive?: boolean }): Promise<void> {
     // Note: There's currently no IPC handler for createDir
     // If needed in the future, add a handler in fileSystemHandlers.ts
     // For now, LibraryLoader only needs read operations, so this should not be called

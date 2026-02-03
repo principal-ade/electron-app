@@ -34,19 +34,19 @@ export const InstallStep: React.FC<InstallStepProps> = ({
   installProgress,
   onInstall,
   onCheckStatus,
-  onInstallComplete,
+  _onInstallComplete,
   onUninstall,
   hasHooks = false,
   handleClaudeTourButtonClick,
   isClaudeTourActive,
   claudeTourStepIndex,
-  isCurrentStep,
-  isInstalled,
+  _isCurrentStep,
+  _isInstalled,
 }) => {
   const { theme } = useTheme();
   const agentConfig = getAgentInfo(agentType);
 
-  const handleCheckInstallation = async () => {
+  const _handleCheckInstallation = async () => {
     // Installation is now handled externally
     onCheckStatus();
   };

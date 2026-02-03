@@ -54,10 +54,10 @@ const RemoteTerminalViewer = React.lazy(() =>
 
 function AppContent({
   _setHasUpdateAvailable,
-  hasUpdateAvailable,
+  _hasUpdateAvailable,
 }: {
   _setHasUpdateAvailable: (hasUpdate: boolean) => void;
-  hasUpdateAvailable?: boolean;
+  _hasUpdateAvailable?: boolean;
   // onLandingPageMounted removed - add project buttons now in repository list header
 }) {
   const { theme } = useTheme();
@@ -291,7 +291,7 @@ function App() {
       <GlobalFeedbackProvider>
         <AppContent
           _setHasUpdateAvailable={setHasUpdateAvailable}
-          hasUpdateAvailable={hasUpdateAvailable}
+          _hasUpdateAvailable={hasUpdateAvailable}
           // onLandingPageMounted removed - add project buttons now in repository list header
         />
       </GlobalFeedbackProvider>

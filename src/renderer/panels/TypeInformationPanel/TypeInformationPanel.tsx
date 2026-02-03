@@ -13,7 +13,6 @@ import type {
   PanelEventEmitter,
 } from '@principal-ade/panel-framework-core';
 import { Search, FileType, Package, Loader2, RefreshCw, ChevronRight } from 'lucide-react';
-import { TypeSchemaService } from '../../main-process-api/TypeSchemaService';
 
 interface TypeInformationPanelProps {
   context: PanelContextValue;
@@ -30,7 +29,7 @@ interface ExtractedType {
 export const TypeInformationPanel: React.FC<TypeInformationPanelProps> = ({
   context,
   actions,
-  events,
+  _events,
 }) => {
   const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');

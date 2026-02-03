@@ -6,7 +6,6 @@ import type {
   TokenInfo,
   GitHubPullRequest,
   CreateIssueRequest,
-  GitHubSSHKey,
   SSHKeysResponse,
   GitHubOrgMember,
   CreateRepositoryInput,

@@ -117,7 +117,7 @@ const AlexandriaWorkspaceContent: React.FC = () => {
   >(undefined);
 
   // Track git status for each repository by path
-  const [repoGitStatuses, setRepoGitStatuses] = useState<
+  const [_repoGitStatuses, _setRepoGitStatuses] = useState<
     Map<string, RepoGitStatus>
   >(new Map());
 
@@ -244,7 +244,7 @@ const AlexandriaWorkspaceContent: React.FC = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const workspaceId = urlParams.get('workspaceId');
     const repositoryPath = urlParams.get('repositoryPath');
-    const repositoryId = urlParams.get('repositoryId');
+    const _repositoryId = urlParams.get('repositoryId');
 
     // Load workspace data (either real workspace or temp single-repo mode)
     const loadWorkspace = async () => {
@@ -435,7 +435,7 @@ const AlexandriaWorkspaceContent: React.FC = () => {
             repo.path,
           );
           if (gitStatus) {
-            setRepoGitStatuses((prev) => {
+            _setRepoGitStatuses((prev) => {
               const next = new Map(prev);
               next.set(repo.path, {
                 branch: gitStatus.branch,
@@ -480,7 +480,7 @@ const AlexandriaWorkspaceContent: React.FC = () => {
           status.branch,
         );
 
-        setRepoGitStatuses((prev) => {
+        _setRepoGitStatuses((prev) => {
           const next = new Map(prev);
           next.set(status.repoPath, {
             branch: status.branch,

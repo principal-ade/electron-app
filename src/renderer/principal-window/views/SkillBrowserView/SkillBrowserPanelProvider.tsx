@@ -1,5 +1,4 @@
-import React, { useMemo, useState, useEffect, useCallback, type ReactNode } from 'react';
-import { PanelEventBus } from '@principal-ade/panel-framework-core';
+import React, { useMemo, useState, useEffect, type ReactNode } from 'react';
 import type {
   PanelContextValue,
   PanelActions,
@@ -50,7 +49,7 @@ export const SkillBrowserPanelProvider: React.FC<
 
   // Track file tree from GitHub
   const [fileTreeData, setFileTreeData] = useState<FileTree | null>(null);
-  const [fileTreeLoading, setFileTreeLoading] = useState(false);
+  const [fileTreeLoading, _setFileTreeLoading] = useState(false);
 
   // Track GitHub repository info
   const [githubRepoInfo, setGithubRepoInfo] = useState<GitHubRepoInfo | null>(null);

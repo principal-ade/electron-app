@@ -1,5 +1,4 @@
 import type { FileTree } from '@principal-ai/repository-abstraction';
-import type { AgentSessionRecord } from '../../shared/sessionTypes';
 
 /**
  * Normalizes a file path to be relative to the git repository root

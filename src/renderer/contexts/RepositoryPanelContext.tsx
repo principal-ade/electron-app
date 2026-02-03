@@ -8,7 +8,6 @@ import React, {
   useRef,
   type ReactNode,
 } from 'react';
-import { PanelEventBus } from '@principal-ade/panel-framework-core';
 import type {
   PanelContextValue,
   PanelActions,
@@ -34,7 +33,6 @@ import type { PackageLayer } from '@principal-ai/codebase-composition';
 import type {
   PackageSummary,
   GitStatusWithFiles,
-  WorkspaceChangeEventPayload,
 } from '@principal-ai/repository-monitoring-server';
 import { minimatch } from 'minimatch';
 import type { ColorMode, FileMetricData, QualitySliceData } from '@principal-ai/quality-lens-registry';
@@ -103,13 +101,13 @@ interface RepositoryPanelProviderProps {
   repository: RepositoryMetadata | null;
   /** Event bus for panel communication - must be provided by parent */
   events: PanelEventEmitter;
-  /** Trace source URL for OTEL MessagePort routing */
-  traceSourceUrl?: string;
+  /** Trace source service name for OTEL MessagePort routing */
+  traceSourceServiceName?: string;
 }
 
 export const RepositoryPanelProvider: React.FC<
   RepositoryPanelProviderProps
-> = ({ children, repositoryPath, repository, events, traceSourceUrl }) => {
+> = ({ children, repositoryPath, repository, events, traceSourceServiceName }) => {
   // Track file tree for the current repository
   const [fileTreeData, setFileTreeData] = useState<FileTree | null>(null);
   const [fileTreeLoading, setFileTreeLoading] = useState(false);
@@ -719,12 +717,12 @@ export const RepositoryPanelProvider: React.FC<
 
     const registerTelemetryPort = async () => {
       try {
-        // Generate window ID and determine source URL
+        // Generate window ID and determine source service name
         windowId = `dev-workspace-${Date.now()}`;
-        sourceUrl = traceSourceUrl || 'principal-ade';
+        sourceUrl = traceSourceServiceName || 'principal-ade';
 
         console.info('[RepositoryPanelProvider] 🔌 Registering telemetry port');
-        console.info('[RepositoryPanelProvider] traceSourceUrl prop:', traceSourceUrl);
+        console.info('[RepositoryPanelProvider] traceSourceServiceName prop:', traceSourceServiceName);
         console.info('[RepositoryPanelProvider] Final sourceUrl:', sourceUrl);
         console.info('[RepositoryPanelProvider] Window ID:', windowId);
 
@@ -825,7 +823,7 @@ export const RepositoryPanelProvider: React.FC<
 
     registerTelemetryPort();
 
-    // Cleanup on unmount or when traceSourceUrl changes
+    // Cleanup on unmount or when traceSourceServiceName changes
     return () => {
       // Unsubscribe from messages
       if (unsubscribe) {
@@ -844,7 +842,7 @@ export const RepositoryPanelProvider: React.FC<
         });
       }
     };
-  }, [traceSourceUrl]);
+  }, [traceSourceServiceName]);
 
   // Create actions object
   // Note: Terminal actions have been moved to TerminalContext

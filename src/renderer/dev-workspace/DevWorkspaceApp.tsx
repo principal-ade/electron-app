@@ -28,7 +28,7 @@ import { WindowService } from '../main-process-api/WindowService';
 import { gitSyncConnectionManager } from '../services/git-sync/GitSyncConnectionManager';
 import { APP_BRANDING } from '../../shared/config/appBranding';
 import { AlexandriaEventType } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
-import { getServiceName } from '../utils/libraryResourcesLoader';
+import { getAllServiceNamesFromFileTree } from '../utils/libraryResourcesLoader';
 
 /**
  * Alexandria entry data passed from main process
@@ -224,39 +224,56 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   const [resetKey, setResetKey] = useState(0);
   const [hasGitHubFolder, setHasGitHubFolder] = useState(false);
   const [packages, setPackages] = useState<PackageLayer[]>([]);
-  const [traceSourceUrl, setTraceSourceUrl] = useState<string>('all');
+  const [traceSourceServiceName, setTraceSourceServiceName] = useState<string>('all');
+  const [availableServiceNames, setAvailableServiceNames] = useState<string[]>([]);
 
   // Load service name from library.yaml resources when repository changes
   useEffect(() => {
     if (!repositoryPath) return;
 
-    const loadTraceSourceUrl = async () => {
+    const loadTraceSourceServiceName = async () => {
       try {
-        console.log('[DevWorkspaceApp] 🔍 Loading service name from library.yaml');
+        console.log('[DevWorkspaceApp] 🔍 Loading service names from library.yaml files');
         console.log('[DevWorkspaceApp] Repository path:', repositoryPath);
 
-        // Try to get service.name from library.yaml
-        const serviceName = await getServiceName(repositoryPath);
+        // Get file tree and discover all services
+        const fileTree = await RepositoryMonitoringService.getFileTree(repositoryPath);
 
-        if (serviceName) {
-          console.log('[DevWorkspaceApp] ✅ Found service.name:', serviceName);
-          setTraceSourceUrl(serviceName);
-          console.log('[DevWorkspaceApp] 📝 Set traceSourceUrl to:', serviceName);
+        if (!fileTree) {
+          console.log('[DevWorkspaceApp] ⚠️ No file tree available, defaulting to "all"');
+          setTraceSourceServiceName('all');
+          return;
+        }
+
+        const serviceNames = await getAllServiceNamesFromFileTree(fileTree, repositoryPath);
+
+        if (serviceNames.length > 0) {
+          console.log('[DevWorkspaceApp] ✅ Found service names:', serviceNames);
+          setAvailableServiceNames(serviceNames);
+
+          // Use first service name by default
+          const serviceName = serviceNames[0];
+          console.log('[DevWorkspaceApp] 📝 Using first service name:', serviceName);
+          setTraceSourceServiceName(serviceName);
+
+          if (serviceNames.length > 1) {
+            console.log('[DevWorkspaceApp] ℹ️ Multiple services found:', serviceNames.length);
+          }
         } else {
-          console.log('[DevWorkspaceApp] ⚠️ No service.name in library.yaml, defaulting to "all"');
-          // Fall back to "all" if not found in library.yaml
-          setTraceSourceUrl('all');
-          console.log('[DevWorkspaceApp] 📝 Set traceSourceUrl to: all');
+          console.log('[DevWorkspaceApp] ⚠️ No services found in library.yaml files, defaulting to "all"');
+          setAvailableServiceNames([]);
+          setTraceSourceServiceName('all');
         }
       } catch (error) {
-        console.error('[DevWorkspaceApp] ❌ Failed to load service name from library.yaml:', error);
+        console.error('[DevWorkspaceApp] ❌ Failed to load service names from library.yaml:', error);
         // Fall back to "all" on error
-        setTraceSourceUrl('all');
-        console.log('[DevWorkspaceApp] 📝 Set traceSourceUrl to: all (due to error)');
+        setAvailableServiceNames([]);
+        setTraceSourceServiceName('all');
+        console.log('[DevWorkspaceApp] 📝 Set traceSourceServiceName to: all (due to error)');
       }
     };
 
-    loadTraceSourceUrl();
+    loadTraceSourceServiceName();
   }, [repositoryPath]);
 
   // Create repository object from Alexandria entry data
@@ -950,8 +967,9 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         onFocusRight={handleFocusRight}
         events={events}
         packages={packages}
-        traceSourceUrl={traceSourceUrl}
-        onTraceSourceUrlChange={setTraceSourceUrl}
+        traceSourceServiceName={traceSourceServiceName}
+        availableServiceNames={availableServiceNames}
+        onTraceSourceServiceNameChange={setTraceSourceServiceName}
       />
       <div className="flex-1 overflow-hidden">
         <DevWorkspacePanelFramework
@@ -968,7 +986,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           panelFocus={panelFocus}
           onFocusLeft={handleFocusLeft}
           onFocusRight={handleFocusRight}
-          traceSourceUrl={traceSourceUrl}
+          traceSourceServiceName={traceSourceServiceName}
         />
       </div>
 

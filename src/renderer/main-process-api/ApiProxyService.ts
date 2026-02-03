@@ -8,8 +8,6 @@
 
 import type {
   JSONValue,
-  JSONObject,
-  JSONArray,
 } from '../../shared/main-process-api-interfaces/ApiProxyAPI';
 
 export interface ApiProxyStatusResult {

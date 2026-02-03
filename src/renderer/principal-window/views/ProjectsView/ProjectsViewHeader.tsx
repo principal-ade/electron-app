@@ -13,7 +13,7 @@ interface ProjectsViewHeaderProps {
 export const ProjectsViewHeader: React.FC<ProjectsViewHeaderProps> = ({
   leftPanelView,
   onLeftPanelViewChange,
-  isAuthenticated,
+  _isAuthenticated,
   onCreateRepository,
 }) => {
   const { theme } = useTheme();

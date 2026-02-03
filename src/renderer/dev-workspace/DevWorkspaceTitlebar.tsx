@@ -201,9 +201,10 @@ export interface DevWorkspaceTitlebarProps {
   };
   // Packages data from codebase-composition
   packages?: PackageLayer[];
-  // Trace source URL configuration
-  traceSourceUrl?: string;
-  onTraceSourceUrlChange?: (sourceUrl: string) => void;
+  // Trace source service name configuration
+  traceSourceServiceName?: string;
+  availableServiceNames?: string[];
+  onTraceSourceServiceNameChange?: (serviceName: string) => void;
 }
 
 export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
@@ -228,8 +229,9 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
   repositoryPath,
   events,
   packages,
-  traceSourceUrl,
-  onTraceSourceUrlChange,
+  traceSourceServiceName,
+  availableServiceNames,
+  onTraceSourceServiceNameChange,
 }) => {
   const { theme } = useTheme();
   const [copiedPath, setCopiedPath] = useState(false);
@@ -630,11 +632,11 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
               )}
 
               {/* Trace Source Selector */}
-              {onTraceSourceUrlChange && (
+              {onTraceSourceServiceNameChange && (
                 <div style={{ position: 'relative' }}>
                   <select
-                    value={traceSourceUrl || 'all'}
-                    onChange={(e) => onTraceSourceUrlChange(e.target.value)}
+                    value={traceSourceServiceName || 'all'}
+                    onChange={(e) => onTraceSourceServiceNameChange(e.target.value)}
                     title="Select service for trace routing"
                     style={{
                       // @ts-ignore - WebkitAppRegion is not in CSSProperties
@@ -651,8 +653,12 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                     }}
                   >
                     <option value="all">Traces: all services</option>
-                    {traceSourceUrl !== 'all' && (
-                      <option value={traceSourceUrl}>Traces: {traceSourceUrl}</option>
+                    {availableServiceNames && availableServiceNames.length > 0 && (
+                      availableServiceNames.map((serviceName) => (
+                        <option key={serviceName} value={serviceName}>
+                          Traces: {serviceName}
+                        </option>
+                      ))
                     )}
                   </select>
                 </div>

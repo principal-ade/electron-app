@@ -34,7 +34,7 @@ const SkillDetailPanelComponent = agentPanels.find(
 const SkillBrowserViewContent: React.FC = () => {
   const { theme } = useTheme();
   const { context, actions, events } = useSkillBrowserPanelProvider();
-  const { isConfigured, config, getConfig } = useSkillsSync();
+  const { _isConfigured, _config, getConfig } = useSkillsSync();
 
   // State for onboarding
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -334,7 +334,7 @@ const SkillBrowserViewContent: React.FC = () => {
 
   // Listen for skill installation events to refresh installed skills
   useEffect(() => {
-    const unsubscribe = events.on('skill:installed', (event) => {
+    const unsubscribe = events.on('skill:installed', (_event) => {
       console.log('[SkillBrowserView] Skill installed, refreshing installed skills');
       // Reload installed skills after a skill is installed
       loadInstalledSkills();
@@ -707,7 +707,7 @@ const SkillBrowserViewContent: React.FC = () => {
   /**
    * Install skill to selected destination
    */
-  const handleInstallSkill = useCallback(
+  const _handleInstallSkill = useCallback(
     async (destination: SkillDestination) => {
       if (!selectedSkill || !githubRepoInfo || !browseFileTree) {
         throw new Error('No skill selected, GitHub repo info missing, or file tree not loaded');
