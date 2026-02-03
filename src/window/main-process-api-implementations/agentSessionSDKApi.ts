@@ -223,10 +223,12 @@ export const agentSessionSDKApi: AgentSessionSDKAPI = {
     repository: string,
     callback: (event: RepoNormalizedUniversalAgentSessionEvent) => void,
   ): (() => void) => {
-    if (!eventSubscribers.has(repository)) {
-      eventSubscribers.set(repository, new Set());
+    let subscribers = eventSubscribers.get(repository);
+    if (!subscribers) {
+      subscribers = new Set();
+      eventSubscribers.set(repository, subscribers);
     }
-    eventSubscribers.get(repository)!.add(callback);
+    subscribers.add(callback);
 
     return () => {
       const subscribers = eventSubscribers.get(repository);

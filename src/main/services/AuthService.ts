@@ -20,6 +20,7 @@ import {
 import { AuthEvent } from '../../shared/ipc-events/AuthEvents';
 import { GitCredentialHelper } from './GitCredentialHelper';
 import { APP_BRANDING } from '../../shared/config/appBranding';
+import type { AuthUser } from '../../shared/main-process-api-interfaces/AuthenticationAPI';
 
 interface GitHubUser {
   login: string;
@@ -187,13 +188,16 @@ class AuthService {
           console.log('[AuthService] Starting OAuth flow...');
           const result = await authClient.authenticate();
 
-          // For initial authentication, token should always be present
+          // For initial authentication, token and user should always be present
           if (!result.token) {
             throw new Error('Authentication failed: no token received');
           }
+          if (!result.user) {
+            throw new Error('Authentication failed: no user data received');
+          }
 
           // Fetch GitHub user profile to get canonical user data
-          let enrichedUser: AuthResult['user'] = result.user;
+          let enrichedUser: AuthUser = result.user;
           try {
             console.log('[AuthService] Fetching GitHub user profile...');
             const response = await fetch('https://api.github.com/user', {
@@ -208,8 +212,8 @@ class AuthService {
               // Use GitHub API as source of truth for all user data
               enrichedUser = {
                 login: githubUser.login, // GitHub's canonical username
-                email: githubUser.email || result.user.email,
-                name: githubUser.name || result.user.name,
+                email: githubUser.email || result.user?.email || '',
+                name: githubUser.name || result.user?.name,
                 id: githubUser.id,
                 avatarUrl: githubUser.avatar_url,
               };

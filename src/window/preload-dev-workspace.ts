@@ -155,7 +155,7 @@ ipcRenderer.on('terminal:port', (event, sessionId: string) => {
 ipcRenderer.on(
   'terminal:ownershipLost',
   (_event, data: { sessionId: string; newOwnerWindowId: number }) => {
-    console.log(
+    console.info(
       `[preload-dev-workspace] Ownership lost for session ${data.sessionId}, new owner: ${data.newOwnerWindowId}`,
     );
     ownershipLostSubscribers.forEach((cb) => cb(data));
@@ -169,11 +169,11 @@ ipcRenderer.on(
 // OTEL collector port storage
 const otelPorts = new Map<string, MessagePort>(); // key: windowId:sourceUrl
 // Message subscribers - for receiving trace data
-const otelMessageSubscribers = new Map<string, Set<(data: any) => void>>();
+const otelMessageSubscribers = new Map<string, Set<(data: unknown) => void>>();
 
 // Listen for MessagePort delivery from main process (same pattern as terminal)
 ipcRenderer.on('otel-collector:port', (event, data: { windowId: string; sourceUrl: string }) => {
-  console.log('[preload-dev-workspace] 📨 Received otel-collector:port event', data);
+  console.info('[preload-dev-workspace] 📨 Received otel-collector:port event', data);
 
   const [port] = event.ports;
   if (!port) {
@@ -192,7 +192,6 @@ ipcRenderer.on('otel-collector:port', (event, data: { windowId: string; sourceUr
 
   // Set up message handler to route to subscribers
   port.onmessage = (e: MessageEvent) => {
-    console.log(`[preload-dev-workspace] OTEL port message for ${key}:`, e.data?.type || e.data);
     const subscribers = otelMessageSubscribers.get(key);
     if (subscribers && subscribers.size > 0) {
       subscribers.forEach((cb) => cb(e.data));
@@ -225,14 +224,16 @@ try {
       callback: (data: string) => void,
     ): (() => void) => {
       // Initialize subscriber set for this session if needed
-      if (!terminalSubscribers.has(sessionId)) {
-        terminalSubscribers.set(sessionId, new Set());
+      let subscribers = terminalSubscribers.get(sessionId);
+      if (!subscribers) {
+        subscribers = new Set();
+        terminalSubscribers.set(sessionId, subscribers);
       }
 
       // Add the callback to subscribers
-      terminalSubscribers.get(sessionId)!.add(callback);
+      subscribers.add(callback);
 
-      console.log(
+      console.info(
         `[preload-dev-workspace] Subscribed to terminal data for session ${sessionId}`,
       );
 
@@ -241,7 +242,7 @@ try {
         const subscribers = terminalSubscribers.get(sessionId);
         if (subscribers) {
           subscribers.delete(callback);
-          console.log(
+          console.info(
             `[preload-dev-workspace] Unsubscribed from terminal data for session ${sessionId}`,
           );
 
@@ -258,13 +259,13 @@ try {
       callback: (data: { sessionId: string; newOwnerWindowId: number }) => void,
     ): (() => void) => {
       ownershipLostSubscribers.add(callback);
-      console.log(
+      console.info(
         '[preload-dev-workspace] Subscribed to ownership lost events',
       );
 
       return () => {
         ownershipLostSubscribers.delete(callback);
-        console.log(
+        console.info(
           '[preload-dev-workspace] Unsubscribed from ownership lost events',
         );
       };
@@ -302,25 +303,27 @@ try {
     onOtelMessage: (
       windowId: string,
       sourceUrl: string,
-      callback: (data: any) => void,
+      callback: (data: unknown) => void,
     ): (() => void) => {
       const key = `${windowId}:${sourceUrl}`;
-      console.log(`[preload-dev-workspace] 📝 Subscribing to OTEL messages for ${key}`);
+      console.info(`[preload-dev-workspace] 📝 Subscribing to OTEL messages for ${key}`);
 
       // Initialize subscriber set for this key if needed
-      if (!otelMessageSubscribers.has(key)) {
-        otelMessageSubscribers.set(key, new Set());
+      let subscribers = otelMessageSubscribers.get(key);
+      if (!subscribers) {
+        subscribers = new Set();
+        otelMessageSubscribers.set(key, subscribers);
       }
 
       // Add the callback to subscribers
-      otelMessageSubscribers.get(key)!.add(callback);
+      subscribers.add(callback);
 
       // Return unsubscribe function
       return () => {
         const subscribers = otelMessageSubscribers.get(key);
         if (subscribers) {
           subscribers.delete(callback);
-          console.log(`[preload-dev-workspace] 🗑️ Unsubscribed from OTEL messages for ${key}`);
+          console.info(`[preload-dev-workspace] 🗑️ Unsubscribed from OTEL messages for ${key}`);
 
           // Clean up empty subscriber sets
           if (subscribers.size === 0) {
@@ -331,13 +334,13 @@ try {
     },
 
     // Send message to OTEL port
-    sendOtelMessage: (windowId: string, sourceUrl: string, data: any): boolean => {
+    sendOtelMessage: (windowId: string, sourceUrl: string, data: unknown): boolean => {
       const key = `${windowId}:${sourceUrl}`;
       const port = otelPorts.get(key);
       if (port) {
         try {
           port.postMessage(data);
-          console.log(`[preload-dev-workspace] 📤 Sent message to OTEL port ${key}`);
+          console.info(`[preload-dev-workspace] 📤 Sent message to OTEL port ${key}`);
           return true;
         } catch (err) {
           console.error(`[preload-dev-workspace] Error sending to OTEL port ${key}:`, err);
@@ -366,7 +369,7 @@ try {
         }
         otelPorts.delete(key);
         otelMessageSubscribers.delete(key);
-        console.log(`[preload-dev-workspace] 🗑️ Removed OTEL port ${key}`);
+        console.info(`[preload-dev-workspace] 🗑️ Removed OTEL port ${key}`);
       }
     },
   });

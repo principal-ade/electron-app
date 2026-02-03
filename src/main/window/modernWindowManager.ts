@@ -9,6 +9,7 @@ import {
   app,
   shell,
   ipcMain,
+  screen,
 } from 'electron';
 import path from 'path';
 import log from 'electron-log';
@@ -329,9 +330,16 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
       titleBarOptions.frame = false;
     }
 
+    // Get primary display dimensions for maximized-like size
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width: screenWidth, height: screenHeight } =
+      primaryDisplay.workAreaSize;
+
     return {
-      width: 1024,
-      height: 768,
+      width: screenWidth,
+      height: screenHeight,
+      x: primaryDisplay.workArea.x,
+      y: primaryDisplay.workArea.y,
       minWidth: 800,
       minHeight: 600,
       icon: iconPath,
@@ -548,12 +556,12 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
     this.window.once('ready-to-show', () => {
       this.window.show();
 
-      // Maximize if configured
-      if (this.features.maximizeOnShow) {
-        if (!process.env.START_MINIMIZED) {
-          this.window.maximize();
-        }
-      }
+      // Skip maximize - window already starts at full size
+      // if (this.features.maximizeOnShow) {
+      //   if (!process.env.START_MINIMIZED) {
+      //     this.window.maximize();
+      //   }
+      // }
     });
 
     // Setup titlebar IPC handlers for this window

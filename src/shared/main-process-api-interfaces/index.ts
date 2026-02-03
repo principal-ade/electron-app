@@ -1,4 +1,3 @@
-import type { A24zAPI } from './A24zAPI';
 import type { CollectionsAPI } from './CollectionsAPI';
 import type { ActRunnerAPI } from './ActRunnerAPI';
 import type { ActWorkflowAPI } from './ActWorkflowAPI';
@@ -44,6 +43,7 @@ import type { LocalhostDetectionAPI } from './LocalhostDetectionAPI';
 import type { GitHubArtifactAPI } from './GitHubArtifactAPI';
 import type { RecentReposAPI } from './RecentReposAPI';
 import type { SkillLockAPI } from './SkillLockAPI';
+import type { OtelCollectorAPI } from './OtelCollectorAPI';
 
 // Re-export for convenience
 export type {
@@ -64,7 +64,6 @@ export type {
 export interface MainProcessAPI {
   actRunner: ActRunnerAPI;
   actWorkflow: ActWorkflowAPI;
-  a24z: A24zAPI;
   collections: CollectionsAPI;
   agentConfig: AgentConfigAPI;
   alexandria: AlexandriaAPI;
@@ -82,6 +81,7 @@ export interface MainProcessAPI {
   github: GitHubAPI;
   store: StoreAPI;
   repositoryMonitoring: RepositoryMonitoringAPI;
+  otelCollector: OtelCollectorAPI;
   secrets: SecretsAPI;
   links: LinksAPI;
   shell: ShellAPI;

@@ -32,7 +32,6 @@ import { shellAPI } from './main-process-api-implementations/shellApi';
 import { systemAPI } from './main-process-api-implementations/systemApi';
 import { userPreferencesAPI } from './main-process-api-implementations/userPreferencesApi';
 import { windowManagerAPI } from './main-process-api-implementations/windowManagerApi';
-import { a24zAPI } from './main-process-api-implementations/a24zApi';
 import { repositoryMonitoringAPI } from './main-process-api-implementations/repositoryMonitoringApi';
 import { otelCollectorApi } from './main-process-api-implementations/otelCollectorApi';
 import { secretsAPI } from './main-process-api-implementations/secretsApi';
@@ -120,7 +119,6 @@ const mainProcessExposure: MainProcessAPI = {
   apiProxy: apiProxyApi,
   windowManager: windowManagerAPI,
   orbit: orbitAPI,
-  a24z: a24zAPI,
   packageManager: packageManagerApi,
   typeExtraction: typeExtractionApi,
   typeSchema: typeSchemaApi,
@@ -214,8 +212,8 @@ try {
       ipcRenderer.send('window-switcher:cycle', direction),
 
     // Quick Open API
-    onQuickOpenItems: (callback: (event: any, items: any[]) => void) => {
-      const listener = (event: Electron.IpcRendererEvent, items: any[]) =>
+    onQuickOpenItems: (callback: (event: Electron.IpcRendererEvent, items: unknown[]) => void) => {
+      const listener = (event: Electron.IpcRendererEvent, items: unknown[]) =>
         callback(event, items);
       ipcRenderer.on('quick-open:items', listener);
       return () => {
@@ -223,7 +221,7 @@ try {
       };
     },
     requestQuickOpenItems: () => ipcRenderer.send('quick-open:request-items'),
-    selectQuickOpenItem: (item: any) =>
+    selectQuickOpenItem: (item: unknown) =>
       ipcRenderer.send('quick-open:select', item),
     closeQuickOpen: () => ipcRenderer.send('quick-open:close'),
   });
@@ -313,7 +311,7 @@ ipcRenderer.on('terminal:port', (event, sessionId: string) => {
 ipcRenderer.on(
   'terminal:ownershipLost',
   (_event, data: { sessionId: string; newOwnerWindowId: number }) => {
-    console.log(
+    console.info(
       `[preload] Ownership lost for session ${data.sessionId}, new owner: ${data.newOwnerWindowId}`,
     );
     ownershipLostSubscribers.forEach((cb) => cb(data));
@@ -341,14 +339,16 @@ try {
       callback: (data: string) => void,
     ): (() => void) => {
       // Initialize subscriber set for this session if needed
-      if (!terminalSubscribers.has(sessionId)) {
-        terminalSubscribers.set(sessionId, new Set());
+      let subscribers = terminalSubscribers.get(sessionId);
+      if (!subscribers) {
+        subscribers = new Set();
+        terminalSubscribers.set(sessionId, subscribers);
       }
 
       // Add the callback to subscribers
-      terminalSubscribers.get(sessionId)!.add(callback);
+      subscribers.add(callback);
 
-      console.log(
+      console.info(
         `[preload] Subscribed to terminal data for session ${sessionId}`,
       );
 
@@ -357,7 +357,7 @@ try {
         const subscribers = terminalSubscribers.get(sessionId);
         if (subscribers) {
           subscribers.delete(callback);
-          console.log(
+          console.info(
             `[preload] Unsubscribed from terminal data for session ${sessionId}`,
           );
 
@@ -374,11 +374,11 @@ try {
       callback: (data: { sessionId: string; newOwnerWindowId: number }) => void,
     ): (() => void) => {
       ownershipLostSubscribers.add(callback);
-      console.log('[preload] Subscribed to ownership lost events');
+      console.info('[preload] Subscribed to ownership lost events');
 
       return () => {
         ownershipLostSubscribers.delete(callback);
-        console.log('[preload] Unsubscribed from ownership lost events');
+        console.info('[preload] Unsubscribed from ownership lost events');
       };
     },
 

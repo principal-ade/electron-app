@@ -87,10 +87,12 @@ function registerPort(
   repository: string,
   port: MessagePortLike,
 ): void {
-  if (!registeredPorts.has(repository)) {
-    registeredPorts.set(repository, new Map());
+  let repoPorts = registeredPorts.get(repository);
+  if (!repoPorts) {
+    repoPorts = new Map();
+    registeredPorts.set(repository, repoPorts);
   }
-  registeredPorts.get(repository)!.set(windowId, port);
+  repoPorts.set(windowId, port);
 
   // Start the port to enable message receiving (if needed later)
   port.start();
@@ -109,7 +111,7 @@ function unregisterPort(windowId: number, repository: string): void {
   if (port) {
     try {
       port.close();
-    } catch (e) {
+    } catch (_e) {
       // Port may already be closed
     }
     repoPorts.delete(windowId);

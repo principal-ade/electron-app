@@ -181,6 +181,9 @@ export function registerDevWorkspaceWindowHandlers(): void {
   ipcMain.handle(
     WindowEvent.OPEN_DEV_WORKSPACE,
     async (_event, options?: DevWorkspaceOptions) => {
+      if (!options) {
+        throw new Error('DevWorkspace options are required');
+      }
       return openDevWorkspaceWindow(options);
     },
   );

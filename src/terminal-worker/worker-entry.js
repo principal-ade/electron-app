@@ -25,7 +25,6 @@ let pty = null;
 function loadPty() {
   try {
     // Use eval to prevent webpack from bundling node-pty
-    // eslint-disable-next-line no-eval
     const nodePty = eval('require')('node-pty');
     console.info('[TerminalWorker] node-pty loaded successfully');
     return nodePty;

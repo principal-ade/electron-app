@@ -2,6 +2,8 @@
  * Message types for communication between main process and PTY worker
  */
 
+import type { MessagePort } from 'worker_threads';
+
 // Messages sent from main process to worker
 export type WorkerControlMessage =
   | {

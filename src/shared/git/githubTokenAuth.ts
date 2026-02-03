@@ -75,7 +75,7 @@ export async function createGitHubTokenAuthEnvForUrl(
     try {
       // Use 'which node' to find the actual Node.js binary
       nodeExecutable = execSync('which node', { encoding: 'utf-8' }).trim();
-    } catch (err) {
+    } catch (_err) {
       // Fallback to 'node' in PATH if 'which' fails
       nodeExecutable = 'node';
     }

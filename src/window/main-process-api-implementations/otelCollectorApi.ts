@@ -3,40 +3,18 @@
  */
 
 import { ipcRenderer } from 'electron';
-import type { ServerStats } from '@principal-ai/otel-collector-server';
-
-export interface OtelCollectorStatus {
-  isRunning: boolean;
-  stats: ServerStats | null;
-  error?: string;
-}
-
-export interface OtelCollectorResponse {
-  success: boolean;
-  error?: string;
-}
-
-export interface RegisterPortResponse {
-  success: boolean;
-  error?: string;
-}
-
-export interface StoredTrace {
-  timestamp: number;
-  traceId: string;
-  data: any;
-}
-
-export interface GetTracesResponse {
-  success: boolean;
-  traces: StoredTrace[];
-  error?: string;
-}
+import type {
+  OtelCollectorAPI,
+  OtelCollectorResponse,
+  OtelCollectorStatus,
+  RegisterPortResponse,
+  GetTracesResponse,
+} from '../../shared/main-process-api-interfaces/OtelCollectorAPI';
 
 // NOTE: MessagePort handling is done in preload-dev-workspace.ts
 // Ports are kept in preload and messages are routed via onOtelMessage/sendOtelMessage helpers
 
-export const otelCollectorApi = {
+export const otelCollectorApi: OtelCollectorAPI = {
   /**
    * Start the OTEL collector
    */
@@ -64,12 +42,10 @@ export const otelCollectorApi = {
    */
   async registerPort(windowId: string, sourceUrl: string): Promise<RegisterPortResponse> {
     const key = `${windowId}:${sourceUrl}`;
-    console.log(`[otelCollectorApi] 🔄 Registering port for ${key}`);
 
     try {
       // Trigger the IPC call to register the port (main will send it via postMessage to preload)
       const response = await ipcRenderer.invoke('otel-collector:registerPort', windowId, sourceUrl);
-      console.log(`[otelCollectorApi] 📥 IPC response for ${key}:`, response);
 
       return response;
     } catch (error) {

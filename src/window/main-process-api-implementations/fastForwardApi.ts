@@ -8,7 +8,6 @@ import {
   GetPendingPullsResponse,
   GetPullHistoryResponse,
   GetWebhookNotificationsResponse,
-  PullNowResponse,
   DismissResponse,
 } from '../../shared/main-process-api-interfaces/FastForwardAPI';
 

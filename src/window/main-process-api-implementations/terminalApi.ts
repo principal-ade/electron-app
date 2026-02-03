@@ -12,8 +12,11 @@ import type {
 // Terminal MessagePort Management
 // ============================================
 
+// Type alias for MessagePort to avoid TypeScript type/value confusion
+type Port = InstanceType<typeof MessagePort>;
+
 // Store active MessagePorts by session ID
-const sessionPorts = new Map<string, MessagePort>();
+const sessionPorts = new Map<string, Port>();
 
 // Store data subscribers by session ID (allows subscribing before port arrives)
 const terminalSubscribers = new Map<string, Set<(data: string) => void>>();
@@ -56,7 +59,7 @@ ipcRenderer.on(
           subscribers.forEach((cb) => cb(e.data.data));
         }
       } else if (e.data?.type === 'EXIT') {
-        console.log(`[TerminalAPI] Terminal session ${data.sessionId} exited`);
+        console.info(`[TerminalAPI] Terminal session ${data.sessionId} exited`);
         // Clean up on exit
         sessionPorts.delete(data.sessionId);
         terminalSubscribers.delete(data.sessionId);
@@ -80,7 +83,7 @@ ipcRenderer.on(
     _event: Electron.IpcRendererEvent,
     data: { sessionId: string; newOwnerWindowId: number },
   ) => {
-    console.log(
+    console.info(
       `[TerminalAPI] Ownership lost for session ${data.sessionId}, new owner: ${data.newOwnerWindowId}`,
     );
     ownershipLostSubscribers.forEach((cb) => cb(data));
@@ -147,12 +150,14 @@ export const terminalAPI: TerminalAPI = {
   // Uses subscriber pattern - can subscribe before port arrives
   onDataForSession: (sessionId: string, callback: (data: string) => void) => {
     // Initialize subscriber set for this session if needed
-    if (!terminalSubscribers.has(sessionId)) {
-      terminalSubscribers.set(sessionId, new Set());
+    let subscribers = terminalSubscribers.get(sessionId);
+    if (!subscribers) {
+      subscribers = new Set();
+      terminalSubscribers.set(sessionId, subscribers);
     }
 
     // Add the callback to subscribers
-    terminalSubscribers.get(sessionId)!.add(callback);
+    subscribers.add(callback);
 
     const hasPort = sessionPorts.has(sessionId);
     console.info(
@@ -227,7 +232,7 @@ export const terminalAPI: TerminalAPI = {
   onPortReady: (
     callback: (
       data: { sessionId: string; writable: boolean; ownershipToken?: string },
-      port: MessagePort,
+      port: Port,
     ) => void,
   ) => {
     const listener = (

@@ -8,7 +8,7 @@
  */
 
 import { LibraryLoader } from '@principal-ai/principal-view-core';
-import type { ComponentLibrary } from '@principal-ai/principal-view-core';
+import type { ComponentLibrary, ResourceAttributes } from '@principal-ai/principal-view-core';
 import { createRendererFileSystemAdapter } from './RendererFileSystemAdapter';
 
 /**
@@ -16,7 +16,7 @@ import { createRendererFileSystemAdapter } from './RendererFileSystemAdapter';
  */
 export interface LibraryResourcesResult {
   success: boolean;
-  resources?: Record<string, string>;
+  resources?: Record<string, ResourceAttributes>;
   error?: string;
   path?: string;
 }

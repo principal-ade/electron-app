@@ -1,7 +1,6 @@
 import { ipcRenderer } from 'electron';
 import {
   RecentReposAPIEvent,
-  type RecentRepo,
   type RecentReposAPI,
 } from '../../shared/main-process-api-interfaces/RecentReposAPI';
 

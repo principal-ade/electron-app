@@ -372,7 +372,7 @@ export class OrbitWebSocketManager {
     // Event received - WebRTC signaling messages
     client.on('event_received', (data: { event: Event }) => {
       const event = data.event;
-      const eventType = event.type;
+      const eventType = event.type as string;
 
       // Handle WebRTC signaling events
       if (
@@ -380,7 +380,7 @@ export class OrbitWebSocketManager {
         eventType === 'webrtc:answer' ||
         eventType === 'webrtc:ice_candidate'
       ) {
-        const eventData = event.data as { targetPeerId?: string };
+        const eventData = event.data as { targetPeerId?: string; userId?: string };
         const targetPeerId = eventData?.targetPeerId;
 
         // Only process signals meant for us
@@ -389,7 +389,7 @@ export class OrbitWebSocketManager {
         }
 
         const signal: OrbitSignal = {
-          from: event.userId || 'unknown',
+          from: eventData.userId || 'unknown',
           to: connectionInfo.peerId,
           type: eventType.replace('webrtc:', ''), // 'offer', 'answer', 'ice_candidate'
           data: event.data,

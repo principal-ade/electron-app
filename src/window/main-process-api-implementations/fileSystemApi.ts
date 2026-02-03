@@ -2,6 +2,8 @@ import { ipcRenderer, IpcRendererEvent } from 'electron';
 import {
   FileSystemAPI,
   FileSystemAPIEvent,
+  SkillsRepoConfig,
+  GlobalSkillDirectory,
 } from '../../shared/main-process-api-interfaces/FileSystemAPI';
 
 export const fileSystemAPI: FileSystemAPI = {
@@ -190,7 +192,7 @@ export const fileSystemAPI: FileSystemAPI = {
   getSyncConfig: async () => {
     return ipcRenderer.invoke(FileSystemAPIEvent.GET_SYNC_CONFIG);
   },
-  updateSyncConfig: async (updates: any) => {
+  updateSyncConfig: async (updates: Partial<SkillsRepoConfig>) => {
     return ipcRenderer.invoke(FileSystemAPIEvent.UPDATE_SYNC_CONFIG, updates);
   },
   enableSkillSync: async (options: { skillPath: string; syncSource: 'git-global' | 'github' }) => {
@@ -225,10 +227,10 @@ export const fileSystemAPI: FileSystemAPI = {
   getSkillDirectories: async () => {
     return ipcRenderer.invoke(FileSystemAPIEvent.GET_SKILL_DIRECTORIES);
   },
-  addSkillDirectory: async (directory: any) => {
+  addSkillDirectory: async (directory: Omit<GlobalSkillDirectory, 'id' | 'localClonePath'>) => {
     return ipcRenderer.invoke(FileSystemAPIEvent.ADD_SKILL_DIRECTORY, directory);
   },
-  updateSkillDirectory: async (options: { id: string; updates: any }) => {
+  updateSkillDirectory: async (options: { id: string; updates: Partial<GlobalSkillDirectory> }) => {
     return ipcRenderer.invoke(FileSystemAPIEvent.UPDATE_SKILL_DIRECTORY, options);
   },
   removeSkillDirectory: async (id: string) => {
@@ -256,8 +258,20 @@ export const fileSystemAPI: FileSystemAPI = {
   clearPendingChanges: async (directoryId: string) => {
     return ipcRenderer.invoke(FileSystemAPIEvent.CLEAR_PENDING_CHANGES, directoryId);
   },
-  onPendingChangesUpdated: (callback: (event: any) => void): (() => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, payload: any) => callback(payload);
+  onPendingChangesUpdated: (callback: (event: {
+    directoryId: string;
+    changes: {
+      changes: Array<{ path: string; type: string }>;
+      lastDetected: Date;
+    };
+  }) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: {
+      directoryId: string;
+      changes: {
+        changes: Array<{ path: string; type: string }>;
+        lastDetected: Date;
+      };
+    }) => callback(payload);
     ipcRenderer.on(FileSystemAPIEvent.PENDING_CHANGES_UPDATED, handler);
     return () => {
       ipcRenderer.removeListener(FileSystemAPIEvent.PENDING_CHANGES_UPDATED, handler);

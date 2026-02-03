@@ -243,7 +243,7 @@ export default class MenuBuilder {
     ];
   }
 
-  buildDefaultTemplate() {
+  buildDefaultTemplate(): MenuItemConstructorOptions[] {
     const templateDefault = [
       {
         label: '&File',
@@ -305,7 +305,7 @@ export default class MenuBuilder {
                     this.mainWindow.webContents.toggleDevTools();
                   },
                 },
-                { type: 'separator' },
+                { type: 'separator' as const },
                 {
                   label: 'Remote Terminal Viewer',
                   click: async () => {

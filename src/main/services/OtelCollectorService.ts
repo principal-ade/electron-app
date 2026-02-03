@@ -152,12 +152,13 @@ export class OtelCollectorService {
   /**
    * Register a MessagePort for a window
    */
-  registerPort(windowId: string, sourceUrl: string, port: MessagePort): void {
+  registerPort(windowId: string, sourceUrl: string, port: MessagePortMain): void {
     if (!this.server) {
       throw new Error('OTEL Collector not started');
     }
 
-    this.server.registerPort(windowId, sourceUrl, port);
+    // Cast to any since MessagePortMain is API-compatible with worker_threads MessagePort
+    this.server.registerPort(windowId, sourceUrl, port as unknown as import('worker_threads').MessagePort);
     console.log(`[OtelCollectorService] Registered port for window ${windowId}, source: ${sourceUrl}`);
   }
 

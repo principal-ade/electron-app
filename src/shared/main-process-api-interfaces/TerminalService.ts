@@ -1,3 +1,6 @@
+// Type alias for MessagePort to avoid TypeScript type/value confusion
+type Port = InstanceType<typeof MessagePort>;
+
 export enum TerminalAPIEvents {
   CREATE = 'terminal:create',
   GET_OR_CREATE = 'terminal:getOrCreate',
@@ -99,7 +102,7 @@ export interface TerminalAPI {
     callback: (data: { sessionId: string; newOwnerWindowId: number }) => void,
   ) => () => void;
   onPortReady: (
-    callback: (data: PortReadyData, port: MessagePort) => void,
+    callback: (data: PortReadyData, port: Port) => void,
   ) => () => void;
   /**
    * Request a MessagePort for receiving terminal data directly.

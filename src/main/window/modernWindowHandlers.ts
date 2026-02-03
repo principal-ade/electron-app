@@ -519,13 +519,14 @@ export function registerModernWindowHandlers(): void {
 
             // Filter repos with valid paths
             const reposWithPaths = repositories.filter(
-              (repo): repo is typeof repo & { path: string } => !!repo.path,
+              (repo: AlexandriaEntry): repo is AlexandriaEntry & { path: string } =>
+                !!repo.path,
             );
 
             // Acquire watches in parallel (acquireWatch auto-registers if needed)
             const results = await Promise.allSettled(
-              reposWithPaths.map(async (repo) => {
-                const repoPath = repo.path as string;
+              reposWithPaths.map(async (repo: { path: string }) => {
+                const repoPath = repo.path;
                 await monitoringManager.acquireWatch(repoPath, watchReferenceId);
                 return repoPath;
               }),

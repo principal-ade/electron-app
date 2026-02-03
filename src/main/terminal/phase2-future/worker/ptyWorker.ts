@@ -7,7 +7,14 @@
  */
 
 import * as os from 'os';
-import { WorkerControlMessage, WorkerEventMessage } from './types';
+import { parentPort, MessagePort } from 'worker_threads';
+import {
+  WorkerControlMessage,
+  WorkerEventMessage,
+  WorkerSessionInfo,
+  PtyDataMessage,
+  RendererPortMessage,
+} from './types';
 
 // Import node-pty dynamically
 let pty: any;
@@ -143,9 +150,12 @@ function createSession(
       });
 
       // Clean up
+      const session = sessions.get(sessionId);
+      if (session) {
+        session.port.close();
+      }
       sessions.delete(sessionId);
       outputBuffers.delete(sessionId);
-      session.port.close();
     });
 
     // Listen for messages from renderer via MessagePort

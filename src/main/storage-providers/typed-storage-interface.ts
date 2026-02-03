@@ -207,30 +207,6 @@ export class NamespaceDataValidator {
     return data && typeof data === 'object';
   }
 
-  static isAIConfiguration(
-    data: any,
-  ): data is NamespaceDataTypes[StaticNamespaces.AI_CONFIGURATION] {
-    return (
-      data &&
-      typeof data === 'object' &&
-      'defaultProvider' in data &&
-      'providers' in data
-    );
-  }
-
-  static isLLMModels(
-    data: any,
-  ): data is NamespaceDataTypes[StaticNamespaces.LLM_MODELS] {
-    return (
-      data &&
-      typeof data === 'object' &&
-      'providers' in data &&
-      'customModels' in data &&
-      Array.isArray(data.customModels) &&
-      'lastUpdated' in data
-    );
-  }
-
   static isToolContainerState(
     data: any,
   ): data is NamespaceDataTypes[StaticNamespaces.DOCKER_CONTAINERS] {
@@ -281,10 +257,6 @@ export class NamespaceDataValidator {
     switch (namespace) {
       case StaticNamespaces.USER_PREFERENCES:
         return this.isUserPreferences(data);
-      case StaticNamespaces.AI_CONFIGURATION:
-        return this.isAIConfiguration(data);
-      case StaticNamespaces.LLM_MODELS:
-        return this.isLLMModels(data);
       case StaticNamespaces.DOCKER_CONTAINERS:
         return this.isToolContainerState(data);
       case StaticNamespaces.DOCKER_SESSIONS:

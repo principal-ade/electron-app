@@ -4,6 +4,18 @@
  * Configuration types and defaults for both main and renderer process telemetry.
  */
 
+/**
+ * Extended window interface for renderer process
+ */
+interface WindowWithOtel {
+  otelCollectorEndpoint?: string;
+}
+
+/**
+ * Declare window as potentially available in global scope
+ */
+declare const window: WindowWithOtel | undefined;
+
 export interface TelemetryConfig {
   enabled: boolean;
   collectorEndpoint: string;
@@ -33,8 +45,8 @@ export interface TelemetryConfig {
  */
 function getCollectorEndpoint(): string {
   // In renderer process, use the endpoint exposed by preload script
-  if (typeof window !== 'undefined' && (window as any).otelCollectorEndpoint) {
-    return (window as any).otelCollectorEndpoint;
+  if (typeof window !== 'undefined' && window?.otelCollectorEndpoint) {
+    return window.otelCollectorEndpoint;
   }
 
   // In main process, check for environment variable override

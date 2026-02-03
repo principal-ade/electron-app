@@ -125,7 +125,7 @@ class GitRepoCache {
         owner,
         repo,
       };
-    } catch (error) {
+    } catch (_error) {
       // Not a git repo or git not available
       return null;
     }

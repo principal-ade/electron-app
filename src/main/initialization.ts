@@ -50,7 +50,6 @@ import { OtelCollectorService } from './services/OtelCollectorService';
 import { JWTService } from './services/JWTService';
 import { registerGitHubIpcHandlers } from './version-control-providers/githubHandlers';
 import { UserPreferencesHandler } from './stores/userPreferencesHandler';
-import { A24zHandler } from './stores/a24zHandler';
 import { AppVersionManagerAPIEvent } from '../window/main-process-api-implementations/appVersionManagerApi';
 import { registerDockerHandlers } from './services/ipc/docker/dockerHandlers';
 import { registerOptimizedDockerHandlers } from './services/ipc/docker/optimizedDockerHandlers';
@@ -260,10 +259,6 @@ const registerAllIpcHandlers = async () => {
   // Register User Preferences handlers
   const userPreferencesHandler = new UserPreferencesHandler(typedStore);
   userPreferencesHandler.registerHandlers();
-
-  // Register A24z handlers
-  const a24zHandler = new A24zHandler();
-  a24zHandler.registerHandlers();
 
   // Initialize and register Extension Discovery handlers
   await extensionDiscoveryService.initialize();
