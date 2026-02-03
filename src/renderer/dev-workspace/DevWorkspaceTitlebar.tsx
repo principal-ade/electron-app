@@ -635,7 +635,7 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                   <select
                     value={traceSourceUrl || 'all'}
                     onChange={(e) => onTraceSourceUrlChange(e.target.value)}
-                    title="Select trace source URL for routing"
+                    title="Select service for trace routing"
                     style={{
                       // @ts-ignore - WebkitAppRegion is not in CSSProperties
                       WebkitAppRegion: 'no-drag',
@@ -650,8 +650,10 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                       outline: 'none',
                     }}
                   >
-                    <option value="all">Traces: all</option>
-                    <option value={repositoryPath || ''}>Traces: {repositoryPath ? repositoryPath.split('/').pop() : 'repo path'}</option>
+                    <option value="all">Traces: all services</option>
+                    {traceSourceUrl !== 'all' && (
+                      <option value={traceSourceUrl}>Traces: {traceSourceUrl}</option>
+                    )}
                   </select>
                 </div>
               )}

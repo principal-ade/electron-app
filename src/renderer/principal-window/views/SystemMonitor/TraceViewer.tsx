@@ -54,24 +54,20 @@ export const TraceViewer: React.FC<TraceViewerProps> = ({
     }
   }, [autoRefresh, refreshInterval]);
 
-  // Extract source URL from trace data
+  // Extract service name from trace data
   const extractSource = (trace: StoredTrace): string => {
     try {
       // OTLP format: resourceSpans[0].resource.attributes
       const attributes = trace.data?.resourceSpans?.[0]?.resource?.attributes;
       if (attributes) {
-        const sourceAttr = attributes.find((attr: any) => attr.key === 'dev.server.url');
-        if (sourceAttr?.value?.stringValue) {
-          return sourceAttr.value.stringValue;
-        }
         const serviceAttr = attributes.find((attr: any) => attr.key === 'service.name');
         if (serviceAttr?.value?.stringValue) {
           return serviceAttr.value.stringValue;
         }
       }
-      return 'Unknown Source';
+      return 'Unknown Service';
     } catch {
-      return 'Unknown Source';
+      return 'Unknown Service';
     }
   };
 

@@ -723,7 +723,10 @@ export const RepositoryPanelProvider: React.FC<
         windowId = `dev-workspace-${Date.now()}`;
         sourceUrl = traceSourceUrl || 'principal-ade';
 
-        console.info('[RepositoryPanelProvider] Registering telemetry port with sourceUrl:', sourceUrl);
+        console.info('[RepositoryPanelProvider] 🔌 Registering telemetry port');
+        console.info('[RepositoryPanelProvider] traceSourceUrl prop:', traceSourceUrl);
+        console.info('[RepositoryPanelProvider] Final sourceUrl:', sourceUrl);
+        console.info('[RepositoryPanelProvider] Window ID:', windowId);
 
         // Subscribe to OTEL messages (port is handled in preload)
         unsubscribe = (window as any).electron.onOtelMessage(

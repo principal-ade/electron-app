@@ -28,7 +28,7 @@ import { WindowService } from '../main-process-api/WindowService';
 import { gitSyncConnectionManager } from '../services/git-sync/GitSyncConnectionManager';
 import { APP_BRANDING } from '../../shared/config/appBranding';
 import { AlexandriaEventType } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
-import { getDevServerUrl } from '../utils/libraryResourcesLoader';
+import { getServiceName } from '../utils/libraryResourcesLoader';
 
 /**
  * Alexandria entry data passed from main process
@@ -226,29 +226,33 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   const [packages, setPackages] = useState<PackageLayer[]>([]);
   const [traceSourceUrl, setTraceSourceUrl] = useState<string>('all');
 
-  // Load trace source URL from library.yaml resources when repository changes
+  // Load service name from library.yaml resources when repository changes
   useEffect(() => {
     if (!repositoryPath) return;
 
     const loadTraceSourceUrl = async () => {
       try {
-        console.log('[DevWorkspaceApp] Loading trace source URL from library.yaml:', repositoryPath);
+        console.log('[DevWorkspaceApp] 🔍 Loading service name from library.yaml');
+        console.log('[DevWorkspaceApp] Repository path:', repositoryPath);
 
-        // Try to get dev.server.url from library.yaml
-        const devServerUrl = await getDevServerUrl(repositoryPath);
+        // Try to get service.name from library.yaml
+        const serviceName = await getServiceName(repositoryPath);
 
-        if (devServerUrl) {
-          console.log('[DevWorkspaceApp] Found dev.server.url in library.yaml:', devServerUrl);
-          setTraceSourceUrl(devServerUrl);
+        if (serviceName) {
+          console.log('[DevWorkspaceApp] ✅ Found service.name:', serviceName);
+          setTraceSourceUrl(serviceName);
+          console.log('[DevWorkspaceApp] 📝 Set traceSourceUrl to:', serviceName);
         } else {
-          console.log('[DevWorkspaceApp] No dev.server.url in library.yaml, defaulting to "all"');
+          console.log('[DevWorkspaceApp] ⚠️ No service.name in library.yaml, defaulting to "all"');
           // Fall back to "all" if not found in library.yaml
           setTraceSourceUrl('all');
+          console.log('[DevWorkspaceApp] 📝 Set traceSourceUrl to: all');
         }
       } catch (error) {
-        console.error('[DevWorkspaceApp] Failed to load trace source URL from library.yaml:', error);
+        console.error('[DevWorkspaceApp] ❌ Failed to load service name from library.yaml:', error);
         // Fall back to "all" on error
         setTraceSourceUrl('all');
+        console.log('[DevWorkspaceApp] 📝 Set traceSourceUrl to: all (due to error)');
       }
     };
 

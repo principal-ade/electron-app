@@ -38,16 +38,26 @@ export interface LibraryResourcesResult {
  */
 export async function loadLibraryResources(baseDir: string): Promise<LibraryResourcesResult> {
   try {
+    console.log('[libraryResourcesLoader] Loading library resources from:', baseDir);
+
     // Create and initialize the file system adapter
     const fsAdapter = await createRendererFileSystemAdapter();
+    console.log('[libraryResourcesLoader] Created file system adapter');
 
     // Create LibraryLoader with the adapter
     const loader = new LibraryLoader(fsAdapter);
 
     // Load the library from baseDir/.principal-views/
-    const loadResult = loader.load(baseDir);
+    const loadResult = await loader.load(baseDir);
+    console.log('[libraryResourcesLoader] LibraryLoader.load result:', {
+      success: loadResult.success,
+      hasLibrary: !!loadResult.library,
+      error: loadResult.error,
+      path: loadResult.path,
+    });
 
     if (!loadResult.success || !loadResult.library) {
+      console.warn('[libraryResourcesLoader] Failed to load library:', loadResult.error);
       return {
         success: false,
         error: loadResult.error || 'Failed to load library',
@@ -57,6 +67,7 @@ export async function loadLibraryResources(baseDir: string): Promise<LibraryReso
 
     // Extract resources from the library
     const resources = loadResult.library.resources || {};
+    console.log('[libraryResourcesLoader] Extracted resources:', resources);
 
     return {
       success: true,
@@ -64,6 +75,7 @@ export async function loadLibraryResources(baseDir: string): Promise<LibraryReso
       path: loadResult.path,
     };
   } catch (error) {
+    console.error('[libraryResourcesLoader] Exception while loading library:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : String(error),
@@ -72,31 +84,49 @@ export async function loadLibraryResources(baseDir: string): Promise<LibraryReso
 }
 
 /**
- * Get the dev.server.url resource from a library.yaml file.
+ * Get the service.name resource from a library.yaml file.
  * This is the primary attribute used for trace routing in dev tools.
  *
  * @param baseDir - The base directory to search for library.yaml
- * @returns Promise<string | null> - The dev.server.url value or null if not found
+ * @returns Promise<string | null> - The service.name value or null if not found
  *
  * @example
  * ```typescript
- * const devServerUrl = await getDevServerUrl('/Users/griever/Developer/web-ade/web-ade');
- * if (devServerUrl) {
- *   console.log('Register for sourceUrl:', devServerUrl);
+ * const serviceName = await getServiceName('/Users/griever/Developer/web-ade/web-ade');
+ * if (serviceName) {
+ *   console.log('Register for service:', serviceName);
  * }
  * ```
  */
-export async function getDevServerUrl(baseDir: string): Promise<string | null> {
+export async function getServiceName(baseDir: string): Promise<string | null> {
+  console.log('[libraryResourcesLoader] getServiceName called with baseDir:', baseDir);
   const result = await loadLibraryResources(baseDir);
+  console.log('[libraryResourcesLoader] loadLibraryResources result:', {
+    success: result.success,
+    hasResources: !!result.resources,
+    resources: result.resources,
+    error: result.error,
+    path: result.path,
+  });
   if (result.success && result.resources) {
-    return result.resources['dev.server.url'] || null;
+    const serviceName = result.resources['service.name'] || null;
+    console.log('[libraryResourcesLoader] Extracted service.name:', serviceName);
+    return serviceName;
   }
+  console.log('[libraryResourcesLoader] Failed to load service.name, returning null');
   return null;
 }
 
 /**
+ * @deprecated Use getServiceName() instead. This function will be removed in a future version.
+ */
+export async function getDevServerUrl(baseDir: string): Promise<string | null> {
+  return getServiceName(baseDir);
+}
+
+/**
  * Get all OTEL-related resources from a library.yaml file.
- * Includes service.name, service.version, dev.server.url, deployment.environment, etc.
+ * Includes service.name, service.version, deployment.environment, etc.
  *
  * @param baseDir - The base directory to search for library.yaml
  * @returns Promise<Record<string, string>> - All OTEL resources, or empty object if none found
@@ -106,7 +136,6 @@ export async function getDevServerUrl(baseDir: string): Promise<string | null> {
  * const resources = await getOtelResources('/Users/griever/Developer/web-ade/web-ade');
  * console.log('Service name:', resources['service.name']);
  * console.log('Service version:', resources['service.version']);
- * console.log('Dev server URL:', resources['dev.server.url']);
  * console.log('Environment:', resources['deployment.environment']);
  * ```
  */
