@@ -1116,7 +1116,7 @@ export const RepositoryPanelProvider: React.FC<
         matchesPath: (pattern: string, filePath: string): boolean => {
           return minimatch(filePath, pattern);
         },
-        // fileSystem adapter for panels that need full file system access (e.g., Kanban panel)
+        // fileSystem adapter for panels that need full file system access (e.g., Kanban panel, TraceListPanel)
         fileSystem: {
           exists: async (relativePath: string): Promise<boolean> => {
             try {
@@ -1141,6 +1141,34 @@ export const RepositoryPanelProvider: React.FC<
               ? relativePath
               : `${repositoryPath}/${relativePath}`;
             await FileSystemService.deleteFile(absolutePath);
+          },
+          // Path manipulation methods required by TraceListPanel
+          join: (...paths: string[]): string => {
+            return paths
+              .join('/')
+              .replace(/\/+/g, '/')
+              .replace(/\/$/, '') || '/';
+          },
+          dirname: (path: string): string => {
+            const lastSlash = path.lastIndexOf('/');
+            return lastSlash <= 0 ? '/' : path.slice(0, lastSlash);
+          },
+          basename: (path: string, ext?: string): string => {
+            const segments = path.split('/');
+            let base = segments[segments.length - 1] || '';
+            if (ext && base.endsWith(ext)) {
+              base = base.slice(0, -ext.length);
+            }
+            return base;
+          },
+          extname: (path: string): string => {
+            const segments = path.split('/');
+            const base = segments[segments.length - 1] || '';
+            const lastDot = base.lastIndexOf('.');
+            return lastDot > 0 ? base.slice(lastDot) : '';
+          },
+          normalize: (path: string): string => {
+            return path.replace(/\/+/g, '/').replace(/\/$/, '') || '/';
           },
         },
       };
