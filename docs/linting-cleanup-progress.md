@@ -37,7 +37,49 @@ npm run lint 2>&1 | grep -E "^/Users/griever/Developer/desktop-app/electron-app/
 npm run typecheck 2>&1 | grep "error TS" | grep "src/renderer/" | sed 's|.*src/renderer/||' | cut -d'/' -f1 | sort | uniq -c | sort -nr
 ```
 
-## Current Status (Updated - 2026-02-02 - After Main Directory Cleanup)
+## Current Status (Updated - 2026-02-03 - Type Safety Improvements)
+
+### Overall Issues
+
+* **ESLint**: 1007 total issues (484 errors, 523 warnings) ⬇️ **-86 from yesterday (-7.9%, was 1093)** ✅
+* **TypeScript**: 166 errors ⬆️ **+8 from yesterday (+5.1%, was 158)** ⚠️
+* **Console.log warnings**: 399 ⬆️ **+399 from yesterday (was 0)** 🚨 **REGRESSION**
+* **Any types in src/main**: 400 ⬇️ **-35 from baseline (-8.0%, was 435)** ✅
+
+### Recent Changes (2026-02-03)
+
+* ✅ **TYPE SAFETY CLEANUP** - Eliminated 35 `any` types in src/main directory
+* ✅ **MAIN DIRECTORY STILL TYPESCRIPT-CLEAN** - 0 TypeScript errors maintained
+* 🎉 **7 FILES COMPLETELY CLEANED** - All `any` types removed from critical files
+* ESLint improved by 86 issues (-7.9%) ✅
+* Console.log regression: 399 warnings added (needs investigation) 🚨
+* TypeScript errors increased slightly (+8 in renderer, main still clean)
+
+**Files Cleaned Today (35 any types eliminated):**
+1. `services/AuthService.ts` - 11 any → 0 ✅
+2. `services/OAuthServerClient.ts` - 6 any → 0 ✅
+3. `file-system/shellHandlers.ts` - 8 any → 0 ✅
+4. `window/types.ts` - 3 any → 0 ✅
+5. `electron-cli-bridge/CLIBridge.ts` - 3 any → 0 ✅
+6. `file-system/fileSystemHandlers.ts` - 2 any → 0 ✅
+7. `services/ExtensionDiscoveryService.ts` - 2 any → 0 ✅
+
+**Key Type Safety Improvements:**
+* Error handling: Replaced `catch (error: any)` → `catch (error: unknown)` with type guards
+* Global types: Added proper type declarations for global function overrides
+* Circular dependencies: Fixed with `import type` for window adapters
+* IPC messages: Properly typed `WorkerResponse` messages
+* Shell commands: Specialized `ExecException` handling for child_process errors
+* Index signatures: Replaced `[key: string]: any` with explicit properties
+
+**Remaining Work:**
+* 400 `any` types remain in src/main (primarily in utility files)
+* 399 console.log statements need investigation/cleanup
+* 166 TypeScript errors in src/renderer
+
+---
+
+## Previous Status (2026-02-02 - After Main Directory Cleanup)
 
 ### Overall Issues
 
@@ -65,31 +107,33 @@ npm run typecheck 2>&1 | grep "error TS" | grep "src/renderer/" | sed 's|.*src/r
 
 #### ESLint Issues
 
-| Directory                    | Issues | % of Total | Change            |
-| ---------------------------- | ------ | ---------- | ----------------- |
-| renderer                     | 98     | 63.6%      | -                 |
-| main                         | 56     | 36.4%      | -                 |
-| window                       | 0      | ✅ Clean    | ⬇️ **-8** ✅      |
-| terminal-worker              | 0      | ✅ Clean    | ⬇️ **-2** ✅      |
-| event-processing-server      | 0      | ✅ Clean    | ⬇️ **-2** ✅      |
-| telemetry                    | 0      | ✅ Clean    | ⬇️ **-1** ✅      |
-| shared                       | 0      | ✅ Clean    | ⬇️ **-1** ✅      |
-| repository-monitoring-server | 0      | ✅ Clean    | -                 |
-| titlebar                     | 0      | ✅ Clean    | -                 |
+| Directory                    | Issues | % of Total | Change from 2026-02-02 |
+| ---------------------------- | ------ | ---------- | ----------------------- |
+| renderer                     | 88     | 61.5%      | ⬇️ **-10** ✅            |
+| main                         | 56     | 38.5%      | Same                    |
+| window                       | 0      | ✅ Clean    | -                       |
+| terminal-worker              | 0      | ✅ Clean    | -                       |
+| event-processing-server      | 0      | ✅ Clean    | -                       |
+| telemetry                    | 0      | ✅ Clean    | -                       |
+| shared                       | 0      | ✅ Clean    | -                       |
+| repository-monitoring-server | 0      | ✅ Clean    | -                       |
+| titlebar                     | 0      | ✅ Clean    | -                       |
+
+**Note:** Main directory now has 400 `any` types (down from 435 baseline, -35 today)
 
 #### TypeScript Errors
 
-| Directory                    | Errors   | % of Total | Change             |
-| ---------------------------- | -------- | ---------- | ------------------ |
-| renderer                     | 158      | 100%       | ⬇️ **-1**          |
-| main                         | 0        | ✅ Clean    | ⬇️ **-31** 🎉      |
-| shared                       | 0        | ✅ Clean    | ⬇️ **-10** ✅      |
-| telemetry                    | 0        | ✅ Clean    | ⬇️ **-3** ✅       |
-| window                       | 0        | ✅ Clean    | ⬇️ **-3** ✅       |
-| repository-monitoring-server | 0        | ✅ Clean    | -                  |
-| titlebar                     | 0        | ✅ Clean    | -                  |
-| event-processing-server      | 0        | ✅ Clean    | -                  |
-| pure-core                    | 0        | ✅ Clean    | -                  |
+| Directory                    | Errors   | % of Total | Change from 2026-02-02 |
+| ---------------------------- | -------- | ---------- | ----------------------- |
+| renderer                     | 166      | 100%       | ⬆️ **+8**               |
+| main                         | 0        | ✅ Clean    | **Still clean** 🎉       |
+| shared                       | 0        | ✅ Clean    | -                       |
+| telemetry                    | 0        | ✅ Clean    | -                       |
+| window                       | 0        | ✅ Clean    | -                       |
+| repository-monitoring-server | 0        | ✅ Clean    | -                       |
+| titlebar                     | 0        | ✅ Clean    | -                       |
+| event-processing-server      | 0        | ✅ Clean    | -                       |
+| pure-core                    | 0        | ✅ Clean    | -                       |
 
 ### Renderer Subdirectories
 
@@ -203,6 +247,159 @@ npm run typecheck 2>&1 | grep "error TS" | grep "src/renderer/" | sed 's|.*src/r
 ⚠️ **Remaining Problem Areas**:
 
 * **renderer** - 158 TypeScript errors (ESLint counts are from the full build, TypeScript is the priority)
+
+## Type Safety Cleanup Patterns (Added 2026-02-03)
+
+### Pattern 1: Error Handling with Unknown
+
+**Standard Error Pattern:**
+```typescript
+// Before:
+catch (error: any) {
+  console.error('Error:', error);
+  return { success: false, error: error.message };
+}
+
+// After:
+catch (error: unknown) {
+  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+  console.error('Error:', error);
+  return { success: false, error: errorMessage };
+}
+```
+
+**Shell Command Error Pattern (child_process):**
+```typescript
+import { ExecException } from 'child_process';
+
+catch (error: unknown) {
+  // Handle ExecException from child_process
+  if (error && typeof error === 'object' && 'code' in error) {
+    const execError = error as ExecException & { stdout?: string; stderr?: string };
+    return {
+      success: false,
+      error: execError.message,
+      stdout: execError.stdout || '',
+      stderr: execError.stderr || '',
+      code: execError.code,
+    };
+  }
+
+  // Handle other errors
+  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+  return { success: false, error: errorMessage };
+}
+```
+
+### Pattern 2: Breaking Circular Dependencies with import type
+
+**Problem:** Using regular imports can create runtime circular dependencies.
+
+**Solution:**
+```typescript
+// In types.ts - Use type-only imports
+import type { ElectronFileSystemAdapter } from '../file-system/fileSystemHandlers';
+import type { ElectronWindowManagerAdapter } from './windowManagerHandlers';
+import type { GitHubAdapter } from '../version-control-providers/githubHandlers';
+
+export interface IModernApplicationWindow {
+  window: BrowserWindow;
+  fileSystemAdapter?: ElectronFileSystemAdapter;  // Now properly typed!
+  windowManagerAdapter?: ElectronWindowManagerAdapter;
+  githubAdapter?: GitHubAdapter;
+}
+```
+
+**Why this works:** `import type` creates NO runtime dependency - it's erased at compile time. Both sides use type-only imports, so no circular dependency exists at runtime.
+
+### Pattern 3: Global Function Override Types
+
+**Before:**
+```typescript
+const originalOpen = (global as any).open;
+(global as any).open = (url: string) => shell.openExternal(url);
+```
+
+**After:**
+```typescript
+// Declare the global type
+declare global {
+  var open: ((url: string) => Promise<void>) | undefined;
+}
+
+const originalOpen = global.open;
+global.open = (url: string) => shell.openExternal(url);
+```
+
+### Pattern 4: IPC Message Types
+
+**Before:**
+```typescript
+worker.on('message', (msg: any) => {
+  this.handleWorkerMessage(name, msg);
+});
+
+private handleWorkerMessage(workerName: string, msg: any): void {
+  const response = msg as WorkerResponse;
+  // ...
+}
+```
+
+**After:**
+```typescript
+worker.on('message', (msg: WorkerResponse | { type: 'ready' }) => {
+  this.handleWorkerMessage(name, msg);
+});
+
+private handleWorkerMessage(workerName: string, msg: WorkerResponse | { type: 'ready' }): void {
+  if (msg.type === 'ready') return;
+  const response = msg as WorkerResponse;  // Type narrowed
+  // ...
+}
+```
+
+### Pattern 5: Replace Dynamic Index Signatures
+
+**Before:**
+```typescript
+params: {
+  pattern: string;
+  path?: string;
+  [key: string]: any;  // ❌ Allows anything
+}
+```
+
+**After:**
+```typescript
+params: {
+  pattern: string;
+  path?: string;
+  '-A'?: number;  // After context
+  '-B'?: number;  // Before context
+  '-C'?: number;  // Context
+  '-i'?: boolean; // Case insensitive
+}
+```
+
+### Pattern 6: Electron Types
+
+**Before:**
+```typescript
+const dialogOptions: any = {
+  properties: ['openDirectory'],
+  title: 'Select directory',
+};
+```
+
+**After:**
+```typescript
+const dialogOptions: Electron.OpenDialogOptions = {
+  properties: ['openDirectory'],
+  title: 'Select directory',
+};
+```
+
+---
 
 ## Cleanup Best Practices
 

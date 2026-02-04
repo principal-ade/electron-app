@@ -4,6 +4,9 @@
  */
 
 import { BrowserWindow } from 'electron';
+import type { ElectronFileSystemAdapter } from '../file-system/fileSystemHandlers';
+import type { ElectronWindowManagerAdapter } from './windowManagerHandlers';
+import type { GitHubAdapter } from '../version-control-providers/githubHandlers';
 
 /**
  * Window features configuration
@@ -51,14 +54,17 @@ export interface WindowMetadata {
 /**
  * Forward declaration of ModernApplicationWindow for typing
  * The actual class remains in modernWindowManager.ts
+ *
+ * Note: Uses type-only imports to avoid circular dependencies.
+ * Since both sides use 'import type', no runtime dependency exists.
  */
 export interface IModernApplicationWindow {
   window: BrowserWindow;
   features: WindowFeatures;
   metadata: WindowMetadata;
-  fileSystemAdapter?: any; // Import types would create circular deps
-  windowManagerAdapter?: any;
-  githubAdapter?: any;
+  fileSystemAdapter?: ElectronFileSystemAdapter;
+  windowManagerAdapter?: ElectronWindowManagerAdapter;
+  githubAdapter?: GitHubAdapter;
 }
 
 /**

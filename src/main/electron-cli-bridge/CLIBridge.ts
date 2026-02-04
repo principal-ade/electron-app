@@ -145,7 +145,7 @@ export class CLIBridge extends EventEmitter {
         this.log('info', `Worker ${name} spawned successfully`);
       });
 
-      worker.on('message', (msg: any) => {
+      worker.on('message', (msg: WorkerResponse | { type: 'ready' }) => {
         // In Electron's utilityProcess, messages come directly
         // not wrapped in an event object
         this.handleWorkerMessage(name, msg);
@@ -200,7 +200,7 @@ export class CLIBridge extends EventEmitter {
         reject(new Error(`Worker ${name} failed to start within timeout`));
       }, 5000);
 
-      const handler = (workerName: string, msg: any) => {
+      const handler = (workerName: string, msg: WorkerResponse | { type: 'ready' }) => {
         if (workerName === name && msg.type === 'ready') {
           clearTimeout(timeout);
           this.removeListener('worker-message', handler);
@@ -215,7 +215,7 @@ export class CLIBridge extends EventEmitter {
   /**
    * Handle messages from workers
    */
-  private handleWorkerMessage(workerName: string, msg: any): void {
+  private handleWorkerMessage(workerName: string, msg: WorkerResponse | { type: 'ready' }): void {
     this.log('debug', `Message from ${workerName}: ${JSON.stringify(msg)}`);
     this.emit('worker-message', workerName, msg);
 
@@ -225,7 +225,7 @@ export class CLIBridge extends EventEmitter {
       return;
     }
 
-    // Route to pending call
+    // Route to pending call (msg is now guaranteed to be WorkerResponse)
     const response = msg as WorkerResponse;
     const pendingCall = this.pendingCalls.get(response.id);
 

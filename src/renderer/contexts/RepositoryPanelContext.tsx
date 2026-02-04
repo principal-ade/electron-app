@@ -29,23 +29,14 @@ import {
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import { FileTreeCore } from '@principal-ai/repository-abstraction';
-import type { PackageLayer } from '@principal-ai/codebase-composition';
-import type {
-  PackageSummary,
-  GitStatusWithFiles,
-} from '@principal-ai/repository-monitoring-server';
+import type { PackageLayer, PackageSummary, PackagesSliceData } from '@principal-ai/codebase-composition';
+import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import { minimatch } from 'minimatch';
 import type { ColorMode, FileMetricData, QualitySliceData } from '@principal-ai/quality-lens-registry';
 import type { GlobalSkill } from '../../shared/main-process-api-interfaces/FileSystemAPI';
 import type { TraceInfo } from '@industry-theme/principal-view-panels';
 import { groupSpansByTrace } from '@industry-theme/principal-view-panels';
 import { OtelCollectorService } from '../main-process-api/OtelCollectorService';
-
-// Types for packages slice data (matches @industry-theme/alexandria-panels DependenciesPanel expectations)
-interface PackagesSliceData {
-  packages: PackageLayer[];
-  summary: PackageSummary;
-}
 
 // Color mode for file city visualization - imported from registry
 // The registry's ColorMode type includes all built-in and lens-based modes

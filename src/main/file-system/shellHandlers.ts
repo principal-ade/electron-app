@@ -1,5 +1,5 @@
 import { ipcMain, shell } from 'electron';
-import { exec } from 'child_process';
+import { exec, type ExecException } from 'child_process';
 import { promisify } from 'util';
 import * as os from 'os';
 import { ShellAPIEvent } from '../../shared/main-process-api-interfaces/ShellAPI';
@@ -23,9 +23,10 @@ export function setupShellHandlers() {
     try {
       await shell.openExternal(url);
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error opening URL in browser:', error);
-      return { success: false, error: error.message };
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      return { success: false, error: errorMessage };
     }
   });
 
@@ -65,31 +66,44 @@ export function setupShellHandlers() {
           output: stdout,
           error: stderr,
         };
-      } catch (error: any) {
-        console.error('[ShellHandler] Command failed:', {
-          message: error.message,
-          code: error.code,
-          stdout: error.stdout?.substring(0, 200),
-          stderr: error.stderr?.substring(0, 200),
-        });
+      } catch (error: unknown) {
+        // Handle ExecException from child_process
+        if (error && typeof error === 'object' && 'code' in error) {
+          const execError = error as ExecException & { stdout?: string; stderr?: string };
+          console.error('[ShellHandler] Command failed:', {
+            message: execError.message,
+            code: execError.code,
+            stdout: execError.stdout?.substring(0, 200),
+            stderr: execError.stderr?.substring(0, 200),
+          });
 
-        // Even if the command returns a non-zero exit code, we may still have output
-        // Extract exit code from the error
-        let exitCode = error.code;
-        if (exitCode === undefined && error.message) {
-          // Try to extract exit code from error message
-          const match = error.message.match(/exit code (\d+)/);
-          if (match) {
-            exitCode = parseInt(match[1], 10);
+          // Even if the command returns a non-zero exit code, we may still have output
+          // Extract exit code from the error
+          let exitCode = execError.code;
+          if (exitCode === undefined && execError.message) {
+            // Try to extract exit code from error message
+            const match = execError.message.match(/exit code (\d+)/);
+            if (match) {
+              exitCode = parseInt(match[1], 10);
+            }
           }
+
+          return {
+            success: false,
+            error: execError.message,
+            output: execError.stdout || '',
+            stderr: execError.stderr || '',
+            code: exitCode,
+          };
         }
 
+        // Handle other errors
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         return {
           success: false,
-          error: error.message,
-          output: error.stdout || '',
-          stderr: error.stderr || '',
-          code: exitCode,
+          error: errorMessage,
+          output: '',
+          stderr: '',
         };
       }
     },
@@ -105,7 +119,10 @@ export function setupShellHandlers() {
         path?: string;
         glob?: string;
         output_mode?: string;
-        [key: string]: any;
+        '-A'?: number;  // After context
+        '-B'?: number;  // Before context
+        '-C'?: number;  // Context (both before and after)
+        '-i'?: boolean; // Case insensitive
       },
     ) => {
       console.log('[ShellHandler] Running grep:', params);
@@ -172,13 +189,24 @@ export function setupShellHandlers() {
           stdout,
           stderr,
         };
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[ShellHandler] Grep failed:', error);
+        // Handle ExecException from child_process
+        if (error && typeof error === 'object' && 'stdout' in error) {
+          const execError = error as ExecException & { stdout?: string; stderr?: string };
+          return {
+            success: false,
+            error: execError.message || 'Grep command failed',
+            stdout: execError.stdout || '',
+            stderr: execError.stderr || '',
+          };
+        }
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         return {
           success: false,
-          error: error.message,
-          stdout: error.stdout || '',
-          stderr: error.stderr || '',
+          error: errorMessage,
+          stdout: '',
+          stderr: '',
         };
       }
     },
@@ -211,12 +239,23 @@ export function setupShellHandlers() {
           stdout: result.stdout,
           stderr: result.stderr,
         };
-      } catch (error: any) {
+      } catch (error: unknown) {
+        // Handle ExecException from child_process
+        if (error && typeof error === 'object' && 'stdout' in error) {
+          const execError = error as ExecException & { stdout?: string; stderr?: string };
+          return {
+            success: false,
+            error: execError.message || 'Command failed',
+            stdout: execError.stdout || '',
+            stderr: execError.stderr || '',
+          };
+        }
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         return {
           success: false,
-          error: error.message,
-          stdout: error.stdout || '',
-          stderr: error.stderr || '',
+          error: errorMessage,
+          stdout: '',
+          stderr: '',
         };
       }
     },
@@ -297,9 +336,10 @@ export function setupShellHandlers() {
     try {
       await shell.trashItem(filePath);
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error moving file to trash:', error);
-      return { success: false, error: error.message };
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      return { success: false, error: errorMessage };
     }
   });
 
@@ -310,9 +350,10 @@ export function setupShellHandlers() {
       try {
         shell.showItemInFolder(path.resolve(filePath));
         return { success: true };
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Error showing item in folder:', error);
-        return { success: false, error: error.message };
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return { success: false, error: errorMessage };
       }
     },
   );
@@ -330,9 +371,10 @@ export function setupShellHandlers() {
       }
 
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error opening path:', error);
-      return { success: false, error: error.message };
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      return { success: false, error: errorMessage };
     }
   });
 

@@ -122,7 +122,7 @@ export class ElectronFileSystemAdapter {
       options,
     );
 
-    const dialogOptions: any = {
+    const dialogOptions: Electron.OpenDialogOptions = {
       properties: options?.properties || ['openDirectory'],
       title: options?.title || 'Select a directory with markdown files',
     };
@@ -1782,7 +1782,14 @@ export function registerFileSystemIpcHandlers(
           const structure = await analyzeSkillStructure(skillPath);
 
           // Read metadata from centralized lock file (add-skill convention)
-          let metadata: any;
+          let metadata: {
+            installedFrom?: string;
+            skillPath?: string;
+            owner?: string;
+            repo?: string;
+            sha?: string;
+            installedAt?: string;
+          } | undefined;
           try {
             const lockService = getSkillLockFileService();
             const skillEntry = await lockService.getSkill(skillDirName);
@@ -1793,7 +1800,7 @@ export function registerFileSystemIpcHandlers(
                 owner: skillEntry.source.split('/')[0],
                 repo: skillEntry.source.split('/')[1],
                 sha: skillEntry.skillFolderHash,
-                installedAt: skillEntry.installedAt,
+                installedAt: skillEntry.installedAt?.toString(),
               };
               console.log(`[getGlobalSkills] Loaded metadata from lock file for skill: ${skillDirName}`);
             }

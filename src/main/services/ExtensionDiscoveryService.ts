@@ -434,7 +434,7 @@ export class ExtensionDiscoveryService {
       const importFn = new Function(
         'specifier',
         'return import(specifier)',
-      ) as (specifier: string) => Promise<any>;
+      ) as (specifier: string) => Promise<{ panels?: unknown[] }>;
       const module = await importFn(`file://${realBundlePath}`);
 
       if (!Array.isArray(module.panels)) {
@@ -446,16 +446,14 @@ export class ExtensionDiscoveryService {
 
       // Extract just the metadata (not the components)
       // Panel definitions use nested metadata: { metadata: { id, name, ... }, component }
-      return module.panels.map((panel: any) => ({
-        id: panel.metadata.id,
-        name: panel.metadata.name,
-        icon: panel.metadata.icon,
-        version: panel.metadata.version,
-        author: panel.metadata.author,
-        description: panel.metadata.description,
-        surfaces: panel.metadata.surfaces,
-        slices: panel.metadata.slices,
-      }));
+      return module.panels.map((panel: unknown): PanelMetadata => {
+        // Type guard: ensure panel has metadata property
+        if (!panel || typeof panel !== 'object' || !('metadata' in panel)) {
+          throw new Error('Invalid panel definition: missing metadata');
+        }
+        const panelObj = panel as { metadata: PanelMetadata };
+        return panelObj.metadata;
+      });
     } catch (error) {
       console.error(
         `[ExtensionDiscoveryService] Failed to extract panel metadata from ${packageName}:`,

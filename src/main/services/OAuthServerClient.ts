@@ -19,6 +19,11 @@ import {
 } from './AuthProvider';
 import { APP_BRANDING } from '../../shared/config/appBranding';
 
+// Declare global type for browser open function override
+declare global {
+  var open: ((url: string) => Promise<void>) | undefined;
+}
+
 interface AuthStartResponse {
   auth_url: string;
 }
@@ -111,8 +116,8 @@ export class OAuthServerClient {
       console.log(`[OAuthServerClient] Auth URL: ${auth_url}`);
 
       // The caller should handle opening the browser
-      if ((global as any).open) {
-        await (global as any).open(auth_url);
+      if (global.open) {
+        await global.open(auth_url);
       } else {
         throw new Error('No browser opener configured');
       }
@@ -163,8 +168,9 @@ export class OAuthServerClient {
         expiresAt,
         user: tokenResponse.user,
       };
-    } catch (error: any) {
-      throw new Error(`Authentication failed: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Authentication failed: ${errorMessage}`);
     }
   }
 
@@ -209,7 +215,7 @@ export class OAuthServerClient {
 
         // Unexpected status
         throw new Error(`Unexpected response: ${response.status}`);
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Network errors or other issues
         if (attempt === maxAttempts - 1) {
           throw error; // Last attempt, propagate error
@@ -298,9 +304,10 @@ export class OAuthServerClient {
         expiresAt,
         user: tokenResponse.user,
       };
-    } catch (error: any) {
-      console.error('[OAuthServerClient] Token refresh failed:', error.message);
-      throw new Error(`Token refresh failed: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[OAuthServerClient] Token refresh failed:', errorMessage);
+      throw new Error(`Token refresh failed: ${errorMessage}`);
     }
   }
 
@@ -377,10 +384,11 @@ export class OAuthServerClient {
         githubLogin: data.github_login,
         updatedAt: data.updated_at,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error(
         '[OAuthServerClient] Error fetching current token:',
-        error.message,
+        errorMessage,
       );
       return null;
     }

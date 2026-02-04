@@ -22,6 +22,11 @@ import { GitCredentialHelper } from './GitCredentialHelper';
 import { APP_BRANDING } from '../../shared/config/appBranding';
 import type { AuthUser } from '../../shared/main-process-api-interfaces/AuthenticationAPI';
 
+// Declare global type for browser open function override
+declare global {
+  var open: ((url: string) => Promise<void>) | undefined;
+}
+
 interface GitHubUser {
   login: string;
   email: string;
@@ -181,8 +186,8 @@ class AuthService {
         });
 
         // Override the open function to use Electron's shell
-        const originalOpen = (global as any).open;
-        (global as any).open = (url: string) => shell.openExternal(url);
+        const originalOpen = global.open;
+        global.open = (url: string) => shell.openExternal(url);
 
         try {
           console.log('[AuthService] Starting OAuth flow...');
@@ -291,21 +296,21 @@ class AuthService {
           };
         } finally {
           // Restore original open function
-          (global as any).open = originalOpen;
+          global.open = originalOpen;
         }
-      } catch (error: any) {
-        if (error.name === 'AbortError') {
+      } catch (error: unknown) {
+        if (error && typeof error === 'object' && 'name' in error && error.name === 'AbortError') {
           console.log('[AuthService] Authentication was canceled');
           return { success: false, error: 'Authentication canceled' };
         }
         console.error('[AuthService] Authentication error:', error);
 
         // Provide more user-friendly error messages
-        let errorMessage = error.message;
-        if (error.message.includes('timeout')) {
-          errorMessage = 'Authentication timed out. Please try again.';
-        } else if (error.message.includes('network')) {
-          errorMessage = 'Network error. Please check your connection.';
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        if (errorMessage.includes('timeout')) {
+          return { success: false, error: 'Authentication timed out. Please try again.' };
+        } else if (errorMessage.includes('network')) {
+          return { success: false, error: 'Network error. Please check your connection.' };
         }
 
         return { success: false, error: errorMessage };
@@ -336,9 +341,10 @@ class AuthService {
         }
 
         return { success: true };
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[AuthService] Logout error:', error);
-        return { success: false, error: error.message };
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return { success: false, error: errorMessage };
       }
     });
 
@@ -346,12 +352,13 @@ class AuthService {
     ipcMain.handle(AuthEvent.GET_TOKEN_METADATA, async () => {
       try {
         return await this.getTokenMetadata();
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[AuthService] Get token metadata error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         return {
           hasToken: false,
           hasRefreshToken: false,
-          error: error.message,
+          error: errorMessage,
         };
       }
     });
@@ -533,10 +540,11 @@ class AuthService {
             token: newGithubToken, // ✅ Return GitHub token for API calls
             user: user,
           };
-        } catch (refreshError: any) {
+        } catch (refreshError: unknown) {
+          const errorMessage = refreshError instanceof Error ? refreshError.message : 'Unknown error';
           console.error(
             '[AuthService] Token refresh failed:',
-            refreshError.message,
+            errorMessage,
           );
           // If refresh fails, clear auth and require re-login
           await this.clearStoredAuth();
@@ -847,7 +855,7 @@ class AuthService {
     isExpired?: boolean;
     isExpiringSoon?: boolean;
     timeUntilExpiry?: string;
-    user?: any;
+    user?: AuthUser;
   }> {
     try {
       const tokenData = await this.storage.getTokenWithMetadata(
@@ -895,9 +903,9 @@ class AuthService {
         isExpired,
         isExpiringSoon,
         timeUntilExpiry,
-        user: metadata?.user,
+        user: metadata?.user as AuthUser | undefined,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[AuthService] Error getting token metadata:', error);
       return {
         hasToken: false,
@@ -1000,11 +1008,12 @@ class AuthService {
         success: true,
         newExpiresAt: refreshedAuth.expiresAt,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[AuthService] Token refresh test failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       return {
         success: false,
-        error: error.message || 'Token refresh failed',
+        error: errorMessage || 'Token refresh failed',
       };
     }
   }
@@ -1079,12 +1088,13 @@ class AuthService {
           statusCode: response.status,
         };
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[AuthService] GitHub token validation error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       return {
         valid: false,
         tokenPresent: true,
-        error: error.message || 'Failed to validate token',
+        error: errorMessage || 'Failed to validate token',
       };
     }
   }
