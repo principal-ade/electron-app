@@ -182,6 +182,18 @@ export const fileSystemAPI: FileSystemAPI = {
   getGlobalSkills: async () => {
     return ipcRenderer.invoke(FileSystemAPIEvent.GET_GLOBAL_SKILLS);
   },
+  getFileContentAtRevision: async (
+    repositoryPath: string,
+    filePath: string,
+    revision: string = 'HEAD'
+  ) => {
+    return ipcRenderer.invoke(
+      FileSystemAPIEvent.GET_FILE_CONTENT_AT_REVISION,
+      repositoryPath,
+      filePath,
+      revision
+    );
+  },
   // Skills Git sync methods
   syncGlobalSkills: async () => {
     return ipcRenderer.invoke(FileSystemAPIEvent.SYNC_GLOBAL_SKILLS);

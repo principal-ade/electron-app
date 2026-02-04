@@ -1133,6 +1133,54 @@ export const RepositoryPanelProvider: React.FC<
               : `${repositoryPath}/${relativePath}`;
             await FileSystemService.deleteFile(absolutePath);
           },
+          // Git-specific method to read file content at a specific revision
+          getFileContentAtRevision: async (
+            filePath: string,
+            revision: string = 'HEAD'
+          ): Promise<string | null> => {
+            try {
+              if (!repositoryPath) {
+                console.warn('[RepositoryPanelProvider] No repository path set');
+                return null;
+              }
+
+              // Calculate the path relative to repository root
+              let pathRelativeToRepo = filePath;
+              if (filePath.startsWith('/')) {
+                // If absolute path, make it relative to repository root
+                if (filePath.startsWith(repositoryPath + '/')) {
+                  pathRelativeToRepo = filePath.substring(repositoryPath.length + 1);
+                } else if (filePath === repositoryPath) {
+                  pathRelativeToRepo = '';
+                } else {
+                  console.warn('[RepositoryPanelProvider] File path is outside repository:', {
+                    filePath,
+                    repositoryPath
+                  });
+                  return null;
+                }
+              }
+
+              console.log('[RepositoryPanelProvider] getFileContentAtRevision:', {
+                repositoryPath,
+                originalPath: filePath,
+                pathRelativeToRepo,
+                revision
+              });
+
+              // Use FileSystemService to call IPC with the relative path
+              const content = await FileSystemService.getFileContentAtRevision(
+                repositoryPath,
+                pathRelativeToRepo,
+                revision
+              );
+
+              return content;
+            } catch (error) {
+              console.error('[RepositoryPanelProvider] Failed to get file content from git:', error);
+              return null;
+            }
+          },
           // Path manipulation methods required by TraceListPanel
           join: (...paths: string[]): string => {
             return paths

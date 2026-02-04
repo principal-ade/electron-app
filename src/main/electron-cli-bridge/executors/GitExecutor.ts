@@ -579,6 +579,36 @@ export class GitExecutor extends BaseExecutor {
   }
 
   /**
+   * Get file content at a specific revision
+   * @param directory - Git repository directory
+   * @param filePath - Path to file relative to repository root
+   * @param revision - Git revision (default: 'HEAD')
+   * @returns File content or null if file doesn't exist at that revision
+   */
+  async getFileContentAtRevision(
+    directory: string,
+    filePath: string,
+    revision: string = 'HEAD',
+  ): Promise<string | null> {
+    try {
+      const result = await this.execute(
+        'git',
+        ['show', `${revision}:${filePath}`],
+        {
+          cwd: directory,
+        },
+      );
+
+      if (result.success && result.stdout !== undefined) {
+        return result.stdout;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Execute raw git command
    */
   async raw(

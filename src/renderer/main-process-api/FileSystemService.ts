@@ -94,6 +94,18 @@ export class FileSystemService {
     return window.mainProcess.fileSystem.getGlobalSkills();
   }
 
+  static async getFileContentAtRevision(
+    repositoryPath: string,
+    filePath: string,
+    revision: string = 'HEAD'
+  ): Promise<string | null> {
+    return window.mainProcess.fileSystem.getFileContentAtRevision(
+      repositoryPath,
+      filePath,
+      revision
+    );
+  }
+
   // Skills Git sync methods
   static async syncGlobalSkills() {
     return window.mainProcess.fileSystem.syncGlobalSkills();

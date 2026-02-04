@@ -263,6 +263,22 @@ export class GitClientFactory {
     const git = await this.ensureInitialized();
     return await git.getConfig(directory, key);
   }
+
+  /**
+   * Get file content at a specific git revision
+   * @param directory - Git repository directory
+   * @param filePath - Path to file relative to repository root
+   * @param revision - Git revision (default: 'HEAD')
+   * @returns File content or null if file doesn't exist at that revision
+   */
+  static async getFileContentAtRevision(
+    directory: string,
+    filePath: string,
+    revision: string = 'HEAD',
+  ): Promise<string | null> {
+    const git = await this.ensureInitialized();
+    return await git.getFileContentAtRevision(directory, filePath, revision);
+  }
 }
 
 // Export a singleton instance for convenience (maintains compatibility)

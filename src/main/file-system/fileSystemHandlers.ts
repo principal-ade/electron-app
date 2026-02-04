@@ -16,6 +16,7 @@ import { getSkillLockFileService } from '../skills/skillLockFile';
 import { isSymlink, removeSkillSymlink } from '../skills/symlinkUtils';
 import { RecentReposService } from '../services/RecentReposService';
 import { RecentReposAPIEvent } from '../../shared/main-process-api-interfaces/RecentReposAPI';
+import { gitClientFactory } from '../utils/gitClientFactory';
 
 export class ElectronFileSystemAdapter {
   private rootPath: string | null = null;
@@ -1862,6 +1863,33 @@ export function registerFileSystemIpcHandlers(
       return [];
     }
   });
+
+  // Handler for getting file content at a specific git revision
+  ipcMain.handle(
+    FileSystemAPIEvent.GET_FILE_CONTENT_AT_REVISION,
+    async (
+      _event,
+      repositoryPath: string,
+      filePath: string,
+      revision: string = 'HEAD'
+    ) => {
+      try {
+        console.log(`[getFileContentAtRevision] Getting content for ${filePath} at ${revision} in ${repositoryPath}`);
+
+        // Use gitClientFactory to get file content from git
+        const content = await gitClientFactory.getFileContentAtRevision(
+          repositoryPath,
+          filePath,
+          revision
+        );
+
+        return content;
+      } catch (error) {
+        console.error('[getFileContentAtRevision] Failed:', error);
+        return null;
+      }
+    }
+  );
 
   // Handler for syncing global skills from Git repository
   ipcMain.handle(FileSystemAPIEvent.SYNC_GLOBAL_SKILLS, async () => {

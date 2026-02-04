@@ -19,6 +19,7 @@ export enum FileSystemAPIEvent {
   GET_CURRENT_WORKING_DIRECTORY = 'file-system:get-current-working-directory',
   GET_DIRECTORY_STATS = 'file-system:get-directory-stats',
   GET_GLOBAL_SKILLS = 'file-system:get-global-skills',
+  GET_FILE_CONTENT_AT_REVISION = 'file-system:get-file-content-at-revision',
 
   // Skills Git sync events
   SYNC_GLOBAL_SKILLS = 'file-system:sync-global-skills',
@@ -332,6 +333,11 @@ export interface FileSystemAPI {
     totalSize: number;
   } | null>;
   getGlobalSkills: () => Promise<GlobalSkill[]>;
+  getFileContentAtRevision: (
+    repositoryPath: string,
+    filePath: string,
+    revision?: string
+  ) => Promise<string | null>;
 
   // Skills Git sync methods
   syncGlobalSkills: () => Promise<{ success: boolean; error?: string }>;
