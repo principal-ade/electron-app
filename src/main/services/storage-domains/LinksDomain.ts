@@ -2,6 +2,10 @@ import { TypedMultiStoreWrapper } from '../../storage-providers/typed-multistore
 import { StaticNamespaces } from '../../../shared/types/namespaces.types';
 import { v4 as uuidv4 } from 'uuid';
 
+// Named types for better readability of dynamic data
+/** Contextual data attached to audit log entries (e.g., repoId, error details) */
+type AuditLogData = unknown;
+
 export interface RepositoryLink {
   id: string;
   label: string;
@@ -30,12 +34,12 @@ export class LinksDomain {
     level: string;
     message: string;
     timestamp: number;
-    data?: any;
+    data?: AuditLogData;
   }> = [];
 
   constructor(private storage: TypedMultiStoreWrapper) {}
 
-  private logAudit(level: string, message: string, data?: any): void {
+  private logAudit(level: string, message: string, data?: AuditLogData): void {
     const entry = {
       level,
       message,
@@ -129,12 +133,13 @@ export class LinksDomain {
       });
 
       return { success: true, metadata };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logAudit('error', 'Failed to store links', {
         repoId,
-        error: error.message,
+        error: errorMessage,
       });
-      return { success: false, error: error.message };
+      return { success: false, error: errorMessage };
     }
   }
 
@@ -152,10 +157,11 @@ export class LinksDomain {
 
       this.logAudit('info', 'Retrieved links for repository', { repoId });
       return data.links || [];
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logAudit('error', 'Failed to retrieve links', {
         repoId,
-        error: error.message,
+        error: errorMessage,
       });
       return [];
     }
@@ -169,10 +175,11 @@ export class LinksDomain {
       );
       const data = result.success ? result.data : undefined;
       return data || null;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logAudit('error', 'Failed to retrieve links with metadata', {
         repoId,
-        error: error.message,
+        error: errorMessage,
       });
       return null;
     }
@@ -182,10 +189,11 @@ export class LinksDomain {
     try {
       await this.storage.delete(repoId, StaticNamespaces.REPOSITORY_LINKS);
       this.logAudit('info', 'Deleted links for repository', { repoId });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logAudit('error', 'Failed to delete links', {
         repoId,
-        error: error.message,
+        error: errorMessage,
       });
       throw error;
     }
@@ -210,9 +218,10 @@ export class LinksDomain {
       }
 
       return metadata;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logAudit('error', 'Failed to get all metadata', {
-        error: error.message,
+        error: errorMessage,
       });
       return [];
     }
@@ -242,12 +251,13 @@ export class LinksDomain {
       const repoPath = data?.metadata?.repoPath || '';
 
       return await this.storeLinks(repoId, repoPath, updatedLinks);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logAudit('error', 'Failed to add link', {
         repoId,
-        error: error.message,
+        error: errorMessage,
       });
-      return { success: false, error: error.message };
+      return { success: false, error: errorMessage };
     }
   }
 
@@ -282,13 +292,14 @@ export class LinksDomain {
       const repoPath = data?.metadata?.repoPath || '';
 
       return await this.storeLinks(repoId, repoPath, updatedLinks);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logAudit('error', 'Failed to update link', {
         repoId,
         linkId,
-        error: error.message,
+        error: errorMessage,
       });
-      return { success: false, error: error.message };
+      return { success: false, error: errorMessage };
     }
   }
 
@@ -308,13 +319,14 @@ export class LinksDomain {
       const repoPath = data?.metadata?.repoPath || '';
 
       return await this.storeLinks(repoId, repoPath, updatedLinks);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logAudit('error', 'Failed to remove link', {
         repoId,
         linkId,
-        error: error.message,
+        error: errorMessage,
       });
-      return { success: false, error: error.message };
+      return { success: false, error: errorMessage };
     }
   }
 
@@ -322,7 +334,7 @@ export class LinksDomain {
     level: string;
     message: string;
     timestamp: number;
-    data?: any;
+    data?: AuditLogData;
   }> {
     return [...this.auditLog];
   }

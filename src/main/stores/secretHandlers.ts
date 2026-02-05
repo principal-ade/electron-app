@@ -55,9 +55,10 @@ export function registerSecretHandlers(): void {
           request.repoPath,
           request.secrets,
         );
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[SecretHandlers] Error storing secrets:', error);
-        return { success: false, error: error.message };
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return { success: false, error: errorMessage };
       }
     },
   );
@@ -85,9 +86,10 @@ export function registerSecretHandlers(): void {
 
         await getStorage().deleteSecrets(repoId);
         return { success: true };
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[SecretHandlers] Error deleting secrets:', error);
-        return { success: false, error: error.message };
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return { success: false, error: errorMessage };
       }
     },
   );
@@ -103,7 +105,7 @@ export function registerSecretHandlers(): void {
 
         const secrets = await getStorage().getSecrets(repoId);
         return secrets !== null && Object.keys(secrets).length > 0;
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[SecretHandlers] Error checking secrets:', error);
         return false;
       }
@@ -122,7 +124,7 @@ export function registerSecretHandlers(): void {
         }
 
         return await getStorage().getAllSecretsMetadata();
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[SecretHandlers] Error listing secrets:', error);
         return [];
       }
@@ -158,9 +160,10 @@ export function registerSecretHandlers(): void {
           request.repoPath,
           merged,
         );
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[SecretHandlers] Error updating secrets:', error);
-        return { success: false, error: error.message };
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return { success: false, error: errorMessage };
       }
     },
   );
@@ -203,9 +206,10 @@ export function registerSecretHandlers(): void {
           '', // Empty path for now - the storage should handle this
           existing,
         );
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[SecretHandlers] Error removing keys:', error);
-        return { success: false, error: error.message };
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return { success: false, error: errorMessage };
       }
     },
   );
@@ -223,7 +227,7 @@ export function registerSecretHandlers(): void {
         console.log(
           '[SecretHandlers] Cache clear requested (no-op in unified storage)',
         );
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[SecretHandlers] Error clearing cache:', error);
       }
     },
@@ -267,7 +271,7 @@ export function registerSecretHandlers(): void {
           updatedAt: repoMetadata?.updatedAt || Date.now(),
           repoId,
         };
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[SecretHandlers] Error getting metadata:', error);
         return null;
       }
@@ -301,7 +305,7 @@ export function registerSecretHandlers(): void {
         console.log(`[SecretHandlers] Secret accessed: ${repoId}/${key}`);
 
         return secrets[key];
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[SecretHandlers] Error getting single secret:', error);
         return null;
       }
@@ -345,7 +349,7 @@ export function registerSecretHandlers(): void {
         );
 
         return result;
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error(
           '[SecretHandlers] Error getting multiple secrets:',
           error,
@@ -390,9 +394,10 @@ export function registerSecretHandlers(): void {
         );
 
         return { success: true };
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[SecretHandlers] Error copying to clipboard:', error);
-        return { success: false, error: error.message };
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return { success: false, error: errorMessage };
       }
     },
   );

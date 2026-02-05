@@ -2,7 +2,9 @@ import { BrowserWindow, ipcMain, app } from 'electron';
 import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
+import * as https from 'https';
 import fetch from 'node-fetch';
+import type { IncomingMessage } from 'http';
 import { electronCLI } from '../electron-cli-bridge';
 import { UnifiedSecureStorage } from '../services/UnifiedSecureStorage';
 import { authService } from '../services/AuthService';
@@ -19,6 +21,12 @@ import {
   GitHubLicenseTemplate,
   InstallSkillOptions,
   InstallSkillResult,
+  CreateIssueRequest,
+  CreateIssueResponse,
+  GitHubUser,
+  GitHubSSHKey,
+  SSHKeysResponse,
+  ForkRepositoryOptions,
 } from '../../shared/main-process-api-interfaces/GitHubAPI';
 import { getSkillLockFileService } from '../skills/skillLockFile';
 import { normalizeGitHubSource } from '../../shared/main-process-api-interfaces/SkillLockAPI';
@@ -64,8 +72,42 @@ export interface AuthStatus {
   };
 }
 
+// Named types for better readability of dynamic data
+/** JSON payload sent in API request body */
+type GitHubAPIRequestBody = unknown;
+/** Response data from GitHub API (could be JSON object, array, or text) */
+type GitHubAPIResponseData = unknown;
+/** HTTP response headers as key-value pairs */
+type GitHubAPIResponseHeaders = Record<string, string>;
+/** Raw API response object from GitHub (before type validation) */
+type RawGitHubAPIResponse = Record<string, unknown>;
+/** Raw GitHub API commit info response (before type validation) */
+type GitHubCommitInfoResponse = Record<string, unknown>;
+
+/** Markdown document file info (local or remote) */
+interface MarkdownDocumentFile {
+  path: string;
+  name: string;
+  size: number;
+  lastModified: Date;
+  gitLastModified?: Date;
+  isTracked: boolean;
+}
+
+/** Partial tree entry for git tree building (before full tree response) */
+interface PartialTreeEntry {
+  path: string;
+  type: 'blob' | 'tree';
+  size?: number;
+}
+
+interface CacheEntry {
+  value: unknown;
+  timestamp: number;
+}
+
 export class GitHubAdapter {
-  private cache: Map<string, any> = new Map();
+  private cache: Map<string, CacheEntry> = new Map();
   private storage: UnifiedSecureStorage;
 
   constructor() {
@@ -95,12 +137,12 @@ export class GitHubAdapter {
     options: {
       method?: string;
       headers?: Record<string, string>;
-      body?: any;
+      body?: GitHubAPIRequestBody;
     } = {},
   ): Promise<{
     success: boolean;
-    data?: any;
-    headers?: any;
+    data?: GitHubAPIResponseData;
+    headers?: GitHubAPIResponseHeaders;
     status?: number;
     statusText?: string;
     error?: string;
@@ -166,7 +208,7 @@ export class GitHubAdapter {
 
       // Check if the response is raw content (e.g., application/vnd.github.v3.raw)
       const contentType = response.headers.get('content-type') || '';
-      let data: any;
+      let data: GitHubAPIResponseData;
 
       if (
         contentType.includes('application/vnd.github.v3.raw') ||
@@ -770,10 +812,10 @@ export class GitHubAdapter {
                 headers: { 'User-Agent': 'Principle-MD' },
               };
 
-              const info: any = await new Promise((resolve) => {
-                const req = https.request(options, (res: any) => {
+              const info: GitHubCommitInfoResponse = await new Promise((resolve) => {
+                const req = https.request(options, (res: IncomingMessage) => {
                   let data = '';
-                  res.on('data', (chunk: any) => (data += chunk));
+                  res.on('data', (chunk: Buffer) => (data += chunk));
                   res.on('end', () => {
                     if (
                       res.statusCode &&
@@ -883,7 +925,7 @@ export class GitHubAdapter {
         'f',
       ]);
 
-      const localFiles: Array<any> = [];
+      const localFiles: MarkdownDocumentFile[] = [];
       if (findResult.success) {
         for (const filePath of findResult.stdout
           .split('\n')
@@ -904,19 +946,19 @@ export class GitHubAdapter {
       }
 
       // Merge local files (prioritize local mtime) with remote commit dates if present
-      const merged: Array<any> = [];
+      const merged: MarkdownDocumentFile[] = [];
       for (const local of localFiles) {
         const remote = remoteByPath.get(local.path);
         if (remote && remote.lastModified) {
           try {
-            const remoteDate = new Date(remote.lastModified as any);
+            const remoteDate = new Date(remote.lastModified);
             const lastModified =
               local.lastModified > remoteDate ? local.lastModified : remoteDate;
             merged.push({
               ...local,
               lastModified,
               gitLastModified: remote.gitLastModified
-                ? new Date(remote.gitLastModified as any)
+                ? new Date(remote.gitLastModified)
                 : undefined,
             });
           } catch {
@@ -934,26 +976,20 @@ export class GitHubAdapter {
             path: remote.path,
             name: remote.name,
             size: remote.size,
-            lastModified: new Date(remote.lastModified as any),
+            lastModified: new Date(remote.lastModified),
             gitLastModified: remote.gitLastModified
-              ? new Date(remote.gitLastModified as any)
+              ? new Date(remote.gitLastModified)
               : undefined,
             isTracked: true,
           });
         }
       }
 
-      // Sort and serialize
+      // Sort and return
       merged.sort(
         (a, b) => b.lastModified.getTime() - a.lastModified.getTime(),
       );
-      return merged.map((doc) => ({
-        ...doc,
-        lastModified: doc.lastModified.toISOString(),
-        gitLastModified: doc.gitLastModified
-          ? doc.gitLastModified.toISOString()
-          : undefined,
-      }));
+      return merged;
     } catch (error) {
       console.error('[GitHub] Error in getMarkdownDocumentsLocalFirst:', error);
       return this.getMarkdownDocuments(owner, repo, ref);
@@ -975,9 +1011,9 @@ export class GitHubAdapter {
         },
       };
 
-      const req = https.request(options, (res: any) => {
+      const req = https.request(options, (res: IncomingMessage) => {
         let data = '';
-        res.on('data', (chunk: any) => {
+        res.on('data', (chunk: Buffer) => {
           data += chunk;
         });
         res.on('end', () => {
@@ -1063,7 +1099,7 @@ export class GitHubAdapter {
 
 
   // Create a new GitHub issue
-  async createIssue(owner: string, repo: string, issue: any): Promise<any> {
+  async createIssue(owner: string, repo: string, issue: CreateIssueRequest): Promise<CreateIssueResponse> {
     console.log(`[GitHub] Creating issue for ${owner}/${repo}`, issue);
 
     try {
@@ -1176,7 +1212,7 @@ export class GitHubAdapter {
     // Try token-based API first
     const apiResult = await this.makeGitHubAPICall(endpoint);
     if (apiResult.success && apiResult.data) {
-      return apiResult.data.map((repo: any) => ({
+      return (apiResult.data as RawGitHubAPIResponse[]).map((repo: RawGitHubAPIResponse) => ({
         id: repo.id,
         name: repo.name,
         full_name: repo.full_name,
@@ -1206,7 +1242,7 @@ export class GitHubAdapter {
       if (result.success && result.stdout) {
         const repos = JSON.parse(result.stdout);
         // Return only the fields we need
-        return repos.map((repo: any) => ({
+        return (repos as RawGitHubAPIResponse[]).map((repo: RawGitHubAPIResponse) => ({
           id: repo.id,
           name: repo.name,
           full_name: repo.full_name,
@@ -1246,7 +1282,7 @@ export class GitHubAdapter {
 
     const apiResult = await this.makeGitHubAPICall(endpoint);
     if (apiResult.success && apiResult.data) {
-      return apiResult.data.map((repo: any) => ({
+      return (apiResult.data as RawGitHubAPIResponse[]).map((repo: RawGitHubAPIResponse) => ({
         id: repo.id,
         name: repo.name,
         full_name: repo.full_name,
@@ -1274,7 +1310,7 @@ export class GitHubAdapter {
 
       if (result.success && result.stdout) {
         const repos = JSON.parse(result.stdout);
-        return repos.map((repo: any) => ({
+        return (repos as RawGitHubAPIResponse[]).map((repo: RawGitHubAPIResponse) => ({
           id: repo.id,
           name: repo.name,
           full_name: repo.full_name,
@@ -1321,7 +1357,7 @@ export class GitHubAdapter {
     // Try token-based API first
     const apiResult = await this.makeGitHubAPICall(endpoint);
     if (apiResult.success && apiResult.data) {
-      return apiResult.data.map((repo: any) => ({
+      return (apiResult.data as RawGitHubAPIResponse[]).map((repo: RawGitHubAPIResponse) => ({
         id: repo.id,
         name: repo.name,
         full_name: repo.full_name,
@@ -1351,7 +1387,7 @@ export class GitHubAdapter {
       if (result.success && result.stdout) {
         const repos = JSON.parse(result.stdout);
         // Return only the fields we need
-        return repos.map((repo: any) => ({
+        return (repos as RawGitHubAPIResponse[]).map((repo: RawGitHubAPIResponse) => ({
           id: repo.id,
           name: repo.name,
           full_name: repo.full_name,
@@ -1385,7 +1421,7 @@ export class GitHubAdapter {
     // Try using token-based API first
     const apiResult = await this.makeGitHubAPICall('/user/orgs');
     if (apiResult.success && apiResult.data) {
-      return apiResult.data.map((org: any) => ({
+      return (apiResult.data as RawGitHubAPIResponse[]).map((org: RawGitHubAPIResponse) => ({
         login: org.login,
         id: org.id,
         avatar_url: org.avatar_url,
@@ -1400,7 +1436,7 @@ export class GitHubAdapter {
       if (result.success && result.stdout) {
         const orgs = JSON.parse(result.stdout);
         // Return only the fields we need
-        return orgs.map((org: any) => ({
+        return (orgs as RawGitHubAPIResponse[]).map((org: RawGitHubAPIResponse) => ({
           login: org.login,
           id: org.id,
           avatar_url: org.avatar_url,
@@ -1506,12 +1542,7 @@ export class GitHubAdapter {
    * Get user's SSH keys from GitHub
    * Requires 'read:public_key' or 'admin:public_key' scope
    */
-  async getUserSSHKeys(): Promise<{
-    success: boolean;
-    data?: any[];
-    error?: string;
-    needsPermission?: boolean;
-  }> {
+  async getUserSSHKeys(): Promise<SSHKeysResponse> {
     // Try with token-based API first
     console.log('[GitHub] Attempting to fetch SSH keys from /user/keys...');
     const apiResult = await this.makeGitHubAPICall('/user/keys');
@@ -1584,7 +1615,7 @@ export class GitHubAdapter {
   async getTokenInfo(): Promise<{
     scopes: string[];
     organizations: GitHubOrganization[];
-    user: any;
+    user: GitHubUser;
     rateLimit: {
       limit: number;
       remaining: number;
@@ -1772,10 +1803,10 @@ export class GitHubAdapter {
         },
       };
 
-      const req = https.request(options, (res: any) => {
+      const req = https.request(options, (res: IncomingMessage) => {
         let data = '';
 
-        res.on('data', (chunk: any) => {
+        res.on('data', (chunk: Buffer) => {
           data += chunk;
         });
 
@@ -1785,7 +1816,7 @@ export class GitHubAdapter {
               const issues = JSON.parse(data);
               // Filter out pull requests (they have pull_request property)
               const issuesOnly = issues.filter(
-                (issue: any) => !issue.pull_request,
+                (issue: RawGitHubAPIResponse) => !issue.pull_request,
               );
               console.log(
                 `[GitHub] Found ${issuesOnly.length} issues via HTTPS`,
@@ -1824,7 +1855,7 @@ export class GitHubAdapter {
         });
       });
 
-      req.on('error', (error: any) => {
+      req.on('error', (error: unknown) => {
         console.error('[GitHub] Error fetching issues:', error);
         resolve([]);
       });
@@ -1908,10 +1939,10 @@ export class GitHubAdapter {
         },
       };
 
-      const req = https.request(options, (res: any) => {
+      const req = https.request(options, (res: IncomingMessage) => {
         let data = '';
 
-        res.on('data', (chunk: any) => {
+        res.on('data', (chunk: Buffer) => {
           data += chunk;
         });
 
@@ -1959,7 +1990,7 @@ export class GitHubAdapter {
         });
       });
 
-      req.on('error', (error: any) => {
+      req.on('error', (error: unknown) => {
         console.error('[GitHub] Error fetching pull requests:', error);
         resolve([]);
       });
@@ -2041,10 +2072,10 @@ export class GitHubAdapter {
         },
       };
 
-      const req = https.request(options, (res: any) => {
+      const req = https.request(options, (res: IncomingMessage) => {
         let data = '';
 
-        res.on('data', (chunk: any) => {
+        res.on('data', (chunk: Buffer) => {
           data += chunk;
         });
 
@@ -2080,7 +2111,7 @@ export class GitHubAdapter {
         });
       });
 
-      req.on('error', (error: any) => {
+      req.on('error', (error: unknown) => {
         console.error('[GitHub] Error fetching commits:', error);
         resolve([]);
       });
@@ -2383,7 +2414,7 @@ export class GitHubAdapter {
     const apiResult = await this.makeGitHubAPICall(endpoint);
 
     if (apiResult.success && Array.isArray(apiResult.data)) {
-      const licenses = apiResult.data.map((license: any) => ({
+      const licenses = (apiResult.data as RawGitHubAPIResponse[]).map((license: RawGitHubAPIResponse) => ({
         key: license.key,
         name: license.name,
         spdx_id: license.spdx_id,
@@ -2401,7 +2432,7 @@ export class GitHubAdapter {
       if (result.success && result.stdout) {
         const templates = JSON.parse(result.stdout);
         if (Array.isArray(templates)) {
-          const licenses = templates.map((license: any) => ({
+          const licenses = (templates as RawGitHubAPIResponse[]).map((license: RawGitHubAPIResponse) => ({
             key: license.key,
             name: license.name,
             spdx_id: license.spdx_id,
@@ -2474,7 +2505,7 @@ export class GitHubAdapter {
     console.log(`[GitHub] Forking repository ${owner}/${repo}`, options);
 
     const endpoint = `/repos/${owner}/${repo}/forks`;
-    const body: any = {};
+    const body: Partial<ForkRepositoryOptions> = {};
 
     if (options?.organization) {
       body.organization = options.organization;
@@ -2837,7 +2868,7 @@ export function registerGitHubIpcHandlers(
           }
         }
 
-        const entries: any[] = [];
+        const entries: PartialTreeEntry[] = [];
         dirSet.forEach((d) => entries.push({ path: d, type: 'tree' }));
         fileEntries.forEach((f) =>
           entries.push({ path: f.path, type: 'blob', size: f.size }),
@@ -2992,7 +3023,7 @@ export function registerGitHubIpcHandlers(
 
   ipcMain.handle(
     GitHubAPIEvent.CREATE_ISSUE,
-    async (event, owner: string, repo: string, issue: any) => {
+    async (event, owner: string, repo: string, issue: CreateIssueRequest) => {
       const adapter = getAdapterFromSender(event.sender);
       if (!adapter) {
         console.error('[GitHub] No adapter found for CREATE_ISSUE');

@@ -50,9 +50,10 @@ export async function registerLinksHandlers(): Promise<void> {
           request.repoPath,
           request.links,
         );
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[LinksHandlers] Error storing links:', error);
-        return { success: false, error: error.message };
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return { success: false, error: errorMessage };
       }
     },
   );
@@ -77,9 +78,10 @@ export async function registerLinksHandlers(): Promise<void> {
 
         await linksDomain.deleteLinks(repoId);
         return { success: true };
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[LinksHandlers] Error deleting links:', error);
-        return { success: false, error: error.message };
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return { success: false, error: errorMessage };
       }
     },
   );
@@ -94,7 +96,7 @@ export async function registerLinksHandlers(): Promise<void> {
         }
 
         return await linksDomain.hasLinks(repoId);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[LinksHandlers] Error checking links:', error);
         return false;
       }
@@ -113,7 +115,7 @@ export async function registerLinksHandlers(): Promise<void> {
         }
 
         return await linksDomain.getAllMetadata();
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[LinksHandlers] Error listing links:', error);
         return [];
       }
@@ -139,7 +141,7 @@ export async function registerLinksHandlers(): Promise<void> {
         }
 
         return await linksDomain.getLinks(repoId);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[LinksHandlers] Error getting links:', error);
         return [];
       }
@@ -169,9 +171,10 @@ export async function registerLinksHandlers(): Promise<void> {
         }
 
         return await linksDomain.addLink(repoId, link);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[LinksHandlers] Error adding link:', error);
-        return { success: false, error: error.message };
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return { success: false, error: errorMessage };
       }
     },
   );
@@ -205,9 +208,10 @@ export async function registerLinksHandlers(): Promise<void> {
         }
 
         return await linksDomain.updateLink(repoId, linkId, updates);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[LinksHandlers] Error updating link:', error);
-        return { success: false, error: error.message };
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return { success: false, error: errorMessage };
       }
     },
   );
@@ -240,9 +244,10 @@ export async function registerLinksHandlers(): Promise<void> {
         }
 
         return await linksDomain.removeLink(repoId, linkId);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[LinksHandlers] Error removing link:', error);
-        return { success: false, error: error.message };
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return { success: false, error: errorMessage };
       }
     },
   );
@@ -273,9 +278,10 @@ export async function registerLinksHandlers(): Promise<void> {
         await shell.openExternal(url);
         console.log('[LinksHandlers] Opened link in browser:', url);
         return { success: true };
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[LinksHandlers] Error opening link:', error);
-        return { success: false, error: error.message };
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return { success: false, error: errorMessage };
       }
     },
   );
@@ -299,9 +305,10 @@ export async function registerLinksHandlers(): Promise<void> {
         clipboard.writeText(url);
         console.log('[LinksHandlers] Copied link to clipboard:', url);
         return { success: true };
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[LinksHandlers] Error copying link:', error);
-        return { success: false, error: error.message };
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return { success: false, error: errorMessage };
       }
     },
   );

@@ -1,8 +1,15 @@
-import { ipcMain } from 'electron';
+import { ipcMain, IpcMainInvokeEvent } from 'electron';
 import { UnifiedSecureStorage, TOKEN_KEYS } from './UnifiedSecureStorage';
 import { SecureTokenAPIEvent } from '../../shared/main-process-api-interfaces/SecureTokenAPI';
+import type { AuthUser } from '../../shared/main-process-api-interfaces/AuthenticationAPI';
 import AuthStateManager from './AuthStateManager';
 import { authService } from './AuthService';
+
+// Named types for better readability of dynamic data
+/** Dynamic metadata attached to stored tokens (e.g., user info, timestamps) */
+type TokenMetadata = unknown;
+/** Legacy token data from localStorage migration (unvalidated) */
+type LegacyTokenData = unknown;
 
 /**
  * IPC handlers for secure token storage
@@ -28,7 +35,7 @@ export class SecureTokenIPC {
     // Save GitHub auth token
     ipcMain.handle(
       SecureTokenAPIEvent.SAVE_GITHUB_AUTH,
-      async (event, token: string, user: any) => {
+      async (event: IpcMainInvokeEvent, token: string, user: AuthUser) => {
         try {
           await this.getStorage().setToken(TOKEN_KEYS.ORBIT_AUTH, token, {
             user,
@@ -98,7 +105,7 @@ export class SecureTokenIPC {
     // Generic token operations
     ipcMain.handle(
       SecureTokenAPIEvent.SET,
-      async (event, key: string, token: string, metadata?: any) => {
+      async (event: IpcMainInvokeEvent, key: string, token: string, metadata?: TokenMetadata) => {
         try {
           await this.getStorage().setToken(key, token, metadata);
           return { success: true };
@@ -138,7 +145,7 @@ export class SecureTokenIPC {
     // Migration helper - to be called once from renderer
     ipcMain.handle(
       SecureTokenAPIEvent.MIGRATE_FROM_LOCALSTORAGE,
-      async (event, tokens: any[]) => {
+      async (event: IpcMainInvokeEvent, tokens: LegacyTokenData[]) => {
         try {
           // Migration no longer needed with unified storage
           console.log('Migration skipped - using unified storage');
@@ -181,7 +188,7 @@ export function registerSecureTokenHandlers(): void {
   // Save GitHub auth token
   ipcMain.handle(
     SecureTokenAPIEvent.SAVE_GITHUB_AUTH,
-    async (event: any, token: string, user: any) => {
+    async (event: IpcMainInvokeEvent, token: string, user: AuthUser) => {
       try {
         await getSecureTokenIPC()
           .getStorage()
@@ -285,7 +292,7 @@ export function registerSecureTokenHandlers(): void {
   // Generic token operations
   ipcMain.handle(
     SecureTokenAPIEvent.SET,
-    async (event: any, key: string, token: string, metadata?: any) => {
+    async (event: IpcMainInvokeEvent, key: string, token: string, metadata?: TokenMetadata) => {
       try {
         await getSecureTokenIPC().getStorage().setToken(key, token, metadata);
         return { success: true };
@@ -298,7 +305,7 @@ export function registerSecureTokenHandlers(): void {
     },
   );
 
-  ipcMain.handle(SecureTokenAPIEvent.GET, async (event: any, key: string) => {
+  ipcMain.handle(SecureTokenAPIEvent.GET, async (event: IpcMainInvokeEvent, key: string) => {
     try {
       const token = await getSecureTokenIPC().getStorage().getToken(key);
       return { success: true, token };
@@ -312,7 +319,7 @@ export function registerSecureTokenHandlers(): void {
 
   ipcMain.handle(
     SecureTokenAPIEvent.DELETE,
-    async (event: any, key: string) => {
+    async (event: IpcMainInvokeEvent, key: string) => {
       try {
         await getSecureTokenIPC().getStorage().deleteToken(key);
         return { success: true };
@@ -328,7 +335,7 @@ export function registerSecureTokenHandlers(): void {
   // Migration helper
   ipcMain.handle(
     SecureTokenAPIEvent.MIGRATE_FROM_LOCALSTORAGE,
-    async (event: any, tokens: any[]) => {
+    async (event: IpcMainInvokeEvent, tokens: LegacyTokenData[]) => {
       try {
         // Migration no longer needed with unified storage
         console.log('Migration skipped - using unified storage');

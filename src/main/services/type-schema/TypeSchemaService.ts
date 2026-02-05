@@ -4,6 +4,10 @@ import * as path from 'path';
 import * as ts from 'typescript';
 import { Config } from 'ts-json-schema-generator/dist/src/Config';
 
+// Named types for better readability of dynamic data
+/** JSON Schema object generated from TypeScript types (unvalidated structure) */
+type JSONSchema = unknown;
+
 export interface TypeSchemaGenerationOptions {
   files: string[];
   typeNames?: string[];
@@ -17,7 +21,7 @@ export interface TypeSchemaGenerationOptions {
 export interface TypeSchemaResult {
   fileName: string;
   typeName: string;
-  schema: any;
+  schema: JSONSchema;
 }
 
 export interface TypeSchemaError {
@@ -63,10 +67,11 @@ export class TypeSchemaService {
             `Found ${availableTypes.length} types in ${file}:`,
             availableTypes,
           );
-        } catch (extractError: any) {
+        } catch (extractError: unknown) {
+          const errorMessage = extractError instanceof Error ? extractError.message : 'Unknown error';
           console.warn(
             `Could not extract types from ${file}:`,
-            extractError.message,
+            errorMessage,
           );
           // If we can't extract types, try with '*' anyway
           availableTypes = ['*'];
@@ -103,7 +108,7 @@ export class TypeSchemaService {
                 schema,
               });
             }
-          } catch (error: any) {
+          } catch (error: unknown) {
             console.error(
               `Error generating schema for type '${typeName}' in ${file}:`,
               error,
@@ -111,7 +116,7 @@ export class TypeSchemaService {
 
             // Keep the original error message and add a simplified summary
             const originalError =
-              error.message || 'Unknown error generating schema';
+              error instanceof Error ? error.message : 'Unknown error generating schema';
             let errorSummary = '';
 
             // Determine error category
@@ -144,10 +149,11 @@ export class TypeSchemaService {
             });
           }
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         errors.push({
           fileName: file,
-          error: `File not accessible: ${error.message}`,
+          error: `File not accessible: ${errorMessage}`,
         });
       }
     }
@@ -159,7 +165,7 @@ export class TypeSchemaService {
     filePath: string,
     typeName: string,
     options: TypeSchemaGenerationOptions,
-  ): Promise<any> {
+  ): Promise<JSONSchema> {
     // Try to find tsconfig.json if not provided
     let { tsConfigPath } = options;
     if (!tsConfigPath) {
@@ -185,16 +191,18 @@ export class TypeSchemaService {
       const generator = tsj.createGenerator(config);
       const schema = generator.createSchema(config.type);
       return schema;
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Enhance error message with more context
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error ? error.stack : undefined;
       console.error('Schema generation error details:', {
         file: filePath,
         type: typeName,
         tsconfig: tsConfigPath,
-        error: error.stack || error.message,
+        error: errorStack || errorMessage,
       });
       throw new Error(
-        `Failed to generate schema for type '${typeName}' in file '${filePath}': ${error.message}`,
+        `Failed to generate schema for type '${typeName}' in file '${filePath}': ${errorMessage}`,
       );
     }
   }
@@ -250,10 +258,11 @@ export class TypeSchemaService {
         if (schema.definitions) {
           return Object.keys(schema.definitions);
         }
-      } catch (generatorError: any) {
+      } catch (generatorError: unknown) {
+        const errorMessage = generatorError instanceof Error ? generatorError.message : 'Unknown error';
         console.warn(
           'Generator failed, trying manual extraction:',
-          generatorError.message,
+          errorMessage,
         );
       }
 
@@ -287,10 +296,11 @@ export class TypeSchemaService {
       }
 
       return [...new Set(exportedTypes)]; // Remove duplicates
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to extract types:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new Error(
-        `Failed to extract types from file '${filePath}': ${error.message}`,
+        `Failed to extract types from file '${filePath}': ${errorMessage}`,
       );
     }
   }
@@ -442,10 +452,11 @@ export class TypeSchemaService {
         declarations,
         exportedTypes: [...new Set(exportedTypes)],
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to generate declarations:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new Error(
-        `Failed to generate declarations for '${filePath}': ${error.message}`,
+        `Failed to generate declarations for '${filePath}': ${errorMessage}`,
       );
     }
   }
