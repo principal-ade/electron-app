@@ -20,7 +20,7 @@ import {
  * Supports both static namespaces (from enum) and dynamic namespaces (strings)
  */
 export class TypedMultiStoreWrapper implements TypedMultiStoreManager {
-  private namespaceCache: Map<string, NamespaceOperations<any>>;
+  private namespaceCache: Map<string, NamespaceOperations<StorageNamespaces>>;
 
   constructor(private multiStoreManager: MultiStoreManager) {
     this.namespaceCache = new Map();

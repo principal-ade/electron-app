@@ -10,6 +10,8 @@ import {
 import {
   SecretsDomain,
   type StoredSecret,
+  type SecretMetadata,
+  type SecretValue,
 } from './storage-domains/SecretsDomain';
 
 const fsPromises = {
@@ -183,8 +185,14 @@ export class UnifiedSecureStorage {
 
       this.memoryCache = data;
       return data;
-    } catch (error: any) {
-      if (error.code === 'ENOENT') {
+    } catch (error: unknown) {
+      // Check if it's a file not found error (ENOENT)
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === 'ENOENT'
+      ) {
         console.log(
           '[UnifiedSecureStorage] No existing storage file, creating new',
         );
@@ -273,12 +281,12 @@ export class UnifiedSecureStorage {
   async storeSecrets(
     repoId: string,
     repoPath: string,
-    secrets: Record<string, any>,
-  ): Promise<{ success: boolean; error?: string; metadata?: any }> {
+    secrets: Record<string, SecretValue>,
+  ): Promise<{ success: boolean; error?: string; metadata?: SecretMetadata }> {
     return this.secretsDomain.storeSecrets(repoId, repoPath, secrets);
   }
 
-  async getSecrets(repoId: string): Promise<Record<string, any> | null> {
+  async getSecrets(repoId: string): Promise<Record<string, SecretValue> | null> {
     return this.secretsDomain.getSecrets(repoId);
   }
 
@@ -292,11 +300,11 @@ export class UnifiedSecureStorage {
 
   async getSecretsWithMetadata(
     repoId: string,
-  ): Promise<{ data: Record<string, any>; metadata: any } | null> {
+  ): Promise<{ data: Record<string, SecretValue>; metadata: SecretMetadata } | null> {
     return this.secretsDomain.getSecretsWithMetadata(repoId);
   }
 
-  async getAllSecretsMetadata(): Promise<any[]> {
+  async getAllSecretsMetadata(): Promise<SecretMetadata[]> {
     return this.secretsDomain.getAllMetadata();
   }
 

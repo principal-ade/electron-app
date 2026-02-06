@@ -122,7 +122,7 @@ export interface DockerAnalysisSession {
 
   // Configuration used
   configSource: 'repository' | 'generated' | 'default';
-  configUsed?: any;
+  configUsed?: unknown; // Tool-specific configuration object
   commandExecuted: string;
 
   // Results and performance
@@ -132,7 +132,7 @@ export interface DockerAnalysisSession {
     exitCode?: number;
   };
 
-  results?: any; // Tool-specific results (e.g., knip analysis results)
+  results?: unknown; // Tool-specific results (e.g., knip analysis results)
   error?: string;
 
   // Performance metrics
@@ -160,8 +160,8 @@ export interface DockerAnalysisSession {
  */
 export interface NamespaceDataTypes {
   [StaticNamespaces.USER_PREFERENCES]: UserPreferences;
-  [StaticNamespaces.CACHE]: Record<string, any>;
-  [StaticNamespaces.TEMP]: Record<string, any>;
+  [StaticNamespaces.CACHE]: Record<string, unknown>;
+  [StaticNamespaces.TEMP]: Record<string, unknown>;
 
   // Docker Management namespaces
   [StaticNamespaces.DOCKER_CONTAINERS]: ToolContainerState; // Persistent container state
@@ -296,7 +296,7 @@ export class TypedStorageProvider {
   ): Promise<Record<string, NamespaceDataTypes[K]>> {
     const keys = await this.provider.keys();
     const namespacePrefix = `${namespace}:`;
-    const result: Record<string, any> = {};
+    const result: Record<string, NamespaceDataTypes[K]> = {};
 
     for (const key of keys) {
       if (key.startsWith(namespacePrefix)) {

@@ -24,11 +24,12 @@ export function setupTypeExtractionHandlers() {
           success: true,
           data: packageTypes,
         };
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[TypeExtraction] Error extracting types:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Failed to extract types';
         return {
           success: false,
-          error: error.message || 'Failed to extract types',
+          error: errorMessage,
         };
       }
     },
@@ -56,14 +57,15 @@ export function setupTypeExtractionHandlers() {
             typeCount: packageTypes.types.length,
           },
         };
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error(
           '[TypeExtraction] Error generating definition file:',
           error,
         );
+        const errorMessage = error instanceof Error ? error.message : 'Failed to generate definition file';
         return {
           success: false,
-          error: error.message || 'Failed to generate definition file',
+          error: errorMessage,
         };
       }
     },
@@ -87,14 +89,15 @@ export function setupTypeExtractionHandlers() {
           success: true,
           data: packageTypes,
         };
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error(
           '[TypeExtraction] Error extracting types from layer:',
           error,
         );
+        const errorMessage = error instanceof Error ? error.message : 'Failed to extract types from layer';
         return {
           success: false,
-          error: error.message || 'Failed to extract types from layer',
+          error: errorMessage,
         };
       }
     },

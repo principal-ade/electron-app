@@ -6,7 +6,7 @@ import { StorageStats } from '../../shared/main-process-api-interfaces/StoreAPI'
 /**
  * Extended storage provider interface with type-safe namespace operations
  */
-export interface TypedStorageProvider<T = any> extends StorageProvider {
+export interface TypedStorageProvider extends StorageProvider {
   /**
    * Get a value with namespace-specific typing
    */
@@ -200,7 +200,7 @@ export function createNamespaceOperations<K extends StorageNamespaces>(
  */
 export class NamespaceDataValidator {
   static isUserPreferences(
-    data: any,
+    data: unknown,
   ): data is NamespaceDataTypes[StaticNamespaces.USER_PREFERENCES] {
     // UserPreferences can have various optional fields, so just check it's an object
     // The actual fields are: defaultEditor, defaultView, ollamaModel, agentAutoUpdate, etc.
@@ -208,7 +208,7 @@ export class NamespaceDataValidator {
   }
 
   static isToolContainerState(
-    data: any,
+    data: unknown,
   ): data is NamespaceDataTypes[StaticNamespaces.DOCKER_CONTAINERS] {
     return (
       data &&
@@ -231,7 +231,7 @@ export class NamespaceDataValidator {
   }
 
   static isDockerAnalysisSession(
-    data: any,
+    data: unknown,
   ): data is NamespaceDataTypes[StaticNamespaces.DOCKER_SESSIONS] {
     return (
       data &&
@@ -252,7 +252,7 @@ export class NamespaceDataValidator {
 
   static validateNamespaceData<K extends StorageNamespaces>(
     namespace: K,
-    data: any,
+    data: unknown,
   ): data is NamespaceData<K> {
     switch (namespace) {
       case StaticNamespaces.USER_PREFERENCES:

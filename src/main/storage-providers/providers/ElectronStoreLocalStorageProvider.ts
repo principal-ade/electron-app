@@ -29,7 +29,7 @@ export class ElectronStoreLocalStorageProvider implements StorageProvider {
    */
   public async initialize(config?: StorageProviderConfig): Promise<void> {
     try {
-      const storeOptions: any = {
+      const storeOptions: Record<string, unknown> = {
         name: config?.path || this.name,
         defaults: config?.defaults || {},
         ...config?.options,
@@ -51,7 +51,7 @@ export class ElectronStoreLocalStorageProvider implements StorageProvider {
   /**
    * Get a value by key
    */
-  public async get<T = any>(
+  public async get<T = unknown>(
     key: string,
     defaultValue?: T,
   ): Promise<T | undefined> {
@@ -69,7 +69,7 @@ export class ElectronStoreLocalStorageProvider implements StorageProvider {
   /**
    * Set a value by key
    */
-  public async set<T = any>(key: string, value: T): Promise<void> {
+  public async set<T = unknown>(key: string, value: T): Promise<void> {
     if (!this.store) {
       throw new Error('ElectronStoreBackend not initialized');
     }
@@ -193,7 +193,7 @@ export class ElectronStoreLocalStorageProvider implements StorageProvider {
    */
   public watch(
     key: string,
-    callback: (newValue: any, oldValue: any) => void,
+    callback: (newValue: unknown, oldValue: unknown) => void,
   ): () => void {
     if (!this.store) {
       throw new Error('ElectronStoreBackend not initialized');
@@ -273,7 +273,7 @@ export class ElectronStoreLocalStorageProvider implements StorageProvider {
   /**
    * Migrate data from another backend (utility method)
    */
-  public async importData(data: Record<string, any>): Promise<void> {
+  public async importData(data: Record<string, unknown>): Promise<void> {
     if (!this.store) {
       throw new Error('ElectronStoreBackend not initialized');
     }
@@ -291,7 +291,7 @@ export class ElectronStoreLocalStorageProvider implements StorageProvider {
   /**
    * Export all data (utility method)
    */
-  public async exportData(): Promise<Record<string, any>> {
+  public async exportData(): Promise<Record<string, unknown>> {
     if (!this.store) {
       throw new Error('ElectronStoreBackend not initialized');
     }

@@ -143,7 +143,7 @@ export class MultiStoreManager extends EventEmitter {
   /**
    * Get a value from a specific namespace
    */
-  public async get<T = any>(
+  public async get<T = unknown>(
     key: string,
     namespace: StorageNamespaces,
     defaultValue?: T,
@@ -183,7 +183,7 @@ export class MultiStoreManager extends EventEmitter {
   /**
    * Set a value in a specific namespace
    */
-  public async set<T = any>(
+  public async set<T = unknown>(
     key: string,
     value: T,
     namespace: StorageNamespaces,
@@ -340,7 +340,7 @@ export class MultiStoreManager extends EventEmitter {
   /**
    * Get multiple values from a specific namespace in a single batch operation
    */
-  public async getMultiple<T = any>(
+  public async getMultiple<T = unknown>(
     keys: string[],
     namespace: StorageNamespaces,
   ): Promise<StorageResult<Map<string, T>>> {
@@ -879,8 +879,8 @@ export class MultiStoreManager extends EventEmitter {
     namespace: string,
     storageProvider?: string,
     key?: string,
-    value?: any,
-    oldValue?: any,
+    value?: unknown,
+    oldValue?: unknown,
     error?: Error,
   ): void {
     const event: StorageEvent = {

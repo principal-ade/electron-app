@@ -309,7 +309,8 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
 
     // Add acceptsFirstMouse to webPreferences for better mouse interaction
     // This helps with mouse events on unfocused windows
-    (webPreferences as any).acceptsFirstMouse = true;
+    // Note: acceptsFirstMouse is an undocumented Electron feature
+    (webPreferences as Record<string, unknown>).acceptsFirstMouse = true;
 
     // Platform-specific titlebar configuration
     const isMac = process.platform === 'darwin';
@@ -330,7 +331,7 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
         color: 'rgb(31, 41, 55)', // Match app's background color (top of gradient)
         symbolColor: '#ffffff', // White window control icons
         height: 48, // Height of custom title bar area
-      } as any;
+      };
     } else if (isLinux) {
       // Linux: Remove frame entirely for full control
       titleBarOptions.frame = false;
@@ -823,7 +824,7 @@ export async function focusOrCreateMainWindow(): Promise<IModernApplicationWindo
 
     // Main window ID is stale, clear it
     console.log('[ModernWindow] Main window ID is stale, clearing');
-    setMainWindowId(null as any);
+    setMainWindowId(null);
   }
 
   // No main window exists, create one
@@ -881,7 +882,7 @@ export type OldApplicationWindow = ModernApplicationWindow;
 /**
  * Helper method to send messages to all windows
  */
-export function sendToAllWindows(channel: string, ...args: any[]): void {
+export function sendToAllWindows(channel: string, ...args: unknown[]): void {
   applicationWindows.forEach((appWindow) => {
     if (appWindow && appWindow.window && !appWindow.window.isDestroyed()) {
       appWindow.window.webContents.send(channel, ...args);

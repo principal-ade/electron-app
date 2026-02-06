@@ -1,5 +1,11 @@
 import type { UnifiedSecureStorage } from '../UnifiedSecureStorage';
 
+/** Value of a secret (can be string, number, object, array, etc.) */
+export type SecretValue = unknown;
+
+/** Contextual data attached to audit log entries (e.g., repoId, error details) */
+type AuditLogData = unknown;
+
 export interface SecretMetadata {
   repoId: string;
   repoPath: string;
@@ -9,7 +15,7 @@ export interface SecretMetadata {
 }
 
 export interface StoredSecret {
-  data: Record<string, any>;
+  data: Record<string, SecretValue>;
   metadata: SecretMetadata;
 }
 
@@ -18,12 +24,12 @@ export class SecretsDomain {
     level: string;
     message: string;
     timestamp: number;
-    data?: any;
+    data?: AuditLogData;
   }> = [];
 
   constructor(private storage: UnifiedSecureStorage) {}
 
-  private logAudit(level: string, message: string, data?: any): void {
+  private logAudit(level: string, message: string, data?: AuditLogData): void {
     const entry = {
       level,
       message,
@@ -41,7 +47,7 @@ export class SecretsDomain {
     }
   }
 
-  private validateSecrets(secrets: Record<string, any>): boolean {
+  private validateSecrets(secrets: Record<string, SecretValue>): boolean {
     if (!secrets || typeof secrets !== 'object') {
       return false;
     }
@@ -61,7 +67,7 @@ export class SecretsDomain {
   async storeSecrets(
     repoId: string,
     repoPath: string,
-    secrets: Record<string, any>,
+    secrets: Record<string, SecretValue>,
   ): Promise<{ success: boolean; error?: string; metadata?: SecretMetadata }> {
     try {
       if (!this.validateSecrets(secrets)) {
@@ -102,16 +108,17 @@ export class SecretsDomain {
       );
 
       return { success: true, metadata };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logAudit('error', 'Failed to store secrets', {
         repoId,
-        error: error.message,
+        error: errorMessage,
       });
-      return { success: false, error: error.message };
+      return { success: false, error: errorMessage };
     }
   }
 
-  async getSecrets(repoId: string): Promise<Record<string, any> | null> {
+  async getSecrets(repoId: string): Promise<Record<string, SecretValue> | null> {
     try {
       const data = await this.storage.getData();
       const storedSecret = data.secrets[repoId] as StoredSecret | undefined;
@@ -122,10 +129,11 @@ export class SecretsDomain {
 
       this.logAudit('info', 'Retrieved secrets for repository', { repoId });
       return storedSecret.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logAudit('error', 'Failed to retrieve secrets', {
         repoId,
-        error: error.message,
+        error: errorMessage,
       });
       return null;
     }
@@ -141,10 +149,11 @@ export class SecretsDomain {
       }
 
       return storedSecret;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logAudit('error', 'Failed to retrieve secrets with metadata', {
         repoId,
-        error: error.message,
+        error: errorMessage,
       });
       return null;
     }
@@ -187,7 +196,7 @@ export class SecretsDomain {
     level: string;
     message: string;
     timestamp: number;
-    data?: any;
+    data?: AuditLogData;
   }> {
     return [...this.auditLog];
   }

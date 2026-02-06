@@ -32,14 +32,14 @@ export interface StorageProvider {
    * @param key The key to retrieve
    * @param defaultValue Optional default value if key doesn't exist
    */
-  get<T = any>(key: string, defaultValue?: T): Promise<T | undefined>;
+  get<T = unknown>(key: string, defaultValue?: T): Promise<T | undefined>;
 
   /**
    * Set a value by key
    * @param key The key to set
    * @param value The value to store
    */
-  set<T = any>(key: string, value: T): Promise<void>;
+  set<T = unknown>(key: string, value: T): Promise<void>;
 
   /**
    * Delete a key
@@ -81,7 +81,7 @@ export interface StorageProvider {
    */
   watch?(
     key: string,
-    callback: (newValue: any, oldValue: any) => void,
+    callback: (newValue: unknown, oldValue: unknown) => void,
   ): () => void;
 }
 
@@ -105,7 +105,7 @@ export interface MultiStoreConfig {
 /**
  * Storage operation result
  */
-export interface StorageResult<T = any> {
+export interface StorageResult<T = unknown> {
   success: boolean;
   data?: T;
   error?: Error;
@@ -126,8 +126,8 @@ export interface StorageEvent {
   namespace: string;
   storageProvider: string;
   key?: string;
-  value?: any;
-  oldValue?: any;
+  value?: unknown;
+  oldValue?: unknown;
   timestamp: number;
   error?: Error;
 }

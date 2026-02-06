@@ -71,15 +71,16 @@ export class ElectronCLIBridgeExecutor implements Executor {
         command,
         args,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Command failed';
       return {
         stdout: '',
-        stderr: error.message || 'Command failed',
+        stderr: errorMessage,
         exitCode: 1,
         duration: 0,
         command,
         args,
-        error,
+        error: error instanceof Error ? error : new Error(errorMessage),
       };
     }
   }

@@ -3,6 +3,19 @@ import { OptimizedDockerService } from '../../../docker/OptimizedDockerService';
 import { DockerStoreService } from '../../../docker/DockerStoreService';
 
 /**
+ * Container health check details
+ */
+interface ContainerHealthDetails {
+  id: string;
+  toolName: string;
+  status: string;
+  healthy: boolean;
+  lastUsed?: number;
+  uptime?: number;
+  error?: string;
+}
+
+/**
  * IPC handlers for the optimized Docker service with container reuse
  */
 export function registerOptimizedDockerHandlers() {
@@ -273,7 +286,7 @@ export function registerOptimizedDockerHandlers() {
         totalContainers: containers.length,
         healthyContainers: 0,
         unhealthyContainers: 0,
-        details: [] as any[],
+        details: [] as ContainerHealthDetails[],
       };
 
       for (const container of containers) {

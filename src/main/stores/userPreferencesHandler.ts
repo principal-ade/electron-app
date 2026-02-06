@@ -70,7 +70,7 @@ export class UserPreferencesHandler {
     );
   }
 
-  private deepMerge(target: any, source: any): any {
+  private deepMerge(target: unknown, source: unknown): unknown {
     const output = { ...target };
 
     if (this.isObject(target) && this.isObject(source)) {
@@ -90,7 +90,7 @@ export class UserPreferencesHandler {
     return output;
   }
 
-  private isObject(item: any): boolean {
+  private isObject(item: unknown): boolean {
     return item && typeof item === 'object' && !Array.isArray(item);
   }
 

@@ -247,15 +247,21 @@ export class FileSystemService {
       // Use recursive deletion for the directory
       await fsPromises.rm(dirPath, { recursive: true, force: true });
       console.log(`Successfully deleted directory: ${dirPath}`);
-    } catch (error: any) {
-      if (error.code === 'ENOENT') {
+    } catch (error: unknown) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === 'ENOENT'
+      ) {
         // Directory doesn't exist, consider it a success
         console.log(`Directory does not exist, nothing to delete: ${dirPath}`);
         return;
       }
 
       console.error(`Failed to delete directory ${dirPath}:`, error);
-      throw new Error(`Failed to delete directory: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to delete directory: ${errorMessage}`);
     }
   }
 

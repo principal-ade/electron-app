@@ -124,8 +124,13 @@ export class SkillsConfigService {
 
       console.log('[SkillsConfig] Loaded config from disk');
       return this.config;
-    } catch (error: any) {
-      if (error.code === 'ENOENT') {
+    } catch (error: unknown) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === 'ENOENT'
+      ) {
         // Config file doesn't exist, return defaults
         console.log('[SkillsConfig] No config file found, using defaults');
         this.config = { ...DEFAULT_CONFIG };

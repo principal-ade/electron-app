@@ -7,10 +7,13 @@ import { app, MessageChannelMain, MessagePortMain } from 'electron';
 import path from 'path';
 import os from 'os';
 
+/** OTLP (OpenTelemetry Protocol) trace data payload with dynamic structure */
+type OTLPTraceData = unknown;
+
 interface StoredTrace {
   timestamp: number;
   traceId: string;
-  data: any; // OTLP trace data
+  data: OTLPTraceData;
 }
 
 export class OtelCollectorService {
@@ -207,7 +210,7 @@ export class OtelCollectorService {
   /**
    * Store a received trace
    */
-  storeTrace(traceData: any): void {
+  storeTrace(traceData: OTLPTraceData): void {
     try {
       // Extract trace ID from the data
       const traceId = this.extractTraceId(traceData);
@@ -250,11 +253,14 @@ export class OtelCollectorService {
   /**
    * Extract trace ID from OTLP trace data
    */
-  private extractTraceId(traceData: any): string {
+  private extractTraceId(traceData: OTLPTraceData): string {
     try {
       // OTLP format: resourceSpans[0].scopeSpans[0].spans[0].traceId
-      if (traceData.resourceSpans?.[0]?.scopeSpans?.[0]?.spans?.[0]?.traceId) {
-        return traceData.resourceSpans[0].scopeSpans[0].spans[0].traceId;
+      // Type assertion needed to access dynamic OTLP structure
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data = traceData as any;
+      if (data.resourceSpans?.[0]?.scopeSpans?.[0]?.spans?.[0]?.traceId) {
+        return data.resourceSpans[0].scopeSpans[0].spans[0].traceId;
       }
       return `trace-${Date.now()}`;
     } catch {

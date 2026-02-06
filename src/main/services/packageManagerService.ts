@@ -5,7 +5,7 @@ interface PackageVersionInfo {
   currentVersion: string;
 }
 
-interface VersionCheckResult {
+export interface VersionCheckResult {
   packageName: string;
   currentVersion: string;
   latestVersion?: string;
@@ -16,7 +16,7 @@ interface VersionCheckResult {
   error?: string;
 }
 
-interface VulnerabilityInfo {
+export interface VulnerabilityInfo {
   id: string;
   severity: 'low' | 'moderate' | 'high' | 'critical';
   title: string;
@@ -24,14 +24,14 @@ interface VulnerabilityInfo {
   fixAvailable?: boolean;
 }
 
-interface VulnerabilityCheckResult {
+export interface VulnerabilityCheckResult {
   packageName: string;
   version: string;
   vulnerabilities: VulnerabilityInfo[];
   error?: string;
 }
 
-interface LicenseInfo {
+export interface LicenseInfo {
   license: string;
   licenseType: 'permissive' | 'copyleft' | 'proprietary' | 'unknown';
   requiresAttribution: boolean;
@@ -39,19 +39,22 @@ interface LicenseInfo {
   allowsCommercialUse: boolean;
 }
 
-interface LicenseCheckResult {
+export interface LicenseCheckResult {
   packageName: string;
   version: string;
   license?: LicenseInfo;
   error?: string;
 }
 
+/** NPM package registry data (unvalidated JSON from registry.npmjs.org) */
+type NPMPackageData = unknown;
+
 // Simple in-memory cache
-const versionCache = new Map<string, { data: any; timestamp: number }>();
+const versionCache = new Map<string, { data: NPMPackageData; timestamp: number }>();
 const CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
 export class PackageManagerService {
-  private async fetchPackageInfo(packageName: string): Promise<any> {
+  private async fetchPackageInfo(packageName: string): Promise<NPMPackageData> {
     const cacheKey = `pkg:${packageName}`;
     const cached = versionCache.get(cacheKey);
 

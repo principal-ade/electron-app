@@ -16,11 +16,40 @@ import {
   RendererPortMessage,
 } from './types';
 
+/**
+ * node-pty module interface (dynamically loaded native module)
+ * Using a minimal interface for the methods we actually use
+ */
+interface NodePtyModule {
+  spawn(
+    shell: string,
+    args: string[],
+    options: {
+      name: string;
+      cols: number;
+      rows: number;
+      cwd: string;
+      env: Record<string, string>;
+    },
+  ): NodePtyProcess;
+}
+
+/**
+ * node-pty process interface
+ */
+interface NodePtyProcess {
+  pid: number;
+  onData(callback: (data: string) => void): void;
+  onExit(callback: (exitInfo: { exitCode: number }) => void): void;
+  write(data: string): void;
+  resize(cols: number, rows: number): void;
+}
+
 // Import node-pty dynamically
-let pty: any;
+let pty: NodePtyModule;
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  pty = require('node-pty');
+  pty = require('node-pty') as NodePtyModule;
   if (!pty) {
     throw new Error('node-pty unresolved');
   }
@@ -35,6 +64,19 @@ const sessions = new Map<string, WorkerSessionInfo>();
 // Output buffers for replay/refresh functionality
 const outputBuffers = new Map<string, string[]>();
 const MAX_BUFFER_SIZE = 1000; // Keep last 1000 chunks
+
+// Pending session creation parameters (waiting for PORT_TRANSFER)
+interface PendingSessionParams {
+  sessionId: string;
+  cols: number;
+  rows: number;
+  cwd: string;
+  env: Record<string, string>;
+  shell: string;
+  args: string[];
+  command?: string;
+}
+const pendingSessions = new Map<string, PendingSessionParams>();
 
 /**
  * Send a message to the main process via the control channel
@@ -280,17 +322,22 @@ if (parentPort) {
             `[PTY Worker] Received CREATE_SESSION for ${message.sessionId}`,
           );
           // Store the creation params, wait for port
-          (createSession as any).pending =
-            (createSession as any).pending || new Map();
-          (createSession as any).pending.set(message.sessionId, message);
+          pendingSessions.set(message.sessionId, {
+            sessionId: message.sessionId,
+            cols: message.cols,
+            rows: message.rows,
+            cwd: message.cwd,
+            env: message.env,
+            shell: message.shell,
+            args: message.args,
+            command: message.command,
+          });
         } else if (message.type === 'PORT_TRANSFER') {
           // Receive the port for a session
           console.log(
             `[PTY Worker] Received PORT_TRANSFER for ${message.sessionId}`,
           );
-          const pending = (createSession as any).pending?.get(
-            message.sessionId,
-          );
+          const pending = pendingSessions.get(message.sessionId);
           if (pending) {
             createSession(
               pending.sessionId,
@@ -303,7 +350,7 @@ if (parentPort) {
               message.port,
               pending.command,
             );
-            (createSession as any).pending.delete(message.sessionId);
+            pendingSessions.delete(message.sessionId);
           }
         } else if (message.type === 'DESTROY_SESSION') {
           destroySession(message.sessionId);

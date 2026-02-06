@@ -1,5 +1,10 @@
 import { ipcMain } from 'electron';
-import { PackageManagerService } from '../../packageManagerService';
+import {
+  PackageManagerService,
+  type VersionCheckResult,
+  type VulnerabilityCheckResult,
+  type LicenseCheckResult,
+} from '../../packageManagerService';
 import { PackageManagerAPIEvent } from '../../../../shared/main-process-api-interfaces/PackageManagerAPI';
 
 const packageManagerService = new PackageManagerService();
@@ -10,7 +15,7 @@ export function registerPackageManagerHandlers() {
     PackageManagerAPIEvent.CHECK_VERSIONS,
     async (event, params) => {
       const { packages, options } = params;
-      const results: any[] = [];
+      const results: VersionCheckResult[] = [];
 
       try {
         // Use async generator to stream results
@@ -40,7 +45,7 @@ export function registerPackageManagerHandlers() {
     PackageManagerAPIEvent.CHECK_VULNERABILITIES,
     async (event, params) => {
       const { packages, options } = params;
-      const results: any[] = [];
+      const results: VulnerabilityCheckResult[] = [];
 
       try {
         // Use async generator to stream results
@@ -73,7 +78,7 @@ export function registerPackageManagerHandlers() {
     PackageManagerAPIEvent.CHECK_LICENSES,
     async (event, params) => {
       const { packages, options } = params;
-      const results: any[] = [];
+      const results: LicenseCheckResult[] = [];
 
       try {
         // Use async generator to stream results

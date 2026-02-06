@@ -10,6 +10,40 @@ import type { CommitInfo } from '../quality-lenses/GitLensAdapter';
 import type { GitStatus } from '../../shared/types/repository.types';
 
 /**
+ * Git command execution options (for raw git commands)
+ */
+interface GitRawOptions {
+  env?: Record<string, string>;
+  timeout?: number;
+  cwd?: string;
+}
+
+/**
+ * Compatibility client interface that mimics simple-git API
+ * Used during migration from simple-git to electron-cli-bridge
+ */
+interface GitCompatibilityClient {
+  revparse: (args: string[]) => Promise<string>;
+  status: () => Promise<{
+    current: string | null;
+    staged: string[];
+    modified: string[];
+    deleted: string[];
+    not_added: string[];
+  }>;
+  branchLocal: () => Promise<{ all: string[] }>;
+  branch: (args: string[]) => Promise<{ all: string[] }>;
+  getRemotes: (verbose: boolean) => Promise<
+    Array<{
+      name: string;
+      refs: { fetch: string; push: string };
+    }>
+  >;
+  getConfig: (key: string) => Promise<{ value: string | null }>;
+  raw: (args: string[], options?: GitRawOptions) => Promise<string>;
+}
+
+/**
  * Factory for Git operations using electron-cli-bridge
  * Provides compatibility layer for existing code while using new implementation
  */
@@ -30,7 +64,7 @@ export class GitClientFactory {
   /**
    * Get client for compatibility (returns git executor)
    */
-  static async getClient(_baseDir: string): Promise<any> {
+  static async getClient(_baseDir: string): Promise<GitCompatibilityClient> {
     const git = await this.ensureInitialized();
 
     // Return a compatibility object that mimics simple-git interface
@@ -93,7 +127,7 @@ export class GitClientFactory {
         return { value };
       },
 
-      raw: async (args: string[], options?: any) => {
+      raw: async (args: string[], options?: GitRawOptions) => {
         try {
           const result = await git.raw(_baseDir, args, options);
 

@@ -77,7 +77,7 @@ export class S3RemoteStorageProvider implements StorageProvider {
   /**
    * Get a value by key
    */
-  public async get<T = any>(
+  public async get<T = unknown>(
     key: string,
     defaultValue?: T,
   ): Promise<T | undefined> {
@@ -107,7 +107,7 @@ export class S3RemoteStorageProvider implements StorageProvider {
   /**
    * Set a value by key
    */
-  public async set<T = any>(key: string, value: T): Promise<void> {
+  public async set<T = unknown>(key: string, value: T): Promise<void> {
     if (!this.isAvailable) {
       throw new Error('S3Backend not initialized');
     }
@@ -292,7 +292,7 @@ export class S3RemoteStorageProvider implements StorageProvider {
    */
   public watch?(
     key: string,
-    callback: (newValue: any, oldValue: any) => void,
+    callback: (newValue: unknown, oldValue: unknown) => void,
   ): () => void {
     // S3 doesn't natively support change notifications
     // This could be implemented using:

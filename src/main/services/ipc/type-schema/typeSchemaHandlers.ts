@@ -15,11 +15,12 @@ export function setupTypeSchemaHandlers(): void {
       try {
         const result = await service.generateSchemasForLayer(options);
         return { success: true, data: result };
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Error generating schemas:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Failed to generate schemas';
         return {
           success: false,
-          error: error.message || 'Failed to generate schemas',
+          error: errorMessage,
         };
       }
     },
@@ -35,11 +36,12 @@ export function setupTypeSchemaHandlers(): void {
           data.tsConfigPath,
         );
         return { success: true, data: types };
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Error extracting types:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Failed to extract types';
         return {
           success: false,
-          error: error.message || 'Failed to extract types',
+          error: errorMessage,
         };
       }
     },
@@ -59,11 +61,12 @@ export function setupTypeSchemaHandlers(): void {
           data.tsConfigPath,
         );
         return { success: true, data: exists };
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Error validating type:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Failed to validate type';
         return {
           success: false,
-          error: error.message || 'Failed to validate type',
+          error: errorMessage,
         };
       }
     },
@@ -79,11 +82,12 @@ export function setupTypeSchemaHandlers(): void {
           data.tsConfigPath,
         );
         return { success: true, data: result };
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Error generating declarations:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Failed to generate declarations';
         return {
           success: false,
-          error: error.message || 'Failed to generate declarations',
+          error: errorMessage,
         };
       }
     },

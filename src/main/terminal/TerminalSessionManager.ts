@@ -25,6 +25,15 @@ import type {
   SetOwnerMessage,
 } from '../../terminal-worker/types';
 
+/**
+ * Minimal interface for WebSocket bridge to avoid circular dependency
+ * Defines only the methods that TerminalSessionManager needs to call
+ */
+interface TerminalWebSocketBridge {
+  onSessionCreated(sessionId: string): Promise<void>;
+  onSessionDestroyed(sessionId: string): Promise<void>;
+}
+
 export class TerminalSessionManager {
   // Minimal session state in main - just enough to track existence and metadata
   private sessions: Map<string, TerminalSession> = new Map();
@@ -33,7 +42,7 @@ export class TerminalSessionManager {
   private rendererWindows: Set<BrowserWindow> = new Set();
 
   // WebSocket bridge for remote terminal access (optional)
-  private wsBridge: any | null = null; // Using any to avoid circular dependency
+  private wsBridge: TerminalWebSocketBridge | null = null;
 
   // Data listeners for PTY output (for remote streaming)
   private dataListeners: Map<
@@ -66,7 +75,7 @@ export class TerminalSessionManager {
   /**
    * Set the WebSocket bridge for remote terminal access
    */
-  setWebSocketBridge(bridge: any): void {
+  setWebSocketBridge(bridge: TerminalWebSocketBridge): void {
     this.wsBridge = bridge;
     console.log('[TerminalSessionManager] WebSocket bridge set');
   }

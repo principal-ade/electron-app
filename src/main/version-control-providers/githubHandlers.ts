@@ -1492,7 +1492,7 @@ export class GitHubAdapter {
   /**
    * Get current user information
    */
-  async getCurrentUser(): Promise<any | null> {
+  async getCurrentUser(): Promise<GitHubUser | null> {
     console.log('[GitHub] getCurrentUser: Fetching user info...');
 
     // First try with token-based API
@@ -1668,7 +1668,7 @@ export class GitHubAdapter {
     }
   }
 
-  async getIssues(owner: string, repo: string): Promise<any[]> {
+  async getIssues(owner: string, repo: string): Promise<GitHubIssue[]> {
     console.log(`[GitHub] Fetching issues for ${owner}/${repo}`);
 
     // First, try using gh CLI which handles authentication for private repos
@@ -1864,7 +1864,7 @@ export class GitHubAdapter {
     });
   }
 
-  async getPullRequests(owner: string, repo: string): Promise<any[]> {
+  async getPullRequests(owner: string, repo: string): Promise<GitHubPullRequest[]> {
     console.log(`[GitHub] Fetching pull requests for ${owner}/${repo}`);
 
     try {
@@ -2003,7 +2003,7 @@ export class GitHubAdapter {
     owner: string,
     repo: string,
     options?: { perPage?: number; page?: number },
-  ): Promise<any[]> {
+  ): Promise<GitHubCommit[]> {
     const perPage = options?.perPage || 30;
     const page = options?.page || 1;
     console.log(
@@ -2123,7 +2123,7 @@ export class GitHubAdapter {
   /**
    * Get followers for a user (defaults to authenticated user)
    */
-  async getUserFollowers(username?: string): Promise<any[]> {
+  async getUserFollowers(username?: string): Promise<GitHubUser[]> {
     const endpoint = username
       ? `/users/${username}/followers`
       : '/user/followers';
@@ -2149,7 +2149,7 @@ export class GitHubAdapter {
   /**
    * Get users that a user is following (defaults to authenticated user)
    */
-  async getUserFollowing(username?: string): Promise<any[]> {
+  async getUserFollowing(username?: string): Promise<GitHubUser[]> {
     const endpoint = username
       ? `/users/${username}/following`
       : '/user/following';
@@ -2175,7 +2175,7 @@ export class GitHubAdapter {
   /**
    * Get members of an organization
    */
-  async getOrgMembers(org: string): Promise<any[]> {
+  async getOrgMembers(org: string): Promise<GitHubOrgMember[]> {
     const endpoint = `/orgs/${org}/members`;
     const apiResult = await this.makeGitHubAPICall(endpoint);
 
@@ -2199,7 +2199,7 @@ export class GitHubAdapter {
   /**
    * Get a specific user's profile
    */
-  async getUser(username: string): Promise<any | null> {
+  async getUser(username: string): Promise<GitHubUser | null> {
     const endpoint = `/users/${username}`;
     const apiResult = await this.makeGitHubAPICall(endpoint);
 
@@ -2223,7 +2223,7 @@ export class GitHubAdapter {
   /**
    * Get a specific user's public organizations
    */
-  async getUserOrganizationsForUser(username: string): Promise<any[]> {
+  async getUserOrganizationsForUser(username: string): Promise<GitHubOrganization[]> {
     const endpoint = `/users/${username}/orgs`;
     const apiResult = await this.makeGitHubAPICall(endpoint);
 
@@ -2250,7 +2250,7 @@ export class GitHubAdapter {
   async getUserStarredRepositoriesForUser(
     username: string,
     options?: RepositoryFetchOptions,
-  ): Promise<any[]> {
+  ): Promise<GitHubRepository[]> {
     const queryParams = new URLSearchParams();
     if (options?.sort) queryParams.set('sort', options.sort);
     if (options?.direction) queryParams.set('direction', options.direction);
@@ -2458,7 +2458,7 @@ export class GitHubAdapter {
    * Get repository info including permissions
    * Returns null if repo not found or user doesn't have access
    */
-  async getRepository(owner: string, repo: string): Promise<any | null> {
+  async getRepository(owner: string, repo: string): Promise<GitHubRepositoryWithPermissions | null> {
     console.log(`[GitHub] Fetching repository info for ${owner}/${repo}`);
 
     const endpoint = `/repos/${owner}/${repo}`;
@@ -2501,7 +2501,7 @@ export class GitHubAdapter {
       name?: string;
       default_branch_only?: boolean;
     },
-  ): Promise<any | null> {
+  ): Promise<GitHubRepositoryCreated | null> {
     console.log(`[GitHub] Forking repository ${owner}/${repo}`, options);
 
     const endpoint = `/repos/${owner}/${repo}/forks`;

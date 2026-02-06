@@ -44,7 +44,7 @@ export function registerStoreHandlers(): void {
       _,
       key: string,
       namespace: StorageNamespaces,
-      defaultValue?: any,
+      defaultValue?: unknown,
     ) => {
       try {
         const typedNamespace = await verifyNamespace(namespace);
@@ -62,7 +62,7 @@ export function registerStoreHandlers(): void {
 
   ipcMain.handle(
     StoreEvents.SET,
-    async (_, key: string, value: any, namespace: StorageNamespaces) => {
+    async (_, key: string, value: unknown, namespace: StorageNamespaces) => {
       try {
         const typedManager = await getTypedStorageManagerInstance();
         const result = await typedManager.set(
@@ -305,7 +305,7 @@ export function registerStoreHandlers(): void {
 
   ipcMain.handle(
     StoreEvents.CLEANUP_SESSION_STORAGE,
-    async (_, options: CleanupOptions) => {
+    async (_, _options: CleanupOptions) => {
       try {
         // This would need to be integrated with the actual session storage cleanup
         const result: CleanupResult = {
@@ -322,20 +322,7 @@ export function registerStoreHandlers(): void {
     },
   );
 
-  // Watch functionality
   // Watch functionality removed - not currently used and expensive to maintain
-  // Future implementation should be more targeted if needed
-  ipcMain.handle(
-    StoreEvents.WATCH,
-    async (event, key: string, namespace: string) => {
-      console.warn(
-        'Watch functionality has been removed for performance reasons',
-      );
-      // Return a no-op unsubscribe function
-      return () => {};
-    },
-  );
-
   // Storage event listener removed - not currently used and expensive to maintain
   // Broadcasting all storage changes to all windows is inefficient
   // Future implementation should use more targeted event handling if needed

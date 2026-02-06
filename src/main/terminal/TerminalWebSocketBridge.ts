@@ -171,15 +171,19 @@ export class TerminalWebSocketBridge {
         }, 10000);
 
         // Listen for room_joined event
-        client.once('room_joined' as any, () => {
+        client.once('room_joined', () => {
           clearTimeout(timeout);
           resolve();
         });
 
         // Listen for errors
-        client.once('error' as any, (err: any) => {
+        client.once('error', (err: unknown) => {
           clearTimeout(timeout);
-          reject(new Error(err?.error?.message || 'Failed to join room'));
+          const errorMessage =
+            err && typeof err === 'object' && 'error' in err && err.error && typeof err.error === 'object' && 'message' in err.error
+              ? String(err.error.message)
+              : 'Failed to join room';
+          reject(new Error(errorMessage));
         });
 
         // Send join room request

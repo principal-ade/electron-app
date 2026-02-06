@@ -186,13 +186,14 @@ export class QualityLensService {
           missingLenses: packageLayer.qualityMetrics?.missingLenses,
         },
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(`[QualityLensService] Error:`, error);
+      const errorObj = error instanceof Error ? error : new Error(String(error));
       return this.createErrorResponse(
         packageCommand.lensId || packageCommand.name,
         packageCommand.command,
         packagePath,
-        error,
+        errorObj,
         startTime,
       );
     }
@@ -222,12 +223,13 @@ export class QualityLensService {
         stdout: result.stdout,
         stderr: result.stderr,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorObj = error instanceof Error ? error : new Error(String(error));
       return this.createErrorResponse(
         packageCommand.name,
         packageCommand.command,
         request.packageLayer?.packageData.path,
-        error,
+        errorObj,
         startTime,
       );
     }
