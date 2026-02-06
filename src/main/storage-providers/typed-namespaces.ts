@@ -303,7 +303,7 @@ export class TypedStorageProvider {
         const shortKey = key.slice(namespacePrefix.length);
         const value = await this.provider.get(key);
         if (value !== undefined) {
-          result[shortKey] = value;
+          result[shortKey] = value as NamespaceDataTypes[K];
         }
       }
     }
@@ -365,7 +365,12 @@ export class TypedStorageProvider {
     }
 
     const namespacedKey = this.getNamespacedKey(namespace, key);
-    return this.provider.watch(namespacedKey, callback);
+    return this.provider.watch(namespacedKey, (newValue: unknown, oldValue: unknown) => {
+      callback(
+        newValue as NamespaceDataTypes[K] | undefined,
+        oldValue as NamespaceDataTypes[K] | undefined
+      );
+    });
   }
 
   private getNamespacedKey(namespace: StorageNamespaces, key: string): string {

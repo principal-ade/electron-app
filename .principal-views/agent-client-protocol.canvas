@@ -1,0 +1,325 @@
+{
+  "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "text": "# Agent Client Protocol (ACP)\n\nStandardized communication between editors and AI coding agents",
+      "x": 250,
+      "y": -150,
+      "width": 500,
+      "height": 120,
+      "color": "#8b5cf6",
+      "pv": {
+        "name": "ACP Overview"
+      }
+    },
+    {
+      "id": "editor",
+      "type": "text",
+      "text": "# Code Editor / IDE\n\n**Examples:**\n- VS Code\n- Zed\n- Your Electron App\n- JetBrains\n\n**Role:** ClientSideConnection",
+      "x": 0,
+      "y": 50,
+      "width": 250,
+      "height": 200,
+      "color": "#22c55e",
+      "pv": {
+        "icon": "Monitor",
+        "shape": "rectangle",
+        "name": "Editor/Client"
+      }
+    },
+    {
+      "id": "agent",
+      "type": "text",
+      "text": "# AI Coding Agent\n\n**Examples:**\n- Claude Code\n- Gemini CLI\n- Custom agents\n\n**Role:** AgentSideConnection",
+      "x": 750,
+      "y": 50,
+      "width": 250,
+      "height": 200,
+      "color": "#8b5cf6",
+      "pv": {
+        "nodeType": "agent-session-service",
+        "icon": "Cpu",
+        "shape": "rectangle",
+        "name": "Agent"
+      }
+    },
+    {
+      "id": "communication",
+      "type": "text",
+      "text": "# JSON-RPC over stdio pipes\n\n**NOT PTY** - structured messages\n**Local:** stdin/stdout pipes\n**Remote:** HTTP/WebSocket (WIP)\n\n**Patterns:**\n- Notifications (agent → editor)\n- Bidirectional requests\n- Real-time streaming",
+      "x": 331,
+      "y": 59,
+      "width": 350,
+      "height": 180,
+      "color": "#06b6d4",
+      "pv": {
+        "icon": "Zap",
+        "shape": "hexagon",
+        "name": "Communication Layer"
+      }
+    },
+    {
+      "id": "init",
+      "type": "text",
+      "text": "# 1. Initialization\n\n```json\n{\n  \"method\": \"initialize\",\n  \"params\": {\n    \"protocolVersion\": \"1.0\",\n    \"capabilities\": {...}\n  }\n}\n```\n\n**Negotiates:** Version & capabilities",
+      "x": -28,
+      "y": 838,
+      "width": 300,
+      "height": 200,
+      "color": "#eab308",
+      "pv": {
+        "icon": "Handshake",
+        "name": "Initialization"
+      }
+    },
+    {
+      "id": "session",
+      "type": "text",
+      "text": "# 2. Session Setup\n\n**Editor spawns agent:**\n- As subprocess (local)\n- As remote connection\n\n**Multiple sessions:** Supported for parallel work",
+      "x": 397,
+      "y": 837,
+      "width": 300,
+      "height": 200,
+      "color": "#eab308",
+      "pv": {
+        "icon": "Play",
+        "name": "Session"
+      }
+    },
+    {
+      "id": "prompt-turn",
+      "type": "text",
+      "text": "# 3. Prompt Turn Cycle\n\n**Flow:**\n1. User sends `session/prompt`\n2. Agent processes with LLM\n3. Agent sends `session/update`\n4. Agent requests tool execution\n5. Repeat until completion\n\n**Can be cancelled** anytime",
+      "x": 837,
+      "y": 837,
+      "width": 300,
+      "height": 200,
+      "color": "#eab308",
+      "pv": {
+        "icon": "Repeat",
+        "name": "Prompt Turn"
+      }
+    },
+    {
+      "id": "benefits",
+      "type": "text",
+      "text": "# Key Benefits\n\n✅ **Standardization:** One protocol for all\n✅ **No vendor lock-in:** Mix & match\n✅ **Ecosystem growth:** Independent innovation\n✅ **Editor control:** Maintains authorization\n✅ **Multiple sessions:** Parallel workflows",
+      "x": 1287,
+      "y": 814,
+      "width": 300,
+      "height": 180,
+      "color": "#22c55e",
+      "pv": {
+        "icon": "CheckCircle",
+        "name": "Benefits"
+      }
+    },
+    {
+      "id": "problem",
+      "type": "text",
+      "text": "# Problem Solved\n\n**Before ACP:**\n❌ Each editor must integrate every agent\n❌ Each agent must support every editor\n❌ N × M integrations needed\n❌ Developer lock-in\n\n**With ACP:**\n✅ N + M integrations\n✅ Any editor works with any agent",
+      "x": -436,
+      "y": -45,
+      "width": 300,
+      "height": 200,
+      "color": "#ef4444",
+      "pv": {
+        "icon": "AlertTriangle",
+        "name": "Problem"
+      }
+    },
+    {
+      "id": "typescript-sdk",
+      "type": "text",
+      "text": "# TypeScript SDK\n\n```bash\nnpm install @agentclientprotocol/sdk\n```\n\n**Classes:**\n- `AgentSideConnection` (build agents)\n- `ClientSideConnection` (build editors)\n\n**Also available:** Python, Rust, Kotlin",
+      "x": 1275,
+      "y": 334,
+      "width": 300,
+      "height": 200,
+      "color": "#06b6d4",
+      "pv": {
+        "icon": "Code",
+        "name": "SDK"
+      }
+    },
+    {
+      "id": "integration-note",
+      "type": "text",
+      "text": "# Integration with Your App\n\n**Current state:**\n- Agent management ✅\n- Sessions ✅\n- Event infrastructure ✅\n\n**To add ACP:**\n1. Install `@agentclientprotocol/sdk`\n2. Create `ACPBridge.ts`\n3. Use **stdio pipes** (not nodepty)\n4. Extend agent config handlers\n5. Bridge ACP ↔ existing sessions\n6. Handle tool requests from agents",
+      "x": 1279,
+      "y": 583,
+      "width": 300,
+      "height": 200,
+      "color": "#22c55e",
+      "pv": {
+        "icon": "Plug",
+        "name": "Your Integration"
+      }
+    },
+    {
+      "id": "pty-comparison",
+      "type": "text",
+      "text": "# PTY vs ACP Communication\n\n**PTY (nodepty) - Keep for:**\n- Terminal emulation\n- Interactive shells\n- Build commands\n- Raw terminal I/O\n\n**ACP - Use for:**\n- Agent ↔ Editor communication\n- Structured JSON-RPC messages\n- Session management\n- Type-safe protocol",
+      "x": -321,
+      "y": 313,
+      "width": 300,
+      "height": 250,
+      "color": "#8b5cf6",
+      "pv": {
+        "icon": "GitCompare",
+        "name": "PTY vs ACP"
+      }
+    },
+    {
+      "id": "stdio-detail",
+      "type": "text",
+      "text": "# stdio Pipes (Not PTY!)\n\n```typescript\nspawn(agentPath, [], {\n  stdio: ['pipe', 'pipe', 'pipe']\n  // stdin, stdout, stderr\n})\n```\n\n**Why not PTY?**\n- ACP needs structured JSON\n- No terminal emulation needed\n- Type-safe messages\n- No ANSI escape codes",
+      "x": 335,
+      "y": 325,
+      "width": 350,
+      "height": 200,
+      "color": "#eab308",
+      "pv": {
+        "icon": "Terminal",
+        "name": "stdio Implementation"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "editor-to-comm",
+      "fromNode": "editor",
+      "toNode": "communication",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "JSON-RPC",
+      "pv": {
+        "edgeType": "ipc",
+        "style": "solid",
+        "animation": {
+          "type": "flow",
+          "duration": 2000,
+          "color": "#06b6d4"
+        }
+      }
+    },
+    {
+      "id": "comm-to-agent",
+      "fromNode": "communication",
+      "toNode": "agent",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "stdin/stdout",
+      "pv": {
+        "edgeType": "websocket",
+        "style": "solid",
+        "animation": {
+          "type": "flow",
+          "duration": 2000,
+          "color": "#06b6d4"
+        }
+      }
+    },
+    {
+      "id": "problem-to-editor",
+      "fromNode": "problem",
+      "toNode": "editor",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "solves",
+      "pv": {
+        "edgeType": "uses",
+        "style": "dashed"
+      }
+    },
+    {
+      "id": "editor-to-init",
+      "fromNode": "editor",
+      "toNode": "init",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "1. initialize",
+      "pv": {
+        "edgeType": "ipc",
+        "style": "solid"
+      }
+    },
+    {
+      "id": "init-to-session",
+      "fromNode": "init",
+      "toNode": "session",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "2. create session",
+      "pv": {
+        "edgeType": "ipc",
+        "style": "solid"
+      }
+    },
+    {
+      "id": "session-to-prompt",
+      "fromNode": "session",
+      "toNode": "prompt-turn",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "3. start turn",
+      "pv": {
+        "edgeType": "ipc",
+        "style": "solid"
+      }
+    },
+    {
+      "id": "pty-to-editor",
+      "fromNode": "pty-comparison",
+      "toNode": "editor",
+      "fromSide": "top",
+      "toSide": "left",
+      "label": "context",
+      "pv": {
+        "edgeType": "uses",
+        "style": "dashed"
+      }
+    },
+    {
+      "id": "stdio-to-comm",
+      "fromNode": "stdio-detail",
+      "toNode": "communication",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "label": "implements",
+      "pv": {
+        "edgeType": "uses",
+        "style": "solid"
+      }
+    },
+    {
+      "id": "pty-to-stdio",
+      "fromNode": "pty-comparison",
+      "toNode": "stdio-detail",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "vs",
+      "pv": {
+        "edgeType": "uses",
+        "style": "dashed"
+      }
+    }
+  ],
+  "pv": {
+    "version": "1.0",
+    "name": "Agent Client Protocol Architecture",
+    "description": "Visual explanation of how ACP standardizes editor-agent communication using JSON-RPC over stdio pipes",
+    "markdown": ".principal-views/agent-client-protocol.md",
+    "display": {
+      "layout": "manual",
+      "theme": {
+        "primary": "#8b5cf6",
+        "success": "#22c55e",
+        "danger": "#ef4444",
+        "warning": "#f97316",
+        "info": "#06b6d4"
+      }
+    }
+  }
+}

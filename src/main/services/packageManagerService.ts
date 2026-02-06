@@ -47,7 +47,20 @@ export interface LicenseCheckResult {
 }
 
 /** NPM package registry data (unvalidated JSON from registry.npmjs.org) */
-type NPMPackageData = unknown;
+interface NPMPackageData {
+  'dist-tags'?: {
+    latest?: string;
+    [tag: string]: string | undefined;
+  };
+  versions?: {
+    [version: string]: {
+      deprecated?: string;
+      [key: string]: any;
+    };
+  };
+  license?: string;
+  [key: string]: any;
+}
 
 // Simple in-memory cache
 const versionCache = new Map<string, { data: NPMPackageData; timestamp: number }>();

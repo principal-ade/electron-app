@@ -56,11 +56,11 @@ export class ObservabilityIntegration extends EventEmitter {
       if (stored && Object.keys(stored).length > 0) {
         return {
           storageMode: (stored.storageMode as StorageMode) || 'none',
-          localDbPath: stored.localDbPath,
-          tursoUrl: stored.tursoUrl,
-          tursoAuthToken: stored.tursoAuthToken,
+          localDbPath: stored.localDbPath as string | undefined,
+          tursoUrl: stored.tursoUrl as string | undefined,
+          tursoAuthToken: stored.tursoAuthToken as string | undefined,
           syncInterval: stored.syncInterval
-            ? parseInt(stored.syncInterval)
+            ? parseInt(stored.syncInterval as string)
             : 5000,
           enabled: stored.enabled === 'true',
           debug: stored.debug === 'true',

@@ -181,13 +181,12 @@ export function registerGitHandlers(): void {
 
         // For HTTPS, git will use the configured credential helper (set up by GitCredentialHelper)
         // For SSH, use SSH agent
-        const cloneEnv = {
-          PATH: process.env.PATH,
-          HOME: process.env.HOME,
-          USER: process.env.USER,
-          SSH_AUTH_SOCK: process.env.SSH_AUTH_SOCK,
-          SSH_AGENT_PID: process.env.SSH_AGENT_PID,
-        };
+        const cloneEnv: Record<string, string> = {};
+        if (process.env.PATH) cloneEnv.PATH = process.env.PATH;
+        if (process.env.HOME) cloneEnv.HOME = process.env.HOME;
+        if (process.env.USER) cloneEnv.USER = process.env.USER;
+        if (process.env.SSH_AUTH_SOCK) cloneEnv.SSH_AUTH_SOCK = process.env.SSH_AUTH_SOCK;
+        if (process.env.SSH_AGENT_PID) cloneEnv.SSH_AGENT_PID = process.env.SSH_AGENT_PID;
 
         if (isSSH) {
           diagnostics.sshAgent = !!process.env.SSH_AUTH_SOCK;

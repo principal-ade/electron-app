@@ -49,7 +49,7 @@ export class TypedMultiStoreWrapper implements TypedMultiStoreManager {
       this.namespaceCache.set(namespace, operations);
     }
 
-    return this.namespaceCache.get(namespace)!;
+    return this.namespaceCache.get(namespace)! as NamespaceOperations<K>;
   }
 
   /**

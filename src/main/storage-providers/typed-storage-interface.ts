@@ -204,13 +204,13 @@ export class NamespaceDataValidator {
   ): data is NamespaceDataTypes[StaticNamespaces.USER_PREFERENCES] {
     // UserPreferences can have various optional fields, so just check it's an object
     // The actual fields are: defaultEditor, defaultView, ollamaModel, agentAutoUpdate, etc.
-    return data && typeof data === 'object';
+    return !!(data && typeof data === 'object');
   }
 
   static isToolContainerState(
     data: unknown,
   ): data is NamespaceDataTypes[StaticNamespaces.DOCKER_CONTAINERS] {
-    return (
+    return !!(
       data &&
       typeof data === 'object' &&
       'id' in data &&
@@ -233,7 +233,7 @@ export class NamespaceDataValidator {
   static isDockerAnalysisSession(
     data: unknown,
   ): data is NamespaceDataTypes[StaticNamespaces.DOCKER_SESSIONS] {
-    return (
+    return !!(
       data &&
       typeof data === 'object' &&
       'id' in data &&

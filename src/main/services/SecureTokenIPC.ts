@@ -105,9 +105,9 @@ export class SecureTokenIPC {
     // Generic token operations
     ipcMain.handle(
       SecureTokenAPIEvent.SET,
-      async (event: IpcMainInvokeEvent, key: string, token: string, metadata?: TokenMetadata) => {
+      async (event: IpcMainInvokeEvent, key: string, token: string, metadata?: unknown) => {
         try {
-          await this.getStorage().setToken(key, token, metadata);
+          await this.getStorage().setToken(key, token, metadata as TokenMetadata | undefined);
           return { success: true };
         } catch (error) {
           return {
@@ -292,9 +292,9 @@ export function registerSecureTokenHandlers(): void {
   // Generic token operations
   ipcMain.handle(
     SecureTokenAPIEvent.SET,
-    async (event: IpcMainInvokeEvent, key: string, token: string, metadata?: TokenMetadata) => {
+    async (event: IpcMainInvokeEvent, key: string, token: string, metadata?: unknown) => {
       try {
-        await getSecureTokenIPC().getStorage().setToken(key, token, metadata);
+        await getSecureTokenIPC().getStorage().setToken(key, token, metadata as TokenMetadata | undefined);
         return { success: true };
       } catch (error) {
         return {

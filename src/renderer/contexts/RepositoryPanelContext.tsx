@@ -529,6 +529,70 @@ export const RepositoryPanelProvider: React.FC<
     };
   }, [events]);
 
+  // Listen for refresh requests from AgenticResourcesPanel
+  useEffect(() => {
+    const unsubscribeSkillsRefresh = events.on('skills:refresh', async () => {
+      console.info('[RepositoryPanelProvider] Received skills:refresh event, refreshing global skills and file tree');
+
+      // Refresh both global skills and file tree (for project skills)
+      try {
+        await Promise.all([
+          // Refresh global skills from ~/.claude/skills and ~/.agent/skills
+          (async () => {
+            setGlobalSkillsLoading(true);
+            try {
+              const skills = await FileSystemService.getGlobalSkills();
+              console.info('[RepositoryPanelProvider] Refreshed global skills:', skills.length);
+              setGlobalSkillsData(skills);
+            } catch (error) {
+              console.error('[RepositoryPanelProvider] Failed to refresh global skills:', error);
+            } finally {
+              setGlobalSkillsLoading(false);
+            }
+          })(),
+          // Refresh file tree for project skills
+          (async () => {
+            if (repositoryPath) {
+              setFileTreeLoading(true);
+              try {
+                await RepositoryMonitoringService.refreshRepository(repositoryPath);
+                console.info('[RepositoryPanelProvider] Refreshed file tree for project skills');
+              } catch (error) {
+                console.error('[RepositoryPanelProvider] Failed to refresh file tree:', error);
+              } finally {
+                setFileTreeLoading(false);
+              }
+            }
+          })(),
+        ]);
+      } catch (error) {
+        console.error('[RepositoryPanelProvider] Error during skills refresh:', error);
+      }
+    });
+
+    const unsubscribeAgentsRefresh = events.on('agents:refresh', async () => {
+      console.info('[RepositoryPanelProvider] Received agents:refresh event, refreshing file tree');
+
+      // Refresh file tree to pick up new AGENTS.md and subagent files
+      if (repositoryPath) {
+        setFileTreeLoading(true);
+        try {
+          await RepositoryMonitoringService.refreshRepository(repositoryPath);
+          console.info('[RepositoryPanelProvider] Refreshed file tree for agents');
+        } catch (error) {
+          console.error('[RepositoryPanelProvider] Failed to refresh file tree for agents:', error);
+        } finally {
+          setFileTreeLoading(false);
+        }
+      }
+    });
+
+    return () => {
+      unsubscribeSkillsRefresh?.();
+      unsubscribeAgentsRefresh?.();
+    };
+  }, [events, repositoryPath]);
+
   // Fetch quality metrics from GitHub Actions artifacts when repository changes
   useEffect(() => {
     const fetchQualityMetrics = async () => {

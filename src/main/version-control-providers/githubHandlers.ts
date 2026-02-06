@@ -27,6 +27,11 @@ import {
   GitHubSSHKey,
   SSHKeysResponse,
   ForkRepositoryOptions,
+  GitHubIssue,
+  GitHubPullRequest,
+  GitHubCommit,
+  GitHubOrgMember,
+  GitHubRepositoryWithPermissions,
 } from '../../shared/main-process-api-interfaces/GitHubAPI';
 import { getSkillLockFileService } from '../skills/skillLockFile';
 import { normalizeGitHubSource } from '../../shared/main-process-api-interfaces/SkillLockAPI';
@@ -81,8 +86,90 @@ type GitHubAPIResponseData = unknown;
 type GitHubAPIResponseHeaders = Record<string, string>;
 /** Raw API response object from GitHub (before type validation) */
 type RawGitHubAPIResponse = Record<string, unknown>;
+
+/** Raw GitHub API repository response (before mapping to our types) */
+interface RawGitHubRepositoryResponse {
+  id: unknown;
+  name: unknown;
+  full_name: unknown;
+  owner: {
+    login: unknown;
+    avatar_url: unknown;
+  };
+  private: unknown;
+  html_url: unknown;
+  description: unknown;
+  fork: unknown;
+  clone_url: unknown;
+  updated_at: unknown;
+  pushed_at: unknown;
+  language: unknown;
+  default_branch: unknown;
+  stargazers_count?: unknown;
+  license?: {
+    spdx_id: string;
+  } | null;
+  permissions?: {
+    admin: boolean;
+    maintain?: boolean;
+    push: boolean;
+    triage?: boolean;
+    pull: boolean;
+  };
+}
+
+/** Raw GitHub API organization response */
+interface RawGitHubOrganizationResponse {
+  login: unknown;
+  id: unknown;
+  avatar_url: unknown;
+  description: unknown;
+}
+
+/** Raw GitHub API user response */
+interface RawGitHubUserResponse {
+  login: unknown;
+  id: unknown;
+  avatar_url: unknown;
+  name?: unknown;
+  company?: unknown;
+  location?: unknown;
+  email?: unknown;
+  bio?: unknown;
+  public_repos?: unknown;
+  public_gists?: unknown;
+  followers?: unknown;
+  following?: unknown;
+  created_at?: unknown;
+  updated_at?: unknown;
+  type?: unknown;
+  site_admin?: unknown;
+}
+
+/** Raw GitHub API license template response */
+interface RawGitHubLicenseTemplateResponse {
+  key: unknown;
+  name: unknown;
+  spdx_id: unknown;
+  url: unknown;
+}
 /** Raw GitHub API commit info response (before type validation) */
-type GitHubCommitInfoResponse = Record<string, unknown>;
+type GitHubCommitInfoResponse = {
+  commit?: {
+    author?: {
+      name?: string;
+      email?: string;
+      date?: string;
+    };
+    committer?: {
+      name?: string;
+      email?: string;
+      date?: string;
+    };
+    message?: string;
+  };
+  author?: Record<string, unknown>;
+} | null;
 
 /** Markdown document file info (local or remote) */
 interface MarkdownDocumentFile {
@@ -92,6 +179,21 @@ interface MarkdownDocumentFile {
   lastModified: Date;
   gitLastModified?: Date;
   isTracked: boolean;
+}
+
+/** GitHub API tree response */
+interface GitHubTreeResponse {
+  sha: string;
+  url: string;
+  tree: Array<{
+    path: string;
+    mode: string;
+    type: 'blob' | 'tree';
+    sha: string;
+    size?: number;
+    url?: string;
+  }>;
+  truncated: boolean;
 }
 
 /** Partial tree entry for git tree building (before full tree response) */
@@ -754,7 +856,7 @@ export class GitHubAdapter {
           }
         } else {
           console.warn('[GitHub:getMarkdownDocuments] https tree failed', {
-            error: treeResult.error,
+            error: !treeResult.success ? treeResult.error : 'No tree data',
           });
         }
       }
@@ -1077,7 +1179,10 @@ export class GitHubAdapter {
   /**
    * Get repository tree with authentication support for private repos
    */
-  async getTree(owner: string, repo: string, ref: string) {
+  async getTree(owner: string, repo: string, ref: string): Promise<
+    | { success: true; data: GitHubTreeResponse }
+    | { success: false; error: string }
+  > {
     console.log(
       `[GitHub] Getting tree for ${owner}/${repo} on branch ${ref}`,
     );
@@ -1088,7 +1193,7 @@ export class GitHubAdapter {
     );
 
     if (result.success) {
-      return { success: true, data: result.data };
+      return { success: true, data: result.data as GitHubTreeResponse };
     }
 
     return {
@@ -1164,9 +1269,9 @@ export class GitHubAdapter {
         return {
           success: true,
           issue: {
-            html_url: urlMatch ? urlMatch[0] : null,
+            html_url: urlMatch ? urlMatch[0] : '',
             title: issue.title,
-          },
+          } as GitHubIssue,
         };
       } else if (
         result.stderr?.includes('authentication') ||
@@ -1212,24 +1317,24 @@ export class GitHubAdapter {
     // Try token-based API first
     const apiResult = await this.makeGitHubAPICall(endpoint);
     if (apiResult.success && apiResult.data) {
-      return (apiResult.data as RawGitHubAPIResponse[]).map((repo: RawGitHubAPIResponse) => ({
-        id: repo.id,
-        name: repo.name,
-        full_name: repo.full_name,
+      return (apiResult.data as RawGitHubRepositoryResponse[]).map((repo) => ({
+        id: repo.id as number,
+        name: repo.name as string,
+        full_name: repo.full_name as string,
         owner: {
-          login: repo.owner.login,
-          avatar_url: repo.owner.avatar_url,
+          login: repo.owner.login as string,
+          avatar_url: repo.owner.avatar_url as string,
         },
-        private: repo.private,
-        html_url: repo.html_url,
-        description: repo.description,
-        fork: repo.fork,
-        clone_url: repo.clone_url,
-        updated_at: repo.updated_at,
-        pushed_at: repo.pushed_at,
-        language: repo.language,
-        default_branch: repo.default_branch,
-        stargazers_count: repo.stargazers_count,
+        private: repo.private as boolean,
+        html_url: repo.html_url as string,
+        description: repo.description as string | null,
+        fork: repo.fork as boolean,
+        clone_url: repo.clone_url as string,
+        updated_at: repo.updated_at as string,
+        pushed_at: repo.pushed_at as string,
+        language: repo.language as string | null,
+        default_branch: repo.default_branch as string,
+        stargazers_count: repo.stargazers_count as number | undefined,
         license: repo.license?.spdx_id || null,
       }));
     }
@@ -1242,21 +1347,21 @@ export class GitHubAdapter {
       if (result.success && result.stdout) {
         const repos = JSON.parse(result.stdout);
         // Return only the fields we need
-        return (repos as RawGitHubAPIResponse[]).map((repo: RawGitHubAPIResponse) => ({
-          id: repo.id,
-          name: repo.name,
-          full_name: repo.full_name,
-          owner: { login: repo.owner.login, avatar_url: repo.owner.avatar_url },
-          private: repo.private,
-          html_url: repo.html_url,
-          description: repo.description,
-          fork: repo.fork,
-          clone_url: repo.clone_url,
-          updated_at: repo.updated_at,
-          pushed_at: repo.pushed_at,
-          language: repo.language,
-          default_branch: repo.default_branch,
-          stargazers_count: repo.stargazers_count,
+        return (repos as RawGitHubRepositoryResponse[]).map((repo) => ({
+          id: repo.id as number,
+          name: repo.name as string,
+          full_name: repo.full_name as string,
+          owner: { login: repo.owner.login as string, avatar_url: repo.owner.avatar_url as string },
+          private: repo.private as boolean,
+          html_url: repo.html_url as string,
+          description: repo.description as string | null,
+          fork: repo.fork as boolean,
+          clone_url: repo.clone_url as string,
+          updated_at: repo.updated_at as string,
+          pushed_at: repo.pushed_at as string,
+          language: repo.language as string | null,
+          default_branch: repo.default_branch as string,
+          stargazers_count: repo.stargazers_count as number | undefined,
           license: repo.license?.spdx_id || null,
         }));
       }
@@ -1282,24 +1387,24 @@ export class GitHubAdapter {
 
     const apiResult = await this.makeGitHubAPICall(endpoint);
     if (apiResult.success && apiResult.data) {
-      return (apiResult.data as RawGitHubAPIResponse[]).map((repo: RawGitHubAPIResponse) => ({
-        id: repo.id,
-        name: repo.name,
-        full_name: repo.full_name,
+      return (apiResult.data as RawGitHubRepositoryResponse[]).map((repo) => ({
+        id: repo.id as number,
+        name: repo.name as string,
+        full_name: repo.full_name as string,
         owner: {
-          login: repo.owner.login,
-          avatar_url: repo.owner.avatar_url,
+          login: repo.owner.login as string,
+          avatar_url: repo.owner.avatar_url as string,
         },
-        private: repo.private,
-        html_url: repo.html_url,
-        description: repo.description,
-        fork: repo.fork,
-        clone_url: repo.clone_url,
-        updated_at: repo.updated_at,
-        pushed_at: repo.pushed_at,
-        language: repo.language,
-        default_branch: repo.default_branch,
-        stargazers_count: repo.stargazers_count,
+        private: repo.private as boolean,
+        html_url: repo.html_url as string,
+        description: repo.description as string | null,
+        fork: repo.fork as boolean,
+        clone_url: repo.clone_url as string,
+        updated_at: repo.updated_at as string,
+        pushed_at: repo.pushed_at as string,
+        language: repo.language as string | null,
+        default_branch: repo.default_branch as string,
+        stargazers_count: repo.stargazers_count as number | undefined,
         license: repo.license?.spdx_id || null,
       }));
     }
@@ -1310,21 +1415,21 @@ export class GitHubAdapter {
 
       if (result.success && result.stdout) {
         const repos = JSON.parse(result.stdout);
-        return (repos as RawGitHubAPIResponse[]).map((repo: RawGitHubAPIResponse) => ({
-          id: repo.id,
-          name: repo.name,
-          full_name: repo.full_name,
-          owner: { login: repo.owner.login, avatar_url: repo.owner.avatar_url },
-          private: repo.private,
-          html_url: repo.html_url,
-          description: repo.description,
-          fork: repo.fork,
-          clone_url: repo.clone_url,
-          updated_at: repo.updated_at,
-          pushed_at: repo.pushed_at,
-          language: repo.language,
-          default_branch: repo.default_branch,
-          stargazers_count: repo.stargazers_count,
+        return (repos as RawGitHubRepositoryResponse[]).map((repo) => ({
+          id: repo.id as number,
+          name: repo.name as string,
+          full_name: repo.full_name as string,
+          owner: { login: repo.owner.login as string, avatar_url: repo.owner.avatar_url as string },
+          private: repo.private as boolean,
+          html_url: repo.html_url as string,
+          description: repo.description as string | null,
+          fork: repo.fork as boolean,
+          clone_url: repo.clone_url as string,
+          updated_at: repo.updated_at as string,
+          pushed_at: repo.pushed_at as string,
+          language: repo.language as string | null,
+          default_branch: repo.default_branch as string,
+          stargazers_count: repo.stargazers_count as number | undefined,
           license: repo.license?.spdx_id || null,
         }));
       }
@@ -1357,24 +1462,24 @@ export class GitHubAdapter {
     // Try token-based API first
     const apiResult = await this.makeGitHubAPICall(endpoint);
     if (apiResult.success && apiResult.data) {
-      return (apiResult.data as RawGitHubAPIResponse[]).map((repo: RawGitHubAPIResponse) => ({
-        id: repo.id,
-        name: repo.name,
-        full_name: repo.full_name,
+      return (apiResult.data as RawGitHubRepositoryResponse[]).map((repo) => ({
+        id: repo.id as number,
+        name: repo.name as string,
+        full_name: repo.full_name as string,
         owner: {
-          login: repo.owner.login,
-          avatar_url: repo.owner.avatar_url,
+          login: repo.owner.login as string,
+          avatar_url: repo.owner.avatar_url as string,
         },
-        private: repo.private,
-        html_url: repo.html_url,
-        description: repo.description,
-        fork: repo.fork,
-        clone_url: repo.clone_url,
-        updated_at: repo.updated_at,
-        pushed_at: repo.pushed_at,
-        language: repo.language,
-        default_branch: repo.default_branch,
-        stargazers_count: repo.stargazers_count,
+        private: repo.private as boolean,
+        html_url: repo.html_url as string,
+        description: repo.description as string | null,
+        fork: repo.fork as boolean,
+        clone_url: repo.clone_url as string,
+        updated_at: repo.updated_at as string,
+        pushed_at: repo.pushed_at as string,
+        language: repo.language as string | null,
+        default_branch: repo.default_branch as string,
+        stargazers_count: repo.stargazers_count as number | undefined,
         license: repo.license?.spdx_id || null,
       }));
     }
@@ -1387,21 +1492,21 @@ export class GitHubAdapter {
       if (result.success && result.stdout) {
         const repos = JSON.parse(result.stdout);
         // Return only the fields we need
-        return (repos as RawGitHubAPIResponse[]).map((repo: RawGitHubAPIResponse) => ({
-          id: repo.id,
-          name: repo.name,
-          full_name: repo.full_name,
-          owner: { login: repo.owner.login, avatar_url: repo.owner.avatar_url },
-          private: repo.private,
-          html_url: repo.html_url,
-          description: repo.description,
-          fork: repo.fork,
-          clone_url: repo.clone_url,
-          updated_at: repo.updated_at,
-          pushed_at: repo.pushed_at,
-          language: repo.language,
-          default_branch: repo.default_branch,
-          stargazers_count: repo.stargazers_count,
+        return (repos as RawGitHubRepositoryResponse[]).map((repo) => ({
+          id: repo.id as number,
+          name: repo.name as string,
+          full_name: repo.full_name as string,
+          owner: { login: repo.owner.login as string, avatar_url: repo.owner.avatar_url as string },
+          private: repo.private as boolean,
+          html_url: repo.html_url as string,
+          description: repo.description as string | null,
+          fork: repo.fork as boolean,
+          clone_url: repo.clone_url as string,
+          updated_at: repo.updated_at as string,
+          pushed_at: repo.pushed_at as string,
+          language: repo.language as string | null,
+          default_branch: repo.default_branch as string,
+          stargazers_count: repo.stargazers_count as number | undefined,
           license: repo.license?.spdx_id || null,
         }));
       }
@@ -1421,11 +1526,11 @@ export class GitHubAdapter {
     // Try using token-based API first
     const apiResult = await this.makeGitHubAPICall('/user/orgs');
     if (apiResult.success && apiResult.data) {
-      return (apiResult.data as RawGitHubAPIResponse[]).map((org: RawGitHubAPIResponse) => ({
-        login: org.login,
-        id: org.id,
-        avatar_url: org.avatar_url,
-        description: org.description,
+      return (apiResult.data as RawGitHubOrganizationResponse[]).map((org) => ({
+        login: org.login as string,
+        id: org.id as number,
+        avatar_url: org.avatar_url as string,
+        description: org.description as string | null,
       }));
     }
 
@@ -1436,11 +1541,11 @@ export class GitHubAdapter {
       if (result.success && result.stdout) {
         const orgs = JSON.parse(result.stdout);
         // Return only the fields we need
-        return (orgs as RawGitHubAPIResponse[]).map((org: RawGitHubAPIResponse) => ({
-          login: org.login,
-          id: org.id,
-          avatar_url: org.avatar_url,
-          description: org.description,
+        return (orgs as RawGitHubOrganizationResponse[]).map((org) => ({
+          login: org.login as string,
+          id: org.id as number,
+          avatar_url: org.avatar_url as string,
+          description: org.description as string | null,
         }));
       }
 
@@ -1507,7 +1612,7 @@ export class GitHubAdapter {
 
     if (apiResult.success && apiResult.data) {
       console.log('[GitHub] getCurrentUser: Successfully fetched user via API');
-      return apiResult.data;
+      return apiResult.data as GitHubUser;
     }
 
     // Log why API failed
@@ -1527,7 +1632,7 @@ export class GitHubAdapter {
         console.log(
           '[GitHub] getCurrentUser: Successfully fetched user via CLI',
         );
-        return JSON.parse(result.stdout);
+        return JSON.parse(result.stdout) as GitHubUser;
       }
       console.warn('[GitHub] getCurrentUser: CLI fallback failed');
     } catch (error) {
@@ -1558,9 +1663,9 @@ export class GitHubAdapter {
     if (apiResult.success && apiResult.data) {
       console.log(
         '[GitHub] Successfully fetched SSH keys, count:',
-        apiResult.data.length,
+        (apiResult.data as GitHubSSHKey[]).length,
       );
-      return { success: true, data: apiResult.data };
+      return { success: true, data: apiResult.data as GitHubSSHKey[] };
     }
 
     // Check if it's a permission error (403 or scope issue)
@@ -1732,7 +1837,7 @@ export class GitHubAdapter {
     if (apiResult.success && Array.isArray(apiResult.data)) {
       const issues = (
         apiResult.data as Array<{ pull_request?: unknown }>
-      ).filter((issue) => !issue.pull_request);
+      ).filter((issue) => !issue.pull_request) as GitHubIssue[];
       console.log(
         `[GitHub] Successfully fetched ${issues.length} issues via token-based API`,
       );
@@ -1740,29 +1845,13 @@ export class GitHubAdapter {
     }
 
     if (apiResult.status === 404) {
-      console.log('[GitHub] Repository is private or not found (404) via API');
-      return [
-        {
-          error: 'private_repo',
-          message:
-            'This repository is private. Please authenticate with GitHub (via "gh auth login" or by adding a personal access token) to continue.',
-          requiresAuth: true,
-        },
-      ];
+      console.warn('[GitHub] Repository is private or not found (404) via API - authentication required');
+      return [];
     }
 
     if (apiResult.status === 403) {
-      console.log(
-        '[GitHub] API rate limit or permissions issue (403) via token',
-      );
-      return [
-        {
-          error: 'rate_limit',
-          message:
-            'GitHub API rate limit exceeded. Please authenticate with GitHub (via "gh auth login" or by adding a personal access token) to increase your rate limit.',
-          requiresAuth: true,
-        },
-      ];
+      console.warn('[GitHub] API rate limit or permissions issue (403) via token');
+      return [];
     }
 
     if (!apiResult.success && apiResult.error) {
@@ -1776,14 +1865,8 @@ export class GitHubAdapter {
       console.log(
         '[GitHub] gh CLI authentication required and token-based API unavailable',
       );
-      return [
-        {
-          error: 'authentication_required',
-          message:
-            'GitHub authentication required. Please run "gh auth login" or add a personal access token in Principal to continue.',
-          requiresAuth: true,
-        },
-      ];
+      console.warn('[GitHub] GitHub authentication required');
+      return [];
     }
 
     // Fallback to HTTPS API for public repos
@@ -1828,26 +1911,12 @@ export class GitHubAdapter {
             }
           } else if (res.statusCode === 404) {
             // Repository not found or is private
-            console.log('[GitHub] Repository is private or not found (404)');
-            resolve([
-              {
-                error: 'private_repo',
-                message:
-                  'This repository is private. Please authenticate with GitHub CLI by running "gh auth login" in your terminal.',
-                requiresAuth: true,
-              },
-            ]);
+            console.warn('[GitHub] Repository is private or not found (404)');
+            resolve([]);
           } else if (res.statusCode === 403) {
             // Rate limited
-            console.log('[GitHub] API rate limit exceeded');
-            resolve([
-              {
-                error: 'rate_limit',
-                message:
-                  'GitHub API rate limit exceeded. Please authenticate with GitHub CLI by running "gh auth login" to increase your rate limit.',
-                requiresAuth: true,
-              },
-            ]);
+            console.warn('[GitHub] API rate limit exceeded');
+            resolve([]);
           } else {
             console.error(`[GitHub] Failed to fetch issues: ${res.statusCode}`);
             resolve([]);
@@ -1903,14 +1972,8 @@ export class GitHubAdapter {
           '[GitHub] gh CLI not authenticated, user needs to run: gh auth login',
         );
 
-        return [
-          {
-            error: 'authentication_required',
-            message:
-              'GitHub CLI authentication required. Please run "gh auth login" in your terminal to authenticate.',
-            requiresAuth: true,
-          },
-        ];
+        console.warn('[GitHub] GitHub CLI authentication required');
+        return [];
       } else {
         console.warn(
           '[GitHub] gh CLI pull request fetch failed, falling back',
@@ -1962,25 +2025,11 @@ export class GitHubAdapter {
               resolve([]);
             }
           } else if (res.statusCode === 404) {
-            console.log('[GitHub] Repository is private or not found (404)');
-            resolve([
-              {
-                error: 'private_repo',
-                message:
-                  'This repository is private. Please authenticate with GitHub CLI by running "gh auth login" in your terminal.',
-                requiresAuth: true,
-              },
-            ]);
+            console.warn('[GitHub] Repository is private or not found (404)');
+            resolve([]);
           } else if (res.statusCode === 403) {
-            console.log('[GitHub] API rate limit exceeded');
-            resolve([
-              {
-                error: 'rate_limit',
-                message:
-                  'GitHub API rate limit exceeded. Please authenticate with GitHub CLI by running "gh auth login" to increase your rate limit.',
-                requiresAuth: true,
-              },
-            ]);
+            console.warn('[GitHub] API rate limit exceeded');
+            resolve([]);
           } else {
             console.error(
               `[GitHub] Failed to fetch pull requests: ${res.statusCode}`,
@@ -2130,14 +2179,14 @@ export class GitHubAdapter {
     const apiResult = await this.makeGitHubAPICall(endpoint);
 
     if (apiResult.success && apiResult.data) {
-      return apiResult.data;
+      return apiResult.data as GitHubUser[];
     }
 
     // Fallback to CLI
     try {
       const result = await this.executeCommand(['gh', 'api', endpoint]);
       if (result.success && result.stdout) {
-        return JSON.parse(result.stdout);
+        return JSON.parse(result.stdout) as GitHubUser[];
       }
     } catch (error) {
       console.error('[GitHub] Error getting followers:', error);
@@ -2156,14 +2205,14 @@ export class GitHubAdapter {
     const apiResult = await this.makeGitHubAPICall(endpoint);
 
     if (apiResult.success && apiResult.data) {
-      return apiResult.data;
+      return apiResult.data as GitHubUser[];
     }
 
     // Fallback to CLI
     try {
       const result = await this.executeCommand(['gh', 'api', endpoint]);
       if (result.success && result.stdout) {
-        return JSON.parse(result.stdout);
+        return JSON.parse(result.stdout) as GitHubUser[];
       }
     } catch (error) {
       console.error('[GitHub] Error getting following:', error);
@@ -2180,14 +2229,14 @@ export class GitHubAdapter {
     const apiResult = await this.makeGitHubAPICall(endpoint);
 
     if (apiResult.success && apiResult.data) {
-      return apiResult.data;
+      return apiResult.data as GitHubOrgMember[];
     }
 
     // Fallback to CLI
     try {
       const result = await this.executeCommand(['gh', 'api', endpoint]);
       if (result.success && result.stdout) {
-        return JSON.parse(result.stdout);
+        return JSON.parse(result.stdout) as GitHubOrgMember[];
       }
     } catch (error) {
       console.error('[GitHub] Error getting org members:', error);
@@ -2204,14 +2253,14 @@ export class GitHubAdapter {
     const apiResult = await this.makeGitHubAPICall(endpoint);
 
     if (apiResult.success && apiResult.data) {
-      return apiResult.data;
+      return apiResult.data as GitHubUser;
     }
 
     // Fallback to CLI
     try {
       const result = await this.executeCommand(['gh', 'api', endpoint]);
       if (result.success && result.stdout) {
-        return JSON.parse(result.stdout);
+        return JSON.parse(result.stdout) as GitHubUser;
       }
     } catch (error) {
       console.error('[GitHub] Error getting user:', error);
@@ -2228,14 +2277,14 @@ export class GitHubAdapter {
     const apiResult = await this.makeGitHubAPICall(endpoint);
 
     if (apiResult.success && apiResult.data) {
-      return apiResult.data;
+      return apiResult.data as GitHubOrganization[];
     }
 
     // Fallback to CLI
     try {
       const result = await this.executeCommand(['gh', 'api', endpoint]);
       if (result.success && result.stdout) {
-        return JSON.parse(result.stdout);
+        return JSON.parse(result.stdout) as GitHubOrganization[];
       }
     } catch (error) {
       console.error('[GitHub] Error getting user organizations:', error);
@@ -2261,14 +2310,14 @@ export class GitHubAdapter {
     const apiResult = await this.makeGitHubAPICall(endpoint);
 
     if (apiResult.success && apiResult.data) {
-      return apiResult.data;
+      return apiResult.data as GitHubRepository[];
     }
 
     // Fallback to CLI
     try {
       const result = await this.executeCommand(['gh', 'api', endpoint]);
       if (result.success && result.stdout) {
-        return JSON.parse(result.stdout);
+        return JSON.parse(result.stdout) as GitHubRepository[];
       }
     } catch (error) {
       console.error('[GitHub] Error getting user starred repositories:', error);
@@ -2297,10 +2346,11 @@ export class GitHubAdapter {
     });
 
     if (apiResult.success && apiResult.data) {
+      const repoData = apiResult.data as GitHubRepositoryCreated;
       console.log(
-        `[GitHub] Successfully created repository: ${apiResult.data.full_name}`,
+        `[GitHub] Successfully created repository: ${repoData.full_name}`,
       );
-      return apiResult.data as GitHubRepositoryCreated;
+      return repoData;
     }
 
     // Fallback to CLI
@@ -2414,11 +2464,11 @@ export class GitHubAdapter {
     const apiResult = await this.makeGitHubAPICall(endpoint);
 
     if (apiResult.success && Array.isArray(apiResult.data)) {
-      const licenses = (apiResult.data as RawGitHubAPIResponse[]).map((license: RawGitHubAPIResponse) => ({
-        key: license.key,
-        name: license.name,
-        spdx_id: license.spdx_id,
-        url: license.url,
+      const licenses = (apiResult.data as RawGitHubLicenseTemplateResponse[]).map((license) => ({
+        key: license.key as string,
+        name: license.name as string,
+        spdx_id: license.spdx_id as string,
+        url: license.url as string,
       }));
       console.log(
         `[GitHub] Successfully fetched ${licenses.length} license templates`,
@@ -2432,11 +2482,11 @@ export class GitHubAdapter {
       if (result.success && result.stdout) {
         const templates = JSON.parse(result.stdout);
         if (Array.isArray(templates)) {
-          const licenses = (templates as RawGitHubAPIResponse[]).map((license: RawGitHubAPIResponse) => ({
-            key: license.key,
-            name: license.name,
-            spdx_id: license.spdx_id,
-            url: license.url,
+          const licenses = (templates as RawGitHubLicenseTemplateResponse[]).map((license) => ({
+            key: license.key as string,
+            name: license.name as string,
+            spdx_id: license.spdx_id as string,
+            url: license.url as string,
           }));
           console.log(
             `[GitHub] Successfully fetched ${licenses.length} license templates via CLI`,
@@ -2465,18 +2515,19 @@ export class GitHubAdapter {
     const apiResult = await this.makeGitHubAPICall(endpoint);
 
     if (apiResult.success && apiResult.data) {
-      console.log(`[GitHub] Successfully fetched repository ${owner}/${repo}`, {
-        permissions: apiResult.data.permissions,
-        fork: apiResult.data.fork,
+      const repo = apiResult.data as GitHubRepositoryWithPermissions;
+      console.log(`[GitHub] Successfully fetched repository ${owner}/${repo.name}`, {
+        permissions: repo.permissions,
+        fork: repo.fork,
       });
-      return apiResult.data;
+      return repo;
     }
 
     // Fallback to CLI
     try {
       const result = await this.executeCommand(['gh', 'api', endpoint]);
       if (result.success && result.stdout) {
-        const repoData = JSON.parse(result.stdout);
+        const repoData = JSON.parse(result.stdout) as GitHubRepositoryWithPermissions;
         console.log(
           `[GitHub] Successfully fetched repository ${owner}/${repo} via CLI`,
         );
@@ -2523,10 +2574,11 @@ export class GitHubAdapter {
     });
 
     if (apiResult.success && apiResult.data) {
+      const forkedRepo = apiResult.data as GitHubRepositoryCreated;
       console.log(
-        `[GitHub] Successfully forked repository to ${apiResult.data.full_name}`,
+        `[GitHub] Successfully forked repository to ${forkedRepo.full_name}`,
       );
-      return apiResult.data;
+      return forkedRepo;
     }
 
     // Fallback to CLI
@@ -2546,7 +2598,7 @@ export class GitHubAdapter {
           const forkName = options?.name || repo;
           // Wait a moment for GitHub to create the fork
           await new Promise((resolve) => setTimeout(resolve, 2000));
-          return this.getRepository(forkOwner, forkName);
+          return this.getRepository(forkOwner, forkName) as Promise<GitHubRepositoryCreated | null>;
         }
       }
     } catch (error) {

@@ -90,16 +90,11 @@ export class SkillsGitService {
       const git = await GitClientFactory.getClient(localPath);
 
       // Clone with shallow depth for performance
-      const success = await git.raw(['clone', '--depth', '1', '--branch', config.branch, config.repoUrl, localPath]);
+      await git.raw(['clone', '--depth', '1', '--branch', config.branch, config.repoUrl, localPath]);
 
-      if (success !== undefined && success !== false) {
-        console.log('[SkillsGit] Repository cloned successfully');
-        await this.configService.updateLastSynced();
-        return true;
-      }
-
-      console.error('[SkillsGit] Failed to clone repository');
-      return false;
+      console.log('[SkillsGit] Repository cloned successfully');
+      await this.configService.updateLastSynced();
+      return true;
     } catch (error) {
       console.error('[SkillsGit] Error cloning repository:', error);
       return false;
@@ -136,7 +131,7 @@ export class SkillsGitService {
 
       const hasUpdates = beforeSha !== remoteSha.trim();
 
-      if (hasUpdates) {
+      if (hasUpdates && beforeSha) {
         // Get list of changed files
         const diffResult = await git.raw(
           ['diff', '--name-only', beforeSha, remoteSha.trim()],
@@ -181,16 +176,11 @@ export class SkillsGitService {
       console.log('[SkillsGit] Pulling changes from remote...');
 
       const git = await GitClientFactory.getClient(localPath);
-      const result = await git.raw(['pull', 'origin', config.branch], { cwd: localPath });
+      await git.raw(['pull', 'origin', config.branch], { cwd: localPath });
 
-      if (result !== undefined && result !== false) {
-        console.log('[SkillsGit] Changes pulled successfully');
-        await this.configService.updateLastSynced();
-        return true;
-      }
-
-      console.error('[SkillsGit] Failed to pull changes');
-      return false;
+      console.log('[SkillsGit] Changes pulled successfully');
+      await this.configService.updateLastSynced();
+      return true;
     } catch (error) {
       console.error('[SkillsGit] Error pulling changes:', error);
       return false;
@@ -273,9 +263,9 @@ export class SkillsGitService {
     try {
       // Try to fetch (ls-remote) without cloning
       const git = await GitClientFactory.getClient('.');
-      const result = await git.raw(['ls-remote', config.repoUrl]);
+      await git.raw(['ls-remote', config.repoUrl]);
 
-      return result !== undefined && result !== false;
+      return true;
     } catch (error) {
       console.error('[SkillsGit] Authentication check failed:', error);
       return false;

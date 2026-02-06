@@ -304,7 +304,7 @@ export function registerSecretHandlers(): void {
         // Log access for audit
         console.log(`[SecretHandlers] Secret accessed: ${repoId}/${key}`);
 
-        return secrets[key];
+        return secrets[key] as string;
       } catch (error: unknown) {
         console.error('[SecretHandlers] Error getting single secret:', error);
         return null;
@@ -339,7 +339,7 @@ export function registerSecretHandlers(): void {
         const result: Record<string, string> = {};
         for (const key of keys) {
           if (secrets[key]) {
-            result[key] = secrets[key];
+            result[key] = secrets[key] as string;
           }
         }
 
@@ -386,7 +386,7 @@ export function registerSecretHandlers(): void {
         }
 
         // Copy to clipboard
-        clipboard.writeText(secrets[key]);
+        clipboard.writeText(secrets[key] as string);
 
         // Log access for audit
         console.log(
