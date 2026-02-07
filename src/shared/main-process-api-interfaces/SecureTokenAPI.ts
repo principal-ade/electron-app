@@ -18,9 +18,6 @@ export enum SecureTokenAPIEvent {
   SET = 'secure-token:set',
   GET = 'secure-token:get',
   DELETE = 'secure-token:delete',
-
-  // Migration
-  MIGRATE_FROM_LOCALSTORAGE = 'secure-token:migrate-from-localstorage',
 }
 
 export interface SecureTokenResult {

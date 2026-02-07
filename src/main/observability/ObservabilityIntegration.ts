@@ -156,7 +156,7 @@ export class ObservabilityIntegration extends EventEmitter {
         );
         break;
 
-      case 'local-with-sync':
+      case 'local-with-sync': {
         // Embedded replica mode - local file with cloud sync
         if (!config.tursoUrl) {
           throw new Error('Turso URL required for local-with-sync mode');
@@ -184,6 +184,7 @@ export class ObservabilityIntegration extends EventEmitter {
           `[ObservabilityIntegration] Local-with-sync mode initialized: ${resolvedDbPath} syncing to ${config.tursoUrl}`,
         );
         break;
+      }
 
       default:
         throw new Error(`Unknown storage mode: ${storageMode}`);
@@ -348,7 +349,7 @@ export class ObservabilityIntegration extends EventEmitter {
           testSdk = TursoObservabilitySDK.createLocal(resolvedDbPath);
           break;
 
-        case 'local-with-sync':
+        case 'local-with-sync': {
           // Initialize cloud schema first (same as in initializeSDK)
           const testCloudSDK = TursoObservabilitySDK.createCloud(
             config.tursoUrl!,
@@ -364,6 +365,7 @@ export class ObservabilityIntegration extends EventEmitter {
             config.syncInterval || 5000,
           );
           break;
+        }
 
         default:
           return {

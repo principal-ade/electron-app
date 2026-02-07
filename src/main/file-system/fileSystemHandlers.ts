@@ -1689,7 +1689,7 @@ export function registerFileSystemIpcHandlers(
             const files = await fsPromises.readdir(scriptsDir);
             scriptFiles.push(...files);
           }
-        } catch (error) {
+        } catch (_error) {
           // Ignore errors
         }
 
@@ -1699,7 +1699,7 @@ export function registerFileSystemIpcHandlers(
             const files = await fsPromises.readdir(referencesDir);
             referenceFiles.push(...files);
           }
-        } catch (error) {
+        } catch (_error) {
           // Ignore errors
         }
 
@@ -1709,7 +1709,7 @@ export function registerFileSystemIpcHandlers(
             const files = await fsPromises.readdir(assetsDir);
             assetFiles.push(...files);
           }
-        } catch (error) {
+        } catch (_error) {
           // Ignore errors
         }
 
@@ -1725,7 +1725,7 @@ export function registerFileSystemIpcHandlers(
       };
 
       // Helper function to validate skill frontmatter
-      const validateFrontmatter = (content: string, skillName: string): { isValid: boolean; hasStructure: boolean; missingFields: string[]; errorMessage?: string } => {
+      const validateFrontmatter = (content: string, _skillName: string): { isValid: boolean; hasStructure: boolean; missingFields: string[]; errorMessage?: string } => {
         const missingFields: string[] = [];
 
         // Check for basic structure (heading)
@@ -1805,7 +1805,7 @@ export function registerFileSystemIpcHandlers(
               };
               console.log(`[getGlobalSkills] Loaded metadata from lock file for skill: ${skillDirName}`);
             }
-          } catch (error) {
+          } catch (_error) {
             // Lock file doesn't exist or skill not found - this is fine
             console.debug(`[getGlobalSkills] No lock file entry for skill: ${skillDirName}`);
           }

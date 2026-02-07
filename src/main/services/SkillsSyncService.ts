@@ -10,7 +10,6 @@ import type {
   GlobalSkillDirectory,
 } from '../../shared/main-process-api-interfaces/FileSystemAPI';
 import { getSkillLockFileService } from '../skills/skillLockFile';
-import type { SkillLockEntry } from '../../shared/main-process-api-interfaces/SkillLockAPI';
 import { getManager as getRepositoryMonitoringManager } from '../repository-monitoring/ipcHandlers';
 import type {
   WorkspaceChangeEventPayload,
@@ -314,7 +313,7 @@ export class SkillsSyncService {
         // Optionally unregister (if no other watchers)
         try {
           await repoMonitoringManager.unregisterRepository(directory.localClonePath);
-        } catch (error) {
+        } catch (_error) {
           // Ignore errors - other watchers might still be using it
         }
       }
@@ -694,7 +693,7 @@ export class SkillsSyncService {
     try {
       const content = await fs.readFile(filePath);
       return crypto.createHash('sha256').update(content).digest('hex');
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
   }
@@ -760,7 +759,7 @@ export class SkillsSyncService {
         installedAt: entry.installedAt,
         sha: entry.skillFolderHash,
       };
-    } catch (error) {
+    } catch (_error) {
       // Return empty metadata if lock file read fails
       return {};
     }
@@ -810,7 +809,7 @@ export class SkillsSyncService {
    */
   private async getGlobalSkillPath(
     skillName: string,
-    source: 'git-global' | 'github'
+    _source: 'git-global' | 'github'
   ): Promise<string | null> {
     const home = process.env.HOME || process.env.USERPROFILE;
     if (!home) {

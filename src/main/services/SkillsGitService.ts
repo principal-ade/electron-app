@@ -191,8 +191,6 @@ export class SkillsGitService {
    * Get the current commit SHA of the local repository
    */
   async getCurrentCommitSha(): Promise<string | null> {
-    const config = await this.configService.getConfig();
-
     if (!await this.isRepositoryCloned()) {
       return null;
     }
@@ -210,8 +208,6 @@ export class SkillsGitService {
    * Get list of changed skills since a specific commit SHA
    */
   async getChangedSkills(sinceSha: string): Promise<string[]> {
-    const config = await this.configService.getConfig();
-
     if (!await this.isRepositoryCloned()) {
       return [];
     }
@@ -500,8 +496,6 @@ export class SkillsGitService {
    * Used during onboarding to create a fresh skills repository
    */
   async initializeRepository(): Promise<boolean> {
-    const config = await this.configService.getConfig();
-
     try {
       const localPath = await this.configService.getLocalPath();
       console.log(`[SkillsGit] Initializing repository at ${localPath}`);
@@ -560,8 +554,6 @@ Skills copied to project directories can optionally auto-sync from this reposito
    * Used during migration to commit all skills at once
    */
   async commitSkills(message: string = 'Add migrated skills'): Promise<boolean> {
-    const config = await this.configService.getConfig();
-
     try {
       const localPath = await this.configService.getLocalPath();
       const git = await GitClientFactory.getClient(localPath);
@@ -585,8 +577,6 @@ Skills copied to project directories can optionally auto-sync from this reposito
    * Allows pushing to a remote Git hosting service
    */
   async setRemote(remoteUrl: string, remoteName: string = 'origin'): Promise<boolean> {
-    const config = await this.configService.getConfig();
-
     try {
       const localPath = await this.configService.getLocalPath();
       const git = await GitClientFactory.getClient(localPath);
@@ -614,8 +604,6 @@ Skills copied to project directories can optionally auto-sync from this reposito
    * @param force - If true, force push (use for initial setup when remote has diverged)
    */
   async pushToRemote(remoteName: string = 'origin', branch: string = 'main', force: boolean = false): Promise<boolean> {
-    const config = await this.configService.getConfig();
-
     try {
       const localPath = await this.configService.getLocalPath();
       const git = await GitClientFactory.getClient(localPath);

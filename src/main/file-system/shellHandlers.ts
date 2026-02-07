@@ -48,7 +48,7 @@ export function setupShellHandlers() {
         // Determine the shell based on platform
         const isWindows = os.platform() === 'win32';
         const shellPath: string | undefined = isWindows
-          ? process.env.ComSpec || 'C\\\Windows\\\System32\\\cmd.exe'
+          ? process.env.ComSpec || 'C:\\Windows\\System32\\cmd.exe'
           : '/bin/bash';
 
         const { stdout, stderr } = await execAsync(command, {

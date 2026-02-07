@@ -55,11 +55,11 @@ interface NPMPackageData {
   versions?: {
     [version: string]: {
       deprecated?: string;
-      [key: string]: any;
+      [key: string]: unknown;
     };
   };
   license?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // Simple in-memory cache

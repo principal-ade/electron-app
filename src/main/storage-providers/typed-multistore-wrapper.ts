@@ -146,7 +146,7 @@ export class TypedMultiStoreWrapper implements TypedMultiStoreManager {
     namespace: K,
   ): Promise<TypedStorageResult<K>> {
     try {
-      const result = await this.multiStoreManager.delete(key, namespace);
+      await this.multiStoreManager.delete(key, namespace);
 
       return {
         success: true,

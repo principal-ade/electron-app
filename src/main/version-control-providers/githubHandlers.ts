@@ -2,7 +2,6 @@ import { BrowserWindow, ipcMain, app } from 'electron';
 import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
-import * as https from 'https';
 import fetch from 'node-fetch';
 import type { IncomingMessage } from 'http';
 import { electronCLI } from '../electron-cli-bridge';
@@ -124,26 +123,6 @@ interface RawGitHubOrganizationResponse {
   id: unknown;
   avatar_url: unknown;
   description: unknown;
-}
-
-/** Raw GitHub API user response */
-interface RawGitHubUserResponse {
-  login: unknown;
-  id: unknown;
-  avatar_url: unknown;
-  name?: unknown;
-  company?: unknown;
-  location?: unknown;
-  email?: unknown;
-  bio?: unknown;
-  public_repos?: unknown;
-  public_gists?: unknown;
-  followers?: unknown;
-  following?: unknown;
-  created_at?: unknown;
-  updated_at?: unknown;
-  type?: unknown;
-  site_admin?: unknown;
 }
 
 /** Raw GitHub API license template response */
@@ -643,7 +622,7 @@ export class GitHubAdapter {
                   const fullPath = path.join(directoryPath, filePath);
                   const stats = fs.statSync(fullPath);
                   lastModified = stats.mtime;
-                } catch (error) {
+                } catch (_error) {
                   // File might not exist or be accessible, skip the timestamp
                   console.warn(
                     `[GitHub] Could not get stats for file: ${filePath}`,
@@ -996,7 +975,6 @@ export class GitHubAdapter {
     }>
   > {
     try {
-      const pathMod = require('path');
       const verifiedRemote = await this.executeCommand(
         ['git', 'remote', 'get-url', 'origin'],
         { cwd },
@@ -1123,7 +1101,7 @@ export class GitHubAdapter {
             try {
               const repoData = JSON.parse(data);
               resolve(repoData.default_branch || null);
-            } catch (e) {
+            } catch (_e) {
               resolve(null);
             }
           } else {

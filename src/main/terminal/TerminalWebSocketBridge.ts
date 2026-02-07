@@ -14,12 +14,9 @@ import { TerminalSessionManager } from './TerminalSessionManager';
 import { TerminalOwnershipManager } from './TerminalOwnershipManager';
 import type {
   TerminalOwner,
-  TerminalSession,
-  RemoteClientInfo,
 } from './types';
 import type {
   TerminalEvent,
-  TerminalEventType,
   TerminalSessionInfo,
   TerminalAttachPayload,
   TerminalClaimOwnershipPayload,

@@ -111,7 +111,7 @@ export class GitClientFactory {
         return { all: [] };
       },
 
-      getRemotes: async (verbose: boolean) => {
+      getRemotes: async (_verbose: boolean) => {
         const remotes = await git.getRemotes(_baseDir);
         return remotes.map((r) => ({
           name: r.name,
@@ -160,23 +160,19 @@ export class GitClientFactory {
           ) {
             // This means there's a serialization issue with the options object
             // Try again without the problematic options
-            try {
-              const simpleOptions = {
-                env: options?.env,
-                timeout: options?.timeout,
-              };
-              const result = await git.raw(_baseDir, args, simpleOptions);
-              if (result.success) {
-                return result.stdout || '';
-              }
-              const errorMsg =
-                result.stderr ||
-                result.stdout ||
-                `Command failed with exit code ${result.exitCode}`;
-              throw new Error(errorMsg);
-            } catch (retryError) {
-              throw retryError;
+            const simpleOptions = {
+              env: options?.env,
+              timeout: options?.timeout,
+            };
+            const result = await git.raw(_baseDir, args, simpleOptions);
+            if (result.success) {
+              return result.stdout || '';
             }
+            const errorMsg =
+              result.stderr ||
+              result.stdout ||
+              `Command failed with exit code ${result.exitCode}`;
+            throw new Error(errorMsg);
           }
           throw error;
         }

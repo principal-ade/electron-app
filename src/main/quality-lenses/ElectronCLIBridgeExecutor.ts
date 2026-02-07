@@ -95,7 +95,9 @@ export class ElectronCLIBridgeExecutor implements Executor {
     options: StreamOptions = {},
   ): StreamResult {
     // Create dummy streams for now as GitLens doesn't use streaming
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
     const stdout = new Readable({ read() {} });
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
     const stderr = new Readable({ read() {} });
 
     const exitPromise = this.execute(command, args, options).then((result) => {

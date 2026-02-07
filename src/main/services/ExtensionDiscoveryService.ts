@@ -430,7 +430,6 @@ export class ExtensionDiscoveryService {
       // Resolve symlinks to get the real path for dynamic import
       const realBundlePath = fs.realpathSync(bundlePath);
       // Use native Node.js import to bypass webpack's module resolution
-      // eslint-disable-next-line @typescript-eslint/no-implied-eval
       const importFn = new Function(
         'specifier',
         'return import(specifier)',

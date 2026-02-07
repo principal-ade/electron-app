@@ -61,10 +61,6 @@ export {
 
 // Export backends
 export { ElectronStoreLocalStorageProvider } from './providers/ElectronStoreLocalStorageProvider';
-export {
-  S3RemoteStorageProvider,
-  type S3ProviderConfig,
-} from './providers/S3RemoteStorageProvider';
 
 // Export main manager
 export { MultiStoreManager } from './MultiStoreManager';

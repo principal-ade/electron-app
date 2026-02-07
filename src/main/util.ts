@@ -1,8 +1,5 @@
-/* eslint import/prefer-default-export: off */
 import path from 'path';
 import { URL } from 'url';
-
-import { SUPPORTED_AGENTS } from '@principal-ai/agent-monitoring';
 
 export function resolveHtmlPath(htmlFileName: string) {
   if (process.env.NODE_ENV === 'development') {

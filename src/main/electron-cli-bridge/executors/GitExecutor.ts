@@ -283,7 +283,7 @@ export class GitExecutor extends BaseExecutor {
         deletedFiles: deletedPaths,
         hash,
       };
-    } catch (error) {
+    } catch (_error) {
       const emptyHash = createHash('sha256').update('empty').digest('hex');
       return {
         repoPath: directory,

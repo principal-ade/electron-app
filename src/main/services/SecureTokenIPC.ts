@@ -2,14 +2,11 @@ import { ipcMain, IpcMainInvokeEvent } from 'electron';
 import { UnifiedSecureStorage, TOKEN_KEYS } from './UnifiedSecureStorage';
 import { SecureTokenAPIEvent } from '../../shared/main-process-api-interfaces/SecureTokenAPI';
 import type { AuthUser } from '../../shared/main-process-api-interfaces/AuthenticationAPI';
-import AuthStateManager from './AuthStateManager';
 import { authService } from './AuthService';
 
 // Named types for better readability of dynamic data
 /** Dynamic metadata attached to stored tokens (e.g., user info, timestamps) */
 type TokenMetadata = unknown;
-/** Legacy token data from localStorage migration (unvalidated) */
-type LegacyTokenData = unknown;
 
 /**
  * IPC handlers for secure token storage
@@ -141,27 +138,7 @@ export class SecureTokenIPC {
         };
       }
     });
-
-    // Migration helper - to be called once from renderer
-    ipcMain.handle(
-      SecureTokenAPIEvent.MIGRATE_FROM_LOCALSTORAGE,
-      async (event: IpcMainInvokeEvent, tokens: LegacyTokenData[]) => {
-        try {
-          // Migration no longer needed with unified storage
-          console.log('Migration skipped - using unified storage');
-          return { success: true };
-        } catch (error) {
-          console.error('Migration failed:', error);
-          return {
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
-          };
-        }
-      },
-    );
   }
-
-  // Migration will now happen on first actual use, not on startup
 }
 
 // Lazy initialization to avoid keychain access on startup
@@ -324,24 +301,6 @@ export function registerSecureTokenHandlers(): void {
         await getSecureTokenIPC().getStorage().deleteToken(key);
         return { success: true };
       } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        };
-      }
-    },
-  );
-
-  // Migration helper
-  ipcMain.handle(
-    SecureTokenAPIEvent.MIGRATE_FROM_LOCALSTORAGE,
-    async (event: IpcMainInvokeEvent, tokens: LegacyTokenData[]) => {
-      try {
-        // Migration no longer needed with unified storage
-        console.log('Migration skipped - using unified storage');
-        return { success: true };
-      } catch (error) {
-        console.error('Migration failed:', error);
         return {
           success: false,
           error: error instanceof Error ? error.message : 'Unknown error',

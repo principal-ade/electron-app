@@ -247,7 +247,7 @@ export class CLIBridge extends EventEmitter {
         }
         break;
 
-      case 'complete':
+      case 'complete': {
         const duration =
           response.duration || Date.now() - pendingCall.startTime;
         const result: ExecuteResult = {
@@ -260,6 +260,7 @@ export class CLIBridge extends EventEmitter {
         pendingCall.resolve(result);
         this.pendingCalls.delete(response.id);
         break;
+      }
 
       case 'error':
         pendingCall.reject(new Error(response.error || 'Unknown error'));

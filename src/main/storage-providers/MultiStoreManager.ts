@@ -17,7 +17,6 @@ import {
   NamespaceCategory,
 } from '../../shared/main-process-api-interfaces/StoreAPI';
 import { ElectronStoreLocalStorageProvider } from './providers/ElectronStoreLocalStorageProvider';
-import { S3RemoteStorageProvider } from './providers/S3RemoteStorageProvider';
 import { StorageNamespaces } from './all-namespaces';
 
 /**
@@ -749,10 +748,6 @@ export class MultiStoreManager extends EventEmitter {
       StorageProviderType.ELECTRON_STORE,
       electronStoreLocalStorageProvider,
     );
-
-    // Register S3 backend (stub)
-    const s3StorageProvider = new S3RemoteStorageProvider('default-s3');
-    this.storageProviders.set(StorageProviderType.S3, s3StorageProvider);
   }
 
   /**

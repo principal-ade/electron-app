@@ -6,10 +6,8 @@
 
 import type {
   PackageLayer,
-  PackageCommand,
 } from '@principal-ai/codebase-composition';
 import type { ToolConfiguration } from '@principal-ai/codebase-quality-lenses';
-import path from 'path';
 
 export interface BridgeAnalysis {
   success: boolean;

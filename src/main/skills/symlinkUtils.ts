@@ -16,7 +16,7 @@ export async function isSymlink(targetPath: string): Promise<boolean> {
   try {
     const stats = await lstat(targetPath);
     return stats.isSymbolicLink();
-  } catch (error) {
+  } catch (_error) {
     // Path doesn't exist or can't be accessed
     return false;
   }

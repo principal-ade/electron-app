@@ -70,13 +70,13 @@ export class UserPreferencesHandler {
     );
   }
 
-  private deepMerge<T extends Record<string, any>>(target: T, source: Partial<T>): T {
-    const output = { ...target } as any;
+  private deepMerge<T extends Record<string, unknown>>(target: T, source: Partial<T>): T {
+    const output = { ...target };
 
     if (this.isObject(target) && this.isObject(source)) {
       Object.keys(source).forEach((key) => {
-        const sourceValue = (source as any)[key];
-        const targetValue = (target as any)[key];
+        const sourceValue = source[key as keyof typeof source];
+        const targetValue = target[key as keyof typeof target];
 
         if (this.isObject(sourceValue)) {
           if (!(key in target)) {
@@ -93,7 +93,7 @@ export class UserPreferencesHandler {
     return output;
   }
 
-  private isObject(item: unknown): item is Record<string, any> {
+  private isObject(item: unknown): item is Record<string, unknown> {
     return !!item && typeof item === 'object' && !Array.isArray(item);
   }
 

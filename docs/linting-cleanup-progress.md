@@ -31,7 +31,7 @@ npm run typecheck 2>&1 | grep "error TS" | sed 's|.*src/||' | cut -d'/' -f1 | so
 
 ### Overall Issues
 
-* **ESLint**: 812 total issues
+* **ESLint**: **741 total issues** (down from 812, **71 issues fixed** ✅)
 * **TypeScript**: **0 errors** 🎉 **PROJECT-WIDE CLEAN STATUS**
 * **Console.log warnings**: 400
 * **Any types in src/main**: 59
@@ -40,17 +40,17 @@ npm run typecheck 2>&1 | grep "error TS" | sed 's|.*src/||' | cut -d'/' -f1 | so
 
 #### ESLint Issues
 
-| Directory                    | Issues | Status |
-| ---------------------------- | ------ | ------ |
-| renderer                     | 88     | 72.7%  |
-| main                         | 33     | 27.3%  |
-| window                       | 0      | ✅ Clean |
-| terminal-worker              | 0      | ✅ Clean |
-| event-processing-server      | 0      | ✅ Clean |
-| telemetry                    | 0      | ✅ Clean |
-| shared                       | 0      | ✅ Clean |
-| repository-monitoring-server | 0      | ✅ Clean |
-| titlebar                     | 0      | ✅ Clean |
+| Directory                    | Issues | Status | Change |
+| ---------------------------- | ------ | ------ | ------ |
+| renderer                     | 88     | 85.4%  | - |
+| main                         | **15** | 14.6%  | **-18** ✅ |
+| window                       | 0      | ✅ Clean | - |
+| terminal-worker              | 0      | ✅ Clean | - |
+| event-processing-server      | 0      | ✅ Clean | - |
+| telemetry                    | 0      | ✅ Clean | - |
+| shared                       | 0      | ✅ Clean | - |
+| repository-monitoring-server | 0      | ✅ Clean | - |
+| titlebar                     | 0      | ✅ Clean | - |
 
 #### TypeScript Errors
 
@@ -95,12 +95,26 @@ npm run typecheck 2>&1 | grep "error TS" | sed 's|.*src/||' | cut -d'/' -f1 | so
 
 ### Current Focus Areas
 
-1. **main** - 33 ESLint issues (TypeScript ✅ Clean)
-2. **renderer/principal-window** - 15 ESLint
+1. **renderer/principal-window** - 15 ESLint
+2. **main** - **15 ESLint issues** (TypeScript ✅ Clean) - **54% reduction** 🎉
 3. **renderer/components** - 12 ESLint
 4. **renderer/utils** - 10 ESLint
 5. **renderer/pages** - 10 ESLint
 6. **renderer/main-process-api** - 10 ESLint
+
+### Recent Cleanup (2026-02-06)
+
+**Main Folder Cleanup - 18 issues fixed:**
+- ✅ Fixed lexical declarations in case blocks (added curly braces)
+- ✅ Removed unused variables and imports (20+ fixes)
+- ✅ Deleted localStorage migration system (no longer needed)
+- ✅ Fixed empty constructors/methods (singleton patterns)
+- ✅ Replaced `any` types with `unknown` where appropriate
+- ✅ Fixed regex control character warnings
+- ✅ Fixed unnecessary escape characters
+- ✅ Deleted `phase2-future` folder (unused future implementation)
+- ✅ Deleted `S3RemoteStorageProvider` stub (unused)
+- ✅ Removed unused error variables in catch blocks
 
 ## Type Safety Cleanup Patterns
 

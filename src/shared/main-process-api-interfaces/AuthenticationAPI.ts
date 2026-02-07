@@ -57,11 +57,6 @@ export interface TokenMetadata {
   user?: AuthUser;
 }
 
-export interface TokenMigrationEntry {
-  key: string;
-  value: unknown;
-}
-
 export interface AuthenticationAPI {
   // OAuth operations
   login(options?: { forceNew?: boolean }): Promise<AuthResult>;
@@ -101,9 +96,6 @@ export interface AuthenticationAPI {
   ): Promise<{ success: boolean; error?: string }>;
   getToken(key: string): Promise<TokenResult>;
   deleteToken(key: string): Promise<{ success: boolean; error?: string }>;
-  migrateFromLocalStorage(
-    tokens: TokenMigrationEntry[],
-  ): Promise<{ success: boolean; error?: string }>;
 
   // State management
   getAuthState(): Promise<AuthState>;

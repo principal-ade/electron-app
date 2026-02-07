@@ -764,7 +764,7 @@ export class TerminalSessionManager {
   private closeAllPortsForSession(sessionId: string): void {
     const windowPorts = this.sessionPorts.get(sessionId);
     if (windowPorts) {
-      for (const [windowId, channel] of windowPorts.entries()) {
+      for (const [windowId, _channel] of windowPorts.entries()) {
         try {
           // Notify worker to unregister port
           const unregisterMsg: UnregisterPortMessage = {
@@ -863,7 +863,7 @@ export class TerminalSessionManager {
       }
 
       return undefined;
-    } catch (error) {
+    } catch (_error) {
       // Not a git repo or no remote configured
       return undefined;
     }

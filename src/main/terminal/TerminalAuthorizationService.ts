@@ -6,7 +6,7 @@
  * can access terminal sessions.
  */
 
-import type { TerminalSession, RemoteClientInfo } from './types';
+import type { RemoteClientInfo } from './types';
 import type { TerminalSessionManager } from './TerminalSessionManager';
 
 export interface AuthorizationResult {

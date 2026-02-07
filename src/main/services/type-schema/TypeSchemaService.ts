@@ -33,6 +33,8 @@ export interface TypeSchemaError {
 export class TypeSchemaService {
   private static instance: TypeSchemaService | null = null;
 
+  // Private constructor for singleton pattern
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
   private constructor() {}
 
   public static getInstance(): TypeSchemaService {

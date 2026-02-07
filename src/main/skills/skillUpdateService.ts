@@ -9,7 +9,6 @@ import { getSkillLockFileService } from './skillLockFile';
 import { fetchSkillFolderHash, fetchMultipleSkillFolderHashes } from './githubTreeSha';
 import type {
   SkillUpdateCheckResult,
-  SkillUpdateResult,
   InstalledSkillInfo,
 } from '../../shared/main-process-api-interfaces/SkillLockAPI';
 

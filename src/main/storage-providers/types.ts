@@ -169,7 +169,6 @@ export interface MigrationResult {
  */
 export enum StorageProviderType {
   ELECTRON_STORE = 'electron-store',
-  S3 = 's3',
   MEMORY = 'memory',
   FILE_SYSTEM = 'filesystem',
 }

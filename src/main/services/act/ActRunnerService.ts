@@ -45,6 +45,8 @@ type WritableWorkflowEvent = Extract<
   { type: 'start' | 'progress' | 'step' | 'error' | 'complete' }
 >;
 
+// ANSI escape sequence regex - control characters are intentional
+// eslint-disable-next-line no-control-regex
 const ANSI_ESCAPE_REGEX =
   /\u001b\[[0-9;]*[a-zA-Z]|\u001b\][0-9;]*;.*?(?:\u0007|\u001b\\)/g;
 

@@ -15,7 +15,6 @@ import type {
   AuthUser,
   TokenResult,
   TokenWithMetadata,
-  TokenMigrationEntry,
   TokenMetadata,
 } from '../../shared/main-process-api-interfaces/AuthenticationAPI';
 import { AuthEvent } from '../../shared/ipc-events/AuthEvents';
@@ -116,16 +115,6 @@ export const authenticationAPI: AuthenticationAPI = {
   ): Promise<{ success: boolean; error?: string }> => {
     // Forward to existing secure-token:delete handler
     return ipcRenderer.invoke(SecureTokenAPIEvent.DELETE, key);
-  },
-
-  migrateFromLocalStorage: async (
-    tokens: TokenMigrationEntry[],
-  ): Promise<{ success: boolean; error?: string }> => {
-    // Forward to existing secure-token:migrate-from-localstorage handler
-    return ipcRenderer.invoke(
-      SecureTokenAPIEvent.MIGRATE_FROM_LOCALSTORAGE,
-      tokens,
-    );
   },
 
   // ===== State Management =====

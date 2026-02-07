@@ -5,8 +5,6 @@
  * Used for update detection by comparing installed hash vs current hash.
  */
 
-import { net } from 'electron';
-
 export interface GitHubTreeEntry {
   path: string;
   mode: string;
