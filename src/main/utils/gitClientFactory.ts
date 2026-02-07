@@ -7,7 +7,7 @@ import { electronCLI } from '../electron-cli-bridge';
 import type { GitExecutor } from '../electron-cli-bridge';
 import { gitLensAdapter } from '../quality-lenses/GitLensAdapter';
 import type { CommitInfo } from '../quality-lenses/GitLensAdapter';
-import type { GitStatus } from '../../shared/types/repository.types';
+import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
 
 /**
  * Git command execution options (for raw git commands)
@@ -91,10 +91,10 @@ export class GitClientFactory {
         const status = await git.getStatus(_baseDir);
         return {
           current: await git.getCurrentBranch(_baseDir),
-          staged: status.staged,
-          modified: status.unstaged,
-          deleted: [],
-          not_added: status.untracked,
+          staged: status.stagedFiles,
+          modified: status.modifiedFiles,
+          deleted: status.deletedFiles,
+          not_added: status.untrackedFiles,
         };
       },
 
@@ -223,8 +223,8 @@ export class GitClientFactory {
    * Get git status for a directory
    * Now uses GitLens for consistency with other Git operations
    */
-  static async getGitStatus(directory: string): Promise<GitStatus> {
-    // Use GitLens adapter which now returns proper GitStatus format
+  static async getGitStatus(directory: string): Promise<GitStatusWithFiles> {
+    // Use GitLens adapter which now returns GitStatusWithFiles format
     return await gitLensAdapter.getGitStatus(directory);
   }
 

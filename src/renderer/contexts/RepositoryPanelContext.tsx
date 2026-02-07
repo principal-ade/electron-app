@@ -233,6 +233,7 @@ export const RepositoryPanelProvider: React.FC<
             repositoryPath,
             `SHA: ${tree?.sha}`,
           );
+
           setFileTreeData(tree);
           setFileTreeVersion(version);
         }
@@ -390,9 +391,8 @@ export const RepositoryPanelProvider: React.FC<
 
   // Extract stable identifiers for memoization (prevents unnecessary re-renders)
   // Only stabilize data that actually has SHA/timestamp/ID - not arrays
-  // For fileTree, use cache version instead of git SHA because SHA stays same with -dirty suffix
-  // when files are added/removed (version increments on each cache rebuild)
-  const fileTreeStableId = fileTreeVersion;
+  // For fileTree, use the SHA which is now content-based (changes with each file modification)
+  const fileTreeStableId = fileTreeData?.sha;
   const qualityDataTimestamp = qualityData?.lastUpdated;
   const activeFilePath = activeFileData?.path;
   // Git status hash is now computed at the source (repository-monitoring-server)

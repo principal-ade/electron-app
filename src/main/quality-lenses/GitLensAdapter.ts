@@ -5,7 +5,8 @@
 
 import { GitLens } from '@principal-ai/codebase-quality-lenses';
 import { ElectronCLIBridgeExecutor } from './ElectronCLIBridgeExecutor';
-import type { GitStatus } from '../../shared/types/repository.types';
+import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
+import { createHash } from 'crypto';
 
 // Use the CommitInfo type from GitLens
 export type CommitInfo = {
@@ -122,12 +123,12 @@ export class GitLensAdapter {
 
   /**
    * Get git status for a directory
-   * Returns files categorized as staged, unstaged (modified), and untracked
+   * Returns full GitStatusWithFiles with metadata and file lists
    *
    * @param directory - The directory to get git status for
-   * @returns Object with staged, unstaged, and untracked file arrays
+   * @returns GitStatusWithFiles with all metadata and file arrays
    */
-  public async getGitStatus(directory: string): Promise<GitStatus> {
+  public async getGitStatus(directory: string): Promise<GitStatusWithFiles> {
     try {
       // Configure GitLens for this directory
       this.gitLens.configure({
@@ -148,21 +149,72 @@ export class GitLensAdapter {
       // Parse the results
       const gitInfo = this.gitLens.parse(executeResult);
 
-      // Map GitLens results to our GitStatus format
-      // GitLens uses "modified" for unstaged changes
+      // Extract file arrays as string[] (GitLens already provides them as string[])
+      const stagedFiles: string[] = gitInfo.staged || [];
+      const modifiedFiles: string[] = gitInfo.modified || [];
+      const untrackedFiles: string[] = gitInfo.untracked || [];
+      const deletedFiles: string[] = gitInfo.deleted || [];
+
+      // Get branch name
+      const branch = gitInfo.branch || 'main';
+
+      // Note: GitLens doesn't provide ahead/behind counts, defaulting to 0
+      // For accurate counts, use GitCore or GitExecutor directly
+      const ahead = 0;
+      const behind = 0;
+
+      // Calculate derived metadata
+      const isDirty =
+        stagedFiles.length > 0 ||
+        modifiedFiles.length > 0 ||
+        untrackedFiles.length > 0 ||
+        deletedFiles.length > 0;
+      const hasUntracked = untrackedFiles.length > 0;
+      const hasStaged = stagedFiles.length > 0;
+
+      // Generate stable hash for React memoization
+      const contentForHash = JSON.stringify({
+        staged: stagedFiles.sort(),
+        modified: modifiedFiles.sort(),
+        untracked: untrackedFiles.sort(),
+        deleted: deletedFiles.sort(),
+      });
+      const hash = createHash('sha256').update(contentForHash).digest('hex');
+
       return {
-        staged: (gitInfo.staged || []).map((path: string) => ({ path })),
-        unstaged: (gitInfo.modified || []).map((path: string) => ({ path })),
-        untracked: (gitInfo.untracked || []).map((path: string) => ({ path })),
-        deleted: (gitInfo.deleted || []).map((path: string) => ({ path })),
+        repoPath: directory,
+        branch,
+        isDirty,
+        hasUntracked,
+        hasStaged,
+        ahead,
+        behind,
+        watchingEnabled: false, // Not managed at this level
+        modifiedFiles,
+        untrackedFiles,
+        stagedFiles,
+        createdFiles: untrackedFiles, // All untracked files are considered created
+        deletedFiles,
+        hash,
       };
     } catch (_error) {
-      // Return empty arrays if not a git repo or error
+      // Return empty status with default values if not a git repo or error
+      const emptyHash = createHash('sha256').update('empty').digest('hex');
       return {
-        staged: [],
-        unstaged: [],
-        untracked: [],
-        deleted: [],
+        repoPath: directory,
+        branch: 'main',
+        isDirty: false,
+        hasUntracked: false,
+        hasStaged: false,
+        ahead: 0,
+        behind: 0,
+        watchingEnabled: false,
+        modifiedFiles: [],
+        untrackedFiles: [],
+        stagedFiles: [],
+        createdFiles: [],
+        deletedFiles: [],
+        hash: emptyHash,
       };
     }
   }

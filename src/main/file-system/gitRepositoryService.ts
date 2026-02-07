@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { gitClientFactory } from '../utils/gitClientFactory';
-import type { GitStatus } from '../../shared/types/repository.types';
+import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
 
 export interface GitCommitHistoryEntry {
   hash: string;
@@ -447,8 +447,8 @@ export class GitRepositoryService {
   /**
    * Get git status for a directory
    */
-  async getGitStatus(directory: string): Promise<GitStatus> {
-    // Use GitClientFactory which now returns proper GitStatus format
+  async getGitStatus(directory: string): Promise<GitStatusWithFiles> {
+    // Use GitClientFactory which now returns GitStatusWithFiles format
     return await gitClientFactory.getGitStatus(directory);
   }
 
@@ -459,8 +459,8 @@ export class GitRepositoryService {
     const status = await this.getGitStatus(directory);
     return [
       ...new Set([
-        ...status.staged.map((f) => f.path),
-        ...status.unstaged.map((f) => f.path),
+        ...status.stagedFiles,
+        ...status.modifiedFiles,
       ]),
     ];
   }
@@ -492,17 +492,17 @@ export class GitRepositoryService {
       // Use simple-git to get status information
       const status = await gitClientFactory.getGitStatus(directory);
 
-      // Process staged, unstaged, and untracked files
-      status.staged.forEach((file) => {
-        created.push(file.path);
+      // Process staged, modified, and untracked files (now string arrays)
+      status.stagedFiles.forEach((filePath) => {
+        created.push(filePath);
       });
 
-      status.unstaged.forEach((file) => {
-        modified.push(file.path);
+      status.modifiedFiles.forEach((filePath) => {
+        modified.push(filePath);
       });
 
-      status.untracked.forEach((file) => {
-        created.push(file.path);
+      status.untrackedFiles.forEach((filePath) => {
+        created.push(filePath);
       });
 
       // For more detailed analysis, we still need to use git client directly

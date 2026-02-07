@@ -4,7 +4,8 @@
  */
 
 import { execSync } from 'child_process';
-import type { GitStatus } from '../types/repository.types';
+import { createHash } from 'crypto';
+import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
 
 export interface GitInfo {
   currentCommit: string;
@@ -83,15 +84,16 @@ export class GitCore {
 
   /**
    * Get repository status
+   * Returns GitStatusWithFiles from @principal-ai/repository-abstraction
    */
-  static async getStatus(repoPath: string): Promise<GitStatus> {
+  static async getStatus(repoPath: string): Promise<GitStatusWithFiles> {
     try {
       const statusOutput = this.execGit(['status', '--porcelain'], repoPath);
 
-      const staged: Array<{ path: string; lastModified?: string }> = [];
-      const unstaged: Array<{ path: string; lastModified?: string }> = [];
-      const untracked: Array<{ path: string; lastModified?: string }> = [];
-      const deleted: Array<{ path: string; lastModified?: string }> = [];
+      const stagedPaths: string[] = [];
+      const modifiedPaths: string[] = [];
+      const untrackedPaths: string[] = [];
+      const deletedPaths: string[] = [];
 
       if (statusOutput) {
         const lines = statusOutput.split('\n').filter((line) => line.trim());
@@ -117,7 +119,7 @@ export class GitCore {
 
           // First character is staged status
           if (status[0] !== ' ' && status[0] !== '?') {
-            staged.push({ path: file });
+            stagedPaths.push(file);
           }
 
           // Check for deletions
@@ -125,22 +127,73 @@ export class GitCore {
           // AD = added to index, deleted in working tree
           //  D = deleted in working tree
           if (status[0] === 'D' || status[1] === 'D') {
-            deleted.push({ path: file });
+            deletedPaths.push(file);
           }
 
           // Second character is working tree status
           if (status[1] === 'M') {
-            unstaged.push({ path: file });
+            modifiedPaths.push(file);
           } else if (status[0] === '?' && status[1] === '?') {
-            untracked.push({ path: file });
+            untrackedPaths.push(file);
           }
         }
       }
 
-      return { staged, unstaged, untracked, deleted };
+      // Get metadata using existing helper methods
+      const [branch, ahead, behind] = await Promise.all([
+        this.getCurrentBranch(repoPath),
+        this.getAheadCount(repoPath),
+        this.getBehindCount(repoPath),
+      ]);
+
+      // Generate stable hash for React memoization
+      const contentForHash = JSON.stringify({
+        staged: stagedPaths.sort(),
+        modified: modifiedPaths.sort(),
+        untracked: untrackedPaths.sort(),
+        deleted: deletedPaths.sort(),
+      });
+      const hash = createHash('sha256').update(contentForHash).digest('hex');
+
+      return {
+        repoPath,
+        branch,
+        isDirty:
+          stagedPaths.length > 0 ||
+          modifiedPaths.length > 0 ||
+          untrackedPaths.length > 0 ||
+          deletedPaths.length > 0,
+        hasUntracked: untrackedPaths.length > 0,
+        hasStaged: stagedPaths.length > 0,
+        ahead,
+        behind,
+        watchingEnabled: false, // Not managed at this level
+        modifiedFiles: modifiedPaths,
+        untrackedFiles: untrackedPaths,
+        stagedFiles: stagedPaths,
+        createdFiles: untrackedPaths, // All untracked files are considered created
+        deletedFiles: deletedPaths,
+        hash,
+      };
     } catch (error) {
       console.warn(`[GitCore] Could not get status for ${repoPath}:`, error);
-      return { staged: [], unstaged: [], untracked: [], deleted: [] };
+      const emptyHash = createHash('sha256').update('empty').digest('hex');
+      return {
+        repoPath,
+        branch: 'main',
+        isDirty: false,
+        hasUntracked: false,
+        hasStaged: false,
+        ahead: 0,
+        behind: 0,
+        watchingEnabled: false,
+        modifiedFiles: [],
+        untrackedFiles: [],
+        stagedFiles: [],
+        createdFiles: [],
+        deletedFiles: [],
+        hash: emptyHash,
+      };
     }
   }
 
@@ -307,6 +360,7 @@ export class GitCore {
 
   /**
    * Get comprehensive git status for watching
+   * Note: getStatus() now returns GitStatusWithFiles which includes all this info
    */
   static async getDetailedStatus(repoPath: string): Promise<{
     branch: string;
@@ -315,27 +369,18 @@ export class GitCore {
     hasStaged: boolean;
     ahead: number;
     behind: number;
-    files?: GitStatus; // Include the file lists to avoid duplicate calls
+    files?: GitStatusWithFiles; // Include the file lists to avoid duplicate calls
   }> {
     try {
-      const [branch, status, ahead, behind] = await Promise.all([
-        this.getCurrentBranch(repoPath),
-        this.getStatus(repoPath),
-        this.getAheadCount(repoPath),
-        this.getBehindCount(repoPath),
-      ]);
+      const status = await this.getStatus(repoPath);
 
       return {
-        branch,
-        isDirty:
-          status.unstaged.length > 0 ||
-          status.staged.length > 0 ||
-          status.untracked.length > 0 ||
-          status.deleted.length > 0,
-        hasUntracked: status.untracked.length > 0,
-        hasStaged: status.staged.length > 0,
-        ahead,
-        behind,
+        branch: status.branch,
+        isDirty: status.isDirty,
+        hasUntracked: status.hasUntracked,
+        hasStaged: status.hasStaged,
+        ahead: status.ahead,
+        behind: status.behind,
         files: status, // Return the file status to avoid duplicate calls
       };
     } catch (error) {

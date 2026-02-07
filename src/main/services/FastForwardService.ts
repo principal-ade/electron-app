@@ -405,10 +405,8 @@ class FastForwardService extends EventEmitter {
 
       // 1. Check git status for uncommitted changes
       const status = await git.getStatus(repoPath);
-      const isDirty =
-        status.staged.length > 0 ||
-        status.unstaged.length > 0 ||
-        status.untracked.length > 0;
+      // GitStatusWithFiles provides isDirty field
+      const isDirty = status.isDirty;
 
       if (isDirty) {
         console.log(

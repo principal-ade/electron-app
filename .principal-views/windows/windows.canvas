@@ -96,7 +96,7 @@
       "y": 150,
       "width": 200,
       "height": 80,
-      "text": "Dev Workspace\n(dev-workspace.html)",
+      "text": "Dev Workspace [TEST 2]\n(dev-workspace.html)",
       "pv": {
         "nodeType": "workspace-window",
         "shape": "rectangle",

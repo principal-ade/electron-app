@@ -1,4 +1,8 @@
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
+import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
+
+// Re-export GitStatusWithFiles for convenience
+export type { GitStatusWithFiles };
 
 /**
  * Local clone information for a repository
@@ -27,22 +31,6 @@ export interface EnhancedAlexandriaEntry extends AlexandriaEntry {
   lastCommitHash?: string;
   localClones?: LocalClone[]; // All local paths where this repo is cloned
 }
-
-/**
- * Git status information for a repository
- */
-export interface GitStatus {
-  staged: Array<{ path: string; lastModified?: string }>;
-  unstaged: Array<{ path: string; lastModified?: string }>;
-  untracked: Array<{ path: string; lastModified?: string }>;
-  deleted: Array<{ path: string; lastModified?: string }>;
-}
-
-export type GitChangeSelectionStatus =
-  | 'staged'
-  | 'unstaged'
-  | 'untracked'
-  | 'deleted';
 
 /**
  * Local git repository information

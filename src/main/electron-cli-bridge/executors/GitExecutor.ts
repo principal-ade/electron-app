@@ -3,11 +3,10 @@
  * Provides comprehensive git functionality through electron-cli-bridge
  */
 
+import { createHash } from 'crypto';
 import { BaseExecutor } from './BaseExecutor';
 import type { ExecuteOptions, ExecuteResult } from '../types';
-import type { GitStatus } from '../../../shared/types/repository.types';
-
-// GitStatus is now imported from repository.types
+import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
 
 export interface GitRemote {
   name: string;
@@ -149,21 +148,38 @@ export class GitExecutor extends BaseExecutor {
 
   /**
    * Get git status
+   * Returns GitStatusWithFiles from @principal-ai/repository-abstraction
    */
-  async getStatus(directory: string): Promise<GitStatus> {
+  async getStatus(directory: string): Promise<GitStatusWithFiles> {
     try {
       const result = await this.execute('git', ['status', '--porcelain=v1'], {
         cwd: directory,
       });
 
       if (!result.success || !result.stdout) {
-        return { staged: [], unstaged: [], untracked: [], deleted: [] };
+        const emptyHash = createHash('sha256').update('empty').digest('hex');
+        return {
+          repoPath: directory,
+          branch: 'main',
+          isDirty: false,
+          hasUntracked: false,
+          hasStaged: false,
+          ahead: 0,
+          behind: 0,
+          watchingEnabled: false,
+          modifiedFiles: [],
+          untrackedFiles: [],
+          stagedFiles: [],
+          createdFiles: [],
+          deletedFiles: [],
+          hash: emptyHash,
+        };
       }
 
-      const staged: Array<{ path: string; lastModified?: string }> = [];
-      const unstaged: Array<{ path: string; lastModified?: string }> = [];
-      const untracked: Array<{ path: string; lastModified?: string }> = [];
-      const deleted: Array<{ path: string; lastModified?: string }> = [];
+      const stagedPaths: string[] = [];
+      const modifiedPaths: string[] = [];
+      const untrackedPaths: string[] = [];
+      const deletedPaths: string[] = [];
 
       this.parseLines(result.stdout).forEach((line) => {
         const status = line.substring(0, 2);
@@ -189,29 +205,102 @@ export class GitExecutor extends BaseExecutor {
           status[0] === 'R' ||
           status[0] === 'C'
         ) {
-          staged.push({ path: file });
+          stagedPaths.push(file);
         } else if (status[0] === 'D') {
           // Staged deletion
-          deleted.push({ path: file });
+          deletedPaths.push(file);
         }
 
         // Working tree status (second character)
         if (status[1] === 'M') {
-          unstaged.push({ path: file });
+          modifiedPaths.push(file);
         } else if (status[1] === 'D') {
           // Unstaged deletion
-          deleted.push({ path: file });
+          deletedPaths.push(file);
         }
 
         // Untracked files
         if (status === '??') {
-          untracked.push({ path: file });
+          untrackedPaths.push(file);
         }
       });
 
-      return { staged, unstaged, untracked, deleted };
-    } catch {
-      return { staged: [], unstaged: [], untracked: [], deleted: [] };
+      // Get branch name
+      const branchResult = await this.execute(
+        'git',
+        ['rev-parse', '--abbrev-ref', 'HEAD'],
+        { cwd: directory },
+      );
+      const branch = branchResult.success && branchResult.stdout
+        ? branchResult.stdout.trim()
+        : 'main';
+
+      // Get ahead/behind counts
+      const aheadResult = await this.execute(
+        'git',
+        ['rev-list', '--count', '@{u}..HEAD'],
+        { cwd: directory },
+      );
+      const ahead = aheadResult.success && aheadResult.stdout
+        ? parseInt(aheadResult.stdout.trim(), 10) || 0
+        : 0;
+
+      const behindResult = await this.execute(
+        'git',
+        ['rev-list', '--count', 'HEAD..@{u}'],
+        { cwd: directory },
+      );
+      const behind = behindResult.success && behindResult.stdout
+        ? parseInt(behindResult.stdout.trim(), 10) || 0
+        : 0;
+
+      // Generate stable hash for React memoization
+      const contentForHash = JSON.stringify({
+        staged: stagedPaths.sort(),
+        modified: modifiedPaths.sort(),
+        untracked: untrackedPaths.sort(),
+        deleted: deletedPaths.sort(),
+      });
+      const hash = createHash('sha256').update(contentForHash).digest('hex');
+
+      return {
+        repoPath: directory,
+        branch,
+        isDirty:
+          stagedPaths.length > 0 ||
+          modifiedPaths.length > 0 ||
+          untrackedPaths.length > 0 ||
+          deletedPaths.length > 0,
+        hasUntracked: untrackedPaths.length > 0,
+        hasStaged: stagedPaths.length > 0,
+        ahead,
+        behind,
+        watchingEnabled: false,
+        modifiedFiles: modifiedPaths,
+        untrackedFiles: untrackedPaths,
+        stagedFiles: stagedPaths,
+        createdFiles: untrackedPaths,
+        deletedFiles: deletedPaths,
+        hash,
+      };
+    } catch (error) {
+      const emptyHash = createHash('sha256').update('empty').digest('hex');
+      return {
+        repoPath: directory,
+        branch: 'main',
+        isDirty: false,
+        hasUntracked: false,
+        hasStaged: false,
+        ahead: 0,
+        behind: 0,
+        watchingEnabled: false,
+        modifiedFiles: [],
+        untrackedFiles: [],
+        stagedFiles: [],
+        createdFiles: [],
+        deletedFiles: [],
+        hash: emptyHash,
+      };
     }
   }
 
