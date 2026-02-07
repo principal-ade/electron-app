@@ -1264,8 +1264,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             >
               <CanvasEditorPanelComponent
                 context={context}
-                actions={actions}
-                events={events}
+                actions={actionsRef.current}
+                events={eventsRef.current}
                 selectedConfigId={canvasEditorTab.canvasId}
                 canvasPath={canvasEditorTab.canvasPath}
                 canvasName={canvasEditorTab.canvasName}
@@ -1498,7 +1498,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           );
       }
     },
-    [theme, context, actions, events, SkillDetailPanelComponent, MarkdownPanelComponent, CanvasEditorPanelComponent, CanvasDetailPanelComponent, FileEditorPanelComponent, GitDiffPanelComponent],
+    [theme, context, SkillDetailPanelComponent, MarkdownPanelComponent, CanvasEditorPanelComponent, CanvasDetailPanelComponent, FileEditorPanelComponent, GitDiffPanelComponent],
   );
 
   // Define all panels using panel framework components
