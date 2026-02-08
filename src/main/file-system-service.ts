@@ -173,19 +173,23 @@ export class FileSystemService {
             exclude,
             maxFileSize,
           );
-          node.children!.push(childNode);
+          if (node.children) {
+            node.children.push(childNode);
+          }
         } catch (error) {
           console.error(`Failed to process ${itemPath}:`, error);
         }
       }
 
       // Sort children: directories first, then files, alphabetically
-      node.children!.sort((a, b) => {
-        if (a.type !== b.type) {
-          return a.type === 'directory' ? -1 : 1;
-        }
-        return a.name.localeCompare(b.name);
-      });
+      if (node.children) {
+        node.children.sort((a, b) => {
+          if (a.type !== b.type) {
+            return a.type === 'directory' ? -1 : 1;
+          }
+          return a.name.localeCompare(b.name);
+        });
+      }
     } catch (error) {
       console.error(`Failed to read directory ${currentPath}:`, error);
     }

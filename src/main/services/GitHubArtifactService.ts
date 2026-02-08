@@ -256,7 +256,10 @@ export class GitHubArtifactService {
       return result;
     }
 
-    const artifact = data.artifacts[0]!;
+    const artifact = data.artifacts[0];
+    if (!artifact) {
+      return null;
+    }
     const result = await this.downloadAndParseArtifact(
       owner,
       repo,
@@ -320,7 +323,10 @@ export class GitHubArtifactService {
         return null;
       }
 
-      const firstArtifact = artifacts[0]!;
+      const firstArtifact = artifacts[0];
+      if (!firstArtifact) {
+        return null;
+      }
       return this.downloadAndParseArtifact(
         owner,
         repo,
@@ -346,7 +352,10 @@ export class GitHubArtifactService {
           return null;
         }
 
-        const firstArtifact = artifacts[0]!;
+        const firstArtifact = artifacts[0];
+        if (!firstArtifact) {
+          return null;
+        }
         return this.downloadAndParseArtifact(
           owner,
           repo,

@@ -230,7 +230,7 @@ export function setupShellHandlers() {
           maxBuffer: 1024 * 1024 * 10, // 10MB buffer
           shell:
             os.platform() === 'win32'
-              ? process.env.ComSpec || 'C\\\Windows\\\System32\\\cmd.exe'
+              ? process.env.ComSpec || 'C:\\Windows\\System32\\cmd.exe'
               : '/bin/bash',
         });
 

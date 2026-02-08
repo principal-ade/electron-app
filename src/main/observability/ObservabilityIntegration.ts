@@ -351,8 +351,14 @@ export class ObservabilityIntegration extends EventEmitter {
 
         case 'local-with-sync': {
           // Initialize cloud schema first (same as in initializeSDK)
+          if (!config.tursoUrl) {
+            return {
+              success: false,
+              error: 'Turso URL is required for local-with-sync mode',
+            };
+          }
           const testCloudSDK = TursoObservabilitySDK.createCloud(
-            config.tursoUrl!,
+            config.tursoUrl,
             config.tursoAuthToken || '',
           );
           await testCloudSDK.initializeSchema();
@@ -360,7 +366,7 @@ export class ObservabilityIntegration extends EventEmitter {
 
           testSdk = TursoObservabilitySDK.createEmbeddedReplica(
             resolvedDbPath,
-            config.tursoUrl!,
+            config.tursoUrl,
             config.tursoAuthToken || '',
             config.syncInterval || 5000,
           );

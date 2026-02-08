@@ -666,10 +666,12 @@ export class TerminalSessionManager {
       const channel = new MessageChannelMain();
 
       // Store the channel reference
-      if (!this.sessionPorts.has(sessionId)) {
-        this.sessionPorts.set(sessionId, new Map());
+      let windowPorts = this.sessionPorts.get(sessionId);
+      if (!windowPorts) {
+        windowPorts = new Map();
+        this.sessionPorts.set(sessionId, windowPorts);
       }
-      this.sessionPorts.get(sessionId)!.set(windowId, channel);
+      windowPorts.set(windowId, channel);
 
       // Claim ownership if requested
       if (claimOwnership) {

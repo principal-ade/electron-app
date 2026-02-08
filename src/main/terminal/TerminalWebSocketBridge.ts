@@ -399,10 +399,12 @@ export class TerminalWebSocketBridge {
 
     // 3. Add to remote attachments
     const isFirstAttachment = !this.remoteAttachments.has(sessionId);
-    if (isFirstAttachment) {
-      this.remoteAttachments.set(sessionId, new Set());
+    let attachments = this.remoteAttachments.get(sessionId);
+    if (!attachments) {
+      attachments = new Set();
+      this.remoteAttachments.set(sessionId, attachments);
     }
-    this.remoteAttachments.get(sessionId)!.add(event.userId);
+    attachments.add(event.userId);
 
     // If this is the first remote attachment, create monitoring port for data streaming
     if (isFirstAttachment) {
@@ -445,7 +447,7 @@ export class TerminalWebSocketBridge {
         false,
       );
 
-      if (result.success) {
+      if (result.success && result.owner) {
         console.log(
           `[TerminalWebSocketBridge] Client ${event.userId} claimed ownership of session ${sessionId}`,
         );
@@ -453,7 +455,7 @@ export class TerminalWebSocketBridge {
         // Broadcast ownership change
         await this.broadcastOwnershipChange(
           sessionId,
-          result.owner!,
+          result.owner,
           result.previousOwner || null,
         );
       } else {
@@ -563,13 +565,13 @@ export class TerminalWebSocketBridge {
       force || false,
     );
 
-    if (result.success) {
+    if (result.success && result.owner) {
       console.log(
         `[TerminalWebSocketBridge] Client ${event.userId} claimed ownership of session ${sessionId}`,
       );
       await this.broadcastOwnershipChange(
         sessionId,
-        result.owner!,
+        result.owner,
         result.previousOwner || null,
       );
     } else {

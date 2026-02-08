@@ -1086,7 +1086,7 @@ export class ElectronFileSystemAdapter {
       this.filesWatcher
         .on('unlink', (unlinkedPath) => {
           console.log(
-            `[File System Adapter WID-${this.mainWindow!.id}] File DELETED by filesWatcher: ${unlinkedPath}`,
+            `[File System Adapter WID-${this.mainWindow?.id ?? 'unknown'}] File DELETED by filesWatcher: ${unlinkedPath}`,
           );
           // Check if window is still valid before sending
           if (this.mainWindow && !this.mainWindow.isDestroyed()) {
@@ -1102,7 +1102,7 @@ export class ElectronFileSystemAdapter {
         })
         .on('error', (error) => {
           console.error(
-            `[File System Adapter WID-${this.mainWindow!.id}] Files watcher error:`,
+            `[File System Adapter WID-${this.mainWindow?.id ?? 'unknown'}] Files watcher error:`,
             error,
           );
         });
@@ -1112,7 +1112,7 @@ export class ElectronFileSystemAdapter {
       return true;
     } catch (error) {
       console.error(
-        `[File System Adapter WID-${this.mainWindow!.id}] Error setting up files watcher:`,
+        `[File System Adapter WID-${this.mainWindow?.id ?? 'unknown'}] Error setting up files watcher:`,
         error,
       );
       this.filesWatcher = null; // Ensure it's null on error

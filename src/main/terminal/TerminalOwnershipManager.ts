@@ -167,7 +167,7 @@ export class TerminalOwnershipManager {
     if (currentOwnerExists && !force) {
       return {
         success: false,
-        reason: `Session is owned by another ${currentOwner!.type} client`,
+        reason: `Session is owned by another ${currentOwner?.type ?? 'unknown'} client`,
         owner: currentOwner,
       };
     }

@@ -204,10 +204,12 @@ export class ElectronStoreLocalStorageProvider implements StorageProvider {
       const unsubscribe = this.store.onDidChange(key, callback);
 
       // Track the unsubscribe function
-      if (!this.watchers.has(key)) {
-        this.watchers.set(key, []);
+      let keyWatchersArray = this.watchers.get(key);
+      if (!keyWatchersArray) {
+        keyWatchersArray = [];
+        this.watchers.set(key, keyWatchersArray);
       }
-      this.watchers.get(key)!.push(unsubscribe);
+      keyWatchersArray.push(unsubscribe);
 
       // Return a function that removes this specific watcher
       return () => {

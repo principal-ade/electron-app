@@ -46,8 +46,8 @@ type WritableWorkflowEvent = Extract<
 >;
 
 // ANSI escape sequence regex - control characters are intentional
-// eslint-disable-next-line no-control-regex
 const ANSI_ESCAPE_REGEX =
+  // eslint-disable-next-line no-control-regex
   /\u001b\[[0-9;]*[a-zA-Z]|\u001b\][0-9;]*;.*?(?:\u0007|\u001b\\)/g;
 
 export class ActRunnerService extends EventEmitter {

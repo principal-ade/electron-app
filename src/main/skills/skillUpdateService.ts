@@ -60,10 +60,12 @@ export class SkillUpdateService {
 
       // Branch is not stored in lock file per add-skill convention, default to 'main'
       const key = `${skill.source}@main`;
-      if (!skillsBySource.has(key)) {
-        skillsBySource.set(key, []);
+      let sourceSkillsArray = skillsBySource.get(key);
+      if (!sourceSkillsArray) {
+        sourceSkillsArray = [];
+        skillsBySource.set(key, sourceSkillsArray);
       }
-      skillsBySource.get(key)!.push(skill);
+      sourceSkillsArray.push(skill);
     }
 
     // Fetch updates for each source
@@ -100,7 +102,7 @@ export class SkillUpdateService {
         for (const skill of sourceSkills) {
           const hashResult = skill.skillPath ? hashResults.get(skill.skillPath) : undefined;
 
-          if (!hashResult || !hashResult.success) {
+          if (!hashResult || !hashResult.success || !hashResult.sha) {
             results.push({
               name: skill.name,
               installedHash: skill.skillFolderHash,
@@ -113,7 +115,7 @@ export class SkillUpdateService {
             results.push({
               name: skill.name,
               installedHash: skill.skillFolderHash,
-              latestHash: hashResult.sha!,
+              latestHash: hashResult.sha,
               hasUpdate: skill.skillFolderHash !== hashResult.sha,
               sourceUrl: skill.sourceUrl,
             });

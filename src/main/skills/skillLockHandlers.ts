@@ -122,10 +122,12 @@ export async function registerSkillLockHandlers(): Promise<void> {
 
         // Branch is not stored in lock file per add-skill convention, default to 'main'
         const key = `${skill.source}@main`;
-        if (!skillsBySource.has(key)) {
-          skillsBySource.set(key, []);
+        let sourceSkillsArray = skillsBySource.get(key);
+        if (!sourceSkillsArray) {
+          sourceSkillsArray = [];
+          skillsBySource.set(key, sourceSkillsArray);
         }
-        skillsBySource.get(key)!.push(skill);
+        sourceSkillsArray.push(skill);
       }
 
       // Fetch updates for each source
@@ -161,7 +163,7 @@ export async function registerSkillLockHandlers(): Promise<void> {
         for (const skill of sourceSkills) {
           const hashResult = skill.skillPath ? hashResults.get(skill.skillPath) : undefined;
 
-          if (!hashResult || !hashResult.success) {
+          if (!hashResult || !hashResult.success || !hashResult.sha) {
             results.push({
               name: skill.name,
               installedHash: skill.skillFolderHash,
@@ -174,7 +176,7 @@ export async function registerSkillLockHandlers(): Promise<void> {
             results.push({
               name: skill.name,
               installedHash: skill.skillFolderHash,
-              latestHash: hashResult.sha!,
+              latestHash: hashResult.sha,
               hasUpdate: skill.skillFolderHash !== hashResult.sha,
               sourceUrl: skill.sourceUrl,
             });
@@ -283,10 +285,12 @@ export async function registerSkillLockHandlers(): Promise<void> {
 
         // Branch is not stored in lock file per add-skill convention, default to 'main'
         const key = `${skill.source}@main`;
-        if (!skillsBySource.has(key)) {
-          skillsBySource.set(key, []);
+        let sourceSkillsArray = skillsBySource.get(key);
+        if (!sourceSkillsArray) {
+          sourceSkillsArray = [];
+          skillsBySource.set(key, sourceSkillsArray);
         }
-        skillsBySource.get(key)!.push(skill);
+        sourceSkillsArray.push(skill);
       }
 
       // Check and update each source group

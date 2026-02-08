@@ -31,7 +31,8 @@ export class TypedMultiStoreWrapper implements TypedMultiStoreManager {
    * All namespaces are properly typed
    */
   namespace<K extends StorageNamespaces>(namespace: K): NamespaceOperations<K> {
-    if (!this.namespaceCache.has(namespace)) {
+    let operations = this.namespaceCache.get(namespace);
+    if (!operations) {
       // Get the namespace config from MultiStoreManager
       const namespaces = this.multiStoreManager.getNamespaces();
       const config = namespaces.get(namespace);
@@ -45,11 +46,11 @@ export class TypedMultiStoreWrapper implements TypedMultiStoreManager {
       const provider =
         this.multiStoreManager.getProviderForNamespace(namespace);
 
-      const operations = createNamespaceOperations(namespace, provider);
+      operations = createNamespaceOperations(namespace, provider);
       this.namespaceCache.set(namespace, operations);
     }
 
-    return this.namespaceCache.get(namespace)! as NamespaceOperations<K>;
+    return operations as NamespaceOperations<K>;
   }
 
   /**
@@ -217,13 +218,13 @@ export class TypedMultiStoreWrapper implements TypedMultiStoreManager {
   ): Promise<StorageStats> {
     // Use the multiStoreManager's getStats method which properly handles namespace providers
     const result = await this.multiStoreManager.getStats(namespace);
-    if (!result.success) {
+    if (!result.success || !result.data) {
       throw (
         result.error ||
         new Error(`Failed to get stats for namespace ${namespace}`)
       );
     }
-    return result.data!;
+    return result.data;
   }
 
   /**

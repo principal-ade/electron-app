@@ -120,10 +120,12 @@ export class EventServerManager extends EventEmitter {
     const { port1, port2 } = new MessageChannelMain();
 
     // Track the registration
-    if (!this.registeredWindows.has(repository)) {
-      this.registeredWindows.set(repository, new Set());
+    let windowSet = this.registeredWindows.get(repository);
+    if (!windowSet) {
+      windowSet = new Set();
+      this.registeredWindows.set(repository, windowSet);
     }
-    this.registeredWindows.get(repository)!.add(windowId);
+    windowSet.add(windowId);
 
     // Transfer port1 to the utility process
     this.worker.postMessage(

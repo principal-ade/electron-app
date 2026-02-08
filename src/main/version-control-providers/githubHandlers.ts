@@ -1222,7 +1222,7 @@ export class GitHubAdapter {
       if (result.success && result.stdout) {
         // Extract issue URL from output
         const urlMatch = result.stdout.match(
-          /https:\/\/github\.com\/[^\/]+\/[^\/]+\/issues\/\d+/,
+          /https:\/\/github\.com\/[^/]+\/[^/]+\/issues\/\d+/,
         );
         const numberMatch = result.stdout.match(/\/issues\/(\d+)/);
 
@@ -2850,9 +2850,15 @@ export function registerGitHubIpcHandlers(
             };
           }
         }
+        if (!treeRef) {
+          return {
+            success: false,
+            error: 'treeRef is not defined',
+          };
+        }
         const fetchRes = await run(
           'git',
-          ['fetch', '--depth', '1', 'origin', treeRef!],
+          ['fetch', '--depth', '1', 'origin', treeRef],
           targetDir,
         );
         if (fetchRes.code !== 0) {
