@@ -186,7 +186,6 @@ export interface DevWorkspaceTitlebarProps {
   }) => void;
   onCollapsedChange?: (collapsed: { left: boolean; right: boolean }) => void;
   // Panel sizes
-  panelSizes?: { left: number; middle: number; right: number };
   onPanelSizesChange?: (sizes: { left: number; middle: number; right: number }) => void;
   // Repository path for copy
   repositoryPath?: string;
@@ -195,7 +194,7 @@ export interface DevWorkspaceTitlebarProps {
     emit: (event: {
       type: string;
       source: string;
-      payload: any;
+      payload: unknown;
       timestamp: number;
     }) => void;
   };
@@ -224,7 +223,6 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
   currentLayout,
   onLayoutChange,
   onCollapsedChange,
-  panelSizes,
   onPanelSizesChange,
   repositoryPath,
   events,
@@ -261,24 +259,10 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
     }
   };
 
-  // Handler for changing the left panel
-  const handleLeftPanelChange = (panelId: string) => {
-    if (currentLayout && onLayoutChange) {
-      onLayoutChange({ ...currentLayout, left: panelId });
-    }
-  };
-
   // Handler for changing the right panel
   const handleRightPanelChange = (panelId: string) => {
     if (currentLayout && onLayoutChange) {
       onLayoutChange({ ...currentLayout, right: panelId });
-    }
-  };
-
-  // Handler to expand left panel if collapsed
-  const handleExpandLeftPanel = () => {
-    if (collapsed?.left && onCollapsedChange) {
-      onCollapsedChange({ ...collapsed, left: false });
     }
   };
 
@@ -291,15 +275,15 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
 
   // Detect Storybook packages from codebase-composition data
   useEffect(() => {
-    console.log('[DevWorkspaceTitlebar] Packages data:', packages);
-    console.log('[DevWorkspaceTitlebar] Repository path:', repositoryPath);
+    console.info('[DevWorkspaceTitlebar] Packages data:', packages);
+    console.info('[DevWorkspaceTitlebar] Repository path:', repositoryPath);
 
     if (repositoryPath && packages) {
       const foundPackages = StorybookService.findStorybookPackages(
         packages,
         repositoryPath,
       );
-      console.log('[DevWorkspaceTitlebar] Found Storybook packages:', foundPackages);
+      console.info('[DevWorkspaceTitlebar] Found Storybook packages:', foundPackages);
       setStorybookPackages(foundPackages);
 
       // Auto-select first package if only one exists
@@ -312,7 +296,7 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
         setSelectedPackage(null);
       }
     } else {
-      console.log('[DevWorkspaceTitlebar] No packages or repositoryPath');
+      console.info('[DevWorkspaceTitlebar] No packages or repositoryPath');
       setStorybookPackages([]);
       setSelectedPackage(null);
     }
@@ -357,13 +341,13 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
 
         // Switch right panel back to file-city
         if (currentLayout && onLayoutChange) {
-          console.log('[DevWorkspaceTitlebar] Switching right panel back to file-city');
+          console.info('[DevWorkspaceTitlebar] Switching right panel back to file-city');
           onLayoutChange({ ...currentLayout, right: 'fileCity' });
         }
 
         // Expand left panel back
         if (collapsed?.left && onCollapsedChange) {
-          console.log('[DevWorkspaceTitlebar] Expanding left panel');
+          console.info('[DevWorkspaceTitlebar] Expanding left panel');
           onCollapsedChange({ left: false, right: collapsed?.right ?? false });
         }
       } catch (error) {

@@ -94,7 +94,7 @@ function getTerminalClient(): TerminalClient {
         'Terminal client not available - window.electron not initialized',
       );
     }
-    _terminalClient = createClient<any>({
+    _terminalClient = createClient<TerminalClient>({
       ipcInvoke: window.electron.ipcRenderer.invoke,
     }) as unknown as TerminalClient;
   }

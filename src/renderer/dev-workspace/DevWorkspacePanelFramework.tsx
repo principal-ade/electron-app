@@ -53,6 +53,7 @@ import { panels as agentPanels, type Skill } from '@industry-theme/agent-panels'
 import { panels as githubPanels } from '@industry-theme/github-panels';
 import { panels as typeInformationPanels } from '../panels/TypeInformationPanel';
 import type { Repository } from '../../shared/types/repository.types';
+import type { StoredTrace } from '../../shared/main-process-api-interfaces/OtelCollectorAPI';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { PanelIconSidebar } from '../components/Sidebar/PanelIconSidebar';
 
@@ -143,7 +144,7 @@ interface DependencyGraphTab extends BaseTab {
 interface TraceDetailsTab extends BaseTab {
   contentType: 'trace-details';
   traceId: string;
-  traceData?: any; // Full trace object for instant loading
+  traceData?: StoredTrace; // Full trace object for instant loading
 }
 
 /**
@@ -273,10 +274,11 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   >('xterm');
 
   // Unified modal state for detail panels
-  const [detailModal, setDetailModal] = useState<{
-    panelId: 'githubIssueDetail';
-    data: any;
-  } | null>(null);
+  type DetailModal =
+    | { panelId: 'githubIssueDetail'; data: unknown }
+    | { panelId: 'mdxEditor'; data: { path: string } };
+
+  const [detailModal, setDetailModal] = useState<DetailModal | null>(null);
 
   useEffect(() => {
     const loadPreference = async () => {
@@ -416,16 +418,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   const MilestonePanelComponent = backlogPanels[2]?.component;
 
   // Agent Skills panels
-  const SkillsListPanelComponent = agentPanels.find(
-    (p) => p.metadata?.id === 'industry-theme.skills-list',
-  )?.component;
   const SkillDetailPanelComponent = agentPanels.find(
     (p) => p.metadata?.id === 'industry-theme.skill-detail',
-  )?.component;
-
-  // Agent Documentation panels (AGENTS.md + Subagents)
-  const AgentsListPanelComponent = agentPanels.find(
-    (p) => p.metadata?.id === 'industry-theme.agents-list',
   )?.component;
   const AgentDetailPanelComponent = agentPanels.find(
     (p) => p.metadata?.id === 'industry-theme.agent-detail',
@@ -500,7 +494,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
   // Listen for detail panel events to show modals
   useEffect(() => {
-    console.log('[DevWorkspacePanelFramework] Registering event handlers, events object:', events);
+    console.info('[DevWorkspacePanelFramework] Registering event handlers, events object:', events);
 
     const unsubscribers = [
       // Task detail - open task markdown file in MDX editor tab
@@ -508,9 +502,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         // Ignore re-emitted events from tabs to prevent loop
         if (event.source === 'tab') return;
 
-        console.log('[DevWorkspacePanelFramework] Received task:selected event:', event);
-        const payload = event.payload as { task: any; taskId: string };
-        const task = payload.task;
+        console.info('[DevWorkspacePanelFramework] Received task:selected event:', event);
+        const payload = event.payload as { task: unknown; taskId: string };
+        const task = payload.task as { filePath?: string; title?: string } | undefined;
 
         if (!task || !task.filePath) {
           console.warn('[DevWorkspacePanelFramework] No task data or filePath in payload:', payload);
@@ -520,7 +514,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         const filePath = task.filePath;
         const fileName = task.title || filePath.split('/').pop() || 'Task';
 
-        console.log('[DevWorkspacePanelFramework] Opening task file in MDX editor:', filePath);
+        console.info('[DevWorkspacePanelFramework] Opening task file in MDX editor:', filePath);
 
         setTabs((prevTabs) => {
           // Check if tab already exists
@@ -529,7 +523,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           );
 
           if (existingTab) {
-            console.log('[DevWorkspacePanelFramework] Task MDX editor tab already exists, focusing:', existingTab.id);
+            console.info('[DevWorkspacePanelFramework] Task MDX editor tab already exists, focusing:', existingTab.id);
             setFocusTabId(existingTab.id);
             return prevTabs;
           }
@@ -544,7 +538,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             closable: true,
           };
 
-          console.log('[DevWorkspacePanelFramework] Creating new task MDX editor tab:', newTab);
+          console.info('[DevWorkspacePanelFramework] Creating new task MDX editor tab:', newTab);
           setFocusTabId(newTab.id);
           return [...prevTabs, newTab];
         });

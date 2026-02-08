@@ -202,7 +202,7 @@ const AlexandriaWorkspaceContent: React.FC = () => {
       events.on('panel:switch', (event) => {
         const payload = event.payload as { slot?: string; panel?: string };
         if (payload.slot && payload.panel) {
-          setLayout((prev) => ({ ...prev, [payload.slot!]: payload.panel }));
+          setLayout((prev) => ({ ...prev, [payload.slot]: payload.panel }));
         }
       }),
       events.on('panel:reset-layout', () => {
@@ -474,7 +474,7 @@ const AlexandriaWorkspaceContent: React.FC = () => {
         )
           return;
 
-        console.log(
+        console.info(
           '[AlexandriaWorkspaceApp] Git status changed:',
           status.repoPath,
           status.branch,
@@ -511,7 +511,7 @@ const AlexandriaWorkspaceContent: React.FC = () => {
         )
           return;
 
-        console.log('[AlexandriaWorkspaceApp] Workspace changed:', {
+        console.info('[AlexandriaWorkspaceApp] Workspace changed:', {
           repoPath: event.repoPath,
           changeCount: event.changes?.length ?? 0,
           state: event.state,

@@ -233,14 +233,14 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
 
     const loadTraceSourceServiceName = async () => {
       try {
-        console.log('[DevWorkspaceApp] 🔍 Loading service names from library.yaml files');
-        console.log('[DevWorkspaceApp] Repository path:', repositoryPath);
+        console.info('[DevWorkspaceApp] 🔍 Loading service names from library.yaml files');
+        console.info('[DevWorkspaceApp] Repository path:', repositoryPath);
 
         // Get file tree and discover all services
         const fileTree = await RepositoryMonitoringService.getFileTree(repositoryPath);
 
         if (!fileTree) {
-          console.log('[DevWorkspaceApp] ⚠️ No file tree available, defaulting to "all"');
+          console.info('[DevWorkspaceApp] ⚠️ No file tree available, defaulting to "all"');
           setTraceSourceServiceName('all');
           return;
         }
@@ -248,19 +248,19 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         const serviceNames = await getAllServiceNamesFromFileTree(fileTree, repositoryPath);
 
         if (serviceNames.length > 0) {
-          console.log('[DevWorkspaceApp] ✅ Found service names:', serviceNames);
+          console.info('[DevWorkspaceApp] ✅ Found service names:', serviceNames);
           setAvailableServiceNames(serviceNames);
 
           // Use first service name by default
           const serviceName = serviceNames[0];
-          console.log('[DevWorkspaceApp] 📝 Using first service name:', serviceName);
+          console.info('[DevWorkspaceApp] 📝 Using first service name:', serviceName);
           setTraceSourceServiceName(serviceName);
 
           if (serviceNames.length > 1) {
-            console.log('[DevWorkspaceApp] ℹ️ Multiple services found:', serviceNames.length);
+            console.info('[DevWorkspaceApp] ℹ️ Multiple services found:', serviceNames.length);
           }
         } else {
-          console.log('[DevWorkspaceApp] ⚠️ No services found in library.yaml files, defaulting to "all"');
+          console.info('[DevWorkspaceApp] ⚠️ No services found in library.yaml files, defaulting to "all"');
           setAvailableServiceNames([]);
           setTraceSourceServiceName('all');
         }
@@ -269,7 +269,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         // Fall back to "all" on error
         setAvailableServiceNames([]);
         setTraceSourceServiceName('all');
-        console.log('[DevWorkspaceApp] 📝 Set traceSourceServiceName to: all (due to error)');
+        console.info('[DevWorkspaceApp] 📝 Set traceSourceServiceName to: all (due to error)');
       }
     };
 
@@ -460,7 +460,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
       events.on('panel:switch', (event) => {
         const payload = event.payload as { slot?: string; panel?: string };
         if (payload.slot && payload.panel) {
-          setLayout((prev) => ({ ...prev, [payload.slot!]: payload.panel }));
+          setLayout((prev) => ({ ...prev, [payload.slot]: payload.panel }));
         }
       }),
       events.on('panel:reset-layout', () => {
@@ -473,7 +473,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
       }),
       // Listen for terminal shortcut events (e.g., Cmd+Shift+P from terminal)
       events.on('terminal:shortcut', (event) => {
-        console.log(
+        console.info(
           '[DevWorkspaceApp] Received terminal:shortcut event:',
           event,
         );
@@ -482,7 +482,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           sessionId: string;
         };
         if (payload.shortcut === 'command-palette') {
-          console.log(
+          console.info(
             '[DevWorkspaceApp] Opening command palette from terminal shortcut',
           );
           agentPalette.open();
@@ -959,7 +959,6 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         }
         onLayoutChange={(newLayout) => setLayout(newLayout)}
         onCollapsedChange={setCollapsed}
-        panelSizes={panelSizes}
         onPanelSizesChange={setPanelSizes}
         repositoryPath={repositoryPath}
         panelFocus={panelFocus}

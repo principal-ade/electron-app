@@ -8,12 +8,9 @@
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import * as ReactJSXRuntime from 'react/jsx-runtime';
 import type { PanelMetadata } from '../../../shared/main-process-api-interfaces/ExtensionAPI';
-import type { ExtensionWindowMainProcessAPI } from '../../../shared/main-process-api-interfaces/ExtensionWindowAPI';
 
 // Get the mainProcess API from the window object
-const mainProcess = (window as any).mainProcess as
-  | ExtensionWindowMainProcessAPI
-  | undefined;
+const mainProcess = window.mainProcess;
 
 interface PanelHarnessProps {
   /** The package name of the extension */
@@ -24,9 +21,29 @@ interface PanelHarnessProps {
   onClose: () => void;
 }
 
+/** Props that extension panel components may receive */
+interface ExtensionPanelProps {
+  isActive?: boolean;
+  onClose?: () => void;
+  [key: string]: unknown;
+}
+
 interface LoadedPanel {
-  component: React.ComponentType<any>;
+  component: React.ComponentType<ExtensionPanelProps>;
   metadata: PanelMetadata;
+}
+
+/** Module exports object from dynamically loaded extension bundle */
+interface ExtensionBundleExports {
+  panels?: unknown[];
+  [key: string]: unknown;
+}
+
+/** Unvalidated panel definition from extension bundle (before type checking) */
+interface UnvalidatedPanelDef {
+  metadata?: { id?: string };
+  component?: React.ComponentType<ExtensionPanelProps>;
+  [key: string]: unknown;
 }
 
 /**
@@ -140,12 +157,12 @@ function transformBundleToUseGlobals(code: string): string {
 /**
  * Execute the transformed bundle and extract exports
  */
-function executeBundle(code: string): any {
+function executeBundle(code: string): ExtensionBundleExports {
   // Transform the bundle to use globals
   const transformedCode = transformBundleToUseGlobals(code);
 
   // Create exports object
-  const moduleExports: any = {};
+  const moduleExports: ExtensionBundleExports = {};
 
   // Wrap in a function that provides the globals
   const wrappedCode = `
@@ -155,7 +172,6 @@ function executeBundle(code: string): any {
   `;
 
   try {
-    // eslint-disable-next-line no-eval
     const fn = eval(wrappedCode);
     fn(moduleExports, React, ReactJSXRuntime);
     return moduleExports;
@@ -210,8 +226,13 @@ export const PanelHarness: React.FC<PanelHarnessProps> = ({
 
       // Find the specific panel by ID
       const panelDef = module.panels.find(
-        (p: any) => p.metadata?.id === panel.id,
-      );
+        (p: unknown): p is UnvalidatedPanelDef =>
+          typeof p === 'object' &&
+          p !== null &&
+          'metadata' in p &&
+          typeof (p as UnvalidatedPanelDef).metadata === 'object' &&
+          (p as UnvalidatedPanelDef).metadata?.id === panel.id
+      ) as UnvalidatedPanelDef | undefined;
 
       if (!panelDef || !panelDef.component) {
         setError(`Panel not found: ${panel.id}`);
@@ -314,10 +335,10 @@ const PanelRenderer: React.FC<{ panel: LoadedPanel }> = ({ panel }) => {
 
   // Provide mock context/props that panels might expect
   // This can be extended based on what panels typically need
-  const mockProps = {
+  const mockProps: ExtensionPanelProps = {
     // Common panel props
     isActive: true,
-    onClose: () => console.log('[PanelHarness] Panel requested close'),
+    onClose: () => console.info('[PanelHarness] Panel requested close'),
   };
 
   return (

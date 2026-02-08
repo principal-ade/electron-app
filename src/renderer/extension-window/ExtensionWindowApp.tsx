@@ -10,16 +10,13 @@ import type {
   DiscoveredExtension,
   PanelMetadata,
 } from '../../shared/main-process-api-interfaces/ExtensionAPI';
-import type { ExtensionWindowMainProcessAPI } from '../../shared/main-process-api-interfaces/ExtensionWindowAPI';
 import { ExtensionWindowTitlebar } from './ExtensionWindowTitlebar';
 import { ExtensionList } from './components/ExtensionList';
 import { ExtensionDetails } from './components/ExtensionDetails';
 import { PanelHarness } from './components/PanelHarness';
 
 // Get the mainProcess API from the window object
-const mainProcess = (window as any).mainProcess as
-  | ExtensionWindowMainProcessAPI
-  | undefined;
+const mainProcess = window.mainProcess;
 
 // Check if the API is available at module level
 const isAPIAvailable = !!mainProcess?.extension;

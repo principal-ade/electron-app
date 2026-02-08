@@ -144,7 +144,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
         throw error;
       }
     },
-    [entryToRemove, workspaceForRemoval, actions],
+    [entryToRemove, workspaceForRemoval, context],
   );
 
   // Override actions to intercept removeRepositoryFromWorkspace
