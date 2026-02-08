@@ -1,0 +1,364 @@
+{
+  "version": "1.0.0",
+  "name": "FileTree Sync: Error & Reactivity Analysis",
+  "description": "Detects errors, reactivity issues, multi-window patterns, and different operation types in file tree sync",
+  "mode": "span-tree",
+  "canvas": ".principal-views/filetree-sync/filetree-sync.otel.canvas",
+  "scenarios": [
+    {
+      "id": "context-update-failed",
+      "name": "🔴 Error: Context Update Failed",
+      "description": "CACHE_SYNC reached preload but React context didn't update",
+      "priority": 1,
+      "condition": {
+        "requires": ["filetree.cache.synced", "filetree.preload.event_received"],
+        "excludes": ["filetree.context.updated"]
+      },
+      "severity": "error",
+      "template": {
+        "introduction": "🔴 **Context Update Failure Detected**\n\nThe CACHE_SYNC event was received by the preload bridge, but the React context did not update.\n\n**This is the reactivity bug described in PANEL_CONTEXT_REACTIVITY_PATTERN.md!**\n\nRepository: `{{repository.path}}`\nCache Version: {{cache.version}}",
+        "events": {
+          "filetree.file.changed": "1️⃣ ✅ File changed: `{{file.path}}` ({{file.event}})",
+          "filetree.watcher.detected": "2️⃣ ✅ Watcher detected",
+          "filetree.worker.notified": "3️⃣ ✅ Worker notified",
+          "filetree.cache.invalidated": "4️⃣ ✅ Cache invalidated",
+          "filetree.cache.rebuild": "5️⃣ ✅ Cache rebuilt in {{cache.rebuild.duration_ms}}ms → v{{cache.version.after}}",
+          "filetree.cache.synced": "6️⃣ ✅ CACHE_SYNC IPC event emitted (v{{cache.version}}, slice: {{cache.slice}})",
+          "filetree.preload.event_received": "7️⃣ ✅ Preload received {{event.type}} (duplicate: {{dedup.is_duplicate}})",
+          "filetree.context.updated": "8️⃣ ❌ **MISSING** - React context never updated!"
+        },
+        "summary": "**Root Cause Analysis:**\n\nThis indicates one of these issues:\n1. **Context using ref instead of direct value** - `contextRef.current` doesn't trigger re-renders\n2. **onCacheSync handler not attached** - No listener registered for CACHE_SYNC events\n3. **Context provider unmounted** - Component tree destroyed before update arrived\n4. **Event filtering issue** - repoPath mismatch preventing update\n\n**Fix:** Follow PANEL_CONTEXT_REACTIVITY_PATTERN.md:\n- Pass `context` directly to panels (not `contextRef.current`)\n- Ensure `onCacheSync` listener is properly registered\n- Check repoPath matching in event handler\n\n**Impact:**\n- UI shows stale file tree data\n- Panels don't reflect file changes\n- Manual refresh required to see updates"
+      }
+    },
+    {
+      "id": "ui-render-missing",
+      "name": "🟡 Warning: UI Render Missing",
+      "description": "Context updated but UI component didn't re-render",
+      "priority": 2,
+      "condition": {
+        "requires": ["filetree.context.updated"],
+        "excludes": ["filetree.ui.rendered"]
+      },
+      "severity": "warning",
+      "template": {
+        "introduction": "🟡 **UI Render Missing**\n\nReact context was updated with new file tree data, but no UI component rendered.\n\nThis could indicate:\n- Panel using stale context ref\n- Component not subscribed to context changes\n- Memoization preventing re-render\n\nRepository: `{{repository.path}}`\nNew Version: {{filetree.version}}",
+        "events": {
+          "filetree.file.changed": "1️⃣ ✅ File changed: `{{file.path}}`",
+          "filetree.watcher.detected": "2️⃣ ✅ Watcher detected",
+          "filetree.worker.notified": "3️⃣ ✅ Worker notified",
+          "filetree.cache.invalidated": "4️⃣ ✅ Cache invalidated",
+          "filetree.cache.rebuild": "5️⃣ ✅ Cache rebuilt → v{{cache.version.after}}",
+          "filetree.cache.synced": "6️⃣ ✅ CACHE_SYNC sent (v{{cache.version}})",
+          "filetree.preload.event_received": "7️⃣ ✅ Preload received",
+          "filetree.context.updated": "8️⃣ ✅ Context updated to v{{filetree.version}} (source: {{update.source}})",
+          "filetree.ui.rendered": "9️⃣ ❌ **MISSING** - No UI component rendered!"
+        },
+        "summary": "**Possible Causes:**\n\n1. **Panel using contextRef.current** - Component has internal ref that doesn't trigger re-render\n2. **Incorrect dependency array** - useMemo/useEffect missing context dependency\n3. **No consumers mounted** - No panels are currently displaying file tree\n4. **Over-memoization** - React.memo preventing update propagation\n\n**To Fix:**\n- Extract specific values from context (e.g., fileTreeSha) in useMemo\n- Depend on extracted values, not context ref\n- Ensure components use context directly, not refs\n\n**Context State:**\n- Updated to version: {{filetree.version}}\n- Update source: {{update.source}}\n- Repository: `{{repository.path}}`"
+      }
+    },
+    {
+      "id": "cache-sync-not-sent",
+      "name": "🔴 Error: CACHE_SYNC Not Sent",
+      "description": "Cache rebuilt but CACHE_SYNC IPC event was never emitted",
+      "priority": 3,
+      "condition": {
+        "requires": ["filetree.cache.rebuild"],
+        "excludes": ["filetree.cache.synced"]
+      },
+      "severity": "error",
+      "template": {
+        "introduction": "🔴 **IPC Event Failure**\n\nCache was rebuilt successfully but CACHE_SYNC IPC event was never emitted to renderer windows.\n\nRepository: `{{repository.path}}`\nCache Version: {{cache.version.after}}",
+        "events": {
+          "filetree.file.changed": "1️⃣ ✅ File changed: `{{file.path}}`",
+          "filetree.watcher.detected": "2️⃣ ✅ Watcher detected",
+          "filetree.worker.notified": "3️⃣ ✅ Worker notified",
+          "filetree.cache.invalidated": "4️⃣ ✅ Cache invalidated (was v{{cache.version.before}})",
+          "filetree.cache.rebuild": "5️⃣ ✅ Cache rebuilt in {{cache.rebuild.duration_ms}}ms → v{{cache.version.after}} ({{filetree.files_count}} files)",
+          "filetree.cache.synced": "6️⃣ ❌ **MISSING** - CACHE_SYNC IPC event never sent!"
+        },
+        "summary": "**Root Cause:**\n\nThe monitoring server rebuilt the cache but failed to emit the CACHE_SYNC IPC event. This could be:\n\n1. **IPC handler error** - Exception in broadcastToRelevantWindows()\n2. **No windows registered** - No renderer windows are listening\n3. **Worker communication failure** - Worker couldn't send message to main process\n4. **Event filtering** - All windows filtered out (no relevant windows)\n\n**Impact:**\n- New cache data exists but is not distributed\n- All renderer windows show stale data\n- Next file change will trigger new CACHE_SYNC\n\n**Debug Steps:**\n1. Check main process logs for IPC errors\n2. Verify renderer windows are registered\n3. Check broadcastToRelevantWindows() implementation\n4. Verify worker-to-main communication"
+      }
+    },
+    {
+      "id": "panel-reactivity-success",
+      "name": "✅ Success: Full Panel Reactivity",
+      "description": "Complete flow from file change to panel re-render - the fix works!",
+      "priority": 4,
+      "condition": {
+        "requires": [
+          "filetree.file.changed",
+          "filetree.cache.synced",
+          "filetree.context.updated",
+          "filetree.ui.rendered"
+        ]
+      },
+      "severity": "info",
+      "template": {
+        "introduction": "✅ **Panel Reactivity Success!**\n\nFile change successfully propagated through the entire pipeline and triggered panel re-render.\n\n**This demonstrates the PANEL_CONTEXT_REACTIVITY_PATTERN fix is working!**\n\nFile: `{{file.path}}`\nChange: {{file.event}}\nEnd-to-End Latency: ~{{cache.rebuild.duration_ms + render.duration_ms}}ms",
+        "events": {
+          "filetree.file.changed": "1️⃣ File changed: `{{file.path}}` ({{file.event}})",
+          "filetree.watcher.detected": "2️⃣ Watcher detected",
+          "filetree.worker.notified": "3️⃣ Worker notified",
+          "filetree.cache.invalidated": "4️⃣ Cache invalidated",
+          "filetree.cache.rebuild": "5️⃣ Cache rebuilt in {{cache.rebuild.duration_ms}}ms → v{{cache.version.after}}",
+          "filetree.cache.synced": "6️⃣ CACHE_SYNC sent (v{{cache.version}})",
+          "filetree.preload.event_received": "7️⃣ Preload received (duplicate: {{dedup.is_duplicate}})",
+          "filetree.context.updated": "8️⃣ ✨ Context updated to v{{filetree.version}}",
+          "filetree.ui.rendered": "9️⃣ 🎨 **Panel rendered in {{render.duration_ms}}ms** (v{{filetree.version}})"
+        },
+        "summary": "**Performance Metrics:**\n- Cache rebuild: {{cache.rebuild.duration_ms}}ms\n- UI render: {{render.duration_ms}}ms\n- **Total latency: ~{{cache.rebuild.duration_ms + render.duration_ms}}ms**\n\n**Reactivity Pattern Working:**\n- ✅ Context passed directly (not via ref)\n- ✅ Context change detected by React\n- ✅ Panel re-rendered with new data\n- ✅ Version updated: {{filetree.version}}\n\n**Files in tree:** {{filetree.files_count}}\n**Repository:** `{{repository.path}}`"
+      }
+    },
+    {
+      "id": "version-mismatch-detected",
+      "name": "🟡 Warning: Context Version Mismatch",
+      "description": "Multiple context updates with different versions - windows out of sync",
+      "priority": 5,
+      "condition": {
+        "requires": ["filetree.context.updated"],
+        "assertions": [
+          {
+            "path": "filetree.version",
+            "operator": "!=",
+            "value": "{{cache.version}}"
+          }
+        ]
+      },
+      "severity": "warning",
+      "template": {
+        "introduction": "🟡 **Version Mismatch Detected**\n\nContext version ({{filetree.version}}) doesn't match cache version ({{cache.version}}).\n\nThis suggests windows are out of sync or events arrived out of order.\n\nRepository: `{{repository.path}}`",
+        "events": {
+          "filetree.file.changed": "1️⃣ File changed",
+          "filetree.watcher.detected": "2️⃣ Watcher detected",
+          "filetree.worker.notified": "3️⃣ Worker notified",
+          "filetree.cache.invalidated": "4️⃣ Cache invalidated",
+          "filetree.cache.rebuild": "5️⃣ Cache rebuilt → v{{cache.version.after}}",
+          "filetree.cache.synced": "6️⃣ CACHE_SYNC sent with v{{cache.version}}",
+          "filetree.preload.event_received": "7️⃣ Preload received",
+          "filetree.context.updated": "8️⃣ ⚠️ Context updated to **v{{filetree.version}}** (expected: v{{cache.version}})"
+        },
+        "summary": "**Mismatch Details:**\n- Cache version: {{cache.version}}\n- Context version: {{filetree.version}}\n- Difference: {{cache.version - filetree.version}} versions\n\n**Possible Causes:**\n1. Multiple rapid updates - context processing older event\n2. Event delivery order - CACHE_SYNC events out of sequence\n3. Window-specific lag - this window slower than others\n4. Stale event - context received old event after newer one\n\n**Impact:**\n- This window may show outdated file tree\n- Other windows may have newer data\n- Next update should resync"
+      }
+    },
+    {
+      "id": "single-file-edit",
+      "name": "📝 Single File Edit",
+      "description": "Developer editing a single file - fast, immediate update",
+      "priority": 10,
+      "condition": {
+        "requires": ["filetree.file.changed"],
+        "assertions": [
+          {
+            "path": "file.event",
+            "operator": "in",
+            "value": ["change"]
+          },
+          {
+            "path": "debounce.changes_count",
+            "operator": "<=",
+            "value": 1
+          }
+        ]
+      },
+      "severity": "info",
+      "template": {
+        "introduction": "📝 **Single File Edit**\n\nDeveloper edited a single file: `{{file.path}}`\n\nThis is the most common operation during active development.\n\nChange type: {{file.event}}",
+        "events": {
+          "filetree.file.changed": "1️⃣ 📝 File modified: `{{file.path}}`",
+          "filetree.watcher.detected": "2️⃣ Watcher detected change",
+          "filetree.worker.notified": "3️⃣ Worker notified (PID: {{worker.pid}})",
+          "filetree.cache.invalidated": "4️⃣ Cache invalidated (was v{{cache.version.before}})",
+          "filetree.debounce.triggered": "5️⃣ ⚡ Debounce: {{debounce.delay_ms}}ms ({{debounce.changes_count}} change)",
+          "filetree.cache.rebuild": "6️⃣ 🔄 Quick rebuild in {{cache.rebuild.duration_ms}}ms → v{{cache.version.after}}",
+          "filetree.cache.synced": "7️⃣ CACHE_SYNC sent (v{{cache.version}})",
+          "filetree.preload.event_received": "8️⃣ Preload received (duplicate: {{dedup.is_duplicate}})",
+          "filetree.context.updated": "9️⃣ ✨ UI updated to v{{filetree.version}}"
+        },
+        "summary": "**Single File Edit Metrics:**\n- File: `{{file.path}}`\n- Debounce: {{debounce.delay_ms}}ms\n- Rebuild: {{cache.rebuild.duration_ms}}ms\n- Changes batched: {{debounce.changes_count}}\n\n**Expected Performance:**\n- Debounce should be minimal (1-250ms)\n- Rebuild should be fast for single file change\n- UI should update smoothly\n\n**Repository:** `{{repository.path}}`"
+      }
+    },
+    {
+      "id": "git-operation-detected",
+      "name": "🔀 Git Operation (Bulk Change)",
+      "description": "Git checkout, pull, or merge - large batch of file changes",
+      "priority": 11,
+      "condition": {
+        "requires": ["filetree.debounce.triggered"],
+        "assertions": [
+          {
+            "path": "debounce.changes_count",
+            "operator": ">",
+            "value": 10
+          },
+          {
+            "path": "debounce.changes_count",
+            "operator": "<=",
+            "value": 1000
+          }
+        ]
+      },
+      "severity": "info",
+      "template": {
+        "introduction": "🔀 **Git Operation Detected**\n\nLarge batch of file changes detected: **{{debounce.changes_count}} files**\n\nLikely operation: `git checkout`, `git pull`, or `git merge`\n\nRepository: `{{repository.path}}`",
+        "events": {
+          "filetree.file.changed": "1️⃣ First change: `{{file.path}}` ({{file.event}})",
+          "filetree.watcher.detected": "2️⃣ Watcher detected changes",
+          "filetree.worker.notified": "3️⃣ Worker notified",
+          "filetree.cache.invalidated": "4️⃣ Cache invalidated",
+          "filetree.debounce.triggered": "5️⃣ 📦 **Batched {{debounce.changes_count}} changes** over {{debounce.delay_ms}}ms",
+          "filetree.cache.rebuild": "6️⃣ 🔄 Full rebuild in {{cache.rebuild.duration_ms}}ms ({{filetree.files_count}} files) → v{{cache.version.after}}",
+          "filetree.cache.synced": "7️⃣ 📡 CACHE_SYNC broadcast to all windows",
+          "filetree.preload.event_received": "8️⃣ Preload received event",
+          "filetree.context.updated": "9️⃣ Context updated to v{{filetree.version}}"
+        },
+        "summary": "**Git Operation Metrics:**\n- Files changed: **{{debounce.changes_count}}**\n- Debounce window: {{debounce.delay_ms}}ms\n- Rebuild duration: {{cache.rebuild.duration_ms}}ms\n- Total files in tree: {{filetree.files_count}}\n\n**Efficiency Gain:**\n- Instead of {{debounce.changes_count}} rebuilds, performed just **1 rebuild**\n- Saved ~{{debounce.changes_count * 100 - cache.rebuild.duration_ms}}ms of CPU time\n\n**Performance:**\n- Rebuild rate: ~{{filetree.files_count / cache.rebuild.duration_ms * 1000}} files/sec\n\n**Repository:** `{{repository.path}}`"
+      }
+    },
+    {
+      "id": "bulk-file-deletion",
+      "name": "🗑️ Bulk File Deletion",
+      "description": "Multiple files deleted at once",
+      "priority": 12,
+      "condition": {
+        "requires": ["filetree.file.changed"],
+        "assertions": [
+          {
+            "path": "file.event",
+            "operator": "in",
+            "value": ["unlink", "unlinkDir"]
+          },
+          {
+            "path": "debounce.changes_count",
+            "operator": ">",
+            "value": 3
+          }
+        ]
+      },
+      "severity": "info",
+      "template": {
+        "introduction": "🗑️ **Bulk File Deletion**\n\nMultiple files were deleted: **{{debounce.changes_count}} deletions**\n\nFirst deletion: `{{file.path}}`\n\nRepository: `{{repository.path}}`",
+        "events": {
+          "filetree.file.changed": "1️⃣ 🗑️ File deleted: `{{file.path}}` ({{file.event}})",
+          "filetree.watcher.detected": "2️⃣ Watcher detected deletions",
+          "filetree.worker.notified": "3️⃣ Worker notified",
+          "filetree.cache.invalidated": "4️⃣ Cache invalidated",
+          "filetree.debounce.triggered": "5️⃣ ⏱️ Batched {{debounce.changes_count}} deletions over {{debounce.delay_ms}}ms",
+          "filetree.cache.rebuild": "6️⃣ 🔄 Tree rebuilt without deleted files ({{cache.rebuild.duration_ms}}ms) → v{{cache.version.after}}",
+          "filetree.cache.synced": "7️⃣ 📡 Updated tree sent to windows ({{filetree.files_count}} files remaining)",
+          "filetree.preload.event_received": "8️⃣ Preload received event",
+          "filetree.context.updated": "9️⃣ Context updated"
+        },
+        "summary": "**Deletion Summary:**\n- Files deleted: **{{debounce.changes_count}}**\n- Debounce: {{debounce.delay_ms}}ms\n- Rebuild: {{cache.rebuild.duration_ms}}ms\n- Remaining files: {{filetree.files_count}}\n\n**Operation Type:**\nLikely `rm -rf`, `git clean`, or bulk deletion in file explorer.\n\n**Repository:** `{{repository.path}}`"
+      }
+    },
+    {
+      "id": "fast-rebuild-small-repo",
+      "name": "⚡ Fast Rebuild (<50ms)",
+      "description": "Very fast cache rebuild - small repository or incremental update",
+      "priority": 13,
+      "condition": {
+        "requires": ["filetree.cache.rebuild"],
+        "assertions": [
+          {
+            "path": "cache.rebuild.duration_ms",
+            "operator": "<",
+            "value": 50
+          }
+        ]
+      },
+      "severity": "info",
+      "template": {
+        "introduction": "⚡ **Lightning Fast Rebuild**\n\nCache rebuilt in just **{{cache.rebuild.duration_ms}}ms** - excellent performance!\n\nFiles processed: {{filetree.files_count}}\nRepository: `{{repository.path}}`",
+        "events": {
+          "filetree.file.changed": "1️⃣ File changed: `{{file.path}}`",
+          "filetree.watcher.detected": "2️⃣ Watcher detected",
+          "filetree.worker.notified": "3️⃣ Worker notified",
+          "filetree.cache.invalidated": "4️⃣ Cache invalidated",
+          "filetree.cache.rebuild": "5️⃣ ⚡ **Ultra-fast rebuild: {{cache.rebuild.duration_ms}}ms** ({{filetree.files_count}} files)",
+          "filetree.cache.synced": "6️⃣ CACHE_SYNC sent"
+        },
+        "summary": "**Performance Analysis:**\n- Duration: **{{cache.rebuild.duration_ms}}ms** 🎉\n- Files: {{filetree.files_count}}\n- Rate: ~{{filetree.files_count / cache.rebuild.duration_ms * 1000}} files/sec\n\n**Why So Fast?**\n- Small repository ({{filetree.files_count}} files)\n- Fast disk I/O (SSD)\n- Efficient file tree builder\n- Minimal .gitignore processing\n\n**Benchmark:**\n- <50ms: ⚡ Excellent (you are here!)\n- 50-200ms: ✅ Good\n- 200-500ms: ⚠️ Acceptable\n- >500ms: 🐌 Needs optimization"
+      }
+    },
+    {
+      "id": "no-debounce-immediate",
+      "name": "🎯 Immediate Rebuild (No Debounce)",
+      "description": "Single change processed immediately without debounce delay",
+      "priority": 14,
+      "condition": {
+        "requires": ["filetree.cache.rebuild"],
+        "excludes": ["filetree.debounce.triggered"]
+      },
+      "severity": "info",
+      "template": {
+        "introduction": "🎯 **Immediate Rebuild**\n\nCache was rebuilt immediately without waiting for debounce timer.\n\nThis happens for:\n- Manual refresh requests\n- Initial load\n- Immediate-priority operations\n\nRepository: `{{repository.path}}`",
+        "events": {
+          "filetree.refresh.requested": "1️⃣ Manual refresh requested (trigger: {{refresh.trigger}})",
+          "filetree.cache.invalidated": "2️⃣ Cache invalidated immediately",
+          "filetree.cache.rebuild": "3️⃣ ⚡ Immediate rebuild in {{cache.rebuild.duration_ms}}ms → v{{cache.version.after}}",
+          "filetree.cache.synced": "4️⃣ CACHE_SYNC sent"
+        },
+        "summary": "**Immediate Rebuild Details:**\n- No debounce delay applied\n- Direct rebuild triggered\n- Duration: {{cache.rebuild.duration_ms}}ms\n- Files: {{filetree.files_count}}\n\n**Trigger:**\n- Manual refresh request, OR\n- Initial cache population, OR\n- Critical update path\n\n**Repository:** `{{repository.path}}`"
+      }
+    },
+    {
+      "id": "multi-window-broadcast",
+      "name": "📡 Multi-Window Broadcast",
+      "description": "CACHE_SYNC event sent to multiple renderer windows",
+      "priority": 15,
+      "condition": {
+        "requires": ["filetree.cache.synced"],
+        "assertions": [
+          {
+            "path": "cache.slice",
+            "operator": "==",
+            "value": "fileTree"
+          }
+        ]
+      },
+      "severity": "info",
+      "template": {
+        "introduction": "📡 **Multi-Window Broadcast**\n\nCACHE_SYNC event broadcasted to renderer windows.\n\nSlice: {{cache.slice}}\nVersion: {{cache.version}}\nRepository: `{{repository.path}}`",
+        "events": {
+          "filetree.file.changed": "1️⃣ File changed: `{{file.path}}`",
+          "filetree.watcher.detected": "2️⃣ Watcher detected",
+          "filetree.worker.notified": "3️⃣ Worker notified",
+          "filetree.cache.invalidated": "4️⃣ Cache invalidated",
+          "filetree.cache.rebuild": "5️⃣ Cache rebuilt → v{{cache.version.after}}",
+          "filetree.cache.synced": "6️⃣ 📡 CACHE_SYNC broadcast (slice: {{cache.slice}}, version: {{cache.version}}, payload: {{event.payload.size_bytes}} bytes)",
+          "filetree.preload.event_received": "7️⃣ Preload received event"
+        },
+        "summary": "**Broadcast Details:**\n- Slice: {{cache.slice}}\n- Version: {{cache.version}}\n- Payload size: {{event.payload.size_bytes}} bytes\n- Repository: `{{repository.path}}`\n\n**Window Filtering:**\nMain process determines which windows should receive this event based on:\n- Window type (MAIN, REPOSITORY, DEV_WORKSPACE)\n- Repository path matching\n- Workspace membership\n\n**Note:** Check logs to see which specific windows received the event."
+      }
+    },
+    {
+      "id": "default-fallback",
+      "name": "Default: Other FileTree Event",
+      "description": "Fallback for events that don't match specific scenarios",
+      "priority": 999,
+      "condition": {
+        "default": true
+      },
+      "severity": "info",
+      "template": {
+        "introduction": "ℹ️ **FileTree Sync Event**\n\nA file tree sync event was captured but didn't match any specific scenario.\n\nRepository: `{{repository.path}}`",
+        "events": {
+          "filetree.file.changed": "File changed: `{{file.path}}`",
+          "filetree.watcher.detected": "Watcher detected change",
+          "filetree.worker.notified": "Worker notified",
+          "filetree.workspace.changed": "Workspace change event",
+          "filetree.cache.invalidated": "Cache invalidated",
+          "filetree.debounce.triggered": "Debounce triggered",
+          "filetree.cache.rebuild": "Cache rebuilt",
+          "filetree.cache.synced": "CACHE_SYNC sent",
+          "filetree.preload.event_received": "Preload received event",
+          "filetree.service.subscribed": "Service subscribed",
+          "filetree.refresh.requested": "Refresh requested",
+          "filetree.context.updated": "Context updated",
+          "filetree.ui.rendered": "UI rendered"
+        },
+        "summary": "This execution may represent:\n- A partial flow (incomplete execution)\n- A new pattern not yet documented\n- Test instrumentation data\n\nReview the captured events to understand the execution pattern."
+      }
+    }
+  ]
+}
