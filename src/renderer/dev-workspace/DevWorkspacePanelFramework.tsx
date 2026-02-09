@@ -545,19 +545,19 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       }),
       // Skill detail - create tab instead of modal
       events.on('skill:selected', (event) => {
-        console.log('[DevWorkspacePanelFramework] ===== SKILL SELECTED EVENT FIRED =====');
-        console.log('[DevWorkspacePanelFramework] Event source:', event.source);
-        console.log('[DevWorkspacePanelFramework] Event payload:', event.payload);
-        console.log('[DevWorkspacePanelFramework] Full event:', event);
+        console.info('[DevWorkspacePanelFramework] ===== SKILL SELECTED EVENT FIRED =====');
+        console.info('[DevWorkspacePanelFramework] Event source:', event.source);
+        console.info('[DevWorkspacePanelFramework] Event payload:', event.payload);
+        console.info('[DevWorkspacePanelFramework] Full event:', event);
 
         // Ignore re-emitted events from tabs to prevent loop
         if (event.source === 'tab') {
-          console.log('[DevWorkspacePanelFramework] Ignoring tab re-emission');
+          console.info('[DevWorkspacePanelFramework] Ignoring tab re-emission');
           return;
         }
 
-        console.log('[DevWorkspacePanelFramework] Received skill:selected event:', event);
-        const payload = event.payload as { skill?: any; skillId?: string };
+        console.info('[DevWorkspacePanelFramework] Received skill:selected event:', event);
+        const payload = event.payload as { skill?: Skill; skillId?: string };
 
         // Extract skill data
         const skill = payload.skill;
@@ -574,7 +574,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
           if (existingTab) {
             // Tab exists - focus it
-            console.log('[DevWorkspacePanelFramework] Skill tab already exists, focusing:', existingTab.id);
+            console.info('[DevWorkspacePanelFramework] Skill tab already exists, focusing:', existingTab.id);
             setFocusTabId(existingTab.id);
             return prevTabs; // No change to tabs array
           }
@@ -590,24 +590,24 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             closable: true,
           };
 
-          console.log('[DevWorkspacePanelFramework] Creating new skill tab (skill pre-loaded):', newTab);
+          console.info('[DevWorkspacePanelFramework] Creating new skill tab (skill pre-loaded):', newTab);
           setFocusTabId(newTab.id);
           return [...prevTabs, newTab];
         });
       }),
       // Trace detail - create tab instead of modal
       events.on('trace:selected', (event) => {
-        console.log('[DevWorkspacePanelFramework] ===== TRACE SELECTED EVENT FIRED =====');
-        console.log('[DevWorkspacePanelFramework] Event source:', event.source);
-        console.log('[DevWorkspacePanelFramework] Event payload:', event.payload);
+        console.info('[DevWorkspacePanelFramework] ===== TRACE SELECTED EVENT FIRED =====');
+        console.info('[DevWorkspacePanelFramework] Event source:', event.source);
+        console.info('[DevWorkspacePanelFramework] Event payload:', event.payload);
 
         // Ignore re-emitted events from tabs to prevent loop
         if (event.source === 'tab') {
-          console.log('[DevWorkspacePanelFramework] Ignoring tab re-emission');
+          console.info('[DevWorkspacePanelFramework] Ignoring tab re-emission');
           return;
         }
 
-        const payload = event.payload as { trace?: any; traceId?: string };
+        const payload = event.payload as { trace?: StoredTrace; traceId?: string };
 
         // Extract trace data
         const trace = payload.trace;
@@ -624,7 +624,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
           if (existingTab) {
             // Tab exists - focus it
-            console.log('[DevWorkspacePanelFramework] Trace details tab already exists, focusing:', existingTab.id);
+            console.info('[DevWorkspacePanelFramework] Trace details tab already exists, focusing:', existingTab.id);
             setFocusTabId(existingTab.id);
             return prevTabs; // No change to tabs array
           }
@@ -639,7 +639,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             closable: true,
           };
 
-          console.log('[DevWorkspacePanelFramework] Creating new trace details tab (trace pre-loaded):', newTab);
+          console.info('[DevWorkspacePanelFramework] Creating new trace details tab (trace pre-loaded):', newTab);
           setFocusTabId(newTab.id);
           return [...prevTabs, newTab];
         });
@@ -649,8 +649,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         // Ignore re-emitted events from tabs to prevent loop
         if (event.source === 'tab') return;
 
-        console.log('[DevWorkspacePanelFramework] Received agent:selected event:', event);
-        const payload = event.payload as { data?: any };
+        console.info('[DevWorkspacePanelFramework] Received agent:selected event:', event);
+        const payload = event.payload as { data?: unknown };
         const agent = payload.data;
 
         if (!agent || !agent.path) {
@@ -669,7 +669,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         const filePath = `${repoPath}/${agent.path}`;
         const fileName = agent.name || agent.path.split('/').pop() || 'AGENTS.md';
 
-        console.log('[DevWorkspacePanelFramework] Opening agent file in MDX editor:', filePath);
+        console.info('[DevWorkspacePanelFramework] Opening agent file in MDX editor:', filePath);
 
         setTabs((prevTabs) => {
           // Check if tab already exists (check both mdx-editor and markdown for backwards compat)
@@ -680,7 +680,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           );
 
           if (existingTab) {
-            console.log('[DevWorkspacePanelFramework] Agent MDX editor tab already exists, focusing:', existingTab.id);
+            console.info('[DevWorkspacePanelFramework] Agent MDX editor tab already exists, focusing:', existingTab.id);
             setFocusTabId(existingTab.id);
             return prevTabs;
           }
@@ -695,7 +695,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             closable: true,
           };
 
-          console.log('[DevWorkspacePanelFramework] Creating new agent MDX editor tab:', newTab);
+          console.info('[DevWorkspacePanelFramework] Creating new agent MDX editor tab:', newTab);
           setFocusTabId(newTab.id);
           return [...prevTabs, newTab];
         });
@@ -705,8 +705,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         // Ignore re-emitted events from modal to prevent loop
         if (event.source === 'modal') return;
 
-        console.log('[DevWorkspacePanelFramework] Received issue:selected event:', event);
-        const payload = event.payload as { issue: any };
+        console.info('[DevWorkspacePanelFramework] Received issue:selected event:', event);
+        const payload = event.payload as { issue: unknown };
         setDetailModal({
           panelId: 'githubIssueDetail',
           data: payload.issue,
@@ -717,7 +717,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         // Ignore re-emitted events from tabs to prevent loop
         if (event.source === 'tab') return;
 
-        console.log('[DevWorkspacePanelFramework] Received file:open event:', event);
+        console.info('[DevWorkspacePanelFramework] Received file:open event:', event);
         const payload = event.payload as { path: string; gitStatus?: string };
         const filePath = payload.path;
         const fileName = filePath.split('/').pop() || 'File';
@@ -735,7 +735,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           contentType = isModified ? 'git-diff' : 'file-editor';
         }
 
-        console.log('[DevWorkspacePanelFramework] Git status:', payload.gitStatus, '-> Opening tab:', contentType);
+        console.info('[DevWorkspacePanelFramework] Git status:', payload.gitStatus, '-> Opening tab:', contentType);
 
         setTabs((prevTabs) => {
           // Check if tab already exists
@@ -747,7 +747,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           );
 
           if (existingTab) {
-            console.log('[DevWorkspacePanelFramework] Tab already exists, focusing:', existingTab.id);
+            console.info('[DevWorkspacePanelFramework] Tab already exists, focusing:', existingTab.id);
             setFocusTabId(existingTab.id);
             return prevTabs;
           }
@@ -784,7 +784,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             };
           }
 
-          console.log('[DevWorkspacePanelFramework] Creating new tab:', newTab);
+          console.info('[DevWorkspacePanelFramework] Creating new tab:', newTab);
           setFocusTabId(newTab.id);
           return [...prevTabs, newTab];
         });
@@ -793,7 +793,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       events.on('file:opened', async (event) => {
         // Ignore re-emitted events from tabs to prevent loop
         if (event.source === 'tab') {
-          console.log('[DevWorkspacePanelFramework] Ignoring tab re-emission');
+          console.info('[DevWorkspacePanelFramework] Ignoring tab re-emission');
           return;
         }
 
@@ -810,12 +810,12 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           return; // Ignore non-markdown files
         }
 
-        console.log('[DevWorkspacePanelFramework] Received file:opened event for markdown:', filePath);
+        console.info('[DevWorkspacePanelFramework] Received file:opened event for markdown:', filePath);
         const fileName = filePath.split('/').pop() || 'Markdown';
 
         // Check if this file is already being loaded (prevents duplicate tabs on rapid clicks)
         if (loadingMarkdownFilesRef.current.has(filePath)) {
-          console.log('[DevWorkspacePanelFramework] Markdown file already being loaded:', filePath);
+          console.info('[DevWorkspacePanelFramework] Markdown file already being loaded:', filePath);
           return;
         }
 
@@ -824,7 +824,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
         try {
           // Pre-load the file content
-          console.log('[DevWorkspacePanelFramework] Pre-loading markdown file:', filePath);
+          console.info('[DevWorkspacePanelFramework] Pre-loading markdown file:', filePath);
           if (actions.setActiveFile) {
             await actions.setActiveFile(filePath);
           }
@@ -838,7 +838,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             );
 
             if (existingTab) {
-              console.log('[DevWorkspacePanelFramework] Markdown tab already exists:', existingTab.id);
+              console.info('[DevWorkspacePanelFramework] Markdown tab already exists:', existingTab.id);
               return prevTabs; // Tab exists, don't create new one
             }
 
@@ -852,12 +852,12 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               closable: true,
             };
 
-            console.log('[DevWorkspacePanelFramework] Creating new markdown tab:', newTab);
+            console.info('[DevWorkspacePanelFramework] Creating new markdown tab:', newTab);
             return [...prevTabs, newTab];
           });
 
           // Focus the tab (existing or new) - do this outside setTabs to avoid batching issues
-          console.log('[DevWorkspacePanelFramework] Focusing markdown tab:', tabId);
+          console.info('[DevWorkspacePanelFramework] Focusing markdown tab:', tabId);
           setFocusTabId(tabId);
         } finally {
           // Always remove from loading set when done
@@ -877,7 +877,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           return;
         }
 
-        console.log('[DevWorkspacePanelFramework] Opening file in MDX editor:', filePath);
+        console.info('[DevWorkspacePanelFramework] Opening file in MDX editor:', filePath);
 
         // Open MDX editor modal
         setDetailModal({
@@ -893,8 +893,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           return;
         }
 
-        console.log('[DevWorkspacePanelFramework] Received canvas open event:', event);
-        const { canvasId, canvas, canvasFileInfo, workflowId, workflow, workflowFileInfo, openMode } = event.payload;
+        console.info('[DevWorkspacePanelFramework] Received canvas open event:', event);
+        const { canvasId, canvas, canvasFileInfo, workflowId, workflow, workflowFileInfo } = event.payload;
 
         if (!canvasId || !canvas) {
           console.warn('[DevWorkspacePanelFramework] No canvas data in event:', event.payload);
@@ -920,7 +920,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
           if (existingTabIndex !== -1 && hasWorkflow) {
             // Existing canvas-detail tab found - update it with new workflow information
-            console.log('[DevWorkspacePanelFramework] Updating existing canvas tab with new workflow:', prevTabs[existingTabIndex].id);
+            console.info('[DevWorkspacePanelFramework] Updating existing canvas tab with new workflow:', prevTabs[existingTabIndex].id);
             const updatedTabs = [...prevTabs];
             const existingTab = updatedTabs[existingTabIndex] as CanvasTab;
 
@@ -936,7 +936,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             return updatedTabs; // Tab updated, will be focused
           } else if (existingTabIndex !== -1) {
             // Existing tab found (canvas-editor) - focus it
-            console.log('[DevWorkspacePanelFramework] Canvas tab already exists, focusing:', prevTabs[existingTabIndex].id);
+            console.info('[DevWorkspacePanelFramework] Canvas tab already exists, focusing:', prevTabs[existingTabIndex].id);
             setFocusTabId(prevTabs[existingTabIndex].id);
             return prevTabs; // Tab exists, will be focused
           }
@@ -968,7 +968,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 closable: true,
               } as CanvasEditorTab;
 
-          console.log('[DevWorkspacePanelFramework] Creating new', contentType, 'tab:', newTab);
+          console.info('[DevWorkspacePanelFramework] Creating new', contentType, 'tab:', newTab);
           // Also request focus for new tabs to ensure consistent activation
           setFocusTabId(newTab.id);
           return [...prevTabs, newTab];
@@ -979,16 +979,17 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     return () => {
       unsubscribers.forEach((unsub) => unsub());
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- actions and context intentionally omitted to avoid re-subscribing
   }, [events]);
 
   // Re-emit selection events when modal opens so detail panels can receive them
   useEffect(() => {
     if (detailModal) {
-      console.log('[DevWorkspacePanelFramework] Modal opened with data:', detailModal);
+      console.info('[DevWorkspacePanelFramework] Modal opened with data:', detailModal);
       // Use setTimeout to ensure the detail panel component is mounted first
       setTimeout(() => {
         if (detailModal.panelId === 'githubIssueDetail') {
-          console.log('[DevWorkspacePanelFramework] Re-emitting issue:selected with data:', detailModal.data);
+          console.info('[DevWorkspacePanelFramework] Re-emitting issue:selected with data:', detailModal.data);
           events.emit({
             type: 'issue:selected',
             source: 'modal',
@@ -998,7 +999,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             },
           });
         } else if (detailModal.panelId === 'mdxEditor') {
-          console.log('[DevWorkspacePanelFramework] Setting active file for MDX editor:', detailModal.data.path);
+          console.info('[DevWorkspacePanelFramework] Setting active file for MDX editor:', detailModal.data.path);
           // Set the active file via actions
           if (actions.setActiveFile) {
             actions.setActiveFile(detailModal.data.path);
@@ -1006,13 +1007,14 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         }
       }, 0);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- actions intentionally omitted to avoid re-running effect
   }, [detailModal, events]);
 
   // Listen for deselection events to close the modal (from panel's X button)
   useEffect(() => {
     const unsubscribers = [
       events.on('issue:deselected', () => {
-        console.log('[DevWorkspacePanelFramework] Issue deselected, closing modal');
+        console.info('[DevWorkspacePanelFramework] Issue deselected, closing modal');
         setDetailModal(null);
       }),
     ];
@@ -1025,7 +1027,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   // Listen for dependency-graph:open events to create a new graph tab
   useEffect(() => {
     const unsubscribe = events.on('dependency-graph:open', (event) => {
-      console.log('[DevWorkspacePanelFramework] Received dependency-graph:open event:', event);
+      console.info('[DevWorkspacePanelFramework] Received dependency-graph:open event:', event);
       const payload = event.payload as { packages: PackageLayer[] } | undefined;
       const packages = payload?.packages ?? [];
 
@@ -1042,7 +1044,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
         if (existingTab) {
           // Update existing tab with new packages and focus it
-          console.log('[DevWorkspacePanelFramework] Updating existing dependency graph tab:', existingTab.id);
+          console.info('[DevWorkspacePanelFramework] Updating existing dependency graph tab:', existingTab.id);
           setFocusTabId(existingTab.id);
           return prevTabs.map((t) =>
             t.id === existingTab.id
@@ -1060,7 +1062,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           closable: true,
         };
 
-        console.log('[DevWorkspacePanelFramework] Creating new dependency graph tab:', newTab);
+        console.info('[DevWorkspacePanelFramework] Creating new dependency graph tab:', newTab);
         setFocusTabId(newTab.id);
         return [...prevTabs, newTab];
       });
@@ -1157,7 +1159,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             );
           }
 
-          console.log('[DevWorkspacePanelFramework] Rendering skill tab:', {
+          console.info('[DevWorkspacePanelFramework] Rendering skill tab:', {
             skillId: skillTab.skillId,
             skillName: skillTab.skillName,
             hasSkillData: !!skillTab.skill,
@@ -1198,7 +1200,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             );
           }
 
-          console.log('[DevWorkspacePanelFramework] Rendering markdown tab:', {
+          console.info('[DevWorkspacePanelFramework] Rendering markdown tab:', {
             filePath: markdownTab.filePath,
             fileName: markdownTab.fileName,
             isActive,
@@ -1238,7 +1240,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             );
           }
 
-          console.log('[DevWorkspacePanelFramework] Rendering canvas editor tab:', {
+          console.info('[DevWorkspacePanelFramework] Rendering canvas editor tab:', {
             canvasId: canvasEditorTab.canvasId,
             canvasPath: canvasEditorTab.canvasPath,
             canvasName: canvasEditorTab.canvasName,
@@ -1321,7 +1323,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             );
           }
 
-          console.log('[DevWorkspacePanelFramework] Rendering file editor tab:', {
+          console.info('[DevWorkspacePanelFramework] Rendering file editor tab:', {
             filePath: fileEditorTab.filePath,
             fileName: fileEditorTab.fileName,
             isActive,
@@ -1361,7 +1363,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             );
           }
 
-          console.log('[DevWorkspacePanelFramework] Rendering MDX editor tab:', {
+          console.info('[DevWorkspacePanelFramework] Rendering MDX editor tab:', {
             filePath: mdxEditorTab.filePath,
             fileName: mdxEditorTab.fileName,
             isActive,
@@ -1401,7 +1403,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             );
           }
 
-          console.log('[DevWorkspacePanelFramework] Rendering git diff tab:', {
+          console.info('[DevWorkspacePanelFramework] Rendering git diff tab:', {
             filePath: gitDiffTab.filePath,
             fileName: gitDiffTab.fileName,
             gitStatus: gitDiffTab.gitStatus,
@@ -1456,7 +1458,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           // Type assertion for TypeScript
           const traceDetailsTab = tab as TraceDetailsTab;
 
-          console.log('[DevWorkspacePanelFramework] Rendering trace details tab:', {
+          console.info('[DevWorkspacePanelFramework] Rendering trace details tab:', {
             traceId: traceDetailsTab.traceId,
             hasTraceData: !!traceDetailsTab.traceData,
             isActive,
@@ -1484,15 +1486,15 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         }
 
         default:
-          console.warn('[DevWorkspacePanelFramework] Unknown tab type:', (tab as any).contentType);
+          console.warn('[DevWorkspacePanelFramework] Unknown tab type:', tab.contentType);
           return (
             <div style={{ padding: '2rem', color: theme.colors.error }}>
-              Unknown tab type: {(tab as any).contentType}
+              Unknown tab type: {tab.contentType}
             </div>
           );
       }
     },
-    [theme, context, SkillDetailPanelComponent, MarkdownPanelComponent, CanvasEditorPanelComponent, CanvasDetailPanelComponent, FileEditorPanelComponent, GitDiffPanelComponent],
+    [theme, context, SkillDetailPanelComponent, MarkdownPanelComponent, CanvasEditorPanelComponent, CanvasDetailPanelComponent, FileEditorPanelComponent, MDXEditorPanelComponent, GitDiffPanelComponent],
   );
 
   // Define all panels using panel framework components

@@ -505,9 +505,9 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           await RepositoryMonitoringService.getFileTree(repositoryPath);
 
         // Log the file tree for inspection
-        console.log('[DevWorkspaceApp] File tree loaded:', fileTree);
-        console.log('[DevWorkspaceApp] All files count:', fileTree?.allFiles?.length);
-        console.log('[DevWorkspaceApp] All files:', fileTree?.allFiles);
+        console.info('[DevWorkspaceApp] File tree loaded:', fileTree);
+        console.info('[DevWorkspaceApp] All files count:', fileTree?.allFiles?.length);
+        console.info('[DevWorkspaceApp] All files:', fileTree?.allFiles);
 
         if (fileTree?.allFiles) {
           const hasFolder = fileTree.allFiles.some(
@@ -535,15 +535,15 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
 
     const fetchPackages = async () => {
       try {
-        console.log('[DevWorkspaceApp] Fetching packages for:', repositoryPath);
+        console.info('[DevWorkspaceApp] Fetching packages for:', repositoryPath);
         const packagesData =
           await RepositoryMonitoringService.getPackages(repositoryPath);
-        console.log('[DevWorkspaceApp] Received packages data:', packagesData);
+        console.info('[DevWorkspaceApp] Received packages data:', packagesData);
         if (packagesData?.packages) {
-          console.log('[DevWorkspaceApp] Setting packages:', packagesData.packages);
+          console.info('[DevWorkspaceApp] Setting packages:', packagesData.packages);
           setPackages(packagesData.packages);
         } else {
-          console.log('[DevWorkspaceApp] No packages in response');
+          console.info('[DevWorkspaceApp] No packages in response');
         }
       } catch (error) {
         console.error('[DevWorkspaceApp] Failed to fetch packages:', error);
@@ -591,12 +591,12 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
       if (event.type === AlexandriaEventType.REMOVED) {
         // Repository was removed - we could close the window or show a message
         if (event.name === repositoryName) {
-          console.log(
+          console.info(
             '[DevWorkspaceApp] Repository was removed from Alexandria registry',
           );
         }
       } else if (event.repository?.path === repositoryPath) {
-        console.log(
+        console.info(
           '[DevWorkspaceApp] Repository updated:',
           event.type,
           event.repository,
@@ -617,7 +617,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         // Filter events for this repository
         if (event.repoPath !== repositoryPath) return;
 
-        console.log(`🟡 [IPC WORKSPACE_CHANGED] Received at ${Date.now()}`, {
+        console.info(`🟡 [IPC WORKSPACE_CHANGED] Received at ${Date.now()}`, {
           repoPath: event.repoPath,
           changeCount: event.changes?.length ?? 0,
           state: event.state,
@@ -625,7 +625,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
 
         // Emit to the event bus so panels can react to file changes
         if (events) {
-          console.log(`🟡 [BRIDGE] Emitting workspace:changed to PanelEventBus at ${Date.now()}`);
+          console.info(`🟡 [BRIDGE] Emitting workspace:changed to PanelEventBus at ${Date.now()}`);
           events.emit({
             type: 'workspace:changed',
             source: 'DevWorkspaceApp',
@@ -655,7 +655,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           task: { filePath?: string };
         };
 
-        console.log('[DevWorkspaceApp] Task delete requested:', {
+        console.info('[DevWorkspaceApp] Task delete requested:', {
           taskId,
           filePath: task.filePath,
         });
@@ -669,7 +669,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           // Delete the task file
           await FileSystemService.deleteFile(task.filePath);
 
-          console.log('[DevWorkspaceApp] Task file deleted successfully:', task.filePath);
+          console.info('[DevWorkspaceApp] Task file deleted successfully:', task.filePath);
 
           // Emit success event
           events.emit({
@@ -696,7 +696,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
 
       // Handle task deleted - switch back to kanban panel
       events.on('task:deleted', () => {
-        console.log('[DevWorkspaceApp] Task deleted, switching back to kanban panel');
+        console.info('[DevWorkspaceApp] Task deleted, switching back to kanban panel');
         setLayout((prev) => ({ ...prev, left: 'kanban' }));
         setCollapsed((prev) => ({ ...prev, left: false }));
       }),

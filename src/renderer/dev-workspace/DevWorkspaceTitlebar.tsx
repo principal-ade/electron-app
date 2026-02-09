@@ -363,29 +363,29 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
       setStorybookStatus('starting');
       setSelectedPackage(targetPackage); // Update selected package
 
-      console.log('[DevWorkspaceTitlebar] Starting Storybook for package:', targetPackage.name);
-      console.log('[DevWorkspaceTitlebar] Package path:', targetPackage.path);
+      console.info('[DevWorkspaceTitlebar] Starting Storybook for package:', targetPackage.name);
+      console.info('[DevWorkspaceTitlebar] Package path:', targetPackage.path);
 
       // Find available port
       const port = await findAvailablePort(6006, 6020);
-      console.log('[DevWorkspaceTitlebar] Found available port:', port);
+      console.info('[DevWorkspaceTitlebar] Found available port:', port);
       setStorybookPort(port);
 
       // Get command for this specific package
       const command = StorybookService.getStorybookCommand(targetPackage, port);
-      console.log('[DevWorkspaceTitlebar] Command to execute:', command);
+      console.info('[DevWorkspaceTitlebar] Command to execute:', command);
 
       // Create terminal session with storybook context in the package directory
       // Use the same context pattern as TerminalProvider: terminal:owner/repo:storybook
       const terminalContext = `terminal:${repositoryOwner}/${repositoryName}:storybook`;
-      console.log('[DevWorkspaceTitlebar] Creating terminal session with context:', terminalContext);
+      console.info('[DevWorkspaceTitlebar] Creating terminal session with context:', terminalContext);
 
       const sessionId = await window.mainProcess.terminal.createWithCommand(
         targetPackage.path, // Use package path instead of repository path
         command,
         terminalContext,
       );
-      console.log('[DevWorkspaceTitlebar] Terminal session created:', sessionId);
+      console.info('[DevWorkspaceTitlebar] Terminal session created:', sessionId);
       setStorybookSessionId(sessionId || null);
 
       // Emit custom event to notify TerminalProvider to refresh
@@ -400,25 +400,25 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
 
       // Collapse left panel FIRST (before switching panels)
       if (!collapsed?.left && onCollapsedChange) {
-        console.log('[DevWorkspaceTitlebar] Collapsing left panel');
+        console.info('[DevWorkspaceTitlebar] Collapsing left panel');
         onCollapsedChange({ left: true, right: collapsed?.right ?? false });
       }
 
       // Set panel sizes to 50/50 split between middle and right
       if (onPanelSizesChange) {
-        console.log('[DevWorkspaceTitlebar] Setting panel sizes to 50/50 split');
+        console.info('[DevWorkspaceTitlebar] Setting panel sizes to 50/50 split');
         onPanelSizesChange({ left: 0, middle: 50, right: 50 });
       }
 
       // Switch right panel to localhost browser
       if (currentLayout && onLayoutChange) {
-        console.log('[DevWorkspaceTitlebar] Switching right panel to localhost browser');
+        console.info('[DevWorkspaceTitlebar] Switching right panel to localhost browser');
         onLayoutChange({ ...currentLayout, right: 'localhostBrowser' });
       }
 
       // Expand right panel if collapsed
       if (collapsed?.right && onCollapsedChange) {
-        console.log('[DevWorkspaceTitlebar] Expanding right panel');
+        console.info('[DevWorkspaceTitlebar] Expanding right panel');
         onCollapsedChange({ left: true, right: false });
       }
 
@@ -426,14 +426,14 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
       await new Promise((resolve) => setTimeout(resolve, 300));
 
       // Wait for port to become responsive (30s timeout)
-      console.log('[DevWorkspaceTitlebar] Waiting for Storybook to become responsive on port', port);
+      console.info('[DevWorkspaceTitlebar] Waiting for Storybook to become responsive on port', port);
       await waitForPortReady(port, 30000, 1000);
-      console.log('[DevWorkspaceTitlebar] Storybook is now responsive!');
+      console.info('[DevWorkspaceTitlebar] Storybook is now responsive!');
 
       // Navigate browser panel to Storybook port using existing event
       // Emit multiple times to ensure the panel receives it
       if (events) {
-        console.log('[DevWorkspaceTitlebar] Navigating browser panel to port', port);
+        console.info('[DevWorkspaceTitlebar] Navigating browser panel to port', port);
         const navigatePayload = {
           type: 'principal-ade.localhost-browser:navigate' as const,
           source: 'dev-workspace-titlebar',
@@ -454,7 +454,7 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
       }
 
       setStorybookStatus('running');
-      console.log('[DevWorkspaceTitlebar] ✅ Storybook started successfully!');
+      console.info('[DevWorkspaceTitlebar] ✅ Storybook started successfully!');
     } catch (error) {
       console.error('[DevWorkspaceTitlebar] ❌ Failed to start Storybook:', error);
       console.error('[DevWorkspaceTitlebar] Error details:', {

@@ -31,9 +31,9 @@ npm run typecheck 2>&1 | grep "error TS" | sed 's|.*src/||' | cut -d'/' -f1 | so
 
 ### Overall Issues
 
-* **ESLint**: **652 total issues** (down from 741, **89 issues fixed total** ✅)
+* **ESLint**: **565 total issues** (down from 652, **176 issues fixed total** ✅)
 * **TypeScript**: **0 errors** 🎉 **PROJECT-WIDE CLEAN STATUS**
-* **Console.log warnings**: ~352 (reduced from 400)
+* **Console.log warnings**: ~285 (reduced from 400)
 * **Any types in src/main**: 59
 
 ### By Top-Level Directory
@@ -81,7 +81,7 @@ npm run typecheck 2>&1 | grep "error TS" | sed 's|.*src/||' | cut -d'/' -f1 | so
 | panels                     | 6      |
 | contexts                   | 6      |
 | hooks                      | 4      |
-| dev-workspace              | 3      |
+| dev-workspace              | ✅ Clean |
 | extension-window           | ✅ Clean |
 | alexandria-workspace       | ✅ Clean |
 | tipc                       | ✅ Clean |
@@ -104,7 +104,19 @@ npm run typecheck 2>&1 | grep "error TS" | sed 's|.*src/||' | cut -d'/' -f1 | so
 
 ### Recent Cleanup (2026-02-08) 🎉
 
-**Renderer Subdirectories Cleanup - 57 issues fixed (4 directories cleaned, 1 major progress!):**
+**dev-workspace Cleanup - 87 issues fixed (directory now 100% clean!):**
+
+- ✅ **renderer/dev-workspace** - 87 issues fixed (now clean!)
+  - Converted 50+ `console.log` statements to `console.info` across all 3 files
+  - Fixed `any` type → `Skill` type for skill:selected event payload
+  - Fixed `any` type → `StoredTrace` type for trace:selected event payload
+  - Fixed `any` type → `unknown` type for agent:selected and issue:selected event payloads
+  - Removed unused `openMode` parameter from canvas:open event handler
+  - Removed `as any` casts from tab.contentType in default case
+  - Added `MDXEditorPanelComponent` to useCallback dependency array
+  - Added eslint-disable comments for intentionally omitted React hooks dependencies (actions, context)
+
+**Previous Renderer Subdirectories Cleanup - 57 issues fixed (4 directories cleaned, 1 major progress!):**
 
 - ✅ **renderer/tipc** - 1 issue fixed (now clean!)
   - Replaced `createClient<any>` with proper `TerminalClient` type
