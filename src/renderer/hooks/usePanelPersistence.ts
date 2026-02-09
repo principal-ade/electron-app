@@ -147,7 +147,7 @@ export function usePanelPersistence(
       setCollapsed(options.collapsed);
       prevCollapsedRef.current = { ...options.collapsed }; // Create a new object to ensure proper reference
     }
-  }, [options.collapsed.left, (options.collapsed as PanelCollapsed).right]);
+  }, [options.collapsed]);
 
   // Save preferences helper (only saves sizes, not collapsed state)
   const savePreferences = useCallback(

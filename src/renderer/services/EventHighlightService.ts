@@ -145,7 +145,8 @@ export class EventHighlightService extends EventEmitter {
         // Include repo_file, user_file, config_file - anything with a relative path
         return true;
       })
-      .map((file) => file.repository!.relativePath);
+      .map((file) => file.repository?.relativePath || '')
+      .filter((path) => path !== '');
 
     return paths;
   }
@@ -161,8 +162,11 @@ export class EventHighlightService extends EventEmitter {
     // If there's exactly one file, include its name
     const files = event.files?.filter(f => f.repository?.relativePath) || [];
     if (files.length === 1) {
-      const fileName = files[0].repository!.relativePath.split('/').pop();
-      return `${toolOrType}: ${fileName}`;
+      const relativePath = files[0].repository?.relativePath;
+      if (relativePath) {
+        const fileName = relativePath.split('/').pop();
+        return `${toolOrType}: ${fileName}`;
+      }
     }
 
     return toolOrType;

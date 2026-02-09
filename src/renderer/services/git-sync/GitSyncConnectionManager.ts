@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import { GitSyncClient, SyncStatus } from './GitSyncClient';
+import { GitSyncClient } from './GitSyncClient';
 import { GitSyncService } from '../../main-process-api/GitSyncService';
 import { AuthenticationService } from '../../main-process-api/AuthenticationService';
 import type { GitSyncConnectionInfo } from '../../../shared/main-process-api-interfaces/GitSyncAPI';
@@ -87,13 +87,13 @@ export class GitSyncConnectionManager extends EventEmitter {
   private async initializeAuth() {
     // Check for CLI auth instead of GitHubAuth
     const startTime = Date.now();
-    console.log('[GitSyncConnectionManager] Initializing auth...');
+    console.info('[GitSyncConnectionManager] Initializing auth...');
 
     try {
       const cliAuthResult = await AuthenticationService.check();
       const elapsed = Date.now() - startTime;
 
-      console.log('[GitSyncConnectionManager] Auth check result:', {
+      console.info('[GitSyncConnectionManager] Auth check result:', {
         success: cliAuthResult.success,
         hasToken: !!cliAuthResult.token,
         hasUser: !!cliAuthResult.user,
@@ -110,7 +110,7 @@ export class GitSyncConnectionManager extends EventEmitter {
         };
         this.authToken = cliAuthResult.token;
         this.isAuthenticated = true;
-        console.log(
+        console.info(
           `[GitSyncConnectionManager] Auth initialized successfully for: ${this.authUser.githubHandle} (took ${elapsed}ms)`,
         );
         this.emit('auth-changed', true, this.authUser);
@@ -161,7 +161,7 @@ export class GitSyncConnectionManager extends EventEmitter {
       // Store the unsubscribe function for cleanup if needed
       const unsubscribe = AuthenticationService.onAuthStateChanged(
         async (state) => {
-          console.log('[GitSyncConnectionManager] Auth state changed:', {
+          console.info('[GitSyncConnectionManager] Auth state changed:', {
             isAuthenticated: state.isAuthenticated,
             user: state.user?.login,
             currentUser: this.authUser?.githubHandle,
@@ -173,7 +173,7 @@ export class GitSyncConnectionManager extends EventEmitter {
               this.authUser?.githubHandle === state.user.login &&
               this.isAuthenticated
             ) {
-              console.log(
+              console.info(
                 '[GitSyncConnectionManager] Auth state unchanged, skipping update',
               );
               return;
@@ -195,7 +195,7 @@ export class GitSyncConnectionManager extends EventEmitter {
           } else {
             // User logged out - clear auth only if we had a user
             if (this.authUser || this.isAuthenticated) {
-              console.log(
+              console.info(
                 '[GitSyncConnectionManager] User logged out, clearing auth',
               );
               this.clearAuth();
@@ -216,7 +216,7 @@ export class GitSyncConnectionManager extends EventEmitter {
     user: { login: string; email?: string },
     token: string,
   ) {
-    console.log(
+    console.info(
       '[GitSyncConnectionManager] Updating auth for user:',
       user.login,
     );

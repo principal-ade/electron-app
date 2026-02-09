@@ -85,7 +85,7 @@ export function useSkillsPendingChanges(): UseSkillsPendingChangesReturn {
         };
       },
     ) => {
-      console.log('[useSkillsPendingChanges] Received pending changes update:', event);
+      console.info('[useSkillsPendingChanges] Received pending changes update:', event);
 
       setPendingChanges((prev) => {
         const next = new Map(prev);

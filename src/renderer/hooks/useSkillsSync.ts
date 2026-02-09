@@ -50,7 +50,7 @@ export function useSkillsSync(): UseSkillsSyncReturn {
   useEffect(() => {
     loadConfig();
     loadSyncStatus();
-  }, []);
+  }, [loadConfig, loadSyncStatus]);
 
   const loadConfig = useCallback(async () => {
     try {

@@ -46,7 +46,7 @@ export function findStorybookPackages(
   repositoryPath: string,
 ): StorybookPackage[] {
   if (!packages || packages.length === 0) {
-    console.log('[StorybookService] No packages found');
+    console.info('[StorybookService] No packages found');
     return [];
   }
 
@@ -92,7 +92,7 @@ export function findStorybookPackages(
         label,
       });
 
-      console.log(
+      console.info(
         `[StorybookService] Found Storybook in package: ${packageData.name} at ${packagePath}`,
         { hasScript, storybookDependencies, relativePath: packageData.path },
       );
@@ -100,7 +100,7 @@ export function findStorybookPackages(
   }
 
   if (storybookPackages.length === 0) {
-    console.log('[StorybookService] No packages with Storybook found');
+    console.info('[StorybookService] No packages with Storybook found');
   }
 
   return storybookPackages;
@@ -129,16 +129,16 @@ export function getStorybookCommand(
 
   // If "storybook" script exists, use npm run
   if (storybookPackage.hasScript) {
-    console.log('[StorybookService] Using npm run storybook command');
+    console.info('[StorybookService] Using npm run storybook command');
     command = `npm run storybook -- --port ${port} --no-open`;
   } else {
     // Fall back to npx storybook dev
-    console.log('[StorybookService] Using npx storybook dev command');
+    console.info('[StorybookService] Using npx storybook dev command');
     command = `npx storybook dev --port ${port} --no-open`;
   }
 
-  console.log(`[StorybookService] Generated command: ${command}`);
-  console.log(`[StorybookService] Will run in directory: ${storybookPackage.path}`);
+  console.info(`[StorybookService] Generated command: ${command}`);
+  console.info(`[StorybookService] Will run in directory: ${storybookPackage.path}`);
   return command;
 }
 

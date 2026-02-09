@@ -53,11 +53,11 @@ export function useAuthState(): UseAuthStateReturn {
     if (isSubscribed.current) return;
     isSubscribed.current = true;
 
-    console.log('[useAuthState] Subscribing to auth state changes');
+    console.info('[useAuthState] Subscribing to auth state changes');
 
     // Handler for auth state changes
     const handleAuthStateChange = (state: APIAuthState) => {
-      console.log('[useAuthState] Auth state changed:', {
+      console.info('[useAuthState] Auth state changed:', {
         isAuthenticated: state.isAuthenticated,
         user: state.user?.login,
       });
@@ -78,7 +78,7 @@ export function useAuthState(): UseAuthStateReturn {
     // Get initial state
     AuthenticationService.getAuthState()
       .then((state) => {
-        console.log('[useAuthState] Initial auth state:', {
+        console.info('[useAuthState] Initial auth state:', {
           isAuthenticated: state.isAuthenticated,
           user: state.user?.login,
         });
@@ -98,7 +98,7 @@ export function useAuthState(): UseAuthStateReturn {
 
     // Cleanup on unmount
     return () => {
-      console.log('[useAuthState] Unsubscribing from auth state changes');
+      console.info('[useAuthState] Unsubscribing from auth state changes');
       unsubscribe();
       isSubscribed.current = false;
     };
@@ -108,7 +108,7 @@ export function useAuthState(): UseAuthStateReturn {
   const login = useCallback(
     async (forceRetry = false) => {
       if (authState.isLoggingIn && !forceRetry) {
-        console.log('[useAuthState] Login already in progress');
+        console.info('[useAuthState] Login already in progress');
         return;
       }
 
@@ -118,14 +118,14 @@ export function useAuthState(): UseAuthStateReturn {
           isLoggingIn: true,
           loginError: null,
         }));
-        console.log('[useAuthState] Starting login...');
+        console.info('[useAuthState] Starting login...');
 
         const result = await AuthenticationService.login({
           forceNew: forceRetry,
         });
 
         if (result.success) {
-          console.log('[useAuthState] Login successful:', result.user?.login);
+          console.info('[useAuthState] Login successful:', result.user?.login);
 
           // Immediately update state with the result
           setAuthState((prev) => ({
@@ -148,8 +148,8 @@ export function useAuthState(): UseAuthStateReturn {
           }));
           throw new Error(errorMsg);
         }
-      } catch (error: any) {
-        const errorMsg = error.message || 'Login failed';
+      } catch (error: unknown) {
+        const errorMsg = error instanceof Error ? error.message : 'Login failed';
         console.error('[useAuthState] Login error:', errorMsg);
         setAuthState((prev) => ({
           ...prev,
@@ -165,12 +165,12 @@ export function useAuthState(): UseAuthStateReturn {
   // Logout function
   const logout = useCallback(async () => {
     try {
-      console.log('[useAuthState] Logging out...');
+      console.info('[useAuthState] Logging out...');
 
       const result = await AuthenticationService.logout();
 
       if (result.success) {
-        console.log('[useAuthState] Logout successful');
+        console.info('[useAuthState] Logout successful');
 
         // Immediately clear the auth state
         setAuthState((prev) => ({
@@ -196,7 +196,7 @@ export function useAuthState(): UseAuthStateReturn {
   // Refresh auth state
   const refresh = useCallback(async () => {
     try {
-      console.log('[useAuthState] Refreshing auth state...');
+      console.info('[useAuthState] Refreshing auth state...');
 
       const state = await AuthenticationService.getAuthState();
 
@@ -205,7 +205,7 @@ export function useAuthState(): UseAuthStateReturn {
         isLoading: false,
       });
 
-      console.log('[useAuthState] Auth state refreshed:', {
+      console.info('[useAuthState] Auth state refreshed:', {
         isAuthenticated: state.isAuthenticated,
         user: state.user?.login,
       });

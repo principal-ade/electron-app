@@ -32,6 +32,7 @@ export interface AuthResult {
 export class SecureAuthService {
   private static instance: SecureAuthService;
 
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
   private constructor() {}
 
   static getInstance(): SecureAuthService {

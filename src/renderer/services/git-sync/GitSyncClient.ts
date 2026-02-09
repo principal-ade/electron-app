@@ -147,7 +147,7 @@ export class GitSyncClient extends EventEmitter {
         this.ws = new WebSocket(`${wsUrl}/ws`);
 
         this.ws.onopen = () => {
-          console.log('Connected to git-sync server');
+          console.info('Connected to git-sync server');
           this.status.connected = true;
           this.isReconnecting = false;
 
@@ -180,7 +180,7 @@ export class GitSyncClient extends EventEmitter {
         };
 
         this.ws.onclose = () => {
-          console.log('Disconnected from git-sync server');
+          console.info('Disconnected from git-sync server');
           this.status.connected = false;
           this.status.authenticated = false;
           this.stopPingInterval();
@@ -203,7 +203,7 @@ export class GitSyncClient extends EventEmitter {
   private async getRoomToken(): Promise<void> {
     try {
       const repository = this.extractRepoId(this.config.repoUrl);
-      console.log(`Getting room token for repository: ${repository}`);
+      console.info(`Getting room token for repository: ${repository}`);
 
       // Import GitSyncService dynamically to avoid circular imports
       const { GitSyncService } =
@@ -227,7 +227,7 @@ export class GitSyncClient extends EventEmitter {
         expiresIn: 3600, // 1 hour default
       };
 
-      console.log(
+      console.info(
         `Room token obtained for ${this.roomToken.repository} (${this.roomToken.permissions.canWrite ? 'write' : 'read'} access)`,
       );
     } catch (error) {
@@ -637,7 +637,7 @@ export class GitSyncClient extends EventEmitter {
 
     this.isReconnecting = true;
     this.reconnectTimer = setTimeout(() => {
-      console.log('Attempting to reconnect...');
+      console.info('Attempting to reconnect...');
       this.connect().catch((error) => {
         console.error('Reconnection failed:', error);
         this.scheduleReconnect();

@@ -22,15 +22,15 @@ function deepMerge<T extends object>(target: T, source: Partial<T>): T {
       !Array.isArray(source[key])
     ) {
       if (key in target && typeof target[key] === 'object') {
-        (output as any)[key] = deepMerge(
-          target[key] as any,
-          source[key] as any,
+        (output as Record<string, unknown>)[key] = deepMerge(
+          target[key] as object,
+          source[key] as Partial<object>,
         );
       } else {
-        (output as any)[key] = source[key];
+        (output as Record<string, unknown>)[key] = source[key];
       }
     } else {
-      (output as any)[key] = source[key];
+      (output as Record<string, unknown>)[key] = source[key];
     }
   }
 
@@ -117,14 +117,14 @@ class ThemeServiceClass extends EventEmitter {
 
       // Parse property path (e.g., "colors.primary" or "fonts.body")
       const parts = propertyPath.split('.');
-      let current: any = themeOverrides.overrides;
+      let current: Record<string, unknown> = themeOverrides.overrides as Record<string, unknown>;
 
       // Navigate/create nested structure
       for (let i = 0; i < parts.length - 1; i++) {
         if (!current[parts[i]]) {
           current[parts[i]] = {};
         }
-        current = current[parts[i]];
+        current = current[parts[i]] as Record<string, unknown>;
       }
 
       // Set the value
@@ -144,7 +144,7 @@ class ThemeServiceClass extends EventEmitter {
         await this.applyTheme(themeName, false);
       }
 
-      console.log(
+      console.info(
         `[ThemeService] Updated ${propertyPath} in ${themeName} theme`,
       );
     } catch (error) {
@@ -176,40 +176,6 @@ class ThemeServiceClass extends EventEmitter {
   }
 
   /**
-   * Restore theme from snapshot
-   */
-  async restoreThemeSnapshot(
-    themeName: string,
-    snapshot: Theme,
-  ): Promise<void> {
-    try {
-      const baseTheme = this.getBaseTheme(themeName);
-      if (!baseTheme) {
-        throw new Error(`Base theme ${themeName} not found`);
-      }
-
-      // Clear all overrides for this theme
-      const preferences = await UserPreferencesService.getPreferences();
-      const existingOverrides = preferences.customThemeOverrides || {};
-      delete existingOverrides[themeName];
-
-      await UserPreferencesService.updatePreferences({
-        customThemeOverrides: existingOverrides,
-      });
-
-      // If this is the current theme, reload it
-      if (themeName === this.currentThemeName) {
-        await this.applyTheme(themeName, false);
-      }
-
-      console.log(`[ThemeService] Restored ${themeName} theme from snapshot`);
-    } catch (error) {
-      console.error('[ThemeService] Failed to restore theme snapshot:', error);
-      throw error;
-    }
-  }
-
-  /**
    * Clear all overrides for a theme
    */
   async clearThemeOverrides(themeName: string): Promise<void> {
@@ -227,7 +193,7 @@ class ThemeServiceClass extends EventEmitter {
         await this.applyTheme(themeName, false);
       }
 
-      console.log(`[ThemeService] Cleared overrides for ${themeName} theme`);
+      console.info(`[ThemeService] Cleared overrides for ${themeName} theme`);
     } catch (error) {
       console.error('[ThemeService] Failed to clear theme overrides:', error);
       throw error;
@@ -238,7 +204,7 @@ class ThemeServiceClass extends EventEmitter {
    * Apply a theme by name
    */
   async applyTheme(themeName: string, persist: boolean = true): Promise<void> {
-    console.log('[ThemeService] Applying theme:', themeName);
+    console.info('[ThemeService] Applying theme:', themeName);
 
     const theme = await this.getActiveTheme(themeName);
     if (!theme) {
@@ -262,7 +228,7 @@ class ThemeServiceClass extends EventEmitter {
         await UserPreferencesService.updatePreferences({
           selectedTheme: themeName,
         });
-        console.log('[ThemeService] Theme persisted to preferences');
+        console.info('[ThemeService] Theme persisted to preferences');
       } catch (error) {
         console.error('[ThemeService] Failed to persist theme:', error);
       }
@@ -276,7 +242,7 @@ class ThemeServiceClass extends EventEmitter {
     mode: 'light' | 'dark',
     persist: boolean = true,
   ): Promise<void> {
-    console.log('[ThemeService] Setting color mode:', mode);
+    console.info('[ThemeService] Setting color mode:', mode);
 
     this.currentColorMode = mode;
 
@@ -295,7 +261,7 @@ class ThemeServiceClass extends EventEmitter {
         await UserPreferencesService.updatePreferences({
           colorMode: mode,
         });
-        console.log('[ThemeService] Color mode persisted to preferences');
+        console.info('[ThemeService] Color mode persisted to preferences');
       } catch (error) {
         console.error('[ThemeService] Failed to persist color mode:', error);
       }
