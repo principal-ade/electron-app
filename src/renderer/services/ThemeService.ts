@@ -289,7 +289,7 @@ class ThemeServiceClass extends EventEmitter {
         this.currentColorMode = prefersDark ? 'dark' : 'light';
       }
 
-      console.log('[ThemeService] Loaded preferences:', {
+      console.info('[ThemeService] Loaded preferences:', {
         theme: this.currentThemeName,
         colorMode: this.currentColorMode,
       });

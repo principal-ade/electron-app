@@ -245,7 +245,7 @@ export class GitSyncConnectionManager extends EventEmitter {
    * Clear authentication state
    */
   public clearAuth() {
-    console.log('[GitSyncConnectionManager] Clearing auth state');
+    console.info('[GitSyncConnectionManager] Clearing auth state');
 
     this.authUser = null;
     this.authToken = null;
@@ -265,7 +265,7 @@ export class GitSyncConnectionManager extends EventEmitter {
     branch: string = 'main',
     repository?: { owner?: string; name?: string; remoteUrl?: string },
   ): Promise<GitSyncClient | null> {
-    console.log(
+    console.info(
       '[GitSyncConnectionManager] getConnection called, auth status:',
       {
         isAuthenticated: this.isAuthenticated,
@@ -276,7 +276,7 @@ export class GitSyncConnectionManager extends EventEmitter {
 
     // Wait for authentication to initialize if not ready
     if (!this.isAuthenticated || !this.authToken || !this.authUser) {
-      console.log(
+      console.info(
         '[GitSyncConnectionManager] Auth not ready, waiting for initialization...',
       );
 
@@ -295,7 +295,7 @@ export class GitSyncConnectionManager extends EventEmitter {
           throw new Error('Not authenticated. Please sign in to use git-sync.');
         }
 
-        console.log(
+        console.info(
           '[GitSyncConnectionManager] Auth ready, proceeding with connection',
         );
       } catch (error) {
@@ -323,7 +323,7 @@ export class GitSyncConnectionManager extends EventEmitter {
     if (existing && existing.client) {
       const status = existing.client.getStatus();
       if (status.connected) {
-        console.log(
+        console.info(
           `GitSyncConnectionManager: Returning existing connection for ${connectionKey}`,
         );
         return existing.client;
@@ -332,7 +332,7 @@ export class GitSyncConnectionManager extends EventEmitter {
 
     // Create new connection via main process (secure)
     try {
-      console.log(
+      console.info(
         `GitSyncConnectionManager: Creating new connection for ${connectionKey}`,
       );
 
@@ -461,21 +461,21 @@ export class GitSyncConnectionManager extends EventEmitter {
   ) {
     // Forward important events
     client.on('connected', () => {
-      console.log(
+      console.info(
         `GitSyncConnectionManager: Client connected for ${connectionKey}`,
       );
       this.updateConnectionStatus(connectionKey);
     });
 
     client.on('disconnected', () => {
-      console.log(
+      console.info(
         `GitSyncConnectionManager: Client disconnected for ${connectionKey}`,
       );
       this.updateConnectionStatus(connectionKey);
     });
 
     client.on('authenticated', () => {
-      console.log(
+      console.info(
         `GitSyncConnectionManager: Client authenticated for ${connectionKey}`,
       );
       this.updateConnectionStatus(connectionKey);
@@ -543,7 +543,7 @@ export class GitSyncConnectionManager extends EventEmitter {
     const connection = this.connections.get(connectionKey);
 
     if (connection && connection.client) {
-      console.log(`GitSyncConnectionManager: Disconnecting ${connectionKey}`);
+      console.info(`GitSyncConnectionManager: Disconnecting ${connectionKey}`);
       connection.client.disconnect();
       this.connections.delete(connectionKey);
       this.emit('connection-removed', connectionKey);
@@ -554,7 +554,7 @@ export class GitSyncConnectionManager extends EventEmitter {
    * Disconnect all connections
    */
   disconnectAll() {
-    console.log('GitSyncConnectionManager: Disconnecting all connections');
+    console.info('GitSyncConnectionManager: Disconnecting all connections');
 
     // Collect connection keys before clearing
     const connectionKeys = Array.from(this.connections.keys());
