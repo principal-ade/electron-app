@@ -68,3 +68,4 @@ assets/icons/
 *.db-wal
 *storybook.log
 storybook-static
+package-lock.json
