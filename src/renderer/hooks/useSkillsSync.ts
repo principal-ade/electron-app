@@ -46,12 +46,6 @@ export function useSkillsSync(): UseSkillsSyncReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load initial config and sync state
-  useEffect(() => {
-    loadConfig();
-    loadSyncStatus();
-  }, [loadConfig, loadSyncStatus]);
-
   const loadConfig = useCallback(async () => {
     try {
       const result = await FileSystemService.getSyncConfig();
@@ -70,6 +64,12 @@ export function useSkillsSync(): UseSkillsSyncReturn {
       console.error('[useSkillsSync] Failed to load sync status:', err);
     }
   }, []);
+
+  // Load initial config and sync state
+  useEffect(() => {
+    loadConfig();
+    loadSyncStatus();
+  }, [loadConfig, loadSyncStatus]);
 
   const getConfig = useCallback(async (): Promise<SkillsRepoConfig | null> => {
     try {
