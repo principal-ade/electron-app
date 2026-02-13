@@ -435,7 +435,7 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
             error: null,
             refresh: async () => {
               // Presence data refreshes automatically via subscription
-              console.log(
+              console.info(
                 '[GitSyncPanelContext] Current projects slice refresh triggered',
               );
             },
@@ -461,6 +461,7 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
       selectedUserError,
       currentUserSessions,
       activeRepository,
+      fetchUserProfile,
     ],
   );
 

@@ -146,8 +146,9 @@ export const UserCollectionsProvider: React.FC<
         const input: CreateCollectionInput = { name, description, icon };
         const result = await CollectionsService.createCollection(input);
         if (result.success && result.data) {
-          setCollections((prev) => [...prev, result.data!]);
-          return result.data;
+          const newCollection = result.data;
+          setCollections((prev) => [...prev, newCollection]);
+          return newCollection;
         } else if (result.error) {
           setError(new Error(result.error));
         }
@@ -170,8 +171,9 @@ export const UserCollectionsProvider: React.FC<
       try {
         const result = await CollectionsService.updateCollection(id, updates);
         if (result.success && result.data) {
+          const updatedCollection = result.data;
           setCollections((prev) =>
-            prev.map((c) => (c.id === id ? result.data! : c)),
+            prev.map((c) => (c.id === id ? updatedCollection : c)),
           );
         } else if (result.error) {
           setError(new Error(result.error));

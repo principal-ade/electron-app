@@ -42,4 +42,9 @@ export interface OtelCollectorAPI {
   sendTestTrace(sourceUrl: string): Promise<OtelCollectorResponse>;
   getTraces(limit?: number): Promise<GetTracesResponse>;
   clearTraces(): Promise<OtelCollectorResponse>;
+
+  // MessagePort helpers (managed in preload for security)
+  onOtelMessage(windowId: string, sourceUrl: string, callback: (data: unknown) => void): () => void;
+  sendOtelMessage(windowId: string, sourceUrl: string, data: unknown): boolean;
+  removeOtelPort(windowId: string, sourceUrl: string): void;
 }

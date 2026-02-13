@@ -59,6 +59,7 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
   // Forward terminal exit events and update session list
   useEffect(() => {
     let unsubExit: (() => void) | null = null;
+    const subscriptions = terminalSubscriptionsRef.current;
 
     TerminalService.onExit((terminalExit) => {
       // Remove this session from our list
@@ -67,12 +68,10 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
       );
 
       // Clean up subscription for this terminal
-      const unsubscribe = terminalSubscriptionsRef.current.get(
-        terminalExit.sessionId,
-      );
+      const unsubscribe = subscriptions.get(terminalExit.sessionId);
       if (unsubscribe) {
         unsubscribe();
-        terminalSubscriptionsRef.current.delete(terminalExit.sessionId);
+        subscriptions.delete(terminalExit.sessionId);
       }
     }).then((unsub) => {
       unsubExit = unsub;
@@ -83,8 +82,8 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
         unsubExit();
       }
       // Clean up all terminal subscriptions
-      terminalSubscriptionsRef.current.forEach((unsub) => unsub());
-      terminalSubscriptionsRef.current.clear();
+      subscriptions.forEach((unsub) => unsub());
+      subscriptions.clear();
     };
   }, []);
 
@@ -93,12 +92,12 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
     const loadTerminalSessions = async () => {
       try {
         const sessions = await TerminalService.list();
-        console.log('[TerminalProvider] Loaded terminal sessions:', sessions.map(s => ({
+        console.info('[TerminalProvider] Loaded terminal sessions:', sessions.map(s => ({
           id: s.id,
           directory: s.directory,
           context: s.context,
         })));
-        console.log('[TerminalProvider] Expected terminalContext:', terminalContext);
+        console.info('[TerminalProvider] Expected terminalContext:', terminalContext);
         setTerminalSessions(sessions);
       } catch (error) {
         console.error(
@@ -113,8 +112,8 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
     // Listen for external session creation events
     const handleSessionCreated = (event: Event) => {
       const customEvent = event as CustomEvent;
-      console.log('[TerminalProvider] Detected new terminal session:', customEvent.detail);
-      console.log('[TerminalProvider] Refreshing list...');
+      console.info('[TerminalProvider] Detected new terminal session:', customEvent.detail);
+      console.info('[TerminalProvider] Refreshing list...');
       loadTerminalSessions();
     };
 
@@ -220,11 +219,11 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
       },
 
       claimTerminalOwnership: async (sessionId: string, force?: boolean) => {
-        console.log(
+        console.info(
           `[TerminalActions] claimTerminalOwnership called: sessionId=${sessionId}, force=${force}`,
         );
         const result = await TerminalService.claimOwnership(sessionId, force);
-        console.log(`[TerminalActions] claimTerminalOwnership result:`, result);
+        console.info(`[TerminalActions] claimTerminalOwnership result:`, result);
         return result;
       },
 
@@ -238,16 +237,16 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
           newOwnerWindowId: number;
         }) => void,
       ) => {
-        console.log('[TerminalActions] onOwnershipLost: registering callback');
+        console.info('[TerminalActions] onOwnershipLost: registering callback');
         const unsubscribe = TerminalService.onOwnershipLost((data) => {
-          console.log(
+          console.info(
             '[TerminalActions] onOwnershipLost: received event from TerminalService:',
             data,
           );
           callback(data);
         });
         return () => {
-          console.log('[TerminalActions] onOwnershipLost: unsubscribing');
+          console.info('[TerminalActions] onOwnershipLost: unsubscribing');
           unsubscribe();
         };
       },

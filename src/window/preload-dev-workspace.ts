@@ -162,47 +162,6 @@ ipcRenderer.on(
   },
 );
 
-// ============================================
-// OTEL Collector MessagePort Management
-// ============================================
-
-// OTEL collector port storage
-const otelPorts = new Map<string, MessagePort>(); // key: windowId:sourceUrl
-// Message subscribers - for receiving trace data
-const otelMessageSubscribers = new Map<string, Set<(data: unknown) => void>>();
-
-// Listen for MessagePort delivery from main process (same pattern as terminal)
-ipcRenderer.on('otel-collector:port', (event, data: { windowId: string; sourceUrl: string }) => {
-  console.info('[preload-dev-workspace] 📨 Received otel-collector:port event', data);
-
-  const [port] = event.ports;
-  if (!port) {
-    console.warn('[preload-dev-workspace] ❌ Received otel-collector:port event without a port');
-    return;
-  }
-
-  const key = `${data.windowId}:${data.sourceUrl}`;
-
-  // Store the port
-  otelPorts.set(key, port);
-
-  // Start the port to enable messaging
-  port.start();
-  console.info(`[preload-dev-workspace] ✅ OTEL port started for ${key}`);
-
-  // Set up message handler to route to subscribers
-  port.onmessage = (e: MessageEvent) => {
-    const subscribers = otelMessageSubscribers.get(key);
-    if (subscribers && subscribers.size > 0) {
-      subscribers.forEach((cb) => cb(e.data));
-    } else {
-      console.warn(`[preload-dev-workspace] No subscribers for OTEL messages on ${key}`);
-    }
-  };
-
-  console.info(`[preload-dev-workspace] ✅ OTEL port ready for ${key}`);
-});
-
 try {
   contextBridge.exposeInMainWorld('electron', {
     ipcRenderer: {
@@ -298,82 +257,8 @@ try {
         portReadyCallbacks.delete(callback);
       };
     },
-
-    // Subscribe to OTEL messages (abstracts MessagePort)
-    onOtelMessage: (
-      windowId: string,
-      sourceUrl: string,
-      callback: (data: unknown) => void,
-    ): (() => void) => {
-      const key = `${windowId}:${sourceUrl}`;
-      console.info(`[preload-dev-workspace] 📝 Subscribing to OTEL messages for ${key}`);
-
-      // Initialize subscriber set for this key if needed
-      let subscribers = otelMessageSubscribers.get(key);
-      if (!subscribers) {
-        subscribers = new Set();
-        otelMessageSubscribers.set(key, subscribers);
-      }
-
-      // Add the callback to subscribers
-      subscribers.add(callback);
-
-      // Return unsubscribe function
-      return () => {
-        const subscribers = otelMessageSubscribers.get(key);
-        if (subscribers) {
-          subscribers.delete(callback);
-          console.info(`[preload-dev-workspace] 🗑️ Unsubscribed from OTEL messages for ${key}`);
-
-          // Clean up empty subscriber sets
-          if (subscribers.size === 0) {
-            otelMessageSubscribers.delete(key);
-          }
-        }
-      };
-    },
-
-    // Send message to OTEL port
-    sendOtelMessage: (windowId: string, sourceUrl: string, data: unknown): boolean => {
-      const key = `${windowId}:${sourceUrl}`;
-      const port = otelPorts.get(key);
-      if (port) {
-        try {
-          port.postMessage(data);
-          console.info(`[preload-dev-workspace] 📤 Sent message to OTEL port ${key}`);
-          return true;
-        } catch (err) {
-          console.error(`[preload-dev-workspace] Error sending to OTEL port ${key}:`, err);
-          return false;
-        }
-      }
-      console.warn(`[preload-dev-workspace] No OTEL port found for ${key}`);
-      return false;
-    },
-
-    // Helper to check if OTEL port is available
-    hasOtelPort: (windowId: string, sourceUrl: string): boolean => {
-      const key = `${windowId}:${sourceUrl}`;
-      return otelPorts.has(key);
-    },
-
-    // Helper to remove OTEL port on cleanup
-    removeOtelPort: (windowId: string, sourceUrl: string): void => {
-      const key = `${windowId}:${sourceUrl}`;
-      const port = otelPorts.get(key);
-      if (port) {
-        try {
-          port.close();
-        } catch (err) {
-          console.warn(`[preload-dev-workspace] Error closing OTEL port ${key}:`, err);
-        }
-        otelPorts.delete(key);
-        otelMessageSubscribers.delete(key);
-        console.info(`[preload-dev-workspace] 🗑️ Removed OTEL port ${key}`);
-      }
-    },
   });
-  console.info('[Preload-DevWorkspace] ✅ TIPC + Terminal + OTEL APIs exposed');
+  console.info('[Preload-DevWorkspace] ✅ TIPC + Terminal APIs exposed');
 } catch (error) {
   console.error(
     '[Preload-DevWorkspace] ❌ Failed to expose TIPC + Terminal APIs:',

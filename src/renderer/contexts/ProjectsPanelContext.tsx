@@ -399,7 +399,7 @@ export const ProjectsPanelProvider: React.FC<
     );
 
     return unsubscribe;
-  }, [localRepositories]); // Re-run when local repos change to update discovered list
+  }, [localRepositories, baseDefaultDirectory]); // Re-run when local repos change to update discovered list
 
   // Fetch GitHub starred repositories
   const fetchStarredRepositories = async () => {

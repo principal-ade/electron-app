@@ -485,6 +485,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
   // Wire up terminal exit events to panel event bus
   useEffect(() => {
     let unsubExit: (() => void) | null = null;
+    const subscriptions = terminalSubscriptionsRef.current;
 
     // Forward terminal exit events to panel event bus
     TerminalService.onExit((terminalExit) => {
@@ -496,12 +497,10 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       });
 
       // Unsubscribe from terminal data for this session
-      const unsubscribe = terminalSubscriptionsRef.current.get(
-        terminalExit.sessionId,
-      );
+      const unsubscribe = subscriptions.get(terminalExit.sessionId);
       if (unsubscribe) {
         unsubscribe();
-        terminalSubscriptionsRef.current.delete(terminalExit.sessionId);
+        subscriptions.delete(terminalExit.sessionId);
       }
 
       // Remove session from list on exit
@@ -517,10 +516,10 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       unsubExit?.();
 
       // Clean up all terminal data subscriptions
-      terminalSubscriptionsRef.current.forEach((unsubscribe) => {
+      subscriptions.forEach((unsubscribe) => {
         unsubscribe();
       });
-      terminalSubscriptionsRef.current.clear();
+      subscriptions.clear();
     };
   }, [events]);
 
@@ -1341,7 +1340,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
   // Create adapters for panels to use (memoized to avoid recreating on every render)
   const adapters: PanelAdapters = useMemo(() => {
     const repoPath = repository?.path || workspace?.path || '';
-    console.log('[PanelContext] Creating adapters with repoPath:', repoPath);
+    console.info('[PanelContext] Creating adapters with repoPath:', repoPath);
 
     return {
       // Minimal adapters (for panels using FileTree-based adapters)

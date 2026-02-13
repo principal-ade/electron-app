@@ -29,7 +29,7 @@ import {
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import { FileTreeCore } from '@principal-ai/repository-abstraction';
-import type { PackageLayer, PackageSummary, PackagesSliceData } from '@principal-ai/codebase-composition';
+import type { PackagesSliceData } from '@principal-ai/codebase-composition';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import { minimatch } from 'minimatch';
 import type { ColorMode, FileMetricData, QualitySliceData } from '@principal-ai/quality-lens-registry';
@@ -102,7 +102,6 @@ export const RepositoryPanelProvider: React.FC<
   // Track file tree for the current repository
   const [fileTreeData, setFileTreeData] = useState<FileTree | null>(null);
   const [fileTreeLoading, setFileTreeLoading] = useState(false);
-  const [fileTreeVersion, setFileTreeVersion] = useState<number>(0);
 
   // Track packages data for the current repository
   const [packagesData, setPackagesData] = useState<PackagesSliceData | null>(
@@ -414,10 +413,15 @@ export const RepositoryPanelProvider: React.FC<
 
   // Create stable references for data objects - only update when their stable ID changes
   // This prevents unnecessary re-renders of all panels when object references change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const stableFileTreeData = useMemo(() => fileTreeData, [fileTreeStableId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const stableQualityData = useMemo(() => qualityData, [qualityDataTimestamp]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const stableActiveFileData = useMemo(() => activeFileData, [activeFilePath]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const stableGitStatusData = useMemo(() => gitStatusData, [gitStatusHash]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const stableLocalhostServers = useMemo(() => localhostServers, [localhostServersHash]);
 
   // Augment file tree with deleted files from git status
@@ -607,7 +611,7 @@ export const RepositoryPanelProvider: React.FC<
         const remoteInfo =
           await RepositoryMonitoringService.getGitRemoteInfo(repositoryPath);
         if (!remoteInfo?.remoteUrl) {
-          console.log(
+          console.info(
             '[RepositoryPanelProvider] No git remote, cannot fetch quality metrics',
           );
           setQualityData(null);
@@ -616,7 +620,7 @@ export const RepositoryPanelProvider: React.FC<
 
         const githubInfo = parseGitHubRemote(remoteInfo.remoteUrl);
         if (!githubInfo) {
-          console.log('[RepositoryPanelProvider] Not a GitHub repository');
+          console.info('[RepositoryPanelProvider] Not a GitHub repository');
           setQualityData(null);
           return;
         }
@@ -626,7 +630,7 @@ export const RepositoryPanelProvider: React.FC<
           await RepositoryMonitoringService.getGitStatus(repositoryPath);
         const branch = gitStatus?.branch || 'main';
 
-        console.log(
+        console.info(
           `[RepositoryPanelProvider] Fetching quality metrics for ${githubInfo.owner}/${githubInfo.repo}@${branch}`,
         );
 
@@ -653,7 +657,7 @@ export const RepositoryPanelProvider: React.FC<
           const fileMetricsKeys = artifactData.fileMetrics
             ? Object.keys(artifactData.fileMetrics)
             : [];
-          console.log(
+          console.info(
             `[RepositoryPanelProvider] Quality metrics loaded: ${packages.length} packages, ` +
               `fileCoverage: ${artifactData.fileCoverage ? Object.keys(artifactData.fileCoverage).length : 0} files, ` +
               `fileMetrics: ${fileMetricsKeys.join(', ') || 'none'}`,
@@ -667,7 +671,7 @@ export const RepositoryPanelProvider: React.FC<
             fileMetrics: artifactData.fileMetrics as Record<string, FileMetricData[]> | undefined,
           });
         } else {
-          console.log(
+          console.info(
             '[RepositoryPanelProvider] No quality artifacts found for this repository',
           );
           setQualityData(null);
@@ -782,12 +786,12 @@ export const RepositoryPanelProvider: React.FC<
         console.info('[RepositoryPanelProvider] Window ID:', windowId);
 
         // Subscribe to OTEL messages (port is handled in preload)
-        unsubscribe = (window as any).electron.onOtelMessage(
+        unsubscribe = window.mainProcess.otelCollector.onOtelMessage(
           windowId,
           sourceUrl,
-          (data: any) => {
+          (data: unknown) => {
             try {
-              console.log('[RepositoryPanelProvider] Received OTEL message:', data?.type || data);
+              console.info('[RepositoryPanelProvider] Received OTEL message:', data?.type || data);
 
               // Check if this is a connection confirmation heartbeat from the server
               if (data?.type === 'CONNECTION_CONFIRMED') {
@@ -801,7 +805,7 @@ export const RepositoryPanelProvider: React.FC<
 
               // Check if this is a trace batch from the server
               if (data?.type === 'TRACE_BATCH') {
-                console.log('[RepositoryPanelProvider] Received TRACE_BATCH from server');
+                console.info('[RepositoryPanelProvider] Received TRACE_BATCH from server');
                 // Extract the payload from the wrapper
                 const payload = data.payload;
                 if (!payload || !payload.resourceSpans) {
@@ -810,7 +814,7 @@ export const RepositoryPanelProvider: React.FC<
                 }
                 // Process the OTLP payload
                 const newTraces = groupSpansByTrace(payload);
-                console.log('[RepositoryPanelProvider] Converted to TraceInfo[]:', newTraces);
+                console.info('[RepositoryPanelProvider] Converted to TraceInfo[]:', newTraces);
 
                 if (newTraces.length > 0) {
                   console.info(
@@ -858,7 +862,7 @@ export const RepositoryPanelProvider: React.FC<
         // Send ready ping to server after a short delay to ensure subscription is set up
         setTimeout(() => {
           console.info('[RepositoryPanelProvider] 📤 Sending RENDERER_READY ping to server');
-          const sent = (window as any).electron.sendOtelMessage(windowId, sourceUrl, {
+          const sent = window.mainProcess.otelCollector.sendOtelMessage(windowId, sourceUrl, {
             type: 'RENDERER_READY',
             windowId,
             sourceUrl,
@@ -887,7 +891,7 @@ export const RepositoryPanelProvider: React.FC<
 
       // Clean up the port
       if (windowId && sourceUrl) {
-        (window as any).electron.removeOtelPort(windowId, sourceUrl);
+        window.mainProcess.otelCollector.removeOtelPort(windowId, sourceUrl);
       }
 
       // Unregister from main process
@@ -953,7 +957,7 @@ export const RepositoryPanelProvider: React.FC<
             ? filePath
             : `${repositoryPath}/${filePath}`;
 
-          console.log('[RepositoryPanelProvider] Opening file:', absolutePath);
+          console.info('[RepositoryPanelProvider] Opening file:', absolutePath);
 
           // Emit file:opened event - let the workspace layouts decide how to handle it
           events.emit({
@@ -1141,7 +1145,7 @@ export const RepositoryPanelProvider: React.FC<
         const absolutePath = relativePath.startsWith('/')
           ? relativePath
           : `${repositoryPath}/${relativePath}`;
-        console.log('[RepositoryPanelProvider] adapters.readFile called:', {
+        console.info('[RepositoryPanelProvider] adapters.readFile called:', {
           relativePath,
           absolutePath,
           repositoryPath,
@@ -1149,10 +1153,10 @@ export const RepositoryPanelProvider: React.FC<
         // FileSystemService.readFile returns { content, filePath } or null
         const result = await FileSystemService.readFile(absolutePath);
         if (!result) {
-          console.log('[RepositoryPanelProvider] File not found:', absolutePath);
+          console.info('[RepositoryPanelProvider] File not found:', absolutePath);
           throw new Error(`Failed to fetch content for ${relativePath}`);
         }
-        console.log('[RepositoryPanelProvider] File read successfully:', absolutePath);
+        console.info('[RepositoryPanelProvider] File read successfully:', absolutePath);
         // Extract content from the result object
         return typeof result === 'string' ? result : result.content;
       };
@@ -1225,7 +1229,7 @@ export const RepositoryPanelProvider: React.FC<
                 }
               }
 
-              console.log('[RepositoryPanelProvider] getFileContentAtRevision:', {
+              console.info('[RepositoryPanelProvider] getFileContentAtRevision:', {
                 repositoryPath,
                 originalPath: filePath,
                 pathRelativeToRepo,
@@ -1332,7 +1336,7 @@ export const RepositoryPanelProvider: React.FC<
       .map(([key]) => key);
 
     if (changedDeps.length > 0) {
-      console.log('[RepositoryPanelContext] Slices recreated due to:', changedDeps);
+      console.info('[RepositoryPanelContext] Slices recreated due to:', changedDeps);
     }
   }
 
@@ -1381,7 +1385,7 @@ export const RepositoryPanelProvider: React.FC<
                   await RepositoryMonitoringService.refreshRepository(
                     repositoryPath,
                   );
-                  console.log(
+                  console.info(
                     '[RepositoryPanelProvider] Refresh triggered for file tree, waiting for cache sync event',
                   );
                 } catch (error) {
@@ -1421,7 +1425,7 @@ export const RepositoryPanelProvider: React.FC<
                   await RepositoryMonitoringService.refreshRepository(
                     repositoryPath,
                   );
-                  console.log(
+                  console.info(
                     '[RepositoryPanelProvider] Refresh triggered for markdown, waiting for cache sync event',
                   );
                 } catch (error) {
@@ -1460,7 +1464,7 @@ export const RepositoryPanelProvider: React.FC<
                   await RepositoryMonitoringService.refreshRepository(
                     repositoryPath,
                   );
-                  console.log(
+                  console.info(
                     '[RepositoryPanelProvider] Refresh triggered for packages, waiting for cache sync event',
                   );
                 } catch (error) {
@@ -1503,7 +1507,7 @@ export const RepositoryPanelProvider: React.FC<
                   await RepositoryMonitoringService.refreshRepository(
                     repositoryPath,
                   );
-                  console.log(
+                  console.info(
                     '[RepositoryPanelProvider] Refresh triggered for git status, waiting for event',
                   );
                 } catch (error) {
