@@ -284,21 +284,16 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       );
 
       if (repository) {
-        const repoPath = repositoryPath || repository.path;
-
         // Open the repository in a new dev workspace window
-        if (repoPath) {
-          try {
-            await WindowService.openDevWorkspace({
-              repositoryPath: repoPath,
-              repositoryName: repository.name,
-            });
-          } catch (error) {
-            console.error(
-              '[AlexandriaWorkspaceLayout] Failed to open dev workspace:',
-              error,
-            );
-          }
+        try {
+          await WindowService.openDevWorkspace({
+            alexandriaEntry: repository,
+          });
+        } catch (error) {
+          console.error(
+            '[AlexandriaWorkspaceLayout] Failed to open dev workspace:',
+            error,
+          );
         }
       }
     });

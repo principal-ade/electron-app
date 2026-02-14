@@ -201,8 +201,10 @@ const AlexandriaWorkspaceContent: React.FC = () => {
       }),
       events.on('panel:switch', (event) => {
         const payload = event.payload as { slot?: string; panel?: string };
-        if (payload.slot && payload.panel) {
-          setLayout((prev) => ({ ...prev, [payload.slot]: payload.panel }));
+        const slot = payload.slot;
+        const panel = payload.panel;
+        if (slot && panel) {
+          setLayout((prev) => ({ ...prev, [slot]: panel }));
         }
       }),
       events.on('panel:reset-layout', () => {
