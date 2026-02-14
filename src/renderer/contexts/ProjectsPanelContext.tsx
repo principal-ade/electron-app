@@ -1746,7 +1746,12 @@ export const ProjectsPanelProvider: React.FC<
               path: selectedWorkspace.suggestedClonePath || '',
             }
           : undefined,
-        repository: selectedRepository || undefined,
+        repository: selectedRepository
+          ? {
+              name: selectedRepository.name,
+              path: selectedRepository.path,
+            }
+          : undefined,
       },
       slices,
       adapters: {},
