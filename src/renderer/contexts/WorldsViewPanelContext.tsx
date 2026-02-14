@@ -4,6 +4,7 @@ import React, {
   useMemo,
   useState,
   useEffect,
+  useCallback,
   type ReactNode,
 } from 'react';
 import { PanelEventBus } from '@principal-ade/panel-framework-core';
@@ -134,7 +135,7 @@ export const WorldsViewPanelProvider: React.FC<
   }, []);
 
   // Fetch collections on mount
-  const fetchCollections = async () => {
+  const fetchCollections = useCallback(async () => {
     try {
       setCollectionsLoading(true);
       setCollectionsError(null);
@@ -155,11 +156,11 @@ export const WorldsViewPanelProvider: React.FC<
     } finally {
       setCollectionsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void fetchCollections();
-  }, []);
+  }, [fetchCollections]);
 
   // Listen for collection selection events from UserCollectionsPanel
   useEffect(() => {
@@ -632,6 +633,7 @@ export const WorldsViewPanelProvider: React.FC<
       selectedCollection,
       collections,
       collectionMemberships,
+      fetchCollections,
     ],
   );
 
