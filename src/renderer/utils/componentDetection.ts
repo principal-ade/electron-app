@@ -124,7 +124,7 @@ function findNearestComponent(fiber: FiberNode | null): ComponentInfo {
       break;
     }
 
-    currentFiber = currentFiber.return || currentFiber._debugOwner;
+    currentFiber = currentFiber.return || currentFiber._debugOwner || null;
   }
 
   return { name: componentName, path: componentPath };

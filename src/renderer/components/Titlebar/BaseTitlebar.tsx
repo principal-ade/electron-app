@@ -42,7 +42,7 @@ export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
 }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-  const { theme, colorMode } = useTheme();
+  const { theme, mode } = useTheme();
 
   useEffect(() => {
     if (window.electronTitlebar) {
@@ -56,14 +56,14 @@ export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
   }
 
   const backgroundColor =
-    colorMode === 'dark'
-      ? theme.colors.modes?.dark?.backgroundSecondary ||
+    mode === 'dark'
+      ? theme.modes?.dark?.backgroundSecondary ||
         theme.colors.backgroundSecondary
       : theme.colors.backgroundSecondary;
 
   const accentColor =
-    colorMode === 'dark'
-      ? theme.colors.modes?.dark?.accent || theme.colors.accent
+    mode === 'dark'
+      ? theme.modes?.dark?.accent || theme.colors.accent
       : theme.colors.accent;
 
   return (

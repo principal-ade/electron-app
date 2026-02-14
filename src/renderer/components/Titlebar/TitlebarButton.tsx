@@ -23,7 +23,7 @@ export const TitlebarButton: React.FC<TitlebarButtonProps> = ({
   className = '',
   style,
 }) => {
-  const { theme, colorMode } = useTheme();
+  const { theme, mode } = useTheme();
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
   const buttonPosition =
@@ -45,7 +45,7 @@ export const TitlebarButton: React.FC<TitlebarButtonProps> = ({
         borderRadius: '6px',
         border: 'none',
         backgroundColor: 'transparent',
-        color: colorMode === 'dark' ? '#9ca3af' : '#6b7280',
+        color: mode === 'dark' ? '#9ca3af' : '#6b7280',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -57,16 +57,16 @@ export const TitlebarButton: React.FC<TitlebarButtonProps> = ({
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.backgroundColor =
-          colorMode === 'dark'
+          mode === 'dark'
             ? 'rgba(255, 255, 255, 0.1)'
             : 'rgba(0, 0, 0, 0.05)';
         e.currentTarget.style.color =
-          colorMode === 'dark' ? '#d1d5db' : '#374151';
+          mode === 'dark' ? '#d1d5db' : '#374151';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.backgroundColor = 'transparent';
         e.currentTarget.style.color =
-          colorMode === 'dark' ? '#9ca3af' : '#6b7280';
+          mode === 'dark' ? '#9ca3af' : '#6b7280';
       }}
       aria-label={ariaLabel}
       title={title}

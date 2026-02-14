@@ -71,7 +71,7 @@ interface RepositoryPanelActions extends PanelActions {
 // Extended context for repository panels
 // Note: Terminal state has been moved to TerminalContext
 interface RepositoryPanelContextValue extends PanelContextValue {
-  repositoryPath: string;
+  repositoryPath: string | null;
   repository: RepositoryMetadata | null;
   loading: boolean;
 }
@@ -402,12 +402,12 @@ export const RepositoryPanelProvider: React.FC<
   // This prevents re-renders when the array reference changes but content is the same
   const localhostServersHash = useMemo(() => {
     if (!localhostServers || localhostServers.length === 0) return 'empty';
-    // Hash based on port, pid, and name (the identifying characteristics)
+    // Hash based on port, pid, and label (the identifying characteristics)
     return JSON.stringify(
       localhostServers.map(s => ({
         port: s.port,
         pid: s.pid,
-        name: s.name,
+        label: s.label,
       })).sort((a, b) => a.port - b.port)
     );
   }, [localhostServers]);
@@ -771,9 +771,9 @@ export const RepositoryPanelProvider: React.FC<
 
   // Register MessagePort for OTEL traces
   useEffect(() => {
+    let unsubscribe: (() => void) | null = null;
     let windowId: string | null = null;
     let sourceUrl: string | null = null;
-    let unsubscribe: (() => void) | null = null;
 
     const registerTelemetryPort = async () => {
       try {
@@ -792,25 +792,26 @@ export const RepositoryPanelProvider: React.FC<
           sourceUrl,
           (data: unknown) => {
             try {
-              console.info('[RepositoryPanelProvider] Received OTEL message:', data?.type || data);
+              const message = data as any;
+              console.info('[RepositoryPanelProvider] Received OTEL message:', message?.type || message);
 
               // Check if this is a connection confirmation heartbeat from the server
-              if (data?.type === 'CONNECTION_CONFIRMED') {
+              if (message?.type === 'CONNECTION_CONFIRMED') {
                 console.info('[RepositoryPanelProvider] 🎉 Server connection confirmed!', {
-                  windowId: data.windowId,
-                  sourceUrl: data.sourceUrl,
-                  timestamp: new Date(data.timestamp).toISOString(),
+                  windowId: message.windowId,
+                  sourceUrl: message.sourceUrl,
+                  timestamp: new Date(message.timestamp).toISOString(),
                 });
                 return;
               }
 
               // Check if this is a trace batch from the server
-              if (data?.type === 'TRACE_BATCH') {
+              if (message?.type === 'TRACE_BATCH') {
                 console.info('[RepositoryPanelProvider] Received TRACE_BATCH from server');
                 // Extract the payload from the wrapper
-                const payload = data.payload;
+                const payload = message.payload;
                 if (!payload || !payload.resourceSpans) {
-                  console.warn('[RepositoryPanelProvider] Invalid TRACE_BATCH payload:', data);
+                  console.warn('[RepositoryPanelProvider] Invalid TRACE_BATCH payload:', message);
                   return;
                 }
                 // Process the OTLP payload
@@ -819,7 +820,7 @@ export const RepositoryPanelProvider: React.FC<
 
                 if (newTraces.length > 0) {
                   console.info(
-                    `[RepositoryPanelProvider] Received ${newTraces.length} new traces from source: ${data.source}`
+                    `[RepositoryPanelProvider] Received ${newTraces.length} new traces from source: ${message.source}`
                   );
 
                   setTelemetryTraces((prev) => {
@@ -838,7 +839,7 @@ export const RepositoryPanelProvider: React.FC<
               }
 
               // Unknown message type
-              console.warn('[RepositoryPanelProvider] Received unknown message type:', data?.type || data);
+              console.warn('[RepositoryPanelProvider] Received unknown message type:', message?.type || message);
             } catch (error) {
               console.error(
                 '[RepositoryPanelProvider] Error processing telemetry message:',
@@ -862,6 +863,7 @@ export const RepositoryPanelProvider: React.FC<
 
         // Send ready ping to server after a short delay to ensure subscription is set up
         setTimeout(() => {
+          if (!windowId || !sourceUrl) return;
           console.info('[RepositoryPanelProvider] 📤 Sending RENDERER_READY ping to server');
           const sent = window.mainProcess.otelCollector.sendOtelMessage(windowId, sourceUrl, {
             type: 'RENDERER_READY',

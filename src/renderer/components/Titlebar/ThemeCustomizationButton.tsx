@@ -7,7 +7,7 @@ import { ThemeCustomizationPanel } from '../../principal-window/components/theme
 export const ThemeCustomizationButton: React.FC = () => {
   const [showCustomizationPanel, setShowCustomizationPanel] = useState(false);
   const [currentTheme, setCurrentTheme] = useState<string>('terminal');
-  const { theme, colorMode } = useTheme();
+  const { theme, mode } = useTheme();
 
   useEffect(() => {
     console.log('showCustomizationPanel changed to:', showCustomizationPanel);
@@ -43,8 +43,8 @@ export const ThemeCustomizationButton: React.FC = () => {
   }, []);
 
   const accentColor =
-    colorMode === 'dark'
-      ? theme.colors.modes?.dark?.accent || theme.colors.accent
+    mode === 'dark'
+      ? theme.modes?.dark?.accent || theme.colors.accent
       : theme.colors.accent;
 
   return (
@@ -80,7 +80,7 @@ export const ThemeCustomizationButton: React.FC = () => {
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor =
-              theme.colors.hover || 'rgba(255, 255, 255, 0.1)';
+              theme.colors.backgroundHover || 'rgba(255, 255, 255, 0.1)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = 'transparent';

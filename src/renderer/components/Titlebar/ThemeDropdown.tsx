@@ -9,7 +9,7 @@ export const ThemeDropdown: React.FC = () => {
   const [selectedTheme, setSelectedTheme] = useState<string>('terminal');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { theme, colorMode } = useTheme();
+  const { theme, mode } = useTheme();
   const availableThemes = getThemeNames();
 
   useEffect(() => {
@@ -57,14 +57,14 @@ export const ThemeDropdown: React.FC = () => {
   };
 
   const backgroundColor =
-    colorMode === 'dark'
-      ? theme.colors.modes?.dark?.backgroundSecondary ||
+    mode === 'dark'
+      ? theme.modes?.dark?.backgroundSecondary ||
         theme.colors.backgroundSecondary
       : theme.colors.backgroundSecondary;
 
   const accentColor =
-    colorMode === 'dark'
-      ? theme.colors.modes?.dark?.accent || theme.colors.accent
+    mode === 'dark'
+      ? theme.modes?.dark?.accent || theme.colors.accent
       : theme.colors.accent;
 
   return (
@@ -103,7 +103,7 @@ export const ThemeDropdown: React.FC = () => {
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.backgroundColor =
-            theme.colors.hover || 'rgba(255, 255, 255, 0.1)';
+            theme.colors.backgroundHover || 'rgba(255, 255, 255, 0.1)';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.backgroundColor = 'transparent';
@@ -142,7 +142,7 @@ export const ThemeDropdown: React.FC = () => {
                   width: '100%',
                   padding: '10px 16px',
                   backgroundColor: isSelected
-                    ? theme.colors.hover || 'rgba(255, 255, 255, 0.1)'
+                    ? theme.colors.backgroundHover || 'rgba(255, 255, 255, 0.1)'
                     : 'transparent',
                   border: 'none',
                   color: isSelected ? accentColor : theme.colors.text,
@@ -159,7 +159,7 @@ export const ThemeDropdown: React.FC = () => {
                 onMouseEnter={(e) => {
                   if (!isSelected) {
                     e.currentTarget.style.backgroundColor =
-                      theme.colors.hover || 'rgba(255, 255, 255, 0.05)';
+                      theme.colors.backgroundHover || 'rgba(255, 255, 255, 0.05)';
                   }
                 }}
                 onMouseLeave={(e) => {

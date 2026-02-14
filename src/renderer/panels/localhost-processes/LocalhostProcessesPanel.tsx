@@ -447,7 +447,7 @@ export const LocalhostProcessesPanel: React.FC<PanelComponentProps> = ({
                         alignItems: 'center',
                         color: killingPids.has(server.pid)
                           ? theme.colors.textTertiary
-                          : theme.colors.danger,
+                          : theme.colors.error,
                         opacity: killingPids.has(server.pid) ? 0.5 : 1,
                       }}
                       title={`Kill server (PID: ${server.pid})`}

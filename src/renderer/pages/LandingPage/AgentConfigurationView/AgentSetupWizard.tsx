@@ -51,6 +51,7 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
   const { theme } = useTheme();
   const [isConfiguringHooks, setIsConfiguringHooks] = useState(false);
   const [isTogglingMCP, setIsTogglingMCP] = useState(false);
+  const [isInstallingAgent, setIsInstallingAgent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [installProgress, setInstallProgress] =
     useState<InstallProgress | null>(null);

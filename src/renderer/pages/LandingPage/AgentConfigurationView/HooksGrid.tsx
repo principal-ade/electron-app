@@ -34,7 +34,6 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
   agentType,
   color,
   onHooksChange,
-  _showAddFormRef,
   layout = 'grid',
 }) => {
   const { theme } = useTheme();

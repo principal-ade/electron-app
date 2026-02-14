@@ -254,7 +254,7 @@ export class GitSyncConnectionManager extends EventEmitter {
     // Disconnect all connections when auth is cleared
     this.disconnectAll();
 
-    this.emit('auth-changed', false, null);
+    this.emit('auth-changed', false, undefined);
   }
 
   /**

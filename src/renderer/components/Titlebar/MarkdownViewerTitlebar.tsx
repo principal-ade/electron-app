@@ -16,7 +16,6 @@ import { TitlebarButton } from './TitlebarButton';
 export interface MarkdownViewerTitlebarProps {
   fileName?: string;
   filePath?: string;
-  projectName?: string;
   fontSizeScale?: number;
   viewMode?: 'single' | 'book';
   onEdit?: () => void;
@@ -30,7 +29,6 @@ export interface MarkdownViewerTitlebarProps {
 export const MarkdownViewerTitlebar: React.FC<MarkdownViewerTitlebarProps> = ({
   fileName,
   filePath,
-  _projectName,
   fontSizeScale = 1.0,
   viewMode = 'book',
   onEdit,

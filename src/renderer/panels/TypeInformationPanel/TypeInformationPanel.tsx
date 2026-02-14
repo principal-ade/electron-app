@@ -29,7 +29,7 @@ interface ExtractedType {
 export const TypeInformationPanel: React.FC<TypeInformationPanelProps> = ({
   context,
   actions,
-  _events,
+  events,
 }) => {
   const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');

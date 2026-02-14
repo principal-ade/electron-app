@@ -86,13 +86,10 @@ export const MarkdownDocumentViewer: React.FC<MarkdownDocumentViewerProps> = ({
       <div style={{ position: 'relative', height: '100%', width: '100%' }}>
         <ThemedDocumentView
           content={content}
-          showSegmented={showSegmented}
           theme={theme}
           fontSizeScale={fontSizeScale}
           onCheckboxChange={onCheckboxChange}
           slideIdPrefix="repository-doc"
-          showSectionHeaders={showSegmented}
-          showSeparators={showSegmented}
         />
         {isEmpty && <MarkdownEmptyOverlay theme={theme} />}
       </div>

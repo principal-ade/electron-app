@@ -5,7 +5,7 @@
  * Used by LibraryLoader to parse library.yaml files in the renderer process.
  */
 
-import type { FileSystemAdapter } from '@principal-ai/repository-abstraction';
+import type { FileSystemAdapter, FileStats } from '@principal-ai/repository-abstraction';
 import * as pathBrowserify from 'path-browserify';
 import { FileSystemService } from '../main-process-api/FileSystemService';
 
@@ -43,6 +43,24 @@ export class RendererFileSystemAdapter implements FileSystemAdapter {
     if (!result || !result.success) {
       throw new Error(`Failed to delete file: ${path}. ${result?.error || ''}`);
     }
+  }
+
+  async rename(from: string, to: string): Promise<void> {
+    // Note: There's currently no IPC handler for rename
+    // If needed in the future, add a handler in fileSystemHandlers.ts
+    throw new Error('rename is not implemented in renderer process. If needed, add IPC handler in main process.');
+  }
+
+  async stat(path: string): Promise<FileStats> {
+    const stats = await FileSystemService.getFileStats(path);
+    if (!stats) {
+      throw new Error(`Failed to get stats for path: ${path}`);
+    }
+    return {
+      mtime: new Date(stats.mtime),
+      isDirectory: stats.isDirectory,
+      size: stats.size,
+    };
   }
 
   // ============================================================================

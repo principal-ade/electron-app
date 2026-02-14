@@ -795,7 +795,6 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
               context={context}
               actions={actions}
               events={events}
-              defaultShowSearch
             />
           </div>
         ) : (
@@ -1562,7 +1561,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       >
         {/* Panel Icon Sidebar */}
         <PanelIconSidebar
-          currentPanelId={layout.left}
+          currentPanelId={typeof layout.left === 'string' ? layout.left : ''}
           onPanelChange={(panelId) => onLayoutChange({ ...layout, left: panelId })}
           theme={theme}
           collapsed={collapsed.left}

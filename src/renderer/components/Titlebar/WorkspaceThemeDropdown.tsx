@@ -20,7 +20,7 @@ export const WorkspaceThemeDropdown: React.FC<WorkspaceThemeDropdownProps> = ({
   );
   const [isDropdownOpen, setIsDropdownOpenInternal] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { theme, colorMode } = useTheme();
+  const { theme, mode } = useTheme();
   const availableThemes = getThemeNames();
 
   // Wrapper to notify parent of open state changes
@@ -76,14 +76,14 @@ export const WorkspaceThemeDropdown: React.FC<WorkspaceThemeDropdownProps> = ({
   };
 
   const backgroundColor =
-    colorMode === 'dark'
-      ? theme.colors.modes?.dark?.backgroundSecondary ||
+    mode === 'dark'
+      ? theme.modes?.dark?.backgroundSecondary ||
         theme.colors.backgroundSecondary
       : theme.colors.backgroundSecondary;
 
   const accentColor =
-    colorMode === 'dark'
-      ? theme.colors.modes?.dark?.accent || theme.colors.accent
+    mode === 'dark'
+      ? theme.modes?.dark?.accent || theme.colors.accent
       : theme.colors.accent;
 
   return (
@@ -121,7 +121,7 @@ export const WorkspaceThemeDropdown: React.FC<WorkspaceThemeDropdownProps> = ({
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.backgroundColor =
-            theme.colors.hover || 'rgba(255, 255, 255, 0.1)';
+            theme.colors.backgroundHover || 'rgba(255, 255, 255, 0.1)';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.backgroundColor = 'transparent';
@@ -161,7 +161,7 @@ export const WorkspaceThemeDropdown: React.FC<WorkspaceThemeDropdownProps> = ({
                   width: '100%',
                   padding: '10px 16px',
                   backgroundColor: isSelected
-                    ? theme.colors.hover || 'rgba(255, 255, 255, 0.1)'
+                    ? theme.colors.backgroundHover || 'rgba(255, 255, 255, 0.1)'
                     : 'transparent',
                   border: 'none',
                   color: isSelected ? accentColor : theme.colors.text,
@@ -178,7 +178,7 @@ export const WorkspaceThemeDropdown: React.FC<WorkspaceThemeDropdownProps> = ({
                 onMouseEnter={(e) => {
                   if (!isSelected) {
                     e.currentTarget.style.backgroundColor =
-                      theme.colors.hover || 'rgba(255, 255, 255, 0.05)';
+                      theme.colors.backgroundHover || 'rgba(255, 255, 255, 0.05)';
                   }
                 }}
                 onMouseLeave={(e) => {

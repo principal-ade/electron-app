@@ -34,6 +34,7 @@ import {
 } from '../main-process-api/LocalhostDetectionService';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { FileTree } from '@principal-ai/repository-abstraction';
+import type { TerminalSessionInfo } from '@industry-theme/xterm-terminal-panel';
 import { minimatch } from 'minimatch';
 
 // Extend PanelActions with terminal and workspace-specific actions
@@ -108,7 +109,7 @@ interface ExtendedPanelActions extends PanelActions {
   /**
    * List all terminal sessions.
    */
-  listTerminalSessions?: () => Promise<TerminalInfo[]>;
+  listTerminalSessions?: () => Promise<TerminalSessionInfo[]>;
   removeRepositoryFromWorkspace?: (
     repositoryId: string,
     workspaceId: string,

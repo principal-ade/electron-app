@@ -170,7 +170,6 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
         <MarkdownViewerTitlebar
           filePath={filePath}
           fileName={filePath.split('/').pop()}
-          projectName={projectName}
           fontSizeScale={fontSizeScale}
           viewMode={viewMode}
           onFontSizeIncrease={handleFontSizeIncrease}
@@ -204,7 +203,6 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
         <MarkdownViewerTitlebar
           filePath={filePath}
           fileName={filePath.split('/').pop()}
-          projectName={projectName}
           fontSizeScale={fontSizeScale}
           viewMode={viewMode}
           onFontSizeIncrease={handleFontSizeIncrease}
@@ -240,7 +238,6 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
       <MarkdownViewerTitlebar
         filePath={filePath}
         fileName={filePath.split('/').pop()}
-        projectName={projectName}
         fontSizeScale={fontSizeScale}
         onFontSizeIncrease={handleFontSizeIncrease}
         onFontSizeDecrease={handleFontSizeDecrease}
