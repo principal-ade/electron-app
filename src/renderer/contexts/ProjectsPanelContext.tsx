@@ -77,6 +77,12 @@ interface ProjectsPanelActions
     collectionId: string,
     repositoryId: string,
   ) => Promise<void>;
+  // Add a repository to a collection (for drag-drop integration)
+  addRepositoryToCollection?: (
+    collectionId: string,
+    repositoryPath: string,
+    repositoryMetadata: any,
+  ) => Promise<void>;
   // Track a discovered repository (add to Alexandria)
   trackRepository?: (name: string, path: string) => Promise<void>;
   // Select a repository without opening a new window (for ProjectInfoPanel)
@@ -1641,6 +1647,50 @@ export const ProjectsPanelProvider: React.FC<
         } catch (error) {
           console.error(
             '[ProjectsPanelProvider] Failed to remove repository from collection:',
+            error,
+          );
+          throw error;
+        } finally {
+          setCollectionsSaving(false);
+        }
+      },
+
+      addRepositoryToCollection: async (
+        collectionId: string,
+        repositoryPath: string,
+        repositoryMetadata: any,
+      ) => {
+        console.info(
+          '[ProjectsPanelProvider] Adding repository to collection:',
+          repositoryPath,
+          collectionId,
+          repositoryMetadata,
+        );
+        setCollectionsSaving(true);
+        try {
+          // Determine repository ID from metadata
+          // Format: "owner/repo" or just "name"
+          const repositoryId =
+            repositoryMetadata?.github?.owner && repositoryMetadata?.name
+              ? `${repositoryMetadata.github.owner}/${repositoryMetadata.name}`
+              : repositoryMetadata?.name || repositoryPath;
+
+          await CollectionsService.addRepository({
+            collectionId,
+            repositoryId,
+            metadata: repositoryMetadata,
+          });
+          await fetchCollections();
+
+          events.emit({
+            type: 'industry-theme.user-collections:collection:repository-added',
+            source: 'worlds-view',
+            timestamp: Date.now(),
+            payload: { collectionId, repositoryId, repositoryPath },
+          });
+        } catch (error) {
+          console.error(
+            '[ProjectsPanelProvider] Failed to add repository to collection:',
             error,
           );
           throw error;

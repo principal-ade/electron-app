@@ -2,9 +2,9 @@ import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ConfigurablePanelLayout } from '@principal-ade/panels';
 import '@principal-ade/panels/panels.css';
-import { UserCollectionsPanel } from '@industry-theme/alexandria-panels';
+import { UserCollectionsPanel, LocalProjectsPanel } from '@industry-theme/alexandria-panels';
 import { CollectionMapPanel } from '@industry-theme/repository-composition-panels';
-import { Map, FolderOpen } from 'lucide-react';
+import { Map, FolderOpen, Folder } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuthState';
 import {
   ProjectsPanelProvider,
@@ -98,22 +98,16 @@ const WorldsViewContent: React.FC = () => {
         ),
       },
       {
-        id: 'collection-info',
-        label: 'Collection Info',
-        icon: <Map size={16} />,
+        id: 'local-projects',
+        label: 'Local Projects',
+        icon: <Folder size={16} />,
         content: (
-          <div
-            style={{
-              padding: '24px',
-              color: '#666',
-              textAlign: 'center',
-            }}
-          >
-            <Map size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
-            <div style={{ fontSize: '14px', fontWeight: 500 }}>
-              Select a collection to view details
-            </div>
-          </div>
+          <LocalProjectsPanel
+            context={context}
+            actions={actions}
+            events={events}
+            defaultShowSearch
+          />
         ),
       },
     ],
@@ -124,7 +118,7 @@ const WorldsViewContent: React.FC = () => {
     return {
       left: 'collections',
       middle: 'overworld-map',
-      right: 'collection-info',
+      right: 'local-projects',
     };
   }, []);
 
