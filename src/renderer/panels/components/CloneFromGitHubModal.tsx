@@ -360,7 +360,7 @@ export const CloneFromGitHubModal: React.FC<CloneFromGitHubModalProps> = ({
 
   const handleSelectDirectory = async () => {
     try {
-      const result = await window.mainProcess.dialog.showOpenDialog({
+      const result = await window.mainProcess.system.openDialog({
         properties: ['openDirectory', 'createDirectory'],
         title: 'Select Clone Directory',
         defaultPath: workspace.suggestedClonePath || undefined,

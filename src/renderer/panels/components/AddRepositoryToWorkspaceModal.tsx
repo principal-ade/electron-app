@@ -399,8 +399,7 @@ export const AddRepositoryToWorkspaceModal: React.FC<
                             : theme.colors.primary,
                           color: isAdding
                             ? theme.colors.textSecondary
-                            : theme.colors.buttonText ||
-                              theme.colors.background,
+                            : theme.colors.background,
                           border: 'none',
                           cursor: isAdding ? 'default' : 'pointer',
                           fontSize: '13px',

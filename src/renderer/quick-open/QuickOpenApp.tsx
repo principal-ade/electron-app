@@ -39,7 +39,7 @@ interface QuickOpenWindow extends Window {
 }
 
 // Cast window to QuickOpenWindow since we know electronAPI is always present
-const quickOpenWindow = window as QuickOpenWindow;
+const quickOpenWindow = window as unknown as QuickOpenWindow;
 
 const QuickOpenApp: React.FC = () => {
   const { theme } = useTheme();
