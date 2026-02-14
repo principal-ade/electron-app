@@ -1125,9 +1125,12 @@ export const ProjectsPanelProvider: React.FC<
       collectionsGitHubRepoExists,
       collectionsGitHubRepoUrl,
       selectedCollection,
-      selectedRepository,
-      gitStatusWithFiles,
-      gitStatusLoading,
+      // Note: selectedRepository, gitStatusWithFiles, and gitStatusLoading are
+      // intentionally NOT in dependencies to prevent unnecessary rerenders of all
+      // panels when only repository-specific state changes. The gitStatusWithFiles
+      // slice is only used by ProjectInfoPanel. The slice data/loading values are
+      // captured from state at the time panels read them, and the refresh function
+      // captures selectedRepository from closure at call time.
     ],
   );
 
@@ -1795,7 +1798,7 @@ export const ProjectsPanelProvider: React.FC<
       selectedCollection,
       setSelectedCollection,
     }),
-    [slices, selectedWorkspace, selectedCollection, selectedRepository],
+    [slices, selectedWorkspace, selectedCollection],
   );
 
   // Combine into provider value

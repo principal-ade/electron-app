@@ -7,9 +7,9 @@ import { CollectionMapPanel } from '@industry-theme/repository-composition-panel
 import { Map, FolderOpen, Folder } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuthState';
 import {
-  ProjectsPanelProvider,
-  useProjectsPanelProvider,
-} from '../../../contexts/ProjectsPanelContext';
+  WorldsViewPanelProvider,
+  useWorldsViewPanelProvider,
+} from '../../../contexts/WorldsViewPanelContext';
 import { usePanelPersistence } from '../../../hooks/usePanelPersistence';
 import { WorldsViewHeader } from './WorldsViewHeader';
 import { CreateCollectionModal } from '../../../components/CreateCollectionModal';
@@ -19,7 +19,7 @@ import { CreateCollectionModal } from '../../../components/CreateCollectionModal
  */
 const WorldsViewContent: React.FC = () => {
   const { theme } = useTheme();
-  const { context, actions, events } = useProjectsPanelProvider();
+  const { context, actions, events } = useWorldsViewPanelProvider();
   const { isAuthenticated } = useAuth();
 
   // State for create collection modal
@@ -177,8 +177,8 @@ const WorldsViewContent: React.FC = () => {
  */
 export const WorldsView: React.FC = () => {
   return (
-    <ProjectsPanelProvider>
+    <WorldsViewPanelProvider>
       <WorldsViewContent />
-    </ProjectsPanelProvider>
+    </WorldsViewPanelProvider>
   );
 };
