@@ -506,7 +506,6 @@ const ProjectsViewContent: React.FC = () => {
         <ProjectsViewHeader
           leftPanelView={leftPanelView}
           onLeftPanelViewChange={setLeftPanelView}
-          isAuthenticated={isAuthenticated}
           onCreateRepository={handleCreateRepository}
         />
 

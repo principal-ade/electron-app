@@ -6,14 +6,12 @@ import type { LeftPanelView } from './ProjectsView';
 interface ProjectsViewHeaderProps {
   leftPanelView: LeftPanelView;
   onLeftPanelViewChange: (view: LeftPanelView) => void;
-  isAuthenticated: boolean;
   onCreateRepository?: () => void;
 }
 
 export const ProjectsViewHeader: React.FC<ProjectsViewHeaderProps> = ({
   leftPanelView,
   onLeftPanelViewChange,
-  _isAuthenticated,
   onCreateRepository,
 }) => {
   const { theme } = useTheme();
