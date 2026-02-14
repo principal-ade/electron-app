@@ -115,12 +115,12 @@ export const WorldsViewPanelProvider: React.FC<
     const fetchLocalRepositories = async () => {
       try {
         setLocalRepositoriesLoading(true);
-        const repos = await AlexandriaService.listLocalRepositories();
+        const repos = await AlexandriaService.getRepositories();
         setLocalRepositories(repos);
 
-        // Also fetch discovered repositories
-        const discovered = await AlexandriaService.discoverRepositories();
-        setDiscoveredRepositories(discovered);
+        // Note: Discovered repositories would require GitService and basePath
+        // For now, WorldsView doesn't support discovered repos
+        setDiscoveredRepositories([]);
       } catch (error) {
         console.error(
           '[WorldsViewPanelProvider] Failed to fetch local repositories:',
@@ -196,9 +196,9 @@ export const WorldsViewPanelProvider: React.FC<
   }, [events]);
 
   // Build slices map
-  const slices = useMemo(
+  const slices = useMemo<Map<string, DataSlice>>(
     () =>
-      new Map<string, DataSlice>([
+      new Map([
         [
           'alexandriaRepositories',
           {
@@ -214,10 +214,10 @@ export const WorldsViewPanelProvider: React.FC<
             refresh: async () => {
               setLocalRepositoriesLoading(true);
               try {
-                const repos = await AlexandriaService.listLocalRepositories();
+                const repos = await AlexandriaService.getRepositories();
                 setLocalRepositories(repos);
-                const discovered = await AlexandriaService.discoverRepositories();
-                setDiscoveredRepositories(discovered);
+                // Note: Discovered repositories would require GitService and basePath
+                setDiscoveredRepositories([]);
               } catch (error) {
                 console.error(
                   '[WorldsViewPanelProvider] Failed to refresh local repositories:',
@@ -244,7 +244,7 @@ export const WorldsViewPanelProvider: React.FC<
               gitHubRepoUrl: collectionsGitHubRepoUrl,
             } as UserCollectionsSlice,
             loading: collectionsLoading,
-            error: (collectionsError ?? null) as string | null,
+            error: null,
             refresh: fetchCollections,
           },
         ],
@@ -267,7 +267,7 @@ export const WorldsViewPanelProvider: React.FC<
             refresh: fetchCollections,
           },
         ],
-      ]) as Map<string, DataSlice>,
+      ]),
     [
       localRepositories,
       localRepositoriesLoading,
@@ -295,13 +295,13 @@ export const WorldsViewPanelProvider: React.FC<
         console.info('[WorldsViewPanelProvider] Creating collection:', name);
         setCollectionsSaving(true);
         try {
-          const collection = await CollectionsService.createCollection({
+          const result = await CollectionsService.createCollection({
             name,
             description,
             icon,
           });
           await fetchCollections();
-          return collection;
+          return result.success && result.data ? result.data : null;
         } catch (error) {
           console.error(
             '[WorldsViewPanelProvider] Failed to create collection:',
@@ -492,29 +492,8 @@ export const WorldsViewPanelProvider: React.FC<
         }
       },
 
-      disableGitHubSync: async () => {
-        console.info('[WorldsViewPanelProvider] Disabling GitHub sync');
-        setCollectionsSaving(true);
-        try {
-          await CollectionsService.disableGitHubSync();
-          await fetchCollections();
-
-          events.emit({
-            type: 'industry-theme.user-collections:github-sync-disabled',
-            source: 'worlds-view',
-            timestamp: Date.now(),
-            payload: {},
-          });
-        } catch (error) {
-          console.error(
-            '[WorldsViewPanelProvider] Failed to disable GitHub sync:',
-            error,
-          );
-          throw error;
-        } finally {
-          setCollectionsSaving(false);
-        }
-      },
+      // Note: disableGitHubSync is not available in CollectionsService
+      // Users can manually delete the GitHub repo if needed
 
       syncCollectionsToGitHub: async () => {
         console.info('[WorldsViewPanelProvider] Syncing collections to GitHub');
@@ -548,12 +527,10 @@ export const WorldsViewPanelProvider: React.FC<
         );
 
         try {
-          await WindowService.openDevWorkspace(entry.path);
+          await WindowService.openDevWorkspace({ alexandriaEntry: entry });
 
           // Update lastOpenedAt timestamp
-          await AlexandriaService.updateRepository(entry.name, {
-            lastOpenedAt: new Date().toISOString(),
-          });
+          await AlexandriaService.updateLastOpened(entry.name);
 
           // Refresh repositories to update the list
           await slices.get('alexandriaRepositories')?.refresh();
@@ -628,7 +605,8 @@ export const WorldsViewPanelProvider: React.FC<
       // Utility actions
       copyToClipboard: async (text: string) => {
         try {
-          await FileSystemService.copyToClipboard(text);
+          // Use browser clipboard API instead
+          await navigator.clipboard.writeText(text);
         } catch (error) {
           console.error(
             '[WorldsViewPanelProvider] Failed to copy to clipboard:',
@@ -652,6 +630,9 @@ export const WorldsViewPanelProvider: React.FC<
   const context = useMemo<WorldsViewPanelContextValue>(
     () => ({
       scope: {},
+      currentScope: {
+        type: 'workspace' as const,
+      },
       slices,
       adapters: {},
       getSlice: <T = unknown,>(name: string): DataSlice<T> | undefined => {
