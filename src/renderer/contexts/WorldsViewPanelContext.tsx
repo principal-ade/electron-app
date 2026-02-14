@@ -532,8 +532,8 @@ export const WorldsViewPanelProvider: React.FC<
           // Update lastOpenedAt timestamp
           await AlexandriaService.updateLastOpened(entry.name);
 
-          // Refresh repositories to update the list
-          await slices.get('alexandriaRepositories')?.refresh();
+          // Note: We don't refresh repositories here to avoid unnecessary rerenders
+          // The lastOpenedAt update is just metadata and doesn't need immediate UI refresh
 
           events.emit({
             type: 'repository:opened',
