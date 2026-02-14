@@ -26,6 +26,7 @@ export type InteractiveShellNavigationView =
   | 'monitoring'
   | 'auth'
   | 'workspaces'
+  | 'worlds'
   | 'network'
   | 'processes'
   | 'connections'

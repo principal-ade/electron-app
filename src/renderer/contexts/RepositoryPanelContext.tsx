@@ -102,6 +102,7 @@ export const RepositoryPanelProvider: React.FC<
   // Track file tree for the current repository
   const [fileTreeData, setFileTreeData] = useState<FileTree | null>(null);
   const [fileTreeLoading, setFileTreeLoading] = useState(false);
+  const [fileTreeVersion, setFileTreeVersion] = useState(0);
 
   // Track packages data for the current repository
   const [packagesData, setPackagesData] = useState<PackagesSliceData | null>(

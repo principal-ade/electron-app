@@ -9,6 +9,7 @@ import {
   Globe,
   Radio,
   Zap,
+  Map,
 } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuthState';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
@@ -123,6 +124,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
 
   const navItems: NavItem[] = [
     { id: 'workspaces', icon: <LayoutGrid size={20} />, label: 'Projects' },
+    { id: 'worlds', icon: <Map size={20} />, label: 'Worlds' },
     { id: 'skills', icon: <Zap size={20} />, label: 'Skills' },
     { id: 'network', icon: <Users size={20} />, label: 'Network' },
     { id: 'processes', icon: <Globe size={20} />, label: 'Processes' },
