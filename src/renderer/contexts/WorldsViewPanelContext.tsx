@@ -140,19 +140,30 @@ export const WorldsViewPanelProvider: React.FC<
       setCollectionsLoading(true);
       setCollectionsError(null);
 
-      const [collectionsData, membershipsData, repoStatus] = await Promise.all([
-        CollectionsService.listCollections(),
-        CollectionsService.listMemberships(),
-        CollectionsService.getGitHubRepoStatus(),
-      ]);
+      // Check if GitHub repo exists first
+      const repoStatusResult = await CollectionsService.checkGitHubRepo();
+      if (repoStatusResult.success && repoStatusResult.data) {
+        setCollectionsGitHubRepoExists(repoStatusResult.data.exists);
+        setCollectionsGitHubRepoUrl(repoStatusResult.data.repoUrl);
+      }
 
-      setCollections(collectionsData);
-      setCollectionMemberships(membershipsData);
-      setCollectionsGitHubRepoExists(repoStatus.exists);
-      setCollectionsGitHubRepoUrl(repoStatus.url);
+      // Load collections
+      const collectionsResult = await CollectionsService.getCollections();
+      if (collectionsResult.success && collectionsResult.data) {
+        setCollections(collectionsResult.data.collections as Collection[]);
+        setCollectionMemberships(collectionsResult.data.memberships);
+      } else {
+        // No collections yet - start empty
+        setCollections([]);
+        setCollectionMemberships([]);
+      }
     } catch (error) {
       console.error('[WorldsViewPanelProvider] Failed to fetch collections:', error);
-      setCollectionsError((error as Error).message);
+      setCollectionsError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to load collections.',
+      );
     } finally {
       setCollectionsLoading(false);
     }
@@ -390,10 +401,10 @@ export const WorldsViewPanelProvider: React.FC<
         );
         setCollectionsSaving(true);
         try {
-          await CollectionsService.removeRepository({
+          await CollectionsService.removeRepository(
             collectionId,
             repositoryId,
-          });
+          );
           await fetchCollections();
 
           events.emit({
