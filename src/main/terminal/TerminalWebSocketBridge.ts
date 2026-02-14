@@ -14,6 +14,7 @@ import { TerminalSessionManager } from './TerminalSessionManager';
 import { TerminalOwnershipManager } from './TerminalOwnershipManager';
 import type {
   TerminalOwner,
+  TerminalSession,
 } from './types';
 import type {
   TerminalEvent,

@@ -252,12 +252,14 @@ export class PackageManagerService {
         try {
           const packageInfo = await this.fetchPackageInfo(pkg.name);
           const cleanVersion = pkg.currentVersion.replace(/^[\^~]/, '');
+          const latestVersion = packageInfo['dist-tags']?.latest;
           const versionData =
             packageInfo.versions?.[cleanVersion] ||
-            packageInfo.versions?.[packageInfo['dist-tags']?.latest];
+            (latestVersion ? packageInfo.versions?.[latestVersion] : undefined);
 
-          const licenseString =
-            versionData?.license || packageInfo.license || 'Unknown';
+          const licenseString = String(
+            versionData?.license || packageInfo.license || 'Unknown'
+          );
           const licenseType = commonLicenseTypes[licenseString] || 'unknown';
 
           return {

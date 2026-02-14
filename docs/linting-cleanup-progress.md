@@ -27,6 +27,16 @@ npm run lint 2>&1 | grep -E "^/Users/griever/Developer/desktop-app/electron-app/
 npm run typecheck 2>&1 | grep "error TS" | sed 's|.*src/||' | cut -d'/' -f1 | sort | uniq -c | sort -nr
 ```
 
+### Issues by Renderer Subdirectory
+
+```bash
+# ESLint issues by renderer subdirectory
+npm run lint 2>&1 | grep "src/renderer/" | sed 's/(.*//' | awk -F: '{print $1}' | sed 's|.*src/renderer/||' | cut -d'/' -f1 | sort | uniq -c | sort -nr
+
+# TypeScript errors by renderer subdirectory
+npm run typecheck 2>&1 | grep "src/renderer/" | sed 's/(.*//' | awk -F: '{print $1}' | sed 's|.*src/renderer/||' | cut -d'/' -f1 | sort | uniq -c | sort -nr
+```
+
 ## Current Status (Updated - 2026-02-13)
 
 ### Overall Issues
@@ -90,6 +100,29 @@ npm run typecheck 2>&1 | grep "error TS" | sed 's|.*src/||' | cut -d'/' -f1 | so
 | types                      | ✅ Clean | - |
 | GlobalFeedbackProvider.tsx | ✅ Clean | - |
 | quick-open                 | ✅ Clean | - |
+
+### Renderer Subdirectories - TypeScript Errors
+
+| Subdirectory               | Errors | Status |
+| -------------------------- | ------ | ------ |
+| dev-workspace              | 45     | ⚠️ Needs Attention |
+| principal-window           | 38     | ⚠️ Needs Attention |
+| components                 | 22     | ⚠️ Needs Attention |
+| utils                      | 18     | ⚠️ Needs Attention |
+| services                   | 18     | ⚠️ Needs Attention |
+| extension-window           | 18     | ⚠️ Needs Attention |
+| panels                     | 14     | ⚠️ Needs Attention |
+| contexts                   | 14     | ⚠️ Needs Attention |
+| pages                      | 9      | ⚠️ Needs Attention |
+| alexandria-workspace       | 5      | ⚠️ Needs Attention |
+| main-process-api           | 2      | ⚠️ Needs Attention |
+| tipc                       | 1      | ⚠️ Needs Attention |
+| quick-open                 | 1      | ⚠️ Needs Attention |
+| hooks                      | ✅ Clean | ✅ Clean |
+| telemetry                  | ✅ Clean | ✅ Clean |
+| adapters                   | ✅ Clean | ✅ Clean |
+| types                      | ✅ Clean | ✅ Clean |
+| GlobalFeedbackProvider.tsx | ✅ Clean | ✅ Clean |
 
 ## Priority Areas for Cleanup
 

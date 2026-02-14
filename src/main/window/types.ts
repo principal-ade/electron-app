@@ -79,7 +79,7 @@ export const specialWindows = new Map<string, number>();
  */
 export let mainWindowId: number | null = null;
 
-export function setMainWindowId(id: number) {
+export function setMainWindowId(id: number | null) {
   mainWindowId = id;
 }
 

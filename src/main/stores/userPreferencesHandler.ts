@@ -62,7 +62,7 @@ export class UserPreferencesHandler {
     updates: Partial<UserPreferences>,
   ): Promise<void> {
     const current = await this.getOrCreatePreferences();
-    const updated = this.deepMerge(current, updates) as UserPreferences;
+    const updated = this.deepMerge(current, updates);
     await this.typedStore.set(
       USER_PREFERENCES_KEY,
       updated,
@@ -70,16 +70,16 @@ export class UserPreferencesHandler {
     );
   }
 
-  private deepMerge<T extends Record<string, unknown>>(target: T, source: Partial<T>): T {
-    const output = { ...target };
+  private deepMerge<T>(target: T, source: Partial<T>): T {
+    const output: any = { ...target };
 
     if (this.isObject(target) && this.isObject(source)) {
       Object.keys(source).forEach((key) => {
-        const sourceValue = source[key as keyof typeof source];
-        const targetValue = target[key as keyof typeof target];
+        const sourceValue = (source as any)[key];
+        const targetValue = (target as any)[key];
 
         if (this.isObject(sourceValue)) {
-          if (!(key in target)) {
+          if (!(key in (target as object))) {
             output[key] = sourceValue;
           } else {
             output[key] = this.deepMerge(targetValue, sourceValue);
@@ -90,7 +90,7 @@ export class UserPreferencesHandler {
       });
     }
 
-    return output;
+    return output as T;
   }
 
   private isObject(item: unknown): item is Record<string, unknown> {

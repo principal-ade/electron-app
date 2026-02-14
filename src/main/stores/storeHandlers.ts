@@ -16,6 +16,7 @@ import fs from 'fs';
 import { app } from 'electron';
 import { NamespaceOperations } from '../storage-providers/typed-storage-interface';
 import { TypedMultiStoreWrapper } from '../storage-providers/typed-multistore-wrapper';
+import { NamespaceData } from '../storage-providers/typed-namespaces';
 
 /**
  * Register IPC handlers for Store operations
@@ -48,7 +49,7 @@ export function registerStoreHandlers(): void {
     ) => {
       try {
         const typedNamespace = await verifyNamespace(namespace);
-        const result = await typedNamespace.get(key, defaultValue);
+        const result = await typedNamespace.get(key, defaultValue as NamespaceData<typeof namespace> | undefined);
         if (!result) {
           throw new Error(`Key ${key} not found in namespace ${namespace}`);
         }
@@ -67,7 +68,7 @@ export function registerStoreHandlers(): void {
         const typedManager = await getTypedStorageManagerInstance();
         const result = await typedManager.set(
           key,
-          value,
+          value as NamespaceData<typeof namespace>,
           namespace as StorageNamespaces,
         );
         if (!result) {

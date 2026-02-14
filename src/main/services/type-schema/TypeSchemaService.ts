@@ -93,9 +93,16 @@ export class TypeSchemaService {
             );
 
             // If generating for all types (*), extract all defined types from schema
-            if (typeName === '*' && schema.definitions) {
+            if (
+              typeName === '*' &&
+              typeof schema === 'object' &&
+              schema !== null &&
+              'definitions' in schema &&
+              schema.definitions &&
+              typeof schema.definitions === 'object'
+            ) {
               for (const [definedType, definition] of Object.entries(
-                schema.definitions,
+                schema.definitions as Record<string, unknown>,
               )) {
                 schemas.push({
                   fileName: file,

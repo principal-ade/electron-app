@@ -3,10 +3,7 @@ import { UnifiedSecureStorage, TOKEN_KEYS } from './UnifiedSecureStorage';
 import { SecureTokenAPIEvent } from '../../shared/main-process-api-interfaces/SecureTokenAPI';
 import type { AuthUser } from '../../shared/main-process-api-interfaces/AuthenticationAPI';
 import { authService } from './AuthService';
-
-// Named types for better readability of dynamic data
-/** Dynamic metadata attached to stored tokens (e.g., user info, timestamps) */
-type TokenMetadata = unknown;
+import type { TokenMetadata } from './storage-domains/TokenDomain';
 
 /**
  * IPC handlers for secure token storage

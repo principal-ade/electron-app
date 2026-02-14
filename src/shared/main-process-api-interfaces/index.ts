@@ -59,7 +59,6 @@ export type {
   AuthState,
   TokenResult,
   TokenWithMetadata,
-  TokenMigrationEntry,
 } from './AuthenticationAPI';
 export interface MainProcessAPI {
   actRunner: ActRunnerAPI;
