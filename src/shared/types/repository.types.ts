@@ -80,4 +80,7 @@ export interface Repository {
   addedAt: number; // When first added to the system
   description?: string; // Repository description
   avatarUrl?: string; // Owner's avatar URL (from GitHub)
+  metadata?: {
+    defaultBranch?: string; // Default branch from remote
+  };
 }

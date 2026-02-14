@@ -113,7 +113,6 @@ export class EventHighlightService extends EventEmitter {
         type: 'file' as const,
         renderStrategy: 'fill' as const,
       })),
-      timestamp: event.timestamp,
     };
   }
 

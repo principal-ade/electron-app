@@ -550,7 +550,6 @@ export class WorkspaceLayoutService {
       await UserPreferencesService.updatePreferences({
         workspaceLayouts: {
           presets: {},
-          lastUsedWorkspace: {},
           builtInWorkspaceIds: [
             'project-management',
             'code-review',
