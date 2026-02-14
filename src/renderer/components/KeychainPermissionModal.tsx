@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { AuthenticationService } from '../main-process-api/AuthenticationService';
 
-const processName = window.electron?.process?.name || 'Electron App';
+const processName = window.appName || 'Electron App';
 
 interface KeychainPermissionModalProps {
   isOpen: boolean;

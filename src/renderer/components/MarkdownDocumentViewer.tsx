@@ -85,7 +85,7 @@ export const MarkdownDocumentViewer: React.FC<MarkdownDocumentViewerProps> = ({
     return (
       <div style={{ position: 'relative', height: '100%', width: '100%' }}>
         <ThemedDocumentView
-          content={slides}
+          content={content}
           showSegmented={showSegmented}
           theme={theme}
           fontSizeScale={fontSizeScale}
