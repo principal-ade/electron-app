@@ -56,6 +56,3 @@ export class EventEmitter {
 
 // Default export to match Node.js events module
 export default EventEmitter;
-
-// Named exports to match Node.js events module
-export { EventEmitter as EventEmitter };

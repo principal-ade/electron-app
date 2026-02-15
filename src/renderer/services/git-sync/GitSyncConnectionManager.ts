@@ -138,7 +138,7 @@ export class GitSyncConnectionManager extends EventEmitter {
   private setupIPCMessageForwarding() {
     // Listen for WebSocket messages from main process using GitSyncService
     const unsubscribe = GitSyncService.onMessage(
-      (connectionKey: string, message: Record<string, unknown>) => {
+      (connectionKey: string, message: unknown) => {
         const connection = this.connections.get(connectionKey);
         if (connection && connection.client) {
           // Forward message to the client's event handlers

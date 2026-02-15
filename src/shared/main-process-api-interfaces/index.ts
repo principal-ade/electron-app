@@ -44,6 +44,19 @@ import type { GitHubArtifactAPI } from './GitHubArtifactAPI';
 import type { RecentReposAPI } from './RecentReposAPI';
 import type { SkillLockAPI } from './SkillLockAPI';
 import type { OtelCollectorAPI } from './OtelCollectorAPI';
+import type { ExtensionAPI } from './ExtensionAPI';
+
+/**
+ * Terminal Bridge API Interface (Remote Terminal Viewer only)
+ * Used to connect the main process bridge to remote terminal sessions
+ */
+export interface TerminalBridgeAPI {
+  connectBridge: (args: {
+    token: string;
+    userId: string;
+    githubHandle: string;
+  }) => Promise<{ success: boolean; error?: string }>;
+}
 
 // Re-export for convenience
 export type {
@@ -108,6 +121,9 @@ export interface MainProcessAPI {
   githubArtifact: GitHubArtifactAPI;
   recentRepos: RecentReposAPI;
   skillLock: SkillLockAPI;
+  extension: ExtensionAPI;
+  /** Only available in Remote Terminal Viewer window */
+  terminalBridge?: TerminalBridgeAPI;
 }
 
 /**

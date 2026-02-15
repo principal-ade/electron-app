@@ -51,7 +51,7 @@ interface FileCityColorModesSliceData {
 
 // Extend PanelActions with file system actions
 // Note: Terminal actions have been moved to TerminalContext
-interface RepositoryPanelActions extends PanelActions {
+export interface RepositoryPanelActions extends PanelActions {
   /** Read file content - supports all file types (not just markdown) */
   readFile?: (filePath: string) => Promise<string>;
   writeFile?: (filePath: string, content: string) => Promise<void>;
@@ -1785,7 +1785,8 @@ export const RepositoryPanelProvider: React.FC<
   const currentScope = useMemo(
     () => ({
       type: 'repository' as const,
-      repository,
+      // Filter out null to match PanelContextValue type (repository is optional, not nullable)
+      ...(repository ? { repository } : {}),
     }),
     [repository],
   );

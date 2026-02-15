@@ -30,7 +30,7 @@ export const ExtensionWindowTitlebar: React.FC<
       showCustomizeButton={false}
     >
       <button
-        position="left"
+        data-position="left"
         onClick={onToggleSidebar}
         title={sidebarCollapsed ? 'Show Sidebar' : 'Hide Sidebar'}
         className="flex items-center justify-center w-8 h-8 rounded transition-colors duration-200 hover:bg-gray-700 text-gray-400 hover:text-white"
@@ -50,7 +50,7 @@ export const ExtensionWindowTitlebar: React.FC<
         )}
       </button>
       <div
-        position="center"
+        data-position="center"
         style={{
           fontSize: '11px',
           opacity: 0.5,

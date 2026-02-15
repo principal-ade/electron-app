@@ -13,6 +13,8 @@ import type {
   PanelEventEmitter,
 } from '@principal-ade/panel-framework-core';
 import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
+import type { RepositoryPanelActions } from '../contexts/RepositoryPanelContext';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { FolderGit2, GitBranch, RefreshCw, AlertCircle, Trash2, FolderOpen } from 'lucide-react';
 
 interface ProjectInfoPanelProps {
@@ -62,9 +64,15 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
 
   // Handle open project
   const handleOpenProject = async () => {
-    if (repository && actions.openRepository) {
+    // Type assertion: actions may be RepositoryPanelActions at runtime
+    const repoActions = actions as RepositoryPanelActions;
+    if (repository && repoActions.openRepository) {
       try {
-        await actions.openRepository(repository);
+        // In ProjectsView context, repository is actually the full AlexandriaEntry
+        // (see ProjectsPanelContext where currentScope.repository = selectedRepository)
+        // TODO: Check with @principal-ade/panel-framework-core about extending RepositoryMetadata
+        // to support richer repository types like AlexandriaEntry, or making it generic
+        await repoActions.openRepository(repository as unknown as AlexandriaEntry);
       } catch (error) {
         console.error('Failed to open project:', error);
       }

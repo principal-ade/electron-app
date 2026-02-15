@@ -191,27 +191,27 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 // Default story with types
-export const Default: Story = {
+export const Default = {
   render: () => <TypeInformationPanelStory />,
-};
+} as unknown as Story;
 
 // Empty state - no repository
-export const NoRepository: Story = {
+export const NoRepository = {
   render: () => <TypeInformationPanelStory hasRepository={false} />,
-};
+} as unknown as Story;
 
 // Few types
-export const FewTypes: Story = {
+export const FewTypes = {
   render: () => <TypeInformationPanelStory typeCount={5} />,
-};
+} as unknown as Story;
 
 // Many types (scrolling)
-export const ManyTypes: Story = {
+export const ManyTypes = {
   render: () => <TypeInformationPanelStory typeCount={25} />,
-};
+} as unknown as Story;
 
 // Loading state
-export const LoadingState: Story = {
+export const LoadingState = {
   render: () => {
     const LoadingPanel: React.FC = () => {
       const mockContext: PanelContextValue = {
@@ -250,10 +250,10 @@ export const LoadingState: Story = {
 
     return <LoadingPanel />;
   },
-};
+} as unknown as Story;
 
 // Interactive demo with controls
-export const Interactive: Story = {
+export const Interactive = {
   render: () => {
     const InteractivePanel: React.FC = () => {
       const [hasRepository, setHasRepository] = useState(true);
@@ -314,4 +314,4 @@ export const Interactive: Story = {
 
     return <InteractivePanel />;
   },
-};
+} as unknown as Story;

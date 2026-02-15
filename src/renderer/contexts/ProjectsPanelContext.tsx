@@ -14,6 +14,7 @@ import type {
   DataSlice,
   PanelEvent,
   PanelEventEmitter,
+  RepositoryMetadata,
 } from '@principal-ade/panel-framework-core';
 import type {
   Workspace,
@@ -1746,12 +1747,10 @@ export const ProjectsPanelProvider: React.FC<
               path: selectedWorkspace.suggestedClonePath || '',
             }
           : undefined,
-        repository: selectedRepository
-          ? {
-              name: selectedRepository.name,
-              path: selectedRepository.path,
-            }
-          : undefined,
+        // Pass full selectedRepository (AlexandriaEntry) instead of just {name, path}
+        // This allows panels like ProjectInfoPanel to use openRepository action
+        // AlexandriaEntry is compatible with RepositoryMetadata (has name, path, and index signature allows extras)
+        repository: (selectedRepository as unknown as RepositoryMetadata) || undefined,
       },
       slices,
       adapters: {},

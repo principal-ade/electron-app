@@ -14,7 +14,7 @@ import type {
 } from '@principal-ade/panel-framework-core';
 import { Search, FileType, Package, Loader2, RefreshCw, ChevronRight } from 'lucide-react';
 
-interface TypeInformationPanelProps {
+export interface TypeInformationPanelProps {
   context: PanelContextValue;
   actions: PanelActions;
   events: PanelEventEmitter;

@@ -240,9 +240,10 @@ export const PanelHarness: React.FC<PanelHarnessProps> = ({
         return;
       }
 
+      // Use the validated panel metadata from props instead of unvalidated bundle metadata
       setLoadedPanel({
         component: panelDef.component,
-        metadata: panelDef.metadata,
+        metadata: panel,
       });
     } catch (err) {
       console.error('[PanelHarness] Failed to load panel:', err);

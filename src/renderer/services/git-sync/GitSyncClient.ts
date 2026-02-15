@@ -84,9 +84,98 @@ export interface SyncStatus {
   }[];
 }
 
-export interface GitSyncMessage {
+// Base message type
+interface BaseGitSyncMessage {
   type: string;
-  [key: string]: unknown;
+  requestId?: string;
+}
+
+// Specific message types
+interface LockResponseMessage extends BaseGitSyncMessage {
+  type: 'lock_response';
+  success: boolean;
+  lock?: LockInfo;
+  error?: string;
+  warnings?: CrossBranchWarning[];
+}
+
+interface LockReleasedMessage extends BaseGitSyncMessage {
+  type: 'lock_released';
+  success: boolean;
+  lockId: string;
+}
+
+interface MergeSafetyResponseMessage extends BaseGitSyncMessage {
+  type: 'merge_safety_response';
+  safe: boolean;
+  blockingLocks: LockInfo[];
+  warnings: CrossBranchWarning[];
+}
+
+interface BranchSwitchedMessage extends BaseGitSyncMessage {
+  type: 'branch_switched';
+  commitCount: number;
+  released: number;
+  warnings: CrossBranchWarning[];
+}
+
+interface PeerInfo {
+  agentId: string;
+  userId: string;
+  branch: string;
+}
+
+interface AuthSuccessMessage extends BaseGitSyncMessage {
+  type: 'auth_success';
+  agentId: string;
+  userId: string;
+  branch: string;
+  peers?: PeerInfo[];
+}
+
+interface AuthResponseMessage extends BaseGitSyncMessage {
+  type: 'auth_response';
+  success: boolean;
+  error?: string;
+  peers?: PeerInfo[];
+}
+
+interface RegisterResponseMessage extends BaseGitSyncMessage {
+  type: 'register_response';
+  success: boolean;
+  room?: unknown;
+}
+
+// Union of all message types
+export type GitSyncMessage =
+  | LockResponseMessage
+  | LockReleasedMessage
+  | MergeSafetyResponseMessage
+  | BranchSwitchedMessage
+  | AuthSuccessMessage
+  | AuthResponseMessage
+  | RegisterResponseMessage
+  | (BaseGitSyncMessage & { [key: string]: unknown }); // Fallback for unknown message types
+
+// Type guard functions
+function isLockResponseMessage(msg: GitSyncMessage): msg is LockResponseMessage {
+  return msg.type === 'lock_response';
+}
+
+function isLockReleasedMessage(msg: GitSyncMessage): msg is LockReleasedMessage {
+  return msg.type === 'lock_released';
+}
+
+function isMergeSafetyResponseMessage(msg: GitSyncMessage): msg is MergeSafetyResponseMessage {
+  return msg.type === 'merge_safety_response';
+}
+
+function isBranchSwitchedMessage(msg: GitSyncMessage): msg is BranchSwitchedMessage {
+  return msg.type === 'branch_switched';
+}
+
+function isAuthSuccessMessage(msg: GitSyncMessage): msg is AuthSuccessMessage {
+  return msg.type === 'auth_success';
 }
 
 export class GitSyncClient extends EventEmitter {
@@ -287,7 +376,7 @@ export class GitSyncClient extends EventEmitter {
 
       const handler = (message: GitSyncMessage) => {
         if (
-          message.type === 'lock_response' &&
+          isLockResponseMessage(message) &&
           message.requestId === requestId
         ) {
           this.removeListener('lock_response', handler);
@@ -338,7 +427,7 @@ export class GitSyncClient extends EventEmitter {
 
       const handler = (message: GitSyncMessage) => {
         if (
-          message.type === 'lock_released' &&
+          isLockReleasedMessage(message) &&
           message.requestId === requestId
         ) {
           this.removeListener('lock_released', handler);
@@ -398,7 +487,7 @@ export class GitSyncClient extends EventEmitter {
 
       const handler = (message: GitSyncMessage) => {
         if (
-          message.type === 'merge_safety_response' &&
+          isMergeSafetyResponseMessage(message) &&
           message.requestId === requestId
         ) {
           this.removeListener('merge_safety_response', handler);
@@ -441,7 +530,7 @@ export class GitSyncClient extends EventEmitter {
 
       const handler = (message: GitSyncMessage) => {
         if (
-          message.type === 'branch_switched' &&
+          isBranchSwitchedMessage(message) &&
           message.requestId === requestId
         ) {
           this.removeListener('branch_switched', handler);
@@ -518,29 +607,50 @@ export class GitSyncClient extends EventEmitter {
   private handleMessage(message: GitSyncMessage): void {
     switch (message.type) {
       case 'auth_response':
+        // Type guard to narrow to AuthResponseMessage
+        if (message.type === 'auth_response') {
+          const authMsg = message as AuthResponseMessage;
+          if (authMsg.success) {
+            this.status.authenticated = true;
+
+            // Handle initial peers list if provided
+            if (authMsg.peers && Array.isArray(authMsg.peers)) {
+              this.status.peers = authMsg.peers;
+            }
+
+            this.emit('authenticated');
+          } else {
+            this.emit(
+              'error',
+              new Error(authMsg.error || 'Authentication failed'),
+            );
+          }
+        }
+        break;
+
       case 'auth_success':
-        if (message.success || message.type === 'auth_success') {
+        // Type guard to narrow to AuthSuccessMessage
+        if (message.type === 'auth_success') {
+          const authMsg = message as AuthSuccessMessage;
           this.status.authenticated = true;
 
           // Handle initial peers list if provided
-          if (message.peers && Array.isArray(message.peers)) {
-            this.status.peers = message.peers;
+          if (authMsg.peers && Array.isArray(authMsg.peers)) {
+            this.status.peers = authMsg.peers;
           }
 
           // Control Tower Core automatically assigns you to a room based on JWT repoId
           // No separate registration needed
           this.emit('authenticated');
-        } else {
-          this.emit(
-            'error',
-            new Error(message.error || 'Authentication failed'),
-          );
         }
         break;
 
       case 'register_response':
-        if (message.success) {
-          this.emit('registered', message.room);
+        if (message.type === 'register_response') {
+          const regMsg = message as RegisterResponseMessage;
+          if (regMsg.success) {
+            this.emit('registered', regMsg.room);
+          }
         }
         break;
 
@@ -569,10 +679,13 @@ export class GitSyncClient extends EventEmitter {
         this.emit('cross_branch_warning', message.warning);
         break;
 
-      case 'peer_joined':
-        this.status.peers.push(message.peer);
-        this.emit('peer_joined', message.peer);
+      case 'peer_joined': {
+        // Type assertion for peer_joined message with proper peer type
+        const peerMsg = message as unknown as BaseGitSyncMessage & { peer: PeerInfo };
+        this.status.peers.push(peerMsg.peer);
+        this.emit('peer_joined', peerMsg.peer);
         break;
+      }
 
       case 'peer_left':
         this.status.peers = this.status.peers.filter(
@@ -597,7 +710,7 @@ export class GitSyncClient extends EventEmitter {
           'Authentication failed:',
           message.message || 'Invalid token',
         );
-        this.status.isAuthenticated = false;
+        this.status.authenticated = false;
         this.emit('auth_error', message.message || 'Authentication failed');
         this.disconnect();
         break;
@@ -625,7 +738,9 @@ export class GitSyncClient extends EventEmitter {
   private processMessageQueue(): void {
     while (this.messageQueue.length > 0) {
       const message = this.messageQueue.shift();
-      this.send(message);
+      if (message) {
+        this.send(message);
+      }
     }
   }
 
