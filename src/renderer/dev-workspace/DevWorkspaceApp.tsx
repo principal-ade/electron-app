@@ -279,10 +279,10 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   // Create repository object from Alexandria entry data
   const repository: Repository = useMemo(
     () => ({
-      owner: github?.owner || 'local',
+      owner: github?.owner,
       name: repositoryName,
       remoteUrl: remoteUrl || '',
-      vcsType: 'git' as const,
+      vcsType: github ? 'github' : 'generic',
       avatarUrl: github?.avatarUrl,
       localClones: repositoryPath
         ? [{ path: repositoryPath, addedAt: Date.now() }]
@@ -460,7 +460,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
       events.on('panel:switch', (event) => {
         const payload = event.payload as { slot?: string; panel?: string };
         if (payload.slot && payload.panel) {
-          setLayout((prev) => ({ ...prev, [payload.slot]: payload.panel }));
+          setLayout((prev) => ({ ...prev, [payload.slot as string]: payload.panel }));
         }
       }),
       events.on('panel:reset-layout', () => {
@@ -942,8 +942,6 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         onToggleRightSidebar={() =>
           setCollapsed((prev) => ({ ...prev, right: !prev.right }))
         }
-        onSwitchLeftMiddlePanels={handleSwitchLeftMiddle}
-        onSwitchRightMiddlePanels={handleSwitchRightMiddle}
         onOpenInWebADE={githubInfo ? handleOpenInWebADE : undefined}
         onOpenGitHubActions={
           githubInfo && hasGitHubFolder ? handleOpenGitHubActions : undefined
@@ -956,9 +954,6 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         onCollapsedChange={setCollapsed}
         onPanelSizesChange={setPanelSizes}
         repositoryPath={repositoryPath}
-        panelFocus={panelFocus}
-        onFocusLeft={handleFocusLeft}
-        onFocusRight={handleFocusRight}
         events={events}
         packages={packages}
         traceSourceServiceName={traceSourceServiceName}
@@ -977,9 +972,6 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           panelSizes={panelSizes}
           onPanelSizesChange={setPanelSizes}
           events={events}
-          panelFocus={panelFocus}
-          onFocusLeft={handleFocusLeft}
-          onFocusRight={handleFocusRight}
           traceSourceServiceName={traceSourceServiceName}
         />
       </div>

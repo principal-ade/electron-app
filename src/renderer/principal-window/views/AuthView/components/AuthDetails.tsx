@@ -27,6 +27,7 @@ import type {
   TokenInfo,
   GitHubSSHKey,
 } from '../../../../../shared/main-process-api-interfaces/GitHubAPI';
+import type { TokenMetadata } from '../../../../../shared/main-process-api-interfaces/AuthenticationAPI';
 
 // Mapping of GitHub scopes to human-readable descriptions
 export const SCOPE_DESCRIPTIONS: Record<string, string> = {
@@ -126,10 +127,7 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
     success: boolean;
     message: string;
   } | null>(null);
-  const [tokenMetadata, setTokenMetadata] = useState<Record<
-    string,
-    unknown
-  > | null>(null);
+  const [tokenMetadata, setTokenMetadata] = useState<TokenMetadata | null>(null);
   const [loadingTokenMetadata, setLoadingTokenMetadata] = useState(false);
   const [testingRefresh, setTestingRefresh] = useState(false);
   const [refreshResult, setRefreshResult] = useState<{
