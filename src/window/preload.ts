@@ -55,6 +55,7 @@ import { githubArtifactAPI } from './main-process-api-implementations/githubArti
 import { collectionsAPI } from './main-process-api-implementations/collectionsApi';
 import { recentReposAPI } from './main-process-api-implementations/recentReposApi';
 import { skillLockAPI } from './main-process-api-implementations/skillLockApi';
+import { extensionAPI } from './main-process-api-implementations/extensionApi';
 // Removed mermaid import - it uses 'debug' which isn't available in preload context
 // import mermaid from 'mermaid';
 
@@ -137,6 +138,7 @@ const mainProcessExposure: MainProcessAPI = {
   githubArtifact: githubArtifactAPI,
   recentRepos: recentReposAPI,
   skillLock: skillLockAPI,
+  extension: extensionAPI,
 };
 
 // Mermaid removed from preload - will be loaded in renderer instead
