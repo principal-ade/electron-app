@@ -3,7 +3,8 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { ConfigurablePanelLayout } from '@principal-ade/panels';
 import '@principal-ade/panels/panels.css';
 import { PanelEventBus } from '@principal-ade/panel-framework-core';
-import { panels as agentPanels, type Skill, SkillsBrowsePanel, GlobalSkillsPanel } from '@industry-theme/agent-panels';
+import { panels as agentPanels, type Skill, SkillsBrowsePanel, GlobalSkillsPanel, type SkillDetailPanelProps } from '@industry-theme/agent-panels';
+import type { PanelComponentProps } from '@principal-ade/panel-framework-core';
 import {
   SkillBrowserPanelProvider,
   useSkillBrowserPanelProvider,
@@ -26,7 +27,7 @@ import { SkillInstallationModal } from './SkillInstallationModal';
 // Extract panel components from agent-panels package
 const SkillDetailPanelComponent = agentPanels.find(
   (p) => p.metadata?.id === 'industry-theme.skill-detail',
-)?.component;
+)?.component as React.FC<SkillDetailPanelProps> | undefined;
 
 /**
  * Inner content component that uses the panel context
@@ -975,7 +976,7 @@ const SkillBrowserViewContent: React.FC = () => {
       {
         id: 'skill-detail',
         label: 'Skill Detail',
-        content: (
+        content: SkillDetailPanelComponent ? (
           <SkillDetailPanelComponent
             context={context}
             actions={actions}
@@ -1032,7 +1033,7 @@ const SkillBrowserViewContent: React.FC = () => {
             } : undefined}
             hideEditButtons={viewMode === 'browse'}
           />
-        ),
+        ) : null,
       },
     ];
   }, [context, actions, events, selectedSkill, githubRepoInfo, isSkillInstalled, getSkillInstalledDirectories, getSkillTreeSha, viewMode, browseFileTree, recentRepos, handleSelectRecentRepo, detectedDirectories, githubUrl, handleFetchSkills, isLoading, selectedSkillMetadata, handleInstallSkillToDirectories, getInstalledSkillMetadata, setSelectedSkillMetadata]);
@@ -1095,15 +1096,10 @@ const SkillBrowserViewContent: React.FC = () => {
         overflow: 'hidden',
       }}
     >
-      {/* Header with GitHub URL input */}
+      {/* Header with view mode toggle */}
       <SkillBrowserViewHeader
-        githubUrl={githubUrl}
-        onGithubUrlChange={setGithubUrl}
-        onFetchSkills={handleFetchSkills}
-        isLoading={isLoading}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
-        showGithubInput={viewMode === 'browse'}
         currentRepo={githubRepoInfo}
         onClearRepo={() => {
           setBrowseFileTree(null);
