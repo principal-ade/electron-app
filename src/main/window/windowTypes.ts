@@ -45,9 +45,6 @@ export enum WindowType {
   MARKDOWN_VIEWER = 'markdown-viewer',
   SESSION_DETAILS = 'session-details',
   MULTI_FILE_EDITOR = 'multi-file-editor',
-
-  // Utility windows - bare minimum
-  STORE_VIEWER = 'store-viewer',
 }
 
 /**
@@ -113,16 +110,6 @@ export const WINDOW_TYPE_CONFIGS: Record<WindowType, WindowFeatures> = {
     singleton: true,
     persistState: true,
     errorHandlers: true,
-  },
-
-  // Utility windows
-  [WindowType.STORE_VIEWER]: {
-    menu: false,
-    devTools: true,
-    fileSystemAdapter: true, // Needs to access storage files
-    contentSecurityPolicy: true,
-    singleton: true,
-    persistState: false,
   },
 };
 

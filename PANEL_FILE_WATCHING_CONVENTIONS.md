@@ -613,7 +613,6 @@ When building a new panel, follow this checklist:
 - `/Users/griever/Developer/desktop-app/repository-monitoring-server/src/worker/FileTreeBuilder.ts` - FileTree construction
 
 **Examples:**
-- `/Users/griever/Developer/desktop-app/electron-app/src/renderer/pages/MarkdownView.tsx` - Single file viewer with useFileWatch
 - `/Users/griever/Developer/desktop-app/electron-app/src/renderer/panels/components/HeadlessFileEditorPanel.tsx` - Editor with dirty state
 - `/Users/griever/Developer/industry-themed-panels/industry-themed-agent-skills-panel/src/panels/SkillsListPanel.tsx` - List panel with FileTree + events
 - `/Users/griever/Developer/visual-validation/industry-themed-principal-view-panels/src/panels/CanvasEditorPanel.tsx` - Hybrid panel (editor + list)

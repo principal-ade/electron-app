@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { NavigationSidebar } from './NavigationSidebar';
 import { IntegratedTitlebar } from './IntegratedTitlebar';
 import { useTheme } from '@principal-ade/industry-theme';
-import { MarkdownSearch } from '../../views/MarkdownSearch';
 import { Settings } from '../../views/Settings';
 import { SystemMonitor } from '../../views/SystemMonitor/SystemMonitor';
 import { AuthView } from '../../views/AuthView';
@@ -29,7 +28,6 @@ export type NavigationView = InteractiveShellNavigationView;
 // Available views for switch command
 const VIEW_OPTIONS = [
   'workspaces',
-  'search',
   'settings',
   'monitoring',
   'auth',
@@ -521,7 +519,6 @@ export const IntegratedShell: React.FC = () => {
             }}
           >
             {/* Views will be rendered here based on activeView */}
-            {activeView === 'search' && <MarkdownSearch />}
             {activeView === 'monitoring' && (
               <SystemMonitor sidebarCollapsed={sidebarCollapsed} />
             )}

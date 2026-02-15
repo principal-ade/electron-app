@@ -134,6 +134,16 @@ export default [{
     '@typescript-eslint/no-explicit-any': 'off',
     'no-console': 'off',
   },
+}, // File size limits for TypeScript files
+{
+  files: ['**/*.{ts,tsx}'],
+  rules: {
+    'max-lines': ['error', {
+      max: 800,
+      skipBlankLines: true,
+      skipComments: true,
+    }],
+  },
 }, // Specific rules for storybook files
 {
   files: ['.storybook/**/*.{ts,tsx,js,jsx}'],

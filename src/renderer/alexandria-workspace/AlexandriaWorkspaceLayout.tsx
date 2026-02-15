@@ -302,6 +302,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   }, [events]);
 
   // Listen for file:opened events (from Alexandria docs panel)
+  // TODO: Implement tabbed view for markdown files
   useEffect(() => {
     const unsubscribe = events.on('file:opened', async (event) => {
       const { filePath } = event.payload as { filePath: string };
@@ -311,47 +312,12 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
         filePath,
       );
 
-      // If it's a markdown file, open it in the standalone markdown viewer
-      if (filePath.endsWith('.md')) {
-        // We need a repository context to open the markdown file
-        const repositoryPath = context.currentScope.repository?.path;
-
-        if (!repositoryPath) {
-          console.warn(
-            '[AlexandriaWorkspaceLayout] Cannot open markdown file - no repository selected',
-          );
-          return;
-        }
-
-        try {
-          // Convert absolute path to relative for the handler
-          let relativeFilePath = filePath;
-          const repoPrefix = repositoryPath.endsWith('/')
-            ? repositoryPath
-            : repositoryPath + '/';
-
-          if (filePath.startsWith(repoPrefix)) {
-            relativeFilePath = filePath.substring(repoPrefix.length);
-          }
-
-          await WindowService.openMarkdownViewFromRepository(
-            relativeFilePath,
-            repositoryPath,
-            {
-              viewMode: 'single',
-            },
-          );
-        } catch (error) {
-          console.error(
-            '[AlexandriaWorkspaceLayout] Failed to open markdown viewer:',
-            error,
-          );
-        }
-      }
+      // Markdown files will be shown in tabs when tabbed view is implemented
+      // For now, just log the event
     });
 
     return unsubscribe;
-  }, [events, context]);
+  }, [events]);
 
   // Listen for doc:openInRightPanel events (from Alexandria docs panel context menu)
   useEffect(() => {

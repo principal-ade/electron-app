@@ -1,6 +1,5 @@
 import { useTheme } from '@principal-ade/industry-theme';
 import {
-  Search,
   Settings,
   Activity,
   User,
@@ -35,14 +34,12 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   const { theme, mode } = useTheme();
   const { isAuthenticated, user } = useAuth();
   const [showMonitorButton, setShowMonitorButton] = useState(false);
-  const [showSearchButton, setShowSearchButton] = useState(false);
   const [showConnectionsButton, setShowConnectionsButton] = useState(false);
 
   useEffect(() => {
     // Load user preferences for showing buttons
     UserPreferencesService.getPreferences().then((prefs) => {
       setShowMonitorButton(prefs.showMonitorButton ?? false);
-      setShowSearchButton(prefs.showSearchButton ?? false);
       setShowConnectionsButton(prefs.showConnectionsButton ?? false);
     });
 
@@ -52,9 +49,6 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
       if (detail) {
         if ('showMonitorButton' in detail) {
           setShowMonitorButton(detail.showMonitorButton ?? false);
-        }
-        if ('showSearchButton' in detail) {
-          setShowSearchButton(detail.showSearchButton ?? false);
         }
         if ('showConnectionsButton' in detail) {
           setShowConnectionsButton(detail.showConnectionsButton ?? false);
@@ -135,16 +129,6 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
             id: 'connections' as NavigationView,
             icon: <Radio size={20} />,
             label: 'Connections',
-          },
-        ]
-      : []),
-    // Only include search button if user has enabled it in preferences
-    ...(showSearchButton
-      ? [
-          {
-            id: 'search' as NavigationView,
-            icon: <Search size={20} />,
-            label: 'Search',
           },
         ]
       : []),

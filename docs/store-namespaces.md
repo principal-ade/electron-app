@@ -31,11 +31,10 @@ This document lists the storage namespaces registered by the app, groups them by
   - Secrets UI (store secret): [`src/renderer/repo-manager/shared/SecretsModal.tsx:103`](src/renderer/repo-manager/shared/SecretsModal.tsx:103)  
   - Main manager/tests: [`src/main/stores/SecretManager.ts:228`](src/main/stores/SecretManager.ts:228)
 
-- cache / temp (memory-backed) — in-memory caches the renderer relies on for performance (not persisted)  
-  - Registered: [`src/main/storage-providers/typed-namespaces.ts:399`](src/main/storage-providers/typed-namespaces.ts:399) and [`src/main/storage-providers/typed-namespaces.ts:406`](src/main/storage-providers/typed-namespaces.ts:406)  
-  - File-tree / analysis caches: [`src/renderer/services/FileTreeCacheService.ts:38`](src/renderer/services/FileTreeCacheService.ts:38)  
-  - Renderer listens for invalidation events: [`src/renderer/repo-manager/RepositoryManager.tsx:606`](src/renderer/repo-manager/RepositoryManager.tsx:606)  
-  - Store Viewer shows cache categories: [`src/renderer/pages/StoreViewer.tsx:406`](src/renderer/pages/StoreViewer.tsx:406)
+- cache / temp (memory-backed) — in-memory caches the renderer relies on for performance (not persisted)
+  - Registered: [`src/main/storage-providers/typed-namespaces.ts:399`](src/main/storage-providers/typed-namespaces.ts:399) and [`src/main/storage-providers/typed-namespaces.ts:406`](src/main/storage-providers/typed-namespaces.ts:406)
+  - File-tree / analysis caches: [`src/renderer/services/FileTreeCacheService.ts:38`](src/renderer/services/FileTreeCacheService.ts:38)
+  - Renderer listens for invalidation events: [`src/renderer/repo-manager/RepositoryManager.tsx:606`](src/renderer/repo-manager/RepositoryManager.tsx:606)
 
 - session-summaries & global-session-registry — backing data for session UIs and quick summaries  
   - Types/registry: [`src/main/storage-providers/typed-namespaces.ts:241`](src/main/storage-providers/typed-namespaces.ts:241)  

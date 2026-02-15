@@ -425,29 +425,6 @@ export const AgentConnectionVisualizer: React.FC<
               >
                 Event monitoring and debugging tool
               </text>
-              {hasHooks && isInstalled && (
-                <foreignObject x="-50" y="20" width="100" height="35">
-                  <button
-                    className="px-3 py-1 text-xs rounded"
-                    style={{
-                      backgroundColor: theme.colors.primary,
-                      color: theme.colors.background,
-                    }}
-                    onClick={async () => {
-                      try {
-                        await WindowService.openStoreViewer({
-                          agent: agentType,
-                          namespace: 'events',
-                        });
-                      } catch (error) {
-                        console.error('Failed to open store viewer:', error);
-                      }
-                    }}
-                  >
-                    Open Store Viewer
-                  </button>
-                </foreignObject>
-              )}
             </>
           )}
 
