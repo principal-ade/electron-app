@@ -466,19 +466,23 @@ export function RemoteTerminalViewer() {
       // Tell main process to connect its bridge to the same user room (ONE-TIME IPC call for setup)
       // After this, all communication happens through WebSocket only
       console.log('[RemoteTerminalViewer] Telling main process to connect bridge (one-time setup)...');
-      try {
-        const bridgeResult = await window.mainProcess.terminalBridge.connectBridge({
-          token,
-          userId,
-          githubHandle,
-        });
-        if (bridgeResult.success) {
-          console.log('[RemoteTerminalViewer] ✅ Main process bridge connected - all subsequent communication via WebSocket');
-        } else {
-          console.warn('[RemoteTerminalViewer] ⚠️ Bridge connection failed:', bridgeResult.error);
+      if (!window.mainProcess.terminalBridge) {
+        console.error('[RemoteTerminalViewer] ❌ terminalBridge API not available');
+      } else {
+        try {
+          const bridgeResult = await window.mainProcess.terminalBridge.connectBridge({
+            token,
+            userId,
+            githubHandle,
+          });
+          if (bridgeResult.success) {
+            console.log('[RemoteTerminalViewer] ✅ Main process bridge connected - all subsequent communication via WebSocket');
+          } else {
+            console.warn('[RemoteTerminalViewer] ⚠️ Bridge connection failed:', bridgeResult.error);
+          }
+        } catch (err) {
+          console.error('[RemoteTerminalViewer] ❌ Failed to connect bridge:', err);
         }
-      } catch (err) {
-        console.error('[RemoteTerminalViewer] ❌ Failed to connect bridge:', err);
       }
 
       // Small delay to ensure bridge connection and room state is fully updated

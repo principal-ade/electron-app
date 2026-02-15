@@ -1102,7 +1102,7 @@ export const DetailedConfigurationView: React.FC<
 
         setDroidMCPStatus({
           hasPrincipleMD: mcpResult.status?.hasMCP || false,
-          mcpServers: mcpResult.status?.servers || {},
+          mcpServers: {}, // status doesn't include servers property, use empty object
         });
       } catch (error) {
         console.error('[MCP] Error loading Droid MCP status:', error);

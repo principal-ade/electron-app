@@ -42,7 +42,7 @@ export async function getAllServiceNamesFromFileTree(
     const fsAdapter = await createRendererFileSystemAdapter();
     const discovery = new LibraryDiscovery(fsAdapter);
 
-    const result = await discovery.discover(fileTree, { repositoryPath });
+    const result = await discovery.discover(fileTree);
 
     console.log('[libraryResourcesLoader] Discovery result:', {
       repositoryPath,
@@ -83,7 +83,7 @@ export async function getOtelResourcesFromFileTree(
     const fsAdapter = await createRendererFileSystemAdapter();
     const discovery = new LibraryDiscovery(fsAdapter);
 
-    const result = await discovery.discover(fileTree, { repositoryPath });
+    const result = await discovery.discover(fileTree);
 
     // Flatten all resources from all libraries into a single map
     const allResources: Record<string, ResourceAttributes> = {};

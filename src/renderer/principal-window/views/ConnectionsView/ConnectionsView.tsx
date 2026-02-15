@@ -27,7 +27,7 @@ import {
   Webhook,
   FileText,
 } from 'lucide-react';
-import { GitSyncWebhookEvent } from '../../../shared/main-process-api-interfaces/GitSyncAPI';
+import { GitSyncWebhookEvent, BacklogTaskChange } from '../../../../shared/main-process-api-interfaces/GitSyncAPI';
 
 interface ConnectionInfo {
   connectionId: string;
@@ -235,7 +235,7 @@ export const ConnectionsView: React.FC = () => {
         const authResult = await authService.checkAuth();
         if (authResult.authenticated && authResult.user) {
           setCurrentUserId(authResult.user.githubHandle);
-          setCurrentUserName(authResult.user.name || authResult.user.githubHandle);
+          setCurrentUserName(authResult.user.metadata?.name || authResult.user.githubHandle);
         }
       } catch (error) {
         console.error('[ConnectionsView] Failed to get current user:', error);
@@ -1512,7 +1512,7 @@ export const ConnectionsView: React.FC = () => {
                             <div style={{ fontSize: '10px', fontWeight: 500, color: textColor, marginBottom: '4px' }}>
                               Backlog Changes ({event.backlogChanges.length}):
                             </div>
-                            {event.backlogChanges.map((change, idx) => (
+                            {event.backlogChanges.map((change: BacklogTaskChange, idx: number) => (
                               <div
                                 key={idx}
                                 style={{

@@ -47,7 +47,8 @@ interface UsePanelPersistenceOptions {
     | 'authView'
     | 'repositoryDetailsNested'
     | 'gitSyncView'
-    | 'projectsView';
+    | 'projectsView'
+    | 'worldsView';
   defaultSizes: PanelSizes | TwoPanelSizes;
   collapsed: PanelCollapsed | { left?: boolean }; // Initial collapsed state
   panelType: 'three-panel' | 'two-panel';

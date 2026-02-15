@@ -50,9 +50,9 @@ const WorldsViewContent: React.FC = () => {
 
   // Handle create collection
   const handleCreateCollection = useCallback(
-    async (name: string, description?: string, icon?: string) => {
+    async (name: string, description?: string, icon?: string): Promise<void> => {
       if (actions.createCollection) {
-        return await actions.createCollection(name, description, icon);
+        await actions.createCollection(name, description, icon);
       }
     },
     [actions]
@@ -154,8 +154,8 @@ const WorldsViewContent: React.FC = () => {
               middle: false,
               right: isRightPanelCollapsed,
             }}
-            onRightCollapseComplete={panelState.handleRightCollapseComplete}
-            onRightExpandComplete={panelState.handleRightExpandComplete}
+            onRightCollapseComplete={panelState.type === 'three-panel' ? panelState.handleRightCollapseComplete : undefined}
+            onRightExpandComplete={panelState.type === 'three-panel' ? panelState.handleRightExpandComplete : undefined}
             theme={theme}
           />
         </div>

@@ -34,14 +34,11 @@ export const InstallStep: React.FC<InstallStepProps> = ({
   installProgress,
   onInstall,
   onCheckStatus,
-  _onInstallComplete,
   onUninstall,
   hasHooks = false,
   handleClaudeTourButtonClick,
   isClaudeTourActive,
   claudeTourStepIndex,
-  _isCurrentStep,
-  _isInstalled,
 }) => {
   const { theme } = useTheme();
   const agentConfig = getAgentInfo(agentType);

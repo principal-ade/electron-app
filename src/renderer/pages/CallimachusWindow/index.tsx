@@ -37,26 +37,10 @@ export const CallimachusWindow: React.FC = () => {
     try {
       const newClient = new CallimachusClient(config);
 
-      // Ensure the client is fully initialized (table creation, etc.)
-      try {
-        console.log('Initializing Pixeltable tables...');
-        await newClient.ensureInitialized();
-        console.log('Table initialization complete');
-      } catch (initError) {
-        console.error('Initialization error:', initError);
-        setConnectionError(
-          initError instanceof Error
-            ? `Initialization failed: ${initError.message}`
-            : 'Failed to initialize Pixeltable tables',
-        );
-        setIsConnected(false);
-        return;
-      }
-
       // Test the connection with a simple browse call
       try {
         console.log('Testing connection to Pixeltable...');
-        const testResult = await newClient.browse({ limit: 1 });
+        const testResult = await newClient.browse({ pageSize: 1 });
         console.log('Connection test successful:', testResult);
 
         setClient(newClient);

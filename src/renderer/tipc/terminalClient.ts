@@ -16,6 +16,7 @@ import type {
   TerminalSessionInfo,
   TerminalOwnershipResult,
   RefreshResult,
+  TerminalRouterType,
 } from '../../shared/tipc/terminalRouterTypes';
 
 // Extend Window interface for TypeScript
@@ -56,7 +57,7 @@ declare global {
 }
 
 // Define the client interface to match main process router implementation
-// This avoids importing from main process which breaks TypeScript project boundaries
+// The shared TerminalRouterType is used for createClient<T>() to satisfy TIPC's RouterType constraint
 export interface TerminalClient {
   createTerminalSession: (input: CreateTerminalSessionInput) => Promise<string>;
   destroyTerminalSession: (input: DestroyTerminalSessionInput) => Promise<void>;
@@ -94,7 +95,8 @@ function getTerminalClient(): TerminalClient {
         'Terminal client not available - window.electron not initialized',
       );
     }
-    _terminalClient = createClient<TerminalClient>({
+    // Use shared TerminalRouterType which satisfies RouterType constraint
+    _terminalClient = createClient<TerminalRouterType>({
       ipcInvoke: window.electron.ipcRenderer.invoke,
     }) as unknown as TerminalClient;
   }

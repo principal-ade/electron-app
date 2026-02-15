@@ -57,7 +57,7 @@ export class RendererFileSystemAdapter implements FileSystemAdapter {
       throw new Error(`Failed to get stats for path: ${path}`);
     }
     return {
-      mtime: new Date(stats.mtime),
+      mtime: new Date(stats.lastModified),
       isDirectory: stats.isDirectory,
       size: stats.size,
     };

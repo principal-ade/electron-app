@@ -67,4 +67,18 @@ export interface ObservabilityAPI {
     resolvedPath?: string;
     error?: string;
   }>;
+
+  /**
+   * Get the current database file path
+   */
+  getDbPath(): Promise<{
+    success: boolean;
+    dbPath?: string;
+    error?: string;
+  }>;
+
+  /**
+   * Open the database file location in Finder/Explorer
+   */
+  openDbInFinder(): Promise<{ success: boolean; error?: string }>;
 }

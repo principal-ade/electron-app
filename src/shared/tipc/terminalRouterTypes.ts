@@ -5,6 +5,8 @@
  * This avoids cross-project import issues with TypeScript composite builds.
  */
 
+import type { ActionContext } from '@egoist/tipc/main';
+
 // Input/output types for terminal router procedures
 
 export interface CreateTerminalSessionInput {
@@ -72,4 +74,77 @@ export interface RequestDataPortResult {
   sessionId: string;
   writable: boolean;
   error?: string;
+}
+
+/**
+ * Terminal Router Type - TIPC RouterType-compatible type
+ *
+ * This defines the shape of the terminal router that both main and renderer can reference.
+ * It satisfies the TIPC RouterType constraint for createClient<T>().
+ * Uses Record<string, ...> to provide the required index signature.
+ */
+export type TerminalRouterType = Record<
+  string,
+  { action: (args: { context: ActionContext; input: any }) => Promise<any> }
+> & {
+  createTerminalSession: {
+    action: (args: {
+      context: ActionContext;
+      input: CreateTerminalSessionInput;
+    }) => Promise<string>;
+  };
+  destroyTerminalSession: {
+    action: (args: {
+      context: ActionContext;
+      input: DestroyTerminalSessionInput;
+    }) => Promise<void>;
+  };
+  listTerminalSessions: {
+    action: (args: {
+      context: ActionContext;
+      input?: void;
+    }) => Promise<TerminalSessionInfo[]>;
+  };
+  resizeTerminal: {
+    action: (args: {
+      context: ActionContext;
+      input: ResizeTerminalInput;
+    }) => Promise<void>;
+  };
+  refreshTerminal: {
+    action: (args: {
+      context: ActionContext;
+      input: RefreshTerminalInput;
+    }) => Promise<RefreshResult>;
+  };
+  checkTerminalOwnership: {
+    action: (args: {
+      context: ActionContext;
+      input: { sessionId: string };
+    }) => Promise<{
+      exists: boolean;
+      ownedByWindowId: number | null;
+      ownedByThisWindow: boolean;
+      canClaim: boolean;
+      ownerWindowExists: boolean;
+    }>;
+  };
+  claimTerminalOwnership: {
+    action: (args: {
+      context: ActionContext;
+      input: OwnershipInput;
+    }) => Promise<TerminalOwnershipResult>;
+  };
+  releaseTerminalOwnership: {
+    action: (args: {
+      context: ActionContext;
+      input: { sessionId: string };
+    }) => Promise<TerminalOwnershipResult>;
+  };
+  requestTerminalDataPort: {
+    action: (args: {
+      context: ActionContext;
+      input: RequestDataPortInput;
+    }) => Promise<{ success: boolean; reason?: string }>;
+  };
 }

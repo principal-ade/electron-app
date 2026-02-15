@@ -21,20 +21,20 @@ npx knip --files
 npx knip --files 2>&1 | grep "^src/renderer/components/"
 ```
 
-## Current Status (Updated - 2026-01-29)
+## Current Status (Updated - 2026-02-14)
 
-**Total unused files: 75** ⬇️ **-1 from previous (was 76)** ✅
+**Total unused files: 61** ⬇️ **-15 from previous (was 76)** ✅
 
 ### By Top-Level Directory
 
 | Directory | Unused Files | Change |
 |-----------|--------------|--------|
-| renderer | 32 | ⬇️ **-1** ✅ |
+| renderer | 33 | ⬆️ **+1** |
 | shared | 16 | - |
-| main | 15 | ⬆️ **+1** |
-| window | 6 | ⬆️ **+1** |
+| main | 13 | ⬇️ **-2** ✅ |
+| window | 3 | ⬇️ **-3** ✅ |
 | terminal-worker | 3 | - |
-| titlebar | 2 | ⬇️ **-2** ✅ |
+| titlebar | 2 | - |
 | setupTests.js | 1 | - |
 | event-processing-server | ✅ Clean | - |
 
@@ -44,18 +44,19 @@ npx knip --files 2>&1 | grep "^src/renderer/components/"
 |--------------|--------------|--------|
 | main-process-api | 11 | - |
 | utils | 10 | - |
-| services | 4 | ⬇️ **-1** ✅ |
-| principal-window | 2 | 🆕 **New** 🚨 |
-| styles | 1 | 🆕 **New** |
-| hooks | 1 | 🚨 **Regressed** |
-| global.d.ts | 1 | - |
+| services | 4 | - |
+| principal-window | 2 | - |
+| extension-window | 1 | 🆕 **New** |
 | dev-workspace | 1 | - |
-| contexts | 1 | 🚨 **Regressed** |
+| hooks | 1 | - |
+| contexts | 1 | - |
+| pages | 1 | 🆕 **New** 🚨 |
+| styles | 1 | - |
+| global.d.ts | 1 | - |
 | components | ✅ Clean | - |
 | panels | ✅ Clean | - |
 | types | ✅ Clean | - |
 | adapters | ✅ Clean | - |
-| pages | ✅ Clean | - |
 | config | ✅ Clean | - |
 | repo-manager | ✅ Removed | Directory removed |
 
@@ -71,7 +72,21 @@ npx knip --files 2>&1 | grep "^src/renderer/components/"
 
 ---
 
-### renderer/principal-window (2 files) 🆕
+### renderer/pages (1 file) 🆕
+
+```
+src/renderer/pages/CallimachusWindow/index.tsx
+```
+
+**Status:** ⏳ Pending review
+
+**Notes:**
+- New unused file detected (2026-02-14)
+- Callimachus window - may be legacy or work-in-progress
+
+---
+
+### renderer/principal-window (2 files)
 
 ```
 src/renderer/principal-window/views/SkillBrowserView/GlobalDirectoriesConfig.tsx
@@ -86,7 +101,7 @@ src/renderer/principal-window/views/SkillBrowserView/PendingChangesPanel.tsx
 
 ---
 
-### renderer/contexts (1 file) 🚨
+### renderer/contexts (1 file)
 
 ```
 src/renderer/contexts/UserCollectionsContext.tsx
@@ -100,7 +115,7 @@ src/renderer/contexts/UserCollectionsContext.tsx
 
 ---
 
-### renderer/hooks (1 file) 🚨
+### renderer/hooks (1 file)
 
 ```
 src/renderer/hooks/useSkillsPendingChanges.ts
@@ -114,7 +129,7 @@ src/renderer/hooks/useSkillsPendingChanges.ts
 
 ---
 
-### renderer/styles (1 file) 🆕
+### renderer/styles (1 file)
 
 ```
 src/renderer/styles/mdx-editor.ts
@@ -124,6 +139,20 @@ src/renderer/styles/mdx-editor.ts
 
 **Notes:**
 - New unused styles file detected (2026-01-26)
+
+---
+
+### renderer/extension-window (1 file) 🆕
+
+```
+src/renderer/extension-window/global.d.ts
+```
+
+**Status:** ⏳ Pending review
+
+**Notes:**
+- New unused file detected (2026-02-14)
+- Global type definitions - may be needed for TypeScript
 
 ---
 
@@ -184,7 +213,7 @@ src/renderer/utils/workflowParser.ts
 
 ---
 
-### renderer/other (2 files)
+### renderer/other (1 file)
 
 ```
 src/renderer/global.d.ts
@@ -195,7 +224,7 @@ src/renderer/dev-workspace/global.d.ts
 
 ---
 
-## Main Process Unused Files (15 files)
+## Main Process Unused Files (13 files)
 
 ```
 src/main/quality-lenses/PackageLayerToToolConfigBridge.ts
@@ -206,9 +235,7 @@ src/main/services/PresenceIPC.ts
 src/main/services/SecureTokenIPC.ts
 src/main/services/store/types/index.ts
 src/main/services/store/types/session.types.ts
-src/main/terminal/phase2-future/worker/ptyWorker.ts
-src/main/terminal/phase2-future/worker/types.ts
-src/main/terminal/phase2-future/worker/WorkerManager.ts
+src/main/skills/skillUpdateService.ts
 src/main/terminal/TerminalAuthorizationService.ts
 src/main/window/callimachusWindow.ts
 src/main/window/windowDefaults.ts
@@ -218,11 +245,12 @@ src/main/window/windowTypes.ts
 **Status:** ⏳ Pending review
 
 **Notes:**
-- `terminal/phase2-future/*` - WIP worker implementation, keep for now
 - `services/store/types/*` - May be imported dynamically or needed for type definitions
 - `services/*IPC.ts` - 5 IPC files detected as unused (FastForward, GitSync, Orbit, Presence, SecureToken)
 - `FastForwardIPC.ts` - 🆕 New unused file detected (2026-01-26)
 - `TerminalAuthorizationService.ts` - 🆕 New unused file detected (2026-01-26)
+- `skills/skillUpdateService.ts` - 🆕 New unused file detected (2026-02-14)
+- `terminal/phase2-future/worker/*` - No longer detected as unused ✅ (2026-02-14)
 - `system/clipboardHandler.ts` - No longer detected as unused ✅
 
 ---
@@ -273,15 +301,12 @@ src/titlebar/index.tsx
 
 ---
 
-## Window Unused Files (6 files)
+## Window Unused Files (3 files)
 
 ```
 src/window/main-process-api-implementations/extensionApi.ts
 src/window/preload-dev-workspace.ts
 src/window/preload-extension-window.ts
-src/window/preload-quick-open.ts
-src/window/preload-remote-terminal-viewer.ts
-src/window/preload-window-switcher.ts
 ```
 
 **Status:** ⏳ Pending review
@@ -289,11 +314,13 @@ src/window/preload-window-switcher.ts
 **Notes:**
 - `preload-*.ts` files are likely preload script entry points
 - May need to be added to knip.json entry points
-- `preload-remote-terminal-viewer.ts` - 🆕 New unused file detected (2026-01-26)
+- `preload-remote-terminal-viewer.ts` - No longer detected as unused ✅ (2026-02-14)
+- `preload-quick-open.ts` - No longer detected as unused ✅ (2026-02-14)
+- `preload-window-switcher.ts` - No longer detected as unused ✅ (2026-02-14)
 
 ---
 
-## Terminal Worker Unused Files (3 files) 🆕
+## Terminal Worker Unused Files (3 files)
 
 ```
 src/terminal-worker/types.ts
@@ -354,6 +381,7 @@ grep -r "from.*filename" src/
 
 | Date | Files Removed | Notes |
 |------|---------------|-------|
+| 2026-02-14 | 0 | Status update - major improvement! window improved (-3), main improved (-2), renderer +1 |
 | 2026-01-26 | 0 | Status update - renderer regressed +5, new skills-related files detected |
 | 2025-12-27 | 0 | Status update - terminal-worker detected, window preloads increased |
 | 2025-12-16 | 0 | Status update - 4 new IPC files detected as unused in main |
@@ -362,6 +390,44 @@ grep -r "from.*filename" src/
 | 2025-11-28 | 2 | Removed `MetricBox.tsx`, `RightPaneContainer.tsx` from renderer/components |
 | 2025-11-28 | 2 | Removed `src/event-processing-server/types/` directory (duplicate of `types.ts`) |
 | 2025-11-28 | 0 | Initial audit |
+
+### 2026-02-14 Summary
+
+**Total:** 76 → 61 files (-15, -19.7% decrease) ✅
+
+**New unused files detected:**
+- `src/renderer/pages/CallimachusWindow/index.tsx`
+- `src/renderer/extension-window/global.d.ts`
+- `src/main/skills/skillUpdateService.ts`
+
+**Files no longer detected as unused:**
+- `src/main/terminal/phase2-future/worker/ptyWorker.ts` ✅
+- `src/main/terminal/phase2-future/worker/types.ts` ✅
+- `src/main/terminal/phase2-future/worker/WorkerManager.ts` ✅
+- `src/window/preload-quick-open.ts` ✅
+- `src/window/preload-window-switcher.ts` ✅
+- `src/window/preload-remote-terminal-viewer.ts` ✅
+
+**Directory changes:**
+- **renderer**: 32 → 33 (+1) - slight regression
+  - **pages**: 0 → 1 (new unused file)
+  - **extension-window**: 0 → 1 (new category)
+- **main**: 15 → 13 (-2) ✅
+  - **terminal/phase2-future/worker**: 3 → 0 (all files now in use!)
+  - **skills**: 0 → 1 (new unused file)
+- **window**: 6 → 3 (-3) ✅
+  - All preload scripts now in use!
+- **titlebar**: 2 (no change)
+
+**Notes:**
+- **Major improvement overall**: 15 fewer unused files (-19.7%)
+- **window directory major cleanup**: All 3 preload scripts now in use
+- **main/terminal/phase2-future/worker**: All 3 worker files now in use - phase2 implementation is active!
+- **Slight renderer regression**: +1 file (CallimachusWindow/index.tsx, extension-window global.d.ts)
+- **main/skills**: New unused skillUpdateService.ts detected
+- This is the largest improvement since the 2025-12-14 major cleanup
+
+---
 
 ### 2026-01-26 Summary
 
@@ -460,3 +526,4 @@ grep -r "from.*filename" src/
 - titlebar: 4 files (entry points may need knip config)
 - window: 3 files (preload scripts may need knip config)
 
+---
