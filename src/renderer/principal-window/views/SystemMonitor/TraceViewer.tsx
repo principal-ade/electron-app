@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { openTelemetrySpanAdapter } from '@evilmartians/agent-prism-data';
-import type { TraceViewerData } from '@evilmartians/agent-prism-types';
+import type { TraceSpan } from '@evilmartians/agent-prism-types';
 import { OtelCollectorService, type StoredTrace } from '../../../main-process-api/OtelCollectorService';
 import { RefreshCw, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 
@@ -21,7 +21,7 @@ export const TraceViewer: React.FC<TraceViewerProps> = ({
   const { theme } = useTheme();
   const [traces, setTraces] = useState<StoredTrace[]>([]);
   const [selectedTrace, setSelectedTrace] = useState<StoredTrace | null>(null);
-  const [traceData, setTraceData] = useState<TraceViewerData | null>(null);
+  const [traceData, setTraceData] = useState<TraceSpan[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [collapsedSources, setCollapsedSources] = useState<Set<string>>(new Set());

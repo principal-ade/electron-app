@@ -297,6 +297,8 @@ export const IntegratedShell: React.FC = () => {
       try {
         const viewKey = getViewKey(activeView);
         if (viewKey) {
+          // AuthView only supports two-panel layout (no right panel)
+          // Only save left collapse state for authView
           await UserPreferencesService.updatePreferences({
             panelLayouts: {
               [viewKey]: {
@@ -304,7 +306,6 @@ export const IntegratedShell: React.FC = () => {
                   left:
                     viewCollapsedStates[activeView]?.left ??
                     getViewDefaults(activeView).left,
-                  right: newCollapsed,
                 },
               },
             },

@@ -14,7 +14,7 @@ import { type SkillDestination, DIRECTORY_ID_TO_DESTINATION } from './InstallSki
 import { GithubService } from '../../../main-process-api/GithubService';
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
 import { SkillLockService } from '../../../main-process-api/SkillLockService';
-import type { FileTree } from '../../../contexts/RepositoryPanelContext';
+import type { FileTree } from '@principal-ai/repository-abstraction';
 import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
 import { useSkillsSync } from '../../../hooks/useSkillsSync';
 import { SkillsRepoOnboarding } from './SkillsRepoOnboarding';
@@ -34,7 +34,7 @@ const SkillDetailPanelComponent = agentPanels.find(
 const SkillBrowserViewContent: React.FC = () => {
   const { theme } = useTheme();
   const { context, actions, events } = useSkillBrowserPanelProvider();
-  const { _isConfigured, _config, getConfig } = useSkillsSync();
+  const { isConfigured, config, getConfig } = useSkillsSync();
 
   // State for onboarding
   const [showOnboarding, setShowOnboarding] = useState(false);

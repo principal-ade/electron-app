@@ -9,7 +9,7 @@ import type {
 } from '@principal-ade/panel-framework-core';
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
 import type { GlobalSkill } from '../../../../shared/main-process-api-interfaces/FileSystemAPI';
-import type { FileTree } from '../../../contexts/RepositoryPanelContext';
+import type { FileTree } from '@principal-ai/repository-abstraction';
 import { GitHubFileSystemAdapter } from './GitHubFileSystemAdapter';
 import { LocalSkillsFileSystemAdapter } from './LocalSkillsFileSystemAdapter';
 
@@ -282,7 +282,7 @@ export const SkillBrowserPanelProvider: React.FC<
       // PanelContextValue properties
       currentScope: {
         type: githubRepoInfo ? 'repository' as const : 'workspace' as const,
-        workspace: null,
+        workspace: undefined,
         repository: githubRepoInfo ? {
           path: `${githubRepoInfo.owner}/${githubRepoInfo.repo}`,
           name: githubRepoInfo.repo,
