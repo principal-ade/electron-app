@@ -5,7 +5,7 @@ import {
   EditableConfigurablePanelLayout,
   type PanelLayout,
 } from '@principal-ade/panel-layouts';
-import { PanelEventBus } from '@principal-ade/panel-framework-core';
+import { PanelEventBus, type PanelContextValue, type DataSlice } from '@principal-ade/panel-framework-core';
 import { panels as repositoryCompositionPanels } from '@industry-theme/repository-composition-panels';
 import { panels as fileCityPanels } from '@industry-theme/file-city-panel';
 import { TabbedTerminalPanel } from '@industry-theme/xterm-terminal-panel';
@@ -83,7 +83,7 @@ const createMockGitStatus = () => {
 // Mock context provider
 const MockRepositoryPanelProvider: React.FC<{
   children: (props: {
-    context: unknown;
+    context: PanelContextValue;
     actions: Record<string, unknown>;
     events: PanelEventBus;
   }) => React.ReactNode;
@@ -117,7 +117,7 @@ const MockRepositoryPanelProvider: React.FC<{
   }, [events]);
 
   const context = useMemo(
-    () => ({
+    (): PanelContextValue => ({
       currentScope: {
         type: 'repository' as const,
         repository: {
@@ -160,17 +160,28 @@ const MockRepositoryPanelProvider: React.FC<{
           },
         ],
       ]),
-      getSlice: function <T = unknown>(name: string) {
-        return this.slices.get(name) as
-          | {
-              scope: string;
-              name: string;
-              data: T;
-              loading: boolean;
-              error: unknown;
-              refresh: () => Promise<void>;
-            }
-          | undefined;
+      getSlice: function <T = unknown>(name: string): DataSlice<T> | undefined {
+        return this.slices.get(name) as DataSlice<T> | undefined;
+      },
+      getWorkspaceSlice: function <T = unknown>(_name: string): DataSlice<T> | undefined {
+        return undefined;
+      },
+      getRepositorySlice: function <T = unknown>(name: string): DataSlice<T> | undefined {
+        const slice = this.slices.get(name);
+        if (slice && slice.scope === 'repository') {
+          return slice as DataSlice<T>;
+        }
+        return undefined;
+      },
+      hasSlice: function (name: string, _scope?: 'workspace' | 'repository'): boolean {
+        return this.slices.has(name);
+      },
+      isSliceLoading: function (name: string, _scope?: 'workspace' | 'repository'): boolean {
+        const slice = this.slices.get(name);
+        return slice ? slice.loading : false;
+      },
+      refresh: async function (_scope?: 'workspace' | 'repository', _slice?: string): Promise<void> {
+        // Mock refresh - no-op
       },
     }),
     [fileTree, gitStatus],
@@ -457,8 +468,8 @@ const PanelInteractionsStoryInner: React.FC = () => {
                           alignItems: 'center',
                         }}
                       >
-                        Current Layout: {layout.left} | {layout.middle} |{' '}
-                        {layout.right}
+                        Current Layout: {typeof layout.left === 'string' ? layout.left : 'none'} | {typeof layout.middle === 'string' ? layout.middle : 'none'} |{' '}
+                        {typeof layout.right === 'string' ? layout.right : 'none'}
                       </div>
                     </div>
                   </div>

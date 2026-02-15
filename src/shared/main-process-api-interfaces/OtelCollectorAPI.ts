@@ -2,7 +2,7 @@
  * OTEL Collector API Interface
  */
 
-import type { ServerStats } from '@principal-ai/otel-collector-server';
+import type { ServerStats, OTLPTraceRequest } from '@principal-ai/otel-collector-server';
 
 export interface OtelCollectorStatus {
   isRunning: boolean;
@@ -23,7 +23,7 @@ export interface RegisterPortResponse {
 export interface StoredTrace {
   timestamp: number;
   traceId: string;
-  data: unknown;
+  data: OTLPTraceRequest;
 }
 
 export interface GetTracesResponse {

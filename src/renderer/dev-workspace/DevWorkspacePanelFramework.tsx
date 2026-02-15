@@ -17,7 +17,7 @@ import {
 // CSS is bundled inline in principal-view-panels, no separate import needed
 // Note: file-city-panel CSS is bundled inline, no separate import needed
 // Note: file-editing-panels CSS is now inlined in JS, no separate import needed
-import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
+import type { PanelEventEmitter, PanelComponentProps, DataSlice } from '@principal-ade/panel-framework-core';
 import {
   RepositoryPanelProvider,
   useRepositoryPanelProvider,
@@ -32,7 +32,7 @@ import {
 } from '../contexts/AgentHighlightContext';
 import { TabbedTerminalPanel, type BaseTab, type TerminalTab } from '@industry-theme/xterm-terminal-panel';
 import { TabbedGhosttyTerminal } from '@industry-theme/ghostty-terminal-panel';
-import { panels as principalViewPanels, TraceDetailsPanel } from '@industry-theme/principal-view-panels';
+import { panels as principalViewPanels, TraceDetailsPanel, type CanvasEditorPanelProps, type WorkflowScenariosPanelProps } from '@industry-theme/principal-view-panels';
 import type { WorkflowTemplate } from '@principal-ai/principal-view-core';
 import type { FileInfo } from '@principal-ai/repository-abstraction';
 import { panels as fileCityPanels } from '@industry-theme/file-city-panel';
@@ -46,16 +46,33 @@ import {
   type PackageLayer,
 } from '@industry-theme/repository-composition-panels';
 import { panels as codeQualityPanels } from '@principal-ade/code-quality-panels';
-import { panels as markdownPanels } from '@industry-theme/markdown-panels';
-import { panels as fileEditingPanels } from '@industry-theme/file-editing-panels';
+import { panels as markdownPanels, type MarkdownPanelProps } from '@industry-theme/markdown-panels';
+import {
+  panels as fileEditingPanels,
+  type FileEditorPanelProps,
+  type MDXEditorPanelProps,
+  type GitDiffPanelProps,
+} from '@industry-theme/file-editing-panels';
 import { panels as backlogPanels } from '@industry-theme/backlogmd-kanban-panel';
-import { panels as agentPanels, type Skill } from '@industry-theme/agent-panels';
+import { panels as agentPanels, type Skill, type SkillDetailPanelProps } from '@industry-theme/agent-panels';
 import { panels as githubPanels } from '@industry-theme/github-panels';
 import { panels as typeInformationPanels } from '../panels/TypeInformationPanel';
 import type { Repository } from '../../shared/types/repository.types';
 import type { StoredTrace } from '../../shared/main-process-api-interfaces/OtelCollectorAPI';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { PanelIconSidebar } from '../components/Sidebar/PanelIconSidebar';
+import type {
+  DocumentSelectedPayload,
+  TaskSelectedPayload,
+  SkillSelectedPayload,
+  TraceSelectedPayload,
+  AgentSelectedPayload,
+  IssueSelectedPayload,
+  FileOpenedPayload,
+  MDXEditorPayload,
+  CanvasOpenPayload,
+  DependencyGraphPayload,
+} from './DevWorkspaceEvents.types';
 
 /**
  * Tab type for displaying skill detail panels
@@ -189,11 +206,7 @@ const FileCityWithHighlights: React.FC<{
   context: ReturnType<typeof useRepositoryPanelProvider>['context'];
   actions: ReturnType<typeof useRepositoryPanelProvider>['actions'];
   events: ReturnType<typeof useRepositoryPanelProvider>['events'];
-  FileCityPanelComponent: React.ComponentType<{
-    context: unknown;
-    actions: unknown;
-    events: unknown;
-  }>;
+  FileCityPanelComponent: React.ComponentType<PanelComponentProps>;
 }> = ({ context, actions, events, FileCityPanelComponent }) => {
   const { context: agentHighlightCtx } = useAgentHighlightProvider();
 
@@ -222,16 +235,7 @@ const FileCityWithHighlights: React.FC<{
       slices: mergedSlices,
       // Override getSlice to use our merged slices Map
       getSlice: <T = unknown>(name: string) => {
-        return mergedSlices.get(name) as
-          | {
-              scope: string;
-              name: string;
-              data: T;
-              loading: boolean;
-              error: unknown;
-              refresh: () => Promise<void>;
-            }
-          | undefined;
+        return mergedSlices.get(name) as DataSlice<T> | undefined;
       },
     };
   }, [context, agentHighlightCtx.highlightLayers]);
@@ -365,13 +369,13 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
   const CanvasEditorPanelComponent = principalViewPanels.find(
     (p) => p.metadata?.id === 'principal-ai.canvas-editor',
-  )?.component;
+  )?.component as React.ComponentType<CanvasEditorPanelProps> | undefined;
   const TraceViewerPanelComponent = principalViewPanels.find(
     (p) => p.metadata?.id === 'principal-ai.trace-viewer',
   )?.component;
   const CanvasDetailPanelComponent = principalViewPanels.find(
     (p) => p.metadata?.id === 'principal-ai.workflow-scenarios',
-  )?.component;
+  )?.component as React.ComponentType<WorkflowScenariosPanelProps> | undefined;
   const StoryboardListPanelComponent = principalViewPanels.find(
     (p) => p.metadata?.id === 'principal-ai.storyboard-list',
   )?.component;
@@ -401,16 +405,16 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   const CodeQualityPanelComponent = codeQualityPanels.find(
     (p) => p.metadata?.id === 'principal-ade.quality-hexagon-panel',
   )?.component;
-  const MarkdownPanelComponent = markdownPanels[0]?.component;
+  const MarkdownPanelComponent = markdownPanels[0]?.component as React.ComponentType<MarkdownPanelProps> | undefined;
   const FileEditorPanelComponent = fileEditingPanels.find(
     (p) => p.metadata?.id === 'industry-theme.file-editor',
-  )?.component;
+  )?.component as React.ComponentType<FileEditorPanelProps> | undefined;
   const GitDiffPanelComponent = fileEditingPanels.find(
     (p) => p.metadata?.id === 'industry-theme.git-diff',
-  )?.component;
+  )?.component as React.ComponentType<GitDiffPanelProps> | undefined;
   const MDXEditorPanelComponent = fileEditingPanels.find(
     (p) => p.metadata?.id === 'industry-theme.mdx-editor',
-  )?.component;
+  )?.component as React.ComponentType<MDXEditorPanelProps> | undefined;
 
   // Backlog.md panels (Kanban, TaskDetail, Milestone)
   const KanbanPanelComponent = backlogPanels[0]?.component;
@@ -420,7 +424,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   // Agent Skills panels
   const SkillDetailPanelComponent = agentPanels.find(
     (p) => p.metadata?.id === 'industry-theme.skill-detail',
-  )?.component;
+  )?.component as React.ComponentType<SkillDetailPanelProps> | undefined;
   const AgentDetailPanelComponent = agentPanels.find(
     (p) => p.metadata?.id === 'industry-theme.agent-detail',
   )?.component;
@@ -444,11 +448,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   // Listen for doc:openInRightPanel events (from Alexandria docs panel context menu)
   useEffect(() => {
     const unsubscribe = events.on('doc:openInRightPanel', async (event) => {
-      const doc = event.payload as {
-        path: string;
-        relativePath: string;
-        name: string;
-      };
+      const doc = event.payload as DocumentSelectedPayload;
 
       console.info(
         '[DevWorkspacePanelFramework] Open in right panel event received:',
@@ -503,8 +503,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         if (event.source === 'tab') return;
 
         console.info('[DevWorkspacePanelFramework] Received task:selected event:', event);
-        const payload = event.payload as { task: unknown; taskId: string };
-        const task = payload.task as { filePath?: string; title?: string } | undefined;
+        const payload = event.payload as TaskSelectedPayload;
+        const task = payload.task;
 
         if (!task || !task.filePath) {
           console.warn('[DevWorkspacePanelFramework] No task data or filePath in payload:', payload);
@@ -529,8 +529,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           }
 
           // Create new MDX editor tab
+          // Use file path for deterministic ID (sanitize for valid ID)
+          const tabId = `task-${filePath.replace(/[^a-zA-Z0-9-_]/g, '_')}`;
           const newTab: MDXEditorTab = {
-            id: `task-${task.id || Date.now()}`,
+            id: tabId,
             label: fileName,
             contentType: 'mdx-editor',
             filePath: filePath,
@@ -557,7 +559,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         }
 
         console.info('[DevWorkspacePanelFramework] Received skill:selected event:', event);
-        const payload = event.payload as { skill?: Skill; skillId?: string };
+        const payload = event.payload as SkillSelectedPayload;
 
         // Extract skill data
         const skill = payload.skill;
@@ -581,7 +583,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
           // Create new skill tab with full skill object for instant loading
           const newTab: SkillTab = {
-            id: `skill-${skill.id}-${Date.now()}`,
+            id: `skill-${skill.id}`,
             label: skill.name || 'Skill',
             contentType: 'skill',
             skillId: skill.id,
@@ -607,7 +609,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           return;
         }
 
-        const payload = event.payload as { trace?: StoredTrace; traceId?: string };
+        const payload = event.payload as TraceSelectedPayload;
 
         // Extract trace data
         const trace = payload.trace;
@@ -630,9 +632,13 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           }
 
           // Create new trace details tab with full trace object for instant loading
+          // Extract name from first span if available, otherwise use short traceId
+          const firstSpan = trace.data.resourceSpans?.[0]?.scopeSpans?.[0]?.spans?.[0];
+          const traceName = firstSpan?.name || trace.traceId.substring(0, 8);
+
           const newTab: TraceDetailsTab = {
-            id: `trace-${trace.traceId}-${Date.now()}`,
-            label: trace.name || trace.traceId.substring(0, 8),
+            id: `trace-${trace.traceId}`,
+            label: traceName,
             contentType: 'trace-details',
             traceId: trace.traceId,
             traceData: trace, // Pass full trace object for instant display
@@ -650,7 +656,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         if (event.source === 'tab') return;
 
         console.info('[DevWorkspacePanelFramework] Received agent:selected event:', event);
-        const payload = event.payload as { data?: unknown };
+        const payload = event.payload as AgentSelectedPayload;
         const agent = payload.data;
 
         if (!agent || !agent.path) {
@@ -686,8 +692,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           }
 
           // Create new MDX editor tab
+          // Use file path for deterministic ID (sanitize for valid ID)
+          const tabId = `agent-${filePath.replace(/[^a-zA-Z0-9-_]/g, '_')}`;
           const newTab: MDXEditorTab = {
-            id: `agent-${agent.id}-${Date.now()}`,
+            id: tabId,
             label: fileName,
             contentType: 'mdx-editor',
             filePath: filePath,
@@ -706,7 +714,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         if (event.source === 'modal') return;
 
         console.info('[DevWorkspacePanelFramework] Received issue:selected event:', event);
-        const payload = event.payload as { issue: unknown };
+        const payload = event.payload as IssueSelectedPayload;
         setDetailModal({
           panelId: 'githubIssueDetail',
           data: payload.issue,
@@ -718,7 +726,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         if (event.source === 'tab') return;
 
         console.info('[DevWorkspacePanelFramework] Received file:open event:', event);
-        const payload = event.payload as { path: string; gitStatus?: string };
+        const payload = event.payload as FileOpenedPayload;
         const filePath = payload.path;
         const fileName = filePath.split('/').pop() || 'File';
 
@@ -753,10 +761,12 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           }
 
           // Create new tab
+          // Use file path for deterministic ID (sanitize for valid ID)
+          const sanitizedPath = filePath.replace(/[^a-zA-Z0-9-_]/g, '_');
           let newTab: FileEditorTab | MDXEditorTab | GitDiffTab;
           if (contentType === 'mdx-editor') {
             newTab = {
-              id: `mdx-editor-${Date.now()}`,
+              id: `mdx-editor-${sanitizedPath}`,
               label: fileName,
               contentType: 'mdx-editor',
               filePath: filePath,
@@ -765,7 +775,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             };
           } else if (contentType === 'git-diff') {
             newTab = {
-              id: `git-diff-${Date.now()}`,
+              id: `git-diff-${sanitizedPath}`,
               label: fileName,
               contentType: 'git-diff',
               filePath: filePath,
@@ -775,7 +785,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             };
           } else {
             newTab = {
-              id: `file-editor-${Date.now()}`,
+              id: `file-editor-${sanitizedPath}`,
               label: fileName,
               contentType: 'file-editor',
               filePath: filePath,
@@ -797,7 +807,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           return;
         }
 
-        const payload = event.payload as { filePath?: string; path?: string };
+        const payload = event.payload as MDXEditorPayload;
         const filePath = payload.filePath || payload.path;
 
         if (!filePath) {
@@ -869,7 +879,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         // Ignore re-emitted events from modal to prevent loop
         if (event.source === 'modal') return;
 
-        const payload = event.payload as { filePath?: string };
+        const payload = event.payload as MDXEditorPayload;
         const filePath = payload?.filePath;
 
         if (!filePath) {
@@ -887,14 +897,17 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       }),
       // Canvas open - create tab (from storyboard-list-panel, canvas-list-panel or canvas-detail-panel)
       events.on('custom', (event) => {
+        // Type the canvas payload
+        const payload = event.payload as CanvasOpenPayload;
+
         // Only handle openCanvas action from storyboard-list-panel, canvas-list-panel or canvas-detail-panel
-        if (event.payload?.action !== 'openCanvas' ||
+        if (payload.action !== 'openCanvas' ||
             (event.source !== 'storyboard-list-panel' && event.source !== 'canvas-list-panel' && event.source !== 'canvas-detail-panel')) {
           return;
         }
 
         console.info('[DevWorkspacePanelFramework] Received canvas open event:', event);
-        const { canvasId, canvas, canvasFileInfo, workflowId, workflow, workflowFileInfo } = event.payload;
+        const { canvasId, canvas, canvasFileInfo, workflowId, workflow, workflowFileInfo } = payload;
 
         if (!canvasId || !canvas) {
           console.warn('[DevWorkspacePanelFramework] No canvas data in event:', event.payload);
@@ -927,7 +940,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             updatedTabs[existingTabIndex] = {
               ...existingTab,
               selectedNarrativeId: workflowId || null,
-              narrativePath: workflow?.path || null,
+              narrativePath: workflowFileInfo?.path || null,
               narrativeTemplate: workflow || null,
               narrativeFileInfo: workflowFileInfo || null,
             };
@@ -944,7 +957,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           // Create new canvas tab (editor or detail based on workflow presence)
           const newTab: CanvasEditorTab | CanvasTab = hasWorkflow
             ? {
-                id: `canvas-${canvasId}-${Date.now()}`,
+                id: `canvas-${canvasId}`,
                 label: workflow?.name || workflowId || canvas.name || canvasId,
                 contentType: 'canvas-detail',
                 canvasId: canvasId,
@@ -952,13 +965,13 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 canvasName: canvas.name || canvasId,
                 canvasFileInfo: canvasFileInfo || null,
                 selectedNarrativeId: workflowId || null,
-                narrativePath: workflow?.path || null,
+                narrativePath: workflowFileInfo?.path || null,
                 narrativeTemplate: workflow || null,
                 narrativeFileInfo: workflowFileInfo || null,
                 closable: true,
               } as CanvasTab
             : {
-                id: `canvas-${canvasId}-${Date.now()}`,
+                id: `canvas-${canvasId}`,
                 label: canvas.name || canvasId,
                 contentType: 'canvas-editor',
                 canvasId: canvasId,
@@ -1028,7 +1041,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   useEffect(() => {
     const unsubscribe = events.on('dependency-graph:open', (event) => {
       console.info('[DevWorkspacePanelFramework] Received dependency-graph:open event:', event);
-      const payload = event.payload as { packages: PackageLayer[] } | undefined;
+      const payload = event.payload as DependencyGraphPayload | undefined;
       const packages = payload?.packages ?? [];
 
       if (packages.length === 0) {
@@ -1262,7 +1275,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 context={context}
                 actions={actionsRef.current}
                 events={eventsRef.current}
-                selectedConfigId={canvasEditorTab.canvasId}
                 canvasPath={canvasEditorTab.canvasPath}
                 canvasName={canvasEditorTab.canvasName}
                 canvasFileInfo={canvasEditorTab.canvasFileInfo}
@@ -1485,13 +1497,15 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           );
         }
 
-        default:
-          console.warn('[DevWorkspacePanelFramework] Unknown tab type:', tab.contentType);
+        default: {
+          const unknownTab = tab as DevWorkspaceTab;
+          console.warn('[DevWorkspacePanelFramework] Unknown tab type:', unknownTab.contentType);
           return (
             <div style={{ padding: '2rem', color: theme.colors.error }}>
-              Unknown tab type: {tab.contentType}
+              Unknown tab type: {unknownTab.contentType}
             </div>
           );
+        }
       }
     },
     [theme, context, SkillDetailPanelComponent, MarkdownPanelComponent, CanvasEditorPanelComponent, CanvasDetailPanelComponent, FileEditorPanelComponent, MDXEditorPanelComponent, GitDiffPanelComponent],
@@ -2218,7 +2232,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       >
         {/* Panel Icon Sidebar */}
         <PanelIconSidebar
-        currentPanelId={layout.left}
+        currentPanelId={typeof layout.left === 'string' ? layout.left : ''}
         onPanelChange={(panelId) => onLayoutChange({ ...layout, left: panelId })}
         theme={theme}
         collapsed={collapsed.left}
@@ -2289,6 +2303,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                         name: 'selectedIssue',
                         data: detailModal.data,
                         loading: false,
+                        error: null,
+                        refresh: async () => {},
                       }],
                     ]),
                   }}

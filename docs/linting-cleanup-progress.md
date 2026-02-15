@@ -37,12 +37,12 @@ npm run lint 2>&1 | grep "src/renderer/" | sed 's/(.*//' | awk -F: '{print $1}' 
 npm run typecheck 2>&1 | grep "src/renderer/" | sed 's/(.*//' | awk -F: '{print $1}' | sed 's|.*src/renderer/||' | cut -d'/' -f1 | sort | uniq -c | sort -nr
 ```
 
-## Current Status (Updated - 2026-02-14)
+## Current Status (Updated - 2026-02-15)
 
 ### Overall Issues
 
-* **ESLint**: **473 total issues** (up from 454, **+19 issues** ⚠️)
-* **TypeScript**: **39 errors** (down from 132, **-93 errors** ✅ **70% reduction!**)
+* **ESLint**: **473 total issues** (unchanged)
+* **TypeScript**: **1 error** (down from 39, **-38 errors** ✅ **97% reduction this session!**)
 * **Console.log warnings**: 211 (unchanged)
 * **Any types in src/main**: 59
 
@@ -106,7 +106,7 @@ npm run typecheck 2>&1 | grep "src/renderer/" | sed 's/(.*//' | awk -F: '{print 
 
 | Subdirectory               | Errors | Status | Change |
 | -------------------------- | ------ | ------ | ------ |
-| dev-workspace              | 39     | ⚠️ Needs Attention | **-4** ✅ |
+| dev-workspace              | 1      | ⚠️ Nearly Clean | **-38** ✅ |
 | principal-window           | ✅ Clean | ✅ Clean | **-37** ✅ |
 | extension-window           | ✅ Clean | ✅ Clean | **-18** ✅ |
 | utils                      | ✅ Clean | ✅ Clean | **-17** ✅ |
@@ -141,6 +141,56 @@ npm run typecheck 2>&1 | grep "src/renderer/" | sed 's/(.*//' | awk -F: '{print 
 4. **renderer/utils** - 10 ESLint
 5. **renderer/components** - 12 ESLint
 6. **renderer/principal-window** - 16 ESLint
+
+### Recent Changes (2026-02-15 - Session 5)
+
+**TypeScript Cleanup - 38 errors fixed (97% reduction!):**
+
+- ✅ **Published @industry-theme/file-editing-panels@0.3.18**
+  - Added exports for FileEditorPanelProps, MDXEditorPanelProps, GitDiffPanelProps
+  - Fixed MDXEditorPanel/index.ts to export MDXEditorPanelProps
+  - Allows proper type imports instead of duplicating types inline
+
+- ✅ **Published @principal-ai/otel-collector-server@0.2.1**
+  - Exported OTLPTraceRequest type from package index
+  - Fixed type safety for StoredTrace.data property
+  - Replaced `unknown` with proper OTLPTraceRequest type
+
+- ✅ **DevWorkspacePanelFramework.tsx** - Multiple fixes:
+  - Fixed panel type imports: changed from `/dist/panels/...` to main package exports
+  - Removed invalid `selectedConfigId` prop from CanvasEditorPanelComponent
+  - Created DevWorkspaceEvents.types.ts for all event payload types
+  - Replaced all inline type assertions with proper imported types
+  - Fixed contentType type narrowing in default case (cast to DevWorkspaceTab)
+  - Fixed FileCityWithHighlights prop type from `unknown` to `PanelComponentProps`
+  - Fixed getSlice return type to use `DataSlice<T>` instead of inline type
+  - Fixed PanelSlot | undefined issue with type guard
+  - Fixed DataSlice creation by adding missing `error` and `refresh` properties
+
+- ✅ **OtelCollectorService.ts** - Fixed traceId type mismatch:
+  - Handle both string and Uint8Array formats for traceId
+  - Convert Uint8Array to hex string representation
+
+- ✅ **PanelInteractions.stories.tsx** - Fixed all Storybook errors:
+  - Imported PanelContextValue and DataSlice types
+  - Changed context type from `unknown` to `PanelContextValue`
+  - Implemented all required PanelContextValue methods (getWorkspaceSlice, getRepositorySlice, hasSlice, isSliceLoading, refresh)
+  - Fixed PanelSlot display with type guard
+
+**Library Updates:**
+- Updated @industry-theme/file-editing-panels from 0.3.17 → 0.3.18
+- Updated @principal-ai/otel-collector-server from 0.2.0 → 0.2.1
+
+**Notable Achievements:**
+- 🎉 **Total TypeScript errors: 1** (down from 39, **-97%** this session, **-99.5%** overall from 196!)
+- 📦 Published 2 package patches to fix type exports
+- 📁 Created DevWorkspaceEvents.types.ts for centralized event types
+- ✅ Fixed OTLPTraceRequest type safety (no more `unknown` for trace data)
+- ✅ Fixed OTLP traceId to handle both string and Uint8Array formats
+- ✅ **Progress: 196 → 39 → 1** (almost done!)
+
+**Remaining Error (1 total):**
+- 1 error in DevWorkspacePanelFramework.tsx:1494 - StoredTrace to TraceInfo type mismatch (will be revisited soon)
 
 ### Recent Changes (2026-02-14 - Session 4)
 

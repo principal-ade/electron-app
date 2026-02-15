@@ -2,13 +2,13 @@
  * OTEL Collector Service - Manages OpenTelemetry collector for trace collection
  */
 
-import { OTELCollectorServer, ServerStats, WILDCARD_SOURCE } from '@principal-ai/otel-collector-server';
+import { OTELCollectorServer, ServerStats, WILDCARD_SOURCE, OTLPTraceRequest } from '@principal-ai/otel-collector-server';
 import { app, MessageChannelMain, MessagePortMain } from 'electron';
 import path from 'path';
 import os from 'os';
 
-/** OTLP (OpenTelemetry Protocol) trace data payload with dynamic structure */
-type OTLPTraceData = unknown;
+/** OTLP (OpenTelemetry Protocol) trace data payload */
+type OTLPTraceData = OTLPTraceRequest;
 
 interface StoredTrace {
   timestamp: number;
@@ -256,11 +256,17 @@ export class OtelCollectorService {
   private extractTraceId(traceData: OTLPTraceData): string {
     try {
       // OTLP format: resourceSpans[0].scopeSpans[0].spans[0].traceId
-      // Type assertion needed to access dynamic OTLP structure
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const data = traceData as any;
-      if (data.resourceSpans?.[0]?.scopeSpans?.[0]?.spans?.[0]?.traceId) {
-        return data.resourceSpans[0].scopeSpans[0].spans[0].traceId;
+      const traceId = traceData.resourceSpans?.[0]?.scopeSpans?.[0]?.spans?.[0]?.traceId;
+      if (traceId) {
+        // Handle both string and Uint8Array formats
+        if (typeof traceId === 'string') {
+          return traceId;
+        } else {
+          // Convert Uint8Array to hex string
+          return Array.from(traceId)
+            .map(b => b.toString(16).padStart(2, '0'))
+            .join('');
+        }
       }
       return `trace-${Date.now()}`;
     } catch {
