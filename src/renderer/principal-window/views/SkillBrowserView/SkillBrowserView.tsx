@@ -9,7 +9,7 @@ import {
   useSkillBrowserPanelProvider,
 } from './SkillBrowserPanelProvider';
 import { usePanelPersistence } from '../../../hooks/usePanelPersistence';
-import { SkillBrowserViewHeader, type ViewMode } from './SkillBrowserViewHeader';
+import { SkillBrowserViewHeader, type ViewMode, type DetectedDirectory } from './SkillBrowserViewHeader';
 import { type SkillDestination, DIRECTORY_ID_TO_DESTINATION } from './InstallSkillToolbar';
 import { GithubService } from '../../../main-process-api/GithubService';
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
@@ -51,13 +51,7 @@ const SkillBrowserViewContent: React.FC = () => {
   const [installedSkillsData, setInstalledSkillsData] = useState<Array<{ path: string; name: string; source: string }>>([]);
 
   // State for detected skill directories
-  const [detectedDirectories, setDetectedDirectories] = useState<Array<{
-    id: string;
-    path: string;
-    displayName: string;
-    skillCount: number;
-    skills: string[];
-  }>>([]);
+  const [detectedDirectories, setDetectedDirectories] = useState<DetectedDirectory[]>([]);
 
   // State for recent repos
   const [recentRepos, setRecentRepos] = useState<RecentRepo[]>([]);
@@ -750,8 +744,10 @@ const SkillBrowserViewContent: React.FC = () => {
       console.log('[SkillBrowserView] Skill installed successfully:', result);
 
       // Emit event to refresh global skills cache
-      actions.notifyPanels({
+      actions.notifyPanels?.({
         type: 'skill:installed',
+        source: 'SkillBrowserView',
+        timestamp: Date.now(),
         payload: {
           skillName: skillFolderName,
           destination,
@@ -829,8 +825,10 @@ const SkillBrowserViewContent: React.FC = () => {
         });
 
         // Emit event to refresh global skills cache
-        actions.notifyPanels({
+        actions.notifyPanels?.({
           type: 'skill:installed',
+          source: 'SkillBrowserView',
+          timestamp: Date.now(),
           payload: {
             skillName: skillFolderName,
             destination,
@@ -899,8 +897,10 @@ const SkillBrowserViewContent: React.FC = () => {
 
       // Now emit events so panels refresh with the updated data
       for (const { skillPath, directoryId } of deletedPaths) {
-        actions.notifyPanels({
+        actions.notifyPanels?.({
           type: 'skill:uninstalled',
+          source: 'SkillBrowserView',
+          timestamp: Date.now(),
           payload: {
             skillName: skillFolderName,
             skillPath,
@@ -992,21 +992,20 @@ const SkillBrowserViewContent: React.FC = () => {
                 skillPath: selectedSkill.path,
                 currentSha: getSkillTreeSha(selectedSkill.skillFolderPath),
               } : undefined,
-              onInstall: async () => {
+              onInstall: () => {
                 // Check if this is an update (skill is already installed)
                 if (isSkillInstalled(selectedSkill)) {
                   const installedDirs = getSkillInstalledDirectories(selectedSkill);
                   if (installedDirs.length > 0) {
                     // Directly update to already-installed directories
-                    try {
-                      await handleInstallSkillToDirectories(installedDirs);
+                    handleInstallSkillToDirectories(installedDirs).then(async () => {
                       // Refresh metadata after update
                       const metadata = await getInstalledSkillMetadata(selectedSkill);
                       setSelectedSkillMetadata(metadata);
-                    } catch (err) {
+                    }).catch((err) => {
                       console.error('[SkillBrowserView] Update failed:', err);
                       alert(`Update failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
-                    }
+                    });
                     return;
                   }
                 }
@@ -1168,12 +1167,12 @@ const SkillBrowserViewContent: React.FC = () => {
                 : undefined
             }
             onRightCollapseComplete={
-              panelState.type === 'two-panel'
+              panelState.type === 'three-panel'
                 ? panelState.handleRightCollapseComplete
                 : undefined
             }
             onRightExpandComplete={
-              panelState.type === 'two-panel'
+              panelState.type === 'three-panel'
                 ? panelState.handleRightExpandComplete
                 : undefined
             }
