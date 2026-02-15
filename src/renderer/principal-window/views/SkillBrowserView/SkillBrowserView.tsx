@@ -239,7 +239,12 @@ const SkillBrowserViewContent: React.FC = () => {
   const loadDetectedDirectories = useCallback(async () => {
     try {
       const detected = await FileSystemService.detectPresetDirectories();
-      setDetectedDirectories(detected || []);
+      // Map to DetectedDirectory, providing default icon if missing
+      const mappedDirectories: DetectedDirectory[] = (detected || []).map(dir => ({
+        ...dir,
+        icon: dir.icon || 'folder',
+      }));
+      setDetectedDirectories(mappedDirectories);
     } catch (err) {
       console.error('[SkillBrowserView] Failed to detect directories:', err);
     }
