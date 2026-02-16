@@ -256,7 +256,7 @@ export const DetailedConfigurationView: React.FC<
   const checkHooksFile = async (hooksFilePath: string) => {
     try {
       const fileResult = await FileSystemService.readFile(hooksFilePath);
-      console.log('Hooks file content:', fileResult?.content);
+      console.info('Hooks file content:', fileResult?.content);
       setHooksFileExists(!!fileResult?.content);
     } catch {
       setHooksFileExists(false);
@@ -473,14 +473,14 @@ export const DetailedConfigurationView: React.FC<
         </button>
         <button
           onClick={() => {
-            console.log(
+            console.info(
               '[MCP] Tab button clicked, isEditMode:',
               isEditMode,
               'currentViewMode:',
               viewMode,
             );
             if (!isEditMode) {
-              console.log('[MCP] Setting view mode to mcp');
+              console.info('[MCP] Setting view mode to mcp');
               setViewMode('mcp');
             }
           }}
@@ -729,21 +729,21 @@ export const DetailedConfigurationView: React.FC<
   };
 
   const renderMCPContent = () => {
-    console.log('[MCP] renderMCPContent called for agentType:', agentType);
+    console.info('[MCP] renderMCPContent called for agentType:', agentType);
     if (agentType === 'claude') {
-      console.log('[MCP] Rendering Claude MCP content');
+      console.info('[MCP] Rendering Claude MCP content');
       return <ClaudeMCPContent />;
     } else if (agentType === 'cline') {
-      console.log('[MCP] Rendering Cline MCP content');
+      console.info('[MCP] Rendering Cline MCP content');
       return <ClineMCPContent />;
     } else if (agentType === 'opencode') {
-      console.log('[MCP] Rendering OpenCode MCP content');
+      console.info('[MCP] Rendering OpenCode MCP content');
       return <OpenCodeMCPContent />;
     } else if (agentType === 'droid') {
-      console.log('[MCP] Rendering Droid MCP content');
+      console.info('[MCP] Rendering Droid MCP content');
       return <DroidMCPContent />;
     }
-    console.log('[MCP] Unknown agent type, returning null');
+    console.info('[MCP] Unknown agent type, returning null');
     return null;
   };
 
@@ -760,12 +760,12 @@ export const DetailedConfigurationView: React.FC<
     }, []);
 
     const loadClaudeMCPStatus = async () => {
-      console.log('[MCP] Loading Claude MCP status...');
+      console.info('[MCP] Loading Claude MCP status...');
       try {
         const mcpResult = await AgentConfigurationService.getAgentMCPStatus(
           SupportedAgent.CLAUDE,
         );
-        console.log('[MCP] Claude MCP status result:', mcpResult);
+        console.info('[MCP] Claude MCP status result:', mcpResult);
         if (mcpResult.success && mcpResult.status) {
           setClaudeMCPStatus({
             hasPrincipleMD: mcpResult.status.hasMCP,
@@ -778,28 +778,28 @@ export const DetailedConfigurationView: React.FC<
     };
 
     const handleToggleClaudeMCP = async () => {
-      console.log(
+      console.info(
         '[MCP] Toggle Claude MCP clicked, current status:',
         claudeMCPStatus.hasPrincipleMD,
       );
       setIsTogglingClaudeMCP(true);
       try {
         if (claudeMCPStatus.hasPrincipleMD) {
-          console.log('[MCP] Removing MCP from Claude...');
+          console.info('[MCP] Removing MCP from Claude...');
           const result = await AgentConfigurationService.removeMCPFromAgent(
             SupportedAgent.CLAUDE,
           );
-          console.log('[MCP] Remove result:', result);
+          console.info('[MCP] Remove result:', result);
           if (result.success) {
             await loadClaudeMCPStatus();
             checkConfigFile();
           }
         } else {
-          console.log('[MCP] Adding MCP to Claude...');
+          console.info('[MCP] Adding MCP to Claude...');
           const result = await AgentConfigurationService.addMCPToAgent(
             SupportedAgent.CLAUDE,
           );
-          console.log('[MCP] Add result:', result);
+          console.info('[MCP] Add result:', result);
           if (result.success) {
             await loadClaudeMCPStatus();
             checkConfigFile();
@@ -868,12 +868,12 @@ export const DetailedConfigurationView: React.FC<
     }, []);
 
     const loadClineMCPStatus = async () => {
-      console.log('[MCP] Loading Cline MCP status...');
+      console.info('[MCP] Loading Cline MCP status...');
       try {
         const mcpResult = await AgentConfigurationService.getAgentMCPStatus(
           SupportedAgent.CLINE,
         );
-        console.log('[MCP] Cline MCP status result:', mcpResult);
+        console.info('[MCP] Cline MCP status result:', mcpResult);
         if (mcpResult.success && mcpResult.status) {
           setClineMCPStatus({
             hasPrincipleMD: mcpResult.status.hasMCP,
@@ -886,28 +886,28 @@ export const DetailedConfigurationView: React.FC<
     };
 
     const handleToggleClineMCP = async () => {
-      console.log(
+      console.info(
         '[MCP] Toggle Cline MCP clicked, current status:',
         clineMCPStatus.hasPrincipleMD,
       );
       setIsTogglingClineMCP(true);
       try {
         if (clineMCPStatus.hasPrincipleMD) {
-          console.log('[MCP] Removing MCP from Cline...');
+          console.info('[MCP] Removing MCP from Cline...');
           const result = await AgentConfigurationService.removeMCPFromAgent(
             SupportedAgent.CLINE,
           );
-          console.log('[MCP] Remove result:', result);
+          console.info('[MCP] Remove result:', result);
           if (result.success) {
             await loadClineMCPStatus();
             checkConfigFile();
           }
         } else {
-          console.log('[MCP] Adding MCP to Cline...');
+          console.info('[MCP] Adding MCP to Cline...');
           const result = await AgentConfigurationService.addMCPToAgent(
             SupportedAgent.CLINE,
           );
-          console.log('[MCP] Add result:', result);
+          console.info('[MCP] Add result:', result);
           if (result.success) {
             await loadClineMCPStatus();
             checkConfigFile();
@@ -977,22 +977,22 @@ export const DetailedConfigurationView: React.FC<
     }, []);
 
     const loadOpenCodeMCPStatus = async () => {
-      console.log('[MCP] Loading OpenCode MCP status...');
+      console.info('[MCP] Loading OpenCode MCP status...');
       try {
         const mcpResult = await AgentConfigurationService.getAgentMCPStatus(
           SupportedAgent.OPENCODE,
         );
-        console.log('[MCP] OpenCode MCP status result:', mcpResult);
+        console.info('[MCP] OpenCode MCP status result:', mcpResult);
         if (mcpResult.success && mcpResult.status) {
           setOpenCodeMCPStatus({
             hasPrincipleMD: mcpResult.status.hasMCP,
             mcpServers: {}, // We don't need detailed servers list for now
           });
-          console.log('[MCP] OpenCode MCP status updated:', {
+          console.info('[MCP] OpenCode MCP status updated:', {
             hasPrincipleMD: mcpResult.status.hasMCP,
           });
         } else {
-          console.log(
+          console.info(
             '[MCP] Failed to get OpenCode MCP status:',
             mcpResult.error,
           );
@@ -1003,28 +1003,28 @@ export const DetailedConfigurationView: React.FC<
     };
 
     const handleToggleOpenCodeMCP = async () => {
-      console.log(
+      console.info(
         '[MCP] Toggle OpenCode MCP clicked, current status:',
         openCodeMCPStatus.hasPrincipleMD,
       );
       setIsTogglingOpenCodeMCP(true);
       try {
         if (openCodeMCPStatus.hasPrincipleMD) {
-          console.log('[MCP] Removing MCP from OpenCode...');
+          console.info('[MCP] Removing MCP from OpenCode...');
           const result = await AgentConfigurationService.removeMCPFromAgent(
             SupportedAgent.OPENCODE,
           );
-          console.log('[MCP] Remove result:', result);
+          console.info('[MCP] Remove result:', result);
           if (result.success) {
             await loadOpenCodeMCPStatus();
             await checkAgentStatus();
           }
         } else {
-          console.log('[MCP] Adding MCP to OpenCode...');
+          console.info('[MCP] Adding MCP to OpenCode...');
           const result = await AgentConfigurationService.addMCPToAgent(
             SupportedAgent.OPENCODE,
           );
-          console.log('[MCP] Add result:', result);
+          console.info('[MCP] Add result:', result);
           if (result.success) {
             await loadOpenCodeMCPStatus();
             await checkAgentStatus();
@@ -1093,12 +1093,12 @@ export const DetailedConfigurationView: React.FC<
     }, []);
 
     const loadDroidMCPStatus = async () => {
-      console.log('[MCP] Loading Droid MCP status...');
+      console.info('[MCP] Loading Droid MCP status...');
       try {
         const mcpResult = await AgentConfigurationService.getAgentMCPStatus(
           'droid' as SupportedAgent,
         );
-        console.log('[MCP] Droid MCP result:', mcpResult);
+        console.info('[MCP] Droid MCP result:', mcpResult);
 
         setDroidMCPStatus({
           hasPrincipleMD: mcpResult.status?.hasMCP || false,
@@ -1113,21 +1113,21 @@ export const DetailedConfigurationView: React.FC<
       setIsTogglingDroidMCP(true);
       try {
         if (droidMCPStatus.hasPrincipleMD) {
-          console.log('[MCP] Removing MCP from Droid...');
+          console.info('[MCP] Removing MCP from Droid...');
           const result = await AgentConfigurationService.removeMCPFromAgent(
             'droid' as SupportedAgent,
           );
-          console.log('[MCP] Remove result:', result);
+          console.info('[MCP] Remove result:', result);
           if (result.success) {
             await loadDroidMCPStatus();
             checkConfigFile();
           }
         } else {
-          console.log('[MCP] Adding MCP to Droid...');
+          console.info('[MCP] Adding MCP to Droid...');
           const result = await AgentConfigurationService.addMCPToAgent(
             'droid' as SupportedAgent,
           );
-          console.log('[MCP] Add result:', result);
+          console.info('[MCP] Add result:', result);
           if (result.success) {
             await loadDroidMCPStatus();
             checkConfigFile();

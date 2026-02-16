@@ -26,7 +26,7 @@ import { createRendererFileSystemAdapter } from './RendererFileSystemAdapter';
  * const fileTree = await RepositoryMonitoringService.getFileTree(repositoryPath);
  * const serviceNames = await getAllServiceNamesFromFileTree(fileTree, repositoryPath);
  * // Returns: ['payment-api', 'payment-worker', 'auth-service']
- * console.log('Found services:', serviceNames);
+ * console.info('Found services:', serviceNames);
  * ```
  */
 export async function getAllServiceNamesFromFileTree(
@@ -34,7 +34,7 @@ export async function getAllServiceNamesFromFileTree(
   repositoryPath: string
 ): Promise<string[]> {
   try {
-    console.log('[libraryResourcesLoader] Discovering all services from file tree', {
+    console.info('[libraryResourcesLoader] Discovering all services from file tree', {
       repositoryPath,
       fileTreeSha: fileTree.sha,
     });
@@ -44,7 +44,7 @@ export async function getAllServiceNamesFromFileTree(
 
     const result = await discovery.discover(fileTree);
 
-    console.log('[libraryResourcesLoader] Discovery result:', {
+    console.info('[libraryResourcesLoader] Discovery result:', {
       repositoryPath,
       librariesCount: result.libraries.length,
       serviceNamesCount: result.allServiceNames.length,
@@ -71,13 +71,13 @@ export async function getAllServiceNamesFromFileTree(
  * const fileTree = await RepositoryMonitoringService.getFileTree(repositoryPath);
  * const resources = await getOtelResourcesFromFileTree(fileTree, repositoryPath);
  * for (const [serviceId, attrs] of Object.entries(resources)) {
- *   console.log('Service:', attrs['service.name']);
+ *   console.info('Service:', attrs['service.name']);
  * }
  * ```
  */
 export async function getOtelResourcesFromFileTree(
   fileTree: FileTree,
-  repositoryPath: string
+  _repositoryPath: string
 ): Promise<Record<string, ResourceAttributes>> {
   try {
     const fsAdapter = await createRendererFileSystemAdapter();

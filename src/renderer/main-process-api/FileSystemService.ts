@@ -1,3 +1,5 @@
+import type { GlobalSkillDirectory, SkillsRepoConfig } from '../../shared/main-process-api-interfaces/FileSystemAPI';
+
 export class FileSystemService {
   static async getFileStats(filePath: string) {
     return window.mainProcess.fileSystem.getFileStats(filePath);
@@ -119,7 +121,7 @@ export class FileSystemService {
     return window.mainProcess.fileSystem.getSyncConfig();
   }
 
-  static async updateSyncConfig(updates: any) {
+  static async updateSyncConfig(updates: Partial<SkillsRepoConfig>) {
     return window.mainProcess.fileSystem.updateSyncConfig(updates);
   }
 
@@ -165,11 +167,11 @@ export class FileSystemService {
     return window.mainProcess.fileSystem.getSkillDirectories();
   }
 
-  static async addSkillDirectory(directory: any) {
+  static async addSkillDirectory(directory: Omit<GlobalSkillDirectory, 'id' | 'localClonePath'>) {
     return window.mainProcess.fileSystem.addSkillDirectory(directory);
   }
 
-  static async updateSkillDirectory(id: string, updates: any) {
+  static async updateSkillDirectory(id: string, updates: Partial<GlobalSkillDirectory>) {
     return window.mainProcess.fileSystem.updateSkillDirectory({ id, updates });
   }
 

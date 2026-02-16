@@ -111,6 +111,7 @@
       "pv": {
         "nodeType": "file-system",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/main/repository-monitoring/ipcHandlers.ts"
         ],
@@ -150,6 +151,7 @@
       "pv": {
         "nodeType": "worker",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/main/repository-monitoring/ipcHandlers.ts"
         ],
@@ -185,6 +187,7 @@
       "pv": {
         "nodeType": "worker",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/main/repository-monitoring/ipcHandlers.ts"
         ],
@@ -220,6 +223,7 @@
       "pv": {
         "nodeType": "main-process",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/main/repository-monitoring/ipcHandlers.ts"
         ],
@@ -255,6 +259,7 @@
       "pv": {
         "nodeType": "cache",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/main/repository-monitoring/ipcHandlers.ts"
         ],
@@ -294,6 +299,7 @@
       "pv": {
         "nodeType": "timing",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/main/repository-monitoring/ipcHandlers.ts"
         ],
@@ -333,6 +339,7 @@
       "pv": {
         "nodeType": "worker",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/main/repository-monitoring/ipcHandlers.ts"
         ],
@@ -376,6 +383,7 @@
       "pv": {
         "nodeType": "main-process",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/main/repository-monitoring/ipcHandlers.ts"
         ],
@@ -419,6 +427,7 @@
       "pv": {
         "nodeType": "preload",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/window/main-process-api-implementations/repositoryMonitoringApi.ts"
         ],
@@ -462,6 +471,7 @@
       "pv": {
         "nodeType": "renderer-service",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/renderer/main-process-api/RepositoryMonitoringService.ts"
         ],
@@ -497,6 +507,7 @@
       "pv": {
         "nodeType": "renderer-service",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/renderer/main-process-api/RepositoryMonitoringService.ts"
         ],
@@ -532,6 +543,7 @@
       "pv": {
         "nodeType": "context",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/renderer/contexts/RepositoryPanelContext.tsx"
         ],
@@ -571,6 +583,7 @@
       "pv": {
         "nodeType": "ui-component",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/renderer/contexts/RepositoryPanelContext.tsx"
         ],

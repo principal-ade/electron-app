@@ -48,7 +48,7 @@ export class GitService {
   static async getRepositoryInfo(
     directoryPath: string,
   ): Promise<GitInfo | null> {
-    console.log(`[GitService] Getting repository info for: ${directoryPath}`);
+    console.info(`[GitService] Getting repository info for: ${directoryPath}`);
     const info = await window.mainProcess.git.getRepositoryInfo(directoryPath);
     if (!info) return null;
     return {
@@ -62,7 +62,7 @@ export class GitService {
   }
 
   static async checkIfPrivateRepo(remoteUrl: string): Promise<boolean> {
-    console.log(`[GitService] Checking if repo is private: ${remoteUrl}`);
+    console.info(`[GitService] Checking if repo is private: ${remoteUrl}`);
 
     return window.mainProcess.git.checkIfPrivateRepo(remoteUrl);
   }
@@ -71,7 +71,7 @@ export class GitService {
     remoteUrl: string,
     targetPath: string,
   ): Promise<boolean> {
-    console.log(
+    console.info(
       `[GitService] Cloning repository ${remoteUrl} to ${targetPath}`,
     );
     return window.mainProcess.git.cloneRepository(remoteUrl, targetPath);
@@ -82,7 +82,7 @@ export class GitService {
     https: { available: boolean; reason?: string };
     suggestions: string[];
   }> {
-    console.log(`[GitService] Checking auth methods for ${remoteUrl}`);
+    console.info(`[GitService] Checking auth methods for ${remoteUrl}`);
     return window.mainProcess.git.checkAuthMethods(remoteUrl);
   }
 
@@ -94,7 +94,7 @@ export class GitService {
     currentBranch?: string;
     requiresConfirmation?: boolean;
   }> {
-    console.log(`[GitService] Deleting git repository: ${repoPath}`);
+    console.info(`[GitService] Deleting git repository: ${repoPath}`);
     return window.mainProcess.git.deleteGitRepository(repoPath);
   }
 
@@ -102,7 +102,7 @@ export class GitService {
     success: boolean;
     error?: string;
   }> {
-    console.log(`[GitService] Force deleting git repository: ${repoPath}`);
+    console.info(`[GitService] Force deleting git repository: ${repoPath}`);
     return window.mainProcess.git.forceDeleteGitRepository(repoPath);
   }
 
@@ -116,7 +116,7 @@ export class GitService {
     folderPath: string,
     maxDepth?: number,
   ): Promise<string[]> {
-    console.log(
+    console.info(
       `[GitService] Scanning folder for repos: ${folderPath} (depth: ${maxDepth ?? 2})`,
     );
     return window.mainProcess.git.scanFolderForRepos(folderPath, maxDepth);
@@ -133,7 +133,7 @@ export class GitService {
     basePath: string,
     maxDepth?: number,
   ): Promise<Array<{ path: string; name: string; isTracked: false }>> {
-    console.log(
+    console.info(
       `[GitService] Getting discovered repos: ${basePath} (depth: ${maxDepth ?? 2})`,
     );
     return window.mainProcess.git.getDiscoveredRepos(basePath, maxDepth);
@@ -143,7 +143,7 @@ export class GitService {
     directory: string,
     limit = 50,
   ): Promise<GitCommitInfo[]> {
-    console.log(
+    console.info(
       `[GitService] Getting commit history for: ${directory} (limit=${limit})`,
     );
     return window.mainProcess.git.getCommitHistory(directory, limit);
@@ -152,7 +152,7 @@ export class GitService {
   static async fastForwardMerge(
     directory: string,
   ): Promise<{ success: boolean; message: string }> {
-    console.log(`[GitService] Attempting fast-forward merge for: ${directory}`);
+    console.info(`[GitService] Attempting fast-forward merge for: ${directory}`);
     try {
       // First, ensure we have the latest remote info
       await window.mainProcess.git.execCommand(directory, ['fetch', 'origin']);
@@ -178,7 +178,7 @@ export class GitService {
   }
 
   static async getBranchStatus(directory: string): Promise<GitBranchStatus> {
-    console.log(`[GitService] Getting branch status for: ${directory}`);
+    console.info(`[GitService] Getting branch status for: ${directory}`);
     try {
       // Get current branch and upstream tracking info
       const branchResult = await window.mainProcess.git.execCommand(directory, [
@@ -272,7 +272,7 @@ export class GitService {
   static async fetchUpstream(
     directory: string,
   ): Promise<{ success: boolean; message: string }> {
-    console.log(`[GitService] Fetching upstream for: ${directory}`);
+    console.info(`[GitService] Fetching upstream for: ${directory}`);
     try {
       // First try to fetch from upstream remote
       try {
@@ -280,7 +280,7 @@ export class GitService {
           'fetch',
           'upstream',
         ]);
-        console.log('[GitService] Fetched from upstream remote');
+        console.info('[GitService] Fetched from upstream remote');
         return {
           success: true,
           message: 'Fetched from upstream',
@@ -308,7 +308,7 @@ export class GitService {
 
   // Additional methods needed by GitSyncManager
   static async getCurrentBranch(directory: string): Promise<GitBranchInfo> {
-    console.log(`[GitService] Getting current branch for: ${directory}`);
+    console.info(`[GitService] Getting current branch for: ${directory}`);
     try {
       const branch = await window.mainProcess.git.execCommand(directory, [
         'rev-parse',
@@ -339,7 +339,7 @@ export class GitService {
   }
 
   static async getLatestCommit(directory: string): Promise<GitCommitInfo> {
-    console.log(`[GitService] Getting latest commit for: ${directory}`);
+    console.info(`[GitService] Getting latest commit for: ${directory}`);
     try {
       const hash = await window.mainProcess.git.execCommand(directory, [
         'rev-parse',
@@ -386,7 +386,7 @@ export class GitService {
     message: string,
     files: string[],
   ): Promise<{ success: boolean; message: string }> {
-    console.log(`[GitService] Committing changes in: ${directory}`);
+    console.info(`[GitService] Committing changes in: ${directory}`);
     try {
       // Add specified files
       if (files.length > 0) {
@@ -416,7 +416,7 @@ export class GitService {
   static async fetch(
     directory: string,
   ): Promise<{ success: boolean; message: string }> {
-    console.log(`[GitService] Fetching for: ${directory}`);
+    console.info(`[GitService] Fetching for: ${directory}`);
     try {
       await window.mainProcess.git.execCommand(directory, ['fetch', 'origin']);
 
@@ -437,7 +437,7 @@ export class GitService {
     directory: string,
     branch: string,
   ): Promise<{ success: boolean; message: string }> {
-    console.log(`[GitService] Merging ${branch} in: ${directory}`);
+    console.info(`[GitService] Merging ${branch} in: ${directory}`);
     try {
       await window.mainProcess.git.execCommand(directory, ['merge', branch]);
 
@@ -463,7 +463,7 @@ export class GitService {
       setUpstream?: boolean;
     },
   ): Promise<{ success: boolean; message: string }> {
-    console.log(`[GitService] Pushing changes from: ${directory}`);
+    console.info(`[GitService] Pushing changes from: ${directory}`);
     try {
       const args = ['push'];
 
@@ -542,7 +542,7 @@ export class GitService {
     hasUpstream: boolean;
     needsUpstream: boolean;
   }> {
-    console.log(`[GitService] Checking if push is safe for: ${directory}`);
+    console.info(`[GitService] Checking if push is safe for: ${directory}`);
     try {
       // Get branch status
       const status = await this.getBranchStatus(directory);

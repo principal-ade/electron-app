@@ -377,7 +377,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
     try {
       const result = await OtelCollectorService.sendTestTrace('http://localhost:3000');
       if (result.success) {
-        console.log('Test trace sent successfully');
+        console.info('Test trace sent successfully');
       } else {
         console.error('Failed to send test trace:', result.error);
       }

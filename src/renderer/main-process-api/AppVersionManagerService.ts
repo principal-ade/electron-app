@@ -1,3 +1,6 @@
+// Import types from the shared API interface
+import type { UpdateInfo, ProgressInfo, UpdateDownloadedEvent } from '../../shared/main-process-api-interfaces/AppVersionManagerAPI';
+
 export class AppVersionManagerService {
   static async getVersion(): Promise<string> {
     return await window.mainProcess.appVersionManager.getVersion();
@@ -15,15 +18,15 @@ export class AppVersionManagerService {
     window.mainProcess.appVersionManager.checkForUpdateSilently();
   }
 
-  static onUpdateAvailable(callback: (info: any) => void): () => void {
+  static onUpdateAvailable(callback: (info: UpdateInfo) => void): () => void {
     return window.mainProcess.appVersionManager.onUpdateAvailable(callback);
   }
 
-  static onUpdateNotAvailable(callback: (info: any) => void): () => void {
+  static onUpdateNotAvailable(callback: (info: UpdateInfo) => void): () => void {
     return window.mainProcess.appVersionManager.onUpdateNotAvailable(callback);
   }
 
-  static onUpdateError(callback: (error: any) => void): () => void {
+  static onUpdateError(callback: (error: Error) => void): () => void {
     return window.mainProcess.appVersionManager.onUpdateError(callback);
   }
 
@@ -44,14 +47,14 @@ export class AppVersionManagerService {
   }
 
   static onUpdateDownloadProgress(
-    callback: (progress: any) => void,
+    callback: (progress: ProgressInfo) => void,
   ): () => void {
     return window.mainProcess.appVersionManager.onUpdateDownloadProgress(
       callback,
     );
   }
 
-  static onUpdateDownloaded(callback: (info: any) => void): () => void {
+  static onUpdateDownloaded(callback: (info: UpdateDownloadedEvent) => void): () => void {
     return window.mainProcess.appVersionManager.onUpdateDownloaded(callback);
   }
 

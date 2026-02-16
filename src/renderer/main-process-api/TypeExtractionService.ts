@@ -3,21 +3,21 @@
  * Provides methods for extracting TypeScript types from packages and layers
  */
 
+import type { ExtractedType, PackageTypes, PackageLayer } from '@principal-ai/codebase-composition';
+
 export class TypeExtractionService {
-  async extractTypes(params: any): Promise<any> {
+  async extractTypes(packagePath: string): Promise<ExtractedType[] | null> {
     try {
-      return await window.mainProcess.typeExtraction.extractTypes(params);
+      return await window.mainProcess.typeExtraction.extractTypes(packagePath);
     } catch (error) {
       console.error('[TypeExtractionService] Error extracting types:', error);
       return null;
     }
   }
 
-  async extractPackageTypes(packagePath: string): Promise<any> {
+  async extractPackageTypes(packagePath: string): Promise<PackageTypes | null> {
     try {
-      return await (
-        window.mainProcess.typeExtraction as any
-      ).extractPackageTypes(packagePath);
+      return await window.mainProcess.typeExtraction.extractPackageTypes(packagePath);
     } catch (error) {
       console.error(
         '[TypeExtractionService] Error extracting package types:',
@@ -27,11 +27,13 @@ export class TypeExtractionService {
     }
   }
 
-  async generateDefinitionFile(packagePath: string): Promise<any> {
+  async generateDefinitionFile(packagePath: string): Promise<{
+    success: boolean;
+    filePath?: string;
+    error?: string;
+  } | null> {
     try {
-      return await (
-        window.mainProcess.typeExtraction as any
-      ).generateDefinitionFile(packagePath);
+      return await window.mainProcess.typeExtraction.generateDefinitionFile(packagePath);
     } catch (error) {
       console.error(
         '[TypeExtractionService] Error generating definition file:',
@@ -42,13 +44,11 @@ export class TypeExtractionService {
   }
 
   async extractPackageTypesFromLayer(
-    layer: any,
+    layer: PackageLayer,
     workingDirectory: string,
-  ): Promise<any> {
+  ): Promise<PackageTypes | null> {
     try {
-      return await (
-        window.mainProcess.typeExtraction as any
-      ).extractPackageTypesFromLayer(layer, workingDirectory);
+      return await window.mainProcess.typeExtraction.extractPackageTypesFromLayer(layer, workingDirectory);
     } catch (error) {
       console.error(
         '[TypeExtractionService] Error extracting types from layer:',

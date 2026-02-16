@@ -10,14 +10,14 @@ export const ThemeCustomizationButton: React.FC = () => {
   const { theme, mode } = useTheme();
 
   useEffect(() => {
-    console.log('showCustomizationPanel changed to:', showCustomizationPanel);
+    console.info('showCustomizationPanel changed to:', showCustomizationPanel);
   }, [showCustomizationPanel]);
 
   useEffect(() => {
     // Wait a bit for ThemeService to initialize, then get current theme
     const getThemeName = () => {
       const themeName = ThemeService.getCurrentThemeName();
-      console.log('ThemeService.getCurrentThemeName() returned:', themeName);
+      console.info('ThemeService.getCurrentThemeName() returned:', themeName);
       // Only update if it's not 'default' (which means not initialized yet)
       if (themeName && themeName !== 'default') {
         setCurrentTheme(themeName);
@@ -32,7 +32,7 @@ export const ThemeCustomizationButton: React.FC = () => {
 
     // Listen for theme changes
     const unsubscribe = ThemeService.onThemeChange(({ themeName }) => {
-      console.log('Theme changed to:', themeName);
+      console.info('Theme changed to:', themeName);
       setCurrentTheme(themeName);
     });
 
@@ -59,9 +59,9 @@ export const ThemeCustomizationButton: React.FC = () => {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            console.log('ThemeCustomizationButton clicked!');
+            console.info('ThemeCustomizationButton clicked!');
             setShowCustomizationPanel(true);
-            console.log('showCustomizationPanel set to true');
+            console.info('showCustomizationPanel set to true');
           }}
           style={{
             display: 'flex',

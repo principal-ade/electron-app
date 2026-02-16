@@ -1,0 +1,738 @@
+{
+  "pv": {
+    "name": "OTEL Trace Pipeline",
+    "version": "1.0.0",
+    "description": "Complete flow of OpenTelemetry traces from application code through OTEL collector to dev workspace window visualization",
+    "markdown": ".principal-views/otel-trace-pipeline/otel-trace-pipeline.md",
+    "nodeTypes": {
+      "external-service": {
+        "label": "External Service",
+        "color": "#64748B"
+      },
+      "http-endpoint": {
+        "label": "HTTP Endpoint",
+        "color": "#22C55E"
+      },
+      "collector-server": {
+        "label": "OTEL Collector",
+        "color": "#3B82F6"
+      },
+      "storage": {
+        "label": "Storage",
+        "color": "#0D9488"
+      },
+      "ipc-transport": {
+        "label": "IPC Transport",
+        "color": "#14B8A6"
+      },
+      "ipc-handler": {
+        "label": "IPC Handler",
+        "color": "#6366F1"
+      },
+      "preload": {
+        "label": "Preload Bridge",
+        "color": "#14B8A6"
+      },
+      "renderer-service": {
+        "label": "Renderer Service",
+        "color": "#7C3AED"
+      },
+      "ui-component": {
+        "label": "UI Component",
+        "color": "#EC4899"
+      },
+      "event-bus": {
+        "label": "Event Bus",
+        "color": "#F59E0B"
+      }
+    },
+    "edgeTypes": {
+      "http-post": {
+        "label": "HTTP POST",
+        "style": "solid",
+        "color": "#22C55E"
+      },
+      "trace-data": {
+        "label": "Trace Data",
+        "style": "solid",
+        "color": "#3B82F6"
+      },
+      "messageport": {
+        "label": "MessagePort",
+        "style": "solid",
+        "color": "#14B8A6"
+      },
+      "ipc-invoke": {
+        "label": "IPC Invoke",
+        "style": "solid",
+        "color": "#6366F1"
+      },
+      "event-emit": {
+        "label": "Event Emit",
+        "style": "dashed",
+        "color": "#F59E0B"
+      },
+      "data-flow": {
+        "label": "Data Flow",
+        "style": "solid",
+        "color": "#8B5CF6"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "x": 400,
+      "y": -100,
+      "width": 600,
+      "height": 60,
+      "text": "# OTEL Trace Pipeline\n**From application instrumentation to dev workspace visualization**"
+    },
+    {
+      "id": "external-service",
+      "type": "text",
+      "x": 50,
+      "y": 0,
+      "width": 200,
+      "height": 100,
+      "text": "Application Code\n(instrumented with\n@opentelemetry/api)",
+      "pv": {
+        "nodeType": "external-service",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": [
+          "src/main/services/OtelCollectorService.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "trace",
+          "isNew": true
+        },
+        "event": {
+          "name": "otel.trace.span_created",
+          "description": "Application creates span with OpenTelemetry SDK",
+          "attributes": {
+            "span.name": {
+              "type": "string",
+              "description": "Name of the span operation"
+            },
+            "span.kind": {
+              "type": "string",
+              "description": "Span kind: INTERNAL, SERVER, CLIENT, etc."
+            },
+            "trace.id": {
+              "type": "string",
+              "description": "Trace ID (hex string)"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "otlp-endpoint",
+      "type": "text",
+      "x": 300,
+      "y": 0,
+      "width": 220,
+      "height": 100,
+      "text": "OTLP HTTP Endpoint\nlocalhost:4318/v1/traces\n(or :14318 in dev)",
+      "pv": {
+        "nodeType": "http-endpoint",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": [
+          "src/main/services/OtelCollectorService.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "http",
+          "isNew": true
+        },
+        "event": {
+          "name": "otel.endpoint.request_received",
+          "description": "OTLP HTTP endpoint received POST request with trace data",
+          "attributes": {
+            "http.method": {
+              "type": "string",
+              "description": "HTTP method: POST"
+            },
+            "http.url": {
+              "type": "string",
+              "description": "Endpoint URL: /v1/traces"
+            },
+            "http.port": {
+              "type": "number",
+              "description": "Port number: 4318 or 14318"
+            },
+            "content.type": {
+              "type": "string",
+              "description": "Content-Type: application/json or application/x-protobuf"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "collector-server",
+      "type": "text",
+      "x": 570,
+      "y": 0,
+      "width": 220,
+      "height": 120,
+      "text": "OTELCollectorServer\n(@principal-ai/\notel-collector-server)\nReceives & processes",
+      "pv": {
+        "nodeType": "collector-server",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": [
+          "src/main/services/OtelCollectorService.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "trace",
+          "isNew": true
+        },
+        "event": {
+          "name": "otel.collector.trace_received",
+          "description": "OTEL collector server received and parsed trace data",
+          "attributes": {
+            "trace.format": {
+              "type": "string",
+              "description": "Format: OTLP (protobuf or JSON)"
+            },
+            "resource.spans.count": {
+              "type": "number",
+              "description": "Number of resource spans in batch"
+            },
+            "collector.mode": {
+              "type": "string",
+              "description": "Collector mode: electron"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "trace-storage",
+      "type": "text",
+      "x": 570,
+      "y": 160,
+      "width": 220,
+      "height": 100,
+      "text": "Trace Storage\n(circular buffer)\nMAX_TRACES = 50",
+      "pv": {
+        "nodeType": "storage",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": [
+          "src/main/services/OtelCollectorService.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "storage",
+          "isNew": true
+        },
+        "event": {
+          "name": "otel.storage.trace_stored",
+          "description": "Trace stored in circular buffer with timestamp and ID",
+          "attributes": {
+            "trace.id": {
+              "type": "string",
+              "description": "Extracted trace ID from OTLP data"
+            },
+            "storage.timestamp": {
+              "type": "number",
+              "description": "Unix timestamp when trace was stored"
+            },
+            "storage.size": {
+              "type": "number",
+              "description": "Current number of traces in storage"
+            },
+            "storage.max_size": {
+              "type": "number",
+              "description": "Maximum traces stored: 50"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "messageport-system",
+      "type": "text",
+      "x": 840,
+      "y": 0,
+      "width": 220,
+      "height": 120,
+      "text": "MessagePort System\nRoutes traces to\nspecific windows\n(windowId:sourceUrl)",
+      "pv": {
+        "nodeType": "ipc-transport",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": [
+          "src/main/services/OtelCollectorService.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ipc",
+          "isNew": true
+        },
+        "event": {
+          "name": "otel.messageport.trace_routed",
+          "description": "Trace batch sent to registered MessagePort for specific window",
+          "attributes": {
+            "window.id": {
+              "type": "string",
+              "description": "Target window ID"
+            },
+            "source.url": {
+              "type": "string",
+              "description": "Source URL filter for this port"
+            },
+            "message.type": {
+              "type": "string",
+              "description": "Message type: TRACE_BATCH"
+            },
+            "port.registered": {
+              "type": "boolean",
+              "description": "Whether port is registered for this window+source"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ipc-handlers",
+      "type": "text",
+      "x": 840,
+      "y": 160,
+      "width": 220,
+      "height": 140,
+      "text": "IPC Handlers\n- registerPort\n- unregisterPort\n- getTraces\n- clearTraces\n- getStatus",
+      "pv": {
+        "nodeType": "ipc-handler",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": [
+          "src/main/services/ipc/otelCollectorHandlers.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ipc",
+          "isNew": true
+        },
+        "event": {
+          "name": "otel.ipc.handler_invoked",
+          "description": "IPC handler invoked from renderer process",
+          "attributes": {
+            "handler.name": {
+              "type": "string",
+              "description": "Handler name: registerPort, getTraces, etc."
+            },
+            "window.id": {
+              "type": "string",
+              "description": "Requesting window ID"
+            },
+            "source.url": {
+              "type": "string",
+              "description": "Source URL parameter (for registerPort)"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "preload-bridge",
+      "type": "text",
+      "x": 1110,
+      "y": 160,
+      "width": 220,
+      "height": 120,
+      "text": "Preload Bridge\n(otelCollectorApi)\nManages ports &\nsubscriptions",
+      "pv": {
+        "nodeType": "preload",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": [
+          "src/window/main-process-api-implementations/otelCollectorApi.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ipc",
+          "isNew": true
+        },
+        "event": {
+          "name": "otel.preload.port_registered",
+          "description": "Preload bridge registered MessagePort and set up listener",
+          "attributes": {
+            "window.id": {
+              "type": "string",
+              "description": "Window ID for this port"
+            },
+            "source.url": {
+              "type": "string",
+              "description": "Source URL for this port"
+            },
+            "port.key": {
+              "type": "string",
+              "description": "Port map key: windowId:sourceUrl"
+            },
+            "subscribers.count": {
+              "type": "number",
+              "description": "Number of subscribers for this port"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "trace-message-subscriber",
+      "type": "text",
+      "x": 1110,
+      "y": 320,
+      "width": 220,
+      "height": 100,
+      "text": "Message Subscriber\nonOtelMessage()\ncallback receives\ntrace batches",
+      "pv": {
+        "nodeType": "renderer-service",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": [
+          "src/window/main-process-api-implementations/otelCollectorApi.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "isNew": true
+        },
+        "event": {
+          "name": "otel.subscriber.message_received",
+          "description": "Subscriber callback invoked with trace batch from MessagePort",
+          "attributes": {
+            "message.type": {
+              "type": "string",
+              "description": "Message type from port: TRACE_BATCH"
+            },
+            "payload.traces.count": {
+              "type": "number",
+              "description": "Number of traces in batch"
+            },
+            "subscriber.callback": {
+              "type": "string",
+              "description": "Callback function name"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "devworkspace-framework",
+      "type": "text",
+      "x": 1380,
+      "y": 160,
+      "width": 220,
+      "height": 120,
+      "text": "DevWorkspace\nPanelFramework\nHandles trace:selected\nevent",
+      "pv": {
+        "nodeType": "ui-component",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": [
+          "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ui",
+          "isNew": true
+        },
+        "event": {
+          "name": "otel.devworkspace.trace_selected",
+          "description": "User selected trace, creating trace details tab",
+          "attributes": {
+            "trace.id": {
+              "type": "string",
+              "description": "Selected trace ID"
+            },
+            "tab.id": {
+              "type": "string",
+              "description": "Created tab ID: trace-{traceId}"
+            },
+            "tab.label": {
+              "type": "string",
+              "description": "Tab label from trace name"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "trace-details-panel",
+      "type": "text",
+      "x": 1650,
+      "y": 160,
+      "width": 220,
+      "height": 100,
+      "text": "TraceDetailsPanel\n(@industry-theme/\nprincipal-view-panels)\nVisualizes spans",
+      "pv": {
+        "nodeType": "ui-component",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": [
+          "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ui",
+          "isNew": true
+        },
+        "event": {
+          "name": "otel.panel.trace_rendered",
+          "description": "TraceDetailsPanel rendered trace with span hierarchy",
+          "attributes": {
+            "trace.id": {
+              "type": "string",
+              "description": "Rendered trace ID"
+            },
+            "spans.count": {
+              "type": "number",
+              "description": "Number of spans in trace"
+            },
+            "render.duration_ms": {
+              "type": "number",
+              "description": "Time to render trace visualization"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "system-monitor-viewer",
+      "type": "text",
+      "x": 1380,
+      "y": 320,
+      "width": 220,
+      "height": 120,
+      "text": "SystemMonitor\nTraceViewer\nPolls getTraces()\nevery 2 seconds",
+      "pv": {
+        "nodeType": "ui-component",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": [
+          "src/renderer/principal-window/views/SystemMonitor/TraceViewer.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ui",
+          "isNew": true
+        },
+        "event": {
+          "name": "otel.systemmonitor.traces_polled",
+          "description": "SystemMonitor polled and received traces from storage",
+          "attributes": {
+            "traces.fetched": {
+              "type": "number",
+              "description": "Number of traces retrieved"
+            },
+            "traces.limit": {
+              "type": "number",
+              "description": "Query limit: 20"
+            },
+            "poll.interval_ms": {
+              "type": "number",
+              "description": "Polling interval: 2000ms"
+            },
+            "services.count": {
+              "type": "number",
+              "description": "Number of unique services in traces"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "event-bus",
+      "type": "text",
+      "x": 1650,
+      "y": 320,
+      "width": 200,
+      "height": 80,
+      "text": "Panel Event Bus\ntrace:selected\nevent",
+      "pv": {
+        "nodeType": "event-bus",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": [
+          "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "isNew": true
+        },
+        "event": {
+          "name": "otel.eventbus.trace_event_emitted",
+          "description": "Panel event bus emitted trace:selected event",
+          "attributes": {
+            "event.type": {
+              "type": "string",
+              "description": "Event type: trace:selected"
+            },
+            "event.source": {
+              "type": "string",
+              "description": "Event source component"
+            },
+            "payload.trace.id": {
+              "type": "string",
+              "description": "Trace ID in event payload"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "app-to-endpoint",
+      "fromNode": "external-service",
+      "fromSide": "right",
+      "toNode": "otlp-endpoint",
+      "toSide": "left",
+      "label": "POST /v1/traces",
+      "pv": {
+        "edgeType": "http-post"
+      }
+    },
+    {
+      "id": "endpoint-to-collector",
+      "fromNode": "otlp-endpoint",
+      "fromSide": "right",
+      "toNode": "collector-server",
+      "toSide": "left",
+      "label": "OTLP data",
+      "pv": {
+        "edgeType": "trace-data"
+      }
+    },
+    {
+      "id": "collector-to-storage",
+      "fromNode": "collector-server",
+      "fromSide": "bottom",
+      "toNode": "trace-storage",
+      "toSide": "top",
+      "label": "store trace",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "collector-to-messageport",
+      "fromNode": "collector-server",
+      "fromSide": "right",
+      "toNode": "messageport-system",
+      "toSide": "left",
+      "label": "route to ports",
+      "pv": {
+        "edgeType": "messageport"
+      }
+    },
+    {
+      "id": "messageport-to-ipc",
+      "fromNode": "messageport-system",
+      "fromSide": "bottom",
+      "toNode": "ipc-handlers",
+      "toSide": "top",
+      "label": "manages",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "ipc-to-preload",
+      "fromNode": "ipc-handlers",
+      "fromSide": "right",
+      "toNode": "preload-bridge",
+      "toSide": "left",
+      "label": "sends port2",
+      "pv": {
+        "edgeType": "ipc-invoke"
+      }
+    },
+    {
+      "id": "preload-to-subscriber",
+      "fromNode": "preload-bridge",
+      "fromSide": "bottom",
+      "toNode": "trace-message-subscriber",
+      "toSide": "top",
+      "label": "port.onmessage",
+      "pv": {
+        "edgeType": "messageport"
+      }
+    },
+    {
+      "id": "preload-to-devworkspace",
+      "fromNode": "preload-bridge",
+      "fromSide": "right",
+      "toNode": "devworkspace-framework",
+      "toSide": "left",
+      "label": "exposes API",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "subscriber-to-systemmonitor",
+      "fromNode": "trace-message-subscriber",
+      "fromSide": "right",
+      "toNode": "system-monitor-viewer",
+      "toSide": "left",
+      "label": "notifies",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "devworkspace-to-details",
+      "fromNode": "devworkspace-framework",
+      "fromSide": "right",
+      "toNode": "trace-details-panel",
+      "toSide": "left",
+      "label": "creates tab",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "systemmonitor-to-eventbus",
+      "fromNode": "system-monitor-viewer",
+      "fromSide": "right",
+      "toNode": "event-bus",
+      "toSide": "left",
+      "label": "user selects trace",
+      "pv": {
+        "edgeType": "event-emit"
+      }
+    },
+    {
+      "id": "eventbus-to-devworkspace",
+      "fromNode": "event-bus",
+      "fromSide": "top",
+      "toNode": "devworkspace-framework",
+      "toSide": "bottom",
+      "label": "trace:selected",
+      "pv": {
+        "edgeType": "event-emit"
+      }
+    },
+    {
+      "id": "storage-to-ipc",
+      "fromNode": "trace-storage",
+      "fromSide": "right",
+      "toNode": "ipc-handlers",
+      "toSide": "left",
+      "label": "getTraces()",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    }
+  ]
+}

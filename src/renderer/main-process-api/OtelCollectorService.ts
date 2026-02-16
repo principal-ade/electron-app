@@ -2,7 +2,7 @@
  * Renderer Service for OTEL Collector
  */
 
-import type { ServerStats } from '@principal-ai/otel-collector-server';
+import type { ServerStats, OTLPTraceRequest } from '@principal-ai/otel-collector-server';
 
 export interface OtelCollectorStatus {
   isRunning: boolean;
@@ -18,7 +18,7 @@ export interface OtelCollectorResponse {
 export interface StoredTrace {
   timestamp: number;
   traceId: string;
-  data: any; // OTLP trace data
+  data: OTLPTraceRequest; // OTLP trace data
 }
 
 export interface GetTracesResponse {

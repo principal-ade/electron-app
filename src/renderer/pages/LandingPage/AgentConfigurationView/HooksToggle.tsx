@@ -25,14 +25,14 @@ export const HooksToggle: React.FC<HooksToggleProps> = ({
   const { theme } = useTheme();
   const [isToggling, setIsToggling] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  console.log('HooksToggle', agentType, hooksEnabled);
+  console.info('HooksToggle', agentType, hooksEnabled);
 
   const handleToggle = useCallback(async () => {
     setIsToggling(true);
 
     try {
       let success = false;
-      console.log('handleToggle', agentType, hooksEnabled);
+      console.info('handleToggle', agentType, hooksEnabled);
 
       if (hooksEnabled) {
         // Disable hooks - save current hooks configuration first

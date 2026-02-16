@@ -157,7 +157,7 @@ const SkillBrowserViewContent: React.FC = () => {
         filePaths.push(`${skill.source}/${skill.name}/SKILL.md`);
       }
 
-      console.log('[SkillBrowserView] Building FileTree from local skills:', {
+      console.info('[SkillBrowserView] Building FileTree from local skills:', {
         totalSkills: skills.length,
         filePaths: filePaths.length,
       });
@@ -187,7 +187,7 @@ const SkillBrowserViewContent: React.FC = () => {
         },
       };
 
-      console.log('[SkillBrowserView] FileTree built for installed skills:', {
+      console.info('[SkillBrowserView] FileTree built for installed skills:', {
         totalFiles: fileTreeData.stats.totalFiles,
         totalDirectories: fileTreeData.stats.totalDirectories,
       });
@@ -200,12 +200,12 @@ const SkillBrowserViewContent: React.FC = () => {
   // Load installed skills from local directories
   const loadInstalledSkills = useCallback(async () => {
     try {
-      console.log('[SkillBrowserView] Loading installed skills...');
+      console.info('[SkillBrowserView] Loading installed skills...');
 
       const result = await FileSystemService.getAllLocalSkills();
 
       if (!result || !result.skills || result.skills.length === 0) {
-        console.log('[SkillBrowserView] No installed skills found');
+        console.info('[SkillBrowserView] No installed skills found');
         setInstalledFileTree(null);
         setInstalledSkillsData([]);
         if (viewMode === 'installed') {
@@ -214,7 +214,7 @@ const SkillBrowserViewContent: React.FC = () => {
         return;
       }
 
-      console.log(`[SkillBrowserView] Found ${result.skills.length} installed skills`);
+      console.info(`[SkillBrowserView] Found ${result.skills.length} installed skills`);
 
       // Store the raw skills data (needed for LocalSkillsFileSystemAdapter)
       setInstalledSkillsData(result.skills);
@@ -265,14 +265,14 @@ const SkillBrowserViewContent: React.FC = () => {
    */
   const handleCreateAgentDirectories = useCallback(async (agentIds: string[]) => {
     try {
-      console.log('[SkillBrowserView] Creating agent directories:', agentIds);
+      console.info('[SkillBrowserView] Creating agent directories:', agentIds);
       const result = await FileSystemService.createAgentDirectories(agentIds);
 
       if (!result.success) {
         throw new Error(result.error || 'Failed to create directories');
       }
 
-      console.log('[SkillBrowserView] Directories created:', result.createdDirectories);
+      console.info('[SkillBrowserView] Directories created:', result.createdDirectories);
 
       // Refresh detected directories and installed skills
       await loadDetectedDirectories();
@@ -288,14 +288,14 @@ const SkillBrowserViewContent: React.FC = () => {
    */
   const handleRemoveAgentDirectory = useCallback(async (agentId: string) => {
     try {
-      console.log('[SkillBrowserView] Removing agent directory:', agentId);
+      console.info('[SkillBrowserView] Removing agent directory:', agentId);
       const result = await FileSystemService.deleteAgentDirectory(agentId);
 
       if (!result.success) {
         throw new Error(result.error || 'Failed to remove directory');
       }
 
-      console.log('[SkillBrowserView] Directory removed successfully');
+      console.info('[SkillBrowserView] Directory removed successfully');
 
       // Refresh detected directories and installed skills
       await loadDetectedDirectories();
@@ -314,7 +314,7 @@ const SkillBrowserViewContent: React.FC = () => {
     const unsubscribe = events.on('skill:selected', (event) => {
       const payload = event.payload as { skill: Skill } | undefined;
       if (payload?.skill) {
-        console.log('[SkillBrowserView] Skill selected:', {
+        console.info('[SkillBrowserView] Skill selected:', {
           skillId: payload.skill.id,
           skillName: payload.skill.name,
           skillPath: payload.skill.path,
@@ -335,7 +335,7 @@ const SkillBrowserViewContent: React.FC = () => {
   // Listen for skill installation events to refresh installed skills
   useEffect(() => {
     const unsubscribe = events.on('skill:installed', (_event) => {
-      console.log('[SkillBrowserView] Skill installed, refreshing installed skills');
+      console.info('[SkillBrowserView] Skill installed, refreshing installed skills');
       // Reload installed skills after a skill is installed
       loadInstalledSkills();
     });
@@ -348,20 +348,20 @@ const SkillBrowserViewContent: React.FC = () => {
     if (viewMode === 'browse') {
       // Switch to browse tree (if available)
       if (browseFileTree) {
-        console.log('[SkillBrowserView] Switching to browse mode tree');
+        console.info('[SkillBrowserView] Switching to browse mode tree');
         actions.setFileTree(browseFileTree);
       } else {
         // Clear the tree if no browse data loaded yet
-        console.log('[SkillBrowserView] Browse mode - no tree loaded yet, clearing');
+        console.info('[SkillBrowserView] Browse mode - no tree loaded yet, clearing');
         actions.setFileTree(null);
       }
     } else {
       // Switch to installed tree (if available)
       if (installedFileTree) {
-        console.log('[SkillBrowserView] Switching to installed mode tree');
+        console.info('[SkillBrowserView] Switching to installed mode tree');
         actions.setFileTree(installedFileTree);
       } else {
-        console.log('[SkillBrowserView] Installed mode - clearing browse tree and loading local skills');
+        console.info('[SkillBrowserView] Installed mode - clearing browse tree and loading local skills');
         // Clear the browse tree from view
         actions.setFileTree(null);
         // Load local skills if not already loaded
@@ -381,7 +381,7 @@ const SkillBrowserViewContent: React.FC = () => {
   // Listen for refresh requests from SkillsListPanel
   useEffect(() => {
     const unsubscribe = events.on('skills:refresh', () => {
-      console.log('[SkillBrowserView] Received skills refresh request, reloading installed skills from filesystem');
+      console.info('[SkillBrowserView] Received skills refresh request, reloading installed skills from filesystem');
       loadInstalledSkills();
     });
 
@@ -394,13 +394,13 @@ const SkillBrowserViewContent: React.FC = () => {
 
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        console.log('[SkillBrowserView] Document became visible, refreshing installed skills');
+        console.info('[SkillBrowserView] Document became visible, refreshing installed skills');
         loadInstalledSkills();
       }
     };
 
     const handleFocus = () => {
-      console.log('[SkillBrowserView] Window focused, refreshing installed skills');
+      console.info('[SkillBrowserView] Window focused, refreshing installed skills');
       loadInstalledSkills();
     };
 
@@ -432,7 +432,7 @@ const SkillBrowserViewContent: React.FC = () => {
         .filter((item) => item.type === 'blob')
         .map((item) => item.path);
 
-      console.log('[SkillBrowserView] Building FileTree from paths:', {
+      console.info('[SkillBrowserView] Building FileTree from paths:', {
         totalPaths: filePaths.length,
         owner: parsed.owner,
         repo: parsed.repo,
@@ -464,7 +464,7 @@ const SkillBrowserViewContent: React.FC = () => {
         },
       };
 
-      console.log('[SkillBrowserView] FileTree built:', {
+      console.info('[SkillBrowserView] FileTree built:', {
         totalFiles: fileTreeData.stats.totalFiles,
         totalDirectories: fileTreeData.stats.totalDirectories,
         allFilesLength: fileTreeData.allFiles.length,
@@ -541,7 +541,7 @@ const SkillBrowserViewContent: React.FC = () => {
       );
 
       // Store in browse file tree state (not directly in context)
-      console.log('[SkillBrowserView] File tree fetched for browse mode:', fileTree);
+      console.info('[SkillBrowserView] File tree fetched for browse mode:', fileTree);
       setBrowseFileTree(fileTree);
 
       // Only update context if we're in browse mode
@@ -576,7 +576,7 @@ const SkillBrowserViewContent: React.FC = () => {
    * Handle selecting a recent repository
    */
   const handleSelectRecentRepo = useCallback(async (repo: RecentRepo) => {
-    console.log('[SkillBrowserView] Selected recent repo:', repo);
+    console.info('[SkillBrowserView] Selected recent repo:', repo);
     // Set the GitHub URL
     setGithubUrl(repo.url);
     // Fetch the skills for this repo
@@ -724,7 +724,7 @@ const SkillBrowserViewContent: React.FC = () => {
       // Use folder name (with hyphens) not display name (with spaces) for installation
       const skillFolderName = getSkillFolderName(selectedSkill);
 
-      console.log('[SkillBrowserView] Installing skill:', {
+      console.info('[SkillBrowserView] Installing skill:', {
         skillName: skillFolderName,
         skillPath: selectedSkill.skillFolderPath,
         destination,
@@ -747,7 +747,7 @@ const SkillBrowserViewContent: React.FC = () => {
         throw new Error(result.error || 'Installation failed');
       }
 
-      console.log('[SkillBrowserView] Skill installed successfully:', result);
+      console.info('[SkillBrowserView] Skill installed successfully:', result);
 
       // Emit event to refresh global skills cache
       actions.notifyPanels?.({
@@ -785,7 +785,7 @@ const SkillBrowserViewContent: React.FC = () => {
       // Use folder name (with hyphens) not display name (with spaces) for installation
       const skillFolderName = getSkillFolderName(selectedSkill);
 
-      console.log('[SkillBrowserView] Building file list for skill installation:', {
+      console.info('[SkillBrowserView] Building file list for skill installation:', {
         skillName: skillFolderName,
         skillFolderPath,
         totalFiles: fileList.length,
@@ -800,7 +800,7 @@ const SkillBrowserViewContent: React.FC = () => {
           throw new Error(`Invalid directory ID: ${directoryId}. No destination mapping found.`);
         }
 
-        console.log('[SkillBrowserView] Installing skill to directory:', {
+        console.info('[SkillBrowserView] Installing skill to directory:', {
           skillName: skillFolderName,
           skillPath: selectedSkill.skillFolderPath,
           directoryId,
@@ -824,7 +824,7 @@ const SkillBrowserViewContent: React.FC = () => {
           throw new Error(result.error || `Installation to ${directoryId} failed`);
         }
 
-        console.log('[SkillBrowserView] Skill installed successfully to:', {
+        console.info('[SkillBrowserView] Skill installed successfully to:', {
           directoryId,
           destination,
           installedPath: result.installedPath,
@@ -861,7 +861,7 @@ const SkillBrowserViewContent: React.FC = () => {
       // Use folder name (with hyphens) for the actual path construction
       const skillFolderName = getSkillFolderName(selectedSkill);
 
-      console.log('[handleUninstallSkillFromDirectories] Uninstalling skill:', {
+      console.info('[handleUninstallSkillFromDirectories] Uninstalling skill:', {
         displayName: selectedSkill.name,
         folderName: skillFolderName,
         fromDirectories: directoryIds,
@@ -882,7 +882,7 @@ const SkillBrowserViewContent: React.FC = () => {
         // Construct the full path to the skill in this directory
         const skillPath = `${directory.path}/${skillFolderName}`;
 
-        console.log('[handleUninstallSkillFromDirectories] Deleting skill at:', {
+        console.info('[handleUninstallSkillFromDirectories] Deleting skill at:', {
           directoryId,
           directoryPath: directory.path,
           skillPath,
@@ -894,7 +894,7 @@ const SkillBrowserViewContent: React.FC = () => {
           throw new Error(result.error || `Uninstallation from ${directoryId} failed`);
         }
 
-        console.log('[handleUninstallSkillFromDirectories] Skill uninstalled successfully from:', directoryId);
+        console.info('[handleUninstallSkillFromDirectories] Skill uninstalled successfully from:', directoryId);
         deletedPaths.push({ skillPath, directoryId });
       }
 

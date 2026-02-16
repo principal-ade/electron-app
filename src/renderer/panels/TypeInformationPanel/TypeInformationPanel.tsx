@@ -28,7 +28,6 @@ interface ExtractedType {
 
 export const TypeInformationPanel: React.FC<TypeInformationPanelProps> = ({
   context,
-  actions,
   events,
 }) => {
   const { theme } = useTheme();

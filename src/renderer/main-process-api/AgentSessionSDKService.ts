@@ -23,15 +23,14 @@ export class AgentSessionSDKService {
     const entries = Object.entries(this.callCounts).sort((a, b) => b[1] - a[1]);
 
     if (entries.length === 0) {
-      console.log('[AgentSessionSDKService] No calls recorded yet.');
+      console.info('[AgentSessionSDKService] No calls recorded yet.');
       return;
     }
 
-    console.group('[AgentSessionSDKService] Call statistics');
+    console.info('[AgentSessionSDKService] Call statistics');
     entries.forEach(([method, count]) => {
-      console.log(`${method}: ${count}`);
+      console.info(`  ${method}: ${count}`);
     });
-    console.groupEnd();
   }
 
   /**
@@ -120,7 +119,7 @@ export class AgentSessionSDKService {
    */
   static async unregisterEventPort(repository: string): Promise<void> {
     this.recordCall('unregisterEventPort');
-    console.log(
+    console.info(
       `[AgentSessionSDKService] Unregistering event port for: ${repository}`,
     );
     return window.mainProcess.agentSessionSDK.unregisterEventPort(repository);

@@ -17,7 +17,7 @@ import { LocalhostDetectionService } from '../main-process-api/LocalhostDetectio
  * @example
  * // Find available port for Storybook (tries 6006, 6007, 6008, ...)
  * const port = await findAvailablePort(6006, 6020);
- * console.log(`Found available port: ${port}`);
+ * console.info(`Found available port: ${port}`);
  */
 export async function findAvailablePort(
   startPort: number = 6006,
@@ -42,7 +42,7 @@ export async function findAvailablePort(
   for (let port = startPort; port <= endPort; port++) {
     // Skip if we know this port is occupied
     if (occupiedPorts.has(port)) {
-      console.log(`[portDetection] Port ${port} is occupied by running server`);
+      console.info(`[portDetection] Port ${port} is occupied by running server`);
       continue;
     }
 
@@ -50,10 +50,10 @@ export async function findAvailablePort(
     try {
       const isAvailable = await LocalhostDetectionService.checkPort(port, 500);
       if (!isAvailable) {
-        console.log(`[portDetection] Port ${port} is available`);
+        console.info(`[portDetection] Port ${port} is available`);
         return port;
       }
-      console.log(`[portDetection] Port ${port} is occupied (check returned true)`);
+      console.info(`[portDetection] Port ${port} is occupied (check returned true)`);
     } catch (error) {
       console.error(`[portDetection] Error checking port ${port}:`, error);
       // Continue to next port on error
@@ -78,7 +78,7 @@ export async function findAvailablePort(
  * @example
  * // Wait for Storybook to start on port 6006
  * await waitForPortReady(6006, 30000);
- * console.log('Storybook is ready!');
+ * console.info('Storybook is ready!');
  */
 export async function waitForPortReady(
   port: number,
@@ -88,20 +88,20 @@ export async function waitForPortReady(
   const startTime = Date.now();
   let attempts = 0;
 
-  console.log(`[portDetection] Waiting for port ${port} to become responsive (timeout: ${timeout}ms)`);
+  console.info(`[portDetection] Waiting for port ${port} to become responsive (timeout: ${timeout}ms)`);
 
   while (Date.now() - startTime < timeout) {
     attempts++;
     try {
       const isResponsive = await LocalhostDetectionService.checkPort(port, 500);
       if (isResponsive) {
-        console.log(`[portDetection] ✅ Port ${port} is now responsive (took ${Date.now() - startTime}ms, ${attempts} attempts)`);
+        console.info(`[portDetection] ✅ Port ${port} is now responsive (took ${Date.now() - startTime}ms, ${attempts} attempts)`);
         return true;
       }
 
       // Log progress every 5 attempts (5 seconds)
       if (attempts % 5 === 0) {
-        console.log(`[portDetection] Still waiting for port ${port}... (${Date.now() - startTime}ms elapsed)`);
+        console.info(`[portDetection] Still waiting for port ${port}... (${Date.now() - startTime}ms elapsed)`);
       }
     } catch (error) {
       console.warn(`[portDetection] Port check attempt ${attempts} failed:`, error);

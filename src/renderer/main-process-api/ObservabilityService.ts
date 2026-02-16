@@ -33,10 +33,10 @@ class ObservabilityServiceClass {
    */
   async getConfiguration(): Promise<ObservabilityConfig> {
     const result = await window.mainProcess.observability.getConfig();
-    if (!result.success) {
+    if (!result.success || !result.config) {
       throw new Error(result.error || 'Failed to get configuration');
     }
-    return result.config!;
+    return result.config;
   }
 
   /**
@@ -65,10 +65,10 @@ class ObservabilityServiceClass {
    */
   async getStatus(): Promise<ObservabilityStatus> {
     const result = await window.mainProcess.observability.getStatus();
-    if (!result.success) {
+    if (!result.success || !result.status) {
       throw new Error(result.error || 'Failed to get status');
     }
-    return result.status!;
+    return result.status;
   }
 
   /**
@@ -76,10 +76,10 @@ class ObservabilityServiceClass {
    */
   async resolvePath(dbPath: string): Promise<string> {
     const result = await window.mainProcess.observability.resolvePath(dbPath);
-    if (!result.success) {
+    if (!result.success || !result.resolvedPath) {
       throw new Error(result.error || 'Failed to resolve path');
     }
-    return result.resolvedPath!;
+    return result.resolvedPath;
   }
 
   /**
@@ -87,10 +87,10 @@ class ObservabilityServiceClass {
    */
   async getDbPath(): Promise<string> {
     const result = await window.mainProcess.observability.getDbPath();
-    if (!result.success) {
+    if (!result.success || !result.dbPath) {
       throw new Error(result.error || 'Failed to get database path');
     }
-    return result.dbPath!;
+    return result.dbPath;
   }
 
   /**

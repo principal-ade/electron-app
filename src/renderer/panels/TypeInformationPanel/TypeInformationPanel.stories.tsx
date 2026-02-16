@@ -13,7 +13,7 @@ class MockEventEmitter implements PanelEventEmitter {
   private listeners: Map<string, Array<(event: any) => void>> = new Map();
 
   emit(event: any): void {
-    console.log('[Mock Event]:', event);
+    console.info('[Mock Event]:', event);
     const eventListeners = this.listeners.get(event.type) || [];
     eventListeners.forEach((listener) => listener(event));
   }

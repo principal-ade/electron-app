@@ -578,9 +578,9 @@ export const WorldsViewPanelProvider: React.FC<
             : c,
         );
 
-        console.log('[WorldsViewPanelProvider] Optimistic update - new region:', newRegion);
-        console.log('[WorldsViewPanelProvider] Updated metadata:', updatedMetadata);
-        console.log('[WorldsViewPanelProvider] Updated collection:', optimisticCollections.find(c => c.id === collectionId));
+        console.info('[WorldsViewPanelProvider] Optimistic update - new region:', newRegion);
+        console.info('[WorldsViewPanelProvider] Updated metadata:', updatedMetadata);
+        console.info('[WorldsViewPanelProvider] Updated collection:', optimisticCollections.find(c => c.id === collectionId));
 
         setCollections(optimisticCollections);
 

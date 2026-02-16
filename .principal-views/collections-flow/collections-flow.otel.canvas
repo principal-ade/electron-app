@@ -88,6 +88,7 @@
       "pv": {
         "nodeType": "ui-component",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/renderer/components/CreateCollectionModal.tsx"
         ],
@@ -123,6 +124,7 @@
       "pv": {
         "nodeType": "ui-component",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/renderer/contexts/WorldsViewPanelContext.tsx"
         ],
@@ -158,6 +160,7 @@
       "pv": {
         "nodeType": "context",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/renderer/contexts/WorldsViewPanelContext.tsx"
         ],
@@ -197,6 +200,7 @@
       "pv": {
         "nodeType": "renderer-service",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/renderer/main-process-api/CollectionsService.ts"
         ],
@@ -232,6 +236,7 @@
       "pv": {
         "nodeType": "preload",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/window/main-process-api-implementations/collectionsApi.ts"
         ],
@@ -267,6 +272,7 @@
       "pv": {
         "nodeType": "main-process",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/main/services/CollectionsService.ts"
         ],
@@ -306,6 +312,7 @@
       "pv": {
         "nodeType": "main-process",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/main/services/CollectionsService.ts"
         ],
@@ -341,6 +348,7 @@
       "pv": {
         "nodeType": "github-api",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/main/services/CollectionsService.ts"
         ],
@@ -384,6 +392,7 @@
       "pv": {
         "nodeType": "main-process",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/main/services/CollectionsService.ts"
         ],
@@ -419,6 +428,7 @@
       "pv": {
         "nodeType": "github-api",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/main/services/CollectionsService.ts"
         ],
@@ -466,6 +476,7 @@
       "pv": {
         "nodeType": "main-process",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/main/services/CollectionsService.ts"
         ],
@@ -501,6 +512,7 @@
       "pv": {
         "nodeType": "github-api",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/main/services/CollectionsService.ts"
         ],
@@ -552,6 +564,7 @@
       "pv": {
         "nodeType": "github-api",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/main/services/CollectionsService.ts"
         ],
@@ -595,6 +608,7 @@
       "pv": {
         "nodeType": "storage",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/main/services/CollectionsService.ts"
         ],
@@ -634,6 +648,7 @@
       "pv": {
         "nodeType": "context",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/renderer/contexts/WorldsViewPanelContext.tsx"
         ],
@@ -669,6 +684,7 @@
       "pv": {
         "nodeType": "ui-component",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/renderer/contexts/WorldsViewPanelContext.tsx"
         ],
@@ -708,6 +724,7 @@
       "pv": {
         "nodeType": "context",
         "shape": "rectangle",
+        "status": "implemented",
         "sources": [
           "src/renderer/contexts/WorldsViewPanelContext.tsx"
         ],

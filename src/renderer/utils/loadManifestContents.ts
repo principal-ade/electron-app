@@ -80,7 +80,7 @@ export async function loadManifestContents(
       return fallbackPatterns.includes(base);
     });
 
-  console.log('[loadManifestContents] Found manifest files:', manifestFiles);
+  console.info('[loadManifestContents] Found manifest files:', manifestFiles);
 
   // Load contents of each manifest file
   for (const path of manifestFiles) {
@@ -97,7 +97,7 @@ export async function loadManifestContents(
       })();
 
       if (rootPath) {
-        console.debug('[loadManifestContents] reading', { path, resolvedPath });
+        console.info('[loadManifestContents] reading', { path, resolvedPath });
       }
 
       const result = await fileSystemAdapter.readFile(resolvedPath);
@@ -127,7 +127,7 @@ export async function loadManifestContents(
     }
   }
 
-  console.log(
+  console.info(
     '[loadManifestContents] Loaded manifest contents for',
     manifestContents.size,
     'files',
@@ -155,7 +155,7 @@ function parseManifestContent(filePath: string, content: string): any {
   // TOML files (Cargo.toml, pyproject.toml)
   if (filePath.endsWith('.toml')) {
     // TODO: Add proper TOML parser when available
-    console.log(
+    console.info(
       `[loadManifestContents] TOML parsing not implemented for ${filePath}`,
     );
 
@@ -185,7 +185,7 @@ function parseManifestContent(filePath: string, content: string): any {
   // XML files (pom.xml)
   if (filePath.endsWith('.xml')) {
     // TODO: Add XML parser when needed
-    console.log(
+    console.info(
       `[loadManifestContents] XML parsing not implemented for ${filePath}`,
     );
     return content;

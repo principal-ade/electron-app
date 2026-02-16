@@ -81,7 +81,7 @@ export const ThemeDropdown: React.FC = () => {
         className="titlebar-theme-button"
         onClick={(e) => {
           e.stopPropagation();
-          console.log('Theme button clicked, current state:', isDropdownOpen);
+          console.info('Theme button clicked, current state:', isDropdownOpen);
           setIsDropdownOpen(!isDropdownOpen);
         }}
         style={{

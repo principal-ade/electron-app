@@ -138,13 +138,6 @@ const ProjectsViewContent: React.FC = () => {
     setIsCreateRepositoryModalOpen(false);
   }, []);
 
-  // Handle repository created successfully - refresh the repositories list
-  const handleRepositoryCreated = useCallback(() => {
-    // Refresh repositories and workspace repositories
-    context.refresh('repository', 'alexandriaRepositories');
-    context.refresh('workspace', 'workspaceRepositories');
-  }, [context]);
-
   // Handle delete modal close
   const handleCloseDeleteModal = useCallback(() => {
     setIsDeleteModalOpen(false);

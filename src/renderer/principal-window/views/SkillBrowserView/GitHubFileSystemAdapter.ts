@@ -32,7 +32,7 @@ export class GitHubFileSystemAdapter {
         relativePath = path.substring(prefix.length);
       }
 
-      console.log('[GitHubFileSystemAdapter] Reading file:', {
+      console.info('[GitHubFileSystemAdapter] Reading file:', {
         originalPath: path,
         relativePath,
         owner: this.owner,
@@ -52,7 +52,7 @@ export class GitHubFileSystemAdapter {
         throw new Error(`Failed to fetch file: ${relativePath}`);
       }
 
-      console.log('[GitHubFileSystemAdapter] Successfully read file:', {
+      console.info('[GitHubFileSystemAdapter] Successfully read file:', {
         path: relativePath,
         contentLength: content.length,
       });

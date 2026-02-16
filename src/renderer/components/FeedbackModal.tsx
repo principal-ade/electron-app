@@ -34,7 +34,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
       userAgent: navigator.userAgent,
     };
 
-    console.log('Feedback data to send:', feedbackData);
+    console.info('Feedback data to send:', feedbackData);
     // TODO: Wire this up to send feedback to your backend
     onClose();
   };

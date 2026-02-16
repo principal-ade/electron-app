@@ -12,7 +12,6 @@ import {
   GitPullRequest,
   X,
   AlertTriangle,
-  CheckCircle,
   XCircle,
   RefreshCw,
   Inbox,

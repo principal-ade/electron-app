@@ -13,7 +13,7 @@ export class ShellService {
   static async openExternal(
     url: string,
   ): Promise<{ success: boolean; error?: string }> {
-    console.log(`[ShellService] Opening external URL: ${url}`);
+    console.info(`[ShellService] Opening external URL: ${url}`);
 
     try {
       const result = await window.mainProcess.shell.openExternal(url);
@@ -39,7 +39,7 @@ export class ShellService {
         try {
           window.open(url, '_blank');
           return { success: true };
-        } catch (fallbackError) {
+        } catch {
           return {
             success: false,
             error: `Failed to open URL: ${error}`,
@@ -67,7 +67,7 @@ export class ShellService {
     stderr?: string;
     code?: number;
   }> {
-    console.log(`[ShellService] Running command: ${command}`);
+    console.info(`[ShellService] Running command: ${command}`);
     return window.mainProcess.shell.runCommand(command, options);
   }
 
@@ -79,8 +79,8 @@ export class ShellService {
     dir?: string;
     files?: string[];
   }): Promise<{ success: boolean; error?: string }> {
-    console.log(`[ShellService] Opening in editor: ${params.editor}`);
-    return window.mainProcess.shell.openInEditor(params as any);
+    console.info(`[ShellService] Opening in editor: ${params.editor}`);
+    return window.mainProcess.shell.openInEditor(params);
   }
 
   /**
@@ -91,7 +91,7 @@ export class ShellService {
     dir: string;
     command?: string;
   }): Promise<{ success: boolean; error?: string }> {
-    console.log(`[ShellService] Opening terminal: ${params.terminal}`);
+    console.info(`[ShellService] Opening terminal: ${params.terminal}`);
     return window.mainProcess.shell.openInTerminal(params);
   }
 
@@ -103,7 +103,7 @@ export class ShellService {
   static async openPath(
     path: string,
   ): Promise<{ success: boolean; error?: string }> {
-    console.log(`[ShellService] Opening path: ${path}`);
+    console.info(`[ShellService] Opening path: ${path}`);
     return window.mainProcess.shell.openPath(path);
   }
 
@@ -112,7 +112,7 @@ export class ShellService {
    * Uses the system's default terminal application.
    */
   static async openTerminal(path: string): Promise<void> {
-    console.log(`[ShellService] Opening terminal at: ${path}`);
+    console.info(`[ShellService] Opening terminal at: ${path}`);
     return window.mainProcess.shell.openTerminal(path);
   }
 
@@ -125,7 +125,7 @@ export class ShellService {
     path?: string;
     error?: string;
   }> {
-    console.log(`[ShellService] Checking command: ${command}`);
+    console.info(`[ShellService] Checking command: ${command}`);
     return window.mainProcess.shell.checkCommand(command);
   }
 
@@ -134,7 +134,7 @@ export class ShellService {
    * Useful when the system PATH has been modified.
    */
   static async clearPathCache(): Promise<void> {
-    console.log(`[ShellService] Clearing PATH cache`);
+    console.info(`[ShellService] Clearing PATH cache`);
     return window.mainProcess.shell.clearPathCache();
   }
 
@@ -145,7 +145,7 @@ export class ShellService {
   static async openInDefaultEditor(
     path: string,
   ): Promise<{ success: boolean; error?: string }> {
-    console.log(`[ShellService] Opening in default editor: ${path}`);
+    console.info(`[ShellService] Opening in default editor: ${path}`);
     // Try VS Code first, then Cursor as fallback
     const result = await this.openInEditor({
       editor: 'vscode' as EditorId,
@@ -165,7 +165,7 @@ export class ShellService {
   static async showItemInFolder(
     filePath: string,
   ): Promise<{ success: boolean; error?: string }> {
-    console.log(`[ShellService] Showing item in folder: ${filePath}`);
+    console.info(`[ShellService] Showing item in folder: ${filePath}`);
     return window.mainProcess.shell.showItemInFolder(filePath);
   }
 
@@ -175,7 +175,7 @@ export class ShellService {
   static async moveToTrash(
     filePath: string,
   ): Promise<{ success: boolean; error?: string }> {
-    console.log(`[ShellService] Moving to trash: ${filePath}`);
+    console.info(`[ShellService] Moving to trash: ${filePath}`);
     return window.mainProcess.shell.moveToTrash(filePath);
   }
 }

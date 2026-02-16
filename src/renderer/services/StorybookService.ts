@@ -38,7 +38,7 @@ export interface StorybookPackage {
  * const packagesSlice = context.getSlice('packages');
  * const storybookPackages = findStorybookPackages(packagesSlice.data.packages, repoPath);
  * if (storybookPackages.length > 0) {
- *   console.log(`Found ${storybookPackages.length} packages with Storybook`);
+ *   console.info(`Found ${storybookPackages.length} packages with Storybook`);
  * }
  */
 export function findStorybookPackages(
@@ -119,7 +119,7 @@ export function findStorybookPackages(
  *
  * @example
  * const command = getStorybookCommand(storybookPackage, 6006);
- * console.log(command); // "npm run storybook -- --port 6006"
+ * console.info(command); // "npm run storybook -- --port 6006"
  */
 export function getStorybookCommand(
   storybookPackage: StorybookPackage,

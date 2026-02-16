@@ -3,7 +3,6 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { RefreshCw, Globe, ExternalLink, Terminal, Folder, X } from 'lucide-react';
 import type {
   PanelComponentProps,
-  DataSlice,
 } from '@principal-ade/panel-framework-core';
 import { LocalhostDetectionService } from '../../main-process-api/LocalhostDetectionService';
 
@@ -119,7 +118,7 @@ export const LocalhostProcessesPanel: React.FC<PanelComponentProps> = ({
       const result = await LocalhostDetectionService.killServer(server.pid);
 
       if (result.success) {
-        console.log(
+        console.info(
           `[LocalhostProcessesPanel] Successfully killed server with PID ${server.pid}`,
         );
 

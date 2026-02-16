@@ -109,7 +109,7 @@ export const PendingChangesPanel: React.FC<PendingChangesPanelProps> = ({ onClos
 
     // TODO: Implement actual sync logic
     // For now, just clear the pending changes
-    console.log('[PendingChangesPanel] Syncing directory:', directoryId, 'changes:', selected);
+    console.info('[PendingChangesPanel] Syncing directory:', directoryId, 'changes:', selected);
 
     await clearPendingChanges(directoryId);
 

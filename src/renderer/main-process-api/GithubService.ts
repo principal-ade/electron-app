@@ -15,6 +15,7 @@ import type {
   ForkRepositoryOptions,
   InstallSkillOptions,
   InstallSkillResult,
+  GitHubCommit,
 } from '../../shared/main-process-api-interfaces/GitHubAPI';
 
 export class GithubService {
@@ -149,7 +150,7 @@ export class GithubService {
     owner: string,
     repo: string,
     options?: { perPage?: number; page?: number },
-  ): Promise<any[]> {
+  ): Promise<GitHubCommit[]> {
     const result = await window.mainProcess.github.getRepositoryCommits(
       owner,
       repo,

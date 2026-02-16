@@ -45,7 +45,7 @@ export class RendererFileSystemAdapter implements FileSystemAdapter {
     }
   }
 
-  async rename(from: string, to: string): Promise<void> {
+  async rename(_from: string, _to: string): Promise<void> {
     // Note: There's currently no IPC handler for rename
     // If needed in the future, add a handler in fileSystemHandlers.ts
     throw new Error('rename is not implemented in renderer process. If needed, add IPC handler in main process.');

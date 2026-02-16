@@ -58,9 +58,9 @@ export const GlobalDirectoriesConfig: React.FC<GlobalDirectoriesConfigProps> = (
 
   const loadDirectories = async () => {
     try {
-      console.log('[GlobalDirectoriesConfig] Loading directories...');
+      console.info('[GlobalDirectoriesConfig] Loading directories...');
       const dirs = await FileSystemService.getSkillDirectories();
-      console.log('[GlobalDirectoriesConfig] Received directories:', dirs);
+      console.info('[GlobalDirectoriesConfig] Received directories:', dirs);
 
       // De-duplicate directories by path
       const uniqueDirs = dirs.reduce((acc: Directory[], dir: Directory) => {

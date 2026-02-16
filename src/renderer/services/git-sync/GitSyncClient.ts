@@ -174,10 +174,6 @@ function isBranchSwitchedMessage(msg: GitSyncMessage): msg is BranchSwitchedMess
   return msg.type === 'branch_switched';
 }
 
-function isAuthSuccessMessage(msg: GitSyncMessage): msg is AuthSuccessMessage {
-  return msg.type === 'auth_success';
-}
-
 export class GitSyncClient extends EventEmitter {
   private ws: WebSocket | null = null;
   private config: GitSyncConfig;

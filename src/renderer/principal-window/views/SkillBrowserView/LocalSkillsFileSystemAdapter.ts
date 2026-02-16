@@ -47,7 +47,7 @@ export class LocalSkillsFileSystemAdapter {
       // skill.path is the full directory path (e.g., /Users/user/.claude/skills/setup-otel-testing)
       const actualPath = `${skill.path}/${filePath}`;
 
-      console.log('[LocalSkillsFileSystemAdapter] Reading file:', {
+      console.info('[LocalSkillsFileSystemAdapter] Reading file:', {
         virtualPath: path,
         actualPath,
         source,
@@ -62,7 +62,7 @@ export class LocalSkillsFileSystemAdapter {
         throw new Error('Failed to read file content');
       }
 
-      console.log('[LocalSkillsFileSystemAdapter] Successfully read file:', {
+      console.info('[LocalSkillsFileSystemAdapter] Successfully read file:', {
         path: actualPath,
         contentLength: result.content.length,
       });

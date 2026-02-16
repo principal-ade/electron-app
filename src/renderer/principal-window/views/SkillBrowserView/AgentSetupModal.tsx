@@ -90,9 +90,9 @@ export const AgentSetupModal: React.FC<AgentSetupModalProps> = ({
     setSuccess(false);
 
     try {
-      console.log('[AgentSetupModal] Creating directories for:', Array.from(selectedAgents));
+      console.info('[AgentSetupModal] Creating directories for:', Array.from(selectedAgents));
       await onSetup(Array.from(selectedAgents));
-      console.log('[AgentSetupModal] Directories created successfully');
+      console.info('[AgentSetupModal] Directories created successfully');
 
       // Show success state
       setSuccess(true);
@@ -120,9 +120,9 @@ export const AgentSetupModal: React.FC<AgentSetupModalProps> = ({
     setError(null);
 
     try {
-      console.log('[AgentSetupModal] Removing directory for:', agentId);
+      console.info('[AgentSetupModal] Removing directory for:', agentId);
       await onRemove(agentId);
-      console.log('[AgentSetupModal] Directory removed successfully');
+      console.info('[AgentSetupModal] Directory removed successfully');
     } catch (err) {
       console.error('[AgentSetupModal] Failed to remove directory:', err);
       setError(err instanceof Error ? err.message : 'Failed to remove directory');

@@ -4,7 +4,7 @@
   "description": "Initial setup workflow when creating the web-ade-collections GitHub repository",
   "mode": "span-tree",
   "canvas": ".principal-views/collections-flow/collections-flow.otel.canvas",
-  "spanPattern": "collections.*",
+  "spanPattern": "collections.create_first_time",
   "scenarios": [
     {
       "id": "first-time-setup",

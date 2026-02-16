@@ -94,12 +94,12 @@ export const SkillBrowserPanelProvider: React.FC<
 
     // Listen for skill installation/uninstallation events to refresh global skills
     const unsubscribeInstalled = events.on('skill:installed', () => {
-      console.log('[SkillBrowserPanelProvider] Skill installed, refreshing global skills');
+      console.info('[SkillBrowserPanelProvider] Skill installed, refreshing global skills');
       fetchGlobalSkills();
     });
 
     const unsubscribeUninstalled = events.on('skill:uninstalled', () => {
-      console.log('[SkillBrowserPanelProvider] Skill uninstalled, refreshing global skills');
+      console.info('[SkillBrowserPanelProvider] Skill uninstalled, refreshing global skills');
       fetchGlobalSkills();
     });
 
@@ -128,7 +128,7 @@ export const SkillBrowserPanelProvider: React.FC<
 
     // Listen for skill installation events to refresh
     const unsubscribe = events.on('skill:installed', () => {
-      console.log('[SkillBrowserPanelProvider] Skill installed, refreshing installed skills');
+      console.info('[SkillBrowserPanelProvider] Skill installed, refreshing installed skills');
       fetchInstalledSkills();
     });
 
@@ -140,7 +140,7 @@ export const SkillBrowserPanelProvider: React.FC<
     () => ({
       fileSystem: {
         readFile: async (filePath: string): Promise<string> => {
-          console.log('[SkillBrowserPanelProvider] readFile called:', filePath);
+          console.info('[SkillBrowserPanelProvider] readFile called:', filePath);
 
           // If it's an absolute path (global skills), read directly
           if (filePath.startsWith('/') || filePath.startsWith('~')) {
@@ -163,7 +163,7 @@ export const SkillBrowserPanelProvider: React.FC<
             // Virtual skill paths are: source/skill-name/file.md
             if (parts.length >= 3) {
               try {
-                console.log('[SkillBrowserPanelProvider] Reading installed skill:', filePath);
+                console.info('[SkillBrowserPanelProvider] Reading installed skill:', filePath);
                 const content = await localSkillsAdapter.readFile(filePath);
                 return content;
               } catch (error) {
@@ -195,7 +195,7 @@ export const SkillBrowserPanelProvider: React.FC<
         exists: async (filePath: string): Promise<boolean> => {
           // For GitHub files, we can't check existence without making an API call
           // For now, just return true and let readFile handle the error
-          console.log('[SkillBrowserPanelProvider] exists called:', filePath);
+          console.info('[SkillBrowserPanelProvider] exists called:', filePath);
           return true;
         },
       },
@@ -218,7 +218,7 @@ export const SkillBrowserPanelProvider: React.FC<
             refresh: async () => {
               // Refresh is handled by skills:refresh event from SkillsListPanel
               // This is here for API compatibility but not actively used
-              console.log('[SkillBrowserPanelProvider] fileTree refresh called (no-op)');
+              console.info('[SkillBrowserPanelProvider] fileTree refresh called (no-op)');
             },
           },
         ],

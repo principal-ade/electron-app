@@ -153,9 +153,9 @@ export function RemoteTerminalViewer() {
 
   // Initialize auth and connection
   useEffect(() => {
-    console.log('[RemoteTerminalViewer] Mounted');
-    console.log('[RemoteTerminalViewer] window.mainProcess available:', !!window.mainProcess);
-    console.log('[RemoteTerminalViewer] Available window properties:', Object.keys(window).filter(k => k.includes('main') || k.includes('electron')));
+    console.info('[RemoteTerminalViewer] Mounted');
+    console.info('[RemoteTerminalViewer] window.mainProcess available:', !!window.mainProcess);
+    console.info('[RemoteTerminalViewer] Available window properties:', Object.keys(window).filter(k => k.includes('main') || k.includes('electron')));
 
     async function initialize() {
       try {
@@ -171,7 +171,7 @@ export function RemoteTerminalViewer() {
 
         // Get GitHub auth from main process
         const authResult = await window.mainProcess.authentication.getGitHubAuth();
-        console.log('[RemoteTerminalViewer] Auth result:', {
+        console.info('[RemoteTerminalViewer] Auth result:', {
           authenticated: authResult.authenticated,
           hasUser: !!authResult.user
         });
@@ -191,9 +191,9 @@ export function RemoteTerminalViewer() {
 
         // Exchange GitHub token for JWT user discovery token
         // This doesn't require a repository since we're joining user-specific discovery room
-        console.log('[RemoteTerminalViewer] Getting user discovery token...');
+        console.info('[RemoteTerminalViewer] Getting user discovery token...');
         const userToken = await getUserToken(authResult.token);
-        console.log('[RemoteTerminalViewer] User discovery token obtained');
+        console.info('[RemoteTerminalViewer] User discovery token obtained');
 
         // Create WebSocket client and connect to user discovery room
         await connectToUserDiscoveryRoom(userToken, userId, githubHandle);
@@ -208,7 +208,7 @@ export function RemoteTerminalViewer() {
     initialize();
 
     return () => {
-      console.log('[RemoteTerminalViewer] Unmounting, cleaning up...');
+      console.info('[RemoteTerminalViewer] Unmounting, cleaning up...');
 
       // Cleanup all terminals
       attachedTerminals.forEach(({ terminal }) => {
@@ -235,12 +235,12 @@ export function RemoteTerminalViewer() {
         'wss://repository-traffic-controller-production.rj36caac972nm.us-east-1.cs.amazonlightsail.com/ws';
 
       const userRoomId = `terminals:user:${userId}`;
-      console.log('[RemoteTerminalViewer] Connecting to user discovery room:', userRoomId);
-      console.log('[RemoteTerminalViewer] WebSocket URL:', wsServerUrl);
-      console.log('[RemoteTerminalViewer] Token length:', token?.length);
+      console.info('[RemoteTerminalViewer] Connecting to user discovery room:', userRoomId);
+      console.info('[RemoteTerminalViewer] WebSocket URL:', wsServerUrl);
+      console.info('[RemoteTerminalViewer] Token length:', token?.length);
 
       // Test direct WebSocket connection to see actual error
-      console.log('[RemoteTerminalViewer] Testing direct WebSocket connection...');
+      console.info('[RemoteTerminalViewer] Testing direct WebSocket connection...');
       try {
         await new Promise<void>((resolve, reject) => {
           const testUrl = `${wsServerUrl}${wsServerUrl.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`;
@@ -253,7 +253,7 @@ export function RemoteTerminalViewer() {
           }, 5000);
 
           testWs.onopen = () => {
-            console.log('[RemoteTerminalViewer] ✅ Direct WebSocket test: CONNECTED');
+            console.info('[RemoteTerminalViewer] ✅ Direct WebSocket test: CONNECTED');
             clearTimeout(timeout);
             testWs.close();
             resolve();
@@ -296,7 +296,7 @@ export function RemoteTerminalViewer() {
       });
 
       // Log transport adapter details
-      console.log('[RemoteTerminalViewer] Transport adapter created:', {
+      console.info('[RemoteTerminalViewer] Transport adapter created:', {
         type: 'BrowserWebSocketTransportAdapter',
         hasHeartbeat: true,
         tokenLength: token.length,
@@ -324,7 +324,7 @@ export function RemoteTerminalViewer() {
 
       // Debug: log all incoming messages
       (client as any).on('message' as any, (msg: any) => {
-        console.log('[RemoteTerminalViewer] Raw message received:', msg);
+        console.info('[RemoteTerminalViewer] Raw message received:', msg);
       });
 
       // Add connection error handlers
@@ -341,12 +341,12 @@ export function RemoteTerminalViewer() {
       });
 
       client.on('disconnect' as any, (reason: any) => {
-        console.log('[RemoteTerminalViewer] Disconnected:', reason);
+        console.info('[RemoteTerminalViewer] Disconnected:', reason);
         setStatus('disconnected');
       });
 
       // Connect to server with timeout
-      console.log('[RemoteTerminalViewer] Initiating connection...');
+      console.info('[RemoteTerminalViewer] Initiating connection...');
       try {
         await Promise.race([
           client.connect(wsServerUrl, token),
@@ -354,11 +354,11 @@ export function RemoteTerminalViewer() {
             setTimeout(() => reject(new Error('Connection timeout after 10s')), 10000)
           )
         ]);
-        console.log('[RemoteTerminalViewer] Connected to WebSocket server');
+        console.info('[RemoteTerminalViewer] Connected to WebSocket server');
 
         // Authenticate with the server using the BaseClient authenticate method
         // BaseClient emits 'authenticated' event when auth_result is processed
-        console.log('[RemoteTerminalViewer] Authenticating...');
+        console.info('[RemoteTerminalViewer] Authenticating...');
 
         // Set up promise to wait for authentication event
         const authPromise = new Promise<void>((resolve, reject) => {
@@ -367,7 +367,7 @@ export function RemoteTerminalViewer() {
           }, 5000);
 
           const handleAuthenticated = () => {
-            console.log('[RemoteTerminalViewer] ✅ Authenticated event received');
+            console.info('[RemoteTerminalViewer] ✅ Authenticated event received');
             clearTimeout(timeout);
             client.off('authenticated' as any, handleAuthenticated);
             client.off('authentication_failed' as any, handleAuthFailed);
@@ -389,11 +389,11 @@ export function RemoteTerminalViewer() {
         // Send authenticate message
         try {
           await client.authenticate();
-          console.log('[RemoteTerminalViewer] Authentication message sent, waiting for response...');
+          console.info('[RemoteTerminalViewer] Authentication message sent, waiting for response...');
 
           // Wait for auth_result to be processed
           await authPromise;
-          console.log('[RemoteTerminalViewer] ✅ Authentication complete');
+          console.info('[RemoteTerminalViewer] ✅ Authentication complete');
         } catch (authError: any) {
           console.error('[RemoteTerminalViewer] ❌ Authentication failed:', authError);
           throw new Error(`Authentication failed: ${authError?.message || 'Unknown error'}`);
@@ -411,18 +411,18 @@ export function RemoteTerminalViewer() {
 
         // Log WebSocket readyState if available
         if (typeof WebSocket !== 'undefined') {
-          console.log('[RemoteTerminalViewer] WebSocket available:', true);
+          console.info('[RemoteTerminalViewer] WebSocket available:', true);
         }
 
         throw new Error(`Failed to connect to WebSocket server: ${connectError?.message || 'Unknown error'}`);
       }
 
       // Join user discovery room
-      console.log('[RemoteTerminalViewer] Joining room:', userRoomId);
+      console.info('[RemoteTerminalViewer] Joining room:', userRoomId);
 
       // Listen for ALL events to debug
       client.on('message' as any, (msg: any) => {
-        console.log('[RemoteTerminalViewer] 🔍 Received message:', msg);
+        console.info('[RemoteTerminalViewer] 🔍 Received message:', msg);
       });
 
       // Listen for room join confirmation
@@ -435,7 +435,7 @@ export function RemoteTerminalViewer() {
 
         // Listen for join success (correct event name: room_joined with underscore)
         client.on('room_joined' as any, (event: any) => {
-          console.log('[RemoteTerminalViewer] ✅ Room joined event:', event);
+          console.info('[RemoteTerminalViewer] ✅ Room joined event:', event);
           clearTimeout(timeout);
           resolve();
         });
@@ -448,7 +448,7 @@ export function RemoteTerminalViewer() {
         });
 
         // Attempt to join
-        console.log('[RemoteTerminalViewer] 📤 Sending join room request for:', userRoomId);
+        console.info('[RemoteTerminalViewer] 📤 Sending join room request for:', userRoomId);
         client.joinRoom(userRoomId).catch((err) => {
           console.error('[RemoteTerminalViewer] ❌ Join room threw error:', err);
           clearTimeout(timeout);
@@ -456,7 +456,7 @@ export function RemoteTerminalViewer() {
         });
       });
 
-      console.log('[RemoteTerminalViewer] Successfully joined user discovery room:', userRoomId);
+      console.info('[RemoteTerminalViewer] Successfully joined user discovery room:', userRoomId);
 
       const connectionId = userId; // Use userId as connection identifier
       connectionIdRef.current = connectionId;
@@ -465,7 +465,7 @@ export function RemoteTerminalViewer() {
 
       // Tell main process to connect its bridge to the same user room (ONE-TIME IPC call for setup)
       // After this, all communication happens through WebSocket only
-      console.log('[RemoteTerminalViewer] Telling main process to connect bridge (one-time setup)...');
+      console.info('[RemoteTerminalViewer] Telling main process to connect bridge (one-time setup)...');
       if (!window.mainProcess.terminalBridge) {
         console.error('[RemoteTerminalViewer] ❌ terminalBridge API not available');
       } else {
@@ -476,7 +476,7 @@ export function RemoteTerminalViewer() {
             githubHandle,
           });
           if (bridgeResult.success) {
-            console.log('[RemoteTerminalViewer] ✅ Main process bridge connected - all subsequent communication via WebSocket');
+            console.info('[RemoteTerminalViewer] ✅ Main process bridge connected - all subsequent communication via WebSocket');
           } else {
             console.warn('[RemoteTerminalViewer] ⚠️ Bridge connection failed:', bridgeResult.error);
           }
@@ -489,9 +489,9 @@ export function RemoteTerminalViewer() {
       await new Promise(resolve => setTimeout(resolve, 100));
 
       // Request session list via WebSocket (not IPC)
-      console.log('[RemoteTerminalViewer] Requesting session list via WebSocket...');
+      console.info('[RemoteTerminalViewer] Requesting session list via WebSocket...');
       await requestSessionList(client);
-      console.log('[RemoteTerminalViewer] Session list requested');
+      console.info('[RemoteTerminalViewer] Session list requested');
 
     } catch (err: any) {
       console.error('[RemoteTerminalViewer] Connection failed:', err);
@@ -501,31 +501,31 @@ export function RemoteTerminalViewer() {
 
   // Set up event handlers for terminal events
   function setupEventHandlers(client: BaseClient): void {
-    console.log('[RemoteTerminalViewer] Setting up event handlers');
+    console.info('[RemoteTerminalViewer] Setting up event handlers');
 
     // Listen for all events via event_received
     client.on('event_received' as any, (data: any) => {
       const event = data.event;
-      console.log('[RemoteTerminalViewer] 📨 Event received:', event.type, event);
+      console.info('[RemoteTerminalViewer] 📨 Event received:', event.type, event);
 
       // Handle different terminal event types
       switch (event.type) {
         case 'terminal:session_list':
-          console.log('[RemoteTerminalViewer] ✅ Received session list:', event.data);
+          console.info('[RemoteTerminalViewer] ✅ Received session list:', event.data);
           if (event.data && Array.isArray(event.data.sessions)) {
             setSessions(event.data.sessions);
           }
           break;
 
         case 'terminal:session_created':
-          console.log('[RemoteTerminalViewer] ➕ Session created:', event.data);
+          console.info('[RemoteTerminalViewer] ➕ Session created:', event.data);
           if (event.data && event.data.session) {
             setSessions((prev) => [...prev, event.data.session]);
           }
           break;
 
         case 'terminal:session_destroyed':
-          console.log('[RemoteTerminalViewer] ➖ Session destroyed:', event.data);
+          console.info('[RemoteTerminalViewer] ➖ Session destroyed:', event.data);
           if (event.data && event.data.sessionId) {
             const sessionId = event.data.sessionId;
             setSessions((prev) => prev.filter((s) => s.sessionId !== sessionId));
@@ -556,7 +556,7 @@ export function RemoteTerminalViewer() {
           break;
 
         case 'terminal:ownership_changed':
-          console.log('[RemoteTerminalViewer] 🔑 Ownership changed:', event.data);
+          console.info('[RemoteTerminalViewer] 🔑 Ownership changed:', event.data);
           // Update session ownership in list
           if (event.data && event.data.sessionId) {
             setSessions((prev) =>
@@ -577,7 +577,7 @@ export function RemoteTerminalViewer() {
           break;
 
         default:
-          console.log('[RemoteTerminalViewer] Unhandled terminal event:', event.type);
+          console.info('[RemoteTerminalViewer] Unhandled terminal event:', event.type);
       }
     });
   }
@@ -616,7 +616,7 @@ export function RemoteTerminalViewer() {
     }
 
     try {
-      console.log('[RemoteTerminalViewer] Attaching to session:', sessionId, 'asOwner:', asOwner);
+      console.info('[RemoteTerminalViewer] Attaching to session:', sessionId, 'asOwner:', asOwner);
 
       // Send attach request
       const event = createTerminalEvent(
@@ -706,7 +706,7 @@ export function RemoteTerminalViewer() {
     if (!clientRef.current) return;
 
     try {
-      console.log('[RemoteTerminalViewer] Detaching from session:', sessionId);
+      console.info('[RemoteTerminalViewer] Detaching from session:', sessionId);
 
       // Send detach request
       const event = createTerminalEvent(
@@ -741,7 +741,7 @@ export function RemoteTerminalViewer() {
     if (!clientRef.current) return;
 
     try {
-      console.log('[RemoteTerminalViewer] Claiming ownership:', sessionId);
+      console.info('[RemoteTerminalViewer] Claiming ownership:', sessionId);
 
       const event = createTerminalEvent(
         'terminal:claim_ownership',
