@@ -1,5 +1,5 @@
 // Import types from electron-updater
-interface UpdateInfo {
+export interface UpdateInfo {
   version: string;
   files?: Array<{ url: string; size: number }>;
   releaseDate?: string;
@@ -7,7 +7,7 @@ interface UpdateInfo {
   releaseNotes?: string | Array<{ version: string; note: string }>;
 }
 
-interface ProgressInfo {
+export interface ProgressInfo {
   total: number;
   delta: number;
   transferred: number;
@@ -15,7 +15,7 @@ interface ProgressInfo {
   bytesPerSecond: number;
 }
 
-interface UpdateDownloadedEvent {
+export interface UpdateDownloadedEvent {
   downloadedFile: string;
   version?: string;
   releaseNotes?: string | Array<{ version: string; note: string }>;

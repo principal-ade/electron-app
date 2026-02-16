@@ -5,6 +5,14 @@ import { useSkillsSync } from '../../../hooks/useSkillsSync';
 import { useAuthState } from '../../../hooks/useAuthState';
 import { GithubService } from '../../../main-process-api/GithubService';
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
+import type { PresetDirectory } from '../../../../shared/main-process-api-interfaces/FileSystemAPI';
+
+// Detected preset directory with additional metadata
+type DetectedPreset = PresetDirectory & {
+  path: string;
+  skillCount: number;
+  skills: string[];
+};
 
 interface SkillsRepoOnboardingProps {
   onComplete: () => void;
@@ -32,7 +40,7 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [creatingRepo, setCreatingRepo] = useState(false);
   const [createRepoError, setCreateRepoError] = useState<string | null>(null);
-  const [detectedPresets, setDetectedPresets] = useState<any[]>([]);
+  const [detectedPresets, setDetectedPresets] = useState<DetectedPreset[]>([]);
   const [selectedPresets, setSelectedPresets] = useState<string[]>([]);
 
   // Load existing skills when moving to that step
@@ -55,7 +63,7 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
       const detected = await FileSystemService.detectPresetDirectories();
       setDetectedPresets(detected || []);
       // Auto-select all detected presets
-      setSelectedPresets((detected || []).map((d: any) => d.id));
+      setSelectedPresets((detected || []).map((d) => d.id));
     } catch (err) {
       console.error('Failed to detect preset directories:', err);
     }

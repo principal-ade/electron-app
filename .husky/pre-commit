@@ -1,2 +1,5 @@
+# Run TypeScript type checking
+npm run typecheck
+
 # Run principal view linting on staged .principal-views files
-npx @principal-ai/principal-view-cli lint --quiet
+npx @principal-ai/principal-view-cli@latest lint --quiet

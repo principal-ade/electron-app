@@ -32,7 +32,7 @@ import {
 } from '../contexts/AgentHighlightContext';
 import { TabbedTerminalPanel, type BaseTab, type TerminalTab } from '@industry-theme/xterm-terminal-panel';
 import { TabbedGhosttyTerminal } from '@industry-theme/ghostty-terminal-panel';
-import { panels as principalViewPanels, TraceDetailsPanel, type CanvasEditorPanelProps, type WorkflowScenariosPanelProps } from '@industry-theme/principal-view-panels';
+import { panels as principalViewPanels, TraceDetailsPanel, type CanvasEditorPanelProps, type WorkflowScenariosPanelProps, groupSpansByTrace, type TraceInfo } from '@industry-theme/principal-view-panels';
 import type { WorkflowTemplate } from '@principal-ai/principal-view-core';
 import type { FileInfo } from '@principal-ai/repository-abstraction';
 import { panels as fileCityPanels } from '@industry-theme/file-city-panel';
@@ -161,7 +161,7 @@ interface DependencyGraphTab extends BaseTab {
 interface TraceDetailsTab extends BaseTab {
   contentType: 'trace-details';
   traceId: string;
-  traceData?: StoredTrace; // Full trace object for instant loading
+  traceData?: TraceInfo; // Processed trace object for instant loading
 }
 
 /**
@@ -632,6 +632,16 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           }
 
           // Create new trace details tab with full trace object for instant loading
+          // Convert StoredTrace to TraceInfo using groupSpansByTrace
+          // IExportTraceServiceRequest and OtelResourceSpansData are both valid OTLP formats
+          // with the same structure but different TypeScript type definitions
+          const tracePayload = {
+            ...trace.data,
+            resourceSpans: trace.data.resourceSpans || [],
+          } as Parameters<typeof groupSpansByTrace>[0];
+          const traceInfoArray = groupSpansByTrace(tracePayload);
+          const traceInfo = traceInfoArray.length > 0 ? traceInfoArray[0] : undefined;
+
           // Extract name from first span if available, otherwise use short traceId
           const firstSpan = trace.data.resourceSpans?.[0]?.scopeSpans?.[0]?.spans?.[0];
           const traceName = firstSpan?.name || trace.traceId.substring(0, 8);
@@ -641,7 +651,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             label: traceName,
             contentType: 'trace-details',
             traceId: trace.traceId,
-            traceData: trace, // Pass full trace object for instant display
+            traceData: traceInfo, // Pass converted TraceInfo object for instant display
             closable: true,
           };
 

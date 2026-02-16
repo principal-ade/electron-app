@@ -4,7 +4,6 @@ import { ConfigurablePanelLayout } from '@principal-ade/panels';
 import '@principal-ade/panels/panels.css';
 import { PanelEventBus } from '@principal-ade/panel-framework-core';
 import { panels as agentPanels, type Skill, SkillsBrowsePanel, GlobalSkillsPanel, type SkillDetailPanelProps } from '@industry-theme/agent-panels';
-import type { PanelComponentProps } from '@principal-ade/panel-framework-core';
 import {
   SkillBrowserPanelProvider,
   useSkillBrowserPanelProvider,
@@ -35,7 +34,7 @@ const SkillDetailPanelComponent = agentPanels.find(
 const SkillBrowserViewContent: React.FC = () => {
   const { theme } = useTheme();
   const { context, actions, events } = useSkillBrowserPanelProvider();
-  const { isConfigured, config, getConfig } = useSkillsSync();
+  const { config, getConfig } = useSkillsSync();
 
   // State for onboarding
   const [showOnboarding, setShowOnboarding] = useState(false);

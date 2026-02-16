@@ -1,9 +1,17 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { openTelemetrySpanAdapter } from '@evilmartians/agent-prism-data';
-import type { TraceSpan } from '@evilmartians/agent-prism-types';
 import { OtelCollectorService, type StoredTrace } from '../../../main-process-api/OtelCollectorService';
 import { RefreshCw, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+
+// OTLP KeyValue type (internal to @opentelemetry/otlp-transformer)
+type OTLPKeyValue = {
+  key: string;
+  value?: {
+    stringValue?: string | null;
+    boolValue?: boolean | null;
+    intValue?: number | null;
+  };
+};
 
 interface TraceViewerProps {
   autoRefresh?: boolean;
@@ -21,7 +29,6 @@ export const TraceViewer: React.FC<TraceViewerProps> = ({
   const { theme } = useTheme();
   const [traces, setTraces] = useState<StoredTrace[]>([]);
   const [selectedTrace, setSelectedTrace] = useState<StoredTrace | null>(null);
-  const [traceData, setTraceData] = useState<TraceSpan[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [collapsedSources, setCollapsedSources] = useState<Set<string>>(new Set());
@@ -60,7 +67,7 @@ export const TraceViewer: React.FC<TraceViewerProps> = ({
       // OTLP format: resourceSpans[0].resource.attributes
       const attributes = trace.data?.resourceSpans?.[0]?.resource?.attributes;
       if (attributes) {
-        const serviceAttr = attributes.find((attr: any) => attr.key === 'service.name');
+        const serviceAttr = attributes.find((attr: OTLPKeyValue) => attr.key === 'service.name');
         if (serviceAttr?.value?.stringValue) {
           return serviceAttr.value.stringValue;
         }
@@ -97,28 +104,12 @@ export const TraceViewer: React.FC<TraceViewerProps> = ({
     });
   };
 
-  // Convert selected trace to AgentPrism format
-  useEffect(() => {
-    if (selectedTrace) {
-      try {
-        const converted = openTelemetrySpanAdapter.convertRawDocumentsToSpans([selectedTrace.data]);
-        setTraceData(converted);
-      } catch (err) {
-        console.error('Failed to convert trace:', err);
-        setError('Failed to parse trace data');
-      }
-    } else {
-      setTraceData(null);
-    }
-  }, [selectedTrace]);
-
   // Clear traces
   const handleClear = async () => {
     try {
       await OtelCollectorService.clearTraces();
       setTraces([]);
       setSelectedTrace(null);
-      setTraceData(null);
     } catch (err) {
       console.error('Failed to clear traces:', err);
     }
@@ -332,7 +323,7 @@ export const TraceViewer: React.FC<TraceViewerProps> = ({
       </div>
 
       {/* Trace Details */}
-      {selectedTrace && traceData && (
+      {selectedTrace && (
         <div
           style={{
             backgroundColor: theme.colors.backgroundSecondary,
