@@ -25,6 +25,7 @@ import type {
 import type {
   CustomRegion,
   RegionCallbacks,
+  RepositoryLayoutData,
 } from '@industry-theme/repository-composition-panels';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { CollectionsService } from '../main-process-api/CollectionsService';
@@ -730,6 +731,175 @@ export const WorldsViewPanelProvider: React.FC<
             console.error('[WorldsViewPanelProvider] Failed to sync repository assignment to GitHub:', error);
             fetchCollections(); // Rollback on error
           });
+      },
+
+      onRepositoryPositionUpdated: async (
+        collectionId: string,
+        repositoryId: string,
+        layout: RepositoryLayoutData,
+      ): Promise<void> => {
+        console.info(
+          '[WorldsViewPanelProvider] Updating repository position:',
+          repositoryId,
+          layout,
+        );
+
+        const membership = collectionMemberships.find(
+          (m) => m.collectionId === collectionId && m.repositoryId === repositoryId,
+        );
+
+        if (!membership) {
+          throw new Error('Membership not found');
+        }
+
+        // Update membership metadata with layout
+        const updatedMetadata = {
+          ...(membership.metadata || {}),
+          layout,
+        };
+
+        // OPTIMISTIC UPDATE: Update local memberships immediately
+        const optimisticMemberships = collectionMemberships.map((m) =>
+          m.collectionId === collectionId && m.repositoryId === repositoryId
+            ? { ...m, metadata: updatedMetadata }
+            : m,
+        );
+        setCollectionMemberships(optimisticMemberships);
+
+        // Background sync to GitHub (remove and re-add)
+        CollectionsService.removeRepository(collectionId, repositoryId)
+          .then(() =>
+            CollectionsService.addRepository({
+              collectionId,
+              repositoryId,
+              metadata: updatedMetadata,
+            }),
+          )
+          .catch((error) => {
+            console.error('[WorldsViewPanelProvider] Failed to sync repository position to GitHub:', error);
+            fetchCollections(); // Rollback on error
+          });
+      },
+
+      onBatchLayoutInitialized: async (
+        collectionId: string,
+        updates: {
+          regions?: CustomRegion[];
+          assignments?: Array<{ repositoryId: string; regionId: string }>;
+          positions?: Array<{ repositoryId: string; layout: RepositoryLayoutData }>;
+        },
+      ): Promise<void> => {
+        console.info(
+          '[WorldsViewPanelProvider] Batch initializing layout for collection:',
+          collectionId,
+          updates,
+        );
+
+        const collection = collections.find((c) => c.id === collectionId);
+        if (!collection) {
+          throw new Error('Collection not found');
+        }
+
+        // Build optimistic updates in one pass
+        let optimisticCollections = collections;
+        let optimisticMemberships = collectionMemberships;
+
+        // Update collection with regions if provided
+        if (updates.regions && updates.regions.length > 0) {
+          const updatedMetadata = {
+            ...(collection.metadata || {}),
+            customRegions: updates.regions,
+          };
+
+          optimisticCollections = collections.map((c) =>
+            c.id === collectionId
+              ? { ...c, metadata: updatedMetadata, updatedAt: Date.now() }
+              : c,
+          );
+        }
+
+        // Update memberships with assignments and positions
+        if (updates.assignments || updates.positions) {
+          optimisticMemberships = collectionMemberships.map((m) => {
+            if (m.collectionId !== collectionId) return m;
+
+            const assignment = updates.assignments?.find(
+              (a) => a.repositoryId === m.repositoryId,
+            );
+            const position = updates.positions?.find(
+              (p) => p.repositoryId === m.repositoryId,
+            );
+
+            if (!assignment && !position) return m;
+
+            const updatedMetadata = {
+              ...(m.metadata || {}),
+              ...(assignment ? { regionId: assignment.regionId } : {}),
+              ...(position ? { layout: position.layout } : {}),
+            };
+
+            return { ...m, metadata: updatedMetadata };
+          });
+        }
+
+        // Single state update for all changes - 1 re-render!
+        setCollections(optimisticCollections);
+        setCollectionMemberships(optimisticMemberships);
+
+        // Background sync to GitHub
+        if (updates.regions && updates.regions.length > 0) {
+          const updatedMetadata = {
+            ...(collection.metadata || {}),
+            customRegions: updates.regions,
+          };
+
+          CollectionsService.updateCollection(collectionId, {
+            metadata: updatedMetadata,
+          }).catch((error) => {
+            console.error('[WorldsViewPanelProvider] Failed to sync regions to GitHub:', error);
+            fetchCollections(); // Rollback on error
+          });
+        }
+
+        // Sync membership updates (assignments + positions)
+        if (updates.assignments || updates.positions) {
+          const membershipUpdates = collectionMemberships
+            .filter((m) => m.collectionId === collectionId)
+            .map((m) => {
+              const assignment = updates.assignments?.find(
+                (a) => a.repositoryId === m.repositoryId,
+              );
+              const position = updates.positions?.find(
+                (p) => p.repositoryId === m.repositoryId,
+              );
+
+              if (!assignment && !position) return null;
+
+              const updatedMetadata = {
+                ...(m.metadata || {}),
+                ...(assignment ? { regionId: assignment.regionId } : {}),
+                ...(position ? { layout: position.layout } : {}),
+              };
+
+              return {
+                collectionId,
+                repositoryId: m.repositoryId,
+                metadata: updatedMetadata,
+              };
+            })
+            .filter((update): update is { collectionId: string; repositoryId: string; metadata: any } => update !== null);
+
+          // Batch sync all membership updates
+          Promise.all(
+            membershipUpdates.map((update) =>
+              CollectionsService.removeRepository(update.collectionId, update.repositoryId)
+                .then(() => CollectionsService.addRepository(update)),
+            ),
+          ).catch((error) => {
+            console.error('[WorldsViewPanelProvider] Failed to sync membership updates to GitHub:', error);
+            fetchCollections(); // Rollback on error
+          });
+        }
       },
 
       onInitializeDefaultRegions: async (
