@@ -1,0 +1,951 @@
+{
+  "pv": {
+    "name": "Collections Flow: Create and GitHub Sync",
+    "version": "1.0.0",
+    "description": "Complete event flow for creating collections and syncing to GitHub web-ade-collections repository",
+    "markdown": ".principal-views/collections-flow/collections-flow.md",
+    "nodeTypes": {
+      "ui-component": {
+        "label": "UI Component",
+        "color": "#EC4899"
+      },
+      "context": {
+        "label": "React Context",
+        "color": "#A855F7"
+      },
+      "renderer-service": {
+        "label": "Renderer Service",
+        "color": "#7C3AED"
+      },
+      "preload": {
+        "label": "Preload Bridge",
+        "color": "#14B8A6"
+      },
+      "main-process": {
+        "label": "Main Process",
+        "color": "#4F46E5"
+      },
+      "github-api": {
+        "label": "GitHub API",
+        "color": "#22C55E"
+      },
+      "storage": {
+        "label": "GitHub Storage",
+        "color": "#0D9488"
+      }
+    },
+    "edgeTypes": {
+      "user-action": {
+        "label": "User Action",
+        "style": "solid",
+        "color": "#EC4899"
+      },
+      "event-emit": {
+        "label": "Event Emit",
+        "style": "dashed",
+        "color": "#A855F7"
+      },
+      "ipc-invoke": {
+        "label": "IPC Invoke",
+        "style": "solid",
+        "color": "#6366F1"
+      },
+      "ipc-event": {
+        "label": "IPC Event",
+        "style": "solid",
+        "color": "#818CF8"
+      },
+      "api-call": {
+        "label": "API Call",
+        "style": "solid",
+        "color": "#22C55E"
+      },
+      "data-flow": {
+        "label": "Data Flow",
+        "style": "solid",
+        "color": "#3B82F6"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "x": 400,
+      "y": -100,
+      "width": 600,
+      "height": 60,
+      "text": "# Collections Flow: Create and GitHub Sync\n**From user action to GitHub persistence**"
+    },
+    {
+      "id": "create-collection-modal",
+      "type": "text",
+      "x": 50,
+      "y": 0,
+      "width": 200,
+      "height": 100,
+      "text": "CreateCollectionModal\n(user enters name,\ndescription, icon)",
+      "pv": {
+        "nodeType": "ui-component",
+        "shape": "rectangle",
+        "sources": [
+          "src/renderer/components/CreateCollectionModal.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ui",
+          "isNew": true
+        },
+        "event": {
+          "name": "collections.ui.modal_opened",
+          "description": "User opened create collection modal",
+          "attributes": {
+            "ui.modal.type": {
+              "type": "string",
+              "description": "Modal type: create_collection"
+            },
+            "user.action": {
+              "type": "string",
+              "description": "User action that triggered modal"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "user-collections-panel",
+      "type": "text",
+      "x": 50,
+      "y": 140,
+      "width": 200,
+      "height": 80,
+      "text": "UserCollectionsPanel\n(displays list,\nemits events)",
+      "pv": {
+        "nodeType": "ui-component",
+        "shape": "rectangle",
+        "sources": [
+          "src/renderer/contexts/WorldsViewPanelContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ui",
+          "isNew": true
+        },
+        "event": {
+          "name": "collections.ui.create_requested",
+          "description": "User clicked create collection button",
+          "attributes": {
+            "ui.component": {
+              "type": "string",
+              "description": "Component name: UserCollectionsPanel"
+            },
+            "event.trigger": {
+              "type": "string",
+              "description": "Event trigger: button_click"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "worlds-view-panel-context",
+      "type": "text",
+      "x": 300,
+      "y": 0,
+      "width": 220,
+      "height": 100,
+      "text": "WorldsViewPanelContext\n- createCollection()\n- manages state\n- emits events",
+      "pv": {
+        "nodeType": "context",
+        "shape": "rectangle",
+        "sources": [
+          "src/renderer/contexts/WorldsViewPanelContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "isNew": true
+        },
+        "event": {
+          "name": "collections.context.create_started",
+          "description": "Context received create collection request",
+          "attributes": {
+            "collection.name": {
+              "type": "string",
+              "description": "Collection name from user input"
+            },
+            "collection.description": {
+              "type": "string",
+              "description": "Optional collection description"
+            },
+            "collection.icon": {
+              "type": "string",
+              "description": "Lucide icon name (default: FolderOpen)"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "renderer-collections-service",
+      "type": "text",
+      "x": 570,
+      "y": 0,
+      "width": 220,
+      "height": 100,
+      "text": "CollectionsService\n(renderer)\nIPC wrapper",
+      "pv": {
+        "nodeType": "renderer-service",
+        "shape": "rectangle",
+        "sources": [
+          "src/renderer/main-process-api/CollectionsService.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ipc",
+          "isNew": true
+        },
+        "event": {
+          "name": "collections.renderer.ipc_invoked",
+          "description": "Renderer service invoked IPC method",
+          "attributes": {
+            "ipc.method": {
+              "type": "string",
+              "description": "IPC method name: collections:create-collection"
+            },
+            "collection.input": {
+              "type": "object",
+              "description": "Create collection input payload"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "preload-bridge",
+      "type": "text",
+      "x": 840,
+      "y": 0,
+      "width": 200,
+      "height": 100,
+      "text": "Preload Bridge\n(collectionsApi)\nIPC boundary",
+      "pv": {
+        "nodeType": "preload",
+        "shape": "rectangle",
+        "sources": [
+          "src/window/main-process-api-implementations/collectionsApi.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ipc",
+          "isNew": true
+        },
+        "event": {
+          "name": "collections.preload.forwarded",
+          "description": "Preload bridge forwarded IPC call to main process",
+          "attributes": {
+            "ipc.channel": {
+              "type": "string",
+              "description": "IPC channel name"
+            },
+            "ipc.direction": {
+              "type": "string",
+              "description": "Direction: renderer_to_main"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "main-collections-service",
+      "type": "text",
+      "x": 1090,
+      "y": 0,
+      "width": 220,
+      "height": 120,
+      "text": "CollectionsService\n(main process)\n- createCollection()\n- validates input\n- generates ID",
+      "pv": {
+        "nodeType": "main-process",
+        "shape": "rectangle",
+        "sources": [
+          "src/main/services/CollectionsService.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "isNew": true
+        },
+        "event": {
+          "name": "collections.main.create_started",
+          "description": "Main process started collection creation",
+          "attributes": {
+            "collection.id": {
+              "type": "string",
+              "description": "Generated collection ID: col-{timestamp}-{random}"
+            },
+            "collection.name": {
+              "type": "string",
+              "description": "Collection name"
+            },
+            "collection.created_at": {
+              "type": "number",
+              "description": "Unix timestamp of creation"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "check-github-repo",
+      "type": "text",
+      "x": 1090,
+      "y": 160,
+      "width": 220,
+      "height": 100,
+      "text": "Check GitHub Repo\ncheckGitHubRepo()\nDoes web-ade-collections\nexist?",
+      "pv": {
+        "nodeType": "main-process",
+        "shape": "rectangle",
+        "sources": [
+          "src/main/services/CollectionsService.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "github",
+          "isNew": true
+        },
+        "event": {
+          "name": "collections.github.repo_check",
+          "description": "Checking if web-ade-collections repository exists",
+          "attributes": {
+            "github.repo.name": {
+              "type": "string",
+              "description": "Repository name: web-ade-collections"
+            },
+            "github.user.authenticated": {
+              "type": "boolean",
+              "description": "Whether user is authenticated with GitHub"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "github-api-check",
+      "type": "text",
+      "x": 1360,
+      "y": 160,
+      "width": 200,
+      "height": 100,
+      "text": "GitHub API\nGET /user/repos\n(check existence)",
+      "pv": {
+        "nodeType": "github-api",
+        "shape": "rectangle",
+        "sources": [
+          "src/main/services/CollectionsService.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "http",
+          "isNew": true
+        },
+        "event": {
+          "name": "collections.github.api_request",
+          "description": "GitHub API request to check repository existence",
+          "attributes": {
+            "http.method": {
+              "type": "string",
+              "description": "HTTP method: GET"
+            },
+            "http.url": {
+              "type": "string",
+              "description": "API endpoint: /user/repos"
+            },
+            "http.status_code": {
+              "type": "number",
+              "description": "HTTP response status code"
+            },
+            "github.repo.exists": {
+              "type": "boolean",
+              "description": "Whether repository exists"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "enable-github-sync",
+      "type": "text",
+      "x": 1090,
+      "y": 300,
+      "width": 220,
+      "height": 100,
+      "text": "Enable GitHub Sync\nenableGitHubSync()\nCreate repo if needed",
+      "pv": {
+        "nodeType": "main-process",
+        "shape": "rectangle",
+        "sources": [
+          "src/main/services/CollectionsService.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "github",
+          "isNew": true
+        },
+        "event": {
+          "name": "collections.github.sync_enabled",
+          "description": "GitHub sync enabled, repository created if needed",
+          "attributes": {
+            "github.repo.created": {
+              "type": "boolean",
+              "description": "Whether repository was newly created"
+            },
+            "github.repo.url": {
+              "type": "string",
+              "description": "Repository URL"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "github-api-create",
+      "type": "text",
+      "x": 1360,
+      "y": 300,
+      "width": 200,
+      "height": 100,
+      "text": "GitHub API\nPOST /user/repos\n(create repository)",
+      "pv": {
+        "nodeType": "github-api",
+        "shape": "rectangle",
+        "sources": [
+          "src/main/services/CollectionsService.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "http",
+          "isNew": true
+        },
+        "event": {
+          "name": "collections.github.repo_created",
+          "description": "Created web-ade-collections repository on GitHub",
+          "attributes": {
+            "http.method": {
+              "type": "string",
+              "description": "HTTP method: POST"
+            },
+            "http.url": {
+              "type": "string",
+              "description": "API endpoint: /user/repos"
+            },
+            "http.status_code": {
+              "type": "number",
+              "description": "HTTP response status code: 201"
+            },
+            "github.repo.name": {
+              "type": "string",
+              "description": "Repository name: web-ade-collections"
+            },
+            "github.repo.visibility": {
+              "type": "string",
+              "description": "Repository visibility: public"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "sync-to-github",
+      "type": "text",
+      "x": 1090,
+      "y": 440,
+      "width": 220,
+      "height": 120,
+      "text": "Sync to GitHub\nsyncToGitHub()\n- Update collections.json\n- Update memberships.json",
+      "pv": {
+        "nodeType": "main-process",
+        "shape": "rectangle",
+        "sources": [
+          "src/main/services/CollectionsService.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "github",
+          "isNew": true
+        },
+        "event": {
+          "name": "collections.github.sync_started",
+          "description": "Started syncing collections to GitHub",
+          "attributes": {
+            "collections.count": {
+              "type": "number",
+              "description": "Number of collections to sync"
+            },
+            "memberships.count": {
+              "type": "number",
+              "description": "Number of memberships to sync"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "github-api-update-collections",
+      "type": "text",
+      "x": 1360,
+      "y": 440,
+      "width": 200,
+      "height": 100,
+      "text": "GitHub API\nPUT contents/\ncollections.json\n(with SHA)",
+      "pv": {
+        "nodeType": "github-api",
+        "shape": "rectangle",
+        "sources": [
+          "src/main/services/CollectionsService.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "http",
+          "isNew": true
+        },
+        "event": {
+          "name": "collections.github.file_updated",
+          "description": "Updated collections.json file on GitHub",
+          "attributes": {
+            "http.method": {
+              "type": "string",
+              "description": "HTTP method: PUT"
+            },
+            "http.url": {
+              "type": "string",
+              "description": "API endpoint: /repos/{owner}/web-ade-collections/contents/collections.json"
+            },
+            "http.status_code": {
+              "type": "number",
+              "description": "HTTP response status code"
+            },
+            "github.file.name": {
+              "type": "string",
+              "description": "File name: collections.json"
+            },
+            "github.file.sha": {
+              "type": "string",
+              "description": "File SHA for conflict resolution"
+            },
+            "github.file.size_bytes": {
+              "type": "number",
+              "description": "File size in bytes"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "github-api-update-memberships",
+      "type": "text",
+      "x": 1360,
+      "y": 580,
+      "width": 200,
+      "height": 100,
+      "text": "GitHub API\nPUT contents/\nmemberships.json\n(with SHA)",
+      "pv": {
+        "nodeType": "github-api",
+        "shape": "rectangle",
+        "sources": [
+          "src/main/services/CollectionsService.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "http",
+          "isNew": true
+        },
+        "event": {
+          "name": "collections.github.memberships_updated",
+          "description": "Updated collection-memberships.json file on GitHub",
+          "attributes": {
+            "http.method": {
+              "type": "string",
+              "description": "HTTP method: PUT"
+            },
+            "http.url": {
+              "type": "string",
+              "description": "API endpoint: /repos/{owner}/web-ade-collections/contents/collection-memberships.json"
+            },
+            "http.status_code": {
+              "type": "number",
+              "description": "HTTP response status code"
+            },
+            "github.file.name": {
+              "type": "string",
+              "description": "File name: collection-memberships.json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "github-storage",
+      "type": "text",
+      "x": 1610,
+      "y": 440,
+      "width": 200,
+      "height": 120,
+      "text": "GitHub Storage\nweb-ade-collections/\n- collections.json\n- memberships.json",
+      "pv": {
+        "nodeType": "storage",
+        "shape": "rectangle",
+        "sources": [
+          "src/main/services/CollectionsService.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "storage",
+          "isNew": true
+        },
+        "event": {
+          "name": "collections.storage.persisted",
+          "description": "Collections data persisted to GitHub storage",
+          "attributes": {
+            "storage.type": {
+              "type": "string",
+              "description": "Storage type: github"
+            },
+            "storage.location": {
+              "type": "string",
+              "description": "Repository URL"
+            },
+            "storage.sync.timestamp": {
+              "type": "number",
+              "description": "Unix timestamp of sync"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "context-refresh",
+      "type": "text",
+      "x": 300,
+      "y": 440,
+      "width": 220,
+      "height": 100,
+      "text": "Context State Update\nfetchCollections()\nRefresh collections list",
+      "pv": {
+        "nodeType": "context",
+        "shape": "rectangle",
+        "sources": [
+          "src/renderer/contexts/WorldsViewPanelContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "isNew": true
+        },
+        "event": {
+          "name": "collections.context.refreshed",
+          "description": "Context state refreshed with new collections",
+          "attributes": {
+            "collections.count": {
+              "type": "number",
+              "description": "Number of collections in state"
+            },
+            "refresh.trigger": {
+              "type": "string",
+              "description": "What triggered the refresh: create_success"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ui-update",
+      "type": "text",
+      "x": 50,
+      "y": 440,
+      "width": 200,
+      "height": 100,
+      "text": "UI Re-render\nCollections list\nupdated with new item",
+      "pv": {
+        "nodeType": "ui-component",
+        "shape": "rectangle",
+        "sources": [
+          "src/renderer/contexts/WorldsViewPanelContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ui",
+          "isNew": true
+        },
+        "event": {
+          "name": "collections.ui.rendered",
+          "description": "UI component re-rendered with updated collections",
+          "attributes": {
+            "ui.component": {
+              "type": "string",
+              "description": "Component name: UserCollectionsPanel"
+            },
+            "collections.displayed": {
+              "type": "number",
+              "description": "Number of collections displayed"
+            },
+            "render.duration_ms": {
+              "type": "number",
+              "description": "Time taken to render component"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "event-emitted",
+      "type": "text",
+      "x": 300,
+      "y": 300,
+      "width": 220,
+      "height": 80,
+      "text": "Event Emitted\ncollection:created\n(PanelEventBus)",
+      "pv": {
+        "nodeType": "context",
+        "shape": "rectangle",
+        "sources": [
+          "src/renderer/contexts/WorldsViewPanelContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "isNew": true
+        },
+        "event": {
+          "name": "collections.event.created_emitted",
+          "description": "collection:created event emitted on PanelEventBus",
+          "attributes": {
+            "event.type": {
+              "type": "string",
+              "description": "Event type: industry-theme.user-collections:collection:created"
+            },
+            "event.source": {
+              "type": "string",
+              "description": "Event source: worlds-view"
+            },
+            "collection.id": {
+              "type": "string",
+              "description": "Created collection ID"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "modal-to-context",
+      "fromNode": "create-collection-modal",
+      "fromSide": "right",
+      "toNode": "worlds-view-panel-context",
+      "toSide": "left",
+      "label": "submit form",
+      "pv": {
+        "edgeType": "user-action"
+      }
+    },
+    {
+      "id": "panel-to-modal",
+      "fromNode": "user-collections-panel",
+      "fromSide": "top",
+      "toNode": "create-collection-modal",
+      "toSide": "bottom",
+      "label": "open modal",
+      "pv": {
+        "edgeType": "user-action"
+      }
+    },
+    {
+      "id": "context-to-renderer-service",
+      "fromNode": "worlds-view-panel-context",
+      "fromSide": "right",
+      "toNode": "renderer-collections-service",
+      "toSide": "left",
+      "label": "createCollection()",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "renderer-to-preload",
+      "fromNode": "renderer-collections-service",
+      "fromSide": "right",
+      "toNode": "preload-bridge",
+      "toSide": "left",
+      "label": "IPC invoke",
+      "pv": {
+        "edgeType": "ipc-invoke"
+      }
+    },
+    {
+      "id": "preload-to-main",
+      "fromNode": "preload-bridge",
+      "fromSide": "right",
+      "toNode": "main-collections-service",
+      "toSide": "left",
+      "label": "forward call",
+      "pv": {
+        "edgeType": "ipc-invoke"
+      }
+    },
+    {
+      "id": "main-to-check",
+      "fromNode": "main-collections-service",
+      "fromSide": "bottom",
+      "toNode": "check-github-repo",
+      "toSide": "top",
+      "label": "check repo exists",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "check-to-api",
+      "fromNode": "check-github-repo",
+      "fromSide": "right",
+      "toNode": "github-api-check",
+      "toSide": "left",
+      "label": "API request",
+      "pv": {
+        "edgeType": "api-call"
+      }
+    },
+    {
+      "id": "check-to-enable",
+      "fromNode": "check-github-repo",
+      "fromSide": "bottom",
+      "toNode": "enable-github-sync",
+      "toSide": "top",
+      "label": "if not exists",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "enable-to-create-api",
+      "fromNode": "enable-github-sync",
+      "fromSide": "right",
+      "toNode": "github-api-create",
+      "toSide": "left",
+      "label": "create repo",
+      "pv": {
+        "edgeType": "api-call"
+      }
+    },
+    {
+      "id": "enable-to-sync",
+      "fromNode": "enable-github-sync",
+      "fromSide": "bottom",
+      "toNode": "sync-to-github",
+      "toSide": "top",
+      "label": "proceed to sync",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "sync-to-collections-api",
+      "fromNode": "sync-to-github",
+      "fromSide": "right",
+      "toNode": "github-api-update-collections",
+      "toSide": "left",
+      "label": "update file",
+      "pv": {
+        "edgeType": "api-call"
+      }
+    },
+    {
+      "id": "sync-to-memberships-api",
+      "fromNode": "sync-to-github",
+      "fromSide": "bottom",
+      "toNode": "github-api-update-memberships",
+      "toSide": "left",
+      "label": "update file",
+      "pv": {
+        "edgeType": "api-call"
+      }
+    },
+    {
+      "id": "collections-api-to-storage",
+      "fromNode": "github-api-update-collections",
+      "fromSide": "right",
+      "toNode": "github-storage",
+      "toSide": "top",
+      "label": "persist",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "memberships-api-to-storage",
+      "fromNode": "github-api-update-memberships",
+      "fromSide": "right",
+      "toNode": "github-storage",
+      "toSide": "bottom",
+      "label": "persist",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "main-to-context-event",
+      "fromNode": "main-collections-service",
+      "fromSide": "left",
+      "toNode": "event-emitted",
+      "toSide": "right",
+      "label": "return success",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "context-emit-event",
+      "fromNode": "worlds-view-panel-context",
+      "fromSide": "bottom",
+      "toNode": "event-emitted",
+      "toSide": "top",
+      "label": "emit event",
+      "pv": {
+        "edgeType": "event-emit"
+      }
+    },
+    {
+      "id": "context-to-refresh",
+      "fromNode": "worlds-view-panel-context",
+      "fromSide": "bottom",
+      "toNode": "context-refresh",
+      "toSide": "top",
+      "label": "fetchCollections()",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "refresh-to-ui",
+      "fromNode": "context-refresh",
+      "fromSide": "left",
+      "toNode": "ui-update",
+      "toSide": "right",
+      "label": "state update",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "ui-to-panel",
+      "fromNode": "ui-update",
+      "fromSide": "top",
+      "toNode": "user-collections-panel",
+      "toSide": "bottom",
+      "label": "re-render",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    }
+  ]
+}

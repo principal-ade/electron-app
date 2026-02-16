@@ -1,0 +1,34 @@
+{
+  "version": "1.0.0",
+  "name": "Collection First-Time Setup",
+  "description": "Initial setup workflow when creating the web-ade-collections GitHub repository",
+  "mode": "span-tree",
+  "canvas": ".principal-views/collections-flow/collections-flow.otel.canvas",
+  "spanPattern": "collections.*",
+  "scenarios": [
+    {
+      "id": "first-time-setup",
+      "name": "🎉 First-Time GitHub Setup",
+      "description": "Creating first collection and initializing GitHub repository",
+      "priority": 1,
+      "template": {
+        "introduction": "🎉 **First-Time Setup Complete**\n\nCreated your first collection **\"{{collection.name}}\"** and initialized GitHub sync.\n\nA new public repository `web-ade-collections` was created at:\n{{github.repo.url}}",
+        "events": {
+          "collections.ui.create_requested": "1️⃣ User created their first collection",
+          "collections.context.create_started": "2️⃣ Context processing: **{{collection.name}}**",
+          "collections.renderer.ipc_invoked": "3️⃣ IPC invoked: {{ipc.method}}",
+          "collections.main.create_started": "4️⃣ Collection created: `{{collection.id}}`",
+          "collections.github.repo_check": "5️⃣ Checking for existing web-ade-collections repository",
+          "collections.github.api_request": "6️⃣ {{http.method}} {{http.url}} → {{http.status_code}} (repo exists: {{github.repo.exists}})",
+          "collections.github.sync_enabled": "7️⃣ 🎉 **GitHub sync enabled** (repo created: {{github.repo.created}})",
+          "collections.github.repo_created": "8️⃣ ✅ **Created repository** {{github.repo.name}} ({{github.repo.visibility}}) → {{http.status_code}}",
+          "collections.github.sync_started": "9️⃣ Initiating first sync ({{collections.count}} collections, {{memberships.count}} memberships)",
+          "collections.github.file_updated": "🔟 Created {{github.file.name}} ({{github.file.size_bytes}} bytes)",
+          "collections.storage.persisted": "1️⃣1️⃣ **Initial data persisted** to {{storage.location}}",
+          "collections.ui.rendered": "1️⃣2️⃣ ✨ **UI updated** ({{collections.displayed}} collections)"
+        },
+        "summary": "**Setup Summary:**\n- Repository created: ✅ {{github.repo.url}}\n- Visibility: {{github.repo.visibility}}\n- First collection: **{{collection.name}}** (`{{collection.id}}`)\n- Storage type: {{storage.type}}\n\n**What Happened:**\n1. User created their first collection\n2. System detected no existing `web-ade-collections` repository\n3. Created new public GitHub repository\n4. Initialized repository with auto_init\n5. Waited 1 second for GitHub initialization\n6. Synced collection data to new repository\n\n**What's Next:**\n- Your collections are now synced to GitHub\n- Changes automatically sync across devices\n- You can view the raw JSON at {{github.repo.url}}\n\n**Files Created on GitHub:**\n- `collections.json` - Collection metadata\n- `collection-memberships.json` - Repository associations\n\n**Architecture Flow:**\nUI → Context → IPC → Main Process → GitHub Repo Check → **Create Repository** → Sync to GitHub → Storage"
+      }
+    }
+  ]
+}

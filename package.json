@@ -1,6 +1,6 @@
 {
   "name": "principal-ade",
-  "version": "0.0.401",
+  "version": "0.0.402",
   "description": "Principal ADE  - The future of Agentic Development Environment",
   "type": "module",
   "keywords": [
@@ -164,7 +164,6 @@
     ]
   },
   "dependencies": {
-    "@a24z/callimachus": "^0.1.4",
     "@egoist/tipc": "^0.3.2",
     "@electron/notarize": "^3.0.0",
     "@evilmartians/agent-prism-data": "^0.0.9",
@@ -184,7 +183,7 @@
     "@industry-theme/localhost-panels": "^0.1.7",
     "@industry-theme/markdown-panels": "^0.2.23",
     "@industry-theme/principal-view-panels": "^0.10.28",
-    "@industry-theme/repository-composition-panels": "^0.2.63",
+    "@industry-theme/repository-composition-panels": "^0.2.69",
     "@industry-theme/xterm-terminal-panel": "^0.3.18",
     "@modelcontextprotocol/sdk": "1.11.4",
     "@monaco-editor/react": "^4.7.0",
@@ -211,7 +210,7 @@
     "@principal-ade/panels": "^1.0.52",
     "@principal-ai/agent-monitoring": "^0.3.11",
     "@principal-ai/agent-monitoring-ui": "^0.1.6",
-    "@principal-ai/alexandria-collections": "^0.1.0",
+    "@principal-ai/alexandria-collections": "^1.0.0",
     "@principal-ai/alexandria-core-library": "0.3.2",
     "@principal-ai/codebase-composition": "^0.2.43",
     "@principal-ai/control-tower-core": "^0.2.1",
@@ -240,10 +239,8 @@
     "electron-store": "^10.1.0",
     "electron-updater": "^6.3.9",
     "express": "^5.1.0",
-    "flexsearch": "^0.8.205",
     "glob": "^11.0.3",
     "gpt-tokenizer": "^3.0.1",
-    "gray-matter": "^4.0.3",
     "hast-util-sanitize": "^5.0.2",
     "highlight.js": "^11.11.1",
     "ignore": "^7.0.5",
@@ -254,7 +251,6 @@
     "jszip": "^3.10.1",
     "keytar": "^7.9.0",
     "lucide-react": "^0.534.0",
-    "marked": "^15.0.11",
     "mermaid": "^11.6.0",
     "minimatch": "^10.0.3",
     "monaco-editor": "^0.52.2",

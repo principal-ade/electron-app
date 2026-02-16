@@ -21,21 +21,25 @@ import type {
   Collection,
   LocalProjectsPanelActions,
 } from '@industry-theme/alexandria-panels';
+import type {
+  CustomRegion,
+  RegionCallbacks,
+} from '@industry-theme/repository-composition-panels';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { CollectionsService } from '../main-process-api/CollectionsService';
 import { WindowService } from '../main-process-api/WindowService';
-import { FileSystemService } from '../main-process-api/FileSystemService';
 import type { CollectionMembership } from '@principal-ai/alexandria-collections';
 import type { DiscoveredRepository } from '@industry-theme/alexandria-panels';
 
 /**
  * Extended actions for WorldsViewPanelProvider
- * Combines collection actions with local repository actions
+ * Combines collection actions with local repository actions and region management
  */
 interface WorldsViewPanelActions
   extends PanelActions,
     Omit<UserCollectionsPanelActions, 'removeRepository'>,
-    Pick<LocalProjectsPanelActions, 'openRepository' | 'registerRepository' | 'trackRepository'> {
+    Pick<LocalProjectsPanelActions, 'openRepository' | 'registerRepository' | 'trackRepository'>,
+    RegionCallbacks {
   // Collections-specific removeRepository (named differently to avoid conflict)
   removeCollectionRepository?: (
     collectionId: string,
@@ -318,31 +322,40 @@ export const WorldsViewPanelProvider: React.FC<
           '[WorldsViewPanelProvider] Deleting collection:',
           collectionId,
         );
-        setCollectionsSaving(true);
-        try {
-          await CollectionsService.deleteCollection(collectionId);
-          await fetchCollections();
 
-          // If the deleted collection was selected, clear selection
-          if (selectedCollection?.id === collectionId) {
-            setSelectedCollection(null);
-          }
-
-          events.emit({
-            type: 'industry-theme.user-collections:collection:deleted',
-            source: 'worlds-view',
-            timestamp: Date.now(),
-            payload: { collectionId },
-          });
-        } catch (error) {
-          console.error(
-            '[WorldsViewPanelProvider] Failed to delete collection:',
-            error,
-          );
-          throw error;
-        } finally {
-          setCollectionsSaving(false);
+        // If the deleted collection was selected, clear selection
+        if (selectedCollection?.id === collectionId) {
+          setSelectedCollection(null);
         }
+
+        // OPTIMISTIC UPDATE: Remove from local state immediately
+        const optimisticCollections = collections.filter((c) => c.id !== collectionId);
+        const optimisticMemberships = collectionMemberships.filter(
+          (m) => m.collectionId !== collectionId,
+        );
+        setCollections(optimisticCollections);
+        setCollectionMemberships(optimisticMemberships);
+
+        events.emit({
+          type: 'industry-theme.user-collections:collection:deleted',
+          source: 'worlds-view',
+          timestamp: Date.now(),
+          payload: { collectionId },
+        });
+
+        // Background sync to GitHub
+        setCollectionsSaving(true);
+        CollectionsService.deleteCollection(collectionId)
+          .then(() => {
+            console.info('[WorldsViewPanelProvider] Collection deleted from GitHub:', collectionId);
+          })
+          .catch((error) => {
+            console.error('[WorldsViewPanelProvider] Failed to delete collection from GitHub:', error);
+            fetchCollections(); // Rollback on error
+          })
+          .finally(() => {
+            setCollectionsSaving(false);
+          });
       },
 
       updateCollection: async (
@@ -353,26 +366,35 @@ export const WorldsViewPanelProvider: React.FC<
           '[WorldsViewPanelProvider] Updating collection:',
           collectionId,
         );
-        setCollectionsSaving(true);
-        try {
-          await CollectionsService.updateCollection(collectionId, updates);
-          await fetchCollections();
 
-          events.emit({
-            type: 'industry-theme.user-collections:collection:updated',
-            source: 'worlds-view',
-            timestamp: Date.now(),
-            payload: { collectionId, updates },
+        // OPTIMISTIC UPDATE: Update local state immediately
+        const optimisticCollections = collections.map((c) =>
+          c.id === collectionId
+            ? { ...c, ...updates, updatedAt: Date.now() }
+            : c,
+        );
+        setCollections(optimisticCollections);
+
+        events.emit({
+          type: 'industry-theme.user-collections:collection:updated',
+          source: 'worlds-view',
+          timestamp: Date.now(),
+          payload: { collectionId, updates },
+        });
+
+        // Background sync to GitHub
+        setCollectionsSaving(true);
+        CollectionsService.updateCollection(collectionId, updates)
+          .then(() => {
+            console.info('[WorldsViewPanelProvider] Collection synced to GitHub:', collectionId);
+          })
+          .catch((error) => {
+            console.error('[WorldsViewPanelProvider] Failed to update collection on GitHub:', error);
+            fetchCollections(); // Rollback on error
+          })
+          .finally(() => {
+            setCollectionsSaving(false);
           });
-        } catch (error) {
-          console.error(
-            '[WorldsViewPanelProvider] Failed to update collection:',
-            error,
-          );
-          throw error;
-        } finally {
-          setCollectionsSaving(false);
-        }
       },
 
       selectCollection: async (collection: Collection | null) => {
@@ -517,6 +539,269 @@ export const WorldsViewPanelProvider: React.FC<
         } finally {
           setCollectionsSaving(false);
         }
+      },
+
+      // Region management actions (with optimistic updates)
+      onRegionCreated: async (
+        collectionId: string,
+        region: Omit<CustomRegion, 'id' | 'createdAt'>,
+      ): Promise<CustomRegion> => {
+        console.info('[WorldsViewPanelProvider] Creating region:', region.name);
+
+        const collection = collections.find((c) => c.id === collectionId);
+        if (!collection) {
+          throw new Error('Collection not found');
+        }
+
+        const newRegion: CustomRegion = {
+          ...region,
+          id: `region-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          createdAt: Date.now(),
+        };
+
+        // If currently in auto mode, switch to manual when user adds a region
+        const currentLayoutMode = collection.metadata?.layoutMode || 'auto';
+        const updatedMetadata = {
+          ...(collection.metadata || {}),
+          customRegions: [
+            ...((collection.metadata?.customRegions as CustomRegion[]) || []),
+            newRegion,
+          ],
+          // Auto-switch to manual mode when user manually creates a region
+          layoutMode: currentLayoutMode === 'auto' ? 'manual' : currentLayoutMode,
+        };
+
+        // OPTIMISTIC UPDATE: Update local state immediately for instant UI feedback
+        const optimisticCollections = collections.map((c) =>
+          c.id === collectionId
+            ? { ...c, metadata: updatedMetadata, updatedAt: Date.now() }
+            : c,
+        );
+
+        console.log('[WorldsViewPanelProvider] Optimistic update - new region:', newRegion);
+        console.log('[WorldsViewPanelProvider] Updated metadata:', updatedMetadata);
+        console.log('[WorldsViewPanelProvider] Updated collection:', optimisticCollections.find(c => c.id === collectionId));
+
+        setCollections(optimisticCollections);
+
+        // Background sync to GitHub (with error handling)
+        CollectionsService.updateCollection(collectionId, {
+          metadata: updatedMetadata,
+        })
+          .then(() => {
+            console.info('[WorldsViewPanelProvider] Region synced to GitHub:', newRegion.id);
+          })
+          .catch((error) => {
+            console.error('[WorldsViewPanelProvider] Failed to sync region to GitHub:', error);
+            // On error, refetch from GitHub to get truth
+            fetchCollections();
+          });
+
+        return newRegion;
+      },
+
+      onRegionUpdated: async (
+        collectionId: string,
+        regionId: string,
+        updates: Partial<CustomRegion>,
+      ): Promise<void> => {
+        console.info('[WorldsViewPanelProvider] Updating region:', regionId);
+
+        const collection = collections.find((c) => c.id === collectionId);
+        if (!collection) {
+          throw new Error('Collection not found');
+        }
+
+        const customRegions = (collection.metadata?.customRegions as CustomRegion[]) || [];
+        const updatedRegions = customRegions.map((r) =>
+          r.id === regionId ? { ...r, ...updates } : r,
+        );
+
+        // If currently in auto mode, switch to manual when user updates a region
+        const currentLayoutMode = collection.metadata?.layoutMode || 'auto';
+        const updatedMetadata = {
+          ...(collection.metadata || {}),
+          customRegions: updatedRegions,
+          // Auto-switch to manual mode when user manually updates a region
+          layoutMode: currentLayoutMode === 'auto' ? 'manual' : currentLayoutMode,
+        };
+
+        // OPTIMISTIC UPDATE: Update local state immediately
+        const optimisticCollections = collections.map((c) =>
+          c.id === collectionId
+            ? { ...c, metadata: updatedMetadata, updatedAt: Date.now() }
+            : c,
+        );
+        setCollections(optimisticCollections);
+
+        // Background sync to GitHub
+        CollectionsService.updateCollection(collectionId, {
+          metadata: updatedMetadata,
+        }).catch((error) => {
+          console.error('[WorldsViewPanelProvider] Failed to sync region update to GitHub:', error);
+          fetchCollections(); // Rollback on error
+        });
+      },
+
+      onRegionDeleted: async (
+        collectionId: string,
+        regionId: string,
+      ): Promise<void> => {
+        console.info('[WorldsViewPanelProvider] Deleting region:', regionId);
+
+        const collection = collections.find((c) => c.id === collectionId);
+        if (!collection) {
+          throw new Error('Collection not found');
+        }
+
+        const customRegions = (collection.metadata?.customRegions as CustomRegion[]) || [];
+        const updatedRegions = customRegions.filter((r) => r.id !== regionId);
+
+        // If currently in auto mode, switch to manual when user deletes a region
+        const currentLayoutMode = collection.metadata?.layoutMode || 'auto';
+        const updatedMetadata = {
+          ...(collection.metadata || {}),
+          customRegions: updatedRegions,
+          // Auto-switch to manual mode when user manually deletes a region
+          layoutMode: currentLayoutMode === 'auto' ? 'manual' : currentLayoutMode,
+        };
+
+        // OPTIMISTIC UPDATE: Update local state immediately
+        const optimisticCollections = collections.map((c) =>
+          c.id === collectionId
+            ? { ...c, metadata: updatedMetadata, updatedAt: Date.now() }
+            : c,
+        );
+        setCollections(optimisticCollections);
+
+        // Background sync to GitHub
+        CollectionsService.updateCollection(collectionId, {
+          metadata: updatedMetadata,
+        }).catch((error) => {
+          console.error('[WorldsViewPanelProvider] Failed to sync region deletion to GitHub:', error);
+          fetchCollections(); // Rollback on error
+        });
+      },
+
+      onRepositoryAssigned: async (
+        collectionId: string,
+        repositoryId: string,
+        regionId: string,
+      ): Promise<void> => {
+        console.info(
+          '[WorldsViewPanelProvider] Assigning repository to region:',
+          repositoryId,
+          regionId,
+        );
+
+        const membership = collectionMemberships.find(
+          (m) => m.collectionId === collectionId && m.repositoryId === repositoryId,
+        );
+
+        if (!membership) {
+          throw new Error('Membership not found');
+        }
+
+        // Update membership metadata with regionId
+        const updatedMetadata = {
+          ...(membership.metadata || {}),
+          regionId,
+        };
+
+        // OPTIMISTIC UPDATE: Update local memberships immediately
+        const optimisticMemberships = collectionMemberships.map((m) =>
+          m.collectionId === collectionId && m.repositoryId === repositoryId
+            ? { ...m, metadata: updatedMetadata }
+            : m,
+        );
+        setCollectionMemberships(optimisticMemberships);
+
+        // Background sync to GitHub (remove and re-add)
+        CollectionsService.removeRepository(collectionId, repositoryId)
+          .then(() =>
+            CollectionsService.addRepository({
+              collectionId,
+              repositoryId,
+              metadata: updatedMetadata,
+            }),
+          )
+          .catch((error) => {
+            console.error('[WorldsViewPanelProvider] Failed to sync repository assignment to GitHub:', error);
+            fetchCollections(); // Rollback on error
+          });
+      },
+
+      onInitializeDefaultRegions: async (
+        collectionId: string,
+        regions: CustomRegion[],
+      ): Promise<void> => {
+        console.info(
+          '[WorldsViewPanelProvider] Initializing default regions for collection:',
+          collectionId,
+        );
+
+        const collection = collections.find((c) => c.id === collectionId);
+        if (!collection) {
+          throw new Error('Collection not found');
+        }
+
+        const updatedMetadata = {
+          ...(collection.metadata || {}),
+          customRegions: regions,
+        };
+
+        // OPTIMISTIC UPDATE: Update local state immediately
+        const optimisticCollections = collections.map((c) =>
+          c.id === collectionId
+            ? { ...c, metadata: updatedMetadata, updatedAt: Date.now() }
+            : c,
+        );
+        setCollections(optimisticCollections);
+
+        // Background sync to GitHub
+        CollectionsService.updateCollection(collectionId, {
+          metadata: updatedMetadata,
+        }).catch((error) => {
+          console.error('[WorldsViewPanelProvider] Failed to sync default regions to GitHub:', error);
+          fetchCollections(); // Rollback on error
+        });
+      },
+
+      onSwitchLayoutMode: async (
+        collectionId: string,
+        mode: 'auto' | 'manual',
+      ): Promise<void> => {
+        console.info(
+          '[WorldsViewPanelProvider] Switching layout mode:',
+          collectionId,
+          mode,
+        );
+
+        const collection = collections.find((c) => c.id === collectionId);
+        if (!collection) {
+          throw new Error('Collection not found');
+        }
+
+        const updatedMetadata = {
+          ...(collection.metadata || {}),
+          layoutMode: mode,
+        };
+
+        // OPTIMISTIC UPDATE: Update local state immediately
+        const optimisticCollections = collections.map((c) =>
+          c.id === collectionId
+            ? { ...c, metadata: updatedMetadata, updatedAt: Date.now() }
+            : c,
+        );
+        setCollections(optimisticCollections);
+
+        // Background sync to GitHub
+        CollectionsService.updateCollection(collectionId, {
+          metadata: updatedMetadata,
+        }).catch((error) => {
+          console.error('[WorldsViewPanelProvider] Failed to sync layout mode to GitHub:', error);
+          fetchCollections(); // Rollback on error
+        });
       },
 
       // Local repository actions
