@@ -222,7 +222,7 @@ export const IntegratedShell: React.FC = () => {
   }, [preferencesLoaded]);
 
   // Save navigation view when it changes
-  const handleViewChange = async (view: NavigationView) => {
+  const handleViewChange = useCallback(async (view: NavigationView) => {
     setActiveView(view);
 
     // Only save preference after initial load to avoid race conditions
@@ -237,10 +237,10 @@ export const IntegratedShell: React.FC = () => {
         console.error('Failed to save navigation preference:', error);
       }
     }
-  };
+  }, [preferencesLoaded]);
 
   // Save collapsed states when they change
-  const handleToggleSidebar = async () => {
+  const handleToggleSidebar = useCallback(async () => {
     const newCollapsed = !sidebarCollapsed;
 
     // Update state for current view
@@ -274,7 +274,7 @@ export const IntegratedShell: React.FC = () => {
         console.error('Failed to save sidebar collapsed state:', error);
       }
     }
-  };
+  }, [sidebarCollapsed, activeView, preferencesLoaded]);
 
   const handleToggleRightSidebar = async () => {
     const newCollapsed = !rightSidebarCollapsed;

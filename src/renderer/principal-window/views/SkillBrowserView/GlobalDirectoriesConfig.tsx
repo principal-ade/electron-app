@@ -54,6 +54,7 @@ export const GlobalDirectoriesConfig: React.FC<GlobalDirectoriesConfigProps> = (
   // Re-run preset detection whenever directories change
   useEffect(() => {
     detectPresets();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [directories]);
 
   const loadDirectories = async () => {

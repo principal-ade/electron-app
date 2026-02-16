@@ -219,7 +219,9 @@ const ProjectsViewContent: React.FC = () => {
         throw error;
       }
     },
-    [entryToRemoveFromWorkspace, workspaceForRemoval, actions],
+    // context is intentionally omitted from dependencies (stable from context provider)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [entryToRemoveFromWorkspace, workspaceForRemoval],
   );
 
   // Override actions to intercept removeRepository and deleteWorkspace to show modals
@@ -483,7 +485,7 @@ const ProjectsViewContent: React.FC = () => {
       middle: 'project-info',
       right: rightPanel,
     };
-  }, [leftPanelView, selectedCollection, isAuthenticated]);
+  }, [leftPanelView, selectedCollection]);
 
   return (
     <>

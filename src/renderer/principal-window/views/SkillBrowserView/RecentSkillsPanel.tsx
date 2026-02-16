@@ -216,9 +216,9 @@ export const RecentSkillsPanel: React.FC<RecentSkillsPanelProps> = ({
             </p>
           </div>
         ) : (
-          recentRepos.map((repo, index) => (
+          recentRepos.map((repo) => (
           <button
-            key={`${repo.owner}/${repo.repo}-${index}`}
+            key={`${repo.owner}/${repo.repo}`}
             onClick={() => onSelectRepo(repo)}
             style={{
               width: '100%',

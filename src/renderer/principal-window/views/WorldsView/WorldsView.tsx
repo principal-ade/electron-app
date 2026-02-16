@@ -111,7 +111,7 @@ const WorldsViewContent: React.FC = () => {
         ),
       },
     ],
-    [context, actions, events, isAuthenticated, theme],
+    [context, actions, events],
   );
 
   const layout = useMemo(() => {

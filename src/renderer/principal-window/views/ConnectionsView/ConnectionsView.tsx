@@ -905,9 +905,9 @@ export const ConnectionsView: React.FC = () => {
               </button>
             </div>
             <div style={{ flex: 1, overflow: 'auto', padding: '8px', fontSize: '11px', fontFamily: 'monospace' }}>
-              {actionResults.map((result, idx) => (
+              {actionResults.map((result) => (
                 <div
-                  key={`action-${idx}`}
+                  key={`action-${result.timestamp.getTime()}`}
                   style={{
                     display: 'flex',
                     alignItems: 'flex-start',

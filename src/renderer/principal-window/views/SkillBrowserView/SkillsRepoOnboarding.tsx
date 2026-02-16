@@ -49,6 +49,7 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
       loadExistingSkills();
       loadDetectedPresets();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
   const loadExistingSkills = async () => {
@@ -152,11 +153,13 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
       // Set the HTTPS clone URL
       setRepoUrl(repo.clone_url);
       setCreatingRepo(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[SkillsRepoOnboarding] Failed to create GitHub repo:', err);
 
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create repository';
+
       // Check if it's a 422 error (repository already exists)
-      if (err.message && err.message.includes('422')) {
+      if (errorMessage.includes('422')) {
         setCreateRepoError(
           `Repository "agent-skills" already exists in your GitHub account. ` +
           `You can use the existing repository by entering its URL below: https://github.com/${user.login}/agent-skills`
@@ -164,7 +167,7 @@ export const SkillsRepoOnboarding: React.FC<SkillsRepoOnboardingProps> = ({ onCo
         // Automatically set the URL to the existing repo
         setRepoUrl(`https://github.com/${user.login}/agent-skills`);
       } else {
-        setCreateRepoError(err.message || 'Failed to create repository');
+        setCreateRepoError(errorMessage);
       }
 
       setCreatingRepo(false);

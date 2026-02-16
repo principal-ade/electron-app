@@ -34,7 +34,7 @@ const SkillDetailPanelComponent = agentPanels.find(
 const SkillBrowserViewContent: React.FC = () => {
   const { theme } = useTheme();
   const { context, actions, events } = useSkillBrowserPanelProvider();
-  const { config, getConfig } = useSkillsSync();
+  const { getConfig } = useSkillsSync();
 
   // State for onboarding
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -90,7 +90,7 @@ const SkillBrowserViewContent: React.FC = () => {
       // Don't auto-show onboarding - users should click "Enable Sync" button
     };
     checkConfig();
-  }, []);
+  }, [getConfig]);
 
   // Clear selected skill when switching view modes
   useEffect(() => {
