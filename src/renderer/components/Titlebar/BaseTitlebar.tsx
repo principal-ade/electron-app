@@ -90,7 +90,8 @@ export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
         }}
       >
         {React.Children.toArray(children).filter(
-          (child: any) => child?.props?.position === 'left',
+          (child): child is React.ReactElement =>
+            React.isValidElement(child) && (child.props as { position?: string }).position === 'left',
         )}
       </div>
 

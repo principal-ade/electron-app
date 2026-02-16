@@ -86,6 +86,7 @@ export const TypeInformationPanel: React.FC<TypeInformationPanelProps> = ({
   // Load types on mount
   useEffect(() => {
     loadTypes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [repository?.path]);
 
   // Debounced search

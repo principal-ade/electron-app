@@ -5,7 +5,6 @@ import {
   getAgentInfo,
   type SupportedAgent,
 } from '@principal-ai/agent-monitoring';
-import { WindowService } from '../../../main-process-api/WindowService';
 
 interface AgentConnectionVisualizerProps {
   agentType: SupportedAgent;

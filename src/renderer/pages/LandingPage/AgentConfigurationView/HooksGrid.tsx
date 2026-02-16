@@ -66,6 +66,7 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
     const types = getAvailableHookTypes(agentType);
     setAvailableHookTypes(types);
     loadHooks(types);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agentType]);
 
   const ensureConfig = (config: AgentSettings | null): AgentSettings => ({

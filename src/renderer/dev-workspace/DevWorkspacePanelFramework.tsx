@@ -58,7 +58,6 @@ import { panels as agentPanels, type Skill, type SkillDetailPanelProps } from '@
 import { panels as githubPanels } from '@industry-theme/github-panels';
 import { panels as typeInformationPanels } from '../panels/TypeInformationPanel';
 import type { Repository } from '../../shared/types/repository.types';
-import type { StoredTrace } from '../../shared/main-process-api-interfaces/OtelCollectorAPI';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { PanelIconSidebar } from '../components/Sidebar/PanelIconSidebar';
 import type {

@@ -126,7 +126,7 @@ const SkillBrowserViewContent: React.FC = () => {
 
     // Handle full GitHub URLs
     const githubUrlPattern =
-      /^https?:\/\/github\.com\/([^\/]+)\/([^\/]+)(?:\/tree\/([^\/]+)(.*))?/;
+      /^https?:\/\/github\.com\/([^/]+)\/([^/]+)(?:\/tree\/([^/]+)(.*))?/;
     const match = trimmed.match(githubUrlPattern);
 
     if (match) {

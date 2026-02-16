@@ -44,7 +44,7 @@ export const GitSyncStatusIndicator: React.FC<GitSyncStatusIndicatorProps> = ({
           transition: 'all 0.2s ease',
           width: '28px',
           height: '28px',
-          WebkitAppRegion: 'no-drag' as any,
+          WebkitAppRegion: 'no-drag' as 'no-drag',
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.backgroundColor = `${color}25`;

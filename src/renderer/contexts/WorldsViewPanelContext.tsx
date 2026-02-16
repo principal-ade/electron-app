@@ -13,6 +13,7 @@ import type {
   PanelActions,
   DataSlice,
   PanelEventEmitter,
+  RepositoryMetadata,
 } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type {
@@ -49,7 +50,7 @@ interface WorldsViewPanelActions
   addRepositoryToCollection?: (
     collectionId: string,
     repositoryPath: string,
-    repositoryMetadata: any,
+    repositoryMetadata: RepositoryMetadata,
   ) => Promise<void>;
   // Copy to clipboard helper
   copyToClipboard?: (text: string) => Promise<void>;

@@ -30,7 +30,7 @@ class TerminalJWTAuthAdapter {
     return this.token;
   }
 
-  async validateToken(token: string): Promise<any> {
+  async validateToken(token: string): Promise<{ valid: boolean }> {
     // Simple validation - just check if token exists
     return { valid: !!token };
   }

@@ -818,23 +818,6 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     }
   };
 
-  // Switch handlers for panel swapping
-  const handleSwitchLeftMiddle = useCallback(() => {
-    setLayout((prev) => ({
-      ...prev,
-      left: prev.middle,
-      middle: prev.left,
-    }));
-  }, []);
-
-  const handleSwitchRightMiddle = useCallback(() => {
-    setLayout((prev) => ({
-      ...prev,
-      right: prev.middle,
-      middle: prev.right,
-    }));
-  }, []);
-
   // Extract GitHub owner/repo from remote URL if available
   const githubInfo = useMemo(() => {
     if (repository.remoteUrl) {

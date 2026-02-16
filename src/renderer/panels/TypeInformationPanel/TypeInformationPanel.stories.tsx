@@ -5,14 +5,15 @@ import type {
   PanelContextValue,
   PanelActions,
   PanelEventEmitter,
+  PanelEvent,
 } from '@principal-ade/panel-framework-core';
 import { TypeInformationPanel } from './TypeInformationPanel';
 
 // Mock event emitter
 class MockEventEmitter implements PanelEventEmitter {
-  private listeners: Map<string, Array<(event: any) => void>> = new Map();
+  private listeners: Map<string, Array<(event: PanelEvent) => void>> = new Map();
 
-  emit(event: any): void {
+  emit(event: PanelEvent): void {
     console.info('[Mock Event]:', event);
     const eventListeners = this.listeners.get(event.type) || [];
     eventListeners.forEach((listener) => listener(event));

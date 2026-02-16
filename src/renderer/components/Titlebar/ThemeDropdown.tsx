@@ -73,7 +73,7 @@ export const ThemeDropdown: React.FC = () => {
       className="titlebar-theme-dropdown"
       style={{
         position: 'relative',
-        WebkitAppRegion: 'no-drag' as any,
+        WebkitAppRegion: 'no-drag' as 'no-drag',
         zIndex: 100,
       }}
     >

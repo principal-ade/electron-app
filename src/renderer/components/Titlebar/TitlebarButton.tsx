@@ -51,7 +51,7 @@ export const TitlebarButton: React.FC<TitlebarButtonProps> = ({
         justifyContent: 'center',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
-        WebkitAppRegion: 'no-drag' as any,
+        WebkitAppRegion: 'no-drag' as 'no-drag',
         zIndex: 10,
         ...style,
       }}

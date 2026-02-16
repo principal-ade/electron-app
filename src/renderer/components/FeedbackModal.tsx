@@ -9,7 +9,7 @@ interface FeedbackModalProps {
     componentPath: string;
     elementInfo: string;
     screenshot?: string;
-    additionalData?: Record<string, any>;
+    additionalData?: Record<string, unknown>;
   };
 }
 

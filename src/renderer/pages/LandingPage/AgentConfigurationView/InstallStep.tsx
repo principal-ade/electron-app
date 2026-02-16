@@ -80,35 +80,6 @@ export const InstallStep: React.FC<InstallStepProps> = ({
           justifyContent: 'center',
         }}
       >
-        {/* Uninstall removed - agents are installed externally */}
-        {false && (
-          <>
-            <button
-              onClick={onUninstall}
-              disabled={isProcessing || hasHooks}
-              className="px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-              style={{
-                backgroundColor: theme.colors.backgroundTertiary,
-                color: theme.colors.text,
-                border: `1px solid ${theme.colors.border}`,
-              }}
-              onMouseEnter={(e) =>
-                !e.currentTarget.disabled &&
-                (e.currentTarget.style.backgroundColor =
-                  theme.colors.backgroundSecondary)
-              }
-              onMouseLeave={(e) =>
-                !e.currentTarget.disabled &&
-                (e.currentTarget.style.backgroundColor =
-                  theme.colors.backgroundTertiary)
-              }
-              title={hasHooks ? 'Remove hooks before uninstalling' : ''}
-            >
-              {isProcessing ? 'Uninstalling...' : 'Uninstall'}
-            </button>
-          </>
-        )}
-
         {/* Show download link - not blocking configuration */}
         <>
           {isProcessing && installProgress ? (

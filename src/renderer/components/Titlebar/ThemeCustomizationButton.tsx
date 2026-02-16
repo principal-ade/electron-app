@@ -52,7 +52,7 @@ export const ThemeCustomizationButton: React.FC = () => {
       <div
         className="titlebar-customize-button"
         style={{
-          WebkitAppRegion: 'no-drag' as any,
+          WebkitAppRegion: 'no-drag' as 'no-drag',
           zIndex: 100,
         }}
       >

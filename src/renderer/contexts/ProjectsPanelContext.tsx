@@ -82,7 +82,7 @@ interface ProjectsPanelActions
   addRepositoryToCollection?: (
     collectionId: string,
     repositoryPath: string,
-    repositoryMetadata: any,
+    repositoryMetadata: RepositoryMetadata,
   ) => Promise<void>;
   // Track a discovered repository (add to Alexandria)
   trackRepository?: (name: string, path: string) => Promise<void>;

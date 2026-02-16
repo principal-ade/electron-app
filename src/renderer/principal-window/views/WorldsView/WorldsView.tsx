@@ -20,7 +20,6 @@ import { CreateCollectionModal } from '../../../components/CreateCollectionModal
 const WorldsViewContent: React.FC = () => {
   const { theme } = useTheme();
   const { context, actions, events } = useWorldsViewPanelProvider();
-  const { isAuthenticated } = useAuth();
 
   // State for create collection modal
   const [isCreateCollectionModalOpen, setIsCreateCollectionModalOpen] =

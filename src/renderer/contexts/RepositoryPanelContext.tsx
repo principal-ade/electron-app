@@ -102,7 +102,6 @@ export const RepositoryPanelProvider: React.FC<
   // Track file tree for the current repository
   const [fileTreeData, setFileTreeData] = useState<FileTree | null>(null);
   const [fileTreeLoading, setFileTreeLoading] = useState(false);
-  const [fileTreeVersion, setFileTreeVersion] = useState(0);
 
   // Track packages data for the current repository
   const [packagesData, setPackagesData] = useState<PackagesSliceData | null>(
@@ -194,7 +193,6 @@ export const RepositoryPanelProvider: React.FC<
     const fetchFileTree = async () => {
       if (!repositoryPath) {
         setFileTreeData(null);
-        setFileTreeVersion(0);
         return;
       }
 
@@ -207,14 +205,12 @@ export const RepositoryPanelProvider: React.FC<
           repositoryPath,
         );
         setFileTreeData(tree);
-        setFileTreeVersion((prev) => prev + 1); // Increment version on initial load
       } catch (error) {
         console.error(
           '[RepositoryPanelProvider] Failed to fetch file tree:',
           error,
         );
         setFileTreeData(null);
-        setFileTreeVersion(0);
       } finally {
         setFileTreeLoading(false);
       }
@@ -227,7 +223,6 @@ export const RepositoryPanelProvider: React.FC<
       if (event.repoPath === repositoryPath && event.slice === 'fileTree') {
         if (event.entry.data) {
           const tree = event.entry.data as FileTree;
-          const version = event.entry.version || 0;
           console.info(
             '[RepositoryPanelProvider] FileTree cache sync received:',
             repositoryPath,
@@ -235,7 +230,6 @@ export const RepositoryPanelProvider: React.FC<
           );
 
           setFileTreeData(tree);
-          setFileTreeVersion(version);
         }
       }
     });

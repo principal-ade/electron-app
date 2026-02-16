@@ -134,13 +134,14 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
     if (!repository) return null;
 
     // Try using github metadata first
-    if ((repository as any).github?.owner && (repository as any).github?.name) {
-      return `https://github.com/${(repository as any).github.owner}/${(repository as any).github.name}`;
+    const repoWithMetadata = repository as { github?: { owner: string; name: string }; remoteUrl?: string };
+    if (repoWithMetadata.github?.owner && repoWithMetadata.github?.name) {
+      return `https://github.com/${repoWithMetadata.github.owner}/${repoWithMetadata.github.name}`;
     }
 
     // Fall back to parsing remoteUrl
-    if ((repository as any).remoteUrl) {
-      const url = (repository as any).remoteUrl as string;
+    if (repoWithMetadata.remoteUrl) {
+      const url = repoWithMetadata.remoteUrl;
       // Handle https://github.com/owner/repo.git
       const httpsMatch = url.match(/https:\/\/github\.com\/([^\/]+)\/([^\/\.]+)/);
       if (httpsMatch) {

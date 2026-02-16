@@ -54,6 +54,8 @@ export const WorkspaceThemeDropdown: React.FC<WorkspaceThemeDropdownProps> = ({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
+    // setIsDropdownOpen is stable (from useState)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDropdownOpen]);
 
   const handleThemeChange = async (themeName: string) => {

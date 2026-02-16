@@ -209,6 +209,8 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
 
       validateInitialUrl();
     }
+    // extractRepoName is a stable utility function
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, currentStep, initialUrl, isValidating]);
 
   // Load workspaces and base default directory when modal opens

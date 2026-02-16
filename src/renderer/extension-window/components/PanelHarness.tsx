@@ -251,7 +251,7 @@ export const PanelHarness: React.FC<PanelHarnessProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [packageName, panel.id]);
+  }, [packageName, panel]);
 
   useEffect(() => {
     loadPanel();
