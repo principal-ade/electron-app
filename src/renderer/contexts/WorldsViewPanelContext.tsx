@@ -24,7 +24,7 @@ import type {
 } from '@industry-theme/alexandria-panels';
 import type {
   CustomRegion,
-  RegionCallbacks,
+  CollectionMapPanelActions,
   RepositoryLayoutData,
 } from '@industry-theme/repository-composition-panels';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
@@ -38,10 +38,9 @@ import type { DiscoveredRepository } from '@industry-theme/alexandria-panels';
  * Combines collection actions with local repository actions and region management
  */
 interface WorldsViewPanelActions
-  extends PanelActions,
+  extends CollectionMapPanelActions,
     Omit<UserCollectionsPanelActions, 'removeRepository'>,
-    Pick<LocalProjectsPanelActions, 'openRepository' | 'registerRepository' | 'trackRepository'>,
-    RegionCallbacks {
+    Pick<LocalProjectsPanelActions, 'openRepository' | 'registerRepository' | 'trackRepository'> {
   // Collections-specific removeRepository (named differently to avoid conflict)
   removeCollectionRepository?: (
     collectionId: string,
@@ -61,6 +60,19 @@ interface WorldsViewPanelActions
  * Extended context interface for WorldsView panels
  */
 interface WorldsViewPanelContextValue extends PanelContextValue {
+  // Direct slice properties for new v0.3.0+ typed panels
+  // Note: CollectionMapPanel expects a simplified slice structure (not full DataSlice)
+  selectedCollectionView: {
+    data: {
+      collection: Collection | null;
+      memberships: CollectionMembership[];
+      repositories: AlexandriaEntry[];
+      dependencies?: Record<string, string[]>;
+    };
+    loading: boolean;
+    error: string | null;
+  };
+
   // Selected collection (for coordination between panels)
   selectedCollection: Collection | null;
   setSelectedCollection: (collection: Collection | null) => void;
@@ -109,7 +121,7 @@ export const WorldsViewPanelProvider: React.FC<
   >([]);
   const [collectionsLoading, setCollectionsLoading] = useState(true);
   const [collectionsSaving, setCollectionsSaving] = useState(false);
-  const [collectionsError, setCollectionsError] = useState<string | null>(null);
+  const [collectionsError, setCollectionsError] = useState<Error | null>(null);
   const [collectionsGitHubRepoExists, setCollectionsGitHubRepoExists] =
     useState(false);
   const [collectionsGitHubRepoUrl, setCollectionsGitHubRepoUrl] = useState<
@@ -142,6 +154,8 @@ export const WorldsViewPanelProvider: React.FC<
 
   // Fetch collections on mount
   const fetchCollections = useCallback(async () => {
+    console.info('[WorldsViewPanelProvider] 🔄 fetchCollections called');
+    console.trace('[WorldsViewPanelProvider] 🔍 Stack trace:');
     try {
       setCollectionsLoading(true);
       setCollectionsError(null);
@@ -167,8 +181,8 @@ export const WorldsViewPanelProvider: React.FC<
       console.error('[WorldsViewPanelProvider] Failed to fetch collections:', error);
       setCollectionsError(
         error instanceof Error
-          ? error.message
-          : 'Failed to load collections.',
+          ? error
+          : new Error('Failed to load collections.'),
       );
     } finally {
       setCollectionsLoading(false);
@@ -202,9 +216,68 @@ export const WorldsViewPanelProvider: React.FC<
   }, [events]);
 
   // Build slices map
-  const slices = useMemo<Map<string, DataSlice>>(
-    () =>
-      new Map([
+  // Create direct slice objects first for type-safe access by new v0.3.0+ panels
+  const selectedCollectionMemberships = selectedCollection
+    ? collectionMemberships.filter(m => m.collectionId === selectedCollection.id)
+    : [];
+
+  const selectedCollectionRepositoryIds = new Set(selectedCollectionMemberships.map(m => m.repositoryId));
+  const selectedCollectionRepositories = localRepositories.filter(r => {
+    const repoId = (r as any).github?.id || r.name;
+    return selectedCollectionRepositoryIds.has(repoId);
+  });
+
+  // Create simplified slice for CollectionMapPanel (it doesn't use full DataSlice interface)
+  const selectedCollectionViewSlice = useMemo(
+    () => ({
+      data: selectedCollection
+        ? {
+            collection: selectedCollection,
+            memberships: selectedCollectionMemberships,
+            repositories: selectedCollectionRepositories,
+            dependencies: {}, // TODO: Add dependency graph support
+          }
+        : {
+            collection: null,
+            memberships: [],
+            repositories: [],
+            dependencies: {},
+          },
+      loading: collectionsLoading || localRepositoriesLoading,
+      error: collectionsError?.message || null,
+    }),
+    [
+      selectedCollection,
+      selectedCollectionMemberships,
+      selectedCollectionRepositories,
+      collectionsLoading,
+      localRepositoriesLoading,
+      collectionsError,
+    ],
+  );
+
+  // Full DataSlice version for the slices Map (backward compat)
+  const selectedCollectionViewDataSlice: DataSlice<unknown> = useMemo(
+    () => ({
+      scope: 'global' as const,
+      name: 'selectedCollectionView',
+      data: selectedCollectionViewSlice.data,
+      loading: selectedCollectionViewSlice.loading,
+      error: selectedCollectionViewSlice.error
+        ? new Error(selectedCollectionViewSlice.error)
+        : null,
+      refresh: async () => {
+        await fetchCollections();
+      },
+    }),
+    [selectedCollectionViewSlice, fetchCollections],
+  );
+
+  const slices = useMemo<Map<string, DataSlice<unknown>>>(() => {
+    console.info('[WorldsViewPanelProvider] 🔄 Recomputing slices with', collectionMemberships.length, 'memberships');
+    console.info('[WorldsViewPanelProvider] 🔄 Selected collection:', selectedCollection?.name, 'has', selectedCollectionMemberships.length, 'memberships');
+
+    return new Map([
         [
           'alexandriaRepositories',
           {
@@ -245,10 +318,10 @@ export const WorldsViewPanelProvider: React.FC<
               memberships: collectionMemberships,
               loading: collectionsLoading,
               saving: collectionsSaving,
-              error: collectionsError,
+              error: collectionsError?.message, // UserCollectionsSlice expects string
               gitHubRepoExists: collectionsGitHubRepoExists,
               gitHubRepoUrl: collectionsGitHubRepoUrl,
-            } as UserCollectionsSlice,
+            },
             loading: collectionsLoading,
             error: null,
             refresh: fetchCollections,
@@ -273,8 +346,9 @@ export const WorldsViewPanelProvider: React.FC<
             refresh: fetchCollections,
           },
         ],
-      ]),
-    [
+        ['selectedCollectionView', selectedCollectionViewDataSlice as DataSlice<unknown>],
+      ]);
+  }, [
       localRepositories,
       localRepositoriesLoading,
       discoveredRepositories,
@@ -711,12 +785,13 @@ export const WorldsViewPanelProvider: React.FC<
         };
 
         // OPTIMISTIC UPDATE: Update local memberships immediately
-        const optimisticMemberships = collectionMemberships.map((m) =>
-          m.collectionId === collectionId && m.repositoryId === repositoryId
-            ? { ...m, metadata: updatedMetadata }
-            : m,
+        setCollectionMemberships((prev) =>
+          prev.map((m) =>
+            m.collectionId === collectionId && m.repositoryId === repositoryId
+              ? { ...m, metadata: updatedMetadata }
+              : m,
+          )
         );
-        setCollectionMemberships(optimisticMemberships);
 
         // Background sync to GitHub (remove and re-add)
         CollectionsService.removeRepository(collectionId, repositoryId)
@@ -738,9 +813,17 @@ export const WorldsViewPanelProvider: React.FC<
         repositoryId: string,
         layout: RepositoryLayoutData,
       ): Promise<void> => {
+        // Look up repository name for better logging
+        const repo = localRepositories.find(r => {
+          const repoId = (r as any).github?.id || r.name;
+          return repoId === repositoryId;
+        });
+        const repoName = repo?.name || repositoryId;
+
         console.info(
-          '[WorldsViewPanelProvider] Updating repository position:',
-          repositoryId,
+          '[WorldsViewPanelProvider] 🎯 START: Moving',
+          repoName,
+          'to',
           layout,
         );
 
@@ -749,8 +832,10 @@ export const WorldsViewPanelProvider: React.FC<
         );
 
         if (!membership) {
-          throw new Error('Membership not found');
+          throw new Error(`Membership not found for ${repoName}`);
         }
+
+        console.info('[WorldsViewPanelProvider] 📄 Current position:', membership.metadata?.layout || 'none');
 
         // Update membership metadata with layout
         const updatedMetadata = {
@@ -758,25 +843,38 @@ export const WorldsViewPanelProvider: React.FC<
           layout,
         };
 
-        // OPTIMISTIC UPDATE: Update local memberships immediately
-        const optimisticMemberships = collectionMemberships.map((m) =>
-          m.collectionId === collectionId && m.repositoryId === repositoryId
-            ? { ...m, metadata: updatedMetadata }
-            : m,
-        );
-        setCollectionMemberships(optimisticMemberships);
+        console.info('[WorldsViewPanelProvider] 📝 New position:', layout, 'for', repoName);
+        console.info('[WorldsViewPanelProvider] 🔍 Region for this repo:', membership.metadata?.regionId || 'none');
 
+        // OPTIMISTIC UPDATE: Update local memberships immediately
+        console.info('[WorldsViewPanelProvider] ⚡ OPTIMISTIC UPDATE: Applying local state change');
+        setCollectionMemberships((prev) => {
+          const updated = prev.map((m) =>
+            m.collectionId === collectionId && m.repositoryId === repositoryId
+              ? { ...m, metadata: updatedMetadata }
+              : m,
+          );
+          console.info('[WorldsViewPanelProvider] ⚡ OPTIMISTIC UPDATE: New memberships state:', updated);
+          return updated;
+        });
+
+        console.info('[WorldsViewPanelProvider] 🌐 Starting GitHub sync...');
         // Background sync to GitHub (remove and re-add)
         CollectionsService.removeRepository(collectionId, repositoryId)
-          .then(() =>
-            CollectionsService.addRepository({
+          .then(() => {
+            console.info('[WorldsViewPanelProvider] 🌐 Removed from GitHub, now re-adding...');
+            return CollectionsService.addRepository({
               collectionId,
               repositoryId,
               metadata: updatedMetadata,
-            }),
-          )
+            });
+          })
+          .then(() => {
+            console.info('[WorldsViewPanelProvider] ✅ GitHub sync completed successfully');
+          })
           .catch((error) => {
-            console.error('[WorldsViewPanelProvider] Failed to sync repository position to GitHub:', error);
+            console.error('[WorldsViewPanelProvider] ❌ Failed to sync repository position to GitHub:', error);
+            console.info('[WorldsViewPanelProvider] 🔄 Rolling back via fetchCollections...');
             fetchCollections(); // Rollback on error
           });
       },
@@ -1082,15 +1180,28 @@ export const WorldsViewPanelProvider: React.FC<
     ],
   );
 
-  // Build context
-  const context = useMemo<WorldsViewPanelContextValue>(
-    () => ({
+  // Convert slices Map to an object for direct property access (needed by v0.3.0+ panels)
+  const slicesAsObject = useMemo(() => {
+    const obj: Record<string, DataSlice> = {};
+    for (const [name, slice] of slices.entries()) {
+      obj[name] = slice;
+    }
+    return obj;
+  }, [slices]);
+
+  // Build context with typed slice properties for typed panels
+  const context = useMemo<WorldsViewPanelContextValue>(() => {
+    return {
+      // Direct slice properties for new v0.3.0+ typed panels
+      selectedCollectionView: selectedCollectionViewSlice,
+
       scope: {},
       currentScope: {
         type: 'workspace' as const,
       },
       slices,
       adapters: {},
+      // Legacy methods (for backward compatibility)
       getSlice: <T = unknown,>(name: string): DataSlice<T> | undefined => {
         return slices.get(name) as DataSlice<T> | undefined;
       },
@@ -1133,9 +1244,8 @@ export const WorldsViewPanelProvider: React.FC<
       // Extended properties
       selectedCollection,
       setSelectedCollection,
-    }),
-    [slices, selectedCollection],
-  );
+    };
+  }, [slices, selectedCollection, selectedCollectionViewSlice]);
 
   // Combine into provider value
   const value: WorldsViewPanelProviderValue = useMemo(

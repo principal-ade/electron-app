@@ -18,6 +18,7 @@ import type {
   PanelEvent,
   PanelEventEmitter,
   PanelAdapters,
+  ActiveFileSlice,
 } from '@principal-ade/panel-framework-core';
 import { TerminalService } from '../main-process-api/TerminalService';
 import type { TerminalInfo } from '../../shared/main-process-api-interfaces/TerminalService';
@@ -33,7 +34,11 @@ import {
   type ServerScanResult,
 } from '../main-process-api/LocalhostDetectionService';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import type { FileTree } from '@principal-ai/repository-abstraction';
+import type {
+  FileTree,
+  FileTreeSource,
+} from '@principal-ai/repository-abstraction';
+import { createFileTreeSource } from '@principal-ai/repository-abstraction';
 import type { TerminalSessionInfo } from '@industry-theme/xterm-terminal-panel';
 import { minimatch } from 'minimatch';
 
@@ -152,8 +157,6 @@ interface ExtendedPanelContextValue extends PanelContextValue {
   };
   gitStatusLoading: boolean;
   markdownFiles: Array<{ path: string; title?: string; lastModified: number }>;
-  fileTree: FileTree | null;
-  fileTreeLoading: boolean;
   packages: unknown[] | null;
   quality: unknown | null;
   terminalSessions?: Array<{
@@ -169,6 +172,11 @@ interface ExtendedPanelContextValue extends PanelContextValue {
   // Localhost detection data
   localhostServers: RunningServer[];
   localhostServersLoading: boolean;
+
+  // Direct slice properties for new v0.3.0+ typed panels
+  // These are always present in the slices Map
+  activeFile: DataSlice<ActiveFileSlice>;
+  fileTree: DataSlice<FileTree>;
 }
 
 // Provider value that contains context, actions, and events separately
@@ -233,11 +241,9 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
     useState(false);
 
   // Track active file for markdown panel (and other file viewers)
-  const [activeFileData, setActiveFileData] = useState<{
-    path: string;
-    content: string;
-    type: string;
-  } | null>(null);
+  const [activeFileData, setActiveFileData] = useState<ActiveFileSlice | null>(
+    null,
+  );
   const [activeFileLoading, setActiveFileLoading] = useState(false);
   const [activeFileError, setActiveFileError] = useState<Error | null>(null);
 
@@ -541,8 +547,90 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
     return unsubscribe;
   }, [events]);
 
+  // Create typed slice objects FIRST (before the Map)
+  // These will be referenced both in the Map and directly in the context
+  const fileTreeSlice: DataSlice<FileTree> = useMemo(
+    () => ({
+      scope: 'repository' as const,
+      name: 'fileTree',
+      data: fileTreeData,
+      loading: fileTreeLoading,
+      error: null,
+      refresh: async () => {
+        // Refetch file tree
+        if (repository?.path) {
+          setFileTreeLoading(true);
+          try {
+            const tree = await RepositoryMonitoringService.getFileTree(
+              repository.path,
+            );
+            setFileTreeData(tree);
+          } catch (error) {
+            console.error(
+              '[PanelContext] Failed to refresh file tree:',
+              error,
+            );
+            setFileTreeData(null);
+          } finally {
+            setFileTreeLoading(false);
+          }
+        }
+      },
+    }),
+    [fileTreeData, fileTreeLoading, repository?.path],
+  );
+
+  const activeFileSlice: DataSlice<ActiveFileSlice> = useMemo(
+    () => ({
+      scope: 'repository' as const,
+      name: 'active-file',
+      data: activeFileData,
+      loading: activeFileLoading,
+      error: activeFileError,
+      refresh: async () => {
+        // Re-read the file if there's an active file
+        if (activeFileData?.path) {
+          setActiveFileLoading(true);
+          try {
+            const repoPath = repository?.path || workspace?.path || '';
+            const absolutePath = activeFileData.path.startsWith('/')
+              ? activeFileData.path
+              : `${repoPath}/${activeFileData.path}`;
+            const result =
+              await window.mainProcess.fileSystem.readFile(absolutePath);
+            if (result) {
+              setActiveFileData({
+                ...activeFileData,
+                content: result.content,
+              });
+            }
+          } catch (error) {
+            console.error(
+              '[PanelContext] Failed to refresh active file:',
+              error,
+            );
+            setActiveFileError(
+              error instanceof Error
+                ? error
+                : new Error('Failed to refresh file'),
+            );
+          } finally {
+            setActiveFileLoading(false);
+          }
+        }
+      },
+    }),
+    [
+      activeFileData,
+      activeFileLoading,
+      activeFileError,
+      repository?.path,
+      workspace?.path,
+    ],
+  );
+
   // Define data slices (memoized to update with workspace repositories)
-  const slices = useMemo<Map<string, DataSlice>>(
+  const slices = useMemo<Map<string, DataSlice<unknown>>>(
     () =>
       new Map([
         [
@@ -643,36 +731,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
             },
           },
         ],
-        [
-          'fileTree',
-          {
-            scope: 'repository' as const,
-            name: 'fileTree',
-            data: fileTreeData,
-            loading: fileTreeLoading,
-            error: null,
-            refresh: async () => {
-              // Refetch file tree
-              if (repository?.path) {
-                setFileTreeLoading(true);
-                try {
-                  const tree = await RepositoryMonitoringService.getFileTree(
-                    repository.path,
-                  );
-                  setFileTreeData(tree);
-                } catch (error) {
-                  console.error(
-                    '[PanelContext] Failed to refresh file tree:',
-                    error,
-                  );
-                  setFileTreeData(null);
-                } finally {
-                  setFileTreeLoading(false);
-                }
-              }
-            },
-          },
-        ],
+        ['fileTree', fileTreeSlice as DataSlice<unknown>],
         [
           'localhostServers',
           {
@@ -724,48 +783,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
             },
           },
         ],
-        [
-          'active-file',
-          {
-            scope: 'repository' as const,
-            name: 'active-file',
-            data: activeFileData,
-            loading: activeFileLoading,
-            error: activeFileError,
-            refresh: async () => {
-              // Re-read the file if there's an active file
-              if (activeFileData?.path) {
-                setActiveFileLoading(true);
-                try {
-                  const repoPath = repository?.path || workspace?.path || '';
-                  const absolutePath = activeFileData.path.startsWith('/')
-                    ? activeFileData.path
-                    : `${repoPath}/${activeFileData.path}`;
-                  const result =
-                    await window.mainProcess.fileSystem.readFile(absolutePath);
-                  if (result) {
-                    setActiveFileData({
-                      ...activeFileData,
-                      content: result.content,
-                    });
-                  }
-                } catch (error) {
-                  console.error(
-                    '[PanelContext] Failed to refresh active file:',
-                    error,
-                  );
-                  setActiveFileError(
-                    error instanceof Error
-                      ? error
-                      : new Error('Failed to refresh file'),
-                  );
-                } finally {
-                  setActiveFileLoading(false);
-                }
-              }
-            },
-          },
-        ],
+        ['active-file', activeFileSlice as DataSlice<unknown>],
       ]),
     [
       workspace,
@@ -773,16 +791,13 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       repositoriesLoading,
       markdownFiles,
       markdownLoading,
-      fileTreeData,
-      fileTreeLoading,
       repository,
       localhostServers,
       localhostServersLoading,
       alexandriaRepositories,
       alexandriaRepositoriesLoading,
-      activeFileData,
-      activeFileLoading,
-      activeFileError,
+      fileTreeSlice,
+      activeFileSlice,
     ],
   );
 
@@ -1298,10 +1313,19 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
                 ? 'markdown'
                 : extension;
 
+            // Create FileTreeSource for the active file
+            const source = createFileTreeSource.localWorkingCopy(
+              repoPath,
+              '',
+              repository?.name || workspace?.name || 'unknown',
+              '',
+            );
+
             setActiveFileData({
               path: absolutePath,
               content: result.content,
               type,
+              source,
             });
           } catch (error) {
             console.error('[PanelContext] Failed to set active file:', error);
@@ -1428,8 +1452,6 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       },
       gitStatusLoading: false,
       markdownFiles,
-      fileTree: fileTreeData,
-      fileTreeLoading,
       packages: null,
       quality: null,
       terminalSessions: terminalSessions.map((session) => ({
@@ -1445,6 +1467,11 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       // Localhost detection data
       localhostServers,
       localhostServersLoading,
+
+      // Direct slice properties for new v0.3.0+ typed panels
+      // These reference the same objects that are in the slices Map
+      activeFile: activeFileSlice,
+      fileTree: fileTreeSlice,
     }),
     [
       workspace,
@@ -1453,10 +1480,10 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       adapters,
       terminalSessions,
       markdownFiles,
-      fileTreeData,
-      fileTreeLoading,
       localhostServers,
       localhostServersLoading,
+      activeFileSlice,
+      fileTreeSlice,
     ],
   );
 

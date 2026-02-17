@@ -87,6 +87,7 @@
       "y": -100,
       "width": 600,
       "height": 60,
+      "color": "#64748B",
       "text": "# OTEL Trace Pipeline\n**From application instrumentation to dev workspace visualization**"
     },
     {
@@ -100,7 +101,7 @@
       "pv": {
         "nodeType": "external-service",
         "shape": "rectangle",
-        "status": "implemented",
+        "status": "draft",
         "sources": [
           "src/main/services/OtelCollectorService.ts"
         ],
@@ -140,7 +141,7 @@
       "pv": {
         "nodeType": "http-endpoint",
         "shape": "rectangle",
-        "status": "implemented",
+        "status": "draft",
         "sources": [
           "src/main/services/OtelCollectorService.ts"
         ],
@@ -184,7 +185,7 @@
       "pv": {
         "nodeType": "collector-server",
         "shape": "rectangle",
-        "status": "implemented",
+        "status": "draft",
         "sources": [
           "src/main/services/OtelCollectorService.ts"
         ],
@@ -224,7 +225,7 @@
       "pv": {
         "nodeType": "storage",
         "shape": "rectangle",
-        "status": "implemented",
+        "status": "draft",
         "sources": [
           "src/main/services/OtelCollectorService.ts"
         ],
@@ -268,7 +269,7 @@
       "pv": {
         "nodeType": "ipc-transport",
         "shape": "rectangle",
-        "status": "implemented",
+        "status": "draft",
         "sources": [
           "src/main/services/OtelCollectorService.ts"
         ],
@@ -312,7 +313,7 @@
       "pv": {
         "nodeType": "ipc-handler",
         "shape": "rectangle",
-        "status": "implemented",
+        "status": "draft",
         "sources": [
           "src/main/services/ipc/otelCollectorHandlers.ts"
         ],
@@ -352,7 +353,7 @@
       "pv": {
         "nodeType": "preload",
         "shape": "rectangle",
-        "status": "implemented",
+        "status": "draft",
         "sources": [
           "src/window/main-process-api-implementations/otelCollectorApi.ts"
         ],
@@ -396,7 +397,7 @@
       "pv": {
         "nodeType": "renderer-service",
         "shape": "rectangle",
-        "status": "implemented",
+        "status": "draft",
         "sources": [
           "src/window/main-process-api-implementations/otelCollectorApi.ts"
         ],
@@ -436,7 +437,7 @@
       "pv": {
         "nodeType": "ui-component",
         "shape": "rectangle",
-        "status": "implemented",
+        "status": "draft",
         "sources": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
@@ -476,7 +477,7 @@
       "pv": {
         "nodeType": "ui-component",
         "shape": "rectangle",
-        "status": "implemented",
+        "status": "draft",
         "sources": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
@@ -516,7 +517,7 @@
       "pv": {
         "nodeType": "ui-component",
         "shape": "rectangle",
-        "status": "implemented",
+        "status": "draft",
         "sources": [
           "src/renderer/principal-window/views/SystemMonitor/TraceViewer.tsx"
         ],
@@ -560,7 +561,7 @@
       "pv": {
         "nodeType": "event-bus",
         "shape": "rectangle",
-        "status": "implemented",
+        "status": "draft",
         "sources": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],

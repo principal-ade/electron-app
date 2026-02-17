@@ -71,6 +71,7 @@
       "y": -100,
       "width": 700,
       "height": 60,
+      "color": "#64748B",
       "text": "# CollectionMapPanel: Repository Positioning Flow\n**From drag & drop to GitHub persistence with optimistic updates**"
     },
     {

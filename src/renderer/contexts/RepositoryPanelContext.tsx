@@ -16,6 +16,7 @@ import type {
   RepositoryMetadata,
   DataSlice,
   PanelAdapters,
+  ActiveFileSlice,
 } from '@principal-ade/panel-framework-core';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { FileSystemService } from '../main-process-api/FileSystemService';
@@ -27,15 +28,14 @@ import {
   type RunningServer,
 } from '../main-process-api/LocalhostDetectionService';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import type { FileTree } from '@principal-ai/repository-abstraction';
-import { FileTreeCore } from '@principal-ai/repository-abstraction';
+import type { FileTree, FileTreeSource } from '@principal-ai/repository-abstraction';
+import { FileTreeCore, createFileTreeSource } from '@principal-ai/repository-abstraction';
 import type { PackagesSliceData } from '@principal-ai/codebase-composition';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import { minimatch } from 'minimatch';
 import type { ColorMode, FileMetricData, QualitySliceData } from '@principal-ai/quality-lens-registry';
 import type { GlobalSkill } from '../../shared/main-process-api-interfaces/FileSystemAPI';
-import type { TraceInfo } from '@industry-theme/principal-view-panels';
-import { groupSpansByTrace } from '@industry-theme/principal-view-panels';
+import type { RegisteredTrace } from '@principal-ai/principal-view-core';
 import { OtelCollectorService } from '../main-process-api/OtelCollectorService';
 
 // Color mode for file city visualization - imported from registry
@@ -74,6 +74,11 @@ interface RepositoryPanelContextValue extends PanelContextValue {
   repositoryPath: string | null;
   repository: RepositoryMetadata | null;
   loading: boolean;
+
+  // Direct slice properties for new v0.3.0+ typed panels
+  // These are always present in the slices Map
+  activeFile: DataSlice<ActiveFileSlice>;
+  fileTree: DataSlice<FileTree>;
 }
 
 // Provider value that contains context, actions, and events separately
@@ -155,11 +160,7 @@ export const RepositoryPanelProvider: React.FC<
   const [localhostServersLoading, setLocalhostServersLoading] = useState(false);
 
   // Track active file for markdown panel (and other file viewers)
-  const [activeFileData, setActiveFileData] = useState<{
-    path: string;
-    content: string;
-    type: string;
-  } | null>(null);
+  const [activeFileData, setActiveFileData] = useState<ActiveFileSlice | null>(null);
   const [activeFileLoading, setActiveFileLoading] = useState(false);
   const [activeFileError, setActiveFileError] = useState<Error | null>(null);
 
@@ -168,7 +169,7 @@ export const RepositoryPanelProvider: React.FC<
   const [globalSkillsLoading, setGlobalSkillsLoading] = useState(false);
 
   // Track telemetry traces for trace viewer
-  const [telemetryTraces, setTelemetryTraces] = useState<TraceInfo[]>([]);
+  const [telemetryTraces, setTelemetryTraces] = useState<RegisteredTrace[]>([]);
   const [telemetryLoading, setTelemetryLoading] = useState(false);
 
   // Helper to extract owner/repo from git remote URL
@@ -799,36 +800,47 @@ export const RepositoryPanelProvider: React.FC<
                 return;
               }
 
-              // Check if this is a trace batch from the server
-              if (message?.type === 'TRACE_BATCH') {
-                console.info('[RepositoryPanelProvider] Received TRACE_BATCH from server');
-                // Extract the payload from the wrapper
-                const payload = message.payload;
-                if (!payload || !payload.resourceSpans) {
-                  console.warn('[RepositoryPanelProvider] Invalid TRACE_BATCH payload:', message);
+              // Check if this is a registered trace from the server
+              if (message?.type === 'REGISTERED_TRACE') {
+                console.info('[RepositoryPanelProvider] Received REGISTERED_TRACE from server');
+
+                // Extract the RegisteredTrace from the message
+                const trace = message.payload as RegisteredTrace;
+
+                if (!trace || !trace.traceId) {
+                  console.warn('[RepositoryPanelProvider] Invalid REGISTERED_TRACE payload:', message);
                   return;
                 }
-                // Process the OTLP payload
-                const newTraces = groupSpansByTrace(payload);
-                console.info('[RepositoryPanelProvider] Converted to TraceInfo[]:', newTraces);
 
-                if (newTraces.length > 0) {
-                  console.info(
-                    `[RepositoryPanelProvider] Received ${newTraces.length} new traces from source: ${message.source}`
-                  );
+                console.info('[RepositoryPanelProvider] Trace details:', {
+                  traceId: trace.traceId,
+                  name: trace.name,
+                  registryStatus: trace.registryStatus,
+                  hasMatchInfo: !!trace.matchInfo,
+                  destination: trace.routing.destination,
+                  scopeVersion: trace.scope.version,
+                });
 
-                  setTelemetryTraces((prev) => {
-                    // Merge new traces with existing, avoiding duplicates
-                    const existingIds = new Set(prev.map((t) => t.traceId));
-                    const uniqueNewTraces = newTraces.filter(
-                      (t) => !existingIds.has(t.traceId)
-                    );
+                // Add trace to state (no conversion needed - already in RegisteredTrace format!)
+                setTelemetryTraces((prev) => {
+                  // Check for duplicates
+                  const existingIds = new Set(prev.map((t) => t.traceId));
+                  if (existingIds.has(trace.traceId)) {
+                    console.debug('[RepositoryPanelProvider] Skipping duplicate trace:', trace.traceId);
+                    return prev;
+                  }
 
-                    // Keep only last 1000 traces
-                    const combined = [...prev, ...uniqueNewTraces];
-                    return combined.slice(-1000);
-                  });
-                }
+                  // Keep only last 1000 traces
+                  const combined = [...prev, trace];
+                  return combined.slice(-1000);
+                });
+
+                return;
+              }
+
+              // Legacy TRACE_BATCH support (can be removed once all clients updated)
+              if (message?.type === 'TRACE_BATCH') {
+                console.warn('[RepositoryPanelProvider] Received legacy TRACE_BATCH - this format is deprecated');
                 return;
               }
 
@@ -1087,10 +1099,18 @@ export const RepositoryPanelProvider: React.FC<
               ? 'markdown'
               : extension;
 
+          const source = createFileTreeSource.localWorkingCopy(
+            repositoryPath || '',
+            '',
+            repository?.name || 'unknown',
+            '',
+          );
+
           setActiveFileData({
             path: absolutePath,
             content: result.content,
             type,
+            source,
           });
         } catch (error) {
           console.error(
@@ -1361,48 +1381,92 @@ export const RepositoryPanelProvider: React.FC<
   };
 
   // Create data slices
-  const slices = useMemo<Map<string, DataSlice>>(
+  // Create direct slice objects first for type-safe access by new v0.3.0+ panels
+  const fileTreeSlice: DataSlice<FileTree> = useMemo(
+    () => ({
+      scope: 'repository' as const,
+      name: 'fileTree',
+      data: augmentedFileTreeData,
+      loading: fileTreeLoading,
+      error: null,
+      refresh: async () => {
+        if (repositoryPath) {
+          setFileTreeLoading(true);
+          try {
+            // Force cache invalidation and rebuild
+            // This will emit CACHE_SYNC events that the onCacheSync listener
+            // (line 241) will handle to update state automatically
+            await RepositoryMonitoringService.refreshRepository(
+              repositoryPath,
+            );
+            console.info(
+              '[RepositoryPanelProvider] Refresh triggered for file tree, waiting for cache sync event',
+            );
+          } catch (error) {
+            console.error(
+              '[RepositoryPanelProvider] Failed to refresh file tree:',
+              error,
+            );
+            // Fallback: try to get whatever is in cache
+            const tree =
+              await RepositoryMonitoringService.getFileTree(
+                repositoryPath,
+              );
+            setFileTreeData(tree);
+          } finally {
+            setFileTreeLoading(false);
+          }
+        }
+      },
+    }),
+    [augmentedFileTreeData, fileTreeLoading, repositoryPath],
+  );
+
+  const activeFileSlice: DataSlice<ActiveFileSlice> = useMemo(
+    () => ({
+      scope: 'repository' as const,
+      name: 'active-file',
+      data: stableActiveFileData,
+      loading: activeFileLoading,
+      error: activeFileError,
+      refresh: async () => {
+        // Re-read the file if there's an active file
+        if (stableActiveFileData?.path) {
+          setActiveFileLoading(true);
+          try {
+            const absolutePath = stableActiveFileData.path.startsWith('/')
+              ? stableActiveFileData.path
+              : `${repositoryPath}/${stableActiveFileData.path}`;
+            const result = await FileSystemService.readFile(absolutePath);
+            if (result) {
+              setActiveFileData({
+                ...stableActiveFileData,
+                content: result.content,
+              });
+            }
+          } catch (error) {
+            console.error(
+              '[RepositoryPanelProvider] Failed to refresh active file:',
+              error,
+            );
+            setActiveFileError(
+              error instanceof Error
+                ? error
+                : new Error('Failed to refresh file'),
+            );
+          } finally {
+            setActiveFileLoading(false);
+          }
+        }
+      },
+    }),
+    [stableActiveFileData, activeFileLoading, activeFileError, repositoryPath],
+  );
+
+  const slices = useMemo<Map<string, DataSlice<unknown>>>(
     () =>
       new Map([
-        [
-          'fileTree',
-          {
-            scope: 'repository' as const,
-            name: 'fileTree',
-            data: augmentedFileTreeData,
-            loading: fileTreeLoading,
-            error: null,
-            refresh: async () => {
-              if (repositoryPath) {
-                setFileTreeLoading(true);
-                try {
-                  // Force cache invalidation and rebuild
-                  // This will emit CACHE_SYNC events that the onCacheSync listener
-                  // (line 241) will handle to update state automatically
-                  await RepositoryMonitoringService.refreshRepository(
-                    repositoryPath,
-                  );
-                  console.info(
-                    '[RepositoryPanelProvider] Refresh triggered for file tree, waiting for cache sync event',
-                  );
-                } catch (error) {
-                  console.error(
-                    '[RepositoryPanelProvider] Failed to refresh file tree:',
-                    error,
-                  );
-                  // Fallback: try to get whatever is in cache
-                  const tree =
-                    await RepositoryMonitoringService.getFileTree(
-                      repositoryPath,
-                    );
-                  setFileTreeData(tree);
-                } finally {
-                  setFileTreeLoading(false);
-                }
-              }
-            },
-          },
-        ],
+        ['fileTree', fileTreeSlice as DataSlice<unknown>],
         [
           'markdown',
           {
@@ -1620,46 +1684,7 @@ export const RepositoryPanelProvider: React.FC<
             },
           },
         ],
-        [
-          'active-file',
-          {
-            scope: 'repository' as const,
-            name: 'active-file',
-            data: stableActiveFileData,
-            loading: activeFileLoading,
-            error: activeFileError,
-            refresh: async () => {
-              // Re-read the file if there's an active file
-              if (stableActiveFileData?.path) {
-                setActiveFileLoading(true);
-                try {
-                  const absolutePath = stableActiveFileData.path.startsWith('/')
-                    ? stableActiveFileData.path
-                    : `${repositoryPath}/${stableActiveFileData.path}`;
-                  const result = await FileSystemService.readFile(absolutePath);
-                  if (result) {
-                    setActiveFileData({
-                      ...stableActiveFileData,
-                      content: result.content,
-                    });
-                  }
-                } catch (error) {
-                  console.error(
-                    '[RepositoryPanelProvider] Failed to refresh active file:',
-                    error,
-                  );
-                  setActiveFileError(
-                    error instanceof Error
-                      ? error
-                      : new Error('Failed to refresh file'),
-                  );
-                } finally {
-                  setActiveFileLoading(false);
-                }
-              }
-            },
-          },
-        ],
+        ['active-file', activeFileSlice as DataSlice<unknown>],
         [
           'fileCityColorModes',
           {
@@ -1856,6 +1881,12 @@ export const RepositoryPanelProvider: React.FC<
       hasSlice,
       isSliceLoading,
       refresh,
+
+      // Direct slice properties for new v0.3.0+ typed panels
+      // These reference the same objects that are in the slices Map
+      // Alexandria docs panel needs: activeFile (camelCase), fileTree
+      activeFile: activeFileSlice,
+      fileTree: fileTreeSlice,
     }),
     [
       repositoryPath,
@@ -1870,6 +1901,8 @@ export const RepositoryPanelProvider: React.FC<
       hasSlice,
       isSliceLoading,
       refresh,
+      activeFileSlice,
+      fileTreeSlice,
     ],
   );
 
