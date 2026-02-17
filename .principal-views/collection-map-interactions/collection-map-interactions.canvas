@@ -1,0 +1,476 @@
+{
+  "pv": {
+    "name": "CollectionMapPanel Interactions & Data Flow",
+    "version": "1.0.0",
+    "markdown": ".principal-views/collection-map-interactions/collection-map-interactions.md",
+    "nodeTypes": {
+      "component": {
+        "label": "React Component",
+        "color": "#22C55E"
+      },
+      "context": {
+        "label": "Context/Provider",
+        "color": "#3B82F6"
+      },
+      "service": {
+        "label": "Service Layer",
+        "color": "#A855F7"
+      },
+      "data": {
+        "label": "Data/State",
+        "color": "#F59E0B"
+      },
+      "external": {
+        "label": "External API",
+        "color": "#EF4444"
+      },
+      "callback": {
+        "label": "Callback Handler",
+        "color": "#14B8A6"
+      }
+    },
+    "edgeTypes": {
+      "provides": {
+        "label": "Provides",
+        "style": "solid",
+        "color": "#6366F1"
+      },
+      "calls": {
+        "label": "Calls",
+        "style": "solid",
+        "color": "#8B5CF6"
+      },
+      "emits": {
+        "label": "Emits Event",
+        "style": "dashed",
+        "color": "#0EA5E9"
+      },
+      "updates": {
+        "label": "Updates",
+        "style": "solid",
+        "color": "#10B981"
+      },
+      "reads": {
+        "label": "Reads",
+        "style": "dotted",
+        "color": "#64748B"
+      },
+      "syncs": {
+        "label": "Syncs To",
+        "style": "solid",
+        "color": "#EF4444"
+      },
+      "flows": {
+        "label": "Data Flow",
+        "style": "solid",
+        "color": "#F59E0B"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "collection-map-panel",
+      "type": "text",
+      "x": 100,
+      "y": -50,
+      "width": 200,
+      "height": 70,
+      "text": "CollectionMapPanel",
+      "pv": {
+        "nodeType": "component",
+        "shape": "rectangle"
+      }
+    },
+    {
+      "id": "worlds-view-context",
+      "type": "text",
+      "x": 80,
+      "y": 80,
+      "width": 240,
+      "height": 80,
+      "text": "WorldsViewPanelProvider",
+      "pv": {
+        "nodeType": "context",
+        "shape": "rectangle"
+      }
+    },
+    {
+      "id": "region-callbacks",
+      "type": "text",
+      "x": -200,
+      "y": 250,
+      "width": 180,
+      "height": 100,
+      "text": "Region Callbacks:\n• onRegionCreated\n• onRegionUpdated\n• onRegionDeleted",
+      "pv": {
+        "nodeType": "callback",
+        "shape": "rectangle"
+      }
+    },
+    {
+      "id": "repository-callbacks",
+      "type": "text",
+      "x": 30,
+      "y": 250,
+      "width": 200,
+      "height": 100,
+      "text": "Repository Callbacks:\n• onRepositoryAssigned\n• onRepositoryPositionUpdated",
+      "pv": {
+        "nodeType": "callback",
+        "shape": "rectangle"
+      }
+    },
+    {
+      "id": "layout-callbacks",
+      "type": "text",
+      "x": 280,
+      "y": 250,
+      "width": 220,
+      "height": 120,
+      "text": "Layout Callbacks:\n• onBatchLayoutInitialized\n• onInitializeDefaultRegions\n• onSwitchLayoutMode",
+      "pv": {
+        "nodeType": "callback",
+        "shape": "rectangle"
+      }
+    },
+    {
+      "id": "collections-state",
+      "type": "text",
+      "x": -350,
+      "y": 450,
+      "width": 180,
+      "height": 100,
+      "text": "Collections State:\n• collections[]\n• collectionMemberships[]",
+      "pv": {
+        "nodeType": "data",
+        "shape": "rectangle"
+      }
+    },
+    {
+      "id": "local-repos-state",
+      "type": "text",
+      "x": -120,
+      "y": 450,
+      "width": 180,
+      "height": 100,
+      "text": "Local Repositories:\n• localRepositories[]",
+      "pv": {
+        "nodeType": "data",
+        "shape": "rectangle"
+      }
+    },
+    {
+      "id": "selected-collection-state",
+      "type": "text",
+      "x": 120,
+      "y": 450,
+      "width": 180,
+      "height": 100,
+      "text": "Selected Collection:\n• selectedCollection\n• memberships\n• repositories",
+      "pv": {
+        "nodeType": "data",
+        "shape": "rectangle"
+      }
+    },
+    {
+      "id": "collections-service",
+      "type": "text",
+      "x": -350,
+      "y": 650,
+      "width": 180,
+      "height": 80,
+      "text": "CollectionsService",
+      "pv": {
+        "nodeType": "service",
+        "shape": "rectangle"
+      }
+    },
+    {
+      "id": "alexandria-service",
+      "type": "text",
+      "x": -100,
+      "y": 650,
+      "width": 180,
+      "height": 80,
+      "text": "AlexandriaService",
+      "pv": {
+        "nodeType": "service",
+        "shape": "rectangle"
+      }
+    },
+    {
+      "id": "github-api",
+      "type": "text",
+      "x": -350,
+      "y": 800,
+      "width": 180,
+      "height": 70,
+      "text": "GitHub Collections API\n(JSON Storage)",
+      "pv": {
+        "nodeType": "external",
+        "shape": "rectangle"
+      }
+    },
+    {
+      "id": "panel-events",
+      "type": "text",
+      "x": 400,
+      "y": 80,
+      "width": 200,
+      "height": 100,
+      "text": "Panel Events:\n• collection:selected\n• collection:updated\n• repository-added",
+      "pv": {
+        "nodeType": "data",
+        "shape": "rectangle"
+      }
+    },
+    {
+      "id": "data-slices",
+      "type": "text",
+      "x": 350,
+      "y": 450,
+      "width": 200,
+      "height": 120,
+      "text": "Data Slices:\n• selectedCollectionView\n• userCollections\n• alexandriaRepositories",
+      "pv": {
+        "nodeType": "data",
+        "shape": "rectangle"
+      }
+    },
+    {
+      "id": "optimistic-updates",
+      "type": "text",
+      "x": 150,
+      "y": 650,
+      "width": 200,
+      "height": 80,
+      "text": "Optimistic Updates\n(Instant UI Feedback)",
+      "pv": {
+        "nodeType": "callback",
+        "shape": "rectangle"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "panel-to-context",
+      "fromNode": "collection-map-panel",
+      "fromSide": "bottom",
+      "toNode": "worlds-view-context",
+      "toSide": "top",
+      "label": "uses context",
+      "pv": {
+        "edgeType": "reads"
+      }
+    },
+    {
+      "id": "context-to-region-callbacks",
+      "fromNode": "worlds-view-context",
+      "fromSide": "left",
+      "toNode": "region-callbacks",
+      "toSide": "top",
+      "label": "provides",
+      "pv": {
+        "edgeType": "provides"
+      }
+    },
+    {
+      "id": "context-to-repo-callbacks",
+      "fromNode": "worlds-view-context",
+      "fromSide": "bottom",
+      "toNode": "repository-callbacks",
+      "toSide": "top",
+      "label": "provides",
+      "pv": {
+        "edgeType": "provides"
+      }
+    },
+    {
+      "id": "context-to-layout-callbacks",
+      "fromNode": "worlds-view-context",
+      "fromSide": "right",
+      "toNode": "layout-callbacks",
+      "toSide": "top",
+      "label": "provides",
+      "pv": {
+        "edgeType": "provides"
+      }
+    },
+    {
+      "id": "panel-to-events",
+      "fromNode": "collection-map-panel",
+      "fromSide": "right",
+      "toNode": "panel-events",
+      "toSide": "left",
+      "label": "subscribes",
+      "pv": {
+        "edgeType": "reads"
+      }
+    },
+    {
+      "id": "context-to-events",
+      "fromNode": "worlds-view-context",
+      "fromSide": "right",
+      "toNode": "panel-events",
+      "toSide": "bottom",
+      "label": "emits",
+      "pv": {
+        "edgeType": "emits"
+      }
+    },
+    {
+      "id": "region-to-collections-state",
+      "fromNode": "region-callbacks",
+      "fromSide": "bottom",
+      "toNode": "collections-state",
+      "toSide": "top",
+      "label": "updates metadata.customRegions",
+      "pv": {
+        "edgeType": "updates"
+      }
+    },
+    {
+      "id": "repo-callbacks-to-memberships",
+      "fromNode": "repository-callbacks",
+      "fromSide": "bottom",
+      "toNode": "collections-state",
+      "toSide": "right",
+      "label": "updates membership.metadata",
+      "pv": {
+        "edgeType": "updates"
+      }
+    },
+    {
+      "id": "layout-to-collections",
+      "fromNode": "layout-callbacks",
+      "fromSide": "bottom",
+      "toNode": "collections-state",
+      "toSide": "right",
+      "label": "batch updates",
+      "pv": {
+        "edgeType": "updates"
+      }
+    },
+    {
+      "id": "collections-state-to-service",
+      "fromNode": "collections-state",
+      "fromSide": "bottom",
+      "toNode": "collections-service",
+      "toSide": "top",
+      "label": "sync changes",
+      "pv": {
+        "edgeType": "calls"
+      }
+    },
+    {
+      "id": "local-repos-to-service",
+      "fromNode": "local-repos-state",
+      "fromSide": "bottom",
+      "toNode": "alexandria-service",
+      "toSide": "top",
+      "label": "fetch repositories",
+      "pv": {
+        "edgeType": "calls"
+      }
+    },
+    {
+      "id": "collections-service-to-github",
+      "fromNode": "collections-service",
+      "fromSide": "bottom",
+      "toNode": "github-api",
+      "toSide": "top",
+      "label": "commit/push JSON",
+      "pv": {
+        "edgeType": "syncs"
+      }
+    },
+    {
+      "id": "context-to-slices",
+      "fromNode": "worlds-view-context",
+      "fromSide": "right",
+      "toNode": "data-slices",
+      "toSide": "left",
+      "label": "exposes slices",
+      "pv": {
+        "edgeType": "provides"
+      }
+    },
+    {
+      "id": "slices-from-collections",
+      "fromNode": "collections-state",
+      "fromSide": "right",
+      "toNode": "data-slices",
+      "toSide": "left",
+      "label": "derives data",
+      "pv": {
+        "edgeType": "flows"
+      }
+    },
+    {
+      "id": "slices-from-repos",
+      "fromNode": "local-repos-state",
+      "fromSide": "right",
+      "toNode": "data-slices",
+      "toSide": "left",
+      "label": "derives data",
+      "pv": {
+        "edgeType": "flows"
+      }
+    },
+    {
+      "id": "slices-from-selected",
+      "fromNode": "selected-collection-state",
+      "fromSide": "right",
+      "toNode": "data-slices",
+      "toSide": "bottom",
+      "label": "derives data",
+      "pv": {
+        "edgeType": "flows"
+      }
+    },
+    {
+      "id": "panel-to-slices",
+      "fromNode": "collection-map-panel",
+      "fromSide": "right",
+      "toNode": "data-slices",
+      "toSide": "top",
+      "label": "reads slices",
+      "pv": {
+        "edgeType": "reads"
+      }
+    },
+    {
+      "id": "callbacks-to-optimistic",
+      "fromNode": "repository-callbacks",
+      "fromSide": "bottom",
+      "toNode": "optimistic-updates",
+      "toSide": "top",
+      "label": "apply immediately",
+      "pv": {
+        "edgeType": "calls"
+      }
+    },
+    {
+      "id": "optimistic-to-state",
+      "fromNode": "optimistic-updates",
+      "fromSide": "left",
+      "toNode": "collections-state",
+      "toSide": "bottom",
+      "label": "update local state",
+      "pv": {
+        "edgeType": "updates"
+      }
+    },
+    {
+      "id": "optimistic-to-service",
+      "fromNode": "optimistic-updates",
+      "fromSide": "left",
+      "toNode": "collections-service",
+      "toSide": "right",
+      "label": "background sync",
+      "pv": {
+        "edgeType": "calls"
+      }
+    }
+  ]
+}
