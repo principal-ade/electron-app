@@ -199,6 +199,12 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
         TerminalService.resize(sessionId, cols, rows, force);
       },
 
+      clearTerminal: (sessionId: string) => {
+        // Send ANSI escape sequence to clear screen and reset cursor
+        // \x1bc is the reset escape sequence (ESC c)
+        TerminalService.write(sessionId, '\x1bc');
+      },
+
       destroyTerminalSession: async (sessionId: string) => {
         await TerminalService.destroy(sessionId);
 

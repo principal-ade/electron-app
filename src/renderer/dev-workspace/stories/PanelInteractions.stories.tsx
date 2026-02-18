@@ -201,7 +201,7 @@ const MockRepositoryPanelProvider: React.FC<{
 const MockTerminalProvider: React.FC<{
   children: (props: {
     terminalContext: { terminalSessions: unknown[] };
-    terminalActions: Record<string, unknown>;
+    terminalActions: import('@industry-theme/xterm-terminal-panel').TerminalPanelActions;
   }) => React.ReactNode;
 }> = ({ children }) => {
   const terminalContext = useMemo(
@@ -213,8 +213,29 @@ const MockTerminalProvider: React.FC<{
 
   const terminalActions = useMemo(
     () => ({
-      createSession: () => {},
-      closeSession: () => {},
+      createTerminalSession: async () => 'mock-session-id',
+      destroyTerminalSession: async () => {},
+      writeToTerminal: () => {},
+      resizeTerminal: () => {},
+      clearTerminal: () => {},
+      onTerminalPortReady: () => () => {},
+      checkTerminalOwnership: async () => ({
+        exists: true,
+        ownedByWindowId: 1,
+        ownedByThisWindow: true,
+        canClaim: true,
+      }),
+      claimTerminalOwnership: async () => ({ success: true }),
+      releaseTerminalOwnership: async () => ({ success: true }),
+      onOwnershipLost: () => () => {},
+      refreshTerminal: async () => true,
+      requestTerminalDataPort: async () => ({ success: true }),
+      onTerminalData: () => () => {},
+      listTerminalSessions: async () => [],
+      openFile: () => {},
+      openGitDiff: () => {},
+      navigateToPanel: () => {},
+      notifyPanels: () => {},
     }),
     [],
   );

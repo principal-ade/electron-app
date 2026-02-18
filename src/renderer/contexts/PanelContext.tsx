@@ -43,25 +43,27 @@ import { minimatch } from 'minimatch';
 
 // Extend PanelActions with terminal and workspace-specific actions
 interface ExtendedPanelActions extends PanelActions {
-  createTerminalSession?: (options?: {
+  // Terminal actions (all required to match TerminalPanelActions)
+  createTerminalSession: (options?: {
     cwd?: string;
     command?: string;
     context?: string;
   }) => Promise<string>;
-  writeToTerminal?: (sessionId: string, data: string) => Promise<void>;
-  resizeTerminal?: (
+  writeToTerminal: (sessionId: string, data: string) => Promise<void>;
+  resizeTerminal: (
     sessionId: string,
     cols: number,
     rows: number,
     force?: boolean,
   ) => Promise<void>;
-  destroyTerminalSession?: (sessionId: string) => Promise<void>;
+  clearTerminal: (sessionId: string) => void;
+  destroyTerminalSession: (sessionId: string) => Promise<void>;
   /**
    * Request a MessagePort for receiving terminal data directly.
    * This bypasses IPC for high-performance data streaming.
    * Returns { success: true } if the port will be delivered via onTerminalPortReady.
    */
-  requestTerminalDataPort?: (
+  requestTerminalDataPort: (
     sessionId: string,
   ) => Promise<{ success: boolean; reason?: string }>;
   /**
@@ -69,51 +71,51 @@ interface ExtendedPanelActions extends PanelActions {
    * Call this before requestTerminalDataPort() to ensure you receive the port.
    * Returns an unsubscribe function.
    */
-  onTerminalPortReady?: (
+  onTerminalPortReady: (
     callback: (
       data: { sessionId: string; writable: boolean },
       port: MessagePort,
     ) => void,
   ) => () => void;
-  // Ownership actions
-  checkTerminalOwnership?: (sessionId: string) => Promise<{
+  // Ownership actions (all required)
+  checkTerminalOwnership: (sessionId: string) => Promise<{
     exists: boolean;
     ownedByWindowId: number | null;
     ownedByThisWindow?: boolean;
     canClaim: boolean;
   }>;
-  claimTerminalOwnership?: (
+  claimTerminalOwnership: (
     sessionId: string,
     force?: boolean,
   ) => Promise<{
     success: boolean;
     reason?: string;
   }>;
-  releaseTerminalOwnership?: (sessionId: string) => Promise<{
+  releaseTerminalOwnership: (sessionId: string) => Promise<{
     success: boolean;
     reason?: string;
   }>;
-  refreshTerminal?: (sessionId: string) => Promise<boolean>;
+  refreshTerminal: (sessionId: string) => Promise<boolean>;
   /**
    * Listen for ownership lost events.
    * Called when another window takes control of a terminal session.
    * Returns an unsubscribe function.
    */
-  onOwnershipLost?: (
+  onOwnershipLost: (
     callback: (data: { sessionId: string; newOwnerWindowId: number }) => void,
   ) => () => void;
   /**
    * Subscribe to terminal data for a specific session.
    * Returns an unsubscribe function.
    */
-  onTerminalData?: (
+  onTerminalData: (
     sessionId: string,
     callback: (data: string) => void,
   ) => () => void;
   /**
    * List all terminal sessions.
    */
-  listTerminalSessions?: () => Promise<TerminalSessionInfo[]>;
+  listTerminalSessions: () => Promise<TerminalSessionInfo[]>;
   removeRepositoryFromWorkspace?: (
     repositoryId: string,
     workspaceId: string,
@@ -934,6 +936,11 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
           force?: boolean,
         ) => {
           await TerminalService.resize(sessionId, cols, rows, force);
+        },
+
+        clearTerminal: (sessionId: string) => {
+          // Send ANSI escape sequence to clear screen and reset cursor
+          TerminalService.write(sessionId, '\x1bc');
         },
 
         destroyTerminalSession: async (sessionId: string) => {
