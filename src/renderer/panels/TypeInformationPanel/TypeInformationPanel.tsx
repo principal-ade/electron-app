@@ -449,7 +449,7 @@ export const TypeInformationPanel: React.FC<TypeInformationPanelProps> = ({
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
-            {filteredTypes.map((type, index) => {
+            {filteredTypes.map((type) => {
               const typeKey = `${type.filePath}:${type.name}`;
               const isExpanded = expandedTypes.has(typeKey);
               const isSelected = selectedType?.name === type.name && selectedType?.filePath === type.filePath;
@@ -458,7 +458,7 @@ export const TypeInformationPanel: React.FC<TypeInformationPanelProps> = ({
 
               return (
                 <div
-                  key={`${type.filePath}-${type.name}-${index}`}
+                  key={typeKey}
                   style={{
                     border: `1px solid ${isSelected ? theme.colors.primary : theme.colors.border}`,
                     borderRadius: borderRadius,

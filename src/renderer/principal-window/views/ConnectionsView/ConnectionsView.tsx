@@ -1125,9 +1125,9 @@ export const ConnectionsView: React.FC = () => {
                           Open Repositories
                         </div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                          {currentUserPresence.extended.openRepositories.map((repo, idx) => (
+                          {currentUserPresence.extended.openRepositories.map((repo) => (
                             <span
-                              key={idx}
+                              key={`${repo.repoId}-${repo.branch || 'main'}`}
                               style={{
                                 fontSize: '10px',
                                 padding: '2px 6px',
@@ -1321,9 +1321,9 @@ export const ConnectionsView: React.FC = () => {
                       </div>
                       {user.extended?.openRepositories && user.extended.openRepositories.length > 0 && (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                          {user.extended.openRepositories.map((repo, idx) => (
+                          {user.extended.openRepositories.map((repo) => (
                             <span
-                              key={idx}
+                              key={`${repo.repoId}-${repo.branch || 'main'}`}
                               style={{
                                 fontSize: '10px',
                                 padding: '2px 6px',
@@ -1512,9 +1512,9 @@ export const ConnectionsView: React.FC = () => {
                             <div style={{ fontSize: '10px', fontWeight: 500, color: textColor, marginBottom: '4px' }}>
                               Backlog Changes ({event.backlogChanges.length}):
                             </div>
-                            {event.backlogChanges.map((change: BacklogTaskChange, idx: number) => (
+                            {event.backlogChanges.map((change: BacklogTaskChange) => (
                               <div
-                                key={idx}
+                                key={`${change.changeType}-${change.taskPath}`}
                                 style={{
                                   display: 'flex',
                                   alignItems: 'center',

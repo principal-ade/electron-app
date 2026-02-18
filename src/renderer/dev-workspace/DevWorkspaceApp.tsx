@@ -891,21 +891,6 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     setCollapsed((prev) => ({ ...prev, left: false }));
   }, []);
 
-  // Per-panel focus state (dims that panel)
-  const [panelFocus, setPanelFocus] = useState<{ left: boolean; right: boolean }>({
-    left: false,
-    right: false,
-  });
-
-  // Focus handlers - dim the panel on that side
-  const handleFocusLeft = useCallback(() => {
-    setPanelFocus((prev) => ({ ...prev, left: !prev.left }));
-  }, []);
-
-  const handleFocusRight = useCallback(() => {
-    setPanelFocus((prev) => ({ ...prev, right: !prev.right }));
-  }, []);
-
   return (
     <div className="h-screen w-screen overflow-hidden bg-transparent flex flex-col">
       <DevWorkspaceTitlebar

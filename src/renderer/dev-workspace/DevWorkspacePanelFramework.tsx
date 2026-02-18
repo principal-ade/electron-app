@@ -193,6 +193,7 @@ interface DevWorkspacePanelFrameworkInnerProps {
   onLayoutChange: (layout: PanelLayout) => void;
   panelSizes?: { left: number; middle: number; right: number };
   onPanelSizesChange?: (sizes: { left: number; middle: number; right: number }) => void;
+  onTabsChange?: (tabs: unknown[]) => void;
 }
 
 /**
@@ -266,7 +267,7 @@ const FileCityWithHighlights: React.FC<{
  */
 const DevWorkspacePanelFrameworkInner: React.FC<
   DevWorkspacePanelFrameworkInnerProps
-> = ({ collapsed, onCollapsedChange, layout, onLayoutChange, panelSizes, onPanelSizesChange }) => {
+> = ({ collapsed, onCollapsedChange, layout, onLayoutChange, panelSizes, onPanelSizesChange, onTabsChange }) => {
   const { theme } = useTheme();
   const { context, actions, events } = useRepositoryPanelProvider();
   const { context: terminalCtx, actions: terminalActions } =
@@ -363,9 +364,12 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         return prevTabs; // No change
       }
 
+      // Notify parent of tab changes for RepositoryPanelProvider
+      onTabsChange?.(newCustomTabs);
+
       return newCustomTabs; // Only store custom tabs
     });
-  }, []);
+  }, [onTabsChange]);
 
   const CanvasEditorPanelComponent = principalViewPanels.find(
     (p) => p.metadata?.id === 'principal-ai.canvas-editor',
@@ -1001,7 +1005,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           // Create new canvas tab (editor or detail based on workflow presence)
           const newTab: CanvasEditorTab | CanvasTab = hasWorkflow
             ? {
-                id: `canvas-${canvasId}`,
+                id: `canvas-detail-${canvasId}`,
                 label: workflow?.name || workflowId || canvas.name || canvasId,
                 contentType: 'canvas-detail',
                 canvasId: canvasId,
@@ -1015,7 +1019,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 closable: true,
               } as CanvasTab
             : {
-                id: `canvas-${canvasId}`,
+                id: `canvas-editor-${canvasId}`,
                 label: canvas.name || canvasId,
                 contentType: 'canvas-editor',
                 canvasId: canvasId,
@@ -2416,12 +2420,16 @@ export const DevWorkspacePanelFramework: React.FC<
     [repository.owner, repository.name, repositoryPath],
   );
 
+  // Track tabs state to pass to RepositoryPanelProvider for panels to access
+  const [tabsForProvider, setTabsForProvider] = useState<unknown[]>([]);
+
   return (
     <RepositoryPanelProvider
       repositoryPath={repositoryPath}
       repository={repositoryMetadata}
       events={events}
       traceSourceServiceName={traceSourceServiceName}
+      openTabs={tabsForProvider}
     >
       <TerminalProvider
         repositoryPath={repositoryPath}
@@ -2435,6 +2443,7 @@ export const DevWorkspacePanelFramework: React.FC<
             onLayoutChange={onLayoutChange}
             panelSizes={panelSizes}
             onPanelSizesChange={onPanelSizesChange}
+            onTabsChange={setTabsForProvider}
           />
         </AgentHighlightProvider>
       </TerminalProvider>

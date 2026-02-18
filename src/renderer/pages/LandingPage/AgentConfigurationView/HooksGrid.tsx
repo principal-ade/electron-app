@@ -686,7 +686,7 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
         {currentHooks.map((hook, index) =>
           hook.hooks.map((h, hIndex) => (
             <HookSquare
-              key={`${index}-${hIndex}`}
+              key={`${hook.matcher || 'all'}-${h.command}`}
               command={h.command}
               matcher={hook.matcher || 'all'}
               color={color}

@@ -15,8 +15,6 @@ interface InstallStepProps {
   onInstall: () => void;
   onCheckStatus: () => void;
   onInstallComplete: () => void;
-  onUninstall?: () => void;
-  hasHooks?: boolean;
   handleClaudeTourButtonClick?: (
     stepIndex: number,
     buttonAction: () => void,
@@ -34,8 +32,6 @@ export const InstallStep: React.FC<InstallStepProps> = ({
   installProgress,
   onInstall,
   onCheckStatus,
-  onUninstall,
-  hasHooks = false,
   handleClaudeTourButtonClick,
   isClaudeTourActive,
   claudeTourStepIndex,

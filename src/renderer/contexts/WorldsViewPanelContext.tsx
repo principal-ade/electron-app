@@ -10,14 +10,12 @@ import React, {
 import { PanelEventBus } from '@principal-ade/panel-framework-core';
 import type {
   PanelContextValue,
-  PanelActions,
   DataSlice,
   PanelEventEmitter,
   RepositoryMetadata,
 } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type {
-  UserCollectionsSlice,
   UserCollectionsPanelActions,
   Collection,
   LocalProjectsPanelActions,
@@ -155,7 +153,7 @@ export const WorldsViewPanelProvider: React.FC<
   // Fetch collections on mount
   const fetchCollections = useCallback(async () => {
     console.info('[WorldsViewPanelProvider] 🔄 fetchCollections called');
-    console.trace('[WorldsViewPanelProvider] 🔍 Stack trace:');
+    console.info('[WorldsViewPanelProvider] 🔍 Stack trace:');
     try {
       setCollectionsLoading(true);
       setCollectionsError(null);
@@ -1179,15 +1177,6 @@ export const WorldsViewPanelProvider: React.FC<
       fetchCollections,
     ],
   );
-
-  // Convert slices Map to an object for direct property access (needed by v0.3.0+ panels)
-  const slicesAsObject = useMemo(() => {
-    const obj: Record<string, DataSlice> = {};
-    for (const [name, slice] of slices.entries()) {
-      obj[name] = slice;
-    }
-    return obj;
-  }, [slices]);
 
   // Build context with typed slice properties for typed panels
   const context = useMemo<WorldsViewPanelContextValue>(() => {

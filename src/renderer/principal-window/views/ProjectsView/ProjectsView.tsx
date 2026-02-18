@@ -13,7 +13,6 @@ import {
 } from '@industry-theme/alexandria-panels';
 import type { GitHubRepository } from '@industry-theme/alexandria-panels';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
 import { DoorClosed, FolderGit2, Folder, FolderOpen, Star } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuthState';
 import {
@@ -71,7 +70,6 @@ const ProjectsViewContent: React.FC = () => {
   const [entryToDelete, setEntryToDelete] = useState<AlexandriaEntry | null>(
     null,
   );
-  const [deleteEntryGitStatus, setDeleteEntryGitStatus] = useState<GitStatusWithFiles | null>(null);
 
   // State for delete workspace modal
   const [isDeleteWorkspaceModalOpen, setIsDeleteWorkspaceModalOpen] =
@@ -142,7 +140,6 @@ const ProjectsViewContent: React.FC = () => {
   const handleCloseDeleteModal = useCallback(() => {
     setIsDeleteModalOpen(false);
     setEntryToDelete(null);
-    setDeleteEntryGitStatus(null);
   }, []);
 
   // Handle delete confirmation
@@ -325,13 +322,11 @@ const ProjectsViewContent: React.FC = () => {
   // Listen for delete-requested events from ProjectInfoPanel
   useEffect(() => {
     const unsubscribe = events.on('project-info:delete-requested', (event) => {
-      const { repository, gitStatus } = event.payload as {
+      const { repository } = event.payload as {
         repository: AlexandriaEntry;
-        gitStatus?: GitStatusWithFiles;
       };
       console.info('[ProjectsView] Delete requested for:', repository.name);
       setEntryToDelete(repository);
-      setDeleteEntryGitStatus(gitStatus || null);
       setIsDeleteModalOpen(true);
     });
 
@@ -561,7 +556,6 @@ const ProjectsViewContent: React.FC = () => {
       <DeleteAlexandriaEntryModal
         isOpen={isDeleteModalOpen}
         entry={entryToDelete}
-        gitStatus={deleteEntryGitStatus}
         onClose={handleCloseDeleteModal}
         onConfirm={handleConfirmDelete}
       />

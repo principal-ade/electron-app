@@ -135,7 +135,7 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
       } else {
         setError('Failed to configure hooks');
       }
-    } catch (error) {
+    } catch (_error) {
       setError('Error configuring hooks');
     } finally {
       setIsConfiguringHooks(false);
@@ -155,20 +155,12 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
       } else {
         setError('Failed to remove hooks');
       }
-    } catch (error) {
+    } catch (_error) {
       setError('Error removing hooks');
     } finally {
       setIsConfiguringHooks(false);
     }
   }, [agentType, checkAgentStatus]);
-
-  const handleUninstallAgent = useCallback(async () => {
-    setError(null);
-    // For all agents, direct user to uninstall manually
-    alert(
-      `Please uninstall ${agentConfig.displayName} manually through your system settings`,
-    );
-  }, [agentConfig.displayName]);
 
   const handleMCPToggle = useCallback(async () => {
     setIsTogglingMCP(true);
@@ -361,8 +353,6 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
                   onInstall={handleInstallAgent}
                   onCheckStatus={checkAgentStatus}
                   onInstallComplete={() => setLocalInstallStatus(true)}
-                  onUninstall={handleUninstallAgent}
-                  hasHooks={agentStatus?.hasHooks || false}
                   handleClaudeTourButtonClick={handleClaudeTourButtonClick}
                   isClaudeTourActive={isClaudeTourActive}
                   claudeTourStepIndex={claudeTourStepIndex}

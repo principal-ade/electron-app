@@ -36,7 +36,6 @@ import {
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type {
   FileTree,
-  FileTreeSource,
 } from '@principal-ai/repository-abstraction';
 import { createFileTreeSource } from '@principal-ai/repository-abstraction';
 import type { TerminalSessionInfo } from '@industry-theme/xterm-terminal-panel';

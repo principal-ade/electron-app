@@ -143,12 +143,12 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
     if (repoWithMetadata.remoteUrl) {
       const url = repoWithMetadata.remoteUrl;
       // Handle https://github.com/owner/repo.git
-      const httpsMatch = url.match(/https:\/\/github\.com\/([^\/]+)\/([^\/\.]+)/);
+      const httpsMatch = url.match(new RegExp('https://github\\.com/([^/]+)/([^/.]+)'));
       if (httpsMatch) {
         return `https://github.com/${httpsMatch[1]}/${httpsMatch[2]}`;
       }
       // Handle git@github.com:owner/repo.git
-      const sshMatch = url.match(/git@github\.com:([^\/]+)\/([^\/\.]+)/);
+      const sshMatch = url.match(new RegExp('git@github\\.com:([^/]+)/([^/.]+)'));
       if (sshMatch) {
         return `https://github.com/${sshMatch[1]}/${sshMatch[2]}`;
       }

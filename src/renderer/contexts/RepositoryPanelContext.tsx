@@ -28,7 +28,7 @@ import {
   type RunningServer,
 } from '../main-process-api/LocalhostDetectionService';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import type { FileTree, FileTreeSource } from '@principal-ai/repository-abstraction';
+import type { FileTree } from '@principal-ai/repository-abstraction';
 import { FileTreeCore, createFileTreeSource } from '@principal-ai/repository-abstraction';
 import type { PackagesSliceData } from '@principal-ai/codebase-composition';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
@@ -79,6 +79,7 @@ interface RepositoryPanelContextValue extends PanelContextValue {
   // These are always present in the slices Map
   activeFile: DataSlice<ActiveFileSlice>;
   fileTree: DataSlice<FileTree>;
+  openTabs: DataSlice<unknown[]>;
 }
 
 // Provider value that contains context, actions, and events separately
@@ -99,11 +100,13 @@ interface RepositoryPanelProviderProps {
   events: PanelEventEmitter;
   /** Trace source service name for OTEL MessagePort routing */
   traceSourceServiceName?: string;
+  /** Open tabs from DevWorkspace - used by panels to check selection state */
+  openTabs?: unknown[];
 }
 
 export const RepositoryPanelProvider: React.FC<
   RepositoryPanelProviderProps
-> = ({ children, repositoryPath, repository, events, traceSourceServiceName }) => {
+> = ({ children, repositoryPath, repository, events, traceSourceServiceName, openTabs = [] }) => {
   // Track file tree for the current repository
   const [fileTreeData, setFileTreeData] = useState<FileTree | null>(null);
   const [fileTreeLoading, setFileTreeLoading] = useState(false);
@@ -826,7 +829,7 @@ export const RepositoryPanelProvider: React.FC<
                   // Check for duplicates
                   const existingIds = new Set(prev.map((t) => t.traceId));
                   if (existingIds.has(trace.traceId)) {
-                    console.debug('[RepositoryPanelProvider] Skipping duplicate trace:', trace.traceId);
+                    console.info('[RepositoryPanelProvider] Skipping duplicate trace:', trace.traceId);
                     return prev;
                   }
 
@@ -1463,6 +1466,20 @@ export const RepositoryPanelProvider: React.FC<
     [stableActiveFileData, activeFileLoading, activeFileError, repositoryPath],
   );
 
+  const openTabsSlice: DataSlice<unknown[]> = useMemo(
+    () => ({
+      scope: 'workspace' as const,
+      name: 'openTabs',
+      data: openTabs,
+      loading: false,
+      error: null,
+      refresh: async () => {
+        // Tabs are managed by DevWorkspace, no refresh needed
+      },
+    }),
+    [openTabs],
+  );
+
   const slices = useMemo<Map<string, DataSlice<unknown>>>(
     () =>
       new Map([
@@ -1887,6 +1904,7 @@ export const RepositoryPanelProvider: React.FC<
       // Alexandria docs panel needs: activeFile (camelCase), fileTree
       activeFile: activeFileSlice,
       fileTree: fileTreeSlice,
+      openTabs: openTabsSlice,
     }),
     [
       repositoryPath,
@@ -1903,6 +1921,7 @@ export const RepositoryPanelProvider: React.FC<
       refresh,
       activeFileSlice,
       fileTreeSlice,
+      openTabsSlice,
     ],
   );
 

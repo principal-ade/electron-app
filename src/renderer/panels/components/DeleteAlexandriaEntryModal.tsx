@@ -10,7 +10,6 @@ import type {
   AlexandriaEntry,
   Workspace,
 } from '@principal-ai/alexandria-core-library/types';
-import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { ShellService } from '../../main-process-api/ShellService';
 import { getWorkspaceThemeColor } from '../../themes/predefinedThemes';
@@ -18,28 +17,18 @@ import { getWorkspaceThemeColor } from '../../themes/predefinedThemes';
 interface DeleteAlexandriaEntryModalProps {
   isOpen: boolean;
   entry: (AlexandriaEntry & { isTracked?: boolean }) | null;
-  gitStatus?: GitStatusWithFiles | null;
   onClose: () => void;
   onConfirm: (deleteLocal: boolean) => Promise<void>;
 }
 
 export const DeleteAlexandriaEntryModal: React.FC<
   DeleteAlexandriaEntryModalProps
-> = ({ isOpen, entry, gitStatus, onClose, onConfirm }) => {
+> = ({ isOpen, entry, onClose, onConfirm }) => {
   const { theme } = useTheme();
 
   // Check if this is a real Alexandria entry (not just a discovered repo)
   // Discovered repos have isDiscovered: true
   const isAlexandriaEntry = !(entry as any)?.isDiscovered;
-
-  // Calculate if repo is clean and synced for default selection
-  const isCleanAndSynced = gitStatus ? (
-    (gitStatus.stagedFiles?.length || 0) === 0 &&
-    (gitStatus.modifiedFiles?.length || 0) === 0 &&
-    (gitStatus.untrackedFiles?.length || 0) === 0 &&
-    (gitStatus.ahead || 0) === 0 &&
-    (gitStatus.behind || 0) === 0
-  ) : false;
 
   const [isDeleting, setIsDeleting] = useState(false);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
@@ -368,12 +357,12 @@ export const DeleteAlexandriaEntryModal: React.FC<
                 if ((entry as any).remoteUrl) {
                   const url = (entry as any).remoteUrl as string;
                   // Handle https://github.com/owner/repo.git
-                  const httpsMatch = url.match(/https:\/\/github\.com\/([^\/]+)\/([^\/\.]+)/);
+                  const httpsMatch = url.match(new RegExp('https://github\\.com/([^/]+)/([^/.]+)'));
                   if (httpsMatch) {
                     return `https://github.com/${httpsMatch[1]}/${httpsMatch[2]}`;
                   }
                   // Handle git@github.com:owner/repo.git
-                  const sshMatch = url.match(/git@github\.com:([^\/]+)\/([^\/\.]+)/);
+                  const sshMatch = url.match(new RegExp('git@github\\.com:([^/]+)/([^/.]+)'));
                   if (sshMatch) {
                     return `https://github.com/${sshMatch[1]}/${sshMatch[2]}`;
                   }

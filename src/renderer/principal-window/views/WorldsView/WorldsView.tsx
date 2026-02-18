@@ -5,7 +5,6 @@ import '@principal-ade/panels/panels.css';
 import { UserCollectionsPanel, LocalProjectsPanel } from '@industry-theme/alexandria-panels';
 import { CollectionMapPanel } from '@industry-theme/repository-composition-panels';
 import { Map, FolderOpen, Folder } from 'lucide-react';
-import { useAuth } from '../../../hooks/useAuthState';
 import {
   WorldsViewPanelProvider,
   useWorldsViewPanelProvider,
