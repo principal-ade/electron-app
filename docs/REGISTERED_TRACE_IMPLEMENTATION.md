@@ -116,7 +116,7 @@ export class TraceRegistryMatcher implements ITraceRegistryMatcher {
       const matchInfo = this.extractMatchInfo(otlpData);
 
       // Extract source URL for routing
-      const sourceUrl = this.extractSourceUrl(otlpData);
+      const serviceIdentifier = this.extractSourceUrl(otlpData);
 
       if (!matchInfo) {
         // Unmatched trace (no pv.* attributes)
@@ -139,7 +139,7 @@ export class TraceRegistryMatcher implements ITraceRegistryMatcher {
             coveragePercent: 0,
           },
           routing: {
-            sourceUrl,
+            serviceIdentifier,
             destination: 'trace-viewer',
           },
           otlpData,
@@ -178,7 +178,7 @@ export class TraceRegistryMatcher implements ITraceRegistryMatcher {
       };
 
       // Determine routing destination
-      const routing = this.determineRouting(matchInfo, registry, sourceUrl);
+      const routing = this.determineRouting(matchInfo, registry, serviceIdentifier);
 
       return {
         traceId,
@@ -351,18 +351,18 @@ export class TraceRegistryMatcher implements ITraceRegistryMatcher {
   private determineRouting(
     matchInfo: NonNullable<ReturnType<typeof this.extractMatchInfo>>,
     registry: RegistryLookupResult,
-    sourceUrl: string
+    serviceIdentifier: string
   ): RegisteredTrace['routing'] {
     if (!registry.isRegistered) {
       return {
-        sourceUrl,
+        serviceIdentifier,
         destination: 'unmatched',
       };
     }
 
     if (matchInfo.scenarioId) {
       return {
-        sourceUrl,
+        serviceIdentifier,
         destination: 'scenario-viewer',
         params: {
           storyboardId: matchInfo.storyboardId,
@@ -374,7 +374,7 @@ export class TraceRegistryMatcher implements ITraceRegistryMatcher {
     }
 
     return {
-      sourceUrl,
+      serviceIdentifier,
       destination: 'storyboard-viewer',
       params: {
         storyboardId: matchInfo.storyboardId,
@@ -488,11 +488,11 @@ Update the `handleTraceRequest` method to match traces:
         });
 
         // Send RegisteredTrace instead of raw OTLP
-        this.traceOutput.send(registeredTrace, registeredTrace.routing.sourceUrl);
+        this.traceOutput.send(registeredTrace, registeredTrace.routing.serviceIdentifier);
       } else {
         // Fallback: send raw OTLP (backward compatibility)
-        const sourceUrl = this.extractSourceUrl(payload);
-        this.traceOutput.send(payload, sourceUrl);
+        const serviceIdentifier = this.extractSourceUrl(payload);
+        this.traceOutput.send(payload, serviceIdentifier);
       }
 
       // ... rest of request handling ...
@@ -775,7 +775,7 @@ const [telemetryTraces, setTelemetryTraces] = useState<TraceInfo[]>([]);
 const [registeredTraces, setRegisteredTraces] = useState<RegisteredTrace[]>([]);
 
 // In message handler:
-window.electron.onOtelMessage(windowId, sourceUrl, (message) => {
+window.electron.onOtelMessage(windowId, serviceIdentifier, (message) => {
   // Check message type
   if (message?.type === 'REGISTERED_TRACE') {
     const trace = message.payload as RegisteredTrace;

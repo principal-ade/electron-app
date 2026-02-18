@@ -26,7 +26,7 @@ This document describes the integration of OpenTelemetry (OTEL) trace viewer com
 ┌─────────────────────────────────────┐
 │  OTELCollectorServer (Main Process) │
 │  - Receives OTLP traces             │
-│  - Routes based on sourceUrl        │
+│  - Routes based on serviceIdentifier        │
 └──────────────┬──────────────────────┘
                │ MessagePort
                │ (postMessage pattern)
@@ -56,7 +56,7 @@ This document describes the integration of OpenTelemetry (OTEL) trace viewer com
 
 ### Trace Routing
 
-The OTEL collector routes traces based on the `sourceUrl` attribute extracted from trace data:
+The OTEL collector routes traces based on the `serviceIdentifier` attribute extracted from trace data:
 
 1. **Extraction Order** (in `OTLPForwardingServer.extractSourceUrl()`):
    - First checks `dev.server.url` attribute
@@ -64,15 +64,15 @@ The OTEL collector routes traces based on the `sourceUrl` attribute extracted fr
    - Defaults to `'unknown'` if neither exists
 
 2. **Routing Mechanism** (in `PortRouter`):
-   - Traces are routed to all MessagePorts registered for the specific sourceUrl
-   - Wildcard registrations (`*`) receive all traces regardless of sourceUrl
+   - Traces are routed to all MessagePorts registered for the specific serviceIdentifier
+   - Wildcard registrations (`*`) receive all traces regardless of serviceIdentifier
    - Prevents duplicate sends to the same windowId
 
 3. **Dev Workspace Selection**:
-   - UI dropdown in titlebar allows selecting sourceUrl
+   - UI dropdown in titlebar allows selecting serviceIdentifier
    - Options: `principal-ade`, `*` (all), or repository-specific path
    - Selection persisted in localStorage
-   - Re-registration happens on sourceUrl change
+   - Re-registration happens on serviceIdentifier change
 
 ---
 
@@ -93,7 +93,7 @@ The OTEL collector routes traces based on the `sourceUrl` attribute extracted fr
 
 ```typescript
 // IMPORTANT: MessagePorts can't be returned via invoke()
-event.sender.postMessage('otel-collector:port', { windowId, sourceUrl }, [port2]);
+event.sender.postMessage('otel-collector:port', { windowId, serviceIdentifier }, [port2]);
 ```
 
 ### Preload Layer
@@ -103,10 +103,10 @@ event.sender.postMessage('otel-collector:port', { windowId, sourceUrl }, [port2]
 - Listens for MessagePort delivery via `otel-collector:port` IPC event
 - Routes incoming messages to renderer subscribers
 - Exposes helper methods through `window.electron`:
-  - `onOtelMessage(windowId, sourceUrl, callback)` - Subscribe to trace messages
-  - `sendOtelMessage(windowId, sourceUrl, data)` - Send messages to server
-  - `hasOtelPort(windowId, sourceUrl)` - Check if port exists
-  - `removeOtelPort(windowId, sourceUrl)` - Cleanup port
+  - `onOtelMessage(windowId, serviceIdentifier, callback)` - Subscribe to trace messages
+  - `sendOtelMessage(windowId, serviceIdentifier, data)` - Send messages to server
+  - `hasOtelPort(windowId, serviceIdentifier)` - Check if port exists
+  - `removeOtelPort(windowId, serviceIdentifier)` - Cleanup port
 - Location: Lines 165-373
 
 ```typescript
@@ -161,7 +161,7 @@ ipcRenderer.on('otel-collector:port', (event, data) => {
 // Key Integration - subscribe to messages (port stays in preload)
 const unsubscribe = window.electron.onOtelMessage(
   windowId,
-  sourceUrl,
+  serviceIdentifier,
   (data) => {
     if (data?.type === 'CONNECTION_CONFIRMED') {
       console.info('Server connection confirmed!');
@@ -180,10 +180,10 @@ const unsubscribe = window.electron.onOtelMessage(
 );
 
 // Send ready ping to trigger server confirmation
-window.electron.sendOtelMessage(windowId, sourceUrl, {
+window.electron.sendOtelMessage(windowId, serviceIdentifier, {
   type: 'RENDERER_READY',
   windowId,
-  sourceUrl,
+  serviceIdentifier,
   timestamp: Date.now(),
 });
 ```
@@ -231,8 +231,8 @@ Error: An object could not be cloned
 **Main Process**:
 ```typescript
 const { port1, port2 } = new MessageChannelMain();
-service.registerPort(windowId, sourceUrl, port1);
-event.sender.postMessage('otel-collector:port', { windowId, sourceUrl }, [port2]);
+service.registerPort(windowId, serviceIdentifier, port1);
+event.sender.postMessage('otel-collector:port', { windowId, serviceIdentifier }, [port2]);
 ```
 
 **Preload**:
@@ -273,8 +273,8 @@ port.onmessage = (e) => {
 
 // Expose through contextBridge
 contextBridge.exposeInMainWorld('electron', {
-  onOtelMessage: (windowId, sourceUrl, callback) => { /* subscribe */ },
-  sendOtelMessage: (windowId, sourceUrl, data) => { /* send */ },
+  onOtelMessage: (windowId, serviceIdentifier, callback) => { /* subscribe */ },
+  sendOtelMessage: (windowId, serviceIdentifier, data) => { /* send */ },
 });
 ```
 
@@ -300,7 +300,7 @@ port.on('message', (event) => {
     port.postMessage({
       type: 'CONNECTION_CONFIRMED',
       windowId,
-      sourceUrl,
+      serviceIdentifier,
       timestamp: Date.now(),
     });
   }
@@ -311,13 +311,13 @@ port.start();
 **Renderer**:
 ```typescript
 // Subscribe to messages FIRST
-window.electron.onOtelMessage(windowId, sourceUrl, (data) => { /* handle */ });
+window.electron.onOtelMessage(windowId, serviceIdentifier, (data) => { /* handle */ });
 
 // THEN send ready ping
-window.electron.sendOtelMessage(windowId, sourceUrl, {
+window.electron.sendOtelMessage(windowId, serviceIdentifier, {
   type: 'RENDERER_READY',
   windowId,
-  sourceUrl,
+  serviceIdentifier,
 });
 ```
 
@@ -416,7 +416,7 @@ const devWorkspaceAPI: DevWorkspaceMainProcessAPI = {
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ 1. RepositoryPanelContext (Renderer)                        │
-│    OtelCollectorService.registerPort(windowId, sourceUrl)   │
+│    OtelCollectorService.registerPort(windowId, serviceIdentifier)   │
 └───────────────────────┬─────────────────────────────────────┘
                         │
                         ▼
@@ -438,7 +438,7 @@ const devWorkspaceAPI: DevWorkspaceMainProcessAPI = {
 ┌─────────────────────────────────────────────────────────────┐
 │ 4. OtelCollectorService (Main Process)                      │
 │    - Stores port1 in PortRouter                             │
-│    - Associates with windowId + sourceUrl                   │
+│    - Associates with windowId + serviceIdentifier                   │
 └─────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
@@ -469,14 +469,14 @@ const devWorkspaceAPI: DevWorkspaceMainProcessAPI = {
                         ▼
 ┌─────────────────────────────────────────────────────────────┐
 │ 2. OTELCollectorServer receives trace                       │
-│    - Extracts sourceUrl from attributes                     │
+│    - Extracts serviceIdentifier from attributes                     │
 │    - Routes to PortRouter                                   │
 └───────────────────────┬─────────────────────────────────────┘
                         │
                         ▼
 ┌─────────────────────────────────────────────────────────────┐
 │ 3. PortRouter routes trace                                  │
-│    - Finds ports registered for sourceUrl                   │
+│    - Finds ports registered for serviceIdentifier                   │
 │    - Sends via port.postMessage(payload)                    │
 └───────────────────────┬─────────────────────────────────────┘
                         │
@@ -558,7 +558,7 @@ The integration includes extensive logging at key points:
 
 **Main Process** (`otelCollectorHandlers.ts`):
 ```
-[IPC] Registering trace port for window: dev-workspace-xxxxx, sourceUrl: principal-ade
+[IPC] Registering trace port for window: dev-workspace-xxxxx, serviceIdentifier: principal-ade
 [IPC] ✅ Trace port registered and sent to renderer
 ```
 
@@ -573,7 +573,7 @@ The integration includes extensive logging at key points:
 
 **Renderer** (`RepositoryPanelContext.tsx`):
 ```
-[RepositoryPanelProvider] Registering telemetry port with sourceUrl: principal-ade
+[RepositoryPanelProvider] Registering telemetry port with serviceIdentifier: principal-ade
 [RepositoryPanelProvider] ✅ Telemetry port registered successfully
 [RepositoryPanelProvider] MessagePort received data: {resourceSpans: [...]}
 [RepositoryPanelProvider] Valid trace data, resourceSpans count: 1
@@ -590,7 +590,7 @@ The integration includes extensive logging at key points:
    // { isRunning: true, stats: {...} }
    ```
 
-2. Verify trace sourceUrl matches selection:
+2. Verify trace serviceIdentifier matches selection:
    ```javascript
    // In your app's trace
    attributes: { 'service.name': 'principal-ade' }

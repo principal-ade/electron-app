@@ -265,7 +265,7 @@
       "y": 0,
       "width": 220,
       "height": 120,
-      "text": "MessagePort System\nRoutes traces to\nspecific windows\n(windowId:sourceUrl)",
+      "text": "MessagePort System\nRoutes traces to\nspecific windows\n(windowId:serviceIdentifier)",
       "pv": {
         "nodeType": "ipc-transport",
         "shape": "rectangle",
@@ -376,7 +376,7 @@
             },
             "port.key": {
               "type": "string",
-              "description": "Port map key: windowId:sourceUrl"
+              "description": "Port map key: windowId:serviceIdentifier"
             },
             "subscribers.count": {
               "type": "number",

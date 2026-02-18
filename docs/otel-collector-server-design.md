@@ -93,23 +93,23 @@ GET  /health         // Health check
 ```typescript
 interface PortRegistration {
   windowId: string;           // Unique window identifier
-  sourceUrl: string;          // e.g., "http://localhost:3000"
+  serviceIdentifier: string;          // e.g., "http://localhost:3000"
   port: MessagePort;          // Direct channel to renderer
   registeredAt: number;       // Timestamp
 }
 
-// Map: sourceUrl → PortRegistration[]
+// Map: serviceIdentifier → PortRegistration[]
 private portRegistry: Map<string, PortRegistration[]>;
 ```
 
 **Routing Logic**:
 ```typescript
-routeTraces(traces: Trace[], sourceUrl: string) {
-  const registrations = this.portRegistry.get(sourceUrl);
+routeTraces(traces: Trace[], serviceIdentifier: string) {
+  const registrations = this.portRegistry.get(serviceIdentifier);
 
   if (!registrations || registrations.length === 0) {
     // No registered consumers - optionally buffer or drop
-    this.handleUnroutedTraces(traces, sourceUrl);
+    this.handleUnroutedTraces(traces, serviceIdentifier);
     return;
   }
 
@@ -118,7 +118,7 @@ routeTraces(traces: Trace[], sourceUrl: string) {
     reg.port.postMessage({
       type: 'TRACE_BATCH',
       traces,
-      source: sourceUrl,
+      source: serviceIdentifier,
       timestamp: Date.now()
     });
   });
@@ -179,14 +179,14 @@ function setupMessageHandlers() {
 }
 
 function handlePortRegistration(message: any) {
-  const { windowId, sourceUrl, port } = message;
+  const { windowId, serviceIdentifier, port } = message;
 
-  server!.registerPort(windowId, sourceUrl, port);
+  server!.registerPort(windowId, serviceIdentifier, port);
 
   process.parentPort!.postMessage({
     type: 'PORT_REGISTERED',
     windowId,
-    sourceUrl
+    serviceIdentifier
   });
 }
 
@@ -214,7 +214,7 @@ initialize().catch(err => {
 {
   type: 'REGISTER_PORT',
   windowId: string,
-  sourceUrl: string,  // e.g., "http://localhost:3000"
+  serviceIdentifier: string,  // e.g., "http://localhost:3000"
   port: MessagePort   // Transferred port
 }
 ```
@@ -224,7 +224,7 @@ initialize().catch(err => {
 {
   type: 'UNREGISTER_PORT',
   windowId: string,
-  sourceUrl: string
+  serviceIdentifier: string
 }
 ```
 
@@ -272,7 +272,7 @@ Response:
 {
   type: 'PORT_REGISTERED',
   windowId: string,
-  sourceUrl: string
+  serviceIdentifier: string
 }
 ```
 
@@ -431,16 +431,16 @@ export class OTELCollectorServer {
   getStats(): ServerStats;
 
   // Port management
-  registerPort(windowId: string, sourceUrl: string, port: MessagePort): void;
-  unregisterPort(windowId: string, sourceUrl: string): void;
+  registerPort(windowId: string, serviceIdentifier: string, port: MessagePort): void;
+  unregisterPort(windowId: string, serviceIdentifier: string): void;
   unregisterWindow(windowId: string): void;  // Unregister all ports for window
 
   // Internal methods
   private handleTraceRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void>;
   private parseOTLPPayload(body: any): Trace[];
   private extractSourceUrl(req: http.IncomingMessage): string | null;
-  private routeTraces(traces: Trace[], sourceUrl: string): void;
-  private handleUnroutedTraces(traces: Trace[], sourceUrl: string): void;
+  private routeTraces(traces: Trace[], serviceIdentifier: string): void;
+  private handleUnroutedTraces(traces: Trace[], serviceIdentifier: string): void;
 }
 ```
 
@@ -458,8 +458,8 @@ export class OTELCollectorManager {
   async stop(): Promise<void>;
 
   // Called by renderer windows via IPC
-  registerPort(windowId: string, sourceUrl: string, port: MessagePort): Promise<void>;
-  unregisterPort(windowId: string, sourceUrl: string): Promise<void>;
+  registerPort(windowId: string, serviceIdentifier: string, port: MessagePort): Promise<void>;
+  unregisterPort(windowId: string, serviceIdentifier: string): Promise<void>;
 
   // Lifecycle
   onWindowClosed(windowId: string): void;
@@ -488,36 +488,36 @@ export class OTELCollectorService {
    * Register this window to receive traces from a specific source URL
    */
   static async registerForTraces(
-    sourceUrl: string,
+    serviceIdentifier: string,
     listener: TraceListener
   ): Promise<void> {
     if (!this.messagePort) {
-      await this.initializeMessagePort(sourceUrl);
+      await this.initializeMessagePort(serviceIdentifier);
     }
 
-    const listeners = this.listeners.get(sourceUrl) || new Set();
+    const listeners = this.listeners.get(serviceIdentifier) || new Set();
     listeners.add(listener);
-    this.listeners.set(sourceUrl, listeners);
+    this.listeners.set(serviceIdentifier, listeners);
 
     // Register with main process
-    await window.mainProcess.otelCollector.registerPort(sourceUrl);
+    await window.mainProcess.otelCollector.registerPort(serviceIdentifier);
   }
 
   /**
    * Unregister this window from receiving traces
    */
   static async unregisterFromTraces(
-    sourceUrl: string,
+    serviceIdentifier: string,
     listener?: TraceListener
   ): Promise<void> {
     if (listener) {
-      const listeners = this.listeners.get(sourceUrl);
+      const listeners = this.listeners.get(serviceIdentifier);
       listeners?.delete(listener);
     } else {
-      this.listeners.delete(sourceUrl);
+      this.listeners.delete(serviceIdentifier);
     }
 
-    await window.mainProcess.otelCollector.unregisterPort(sourceUrl);
+    await window.mainProcess.otelCollector.unregisterPort(serviceIdentifier);
   }
 
   static async getStats(): Promise<ServerStats> {
@@ -525,7 +525,7 @@ export class OTELCollectorService {
   }
 
   // Private
-  private static async initializeMessagePort(sourceUrl: string): Promise<void> {
+  private static async initializeMessagePort(serviceIdentifier: string): Promise<void> {
     const { port1, port2 } = new MessageChannel();
 
     this.messagePort = port1;
@@ -534,7 +534,7 @@ export class OTELCollectorService {
     };
 
     // Transfer port2 to main process
-    await window.mainProcess.otelCollector.initializePort(sourceUrl, port2);
+    await window.mainProcess.otelCollector.initializePort(serviceIdentifier, port2);
   }
 
   private static handleMessage(message: any): void {
@@ -584,7 +584,7 @@ export async function initializeServices() {
 }
 
 // Register IPC handlers
-ipcMain.handle('otel-collector:register-port', async (event, sourceUrl) => {
+ipcMain.handle('otel-collector:register-port', async (event, serviceIdentifier) => {
   const { port1, port2 } = new MessageChannel();
 
   // Send port1 back to renderer
@@ -592,12 +592,12 @@ ipcMain.handle('otel-collector:register-port', async (event, sourceUrl) => {
 
   // Register port2 with collector
   const windowId = getWindowId(event.sender);
-  await otelCollectorManager.registerPort(windowId, sourceUrl, port2);
+  await otelCollectorManager.registerPort(windowId, serviceIdentifier, port2);
 });
 
-ipcMain.handle('otel-collector:unregister-port', async (event, sourceUrl) => {
+ipcMain.handle('otel-collector:unregister-port', async (event, serviceIdentifier) => {
   const windowId = getWindowId(event.sender);
-  await otelCollectorManager.unregisterPort(windowId, sourceUrl);
+  await otelCollectorManager.unregisterPort(windowId, serviceIdentifier);
 });
 
 ipcMain.handle('otel-collector:get-stats', async () => {
@@ -716,7 +716,7 @@ When traces arrive with no registered consumers:
 **Option 1: Buffer (Default)**
 ```typescript
 if (this.config.bufferUnroutedTraces) {
-  const buffer = this.unroutedBuffer.get(sourceUrl) || [];
+  const buffer = this.unroutedBuffer.get(serviceIdentifier) || [];
   buffer.push(...traces);
 
   // Prevent unbounded growth
@@ -725,7 +725,7 @@ if (this.config.bufferUnroutedTraces) {
     this.stats.buffersOverflowed++;
   }
 
-  this.unroutedBuffer.set(sourceUrl, buffer);
+  this.unroutedBuffer.set(serviceIdentifier, buffer);
 }
 ```
 
@@ -733,7 +733,7 @@ if (this.config.bufferUnroutedTraces) {
 ```typescript
 else {
   this.stats.tracesDropped += traces.length;
-  console.warn(`[OTEL] Dropped ${traces.length} traces for ${sourceUrl} (no consumers)`);
+  console.warn(`[OTEL] Dropped ${traces.length} traces for ${serviceIdentifier} (no consumers)`);
 }
 ```
 
@@ -763,16 +763,16 @@ private handleWorkerExit(code: number): void {
 private async handleTraceRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
   try {
     const body = await this.readBody(req);
-    const sourceUrl = this.extractSourceUrl(req);
+    const serviceIdentifier = this.extractSourceUrl(req);
 
-    if (!sourceUrl) {
+    if (!serviceIdentifier) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Missing source identification' }));
       return;
     }
 
     const traces = this.parseOTLPPayload(JSON.parse(body));
-    this.routeTraces(traces, sourceUrl);
+    this.routeTraces(traces, serviceIdentifier);
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'ok', tracesReceived: traces.length }));
@@ -831,22 +831,22 @@ Collect traces and forward in batches to reduce MessagePort overhead:
 private traceBatch: Trace[] = [];
 private batchTimer: NodeJS.Timeout | null = null;
 
-private addToBatch(traces: Trace[], sourceUrl: string): void {
+private addToBatch(traces: Trace[], serviceIdentifier: string): void {
   this.traceBatch.push(...traces);
 
   if (this.traceBatch.length >= this.config.maxBatchSize!) {
-    this.flushBatch(sourceUrl);
+    this.flushBatch(serviceIdentifier);
   } else if (!this.batchTimer) {
     this.batchTimer = setTimeout(() => {
-      this.flushBatch(sourceUrl);
+      this.flushBatch(serviceIdentifier);
     }, this.config.flushInterval!);
   }
 }
 
-private flushBatch(sourceUrl: string): void {
+private flushBatch(serviceIdentifier: string): void {
   if (this.traceBatch.length === 0) return;
 
-  this.routeTraces([...this.traceBatch], sourceUrl);
+  this.routeTraces([...this.traceBatch], serviceIdentifier);
   this.traceBatch = [];
 
   if (this.batchTimer) {
@@ -934,7 +934,7 @@ private flushBatch(sourceUrl: string): void {
    - Buffered with TTL (e.g., discard after 60s)?
    - Dropped immediately?
 
-2. **Multi-Window Behavior**: If multiple DevWorkspace windows register for same sourceUrl:
+2. **Multi-Window Behavior**: If multiple DevWorkspace windows register for same serviceIdentifier:
    - Broadcast to all? (Current design)
    - Round-robin?
    - User choice?

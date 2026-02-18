@@ -69,12 +69,13 @@ export class OtelCollectorService {
   }
 
   /**
-   * Register a MessagePort to receive traces for a specific source URL
-   * The port will be delivered via window.electron.onOtelPortReady callback
+   * Register a MessagePort to receive traces for a specific service
+   * @param windowId - Unique window identifier
+   * @param serviceIdentifier - Service identifier (e.g., "web-ade", repository path, or "*" for all)
    */
-  static async registerPort(windowId: string, sourceUrl: string): Promise<OtelCollectorResponse> {
+  static async registerPort(windowId: string, serviceIdentifier: string): Promise<OtelCollectorResponse> {
     try {
-      return await window.mainProcess.otelCollector.registerPort(windowId, sourceUrl);
+      return await window.mainProcess.otelCollector.registerPort(windowId, serviceIdentifier);
     } catch (err) {
       console.error('[OtelCollectorService] Failed to register port:', err);
       return { success: false, error: err instanceof Error ? err.message : String(err) };
@@ -82,11 +83,13 @@ export class OtelCollectorService {
   }
 
   /**
-   * Unregister a trace port
+   * Unregister a trace port for a specific service
+   * @param windowId - Unique window identifier
+   * @param serviceIdentifier - Service identifier to unregister
    */
-  static async unregisterPort(windowId: string, sourceUrl: string): Promise<OtelCollectorResponse> {
+  static async unregisterPort(windowId: string, serviceIdentifier: string): Promise<OtelCollectorResponse> {
     try {
-      return await window.mainProcess.otelCollector.unregisterPort(windowId, sourceUrl);
+      return await window.mainProcess.otelCollector.unregisterPort(windowId, serviceIdentifier);
     } catch (err) {
       console.error('[OtelCollectorService] Failed to unregister port:', err);
       return { success: false, error: err instanceof Error ? err.message : String(err) };
@@ -107,10 +110,11 @@ export class OtelCollectorService {
 
   /**
    * Send a test trace to the collector
+   * @param serviceIdentifier - Service identifier to include in test trace
    */
-  static async sendTestTrace(sourceUrl: string): Promise<OtelCollectorResponse> {
+  static async sendTestTrace(serviceIdentifier: string): Promise<OtelCollectorResponse> {
     try {
-      return await window.mainProcess.otelCollector.sendTestTrace(sourceUrl);
+      return await window.mainProcess.otelCollector.sendTestTrace(serviceIdentifier);
     } catch (err) {
       console.error('[OtelCollectorService] Failed to send test trace:', err);
       return { success: false, error: err instanceof Error ? err.message : String(err) };

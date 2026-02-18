@@ -3,9 +3,9 @@
  * Replaces Node.js EventEmitter in renderer process
  */
 export class EventEmitter {
-  private events: Record<string, Array<(...args: any[]) => void>> = {};
+  private events: Record<string, Array<(...args: unknown[]) => void>> = {};
 
-  on(event: string, listener: (...args: any[]) => void): this {
+  on(event: string, listener: (...args: unknown[]) => void): this {
     if (!this.events[event]) {
       this.events[event] = [];
     }
@@ -13,7 +13,7 @@ export class EventEmitter {
     return this;
   }
 
-  off(event: string, listener: (...args: any[]) => void): this {
+  off(event: string, listener: (...args: unknown[]) => void): this {
     if (!this.events[event]) return this;
 
     const index = this.events[event].indexOf(listener);
@@ -23,7 +23,7 @@ export class EventEmitter {
     return this;
   }
 
-  emit(event: string, ...args: any[]): boolean {
+  emit(event: string, ...args: unknown[]): boolean {
     if (!this.events[event]) return false;
 
     this.events[event].forEach((listener) => {
@@ -41,8 +41,8 @@ export class EventEmitter {
     return this;
   }
 
-  once(event: string, listener: (...args: any[]) => void): this {
-    const onceWrapper = (...args: any[]) => {
+  once(event: string, listener: (...args: unknown[]) => void): this {
+    const onceWrapper = (...args: unknown[]) => {
       this.off(event, onceWrapper);
       listener(...args);
     };

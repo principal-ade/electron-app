@@ -4,11 +4,18 @@ import {
 } from '@principal-ai/codebase-composition';
 
 /**
+ * File system adapter interface for reading files
+ */
+interface FileSystemAdapter {
+  readFile(path: string): Promise<{ content?: string } | null>;
+}
+
+/**
  * Options for loading manifest contents
  */
 interface LoadManifestOptions {
   fileSystemTree: FileTree;
-  fileSystemAdapter: any; // FileSystem adapter (GitHub or Electron)
+  fileSystemAdapter: FileSystemAdapter;
   packageModule?: PackageLayerModule; // Optional: provide existing module to reuse
   rootPath?: string; // Optional: absolute repo root for local sources
 }
@@ -25,13 +32,13 @@ interface LoadManifestOptions {
  */
 export async function loadManifestContents(
   options: LoadManifestOptions,
-): Promise<Map<string, any>> {
+): Promise<Map<string, unknown>> {
   const { fileSystemTree, fileSystemAdapter, packageModule, rootPath } =
     options;
 
   // Create or use provided package module to access its parsers
   const pkgModule = packageModule || new PackageLayerModule();
-  const manifestContents = new Map<string, any>();
+  const manifestContents = new Map<string, unknown>();
 
   if (!fileSystemTree.allFiles || fileSystemTree.allFiles.length === 0) {
     console.warn(

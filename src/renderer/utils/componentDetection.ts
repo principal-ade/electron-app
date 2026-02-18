@@ -5,15 +5,15 @@
 interface ComponentInfo {
   name: string;
   path: string;
-  props?: any;
+  props?: unknown;
 }
 
 // React fiber node type definition (simplified)
 interface FiberNode {
-  type?: any;
-  elementType?: any;
+  type?: unknown;
+  elementType?: unknown;
   tag?: number;
-  stateNode?: any;
+  stateNode?: unknown;
   return?: FiberNode;
   child?: FiberNode;
   sibling?: FiberNode;
@@ -37,7 +37,7 @@ function findFiberFromDOM(element: HTMLElement): FiberNode | null {
   );
 
   if (key) {
-    return (element as any)[key];
+    return (element as unknown as Record<string, unknown>)[key] as FiberNode;
   }
 
   // Try React 17+ keys
@@ -51,7 +51,7 @@ function findFiberFromDOM(element: HTMLElement): FiberNode | null {
       key.startsWith('__reactFiber$'),
     );
     if (propsKey) {
-      return (element as any)[propsKey];
+      return (element as unknown as Record<string, unknown>)[propsKey] as FiberNode;
     }
   }
 
@@ -67,29 +67,33 @@ function getComponentNameFromFiber(fiber: FiberNode): string {
   // Try different ways to get component name
   if (fiber.type) {
     if (typeof fiber.type === 'function') {
-      return fiber.type.displayName || fiber.type.name || 'Component';
+      return (fiber.type as { displayName?: string; name?: string }).displayName ||
+             (fiber.type as { displayName?: string; name?: string }).name ||
+             'Component';
     }
     if (typeof fiber.type === 'string') {
       return fiber.type; // DOM element
     }
-    if (fiber.type.displayName || fiber.type.name) {
-      return fiber.type.displayName || fiber.type.name;
+    const typeWithProps = fiber.type as { displayName?: string; name?: string };
+    if (typeWithProps.displayName || typeWithProps.name) {
+      return typeWithProps.displayName || typeWithProps.name || 'Component';
     }
   }
 
   if (fiber.elementType) {
     if (typeof fiber.elementType === 'function') {
-      return (
-        fiber.elementType.displayName || fiber.elementType.name || 'Component'
-      );
+      const elemType = fiber.elementType as { displayName?: string; name?: string };
+      return elemType.displayName || elemType.name || 'Component';
     }
   }
 
   // Check for memo/forward ref components
-  if (fiber.elementType && fiber.elementType.type) {
-    const innerType = fiber.elementType.type;
+  if (fiber.elementType && typeof fiber.elementType === 'object' && fiber.elementType !== null) {
+    const elemTypeWithType = fiber.elementType as { type?: unknown };
+    const innerType = elemTypeWithType.type;
     if (typeof innerType === 'function') {
-      return innerType.displayName || innerType.name || 'Component';
+      const innerTypeWithProps = innerType as { displayName?: string; name?: string };
+      return innerTypeWithProps.displayName || innerTypeWithProps.name || 'Component';
     }
   }
 

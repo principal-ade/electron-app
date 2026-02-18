@@ -66,19 +66,19 @@ export function registerOtelCollectorHandlers(): void {
   // NOTE: Uses postMessage pattern (like terminal) because MessagePorts can't be returned via invoke
   ipcMain.handle(
     HANDLERS.REGISTER_TRACE_PORT,
-    (event, windowId: string, sourceUrl: string): { success: boolean; error?: string } => {
+    (event, windowId: string, serviceIdentifier: string): { success: boolean; error?: string } => {
       try {
-        console.log(`[IPC] Registering trace port for window: ${windowId}, sourceUrl: ${sourceUrl}`);
+        console.log(`[IPC] Registering trace port for window: ${windowId}, service: ${serviceIdentifier}`);
 
         // Create a MessageChannel
         const { port1, port2 } = new MessageChannelMain();
 
         // Register port1 with the service
         // The server (PortRouter) will send a CONNECTION_CONFIRMED heartbeat after registration
-        service.registerPort(windowId, sourceUrl, port1);
+        service.registerPort(windowId, serviceIdentifier, port1);
 
         // Send port2 to the renderer via postMessage (same pattern as terminal)
-        event.sender.postMessage('otel-collector:port', { windowId, sourceUrl }, [port2]);
+        event.sender.postMessage('otel-collector:port', { windowId, serviceIdentifier }, [port2]);
 
         console.log(`[IPC] ✅ Trace port registered and sent to renderer`);
 
@@ -91,9 +91,9 @@ export function registerOtelCollectorHandlers(): void {
   );
 
   // Unregister port
-  ipcMain.handle(HANDLERS.UNREGISTER_TRACE_PORT, (event, windowId: string, sourceUrl: string) => {
+  ipcMain.handle(HANDLERS.UNREGISTER_TRACE_PORT, (event, windowId: string, serviceIdentifier: string) => {
     try {
-      service.unregisterPort(windowId, sourceUrl);
+      service.unregisterPort(windowId, serviceIdentifier);
       return { success: true };
     } catch (err) {
       console.error('[IPC] Failed to unregister trace port:', err);
@@ -113,7 +113,7 @@ export function registerOtelCollectorHandlers(): void {
   });
 
   // Send test trace (for testing)
-  ipcMain.handle(HANDLERS.SEND_TEST_TRACE, async (event, sourceUrl: string) => {
+  ipcMain.handle(HANDLERS.SEND_TEST_TRACE, async (event, serviceIdentifier: string) => {
     try {
       // Generate valid OTLP trace and span IDs
       // traceId: 32 hex characters (16 bytes)
@@ -136,8 +136,8 @@ export function registerOtelCollectorHandlers(): void {
           {
             resource: {
               attributes: [
-                { key: 'service.name', value: { stringValue: 'test-service' } },
-                { key: 'dev.server.url', value: { stringValue: sourceUrl } },
+                { key: 'service.name', value: { stringValue: serviceIdentifier } },
+                { key: 'dev.server.url', value: { stringValue: `http://localhost:3000` } },
               ],
               droppedAttributesCount: 0,
             },

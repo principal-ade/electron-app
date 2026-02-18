@@ -153,28 +153,33 @@ export class OtelCollectorService {
   }
 
   /**
-   * Register a MessagePort for a window
+   * Register a MessagePort for a window to receive traces from a specific service
+   * @param windowId - Unique window identifier
+   * @param serviceIdentifier - Service identifier (e.g., "web-ade", repository path, or "*" for all)
+   * @param port - MessagePort for trace delivery
    */
-  registerPort(windowId: string, sourceUrl: string, port: MessagePortMain): void {
+  registerPort(windowId: string, serviceIdentifier: string, port: MessagePortMain): void {
     if (!this.server) {
       throw new Error('OTEL Collector not started');
     }
 
     // Cast to any since MessagePortMain is API-compatible with worker_threads MessagePort
-    this.server.registerPort(windowId, sourceUrl, port as unknown as import('worker_threads').MessagePort);
-    console.log(`[OtelCollectorService] Registered port for window ${windowId}, source: ${sourceUrl}`);
+    this.server.registerPort(windowId, serviceIdentifier, port as unknown as import('worker_threads').MessagePort);
+    console.log(`[OtelCollectorService] Registered port for window ${windowId}, service: ${serviceIdentifier}`);
   }
 
   /**
-   * Unregister a MessagePort for a window
+   * Unregister a MessagePort for a window and service
+   * @param windowId - Unique window identifier
+   * @param serviceIdentifier - Service identifier to unregister
    */
-  unregisterPort(windowId: string, sourceUrl: string): void {
+  unregisterPort(windowId: string, serviceIdentifier: string): void {
     if (!this.server) {
       return;
     }
 
-    this.server.unregisterPort(windowId, sourceUrl);
-    console.log(`[OtelCollectorService] Unregistered port for window ${windowId}, source: ${sourceUrl}`);
+    this.server.unregisterPort(windowId, serviceIdentifier);
+    console.log(`[OtelCollectorService] Unregistered port for window ${windowId}, service: ${serviceIdentifier}`);
   }
 
   /**

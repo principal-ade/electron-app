@@ -54,6 +54,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "lint:all": "eslint . --ignore-pattern ''",
+    "lint:clean-dirs": "eslint src/shared src/window src/terminal-worker src/event-processing-server src/telemetry src/titlebar",
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
     "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
     "format:staged": "prettier --write \"src/main/main.ts\" \"src/window/preload.ts\"",

@@ -771,23 +771,23 @@ export const RepositoryPanelProvider: React.FC<
   useEffect(() => {
     let unsubscribe: (() => void) | null = null;
     let windowId: string | null = null;
-    let sourceUrl: string | null = null;
+    let serviceIdentifier: string | null = null;
 
     const registerTelemetryPort = async () => {
       try {
-        // Generate window ID and determine source service name
+        // Generate window ID and determine service identifier
         windowId = `dev-workspace-${Date.now()}`;
-        sourceUrl = traceSourceServiceName || 'principal-ade';
+        serviceIdentifier = traceSourceServiceName || 'principal-ade';
 
         console.info('[RepositoryPanelProvider] 🔌 Registering telemetry port');
         console.info('[RepositoryPanelProvider] traceSourceServiceName prop:', traceSourceServiceName);
-        console.info('[RepositoryPanelProvider] Final sourceUrl:', sourceUrl);
+        console.info('[RepositoryPanelProvider] Final serviceIdentifier:', serviceIdentifier);
         console.info('[RepositoryPanelProvider] Window ID:', windowId);
 
         // Subscribe to OTEL messages (port is handled in preload)
         unsubscribe = window.mainProcess.otelCollector.onOtelMessage(
           windowId,
-          sourceUrl,
+          serviceIdentifier,
           (data: unknown) => {
             try {
               const message = data as any;
@@ -797,7 +797,7 @@ export const RepositoryPanelProvider: React.FC<
               if (message?.type === 'CONNECTION_CONFIRMED') {
                 console.info('[RepositoryPanelProvider] 🎉 Server connection confirmed!', {
                   windowId: message.windowId,
-                  sourceUrl: message.sourceUrl,
+                  serviceIdentifier: message.serviceIdentifier,
                   timestamp: new Date(message.timestamp).toISOString(),
                 });
                 return;
@@ -859,7 +859,7 @@ export const RepositoryPanelProvider: React.FC<
         );
 
         // Trigger IPC registration (port will arrive in preload)
-        const response = await OtelCollectorService.registerPort(windowId, sourceUrl);
+        const response = await OtelCollectorService.registerPort(windowId, serviceIdentifier);
 
         if (!response.success) {
           console.error('[RepositoryPanelProvider] Failed to register telemetry port:', response.error);
@@ -868,16 +868,16 @@ export const RepositoryPanelProvider: React.FC<
 
         console.info('[RepositoryPanelProvider] ✅ Telemetry port registration initiated');
         console.info('[RepositoryPanelProvider] Window ID:', windowId);
-        console.info('[RepositoryPanelProvider] Source URL:', sourceUrl);
+        console.info('[RepositoryPanelProvider] Service identifier:', serviceIdentifier);
 
         // Send ready ping to server after a short delay to ensure subscription is set up
         setTimeout(() => {
-          if (!windowId || !sourceUrl) return;
+          if (!windowId || !serviceIdentifier) return;
           console.info('[RepositoryPanelProvider] 📤 Sending RENDERER_READY ping to server');
-          const sent = window.mainProcess.otelCollector.sendOtelMessage(windowId, sourceUrl, {
+          const sent = window.mainProcess.otelCollector.sendOtelMessage(windowId, serviceIdentifier, {
             type: 'RENDERER_READY',
             windowId,
-            sourceUrl,
+            serviceIdentifier,
             timestamp: Date.now(),
           });
           if (!sent) {
@@ -902,13 +902,13 @@ export const RepositoryPanelProvider: React.FC<
       }
 
       // Clean up the port
-      if (windowId && sourceUrl) {
-        window.mainProcess.otelCollector.removeOtelPort(windowId, sourceUrl);
+      if (windowId && serviceIdentifier) {
+        window.mainProcess.otelCollector.removeOtelPort(windowId, serviceIdentifier);
       }
 
       // Unregister from main process
-      if (windowId && sourceUrl) {
-        OtelCollectorService.unregisterPort(windowId, sourceUrl).catch((err) => {
+      if (windowId && serviceIdentifier) {
+        OtelCollectorService.unregisterPort(windowId, serviceIdentifier).catch((err) => {
           console.warn('[RepositoryPanelProvider] Error unregistering port:', err);
         });
       }

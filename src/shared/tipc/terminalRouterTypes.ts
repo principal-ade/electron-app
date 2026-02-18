@@ -85,7 +85,7 @@ export interface RequestDataPortResult {
  */
 export type TerminalRouterType = Record<
   string,
-  { action: (args: { context: ActionContext; input: any }) => Promise<any> }
+  { action: (args: { context: ActionContext; input: unknown }) => Promise<unknown> }
 > & {
   createTerminalSession: {
     action: (args: {

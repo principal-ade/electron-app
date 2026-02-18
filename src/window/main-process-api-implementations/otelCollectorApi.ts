@@ -18,14 +18,14 @@ import type {
 // Type alias for MessagePort to avoid TypeScript type/value confusion
 type Port = InstanceType<typeof MessagePort>;
 
-// OTEL collector port storage (key: windowId:sourceUrl)
+// OTEL collector port storage (key: windowId:serviceIdentifier)
 const otelPorts = new Map<string, Port>();
 
 // Message subscribers - for receiving trace data
 const otelMessageSubscribers = new Map<string, Set<(data: unknown) => void>>();
 
 // Listen for MessagePort delivery from main process
-ipcRenderer.on('otel-collector:port', (event, data: { windowId: string; sourceUrl: string }) => {
+ipcRenderer.on('otel-collector:port', (event, data: { windowId: string; serviceIdentifier: string }) => {
   console.info('[otelCollectorApi] 📨 Received otel-collector:port event', data);
 
   const [port] = event.ports;
@@ -34,7 +34,7 @@ ipcRenderer.on('otel-collector:port', (event, data: { windowId: string; sourceUr
     return;
   }
 
-  const key = `${data.windowId}:${data.sourceUrl}`;
+  const key = `${data.windowId}:${data.serviceIdentifier}`;
 
   // Store the port
   otelPorts.set(key, port);
@@ -79,15 +79,15 @@ export const otelCollectorApi: OtelCollectorAPI = {
   },
 
   /**
-   * Register a MessagePort to receive traces for a specific source URL
+   * Register a MessagePort to receive traces for a specific service
    * Port is handled in preload; messages are delivered via window.electron.onOtelMessage()
    */
-  async registerPort(windowId: string, sourceUrl: string): Promise<RegisterPortResponse> {
-    const key = `${windowId}:${sourceUrl}`;
+  async registerPort(windowId: string, serviceIdentifier: string): Promise<RegisterPortResponse> {
+    const key = `${windowId}:${serviceIdentifier}`;
 
     try {
       // Trigger the IPC call to register the port (main will send it via postMessage to preload)
-      const response = await ipcRenderer.invoke('otel-collector:registerPort', windowId, sourceUrl);
+      const response = await ipcRenderer.invoke('otel-collector:registerPort', windowId, serviceIdentifier);
 
       return response;
     } catch (error) {
@@ -102,8 +102,8 @@ export const otelCollectorApi: OtelCollectorAPI = {
   /**
    * Unregister a trace port
    */
-  async unregisterPort(windowId: string, sourceUrl: string): Promise<OtelCollectorResponse> {
-    return await ipcRenderer.invoke('otel-collector:unregisterPort', windowId, sourceUrl);
+  async unregisterPort(windowId: string, serviceIdentifier: string): Promise<OtelCollectorResponse> {
+    return await ipcRenderer.invoke('otel-collector:unregisterPort', windowId, serviceIdentifier);
   },
 
   /**
@@ -116,8 +116,8 @@ export const otelCollectorApi: OtelCollectorAPI = {
   /**
    * Send a test trace to the collector
    */
-  async sendTestTrace(sourceUrl: string): Promise<OtelCollectorResponse> {
-    return await ipcRenderer.invoke('otel-collector:sendTestTrace', sourceUrl);
+  async sendTestTrace(serviceIdentifier: string): Promise<OtelCollectorResponse> {
+    return await ipcRenderer.invoke('otel-collector:sendTestTrace', serviceIdentifier);
   },
 
   /**
@@ -139,10 +139,10 @@ export const otelCollectorApi: OtelCollectorAPI = {
    */
   onOtelMessage(
     windowId: string,
-    sourceUrl: string,
+    serviceIdentifier: string,
     callback: (data: unknown) => void,
   ): () => void {
-    const key = `${windowId}:${sourceUrl}`;
+    const key = `${windowId}:${serviceIdentifier}`;
     console.info(`[otelCollectorApi] 📝 Subscribing to OTEL messages for ${key}`);
 
     // Initialize subscriber set for this key if needed
@@ -173,8 +173,8 @@ export const otelCollectorApi: OtelCollectorAPI = {
   /**
    * Send message to OTEL port
    */
-  sendOtelMessage(windowId: string, sourceUrl: string, data: unknown): boolean {
-    const key = `${windowId}:${sourceUrl}`;
+  sendOtelMessage(windowId: string, serviceIdentifier: string, data: unknown): boolean {
+    const key = `${windowId}:${serviceIdentifier}`;
     const port = otelPorts.get(key);
     if (port) {
       try {
@@ -193,8 +193,8 @@ export const otelCollectorApi: OtelCollectorAPI = {
   /**
    * Helper to remove OTEL port on cleanup
    */
-  removeOtelPort(windowId: string, sourceUrl: string): void {
-    const key = `${windowId}:${sourceUrl}`;
+  removeOtelPort(windowId: string, serviceIdentifier: string): void {
+    const key = `${windowId}:${serviceIdentifier}`;
     const port = otelPorts.get(key);
     if (port) {
       try {
