@@ -18,7 +18,6 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/type
 import type {
   UserCollectionsPanelActions,
   UserCollectionsSlice,
-  Collection,
   LocalProjectsPanelActions,
 } from '@industry-theme/alexandria-panels';
 import type {
@@ -29,7 +28,7 @@ import type {
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { CollectionsService } from '../main-process-api/CollectionsService';
 import { WindowService } from '../main-process-api/WindowService';
-import type { CollectionMembership } from '@principal-ai/alexandria-collections';
+import type { Collection, CollectionMembership } from '@principal-ai/alexandria-collections';
 import type { DiscoveredRepository } from '@industry-theme/alexandria-panels';
 
 /**
@@ -75,7 +74,7 @@ export interface WorldsViewPanelContextType {
       dependencies?: Record<string, string[]>;
     };
     loading: boolean;
-    error: string | null;
+    error: Error | null;
   };
   // Custom state properties
   selectedCollection: Collection | null;
@@ -248,7 +247,7 @@ export const WorldsViewPanelProvider: React.FC<
             dependencies: {},
           },
       loading: collectionsLoading || localRepositoriesLoading,
-      error: collectionsError?.message || null,
+      error: collectionsError || null,
     }),
     [
       selectedCollection,

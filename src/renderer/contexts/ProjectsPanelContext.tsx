@@ -820,337 +820,294 @@ export const ProjectsPanelProvider: React.FC<
     return unsubscribe;
   }, [events]);
 
-  // Define data slices
-  const slices = useMemo<Map<string, DataSlice>>(
-    () =>
-      new Map([
-        [
-          'alexandriaRepositories',
-          {
-            scope: 'global' as const,
-            name: 'alexandriaRepositories',
-            data: {
-              repositories: localRepositories,
-              discoveredRepositories,
-              loading: localRepositoriesLoading,
-            },
-            loading: localRepositoriesLoading,
-            error: null,
-            refresh: async () => {
-              setLocalRepositoriesLoading(true);
-              try {
-                const repos = await AlexandriaService.getRepositories();
-                setLocalRepositories(repos);
+  // Explicit DataSlice: alexandriaRepositories
+  const alexandriaRepositoriesSlice = useMemo<DataSlice<{
+    repositories: AlexandriaEntry[];
+    discoveredRepositories: DiscoveredRepository[];
+    loading: boolean;
+  }>>(
+    () => ({
+      scope: 'global' as const,
+      name: 'alexandriaRepositories',
+      data: {
+        repositories: localRepositories,
+        discoveredRepositories,
+        loading: localRepositoriesLoading,
+      },
+      loading: localRepositoriesLoading,
+      error: null,
+      refresh: async () => {
+        setLocalRepositoriesLoading(true);
+        try {
+          const repos = await AlexandriaService.getRepositories();
+          setLocalRepositories(repos);
 
-                // Also refresh discovered repositories
-                if (baseDefaultDirectory) {
-                  const discovered = await GitService.getDiscoveredRepos(
-                    baseDefaultDirectory,
-                    2,
-                  );
-                  setDiscoveredRepositories(discovered);
-                }
-              } catch (error) {
-                console.error(
-                  '[ProjectsPanelProvider] Failed to refresh local repositories:',
-                  error,
-                );
-              } finally {
-                setLocalRepositoriesLoading(false);
-              }
-            },
-          },
-        ],
-        [
-          'workspaces',
-          {
-            scope: 'global' as const,
-            name: 'workspaces',
-            data: {
-              workspaces,
-              defaultWorkspaceId,
-              loading: workspacesLoading,
-            } as WorkspacesSlice,
-            loading: workspacesLoading,
-            error: null,
-            refresh: async () => {
-              setWorkspacesLoading(true);
-              try {
-                const [allWorkspaces, defaultWs] = await Promise.all([
-                  WorkspaceService.getWorkspaces(),
-                  WorkspaceService.getDefaultWorkspace(),
-                ]);
-                setWorkspaces(allWorkspaces);
-                setDefaultWorkspaceId(defaultWs?.id ?? null);
-              } catch (error) {
-                console.error(
-                  '[ProjectsPanelProvider] Failed to refresh workspaces:',
-                  error,
-                );
-              } finally {
-                setWorkspacesLoading(false);
-              }
-            },
-          },
-        ],
-        [
-          'workspace',
-          {
-            scope: 'workspace' as const,
-            name: 'workspace',
-            data: {
-              workspace: selectedWorkspace,
-              loading: false,
-            },
-            loading: false,
-            error: null,
-            refresh: async () => {
-              // No-op, workspace is selected by user
-            },
-          },
-        ],
-        [
-          'workspaceRepositories',
-          {
-            scope: 'workspace' as const,
-            name: 'workspaceRepositories',
-            data: {
-              repositories: workspaceRepositories,
-              loading: repositoriesLoading,
-            },
-            loading: repositoriesLoading,
-            error: null,
-            refresh: async () => {
-              if (selectedWorkspace) {
-                setRepositoriesLoading(true);
-                try {
-                  const repos =
-                    await WorkspaceService.getRepositoriesInWorkspace(
-                      selectedWorkspace.id,
-                    );
-                  setWorkspaceRepositories(repos);
-                } catch (error) {
-                  console.error(
-                    '[ProjectsPanelProvider] Failed to refresh repositories:',
-                    error,
-                  );
-                } finally {
-                  setRepositoriesLoading(false);
-                }
-              }
-            },
-          },
-        ],
-        [
-          'githubStarred',
-          {
-            scope: 'global' as const,
-            name: 'githubStarred',
-            data: {
-              repositories: starredRepositories,
-              loading: starredLoading,
-              error: starredError,
-            } as GitHubStarredSlice,
-            loading: starredLoading,
-            error: (starredError ?? null) as string | null,
-            refresh: fetchStarredRepositories,
-          },
-        ],
-        [
-          'githubProjects',
-          {
-            scope: 'global' as const,
-            name: 'githubProjects',
-            data: {
-              userRepositories,
-              organizations,
-              orgRepositories,
-              loading: projectsLoading,
-              error: projectsError,
-              currentUser,
-            } as GitHubProjectsSlice,
-            loading: projectsLoading,
-            error: (projectsError ?? null) as string | null,
-            refresh: fetchGitHubProjects,
-          },
-        ],
-        [
-          'repositoriesQuality',
-          {
-            scope: 'workspace' as const,
-            name: 'repositoriesQuality',
-            // Format data for RepositoryQualityGridPanel
-            // Expects: { repositories: RepositoryQualityItem[] }
-            data: {
-              repositories: Object.entries(qualityDataByRepo).map(
-                ([repoPath, repoData]) => ({
-                  id: repoPath,
-                  name: repoPath.split('/').pop() || repoPath,
-                  path: repoPath,
-                  packages: repoData.packages.map((pkg) => ({
-                    name: pkg.name,
-                    version: pkg.version,
-                    metrics: pkg.metrics,
-                  })),
-                }),
-              ),
-            },
-            loading: qualityLoading,
-            error: null,
-            refresh: async () => {
-              if (!selectedWorkspace || workspaceRepositories.length === 0) {
-                return;
-              }
+          // Also refresh discovered repositories
+          if (baseDefaultDirectory) {
+            const discovered = await GitService.getDiscoveredRepos(
+              baseDefaultDirectory,
+              2,
+            );
+            setDiscoveredRepositories(discovered);
+          }
+        } catch (error) {
+          console.error(
+            '[ProjectsPanelProvider] Failed to refresh local repositories:',
+            error,
+          );
+        } finally {
+          setLocalRepositoriesLoading(false);
+        }
+      },
+    }),
+    [localRepositories, discoveredRepositories, localRepositoriesLoading, baseDefaultDirectory],
+  );
 
-              setQualityLoading(true);
-              const newQualityData: typeof qualityDataByRepo = {};
+  // Explicit DataSlice: workspaces
+  const workspacesSlice = useMemo<DataSlice<WorkspacesSlice>>(
+    () => ({
+      scope: 'global' as const,
+      name: 'workspaces',
+      data: {
+        workspaces,
+        defaultWorkspaceId,
+        loading: workspacesLoading,
+      } as WorkspacesSlice,
+      loading: workspacesLoading,
+      error: null,
+      refresh: async () => {
+        setWorkspacesLoading(true);
+        try {
+          const [allWorkspaces, defaultWs] = await Promise.all([
+            WorkspaceService.getWorkspaces(),
+            WorkspaceService.getDefaultWorkspace(),
+          ]);
+          setWorkspaces(allWorkspaces);
+          setDefaultWorkspaceId(defaultWs?.id ?? null);
+        } catch (error) {
+          console.error(
+            '[ProjectsPanelProvider] Failed to refresh workspaces:',
+            error,
+          );
+        } finally {
+          setWorkspacesLoading(false);
+        }
+      },
+    }),
+    [workspaces, defaultWorkspaceId, workspacesLoading],
+  );
 
-              await Promise.all(
-                workspaceRepositories.map(async (repo) => {
-                  try {
-                    if (!repo.path) return;
+  // Explicit DataSlice: workspace
+  const workspaceSlice = useMemo<DataSlice<{
+    workspace: Workspace | null;
+    loading: boolean;
+  }>>(
+    () => ({
+      scope: 'workspace' as const,
+      name: 'workspace',
+      data: {
+        workspace: selectedWorkspace,
+        loading: false,
+      },
+      loading: false,
+      error: null,
+      refresh: async () => {
+        // No-op, workspace is selected by user
+      },
+    }),
+    [selectedWorkspace],
+  );
 
-                    const remoteInfo =
-                      await RepositoryMonitoringService.getGitRemoteInfo(
-                        repo.path,
-                      );
-                    if (!remoteInfo?.remoteUrl) return;
-
-                    const githubInfo = parseGitHubRemote(remoteInfo.remoteUrl);
-                    if (!githubInfo) return;
-
-                    const gitStatus =
-                      await RepositoryMonitoringService.getGitStatus(repo.path);
-                    const branch = gitStatus?.branch || 'main';
-
-                    // Clear cache and fetch fresh
-                    await GitHubArtifactService.clearCache();
-                    const artifactData =
-                      await GitHubArtifactService.getLatestQualityMetrics(
-                        githubInfo.owner,
-                        githubInfo.repo,
-                        branch,
-                      );
-
-                    if (artifactData) {
-                      const packages = artifactData.qualityMetrics.packages.map(
-                        (pkg) => ({
-                          name: pkg.name,
-                          metrics: pkg.hexagon as unknown as Record<
-                            string,
-                            number
-                          >,
-                        }),
-                      );
-                      newQualityData[repo.path] = {
-                        packages,
-                        lastUpdated: artifactData.timestamp,
-                      };
-                    }
-                  } catch (error) {
-                    console.error(
-                      `[ProjectsPanelProvider] Failed to refresh quality for ${repo.name}:`,
-                      error,
-                    );
-                  }
-                }),
+  // Explicit DataSlice: workspaceRepositories
+  const workspaceRepositoriesSlice = useMemo<DataSlice<{
+    repositories: AlexandriaEntry[];
+    loading: boolean;
+  }>>(
+    () => ({
+      scope: 'workspace' as const,
+      name: 'workspaceRepositories',
+      data: {
+        repositories: workspaceRepositories,
+        loading: repositoriesLoading,
+      },
+      loading: repositoriesLoading,
+      error: null,
+      refresh: async () => {
+        if (selectedWorkspace) {
+          setRepositoriesLoading(true);
+          try {
+            const repos =
+              await WorkspaceService.getRepositoriesInWorkspace(
+                selectedWorkspace.id,
               );
+            setWorkspaceRepositories(repos);
+          } catch (error) {
+            console.error(
+              '[ProjectsPanelProvider] Failed to refresh repositories:',
+              error,
+            );
+          } finally {
+            setRepositoriesLoading(false);
+          }
+        }
+      },
+    }),
+    [workspaceRepositories, repositoriesLoading, selectedWorkspace],
+  );
 
-              setQualityDataByRepo(newQualityData);
-              setQualityLoading(false);
-            },
-          },
-        ],
-        [
-          'userCollections',
-          {
-            scope: 'global' as const,
-            name: 'userCollections',
-            data: {
-              collections,
-              memberships: collectionMemberships,
-              loading: collectionsLoading,
-              saving: collectionsSaving,
-              error: collectionsError,
-              gitHubRepoExists: collectionsGitHubRepoExists,
-              gitHubRepoUrl: collectionsGitHubRepoUrl,
-            } as UserCollectionsSlice,
-            loading: collectionsLoading,
-            error: (collectionsError ?? null) as string | null,
-            refresh: fetchCollections,
-          },
-        ],
-        [
-          'collectionRepositories',
-          {
-            scope: 'global' as const,
-            name: 'collectionRepositories',
-            data: {
-              collection: selectedCollection,
-              // Get repository IDs for the selected collection
-              repositoryIds: selectedCollection
-                ? collectionMemberships
-                    .filter((m) => m.collectionId === selectedCollection.id)
-                    .map((m) => m.repositoryId)
-                : [],
-            },
-            loading: collectionsLoading,
-            error: null,
-            refresh: fetchCollections,
-          },
-        ],
-        [
-          'gitStatusWithFiles',
-          {
-            scope: 'repository' as const,
-            name: 'gitStatusWithFiles',
-            data: gitStatusWithFiles,
-            loading: gitStatusLoading,
-            error: null,
-            refresh: async () => {
-              if (selectedRepository) {
-                setGitStatusLoading(true);
-                try {
-                  const status = await RepositoryMonitoringService.getGitStatusWithFiles(
-                    selectedRepository.path,
-                  );
-                  setGitStatusWithFiles(status);
-                } catch (error) {
-                  console.error(
-                    '[ProjectsPanelProvider] Failed to refresh git status:',
-                    error,
-                  );
-                  setGitStatusWithFiles(null);
-                } finally {
-                  setGitStatusLoading(false);
-                }
-              }
-            },
-          },
-        ],
-      ]) as Map<string, DataSlice>,
+  // Explicit DataSlice: githubStarred
+  const githubStarredSlice = useMemo<DataSlice<GitHubStarredSlice>>(
+    () => ({
+      scope: 'global' as const,
+      name: 'githubStarred',
+      data: {
+        repositories: starredRepositories,
+        loading: starredLoading,
+        error: starredError,
+      } as GitHubStarredSlice,
+      loading: starredLoading,
+      error: starredError ? new Error(starredError) : null,
+      refresh: fetchStarredRepositories,
+    }),
+    [starredRepositories, starredLoading, starredError, fetchStarredRepositories],
+  );
+
+  // Explicit DataSlice: githubProjects
+  const githubProjectsSlice = useMemo<DataSlice<GitHubProjectsSlice>>(
+    () => ({
+      scope: 'global' as const,
+      name: 'githubProjects',
+      data: {
+        userRepositories,
+        organizations,
+        orgRepositories,
+        loading: projectsLoading,
+        error: projectsError,
+        currentUser,
+      } as GitHubProjectsSlice,
+      loading: projectsLoading,
+      error: projectsError ? new Error(projectsError) : null,
+      refresh: fetchGitHubProjects,
+    }),
     [
-      workspaces,
-      defaultWorkspaceId,
-      workspacesLoading,
-      selectedWorkspace,
-      workspaceRepositories,
-      repositoriesLoading,
-      localRepositories,
-      localRepositoriesLoading,
-      discoveredRepositories,
-      baseDefaultDirectory,
-      starredRepositories,
-      starredLoading,
-      starredError,
       userRepositories,
       organizations,
       orgRepositories,
       projectsLoading,
       projectsError,
       currentUser,
-      qualityDataByRepo,
-      qualityLoading,
+      fetchGitHubProjects,
+    ],
+  );
+
+  // Explicit DataSlice: repositoriesQuality
+  const repositoriesQualitySlice = useMemo<DataSlice<unknown>>(
+    () => ({
+      scope: 'workspace' as const,
+      name: 'repositoriesQuality',
+      // Format data for RepositoryQualityGridPanel
+      // Expects: { repositories: RepositoryQualityItem[] }
+      data: {
+        repositories: Object.entries(qualityDataByRepo).map(
+          ([repoPath, repoData]) => ({
+            id: repoPath,
+            name: repoPath.split('/').pop() || repoPath,
+            path: repoPath,
+            packages: repoData.packages.map((pkg) => ({
+              name: pkg.name,
+              version: pkg.version,
+              metrics: pkg.metrics,
+            })),
+          }),
+        ),
+      },
+      loading: qualityLoading,
+      error: null,
+      refresh: async () => {
+        if (!selectedWorkspace || workspaceRepositories.length === 0) {
+          return;
+        }
+
+        setQualityLoading(true);
+        const newQualityData: typeof qualityDataByRepo = {};
+
+        await Promise.all(
+          workspaceRepositories.map(async (repo) => {
+            try {
+              if (!repo.path) return;
+
+              const remoteInfo =
+                await RepositoryMonitoringService.getGitRemoteInfo(
+                  repo.path,
+                );
+              if (!remoteInfo?.remoteUrl) return;
+
+              const githubInfo = parseGitHubRemote(remoteInfo.remoteUrl);
+              if (!githubInfo) return;
+
+              const gitStatus =
+                await RepositoryMonitoringService.getGitStatus(repo.path);
+              const branch = gitStatus?.branch || 'main';
+
+              // Clear cache and fetch fresh
+              await GitHubArtifactService.clearCache();
+              const artifactData =
+                await GitHubArtifactService.getLatestQualityMetrics(
+                  githubInfo.owner,
+                  githubInfo.repo,
+                  branch,
+                );
+
+              if (artifactData) {
+                const packages = artifactData.qualityMetrics.packages.map(
+                  (pkg) => ({
+                    name: pkg.name,
+                    metrics: pkg.hexagon as unknown as Record<
+                      string,
+                      number
+                    >,
+                  }),
+                );
+                newQualityData[repo.path] = {
+                  packages,
+                  lastUpdated: artifactData.timestamp,
+                };
+              }
+            } catch (error) {
+              console.error(
+                `[ProjectsPanelProvider] Failed to refresh quality for ${repo.name}:`,
+                error,
+              );
+            }
+          }),
+        );
+
+        setQualityDataByRepo(newQualityData);
+        setQualityLoading(false);
+      },
+    }),
+    [qualityDataByRepo, qualityLoading, selectedWorkspace, workspaceRepositories],
+  );
+
+  // Explicit DataSlice: userCollections
+  const userCollectionsSlice = useMemo<DataSlice<UserCollectionsSlice>>(
+    () => ({
+      scope: 'global' as const,
+      name: 'userCollections',
+      data: {
+        collections,
+        memberships: collectionMemberships,
+        loading: collectionsLoading,
+        saving: collectionsSaving,
+        error: collectionsError,
+        gitHubRepoExists: collectionsGitHubRepoExists,
+        gitHubRepoUrl: collectionsGitHubRepoUrl,
+      } as UserCollectionsSlice,
+      loading: collectionsLoading,
+      error: collectionsError ? new Error(collectionsError) : null,
+      refresh: fetchCollections,
+    }),
+    [
       collections,
       collectionMemberships,
       collectionsLoading,
@@ -1158,15 +1115,64 @@ export const ProjectsPanelProvider: React.FC<
       collectionsError,
       collectionsGitHubRepoExists,
       collectionsGitHubRepoUrl,
-      selectedCollection,
-      // Note: selectedRepository, gitStatusWithFiles, and gitStatusLoading are
-      // intentionally NOT in dependencies to prevent unnecessary rerenders of all
-      // panels when only repository-specific state changes. The gitStatusWithFiles
-      // slice is only used by ProjectInfoPanel. The slice data/loading values are
-      // captured from state at the time panels read them, and the refresh function
-      // captures selectedRepository from closure at call time.
+      fetchCollections,
     ],
   );
+
+  // Explicit DataSlice: collectionRepositories
+  const collectionRepositoriesSlice = useMemo<DataSlice<unknown>>(
+    () => ({
+      scope: 'global' as const,
+      name: 'collectionRepositories',
+      data: {
+        collection: selectedCollection,
+        // Get repository IDs for the selected collection
+        repositoryIds: selectedCollection
+          ? collectionMemberships
+              .filter((m) => m.collectionId === selectedCollection.id)
+              .map((m) => m.repositoryId)
+          : [],
+      },
+      loading: collectionsLoading,
+      error: null,
+      refresh: fetchCollections,
+    }),
+    [selectedCollection, collectionMemberships, collectionsLoading, fetchCollections],
+  );
+
+  // Explicit DataSlice: gitStatusWithFiles
+  const gitStatusWithFilesSlice = useMemo<DataSlice<GitStatusWithFiles | null>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'gitStatusWithFiles',
+      data: gitStatusWithFiles,
+      loading: gitStatusLoading,
+      error: null,
+      refresh: async () => {
+        if (selectedRepository) {
+          setGitStatusLoading(true);
+          try {
+            const status = await RepositoryMonitoringService.getGitStatusWithFiles(
+              selectedRepository.path,
+            );
+            setGitStatusWithFiles(status);
+          } catch (error) {
+            console.error(
+              '[ProjectsPanelProvider] Failed to refresh git status:',
+              error,
+            );
+            setGitStatusWithFiles(null);
+          } finally {
+            setGitStatusLoading(false);
+          }
+        }
+      },
+    }),
+    [gitStatusWithFiles, gitStatusLoading, selectedRepository],
+  );
+
+  // Empty slices Map for backward compatibility with PanelContextValue interface
+  const slices = useMemo<Map<string, DataSlice>>(() => new Map(), []);
 
   // Define actions
   const actions: ProjectsPanelActions = useMemo(
@@ -1795,73 +1801,72 @@ export const ProjectsPanelProvider: React.FC<
       },
       slices,
       adapters: {},
-      getSlice: <T = unknown,>(name: string): DataSlice<T> | undefined => {
-        return slices.get(name) as DataSlice<T> | undefined;
+      // Legacy slice getter methods - kept for PanelContextValue interface compatibility
+      getSlice: <T = unknown,>(_name: string): DataSlice<T> | undefined => {
+        // No-op: Moving away from dynamic Map-based slices
+        // Panels should access typed properties directly (context.userCollections)
+        return undefined;
       },
       getWorkspaceSlice: <T = unknown,>(
-        name: string,
+        _name: string,
       ): DataSlice<T> | undefined => {
-        const slice = slices.get(name);
-        return slice?.scope === 'workspace'
-          ? (slice as DataSlice<T>)
-          : undefined;
+        return undefined; // No-op: use typed properties
       },
       getRepositorySlice: <T = unknown,>(
         _name: string,
       ): DataSlice<T> | undefined => {
         return undefined; // No repository scope in this context
       },
-      hasSlice: (name: string, scope?: 'workspace' | 'repository'): boolean => {
-        const slice = slices.get(name);
-        if (!slice) return false;
-        return scope ? slice.scope === scope : true;
+      // Legacy helper methods - kept for PanelContextValue interface compatibility
+      // No-op stubs: actions handle their own refreshing, React handles reactivity
+      hasSlice: (_name: string, _scope?: 'workspace' | 'repository'): boolean => {
+        // No-op: Moving away from dynamic slice checking
+        // Panels should access typed properties directly (context.userCollections)
+        return false;
       },
       isSliceLoading: (
-        name: string,
-        scope?: 'workspace' | 'repository',
+        _name: string,
+        _scope?: 'workspace' | 'repository',
       ): boolean => {
-        const slice = slices.get(name);
-        if (!slice) return false;
-        if (scope && slice.scope !== scope) return false;
-        return slice.loading;
+        // No-op: Moving away from dynamic slice checking
+        // Panels should access typed properties directly (context.userCollections.loading)
+        return false;
       },
       refresh: async (
-        scope?: 'workspace' | 'repository',
-        sliceName?: string,
+        _scope?: 'workspace' | 'repository',
+        _sliceName?: string,
       ): Promise<void> => {
-        const slicesToRefresh = Array.from(slices.values()).filter((slice) => {
-          if (scope && slice.scope !== scope) return false;
-          if (sliceName && slice.name !== sliceName) return false;
-          return true;
-        });
-
-        await Promise.all(slicesToRefresh.map((slice) => slice.refresh()));
+        // No-op: Actions handle their own data refreshing
+        // React's reactivity handles UI updates automatically
+        // Any actual refresh should be triggered via actions, not context.refresh()
       },
       // Custom state properties
       selectedWorkspace,
       setSelectedWorkspace,
       selectedCollection,
       setSelectedCollection,
-      // Typed slice properties from slices map
-      alexandriaRepositories: slices.get('alexandriaRepositories') as DataSlice<{
-        repositories: AlexandriaEntry[];
-        discoveredRepositories: DiscoveredRepository[];
-        loading: boolean;
-      }>,
-      workspaces: slices.get('workspaces') as DataSlice<WorkspacesSlice>,
-      workspace: slices.get('workspace') as DataSlice<{
-        workspace: Workspace | null;
-        loading: boolean;
-      }>,
-      workspaceRepositories: slices.get('workspaceRepositories') as DataSlice<{
-        repositories: AlexandriaEntry[];
-        loading: boolean;
-      }>,
-      githubProjects: slices.get('githubProjects') as DataSlice<GitHubProjectsSlice>,
-      githubStarred: slices.get('githubStarred') as DataSlice<GitHubStarredSlice>,
-      userCollections: slices.get('userCollections') as DataSlice<UserCollectionsSlice>,
+      // Explicit typed slice properties
+      alexandriaRepositories: alexandriaRepositoriesSlice,
+      workspaces: workspacesSlice,
+      workspace: workspaceSlice,
+      workspaceRepositories: workspaceRepositoriesSlice,
+      githubProjects: githubProjectsSlice,
+      githubStarred: githubStarredSlice,
+      userCollections: userCollectionsSlice,
     }),
-    [slices, selectedWorkspace, selectedCollection, selectedRepository],
+    [
+      slices,
+      selectedWorkspace,
+      selectedCollection,
+      selectedRepository,
+      alexandriaRepositoriesSlice,
+      workspacesSlice,
+      workspaceSlice,
+      workspaceRepositoriesSlice,
+      githubProjectsSlice,
+      githubStarredSlice,
+      userCollectionsSlice,
+    ],
   );
 
   // Combine into provider value

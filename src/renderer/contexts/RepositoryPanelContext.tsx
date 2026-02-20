@@ -43,6 +43,9 @@ import type {
   WorkspaceRepositoriesSlice,
   WorkspacesSlice,
 } from '@industry-theme/alexandria-panels';
+import type { TerminalSessionInfo } from '@industry-theme/xterm-terminal-panel';
+import type { FeedProjectSliceData } from '@industry-theme/file-city-panel';
+import type { GitHubIssuesSliceData } from '@industry-theme/github-panels';
 
 // Color mode for file city visualization - imported from registry
 // The registry's ColorMode type includes all built-in and lens-based modes
@@ -71,7 +74,7 @@ export interface RepositoryPanelActions extends PanelActions {
   // Active file management for markdown panel
   setActiveFile?: (filePath: string | null) => Promise<void>;
   // Telemetry management
-  clearTelemetry?: () => void;
+  clearTelemetry?: () => Promise<void>;
 }
 
 // Extended context for repository panels
@@ -81,15 +84,26 @@ interface RepositoryPanelContextValue extends PanelContextValue {
   repository: RepositoryMetadata | null;
   loading: boolean;
 
-  // Direct slice properties for new v0.3.0+ typed panels
-  // These are always present in the slices Map
+  // Explicit typed slice properties - no more dynamic Map lookups!
   activeFile: DataSlice<ActiveFileSlice>;
   fileTree: DataSlice<FileTree>;
   openTabs: DataSlice<unknown[]>;
+  markdown: DataSlice<unknown>;
+  packages: DataSlice<PackagesSliceData | null>;
+  gitStatusWithFiles: DataSlice<GitStatusWithFiles | null>;
   alexandriaRepositories: DataSlice<AlexandriaRepositoriesSlice>;
   workspace: DataSlice<WorkspaceSlice>;
   workspaceRepositories: DataSlice<WorkspaceRepositoriesSlice>;
   workspaces: DataSlice<WorkspacesSlice>;
+  quality: DataSlice<QualitySliceData | null>;
+  fileCityColorModes: DataSlice<FileCityColorModesSliceData>;
+  localhostServers: DataSlice<RunningServer[]>;
+  globalSkills: DataSlice<{ skills: GlobalSkill[] }>;
+  telemetry: DataSlice<RegisteredTrace[]>;
+  // Panel-specific slices (from ExtendedPanelContextValue)
+  terminal: DataSlice<TerminalSessionInfo[]>;
+  feedProject: DataSlice<FeedProjectSliceData>;
+  githubIssues: DataSlice<GitHubIssuesSliceData>;
 }
 
 // Provider value that contains context, actions, and events separately
@@ -1155,7 +1169,7 @@ export const RepositoryPanelProvider: React.FC<
         }
       },
 
-      clearTelemetry: () => {
+      clearTelemetry: async () => {
         console.info('[RepositoryPanelProvider] Clearing telemetry traces');
         setTelemetryTraces([]);
       },
@@ -1507,399 +1521,453 @@ export const RepositoryPanelProvider: React.FC<
     [openTabs],
   );
 
-  const slices = useMemo<Map<string, DataSlice<unknown>>>(
-    () =>
-      new Map([
-        ['fileTree', fileTreeSlice as DataSlice<unknown>],
-        [
-          'markdown',
-          {
-            scope: 'repository' as const,
-            name: 'markdown',
-            data: markdownFiles,
-            loading: fileTreeLoading,
-            error: null,
-            refresh: async () => {
-              // Markdown slice refreshes when fileTree refreshes
-              if (repositoryPath) {
-                setFileTreeLoading(true);
-                try {
-                  // Force cache invalidation and rebuild
-                  // Markdown files are extracted from the file tree,
-                  // so refreshing the repository will update both
-                  await RepositoryMonitoringService.refreshRepository(
-                    repositoryPath,
-                  );
-                  console.info(
-                    '[RepositoryPanelProvider] Refresh triggered for markdown, waiting for cache sync event',
-                  );
-                } catch (error) {
-                  console.error(
-                    '[RepositoryPanelProvider] Failed to refresh markdown:',
-                    error,
-                  );
-                  // Fallback: try to get whatever is in cache
-                  const tree =
-                    await RepositoryMonitoringService.getFileTree(
-                      repositoryPath,
-                    );
-                  setFileTreeData(tree);
-                } finally {
-                  setFileTreeLoading(false);
-                }
-              }
-            },
-          },
-        ],
-        [
-          'packages',
-          {
-            scope: 'repository' as const,
-            name: 'packages',
-            data: packagesData,
-            loading: packagesLoading,
-            error: null,
-            refresh: async () => {
-              if (repositoryPath) {
-                setPackagesLoading(true);
-                try {
-                  // Force cache invalidation and rebuild
-                  // This will emit CACHE_SYNC events that the onCacheSync listener
-                  // (line 315) will handle to update state automatically
-                  await RepositoryMonitoringService.refreshRepository(
-                    repositoryPath,
-                  );
-                  console.info(
-                    '[RepositoryPanelProvider] Refresh triggered for packages, waiting for cache sync event',
-                  );
-                } catch (error) {
-                  console.error(
-                    '[RepositoryPanelProvider] Failed to refresh packages:',
-                    error,
-                  );
-                  // Fallback: try to get whatever is in cache
-                  const result =
-                    await RepositoryMonitoringService.getPackages(
-                      repositoryPath,
-                    );
-                  if (result) {
-                    setPackagesData(result);
-                  } else {
-                    setPackagesData(null);
-                  }
-                } finally {
-                  setPackagesLoading(false);
-                }
-              }
-            },
-          },
-        ],
-        [
-          'gitStatusWithFiles',
-          {
-            scope: 'repository' as const,
-            name: 'gitStatusWithFiles',
-            data: stableGitStatusData,
-            loading: gitStatusLoading,
-            error: null,
-            refresh: async () => {
-              if (repositoryPath) {
-                setGitStatusLoading(true);
-                try {
-                  // Force cache invalidation and rebuild
-                  // This will emit GIT_STATUS_CHANGED events that the onGitStatusChanged
-                  // listener (line 365) will handle to update state automatically
-                  await RepositoryMonitoringService.refreshRepository(
-                    repositoryPath,
-                  );
-                  console.info(
-                    '[RepositoryPanelProvider] Refresh triggered for git status, waiting for event',
-                  );
-                } catch (error) {
-                  console.error(
-                    '[RepositoryPanelProvider] Failed to refresh git status:',
-                    error,
-                  );
-                  // Fallback: try to get whatever is in cache
-                  const status =
-                    await RepositoryMonitoringService.getGitStatusWithFiles(
-                      repositoryPath,
-                    );
-                  setGitStatusData(status);
-                } finally {
-                  setGitStatusLoading(false);
-                }
-              }
-            },
-          },
-        ],
-        [
-          'alexandriaRepositories',
-          {
-            scope: 'repository' as const,
-            name: 'alexandriaRepositories',
-            data: {
-              repositories: alexandriaRepositories,
-              discoveredRepositories: [],
-              loading: alexandriaRepositoriesLoading,
-              error: undefined,
-            },
-            loading: alexandriaRepositoriesLoading,
-            error: null,
-            refresh: async () => {
-              setAlexandriaRepositoriesLoading(true);
-              try {
-                const repos = await AlexandriaService.getRepositories();
-                setAlexandriaRepositories(repos);
-              } catch (error) {
-                console.error(
-                  '[RepositoryPanelProvider] Failed to refresh Alexandria repositories:',
-                  error,
-                );
-                setAlexandriaRepositories([]);
-              } finally {
-                setAlexandriaRepositoriesLoading(false);
-              }
-            },
-          },
-        ],
-        [
-          'workspace',
-          {
-            scope: 'repository' as const,
-            name: 'workspace',
-            data: {
-              workspace: null,
-              loading: false,
-              error: undefined,
-            },
-            loading: false,
-            error: null,
-            refresh: async () => {
-              // No workspace data in repository context
-            },
-          },
-        ],
-        [
-          'workspaces',
-          {
-            scope: 'repository' as const,
-            name: 'workspaces',
-            data: {
-              workspaces: [],
-              defaultWorkspaceId: null,
-              loading: false,
-              error: undefined,
-            },
-            loading: false,
-            error: null,
-            refresh: async () => {
-              // No workspaces list in repository context
-            },
-          },
-        ],
-        [
-          'workspaceRepositories',
-          {
-            scope: 'repository' as const,
-            name: 'workspaceRepositories',
-            data: {
-              repositories: [],
-              loading: false,
-              error: undefined,
-            },
-            loading: false,
-            error: null,
-            refresh: async () => {
-              // No workspace repositories in repository context
-            },
-          },
-        ],
-        [
-          'quality',
-          {
-            scope: 'repository' as const,
-            name: 'quality',
-            data: stableQualityData,
-            loading: qualityLoading,
-            error: null,
-            refresh: async () => {
-              if (!repositoryPath) return;
-
-              setQualityLoading(true);
-              try {
-                const remoteInfo =
-                  await RepositoryMonitoringService.getGitRemoteInfo(
-                    repositoryPath,
-                  );
-                if (!remoteInfo?.remoteUrl) {
-                  setQualityData(null);
-                  return;
-                }
-
-                const githubInfo = parseGitHubRemote(remoteInfo.remoteUrl);
-                if (!githubInfo) {
-                  setQualityData(null);
-                  return;
-                }
-
-                const gitStatus =
-                  await RepositoryMonitoringService.getGitStatus(
-                    repositoryPath,
-                  );
-                const branch = gitStatus?.branch || 'main';
-
-                // Clear cache to force fresh fetch
-                await GitHubArtifactService.clearCache();
-
-                const artifactData =
-                  await GitHubArtifactService.getLatestQualityMetrics(
-                    githubInfo.owner,
-                    githubInfo.repo,
-                    branch,
-                  );
-
-                if (artifactData) {
-                  const packages = artifactData.qualityMetrics.packages.map(
-                    (pkg) => ({
-                      name: pkg.name,
-                      metrics: pkg.hexagon as unknown as Record<string, number>,
-                    }),
-                  );
-                  setQualityData({
-                    packages,
-                    lastUpdated: artifactData.timestamp,
-                  });
-                } else {
-                  setQualityData(null);
-                }
-              } catch (error) {
-                console.error(
-                  '[RepositoryPanelProvider] Failed to refresh quality metrics:',
-                  error,
-                );
-                setQualityData(null);
-              } finally {
-                setQualityLoading(false);
-              }
-            },
-          },
-        ],
-        ['active-file', activeFileSlice as DataSlice<unknown>],
-        [
-          'fileCityColorModes',
-          {
-            scope: 'repository' as const,
-            name: 'fileCityColorModes',
-            data: {
-              selectedColorMode: effectiveColorMode,
-              // Include quality data for File City to render layers
-              qualityData: stableQualityData
-                ? {
-                    fileCoverage: stableQualityData.fileCoverage,
-                    fileMetrics: stableQualityData.fileMetrics,
-                  }
-                : undefined,
-            } as FileCityColorModesSliceData,
-            loading: false,
-            error: null,
-            refresh: async () => {
-              // No async refresh needed - color mode is computed from other state
-            },
-          },
-        ],
-        [
-          'localhostServers',
-          {
-            scope: 'workspace' as const,
-            name: 'localhostServers',
-            data: stableLocalhostServers,
-            loading: localhostServersLoading,
-            error: null,
-            refresh: async () => {
-              // Refetch localhost servers
-              setLocalhostServersLoading(true);
-              try {
-                const result =
-                  await LocalhostDetectionService.detectRunningServers();
-                setLocalhostServers(result.servers);
-              } catch (error) {
-                console.error(
-                  '[RepositoryPanelContext] Failed to refresh localhost servers:',
-                  error,
-                );
-              } finally {
-                setLocalhostServersLoading(false);
-              }
-            },
-          },
-        ],
-        [
-          'globalSkills',
-          {
-            scope: 'workspace' as const,
-            name: 'globalSkills',
-            data: { skills: globalSkillsData },
-            loading: globalSkillsLoading,
-            error: null,
-            refresh: async () => {
-              // Refetch global skills
-              setGlobalSkillsLoading(true);
-              try {
-                const skills = await FileSystemService.getGlobalSkills();
-                setGlobalSkillsData(skills);
-              } catch (error) {
-                console.error(
-                  '[RepositoryPanelContext] Failed to refresh global skills:',
-                  error,
-                );
-              } finally {
-                setGlobalSkillsLoading(false);
-              }
-            },
-          },
-        ],
-        [
-          'telemetry',
-          {
-            scope: 'workspace' as const,
-            name: 'telemetry',
-            data: telemetryTraces,
-            loading: telemetryLoading,
-            error: null,
-            refresh: async () => {
-              // For now, telemetry refresh is a no-op
-              // Real implementation will fetch from telemetry service
-              setTelemetryLoading(false);
-            },
-          },
-        ],
-      ]),
-    [
-      repositoryPath,
-      augmentedFileTreeData, // Augmented with deleted files - stable reference that changes when SHA or deleted files change
-      fileTreeLoading,
-      markdownFiles, // Derived from stableFileTreeData, already stable
-      packagesData,
-      packagesLoading,
-      stableGitStatusData, // Stable reference - only changes when content hash changes
-      gitStatusLoading,
-      alexandriaRepositories,
-      alexandriaRepositoriesLoading,
-      stableQualityData, // Stable reference - only changes when timestamp changes
-      qualityLoading,
-      stableActiveFileData, // Stable reference - only changes when path changes
-      activeFileLoading,
-      activeFileError,
-      effectiveColorMode,
-      stableLocalhostServers, // Stable reference - only changes when server list content changes
-      localhostServersLoading,
-      globalSkillsData,
-      globalSkillsLoading,
-      telemetryTraces,
-      telemetryLoading,
-    ],
+  // Explicit DataSlice: markdown
+  const markdownSlice = useMemo<DataSlice<unknown>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'markdown',
+      data: markdownFiles,
+      loading: fileTreeLoading,
+      error: null,
+      refresh: async () => {
+        // Markdown slice refreshes when fileTree refreshes
+        if (repositoryPath) {
+          setFileTreeLoading(true);
+          try {
+            // Force cache invalidation and rebuild
+            // Markdown files are extracted from the file tree,
+            // so refreshing the repository will update both
+            await RepositoryMonitoringService.refreshRepository(
+              repositoryPath,
+            );
+            console.info(
+              '[RepositoryPanelProvider] Refresh triggered for markdown, waiting for cache sync event',
+            );
+          } catch (error) {
+            console.error(
+              '[RepositoryPanelProvider] Failed to refresh markdown:',
+              error,
+            );
+            // Fallback: try to get whatever is in cache
+            const tree =
+              await RepositoryMonitoringService.getFileTree(
+                repositoryPath,
+              );
+            setFileTreeData(tree);
+          } finally {
+            setFileTreeLoading(false);
+          }
+        }
+      },
+    }),
+    [markdownFiles, fileTreeLoading, repositoryPath],
   );
+
+  // Explicit DataSlice: packages
+  const packagesSlice = useMemo<DataSlice<PackagesSliceData | null>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'packages',
+      data: packagesData,
+      loading: packagesLoading,
+      error: null,
+      refresh: async () => {
+        if (repositoryPath) {
+          setPackagesLoading(true);
+          try {
+            // Force cache invalidation and rebuild
+            // This will emit CACHE_SYNC events that the onCacheSync listener
+            // (line 315) will handle to update state automatically
+            await RepositoryMonitoringService.refreshRepository(
+              repositoryPath,
+            );
+            console.info(
+              '[RepositoryPanelProvider] Refresh triggered for packages, waiting for cache sync event',
+            );
+          } catch (error) {
+            console.error(
+              '[RepositoryPanelProvider] Failed to refresh packages:',
+              error,
+            );
+            // Fallback: try to get whatever is in cache
+            const result =
+              await RepositoryMonitoringService.getPackages(
+                repositoryPath,
+              );
+            if (result) {
+              setPackagesData(result);
+            } else {
+              setPackagesData(null);
+            }
+          } finally {
+            setPackagesLoading(false);
+          }
+        }
+      },
+    }),
+    [packagesData, packagesLoading, repositoryPath],
+  );
+
+  // Explicit DataSlice: gitStatusWithFiles
+  const gitStatusWithFilesSlice = useMemo<DataSlice<GitStatusWithFiles | null>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'gitStatusWithFiles',
+      data: stableGitStatusData,
+      loading: gitStatusLoading,
+      error: null,
+      refresh: async () => {
+        if (repositoryPath) {
+          setGitStatusLoading(true);
+          try {
+            // Force cache invalidation and rebuild
+            // This will emit GIT_STATUS_CHANGED events that the onGitStatusChanged
+            // listener (line 365) will handle to update state automatically
+            await RepositoryMonitoringService.refreshRepository(
+              repositoryPath,
+            );
+            console.info(
+              '[RepositoryPanelProvider] Refresh triggered for git status, waiting for event',
+            );
+          } catch (error) {
+            console.error(
+              '[RepositoryPanelProvider] Failed to refresh git status:',
+              error,
+            );
+            // Fallback: try to get whatever is in cache
+            const status =
+              await RepositoryMonitoringService.getGitStatusWithFiles(
+                repositoryPath,
+              );
+            setGitStatusData(status);
+          } finally {
+            setGitStatusLoading(false);
+          }
+        }
+      },
+    }),
+    [stableGitStatusData, gitStatusLoading, repositoryPath],
+  );
+
+  // Explicit DataSlice: alexandriaRepositories (for alexandria panels compatibility)
+  const alexandriaRepositoriesSlice = useMemo<DataSlice<unknown>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'alexandriaRepositories',
+      data: {
+        repositories: alexandriaRepositories,
+        discoveredRepositories: [],
+        loading: alexandriaRepositoriesLoading,
+        error: undefined,
+      },
+      loading: alexandriaRepositoriesLoading,
+      error: null,
+      refresh: async () => {
+        setAlexandriaRepositoriesLoading(true);
+        try {
+          const repos = await AlexandriaService.getRepositories();
+          setAlexandriaRepositories(repos);
+        } catch (error) {
+          console.error(
+            '[RepositoryPanelProvider] Failed to refresh Alexandria repositories:',
+            error,
+          );
+          setAlexandriaRepositories([]);
+        } finally {
+          setAlexandriaRepositoriesLoading(false);
+        }
+      },
+    }),
+    [alexandriaRepositories, alexandriaRepositoriesLoading],
+  );
+
+  // Explicit DataSlice: workspace (stub for compatibility)
+  const workspaceSlice = useMemo<DataSlice<unknown>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'workspace',
+      data: {
+        workspace: null,
+        loading: false,
+        error: undefined,
+      },
+      loading: false,
+      error: null,
+      refresh: async () => {
+        // No workspace data in repository context
+      },
+    }),
+    [],
+  );
+
+  // Explicit DataSlice: workspaces (stub for compatibility)
+  const workspacesSlice = useMemo<DataSlice<unknown>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'workspaces',
+      data: {
+        workspaces: [],
+        defaultWorkspaceId: null,
+        loading: false,
+        error: undefined,
+      },
+      loading: false,
+      error: null,
+      refresh: async () => {
+        // No workspaces list in repository context
+      },
+    }),
+    [],
+  );
+
+  // Explicit DataSlice: workspaceRepositories (stub for compatibility)
+  const workspaceRepositoriesSlice = useMemo<DataSlice<unknown>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'workspaceRepositories',
+      data: {
+        repositories: [],
+        loading: false,
+        error: undefined,
+      },
+      loading: false,
+      error: null,
+      refresh: async () => {
+        // No workspace repositories in repository context
+      },
+    }),
+    [],
+  );
+
+  // Explicit DataSlice: quality
+  const qualitySlice = useMemo<DataSlice<QualitySliceData | null>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'quality',
+      data: stableQualityData,
+      loading: qualityLoading,
+      error: null,
+      refresh: async () => {
+        if (!repositoryPath) return;
+
+        setQualityLoading(true);
+        try {
+          const remoteInfo =
+            await RepositoryMonitoringService.getGitRemoteInfo(
+              repositoryPath,
+            );
+          if (!remoteInfo?.remoteUrl) {
+            setQualityData(null);
+            return;
+          }
+
+          const githubInfo = parseGitHubRemote(remoteInfo.remoteUrl);
+          if (!githubInfo) {
+            setQualityData(null);
+            return;
+          }
+
+          const gitStatus =
+            await RepositoryMonitoringService.getGitStatus(
+              repositoryPath,
+            );
+          const branch = gitStatus?.branch || 'main';
+
+          // Clear cache to force fresh fetch
+          await GitHubArtifactService.clearCache();
+
+          const artifactData =
+            await GitHubArtifactService.getLatestQualityMetrics(
+              githubInfo.owner,
+              githubInfo.repo,
+              branch,
+            );
+
+          if (artifactData) {
+            const packages = artifactData.qualityMetrics.packages.map(
+              (pkg) => ({
+                name: pkg.name,
+                metrics: pkg.hexagon as unknown as Record<string, number>,
+              }),
+            );
+            setQualityData({
+              packages,
+              lastUpdated: artifactData.timestamp,
+            });
+          } else {
+            setQualityData(null);
+          }
+        } catch (error) {
+          console.error(
+            '[RepositoryPanelProvider] Failed to refresh quality metrics:',
+            error,
+          );
+          setQualityData(null);
+        } finally {
+          setQualityLoading(false);
+        }
+      },
+    }),
+    [stableQualityData, qualityLoading, repositoryPath],
+  );
+
+  // Explicit DataSlice: fileCityColorModes
+  const fileCityColorModesSlice = useMemo<DataSlice<FileCityColorModesSliceData>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'fileCityColorModes',
+      data: {
+        selectedColorMode: effectiveColorMode,
+        // Include quality data for File City to render layers
+        qualityData: stableQualityData
+          ? {
+              fileCoverage: stableQualityData.fileCoverage,
+              fileMetrics: stableQualityData.fileMetrics,
+            }
+          : undefined,
+      } as FileCityColorModesSliceData,
+      loading: false,
+      error: null,
+      refresh: async () => {
+        // No async refresh needed - color mode is computed from other state
+      },
+    }),
+    [effectiveColorMode, stableQualityData],
+  );
+
+  // Explicit DataSlice: localhostServers
+  const localhostServersSlice = useMemo<DataSlice<RunningServer[]>>(
+    () => ({
+      scope: 'workspace' as const,
+      name: 'localhostServers',
+      data: stableLocalhostServers,
+      loading: localhostServersLoading,
+      error: null,
+      refresh: async () => {
+        // Refetch localhost servers
+        setLocalhostServersLoading(true);
+        try {
+          const result =
+            await LocalhostDetectionService.detectRunningServers();
+          setLocalhostServers(result.servers);
+        } catch (error) {
+          console.error(
+            '[RepositoryPanelContext] Failed to refresh localhost servers:',
+            error,
+          );
+        } finally {
+          setLocalhostServersLoading(false);
+        }
+      },
+    }),
+    [stableLocalhostServers, localhostServersLoading],
+  );
+
+  // Explicit DataSlice: globalSkills
+  const globalSkillsSlice = useMemo<DataSlice<{ skills: GlobalSkill[] }>>(
+    () => ({
+      scope: 'workspace' as const,
+      name: 'globalSkills',
+      data: { skills: globalSkillsData },
+      loading: globalSkillsLoading,
+      error: null,
+      refresh: async () => {
+        // Refetch global skills
+        setGlobalSkillsLoading(true);
+        try {
+          const skills = await FileSystemService.getGlobalSkills();
+          setGlobalSkillsData(skills);
+        } catch (error) {
+          console.error(
+            '[RepositoryPanelContext] Failed to refresh global skills:',
+            error,
+          );
+        } finally {
+          setGlobalSkillsLoading(false);
+        }
+      },
+    }),
+    [globalSkillsData, globalSkillsLoading],
+  );
+
+  // Explicit DataSlice: telemetry
+  const telemetrySlice = useMemo<DataSlice<RegisteredTrace[]>>(
+    () => ({
+      scope: 'workspace' as const,
+      name: 'telemetry',
+      data: telemetryTraces,
+      loading: telemetryLoading,
+      error: null,
+      refresh: async () => {
+        // For now, telemetry refresh is a no-op
+        // Real implementation will fetch from telemetry service
+        setTelemetryLoading(false);
+      },
+    }),
+    [telemetryTraces, telemetryLoading],
+  );
+
+  // Panel-specific slices (from ExtendedPanelContextValue)
+  // Terminal slice (managed by TerminalProvider, stub here for type compatibility)
+  const terminalSlice = useMemo<DataSlice<TerminalSessionInfo[]>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'terminal',
+      data: [],
+      loading: false,
+      error: null,
+      refresh: async () => {},
+    }),
+    [],
+  );
+
+  // Feed project slice (for FeedCodeCityPanel)
+  const feedProjectSlice = useMemo<DataSlice<FeedProjectSliceData>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'feedProject',
+      data: {
+        repo: {
+          owner: '',
+          name: '',
+          fullName: '',
+          description: undefined,
+          htmlUrl: '',
+          stars: 0,
+          forks: 0,
+          language: undefined,
+          topics: [],
+        },
+        rootPackage: undefined,
+      },
+      loading: false,
+      error: null,
+      refresh: async () => {},
+    }),
+    [],
+  );
+
+  // GitHub issues slice (for GitHubIssuesPanel)
+  const githubIssuesSlice = useMemo<DataSlice<GitHubIssuesSliceData>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'githubIssues',
+      data: {
+        issues: [],
+        owner: '',
+        repo: '',
+        isAuthenticated: false,
+        error: undefined,
+      },
+      loading: false,
+      error: null,
+      refresh: async () => {},
+    }),
+    [],
+  );
+
+  // Empty slices Map for backward compatibility with PanelContextValue interface
+  const slices = useMemo<Map<string, DataSlice<unknown>>>(() => new Map(), []);
 
   // Memoize currentScope to prevent recreation
   const currentScope = useMemo(
@@ -1912,55 +1980,54 @@ export const RepositoryPanelProvider: React.FC<
   );
 
   // Memoize callback functions to prevent recreation
+  // Legacy slice getter methods - kept for PanelContextValue interface compatibility
   const getSlice = useCallback(
-    <T = unknown,>(name: string): DataSlice<T> | undefined => {
-      return slices.get(name) as DataSlice<T> | undefined;
+    <T = unknown,>(_name: string): DataSlice<T> | undefined => {
+      // No-op: Moving away from dynamic Map-based slices
+      // Panels should access typed properties directly (context.fileTree)
+      return undefined;
     },
-    [slices],
+    [],
   );
 
   const getWorkspaceSlice = useCallback(() => undefined, []); // No workspace slices in repository context
 
   const getRepositorySlice = useCallback(
-    <T = unknown,>(name: string): DataSlice<T> | undefined => {
-      const slice = slices.get(name);
-      return slice?.scope === 'repository'
-        ? (slice as DataSlice<T>)
-        : undefined;
+    <T = unknown,>(_name: string): DataSlice<T> | undefined => {
+      // No-op: Moving away from dynamic Map-based slices
+      // Panels should access typed properties directly (context.fileTree)
+      return undefined;
     },
-    [slices],
+    [],
   );
 
+  // Legacy helper methods - kept for PanelContextValue interface compatibility
+  // No-op stubs: actions handle their own refreshing, React handles reactivity
   const hasSlice = useCallback(
-    (name: string, scope?: 'workspace' | 'repository'): boolean => {
-      const slice = slices.get(name);
-      if (!slice) return false;
-      return scope ? slice.scope === scope : true;
+    (_name: string, _scope?: 'workspace' | 'repository'): boolean => {
+      // No-op: Moving away from dynamic slice checking
+      // Panels should access typed properties directly (context.fileTree)
+      return false;
     },
-    [slices],
+    [],
   );
 
   const isSliceLoading = useCallback(
-    (name: string, scope?: 'workspace' | 'repository'): boolean => {
-      const slice = slices.get(name);
-      if (!slice) return false;
-      if (scope && slice.scope !== scope) return false;
-      return slice.loading;
+    (_name: string, _scope?: 'workspace' | 'repository'): boolean => {
+      // No-op: Moving away from dynamic slice checking
+      // Panels should access typed properties directly (context.fileTree.loading)
+      return false;
     },
-    [slices],
+    [],
   );
 
   const refresh = useCallback(
-    async (scope?: 'workspace' | 'repository', sliceName?: string): Promise<void> => {
-      const slicesToRefresh = Array.from(slices.values()).filter((slice) => {
-        if (scope && slice.scope !== scope) return false;
-        if (sliceName && slice.name !== sliceName) return false;
-        return true;
-      });
-
-      await Promise.all(slicesToRefresh.map((slice) => slice.refresh()));
+    async (_scope?: 'workspace' | 'repository', _sliceName?: string): Promise<void> => {
+      // No-op: Actions handle their own data refreshing
+      // React's reactivity handles UI updates automatically
+      // Any actual refresh should be triggered via actions, not context.refresh()
     },
-    [slices],
+    [],
   );
 
   // Create context value
@@ -1983,16 +2050,26 @@ export const RepositoryPanelProvider: React.FC<
       isSliceLoading,
       refresh,
 
-      // Direct slice properties for new v0.3.0+ typed panels
-      // These reference the same objects that are in the slices Map
-      // Alexandria docs panel needs: activeFile (camelCase), fileTree
+      // Explicit typed slice properties - no more dynamic Map lookups!
       activeFile: activeFileSlice,
       fileTree: fileTreeSlice,
       openTabs: openTabsSlice,
-      alexandriaRepositories: slices.get('alexandriaRepositories') as DataSlice<AlexandriaRepositoriesSlice>,
-      workspace: slices.get('workspace') as DataSlice<WorkspaceSlice>,
-      workspaceRepositories: slices.get('workspaceRepositories') as DataSlice<WorkspaceRepositoriesSlice>,
-      workspaces: slices.get('workspaces') as DataSlice<WorkspacesSlice>,
+      markdown: markdownSlice,
+      packages: packagesSlice,
+      gitStatusWithFiles: gitStatusWithFilesSlice,
+      alexandriaRepositories: alexandriaRepositoriesSlice as DataSlice<AlexandriaRepositoriesSlice>,
+      workspace: workspaceSlice as DataSlice<WorkspaceSlice>,
+      workspaceRepositories: workspaceRepositoriesSlice as DataSlice<WorkspaceRepositoriesSlice>,
+      workspaces: workspacesSlice as DataSlice<WorkspacesSlice>,
+      quality: qualitySlice,
+      fileCityColorModes: fileCityColorModesSlice,
+      localhostServers: localhostServersSlice,
+      globalSkills: globalSkillsSlice,
+      telemetry: telemetrySlice,
+      // Panel-specific slices (from ExtendedPanelContextValue)
+      terminal: terminalSlice,
+      feedProject: feedProjectSlice,
+      githubIssues: githubIssuesSlice,
     }),
     [
       repositoryPath,
@@ -2010,6 +2087,21 @@ export const RepositoryPanelProvider: React.FC<
       activeFileSlice,
       fileTreeSlice,
       openTabsSlice,
+      markdownSlice,
+      packagesSlice,
+      gitStatusWithFilesSlice,
+      alexandriaRepositoriesSlice,
+      workspaceSlice,
+      workspaceRepositoriesSlice,
+      workspacesSlice,
+      qualitySlice,
+      fileCityColorModesSlice,
+      localhostServersSlice,
+      globalSkillsSlice,
+      telemetrySlice,
+      terminalSlice,
+      feedProjectSlice,
+      githubIssuesSlice,
     ],
   );
 

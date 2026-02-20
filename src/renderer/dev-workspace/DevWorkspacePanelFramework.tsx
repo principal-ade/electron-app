@@ -44,7 +44,7 @@ import {
 import type { RegisteredTrace } from '@principal-ai/principal-view-core';
 import type { WorkflowTemplate } from '@principal-ai/principal-view-core';
 import type { FileInfo } from '@principal-ai/repository-abstraction';
-import { FeedCodeCityPanel } from '@industry-theme/file-city-panel';
+import { FeedCodeCityPanel, type FeedCodeCityPanelPropsTyped } from '@industry-theme/file-city-panel';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import { LocalProjectsPanel } from '@industry-theme/alexandria-panels';
 import { panels as localhostBrowserPanels } from '@industry-theme/localhost-panels';
@@ -218,7 +218,7 @@ const FileCityWithHighlights: React.FC<{
   context: ReturnType<typeof useRepositoryPanelProvider>['context'];
   actions: ReturnType<typeof useRepositoryPanelProvider>['actions'];
   events: ReturnType<typeof useRepositoryPanelProvider>['events'];
-  FileCityPanelComponent: React.ComponentType<PanelComponentProps>;
+  FileCityPanelComponent: React.ComponentType<FeedCodeCityPanelPropsTyped>;
 }> = ({ context, actions, events, FileCityPanelComponent }) => {
   const { context: agentHighlightCtx } = useAgentHighlightProvider();
 
@@ -249,6 +249,9 @@ const FileCityWithHighlights: React.FC<{
       getSlice: <T = unknown>(name: string) => {
         return mergedSlices.get(name) as DataSlice<T> | undefined;
       },
+      // Explicit properties for typed panel contexts
+      fileTree: context.fileTree,
+      feedProject: context.feedProject,
     };
   }, [context, agentHighlightCtx.highlightLayers]);
 
@@ -324,6 +327,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       ...context,
       terminalSessions: terminalCtx.terminalSessions,
       terminalContext: terminalCtx.terminalContext,
+      terminal: context.terminal,
     }),
     [context, terminalCtx.terminalSessions, terminalCtx.terminalContext],
   );

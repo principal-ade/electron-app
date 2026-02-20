@@ -289,6 +289,14 @@ const PanelInteractionsStoryInner: React.FC = () => {
               const terminalPanelContext = {
                 ...context,
                 ...terminalContext,
+                terminal: {
+                  scope: 'repository' as const,
+                  name: 'terminal',
+                  data: [],
+                  loading: false,
+                  error: null,
+                  refresh: async () => {},
+                },
               };
 
               // Debug logging

@@ -19,6 +19,7 @@ import type {
   UserProfilePanelActions,
   GitHubRepository,
 } from '@industry-theme/alexandria-panels';
+import type { GitHubSocialSliceData, PresenceSliceData } from '@industry-theme/git-sync-panels';
 import type {
   GitHubUser as LocalGitHubUser,
   GitHubOrganization as LocalGitHubOrganization,
@@ -61,8 +62,11 @@ interface SelectedUserProfile {
  * Following the web-ade pattern
  */
 export interface GitSyncPanelContextType {
-  // UserProfilePanelContext
+  // All explicit slices for GitSync
+  githubSocial: DataSlice<GitHubSocialSliceData>;
+  presence: DataSlice<PresenceSliceData>;
   userProfile: DataSlice<UserProfileSlice>;
+  currentProjects: DataSlice<unknown>;
 }
 
 /**
@@ -350,109 +354,25 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
     }
   }, []);
 
-  // Define data slices
-  const slices = useMemo<Map<string, DataSlice<unknown>>>(
-    () =>
-      new Map([
-        [
-          'github-social',
-          {
-            scope: 'global' as const,
-            name: 'github-social',
-            data: {
-              isAuthenticated,
-              isAuthLoading,
-              isLoggingIn,
-              loginError,
-              user: user as LocalGitHubUser | null,
-              socialData,
-              isLoading: socialDataLoading,
-              error: socialDataError,
-            },
-            loading: socialDataLoading || isAuthLoading,
-            error: socialDataError ? new Error(socialDataError) : null,
-            refresh: fetchSocialData,
-          },
-        ],
-        [
-          'presence',
-          {
-            scope: 'global' as const,
-            name: 'presence',
-            data: {
-              isConnected,
-              isVisible,
-              users: presenceData,
-            },
-            loading: presenceLoading,
-            error: null,
-            refresh: async () => {
-              if (isConnected) {
-                setPresenceLoading(true);
-                try {
-                  const data = await PresenceService.getUsers();
-                  setPresenceData((data.users || []) as LocalUserPresence[]);
-                } catch (err) {
-                  console.error(
-                    '[GitSyncPanelContext] Failed to refresh presence:',
-                    err,
-                  );
-                } finally {
-                  setPresenceLoading(false);
-                }
-              }
-            },
-          },
-        ],
-        [
-          'userProfile',
-          {
-            scope: 'global' as const,
-            name: 'userProfile',
-            data: {
-              user: selectedUserProfile.user,
-              organizations: selectedUserProfile.organizations,
-              starredRepositories: selectedUserProfile.starredRepositories,
-              presence: selectedUserProfile.presence,
-              loading: selectedUserLoading,
-              error: selectedUserError,
-            },
-            loading: selectedUserLoading,
-            error: selectedUserError ? new Error(selectedUserError) : null,
-            refresh: async () => {
-              if (selectedUserProfile.user?.login) {
-                await fetchUserProfile(selectedUserProfile.user.login);
-              }
-            },
-          },
-        ],
-        [
-          'current-projects',
-          {
-            scope: 'global' as const,
-            name: 'current-projects',
-            data: {
-              projects: currentUserSessions.map((session) => ({
-                ...session,
-                agentId: 'desktop-client',
-                clientType: 'desktop' as const,
-              })),
-              activeProject: activeRepository,
-              currentActivity: undefined, // TODO: Add activity tracking
-              isLoading: presenceLoading,
-              error: null,
-            },
-            loading: presenceLoading,
-            error: null,
-            refresh: async () => {
-              // Presence data refreshes automatically via subscription
-              console.info(
-                '[GitSyncPanelContext] Current projects slice refresh triggered',
-              );
-            },
-          },
-        ],
-      ]),
+  // Explicit DataSlice: githubSocial
+  const githubSocialSlice = useMemo<DataSlice<GitHubSocialSliceData>>(
+    () => ({
+      scope: 'global' as const,
+      name: 'github-social',
+      data: {
+        isAuthenticated: isAuthenticated ?? false,
+        isAuthLoading,
+        isLoggingIn: isLoggingIn ?? false,
+        loginError: loginError ?? null,
+        user: user as any,
+        socialData: socialData as any,
+        isLoading: socialDataLoading,
+        error: socialDataError,
+      },
+      loading: socialDataLoading || isAuthLoading,
+      error: socialDataError ? new Error(socialDataError) : null,
+      refresh: fetchSocialData,
+    }),
     [
       isAuthenticated,
       isAuthLoading,
@@ -462,19 +382,101 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
       socialData,
       socialDataLoading,
       socialDataError,
-      isConnected,
-      isVisible,
-      presenceData,
-      presenceLoading,
       fetchSocialData,
+    ],
+  );
+
+  // Explicit DataSlice: presence
+  const presenceSlice = useMemo<DataSlice<PresenceSliceData>>(
+    () => ({
+      scope: 'global' as const,
+      name: 'presence',
+      data: {
+        isConnected,
+        isVisible,
+        users: presenceData,
+      },
+      loading: presenceLoading,
+      error: null,
+      refresh: async () => {
+        if (isConnected) {
+          setPresenceLoading(true);
+          try {
+            const data = await PresenceService.getUsers();
+            setPresenceData((data.users || []) as LocalUserPresence[]);
+          } catch (err) {
+            console.error(
+              '[GitSyncPanelContext] Failed to refresh presence:',
+              err,
+            );
+          } finally {
+            setPresenceLoading(false);
+          }
+        }
+      },
+    }),
+    [isConnected, isVisible, presenceData, presenceLoading],
+  );
+
+  // Explicit DataSlice: userProfile
+  const userProfileSlice = useMemo<DataSlice<UserProfileSlice>>(
+    () => ({
+      scope: 'global' as const,
+      name: 'userProfile',
+      data: {
+        user: selectedUserProfile.user,
+        organizations: selectedUserProfile.organizations,
+        starredRepositories: selectedUserProfile.starredRepositories,
+        presence: selectedUserProfile.presence,
+        loading: selectedUserLoading,
+        error: selectedUserError ?? undefined,
+      },
+      loading: selectedUserLoading,
+      error: selectedUserError ? new Error(selectedUserError) : null,
+      refresh: async () => {
+        if (selectedUserProfile.user?.login) {
+          await fetchUserProfile(selectedUserProfile.user.login);
+        }
+      },
+    }),
+    [
       selectedUserProfile,
       selectedUserLoading,
       selectedUserError,
-      currentUserSessions,
-      activeRepository,
       fetchUserProfile,
     ],
   );
+
+  // Explicit DataSlice: currentProjects
+  const currentProjectsSlice = useMemo<DataSlice<unknown>>(
+    () => ({
+      scope: 'global' as const,
+      name: 'current-projects',
+      data: {
+        projects: currentUserSessions.map((session) => ({
+          ...session,
+          agentId: 'desktop-client',
+          clientType: 'desktop' as const,
+        })),
+        activeProject: activeRepository,
+        currentActivity: undefined, // TODO: Add activity tracking
+        isLoading: presenceLoading,
+        error: null,
+      },
+      loading: presenceLoading,
+      error: null,
+      refresh: async () => {
+        // Presence data refreshes automatically via subscription
+        console.info(
+          '[GitSyncPanelContext] Current projects slice refresh triggered',
+        );
+      },
+    }),
+    [currentUserSessions, activeRepository, presenceLoading],
+  );
+
+  // Empty slices Map for backward compatibility with PanelContextValue interface
+  const slices = useMemo<Map<string, DataSlice<unknown>>>(() => new Map(), []);
 
   // Define actions
   const actions: GitSyncPanelActions = useMemo(
@@ -557,45 +559,24 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
       },
       slices,
       adapters: {},
-      getSlice: <T = unknown,>(name: string): DataSlice<T> | undefined => {
-        return slices.get(name) as DataSlice<T> | undefined;
+      // Legacy helper methods - now no-ops since we migrated to explicit slices
+      // Actions handle refreshing, React handles reactivity
+      // Panels should use explicit slice properties (context.githubSocial, context.userProfile, etc.)
+      getSlice: () => undefined,
+      getWorkspaceSlice: () => undefined,
+      getRepositorySlice: () => undefined,
+      hasSlice: () => false,
+      isSliceLoading: () => false,
+      refresh: async () => {
+        // No-op: Actions handle refreshing, React handles reactivity
       },
-      getWorkspaceSlice: <T = unknown,>(
-        _name: string,
-      ): DataSlice<T> | undefined => {
-        return undefined;
-      },
-      getRepositorySlice: <T = unknown,>(
-        _name: string,
-      ): DataSlice<T> | undefined => {
-        return undefined;
-      },
-      hasSlice: (name: string): boolean => {
-        return slices.has(name);
-      },
-      isSliceLoading: (name: string): boolean => {
-        const slice = slices.get(name);
-        return slice?.loading ?? false;
-      },
-      refresh: async (
-        _scope?: 'workspace' | 'repository',
-        sliceName?: string,
-      ): Promise<void> => {
-        if (sliceName) {
-          const slice = slices.get(sliceName);
-          if (slice) {
-            await slice.refresh();
-          }
-        } else {
-          await Promise.all(
-            Array.from(slices.values()).map((slice) => slice.refresh()),
-          );
-        }
-      },
-      // Typed slice properties from slices map
-      userProfile: slices.get('userProfile') as DataSlice<UserProfileSlice>,
+      // Typed slice properties for direct access (all explicit slices)
+      githubSocial: githubSocialSlice,
+      presence: presenceSlice,
+      userProfile: userProfileSlice,
+      currentProjects: currentProjectsSlice,
     }),
-    [slices],
+    [slices, githubSocialSlice, presenceSlice, userProfileSlice, currentProjectsSlice],
   );
 
   // Combine into provider value

@@ -45,6 +45,8 @@ import type {
 } from '@industry-theme/alexandria-panels';
 import { createFileTreeSource } from '@principal-ai/repository-abstraction';
 import type { TerminalSessionInfo } from '@industry-theme/xterm-terminal-panel';
+import type { FeedProjectSliceData } from '@industry-theme/file-city-panel';
+import type { GitHubIssuesSliceData } from '@industry-theme/github-panels';
 import { minimatch } from 'minimatch';
 
 // Extend PanelActions with terminal and workspace-specific actions
@@ -176,18 +178,25 @@ interface ExtendedPanelContextValue extends PanelContextValue {
     repositoryPath?: string;
   }>;
   loading: boolean;
-  // Localhost detection data
+  // Localhost detection data (legacy flat properties - kept for backward compatibility)
   localhostServers: RunningServer[];
   localhostServersLoading: boolean;
 
-  // Direct slice properties for new v0.3.0+ typed panels
-  // These are always present in the slices Map
+  // Direct slice properties for typed panel access (all explicit slices)
   activeFile: DataSlice<ActiveFileSlice>;
   fileTree: DataSlice<FileTree>;
+  git: DataSlice<unknown>;
+  markdown: DataSlice<unknown>;
   alexandriaRepositories: DataSlice<AlexandriaRepositoriesSlice>;
   workspace: DataSlice<WorkspaceSlice>;
   workspaceRepositories: DataSlice<WorkspaceRepositoriesSlice>;
   workspaces: DataSlice<WorkspacesSlice>;
+  localhostServersSlice: DataSlice<RunningServer[]>;
+
+  // Panel-specific slices
+  terminal: DataSlice<TerminalSessionInfo[]>;
+  feedProject: DataSlice<FeedProjectSliceData>;
+  githubIssues: DataSlice<GitHubIssuesSliceData>;
 }
 
 // Provider value that contains context, actions, and events separately
@@ -640,209 +649,280 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
     ],
   );
 
-  // Define data slices (memoized to update with workspace repositories)
-  const slices = useMemo<Map<string, DataSlice<unknown>>>(
-    () =>
-      new Map([
-        [
-          'git',
-          {
-            scope: 'repository' as const,
-            name: 'git',
-            data: null,
-            loading: false,
-            error: null,
-            refresh: async () => {
-              // TODO: Implement git data fetching
-              console.info('[PanelContext] Refreshing git data...');
-            },
-          },
-        ],
-        [
-          'workspace',
-          {
-            scope: 'workspace' as const,
-            name: 'workspace',
-            data: {
-              workspace: workspace,
-              loading: false,
-              error: undefined,
-            },
-            loading: false,
-            error: null,
-            refresh: async () => {
-              // TODO: Implement workspace data fetching
-              console.info('[PanelContext] Refreshing workspace data...');
-            },
-          },
-        ],
-        [
-          'workspaces',
-          {
-            scope: 'workspace' as const,
-            name: 'workspaces',
-            data: {
-              workspaces: [workspace],
-              defaultWorkspaceId: workspace.id,
-              loading: false,
-              error: undefined,
-            },
-            loading: false,
-            error: null,
-            refresh: async () => {
-              // TODO: Implement workspaces list fetching
-              console.info('[PanelContext] Refreshing workspaces data...');
-            },
-          },
-        ],
-        [
-          'workspaceRepositories',
-          {
-            scope: 'workspace' as const,
-            name: 'workspaceRepositories',
-            data: {
-              repositories: workspaceRepositories,
-              loading: repositoriesLoading,
-              error: undefined,
-            },
-            loading: repositoriesLoading,
-            error: null,
-            refresh: async () => {
-              // Refetch repositories
-              if (workspace?.id) {
-                setRepositoriesLoading(true);
-                try {
-                  const repos =
-                    await WorkspaceService.getRepositoriesInWorkspace(
-                      workspace.id as string,
-                    );
-                  setWorkspaceRepositories(repos);
-                } catch (error) {
-                  console.error(
-                    '[PanelContext] Failed to refresh workspace repositories:',
-                    error,
-                  );
-                } finally {
-                  setRepositoriesLoading(false);
-                }
-              }
-            },
-          },
-        ],
-        [
-          'markdown',
-          {
-            scope: 'repository' as const,
-            name: 'markdown',
-            data: markdownFiles,
-            loading: markdownLoading,
-            error: null,
-            refresh: async () => {
-              // Refetch markdown files
-              if (repository?.path) {
-                setMarkdownLoading(true);
-                try {
-                  const entry: AlexandriaEntry = {
-                    name: repository.name,
-                    path: repository.path,
-                  } as AlexandriaEntry;
-                  const docs =
-                    await AlexandriaDocsService.getComprehensiveDocuments(
-                      entry,
-                    );
-                  const allDocs = [...docs.tracked, ...docs.untracked];
-                  const files = allDocs.map((docPath) => ({
-                    path: docPath,
-                    title: undefined,
-                    lastModified: Date.now(),
-                  }));
-                  setMarkdownFiles(files);
-                } catch (error) {
-                  console.error(
-                    '[PanelContext] Failed to refresh markdown files:',
-                    error,
-                  );
-                } finally {
-                  setMarkdownLoading(false);
-                }
-              }
-            },
-          },
-        ],
-        ['fileTree', fileTreeSlice as DataSlice<unknown>],
-        [
-          'localhostServers',
-          {
-            scope: 'workspace' as const,
-            name: 'localhostServers',
-            data: localhostServers,
-            loading: localhostServersLoading,
-            error: null,
-            refresh: async () => {
-              // Refetch localhost servers
-              setLocalhostServersLoading(true);
-              try {
-                const result =
-                  await LocalhostDetectionService.detectRunningServers();
-                setLocalhostServers(result.servers);
-              } catch (error) {
-                console.error(
-                  '[PanelContext] Failed to refresh localhost servers:',
-                  error,
-                );
-              } finally {
-                setLocalhostServersLoading(false);
-              }
-            },
-          },
-        ],
-        [
-          'alexandriaRepositories',
-          {
-            scope: 'workspace' as const,
-            name: 'alexandriaRepositories',
-            data: {
-              repositories: alexandriaRepositories,
-              discoveredRepositories: [],
-              loading: alexandriaRepositoriesLoading,
-              error: undefined,
-            },
-            loading: alexandriaRepositoriesLoading,
-            error: null,
-            refresh: async () => {
-              setAlexandriaRepositoriesLoading(true);
-              try {
-                const repos = await AlexandriaService.getRepositories();
-                setAlexandriaRepositories(repos);
-              } catch (error) {
-                console.error(
-                  '[PanelContext] Failed to refresh Alexandria repositories:',
-                  error,
-                );
-                setAlexandriaRepositories([]);
-              } finally {
-                setAlexandriaRepositoriesLoading(false);
-              }
-            },
-          },
-        ],
-        ['active-file', activeFileSlice as DataSlice<unknown>],
-      ]),
-    [
-      workspace,
-      workspaceRepositories,
-      repositoriesLoading,
-      markdownFiles,
-      markdownLoading,
-      repository,
-      localhostServers,
-      localhostServersLoading,
-      alexandriaRepositories,
-      alexandriaRepositoriesLoading,
-      fileTreeSlice,
-      activeFileSlice,
-    ],
+  // Explicit DataSlice: git (stub for compatibility)
+  const gitSlice = useMemo<DataSlice<unknown>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'git',
+      data: null,
+      loading: false,
+      error: null,
+      refresh: async () => {
+        // TODO: Implement git data fetching
+        console.info('[PanelContext] Refreshing git data...');
+      },
+    }),
+    [],
   );
+
+  // Explicit DataSlice: workspace
+  const workspaceSlice = useMemo<DataSlice<WorkspaceSlice>>(
+    () => ({
+      scope: 'workspace' as const,
+      name: 'workspace',
+      data: {
+        workspace: workspace as any, // Cast to match expected Workspace type
+        loading: false,
+        error: undefined,
+      },
+      loading: false,
+      error: null,
+      refresh: async () => {
+        // TODO: Implement workspace data fetching
+        console.info('[PanelContext] Refreshing workspace data...');
+      },
+    }),
+    [workspace],
+  );
+
+  // Explicit DataSlice: workspaces
+  const workspacesSlice = useMemo<DataSlice<WorkspacesSlice>>(
+    () => ({
+      scope: 'workspace' as const,
+      name: 'workspaces',
+      data: {
+        workspaces: [workspace as any], // Cast to match expected Workspace type
+        defaultWorkspaceId: workspace.id as string | null | undefined,
+        loading: false,
+        error: undefined,
+      },
+      loading: false,
+      error: null,
+      refresh: async () => {
+        // TODO: Implement workspaces list fetching
+        console.info('[PanelContext] Refreshing workspaces data...');
+      },
+    }),
+    [workspace],
+  );
+
+  // Explicit DataSlice: workspaceRepositories
+  const workspaceRepositoriesSlice = useMemo<DataSlice<WorkspaceRepositoriesSlice>>(
+    () => ({
+      scope: 'workspace' as const,
+      name: 'workspaceRepositories',
+      data: {
+        repositories: workspaceRepositories,
+        loading: repositoriesLoading,
+        error: undefined,
+      },
+      loading: repositoriesLoading,
+      error: null,
+      refresh: async () => {
+        // Refetch repositories
+        if (workspace?.id) {
+          setRepositoriesLoading(true);
+          try {
+            const repos =
+              await WorkspaceService.getRepositoriesInWorkspace(
+                workspace.id as string,
+              );
+            setWorkspaceRepositories(repos);
+          } catch (error) {
+            console.error(
+              '[PanelContext] Failed to refresh workspace repositories:',
+              error,
+            );
+          } finally {
+            setRepositoriesLoading(false);
+          }
+        }
+      },
+    }),
+    [workspaceRepositories, repositoriesLoading, workspace?.id],
+  );
+
+  // Explicit DataSlice: markdown
+  const markdownSlice = useMemo<DataSlice<unknown>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'markdown',
+      data: markdownFiles,
+      loading: markdownLoading,
+      error: null,
+      refresh: async () => {
+        // Refetch markdown files
+        if (repository?.path) {
+          setMarkdownLoading(true);
+          try {
+            const entry: AlexandriaEntry = {
+              name: repository.name,
+              path: repository.path,
+            } as AlexandriaEntry;
+            const docs =
+              await AlexandriaDocsService.getComprehensiveDocuments(
+                entry,
+              );
+            const allDocs = [...docs.tracked, ...docs.untracked];
+            const files = allDocs.map((docPath) => ({
+              path: docPath,
+              title: undefined,
+              lastModified: Date.now(),
+            }));
+            setMarkdownFiles(files);
+          } catch (error) {
+            console.error(
+              '[PanelContext] Failed to refresh markdown files:',
+              error,
+            );
+          } finally {
+            setMarkdownLoading(false);
+          }
+        }
+      },
+    }),
+    [markdownFiles, markdownLoading, repository],
+  );
+
+  // Explicit DataSlice: localhostServers
+  const localhostServersSlice = useMemo<DataSlice<RunningServer[]>>(
+    () => ({
+      scope: 'workspace' as const,
+      name: 'localhostServers',
+      data: localhostServers,
+      loading: localhostServersLoading,
+      error: null,
+      refresh: async () => {
+        // Refetch localhost servers
+        setLocalhostServersLoading(true);
+        try {
+          const result =
+            await LocalhostDetectionService.detectRunningServers();
+          setLocalhostServers(result.servers);
+        } catch (error) {
+          console.error(
+            '[PanelContext] Failed to refresh localhost servers:',
+            error,
+          );
+        } finally {
+          setLocalhostServersLoading(false);
+        }
+      },
+    }),
+    [localhostServers, localhostServersLoading],
+  );
+
+  // Explicit DataSlice: alexandriaRepositories
+  const alexandriaRepositoriesSlice = useMemo<DataSlice<AlexandriaRepositoriesSlice>>(
+    () => ({
+      scope: 'workspace' as const,
+      name: 'alexandriaRepositories',
+      data: {
+        repositories: alexandriaRepositories,
+        discoveredRepositories: [],
+        loading: alexandriaRepositoriesLoading,
+        error: undefined,
+      },
+      loading: alexandriaRepositoriesLoading,
+      error: null,
+      refresh: async () => {
+        setAlexandriaRepositoriesLoading(true);
+        try {
+          const repos = await AlexandriaService.getRepositories();
+          setAlexandriaRepositories(repos);
+        } catch (error) {
+          console.error(
+            '[PanelContext] Failed to refresh Alexandria repositories:',
+            error,
+          );
+          setAlexandriaRepositories([]);
+        } finally {
+          setAlexandriaRepositoriesLoading(false);
+        }
+      },
+    }),
+    [alexandriaRepositories, alexandriaRepositoriesLoading],
+  );
+
+  // Terminal slice (for TerminalPanelContext)
+  const terminalSlice = useMemo<DataSlice<TerminalSessionInfo[]>>(
+    () => ({
+      scope: workspace ? ('workspace' as const) : ('global' as const),
+      name: 'terminal',
+      data: terminalSessions.map((session) => ({
+        id: session.id,
+        pid: 0, // TerminalInfo doesn't include pid
+        cwd: session.directory || '',
+        shell: '', // TerminalInfo doesn't include shell
+        createdAt: session.createdAt || Date.now(),
+        lastActivity: session.lastActivity || Date.now(),
+        context: session.context,
+      })),
+      loading: false,
+      error: null,
+      refresh: async () => {
+        try {
+          const sessions = await TerminalService.list();
+          setTerminalSessions(sessions);
+        } catch (error) {
+          console.error('[PanelContext] Failed to refresh terminal sessions:', error);
+        }
+      },
+    }),
+    [terminalSessions, workspace],
+  );
+
+  // Feed project slice (for FeedCodeCityPanelContext)
+  const feedProjectSlice = useMemo<DataSlice<FeedProjectSliceData>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'feedProject',
+      data: {
+        repo: {
+          owner: '',
+          name: '',
+          fullName: '',
+          description: undefined,
+          htmlUrl: '',
+          stars: 0,
+          forks: 0,
+          language: undefined,
+          topics: [],
+        },
+        rootPackage: undefined,
+      },
+      loading: false,
+      error: null,
+      refresh: async () => {
+        // No-op: Feed project data managed by panel
+      },
+    }),
+    [],
+  );
+
+  // GitHub issues slice (for GitHubIssuesPanelContext)
+  const githubIssuesSlice = useMemo<DataSlice<GitHubIssuesSliceData>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'githubIssues',
+      data: {
+        issues: [],
+        owner: '',
+        repo: '',
+        isAuthenticated: false,
+        error: undefined,
+      },
+      loading: false,
+      error: null,
+      refresh: async () => {
+        // No-op: GitHub issues data managed by panel
+      },
+    }),
+    [],
+  );
+
+  // Empty slices Map for backward compatibility with PanelContextValue interface
+  const slices = useMemo<Map<string, DataSlice<unknown>>>(() => new Map(), []);
 
   // Define panel actions
   const actions: ExtendedPanelActions = useMemo(
@@ -1444,50 +1524,16 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       },
       slices,
       adapters,
-      getSlice: <T = unknown,>(name: string): DataSlice<T> | undefined => {
-        return slices.get(name) as DataSlice<T> | undefined;
-      },
-      getWorkspaceSlice: <T = unknown,>(
-        name: string,
-      ): DataSlice<T> | undefined => {
-        const slice = slices.get(name);
-        return slice?.scope === 'workspace'
-          ? (slice as DataSlice<T>)
-          : undefined;
-      },
-      getRepositorySlice: <T = unknown,>(
-        name: string,
-      ): DataSlice<T> | undefined => {
-        const slice = slices.get(name);
-        return slice?.scope === 'repository'
-          ? (slice as DataSlice<T>)
-          : undefined;
-      },
-      hasSlice: (name: string, scope?: 'workspace' | 'repository'): boolean => {
-        const slice = slices.get(name);
-        if (!slice) return false;
-        return scope ? slice.scope === scope : true;
-      },
-      isSliceLoading: (
-        name: string,
-        scope?: 'workspace' | 'repository',
-      ): boolean => {
-        const slice = slices.get(name);
-        if (!slice) return false;
-        if (scope && slice.scope !== scope) return false;
-        return slice.loading;
-      },
-      refresh: async (
-        scope?: 'workspace' | 'repository',
-        sliceName?: string,
-      ): Promise<void> => {
-        const slicesToRefresh = Array.from(slices.values()).filter((slice) => {
-          if (scope && slice.scope !== scope) return false;
-          if (sliceName && slice.name !== sliceName) return false;
-          return true;
-        });
-
-        await Promise.all(slicesToRefresh.map((slice) => slice.refresh()));
+      // Legacy helper methods - now no-ops since we migrated to explicit slices
+      // Actions handle refreshing, React handles reactivity
+      // Panels should use explicit slice properties (context.workspace, context.markdown, etc.)
+      getSlice: () => undefined,
+      getWorkspaceSlice: () => undefined,
+      getRepositorySlice: () => undefined,
+      hasSlice: () => false,
+      isSliceLoading: () => false,
+      refresh: async () => {
+        // No-op: Actions handle refreshing, React handles reactivity
       },
       // Panel-specific properties
       repositoryPath: workspace.path, // Use workspace path, not repository path
@@ -1512,18 +1558,25 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
         repositoryPath: undefined, // TerminalInfo doesn't include repositoryPath
       })),
       loading: false,
-      // Localhost detection data
+      // Localhost detection data (legacy flat properties - kept for backward compatibility)
       localhostServers,
       localhostServersLoading,
 
-      // Direct slice properties for new v0.3.0+ typed panels
-      // These reference the same objects that are in the slices Map
+      // Direct slice properties for typed panel access (all explicit slices)
       activeFile: activeFileSlice,
       fileTree: fileTreeSlice,
-      alexandriaRepositories: slices.get('alexandriaRepositories') as DataSlice<AlexandriaRepositoriesSlice>,
-      workspace: slices.get('workspace') as DataSlice<WorkspaceSlice>,
-      workspaceRepositories: slices.get('workspaceRepositories') as DataSlice<WorkspaceRepositoriesSlice>,
-      workspaces: slices.get('workspaces') as DataSlice<WorkspacesSlice>,
+      git: gitSlice,
+      markdown: markdownSlice,
+      alexandriaRepositories: alexandriaRepositoriesSlice,
+      workspace: workspaceSlice,
+      workspaceRepositories: workspaceRepositoriesSlice,
+      workspaces: workspacesSlice,
+      localhostServersSlice: localhostServersSlice,
+
+      // Panel-specific slices
+      terminal: terminalSlice,
+      feedProject: feedProjectSlice,
+      githubIssues: githubIssuesSlice,
     }),
     [
       workspace,
@@ -1536,6 +1589,16 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       localhostServersLoading,
       activeFileSlice,
       fileTreeSlice,
+      gitSlice,
+      markdownSlice,
+      alexandriaRepositoriesSlice,
+      workspaceSlice,
+      workspaceRepositoriesSlice,
+      workspacesSlice,
+      localhostServersSlice,
+      terminalSlice,
+      feedProjectSlice,
+      githubIssuesSlice,
     ],
   );
 
