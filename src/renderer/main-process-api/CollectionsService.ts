@@ -6,6 +6,8 @@
 import type {
   Collection,
   CollectionMembership,
+  CustomRegion,
+  RepositoryLayoutData,
 } from '@principal-ai/alexandria-collections';
 import type {
   CollectionsState,
@@ -141,6 +143,92 @@ export class CollectionsService {
     username: string,
   ): Promise<CollectionsResult<PublicCollectionsResult>> {
     return window.mainProcess.collections.getUserPublicCollections(username);
+  }
+
+  // ========================================
+  // Region Management
+  // ========================================
+
+  /**
+   * Create a new custom region in a collection
+   */
+  static async createRegion(
+    collectionId: string,
+    region: Omit<CustomRegion, 'id'>,
+  ): Promise<CollectionsResult<CustomRegion>> {
+    return window.mainProcess.collections.createRegion(collectionId, region);
+  }
+
+  /**
+   * Update an existing custom region
+   */
+  static async updateRegion(
+    collectionId: string,
+    regionId: string,
+    updates: Partial<Omit<CustomRegion, 'id'>>,
+  ): Promise<CollectionsResult> {
+    return window.mainProcess.collections.updateRegion(
+      collectionId,
+      regionId,
+      updates,
+    );
+  }
+
+  /**
+   * Delete a custom region
+   */
+  static async deleteRegion(
+    collectionId: string,
+    regionId: string,
+  ): Promise<CollectionsResult> {
+    return window.mainProcess.collections.deleteRegion(collectionId, regionId);
+  }
+
+  /**
+   * Assign a repository to a custom region
+   */
+  static async assignRepositoryToRegion(
+    collectionId: string,
+    repositoryId: string,
+    regionId: string,
+  ): Promise<CollectionsResult> {
+    return window.mainProcess.collections.assignRepositoryToRegion(
+      collectionId,
+      repositoryId,
+      regionId,
+    );
+  }
+
+  /**
+   * Update repository position on the overworld map
+   */
+  static async updateRepositoryPosition(
+    collectionId: string,
+    repositoryId: string,
+    layout: RepositoryLayoutData,
+  ): Promise<CollectionsResult> {
+    return window.mainProcess.collections.updateRepositoryPosition(
+      collectionId,
+      repositoryId,
+      layout,
+    );
+  }
+
+  /**
+   * Batch initialize layout (regions + assignments + positions)
+   */
+  static async batchInitializeLayout(
+    collectionId: string,
+    updates: {
+      regions?: CustomRegion[];
+      assignments?: Array<{ repositoryId: string; regionId: string }>;
+      positions?: Array<{ repositoryId: string; layout: RepositoryLayoutData }>;
+    },
+  ): Promise<CollectionsResult> {
+    return window.mainProcess.collections.batchInitializeLayout(
+      collectionId,
+      updates,
+    );
   }
 
   // ========================================

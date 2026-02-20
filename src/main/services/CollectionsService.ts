@@ -1,18 +1,21 @@
 /**
- * CollectionsService - Manages user repository collections synced to GitHub
+ * CollectionsService - Manages user repository collections using CollectionStorageAdapter
  *
- * This service provides collection management functionality that syncs to GitHub,
- * allowing users to organize repositories into collections that persist across devices.
- * Based on the pattern from web-ade.
+ * This service wraps CollectionStorageAdapter from @principal-ai/alexandria-collections
+ * and exposes collection management functionality via IPC to the renderer process.
+ *
+ * Replaces the previous ~1000 lines of custom GitHub sync code with a clean
+ * adapter-based implementation.
  */
 
 import { ipcMain } from 'electron';
-import { authService } from './AuthService';
+import { CollectionStorageAdapter } from '@principal-ai/alexandria-collections';
+import { GitHubFileSystemAdapter } from '../adapters/GitHubFileSystemAdapter';
 import type {
   Collection,
   CollectionMembership,
-  CollectionsData,
-  CollectionMembershipsData,
+  CustomRegion,
+  RepositoryLayoutData,
 } from '@principal-ai/alexandria-collections';
 import {
   CollectionsAPIEvent,
@@ -25,32 +28,40 @@ import {
   type PublicCollectionsResult,
 } from '../../shared/main-process-api-interfaces/CollectionsAPI';
 
-const REPO_NAME = 'web-ade-collections';
-const COLLECTIONS_FILE = 'collections.json';
-const MEMBERSHIPS_FILE = 'collection-memberships.json';
-
-interface GitHubContentResponse {
-  content: string;
-  sha: string;
-  encoding: string;
-}
-
 class CollectionsService {
-  // In-memory cache of collections state
-  private collections: Collection[] = [];
-  private memberships: CollectionMembership[] = [];
-  private gitHubRepoExists = false;
-  private gitHubRepoUrl: string | null = null;
-
-  // SHA tracking for GitHub file updates
-  private collectionsSha: string | null = null;
-  private membershipsSha: string | null = null;
+  private adapter: CollectionStorageAdapter;
+  private fsAdapter: GitHubFileSystemAdapter;
+  private initialized = false;
 
   constructor() {
+    console.log('[CollectionsService] Initializing with CollectionStorageAdapter');
+    this.fsAdapter = new GitHubFileSystemAdapter();
+    this.adapter = new CollectionStorageAdapter('/', this.fsAdapter, {
+      collectionsDir: 'collections',
+      telemetry: { enabled: true },
+    });
     this.setupHandlers();
-    console.log('[CollectionsService] Initialized');
   }
 
+  /**
+   * Initialize the service (must be called before first use)
+   */
+  async initialize(): Promise<void> {
+    if (this.initialized) return;
+
+    try {
+      await this.fsAdapter.initialize();
+      this.initialized = true;
+      console.log('[CollectionsService] Initialized successfully');
+    } catch (error) {
+      console.error('[CollectionsService] Initialization failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Setup IPC handlers for renderer process
+   */
   private setupHandlers() {
     // Core CRUD operations
     ipcMain.handle(CollectionsAPIEvent.GET_COLLECTIONS, async () => {
@@ -100,7 +111,7 @@ class CollectionsService {
       },
     );
 
-    // GitHub sync operations
+    // GitHub sync operations (simplified)
     ipcMain.handle(CollectionsAPIEvent.CHECK_GITHUB_REPO, async () => {
       return this.checkGitHubRepo();
     });
@@ -124,263 +135,75 @@ class CollectionsService {
         return this.getUserPublicCollections(username);
       },
     );
+
+    // Region management (NEW)
+    ipcMain.handle(
+      CollectionsAPIEvent.CREATE_REGION,
+      async (_, collectionId: string, region: Omit<CustomRegion, 'id'>) => {
+        return this.createRegion(collectionId, region);
+      },
+    );
+
+    ipcMain.handle(
+      CollectionsAPIEvent.UPDATE_REGION,
+      async (_, collectionId: string, regionId: string, updates: Partial<Omit<CustomRegion, 'id'>>) => {
+        return this.updateRegion(collectionId, regionId, updates);
+      },
+    );
+
+    ipcMain.handle(
+      CollectionsAPIEvent.DELETE_REGION,
+      async (_, collectionId: string, regionId: string) => {
+        return this.deleteRegion(collectionId, regionId);
+      },
+    );
+
+    ipcMain.handle(
+      CollectionsAPIEvent.ASSIGN_REPOSITORY_TO_REGION,
+      async (_, collectionId: string, repositoryId: string, regionId: string) => {
+        return this.assignRepositoryToRegion(collectionId, repositoryId, regionId);
+      },
+    );
+
+    ipcMain.handle(
+      CollectionsAPIEvent.UPDATE_REPOSITORY_POSITION,
+      async (_, collectionId: string, repositoryId: string, layout: RepositoryLayoutData) => {
+        return this.updateRepositoryPosition(collectionId, repositoryId, layout);
+      },
+    );
+
+    ipcMain.handle(
+      CollectionsAPIEvent.BATCH_INITIALIZE_LAYOUT,
+      async (_, collectionId: string, updates: {
+        regions?: CustomRegion[];
+        assignments?: Array<{ repositoryId: string; regionId: string }>;
+        positions?: Array<{ repositoryId: string; layout: RepositoryLayoutData }>;
+      }) => {
+        return this.batchInitializeLayout(collectionId, updates);
+      },
+    );
+
+    console.log('[CollectionsService] IPC handlers registered');
   }
 
-  // Helper methods for GitHub API calls
-  private async getToken(): Promise<string | null> {
-    return authService.getValidToken();
-  }
+  // ============================================================================
+  // Collection CRUD Operations
+  // ============================================================================
 
-  private async getAuthenticatedUsername(): Promise<string | null> {
-    const user = await authService.getCurrentUser();
-    return user?.login || null;
-  }
-
-  private async checkRepoExists(
-    token: string,
-    owner: string,
-  ): Promise<boolean> {
-    try {
-      const response = await fetch(
-        `https://api.github.com/repos/${owner}/${REPO_NAME}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/vnd.github.v3+json',
-          },
-        },
-      );
-      return response.ok;
-    } catch {
-      return false;
-    }
-  }
-
-  private async createRepo(
-    token: string,
-  ): Promise<{ success: boolean; error?: string }> {
-    try {
-      const response = await fetch('https://api.github.com/user/repos', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/vnd.github.v3+json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: REPO_NAME,
-          description: 'My web-ade collections - synced repository collections',
-          public: true,
-          auto_init: true,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorBody = (await response.json()) as { message?: string };
-        return {
-          success: false,
-          error: errorBody.message || 'Failed to create repository',
-        };
-      }
-
-      return { success: true };
-    } catch (err) {
-      const error = err as Error;
-      return {
-        success: false,
-        error: error.message || 'Unknown error',
-      };
-    }
-  }
-
-  private async getFile<T>(
-    token: string,
-    owner: string,
-    filename: string,
-  ): Promise<{ data: T | null; sha: string | null; error?: string }> {
-    try {
-      const response = await fetch(
-        `https://api.github.com/repos/${owner}/${REPO_NAME}/contents/${filename}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/vnd.github.v3+json',
-          },
-        },
-      );
-
-      if (response.status === 404) {
-        return { data: null, sha: null };
-      }
-
-      if (!response.ok) {
-        return { data: null, sha: null, error: `Failed to fetch ${filename}` };
-      }
-
-      const content = (await response.json()) as GitHubContentResponse;
-
-      try {
-        const decoded = Buffer.from(content.content, 'base64').toString(
-          'utf-8',
-        );
-        const data: T = JSON.parse(decoded);
-        return { data, sha: content.sha };
-      } catch {
-        return {
-          data: null,
-          sha: content.sha,
-          error: `Failed to parse ${filename}`,
-        };
-      }
-    } catch (err) {
-      const error = err as Error;
-      return {
-        data: null,
-        sha: null,
-        error: error.message || 'Unknown error',
-      };
-    }
-  }
-
-  private async saveFile(
-    token: string,
-    owner: string,
-    filename: string,
-    content: unknown,
-    sha?: string | null,
-    retries = 3,
-  ): Promise<{ success: boolean; newSha?: string; error?: string }> {
-    try {
-      const encoded = Buffer.from(JSON.stringify(content, null, 2)).toString(
-        'base64',
-      );
-
-      const body: Record<string, unknown> = {
-        message: `Update ${filename} - ${new Date().toISOString()}`,
-        content: encoded,
-      };
-
-      if (sha) {
-        body.sha = sha;
-      }
-
-      const response = await fetch(
-        `https://api.github.com/repos/${owner}/${REPO_NAME}/contents/${filename}`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/vnd.github.v3+json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(body),
-        },
-      );
-
-      if (!response.ok) {
-        const errorBody = (await response.json()) as { message?: string };
-
-        // Handle SHA conflict (409) by refetching SHA and retrying
-        if (response.status === 409 && retries > 0) {
-          console.log(
-            `[CollectionsService] SHA conflict for ${filename}, retrying...`,
-          );
-          const currentFile = await this.getFile<unknown>(
-            token,
-            owner,
-            filename,
-          );
-          if (currentFile.sha) {
-            return this.saveFile(
-              token,
-              owner,
-              filename,
-              content,
-              currentFile.sha,
-              retries - 1,
-            );
-          }
-        }
-
-        return {
-          success: false,
-          error: errorBody.message || `Failed to save ${filename}`,
-        };
-      }
-
-      const result = (await response.json()) as { content?: { sha?: string } };
-      return { success: true, newSha: result.content?.sha };
-    } catch (err) {
-      const error = err as Error;
-      return {
-        success: false,
-        error: error.message || 'Unknown error',
-      };
-    }
-  }
-
-  // Generate unique collection ID
-  private generateCollectionId(): string {
-    return `col-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-  }
-
-  // Core CRUD operations
   async getCollections(): Promise<CollectionsResult<CollectionsState>> {
     try {
-      const token = await this.getToken();
-      if (!token) {
-        return { success: false, error: 'Not authenticated' };
-      }
+      await this.ensureInitialized();
 
-      const username = await this.getAuthenticatedUsername();
-      if (!username) {
-        return { success: false, error: 'Could not get username' };
-      }
-
-      // Check if repo exists
-      const exists = await this.checkRepoExists(token, username);
-      this.gitHubRepoExists = exists;
-
-      if (!exists) {
-        return {
-          success: true,
-          data: {
-            collections: [],
-            memberships: [],
-            gitHubRepoExists: false,
-            gitHubRepoUrl: null,
-          },
-        };
-      }
-
-      this.gitHubRepoUrl = `https://github.com/${username}/${REPO_NAME}`;
-
-      // Fetch collections and memberships
-      const [collectionsResult, membershipsResult] = await Promise.all([
-        this.getFile<CollectionsData>(token, username, COLLECTIONS_FILE),
-        this.getFile<CollectionMembershipsData>(
-          token,
-          username,
-          MEMBERSHIPS_FILE,
-        ),
-      ]);
-
-      if (collectionsResult.error) {
-        return { success: false, error: collectionsResult.error };
-      }
-
-      this.collections = collectionsResult.data?.collections || [];
-      this.memberships = membershipsResult.data?.memberships || [];
-      this.collectionsSha = collectionsResult.sha;
-      this.membershipsSha = membershipsResult.sha;
+      const collections = await this.adapter.getCollections();
+      const memberships = await this.adapter.getAllMemberships();
 
       return {
         success: true,
         data: {
-          collections: this.collections,
-          memberships: this.memberships,
+          collections,
+          memberships,
           gitHubRepoExists: true,
-          gitHubRepoUrl: this.gitHubRepoUrl,
+          gitHubRepoUrl: `https://github.com/${this.fsAdapter.getOwner()}/web-ade-collections`,
         },
       };
     } catch (error) {
@@ -396,55 +219,19 @@ class CollectionsService {
     input: CreateCollectionInput,
   ): Promise<CollectionsResult<Collection>> {
     try {
-      const token = await this.getToken();
-      if (!token) {
-        return { success: false, error: 'Not authenticated' };
-      }
+      await this.ensureInitialized();
 
-      const username = await this.getAuthenticatedUsername();
-      if (!username) {
-        return { success: false, error: 'Could not get username' };
-      }
-
-      // Check if repo exists, create if not
-      if (!this.gitHubRepoExists) {
-        const checkResult = await this.checkGitHubRepo();
-        if (!checkResult.success || !checkResult.data?.exists) {
-          const enableResult = await this.enableGitHubSync();
-          if (!enableResult.success) {
-            return { success: false, error: enableResult.error };
-          }
-        }
-      }
-
-      const now = Date.now();
-      const newCollection: Collection = {
-        id: this.generateCollectionId(),
+      const collection = await this.adapter.createCollection({
         name: input.name,
         description: input.description,
         icon: input.icon,
         theme: input.theme,
-        isDefault: input.isDefault || false,
+        isDefault: input.isDefault,
         suggestedClonePath: input.suggestedClonePath,
-        createdAt: now,
-        updatedAt: now,
-      };
+      });
 
-      this.collections.push(newCollection);
-
-      // Sync to GitHub
-      const syncResult = await this.syncCollections(token, username);
-      if (!syncResult.success) {
-        // Rollback
-        this.collections.pop();
-        return { success: false, error: syncResult.error };
-      }
-
-      console.log(
-        '[CollectionsService] Created collection:',
-        newCollection.name,
-      );
-      return { success: true, data: newCollection };
+      console.log('[CollectionsService] Created collection:', collection.name);
+      return { success: true, data: collection };
     } catch (error) {
       console.error('[CollectionsService] createCollection error:', error);
       return {
@@ -459,37 +246,9 @@ class CollectionsService {
     input: UpdateCollectionInput,
   ): Promise<CollectionsResult<Collection>> {
     try {
-      const token = await this.getToken();
-      if (!token) {
-        return { success: false, error: 'Not authenticated' };
-      }
+      await this.ensureInitialized();
 
-      const username = await this.getAuthenticatedUsername();
-      if (!username) {
-        return { success: false, error: 'Could not get username' };
-      }
-
-      const index = this.collections.findIndex((c) => c.id === id);
-      if (index === -1) {
-        return { success: false, error: 'Collection not found' };
-      }
-
-      const original = { ...this.collections[index] };
-      const updated: Collection = {
-        ...original,
-        ...input,
-        updatedAt: Date.now(),
-      };
-
-      this.collections[index] = updated;
-
-      // Sync to GitHub
-      const syncResult = await this.syncCollections(token, username);
-      if (!syncResult.success) {
-        // Rollback
-        this.collections[index] = original;
-        return { success: false, error: syncResult.error };
-      }
+      const updated = await this.adapter.updateCollection(id, input);
 
       console.log('[CollectionsService] Updated collection:', updated.name);
       return { success: true, data: updated };
@@ -504,39 +263,11 @@ class CollectionsService {
 
   async deleteCollection(id: string): Promise<CollectionsResult> {
     try {
-      const token = await this.getToken();
-      if (!token) {
-        return { success: false, error: 'Not authenticated' };
-      }
+      await this.ensureInitialized();
 
-      const username = await this.getAuthenticatedUsername();
-      if (!username) {
-        return { success: false, error: 'Could not get username' };
-      }
+      await this.adapter.deleteCollection(id);
 
-      const index = this.collections.findIndex((c) => c.id === id);
-      if (index === -1) {
-        return { success: false, error: 'Collection not found' };
-      }
-
-      const removed = this.collections.splice(index, 1)[0];
-
-      // Also remove all memberships for this collection
-      const removedMemberships = this.memberships.filter(
-        (m) => m.collectionId === id,
-      );
-      this.memberships = this.memberships.filter((m) => m.collectionId !== id);
-
-      // Sync to GitHub
-      const syncResult = await this.syncAll(token, username);
-      if (!syncResult.success) {
-        // Rollback
-        this.collections.splice(index, 0, removed);
-        this.memberships.push(...removedMemberships);
-        return { success: false, error: syncResult.error };
-      }
-
-      console.log('[CollectionsService] Deleted collection:', removed.name);
+      console.log('[CollectionsService] Deleted collection:', id);
       return { success: true };
     } catch (error) {
       console.error('[CollectionsService] deleteCollection error:', error);
@@ -547,59 +278,25 @@ class CollectionsService {
     }
   }
 
-  // Membership operations
+  // ============================================================================
+  // Membership Operations
+  // ============================================================================
+
   async addRepository(input: AddRepositoryInput): Promise<CollectionsResult> {
     try {
-      const token = await this.getToken();
-      if (!token) {
-        return { success: false, error: 'Not authenticated' };
-      }
+      await this.ensureInitialized();
 
-      const username = await this.getAuthenticatedUsername();
-      if (!username) {
-        return { success: false, error: 'Could not get username' };
-      }
-
-      // Check if collection exists
-      const collection = this.collections.find(
-        (c) => c.id === input.collectionId,
+      await this.adapter.addRepository(
+        input.collectionId,
+        input.repositoryId,
+        input.metadata,
       );
-      if (!collection) {
-        return { success: false, error: 'Collection not found' };
-      }
-
-      // Check if membership already exists
-      const existing = this.memberships.find(
-        (m) =>
-          m.collectionId === input.collectionId &&
-          m.repositoryId === input.repositoryId,
-      );
-      if (existing) {
-        return { success: false, error: 'Repository already in collection' };
-      }
-
-      const newMembership: CollectionMembership = {
-        collectionId: input.collectionId,
-        repositoryId: input.repositoryId,
-        addedAt: Date.now(),
-        metadata: input.metadata,
-      };
-
-      this.memberships.push(newMembership);
-
-      // Sync to GitHub
-      const syncResult = await this.syncMemberships(token, username);
-      if (!syncResult.success) {
-        // Rollback
-        this.memberships.pop();
-        return { success: false, error: syncResult.error };
-      }
 
       console.log(
-        '[CollectionsService] Added repository to collection:',
+        '[CollectionsService] Added repository:',
         input.repositoryId,
-        '->',
-        collection.name,
+        'to collection:',
+        input.collectionId,
       );
       return { success: true };
     } catch (error) {
@@ -616,36 +313,15 @@ class CollectionsService {
     repositoryId: string,
   ): Promise<CollectionsResult> {
     try {
-      const token = await this.getToken();
-      if (!token) {
-        return { success: false, error: 'Not authenticated' };
-      }
+      await this.ensureInitialized();
 
-      const username = await this.getAuthenticatedUsername();
-      if (!username) {
-        return { success: false, error: 'Could not get username' };
-      }
-
-      const index = this.memberships.findIndex(
-        (m) => m.collectionId === collectionId && m.repositoryId === repositoryId,
-      );
-      if (index === -1) {
-        return { success: false, error: 'Membership not found' };
-      }
-
-      const removed = this.memberships.splice(index, 1)[0];
-
-      // Sync to GitHub
-      const syncResult = await this.syncMemberships(token, username);
-      if (!syncResult.success) {
-        // Rollback
-        this.memberships.splice(index, 0, removed);
-        return { success: false, error: syncResult.error };
-      }
+      await this.adapter.removeRepository(collectionId, repositoryId);
 
       console.log(
-        '[CollectionsService] Removed repository from collection:',
+        '[CollectionsService] Removed repository:',
         repositoryId,
+        'from collection:',
+        collectionId,
       );
       return { success: true };
     } catch (error) {
@@ -661,16 +337,14 @@ class CollectionsService {
     collectionId: string,
   ): Promise<CollectionsResult<string[]>> {
     try {
-      const repositories = this.memberships
-        .filter((m) => m.collectionId === collectionId)
-        .map((m) => m.repositoryId);
+      await this.ensureInitialized();
+
+      const memberships = await this.adapter.getCollectionMemberships(collectionId);
+      const repositories = memberships.map((m) => m.repositoryId);
 
       return { success: true, data: repositories };
     } catch (error) {
-      console.error(
-        '[CollectionsService] getCollectionRepositories error:',
-        error,
-      );
+      console.error('[CollectionsService] getCollectionRepositories error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -678,53 +352,24 @@ class CollectionsService {
     }
   }
 
-  // GitHub sync operations
+  // ============================================================================
+  // GitHub Sync Operations (Simplified)
+  // ============================================================================
+
   async checkGitHubRepo(): Promise<CollectionsResult<GitHubSyncStatus>> {
     try {
-      const token = await this.getToken();
-      if (!token) {
-        return { success: false, error: 'Not authenticated' };
-      }
+      await this.ensureInitialized();
 
-      const username = await this.getAuthenticatedUsername();
-      if (!username) {
-        return { success: false, error: 'Could not get username' };
-      }
-
-      const exists = await this.checkRepoExists(token, username);
-      this.gitHubRepoExists = exists;
-
-      if (!exists) {
-        return {
-          success: true,
-          data: {
-            exists: false,
-            repoUrl: null,
-            collections: null,
-            memberships: null,
-          },
-        };
-      }
-
-      this.gitHubRepoUrl = `https://github.com/${username}/${REPO_NAME}`;
-
-      // Fetch current state
-      const [collectionsResult, membershipsResult] = await Promise.all([
-        this.getFile<CollectionsData>(token, username, COLLECTIONS_FILE),
-        this.getFile<CollectionMembershipsData>(
-          token,
-          username,
-          MEMBERSHIPS_FILE,
-        ),
-      ]);
+      const collections = await this.adapter.getCollections();
+      const memberships = await this.adapter.getAllMemberships();
 
       return {
         success: true,
         data: {
           exists: true,
-          repoUrl: this.gitHubRepoUrl,
-          collections: collectionsResult.data?.collections || [],
-          memberships: membershipsResult.data?.memberships || [],
+          repoUrl: `https://github.com/${this.fsAdapter.getOwner()}/web-ade-collections`,
+          collections,
+          memberships,
         },
       };
     } catch (error) {
@@ -738,44 +383,12 @@ class CollectionsService {
 
   async enableGitHubSync(): Promise<CollectionsResult<{ repoUrl: string }>> {
     try {
-      const token = await this.getToken();
-      if (!token) {
-        return { success: false, error: 'Not authenticated' };
-      }
+      await this.ensureInitialized();
 
-      const username = await this.getAuthenticatedUsername();
-      if (!username) {
-        return { success: false, error: 'Could not get username' };
-      }
+      const repoUrl = `https://github.com/${this.fsAdapter.getOwner()}/web-ade-collections`;
 
-      // Check if repo already exists
-      const exists = await this.checkRepoExists(token, username);
-      if (exists) {
-        this.gitHubRepoExists = true;
-        this.gitHubRepoUrl = `https://github.com/${username}/${REPO_NAME}`;
-        return { success: true, data: { repoUrl: this.gitHubRepoUrl } };
-      }
-
-      // Create the repo
-      const createResult = await this.createRepo(token);
-      if (!createResult.success) {
-        return { success: false, error: createResult.error };
-      }
-
-      // Wait for GitHub to initialize the repo
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      this.gitHubRepoExists = true;
-      this.gitHubRepoUrl = `https://github.com/${username}/${REPO_NAME}`;
-
-      // Initialize empty collections and memberships files
-      await this.syncAll(token, username);
-
-      console.log(
-        '[CollectionsService] GitHub sync enabled:',
-        this.gitHubRepoUrl,
-      );
-      return { success: true, data: { repoUrl: this.gitHubRepoUrl } };
+      console.log('[CollectionsService] GitHub sync enabled:', repoUrl);
+      return { success: true, data: { repoUrl } };
     } catch (error) {
       console.error('[CollectionsService] enableGitHubSync error:', error);
       return {
@@ -786,141 +399,34 @@ class CollectionsService {
   }
 
   async syncToGitHub(): Promise<CollectionsResult> {
-    try {
-      const token = await this.getToken();
-      if (!token) {
-        return { success: false, error: 'Not authenticated' };
-      }
-
-      const username = await this.getAuthenticatedUsername();
-      if (!username) {
-        return { success: false, error: 'Could not get username' };
-      }
-
-      if (!this.gitHubRepoExists) {
-        return { success: false, error: 'GitHub repo does not exist' };
-      }
-
-      return this.syncAll(token, username);
-    } catch (error) {
-      console.error('[CollectionsService] syncToGitHub error:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
-    }
+    // With the adapter, every write automatically syncs to GitHub
+    // This is a no-op but kept for API compatibility
+    return { success: true };
   }
 
   async fetchFromGitHub(): Promise<CollectionsResult<CollectionsState>> {
-    // Same as getCollections - fetches fresh state from GitHub
+    // Clear cache and re-fetch
+    this.fsAdapter.clearCache();
     return this.getCollections();
   }
 
-  // Public collections
-  async getUserPublicCollections(
-    username: string,
-  ): Promise<CollectionsResult<PublicCollectionsResult>> {
+  // ============================================================================
+  // Region Management (NEW - from CollectionStorageAdapter)
+  // ============================================================================
+
+  async createRegion(
+    collectionId: string,
+    region: Omit<CustomRegion, 'id'>,
+  ): Promise<CollectionsResult<CustomRegion>> {
     try {
-      // For public repos, we don't need authentication
-      const response = await fetch(
-        `https://api.github.com/repos/${username}/${REPO_NAME}`,
-        {
-          headers: {
-            Accept: 'application/vnd.github.v3+json',
-          },
-        },
-      );
+      await this.ensureInitialized();
 
-      if (!response.ok) {
-        return {
-          success: true,
-          data: {
-            user: null,
-            exists: false,
-            collections: [],
-            memberships: [],
-          },
-        };
-      }
+      const created = await this.adapter.createRegion(collectionId, region);
 
-      // Fetch user info
-      const userResponse = await fetch(
-        `https://api.github.com/users/${username}`,
-        {
-          headers: {
-            Accept: 'application/vnd.github.v3+json',
-          },
-        },
-      );
-
-      let userInfo: { login: string; avatarUrl?: string } | null = null;
-      if (userResponse.ok) {
-        const userData = (await userResponse.json()) as {
-          login: string;
-          avatar_url?: string;
-        };
-        userInfo = {
-          login: userData.login,
-          avatarUrl: userData.avatar_url,
-        };
-      }
-
-      // Fetch collections file (no auth for public repos)
-      const collectionsResponse = await fetch(
-        `https://api.github.com/repos/${username}/${REPO_NAME}/contents/${COLLECTIONS_FILE}`,
-        {
-          headers: {
-            Accept: 'application/vnd.github.v3+json',
-          },
-        },
-      );
-
-      let collections: Collection[] = [];
-      if (collectionsResponse.ok) {
-        const content =
-          (await collectionsResponse.json()) as GitHubContentResponse;
-        const decoded = Buffer.from(content.content, 'base64').toString(
-          'utf-8',
-        );
-        const data: CollectionsData = JSON.parse(decoded);
-        collections = data.collections || [];
-      }
-
-      // Fetch memberships file
-      const membershipsResponse = await fetch(
-        `https://api.github.com/repos/${username}/${REPO_NAME}/contents/${MEMBERSHIPS_FILE}`,
-        {
-          headers: {
-            Accept: 'application/vnd.github.v3+json',
-          },
-        },
-      );
-
-      let memberships: CollectionMembership[] = [];
-      if (membershipsResponse.ok) {
-        const content =
-          (await membershipsResponse.json()) as GitHubContentResponse;
-        const decoded = Buffer.from(content.content, 'base64').toString(
-          'utf-8',
-        );
-        const data: CollectionMembershipsData = JSON.parse(decoded);
-        memberships = data.memberships || [];
-      }
-
-      return {
-        success: true,
-        data: {
-          user: userInfo,
-          exists: true,
-          collections,
-          memberships,
-        },
-      };
+      console.log('[CollectionsService] Created region:', created.name);
+      return { success: true, data: created };
     } catch (error) {
-      console.error(
-        '[CollectionsService] getUserPublicCollections error:',
-        error,
-      );
+      console.error('[CollectionsService] createRegion error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -928,68 +434,156 @@ class CollectionsService {
     }
   }
 
-  // Private helper methods for syncing
-  private async syncCollections(
-    token: string,
-    owner: string,
-  ): Promise<{ success: boolean; error?: string }> {
-    const data: CollectionsData = {
-      version: '1.0',
-      collections: this.collections,
-    };
+  async updateRegion(
+    collectionId: string,
+    regionId: string,
+    updates: Partial<Omit<CustomRegion, 'id'>>,
+  ): Promise<CollectionsResult> {
+    try {
+      await this.ensureInitialized();
 
-    const result = await this.saveFile(
-      token,
-      owner,
-      COLLECTIONS_FILE,
-      data,
-      this.collectionsSha,
-    );
+      await this.adapter.updateRegion(collectionId, regionId, updates);
 
-    if (result.success && result.newSha) {
-      this.collectionsSha = result.newSha;
+      console.log('[CollectionsService] Updated region:', regionId);
+      return { success: true };
+    } catch (error) {
+      console.error('[CollectionsService] updateRegion error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
     }
-
-    return result;
   }
 
-  private async syncMemberships(
-    token: string,
-    owner: string,
-  ): Promise<{ success: boolean; error?: string }> {
-    const data: CollectionMembershipsData = {
-      version: '1.0',
-      memberships: this.memberships,
-    };
+  async deleteRegion(
+    collectionId: string,
+    regionId: string,
+  ): Promise<CollectionsResult> {
+    try {
+      await this.ensureInitialized();
 
-    const result = await this.saveFile(
-      token,
-      owner,
-      MEMBERSHIPS_FILE,
-      data,
-      this.membershipsSha,
-    );
+      await this.adapter.deleteRegion(collectionId, regionId);
 
-    if (result.success && result.newSha) {
-      this.membershipsSha = result.newSha;
+      console.log('[CollectionsService] Deleted region:', regionId);
+      return { success: true };
+    } catch (error) {
+      console.error('[CollectionsService] deleteRegion error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
     }
-
-    return result;
   }
 
-  private async syncAll(
-    token: string,
-    owner: string,
-  ): Promise<{ success: boolean; error?: string }> {
-    // Sync collections first
-    const collectionsResult = await this.syncCollections(token, owner);
-    if (!collectionsResult.success) {
-      return collectionsResult;
-    }
+  async assignRepositoryToRegion(
+    collectionId: string,
+    repositoryId: string,
+    regionId: string,
+  ): Promise<CollectionsResult> {
+    try {
+      await this.ensureInitialized();
 
-    // Then sync memberships
-    const membershipsResult = await this.syncMemberships(token, owner);
-    return membershipsResult;
+      await this.adapter.assignRepositoryToRegion(
+        collectionId,
+        repositoryId,
+        regionId,
+      );
+
+      console.log(
+        '[CollectionsService] Assigned repository:',
+        repositoryId,
+        'to region:',
+        regionId,
+      );
+      return { success: true };
+    } catch (error) {
+      console.error('[CollectionsService] assignRepositoryToRegion error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  async updateRepositoryPosition(
+    collectionId: string,
+    repositoryId: string,
+    layout: RepositoryLayoutData,
+  ): Promise<CollectionsResult> {
+    try {
+      await this.ensureInitialized();
+
+      await this.adapter.updateRepositoryPosition(
+        collectionId,
+        repositoryId,
+        layout,
+      );
+
+      console.log(
+        '[CollectionsService] Updated repository position:',
+        repositoryId,
+      );
+      return { success: true };
+    } catch (error) {
+      console.error('[CollectionsService] updateRepositoryPosition error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  async batchInitializeLayout(
+    collectionId: string,
+    updates: {
+      regions?: CustomRegion[];
+      assignments?: Array<{ repositoryId: string; regionId: string }>;
+      positions?: Array<{ repositoryId: string; layout: RepositoryLayoutData }>;
+    },
+  ): Promise<CollectionsResult> {
+    try {
+      await this.ensureInitialized();
+
+      await this.adapter.batchInitializeLayout(collectionId, updates);
+
+      console.log('[CollectionsService] Batch initialized layout for:', collectionId);
+      return { success: true };
+    } catch (error) {
+      console.error('[CollectionsService] batchInitializeLayout error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  // ============================================================================
+  // Public Collections (Stub - Not Yet Implemented)
+  // ============================================================================
+
+  async getUserPublicCollections(
+    _username: string,
+  ): Promise<CollectionsResult<PublicCollectionsResult>> {
+    // TODO: Implement fetching public collections from other users
+    return {
+      success: true,
+      data: {
+        user: null,
+        exists: false,
+        collections: [],
+        memberships: [],
+      },
+    };
+  }
+
+  // ============================================================================
+  // Helper Methods
+  // ============================================================================
+
+  private async ensureInitialized(): Promise<void> {
+    if (!this.initialized) {
+      await this.initialize();
+    }
   }
 }
 
@@ -1000,5 +594,5 @@ export const collectionsService = new CollectionsService();
 export function registerCollectionsHandlers() {
   // The CollectionsService constructor already registers handlers
   // This function exists for consistency with other services
-  console.log('[CollectionsService] Handlers registered');
+  console.log('[CollectionsService] Handlers registered (using CollectionStorageAdapter)');
 }

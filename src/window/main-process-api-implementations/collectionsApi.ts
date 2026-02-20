@@ -16,7 +16,11 @@ import {
   type GitHubSyncStatus,
   type PublicCollectionsResult,
 } from '../../shared/main-process-api-interfaces/CollectionsAPI';
-import type { Collection } from '@principal-ai/alexandria-collections';
+import type {
+  Collection,
+  CustomRegion,
+  RepositoryLayoutData,
+} from '@principal-ai/alexandria-collections';
 
 export const collectionsAPI: CollectionsAPI = {
   // Core CRUD operations
@@ -90,6 +94,83 @@ export const collectionsAPI: CollectionsAPI = {
     return ipcRenderer.invoke(
       CollectionsAPIEvent.GET_USER_PUBLIC_COLLECTIONS,
       username,
+    );
+  },
+
+  // Region management
+  createRegion: (
+    collectionId: string,
+    region: Omit<CustomRegion, 'id'>,
+  ): Promise<CollectionsResult<CustomRegion>> => {
+    return ipcRenderer.invoke(
+      CollectionsAPIEvent.CREATE_REGION,
+      collectionId,
+      region,
+    );
+  },
+
+  updateRegion: (
+    collectionId: string,
+    regionId: string,
+    updates: Partial<Omit<CustomRegion, 'id'>>,
+  ): Promise<CollectionsResult> => {
+    return ipcRenderer.invoke(
+      CollectionsAPIEvent.UPDATE_REGION,
+      collectionId,
+      regionId,
+      updates,
+    );
+  },
+
+  deleteRegion: (
+    collectionId: string,
+    regionId: string,
+  ): Promise<CollectionsResult> => {
+    return ipcRenderer.invoke(
+      CollectionsAPIEvent.DELETE_REGION,
+      collectionId,
+      regionId,
+    );
+  },
+
+  assignRepositoryToRegion: (
+    collectionId: string,
+    repositoryId: string,
+    regionId: string,
+  ): Promise<CollectionsResult> => {
+    return ipcRenderer.invoke(
+      CollectionsAPIEvent.ASSIGN_REPOSITORY_TO_REGION,
+      collectionId,
+      repositoryId,
+      regionId,
+    );
+  },
+
+  updateRepositoryPosition: (
+    collectionId: string,
+    repositoryId: string,
+    layout: RepositoryLayoutData,
+  ): Promise<CollectionsResult> => {
+    return ipcRenderer.invoke(
+      CollectionsAPIEvent.UPDATE_REPOSITORY_POSITION,
+      collectionId,
+      repositoryId,
+      layout,
+    );
+  },
+
+  batchInitializeLayout: (
+    collectionId: string,
+    updates: {
+      regions?: CustomRegion[];
+      assignments?: Array<{ repositoryId: string; regionId: string }>;
+      positions?: Array<{ repositoryId: string; layout: RepositoryLayoutData }>;
+    },
+  ): Promise<CollectionsResult> => {
+    return ipcRenderer.invoke(
+      CollectionsAPIEvent.BATCH_INITIALIZE_LAYOUT,
+      collectionId,
+      updates,
     );
   },
 };

@@ -260,102 +260,61 @@ export const WorldsViewPanelProvider: React.FC<
     ],
   );
 
-  // Full DataSlice version for the slices Map (backward compat)
-  const selectedCollectionViewDataSlice: DataSlice<unknown> = useMemo(
+  // Explicit DataSlice: alexandriaRepositories
+  const alexandriaRepositoriesSlice = useMemo<DataSlice<{
+    repositories: AlexandriaEntry[];
+    discoveredRepositories: DiscoveredRepository[];
+    loading: boolean;
+  }>>(
     () => ({
       scope: 'global' as const,
-      name: 'selectedCollectionView',
-      data: selectedCollectionViewSlice.data,
-      loading: selectedCollectionViewSlice.loading,
-      error: selectedCollectionViewSlice.error
-        ? new Error(selectedCollectionViewSlice.error)
-        : null,
+      name: 'alexandriaRepositories',
+      data: {
+        repositories: localRepositories,
+        discoveredRepositories,
+        loading: localRepositoriesLoading,
+      },
+      loading: localRepositoriesLoading,
+      error: null,
       refresh: async () => {
-        await fetchCollections();
+        setLocalRepositoriesLoading(true);
+        try {
+          const repos = await AlexandriaService.getRepositories();
+          setLocalRepositories(repos);
+          // Note: Discovered repositories would require GitService and basePath
+          setDiscoveredRepositories([]);
+        } catch (error) {
+          console.error(
+            '[WorldsViewPanelProvider] Failed to refresh local repositories:',
+            error,
+          );
+        } finally {
+          setLocalRepositoriesLoading(false);
+        }
       },
     }),
-    [selectedCollectionViewSlice, fetchCollections],
+    [localRepositories, discoveredRepositories, localRepositoriesLoading],
   );
 
-  const slices = useMemo<Map<string, DataSlice<unknown>>>(() => {
-    console.info('[WorldsViewPanelProvider] 🔄 Recomputing slices with', collectionMemberships.length, 'memberships');
-    console.info('[WorldsViewPanelProvider] 🔄 Selected collection:', selectedCollection?.name, 'has', selectedCollectionMemberships.length, 'memberships');
-
-    return new Map([
-        [
-          'alexandriaRepositories',
-          {
-            scope: 'global' as const,
-            name: 'alexandriaRepositories',
-            data: {
-              repositories: localRepositories,
-              discoveredRepositories,
-              loading: localRepositoriesLoading,
-            },
-            loading: localRepositoriesLoading,
-            error: null,
-            refresh: async () => {
-              setLocalRepositoriesLoading(true);
-              try {
-                const repos = await AlexandriaService.getRepositories();
-                setLocalRepositories(repos);
-                // Note: Discovered repositories would require GitService and basePath
-                setDiscoveredRepositories([]);
-              } catch (error) {
-                console.error(
-                  '[WorldsViewPanelProvider] Failed to refresh local repositories:',
-                  error,
-                );
-              } finally {
-                setLocalRepositoriesLoading(false);
-              }
-            },
-          },
-        ],
-        [
-          'userCollections',
-          {
-            scope: 'global' as const,
-            name: 'userCollections',
-            data: {
-              collections,
-              memberships: collectionMemberships,
-              loading: collectionsLoading,
-              saving: collectionsSaving,
-              error: collectionsError?.message, // UserCollectionsSlice expects string
-              gitHubRepoExists: collectionsGitHubRepoExists,
-              gitHubRepoUrl: collectionsGitHubRepoUrl,
-            },
-            loading: collectionsLoading,
-            error: null,
-            refresh: fetchCollections,
-          },
-        ],
-        [
-          'collectionRepositories',
-          {
-            scope: 'global' as const,
-            name: 'collectionRepositories',
-            data: {
-              collection: selectedCollection,
-              // Get repository IDs for the selected collection
-              repositoryIds: selectedCollection
-                ? collectionMemberships
-                    .filter((m) => m.collectionId === selectedCollection.id)
-                    .map((m) => m.repositoryId)
-                : [],
-            },
-            loading: collectionsLoading,
-            error: null,
-            refresh: fetchCollections,
-          },
-        ],
-        ['selectedCollectionView', selectedCollectionViewDataSlice as DataSlice<unknown>],
-      ]);
-  }, [
-      localRepositories,
-      localRepositoriesLoading,
-      discoveredRepositories,
+  // Explicit DataSlice: userCollections
+  const userCollectionsSlice = useMemo<DataSlice<UserCollectionsSlice>>(
+    () => ({
+      scope: 'global' as const,
+      name: 'userCollections',
+      data: {
+        collections,
+        memberships: collectionMemberships,
+        loading: collectionsLoading,
+        saving: collectionsSaving,
+        error: collectionsError?.message, // UserCollectionsSlice expects string
+        gitHubRepoExists: collectionsGitHubRepoExists,
+        gitHubRepoUrl: collectionsGitHubRepoUrl,
+      },
+      loading: collectionsLoading,
+      error: null,
+      refresh: fetchCollections,
+    }),
+    [
       collections,
       collectionMemberships,
       collectionsLoading,
@@ -363,9 +322,12 @@ export const WorldsViewPanelProvider: React.FC<
       collectionsError,
       collectionsGitHubRepoExists,
       collectionsGitHubRepoUrl,
-      selectedCollection,
+      fetchCollections,
     ],
   );
+
+  // Empty slices Map for backward compatibility with PanelContextValue interface
+  const slices = useMemo<Map<string, DataSlice<unknown>>>(() => new Map(), []);
 
   // Define actions
   const actions = useMemo<WorldsViewPanelActions>(
@@ -624,103 +586,32 @@ export const WorldsViewPanelProvider: React.FC<
       // Region management actions (with optimistic updates)
       onRegionCreated: async (
         collectionId: string,
-        region: Omit<CustomRegion, 'id' | 'createdAt'>,
+        region: Omit<CustomRegion, 'id'>,
       ): Promise<CustomRegion> => {
         console.info('[WorldsViewPanelProvider] Creating region:', region.name);
 
-        const collection = collections.find((c) => c.id === collectionId);
-        if (!collection) {
-          throw new Error('Collection not found');
+        const result = await CollectionsService.createRegion(collectionId, region);
+        if (result.success && result.data) {
+          await fetchCollections(); // Refresh from source
+          return result.data;
+        } else {
+          throw new Error(result.error || 'Failed to create region');
         }
-
-        const newRegion: CustomRegion = {
-          ...region,
-          id: `region-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-          createdAt: Date.now(),
-        };
-
-        // If currently in auto mode, switch to manual when user adds a region
-        const currentLayoutMode = collection.metadata?.layoutMode || 'auto';
-        const updatedMetadata = {
-          ...(collection.metadata || {}),
-          customRegions: [
-            ...((collection.metadata?.customRegions as CustomRegion[]) || []),
-            newRegion,
-          ],
-          // Auto-switch to manual mode when user manually creates a region
-          layoutMode: currentLayoutMode === 'auto' ? 'manual' : currentLayoutMode,
-        };
-
-        // OPTIMISTIC UPDATE: Update local state immediately for instant UI feedback
-        const optimisticCollections = collections.map((c) =>
-          c.id === collectionId
-            ? { ...c, metadata: updatedMetadata, updatedAt: Date.now() }
-            : c,
-        );
-
-        console.info('[WorldsViewPanelProvider] Optimistic update - new region:', newRegion);
-        console.info('[WorldsViewPanelProvider] Updated metadata:', updatedMetadata);
-        console.info('[WorldsViewPanelProvider] Updated collection:', optimisticCollections.find(c => c.id === collectionId));
-
-        setCollections(optimisticCollections);
-
-        // Background sync to GitHub (with error handling)
-        CollectionsService.updateCollection(collectionId, {
-          metadata: updatedMetadata,
-        })
-          .then(() => {
-            console.info('[WorldsViewPanelProvider] Region synced to GitHub:', newRegion.id);
-          })
-          .catch((error) => {
-            console.error('[WorldsViewPanelProvider] Failed to sync region to GitHub:', error);
-            // On error, refetch from GitHub to get truth
-            fetchCollections();
-          });
-
-        return newRegion;
       },
 
       onRegionUpdated: async (
         collectionId: string,
         regionId: string,
-        updates: Partial<CustomRegion>,
+        updates: Partial<Omit<CustomRegion, 'id'>>,
       ): Promise<void> => {
         console.info('[WorldsViewPanelProvider] Updating region:', regionId);
 
-        const collection = collections.find((c) => c.id === collectionId);
-        if (!collection) {
-          throw new Error('Collection not found');
+        const result = await CollectionsService.updateRegion(collectionId, regionId, updates);
+        if (result.success) {
+          await fetchCollections(); // Refresh from source
+        } else {
+          throw new Error(result.error || 'Failed to update region');
         }
-
-        const customRegions = (collection.metadata?.customRegions as CustomRegion[]) || [];
-        const updatedRegions = customRegions.map((r) =>
-          r.id === regionId ? { ...r, ...updates } : r,
-        );
-
-        // If currently in auto mode, switch to manual when user updates a region
-        const currentLayoutMode = collection.metadata?.layoutMode || 'auto';
-        const updatedMetadata = {
-          ...(collection.metadata || {}),
-          customRegions: updatedRegions,
-          // Auto-switch to manual mode when user manually updates a region
-          layoutMode: currentLayoutMode === 'auto' ? 'manual' : currentLayoutMode,
-        };
-
-        // OPTIMISTIC UPDATE: Update local state immediately
-        const optimisticCollections = collections.map((c) =>
-          c.id === collectionId
-            ? { ...c, metadata: updatedMetadata, updatedAt: Date.now() }
-            : c,
-        );
-        setCollections(optimisticCollections);
-
-        // Background sync to GitHub
-        CollectionsService.updateCollection(collectionId, {
-          metadata: updatedMetadata,
-        }).catch((error) => {
-          console.error('[WorldsViewPanelProvider] Failed to sync region update to GitHub:', error);
-          fetchCollections(); // Rollback on error
-        });
       },
 
       onRegionDeleted: async (
@@ -729,38 +620,12 @@ export const WorldsViewPanelProvider: React.FC<
       ): Promise<void> => {
         console.info('[WorldsViewPanelProvider] Deleting region:', regionId);
 
-        const collection = collections.find((c) => c.id === collectionId);
-        if (!collection) {
-          throw new Error('Collection not found');
+        const result = await CollectionsService.deleteRegion(collectionId, regionId);
+        if (result.success) {
+          await fetchCollections(); // Refresh from source
+        } else {
+          throw new Error(result.error || 'Failed to delete region');
         }
-
-        const customRegions = (collection.metadata?.customRegions as CustomRegion[]) || [];
-        const updatedRegions = customRegions.filter((r) => r.id !== regionId);
-
-        // If currently in auto mode, switch to manual when user deletes a region
-        const currentLayoutMode = collection.metadata?.layoutMode || 'auto';
-        const updatedMetadata = {
-          ...(collection.metadata || {}),
-          customRegions: updatedRegions,
-          // Auto-switch to manual mode when user manually deletes a region
-          layoutMode: currentLayoutMode === 'auto' ? 'manual' : currentLayoutMode,
-        };
-
-        // OPTIMISTIC UPDATE: Update local state immediately
-        const optimisticCollections = collections.map((c) =>
-          c.id === collectionId
-            ? { ...c, metadata: updatedMetadata, updatedAt: Date.now() }
-            : c,
-        );
-        setCollections(optimisticCollections);
-
-        // Background sync to GitHub
-        CollectionsService.updateCollection(collectionId, {
-          metadata: updatedMetadata,
-        }).catch((error) => {
-          console.error('[WorldsViewPanelProvider] Failed to sync region deletion to GitHub:', error);
-          fetchCollections(); // Rollback on error
-        });
       },
 
       onRepositoryAssigned: async (
@@ -774,42 +639,16 @@ export const WorldsViewPanelProvider: React.FC<
           regionId,
         );
 
-        const membership = collectionMemberships.find(
-          (m) => m.collectionId === collectionId && m.repositoryId === repositoryId,
-        );
-
-        if (!membership) {
-          throw new Error('Membership not found');
-        }
-
-        // Update membership metadata with regionId
-        const updatedMetadata = {
-          ...(membership.metadata || {}),
+        const result = await CollectionsService.assignRepositoryToRegion(
+          collectionId,
+          repositoryId,
           regionId,
-        };
-
-        // OPTIMISTIC UPDATE: Update local memberships immediately
-        setCollectionMemberships((prev) =>
-          prev.map((m) =>
-            m.collectionId === collectionId && m.repositoryId === repositoryId
-              ? { ...m, metadata: updatedMetadata }
-              : m,
-          )
         );
-
-        // Background sync to GitHub (remove and re-add)
-        CollectionsService.removeRepository(collectionId, repositoryId)
-          .then(() =>
-            CollectionsService.addRepository({
-              collectionId,
-              repositoryId,
-              metadata: updatedMetadata,
-            }),
-          )
-          .catch((error) => {
-            console.error('[WorldsViewPanelProvider] Failed to sync repository assignment to GitHub:', error);
-            fetchCollections(); // Rollback on error
-          });
+        if (result.success) {
+          await fetchCollections(); // Refresh from source
+        } else {
+          throw new Error(result.error || 'Failed to assign repository to region');
+        }
       },
 
       onRepositoryPositionUpdated: async (
@@ -817,70 +656,22 @@ export const WorldsViewPanelProvider: React.FC<
         repositoryId: string,
         layout: RepositoryLayoutData,
       ): Promise<void> => {
-        // Look up repository name for better logging
-        const repo = localRepositories.find(r => {
-          const repoId = (r as any).github?.id || r.name;
-          return repoId === repositoryId;
-        });
-        const repoName = repo?.name || repositoryId;
-
         console.info(
-          '[WorldsViewPanelProvider] 🎯 START: Moving',
-          repoName,
-          'to',
+          '[WorldsViewPanelProvider] Updating repository position:',
+          repositoryId,
           layout,
         );
 
-        const membership = collectionMemberships.find(
-          (m) => m.collectionId === collectionId && m.repositoryId === repositoryId,
+        const result = await CollectionsService.updateRepositoryPosition(
+          collectionId,
+          repositoryId,
+          layout,
         );
-
-        if (!membership) {
-          throw new Error(`Membership not found for ${repoName}`);
+        if (result.success) {
+          await fetchCollections(); // Refresh from source
+        } else {
+          throw new Error(result.error || 'Failed to update repository position');
         }
-
-        console.info('[WorldsViewPanelProvider] 📄 Current position:', membership.metadata?.layout || 'none');
-
-        // Update membership metadata with layout
-        const updatedMetadata = {
-          ...(membership.metadata || {}),
-          layout,
-        };
-
-        console.info('[WorldsViewPanelProvider] 📝 New position:', layout, 'for', repoName);
-        console.info('[WorldsViewPanelProvider] 🔍 Region for this repo:', membership.metadata?.regionId || 'none');
-
-        // OPTIMISTIC UPDATE: Update local memberships immediately
-        console.info('[WorldsViewPanelProvider] ⚡ OPTIMISTIC UPDATE: Applying local state change');
-        setCollectionMemberships((prev) => {
-          const updated = prev.map((m) =>
-            m.collectionId === collectionId && m.repositoryId === repositoryId
-              ? { ...m, metadata: updatedMetadata }
-              : m,
-          );
-          console.info('[WorldsViewPanelProvider] ⚡ OPTIMISTIC UPDATE: New memberships state:', updated);
-          return updated;
-        });
-
-        console.info('[WorldsViewPanelProvider] 🌐 Starting GitHub sync...');
-        // Background sync to GitHub (remove and re-add)
-        CollectionsService.removeRepository(collectionId, repositoryId)
-          .then(() => {
-            console.info('[WorldsViewPanelProvider] 🌐 Removed from GitHub, now re-adding...');
-            return CollectionsService.addRepository({
-              collectionId,
-              repositoryId,
-              metadata: updatedMetadata,
-            });
-          })
-          .then(() => {
-            console.info('[WorldsViewPanelProvider] ✅ GitHub sync completed successfully');
-          })
-          .catch((error) => {
-            console.error('[WorldsViewPanelProvider] ❌ Failed to sync repository position to GitHub:', error);
-            console.info('[WorldsViewPanelProvider] 🔄 Rolling back via fetchCollections...');
-            fetchCollections(); // Rollback on error
-          });
       },
 
       onBatchLayoutInitialized: async (
@@ -897,110 +688,11 @@ export const WorldsViewPanelProvider: React.FC<
           updates,
         );
 
-        const collection = collections.find((c) => c.id === collectionId);
-        if (!collection) {
-          throw new Error('Collection not found');
-        }
-
-        // Build optimistic updates in one pass
-        let optimisticCollections = collections;
-        let optimisticMemberships = collectionMemberships;
-
-        // Update collection with regions if provided
-        if (updates.regions && updates.regions.length > 0) {
-          const updatedMetadata = {
-            ...(collection.metadata || {}),
-            customRegions: updates.regions,
-          };
-
-          optimisticCollections = collections.map((c) =>
-            c.id === collectionId
-              ? { ...c, metadata: updatedMetadata, updatedAt: Date.now() }
-              : c,
-          );
-        }
-
-        // Update memberships with assignments and positions
-        if (updates.assignments || updates.positions) {
-          optimisticMemberships = collectionMemberships.map((m) => {
-            if (m.collectionId !== collectionId) return m;
-
-            const assignment = updates.assignments?.find(
-              (a) => a.repositoryId === m.repositoryId,
-            );
-            const position = updates.positions?.find(
-              (p) => p.repositoryId === m.repositoryId,
-            );
-
-            if (!assignment && !position) return m;
-
-            const updatedMetadata = {
-              ...(m.metadata || {}),
-              ...(assignment ? { regionId: assignment.regionId } : {}),
-              ...(position ? { layout: position.layout } : {}),
-            };
-
-            return { ...m, metadata: updatedMetadata };
-          });
-        }
-
-        // Single state update for all changes - 1 re-render!
-        setCollections(optimisticCollections);
-        setCollectionMemberships(optimisticMemberships);
-
-        // Background sync to GitHub
-        if (updates.regions && updates.regions.length > 0) {
-          const updatedMetadata = {
-            ...(collection.metadata || {}),
-            customRegions: updates.regions,
-          };
-
-          CollectionsService.updateCollection(collectionId, {
-            metadata: updatedMetadata,
-          }).catch((error) => {
-            console.error('[WorldsViewPanelProvider] Failed to sync regions to GitHub:', error);
-            fetchCollections(); // Rollback on error
-          });
-        }
-
-        // Sync membership updates (assignments + positions)
-        if (updates.assignments || updates.positions) {
-          const membershipUpdates = collectionMemberships
-            .filter((m) => m.collectionId === collectionId)
-            .map((m) => {
-              const assignment = updates.assignments?.find(
-                (a) => a.repositoryId === m.repositoryId,
-              );
-              const position = updates.positions?.find(
-                (p) => p.repositoryId === m.repositoryId,
-              );
-
-              if (!assignment && !position) return null;
-
-              const updatedMetadata = {
-                ...(m.metadata || {}),
-                ...(assignment ? { regionId: assignment.regionId } : {}),
-                ...(position ? { layout: position.layout } : {}),
-              };
-
-              return {
-                collectionId,
-                repositoryId: m.repositoryId,
-                metadata: updatedMetadata,
-              };
-            })
-            .filter((update): update is { collectionId: string; repositoryId: string; metadata: any } => update !== null);
-
-          // Batch sync all membership updates
-          Promise.all(
-            membershipUpdates.map((update) =>
-              CollectionsService.removeRepository(update.collectionId, update.repositoryId)
-                .then(() => CollectionsService.addRepository(update)),
-            ),
-          ).catch((error) => {
-            console.error('[WorldsViewPanelProvider] Failed to sync membership updates to GitHub:', error);
-            fetchCollections(); // Rollback on error
-          });
+        const result = await CollectionsService.batchInitializeLayout(collectionId, updates);
+        if (result.success) {
+          await fetchCollections(); // Refresh from source
+        } else {
+          throw new Error(result.error || 'Failed to batch initialize layout');
         }
       },
 
@@ -1013,31 +705,12 @@ export const WorldsViewPanelProvider: React.FC<
           collectionId,
         );
 
-        const collection = collections.find((c) => c.id === collectionId);
-        if (!collection) {
-          throw new Error('Collection not found');
+        const result = await CollectionsService.batchInitializeLayout(collectionId, { regions });
+        if (result.success) {
+          await fetchCollections(); // Refresh from source
+        } else {
+          throw new Error(result.error || 'Failed to initialize default regions');
         }
-
-        const updatedMetadata = {
-          ...(collection.metadata || {}),
-          customRegions: regions,
-        };
-
-        // OPTIMISTIC UPDATE: Update local state immediately
-        const optimisticCollections = collections.map((c) =>
-          c.id === collectionId
-            ? { ...c, metadata: updatedMetadata, updatedAt: Date.now() }
-            : c,
-        );
-        setCollections(optimisticCollections);
-
-        // Background sync to GitHub
-        CollectionsService.updateCollection(collectionId, {
-          metadata: updatedMetadata,
-        }).catch((error) => {
-          console.error('[WorldsViewPanelProvider] Failed to sync default regions to GitHub:', error);
-          fetchCollections(); // Rollback on error
-        });
       },
 
       onSwitchLayoutMode: async (
@@ -1194,8 +867,11 @@ export const WorldsViewPanelProvider: React.FC<
       },
       slices,
       adapters: {},
-      getSlice: <T = unknown,>(name: string): DataSlice<T> | undefined => {
-        return slices.get(name) as DataSlice<T> | undefined;
+      // Legacy slice getter methods - kept for PanelContextValue interface compatibility
+      getSlice: <T = unknown,>(_name: string): DataSlice<T> | undefined => {
+        // No-op: Moving away from dynamic Map-based slices
+        // Panels should access typed properties directly (context.userCollections)
+        return undefined;
       },
       getWorkspaceSlice: <T = unknown,>(
         _name: string,
@@ -1207,46 +883,45 @@ export const WorldsViewPanelProvider: React.FC<
       ): DataSlice<T> | undefined => {
         return undefined; // No repository scope in this context
       },
-      hasSlice: (name: string, scope?: 'workspace' | 'repository'): boolean => {
-        const slice = slices.get(name);
-        if (!slice) return false;
-        return scope ? slice.scope === scope : true;
+      // Legacy helper methods - kept for PanelContextValue interface compatibility
+      // No-op stubs: actions handle their own refreshing, React handles reactivity
+      hasSlice: (_name: string, _scope?: 'workspace' | 'repository'): boolean => {
+        // No-op: Moving away from dynamic slice checking
+        // Panels should access typed properties directly (context.userCollections)
+        return false;
       },
       isSliceLoading: (
-        name: string,
-        scope?: 'workspace' | 'repository',
+        _name: string,
+        _scope?: 'workspace' | 'repository',
       ): boolean => {
-        const slice = slices.get(name);
-        if (!slice) return false;
-        if (scope && slice.scope !== scope) return false;
-        return slice.loading;
+        // No-op: Moving away from dynamic slice checking
+        // Panels should access typed properties directly (context.userCollections.loading)
+        return false;
       },
       refresh: async (
-        scope?: 'workspace' | 'repository',
-        sliceName?: string,
+        _scope?: 'workspace' | 'repository',
+        _sliceName?: string,
       ): Promise<void> => {
-        const slicesToRefresh = Array.from(slices.values()).filter((slice) => {
-          if (scope && slice.scope !== scope) return false;
-          if (sliceName && slice.name !== sliceName) return false;
-          return true;
-        });
-
-        await Promise.all(slicesToRefresh.map((slice) => slice.refresh()));
+        // No-op: Actions handle their own data refreshing
+        // React's reactivity handles UI updates automatically
+        // Any actual refresh should be triggered via actions, not context.refresh()
       },
       // Custom state properties
       selectedCollection,
       setSelectedCollection,
-      // Typed slice properties from slices map
-      userCollections: slices.get('userCollections') as DataSlice<UserCollectionsSlice>,
-      alexandriaRepositories: slices.get('alexandriaRepositories') as DataSlice<{
-        repositories: AlexandriaEntry[];
-        discoveredRepositories: DiscoveredRepository[];
-        loading: boolean;
-      }>,
+      // Explicit typed slice properties
+      userCollections: userCollectionsSlice,
+      alexandriaRepositories: alexandriaRepositoriesSlice,
       // CollectionMapPanel slice (not full DataSlice - simplified structure)
       selectedCollectionView: selectedCollectionViewSlice,
     };
-  }, [slices, selectedCollection, selectedCollectionViewSlice]);
+  }, [
+    slices,
+    selectedCollection,
+    userCollectionsSlice,
+    alexandriaRepositoriesSlice,
+    selectedCollectionViewSlice,
+  ]);
 
   // Combine into provider value
   const value: WorldsViewPanelProviderValue = useMemo(
