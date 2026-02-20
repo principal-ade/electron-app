@@ -17,6 +17,7 @@ import type {
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type {
   UserCollectionsPanelActions,
+  UserCollectionsSlice,
   Collection,
   LocalProjectsPanelActions,
 } from '@industry-theme/alexandria-panels';
@@ -37,13 +38,11 @@ import type { DiscoveredRepository } from '@industry-theme/alexandria-panels';
  */
 interface WorldsViewPanelActions
   extends CollectionMapPanelActions,
-    Omit<UserCollectionsPanelActions, 'removeRepository'>,
-    Pick<LocalProjectsPanelActions, 'openRepository' | 'registerRepository' | 'trackRepository'> {
-  // Collections-specific removeRepository (named differently to avoid conflict)
-  removeCollectionRepository?: (
-    collectionId: string,
-    repositoryId: string,
-  ) => Promise<void>;
+    UserCollectionsPanelActions,
+    Omit<
+      LocalProjectsPanelActions,
+      'selectDirectory' | 'removeLocalRepository' | 'focusRepository' | 'getRepositoryWindowState'
+    > {
   // Add a repository to a collection (for drag-drop integration)
   addRepositoryToCollection?: (
     collectionId: string,
@@ -55,11 +54,19 @@ interface WorldsViewPanelActions
 }
 
 /**
- * Extended context interface for WorldsView panels
+ * Worlds view context type - contains only slice properties and custom state
+ * Following the web-ade pattern
  */
-interface WorldsViewPanelContextValue extends PanelContextValue {
-  // Direct slice properties for new v0.3.0+ typed panels
-  // Note: CollectionMapPanel expects a simplified slice structure (not full DataSlice)
+export interface WorldsViewPanelContextType {
+  // UserCollectionsPanelContext
+  userCollections: DataSlice<UserCollectionsSlice>;
+  // LocalProjectsPanelContext
+  alexandriaRepositories: DataSlice<{
+    repositories: AlexandriaEntry[];
+    discoveredRepositories: DiscoveredRepository[];
+    loading: boolean;
+  }>;
+  // CollectionMapPanel slice (not full DataSlice - simplified structure)
   selectedCollectionView: {
     data: {
       collection: Collection | null;
@@ -70,8 +77,7 @@ interface WorldsViewPanelContextValue extends PanelContextValue {
     loading: boolean;
     error: string | null;
   };
-
-  // Selected collection (for coordination between panels)
+  // Custom state properties
   selectedCollection: Collection | null;
   setSelectedCollection: (collection: Collection | null) => void;
 }
@@ -80,7 +86,7 @@ interface WorldsViewPanelContextValue extends PanelContextValue {
  * Provider value containing context, actions, and events
  */
 interface WorldsViewPanelProviderValue {
-  context: WorldsViewPanelContextValue;
+  context: PanelContextValue<WorldsViewPanelContextType>;
   actions: WorldsViewPanelActions;
   events: PanelEventEmitter;
 }
@@ -486,7 +492,7 @@ export const WorldsViewPanelProvider: React.FC<
         });
       },
 
-      removeCollectionRepository: async (
+      removeRepositoryFromCollection: async (
         collectionId: string,
         repositoryId: string,
       ) => {
@@ -1072,9 +1078,9 @@ export const WorldsViewPanelProvider: React.FC<
       },
 
       // Local repository actions
-      openRepository: async (entry: AlexandriaEntry) => {
+      openLocalRepository: async (entry: AlexandriaEntry) => {
         console.info(
-          '[WorldsViewPanelProvider] Opening repository:',
+          '[WorldsViewPanelProvider] Opening local repository:',
           entry.name,
         );
 
@@ -1179,18 +1185,15 @@ export const WorldsViewPanelProvider: React.FC<
   );
 
   // Build context with typed slice properties for typed panels
-  const context = useMemo<WorldsViewPanelContextValue>(() => {
+  // Create context value following web-ade pattern
+  const context = useMemo<PanelContextValue<WorldsViewPanelContextType>>(() => {
     return {
-      // Direct slice properties for new v0.3.0+ typed panels
-      selectedCollectionView: selectedCollectionViewSlice,
-
-      scope: {},
+      // PanelContextValue core properties
       currentScope: {
         type: 'workspace' as const,
       },
       slices,
       adapters: {},
-      // Legacy methods (for backward compatibility)
       getSlice: <T = unknown,>(name: string): DataSlice<T> | undefined => {
         return slices.get(name) as DataSlice<T> | undefined;
       },
@@ -1230,9 +1233,18 @@ export const WorldsViewPanelProvider: React.FC<
 
         await Promise.all(slicesToRefresh.map((slice) => slice.refresh()));
       },
-      // Extended properties
+      // Custom state properties
       selectedCollection,
       setSelectedCollection,
+      // Typed slice properties from slices map
+      userCollections: slices.get('userCollections') as DataSlice<UserCollectionsSlice>,
+      alexandriaRepositories: slices.get('alexandriaRepositories') as DataSlice<{
+        repositories: AlexandriaEntry[];
+        discoveredRepositories: DiscoveredRepository[];
+        loading: boolean;
+      }>,
+      // CollectionMapPanel slice (not full DataSlice - simplified structure)
+      selectedCollectionView: selectedCollectionViewSlice,
     };
   }, [slices, selectedCollection, selectedCollectionViewSlice]);
 

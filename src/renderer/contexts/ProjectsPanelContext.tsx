@@ -24,15 +24,22 @@ import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
 import type {
   WorkspacesSlice,
   WorkspacesListPanelActions,
+  WorkspacesListPanelContext,
   GitHubStarredSlice,
   GitHubStarredPanelActions,
+  GitHubStarredPanelContext,
   GitHubProjectsSlice,
   GitHubProjectsPanelActions,
+  GitHubProjectsPanelContext,
   GitHubRepository,
   GitHubOrganization,
   UserCollectionsSlice,
   UserCollectionsPanelActions,
+  UserCollectionsPanelContext,
   Collection,
+  LocalProjectsPanelContext,
+  LocalProjectsPanelActions,
+  WorkspaceRepositoriesPanelContext,
 } from '@industry-theme/alexandria-panels';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { WindowService } from '../main-process-api/WindowService';
@@ -56,10 +63,12 @@ import type { DiscoveredRepository } from '@industry-theme/alexandria-panels';
 interface ProjectsPanelActions
   extends
     PanelActions,
+    LocalProjectsPanelActions,
     WorkspacesListPanelActions,
     GitHubStarredPanelActions,
     GitHubProjectsPanelActions,
-    Omit<UserCollectionsPanelActions, 'removeRepository'> {
+    UserCollectionsPanelActions {
+  // Workspace-specific actions
   removeRepositoryFromWorkspace?: (
     repositoryId: string,
     workspaceId: string,
@@ -73,11 +82,6 @@ interface ProjectsPanelActions
     repository: AlexandriaEntry,
     workspaceId: string,
   ) => Promise<string>;
-  // Collections-specific removeRepository (named differently to avoid conflict)
-  removeCollectionRepository?: (
-    collectionId: string,
-    repositoryId: string,
-  ) => Promise<void>;
   // Add a repository to a collection (for drag-drop integration)
   addRepositoryToCollection?: (
     collectionId: string,
@@ -87,17 +91,40 @@ interface ProjectsPanelActions
   // Track a discovered repository (add to Alexandria)
   trackRepository?: (name: string, path: string) => Promise<void>;
   // Select a repository without opening a new window (for ProjectInfoPanel)
-  selectRepository?: (entryOrPath: AlexandriaEntry | string) => Promise<void>;
+  selectRepository?: (entry: AlexandriaEntry) => Promise<void>;
 }
 
 /**
- * Extended context interface for workspaces panels
+ * Projects page context type - contains only slice properties and custom state
+ * Following the web-ade pattern
  */
-interface ProjectsPanelContextValue extends PanelContextValue {
-  // Selected workspace (for coordination between panels)
+export interface ProjectsPanelContextType {
+  // LocalProjectsPanelContext
+  alexandriaRepositories: DataSlice<{
+    repositories: AlexandriaEntry[];
+    discoveredRepositories: DiscoveredRepository[];
+    loading: boolean;
+  }>;
+  // WorkspacesListPanelContext
+  workspaces: DataSlice<WorkspacesSlice>;
+  // WorkspaceRepositoriesPanelContext
+  workspace: DataSlice<{
+    workspace: Workspace | null;
+    loading: boolean;
+  }>;
+  workspaceRepositories: DataSlice<{
+    repositories: AlexandriaEntry[];
+    loading: boolean;
+  }>;
+  // GitHubProjectsPanelContext
+  githubProjects: DataSlice<GitHubProjectsSlice>;
+  // GitHubStarredPanelContext
+  githubStarred: DataSlice<GitHubStarredSlice>;
+  // UserCollectionsPanelContext
+  userCollections: DataSlice<UserCollectionsSlice>;
+  // Additional properties for coordination between panels
   selectedWorkspace: Workspace | null;
   setSelectedWorkspace: (workspace: Workspace | null) => void;
-  // Selected collection (for coordination between panels)
   selectedCollection: Collection | null;
   setSelectedCollection: (collection: Collection | null) => void;
 }
@@ -106,7 +133,7 @@ interface ProjectsPanelContextValue extends PanelContextValue {
  * Provider value containing context, actions, and events
  */
 interface ProjectsPanelProviderValue {
-  context: ProjectsPanelContextValue;
+  context: PanelContextValue<ProjectsPanelContextType>;
   actions: ProjectsPanelActions;
   events: PanelEventEmitter;
 }
@@ -871,7 +898,10 @@ export const ProjectsPanelProvider: React.FC<
           {
             scope: 'workspace' as const,
             name: 'workspace',
-            data: selectedWorkspace,
+            data: {
+              workspace: selectedWorkspace,
+              loading: false,
+            },
             loading: false,
             error: null,
             refresh: async () => {
@@ -884,7 +914,10 @@ export const ProjectsPanelProvider: React.FC<
           {
             scope: 'workspace' as const,
             name: 'workspaceRepositories',
-            data: workspaceRepositories,
+            data: {
+              repositories: workspaceRepositories,
+              loading: repositoriesLoading,
+            },
             loading: repositoriesLoading,
             error: null,
             refresh: async () => {
@@ -1206,9 +1239,9 @@ export const ProjectsPanelProvider: React.FC<
         setLocalRepositories(repos);
       },
 
-      removeRepository: async (name: string, deleteLocal: boolean) => {
+      removeLocalRepository: async (name: string, deleteLocal: boolean) => {
         console.info(
-          '[ProjectsPanelProvider] Removing repository:',
+          '[ProjectsPanelProvider] Removing local repository:',
           name,
           deleteLocal,
         );
@@ -1415,23 +1448,7 @@ export const ProjectsPanelProvider: React.FC<
       },
 
       // selectRepository - Sets the current repository without opening a new window
-      selectRepository: async (entryOrPath: AlexandriaEntry | string) => {
-        let entry: AlexandriaEntry | undefined;
-
-        if (typeof entryOrPath === 'string') {
-          // Find the local repo entry by path
-          entry = localRepositories.find((r) => r.path === entryOrPath);
-          if (!entry) {
-            console.error(
-              '[ProjectsPanelProvider] Could not find repository at path:',
-              entryOrPath,
-            );
-            return;
-          }
-        } else {
-          entry = entryOrPath;
-        }
-
+      selectRepository: async (entry: AlexandriaEntry) => {
         console.info(
           '[ProjectsPanelProvider] Selecting repository:',
           entry.name,
@@ -1446,28 +1463,52 @@ export const ProjectsPanelProvider: React.FC<
         });
       },
 
-      // openRepository for GitHub panels (takes localPath string)
-      // Note: This overloads the existing openRepository that takes AlexandriaEntry
-      // The GitHub panels call this with a path string, so we find the matching entry
-      openRepository: async (entryOrPath: AlexandriaEntry | string) => {
-        let entry: AlexandriaEntry | undefined;
+      // openLocalRepository - accepts AlexandriaEntry as required by LocalProjectsPanelActions
+      openLocalRepository: async (entry: AlexandriaEntry) => {
+        console.info(
+          '[ProjectsPanelProvider] Opening local repository:',
+          entry.name,
+        );
 
-        if (typeof entryOrPath === 'string') {
-          // Find the local repo entry by path
-          entry = localRepositories.find((r) => r.path === entryOrPath);
-          if (!entry) {
-            console.error(
-              '[ProjectsPanelProvider] Could not find repository at path:',
-              entryOrPath,
-            );
-            return;
-          }
-        } else {
-          entry = entryOrPath;
+        // Also select the repository for the info panel
+        setSelectedRepository(entry);
+
+        // Update lastOpenedAt timestamp
+        try {
+          await AlexandriaService.updateLastOpened(entry.name);
+        } catch (error) {
+          console.error(
+            '[ProjectsPanelProvider] Failed to update lastOpenedAt:',
+            error,
+          );
+          // Don't block opening the project if update fails
+        }
+
+        await WindowService.openDevWorkspace({
+          alexandriaEntry: entry,
+        });
+        events.emit({
+          type: 'repository:opened',
+          source: 'projects-view',
+          timestamp: Date.now(),
+          payload: { repositoryId: entry.name, repository: entry },
+        });
+      },
+
+      // openRepository - for GitHub panels (takes string path)
+      openRepository: async (localPath: string) => {
+        // Find the local repo entry by path
+        const entry = localRepositories.find((r) => r.path === localPath);
+        if (!entry) {
+          console.error(
+            '[ProjectsPanelProvider] Could not find repository at path:',
+            localPath,
+          );
+          return;
         }
 
         console.info(
-          '[ProjectsPanelProvider] Opening repository:',
+          '[ProjectsPanelProvider] Opening repository from path:',
           entry.name,
         );
 
@@ -1626,9 +1667,8 @@ export const ProjectsPanelProvider: React.FC<
         }
       },
 
-      // Note: removeRepository conflicts with LocalProjectsPanel's removeRepository
-      // The panel interface needs updating to use a unique name like removeCollectionRepository
-      removeCollectionRepository: async (
+      // removeRepositoryFromCollection - from UserCollectionsPanelActions
+      removeRepositoryFromCollection: async (
         collectionId: string,
         repositoryId: string,
       ) => {
@@ -1735,9 +1775,10 @@ export const ProjectsPanelProvider: React.FC<
     [events, selectedWorkspace, localRepositories],
   );
 
-  // Create context value
-  const context: ProjectsPanelContextValue = useMemo(
+  // Create context value following web-ade pattern
+  const context: PanelContextValue<ProjectsPanelContextType> = useMemo(
     () => ({
+      // PanelContextValue core properties
       currentScope: {
         type: 'workspace' as const,
         workspace: selectedWorkspace
@@ -1796,13 +1837,31 @@ export const ProjectsPanelProvider: React.FC<
 
         await Promise.all(slicesToRefresh.map((slice) => slice.refresh()));
       },
-      // Extended properties
+      // Custom state properties
       selectedWorkspace,
       setSelectedWorkspace,
       selectedCollection,
       setSelectedCollection,
+      // Typed slice properties from slices map
+      alexandriaRepositories: slices.get('alexandriaRepositories') as DataSlice<{
+        repositories: AlexandriaEntry[];
+        discoveredRepositories: DiscoveredRepository[];
+        loading: boolean;
+      }>,
+      workspaces: slices.get('workspaces') as DataSlice<WorkspacesSlice>,
+      workspace: slices.get('workspace') as DataSlice<{
+        workspace: Workspace | null;
+        loading: boolean;
+      }>,
+      workspaceRepositories: slices.get('workspaceRepositories') as DataSlice<{
+        repositories: AlexandriaEntry[];
+        loading: boolean;
+      }>,
+      githubProjects: slices.get('githubProjects') as DataSlice<GitHubProjectsSlice>,
+      githubStarred: slices.get('githubStarred') as DataSlice<GitHubStarredSlice>,
+      userCollections: slices.get('userCollections') as DataSlice<UserCollectionsSlice>,
     }),
-    [slices, selectedWorkspace, selectedCollection],
+    [slices, selectedWorkspace, selectedCollection, selectedRepository],
   );
 
   // Combine into provider value

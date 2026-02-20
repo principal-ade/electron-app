@@ -32,31 +32,42 @@ import {
 } from '../contexts/AgentHighlightContext';
 import { TabbedTerminalPanel, type BaseTab, type TerminalTab } from '@industry-theme/xterm-terminal-panel';
 import { TabbedGhosttyTerminal } from '@industry-theme/ghostty-terminal-panel';
-import { panels as principalViewPanels, TraceDetailsPanel, type CanvasEditorPanelProps, type WorkflowScenariosPanelProps } from '@industry-theme/principal-view-panels';
+import {
+  panels as principalViewPanels,
+  TraceDetailsPanel,
+  CanvasEditorPanel,
+  StoryboardListPanel,
+  TraceListPanel,
+  type CanvasEditorPanelProps,
+  type WorkflowScenariosPanelProps,
+} from '@industry-theme/principal-view-panels';
 import type { RegisteredTrace } from '@principal-ai/principal-view-core';
 import type { WorkflowTemplate } from '@principal-ai/principal-view-core';
 import type { FileInfo } from '@principal-ai/repository-abstraction';
-import { panels as fileCityPanels } from '@industry-theme/file-city-panel';
+import { FeedCodeCityPanel } from '@industry-theme/file-city-panel';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
-import { panels as alexandriaPanels } from '@industry-theme/alexandria-panels';
+import { LocalProjectsPanel } from '@industry-theme/alexandria-panels';
 import { panels as localhostBrowserPanels } from '@industry-theme/localhost-panels';
-import { panels as agentDrivenPanels } from '@industry-theme/agent-driven-ui-panels';
+import { EventBusPanel, AgentToolsPanel } from '@industry-theme/agent-driven-ui-panels';
 import {
-  panels as repositoryCompositionPanels,
   DependencyGraphPanelContent,
+  GitChangesPanel,
+  PackageCompositionPanel,
   type PackageLayer,
 } from '@industry-theme/repository-composition-panels';
 import { panels as codeQualityPanels } from '@principal-ade/code-quality-panels';
-import { panels as markdownPanels, type MarkdownPanelProps } from '@industry-theme/markdown-panels';
+import { MarkdownPanel, type MarkdownPanelProps } from '@industry-theme/markdown-panels';
 import {
-  panels as fileEditingPanels,
+  FileEditorPanel,
+  GitDiffPanel,
+  MDXEditorPanel,
   type FileEditorPanelProps,
   type MDXEditorPanelProps,
   type GitDiffPanelProps,
 } from '@industry-theme/file-editing-panels';
 import { panels as backlogPanels } from '@industry-theme/backlogmd-kanban-panel';
 import { panels as agentPanels, type Skill, type SkillDetailPanelProps } from '@industry-theme/agent-panels';
-import { panels as githubPanels } from '@industry-theme/github-panels';
+import { GitHubIssuesPanel, GitHubIssueDetailPanel } from '@industry-theme/github-panels';
 import { panels as typeInformationPanels } from '../panels/TypeInformationPanel';
 import type { Repository } from '../../shared/types/repository.types';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
@@ -349,21 +360,29 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
   // Stable onTabsChange that prevents infinite loops
   const handleTabsChange = useCallback((newTabs: DevWorkspaceTab[]) => {
+    console.log('[DEBUG] handleTabsChange called with:', newTabs.map(t => t.id));
     setTabs(prevTabs => {
       // Only keep custom tabs from the update (filter out terminal tabs)
       // Terminal tabs are managed by TabbedTerminalPanel, we only care about custom tabs
       const newCustomTabs = newTabs.filter(t => t.contentType !== 'terminal');
       const prevCustomTabs = prevTabs.filter(t => t.contentType !== 'terminal');
 
+      console.log('[DEBUG] prevCustomTabs:', prevCustomTabs.map(t => t.id));
+      console.log('[DEBUG] newCustomTabs:', newCustomTabs.map(t => t.id));
+
       // Check if custom tabs actually changed
       const customTabsChanged =
         newCustomTabs.length !== prevCustomTabs.length ||
         !newCustomTabs.every(tab => prevCustomTabs.some(prev => prev.id === tab.id));
 
+      console.log('[DEBUG] customTabsChanged:', customTabsChanged);
+
       if (!customTabsChanged) {
+        console.log('[DEBUG] No change, returning prevTabs');
         return prevTabs; // No change
       }
 
+      console.log('[DEBUG] Updating to newCustomTabs');
       // Notify parent of tab changes for RepositoryPanelProvider
       onTabsChange?.(newCustomTabs);
 
@@ -371,83 +390,59 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     });
   }, [onTabsChange]);
 
-  const CanvasEditorPanelComponent = principalViewPanels.find(
-    (p) => p.metadata?.id === 'principal-ai.canvas-editor',
-  )?.component as React.ComponentType<CanvasEditorPanelProps> | undefined;
+  // Direct imports instead of array access to avoid type inference issues
+  const CanvasEditorPanelComponent = CanvasEditorPanel as React.ComponentType<CanvasEditorPanelProps>;
   const TraceViewerPanelComponent = principalViewPanels.find(
     (p) => p.metadata?.id === 'principal-ai.trace-viewer',
-  )?.component;
+  )?.component; // Cannot convert - component not exported
   const CanvasDetailPanelComponent = principalViewPanels.find(
     (p) => p.metadata?.id === 'principal-ai.workflow-scenarios',
-  )?.component as React.ComponentType<WorkflowScenariosPanelProps> | undefined;
-  const StoryboardListPanelComponent = principalViewPanels.find(
-    (p) => p.metadata?.id === 'principal-ai.storyboard-list',
-  )?.component;
-  const TraceListPanelComponent = principalViewPanels.find(
-    (p) => p.metadata?.id === 'principal-ai.trace-list',
-  )?.component;
-  const FileCityPanelComponent = fileCityPanels[0]?.component;
-  const DocsPanelComponent = docsPanels[0]?.component;
-  const LocalProjectsPanelComponent = alexandriaPanels.find(
-    (p) => p.metadata?.id === 'industry-theme.local-projects',
-  )?.component;
+  )?.component as React.ComponentType<WorkflowScenariosPanelProps> | undefined; // Cannot convert - component not exported
+  const StoryboardListPanelComponent = StoryboardListPanel;
+  const TraceListPanelComponent = TraceListPanel;
+  const FileCityPanelComponent = FeedCodeCityPanel;
+  const DocsPanelComponent = docsPanels[0]?.component; // Cannot convert - component not exported
+  // Direct import instead of array access to avoid type inference issues with mixed desktop/web panels
+  const LocalProjectsPanelComponent = LocalProjectsPanel;
   const LocalhostBrowserPanelComponent = localhostBrowserPanels.find(
     (p) => p.metadata?.id === 'principal-ade.localhost-browser',
-  )?.component;
-  const EventBusPanelComponent = agentDrivenPanels.find(
-    (p) => p.metadata?.id === 'industry-theme.event-bus-panel',
-  )?.component;
-  const AgentToolsPanelComponent = agentDrivenPanels.find(
-    (p) => p.metadata?.id === 'industry-theme.agent-tools-panel',
-  )?.component;
-  const GitChangesPanelComponent = repositoryCompositionPanels.find(
-    (p) => p.metadata?.id === 'industry-theme.git-changes',
-  )?.component;
-  const PackageCompositionPanelComponent = repositoryCompositionPanels.find(
-    (p) => p.metadata?.id === 'industry-theme.package-composition',
-  )?.component;
+  )?.component; // Cannot convert - component not exported
+  const EventBusPanelComponent = EventBusPanel;
+  const AgentToolsPanelComponent = AgentToolsPanel;
+  const GitChangesPanelComponent = GitChangesPanel;
+  const PackageCompositionPanelComponent = PackageCompositionPanel;
   const CodeQualityPanelComponent = codeQualityPanels.find(
     (p) => p.metadata?.id === 'principal-ade.quality-hexagon-panel',
-  )?.component;
-  const MarkdownPanelComponent = markdownPanels[0]?.component as React.ComponentType<MarkdownPanelProps> | undefined;
-  const FileEditorPanelComponent = fileEditingPanels.find(
-    (p) => p.metadata?.id === 'industry-theme.file-editor',
-  )?.component as React.ComponentType<FileEditorPanelProps> | undefined;
-  const GitDiffPanelComponent = fileEditingPanels.find(
-    (p) => p.metadata?.id === 'industry-theme.git-diff',
-  )?.component as React.ComponentType<GitDiffPanelProps> | undefined;
-  const MDXEditorPanelComponent = fileEditingPanels.find(
-    (p) => p.metadata?.id === 'industry-theme.mdx-editor',
-  )?.component as React.ComponentType<MDXEditorPanelProps> | undefined;
+  )?.component; // Cannot convert - package may not be installed
+  const MarkdownPanelComponent = MarkdownPanel as React.ComponentType<MarkdownPanelProps>;
+  const FileEditorPanelComponent = FileEditorPanel as React.ComponentType<FileEditorPanelProps>;
+  const GitDiffPanelComponent = GitDiffPanel as React.ComponentType<GitDiffPanelProps>;
+  const MDXEditorPanelComponent = MDXEditorPanel as React.ComponentType<MDXEditorPanelProps>;
 
   // Backlog.md panels (Kanban, TaskDetail, Milestone)
-  const KanbanPanelComponent = backlogPanels[0]?.component;
-  const TaskDetailPanelComponent = backlogPanels[1]?.component;
-  const MilestonePanelComponent = backlogPanels[2]?.component;
+  const KanbanPanelComponent = backlogPanels[0]?.component; // Cannot convert - component not exported
+  const TaskDetailPanelComponent = backlogPanels[1]?.component; // Cannot convert - component not exported
+  const MilestonePanelComponent = backlogPanels[2]?.component; // Cannot convert - component not exported
 
   // Agent Skills panels
   const SkillDetailPanelComponent = agentPanels.find(
     (p) => p.metadata?.id === 'industry-theme.skill-detail',
-  )?.component as React.ComponentType<SkillDetailPanelProps> | undefined;
+  )?.component as React.ComponentType<SkillDetailPanelProps> | undefined; // Cannot convert - need metadata ID lookup
   const AgentDetailPanelComponent = agentPanels.find(
     (p) => p.metadata?.id === 'industry-theme.agent-detail',
-  )?.component;
+  )?.component; // Cannot convert - need metadata ID lookup
 
   // Unified Agentic Resources panel (Agents + Skills combined)
   const AgenticResourcesPanelComponent = agentPanels.find(
     (p) => p.metadata?.id === 'industry-theme.agentic-resources',
-  )?.component;
+  )?.component; // Cannot convert - need metadata ID lookup
 
   // GitHub panels
-  const GitHubIssuesPanelComponent = githubPanels.find(
-    (p) => p.metadata?.id === 'industry-theme.github-issues',
-  )?.component;
-  const GitHubIssueDetailPanelComponent = githubPanels.find(
-    (p) => p.metadata?.id === 'industry-theme.github-issue-detail',
-  )?.component;
+  const GitHubIssuesPanelComponent = GitHubIssuesPanel;
+  const GitHubIssueDetailPanelComponent = GitHubIssueDetailPanel;
   const TypeInformationPanelComponent = typeInformationPanels.find(
     (p) => p.metadata?.id === 'principal-ade.type-information',
-  )?.component;
+  )?.component; // Cannot convert - local panel, component not exported
 
   // Listen for doc:openInRightPanel events (from Alexandria docs panel context menu)
   useEffect(() => {
@@ -648,7 +643,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           const scopeSpan = trace.data.resourceSpans?.[0]?.scopeSpans?.[0];
           const scope = scopeSpan?.scope;
 
-          // Create basic RegisteredTrace for stored traces (they're unmatched)
+          // Create minimal RegisteredTrace for stored traces
+          // TODO: Process with TraceOrchestrator when ready
           const registeredTrace: RegisteredTrace = {
             traceId: trace.traceId,
             name: traceName,
@@ -656,32 +652,16 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             endTime: trace.timestamp || Date.now(),
             duration: 0,
             spanCount: trace.data.resourceSpans?.[0]?.scopeSpans?.[0]?.spans?.length || 0,
-            serviceName,
             hasErrors: false,
-            scope: {
-              name: scope?.name || 'unknown',
-              version: scope?.version,
-              attributes: scope?.attributes ? Object.fromEntries(
-                scope.attributes.map((attr: any) => [
-                  attr.key,
-                  attr.value?.stringValue || attr.value?.intValue || attr.value?.boolValue
-                ])
-              ) : undefined,
-              schemaUrl: scopeSpan?.schemaUrl || undefined,
-            },
-            registryStatus: 'unmatched',
-            spanMatches: [],
-            matchedNodesSummary: {
-              totalNodesMatched: 0,
-              matchedNodeIds: [],
-              unmatchedNodeIds: [],
-              coveragePercent: 0,
-            },
-            routing: {
-              sourceUrl: serviceName,
-              destination: 'trace-viewer',
-            },
             otlpData: trace.data as any,
+
+            // New structure placeholders - will be filled by TraceOrchestrator
+            resources: [],
+            scenarioMatches: [],
+            storyboardMatches: [],
+            unmatchedSpans: {
+              spans: []
+            },
           };
 
           const newTab: TraceDetailsTab = {

@@ -15,6 +15,11 @@ import type {
   PanelEventEmitter,
 } from '@principal-ade/panel-framework-core';
 import type {
+  UserProfileSlice,
+  UserProfilePanelActions,
+  GitHubRepository,
+} from '@industry-theme/alexandria-panels';
+import type {
   GitHubUser as LocalGitHubUser,
   GitHubOrganization as LocalGitHubOrganization,
   GitHubOrgMember as LocalGitHubOrgMember,
@@ -52,18 +57,24 @@ interface SelectedUserProfile {
 }
 
 /**
+ * GitSync context type - contains only slice properties
+ * Following the web-ade pattern
+ */
+export interface GitSyncPanelContextType {
+  // UserProfilePanelContext
+  userProfile: DataSlice<UserProfileSlice>;
+}
+
+/**
  * Extended actions for GitSyncPanelProvider
  */
-interface GitSyncPanelActions extends PanelActions {
+interface GitSyncPanelActions extends PanelActions, UserProfilePanelActions {
   login?: () => Promise<void>;
   toggleVisibility?: () => Promise<void>;
   connect?: () => Promise<void>;
   disconnect?: () => Promise<void>;
-  // UserProfilePanel actions
+  // Additional UserProfilePanel actions
   selectUser?: (username: string) => Promise<void>;
-  viewOrganization?: (orgLogin: string) => Promise<void>;
-  viewRepository?: (owner: string, repo: string) => Promise<void>;
-  cloneRepository?: (repository: LocalGitHubRepository) => Promise<void>;
   openInBrowser?: (url: string) => Promise<void>;
 }
 
@@ -71,7 +82,7 @@ interface GitSyncPanelActions extends PanelActions {
  * Provider value containing context, actions, and events
  */
 interface GitSyncPanelProviderValue {
-  context: PanelContextValue;
+  context: PanelContextValue<GitSyncPanelContextType>;
   actions: GitSyncPanelActions;
   events: PanelEventEmitter;
   /** Whether connected to presence server (for conditional panel rendering) */
@@ -519,7 +530,7 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
         });
       },
 
-      cloneRepository: async (repository: LocalGitHubRepository) => {
+      cloneRepository: async (repository: GitHubRepository) => {
         events.emit({
           type: 'github:clone-requested',
           source: 'git-sync-view',
@@ -535,9 +546,10 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
     [events, login, handleVisibilityToggle, handleConnect, fetchUserProfile],
   );
 
-  // Create context value
-  const context: PanelContextValue = useMemo(
+  // Create context value following web-ade pattern
+  const context: PanelContextValue<GitSyncPanelContextType> = useMemo(
     () => ({
+      // PanelContextValue core properties
       currentScope: {
         type: 'workspace' as const,
         workspace: undefined,
@@ -580,6 +592,8 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
           );
         }
       },
+      // Typed slice properties from slices map
+      userProfile: slices.get('userProfile') as DataSlice<UserProfileSlice>,
     }),
     [slices],
   );

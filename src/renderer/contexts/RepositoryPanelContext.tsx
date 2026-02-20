@@ -37,6 +37,12 @@ import type { ColorMode, FileMetricData, QualitySliceData } from '@principal-ai/
 import type { GlobalSkill } from '../../shared/main-process-api-interfaces/FileSystemAPI';
 import type { RegisteredTrace } from '@principal-ai/principal-view-core';
 import { OtelCollectorService } from '../main-process-api/OtelCollectorService';
+import type {
+  AlexandriaRepositoriesSlice,
+  WorkspaceSlice,
+  WorkspaceRepositoriesSlice,
+  WorkspacesSlice,
+} from '@industry-theme/alexandria-panels';
 
 // Color mode for file city visualization - imported from registry
 // The registry's ColorMode type includes all built-in and lens-based modes
@@ -52,16 +58,16 @@ interface FileCityColorModesSliceData {
 // Extend PanelActions with file system actions
 // Note: Terminal actions have been moved to TerminalContext
 export interface RepositoryPanelActions extends PanelActions {
-  /** Read file content - supports all file types (not just markdown) */
-  readFile?: (filePath: string) => Promise<string>;
+  /** Read file content - supports all file types (not just markdown) - REQUIRED for MarkdownPanel */
+  readFile: (filePath: string) => Promise<string>;
   writeFile?: (filePath: string, content: string) => Promise<void>;
   /** Open file in viewer - only supports markdown files */
   openFile?: (filePath: string) => Promise<void>;
   // Local Projects panel actions
   selectDirectory?: () => Promise<{ path: string; name: string } | null>;
   registerRepository?: (name: string, path: string) => Promise<void>;
-  removeRepository?: (name: string, deleteLocal: boolean) => Promise<void>;
-  openRepository?: (entry: AlexandriaEntry) => Promise<void>;
+  removeLocalRepository?: (name: string, deleteLocal: boolean) => Promise<void>;
+  openLocalRepository?: (entry: AlexandriaEntry) => Promise<void>;
   // Active file management for markdown panel
   setActiveFile?: (filePath: string | null) => Promise<void>;
   // Telemetry management
@@ -80,6 +86,10 @@ interface RepositoryPanelContextValue extends PanelContextValue {
   activeFile: DataSlice<ActiveFileSlice>;
   fileTree: DataSlice<FileTree>;
   openTabs: DataSlice<unknown[]>;
+  alexandriaRepositories: DataSlice<AlexandriaRepositoriesSlice>;
+  workspace: DataSlice<WorkspaceSlice>;
+  workspaceRepositories: DataSlice<WorkspaceRepositoriesSlice>;
+  workspaces: DataSlice<WorkspacesSlice>;
 }
 
 // Provider value that contains context, actions, and events separately
@@ -803,47 +813,64 @@ export const RepositoryPanelProvider: React.FC<
                 return;
               }
 
-              // Check if this is a registered trace from the server
-              if (message?.type === 'REGISTERED_TRACE') {
-                console.info('[RepositoryPanelProvider] Received REGISTERED_TRACE from server');
+              // Check if this is a raw OTLP trace from the server (forwarding mode)
+              if (message?.type === 'RAW_OTLP_TRACE') {
+                console.info('[RepositoryPanelProvider] Received RAW_OTLP_TRACE from server');
 
-                // Extract the RegisteredTrace from the message
-                const trace = message.payload as RegisteredTrace;
+                // Extract the raw OTLP data from the message
+                const otlpData = message.payload;
 
-                if (!trace || !trace.traceId) {
-                  console.warn('[RepositoryPanelProvider] Invalid REGISTERED_TRACE payload:', message);
+                if (!otlpData) {
+                  console.warn('[RepositoryPanelProvider] Invalid RAW_OTLP_TRACE payload:', message);
                   return;
                 }
 
-                console.info('[RepositoryPanelProvider] Trace details:', {
-                  traceId: trace.traceId,
-                  name: trace.name,
-                  registryStatus: trace.registryStatus,
-                  hasMatchInfo: !!trace.matchInfo,
-                  destination: trace.routing.destination,
-                  scopeVersion: trace.scope.version,
+                // Extract trace ID from OTLP data
+                const extractedTraceId = otlpData.resourceSpans?.[0]?.scopeSpans?.[0]?.spans?.[0]?.traceId;
+                const traceId = typeof extractedTraceId === 'string'
+                  ? extractedTraceId
+                  : Array.isArray(extractedTraceId)
+                    ? Array.from(extractedTraceId).map((b: number) => b.toString(16).padStart(2, '0')).join('')
+                    : `trace-${Date.now()}`;
+
+                console.info('[RepositoryPanelProvider] Raw OTLP trace:', {
+                  traceId,
+                  source: message.source,
+                  resourceSpans: otlpData.resourceSpans?.length || 0,
                 });
 
-                // Add trace to state (no conversion needed - already in RegisteredTrace format!)
+                // Store raw OTLP trace - will process later with TraceOrchestrator
                 setTelemetryTraces((prev) => {
                   // Check for duplicates
                   const existingIds = new Set(prev.map((t) => t.traceId));
-                  if (existingIds.has(trace.traceId)) {
-                    console.info('[RepositoryPanelProvider] Skipping duplicate trace:', trace.traceId);
+                  if (existingIds.has(traceId)) {
+                    console.info('[RepositoryPanelProvider] Skipping duplicate trace:', traceId);
                     return prev;
                   }
 
+                  // Create a minimal RegisteredTrace-like object for now
+                  // TODO: Process with TraceOrchestrator when ready
+                  const rawTrace = {
+                    traceId,
+                    name: `Trace ${traceId.substring(0, 8)}`,
+                    startTime: message.timestamp,
+                    endTime: message.timestamp,
+                    duration: 0,
+                    spanCount: otlpData.resourceSpans?.[0]?.scopeSpans?.[0]?.spans?.length || 0,
+                    hasErrors: false,
+                    otlpData, // Store raw OTLP for processing later
+                    // New structure placeholders - will be filled by TraceOrchestrator
+                    resources: [],
+                    scenarioMatches: [],
+                    storyboardMatches: [],
+                    unmatchedSpans: { spans: [] },
+                  };
+
                   // Keep only last 1000 traces
-                  const combined = [...prev, trace];
+                  const combined = [...prev, rawTrace as any];
                   return combined.slice(-1000);
                 });
 
-                return;
-              }
-
-              // Legacy TRACE_BATCH support (can be removed once all clients updated)
-              if (message?.type === 'TRACE_BATCH') {
-                console.warn('[RepositoryPanelProvider] Received legacy TRACE_BATCH - this format is deprecated');
                 return;
               }
 
@@ -1034,7 +1061,7 @@ export const RepositoryPanelProvider: React.FC<
         }
       },
 
-      removeRepository: async (name: string, deleteLocal: boolean) => {
+      removeLocalRepository: async (name: string, deleteLocal: boolean) => {
         try {
           await AlexandriaService.removeRepository(name, deleteLocal);
           console.info('[RepositoryPanelProvider] Removed repository:', name);
@@ -1047,7 +1074,7 @@ export const RepositoryPanelProvider: React.FC<
         }
       },
 
-      openRepository: async (entry: AlexandriaEntry) => {
+      openLocalRepository: async (entry: AlexandriaEntry) => {
         try {
           await WindowService.openDevWorkspace({
             alexandriaEntry: entry,
@@ -1611,7 +1638,12 @@ export const RepositoryPanelProvider: React.FC<
           {
             scope: 'repository' as const,
             name: 'alexandriaRepositories',
-            data: { repositories: alexandriaRepositories },
+            data: {
+              repositories: alexandriaRepositories,
+              discoveredRepositories: [],
+              loading: alexandriaRepositoriesLoading,
+              error: undefined,
+            },
             loading: alexandriaRepositoriesLoading,
             error: null,
             refresh: async () => {
@@ -1628,6 +1660,58 @@ export const RepositoryPanelProvider: React.FC<
               } finally {
                 setAlexandriaRepositoriesLoading(false);
               }
+            },
+          },
+        ],
+        [
+          'workspace',
+          {
+            scope: 'repository' as const,
+            name: 'workspace',
+            data: {
+              workspace: null,
+              loading: false,
+              error: undefined,
+            },
+            loading: false,
+            error: null,
+            refresh: async () => {
+              // No workspace data in repository context
+            },
+          },
+        ],
+        [
+          'workspaces',
+          {
+            scope: 'repository' as const,
+            name: 'workspaces',
+            data: {
+              workspaces: [],
+              defaultWorkspaceId: null,
+              loading: false,
+              error: undefined,
+            },
+            loading: false,
+            error: null,
+            refresh: async () => {
+              // No workspaces list in repository context
+            },
+          },
+        ],
+        [
+          'workspaceRepositories',
+          {
+            scope: 'repository' as const,
+            name: 'workspaceRepositories',
+            data: {
+              repositories: [],
+              loading: false,
+              error: undefined,
+            },
+            loading: false,
+            error: null,
+            refresh: async () => {
+              // No workspace repositories in repository context
             },
           },
         ],
@@ -1905,6 +1989,10 @@ export const RepositoryPanelProvider: React.FC<
       activeFile: activeFileSlice,
       fileTree: fileTreeSlice,
       openTabs: openTabsSlice,
+      alexandriaRepositories: slices.get('alexandriaRepositories') as DataSlice<AlexandriaRepositoriesSlice>,
+      workspace: slices.get('workspace') as DataSlice<WorkspaceSlice>,
+      workspaceRepositories: slices.get('workspaceRepositories') as DataSlice<WorkspaceRepositoriesSlice>,
+      workspaces: slices.get('workspaces') as DataSlice<WorkspacesSlice>,
     }),
     [
       repositoryPath,

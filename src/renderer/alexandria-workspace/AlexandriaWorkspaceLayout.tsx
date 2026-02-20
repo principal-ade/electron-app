@@ -10,17 +10,20 @@ import {
 } from '@principal-ade/panel-layouts';
 import { PanelProvider, usePanelProvider } from '../contexts/PanelContext';
 import { TabbedTerminalPanel } from '@industry-theme/xterm-terminal-panel';
-import { panels as workspacePanels } from '@industry-theme/alexandria-panels';
+import {
+  WorkspaceRepositoriesPanel,
+  LocalProjectsPanel,
+} from '@industry-theme/alexandria-panels';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
-import { panels as fileCityPanels } from '@industry-theme/file-city-panel';
+import { FeedCodeCityPanel } from '@industry-theme/file-city-panel';
 import { localhostProcessesPanels } from '../panels';
-import { panels as agentDrivenPanels } from '@industry-theme/agent-driven-ui-panels';
-import { panels as markdownPanels } from '@industry-theme/markdown-panels';
-import { panels as principalViewPanels } from '@industry-theme/principal-view-panels';
+import { EventBusPanel, AgentToolsPanel } from '@industry-theme/agent-driven-ui-panels';
+import { MarkdownPanel } from '@industry-theme/markdown-panels';
+import { StoryboardListPanel, CanvasEditorPanel } from '@industry-theme/principal-view-panels';
 import { panels as backlogPanels } from '@industry-theme/backlogmd-kanban-panel';
-import { panels as agentPanels } from '@industry-theme/agent-panels';
-import { panels as githubPanels } from '@industry-theme/github-panels';
-import { panels as repositoryCompositionPanels } from '@industry-theme/repository-composition-panels';
+import { panels as agentPanels } from '@industry-theme/agent-panels'; // Keep as array - multiple panels with different IDs
+import { GitHubIssuesPanel, GitHubIssueDetailPanel } from '@industry-theme/github-panels';
+import { GitChangesPanel, PackageCompositionPanel } from '@industry-theme/repository-composition-panels';
 import { panels as codeQualityPanels } from '@principal-ade/code-quality-panels';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { WindowService } from '../main-process-api/WindowService';
@@ -370,58 +373,42 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     return unsubscribe;
   }, [events, actions, layout, onLayoutChange, collapsed, onCollapsedChange]);
 
-  // Get panel components
-  // Use WorkspaceRepositoriesPanel (panels[1]) which expects workspace + workspaceRepositories slices
-  const WorkspacePanelComponent = workspacePanels[1]?.component;
-  const LocalProjectsPanelComponent = workspacePanels.find(
-    (p) => p.metadata?.id === 'industry-theme.local-projects',
-  )?.component;
-  const DocsPanelComponent = docsPanels[0]?.component;
-  const FileCityPanelComponent = fileCityPanels[0]?.component;
-  const LocalhostPanelComponent = localhostProcessesPanels[0]?.component;
-  const EventBusPanelComponent = agentDrivenPanels.find(
-    (p) => p.metadata?.id === 'industry-theme.event-bus-panel',
-  )?.component;
-  const AgentToolsPanelComponent = agentDrivenPanels.find(
-    (p) => p.metadata?.id === 'industry-theme.agent-tools-panel',
-  )?.component;
-  const MarkdownPanelComponent = markdownPanels[0]?.component;
-  const PrincipalViewPanelComponent = principalViewPanels[0]?.component;
+  // Get panel components - using direct imports instead of array access
+  // to avoid type inference issues with mixed desktop/web panels
+  const WorkspacePanelComponent = WorkspaceRepositoriesPanel;
+  const LocalProjectsPanelComponent = LocalProjectsPanel;
+  const DocsPanelComponent = docsPanels[0]?.component; // Cannot convert - component not exported
+  const FileCityPanelComponent = FeedCodeCityPanel;
+  const LocalhostPanelComponent = localhostProcessesPanels[0]?.component; // Cannot convert - local panel
+  const EventBusPanelComponent = EventBusPanel;
+  const AgentToolsPanelComponent = AgentToolsPanel;
+  const MarkdownPanelComponent = MarkdownPanel;
+  const PrincipalViewPanelComponent = CanvasEditorPanel;
 
   // Dev workspace panels
-  const KanbanPanelComponent = backlogPanels[0]?.component;
-  const TaskDetailPanelComponent = backlogPanels[1]?.component;
-  const MilestonePanelComponent = backlogPanels[2]?.component;
+  const KanbanPanelComponent = backlogPanels[0]?.component; // Cannot convert - component not exported
+  const TaskDetailPanelComponent = backlogPanels[1]?.component; // Cannot convert - component not exported
+  const MilestonePanelComponent = backlogPanels[2]?.component; // Cannot convert - component not exported
   const SkillsListPanelComponent = agentPanels.find(
     (p) => p.metadata?.id === 'industry-theme.skills-list',
-  )?.component;
+  )?.component; // Cannot convert - need metadata ID lookup
   const SkillDetailPanelComponent = agentPanels.find(
     (p) => p.metadata?.id === 'industry-theme.skill-detail',
-  )?.component;
+  )?.component; // Cannot convert - need metadata ID lookup
   const AgentsListPanelComponent = agentPanels.find(
     (p) => p.metadata?.id === 'industry-theme.agents-list',
-  )?.component;
+  )?.component; // Cannot convert - need metadata ID lookup
   const AgentDetailPanelComponent = agentPanels.find(
     (p) => p.metadata?.id === 'industry-theme.agent-detail',
-  )?.component;
-  const GitHubIssuesPanelComponent = githubPanels.find(
-    (p) => p.metadata?.id === 'industry-theme.github-issues',
-  )?.component;
-  const GitHubIssueDetailPanelComponent = githubPanels.find(
-    (p) => p.metadata?.id === 'industry-theme.github-issue-detail',
-  )?.component;
-  const GitChangesPanelComponent = repositoryCompositionPanels.find(
-    (p) => p.metadata?.id === 'industry-theme.git-changes',
-  )?.component;
-  const PackageCompositionPanelComponent = repositoryCompositionPanels.find(
-    (p) => p.metadata?.id === 'industry-theme.package-composition',
-  )?.component;
+  )?.component; // Cannot convert - need metadata ID lookup
+  const GitHubIssuesPanelComponent = GitHubIssuesPanel;
+  const GitHubIssueDetailPanelComponent = GitHubIssueDetailPanel;
+  const GitChangesPanelComponent = GitChangesPanel;
+  const PackageCompositionPanelComponent = PackageCompositionPanel;
   const CodeQualityPanelComponent = codeQualityPanels.find(
     (p) => p.metadata?.id === 'principal-ade.quality-hexagon-panel',
-  )?.component;
-  const StoryboardListPanelComponent = principalViewPanels.find(
-    (p) => p.metadata?.id === 'principal-ai.storyboard-list',
-  )?.component;
+  )?.component; // Cannot convert - package may not be installed
+  const StoryboardListPanelComponent = StoryboardListPanel;
 
   // Get terminal directory from context
   const terminalDirectory =

@@ -221,11 +221,11 @@ const ProjectsViewContent: React.FC = () => {
     [entryToRemoveFromWorkspace, workspaceForRemoval],
   );
 
-  // Override actions to intercept removeRepository and deleteWorkspace to show modals
-  const overriddenActions = useMemo(
+  // Override actions to intercept removeLocalRepository and deleteWorkspace to show modals
+  const overriddenActions = useMemo<typeof actions>(
     () => ({
       ...actions,
-      removeRepository: async (name: string, _deleteLocal: boolean) => {
+      removeLocalRepository: async (name: string, _deleteLocal: boolean) => {
         // Find the entry by name from the context
         const slice = context.getSlice<{ repositories: AlexandriaEntry[] }>(
           'alexandriaRepositories',

@@ -66,13 +66,13 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
   const handleOpenProject = async () => {
     // Type assertion: actions may be RepositoryPanelActions at runtime
     const repoActions = actions as RepositoryPanelActions;
-    if (repository && repoActions.openRepository) {
+    if (repository && repoActions.openLocalRepository) {
       try {
         // In ProjectsView context, repository is actually the full AlexandriaEntry
         // (see ProjectsPanelContext where currentScope.repository = selectedRepository)
         // TODO: Check with @principal-ade/panel-framework-core about extending RepositoryMetadata
         // to support richer repository types like AlexandriaEntry, or making it generic
-        await repoActions.openRepository(repository as unknown as AlexandriaEntry);
+        await repoActions.openLocalRepository(repository as unknown as AlexandriaEntry);
       } catch (error) {
         console.error('Failed to open project:', error);
       }

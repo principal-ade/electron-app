@@ -37,6 +37,12 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/type
 import type {
   FileTree,
 } from '@principal-ai/repository-abstraction';
+import type {
+  AlexandriaRepositoriesSlice,
+  WorkspaceSlice,
+  WorkspaceRepositoriesSlice,
+  WorkspacesSlice,
+} from '@industry-theme/alexandria-panels';
 import { createFileTreeSource } from '@principal-ai/repository-abstraction';
 import type { TerminalSessionInfo } from '@industry-theme/xterm-terminal-panel';
 import { minimatch } from 'minimatch';
@@ -136,13 +142,13 @@ interface ExtendedPanelActions extends PanelActions {
   // Local Projects panel actions
   selectDirectory?: () => Promise<{ path: string; name: string } | null>;
   registerRepository?: (name: string, path: string) => Promise<void>;
-  removeRepository?: (name: string, deleteLocal: boolean) => Promise<void>;
-  openRepository?: (entryOrId: AlexandriaEntry | string) => Promise<void>;
+  removeLocalRepository?: (name: string, deleteLocal: boolean) => Promise<void>;
+  openLocalRepository?: (entryOrId: AlexandriaEntry | string) => Promise<void>;
   // Active file management for markdown panel
   setActiveFile?: (filePath: string | null) => Promise<void>;
-  // File operations for panels (e.g., principal-view-panels)
-  // Matches framework signature: (path: string) => string | Promise<string>
-  readFile?: (path: string) => Promise<string>;
+  // File operations for panels (e.g., principal-view-panels, MarkdownPanel)
+  // REQUIRED for MarkdownPanel - matches framework signature
+  readFile: (path: string) => Promise<string>;
 }
 
 // Extended context interface that panels actually expect
@@ -178,6 +184,10 @@ interface ExtendedPanelContextValue extends PanelContextValue {
   // These are always present in the slices Map
   activeFile: DataSlice<ActiveFileSlice>;
   fileTree: DataSlice<FileTree>;
+  alexandriaRepositories: DataSlice<AlexandriaRepositoriesSlice>;
+  workspace: DataSlice<WorkspaceSlice>;
+  workspaceRepositories: DataSlice<WorkspaceRepositoriesSlice>;
+  workspaces: DataSlice<WorkspacesSlice>;
 }
 
 // Provider value that contains context, actions, and events separately
@@ -653,7 +663,11 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
           {
             scope: 'workspace' as const,
             name: 'workspace',
-            data: workspace,
+            data: {
+              workspace: workspace,
+              loading: false,
+              error: undefined,
+            },
             loading: false,
             error: null,
             refresh: async () => {
@@ -663,11 +677,34 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
           },
         ],
         [
+          'workspaces',
+          {
+            scope: 'workspace' as const,
+            name: 'workspaces',
+            data: {
+              workspaces: [workspace],
+              defaultWorkspaceId: workspace.id,
+              loading: false,
+              error: undefined,
+            },
+            loading: false,
+            error: null,
+            refresh: async () => {
+              // TODO: Implement workspaces list fetching
+              console.info('[PanelContext] Refreshing workspaces data...');
+            },
+          },
+        ],
+        [
           'workspaceRepositories',
           {
             scope: 'workspace' as const,
             name: 'workspaceRepositories',
-            data: workspaceRepositories,
+            data: {
+              repositories: workspaceRepositories,
+              loading: repositoriesLoading,
+              error: undefined,
+            },
             loading: repositoriesLoading,
             error: null,
             refresh: async () => {
@@ -764,7 +801,12 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
           {
             scope: 'workspace' as const,
             name: 'alexandriaRepositories',
-            data: { repositories: alexandriaRepositories },
+            data: {
+              repositories: alexandriaRepositories,
+              discoveredRepositories: [],
+              loading: alexandriaRepositoriesLoading,
+              error: undefined,
+            },
             loading: alexandriaRepositoriesLoading,
             error: null,
             refresh: async () => {
@@ -821,7 +863,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
             payload: { filePath: absolutePath },
           });
         },
-        openRepository: async (entryOrId: AlexandriaEntry | string) => {
+        openLocalRepository: async (entryOrId: AlexandriaEntry | string) => {
           // Handle both AlexandriaEntry objects and repository ID strings
           if (typeof entryOrId === 'string') {
             console.info('[PanelContext] Opening repository by ID:', entryOrId);
@@ -1273,7 +1315,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
           }
         },
 
-        removeRepository: async (name: string, deleteLocal: boolean) => {
+        removeLocalRepository: async (name: string, deleteLocal: boolean) => {
           try {
             await AlexandriaService.removeRepository(name, deleteLocal);
             console.info('[PanelContext] Removed repository:', name);
@@ -1478,6 +1520,10 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       // These reference the same objects that are in the slices Map
       activeFile: activeFileSlice,
       fileTree: fileTreeSlice,
+      alexandriaRepositories: slices.get('alexandriaRepositories') as DataSlice<AlexandriaRepositoriesSlice>,
+      workspace: slices.get('workspace') as DataSlice<WorkspaceSlice>,
+      workspaceRepositories: slices.get('workspaceRepositories') as DataSlice<WorkspaceRepositoriesSlice>,
+      workspaces: slices.get('workspaces') as DataSlice<WorkspacesSlice>,
     }),
     [
       workspace,
