@@ -16,7 +16,6 @@ export interface OtelCollectorResponse {
 }
 
 export interface StoredTrace {
-  timestamp: number;
   traceId: string;
   data: OTLPTraceRequest; // OTLP trace data
 }

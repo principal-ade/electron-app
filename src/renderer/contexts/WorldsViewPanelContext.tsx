@@ -65,17 +65,12 @@ export interface WorldsViewPanelContextType {
     discoveredRepositories: DiscoveredRepository[];
     loading: boolean;
   }>;
-  // CollectionMapPanel slice (not full DataSlice - simplified structure)
-  selectedCollectionView: {
-    data: {
-      collection: Collection | null;
-      memberships: CollectionMembership[];
-      repositories: AlexandriaEntry[];
-      dependencies?: Record<string, string[]>;
-    };
-    loading: boolean;
-    error: Error | null;
-  };
+  // CollectionMapPanelContext slice
+  selectedCollectionView: DataSlice<{
+    collection: Collection | null;
+    repositories: AlexandriaEntry[];
+    dependencies?: Record<string, string[]>;
+  }>;
   // Custom state properties
   selectedCollection: Collection | null;
   setSelectedCollection: (collection: Collection | null) => void;
@@ -230,32 +225,31 @@ export const WorldsViewPanelProvider: React.FC<
     return selectedCollectionRepositoryIds.has(repoId);
   });
 
-  // Create simplified slice for CollectionMapPanel (it doesn't use full DataSlice interface)
-  const selectedCollectionViewSlice = useMemo(
+  // Create DataSlice for CollectionMapPanel
+  const selectedCollectionViewSlice = useMemo<DataSlice<{
+    collection: Collection | null;
+    repositories: AlexandriaEntry[];
+    dependencies?: Record<string, string[]>;
+  }>>(
     () => ({
-      data: selectedCollection
-        ? {
-            collection: selectedCollection,
-            memberships: selectedCollectionMemberships,
-            repositories: selectedCollectionRepositories,
-            dependencies: {}, // TODO: Add dependency graph support
-          }
-        : {
-            collection: null,
-            memberships: [],
-            repositories: [],
-            dependencies: {},
-          },
+      scope: 'workspace' as const,
+      name: 'selectedCollectionView',
+      data: {
+        collection: selectedCollection,
+        repositories: selectedCollectionRepositories,
+        dependencies: {}, // TODO: Add dependency graph support
+      },
       loading: collectionsLoading || localRepositoriesLoading,
       error: collectionsError || null,
+      refresh: fetchCollections,
     }),
     [
       selectedCollection,
-      selectedCollectionMemberships,
       selectedCollectionRepositories,
       collectionsLoading,
       localRepositoriesLoading,
       collectionsError,
+      fetchCollections,
     ],
   );
 
@@ -950,3 +944,120 @@ export const useWorldsViewPanelProvider = (): WorldsViewPanelProviderValue => {
 };
 
 export default WorldsViewPanelContext;
+
+/**
+ * TODO: Quality Metrics Loading for Collections
+ *
+ * This pattern was removed from ProjectsPanelContext.tsx and can be adapted
+ * for loading quality metrics for repositories in collections.
+ *
+ * Reference implementation:
+ *
+ * ```typescript
+ * // State for quality metrics (keyed by repository path)
+ * const [qualityDataByRepo, setQualityDataByRepo] = useState<
+ *   Record<string, {
+ *     packages: Array<{
+ *       name: string;
+ *       version?: string;
+ *       metrics: Record<string, number>;
+ *     }>;
+ *     lastUpdated: string;
+ *   }>
+ * >({});
+ * const [qualityLoading, setQualityLoading] = useState(false);
+ *
+ * // Fetch quality metrics when collection repositories change
+ * useEffect(() => {
+ *   let isCurrent = true;
+ *
+ *   const fetchQualityForCollectionRepos = async () => {
+ *     const repositories = selectedCollectionView.data.repositories;
+ *     if (!selectedCollection || repositories.length === 0) {
+ *       return;
+ *     }
+ *
+ *     setQualityLoading(true);
+ *     const newQualityData: typeof qualityDataByRepo = {};
+ *
+ *     // Fetch quality for each repository in parallel
+ *     await Promise.all(
+ *       repositories.map(async (repo) => {
+ *         try {
+ *           if (!repo.path) return;
+ *
+ *           // Get git remote info
+ *           const remoteInfo = await RepositoryMonitoringService.getGitRemoteInfo(repo.path);
+ *           if (!remoteInfo?.remoteUrl) return;
+ *
+ *           const githubInfo = parseGitHubRemote(remoteInfo.remoteUrl);
+ *           if (!githubInfo) return;
+ *
+ *           // Get current branch
+ *           const gitStatus = await RepositoryMonitoringService.getGitStatus(repo.path);
+ *           const branch = gitStatus?.branch || 'main';
+ *
+ *           // Fetch quality metrics
+ *           const artifactData = await GitHubArtifactService.getLatestQualityMetrics(
+ *             githubInfo.owner,
+ *             githubInfo.repo,
+ *             branch,
+ *           );
+ *
+ *           if (artifactData) {
+ *             const packages = artifactData.qualityMetrics.packages.map((pkg) => ({
+ *               name: pkg.name,
+ *               metrics: pkg.hexagon as unknown as Record<string, number>,
+ *             }));
+ *
+ *             newQualityData[repo.path] = {
+ *               packages,
+ *               lastUpdated: artifactData.timestamp,
+ *             };
+ *           }
+ *         } catch (error) {
+ *           console.error(`Failed to fetch quality for ${repo.name}:`, error);
+ *         }
+ *       }),
+ *     );
+ *
+ *     if (isCurrent) {
+ *       setQualityDataByRepo(newQualityData);
+ *       setQualityLoading(false);
+ *     }
+ *   };
+ *
+ *   fetchQualityForCollectionRepos();
+ *
+ *   return () => {
+ *     isCurrent = false;
+ *   };
+ * }, [selectedCollection?.id, selectedCollectionView.data.repositories]);
+ *
+ * // Then expose via a slice for RepositoryQualityGridPanel:
+ * const repositoriesQualitySlice = useMemo<DataSlice<unknown>>(
+ *   () => ({
+ *     scope: 'workspace' as const,
+ *     name: 'repositoriesQuality',
+ *     data: {
+ *       repositories: Object.entries(qualityDataByRepo).map(
+ *         ([repoPath, repoData]) => ({
+ *           id: repoPath,
+ *           name: repoPath.split('/').pop() || repoPath,
+ *           path: repoPath,
+ *           packages: repoData.packages.map((pkg) => ({
+ *             name: pkg.name,
+ *             version: pkg.version,
+ *             metrics: pkg.metrics,
+ *           })),
+ *         }),
+ *       ),
+ *     },
+ *     loading: qualityLoading,
+ *     error: null,
+ *     refresh: async () => { ... },
+ *   }),
+ *   [qualityDataByRepo, qualityLoading],
+ * );
+ * ```
+ */

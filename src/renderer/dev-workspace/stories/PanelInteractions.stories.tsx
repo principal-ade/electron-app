@@ -7,7 +7,32 @@ import {
 } from '@principal-ade/panel-layouts';
 import { PanelEventBus, type PanelContextValue, type DataSlice } from '@principal-ade/panel-framework-core';
 import { panels as repositoryCompositionPanels } from '@industry-theme/repository-composition-panels';
-import { panels as fileCityPanels } from '@industry-theme/file-city-panel';
+import {
+  CodeCityPanel,
+  type CodeCityPanelContext,
+  type FileCityColorModesSliceData,
+} from '@industry-theme/file-city-panel';
+import type { FileTree } from '@principal-ai/repository-abstraction';
+
+// Extended context type that includes typed slice properties
+interface StoryPanelContext extends PanelContextValue, CodeCityPanelContext {
+  gitStatusWithFiles: DataSlice<{
+    repoPath: string;
+    branch: string;
+    isDirty: boolean;
+    hasUntracked: boolean;
+    hasStaged: boolean;
+    ahead: number;
+    behind: number;
+    watchingEnabled: boolean;
+    modifiedFiles: string[];
+    untrackedFiles: string[];
+    stagedFiles: string[];
+    createdFiles: string[];
+    deletedFiles: string[];
+    hash: string;
+  } | null>;
+}
 import { TabbedTerminalPanel } from '@industry-theme/xterm-terminal-panel';
 import { GitFileTreeBuilder } from '@principal-ai/repository-abstraction';
 
@@ -83,7 +108,7 @@ const createMockGitStatus = () => {
 // Mock context provider
 const MockRepositoryPanelProvider: React.FC<{
   children: (props: {
-    context: PanelContextValue;
+    context: StoryPanelContext;
     actions: Record<string, unknown>;
     events: PanelEventBus;
   }) => React.ReactNode;
@@ -116,8 +141,57 @@ const MockRepositoryPanelProvider: React.FC<{
     };
   }, [events]);
 
+  // Create typed slice objects for direct property access
+  const fileTreeSlice: DataSlice<typeof fileTree> = useMemo(
+    () => ({
+      scope: 'repository' as const,
+      name: 'fileTree',
+      data: fileTree,
+      loading: false,
+      error: null,
+      refresh: async () => {},
+    }),
+    [fileTree],
+  );
+
+  const gitStatusWithFilesSlice: DataSlice<typeof gitStatus | null> = useMemo(
+    () => ({
+      scope: 'repository' as const,
+      name: 'gitStatusWithFiles',
+      data: gitStatus,
+      loading: false,
+      error: null,
+      refresh: async () => {},
+    }),
+    [gitStatus],
+  );
+
+  const fileCityColorModesSlice: DataSlice<FileCityColorModesSliceData> = useMemo(
+    () => ({
+      scope: 'repository' as const,
+      name: 'fileCityColorModes',
+      data: { mode: 'git' } as FileCityColorModesSliceData,
+      loading: false,
+      error: null,
+      refresh: async () => {},
+    }),
+    [],
+  );
+
+  const packagesSlice: DataSlice<null> = useMemo(
+    () => ({
+      scope: 'repository' as const,
+      name: 'packages',
+      data: null,
+      loading: false,
+      error: null,
+      refresh: async () => {},
+    }),
+    [],
+  );
+
   const context = useMemo(
-    (): PanelContextValue => ({
+    (): StoryPanelContext => ({
       currentScope: {
         type: 'repository' as const,
         repository: {
@@ -125,40 +199,17 @@ const MockRepositoryPanelProvider: React.FC<{
           name: 'mock-repo',
         },
       },
-      slices: new Map([
-        [
-          'fileTree',
-          {
-            scope: 'repository' as const,
-            name: 'fileTree',
-            data: fileTree,
-            loading: false,
-            error: null,
-            refresh: async () => {},
-          },
-        ],
-        [
-          'gitStatusWithFiles',
-          {
-            scope: 'repository' as const,
-            name: 'gitStatusWithFiles',
-            data: gitStatus,
-            loading: false,
-            error: null,
-            refresh: async () => {},
-          },
-        ],
-        [
-          'fileCityColorModes',
-          {
-            scope: 'repository' as const,
-            name: 'fileCityColorModes',
-            data: { mode: 'git' },
-            loading: false,
-            error: null,
-            refresh: async () => {},
-          },
-        ],
+      // Typed slice properties for direct access (new pattern)
+      fileTree: fileTreeSlice,
+      gitStatusWithFiles: gitStatusWithFilesSlice,
+      fileCityColorModes: fileCityColorModesSlice,
+      packages: packagesSlice,
+      // Legacy Map-based slices (kept for backwards compatibility)
+      slices: new Map<string, DataSlice<unknown>>([
+        ['fileTree', fileTreeSlice],
+        ['gitStatusWithFiles', gitStatusWithFilesSlice],
+        ['fileCityColorModes', fileCityColorModesSlice],
+        ['packages', packagesSlice],
       ]),
       getSlice: function <T = unknown>(name: string): DataSlice<T> | undefined {
         return this.slices.get(name) as DataSlice<T> | undefined;
@@ -184,7 +235,7 @@ const MockRepositoryPanelProvider: React.FC<{
         // Mock refresh - no-op
       },
     }),
-    [fileTree, gitStatus],
+    [fileTreeSlice, gitStatusWithFilesSlice, fileCityColorModesSlice, packagesSlice],
   );
 
   const actions = useMemo(
@@ -268,7 +319,7 @@ const PanelInteractionsStoryInner: React.FC = () => {
   const GitChangesPanelComponent = repositoryCompositionPanels.find(
     (p) => p.metadata?.id === 'industry-theme.git-changes',
   )?.component;
-  const FileCityPanelComponent = fileCityPanels[0]?.component;
+  const FileCityPanelComponent = CodeCityPanel;
 
   // Debug logging
   React.useEffect(() => {
@@ -298,13 +349,6 @@ const PanelInteractionsStoryInner: React.FC = () => {
                   refresh: async () => {},
                 },
               };
-
-              // Debug logging
-              console.info('[Story] Context slices:', context.slices);
-              console.info('[Story] fileTree slice:', context.getSlice('fileTree'));
-              console.info('[Story] gitStatusWithFiles slice:', context.getSlice('gitStatusWithFiles'));
-              console.info('[Story] fileTree data:', context.getSlice('fileTree')?.data);
-              console.info('[Story] gitStatus data:', context.getSlice('gitStatusWithFiles')?.data);
 
               // Define panels
               const panels = [

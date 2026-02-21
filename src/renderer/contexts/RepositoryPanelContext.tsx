@@ -36,7 +36,9 @@ import { minimatch } from 'minimatch';
 import type { ColorMode, FileMetricData, QualitySliceData } from '@principal-ai/quality-lens-registry';
 import type { GlobalSkill } from '../../shared/main-process-api-interfaces/FileSystemAPI';
 import type { RegisteredTrace } from '@principal-ai/principal-view-core';
+import { LocalRegistry, TraceOrchestrator } from '@principal-ai/principal-view-core';
 import { OtelCollectorService } from '../main-process-api/OtelCollectorService';
+import { RendererFileSystemAdapter } from '../utils/RendererFileSystemAdapter';
 import type {
   AlexandriaRepositoriesSlice,
   WorkspaceSlice,
@@ -98,7 +100,7 @@ interface RepositoryPanelContextValue extends PanelContextValue {
   quality: DataSlice<QualitySliceData | null>;
   fileCityColorModes: DataSlice<FileCityColorModesSliceData>;
   localhostServers: DataSlice<RunningServer[]>;
-  globalSkills: DataSlice<{ skills: GlobalSkill[] }>;
+  globalSkills: DataSlice<{ skills: GlobalSkill[] } | null>;
   telemetry: DataSlice<RegisteredTrace[]>;
   // Panel-specific slices (from ExtendedPanelContextValue)
   terminal: DataSlice<TerminalSessionInfo[]>;
@@ -126,11 +128,13 @@ interface RepositoryPanelProviderProps {
   traceSourceServiceName?: string;
   /** Open tabs from DevWorkspace - used by panels to check selection state */
   openTabs?: unknown[];
+  /** Callback when scope names are discovered from library.yaml */
+  onScopeNamesDiscovered?: (scopeNames: string[]) => void;
 }
 
 export const RepositoryPanelProvider: React.FC<
   RepositoryPanelProviderProps
-> = ({ children, repositoryPath, repository, events, traceSourceServiceName, openTabs = [] }) => {
+> = ({ children, repositoryPath, repository, events, traceSourceServiceName, openTabs = [], onScopeNamesDiscovered }) => {
   // Track file tree for the current repository
   const [fileTreeData, setFileTreeData] = useState<FileTree | null>(null);
   const [fileTreeLoading, setFileTreeLoading] = useState(false);
@@ -198,6 +202,87 @@ export const RepositoryPanelProvider: React.FC<
   // Track telemetry traces for trace viewer
   const [telemetryTraces, setTelemetryTraces] = useState<RegisteredTrace[]>([]);
   const [telemetryLoading, setTelemetryLoading] = useState(false);
+
+  // Track previous FileTree to detect .principal-views changes
+  const prevFileTreeRef = useRef<FileTree | null>(null);
+
+  // FileSystemAdapter for LocalRegistry (needed for LibraryDiscovery)
+  const fsAdapter = useMemo(() => new RendererFileSystemAdapter(), []);
+
+  // LocalRegistry and TraceOrchestrator for processing OTLP traces
+  const localRegistry = useMemo(() => {
+    // FileReader function - reads file content via FileSystemService
+    const fileReader = async (path: string): Promise<string> => {
+      const result = await FileSystemService.readFile(path);
+      if (!result || !result.content) {
+        throw new Error(`Failed to read file: ${path}`);
+      }
+      return result.content;
+    };
+
+    // Pass FileSystemAdapter to enable auto-discovery of scope names from library.yaml
+    return new LocalRegistry(fileReader, fsAdapter);
+  }, [fsAdapter]);
+
+  const traceOrchestrator = useMemo(() => {
+    return new TraceOrchestrator({
+      registry: localRegistry,
+      enableValidation: true,
+    });
+  }, [localRegistry]);
+
+  /**
+   * Check if .principal-views files have changed between FileTree updates
+   *
+   * TODO: Support monorepo packages - currently only checks root .principal-views/
+   * In the future, should check all packages:
+   *   - packages/foo/.principal-views/
+   *   - packages/bar/.principal-views/
+   *   - etc.
+   */
+  const hasPrincipalViewsChanges = useCallback((newFileTree: FileTree): boolean => {
+    if (!prevFileTreeRef.current) return true; // First load
+
+    // Filter files in root .principal-views directory only
+    const oldPVFiles = prevFileTreeRef.current.allFiles
+      .filter(f => f.relativePath.startsWith('.principal-views/'));
+    const newPVFiles = newFileTree.allFiles
+      .filter(f => f.relativePath.startsWith('.principal-views/'));
+
+    // Different number of files?
+    if (oldPVFiles.length !== newPVFiles.length) {
+      console.log('[RepositoryPanelContext] .principal-views file count changed:', {
+        old: oldPVFiles.length,
+        new: newPVFiles.length,
+      });
+      return true;
+    }
+
+    // Compare file paths and lastModified timestamps
+    const oldMap = new Map(oldPVFiles.map(f => [f.relativePath, f.lastModified.getTime()]));
+    for (const newFile of newPVFiles) {
+      const oldTime = oldMap.get(newFile.relativePath);
+      if (!oldTime) {
+        console.log('[RepositoryPanelContext] .principal-views file added:', newFile.relativePath);
+        return true;
+      }
+      if (oldTime !== newFile.lastModified.getTime()) {
+        console.log('[RepositoryPanelContext] .principal-views file modified:', newFile.relativePath);
+        return true;
+      }
+    }
+
+    // Check for removed files
+    const newPaths = new Set(newPVFiles.map(f => f.relativePath));
+    for (const oldFile of oldPVFiles) {
+      if (!newPaths.has(oldFile.relativePath)) {
+        console.log('[RepositoryPanelContext] .principal-views file removed:', oldFile.relativePath);
+        return true;
+      }
+    }
+
+    return false; // No changes in .principal-views
+  }, []);
 
   // Helper to extract owner/repo from git remote URL
   const parseGitHubRemote = (
@@ -491,6 +576,51 @@ export const RepositoryPanelProvider: React.FC<
     // Default to file types
     return 'fileTypes';
   }, [fileCityColorMode, stableGitStatusData]);
+
+  // Register workspace with LocalRegistry and handle .principal-views changes
+  useEffect(() => {
+    if (!repositoryPath || !stableFileTreeData) return;
+
+    let mounted = true;
+
+    const registerWorkspace = async () => {
+      try {
+        // Register workspace with LocalRegistry - auto-discovers scope names from library.yaml
+        const scopeNames = await localRegistry.registerWorkspace(stableFileTreeData);
+
+        if (!mounted) return;
+
+        console.log('[RepositoryPanelContext] Registered workspace with LocalRegistry:', {
+          scopeNames,
+          fileTreeSha: stableFileTreeData.sha,
+        });
+
+        // Notify parent of discovered scope names (for dropdown, etc.)
+        if (onScopeNamesDiscovered) {
+          onScopeNamesDiscovered(scopeNames);
+        }
+
+        // Check if .principal-views files changed and invalidate cache for all scope names
+        if (hasPrincipalViewsChanges(stableFileTreeData)) {
+          console.log('[RepositoryPanelContext] .principal-views changed, invalidating registry cache');
+          for (const scopeName of scopeNames) {
+            localRegistry.invalidateCache(scopeName);
+          }
+        }
+
+        // Update ref for next comparison
+        prevFileTreeRef.current = stableFileTreeData;
+      } catch (error) {
+        console.error('[RepositoryPanelContext] Failed to register workspace:', error);
+      }
+    };
+
+    registerWorkspace();
+
+    return () => {
+      mounted = false;
+    };
+  }, [repositoryPath, stableFileTreeData, localRegistry, hasPrincipalViewsChanges, onScopeNamesDiscovered]);
 
   // Listen for workspace file change events and trigger refresh
   // This ensures file tree updates when files are added/removed
@@ -812,7 +942,7 @@ export const RepositoryPanelProvider: React.FC<
         unsubscribe = window.mainProcess.otelCollector.onOtelMessage(
           windowId,
           serviceIdentifier,
-          (data: unknown) => {
+          async (data: unknown) => {
             try {
               const message = data as any;
               console.info('[RepositoryPanelProvider] Received OTEL message:', message?.type || message);
@@ -829,8 +959,6 @@ export const RepositoryPanelProvider: React.FC<
 
               // Check if this is a raw OTLP trace from the server (forwarding mode)
               if (message?.type === 'RAW_OTLP_TRACE') {
-                console.info('[RepositoryPanelProvider] Received RAW_OTLP_TRACE from server');
-
                 // Extract the raw OTLP data from the message
                 const otlpData = message.payload;
 
@@ -839,51 +967,87 @@ export const RepositoryPanelProvider: React.FC<
                   return;
                 }
 
-                // Extract trace ID from OTLP data
-                const extractedTraceId = otlpData.resourceSpans?.[0]?.scopeSpans?.[0]?.spans?.[0]?.traceId;
-                const traceId = typeof extractedTraceId === 'string'
-                  ? extractedTraceId
-                  : Array.isArray(extractedTraceId)
-                    ? Array.from(extractedTraceId).map((b: number) => b.toString(16).padStart(2, '0')).join('')
-                    : `trace-${Date.now()}`;
+                // Log BEFORE: Raw OTLP data
+                const resourceSpans = otlpData.resourceSpans || [];
+                const firstResource = resourceSpans[0];
+                const serviceNameAttr = firstResource?.resource?.attributes?.find(
+                  (attr: { key: string }) => attr.key === 'service.name'
+                );
+                const serviceName = serviceNameAttr?.value?.stringValue || 'unknown';
+                const spans = firstResource?.scopeSpans?.[0]?.spans || [];
 
-                console.info('[RepositoryPanelProvider] Raw OTLP trace:', {
-                  traceId,
-                  source: message.source,
-                  resourceSpans: otlpData.resourceSpans?.length || 0,
-                });
+                console.group('[TraceProcessing] 📥 BEFORE - Raw OTLP Trace');
+                console.info('Service Name:', serviceName);
+                console.info('Resource Spans:', resourceSpans.length);
+                console.info('Spans:', spans.length);
+                console.info('Span Names:', spans.map((s: { name: string }) => s.name));
+                console.info('Raw OTLP:', otlpData);
+                console.groupEnd();
 
-                // Store raw OTLP trace - will process later with TraceOrchestrator
-                setTelemetryTraces((prev) => {
-                  // Check for duplicates
-                  const existingIds = new Set(prev.map((t) => t.traceId));
-                  if (existingIds.has(traceId)) {
-                    console.info('[RepositoryPanelProvider] Skipping duplicate trace:', traceId);
-                    return prev;
+                // Process the trace through TraceOrchestrator
+                try {
+                  const registeredTrace = await traceOrchestrator.processTrace(otlpData);
+
+                  // Log AFTER: Processed RegisteredTrace
+                  console.group('[TraceProcessing] 📤 AFTER - Processed RegisteredTrace');
+                  console.info('Trace ID:', registeredTrace.traceId);
+                  console.info('Name:', registeredTrace.name);
+                  console.info('Duration:', registeredTrace.duration, 'ms');
+                  console.info('Span Count:', registeredTrace.spanCount);
+                  console.info('Has Errors:', registeredTrace.hasErrors);
+                  console.info('Resources:', registeredTrace.resources.length);
+                  registeredTrace.resources.forEach((r, i) => {
+                    console.info(`  Resource ${i}:`, {
+                      serviceName: r.serviceName,
+                      scopes: r.scopes.map(s => `${s.scope.name}@${s.scope.version}`),
+                    });
+                  });
+                  console.info('Scenario Matches:', registeredTrace.scenarioMatches.length);
+                  registeredTrace.scenarioMatches.forEach((m, i) => {
+                    console.info(`  Match ${i}:`, {
+                      storyboard: m.storyboardName,
+                      workflow: m.workflowName,
+                      scenario: m.scenarioId,
+                      coverage: m.coveragePercent + '%',
+                      matchedSpans: m.matchedSpans.length,
+                    });
+                  });
+                  console.info('Storyboard Matches (orphaned):', registeredTrace.storyboardMatches.length);
+                  registeredTrace.storyboardMatches.forEach((m, i) => {
+                    console.info(`  Match ${i}:`, {
+                      storyboard: m.storyboardName,
+                      workflow: m.workflowName,
+                      orphanedSpans: m.orphanedSpans.length,
+                    });
+                  });
+                  console.info('Unmatched Spans:', registeredTrace.unmatchedSpans.spans.length);
+                  registeredTrace.unmatchedSpans.spans.forEach((s, i) => {
+                    console.info(`  Span ${i}:`, {
+                      name: s.spanName,
+                      scope: s.scopeName,
+                      reason: s.reason,
+                    });
+                  });
+                  if (registeredTrace.validationIssues?.length) {
+                    console.warn('Validation Issues:', registeredTrace.validationIssues);
                   }
+                  console.groupEnd();
 
-                  // Create a minimal RegisteredTrace-like object for now
-                  // TODO: Process with TraceOrchestrator when ready
-                  const rawTrace = {
-                    traceId,
-                    name: `Trace ${traceId.substring(0, 8)}`,
-                    startTime: message.timestamp,
-                    endTime: message.timestamp,
-                    duration: 0,
-                    spanCount: otlpData.resourceSpans?.[0]?.scopeSpans?.[0]?.spans?.length || 0,
-                    hasErrors: false,
-                    otlpData, // Store raw OTLP for processing later
-                    // New structure placeholders - will be filled by TraceOrchestrator
-                    resources: [],
-                    scenarioMatches: [],
-                    storyboardMatches: [],
-                    unmatchedSpans: { spans: [] },
-                  };
+                  setTelemetryTraces((prev) => {
+                    // Check for duplicates
+                    const existingIds = new Set(prev.map((t) => t.traceId));
+                    if (existingIds.has(registeredTrace.traceId)) {
+                      console.info('[RepositoryPanelProvider] Skipping duplicate trace:', registeredTrace.traceId);
+                      return prev;
+                    }
 
-                  // Keep only last 1000 traces
-                  const combined = [...prev, rawTrace as any];
-                  return combined.slice(-1000);
-                });
+                    // Keep only last 1000 traces
+                    const combined = [...prev, registeredTrace];
+                    return combined.slice(-1000);
+                  });
+                } catch (error) {
+                  console.error('[TraceProcessing] ❌ Failed to process trace:', error);
+                }
 
                 return;
               }
@@ -1864,7 +2028,7 @@ export const RepositoryPanelProvider: React.FC<
   );
 
   // Explicit DataSlice: globalSkills
-  const globalSkillsSlice = useMemo<DataSlice<{ skills: GlobalSkill[] }>>(
+  const globalSkillsSlice = useMemo<DataSlice<{ skills: GlobalSkill[] } | null>>(
     () => ({
       scope: 'workspace' as const,
       name: 'globalSkills',

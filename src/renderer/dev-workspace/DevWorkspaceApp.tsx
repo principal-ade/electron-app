@@ -28,7 +28,6 @@ import { WindowService } from '../main-process-api/WindowService';
 import { gitSyncConnectionManager } from '../services/git-sync/GitSyncConnectionManager';
 import { APP_BRANDING } from '../../shared/config/appBranding';
 import { AlexandriaEventType } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
-import { getAllServiceNamesFromFileTree } from '../utils/libraryResourcesLoader';
 
 /**
  * Alexandria entry data passed from main process
@@ -227,54 +226,24 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   const [traceSourceServiceName, setTraceSourceServiceName] = useState<string>('all');
   const [availableServiceNames, setAvailableServiceNames] = useState<string[]>([]);
 
-  // Load service name from library.yaml resources when repository changes
-  useEffect(() => {
-    if (!repositoryPath) return;
+  // Callback when scope names are discovered from library.yaml by RepositoryPanelContext
+  const handleScopeNamesDiscovered = useCallback((scopeNames: string[]) => {
+    console.info('[DevWorkspaceApp] 📝 Scope names discovered from LocalRegistry:', scopeNames);
 
-    const loadTraceSourceServiceName = async () => {
-      try {
-        console.info('[DevWorkspaceApp] 🔍 Loading service names from library.yaml files');
-        console.info('[DevWorkspaceApp] Repository path:', repositoryPath);
+    if (scopeNames.length > 0) {
+      setAvailableServiceNames(scopeNames);
 
-        // Get file tree and discover all services
-        const fileTree = await RepositoryMonitoringService.getFileTree(repositoryPath);
-
-        if (!fileTree) {
-          console.info('[DevWorkspaceApp] ⚠️ No file tree available, defaulting to "all"');
-          setTraceSourceServiceName('all');
-          return;
-        }
-
-        const serviceNames = await getAllServiceNamesFromFileTree(fileTree, repositoryPath);
-
-        if (serviceNames.length > 0) {
-          console.info('[DevWorkspaceApp] ✅ Found service names:', serviceNames);
-          setAvailableServiceNames(serviceNames);
-
-          // Use first service name by default
-          const serviceName = serviceNames[0];
-          console.info('[DevWorkspaceApp] 📝 Using first service name:', serviceName);
-          setTraceSourceServiceName(serviceName);
-
-          if (serviceNames.length > 1) {
-            console.info('[DevWorkspaceApp] ℹ️ Multiple services found:', serviceNames.length);
-          }
-        } else {
-          console.info('[DevWorkspaceApp] ⚠️ No services found in library.yaml files, defaulting to "all"');
-          setAvailableServiceNames([]);
-          setTraceSourceServiceName('all');
-        }
-      } catch (error) {
-        console.error('[DevWorkspaceApp] ❌ Failed to load service names from library.yaml:', error);
-        // Fall back to "all" on error
-        setAvailableServiceNames([]);
-        setTraceSourceServiceName('all');
-        console.info('[DevWorkspaceApp] 📝 Set traceSourceServiceName to: all (due to error)');
+      // Use first service name by default (only if not already set to a specific service)
+      if (traceSourceServiceName === 'all') {
+        const serviceName = scopeNames[0];
+        console.info('[DevWorkspaceApp] 📝 Auto-selecting first service name:', serviceName);
+        setTraceSourceServiceName(serviceName);
       }
-    };
-
-    loadTraceSourceServiceName();
-  }, [repositoryPath]);
+    } else {
+      console.info('[DevWorkspaceApp] ⚠️ No scope names discovered, keeping "all"');
+      setAvailableServiceNames([]);
+    }
+  }, [traceSourceServiceName]);
 
   // Create repository object from Alexandria entry data
   const repository: Repository = useMemo(
@@ -941,6 +910,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           onPanelSizesChange={setPanelSizes}
           events={events}
           traceSourceServiceName={traceSourceServiceName}
+          onScopeNamesDiscovered={handleScopeNamesDiscovered}
         />
       </div>
 

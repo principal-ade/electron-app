@@ -8,7 +8,7 @@
 import type { FileInfo } from '@principal-ai/repository-abstraction';
 import type { WorkflowTemplate } from '@principal-ai/principal-view-core';
 import type { Skill } from '@industry-theme/agent-panels';
-import type { StoredTrace } from '../../shared/main-process-api-interfaces/OtelCollectorAPI';
+import type { RegisteredTrace } from '@principal-ai/principal-view-core';
 import type { PackageLayer } from '@industry-theme/repository-composition-panels';
 
 /**
@@ -45,7 +45,7 @@ export interface SkillSelectedPayload {
  * Payload when a trace is selected for detail view
  */
 export interface TraceSelectedPayload {
-  trace?: StoredTrace;
+  trace?: RegisteredTrace;
   traceId?: string;
 }
 

@@ -20,8 +20,11 @@ export interface RegisterPortResponse {
   error?: string;
 }
 
+/**
+ * StoredTrace - Simple wrapper around raw OTLP trace data
+ * Just stores the traceId for indexing and the raw OTLP payload
+ */
 export interface StoredTrace {
-  timestamp: number;
   traceId: string;
   data: OTLPTraceRequest;
 }

@@ -78,6 +78,30 @@ export const TraceViewer: React.FC<TraceViewerProps> = ({
     }
   };
 
+  // Extract timestamp from OTLP span data
+  const extractTimestamp = (trace: StoredTrace): number => {
+    try {
+      // Get first span's start time (nanoseconds)
+      const startTimeNano = trace.data?.resourceSpans?.[0]?.scopeSpans?.[0]?.spans?.[0]?.startTimeUnixNano;
+      if (startTimeNano) {
+        // Convert nanoseconds to milliseconds
+        // Handle both string, number, and bigint formats
+        let nanoTime: number;
+        if (typeof startTimeNano === 'string') {
+          nanoTime = parseInt(startTimeNano, 10);
+        } else if (typeof startTimeNano === 'bigint') {
+          nanoTime = Number(startTimeNano);
+        } else {
+          nanoTime = startTimeNano as number;
+        }
+        return Math.floor(nanoTime / 1_000_000);
+      }
+      return Date.now();
+    } catch {
+      return Date.now();
+    }
+  };
+
   // Group traces by source
   const groupedTraces = useMemo(() => {
     const groups: GroupedTraces = {};
@@ -310,7 +334,7 @@ export const TraceViewer: React.FC<TraceViewerProps> = ({
                             marginTop: '4px',
                           }}
                         >
-                          {new Date(trace.timestamp).toLocaleTimeString()}
+                          {new Date(extractTimestamp(trace)).toLocaleTimeString()}
                         </div>
                       </div>
                     </div>

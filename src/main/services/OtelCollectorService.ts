@@ -11,7 +11,6 @@ import os from 'os';
 type OTLPTraceData = OTLPTraceRequest;
 
 interface StoredTrace {
-  timestamp: number;
   traceId: string;
   data: OTLPTraceData;
 }
@@ -221,7 +220,6 @@ export class OtelCollectorService {
       const traceId = this.extractTraceId(traceData);
 
       const trace: StoredTrace = {
-        timestamp: Date.now(),
         traceId,
         data: traceData,
       };

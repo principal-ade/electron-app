@@ -4,8 +4,6 @@ import { ConfigurablePanelLayout } from '@principal-ade/panels';
 import '@principal-ade/panels/panels.css';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import {
-  WorkspacesListPanel,
-  WorkspaceRepositoriesPanel,
   LocalProjectsPanel,
   GitHubStarredPanel,
   GitHubProjectsPanel,
@@ -13,7 +11,7 @@ import {
 } from '@industry-theme/alexandria-panels';
 import type { GitHubRepository } from '@industry-theme/alexandria-panels';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import { DoorClosed, FolderGit2, Folder, FolderOpen, Star } from 'lucide-react';
+import { FolderGit2, Folder, FolderOpen, Star } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuthState';
 import {
   ProjectsPanelProvider,
@@ -306,19 +304,6 @@ const ProjectsViewContent: React.FC = () => {
     return unsubscribe;
   }, [events]);
 
-  // Listen for create-workspace-requested events from WorkspacesListPanel
-  useEffect(() => {
-    const unsubscribe = events.on(
-      'industry-theme.workspaces-list:create-workspace-requested',
-      () => {
-        console.info('[ProjectsView] Create workspace requested');
-        setIsCreateWorkspaceModalOpen(true);
-      },
-    );
-
-    return unsubscribe;
-  }, [events]);
-
   // Listen for delete-requested events from ProjectInfoPanel
   useEffect(() => {
     const unsubscribe = events.on('project-info:delete-requested', (event) => {
@@ -346,19 +331,6 @@ const ProjectsViewContent: React.FC = () => {
   const panels = useMemo(
     () => [
       {
-        id: 'workspaces-list',
-        label: 'Workspaces',
-        icon: <DoorClosed size={16} />,
-        content: (
-          <WorkspacesListPanel
-            context={context}
-            actions={overriddenActions}
-            events={events}
-            defaultShowSearch
-          />
-        ),
-      },
-      {
         id: 'local-projects',
         label: 'Local Projects',
         icon: <Folder size={16} />,
@@ -368,18 +340,6 @@ const ProjectsViewContent: React.FC = () => {
             actions={overriddenActions}
             events={events}
             defaultShowSearch
-          />
-        ),
-      },
-      {
-        id: 'workspace-repositories',
-        label: 'Repositories',
-        icon: <FolderGit2 size={16} />,
-        content: (
-          <WorkspaceRepositoriesPanel
-            context={context}
-            actions={overriddenActions}
-            events={events}
           />
         ),
       },
@@ -454,9 +414,6 @@ const ProjectsViewContent: React.FC = () => {
     [context, actions, overriddenActions, events, isAuthenticated],
   );
 
-  // Get selected collection from context to determine right panel
-  const selectedCollection = (context as { selectedCollection?: unknown }).selectedCollection;
-
   // Get workspaces from context for create repository button
   const workspacesSlice = context.getSlice<{ workspaces: Workspace[] }>('workspaces');
   const workspaces = workspacesSlice?.data?.workspaces || [];
@@ -470,17 +427,12 @@ const ProjectsViewContent: React.FC = () => {
       starred: 'github-starred',
     };
 
-    // Right panel shows collection repos if a collection is selected, otherwise workspace repos
-    const rightPanel = selectedCollection
-      ? 'collection-repositories'
-      : 'workspace-repositories';
-
     return {
       left: leftPanelMap[leftPanelView],
       middle: 'project-info',
-      right: rightPanel,
+      right: 'collection-repositories',
     };
-  }, [leftPanelView, selectedCollection]);
+  }, [leftPanelView]);
 
   return (
     <>

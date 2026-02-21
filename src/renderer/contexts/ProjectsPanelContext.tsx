@@ -39,7 +39,6 @@ import type {
   Collection,
   LocalProjectsPanelContext,
   LocalProjectsPanelActions,
-  WorkspaceRepositoriesPanelContext,
 } from '@industry-theme/alexandria-panels';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { WindowService } from '../main-process-api/WindowService';
@@ -112,10 +111,6 @@ export interface ProjectsPanelContextType {
     workspace: Workspace | null;
     loading: boolean;
   }>;
-  workspaceRepositories: DataSlice<{
-    repositories: AlexandriaEntry[];
-    loading: boolean;
-  }>;
   // GitHubProjectsPanelContext
   githubProjects: DataSlice<GitHubProjectsSlice>;
   // GitHubStarredPanelContext
@@ -176,12 +171,6 @@ export const ProjectsPanelProvider: React.FC<
   const [gitStatusWithFiles, setGitStatusWithFiles] = useState<GitStatusWithFiles | null>(null);
   const [gitStatusLoading, setGitStatusLoading] = useState(false);
 
-  // State for workspace repositories
-  const [workspaceRepositories, setWorkspaceRepositories] = useState<
-    AlexandriaEntry[]
-  >([]);
-  const [repositoriesLoading, setRepositoriesLoading] = useState(false);
-
   // State for all local repositories (for LocalProjectsPanel)
   const [localRepositories, setLocalRepositories] = useState<AlexandriaEntry[]>(
     [],
@@ -203,22 +192,6 @@ export const ProjectsPanelProvider: React.FC<
   >([]);
   const [starredLoading, setStarredLoading] = useState(false);
   const [starredError, setStarredError] = useState<string | undefined>();
-
-  // State for quality metrics (keyed by repository path)
-  const [qualityDataByRepo, setQualityDataByRepo] = useState<
-    Record<
-      string,
-      {
-        packages: Array<{
-          name: string;
-          version?: string;
-          metrics: Record<string, number>;
-        }>;
-        lastUpdated: string;
-      }
-    >
-  >({});
-  const [qualityLoading, setQualityLoading] = useState(false);
 
   // State for GitHub projects (user repos + org repos)
   const [userRepositories, setUserRepositories] = useState<GitHubRepository[]>(
@@ -302,34 +275,6 @@ export const ProjectsPanelProvider: React.FC<
 
     void fetchGitStatus();
   }, [selectedRepository]);
-
-  // Fetch repositories when selected workspace changes
-  useEffect(() => {
-    const fetchRepositories = async () => {
-      if (!selectedWorkspace) {
-        setWorkspaceRepositories([]);
-        return;
-      }
-
-      setRepositoriesLoading(true);
-      try {
-        const repos = await WorkspaceService.getRepositoriesInWorkspace(
-          selectedWorkspace.id,
-        );
-        setWorkspaceRepositories(repos);
-      } catch (error) {
-        console.error(
-          '[ProjectsPanelProvider] Failed to fetch workspace repositories:',
-          error,
-        );
-        setWorkspaceRepositories([]);
-      } finally {
-        setRepositoriesLoading(false);
-      }
-    };
-
-    fetchRepositories();
-  }, [selectedWorkspace]);
 
   // Fetch all local repositories on mount
   useEffect(() => {
@@ -574,112 +519,6 @@ export const ProjectsPanelProvider: React.FC<
     void fetchCollections();
   }, []);
 
-  // Helper to extract owner/repo from git remote URL
-  const parseGitHubRemote = (
-    remoteUrl: string,
-  ): { owner: string; repo: string } | null => {
-    // Handle SSH format: git@github.com:owner/repo.git
-    const sshMatch = remoteUrl.match(/git@github\.com:([^/]+)\/([^.]+)/);
-    if (sshMatch) {
-      return { owner: sshMatch[1], repo: sshMatch[2] };
-    }
-    // Handle HTTPS format: https://github.com/owner/repo.git
-    const httpsMatch = remoteUrl.match(/github\.com\/([^/]+)\/([^/.]+)/);
-    if (httpsMatch) {
-      return { owner: httpsMatch[1], repo: httpsMatch[2] };
-    }
-    return null;
-  };
-
-  // Clear quality data when workspace changes
-  useEffect(() => {
-    setQualityDataByRepo({});
-  }, [selectedWorkspace?.id]);
-
-  // Fetch quality metrics for all repositories in the selected workspace
-  useEffect(() => {
-    // Track if this effect is still current (for race condition handling)
-    let isCurrent = true;
-
-    const fetchQualityForWorkspaceRepos = async () => {
-      if (!selectedWorkspace || workspaceRepositories.length === 0) {
-        return;
-      }
-
-      setQualityLoading(true);
-      const newQualityData: typeof qualityDataByRepo = {};
-
-      // Fetch quality for each repository in parallel
-      await Promise.all(
-        workspaceRepositories.map(async (repo) => {
-          try {
-            if (!repo.path) return;
-
-            // Get git remote info
-            const remoteInfo =
-              await RepositoryMonitoringService.getGitRemoteInfo(repo.path);
-            if (!remoteInfo?.remoteUrl) return;
-
-            const githubInfo = parseGitHubRemote(remoteInfo.remoteUrl);
-            if (!githubInfo) return;
-
-            // Get current branch
-            const gitStatus = await RepositoryMonitoringService.getGitStatus(
-              repo.path,
-            );
-            const branch = gitStatus?.branch || 'main';
-
-            // Fetch quality metrics
-            const artifactData =
-              await GitHubArtifactService.getLatestQualityMetrics(
-                githubInfo.owner,
-                githubInfo.repo,
-                branch,
-              );
-
-            if (artifactData) {
-              const packages = artifactData.qualityMetrics.packages.map(
-                (pkg) => ({
-                  name: pkg.name,
-                  metrics: pkg.hexagon as unknown as Record<string, number>,
-                }),
-              );
-
-              newQualityData[repo.path] = {
-                packages,
-                lastUpdated: artifactData.timestamp,
-              };
-
-              console.info(
-                `[ProjectsPanelProvider] Quality loaded for ${repo.name}`,
-              );
-            }
-          } catch (error) {
-            console.error(
-              `[ProjectsPanelProvider] Failed to fetch quality for ${repo.name}:`,
-              error,
-            );
-          }
-        }),
-      );
-
-      // Only update state if this effect is still current
-      if (isCurrent) {
-        setQualityDataByRepo(newQualityData);
-        setQualityLoading(false);
-      }
-    };
-
-    fetchQualityForWorkspaceRepos();
-
-    // Cleanup: mark this effect as stale if a new one starts
-    return () => {
-      isCurrent = false;
-    };
-    // Using selectedWorkspace?.id instead of selectedWorkspace to avoid re-runs on object reference changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedWorkspace?.id, workspaceRepositories]);
-
   // Listen for workspace changes from other parts of the app
   useEffect(() => {
     const unsubscribe = WorkspaceService.onWorkspaceChange((event) => {
@@ -695,21 +534,10 @@ export const ProjectsPanelProvider: React.FC<
           .then(setWorkspaces)
           .catch(console.error);
       }
-
-      if (
-        event.type === 'membership-changed' &&
-        event.workspaceId &&
-        event.workspaceId === selectedWorkspace?.id
-      ) {
-        // Refetch repositories for current workspace
-        WorkspaceService.getRepositoriesInWorkspace(event.workspaceId)
-          .then(setWorkspaceRepositories)
-          .catch(console.error);
-      }
     });
 
     return unsubscribe;
-  }, [selectedWorkspace?.id]);
+  }, []);
 
   // Listen for workspace:selected events from panels
   useEffect(() => {
@@ -918,43 +746,6 @@ export const ProjectsPanelProvider: React.FC<
     [selectedWorkspace],
   );
 
-  // Explicit DataSlice: workspaceRepositories
-  const workspaceRepositoriesSlice = useMemo<DataSlice<{
-    repositories: AlexandriaEntry[];
-    loading: boolean;
-  }>>(
-    () => ({
-      scope: 'workspace' as const,
-      name: 'workspaceRepositories',
-      data: {
-        repositories: workspaceRepositories,
-        loading: repositoriesLoading,
-      },
-      loading: repositoriesLoading,
-      error: null,
-      refresh: async () => {
-        if (selectedWorkspace) {
-          setRepositoriesLoading(true);
-          try {
-            const repos =
-              await WorkspaceService.getRepositoriesInWorkspace(
-                selectedWorkspace.id,
-              );
-            setWorkspaceRepositories(repos);
-          } catch (error) {
-            console.error(
-              '[ProjectsPanelProvider] Failed to refresh repositories:',
-              error,
-            );
-          } finally {
-            setRepositoriesLoading(false);
-          }
-        }
-      },
-    }),
-    [workspaceRepositories, repositoriesLoading, selectedWorkspace],
-  );
-
   // Explicit DataSlice: githubStarred
   const githubStarredSlice = useMemo<DataSlice<GitHubStarredSlice>>(
     () => ({
@@ -998,95 +789,6 @@ export const ProjectsPanelProvider: React.FC<
       currentUser,
       fetchGitHubProjects,
     ],
-  );
-
-  // Explicit DataSlice: repositoriesQuality
-  const repositoriesQualitySlice = useMemo<DataSlice<unknown>>(
-    () => ({
-      scope: 'workspace' as const,
-      name: 'repositoriesQuality',
-      // Format data for RepositoryQualityGridPanel
-      // Expects: { repositories: RepositoryQualityItem[] }
-      data: {
-        repositories: Object.entries(qualityDataByRepo).map(
-          ([repoPath, repoData]) => ({
-            id: repoPath,
-            name: repoPath.split('/').pop() || repoPath,
-            path: repoPath,
-            packages: repoData.packages.map((pkg) => ({
-              name: pkg.name,
-              version: pkg.version,
-              metrics: pkg.metrics,
-            })),
-          }),
-        ),
-      },
-      loading: qualityLoading,
-      error: null,
-      refresh: async () => {
-        if (!selectedWorkspace || workspaceRepositories.length === 0) {
-          return;
-        }
-
-        setQualityLoading(true);
-        const newQualityData: typeof qualityDataByRepo = {};
-
-        await Promise.all(
-          workspaceRepositories.map(async (repo) => {
-            try {
-              if (!repo.path) return;
-
-              const remoteInfo =
-                await RepositoryMonitoringService.getGitRemoteInfo(
-                  repo.path,
-                );
-              if (!remoteInfo?.remoteUrl) return;
-
-              const githubInfo = parseGitHubRemote(remoteInfo.remoteUrl);
-              if (!githubInfo) return;
-
-              const gitStatus =
-                await RepositoryMonitoringService.getGitStatus(repo.path);
-              const branch = gitStatus?.branch || 'main';
-
-              // Clear cache and fetch fresh
-              await GitHubArtifactService.clearCache();
-              const artifactData =
-                await GitHubArtifactService.getLatestQualityMetrics(
-                  githubInfo.owner,
-                  githubInfo.repo,
-                  branch,
-                );
-
-              if (artifactData) {
-                const packages = artifactData.qualityMetrics.packages.map(
-                  (pkg) => ({
-                    name: pkg.name,
-                    metrics: pkg.hexagon as unknown as Record<
-                      string,
-                      number
-                    >,
-                  }),
-                );
-                newQualityData[repo.path] = {
-                  packages,
-                  lastUpdated: artifactData.timestamp,
-                };
-              }
-            } catch (error) {
-              console.error(
-                `[ProjectsPanelProvider] Failed to refresh quality for ${repo.name}:`,
-                error,
-              );
-            }
-          }),
-        );
-
-        setQualityDataByRepo(newQualityData);
-        setQualityLoading(false);
-      },
-    }),
-    [qualityDataByRepo, qualityLoading, selectedWorkspace, workspaceRepositories],
   );
 
   // Explicit DataSlice: userCollections
@@ -1377,13 +1079,6 @@ export const ProjectsPanelProvider: React.FC<
           workspaceId,
         );
 
-        // Refresh repositories if this is the selected workspace
-        if (selectedWorkspace?.id === workspaceId) {
-          const repos =
-            await WorkspaceService.getRepositoriesInWorkspace(workspaceId);
-          setWorkspaceRepositories(repos);
-        }
-
         events.emit({
           type: 'workspace:membership-changed',
           source: 'projects-view',
@@ -1416,13 +1111,6 @@ export const ProjectsPanelProvider: React.FC<
             repository,
             workspaceId,
           );
-
-        // Refresh repositories
-        if (selectedWorkspace?.id === workspaceId) {
-          const repos =
-            await WorkspaceService.getRepositoriesInWorkspace(workspaceId);
-          setWorkspaceRepositories(repos);
-        }
 
         events.emit({
           type: 'repository:moved',
@@ -1849,7 +1537,6 @@ export const ProjectsPanelProvider: React.FC<
       alexandriaRepositories: alexandriaRepositoriesSlice,
       workspaces: workspacesSlice,
       workspace: workspaceSlice,
-      workspaceRepositories: workspaceRepositoriesSlice,
       githubProjects: githubProjectsSlice,
       githubStarred: githubStarredSlice,
       userCollections: userCollectionsSlice,
@@ -1862,7 +1549,6 @@ export const ProjectsPanelProvider: React.FC<
       alexandriaRepositoriesSlice,
       workspacesSlice,
       workspaceSlice,
-      workspaceRepositoriesSlice,
       githubProjectsSlice,
       githubStarredSlice,
       userCollectionsSlice,

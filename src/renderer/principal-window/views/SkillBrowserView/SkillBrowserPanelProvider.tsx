@@ -19,8 +19,14 @@ interface GitHubRepoInfo {
   branch: string;
 }
 
+// Extended context type that includes typed slice properties for SkillsPanelContext
+interface SkillBrowserPanelContext extends PanelContextValue {
+  fileTree: DataSlice<FileTree | null>;
+  globalSkills: DataSlice<{ skills: GlobalSkill[] } | null>;
+}
+
 interface SkillBrowserPanelProviderValue {
-  context: PanelContextValue;
+  context: SkillBrowserPanelContext;
   actions: PanelActions & {
     setFileTree: (tree: FileTree | null) => void;
     setGitHubRepository: (info: GitHubRepoInfo | null) => void;
@@ -265,9 +271,49 @@ export const SkillBrowserPanelProvider: React.FC<
     [events],
   );
 
+  // Create typed slice objects for direct property access
+  const fileTreeSlice: DataSlice<FileTree | null> = useMemo(
+    () => ({
+      scope: 'repository' as const,
+      name: 'fileTree',
+      data: fileTreeData,
+      loading: fileTreeLoading,
+      error: null,
+      refresh: async () => {
+        console.info('[SkillBrowserPanelProvider] fileTree refresh called (no-op)');
+      },
+    }),
+    [fileTreeData, fileTreeLoading],
+  );
+
+  const globalSkillsSlice: DataSlice<{ skills: GlobalSkill[] } | null> = useMemo(
+    () => ({
+      scope: 'workspace' as const,
+      name: 'globalSkills',
+      data: { skills: globalSkillsData },
+      loading: globalSkillsLoading,
+      error: null,
+      refresh: async () => {
+        setGlobalSkillsLoading(true);
+        try {
+          const skills = await FileSystemService.getGlobalSkills();
+          setGlobalSkillsData(skills);
+        } catch (error) {
+          console.error('[SkillBrowserPanelProvider] Failed to refresh global skills:', error);
+        } finally {
+          setGlobalSkillsLoading(false);
+        }
+      },
+    }),
+    [globalSkillsData, globalSkillsLoading],
+  );
+
   // Create context value
   const context = useMemo(
     () => ({
+      // Typed slice properties for direct access (SkillsPanelContext)
+      fileTree: fileTreeSlice,
+      globalSkills: globalSkillsSlice,
       // Repository-like properties for compatibility with skills panels
       // Use owner/repo as the path when browsing GitHub
       repositoryPath: githubRepoInfo ? `${githubRepoInfo.owner}/${githubRepoInfo.repo}` : null,
@@ -319,7 +365,7 @@ export const SkillBrowserPanelProvider: React.FC<
         await Promise.all(slicesToRefresh.map((slice) => slice.refresh()));
       },
     }),
-    [slices, adapters, globalSkillsLoading, fileTreeLoading, githubRepoInfo],
+    [slices, adapters, globalSkillsLoading, fileTreeLoading, githubRepoInfo, fileTreeSlice, globalSkillsSlice],
   );
 
   // Provider value

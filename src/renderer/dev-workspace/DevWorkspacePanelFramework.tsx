@@ -44,7 +44,7 @@ import {
 import type { RegisteredTrace } from '@principal-ai/principal-view-core';
 import type { WorkflowTemplate } from '@principal-ai/principal-view-core';
 import type { FileInfo } from '@principal-ai/repository-abstraction';
-import { FeedCodeCityPanel, type FeedCodeCityPanelPropsTyped } from '@industry-theme/file-city-panel';
+import { CodeCityPanel, type CodeCityPanelPropsTyped } from '@industry-theme/file-city-panel';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import { LocalProjectsPanel } from '@industry-theme/alexandria-panels';
 import { panels as localhostBrowserPanels } from '@industry-theme/localhost-panels';
@@ -195,6 +195,8 @@ export interface DevWorkspacePanelFrameworkProps {
   events: PanelEventEmitter;
   /** Trace source service name for OTEL routing */
   traceSourceServiceName?: string;
+  /** Callback when scope names are discovered from library.yaml */
+  onScopeNamesDiscovered?: (scopeNames: string[]) => void;
 }
 
 interface DevWorkspacePanelFrameworkInnerProps {
@@ -218,7 +220,7 @@ const FileCityWithHighlights: React.FC<{
   context: ReturnType<typeof useRepositoryPanelProvider>['context'];
   actions: ReturnType<typeof useRepositoryPanelProvider>['actions'];
   events: ReturnType<typeof useRepositoryPanelProvider>['events'];
-  FileCityPanelComponent: React.ComponentType<FeedCodeCityPanelPropsTyped>;
+  FileCityPanelComponent: React.ComponentType<CodeCityPanelPropsTyped>;
 }> = ({ context, actions, events, FileCityPanelComponent }) => {
   const { context: agentHighlightCtx } = useAgentHighlightProvider();
 
@@ -249,9 +251,11 @@ const FileCityWithHighlights: React.FC<{
       getSlice: <T = unknown>(name: string) => {
         return mergedSlices.get(name) as DataSlice<T> | undefined;
       },
-      // Explicit properties for typed panel contexts
+      // Explicit properties for typed panel contexts (CodeCityPanelContext)
       fileTree: context.fileTree,
-      feedProject: context.feedProject,
+      fileCityColorModes: context.fileCityColorModes,
+      gitStatusWithFiles: context.gitStatusWithFiles,
+      packages: context.packages,
     };
   }, [context, agentHighlightCtx.highlightLayers]);
 
@@ -404,7 +408,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   )?.component as React.ComponentType<WorkflowScenariosPanelProps> | undefined; // Cannot convert - component not exported
   const StoryboardListPanelComponent = StoryboardListPanel;
   const TraceListPanelComponent = TraceListPanel;
-  const FileCityPanelComponent = FeedCodeCityPanel;
+  const FileCityPanelComponent = CodeCityPanel;
   const DocsPanelComponent = docsPanels[0]?.component; // Cannot convert - component not exported
   // Direct import instead of array access to avoid type inference issues with mixed desktop/web panels
   const LocalProjectsPanelComponent = LocalProjectsPanel;
@@ -634,50 +638,27 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             return prevTabs; // No change to tabs array
           }
 
-          // Create new trace details tab with full trace object for instant loading
-          // Convert StoredTrace to RegisteredTrace for display
-          const firstSpan = trace.data.resourceSpans?.[0]?.scopeSpans?.[0]?.spans?.[0];
-          const traceName = firstSpan?.name || trace.traceId.substring(0, 8);
-
-          // Extract basic info from stored OTLP data
-          const resource = trace.data.resourceSpans?.[0]?.resource;
-          const serviceNameAttr = resource?.attributes?.find((attr: any) => attr.key === 'service.name');
-          const serviceName = (serviceNameAttr?.value?.stringValue as string) || 'unknown';
-
-          const scopeSpan = trace.data.resourceSpans?.[0]?.scopeSpans?.[0];
-          const scope = scopeSpan?.scope;
-
-          // Create minimal RegisteredTrace for stored traces
-          // TODO: Process with TraceOrchestrator when ready
-          const registeredTrace: RegisteredTrace = {
-            traceId: trace.traceId,
-            name: traceName,
-            startTime: trace.timestamp || Date.now(),
-            endTime: trace.timestamp || Date.now(),
-            duration: 0,
-            spanCount: trace.data.resourceSpans?.[0]?.scopeSpans?.[0]?.spans?.length || 0,
-            hasErrors: false,
-            otlpData: trace.data as any,
-
-            // New structure placeholders - will be filled by TraceOrchestrator
-            resources: [],
-            scenarioMatches: [],
-            storyboardMatches: [],
-            unmatchedSpans: {
-              spans: []
-            },
-          };
+          // The trace is already a fully processed RegisteredTrace from TraceOrchestrator
+          // Just use it directly - no conversion needed
+          const registeredTrace = trace as RegisteredTrace;
+          const traceName = registeredTrace.name || registeredTrace.traceId.substring(0, 8);
 
           const newTab: TraceDetailsTab = {
-            id: `trace-${trace.traceId}`,
+            id: `trace-${registeredTrace.traceId}`,
             label: traceName,
             contentType: 'trace-details',
-            traceId: trace.traceId,
+            traceId: registeredTrace.traceId,
             traceData: registeredTrace,
             closable: true,
           };
 
-          console.info('[DevWorkspacePanelFramework] Creating new trace details tab (trace pre-loaded):', newTab);
+          console.info('[DevWorkspacePanelFramework] Creating new trace details tab:', {
+            id: newTab.id,
+            name: traceName,
+            scenarioMatches: registeredTrace.scenarioMatches?.length || 0,
+            storyboardMatches: registeredTrace.storyboardMatches?.length || 0,
+            unmatchedSpans: registeredTrace.unmatchedSpans?.spans?.length || 0,
+          });
           setFocusTabId(newTab.id);
           return [...prevTabs, newTab];
         });
@@ -2384,6 +2365,7 @@ export const DevWorkspacePanelFramework: React.FC<
   onPanelSizesChange,
   events,
   traceSourceServiceName,
+  onScopeNamesDiscovered,
 }) => {
   // Use the same terminal context format as legacy MultiTerminalPanel
   // Legacy uses: terminal:${owner}/${name}
@@ -2414,6 +2396,7 @@ export const DevWorkspacePanelFramework: React.FC<
       events={events}
       traceSourceServiceName={traceSourceServiceName}
       openTabs={tabsForProvider}
+      onScopeNamesDiscovered={onScopeNamesDiscovered}
     >
       <TerminalProvider
         repositoryPath={repositoryPath}

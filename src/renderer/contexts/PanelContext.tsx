@@ -36,7 +36,9 @@ import {
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type {
   FileTree,
+  GitStatusWithFiles,
 } from '@principal-ai/repository-abstraction';
+import type { PackagesSliceData } from '@principal-ai/codebase-composition';
 import type {
   AlexandriaRepositoriesSlice,
   WorkspaceSlice,
@@ -166,7 +168,6 @@ interface ExtendedPanelContextValue extends PanelContextValue {
   };
   gitStatusLoading: boolean;
   markdownFiles: Array<{ path: string; title?: string; lastModified: number }>;
-  packages: unknown[] | null;
   quality: unknown | null;
   terminalSessions?: Array<{
     id: string;
@@ -185,7 +186,7 @@ interface ExtendedPanelContextValue extends PanelContextValue {
   // Direct slice properties for typed panel access (all explicit slices)
   activeFile: DataSlice<ActiveFileSlice>;
   fileTree: DataSlice<FileTree>;
-  git: DataSlice<unknown>;
+  git: DataSlice<GitStatusWithFiles | null>;
   markdown: DataSlice<unknown>;
   alexandriaRepositories: DataSlice<AlexandriaRepositoriesSlice>;
   workspace: DataSlice<WorkspaceSlice>;
@@ -197,6 +198,10 @@ interface ExtendedPanelContextValue extends PanelContextValue {
   terminal: DataSlice<TerminalSessionInfo[]>;
   feedProject: DataSlice<FeedProjectSliceData>;
   githubIssues: DataSlice<GitHubIssuesSliceData>;
+
+  // Typed slices for repository-composition-panels
+  gitStatusWithFiles: DataSlice<GitStatusWithFiles | null>;
+  packages: DataSlice<PackagesSliceData | null>;
 }
 
 // Provider value that contains context, actions, and events separately
@@ -650,7 +655,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
   );
 
   // Explicit DataSlice: git (stub for compatibility)
-  const gitSlice = useMemo<DataSlice<unknown>>(
+  const gitSlice = useMemo<DataSlice<GitStatusWithFiles | null>>(
     () => ({
       scope: 'repository' as const,
       name: 'git',
@@ -916,6 +921,38 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       error: null,
       refresh: async () => {
         // No-op: GitHub issues data managed by panel
+      },
+    }),
+    [],
+  );
+
+  // Git status with files slice (for GitChangesPanelContext)
+  const gitStatusWithFilesSlice = useMemo<DataSlice<GitStatusWithFiles | null>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'gitStatusWithFiles',
+      data: null, // null = not fetched yet
+      loading: false,
+      error: null,
+      refresh: async () => {
+        // TODO: Implement git status fetching
+        console.info('[PanelContext] Refreshing git status with files...');
+      },
+    }),
+    [],
+  );
+
+  // Packages slice (for PackageCompositionPanelContext)
+  const packagesSlice = useMemo<DataSlice<PackagesSliceData | null>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'packages',
+      data: null, // null = not fetched yet
+      loading: false,
+      error: null,
+      refresh: async () => {
+        // TODO: Implement packages fetching
+        console.info('[PanelContext] Refreshing packages...');
       },
     }),
     [],
@@ -1546,7 +1583,6 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       },
       gitStatusLoading: false,
       markdownFiles,
-      packages: null,
       quality: null,
       terminalSessions: terminalSessions.map((session) => ({
         id: session.id,
@@ -1577,6 +1613,10 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       terminal: terminalSlice,
       feedProject: feedProjectSlice,
       githubIssues: githubIssuesSlice,
+
+      // Typed slices for repository-composition-panels
+      gitStatusWithFiles: gitStatusWithFilesSlice,
+      packages: packagesSlice,
     }),
     [
       workspace,
@@ -1599,6 +1639,8 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       terminalSlice,
       feedProjectSlice,
       githubIssuesSlice,
+      gitStatusWithFilesSlice,
+      packagesSlice,
     ],
   );
 
