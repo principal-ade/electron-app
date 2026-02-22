@@ -94,6 +94,7 @@ class WebTelemetryProvider {
           new FetchInstrumentation({
             propagateTraceHeaderCorsUrls: [/localhost/], // Only propagate to localhost
             clearTimingResources: true,
+            ignoreUrls: [/\/v1\/traces$/, /\/v1\/metrics$/, /\/v1\/logs$/], // Don't instrument OTLP exports
           })
         );
       }

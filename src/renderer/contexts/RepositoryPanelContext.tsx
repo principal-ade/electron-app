@@ -35,7 +35,7 @@ import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-ser
 import { minimatch } from 'minimatch';
 import type { ColorMode, FileMetricData, QualitySliceData } from '@principal-ai/quality-lens-registry';
 import type { GlobalSkill } from '../../shared/main-process-api-interfaces/FileSystemAPI';
-import type { RegisteredTrace } from '@principal-ai/principal-view-core';
+import type { RegisteredTrace, VersionSnapshot } from '@principal-ai/principal-view-core';
 import { LocalRegistry, TraceOrchestrator } from '@principal-ai/principal-view-core';
 import { OtelCollectorService } from '../main-process-api/OtelCollectorService';
 import { RendererFileSystemAdapter } from '../utils/RendererFileSystemAdapter';
@@ -106,6 +106,7 @@ interface RepositoryPanelContextValue extends PanelContextValue {
   terminal: DataSlice<TerminalSessionInfo[]>;
   feedProject: DataSlice<FeedProjectSliceData>;
   githubIssues: DataSlice<GitHubIssuesSliceData>;
+  schematics: DataSlice<VersionSnapshot[]>;
 }
 
 // Provider value that contains context, actions, and events separately
@@ -203,8 +204,16 @@ export const RepositoryPanelProvider: React.FC<
   const [telemetryTraces, setTelemetryTraces] = useState<RegisteredTrace[]>([]);
   const [telemetryLoading, setTelemetryLoading] = useState(false);
 
+  // Track schematics (version snapshots from LocalRegistry)
+  const [schematicsData, setSchematicsData] = useState<VersionSnapshot[]>([]);
+  const [schematicsLoading, setSchematicsLoading] = useState(false);
+
   // Track previous FileTree to detect .principal-views changes
   const prevFileTreeRef = useRef<FileTree | null>(null);
+
+  // Ref for repositoryPath so fileReader always has current value
+  const repositoryPathRef = useRef<string | null>(repositoryPath);
+  repositoryPathRef.current = repositoryPath;
 
   // FileSystemAdapter for LocalRegistry (needed for LibraryDiscovery)
   const fsAdapter = useMemo(() => new RendererFileSystemAdapter(), []);
@@ -212,10 +221,19 @@ export const RepositoryPanelProvider: React.FC<
   // LocalRegistry and TraceOrchestrator for processing OTLP traces
   const localRegistry = useMemo(() => {
     // FileReader function - reads file content via FileSystemService
-    const fileReader = async (path: string): Promise<string> => {
-      const result = await FileSystemService.readFile(path);
+    // FileTree paths are relative, so we prepend repositoryPath to make them absolute
+    const fileReader = async (relativePath: string): Promise<string> => {
+      const basePath = repositoryPathRef.current;
+      if (!basePath) {
+        throw new Error(`Cannot read file: no repository path set`);
+      }
+      // Construct absolute path from relative FileTree path
+      const absolutePath = relativePath.startsWith('/')
+        ? relativePath
+        : `${basePath}/${relativePath}`;
+      const result = await FileSystemService.readFile(absolutePath);
       if (!result || !result.content) {
-        throw new Error(`Failed to read file: ${path}`);
+        throw new Error(`Failed to read file: ${absolutePath}`);
       }
       return result.content;
     };
@@ -585,6 +603,8 @@ export const RepositoryPanelProvider: React.FC<
 
     const registerWorkspace = async () => {
       try {
+        setSchematicsLoading(true);
+
         // Register workspace with LocalRegistry - auto-discovers scope names from library.yaml
         const scopeNames = await localRegistry.registerWorkspace(stableFileTreeData);
 
@@ -608,10 +628,21 @@ export const RepositoryPanelProvider: React.FC<
           }
         }
 
+        // Fetch all schematics (version snapshots) for registered scopes
+        const snapshots = await localRegistry.getAllSnapshotsForRegisteredScopes();
+        if (mounted) {
+          console.log('[RepositoryPanelContext] Fetched schematics:', snapshots.length, 'snapshots');
+          setSchematicsData(snapshots);
+        }
+
         // Update ref for next comparison
         prevFileTreeRef.current = stableFileTreeData;
       } catch (error) {
         console.error('[RepositoryPanelContext] Failed to register workspace:', error);
+      } finally {
+        if (mounted) {
+          setSchematicsLoading(false);
+        }
       }
     };
 
@@ -2130,6 +2161,36 @@ export const RepositoryPanelProvider: React.FC<
     [],
   );
 
+  // Schematics slice (version snapshots from LocalRegistry)
+  const schematicsSlice = useMemo<DataSlice<VersionSnapshot[]>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'schematics',
+      data: schematicsData,
+      loading: schematicsLoading,
+      error: null,
+      refresh: async () => {
+        if (!stableFileTreeData) return;
+
+        setSchematicsLoading(true);
+        try {
+          // Invalidate cache and refetch
+          const scopeNames = localRegistry.getRegisteredWorkspaces().map(w => w.scopeName);
+          for (const scopeName of scopeNames) {
+            localRegistry.invalidateCache(scopeName);
+          }
+          const snapshots = await localRegistry.getAllSnapshotsForRegisteredScopes();
+          setSchematicsData(snapshots);
+        } catch (error) {
+          console.error('[RepositoryPanelContext] Failed to refresh schematics:', error);
+        } finally {
+          setSchematicsLoading(false);
+        }
+      },
+    }),
+    [schematicsData, schematicsLoading, stableFileTreeData, localRegistry],
+  );
+
   // Empty slices Map for backward compatibility with PanelContextValue interface
   const slices = useMemo<Map<string, DataSlice<unknown>>>(() => new Map(), []);
 
@@ -2234,6 +2295,7 @@ export const RepositoryPanelProvider: React.FC<
       terminal: terminalSlice,
       feedProject: feedProjectSlice,
       githubIssues: githubIssuesSlice,
+      schematics: schematicsSlice,
     }),
     [
       repositoryPath,
@@ -2266,6 +2328,7 @@ export const RepositoryPanelProvider: React.FC<
       terminalSlice,
       feedProjectSlice,
       githubIssuesSlice,
+      schematicsSlice,
     ],
   );
 
