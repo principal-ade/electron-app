@@ -5,7 +5,7 @@
  * Uses the panel framework layout with minimal API dependencies.
  */
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import type { PanelLayout, QuickCommand } from '@principal-ade/panel-layouts';
 import {
   AgentCommandPalette,
@@ -76,7 +76,6 @@ const PANEL_IDS = [
   'docs',
   'gitChanges',
   'localhostBrowser',
-  'localProjects',
   'codeQuality',
   'packageComposition',
   'fileEditor',
@@ -156,10 +155,6 @@ const QUICK_COMMANDS: QuickCommand[] = [
     description: 'Switch left panel to agents list',
   },
   {
-    name: 'projects',
-    description: 'Switch left panel to local projects',
-  },
-  {
     name: 'files',
     description: 'Switch left panel to file tree',
   },
@@ -211,7 +206,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   const [showTerminalToggle, setShowTerminalToggle] = useState(false);
   const [collapsed, setCollapsed] = useState({ left: false, right: false });
   const [layout, setLayout] = useState<PanelLayout>({
-    left: 'agentsList',
+    left: 'packageComposition',
     middle: 'terminal',
     right: 'fileCity',
   });
@@ -220,6 +215,8 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     middle: 50,
     right: 25,
   });
+  // Ref to hold pending panel sizes that should be applied after collapse completes
+  const pendingPanelSizesRef = useRef<{ left: number; middle: number; right: number } | null>(null);
   const [resetKey, setResetKey] = useState(0);
   const [hasGitHubFolder, setHasGitHubFolder] = useState(false);
   const [packages, setPackages] = useState<PackageLayer[]>([]);
@@ -335,10 +332,6 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           setLayout((prev) => ({ ...prev, left: 'agentsList' }));
           setCollapsed((prev) => ({ ...prev, left: false }));
           return { success: true, message: 'Switched to agents' };
-        case 'projects':
-          setLayout((prev) => ({ ...prev, left: 'localProjects' }));
-          setCollapsed((prev) => ({ ...prev, left: false }));
-          return { success: true, message: 'Switched to projects' };
         case 'files':
           setLayout((prev) => ({ ...prev, left: 'fileCity' }));
           setCollapsed((prev) => ({ ...prev, left: false }));
@@ -394,7 +387,6 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
       '/backlog',
       '/skills',
       '/agents',
-      '/projects',
       '/files',
       '/issues',
       '/docs',
@@ -434,7 +426,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
       }),
       events.on('panel:reset-layout', () => {
         setLayout({
-          left: 'agentsList',
+          left: 'packageComposition',
           middle: 'terminal',
           right: 'fileCity',
         });
@@ -860,6 +852,27 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     setCollapsed((prev) => ({ ...prev, left: false }));
   }, []);
 
+  // Handle left panel collapse complete - apply pending sizes
+  const handleLeftCollapseComplete = useCallback(() => {
+    if (pendingPanelSizesRef.current) {
+      console.info('[DevWorkspaceApp] Left collapse complete, applying pending sizes:', pendingPanelSizesRef.current);
+      setPanelSizes(pendingPanelSizesRef.current);
+      pendingPanelSizesRef.current = null;
+    }
+  }, []);
+
+  // Handle setting panel sizes - stores as pending if collapse is in progress
+  const handlePanelSizesChange = useCallback((sizes: { left: number; middle: number; right: number }) => {
+    // If left is being set to 0, it means we want to apply after collapse
+    // Store as pending and let collapse complete callback apply it
+    if (sizes.left === 0 && !collapsed.left) {
+      console.info('[DevWorkspaceApp] Storing pending panel sizes (collapse in progress):', sizes);
+      pendingPanelSizesRef.current = sizes;
+    } else {
+      setPanelSizes(sizes);
+    }
+  }, [collapsed.left]);
+
   return (
     <div className="h-screen w-screen overflow-hidden bg-transparent flex flex-col">
       <DevWorkspaceTitlebar
@@ -889,7 +902,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         }
         onLayoutChange={(newLayout) => setLayout(newLayout)}
         onCollapsedChange={setCollapsed}
-        onPanelSizesChange={setPanelSizes}
+        onPanelSizesChange={handlePanelSizesChange}
         repositoryPath={repositoryPath}
         events={events}
         packages={packages}
@@ -907,8 +920,9 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           layout={layout}
           onLayoutChange={setLayout}
           panelSizes={panelSizes}
-          onPanelSizesChange={setPanelSizes}
+          onPanelSizesChange={handlePanelSizesChange}
           events={events}
+          onLeftCollapseComplete={handleLeftCollapseComplete}
           traceSourceServiceName={traceSourceServiceName}
           onScopeNamesDiscovered={handleScopeNamesDiscovered}
         />

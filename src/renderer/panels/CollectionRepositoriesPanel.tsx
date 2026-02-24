@@ -8,7 +8,7 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type { PanelContextValue, PanelActions, PanelEventEmitter } from '@principal-ade/panel-framework-core';
-import type { Collection } from '@industry-theme/alexandria-panels';
+import type { Collection } from '@principal-ai/alexandria-collections';
 import { ExternalLink, Github } from 'lucide-react';
 
 interface CollectionRepositoriesSlice {

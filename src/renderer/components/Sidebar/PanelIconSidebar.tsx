@@ -8,7 +8,6 @@ import {
   Bot,
   CheckCircle,
   Package,
-  FolderOpen,
   Activity,
 } from 'lucide-react';
 
@@ -35,14 +34,13 @@ export interface PanelIconSidebarProps {
  * Sorted alphabetically by label
  */
 const PANEL_ICONS = [
-  { id: 'agentsList', Icon: Bot, label: 'Agents' },
-  { id: 'kanban', Icon: KanbanSquare, label: 'Backlog' },
-  { id: 'docs', Icon: BookOpen, label: 'Docs' },
-  { id: 'gitChanges', Icon: GitBranch, label: 'Files' },
-  { id: 'codeQuality', Icon: CheckCircle, label: 'Quality' },
-  { id: 'localProjects', Icon: FolderOpen, label: 'Repos' },
   { id: 'packageComposition', Icon: Package, label: 'Stack' },
+  { id: 'codeQuality', Icon: CheckCircle, label: 'Quality' },
   { id: 'canvasList', Icon: Network, label: 'Stories' },
+  { id: 'docs', Icon: BookOpen, label: 'Docs' },
+  { id: 'agentsList', Icon: Bot, label: 'Agents' },
+  { id: 'gitChanges', Icon: GitBranch, label: 'Files' },
+  { id: 'kanban', Icon: KanbanSquare, label: 'Backlog' },
   { id: 'traceList', Icon: Activity, label: 'Traces' },
 ] as const;
 

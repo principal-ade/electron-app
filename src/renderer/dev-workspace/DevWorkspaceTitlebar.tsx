@@ -41,7 +41,6 @@ const AVAILABLE_PANELS: PanelOption[] = [
   { id: 'gitChanges', label: 'File Tree' },
   { id: 'kanban', label: 'Backlog' },
   { id: 'localhostBrowser', label: 'Localhost Browser' },
-  { id: 'localProjects', label: 'Local Projects' },
   { id: 'packageComposition', label: 'Package Composition' },
   { id: 'skillsList', label: 'Skills' },
   { id: 'terminal', label: 'Terminal' },
@@ -398,16 +397,17 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
       // Give the terminal panel a moment to detect the new session
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      // Collapse left panel FIRST (before switching panels)
+      // Set panel sizes to 50/50 split between middle and right
+      // Note: This is stored as pending and applied after collapse completes
+      if (onPanelSizesChange) {
+        console.info('[DevWorkspaceTitlebar] Setting panel sizes to 50/50 split (pending)');
+        onPanelSizesChange({ left: 0, middle: 50, right: 50 });
+      }
+
+      // Collapse left panel - sizes will be applied when collapse completes
       if (!collapsed?.left && onCollapsedChange) {
         console.info('[DevWorkspaceTitlebar] Collapsing left panel');
         onCollapsedChange({ left: true, right: collapsed?.right ?? false });
-      }
-
-      // Set panel sizes to 50/50 split between middle and right
-      if (onPanelSizesChange) {
-        console.info('[DevWorkspaceTitlebar] Setting panel sizes to 50/50 split');
-        onPanelSizesChange({ left: 0, middle: 50, right: 50 });
       }
 
       // Switch right panel to localhost browser

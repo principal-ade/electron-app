@@ -23,7 +23,6 @@ import type {
 import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
 import type {
   WorkspacesSlice,
-  WorkspacesListPanelActions,
   GitHubStarredSlice,
   GitHubStarredPanelActions,
   GitHubProjectsSlice,
@@ -32,9 +31,9 @@ import type {
   GitHubOrganization,
   UserCollectionsSlice,
   UserCollectionsPanelActions,
-  Collection,
   LocalProjectsPanelActions,
 } from '@industry-theme/alexandria-panels';
+import type { Collection } from '@principal-ai/alexandria-collections';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { WindowService } from '../main-process-api/WindowService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
@@ -57,7 +56,6 @@ interface ProjectsPanelActions
   extends
     PanelActions,
     LocalProjectsPanelActions,
-    WorkspacesListPanelActions,
     GitHubStarredPanelActions,
     GitHubProjectsPanelActions,
     UserCollectionsPanelActions {

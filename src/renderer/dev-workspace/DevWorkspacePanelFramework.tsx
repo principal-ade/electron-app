@@ -46,7 +46,6 @@ import type { WorkflowTemplate } from '@principal-ai/principal-view-core';
 import type { FileInfo } from '@principal-ai/repository-abstraction';
 import { CodeCityPanel, type CodeCityPanelPropsTyped } from '@industry-theme/file-city-panel';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
-import { LocalProjectsPanel } from '@industry-theme/alexandria-panels';
 import { panels as localhostBrowserPanels } from '@industry-theme/localhost-panels';
 import { EventBusPanel, AgentToolsPanel } from '@industry-theme/agent-driven-ui-panels';
 import {
@@ -197,6 +196,10 @@ export interface DevWorkspacePanelFrameworkProps {
   traceSourceServiceName?: string;
   /** Callback when scope names are discovered from library.yaml */
   onScopeNamesDiscovered?: (scopeNames: string[]) => void;
+  /** Callback when left panel collapse animation completes */
+  onLeftCollapseComplete?: () => void;
+  /** Callback when left panel expand animation completes */
+  onLeftExpandComplete?: () => void;
 }
 
 interface DevWorkspacePanelFrameworkInnerProps {
@@ -207,6 +210,8 @@ interface DevWorkspacePanelFrameworkInnerProps {
   panelSizes?: { left: number; middle: number; right: number };
   onPanelSizesChange?: (sizes: { left: number; middle: number; right: number }) => void;
   onTabsChange?: (tabs: unknown[]) => void;
+  onLeftCollapseComplete?: () => void;
+  onLeftExpandComplete?: () => void;
 }
 
 /**
@@ -285,7 +290,7 @@ const FileCityWithHighlights: React.FC<{
  */
 const DevWorkspacePanelFrameworkInner: React.FC<
   DevWorkspacePanelFrameworkInnerProps
-> = ({ collapsed, onCollapsedChange, layout, onLayoutChange, panelSizes, onPanelSizesChange, onTabsChange }) => {
+> = ({ collapsed, onCollapsedChange, layout, onLayoutChange, panelSizes, onPanelSizesChange, onTabsChange, onLeftCollapseComplete, onLeftExpandComplete }) => {
   const { theme } = useTheme();
   const { context, actions, events } = useRepositoryPanelProvider();
   const { context: terminalCtx, actions: terminalActions } =
@@ -410,8 +415,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   const TraceListPanelComponent = TraceListPanel;
   const FileCityPanelComponent = CodeCityPanel;
   const DocsPanelComponent = docsPanels[0]?.component; // Cannot convert - component not exported
-  // Direct import instead of array access to avoid type inference issues with mixed desktop/web panels
-  const LocalProjectsPanelComponent = LocalProjectsPanel;
   const LocalhostBrowserPanelComponent = localhostBrowserPanels.find(
     (p) => p.metadata?.id === 'principal-ade.localhost-browser',
   )?.component; // Cannot convert - component not exported
@@ -1801,30 +1804,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         ),
       },
       {
-        id: 'localProjects',
-        label: 'Local Projects',
-        content: LocalProjectsPanelComponent ? (
-          <div
-            style={{
-              height: '100%',
-              width: '100%',
-              overflow: 'hidden',
-              position: 'relative',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <LocalProjectsPanelComponent
-              context={context}
-              actions={actions}
-              events={events}
-            />
-          </div>
-        ) : (
-          <div>Local Projects panel not available</div>
-        ),
-      },
-      {
         id: 'codeQuality',
         label: 'Code Quality',
         content: CodeQualityPanelComponent ? (
@@ -2193,7 +2172,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       StoryboardListPanelComponent,
       FileCityPanelComponent,
       DocsPanelComponent,
-      LocalProjectsPanelComponent,
       GitChangesPanelComponent,
       LocalhostBrowserPanelComponent,
       EventBusPanelComponent,
@@ -2275,6 +2253,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           showCollapseButtons={false}
           theme={theme}
           onPanelResize={onPanelSizesChange}
+          onLeftCollapseComplete={onLeftCollapseComplete}
+          onLeftExpandComplete={onLeftExpandComplete}
         />
 
         {/* Detail Panel Modal */}
@@ -2366,6 +2346,8 @@ export const DevWorkspacePanelFramework: React.FC<
   events,
   traceSourceServiceName,
   onScopeNamesDiscovered,
+  onLeftCollapseComplete,
+  onLeftExpandComplete,
 }) => {
   // Use the same terminal context format as legacy MultiTerminalPanel
   // Legacy uses: terminal:${owner}/${name}
@@ -2411,6 +2393,8 @@ export const DevWorkspacePanelFramework: React.FC<
             panelSizes={panelSizes}
             onPanelSizesChange={onPanelSizesChange}
             onTabsChange={setTabsForProvider}
+            onLeftCollapseComplete={onLeftCollapseComplete}
+            onLeftExpandComplete={onLeftExpandComplete}
           />
         </AgentHighlightProvider>
       </TerminalProvider>
