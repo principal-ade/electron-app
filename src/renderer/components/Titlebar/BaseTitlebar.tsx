@@ -116,15 +116,17 @@ export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          WebkitAppRegion: 'drag' as any,
+          WebkitAppRegion: 'drag' as 'drag' | 'no-drag',
         }}
       >
-        {React.Children.toArray(children).filter(
-          (child: any) => child?.props?.position === 'center',
+        {React.Children.toArray(children).filter((child) =>
+          React.isValidElement(child) &&
+          (child.props as { position?: string }).position === 'center',
         )}
         {/* Show title only if no center content */}
-        {React.Children.toArray(children).filter(
-          (child: any) => child?.props?.position === 'center',
+        {React.Children.toArray(children).filter((child) =>
+          React.isValidElement(child) &&
+          (child.props as { position?: string }).position === 'center',
         ).length === 0 &&
           title && (
             <div
@@ -133,7 +135,7 @@ export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
                 color: accentColor,
                 fontSize: theme.fontSizes[3],
                 fontFamily: theme.fonts.heading,
-                WebkitAppRegion: 'no-drag' as any,
+                WebkitAppRegion: 'no-drag' as 'drag' | 'no-drag',
               }}
               onClick={onTitleClick}
             >
@@ -151,10 +153,11 @@ export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
           marginRight: showWindowControls && !isMac ? '0' : '20px',
         }}
       >
-        {React.Children.toArray(children).filter(
-          (child: any) =>
-            !child?.props?.position || child?.props?.position === 'right',
-        )}
+        {React.Children.toArray(children).filter((child) => {
+          if (!React.isValidElement(child)) return false;
+          const props = child.props as { position?: string };
+          return !props.position || props.position === 'right';
+        })}
       </div>
 
       {showWindowControls && !isMac && (

@@ -12,7 +12,6 @@ import {
   type CodeCityPanelContext,
   type FileCityColorModesSliceData,
 } from '@industry-theme/file-city-panel';
-import type { FileTree } from '@principal-ai/repository-abstraction';
 
 // Extended context type that includes typed slice properties
 interface StoryPanelContext extends PanelContextValue, CodeCityPanelContext {

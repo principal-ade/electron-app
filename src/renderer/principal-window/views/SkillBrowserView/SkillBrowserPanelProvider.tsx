@@ -39,6 +39,9 @@ interface SkillBrowserPanelProviderProps {
   events: PanelEventEmitter;
 }
 
+// Create context
+const SkillBrowserPanelContext = React.createContext<SkillBrowserPanelProviderValue | null>(null);
+
 /**
  * Simplified panel provider for the Skill Browser view
  * Only provides global skills data without repository-specific logic
@@ -384,9 +387,6 @@ export const SkillBrowserPanelProvider: React.FC<
     </SkillBrowserPanelContext.Provider>
   );
 };
-
-// Create context
-const SkillBrowserPanelContext = React.createContext<SkillBrowserPanelProviderValue | null>(null);
 
 // Hook to use the context
 export const useSkillBrowserPanelProvider = (): SkillBrowserPanelProviderValue => {

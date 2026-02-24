@@ -684,7 +684,7 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
         className={layout === 'grid' ? 'grid grid-cols-4 gap-3' : 'space-y-2'}
       >
         {currentHooks.map((hook, index) =>
-          hook.hooks.map((h, hIndex) => (
+          hook.hooks.map((h, _hIndex) => (
             <HookSquare
               key={`${hook.matcher || 'all'}-${h.command}`}
               command={h.command}

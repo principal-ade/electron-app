@@ -13,7 +13,6 @@ import type {
   PanelContextValue,
   PanelActions,
   DataSlice,
-  WorkspaceMetadata,
   RepositoryMetadata,
   PanelEvent,
   PanelEventEmitter,
@@ -41,6 +40,7 @@ import type {
 import type { PackagesSliceData } from '@principal-ai/codebase-composition';
 import type {
   AlexandriaRepositoriesSlice,
+  Workspace,
   WorkspaceSlice,
   WorkspaceRepositoriesSlice,
   WorkspacesSlice,
@@ -213,9 +213,21 @@ interface PanelProviderValue {
 
 const PanelContext = createContext<PanelProviderValue | null>(null);
 
+/** Extended workspace type that includes additional fields used by the provider */
+interface ExtendedWorkspace extends Workspace {
+  path: string;
+  icon?: string;
+  theme?: string;
+  isDefault?: boolean;
+  isPrivate?: boolean;
+  metadata?: Record<string, unknown>;
+  /** Index signature for compatibility with WorkspaceMetadata */
+  [key: string]: unknown;
+}
+
 interface PanelProviderProps {
   children: ReactNode;
-  workspace: WorkspaceMetadata;
+  workspace: ExtendedWorkspace;
   repository?: RepositoryMetadata;
   theme?: Theme;
   terminalContext?: string; // Optional terminal context for session identification (no default)
@@ -676,7 +688,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       scope: 'workspace' as const,
       name: 'workspace',
       data: {
-        workspace: workspace as any, // Cast to match expected Workspace type
+        workspace,
         loading: false,
         error: undefined,
       },
@@ -696,7 +708,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       scope: 'workspace' as const,
       name: 'workspaces',
       data: {
-        workspaces: [workspace as any], // Cast to match expected Workspace type
+        workspaces: [workspace],
         defaultWorkspaceId: workspace.id as string | null | undefined,
         loading: false,
         error: undefined,

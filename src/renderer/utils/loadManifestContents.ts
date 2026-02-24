@@ -60,24 +60,29 @@ export async function loadManifestContents(
   ];
 
   // Helper to normalize entries to a path string
-  const toPath = (entry: any): string => {
+  const toPath = (entry: unknown): string => {
     if (typeof entry === 'string') return entry;
-    if (entry && typeof entry.path === 'string') return entry.path;
-    if (entry && typeof entry.name === 'string') return entry.name as string;
+    if (entry && typeof entry === 'object' && 'path' in entry && typeof (entry as { path: unknown }).path === 'string') {
+      return (entry as { path: string }).path;
+    }
+    if (entry && typeof entry === 'object' && 'name' in entry && typeof (entry as { name: unknown }).name === 'string') {
+      return (entry as { name: string }).name;
+    }
     return '';
   };
 
   // Find all manifest files using PackageLayerModule's parsers (if available), else fallback patterns
-  const parsers: any[] = (pkgModule as any).parsers || [];
+  const parsers: Array<{ canParse?: (path: string) => boolean }> =
+    (pkgModule as unknown as { parsers?: Array<{ canParse?: (path: string) => boolean }> }).parsers || [];
   const hasParsers = Array.isArray(parsers) && parsers.length > 0;
 
   const manifestFiles = fileSystemTree.allFiles
-    .map((f: any) => toPath(f))
+    .map((f) => toPath(f))
     .filter((p: string) => !!p)
     .filter((p: string) => {
       if (hasParsers) {
         try {
-          return parsers.some((parser: any) => parser?.canParse?.(p));
+          return parsers.some((parser) => parser?.canParse?.(p));
         } catch {
           // If parser check fails, fall back to pattern check below
         }
@@ -145,7 +150,7 @@ export async function loadManifestContents(
 /**
  * Parse manifest content based on file type
  */
-function parseManifestContent(filePath: string, content: string): any {
+function parseManifestContent(filePath: string, content: string): unknown {
   // JSON files (package.json, composer.json, etc.)
   if (filePath.endsWith('.json')) {
     try {
@@ -205,7 +210,7 @@ function parseManifestContent(filePath: string, content: string): any {
 /**
  * Create fallback manifest data when file can't be read
  */
-function createFallbackManifest(filePath: string): any {
+function createFallbackManifest(filePath: string): unknown {
   const dirName = filePath.split('/').slice(-2, -1)[0] || 'unnamed';
 
   if (filePath.endsWith('package.json')) {

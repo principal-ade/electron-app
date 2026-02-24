@@ -89,7 +89,7 @@ export const GitSyncStatusIndicator: React.FC<GitSyncStatusIndicatorProps> = ({
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 10000,
-            WebkitAppRegion: 'no-drag' as any,
+            WebkitAppRegion: 'no-drag' as 'drag' | 'no-drag',
           }}
           onClick={() => setShowModal(false)}
         >

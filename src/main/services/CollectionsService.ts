@@ -13,7 +13,6 @@ import { CollectionStorageAdapter } from '@principal-ai/alexandria-collections';
 import { GitHubFileSystemAdapter } from '../adapters/GitHubFileSystemAdapter';
 import type {
   Collection,
-  CollectionMembership,
   CustomRegion,
   RepositoryLayoutData,
 } from '@principal-ai/alexandria-collections';

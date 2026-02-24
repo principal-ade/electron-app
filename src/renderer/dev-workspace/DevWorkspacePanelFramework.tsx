@@ -17,7 +17,7 @@ import {
 // CSS is bundled inline in principal-view-panels, no separate import needed
 // Note: file-city-panel CSS is bundled inline, no separate import needed
 // Note: file-editing-panels CSS is now inlined in JS, no separate import needed
-import type { PanelEventEmitter, PanelComponentProps, DataSlice } from '@principal-ade/panel-framework-core';
+import type { PanelEventEmitter, DataSlice } from '@principal-ade/panel-framework-core';
 import {
   RepositoryPanelProvider,
   useRepositoryPanelProvider,
@@ -913,9 +913,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         // Type the canvas payload
         const payload = event.payload as CanvasOpenPayload;
 
-        // Only handle openCanvas action from storyboard-list-panel, canvas-list-panel or canvas-detail-panel
+        // Only handle openCanvas action from storyboard-list-panel, canvas-list-panel, canvas-detail-panel, or trace-list-panel
         if (payload.action !== 'openCanvas' ||
-            (event.source !== 'storyboard-list-panel' && event.source !== 'canvas-list-panel' && event.source !== 'canvas-detail-panel')) {
+            (event.source !== 'storyboard-list-panel' && event.source !== 'canvas-list-panel' && event.source !== 'canvas-detail-panel' && event.source !== 'trace-list-panel')) {
           return;
         }
 
@@ -1504,7 +1504,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 context={contextRef.current}
                 actions={actionsRef.current}
                 events={eventsRef.current}
-                selectedTrace={traceDetailsTab.traceData as any || null}
+                selectedTrace={traceDetailsTab.traceData ?? null}
               />
             </div>
           );

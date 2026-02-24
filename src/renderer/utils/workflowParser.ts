@@ -22,9 +22,14 @@ export interface ParsedStep {
 /**
  * Parse a GitHub Actions workflow YAML file and extract required secrets
  */
+interface WorkflowYaml {
+  name?: string;
+  jobs?: Record<string, unknown>;
+}
+
 export function parseWorkflowFile(content: string): ParsedWorkflow | null {
   try {
-    const workflow = yaml.load(content) as any;
+    const workflow = yaml.load(content) as WorkflowYaml | null;
 
     if (!workflow || typeof workflow !== 'object') {
       return null;
@@ -36,14 +41,14 @@ export function parseWorkflowFile(content: string): ParsedWorkflow | null {
     if (workflow.jobs && typeof workflow.jobs === 'object') {
       for (const [_jobId, job] of Object.entries(workflow.jobs)) {
         if (typeof job === 'object' && job !== null) {
-          extractSecretsFromJob(job as any, requiredSecrets);
+          extractSecretsFromJob(job as Record<string, unknown>, requiredSecrets);
         }
       }
     }
 
     return {
       name: workflow.name,
-      jobs: workflow.jobs || {},
+      jobs: (workflow.jobs || {}) as Record<string, ParsedJob>,
       requiredSecrets: Array.from(requiredSecrets).sort(),
     };
   } catch (error) {
@@ -55,29 +60,30 @@ export function parseWorkflowFile(content: string): ParsedWorkflow | null {
 /**
  * Extract secret references from a job definition
  */
-function extractSecretsFromJob(job: any, secrets: Set<string>): void {
+function extractSecretsFromJob(job: Record<string, unknown>, secrets: Set<string>): void {
   // Check job-level env
   if (job.env && typeof job.env === 'object') {
-    extractSecretsFromEnv(job.env, secrets);
+    extractSecretsFromEnv(job.env as Record<string, unknown>, secrets);
   }
 
   // Check each step
   if (Array.isArray(job.steps)) {
     for (const step of job.steps) {
       if (step && typeof step === 'object') {
+        const stepObj = step as Record<string, unknown>;
         // Check step env
-        if (step.env && typeof step.env === 'object') {
-          extractSecretsFromEnv(step.env, secrets);
+        if (stepObj.env && typeof stepObj.env === 'object') {
+          extractSecretsFromEnv(stepObj.env as Record<string, unknown>, secrets);
         }
 
         // Check step with
-        if (step.with && typeof step.with === 'object') {
-          extractSecretsFromObject(step.with, secrets);
+        if (stepObj.with && typeof stepObj.with === 'object') {
+          extractSecretsFromObject(stepObj.with as Record<string, unknown>, secrets);
         }
 
         // Check step run command
-        if (typeof step.run === 'string') {
-          extractSecretsFromString(step.run, secrets);
+        if (typeof stepObj.run === 'string') {
+          extractSecretsFromString(stepObj.run, secrets);
         }
       }
     }
@@ -85,7 +91,7 @@ function extractSecretsFromJob(job: any, secrets: Set<string>): void {
 
   // Check job with
   if (job.with && typeof job.with === 'object') {
-    extractSecretsFromObject(job.with, secrets);
+    extractSecretsFromObject(job.with as Record<string, unknown>, secrets);
   }
 }
 
@@ -93,7 +99,7 @@ function extractSecretsFromJob(job: any, secrets: Set<string>): void {
  * Extract secret references from env object
  */
 function extractSecretsFromEnv(
-  env: Record<string, any>,
+  env: Record<string, unknown>,
   secrets: Set<string>,
 ): void {
   for (const value of Object.values(env)) {
@@ -107,14 +113,14 @@ function extractSecretsFromEnv(
  * Extract secret references from any object
  */
 function extractSecretsFromObject(
-  obj: Record<string, any>,
+  obj: Record<string, unknown>,
   secrets: Set<string>,
 ): void {
   for (const value of Object.values(obj)) {
     if (typeof value === 'string') {
       extractSecretsFromString(value, secrets);
     } else if (value && typeof value === 'object') {
-      extractSecretsFromObject(value, secrets);
+      extractSecretsFromObject(value as Record<string, unknown>, secrets);
     }
   }
 }

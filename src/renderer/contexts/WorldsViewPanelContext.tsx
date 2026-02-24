@@ -42,12 +42,7 @@ interface WorldsViewPanelActions
       LocalProjectsPanelActions,
       'selectDirectory' | 'removeLocalRepository' | 'focusRepository' | 'getRepositoryWindowState'
     > {
-  // Add a repository to a collection (for drag-drop integration)
-  addRepositoryToCollection?: (
-    collectionId: string,
-    repositoryPath: string,
-    repositoryMetadata: RepositoryMetadata,
-  ) => Promise<void>;
+  // addRepositoryToCollection is inherited from CollectionMapPanelActions (required)
   // Copy to clipboard helper
   copyToClipboard?: (text: string) => Promise<void>;
 }
@@ -221,7 +216,7 @@ export const WorldsViewPanelProvider: React.FC<
 
   const selectedCollectionRepositoryIds = new Set(selectedCollectionMemberships.map(m => m.repositoryId));
   const selectedCollectionRepositories = localRepositories.filter(r => {
-    const repoId = (r as any).github?.id || r.name;
+    const repoId = (r as AlexandriaEntry & { github?: { id?: string } }).github?.id || r.name;
     return selectedCollectionRepositoryIds.has(repoId);
   });
 
@@ -484,7 +479,7 @@ export const WorldsViewPanelProvider: React.FC<
       addRepositoryToCollection: async (
         collectionId: string,
         repositoryPath: string,
-        repositoryMetadata: any,
+        repositoryMetadata: RepositoryMetadata,
       ) => {
         console.info(
           '[WorldsViewPanelProvider] Adding repository to collection:',
@@ -496,9 +491,10 @@ export const WorldsViewPanelProvider: React.FC<
         try {
           // Determine repository ID from metadata
           // Format: "owner/repo" or just "name"
+          const github = repositoryMetadata?.github as { owner?: string } | undefined;
           const repositoryId =
-            repositoryMetadata?.github?.owner && repositoryMetadata?.name
-              ? `${repositoryMetadata.github.owner}/${repositoryMetadata.name}`
+            github?.owner && repositoryMetadata?.name
+              ? `${github.owner}/${repositoryMetadata.name}`
               : repositoryMetadata?.name || repositoryPath;
 
           await CollectionsService.addRepository({

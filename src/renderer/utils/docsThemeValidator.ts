@@ -41,11 +41,11 @@ function isValidFontFamily(font: string): boolean {
 /**
  * Deep merge two objects, with source overriding target
  */
-function deepMerge<T extends Record<string, any>>(
+function deepMerge<T extends Record<string, unknown>>(
   target: T,
   source: Partial<T>,
 ): T {
-  const result = { ...target };
+  const result = { ...target } as Record<string, unknown>;
 
   for (const key in source) {
     if (Object.hasOwn(source, key)) {
@@ -63,15 +63,18 @@ function deepMerge<T extends Record<string, any>>(
         !Array.isArray(targetValue)
       ) {
         // Recursively merge objects
-        result[key] = deepMerge(targetValue, sourceValue);
+        result[key] = deepMerge(
+          targetValue as Record<string, unknown>,
+          sourceValue as Partial<Record<string, unknown>>,
+        );
       } else {
         // Override with source value
-        result[key] = sourceValue as any;
+        result[key] = sourceValue;
       }
     }
   }
 
-  return result;
+  return result as T;
 }
 
 /**
@@ -235,7 +238,7 @@ export function createMergedTheme(
   if (config.colors) {
     mergedTheme.colors = deepMerge(mergedTheme.colors, {
       ...config.colors,
-    } as any);
+    } as Partial<typeof mergedTheme.colors>);
   }
 
   // Merge fonts

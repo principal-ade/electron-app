@@ -76,7 +76,7 @@ export const ThemeCustomizationButton: React.FC = () => {
             fontSize: '13px',
             fontFamily: theme.fonts.body,
             transition: 'all 0.2s ease',
-            WebkitAppRegion: 'no-drag' as any,
+            WebkitAppRegion: 'no-drag' as 'drag' | 'no-drag',
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor =

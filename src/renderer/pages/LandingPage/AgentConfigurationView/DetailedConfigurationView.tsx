@@ -751,7 +751,7 @@ export const DetailedConfigurationView: React.FC<
   const ClaudeMCPContent = () => {
     const [claudeMCPStatus, setClaudeMCPStatus] = React.useState<{
       hasPrincipleMD: boolean;
-      mcpServers: Record<string, any>;
+      mcpServers: Record<string, unknown>;
     }>({ hasPrincipleMD: false, mcpServers: {} });
     const [isTogglingClaudeMCP, setIsTogglingClaudeMCP] = React.useState(false);
 
@@ -859,7 +859,7 @@ export const DetailedConfigurationView: React.FC<
   const ClineMCPContent = () => {
     const [clineMCPStatus, setClineMCPStatus] = React.useState<{
       hasPrincipleMD: boolean;
-      mcpServers: Record<string, any>;
+      mcpServers: Record<string, unknown>;
     }>({ hasPrincipleMD: false, mcpServers: {} });
     const [isTogglingClineMCP, setIsTogglingClineMCP] = React.useState(false);
 
@@ -967,7 +967,7 @@ export const DetailedConfigurationView: React.FC<
   const OpenCodeMCPContent = () => {
     const [openCodeMCPStatus, setOpenCodeMCPStatus] = React.useState<{
       hasPrincipleMD: boolean;
-      mcpServers: Record<string, any>;
+      mcpServers: Record<string, unknown>;
     }>({ hasPrincipleMD: false, mcpServers: {} });
     const [isTogglingOpenCodeMCP, setIsTogglingOpenCodeMCP] =
       React.useState(false);
@@ -1084,7 +1084,7 @@ export const DetailedConfigurationView: React.FC<
   const DroidMCPContent = () => {
     const [droidMCPStatus, setDroidMCPStatus] = React.useState<{
       hasPrincipleMD: boolean;
-      mcpServers: Record<string, any>;
+      mcpServers: Record<string, unknown>;
     }>({ hasPrincipleMD: false, mcpServers: {} });
     const [isTogglingDroidMCP, setIsTogglingDroidMCP] = React.useState(false);
 

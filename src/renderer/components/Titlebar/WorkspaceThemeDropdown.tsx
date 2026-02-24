@@ -94,7 +94,7 @@ export const WorkspaceThemeDropdown: React.FC<WorkspaceThemeDropdownProps> = ({
       className="workspace-theme-dropdown"
       style={{
         position: 'relative',
-        WebkitAppRegion: 'no-drag' as any,
+        WebkitAppRegion: 'no-drag' as 'drag' | 'no-drag',
         zIndex: 100,
       }}
     >
@@ -117,7 +117,7 @@ export const WorkspaceThemeDropdown: React.FC<WorkspaceThemeDropdownProps> = ({
           fontSize: '13px',
           fontFamily: theme.fonts.body,
           transition: 'all 0.2s ease',
-          WebkitAppRegion: 'no-drag' as any,
+          WebkitAppRegion: 'no-drag' as 'drag' | 'no-drag',
           position: 'relative',
           zIndex: 101,
         }}

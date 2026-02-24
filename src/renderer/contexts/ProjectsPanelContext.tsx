@@ -24,20 +24,15 @@ import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
 import type {
   WorkspacesSlice,
   WorkspacesListPanelActions,
-  WorkspacesListPanelContext,
   GitHubStarredSlice,
   GitHubStarredPanelActions,
-  GitHubStarredPanelContext,
   GitHubProjectsSlice,
   GitHubProjectsPanelActions,
-  GitHubProjectsPanelContext,
   GitHubRepository,
   GitHubOrganization,
   UserCollectionsSlice,
   UserCollectionsPanelActions,
-  UserCollectionsPanelContext,
   Collection,
-  LocalProjectsPanelContext,
   LocalProjectsPanelActions,
 } from '@industry-theme/alexandria-panels';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
@@ -45,7 +40,6 @@ import { WindowService } from '../main-process-api/WindowService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { FileSystemService } from '../main-process-api/FileSystemService';
 import { GithubService } from '../main-process-api/GithubService';
-import { GitHubArtifactService } from '../main-process-api/GitHubArtifactService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { CollectionsService } from '../main-process-api/CollectionsService';
 import { GitService } from '../main-process-api/GitService';
@@ -822,7 +816,7 @@ export const ProjectsPanelProvider: React.FC<
   );
 
   // Explicit DataSlice: collectionRepositories
-  const collectionRepositoriesSlice = useMemo<DataSlice<unknown>>(
+  const _collectionRepositoriesSlice = useMemo<DataSlice<unknown>>(
     () => ({
       scope: 'global' as const,
       name: 'collectionRepositories',
@@ -843,7 +837,7 @@ export const ProjectsPanelProvider: React.FC<
   );
 
   // Explicit DataSlice: gitStatusWithFiles
-  const gitStatusWithFilesSlice = useMemo<DataSlice<GitStatusWithFiles | null>>(
+  const _gitStatusWithFilesSlice = useMemo<DataSlice<GitStatusWithFiles | null>>(
     () => ({
       scope: 'repository' as const,
       name: 'gitStatusWithFiles',
@@ -1396,7 +1390,7 @@ export const ProjectsPanelProvider: React.FC<
       addRepositoryToCollection: async (
         collectionId: string,
         repositoryPath: string,
-        repositoryMetadata: any,
+        repositoryMetadata: RepositoryMetadata,
       ) => {
         console.info(
           '[ProjectsPanelProvider] Adding repository to collection:',
@@ -1408,9 +1402,10 @@ export const ProjectsPanelProvider: React.FC<
         try {
           // Determine repository ID from metadata
           // Format: "owner/repo" or just "name"
+          const github = repositoryMetadata?.github as { owner?: string } | undefined;
           const repositoryId =
-            repositoryMetadata?.github?.owner && repositoryMetadata?.name
-              ? `${repositoryMetadata.github.owner}/${repositoryMetadata.name}`
+            github?.owner && repositoryMetadata?.name
+              ? `${github.owner}/${repositoryMetadata.name}`
               : repositoryMetadata?.name || repositoryPath;
 
           await CollectionsService.addRepository({

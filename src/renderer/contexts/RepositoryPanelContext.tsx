@@ -35,7 +35,7 @@ import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-ser
 import { minimatch } from 'minimatch';
 import type { ColorMode, FileMetricData, QualitySliceData } from '@principal-ai/quality-lens-registry';
 import type { GlobalSkill } from '../../shared/main-process-api-interfaces/FileSystemAPI';
-import type { RegisteredTrace, VersionSnapshot } from '@principal-ai/principal-view-core';
+import type { RegisteredTrace, VersionSnapshot, OtelExportTraceServiceRequest } from '@principal-ai/principal-view-core';
 import { LocalRegistry, TraceOrchestrator } from '@principal-ai/principal-view-core';
 import { OtelCollectorService } from '../main-process-api/OtelCollectorService';
 import { RendererFileSystemAdapter } from '../utils/RendererFileSystemAdapter';
@@ -975,7 +975,7 @@ export const RepositoryPanelProvider: React.FC<
           serviceIdentifier,
           async (data: unknown) => {
             try {
-              const message = data as any;
+              const message = data as { type?: string; windowId?: string; serviceIdentifier?: string; timestamp?: number; payload?: unknown };
               console.info('[RepositoryPanelProvider] Received OTEL message:', message?.type || message);
 
               // Check if this is a connection confirmation heartbeat from the server
@@ -983,7 +983,7 @@ export const RepositoryPanelProvider: React.FC<
                 console.info('[RepositoryPanelProvider] 🎉 Server connection confirmed!', {
                   windowId: message.windowId,
                   serviceIdentifier: message.serviceIdentifier,
-                  timestamp: new Date(message.timestamp).toISOString(),
+                  timestamp: message.timestamp ? new Date(message.timestamp).toISOString() : undefined,
                 });
                 return;
               }
@@ -991,7 +991,7 @@ export const RepositoryPanelProvider: React.FC<
               // Check if this is a raw OTLP trace from the server (forwarding mode)
               if (message?.type === 'RAW_OTLP_TRACE') {
                 // Extract the raw OTLP data from the message
-                const otlpData = message.payload;
+                const otlpData = message.payload as OtelExportTraceServiceRequest | undefined;
 
                 if (!otlpData) {
                   console.warn('[RepositoryPanelProvider] Invalid RAW_OTLP_TRACE payload:', message);
