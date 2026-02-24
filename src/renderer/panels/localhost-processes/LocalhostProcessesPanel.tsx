@@ -102,9 +102,11 @@ export const LocalhostProcessesPanel: React.FC<PanelComponentProps> = ({
       return;
     }
 
+    const pid = server.pid;
+
     // Confirm before killing
     const confirmed = window.confirm(
-      `Are you sure you want to kill the server on port ${server.port}?\n\nPID: ${server.pid}\nCommand: ${server.command || 'Unknown'}`,
+      `Are you sure you want to kill the server on port ${server.port}?\n\nPID: ${pid}\nCommand: ${server.command || 'Unknown'}`,
     );
 
     if (!confirmed) {
@@ -112,7 +114,7 @@ export const LocalhostProcessesPanel: React.FC<PanelComponentProps> = ({
     }
 
     // Add to killing set for UI feedback
-    setKillingPids((prev) => new Set(prev).add(server.pid!));
+    setKillingPids((prev) => new Set(prev).add(pid));
 
     try {
       const result = await LocalhostDetectionService.killServer(server.pid);
@@ -147,7 +149,7 @@ export const LocalhostProcessesPanel: React.FC<PanelComponentProps> = ({
       // Remove from killing set
       setKillingPids((prev) => {
         const next = new Set(prev);
-        next.delete(server.pid!);
+        next.delete(pid);
         return next;
       });
     }

@@ -375,7 +375,7 @@ const SkillBrowserViewContent: React.FC = () => {
     loadDetectedDirectories();
     loadRecentRepos();
     loadInstalledSkills();
-  }, [loadInstalledSkills]);
+  }, [loadDetectedDirectories, loadRecentRepos, loadInstalledSkills]);
 
   // Listen for refresh requests from SkillsListPanel
   useEffect(() => {
@@ -760,7 +760,7 @@ const SkillBrowserViewContent: React.FC = () => {
         },
       });
     },
-    [selectedSkill, githubRepoInfo, browseFileTree, actions, getSkillFolderName],
+    [selectedSkill, githubRepoInfo, browseFileTree, actions, getSkillFolderName, getSkillTreeSha],
   );
 
   /**
@@ -845,7 +845,7 @@ const SkillBrowserViewContent: React.FC = () => {
       // Refresh installed skills
       await loadInstalledSkills();
     },
-    [selectedSkill, githubRepoInfo, browseFileTree, actions, loadInstalledSkills, getSkillFolderName],
+    [selectedSkill, githubRepoInfo, browseFileTree, actions, loadInstalledSkills, getSkillFolderName, getSkillTreeSha],
   );
 
   /**
@@ -1035,7 +1035,7 @@ const SkillBrowserViewContent: React.FC = () => {
         ) : null,
       },
     ];
-  }, [context, actions, events, selectedSkill, githubRepoInfo, isSkillInstalled, getSkillInstalledDirectories, getSkillTreeSha, viewMode, browseFileTree, recentRepos, handleSelectRecentRepo, detectedDirectories, githubUrl, handleFetchSkills, isLoading, selectedSkillMetadata, handleInstallSkillToDirectories, getInstalledSkillMetadata, setSelectedSkillMetadata]);
+  }, [context, actions, events, selectedSkill, githubRepoInfo, isSkillInstalled, getSkillInstalledDirectories, getSkillTreeSha, viewMode, browseFileTree, recentRepos, handleSelectRecentRepo, detectedDirectories, githubUrl, handleFetchSkills, isLoading, selectedSkillMetadata, handleInstallSkillToDirectories, getInstalledSkillMetadata, setSelectedSkillMetadata, handleUninstallSkillFromDirectories]);
 
   // Define layout configuration (simple left/right split or single panel for recent)
   const layout = useMemo(() => {

@@ -478,15 +478,15 @@ export const TypeInformationPanel: React.FC<TypeInformationPanelProps> = ({
                       cursor: 'pointer',
                     }}
                     onMouseEnter={(e) => {
-                      if (!isSelected) {
-                        e.currentTarget.parentElement!.style.backgroundColor = theme.colors.backgroundTertiary;
-                        e.currentTarget.parentElement!.style.borderColor = theme.colors.primary;
+                      if (!isSelected && e.currentTarget.parentElement) {
+                        e.currentTarget.parentElement.style.backgroundColor = theme.colors.backgroundTertiary;
+                        e.currentTarget.parentElement.style.borderColor = theme.colors.primary;
                       }
                     }}
                     onMouseLeave={(e) => {
-                      if (!isSelected) {
-                        e.currentTarget.parentElement!.style.backgroundColor = theme.colors.backgroundSecondary;
-                        e.currentTarget.parentElement!.style.borderColor = theme.colors.border;
+                      if (!isSelected && e.currentTarget.parentElement) {
+                        e.currentTarget.parentElement.style.backgroundColor = theme.colors.backgroundSecondary;
+                        e.currentTarget.parentElement.style.borderColor = theme.colors.border;
                       }
                     }}
                   >

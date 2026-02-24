@@ -368,29 +368,29 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
   // Stable onTabsChange that prevents infinite loops
   const handleTabsChange = useCallback((newTabs: DevWorkspaceTab[]) => {
-    console.log('[DEBUG] handleTabsChange called with:', newTabs.map(t => t.id));
+    console.info('[DEBUG] handleTabsChange called with:', newTabs.map(t => t.id));
     setTabs(prevTabs => {
       // Only keep custom tabs from the update (filter out terminal tabs)
       // Terminal tabs are managed by TabbedTerminalPanel, we only care about custom tabs
       const newCustomTabs = newTabs.filter(t => t.contentType !== 'terminal');
       const prevCustomTabs = prevTabs.filter(t => t.contentType !== 'terminal');
 
-      console.log('[DEBUG] prevCustomTabs:', prevCustomTabs.map(t => t.id));
-      console.log('[DEBUG] newCustomTabs:', newCustomTabs.map(t => t.id));
+      console.info('[DEBUG] prevCustomTabs:', prevCustomTabs.map(t => t.id));
+      console.info('[DEBUG] newCustomTabs:', newCustomTabs.map(t => t.id));
 
       // Check if custom tabs actually changed
       const customTabsChanged =
         newCustomTabs.length !== prevCustomTabs.length ||
         !newCustomTabs.every(tab => prevCustomTabs.some(prev => prev.id === tab.id));
 
-      console.log('[DEBUG] customTabsChanged:', customTabsChanged);
+      console.info('[DEBUG] customTabsChanged:', customTabsChanged);
 
       if (!customTabsChanged) {
-        console.log('[DEBUG] No change, returning prevTabs');
+        console.info('[DEBUG] No change, returning prevTabs');
         return prevTabs; // No change
       }
 
-      console.log('[DEBUG] Updating to newCustomTabs');
+      console.info('[DEBUG] Updating to newCustomTabs');
       // Notify parent of tab changes for RepositoryPanelProvider
       onTabsChange?.(newCustomTabs);
 

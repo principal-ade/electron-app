@@ -12,9 +12,22 @@ import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 
 // Import Control Tower Core - Browser-safe imports
-import { BaseClient, ClientBuilder } from '@principal-ai/control-tower-core/client';
-import type { Event } from '@principal-ai/control-tower-core/types';
+import { BaseClient, ClientBuilder, type ClientEvents } from '@principal-ai/control-tower-core/client';
+import type { Event, TokenPayload } from '@principal-ai/control-tower-core/types';
 import { BrowserWebSocketTransportAdapter } from '@principal-ai/control-tower-core/adapters/websocket/browser';
+
+// Terminal event data interface for type safety
+interface TerminalEventData {
+  type: string;
+  data?: {
+    sessions?: TerminalSessionInfo[];
+    session?: TerminalSessionInfo;
+    sessionId?: string;
+    data?: string;
+    newOwner?: { type: 'local' | 'remote'; id: string; githubHandle: string } | null;
+    error?: string;
+  };
+}
 
 // Import terminal event types
 import type {
@@ -30,9 +43,9 @@ class TerminalJWTAuthAdapter {
     return this.token;
   }
 
-  async validateToken(token: string): Promise<{ valid: boolean }> {
-    // Simple validation - just check if token exists
-    return { valid: !!token };
+  async validateToken(_token: string): Promise<TokenPayload> {
+    // Simple validation - return minimal payload for browser auth
+    return { userId: 'browser-user' };
   }
 
   isAuthRequired(): boolean {
@@ -198,9 +211,9 @@ export function RemoteTerminalViewer() {
         // Create WebSocket client and connect to user discovery room
         await connectToUserDiscoveryRoom(userToken, userId, githubHandle);
 
-      } catch (err: any) {
+      } catch (err) {
         console.error('[RemoteTerminalViewer] Failed to initialize:', err);
-        setError(err.message || 'Failed to initialize');
+        setError(err instanceof Error ? err.message : 'Failed to initialize');
         setStatus('disconnected');
       }
     }
@@ -279,8 +292,8 @@ export function RemoteTerminalViewer() {
             }
           };
         });
-      } catch (testError: any) {
-        console.error('[RemoteTerminalViewer] Direct WebSocket test failed:', testError.message);
+      } catch (testError) {
+        console.error('[RemoteTerminalViewer] Direct WebSocket test failed:', testError instanceof Error ? testError.message : testError);
         // Continue anyway to see if Control Tower client behaves differently
       }
 
@@ -314,7 +327,7 @@ export function RemoteTerminalViewer() {
       // Build client
       const client = await new ClientBuilder()
         .withTransport(transportAdapter)
-        .withAuth(authAdapter as any)
+        .withAuth(authAdapter as unknown as Parameters<typeof ClientBuilder.prototype.withAuth>[0])
         .build();
 
       clientRef.current = client;
@@ -322,26 +335,24 @@ export function RemoteTerminalViewer() {
       // Set up event handlers first
       setupEventHandlers(client);
 
-      // Debug: log all incoming messages
-      (client as any).on('message' as any, (msg: any) => {
-        console.info('[RemoteTerminalViewer] Raw message received:', msg);
+      // Debug: log all incoming messages via event_received
+      client.on('event_received', (data: ClientEvents['event_received']) => {
+        console.info('[RemoteTerminalViewer] Raw message received:', data.event);
       });
 
       // Add connection error handlers
-      client.on('error' as any, (error: any) => {
-        console.error('[RemoteTerminalViewer] Client error:', error);
-        if (error?.error) {
+      client.on('error', (data: ClientEvents['error']) => {
+        console.error('[RemoteTerminalViewer] Client error:', data);
+        if (data?.error) {
           console.error('[RemoteTerminalViewer] Error details:', {
-            message: error.error.message,
-            code: error.error.code,
-            type: error.error.type,
-            stack: error.error.stack
+            message: data.error.message,
+            stack: data.error.stack
           });
         }
       });
 
-      client.on('disconnect' as any, (reason: any) => {
-        console.info('[RemoteTerminalViewer] Disconnected:', reason);
+      client.on('disconnected', (data: ClientEvents['disconnected']) => {
+        console.info('[RemoteTerminalViewer] Disconnected:', data.reason);
         setStatus('disconnected');
       });
 
@@ -366,24 +377,24 @@ export function RemoteTerminalViewer() {
             reject(new Error('Authentication timeout - no auth_result received'));
           }, 5000);
 
-          const handleAuthenticated = () => {
+          const handleAuthenticated = (_data: ClientEvents['authenticated']) => {
             console.info('[RemoteTerminalViewer] ✅ Authenticated event received');
             clearTimeout(timeout);
-            client.off('authenticated' as any, handleAuthenticated);
-            client.off('authentication_failed' as any, handleAuthFailed);
+            client.off('authenticated', handleAuthenticated);
+            client.off('authentication_failed', handleAuthFailed);
             resolve();
           };
 
-          const handleAuthFailed = (event: any) => {
+          const handleAuthFailed = (event: ClientEvents['authentication_failed']) => {
             console.error('[RemoteTerminalViewer] ❌ Authentication failed event:', event);
             clearTimeout(timeout);
-            client.off('authenticated' as any, handleAuthenticated);
-            client.off('authentication_failed' as any, handleAuthFailed);
+            client.off('authenticated', handleAuthenticated);
+            client.off('authentication_failed', handleAuthFailed);
             reject(new Error(`Authentication failed: ${event?.error || 'Unknown error'}`));
           };
 
-          client.on('authenticated' as any, handleAuthenticated);
-          client.on('authentication_failed' as any, handleAuthFailed);
+          client.on('authenticated', handleAuthenticated);
+          client.on('authentication_failed', handleAuthFailed);
         });
 
         // Send authenticate message
@@ -394,19 +405,18 @@ export function RemoteTerminalViewer() {
           // Wait for auth_result to be processed
           await authPromise;
           console.info('[RemoteTerminalViewer] ✅ Authentication complete');
-        } catch (authError: any) {
+        } catch (authError) {
           console.error('[RemoteTerminalViewer] ❌ Authentication failed:', authError);
-          throw new Error(`Authentication failed: ${authError?.message || 'Unknown error'}`);
+          throw new Error(`Authentication failed: ${authError instanceof Error ? authError.message : 'Unknown error'}`);
         }
 
-      } catch (connectError: any) {
+      } catch (connectError) {
+        const errorObj = connectError instanceof Error ? connectError : new Error(String(connectError));
         console.error('[RemoteTerminalViewer] Connection error details:', {
           url: wsServerUrl,
-          message: connectError?.message,
-          code: connectError?.code,
-          stack: connectError?.stack,
-          name: connectError?.name,
-          fullError: JSON.stringify(connectError, Object.getOwnPropertyNames(connectError), 2)
+          message: errorObj.message,
+          stack: errorObj.stack,
+          name: errorObj.name,
         });
 
         // Log WebSocket readyState if available
@@ -414,15 +424,15 @@ export function RemoteTerminalViewer() {
           console.info('[RemoteTerminalViewer] WebSocket available:', true);
         }
 
-        throw new Error(`Failed to connect to WebSocket server: ${connectError?.message || 'Unknown error'}`);
+        throw new Error(`Failed to connect to WebSocket server: ${errorObj.message}`);
       }
 
       // Join user discovery room
       console.info('[RemoteTerminalViewer] Joining room:', userRoomId);
 
       // Listen for ALL events to debug
-      client.on('message' as any, (msg: any) => {
-        console.info('[RemoteTerminalViewer] 🔍 Received message:', msg);
+      client.on('event_received', (data: ClientEvents['event_received']) => {
+        console.info('[RemoteTerminalViewer] 🔍 Received message:', data.event);
       });
 
       // Listen for room join confirmation
@@ -434,14 +444,14 @@ export function RemoteTerminalViewer() {
         }, 10000); // Increased to 10 seconds
 
         // Listen for join success (correct event name: room_joined with underscore)
-        client.on('room_joined' as any, (event: any) => {
+        client.on('room_joined', (event: ClientEvents['room_joined']) => {
           console.info('[RemoteTerminalViewer] ✅ Room joined event:', event);
           clearTimeout(timeout);
           resolve();
         });
 
         // Listen for join error
-        client.on('error' as any, (event: any) => {
+        client.on('error', (event: ClientEvents['error']) => {
           console.error('[RemoteTerminalViewer] ❌ Error event:', event);
           clearTimeout(timeout);
           reject(new Error(`Failed to join room: ${event?.error?.message || 'Unknown error'}`));
@@ -493,7 +503,7 @@ export function RemoteTerminalViewer() {
       await requestSessionList(client);
       console.info('[RemoteTerminalViewer] Session list requested');
 
-    } catch (err: any) {
+    } catch (err) {
       console.error('[RemoteTerminalViewer] Connection failed:', err);
       throw err;
     }
@@ -504,8 +514,9 @@ export function RemoteTerminalViewer() {
     console.info('[RemoteTerminalViewer] Setting up event handlers');
 
     // Listen for all events via event_received
-    client.on('event_received' as any, (data: any) => {
-      const event = data.event;
+    // Terminal events have custom types not in the base Event schema
+    client.on('event_received', (data: ClientEvents['event_received']) => {
+      const event = data.event as unknown as TerminalEventData;
       console.info('[RemoteTerminalViewer] 📨 Event received:', event.type, event);
 
       // Handle different terminal event types
@@ -519,14 +530,15 @@ export function RemoteTerminalViewer() {
 
         case 'terminal:session_created':
           console.info('[RemoteTerminalViewer] ➕ Session created:', event.data);
-          if (event.data && event.data.session) {
-            setSessions((prev) => [...prev, event.data.session]);
+          if (event.data?.session) {
+            const newSession = event.data.session;
+            setSessions((prev) => [...prev, newSession]);
           }
           break;
 
         case 'terminal:session_destroyed':
           console.info('[RemoteTerminalViewer] ➖ Session destroyed:', event.data);
-          if (event.data && event.data.sessionId) {
+          if (event.data?.sessionId) {
             const sessionId = event.data.sessionId;
             setSessions((prev) => prev.filter((s) => s.sessionId !== sessionId));
 
@@ -544,12 +556,12 @@ export function RemoteTerminalViewer() {
           break;
 
         case 'terminal:data':
-          if (event.data && event.data.sessionId && event.data.data) {
-            const { sessionId, data } = event.data;
+          if (event.data?.sessionId && event.data?.data) {
+            const { sessionId, data: termData } = event.data;
             const attached = attachedTerminals.get(sessionId);
             if (attached) {
               // Decode Base64 data
-              const decoded = atob(data);
+              const decoded = atob(termData);
               attached.terminal.write(decoded);
             }
           }
@@ -558,11 +570,12 @@ export function RemoteTerminalViewer() {
         case 'terminal:ownership_changed':
           console.info('[RemoteTerminalViewer] 🔑 Ownership changed:', event.data);
           // Update session ownership in list
-          if (event.data && event.data.sessionId) {
+          if (event.data?.sessionId) {
+            const eventData = event.data;
             setSessions((prev) =>
               prev.map((session) =>
-                session.sessionId === event.data.sessionId
-                  ? { ...session, owner: event.data.newOwner }
+                session.sessionId === eventData.sessionId
+                  ? { ...session, owner: eventData.newOwner ?? null }
                   : session,
               ),
             );
@@ -571,7 +584,7 @@ export function RemoteTerminalViewer() {
 
         case 'terminal:error':
           console.error('[RemoteTerminalViewer] ❌ Terminal error:', event.data);
-          if (event.data && event.data.error) {
+          if (event.data?.error) {
             setError(event.data.error);
           }
           break;
@@ -585,9 +598,9 @@ export function RemoteTerminalViewer() {
   // Helper to create terminal events with proper structure
   function createTerminalEvent(
     type: TerminalEventType,
-    data: any,
+    data: Record<string, unknown>,
     sessionId?: string,
-  ): any {
+  ): Record<string, unknown> {
     const userId = authInfo?.userId || '';
     const roomId = `terminals:user:${userId}`;
 
@@ -680,9 +693,9 @@ export function RemoteTerminalViewer() {
         return newMap;
       });
 
-    } catch (err: any) {
+    } catch (err) {
       console.error('[RemoteTerminalViewer] Failed to attach:', err);
-      setError(err.message || 'Failed to attach to terminal');
+      setError(err instanceof Error ? err.message : 'Failed to attach to terminal');
     }
   }
 
@@ -731,7 +744,7 @@ export function RemoteTerminalViewer() {
           return newMap;
         });
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('[RemoteTerminalViewer] Failed to detach:', err);
     }
   }
@@ -753,9 +766,9 @@ export function RemoteTerminalViewer() {
       );
       await clientRef.current.broadcast(event as unknown as Event);
 
-    } catch (err: any) {
+    } catch (err) {
       console.error('[RemoteTerminalViewer] Failed to claim ownership:', err);
-      setError(err.message || 'Failed to claim ownership');
+      setError(err instanceof Error ? err.message : 'Failed to claim ownership');
     }
   }
 

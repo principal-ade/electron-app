@@ -20,13 +20,13 @@ interface GitHubRepoInfo {
 }
 
 // Extended context type that includes typed slice properties for SkillsPanelContext
-interface SkillBrowserPanelContext extends PanelContextValue {
+interface SkillBrowserContextValue extends PanelContextValue {
   fileTree: DataSlice<FileTree | null>;
   globalSkills: DataSlice<{ skills: GlobalSkill[] } | null>;
 }
 
 interface SkillBrowserPanelProviderValue {
-  context: SkillBrowserPanelContext;
+  context: SkillBrowserContextValue;
   actions: PanelActions & {
     setFileTree: (tree: FileTree | null) => void;
     setGitHubRepository: (info: GitHubRepoInfo | null) => void;

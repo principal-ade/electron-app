@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
@@ -16,7 +16,7 @@ import { getWorkspaceThemeColor } from '../../themes/predefinedThemes';
 
 interface DeleteAlexandriaEntryModalProps {
   isOpen: boolean;
-  entry: (AlexandriaEntry & { isTracked?: boolean }) | null;
+  entry: (AlexandriaEntry & { isTracked?: boolean; isDiscovered?: boolean }) | null;
   onClose: () => void;
   onConfirm: (deleteLocal: boolean) => Promise<void>;
 }
@@ -28,7 +28,7 @@ export const DeleteAlexandriaEntryModal: React.FC<
 
   // Check if this is a real Alexandria entry (not just a discovered repo)
   // Discovered repos have isDiscovered: true
-  const isAlexandriaEntry = !(entry as any)?.isDiscovered;
+  const isAlexandriaEntry = !entry?.isDiscovered;
 
   const [isDeleting, setIsDeleting] = useState(false);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
@@ -50,11 +50,11 @@ export const DeleteAlexandriaEntryModal: React.FC<
     }
   };
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (!isDeleting) {
       onClose();
     }
-  };
+  }, [isDeleting, onClose]);
 
   // Fetch workspaces when modal opens
   useEffect(() => {
@@ -92,7 +92,7 @@ export const DeleteAlexandriaEntryModal: React.FC<
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, isDeleting]);
+  }, [isOpen, isDeleting, handleClose]);
 
   if (!isOpen || !entry) return null;
 
@@ -349,13 +349,13 @@ export const DeleteAlexandriaEntryModal: React.FC<
               // Try to get GitHub URL from entry
               const getGitHubUrl = (): string | null => {
                 // Try using github metadata first
-                if ((entry as any).github?.owner && (entry as any).github?.name) {
-                  return `https://github.com/${(entry as any).github.owner}/${(entry as any).github.name}`;
+                if (entry?.github?.owner && entry?.github?.name) {
+                  return `https://github.com/${entry.github.owner}/${entry.github.name}`;
                 }
 
                 // Fall back to parsing remoteUrl
-                if ((entry as any).remoteUrl) {
-                  const url = (entry as any).remoteUrl as string;
+                if (entry?.remoteUrl) {
+                  const url = entry.remoteUrl;
                   // Handle https://github.com/owner/repo.git
                   const httpsMatch = url.match(new RegExp('https://github\\.com/([^/]+)/([^/.]+)'));
                   if (httpsMatch) {

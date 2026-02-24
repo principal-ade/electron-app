@@ -276,7 +276,7 @@ export const IntegratedShell: React.FC = () => {
     }
   }, [sidebarCollapsed, activeView, preferencesLoaded]);
 
-  const handleToggleRightSidebar = async () => {
+  const handleToggleRightSidebar = useCallback(async () => {
     const newCollapsed = !rightSidebarCollapsed;
 
     // Update state for current view
@@ -313,7 +313,7 @@ export const IntegratedShell: React.FC = () => {
         console.error('Failed to save right sidebar collapsed state:', error);
       }
     }
-  };
+  }, [rightSidebarCollapsed, activeView, preferencesLoaded, viewCollapsedStates]);
 
   // Handle quick commands from Agent Command Palette
   const handleQuickCommand = useCallback(

@@ -238,11 +238,13 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
-          {(repository as { github?: { owner?: string } }).github?.owner ? (
+          {(() => {
+            const githubOwner = (repository as { github?: { owner?: string } }).github?.owner;
+            return githubOwner ? (
             <>
               <img
-                src={`https://github.com/${(repository as { github?: { owner?: string } }).github!.owner}.png`}
-                alt={`${(repository as { github?: { owner?: string } }).github!.owner} avatar`}
+                src={`https://github.com/${githubOwner}.png`}
+                alt={`${githubOwner} avatar`}
                 style={{
                   width: '32px',
                   height: '32px',
@@ -262,9 +264,10 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
                 style={{ display: 'none' }}
               />
             </>
-          ) : (
-            <FolderGit2 size={20} color={theme.colors.primary} />
-          )}
+            ) : (
+              <FolderGit2 size={20} color={theme.colors.primary} />
+            );
+          })()}
           <h3
             style={{
               margin: 0,

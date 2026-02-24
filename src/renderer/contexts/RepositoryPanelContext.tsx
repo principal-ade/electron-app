@@ -269,7 +269,7 @@ export const RepositoryPanelProvider: React.FC<
 
     // Different number of files?
     if (oldPVFiles.length !== newPVFiles.length) {
-      console.log('[RepositoryPanelContext] .principal-views file count changed:', {
+      console.info('[RepositoryPanelContext] .principal-views file count changed:', {
         old: oldPVFiles.length,
         new: newPVFiles.length,
       });
@@ -281,11 +281,11 @@ export const RepositoryPanelProvider: React.FC<
     for (const newFile of newPVFiles) {
       const oldTime = oldMap.get(newFile.relativePath);
       if (!oldTime) {
-        console.log('[RepositoryPanelContext] .principal-views file added:', newFile.relativePath);
+        console.info('[RepositoryPanelContext] .principal-views file added:', newFile.relativePath);
         return true;
       }
       if (oldTime !== newFile.lastModified.getTime()) {
-        console.log('[RepositoryPanelContext] .principal-views file modified:', newFile.relativePath);
+        console.info('[RepositoryPanelContext] .principal-views file modified:', newFile.relativePath);
         return true;
       }
     }
@@ -294,7 +294,7 @@ export const RepositoryPanelProvider: React.FC<
     const newPaths = new Set(newPVFiles.map(f => f.relativePath));
     for (const oldFile of oldPVFiles) {
       if (!newPaths.has(oldFile.relativePath)) {
-        console.log('[RepositoryPanelContext] .principal-views file removed:', oldFile.relativePath);
+        console.info('[RepositoryPanelContext] .principal-views file removed:', oldFile.relativePath);
         return true;
       }
     }
@@ -610,7 +610,7 @@ export const RepositoryPanelProvider: React.FC<
 
         if (!mounted) return;
 
-        console.log('[RepositoryPanelContext] Registered workspace with LocalRegistry:', {
+        console.info('[RepositoryPanelContext] Registered workspace with LocalRegistry:', {
           scopeNames,
           fileTreeSha: stableFileTreeData.sha,
         });
@@ -622,7 +622,7 @@ export const RepositoryPanelProvider: React.FC<
 
         // Check if .principal-views files changed and invalidate cache for all scope names
         if (hasPrincipalViewsChanges(stableFileTreeData)) {
-          console.log('[RepositoryPanelContext] .principal-views changed, invalidating registry cache');
+          console.info('[RepositoryPanelContext] .principal-views changed, invalidating registry cache');
           for (const scopeName of scopeNames) {
             localRegistry.invalidateCache(scopeName);
           }
@@ -631,7 +631,7 @@ export const RepositoryPanelProvider: React.FC<
         // Fetch all schematics (version snapshots) for registered scopes
         const snapshots = await localRegistry.getAllSnapshotsForRegisteredScopes();
         if (mounted) {
-          console.log('[RepositoryPanelContext] Fetched schematics:', snapshots.length, 'snapshots');
+          console.info('[RepositoryPanelContext] Fetched schematics:', snapshots.length, 'snapshots');
           setSchematicsData(snapshots);
         }
 
@@ -1007,20 +1007,20 @@ export const RepositoryPanelProvider: React.FC<
                 const serviceName = serviceNameAttr?.value?.stringValue || 'unknown';
                 const spans = firstResource?.scopeSpans?.[0]?.spans || [];
 
-                console.group('[TraceProcessing] 📥 BEFORE - Raw OTLP Trace');
+                console.info('[TraceProcessing] 📥 BEFORE - Raw OTLP Trace');
                 console.info('Service Name:', serviceName);
                 console.info('Resource Spans:', resourceSpans.length);
                 console.info('Spans:', spans.length);
                 console.info('Span Names:', spans.map((s: { name: string }) => s.name));
                 console.info('Raw OTLP:', otlpData);
-                console.groupEnd();
+                // End trace logging group
 
                 // Process the trace through TraceOrchestrator
                 try {
                   const registeredTrace = await traceOrchestrator.processTrace(otlpData);
 
                   // Log AFTER: Processed RegisteredTrace
-                  console.group('[TraceProcessing] 📤 AFTER - Processed RegisteredTrace');
+                  console.info('[TraceProcessing] 📤 AFTER - Processed RegisteredTrace');
                   console.info('Trace ID:', registeredTrace.traceId);
                   console.info('Name:', registeredTrace.name);
                   console.info('Duration:', registeredTrace.duration, 'ms');
@@ -1062,7 +1062,7 @@ export const RepositoryPanelProvider: React.FC<
                   if (registeredTrace.validationIssues?.length) {
                     console.warn('Validation Issues:', registeredTrace.validationIssues);
                   }
-                  console.groupEnd();
+                  // End trace logging group
 
                   setTelemetryTraces((prev) => {
                     // Check for duplicates
@@ -1149,7 +1149,7 @@ export const RepositoryPanelProvider: React.FC<
         });
       }
     };
-  }, [traceSourceServiceName]);
+  }, [traceSourceServiceName, traceOrchestrator]);
 
   // Create actions object
   // Note: Terminal actions have been moved to TerminalContext
@@ -1369,7 +1369,7 @@ export const RepositoryPanelProvider: React.FC<
         setTelemetryTraces([]);
       },
     }),
-    [repositoryPath, events],
+    [repositoryPath, events, repository?.name],
   );
 
   // Extract markdown files from file tree

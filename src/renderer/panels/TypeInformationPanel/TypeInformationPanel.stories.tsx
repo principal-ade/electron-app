@@ -9,34 +9,37 @@ import type {
 } from '@principal-ade/panel-framework-core';
 import { TypeInformationPanel } from './TypeInformationPanel';
 
-// Mock event emitter
-class MockEventEmitter implements PanelEventEmitter {
-  private listeners: Map<string, Array<(event: PanelEvent) => void>> = new Map();
+// Mock event emitter for stories
+type EventHandler = (event: PanelEvent<unknown>) => void;
 
-  emit(event: PanelEvent): void {
+class MockEventEmitter implements PanelEventEmitter {
+  private listeners: Map<string, EventHandler[]> = new Map();
+
+  emit<T>(event: PanelEvent<T>): void {
     console.info('[Mock Event]:', event);
     const eventListeners = this.listeners.get(event.type) || [];
-    eventListeners.forEach((listener) => listener(event));
+    eventListeners.forEach((listener) => listener(event as PanelEvent<unknown>));
   }
 
-  on(eventType: string, handler: (event: any) => void): () => void {
+  on<T>(eventType: string, handler: (event: PanelEvent<T>) => void): () => void {
     const listeners = this.listeners.get(eventType) || [];
-    listeners.push(handler);
+    const wrappedHandler = handler as EventHandler;
+    listeners.push(wrappedHandler);
     this.listeners.set(eventType, listeners);
 
     // Return unsubscribe function
     return () => {
       const currentListeners = this.listeners.get(eventType) || [];
-      const index = currentListeners.indexOf(handler);
+      const index = currentListeners.indexOf(wrappedHandler);
       if (index > -1) {
         currentListeners.splice(index, 1);
       }
     };
   }
 
-  off(eventType: string, handler: (event: any) => void): void {
+  off<T>(eventType: string, handler: (event: PanelEvent<T>) => void): void {
     const listeners = this.listeners.get(eventType) || [];
-    const index = listeners.indexOf(handler);
+    const index = listeners.indexOf(handler as EventHandler);
     if (index > -1) {
       listeners.splice(index, 1);
     }
@@ -133,12 +136,12 @@ const MockTypeInformationPanel: React.FC<{
     isSliceLoading: () => false,
     refresh: async () => {},
     clearSlice: () => {},
-  } as any;
+  } as unknown as PanelContextValue;
 
   const mockActions: PanelActions = {
     openFile: async () => {},
     openRepository: async () => {},
-  } as any;
+  } as unknown as PanelActions;
 
   const mockEvents = new MockEventEmitter();
 
@@ -233,9 +236,9 @@ export const LoadingState = {
         isSliceLoading: () => true,
         refresh: async () => {},
         clearSlice: () => {},
-      } as any;
+      } as unknown as PanelContextValue;
 
-      const mockActions: PanelActions = {} as any;
+      const mockActions: PanelActions = {} as unknown as PanelActions;
       const mockEvents = new MockEventEmitter();
 
       return (

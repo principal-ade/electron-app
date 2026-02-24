@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { Bot, Lock, Unlock, Wand2 } from 'lucide-react';
 
 import {
@@ -80,7 +80,7 @@ export const DetailedConfigurationView: React.FC<
     setAgentStatus(initialAgentStatus);
   }, [initialAgentStatus]);
 
-  const checkConfigFile = async () => {
+  const checkConfigFile = useCallback(async () => {
     try {
       // Get the MCP file path for MCP-specific operations
       const mcpPathResult =
@@ -154,7 +154,7 @@ export const DetailedConfigurationView: React.FC<
       setConfigFileExists(false);
       setMcpServers({});
     }
-  };
+  }, [agentType]);
 
   // =========================================================================
   // MCP PROJECT MANAGEMENT
@@ -308,7 +308,7 @@ export const DetailedConfigurationView: React.FC<
     };
     loadMcpFilePath();
     checkConfigFile(); // Also check config file for backwards compatibility
-  }, [agentType]);
+  }, [agentType, checkConfigFile]);
 
   // Load MCP status when view changes to MCP
   React.useEffect(() => {

@@ -33,24 +33,26 @@ export class SessionCollisionDetector {
     sessionLayers.forEach(({ sessionId, readLayer, writeLayer }) => {
       // Process read layer
       readLayer?.items.forEach((item) => {
-        if (!fileOperations.has(item.path)) {
-          fileOperations.set(item.path, new Map());
+        let pathOps = fileOperations.get(item.path);
+        if (!pathOps) {
+          pathOps = new Map();
+          fileOperations.set(item.path, pathOps);
         }
-        const sessionOps =
-          fileOperations.get(item.path)!.get(sessionId) || new Set();
+        const sessionOps = pathOps.get(sessionId) || new Set();
         sessionOps.add('read');
-        fileOperations.get(item.path)!.set(sessionId, sessionOps);
+        pathOps.set(sessionId, sessionOps);
       });
 
       // Process write layer
       writeLayer?.items.forEach((item) => {
-        if (!fileOperations.has(item.path)) {
-          fileOperations.set(item.path, new Map());
+        let pathOps = fileOperations.get(item.path);
+        if (!pathOps) {
+          pathOps = new Map();
+          fileOperations.set(item.path, pathOps);
         }
-        const sessionOps =
-          fileOperations.get(item.path)!.get(sessionId) || new Set();
+        const sessionOps = pathOps.get(sessionId) || new Set();
         sessionOps.add('write');
-        fileOperations.get(item.path)!.set(sessionId, sessionOps);
+        pathOps.set(sessionId, sessionOps);
       });
     });
 

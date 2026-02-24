@@ -1535,7 +1535,6 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
         },
       };
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [events, workspace, repository?.path, repository?.name, terminalContext],
   );
 

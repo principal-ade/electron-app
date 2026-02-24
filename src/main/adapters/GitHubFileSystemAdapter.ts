@@ -274,8 +274,9 @@ export class GitHubFileSystemAdapter implements FileSystemAdapter {
    */
   private async getFileFromGitHub(filePath: string): Promise<{ content: string; sha: string }> {
     // Check cache first
-    if (this.fileCache.has(filePath)) {
-      return this.fileCache.get(filePath)!;
+    const cached = this.fileCache.get(filePath);
+    if (cached) {
+      return cached;
     }
 
     const token = await authService.getValidToken();

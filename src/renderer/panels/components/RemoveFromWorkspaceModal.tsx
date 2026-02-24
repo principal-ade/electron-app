@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useTheme } from '@principal-ade/industry-theme';
 import { X, FolderMinus, FolderOutput, AlertCircle, AlertTriangle } from 'lucide-react';
@@ -91,12 +91,12 @@ export const RemoveFromWorkspaceModal: React.FC<
     }
   };
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (!isRemoving) {
       setMoveToDefault(false);
       onClose();
     }
-  };
+  }, [isRemoving, onClose]);
 
   // Handle ESC key
   useEffect(() => {
@@ -110,7 +110,7 @@ export const RemoveFromWorkspaceModal: React.FC<
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, isRemoving]);
+  }, [isOpen, isRemoving, handleClose]);
 
   if (!isOpen || !entry || !workspace) return null;
 
