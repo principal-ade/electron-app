@@ -105,11 +105,12 @@ const setupAppVersionHandler = () => {
 };
 
 // Setup OTEL endpoint handler
+// Send directly to wrapper port (bypasses Go collector)
 const setupOtelEndpointHandler = () => {
   const getOtelEndpoint = () => {
     const isDev = !app.isPackaged;
-    const otlpPort = parseInt(process.env.OTEL_OTLP_PORT || (isDev ? '14318' : '4318'), 10);
-    return `http://localhost:${otlpPort}`;
+    const wrapperPort = parseInt(process.env.OTEL_WRAPPER_PORT || (isDev ? '14319' : '4319'), 10);
+    return `http://localhost:${wrapperPort}`;
   };
 
   // Sync handler for sendSync() (used by preload for telemetry)

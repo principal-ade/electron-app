@@ -57,12 +57,14 @@ export class OtelCollectorService {
       const isDev = !app.isPackaged;
       const otlpPort = parseInt(process.env.OTEL_OTLP_PORT || (isDev ? '14318' : '4318'), 10);
       const wrapperPort = parseInt(process.env.OTEL_WRAPPER_PORT || (isDev ? '14319' : '4319'), 10);
+      const collectorPort = parseInt(process.env.OTEL_COLLECTOR_PORT || (isDev ? '14320' : '4320'), 10);
 
       // Create server instance
       this.server = new OTELCollectorServer({
         mode: 'electron',
         otlpPort,
         wrapperPort,
+        collectorPort,
         binaryPath,
         logLevel: 'info',
         restartOnCrash: true,

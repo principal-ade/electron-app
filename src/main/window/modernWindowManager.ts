@@ -14,6 +14,7 @@ import {
 import path from 'path';
 import log from 'electron-log';
 import { resolveHtmlPath } from '../util';
+import { getTracer } from '../telemetry';
 import { ElectronFileSystemAdapter } from '../file-system/fileSystemHandlers';
 import { ElectronWindowManagerAdapter } from './windowManagerHandlers';
 import { GitHubAdapter } from '../version-control-providers/githubHandlers';
@@ -62,6 +63,15 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
     customFeatures?: Partial<WindowFeatures>,
     metadata?: WindowMetadata,
   ) {
+    const tracer = getTracer('window-manager');
+    const constructorSpan = tracer.startSpan('window.constructor', {
+      attributes: {
+        'window.type': windowType,
+        'window.primaryType': metadata?.primaryType ?? PrimaryWindowType.UNKNOWN,
+        'window.displayName': metadata?.displayName ?? 'Untitled Window',
+      },
+    });
+
     // Determine features for this window
     this.features = {
       ...WINDOW_FEATURES[windowType],
@@ -121,6 +131,7 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
     // Create the window
     this.window = new BrowserWindow(mergedOptions);
 
+    constructorSpan.setAttribute('window.id', this.window.id);
     console.log(`[ModernWindow] Window created with ID: ${this.window.id}`);
 
     // Setup behaviors FIRST (includes ready-to-show handler)
@@ -128,6 +139,9 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
 
     // Track the window
     applicationWindows.set(this.window.id, this);
+
+    // End constructor span - window is created and tracked
+    constructorSpan.end();
 
     // Initialize features AFTER basic setup
     // For windows with adapters, delay initialization slightly to ensure renderer is ready
@@ -568,9 +582,18 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
   }
 
   private setupWindowBehaviors(): void {
+    const windowId = this.window.id;
+    const tracer = getTracer('window-manager');
+
     // Prevent white flash
     this.window.once('ready-to-show', () => {
+      const showSpan = tracer.startSpan('window.ready-to-show', {
+        attributes: {
+          'window.id': windowId,
+        },
+      });
       this.window.show();
+      showSpan.end();
 
       // Skip maximize - window already starts at full size
       // if (this.features.maximizeOnShow) {
@@ -673,8 +696,16 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
 export async function createWindow(
   options?: BrowserWindowConstructorOptions,
 ): Promise<ModernApplicationWindow | null> {
+  const tracer = getTracer('window-manager');
   const isMainWindow = !options || Object.keys(options).length === 0;
   const windowType = isMainWindow ? 'main' : 'secondary';
+
+  const span = tracer.startSpan('window.create', {
+    attributes: {
+      'window.type': windowType,
+      'window.isMain': isMainWindow,
+    },
+  });
 
   console.log(`[ModernWindow] Creating ${windowType} window`);
 
@@ -696,6 +727,8 @@ export async function createWindow(
       undefined,
       metadata,
     );
+
+    span.setAttribute('window.id', appWindow.window.id);
 
     // Track main window ID
     if (isMainWindow) {
@@ -721,8 +754,11 @@ export async function createWindow(
       }
     }
 
+    span.end();
     return appWindow;
   } catch (error) {
+    span.recordException(error as Error);
+    span.end();
     console.error('[ModernWindow] Failed to create window:', error);
     return null;
   }
@@ -737,11 +773,21 @@ export function createSpecialWindow(
   features?: Partial<WindowFeatures>,
   metadata?: WindowMetadata,
 ): IModernApplicationWindow | null {
+  const tracer = getTracer('window-manager');
+  const span = tracer.startSpan('window.createSpecial', {
+    attributes: {
+      'window.purpose': purpose,
+    },
+  });
+
   // Check if window already exists
   const existingId = specialWindows.get(purpose);
   if (existingId) {
     const existing = applicationWindows.get(existingId);
     if (existing && !existing.window.isDestroyed()) {
+      span.setAttribute('window.reused', true);
+      span.setAttribute('window.id', existingId);
+      span.end();
       existing.window.focus();
       if (existing.window.isMinimized()) {
         existing.window.restore();
@@ -761,6 +807,7 @@ export function createSpecialWindow(
       features?.githubAdapter;
 
     const windowType = hasAdapters ? 'secondary' : 'minimal';
+    span.setAttribute('window.type', windowType);
 
     console.log(
       `[ModernWindow] Creating special window '${purpose}' with type '${windowType}'`,
@@ -780,6 +827,8 @@ export function createSpecialWindow(
       windowMetadata,
     );
 
+    span.setAttribute('window.id', appWindow.id);
+
     // DON'T load any URL here - let the handler do it after window is ready
     // This avoids race conditions with adapter initialization
     console.log(
@@ -787,8 +836,11 @@ export function createSpecialWindow(
     );
 
     specialWindows.set(purpose, appWindow.id);
+    span.end();
     return appWindow;
   } catch (error) {
+    span.recordException(error as Error);
+    span.end();
     console.error(
       `[ModernWindow] Failed to create special window ${purpose}:`,
       error,

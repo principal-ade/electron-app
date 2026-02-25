@@ -101,6 +101,17 @@ try {
   console.error('[Preload-DevWorkspace] ❌ Failed to expose appName:', error);
 }
 
+// Expose OTEL collector endpoint for telemetry
+try {
+  const otelEndpoint = ipcRenderer.sendSync('get-otel-endpoint');
+  contextBridge.exposeInMainWorld('otelCollectorEndpoint', otelEndpoint);
+  console.info('[Preload-DevWorkspace] ✅ OTEL Endpoint exposed:', otelEndpoint);
+} catch (error) {
+  console.error('[Preload-DevWorkspace] ❌ Failed to expose OTEL endpoint:', error);
+  // Fallback to dev wrapper port
+  contextBridge.exposeInMainWorld('otelCollectorEndpoint', 'http://localhost:14319');
+}
+
 // ============================================
 // TIPC Support + Terminal MessagePort Management
 // ============================================

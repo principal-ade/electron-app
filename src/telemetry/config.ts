@@ -41,7 +41,7 @@ export interface TelemetryConfig {
 
 /**
  * Get the OTLP endpoint based on environment
- * Dev instances use port 14318, production uses 4318
+ * Sends directly to wrapper port: dev uses 14319, production uses 4319
  */
 function getCollectorEndpoint(): string {
   // In renderer process, use the endpoint exposed by preload script
@@ -55,19 +55,20 @@ function getCollectorEndpoint(): string {
   }
 
   // In main process, auto-detect dev vs production
+  // Send directly to wrapper port (bypasses Go collector)
   if (typeof process !== 'undefined' && process.type === 'browser') {
     try {
       const { app } = require('electron');
       const isDev = !app.isPackaged;
-      return `http://localhost:${isDev ? '14318' : '4318'}`;
+      return `http://localhost:${isDev ? '14319' : '4319'}`;
     } catch {
       // Fallback if electron not available
-      return 'http://localhost:4318';
+      return 'http://localhost:4319';
     }
   }
 
   // Final fallback
-  return 'http://localhost:4318';
+  return 'http://localhost:4319';
 }
 
 export const defaultTelemetryConfig: TelemetryConfig = {

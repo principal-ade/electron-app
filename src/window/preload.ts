@@ -257,8 +257,8 @@ try {
   console.info('[Preload] ✅ OTEL Endpoint exposed:', otelEndpoint);
 } catch (error) {
   console.error('[Preload] ❌ Failed to expose OTEL endpoint:', error);
-  // Fallback to default
-  contextBridge.exposeInMainWorld('otelCollectorEndpoint', 'http://localhost:4318');
+  // Fallback to dev wrapper port
+  contextBridge.exposeInMainWorld('otelCollectorEndpoint', 'http://localhost:14319');
 }
 
 // ============================================
