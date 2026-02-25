@@ -4,6 +4,7 @@ import React, {
   useMemo,
   useState,
   useEffect,
+  useCallback,
   type ReactNode,
 } from 'react';
 import type { Theme } from '@principal-ade/industry-theme';
@@ -373,7 +374,7 @@ export const ProjectsPanelProvider: React.FC<
   }, [localRepositories, baseDefaultDirectory]); // Re-run when local repos change to update discovered list
 
   // Fetch GitHub starred repositories
-  const fetchStarredRepositories = async () => {
+  const fetchStarredRepositories = useCallback(async () => {
     setStarredLoading(true);
     setStarredError(undefined);
     try {
@@ -397,10 +398,10 @@ export const ProjectsPanelProvider: React.FC<
     } finally {
       setStarredLoading(false);
     }
-  };
+  }, []);
 
   // Fetch GitHub projects (user repos + org repos)
-  const fetchGitHubProjects = async () => {
+  const fetchGitHubProjects = useCallback(async () => {
     setProjectsLoading(true);
     setProjectsError(undefined);
     try {
@@ -465,10 +466,10 @@ export const ProjectsPanelProvider: React.FC<
     } finally {
       setProjectsLoading(false);
     }
-  };
+  }, []);
 
   // Fetch user collections
-  const fetchCollections = async () => {
+  const fetchCollections = useCallback(async () => {
     setCollectionsLoading(true);
     setCollectionsError(undefined);
     try {
@@ -502,14 +503,14 @@ export const ProjectsPanelProvider: React.FC<
     } finally {
       setCollectionsLoading(false);
     }
-  };
+  }, []);
 
   // Fetch GitHub data on mount (these will silently fail if not authenticated)
   useEffect(() => {
     void fetchStarredRepositories();
     void fetchGitHubProjects();
     void fetchCollections();
-  }, []);
+  }, [fetchStarredRepositories, fetchGitHubProjects, fetchCollections]);
 
   // Listen for workspace changes from other parts of the app
   useEffect(() => {
@@ -1459,7 +1460,7 @@ export const ProjectsPanelProvider: React.FC<
         window.open(url, '_blank');
       },
     }),
-    [events, selectedWorkspace, localRepositories],
+    [events, selectedWorkspace, localRepositories, fetchStarredRepositories, fetchGitHubProjects, fetchCollections],
   );
 
   // Create context value following web-ade pattern

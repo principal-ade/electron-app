@@ -139,7 +139,7 @@ export default [{
   files: ['**/*.{ts,tsx}'],
   rules: {
     'max-lines': ['error', {
-      max: 800,
+      max: 3000,
       skipBlankLines: true,
       skipComments: true,
     }],

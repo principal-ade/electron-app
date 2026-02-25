@@ -4,6 +4,7 @@ import path from 'path';
 import { registerIpcMain } from '@egoist/tipc/main';
 import { initializeStorage } from './stores/initialization';
 import { terminalRouter } from './terminal/tipc';
+import { githubRouter } from './github/tipc';
 // import { AgentSessionEventsHttpBridge } from './agent-session-events/AgentSessionEventsHttpBridge';
 import {
   startEventServer,
@@ -288,9 +289,11 @@ const setupTerminalManager = () => {
 
 // Main initialization function
 export const initializeServices = async () => {
-  // Register TIPC terminal router (type-safe RPC for terminal operations)
+  // Register TIPC routers (type-safe RPC)
   registerIpcMain(terminalRouter);
   console.log('[Main Process] TIPC terminal router registered');
+  registerIpcMain(githubRouter);
+  console.log('[Main Process] TIPC github router registered');
 
   // Setup basic IPC handlers
   setupAppVersionHandler();

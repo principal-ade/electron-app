@@ -425,7 +425,8 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
       name: 'userProfile',
       data: {
         user: selectedUserProfile.user,
-        organizations: selectedUserProfile.organizations,
+        collections: [], // Collections managed by ProjectsPanelContext
+        repositories: [], // Repositories managed by ProjectsPanelContext
         starredRepositories: selectedUserProfile.starredRepositories,
         presence: selectedUserProfile.presence,
         loading: selectedUserLoading,

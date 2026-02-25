@@ -234,6 +234,7 @@ export function RemoteTerminalViewer() {
         clientRef.current = null;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Run only on mount; cleanup uses stale closure intentionally for unmount cleanup
   }, []);
 
   // Connect to user discovery room via WebSocket

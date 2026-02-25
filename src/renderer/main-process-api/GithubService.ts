@@ -4,8 +4,6 @@ import type {
   GitHubOrganization,
   GitHubUser,
   TokenInfo,
-  GitHubPullRequest,
-  CreateIssueRequest,
   SSHKeysResponse,
   GitHubOrgMember,
   CreateRepositoryInput,
@@ -15,63 +13,19 @@ import type {
   ForkRepositoryOptions,
   InstallSkillOptions,
   InstallSkillResult,
-  GitHubCommit,
 } from '../../shared/main-process-api-interfaces/GitHubAPI';
+import { githubClient } from '../tipc/githubClient';
+
+// DELETED: detectRepository - unused (0 calls)
+// DELETED: fetchConfigFromGitHub - unused (0 calls)
+// DELETED: fetchRemoteConfig - unused (0 calls)
+// DELETED: getIssues - unused (0 calls)
+// DELETED: getPullRequests - unused (0 calls)
+// DELETED: createIssue - unused (0 calls)
 
 export class GithubService {
-  static async detectRepository(path: string) {
-    const result = await window.mainProcess.github.detectRepository(path);
-    return result;
-  }
-
-  static async fetchConfigFromGitHub(
-    owner: string,
-    repo: string,
-    branch: string,
-    path: string,
-  ) {
-    const result = await window.mainProcess.github.fetchGitHubConfig({
-      owner,
-      repo,
-      branch,
-      path,
-    });
-    return result;
-  }
-
   static async getTree(owner: string, repo: string, branch: string) {
     const result = await window.mainProcess.github.getTree(owner, repo, branch);
-    return result;
-  }
-
-  static async fetchRemoteConfig(url: string) {
-    const result = await window.mainProcess.github.fetchRemoteConfig({ url });
-    return result;
-  }
-
-  static async getIssues(owner: string, repo: string) {
-    const result = await window.mainProcess.github.getIssues(owner, repo);
-    return result || [];
-  }
-
-  static async getPullRequests(
-    owner: string,
-    repo: string,
-  ): Promise<GitHubPullRequest[]> {
-    const result = await window.mainProcess.github.getPullRequests(owner, repo);
-    return result || [];
-  }
-
-  static async createIssue(
-    owner: string,
-    repo: string,
-    issue: CreateIssueRequest,
-  ) {
-    const result = await window.mainProcess.github.createIssue(
-      owner,
-      repo,
-      issue,
-    );
     return result;
   }
 
@@ -90,23 +44,21 @@ export class GithubService {
     return result;
   }
 
-  static async checkAuthStatus() {
-    const result = await window.mainProcess.github.checkAuthStatus();
-    return result;
-  }
+  // DELETED: checkAuthStatus - unused (0 calls)
 
   static async getUserRepositories(
     options?: RepositoryFetchOptions,
   ): Promise<GitHubRepository[]> {
-    const result = await window.mainProcess.github.getUserRepositories(options);
+    // TIPC migration: using type-safe githubClient
+    const result = await githubClient.getUserRepositories({ options });
     return result || [];
   }
 
   static async getUserStarredRepositories(
     options?: RepositoryFetchOptions,
   ): Promise<GitHubRepository[]> {
-    const result =
-      await window.mainProcess.github.getUserStarredRepositories(options);
+    // TIPC migration: using type-safe githubClient
+    const result = await githubClient.getUserStarredRepositories({ options });
     return result || [];
   }
 
@@ -114,25 +66,22 @@ export class GithubService {
     org: string,
     options?: RepositoryFetchOptions,
   ): Promise<GitHubRepository[]> {
-    const result = await window.mainProcess.github.getOrgRepositories(
-      org,
-      options,
-    );
+    // TIPC migration: using type-safe githubClient
+    const result = await githubClient.getOrgRepositories({ org, options });
     return result || [];
   }
 
   static async getUserOrganizations(): Promise<GitHubOrganization[]> {
-    const result = await window.mainProcess.github.getUserOrganizations();
+    // TIPC migration: using type-safe githubClient
+    const result = await githubClient.getUserOrganizations();
     return result || [];
   }
 
-  static async getTokenScopes(): Promise<string[]> {
-    const result = await window.mainProcess.github.getTokenScopes();
-    return result || [];
-  }
+  // DELETED: getTokenScopes - unused (0 calls)
 
   static async getCurrentUser(): Promise<GitHubUser | null> {
-    const result = await window.mainProcess.github.getCurrentUser();
+    // TIPC migration: using type-safe githubClient
+    const result = await githubClient.getCurrentUser();
     return result;
   }
 
@@ -146,18 +95,7 @@ export class GithubService {
     return result;
   }
 
-  static async getRepositoryCommits(
-    owner: string,
-    repo: string,
-    options?: { perPage?: number; page?: number },
-  ): Promise<GitHubCommit[]> {
-    const result = await window.mainProcess.github.getRepositoryCommits(
-      owner,
-      repo,
-      options,
-    );
-    return result || [];
-  }
+  // DELETED: getRepositoryCommits - unused (0 calls)
 
   static async getUserFollowers(username?: string): Promise<GitHubUser[]> {
     const result = await window.mainProcess.github.getUserFollowers(username);

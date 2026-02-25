@@ -9,9 +9,8 @@ import { UnifiedSecureStorage } from '../services/UnifiedSecureStorage';
 import { authService } from '../services/AuthService';
 import {
   GitHubAPIEvent,
-  ConfigFetchRequest,
-  ConfigFetchResponse,
-  GitHubConfigRequest,
+  // DELETED: ConfigFetchRequest, ConfigFetchResponse, GitHubConfigRequest - unused after handler removal
+  // DELETED: CreateIssueRequest, CreateIssueResponse, GitHubIssue, GitHubPullRequest, GitHubCommit - unused after adapter method removal
   GitHubRepository,
   GitHubOrganization,
   RepositoryFetchOptions,
@@ -20,15 +19,10 @@ import {
   GitHubLicenseTemplate,
   InstallSkillOptions,
   InstallSkillResult,
-  CreateIssueRequest,
-  CreateIssueResponse,
   GitHubUser,
   GitHubSSHKey,
   SSHKeysResponse,
   ForkRepositoryOptions,
-  GitHubIssue,
-  GitHubPullRequest,
-  GitHubCommit,
   GitHubOrgMember,
   GitHubRepositoryWithPermissions,
 } from '../../shared/main-process-api-interfaces/GitHubAPI';
@@ -83,8 +77,6 @@ type GitHubAPIRequestBody = unknown;
 type GitHubAPIResponseData = unknown;
 /** HTTP response headers as key-value pairs */
 type GitHubAPIResponseHeaders = Record<string, string>;
-/** Raw API response object from GitHub (before type validation) */
-type RawGitHubAPIResponse = Record<string, unknown>;
 
 /** Raw GitHub API repository response (before mapping to our types) */
 interface RawGitHubRepositoryResponse {
@@ -161,7 +153,7 @@ interface MarkdownDocumentFile {
 }
 
 /** GitHub API tree response */
-interface GitHubTreeResponse {
+export interface GitHubTreeResponse {
   sha: string;
   url: string;
   tree: Array<{
@@ -323,159 +315,9 @@ export class GitHubAdapter {
     }
   }
 
-  // Git repository detection
-  async detectRepository(
-    directoryPath: string,
-  ): Promise<GitRepositoryInfo | null> {
-    console.log(`[GitHub] Detecting repository for: ${directoryPath}`);
+  // DELETED: detectRepository, getGitRemotes, parseGitRemoteUrl - unused (0 calls)
 
-    try {
-      // Check if .git directory exists
-      const gitPath = path.join(directoryPath, '.git');
-      if (!fs.existsSync(gitPath)) {
-        console.log(`[GitHub] No .git directory found in ${directoryPath}`);
-        return null;
-      }
-
-      // Get git remotes
-      const remotes = await this.getGitRemotes(directoryPath);
-      const githubRemote = remotes.find((remote) => remote.isGitHub);
-
-      // Get current branch
-      const branchResult = await this.executeCommand(
-        ['git', 'branch', '--show-current'],
-        { cwd: directoryPath },
-      );
-      const currentBranch = branchResult.success
-        ? branchResult.stdout.trim()
-        : undefined;
-
-      // Get default branch (try to get from remote)
-      let defaultBranch: string | undefined;
-      if (githubRemote) {
-        const defaultBranchResult = await this.executeCommand(
-          ['git', 'symbolic-ref', 'refs/remotes/origin/HEAD'],
-          { cwd: directoryPath },
-        );
-        if (defaultBranchResult.success) {
-          defaultBranch = defaultBranchResult.stdout
-            .trim()
-            .replace('refs/remotes/origin/', '');
-        }
-      }
-
-      const result: GitRepositoryInfo = {
-        path: directoryPath,
-        isGitRepository: true,
-        remotes,
-        isGitHub: !!githubRemote,
-        owner: githubRemote?.owner,
-        repo: githubRemote?.repo,
-        currentBranch,
-        defaultBranch,
-      };
-
-      console.log(`[GitHub] Repository detected:`, result);
-      return result;
-    } catch (error) {
-      console.error(`[GitHub] Error detecting repository:`, error);
-      return null;
-    }
-  }
-
-  private async getGitRemotes(directoryPath: string): Promise<GitRemoteInfo[]> {
-    const result = await this.executeCommand(['git', 'remote', '-v'], {
-      cwd: directoryPath,
-    });
-    if (!result.success) {
-      return [];
-    }
-
-    const remotes: GitRemoteInfo[] = [];
-    const lines = result.stdout.split('\n').filter((line) => line.trim());
-
-    for (const line of lines) {
-      const match = line.match(/^(\w+)\s+(.+?)\s+\(fetch\)$/);
-      if (match) {
-        const [, name, url] = match;
-        const remote = this.parseGitRemoteUrl(name, url);
-        if (!remotes.find((r) => r.name === remote.name)) {
-          remotes.push(remote);
-        }
-      }
-    }
-
-    return remotes;
-  }
-
-  private parseGitRemoteUrl(name: string, url: string): GitRemoteInfo {
-    const remote: GitRemoteInfo = {
-      name,
-      url,
-      isGitHub: false,
-      provider: 'other',
-    };
-
-    // Parse GitHub URLs
-    const githubPatterns = [
-      /github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?$/,
-      /^https?:\/\/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?$/,
-    ];
-
-    for (const pattern of githubPatterns) {
-      const match = url.match(pattern);
-      if (match) {
-        remote.owner = match[1];
-        remote.repo = match[2];
-        remote.isGitHub = true;
-        remote.provider = 'github';
-        break;
-      }
-    }
-
-    return remote;
-  }
-
-  // GitHub CLI operations
-  async checkAuthStatus(): Promise<AuthStatus> {
-    try {
-      // First, check if gh cli is logged in
-      const authStatusResult = await this.executeCommand([
-        'gh',
-        'auth',
-        'status',
-      ]);
-
-      if (!authStatusResult.success) {
-        return { isAuthenticated: false, method: 'none' };
-      }
-
-      // Then, make a test API call to verify the token is valid
-      const userResult = await this.executeCommand(['gh', 'api', 'user']);
-
-      if (userResult.success) {
-        const userMatch = authStatusResult.stderr.match(
-          /Logged in to github\.com as ([^\s]+)/,
-        );
-        return {
-          isAuthenticated: true,
-          method: 'cli',
-          username: userMatch?.[1],
-        };
-      }
-
-      // If the user call fails, the token is likely invalid
-      console.warn('[GitHub] CLI auth check passed, but token is invalid.');
-      return { isAuthenticated: false, method: 'none' };
-    } catch (error) {
-      console.log(`[GitHub] CLI auth check failed:`, error);
-    }
-
-    return {
-      isAuthenticated: false,
-      method: 'none',
-    };
-  }
+  // DELETED: checkAuthStatus - unused (0 calls)
 
   async refreshData(owner: string, repo: string): Promise<void> {
     console.log(`[GitHub] Refreshing data for ${owner}/${repo}`);
@@ -1181,102 +1023,8 @@ export class GitHubAdapter {
   }
 
 
-  // Create a new GitHub issue
-  async createIssue(owner: string, repo: string, issue: CreateIssueRequest): Promise<CreateIssueResponse> {
-    console.log(`[GitHub] Creating issue for ${owner}/${repo}`, issue);
+  // DELETED: createIssue - unused (0 calls)
 
-    try {
-      // Try using gh CLI which handles authentication
-      const issueData = {
-        title: issue.title,
-        body: issue.body || '',
-        labels: issue.labels?.join(',') || '',
-        assignees: issue.assignees?.join(',') || '',
-      };
-
-      // Build gh command args
-      const args = [
-        'gh',
-        'issue',
-        'create',
-        '--repo',
-        `${owner}/${repo}`,
-        '--title',
-        issueData.title,
-      ];
-
-      if (issueData.body) {
-        args.push('--body', issueData.body);
-      }
-
-      if (issueData.labels) {
-        args.push('--label', issueData.labels);
-      }
-
-      if (issueData.assignees) {
-        args.push('--assignee', issueData.assignees);
-      }
-
-      const result = await this.executeCommand(args);
-
-      if (result.success && result.stdout) {
-        // Extract issue URL from output
-        const urlMatch = result.stdout.match(
-          /https:\/\/github\.com\/[^/]+\/[^/]+\/issues\/\d+/,
-        );
-        const numberMatch = result.stdout.match(/\/issues\/(\d+)/);
-
-        if (urlMatch && numberMatch) {
-          // Fetch the created issue details
-          const issueNumber = numberMatch[1];
-          const fetchResult = await this.executeCommand([
-            'gh',
-            'api',
-            `/repos/${owner}/${repo}/issues/${issueNumber}`,
-          ]);
-
-          if (fetchResult.success && fetchResult.stdout) {
-            const createdIssue = JSON.parse(fetchResult.stdout);
-            return {
-              success: true,
-              issue: createdIssue,
-            };
-          }
-        }
-
-        return {
-          success: true,
-          issue: {
-            html_url: urlMatch ? urlMatch[0] : '',
-            title: issue.title,
-          } as GitHubIssue,
-        };
-      } else if (
-        result.stderr?.includes('authentication') ||
-        result.stderr?.includes('401')
-      ) {
-        return {
-          success: false,
-          error:
-            'GitHub CLI authentication required. Please run "gh auth login" in your terminal.',
-        };
-      } else {
-        return {
-          success: false,
-          error: result.stderr || 'Failed to create issue',
-        };
-      }
-    } catch (error) {
-      console.error('[GitHub] Error creating issue:', error);
-      return {
-        success: false,
-        error:
-          error instanceof Error ? error.message : 'Failed to create issue',
-      };
-    }
-  }
-
-  // Fetch GitHub issues
   // Get user's repositories from GitHub
   async getUserRepositories(
     options?: RepositoryFetchOptions,
@@ -1751,401 +1499,9 @@ export class GitHubAdapter {
     }
   }
 
-  async getIssues(owner: string, repo: string): Promise<GitHubIssue[]> {
-    console.log(`[GitHub] Fetching issues for ${owner}/${repo}`);
-
-    // First, try using gh CLI which handles authentication for private repos
-    let cliAuthError = false;
-    try {
-      const ghResult = await this.executeCommand([
-        'gh',
-        'api',
-        `/repos/${owner}/${repo}/issues`,
-        '--method',
-        'GET',
-        '--field',
-        'state=all',
-        '--field',
-        'per_page=100',
-        '--jq',
-        '.[] | select(.pull_request == null)',
-      ]);
-
-      if (ghResult.success && ghResult.stdout.trim()) {
-        // Parse the JSON Lines output (one JSON object per line)
-        const issues = ghResult.stdout
-          .split('\n')
-          .filter((line) => line.trim())
-          .map((line) => {
-            try {
-              return JSON.parse(line);
-            } catch {
-              console.warn('[GitHub] Failed to parse line:', line);
-              return null;
-            }
-          })
-          .filter(Boolean);
-
-        console.log(
-          `[GitHub] Successfully fetched ${issues.length} issues via gh CLI`,
-        );
-        return issues;
-      } else if (
-        ghResult.stderr?.includes('authentication') ||
-        ghResult.stderr?.includes('401')
-      ) {
-        // gh CLI is not authenticated
-        cliAuthError = true;
-        console.log(
-          '[GitHub] gh CLI not authenticated, will attempt token-based API fallback',
-        );
-      } else {
-        console.warn('[GitHub] gh CLI failed, falling back to HTTPS API', {
-          stderr: ghResult.stderr,
-        });
-      }
-    } catch (error) {
-      console.warn('[GitHub] gh CLI error, falling back to HTTPS API:', error);
-    }
-
-    // Try token-based API using stored credentials
-    const apiEndpoint = `/repos/${owner}/${repo}/issues?state=all&per_page=100`;
-    const apiResult = await this.makeGitHubAPICall(apiEndpoint);
-
-    if (apiResult.success && Array.isArray(apiResult.data)) {
-      const issues = (
-        apiResult.data as Array<{ pull_request?: unknown }>
-      ).filter((issue) => !issue.pull_request) as GitHubIssue[];
-      console.log(
-        `[GitHub] Successfully fetched ${issues.length} issues via token-based API`,
-      );
-      return issues;
-    }
-
-    if (apiResult.status === 404) {
-      console.warn('[GitHub] Repository is private or not found (404) via API - authentication required');
-      return [];
-    }
-
-    if (apiResult.status === 403) {
-      console.warn('[GitHub] API rate limit or permissions issue (403) via token');
-      return [];
-    }
-
-    if (!apiResult.success && apiResult.error) {
-      console.warn('[GitHub] Token-based API request failed', {
-        error: apiResult.error,
-        status: apiResult.status,
-      });
-    }
-
-    if (cliAuthError) {
-      console.log(
-        '[GitHub] gh CLI authentication required and token-based API unavailable',
-      );
-      console.warn('[GitHub] GitHub authentication required');
-      return [];
-    }
-
-    // Fallback to HTTPS API for public repos
-    console.log(
-      '[GitHub] Attempting to fetch issues via HTTPS API (public repos only)',
-    );
-    const https = require('https');
-
-    return new Promise((resolve) => {
-      const options = {
-        hostname: 'api.github.com',
-        path: `/repos/${owner}/${repo}/issues?state=all&per_page=100`,
-        method: 'GET',
-        headers: {
-          Accept: 'application/vnd.github.v3+json',
-          'User-Agent': 'Principal-AI',
-        },
-      };
-
-      const req = https.request(options, (res: IncomingMessage) => {
-        let data = '';
-
-        res.on('data', (chunk: Buffer) => {
-          data += chunk;
-        });
-
-        res.on('end', () => {
-          if (res.statusCode === 200) {
-            try {
-              const issues = JSON.parse(data);
-              // Filter out pull requests (they have pull_request property)
-              const issuesOnly = issues.filter(
-                (issue: RawGitHubAPIResponse) => !issue.pull_request,
-              );
-              console.log(
-                `[GitHub] Found ${issuesOnly.length} issues via HTTPS`,
-              );
-              resolve(issuesOnly);
-            } catch (error) {
-              console.error('[GitHub] Failed to parse issues response:', error);
-              resolve([]);
-            }
-          } else if (res.statusCode === 404) {
-            // Repository not found or is private
-            console.warn('[GitHub] Repository is private or not found (404)');
-            resolve([]);
-          } else if (res.statusCode === 403) {
-            // Rate limited
-            console.warn('[GitHub] API rate limit exceeded');
-            resolve([]);
-          } else {
-            console.error(`[GitHub] Failed to fetch issues: ${res.statusCode}`);
-            resolve([]);
-          }
-        });
-      });
-
-      req.on('error', (error: unknown) => {
-        console.error('[GitHub] Error fetching issues:', error);
-        resolve([]);
-      });
-
-      req.end();
-    });
-  }
-
-  async getPullRequests(owner: string, repo: string): Promise<GitHubPullRequest[]> {
-    console.log(`[GitHub] Fetching pull requests for ${owner}/${repo}`);
-
-    try {
-      const ghResult = await this.executeCommand([
-        'gh',
-        'api',
-        `/repos/${owner}/${repo}/pulls`,
-        '--method',
-        'GET',
-        '--field',
-        'state=all',
-        '--field',
-        'per_page=100',
-      ]);
-
-      if (ghResult.success && ghResult.stdout.trim()) {
-        try {
-          const pullRequests = JSON.parse(ghResult.stdout);
-          if (Array.isArray(pullRequests)) {
-            console.log(
-              `[GitHub] Successfully fetched ${pullRequests.length} pull requests via gh CLI`,
-            );
-            return pullRequests;
-          }
-        } catch (error) {
-          console.warn('[GitHub] Failed to parse gh CLI pull requests output', {
-            error,
-            stdoutSample: ghResult.stdout.slice(0, 200),
-          });
-        }
-      } else if (
-        ghResult.stderr?.includes('authentication') ||
-        ghResult.stderr?.includes('401')
-      ) {
-        console.log(
-          '[GitHub] gh CLI not authenticated, user needs to run: gh auth login',
-        );
-
-        console.warn('[GitHub] GitHub CLI authentication required');
-        return [];
-      } else {
-        console.warn(
-          '[GitHub] gh CLI pull request fetch failed, falling back',
-          {
-            stderr: ghResult.stderr,
-          },
-        );
-      }
-    } catch (error) {
-      console.warn('[GitHub] gh CLI error when fetching pull requests:', error);
-    }
-
-    console.log(
-      '[GitHub] Attempting to fetch pull requests via HTTPS API (public repos only)',
-    );
-    const https = require('https');
-
-    return new Promise((resolve) => {
-      const options = {
-        hostname: 'api.github.com',
-        path: `/repos/${owner}/${repo}/pulls?state=all&per_page=100`,
-        method: 'GET',
-        headers: {
-          Accept: 'application/vnd.github.v3+json',
-          'User-Agent': 'Principal-AI',
-        },
-      };
-
-      const req = https.request(options, (res: IncomingMessage) => {
-        let data = '';
-
-        res.on('data', (chunk: Buffer) => {
-          data += chunk;
-        });
-
-        res.on('end', () => {
-          if (res.statusCode === 200) {
-            try {
-              const pullRequests = JSON.parse(data);
-              console.log(
-                `[GitHub] Found ${pullRequests.length} pull requests via HTTPS`,
-              );
-              resolve(pullRequests);
-            } catch (error) {
-              console.error(
-                '[GitHub] Failed to parse pull requests response:',
-                error,
-              );
-              resolve([]);
-            }
-          } else if (res.statusCode === 404) {
-            console.warn('[GitHub] Repository is private or not found (404)');
-            resolve([]);
-          } else if (res.statusCode === 403) {
-            console.warn('[GitHub] API rate limit exceeded');
-            resolve([]);
-          } else {
-            console.error(
-              `[GitHub] Failed to fetch pull requests: ${res.statusCode}`,
-            );
-            resolve([]);
-          }
-        });
-      });
-
-      req.on('error', (error: unknown) => {
-        console.error('[GitHub] Error fetching pull requests:', error);
-        resolve([]);
-      });
-
-      req.end();
-    });
-  }
-
-  async getRepositoryCommits(
-    owner: string,
-    repo: string,
-    options?: { perPage?: number; page?: number },
-  ): Promise<GitHubCommit[]> {
-    const perPage = options?.perPage || 30;
-    const page = options?.page || 1;
-    console.log(
-      `[GitHub] Fetching commits for ${owner}/${repo} (perPage: ${perPage}, page: ${page})`,
-    );
-
-    // Try using gh CLI first
-    try {
-      const ghResult = await this.executeCommand([
-        'gh',
-        'api',
-        `/repos/${owner}/${repo}/commits`,
-        '--method',
-        'GET',
-        '--field',
-        `per_page=${perPage}`,
-        '--field',
-        `page=${page}`,
-      ]);
-
-      if (ghResult.success && ghResult.stdout.trim()) {
-        try {
-          const commits = JSON.parse(ghResult.stdout);
-          if (Array.isArray(commits)) {
-            console.log(
-              `[GitHub] Successfully fetched ${commits.length} commits via gh CLI`,
-            );
-            return commits;
-          }
-        } catch (error) {
-          console.warn('[GitHub] Failed to parse gh CLI commits output', {
-            error,
-            stdoutSample: ghResult.stdout.slice(0, 200),
-          });
-        }
-      } else if (
-        ghResult.stderr?.includes('authentication') ||
-        ghResult.stderr?.includes('401')
-      ) {
-        console.log(
-          '[GitHub] gh CLI not authenticated for commits, falling back to API',
-        );
-      } else {
-        console.warn('[GitHub] gh CLI commits fetch failed, falling back', {
-          stderr: ghResult.stderr,
-        });
-      }
-    } catch (error) {
-      console.warn('[GitHub] gh CLI error when fetching commits:', error);
-    }
-
-    // Fallback to HTTPS API
-    console.log(
-      '[GitHub] Attempting to fetch commits via HTTPS API (public repos only)',
-    );
-    const https = require('https');
-
-    return new Promise((resolve) => {
-      const options = {
-        hostname: 'api.github.com',
-        path: `/repos/${owner}/${repo}/commits?per_page=${perPage}&page=${page}`,
-        method: 'GET',
-        headers: {
-          Accept: 'application/vnd.github.v3+json',
-          'User-Agent': 'Principal-AI',
-        },
-      };
-
-      const req = https.request(options, (res: IncomingMessage) => {
-        let data = '';
-
-        res.on('data', (chunk: Buffer) => {
-          data += chunk;
-        });
-
-        res.on('end', () => {
-          if (res.statusCode === 200) {
-            try {
-              const commits = JSON.parse(data);
-              console.log(
-                `[GitHub] Successfully fetched ${commits.length} commits via HTTPS API`,
-              );
-              resolve(commits);
-            } catch (error) {
-              console.error(
-                '[GitHub] Failed to parse commits response:',
-                error,
-              );
-              resolve([]);
-            }
-          } else if (res.statusCode === 404) {
-            console.log(
-              '[GitHub] Repository commits not found or private (404)',
-            );
-            resolve([]);
-          } else if (res.statusCode === 403) {
-            console.log('[GitHub] API rate limit exceeded');
-            resolve([]);
-          } else {
-            console.error(
-              `[GitHub] Failed to fetch commits: ${res.statusCode}`,
-            );
-            resolve([]);
-          }
-        });
-      });
-
-      req.on('error', (error: unknown) => {
-        console.error('[GitHub] Error fetching commits:', error);
-        resolve([]);
-      });
-
-      req.end();
-    });
-  }
+  // DELETED: getIssues - unused (0 calls)
+  // DELETED: getPullRequests - unused (0 calls)
+  // DELETED: getRepositoryCommits - unused (0 calls)
 
   /**
    * Get followers for a user (defaults to authenticated user)
@@ -2606,26 +1962,8 @@ export function registerGitHubIpcHandlers(
     return appWindow?.githubAdapter || null;
   };
 
-  ipcMain.handle(
-    GitHubAPIEvent.DETECT_REPOSITORY,
-    async (event, path: string) => {
-      const adapter = getAdapterFromSender(event.sender);
-      if (!adapter) {
-        console.error('[GitHub] No adapter found for DETECT_REPOSITORY');
-        return null;
-      }
-      return adapter.detectRepository(path);
-    },
-  );
-
-  ipcMain.handle(GitHubAPIEvent.CHECK_AUTH_STATUS, async (event) => {
-    const adapter = getAdapterFromSender(event.sender);
-    if (!adapter) {
-      console.error('[GitHub] No adapter found for CHECK_AUTH_STATUS');
-      return { isAuthenticated: false, method: 'none' };
-    }
-    return adapter.checkAuthStatus();
-  });
+  // DELETED: DETECT_REPOSITORY - unused (0 calls in renderer)
+  // DELETED: CHECK_AUTH_STATUS - unused (0 calls in renderer)
 
   ipcMain.handle(
     GitHubAPIEvent.REFRESH_DATA,
@@ -2927,147 +2265,13 @@ export function registerGitHubIpcHandlers(
     },
   );
 
-  // Config API handlers
-  ipcMain.handle(
-    GitHubAPIEvent.FETCH_REMOTE_CONFIG,
-    async (
-      event,
-      request: ConfigFetchRequest,
-    ): Promise<ConfigFetchResponse> => {
-      try {
-        console.log(`[Config] Fetching remote config from: ${request.url}`);
+  // DELETED: FETCH_REMOTE_CONFIG - unused (0 calls in renderer)
+  // DELETED: FETCH_GITHUB_CONFIG - unused (0 calls in renderer)
 
-        const response = await fetch(request.url);
-
-        if (!response.ok) {
-          return {
-            content: null,
-            error: `HTTP ${response.status}: ${response.statusText}`,
-          };
-        }
-
-        const content = await response.text();
-        console.log(
-          `[Config] Successfully fetched config, size: ${content.length} bytes`,
-        );
-
-        return {
-          content,
-        };
-      } catch (error) {
-        console.error('[Config] Error fetching remote config:', error);
-        return {
-          content: null,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        };
-      }
-    },
-  );
-
-  ipcMain.handle(
-    GitHubAPIEvent.FETCH_GITHUB_CONFIG,
-    async (
-      event,
-      request: GitHubConfigRequest,
-    ): Promise<ConfigFetchResponse> => {
-      const { owner, repo, branch, path } = request;
-      const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
-
-      try {
-        console.log(
-          `[Config] Fetching GitHub config: ${owner}/${repo}@${branch}/${path}`,
-        );
-        console.log(`[Config] Full URL: ${url}`);
-
-        const response = await fetch(url);
-
-        if (!response.ok) {
-          console.log(
-            `[Config] GitHub fetch failed with status ${response.status}`,
-          );
-          if (response.status === 404) {
-            return {
-              content: null,
-              error: `File not found: ${path} in ${owner}/${repo}@${branch}`,
-            };
-          }
-          return {
-            content: null,
-            error: `GitHub returned ${response.status}: ${response.statusText}`,
-          };
-        }
-
-        const content = await response.text();
-        console.log(
-          `[Config] Successfully fetched GitHub config from ${path}, size: ${content.length} bytes`,
-        );
-        console.log(`[Config] First 200 chars:`, content.substring(0, 200));
-
-        return {
-          content,
-        };
-      } catch (error) {
-        console.error('[Config] Error fetching GitHub config:', error);
-        return {
-          content: null,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        };
-      }
-    },
-  );
-
-  ipcMain.handle(
-    GitHubAPIEvent.GET_ISSUES,
-    async (event, owner: string, repo: string) => {
-      const adapter = getAdapterFromSender(event.sender);
-      if (!adapter) {
-        console.error('[GitHub] No adapter found for GET_ISSUES');
-        return [];
-      }
-      return adapter.getIssues(owner, repo);
-    },
-  );
-
-  ipcMain.handle(
-    GitHubAPIEvent.GET_PULL_REQUESTS,
-    async (event, owner: string, repo: string) => {
-      const adapter = getAdapterFromSender(event.sender);
-      if (!adapter) {
-        console.error('[GitHub] No adapter found for GET_PULL_REQUESTS');
-        return [];
-      }
-      return adapter.getPullRequests(owner, repo);
-    },
-  );
-
-  ipcMain.handle(
-    GitHubAPIEvent.GET_REPOSITORY_COMMITS,
-    async (
-      event,
-      owner: string,
-      repo: string,
-      options?: { perPage?: number; page?: number },
-    ) => {
-      const adapter = getAdapterFromSender(event.sender);
-      if (!adapter) {
-        console.error('[GitHub] No adapter found for GET_REPOSITORY_COMMITS');
-        return [];
-      }
-      return adapter.getRepositoryCommits(owner, repo, options);
-    },
-  );
-
-  ipcMain.handle(
-    GitHubAPIEvent.CREATE_ISSUE,
-    async (event, owner: string, repo: string, issue: CreateIssueRequest) => {
-      const adapter = getAdapterFromSender(event.sender);
-      if (!adapter) {
-        console.error('[GitHub] No adapter found for CREATE_ISSUE');
-        return { success: false, error: 'No adapter found' };
-      }
-      return adapter.createIssue(owner, repo, issue);
-    },
-  );
+  // DELETED: GET_ISSUES - unused (0 calls in renderer)
+  // DELETED: GET_PULL_REQUESTS - unused (0 calls in renderer)
+  // DELETED: GET_REPOSITORY_COMMITS - unused (0 calls in renderer)
+  // DELETED: CREATE_ISSUE - unused (0 calls in renderer)
 
   ipcMain.handle(
     GitHubAPIEvent.GET_USER_REPOSITORIES,
@@ -3116,14 +2320,7 @@ export function registerGitHubIpcHandlers(
     return adapter.getUserOrganizations();
   });
 
-  ipcMain.handle(GitHubAPIEvent.GET_TOKEN_SCOPES, async (event) => {
-    const adapter = getAdapterFromSender(event.sender);
-    if (!adapter) {
-      console.error('[GitHub] No adapter found for GET_TOKEN_SCOPES');
-      return [];
-    }
-    return adapter.getTokenScopes();
-  });
+  // DELETED: GET_TOKEN_SCOPES - unused (0 calls in renderer)
 
   ipcMain.handle(GitHubAPIEvent.GET_CURRENT_USER, async (event) => {
     const adapter = getAdapterFromSender(event.sender);

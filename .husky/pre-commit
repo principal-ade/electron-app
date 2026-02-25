@@ -1,9 +1,10 @@
 # Run TypeScript type checking
 npm run typecheck
 
-# Run ESLint on "clean" directories (must remain at 0 issues)
-# Excludes main/ and renderer/ which are work-in-progress
-npm run lint:clean-dirs
+# Run ESLint (full codebase)
+# Working toward 1000 lines/file, currently at 2500 max
+# See docs/file-size-reduction-plan.md for roadmap
+npm run lint
 
 # Run principal view linting on staged .principal-views files
 npx @principal-ai/principal-view-cli@latest lint --quiet
