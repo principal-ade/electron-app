@@ -1,5 +1,28 @@
 version: "1.0.0"
-name: "Principal ADE Component Library"
+name: "principal-ade"
+description: "Principal ADE - The future of Agentic Development Environment"
+
+# Service resource registry
+# Define all services in this repository with their OTEL resource attributes
+resources:
+  principal-ade:
+    service.name: "principal-ade"
+    service.version: "0.0.410"
+    deployment.environment: "development"
+    project: "principal-ade"
+
+  principal-ade-storybook:
+    service.name: "principal-ade-storybook"
+    service.version: "0.0.410"
+    deployment.environment: "development"
+    project: "principal-ade"
+
+  principal-ade-tests:
+    service.name: "principal-ade-tests"
+    service.version: "0.0.410"
+    deployment.environment: "test"
+    test.suite: "integration"
+    project: "principal-ade"
 
 nodeComponents:
   # ============================================
