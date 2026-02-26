@@ -2,7 +2,12 @@
   "pv": {
     "name": "Agent Event Flow to Renderer",
     "version": "1.0.0",
+    "markdown": ".principal-views/agent-event-flow/agent-event-flow.md",
     "nodeTypes": {
+      "group": {
+        "label": "Process Group",
+        "color": "#64748B"
+      },
       "utility-process": {
         "label": "Utility Process",
         "color": "#EF4444"
@@ -92,7 +97,8 @@
       "y": -258,
       "width": 720,
       "height": 380,
-      "label": "Main Process"
+      "label": "Main Process",
+      "color": "#4F46E5"
     },
     {
       "id": "group-renderer",
@@ -101,7 +107,8 @@
       "y": -448,
       "width": 480,
       "height": 700,
-      "label": "Renderer Process"
+      "label": "Renderer Process",
+      "color": "#22C55E"
     },
     {
       "id": "event-server",

@@ -7,26 +7,92 @@
   "spanPattern": "alexandria.window",
   "scenarios": [
     {
-      "id": "window-open-complete",
-      "name": "Window Open Flow",
-      "description": "Complete flow for opening an Alexandria workspace window - handles named workspaces, temp workspaces, and reuse",
+      "id": "named-workspace-new-window",
+      "name": "Open Named Workspace (New Window)",
+      "description": "Opening a named workspace in a new window",
       "priority": 1,
       "template": {
-        "introduction": "**Alexandria Window Opening**\n\n{{#if workspace.id}}Opening workspace **\"{{workspace.name}}\"**{{else}}Opening temporary repository workspace{{/if}}",
+        "introduction": "**Alexandria Window Opening**\n\nOpening workspace **\"{{workspace.name}}\"**",
         "events": {
-          "alexandria.window.open.flow": "🎯 Starting window open flow",
-          "alexandria.window.open.requested": "1️⃣ User triggered open from {{trigger.source}}{{#if workspace.id}} (workspaceId: `{{workspace.id}}`){{/if}}{{#if repository.path}} (path: `{{repository.path}}`){{/if}}{{#if repository.id}} (PURL: `{{repository.id}}`){{/if}}",
-          "alexandria.window.ipc.invoke": "2️⃣ WindowService invoked IPC channel: {{ipc.channel}}",
-          "alexandria.window.handler.received": "3️⃣ Main process received request, window mode: **{{window.mode}}**",
-          "alexandria.workspace.lookup": "4️⃣ Registry lookup: {{#if workspace.found}}workspace **{{workspace.name}}** found with {{repository.count}} repositories{{else}}**workspace not found**{{/if}}",
-          "window.createSpecial": "5️⃣ {{#if window.reused}}**Reusing existing window** {{window.id}}{{else}}Creating new BrowserWindow (ID: {{window.id}}, type: {{window.type}}){{/if}}",
-          "terminal.window.registered": "6️⃣ Terminal manager registered window {{window.id}}",
-          "alexandria.watches.acquired": "7️⃣ Acquired watches for {{repositories.watched}}/{{repositories.total}} repositories",
-          "window.loadURL": "8️⃣ Loading URL: {{url.path}}",
-          "alexandria.app.initialized": "9️⃣ Renderer initialized in {{init.duration.ms}}ms, panels: {{layout.panels}}",
-          "alexandria.window.ready": "🔟 Window ready in {{total.duration.ms}}ms with {{watches.active}} active watches"
+          "alexandria.window.open.flow": "Starting window open flow",
+          "alexandria.window.open.requested": "User triggered open from {{trigger.source}} (workspaceId: `{{workspace.id}}`)",
+          "alexandria.window.ipc.invoke": "WindowService invoked IPC channel: {{ipc.channel}}",
+          "alexandria.window.handler.received": "Main process received request, window mode: **{{window.mode}}**",
+          "alexandria.workspace.lookup": "Registry lookup: workspace **{{workspace.name}}** found with {{repository.count}} repositories",
+          "alexandria.workspace.found": "Workspace exists in registry",
+          "alexandria.window.creating": "Creating new window for workspace",
+          "window.createSpecial": "Creating new BrowserWindow (ID: {{window.id}}, type: {{window.type}})",
+          "terminal.window.registered": "Terminal manager registered window {{window.id}}",
+          "alexandria.watches.acquired": "Acquired watches for {{repositories.watched}}/{{repositories.total}} repositories",
+          "window.loadURL": "Loading URL: {{url.path}}",
+          "alexandria.app.initialized": "Renderer initialized in {{init.duration.ms}}ms, panels: {{layout.panels}}",
+          "alexandria.window.ready": "Window ready in {{total.duration.ms}}ms with {{watches.active}} active watches"
         },
-        "summary": "{{#if window.reused}}**Result:** Focused existing window {{window.id}}\n\n{{else}}**Window Details:**\n- Window ID: {{window.id}}\n{{#if workspace.name}}- Workspace: **{{workspace.name}}**\n{{/if}}{{#if workspace.id}}- Workspace ID: `{{workspace.id}}`\n{{/if}}{{#if repository.path}}- Repository Path: `{{repository.path}}`\n{{/if}}{{#if repository.count}}- Repositories: {{repository.count}}\n{{/if}}\n**Performance:**\n- Total duration: {{total.duration.ms}}ms\n{{#if watches.active}}- Active watches: {{watches.active}}{{/if}}{{/if}}"
+        "summary": "**Window Details:**\n- Window ID: {{window.id}}\n- Workspace: **{{workspace.name}}**\n- Workspace ID: `{{workspace.id}}`\n- Repositories: {{repository.count}}\n\n**Performance:**\n- Total duration: {{total.duration.ms}}ms\n- Active watches: {{watches.active}}"
+      }
+    },
+    {
+      "id": "named-workspace-reuse-window",
+      "name": "Open Named Workspace (Reuse Window)",
+      "description": "Focusing an existing window for a named workspace",
+      "priority": 2,
+      "template": {
+        "introduction": "**Alexandria Window Opening**\n\nOpening workspace **\"{{workspace.name}}\"** (reusing existing window)",
+        "events": {
+          "alexandria.window.open.flow": "Starting window open flow",
+          "alexandria.window.open.requested": "User triggered open from {{trigger.source}} (workspaceId: `{{workspace.id}}`)",
+          "alexandria.window.ipc.invoke": "WindowService invoked IPC channel: {{ipc.channel}}",
+          "alexandria.window.handler.received": "Main process received request, window mode: **{{window.mode}}**",
+          "alexandria.workspace.lookup": "Registry lookup: workspace **{{workspace.name}}** found with {{repository.count}} repositories",
+          "alexandria.workspace.found": "Workspace exists in registry",
+          "alexandria.window.reusing": "Found existing window to reuse",
+          "window.createSpecial": "**Reusing existing window** {{window.id}}",
+          "alexandria.window.ready": "Window focused in {{total.duration.ms}}ms"
+        },
+        "summary": "**Result:** Focused existing window {{window.id}}"
+      }
+    },
+    {
+      "id": "temp-workspace-new-window",
+      "name": "Open Temporary Repository Workspace",
+      "description": "Opening a temporary workspace for a single repository",
+      "priority": 3,
+      "template": {
+        "introduction": "**Alexandria Window Opening**\n\nOpening temporary repository workspace",
+        "events": {
+          "alexandria.window.open.flow": "Starting window open flow",
+          "alexandria.window.open.requested": "User triggered open from {{trigger.source}} (path: `{{repository.path}}`)",
+          "alexandria.window.ipc.invoke": "WindowService invoked IPC channel: {{ipc.channel}}",
+          "alexandria.window.handler.received": "Main process received request, window mode: **{{window.mode}}**",
+          "alexandria.window.temp.mode": "Opening in temporary workspace mode (no workspace ID)",
+          "alexandria.window.creating": "Creating new window for temporary workspace",
+          "window.createSpecial": "Creating new BrowserWindow (ID: {{window.id}}, type: {{window.type}})",
+          "terminal.window.registered": "Terminal manager registered window {{window.id}}",
+          "alexandria.watches.acquired": "Acquired watches for {{repositories.watched}}/{{repositories.total}} repositories",
+          "window.loadURL": "Loading URL: {{url.path}}",
+          "alexandria.app.initialized": "Renderer initialized in {{init.duration.ms}}ms, panels: {{layout.panels}}",
+          "alexandria.window.ready": "Window ready in {{total.duration.ms}}ms with {{watches.active}} active watches"
+        },
+        "summary": "**Window Details:**\n- Window ID: {{window.id}}\n- Repository Path: `{{repository.path}}`\n\n**Performance:**\n- Total duration: {{total.duration.ms}}ms\n- Active watches: {{watches.active}}"
+      }
+    },
+    {
+      "id": "workspace-not-found",
+      "name": "Workspace Not Found",
+      "description": "Attempting to open a workspace that doesn't exist",
+      "priority": 4,
+      "template": {
+        "introduction": "**Alexandria Window Opening**\n\nWorkspace lookup failed",
+        "events": {
+          "alexandria.window.open.flow": "Starting window open flow",
+          "alexandria.window.open.requested": "User triggered open from {{trigger.source}} (workspaceId: `{{workspace.id}}`)",
+          "alexandria.window.ipc.invoke": "WindowService invoked IPC channel: {{ipc.channel}}",
+          "alexandria.window.handler.received": "Main process received request, window mode: **{{window.mode}}**",
+          "alexandria.workspace.lookup": "Registry lookup: **workspace not found**",
+          "alexandria.workspace.not_found": "Workspace `{{workspace.id}}` does not exist in registry",
+          "alexandria.window.open.failed": "Window open failed due to missing workspace"
+        },
+        "summary": "**Error:** Workspace `{{workspace.id}}` not found in registry"
       }
     }
   ]

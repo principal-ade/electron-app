@@ -2,6 +2,7 @@
   "pv": {
     "name": "Authentication & Token Refresh Flow",
     "version": "1.0.0",
+    "markdown": ".principal-views/auth-flow/auth-flow.md",
     "nodeTypes": {
       "renderer": {
         "label": "Renderer Process",

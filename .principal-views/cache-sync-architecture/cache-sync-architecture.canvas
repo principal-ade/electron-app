@@ -3,6 +3,7 @@
     "name": "Cache Sync Architecture",
     "version": "1.0.0",
     "description": "Repository cache sync event broadcasting mechanism - flow from worker process through main process to renderer",
+    "markdown": ".principal-views/cache-sync-architecture/cache-sync-architecture.md",
     "nodeTypes": {
       "git-watcher-adapter": {
         "label": "Git Watcher Adapter",
@@ -95,7 +96,8 @@
       "y": 0,
       "width": 500,
       "height": 400,
-      "label": "Worker Process (Node.js Utility Process)"
+      "label": "Worker Process (Node.js Utility Process)",
+      "color": "#0D9488"
     },
     {
       "id": "git-watcher",
@@ -156,7 +158,8 @@
       "y": 280,
       "width": 200,
       "height": 40,
-      "text": "process.parentPort.postMessage()"
+      "text": "process.parentPort.postMessage()",
+      "color": "#0D9488"
     },
     {
       "id": "main-process",
@@ -165,7 +168,8 @@
       "y": 450,
       "width": 500,
       "height": 250,
-      "label": "Main Process (Electron)"
+      "label": "Main Process (Electron)",
+      "color": "#4F46E5"
     },
     {
       "id": "monitoring-manager",
@@ -200,7 +204,8 @@
       "y": 620,
       "width": 200,
       "height": 40,
-      "text": "window.webContents.send('repository-monitoring:cache-sync', event)"
+      "text": "window.webContents.send('repository-monitoring:cache-sync', event)",
+      "color": "#4F46E5"
     },
     {
       "id": "renderer-process",
@@ -209,7 +214,8 @@
       "y": 750,
       "width": 500,
       "height": 400,
-      "label": "Renderer Process (React)"
+      "label": "Renderer Process (React)",
+      "color": "#7C3AED"
     },
     {
       "id": "preload-bridge",
@@ -283,7 +289,8 @@
       "y": 100,
       "width": 280,
       "height": 200,
-      "text": "THROTTLING STRATEGY\n\nWorker Level:\n- File tree: 250ms debounce\n- Packages: 300ms debounce\n- Max 2 concurrent builds\n\nRenderer Level:\n- 100ms batch flush interval\n- Version validation (monotonic)\n- Hash validation (structural)"
+      "text": "THROTTLING STRATEGY\n\nWorker Level:\n- File tree: 250ms debounce\n- Packages: 300ms debounce\n- Max 2 concurrent builds\n\nRenderer Level:\n- 100ms batch flush interval\n- Version validation (monotonic)\n- Hash validation (structural)",
+      "color": "#64748B"
     },
     {
       "id": "latency-issue",
@@ -292,7 +299,8 @@
       "y": 500,
       "width": 280,
       "height": 150,
-      "text": "MAIN THREAD LATENCY ISSUE\n\nBrowserWindow.getAllWindows().forEach()\nruns synchronously on main thread.\n\nWith many windows or frequent\ncache updates, this can block\nthe event loop."
+      "text": "MAIN THREAD LATENCY ISSUE\n\nBrowserWindow.getAllWindows().forEach()\nruns synchronously on main thread.\n\nWith many windows or frequent\ncache updates, this can block\nthe event loop.",
+      "color": "#EF4444"
     },
     {
       "id": "cache-slices",
@@ -301,7 +309,8 @@
       "y": 750,
       "width": 280,
       "height": 150,
-      "text": "CACHE SLICES\n\n1. gitStatus - branch, changes\n2. fileTree - full directory tree\n3. packages - package.json data\n4. gitRemote - remote info\n\nEach slice has:\n- version (monotonic counter)\n- hash (structural validation)\n- timestamp"
+      "text": "CACHE SLICES\n\n1. gitStatus - branch, changes\n2. fileTree - full directory tree\n3. packages - package.json data\n4. gitRemote - remote info\n\nEach slice has:\n- version (monotonic counter)\n- hash (structural validation)\n- timestamp",
+      "color": "#14B8A6"
     }
   ],
   "edges": [

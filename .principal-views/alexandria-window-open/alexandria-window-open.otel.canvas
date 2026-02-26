@@ -332,6 +332,180 @@
           }
         }
       }
+    },
+    {
+      "id": "workspace-found",
+      "type": "text",
+      "text": "# Workspace Found\n\nWorkspace exists in registry, proceeding with window creation",
+      "x": 1070,
+      "y": 0,
+      "width": 250,
+      "height": 100,
+      "color": "#22c55e",
+      "pv": {
+        "nodeType": "alexandria-service",
+        "icon": "CheckCircle",
+        "name": "Workspace Found",
+        "sources": ["src/main/stores/AlexandriaRegistryService.ts"],
+        "status": "draft",
+        "otel": {
+          "kind": "event",
+          "category": "database",
+          "isNew": true
+        },
+        "event": {
+          "name": "alexandria.workspace.found",
+          "attributes": {
+            "workspace.id": { "type": "string" },
+            "workspace.name": { "type": "string" }
+          }
+        }
+      }
+    },
+    {
+      "id": "workspace-not-found",
+      "type": "text",
+      "text": "# Workspace Not Found\n\nWorkspace ID not in registry, cannot proceed",
+      "x": 1070,
+      "y": 120,
+      "width": 250,
+      "height": 100,
+      "color": "#ef4444",
+      "pv": {
+        "nodeType": "alexandria-service",
+        "icon": "XCircle",
+        "name": "Workspace Not Found",
+        "sources": ["src/main/stores/AlexandriaRegistryService.ts"],
+        "status": "draft",
+        "otel": {
+          "kind": "event",
+          "category": "error",
+          "isNew": true
+        },
+        "event": {
+          "name": "alexandria.workspace.not_found",
+          "attributes": {
+            "workspace.id": { "type": "string" },
+            "error.message": { "type": "string" }
+          }
+        }
+      }
+    },
+    {
+      "id": "temp-mode",
+      "type": "text",
+      "text": "# Temporary Mode\n\nOpening without workspace ID - single repository mode",
+      "x": 1070,
+      "y": 520,
+      "width": 250,
+      "height": 100,
+      "color": "#f59e0b",
+      "pv": {
+        "nodeType": "main-process",
+        "icon": "Clock",
+        "name": "Temp Mode",
+        "sources": ["src/main/window/modernWindowHandlers.ts"],
+        "status": "draft",
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "isNew": true
+        },
+        "event": {
+          "name": "alexandria.window.temp.mode",
+          "attributes": {
+            "repository.path": { "type": "string" },
+            "repository.id": { "type": "string" }
+          }
+        }
+      }
+    },
+    {
+      "id": "window-creating",
+      "type": "text",
+      "text": "# Creating Window\n\nNew BrowserWindow being created",
+      "x": 350,
+      "y": 520,
+      "width": 200,
+      "height": 80,
+      "color": "#4f46e5",
+      "pv": {
+        "nodeType": "main-process",
+        "icon": "Plus",
+        "name": "Creating Window",
+        "sources": ["src/main/window/modernWindowManager.ts"],
+        "status": "draft",
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "isNew": true
+        },
+        "event": {
+          "name": "alexandria.window.creating",
+          "attributes": {
+            "window.name": { "type": "string" },
+            "window.type": { "type": "string" }
+          }
+        }
+      }
+    },
+    {
+      "id": "window-reusing",
+      "type": "text",
+      "text": "# Reusing Window\n\nExisting window found, focusing instead of creating",
+      "x": 560,
+      "y": 520,
+      "width": 200,
+      "height": 80,
+      "color": "#06b6d4",
+      "pv": {
+        "nodeType": "main-process",
+        "icon": "RotateCw",
+        "name": "Reusing Window",
+        "sources": ["src/main/window/modernWindowManager.ts"],
+        "status": "draft",
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "isNew": true
+        },
+        "event": {
+          "name": "alexandria.window.reusing",
+          "attributes": {
+            "window.id": { "type": "number" },
+            "window.name": { "type": "string" }
+          }
+        }
+      }
+    },
+    {
+      "id": "open-failed",
+      "type": "text",
+      "text": "# Open Failed\n\nWindow open failed due to error",
+      "x": 1070,
+      "y": 640,
+      "width": 250,
+      "height": 80,
+      "color": "#ef4444",
+      "pv": {
+        "nodeType": "main-process",
+        "icon": "AlertTriangle",
+        "name": "Open Failed",
+        "sources": ["src/main/window/modernWindowHandlers.ts"],
+        "status": "draft",
+        "otel": {
+          "kind": "event",
+          "category": "error",
+          "isNew": true
+        },
+        "event": {
+          "name": "alexandria.window.open.failed",
+          "attributes": {
+            "error.message": { "type": "string" },
+            "error.code": { "type": "string" }
+          }
+        }
+      }
     }
   ],
   "edges": [
@@ -474,6 +648,114 @@
       "pv": {
         "edgeType": "uses",
         "style": "dashed"
+      }
+    },
+    {
+      "id": "registry-to-found",
+      "fromNode": "registry-lookup",
+      "toNode": "workspace-found",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "found",
+      "pv": {
+        "edgeType": "uses",
+        "style": "solid"
+      }
+    },
+    {
+      "id": "registry-to-not-found",
+      "fromNode": "registry-lookup",
+      "toNode": "workspace-not-found",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "not found",
+      "pv": {
+        "edgeType": "uses",
+        "style": "dashed"
+      }
+    },
+    {
+      "id": "found-to-creating",
+      "fromNode": "workspace-found",
+      "toNode": "window-creating",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "new window",
+      "pv": {
+        "edgeType": "uses",
+        "style": "solid"
+      }
+    },
+    {
+      "id": "found-to-reusing",
+      "fromNode": "workspace-found",
+      "toNode": "window-reusing",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "existing window",
+      "pv": {
+        "edgeType": "uses",
+        "style": "dashed"
+      }
+    },
+    {
+      "id": "creating-to-create",
+      "fromNode": "window-creating",
+      "toNode": "create-window",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "label": "proceed",
+      "pv": {
+        "edgeType": "uses",
+        "style": "solid"
+      }
+    },
+    {
+      "id": "reusing-to-create",
+      "fromNode": "window-reusing",
+      "toNode": "create-window",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "label": "focus",
+      "pv": {
+        "edgeType": "uses",
+        "style": "solid"
+      }
+    },
+    {
+      "id": "handler-to-temp",
+      "fromNode": "ipc-handler",
+      "toNode": "temp-mode",
+      "fromSide": "right",
+      "toSide": "top",
+      "label": "no workspace ID",
+      "pv": {
+        "edgeType": "uses",
+        "style": "dashed"
+      }
+    },
+    {
+      "id": "temp-to-creating",
+      "fromNode": "temp-mode",
+      "toNode": "window-creating",
+      "fromSide": "left",
+      "toSide": "right",
+      "label": "create temp window",
+      "pv": {
+        "edgeType": "uses",
+        "style": "solid"
+      }
+    },
+    {
+      "id": "not-found-to-failed",
+      "fromNode": "workspace-not-found",
+      "toNode": "open-failed",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "error",
+      "pv": {
+        "edgeType": "uses",
+        "style": "solid"
       }
     }
   ],

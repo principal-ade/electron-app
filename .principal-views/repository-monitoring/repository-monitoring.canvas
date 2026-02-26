@@ -2,6 +2,7 @@
   "pv": {
     "name": "Repository Monitoring Event Flow",
     "version": "1.0.0",
+    "markdown": ".principal-views/repository-monitoring/repository-monitoring.md",
     "nodeTypes": {
       "renderer-process": {
         "label": "Renderer Process",

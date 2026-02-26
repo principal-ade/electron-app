@@ -2,6 +2,7 @@
   "pv": {
     "name": "Principal ADE - System Architecture",
     "version": "1.0.0",
+    "markdown": ".principal-views/architecture/architecture.md",
     "nodeTypes": {
       "renderer": {
         "label": "Renderer Process",

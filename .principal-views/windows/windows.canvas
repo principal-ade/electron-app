@@ -2,6 +2,7 @@
   "pv": {
     "name": "Principal ADE - Window Architecture",
     "version": "1.0.0",
+    "markdown": ".principal-views/windows/windows.md",
     "nodeTypes": {
       "primary-window": {
         "label": "Primary Window",
@@ -159,21 +160,7 @@
         "sources": ["src/main/window/modernWindowHandlers.ts"]
       }
     },
-    {
-      "id": "callimachus-window",
-      "type": "text",
-      "x": 720,
-      "y": 300,
-      "width": 220,
-      "height": 80,
-      "text": "Callimachus\nPattern Discovery",
-      "pv": {
-        "nodeType": "viewer-window",
-        "shape": "rectangle",
-        "sources": ["src/main/window/callimachusWindow.ts"]
-      }
-    },
-    {
+        {
       "id": "window-switcher",
       "type": "text",
       "x": 120,
@@ -287,17 +274,7 @@
         "edgeType": "creates"
       }
     },
-    {
-      "id": "manager-to-callimachus",
-      "fromNode": "window-manager",
-      "fromSide": "bottom",
-      "toNode": "callimachus-window",
-      "toSide": "top",
-      "pv": {
-        "edgeType": "creates"
-      }
-    },
-    {
+        {
       "id": "manager-to-switcher",
       "fromNode": "window-manager",
       "fromSide": "bottom",

@@ -2,6 +2,7 @@
   "pv": {
     "name": "Windows & IPC Architecture",
     "version": "1.0.0",
+    "markdown": ".principal-views/windows-ipc/windows-ipc.md",
     "nodeTypes": {
       "main-process": {
         "label": "Main Process",

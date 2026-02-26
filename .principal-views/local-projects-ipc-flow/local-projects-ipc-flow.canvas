@@ -2,6 +2,7 @@
   "pv": {
     "name": "Local Projects IPC Data Flow",
     "version": "1.0.0",
+    "markdown": ".principal-views/local-projects-ipc-flow/local-projects-ipc-flow.md",
     "nodeTypes": {
       "renderer-component": {
         "label": "Renderer Component",

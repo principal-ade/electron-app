@@ -7,30 +7,57 @@
   "spanPattern": "collections.create",
   "scenarios": [
     {
-      "id": "successful-creation",
-      "name": "✅ Successful Collection Creation",
-      "description": "User creates a new collection and syncs to existing GitHub repository",
+      "id": "successful-creation-full",
+      "name": "Successful Collection Creation (Full Details)",
+      "description": "User creates a new collection with icon and description, syncs to GitHub",
       "priority": 1,
       "template": {
-        "introduction": "✅ **Collection Created Successfully**\n\nCreated collection **\"{{collection.name}}\"** (ID: `{{collection.id}}`) and synchronized to GitHub.\n\nThe collection is now available across all devices.",
+        "introduction": "**Collection Created Successfully**\n\nCreated collection **\"{{collection.name}}\"** (ID: `{{collection.id}}`) and synchronized to GitHub.\n\nThe collection is now available across all devices.",
         "events": {
-          "collections.ui.modal_opened": "1️⃣ User opened create collection modal",
-          "collections.ui.create_requested": "2️⃣ User clicked create button in UserCollectionsPanel",
-          "collections.context.create_started": "3️⃣ Context received request: **{{collection.name}}** {{#if collection.description}}({{collection.description}}){{/if}}",
-          "collections.renderer.ipc_invoked": "4️⃣ Renderer service invoked IPC: {{ipc.method}}",
-          "collections.preload.forwarded": "5️⃣ Preload bridge forwarded to main process ({{ipc.direction}})",
-          "collections.main.create_started": "6️⃣ Main process created collection `{{collection.id}}` at {{collection.created_at}}",
-          "collections.github.repo_check": "7️⃣ Checking if web-ade-collections exists (authenticated: {{github.user.authenticated}})",
-          "collections.github.api_request": "8️⃣ GitHub API {{http.method}} {{http.url}} → {{http.status_code}} (repo exists: {{github.repo.exists}})",
-          "collections.github.sync_started": "9️⃣ Syncing {{collections.count}} collections and {{memberships.count}} memberships",
-          "collections.github.file_updated": "🔟 Updated {{github.file.name}} ({{github.file.size_bytes}} bytes, SHA: {{github.file.sha}})",
-          "collections.github.memberships_updated": "1️⃣1️⃣ Updated memberships in {{github.file.name}}",
-          "collections.storage.persisted": "1️⃣2️⃣ ✅ **Data persisted to GitHub** at {{storage.location}} ({{storage.sync.timestamp}})",
-          "collections.event.created_emitted": "1️⃣3️⃣ Event emitted: {{event.type}} from {{event.source}}",
-          "collections.context.refreshed": "1️⃣4️⃣ Context refreshed with {{collections.count}} collections (trigger: {{refresh.trigger}})",
-          "collections.ui.rendered": "1️⃣5️⃣ ✨ **UI updated in {{render.duration_ms}}ms** (displaying {{collections.displayed}} collections)"
+          "collections.ui.modal_opened": "User opened create collection modal",
+          "collections.ui.create_requested": "User clicked create button in UserCollectionsPanel",
+          "collections.context.create_started": "Context received request: **{{collection.name}}** ({{collection.description}})",
+          "collections.renderer.ipc_invoked": "Renderer service invoked IPC: {{ipc.method}}",
+          "collections.preload.forwarded": "Preload bridge forwarded to main process ({{ipc.direction}})",
+          "collections.main.create_started": "Main process created collection `{{collection.id}}` at {{collection.created_at}}",
+          "collections.github.repo_check": "Checking if web-ade-collections exists (authenticated: {{github.user.authenticated}})",
+          "collections.github.api_request": "GitHub API {{http.method}} {{http.url}} -> {{http.status_code}} (repo exists: {{github.repo.exists}})",
+          "collections.github.sync_started": "Syncing {{collections.count}} collections and {{memberships.count}} memberships",
+          "collections.github.file_updated": "Updated {{github.file.name}} ({{github.file.size_bytes}} bytes, SHA: {{github.file.sha}})",
+          "collections.github.memberships_updated": "Updated memberships in {{github.file.name}}",
+          "collections.storage.persisted": "**Data persisted to GitHub** at {{storage.location}} ({{storage.sync.timestamp}})",
+          "collections.event.created_emitted": "Event emitted: {{event.type}} from {{event.source}}",
+          "collections.context.refreshed": "Context refreshed with {{collections.count}} collections (trigger: {{refresh.trigger}})",
+          "collections.ui.rendered": "**UI updated in {{render.duration_ms}}ms** (displaying {{collections.displayed}} collections)"
         },
-        "summary": "**Collection Details:**\n- Name: **{{collection.name}}**\n- ID: `{{collection.id}}`\n{{#if collection.icon}}- Icon: {{collection.icon}}\n{{/if}}{{#if collection.description}}- Description: {{collection.description}}\n{{/if}}\n**GitHub Storage:**\n- Repository: {{storage.location}}\n- Total collections: {{collections.count}}\n- Sync timestamp: {{storage.sync.timestamp}}\n\n**Performance:**\n- UI render time: {{render.duration_ms}}ms\n\n**Architecture Flow:**\nUI Modal → Context → IPC → Main Process → GitHub API → Storage → Context Refresh → UI Update"
+        "summary": "**Collection Details:**\n- Name: **{{collection.name}}**\n- ID: `{{collection.id}}`\n- Icon: {{collection.icon}}\n- Description: {{collection.description}}\n\n**GitHub Storage:**\n- Repository: {{storage.location}}\n- Total collections: {{collections.count}}\n- Sync timestamp: {{storage.sync.timestamp}}\n\n**Performance:**\n- UI render time: {{render.duration_ms}}ms\n\n**Architecture Flow:**\nUI Modal -> Context -> IPC -> Main Process -> GitHub API -> Storage -> Context Refresh -> UI Update"
+      }
+    },
+    {
+      "id": "successful-creation-minimal",
+      "name": "Successful Collection Creation (Name Only)",
+      "description": "User creates a new collection with just a name, no icon or description",
+      "priority": 2,
+      "template": {
+        "introduction": "**Collection Created Successfully**\n\nCreated collection **\"{{collection.name}}\"** (ID: `{{collection.id}}`) and synchronized to GitHub.",
+        "events": {
+          "collections.ui.modal_opened": "User opened create collection modal",
+          "collections.ui.create_requested": "User clicked create button in UserCollectionsPanel",
+          "collections.context.create_started": "Context received request: **{{collection.name}}**",
+          "collections.renderer.ipc_invoked": "Renderer service invoked IPC: {{ipc.method}}",
+          "collections.preload.forwarded": "Preload bridge forwarded to main process ({{ipc.direction}})",
+          "collections.main.create_started": "Main process created collection `{{collection.id}}` at {{collection.created_at}}",
+          "collections.github.repo_check": "Checking if web-ade-collections exists (authenticated: {{github.user.authenticated}})",
+          "collections.github.api_request": "GitHub API {{http.method}} {{http.url}} -> {{http.status_code}} (repo exists: {{github.repo.exists}})",
+          "collections.github.sync_started": "Syncing {{collections.count}} collections and {{memberships.count}} memberships",
+          "collections.github.file_updated": "Updated {{github.file.name}} ({{github.file.size_bytes}} bytes, SHA: {{github.file.sha}})",
+          "collections.github.memberships_updated": "Updated memberships in {{github.file.name}}",
+          "collections.storage.persisted": "**Data persisted to GitHub** at {{storage.location}} ({{storage.sync.timestamp}})",
+          "collections.event.created_emitted": "Event emitted: {{event.type}} from {{event.source}}",
+          "collections.context.refreshed": "Context refreshed with {{collections.count}} collections (trigger: {{refresh.trigger}})",
+          "collections.ui.rendered": "**UI updated in {{render.duration_ms}}ms** (displaying {{collections.displayed}} collections)"
+        },
+        "summary": "**Collection Details:**\n- Name: **{{collection.name}}**\n- ID: `{{collection.id}}`\n\n**GitHub Storage:**\n- Repository: {{storage.location}}\n- Total collections: {{collections.count}}\n\n**Performance:**\n- UI render time: {{render.duration_ms}}ms"
       }
     }
   ]
