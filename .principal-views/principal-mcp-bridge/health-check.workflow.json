@@ -1,0 +1,29 @@
+{
+  "version": "1.0.0",
+  "name": "Principal MCP Health Check",
+  "description": "Health check endpoint flow for the Principal MCP Bridge",
+  "mode": "span-tree",
+  "canvas": ".principal-views/principal-mcp-bridge/principal-mcp-bridge.otel.canvas",
+  "spanPattern": "principal_mcp.health",
+  "scenarios": [
+    {
+      "id": "health-check-success",
+      "name": "Health Check Success",
+      "description": "Health check endpoint returns OK status",
+      "priority": 1,
+      "severity": "info",
+      "match": {
+        "health.status": "ok"
+      },
+      "template": {
+        "introduction": "**Health Check Successful**\n\nThe Principal MCP Bridge health endpoint responded successfully.",
+        "events": {
+          "principal_mcp.client.request_initiated": "1. Client sent GET request to /health",
+          "principal_mcp.server.request_received": "2. Server received request on port {{server.port}}",
+          "principal_mcp.health.checked": "3. Health status: **{{health.status}}**"
+        },
+        "summary": "**Health Status:**\n- Status: {{health.status}}\n- Port: {{health.port}}\n- Timestamp: {{health.timestamp}}\n\nThe bridge is running and accepting requests."
+      }
+    }
+  ]
+}

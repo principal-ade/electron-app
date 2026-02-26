@@ -1,0 +1,128 @@
+{
+  "version": "1.0.0",
+  "name": "Principal MCP Dependency Resolution",
+  "description": "Flow of dependency resolution requests from external MCP clients through the bridge to repository monitoring",
+  "mode": "span-tree",
+  "canvas": ".principal-views/principal-mcp-bridge/principal-mcp-bridge.otel.canvas",
+  "spanPattern": "principal_mcp.dependency",
+  "scenarios": [
+    {
+      "id": "dependency-found-in-alexandria",
+      "name": "Found in Alexandria Registry",
+      "description": "Dependency resolved successfully from a local repository in Alexandria",
+      "priority": 1,
+      "severity": "info",
+      "match": {
+        "found": true,
+        "source": "alexandria"
+      },
+      "template": {
+        "introduction": "**Dependency Found in Alexandria**\n\nThe dependency `{{dependency.id}}` was resolved from a local repository clone registered in Alexandria.",
+        "events": {
+          "principal_mcp.client.request_initiated": "1. MCP client sent {{http.method}} request",
+          "principal_mcp.server.request_received": "2. Bridge received request on port {{server.port}}",
+          "principal_mcp.dependency.resolve_requested": "3. Resolving: `{{dependency.id}}`",
+          "principal_mcp.repo_monitoring.calling": "4. Calling repository monitoring manager...",
+          "principal_mcp.repo_monitoring.result_received": "5. Result received (found={{found}})",
+          "principal_mcp.resolution.alexandria_found": "6. **Found in Alexandria:** {{alexandria.name}} at `{{alexandria.path}}`",
+          "principal_mcp.resolution.package_not_found": "7. Not checking packages (already found)",
+          "principal_mcp.repo_monitoring.dependency_resolved": "8. Resolution complete (source={{source}})"
+        },
+        "summary": "**Resolution Result:**\n- **Dependency:** `{{dependency.id}}`\n- **Found:** Yes\n- **Source:** Alexandria Registry\n\n**Repository Details:**\n- Name: {{alexandria.name}}\n- Path: `{{alexandria.path}}`\n- Remote URL: {{alexandria.remote_url}}\n- Last Commit: {{alexandria.last_commit_hash}}"
+      }
+    },
+    {
+      "id": "dependency-found-in-package",
+      "name": "Found in Package Dependencies",
+      "description": "Dependency resolved from a registered repository's package.json",
+      "priority": 2,
+      "severity": "info",
+      "match": {
+        "found": true,
+        "source": "package"
+      },
+      "template": {
+        "introduction": "**Dependency Found in Package**\n\nThe dependency `{{dependency.id}}` was found in a registered repository's package.json.",
+        "events": {
+          "principal_mcp.client.request_initiated": "1. MCP client sent {{http.method}} request",
+          "principal_mcp.server.request_received": "2. Bridge received request on port {{server.port}}",
+          "principal_mcp.dependency.resolve_requested": "3. Resolving: `{{dependency.id}}`",
+          "principal_mcp.repo_monitoring.calling": "4. Calling repository monitoring manager...",
+          "principal_mcp.repo_monitoring.result_received": "5. Result received (found={{found}})",
+          "principal_mcp.resolution.alexandria_not_found": "6. Not in Alexandria registry",
+          "principal_mcp.resolution.package_found": "7. **Found in package:** {{package.name}}@{{package.version}}",
+          "principal_mcp.repo_monitoring.dependency_resolved": "8. Resolution complete (source={{source}})"
+        },
+        "summary": "**Resolution Result:**\n- **Dependency:** `{{dependency.id}}`\n- **Found:** Yes\n- **Source:** Package Dependencies\n\n**Package Details:**\n- Name: {{package.name}}\n- Version: {{package.version}}\n- Path: `{{package.path}}`\n- Dev Dependency: {{package.is_dev_dependency}}"
+      }
+    },
+    {
+      "id": "dependency-not-found",
+      "name": "Dependency Not Found",
+      "description": "Dependency could not be resolved from any registered source",
+      "priority": 3,
+      "severity": "warning",
+      "match": {
+        "found": false,
+        "source": "none"
+      },
+      "template": {
+        "introduction": "**Dependency Not Found**\n\nThe dependency `{{dependency.id}}` could not be resolved from any registered repository.",
+        "events": {
+          "principal_mcp.client.request_initiated": "1. MCP client sent {{http.method}} request",
+          "principal_mcp.server.request_received": "2. Bridge received request on port {{server.port}}",
+          "principal_mcp.dependency.resolve_requested": "3. Resolving: `{{dependency.id}}`",
+          "principal_mcp.repo_monitoring.calling": "4. Calling repository monitoring manager...",
+          "principal_mcp.repo_monitoring.result_received": "5. Result received (found={{found}})",
+          "principal_mcp.resolution.alexandria_not_found": "6. Not in Alexandria registry",
+          "principal_mcp.resolution.package_not_found": "7. Not in any package.json",
+          "principal_mcp.resolution.suggestions_generated": "8. Suggestions: {{suggestions.install_commands}}",
+          "principal_mcp.repo_monitoring.dependency_resolved": "9. Resolution complete (not found)"
+        },
+        "summary": "**Resolution Result:**\n- **Dependency:** `{{dependency.id}}`\n- **Found:** No\n\n**Checked Sources:**\n- Alexandria Registry: Not found\n- Package Dependencies: Not found\n\n**Suggestions:**\n- Install commands: {{suggestions.install_commands}}\n- Target package: {{suggestions.target_package}}\n\n**Possible Actions:**\n1. Clone the repository containing this dependency\n2. Register the repository in Alexandria\n3. Check if the dependency ID format is correct"
+      }
+    },
+    {
+      "id": "resolution-error",
+      "name": "Resolution Error",
+      "description": "An error occurred during dependency resolution",
+      "priority": 4,
+      "severity": "error",
+      "match": {
+        "resolution.success": false
+      },
+      "template": {
+        "introduction": "**Dependency Resolution Failed**\n\nAn error occurred while resolving `{{dependency.id}}`.",
+        "events": {
+          "principal_mcp.client.request_initiated": "1. MCP client sent {{http.method}} request",
+          "principal_mcp.server.request_received": "2. Bridge received request on port {{server.port}}",
+          "principal_mcp.dependency.resolve_requested": "3. Resolving: `{{dependency.id}}`",
+          "principal_mcp.repo_monitoring.calling": "4. Calling repository monitoring manager...",
+          "principal_mcp.error.resolution_failed": "5. **Exception:** {{error.message}}",
+          "principal_mcp.repo_monitoring.dependency_resolved": "6. Resolution failed (success={{resolution.success}})"
+        },
+        "summary": "**Error Details:**\n- **Dependency:** `{{dependency.id}}`\n- **Error:** {{error.message}}\n\n**Troubleshooting:**\n1. Check if the Repository Monitoring Server is running\n2. Verify the dependency ID format\n3. Check application logs for detailed error information"
+      }
+    },
+    {
+      "id": "validation-error",
+      "name": "Validation Error",
+      "description": "Request validation failed - missing dependencyId",
+      "priority": 5,
+      "severity": "error",
+      "match": {
+        "error.type": "validation_error"
+      },
+      "template": {
+        "introduction": "**Validation Error**\n\nThe request was rejected due to missing required field.",
+        "events": {
+          "principal_mcp.client.request_initiated": "1. MCP client sent {{http.method}} request",
+          "principal_mcp.server.request_received": "2. Bridge received request on port {{server.port}}",
+          "principal_mcp.dependency.resolve_requested": "3. Checking request body...",
+          "principal_mcp.error.validation_failed": "4. **Validation failed:** {{error.field}} is required"
+        },
+        "summary": "**Error:**\n- Missing required field: `dependencyId`\n\n**Expected Request Body:**\n```json\n{\n  \"dependencyId\": \"pkg:npm/@scope/package\",\n  \"repositoryRoot\": \"/path/to/repo\" // optional\n}\n```"
+      }
+    }
+  ]
+}

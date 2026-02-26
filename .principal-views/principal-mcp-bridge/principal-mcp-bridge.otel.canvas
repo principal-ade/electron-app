@@ -1,0 +1,902 @@
+{
+  "pv": {
+    "name": "Principal MCP Bridge",
+    "version": "1.0.0",
+    "description": "HTTP bridge enabling external AI agents (MCP tools) to interact with the Electron app's repository monitoring capabilities",
+    "markdown": ".principal-views/principal-mcp-bridge/principal-mcp-bridge.md",
+    "nodeTypes": {
+      "external-client": {
+        "label": "External Client",
+        "color": "#64748B"
+      },
+      "http-server": {
+        "label": "HTTP Server",
+        "color": "#22C55E"
+      },
+      "middleware": {
+        "label": "Middleware",
+        "color": "#F59E0B"
+      },
+      "route-handler": {
+        "label": "Route Handler",
+        "color": "#3B82F6"
+      },
+      "service": {
+        "label": "Service",
+        "color": "#7C3AED"
+      },
+      "utility-process": {
+        "label": "Utility Process",
+        "color": "#EC4899"
+      }
+    },
+    "edgeTypes": {
+      "http-request": {
+        "label": "HTTP Request",
+        "style": "solid",
+        "color": "#22C55E"
+      },
+      "http-response": {
+        "label": "HTTP Response",
+        "style": "dashed",
+        "color": "#22C55E"
+      },
+      "function-call": {
+        "label": "Function Call",
+        "style": "solid",
+        "color": "#3B82F6"
+      },
+      "ipc-message": {
+        "label": "IPC Message",
+        "style": "solid",
+        "color": "#7C3AED"
+      },
+      "data-flow": {
+        "label": "Data Flow",
+        "style": "solid",
+        "color": "#8B5CF6"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "x": 300,
+      "y": -100,
+      "width": 500,
+      "height": 60,
+      "color": "#64748B",
+      "text": "# Principal MCP Bridge\n**HTTP bridge for AI agents to access repository monitoring**"
+    },
+    {
+      "id": "mcp-client",
+      "type": "text",
+      "x": 50,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "text": "MCP Client\n(AI Agent Tool)\nClaude Code, Cline,\nOpenCode, etc.",
+      "pv": {
+        "nodeType": "external-client",
+        "shape": "rectangle",
+        "status": "draft",
+        "sources": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "http",
+          "isNew": true
+        },
+        "event": {
+          "name": "principal_mcp.client.request_initiated",
+          "description": "External MCP client initiates HTTP request to the bridge",
+          "attributes": {
+            "http.method": {
+              "type": "string",
+              "description": "HTTP method: POST or GET"
+            },
+            "http.url": {
+              "type": "string",
+              "description": "Target endpoint URL"
+            },
+            "client.type": {
+              "type": "string",
+              "description": "Type of MCP client making the request"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "express-server",
+      "type": "text",
+      "x": 300,
+      "y": 50,
+      "width": 220,
+      "height": 100,
+      "text": "PrincipalMCPBridge\n(Express Server)\nlocalhost:3044",
+      "pv": {
+        "nodeType": "http-server",
+        "shape": "rectangle",
+        "status": "draft",
+        "sources": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "http",
+          "isNew": true
+        },
+        "event": {
+          "name": "principal_mcp.server.request_received",
+          "description": "Express server receives incoming HTTP request",
+          "attributes": {
+            "http.method": {
+              "type": "string",
+              "description": "HTTP method: GET, POST, OPTIONS"
+            },
+            "http.path": {
+              "type": "string",
+              "description": "Request path: /health, /dependencies/resolve"
+            },
+            "server.port": {
+              "type": "number",
+              "description": "Server port: 3044"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "cors-middleware",
+      "type": "text",
+      "x": 300,
+      "y": 180,
+      "width": 220,
+      "height": 80,
+      "text": "CORS Middleware\nAccess-Control-Allow-Origin: *\nJSON body parser (10mb)",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "health-route",
+      "type": "text",
+      "x": 570,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "text": "GET /health\nReturns server status,\ntimestamp, port",
+      "pv": {
+        "nodeType": "route-handler",
+        "shape": "rectangle",
+        "status": "draft",
+        "sources": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "http",
+          "isNew": true
+        },
+        "event": {
+          "name": "principal_mcp.health.checked",
+          "description": "Health check endpoint invoked",
+          "attributes": {
+            "health.status": {
+              "type": "string",
+              "description": "Health status: ok"
+            },
+            "health.timestamp": {
+              "type": "number",
+              "description": "Server timestamp"
+            },
+            "health.port": {
+              "type": "number",
+              "description": "Server port"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "resolve-route",
+      "type": "text",
+      "x": 570,
+      "y": 180,
+      "width": 220,
+      "height": 100,
+      "text": "POST /dependencies/resolve\nResolves dependency info\nvia repository monitoring",
+      "pv": {
+        "nodeType": "route-handler",
+        "shape": "rectangle",
+        "status": "draft",
+        "sources": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "http",
+          "isNew": true
+        },
+        "event": {
+          "name": "principal_mcp.dependency.resolve_requested",
+          "description": "Dependency resolution endpoint called",
+          "attributes": {
+            "dependency.id": {
+              "type": "string",
+              "description": "Dependency identifier to resolve"
+            },
+            "repository.root": {
+              "type": "string",
+              "description": "Repository root path (optional)"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "repo-monitoring-calling",
+      "type": "text",
+      "x": 840,
+      "y": 100,
+      "width": 220,
+      "height": 60,
+      "text": "Calling Repo Monitoring\nManager",
+      "pv": {
+        "nodeType": "service",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "service",
+          "isNew": true,
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
+        "event": {
+          "name": "principal_mcp.repo_monitoring.calling",
+          "description": "About to call repository monitoring manager",
+          "attributes": {
+            "dependency.id": {
+              "type": "string",
+              "description": "Dependency ID being resolved"
+            },
+            "has_repository_root": {
+              "type": "boolean",
+              "description": "Whether repository root was provided"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "repo-monitoring-result",
+      "type": "text",
+      "x": 840,
+      "y": 180,
+      "width": 220,
+      "height": 60,
+      "text": "Result Received\nfrom Monitoring",
+      "pv": {
+        "nodeType": "service",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "service",
+          "isNew": true,
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
+        "event": {
+          "name": "principal_mcp.repo_monitoring.result_received",
+          "description": "Raw result received from monitoring manager",
+          "attributes": {
+            "dependency.id": {
+              "type": "string",
+              "description": "Dependency ID"
+            },
+            "found": {
+              "type": "boolean",
+              "description": "Whether dependency was found"
+            },
+            "has_alexandria_entry": {
+              "type": "boolean",
+              "description": "Has Alexandria registry entry"
+            },
+            "has_package_info": {
+              "type": "boolean",
+              "description": "Has package.json info"
+            },
+            "has_suggestions": {
+              "type": "boolean",
+              "description": "Has install suggestions"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "resolution-alexandria-found",
+      "type": "text",
+      "x": 1100,
+      "y": 100,
+      "width": 200,
+      "height": 60,
+      "text": "Found in Alexandria\nRegistry",
+      "pv": {
+        "nodeType": "service",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "resolution",
+          "isNew": true,
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
+        "event": {
+          "name": "principal_mcp.resolution.alexandria_found",
+          "description": "Dependency found in Alexandria registry",
+          "attributes": {
+            "dependency.id": {
+              "type": "string",
+              "description": "Dependency ID"
+            },
+            "alexandria.name": {
+              "type": "string",
+              "description": "Repository name"
+            },
+            "alexandria.path": {
+              "type": "string",
+              "description": "Local path"
+            },
+            "alexandria.remote_url": {
+              "type": "string",
+              "description": "Remote URL"
+            },
+            "alexandria.last_commit_hash": {
+              "type": "string",
+              "description": "Last commit hash"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "resolution-alexandria-not-found",
+      "type": "text",
+      "x": 1100,
+      "y": 180,
+      "width": 200,
+      "height": 60,
+      "text": "Not in Alexandria\nRegistry",
+      "pv": {
+        "nodeType": "service",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "resolution",
+          "isNew": true,
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
+        "event": {
+          "name": "principal_mcp.resolution.alexandria_not_found",
+          "description": "Dependency not found in Alexandria registry",
+          "attributes": {
+            "dependency.id": {
+              "type": "string",
+              "description": "Dependency ID"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "resolution-package-found",
+      "type": "text",
+      "x": 1100,
+      "y": 260,
+      "width": 200,
+      "height": 60,
+      "text": "Found in Package\nDependencies",
+      "pv": {
+        "nodeType": "service",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "resolution",
+          "isNew": true,
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
+        "event": {
+          "name": "principal_mcp.resolution.package_found",
+          "description": "Dependency found in package.json",
+          "attributes": {
+            "dependency.id": {
+              "type": "string",
+              "description": "Dependency ID"
+            },
+            "package.name": {
+              "type": "string",
+              "description": "Package name"
+            },
+            "package.version": {
+              "type": "string",
+              "description": "Package version"
+            },
+            "package.path": {
+              "type": "string",
+              "description": "Package path"
+            },
+            "package.is_dev_dependency": {
+              "type": "boolean",
+              "description": "Is dev dependency"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "resolution-package-not-found",
+      "type": "text",
+      "x": 1100,
+      "y": 340,
+      "width": 200,
+      "height": 60,
+      "text": "Not in Package\nDependencies",
+      "pv": {
+        "nodeType": "service",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "resolution",
+          "isNew": true,
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
+        "event": {
+          "name": "principal_mcp.resolution.package_not_found",
+          "description": "Dependency not found in package.json",
+          "attributes": {
+            "dependency.id": {
+              "type": "string",
+              "description": "Dependency ID"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "resolution-suggestions",
+      "type": "text",
+      "x": 1100,
+      "y": 420,
+      "width": 200,
+      "height": 60,
+      "text": "Install Suggestions\nGenerated",
+      "pv": {
+        "nodeType": "service",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "resolution",
+          "isNew": true,
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
+        "event": {
+          "name": "principal_mcp.resolution.suggestions_generated",
+          "description": "Install suggestions generated for not-found dependency",
+          "attributes": {
+            "dependency.id": {
+              "type": "string",
+              "description": "Dependency ID"
+            },
+            "suggestions.install_commands": {
+              "type": "string",
+              "description": "Suggested install commands"
+            },
+            "suggestions.target_package": {
+              "type": "string",
+              "description": "Target package"
+            },
+            "suggestions.package_manager": {
+              "type": "string",
+              "description": "Package manager"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "error-validation-failed",
+      "type": "text",
+      "x": 570,
+      "y": 310,
+      "width": 200,
+      "height": 60,
+      "text": "Validation Failed\n(missing dependencyId)",
+      "pv": {
+        "nodeType": "route-handler",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "error",
+          "isNew": true,
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
+        "event": {
+          "name": "principal_mcp.error.validation_failed",
+          "description": "Request validation failed",
+          "attributes": {
+            "error.type": {
+              "type": "string",
+              "description": "Error type: validation_error"
+            },
+            "error.field": {
+              "type": "string",
+              "description": "Field that failed validation"
+            },
+            "error.message": {
+              "type": "string",
+              "description": "Error message"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "error-resolution-failed",
+      "type": "text",
+      "x": 840,
+      "y": 460,
+      "width": 200,
+      "height": 60,
+      "text": "Resolution Failed\n(exception thrown)",
+      "pv": {
+        "nodeType": "service",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "error",
+          "isNew": true,
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
+        "event": {
+          "name": "principal_mcp.error.resolution_failed",
+          "description": "Dependency resolution threw an exception",
+          "attributes": {
+            "dependency.id": {
+              "type": "string",
+              "description": "Dependency ID"
+            },
+            "error.type": {
+              "type": "string",
+              "description": "Error type: resolution_error"
+            },
+            "error.message": {
+              "type": "string",
+              "description": "Error message"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "repo-monitoring-manager",
+      "type": "text",
+      "x": 840,
+      "y": 260,
+      "width": 220,
+      "height": 80,
+      "text": "Final Resolution\nResult",
+      "pv": {
+        "nodeType": "service",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "service",
+          "isNew": true,
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
+        "event": {
+          "name": "principal_mcp.repo_monitoring.dependency_resolved",
+          "description": "Final dependency resolution status",
+          "attributes": {
+            "dependency.id": {
+              "type": "string",
+              "description": "Resolved dependency ID"
+            },
+            "resolution.success": {
+              "type": "boolean",
+              "description": "Whether resolution succeeded"
+            },
+            "found": {
+              "type": "boolean",
+              "description": "Whether dependency was found"
+            },
+            "source": {
+              "type": "string",
+              "description": "Resolution source: alexandria, package, or none"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "monitoring-worker",
+      "type": "text",
+      "x": 840,
+      "y": 360,
+      "width": 220,
+      "height": 80,
+      "text": "Repository Monitoring\nWorker Process\n(Utility Process)",
+      "color": "#EC4899"
+    },
+    {
+      "id": "startup-note",
+      "type": "text",
+      "x": 50,
+      "y": 180,
+      "width": 200,
+      "height": 120,
+      "text": "**Lifecycle**\nStarted in initialization.ts\nvia startPrincipalMCPBridge()\n\nStopped on app quit\nvia stopPrincipalMCPBridge()",
+      "color": "#64748B"
+    },
+    {
+      "id": "config-note",
+      "type": "text",
+      "x": 50,
+      "y": 330,
+      "width": 200,
+      "height": 100,
+      "text": "**Port Config**\nappBranding.ts:\nBRIDGE_PORTS.\n  PRINCIPAL_MCP: 3044",
+      "color": "#64748B"
+    }
+  ],
+  "edges": [
+    {
+      "id": "client-to-server",
+      "fromNode": "mcp-client",
+      "fromSide": "right",
+      "toNode": "express-server",
+      "toSide": "left",
+      "label": "HTTP POST/GET",
+      "pv": {
+        "edgeType": "http-request"
+      }
+    },
+    {
+      "id": "server-to-cors",
+      "fromNode": "express-server",
+      "fromSide": "bottom",
+      "toNode": "cors-middleware",
+      "toSide": "top",
+      "label": "applies middleware",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "server-to-health",
+      "fromNode": "express-server",
+      "fromSide": "right",
+      "toNode": "health-route",
+      "toSide": "left",
+      "label": "GET /health",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "server-to-resolve",
+      "fromNode": "express-server",
+      "fromSide": "right",
+      "toNode": "resolve-route",
+      "toSide": "left",
+      "label": "POST /dependencies/resolve",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "cors-to-resolve",
+      "fromNode": "cors-middleware",
+      "fromSide": "right",
+      "toNode": "resolve-route",
+      "toSide": "top",
+      "label": "applies CORS",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "resolve-to-calling",
+      "fromNode": "resolve-route",
+      "fromSide": "right",
+      "toNode": "repo-monitoring-calling",
+      "toSide": "left",
+      "label": "call manager",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "calling-to-result",
+      "fromNode": "repo-monitoring-calling",
+      "fromSide": "bottom",
+      "toNode": "repo-monitoring-result",
+      "toSide": "top",
+      "label": "awaits",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "result-to-alexandria-found",
+      "fromNode": "repo-monitoring-result",
+      "fromSide": "right",
+      "toNode": "resolution-alexandria-found",
+      "toSide": "left",
+      "label": "if found",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "result-to-alexandria-not-found",
+      "fromNode": "repo-monitoring-result",
+      "fromSide": "right",
+      "toNode": "resolution-alexandria-not-found",
+      "toSide": "left",
+      "label": "if not found",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "alexandria-not-found-to-package-found",
+      "fromNode": "resolution-alexandria-not-found",
+      "fromSide": "bottom",
+      "toNode": "resolution-package-found",
+      "toSide": "top",
+      "label": "check packages",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "alexandria-not-found-to-package-not-found",
+      "fromNode": "resolution-alexandria-not-found",
+      "fromSide": "bottom",
+      "toNode": "resolution-package-not-found",
+      "toSide": "top",
+      "label": "check packages",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "package-not-found-to-suggestions",
+      "fromNode": "resolution-package-not-found",
+      "fromSide": "bottom",
+      "toNode": "resolution-suggestions",
+      "toSide": "top",
+      "label": "generate suggestions",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "alexandria-found-to-final",
+      "fromNode": "resolution-alexandria-found",
+      "fromSide": "bottom",
+      "toNode": "repo-monitoring-manager",
+      "toSide": "right",
+      "label": "complete",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "package-found-to-final",
+      "fromNode": "resolution-package-found",
+      "fromSide": "left",
+      "toNode": "repo-monitoring-manager",
+      "toSide": "right",
+      "label": "complete",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "suggestions-to-final",
+      "fromNode": "resolution-suggestions",
+      "fromSide": "left",
+      "toNode": "repo-monitoring-manager",
+      "toSide": "bottom",
+      "label": "complete",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "final-to-worker",
+      "fromNode": "repo-monitoring-manager",
+      "fromSide": "bottom",
+      "toNode": "monitoring-worker",
+      "toSide": "top",
+      "label": "IPC message",
+      "pv": {
+        "edgeType": "ipc-message"
+      }
+    },
+    {
+      "id": "final-response",
+      "fromNode": "repo-monitoring-manager",
+      "fromSide": "left",
+      "toNode": "resolve-route",
+      "toSide": "right",
+      "label": "resolution result",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "resolve-to-validation-error",
+      "fromNode": "resolve-route",
+      "fromSide": "bottom",
+      "toNode": "error-validation-failed",
+      "toSide": "top",
+      "label": "if invalid",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "calling-to-resolution-error",
+      "fromNode": "repo-monitoring-calling",
+      "fromSide": "bottom",
+      "toNode": "error-resolution-failed",
+      "toSide": "top",
+      "label": "if error",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    }
+  ]
+}
