@@ -1512,16 +1512,6 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
           overflow: 'hidden',
         }}
       >
-        {/* Panel Icon Sidebar */}
-        <PanelIconSidebar
-          currentPanelId={typeof layout.left === 'string' ? layout.left : ''}
-          onPanelChange={(panelId) => onLayoutChange({ ...layout, left: panelId })}
-          theme={theme}
-          collapsed={collapsed.left}
-          onExpand={() => onCollapsedChange({ ...collapsed, left: false })}
-          onCollapse={() => onCollapsedChange({ ...collapsed, left: true })}
-        />
-
         {/* Main panel layout area */}
         <div
           style={{
@@ -1544,6 +1534,17 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
             showCollapseButtons={false}
           />
         </div>
+
+        {/* Panel Icon Sidebar */}
+        <PanelIconSidebar
+          currentPanelId={typeof layout.left === 'string' ? layout.left : ''}
+          onPanelChange={(panelId) => onLayoutChange({ ...layout, left: panelId })}
+          theme={theme}
+          collapsed={collapsed.left}
+          onExpand={() => onCollapsedChange({ ...collapsed, left: false })}
+          onCollapse={() => onCollapsedChange({ ...collapsed, left: true })}
+          position="right"
+        />
       </div>
 
       {/* Remove from Workspace Modal */}

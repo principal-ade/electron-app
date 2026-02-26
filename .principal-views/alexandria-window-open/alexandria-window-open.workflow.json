@@ -1,0 +1,33 @@
+{
+  "version": "1.0.0",
+  "name": "Alexandria Window Opening",
+  "description": "Workflows for opening Alexandria Workspace windows",
+  "mode": "span-tree",
+  "canvas": ".principal-views/alexandria-window-open/alexandria-window-open.otel.canvas",
+  "spanPattern": "alexandria.window",
+  "scenarios": [
+    {
+      "id": "window-open-complete",
+      "name": "Window Open Flow",
+      "description": "Complete flow for opening an Alexandria workspace window - handles named workspaces, temp workspaces, and reuse",
+      "priority": 1,
+      "template": {
+        "introduction": "**Alexandria Window Opening**\n\n{{#if workspace.id}}Opening workspace **\"{{workspace.name}}\"**{{else}}Opening temporary repository workspace{{/if}}",
+        "events": {
+          "alexandria.window.open.flow": "🎯 Starting window open flow",
+          "alexandria.window.open.requested": "1️⃣ User triggered open from {{trigger.source}}{{#if workspace.id}} (workspaceId: `{{workspace.id}}`){{/if}}{{#if repository.path}} (path: `{{repository.path}}`){{/if}}{{#if repository.id}} (PURL: `{{repository.id}}`){{/if}}",
+          "alexandria.window.ipc.invoke": "2️⃣ WindowService invoked IPC channel: {{ipc.channel}}",
+          "alexandria.window.handler.received": "3️⃣ Main process received request, window mode: **{{window.mode}}**",
+          "alexandria.workspace.lookup": "4️⃣ Registry lookup: {{#if workspace.found}}workspace **{{workspace.name}}** found with {{repository.count}} repositories{{else}}**workspace not found**{{/if}}",
+          "window.createSpecial": "5️⃣ {{#if window.reused}}**Reusing existing window** {{window.id}}{{else}}Creating new BrowserWindow (ID: {{window.id}}, type: {{window.type}}){{/if}}",
+          "terminal.window.registered": "6️⃣ Terminal manager registered window {{window.id}}",
+          "alexandria.watches.acquired": "7️⃣ Acquired watches for {{repositories.watched}}/{{repositories.total}} repositories",
+          "window.loadURL": "8️⃣ Loading URL: {{url.path}}",
+          "alexandria.app.initialized": "9️⃣ Renderer initialized in {{init.duration.ms}}ms, panels: {{layout.panels}}",
+          "alexandria.window.ready": "🔟 Window ready in {{total.duration.ms}}ms with {{watches.active}} active watches"
+        },
+        "summary": "{{#if window.reused}}**Result:** Focused existing window {{window.id}}\n\n{{else}}**Window Details:**\n- Window ID: {{window.id}}\n{{#if workspace.name}}- Workspace: **{{workspace.name}}**\n{{/if}}{{#if workspace.id}}- Workspace ID: `{{workspace.id}}`\n{{/if}}{{#if repository.path}}- Repository Path: `{{repository.path}}`\n{{/if}}{{#if repository.count}}- Repositories: {{repository.count}}\n{{/if}}\n**Performance:**\n- Total duration: {{total.duration.ms}}ms\n{{#if watches.active}}- Active watches: {{watches.active}}{{/if}}{{/if}}"
+      }
+    }
+  ]
+}

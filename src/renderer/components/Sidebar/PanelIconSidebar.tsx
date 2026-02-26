@@ -27,6 +27,8 @@ export interface PanelIconSidebarProps {
   onExpand?: () => void;
   /** Callback to collapse left panel */
   onCollapse?: () => void;
+  /** Position of the sidebar (affects border placement) */
+  position?: 'left' | 'right';
 }
 
 /**
@@ -34,7 +36,7 @@ export interface PanelIconSidebarProps {
  * Sorted alphabetically by label
  */
 const PANEL_ICONS = [
-  { id: 'packageComposition', Icon: Package, label: 'Stack' },
+  { id: 'packageComposition', Icon: Package, label: 'Info' },
   { id: 'codeQuality', Icon: CheckCircle, label: 'Quality' },
   { id: 'canvasList', Icon: Network, label: 'Stories' },
   { id: 'docs', Icon: BookOpen, label: 'Docs' },
@@ -57,6 +59,7 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
   collapsed,
   onExpand,
   onCollapse,
+  position = 'left',
 }) => {
   const handlePanelClick = (panelId: string) => {
     // If clicking on the same panel that's already visible and panel is expanded, collapse it
@@ -78,7 +81,8 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
         width: '80px',
         height: '100%',
         backgroundColor: theme.colors.backgroundSecondary,
-        borderRight: `1px solid ${theme.colors.border}`,
+        borderLeft: position === 'right' ? `1px solid ${theme.colors.border}` : undefined,
+        borderRight: position === 'left' ? `1px solid ${theme.colors.border}` : undefined,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
