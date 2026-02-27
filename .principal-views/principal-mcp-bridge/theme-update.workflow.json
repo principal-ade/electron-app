@@ -1,0 +1,54 @@
+{
+  "version": "1.0.0",
+  "name": "Theme Update",
+  "description": "POST /theme/update endpoint for updating theme properties via UserPreferences",
+  "mode": "span-tree",
+  "canvas": ".principal-views/principal-mcp-bridge/principal-mcp-bridge.otel.canvas",
+  "spanPattern": "principal_mcp.theme_update",
+  "scenarios": [
+    {
+      "id": "success",
+      "name": "Theme Update Successful",
+      "description": "Theme property updated successfully via UserPreferences",
+      "priority": 1,
+      "template": {
+        "introduction": "Updated theme property **{{theme.property_path}}**",
+        "events": {
+          "principal_mcp.theme.update_requested": "Requested update to {{theme.property_path}} (type: {{theme.value_type}})",
+          "principal_mcp.theme.preferences_updated": "Updated preferences for theme '{{theme.target_theme}}'",
+          "principal_mcp.theme.renderer_broadcast": "Broadcasting to {{broadcast.window_count}} window(s)",
+          "principal_mcp.theme.renderer_notified": "Notified {{notification.windows_notified}} renderer window(s)",
+          "principal_mcp.theme.update_completed": "Updated {{theme.property_path}} in theme '{{theme.updated_theme}}'"
+        },
+        "summary": "Successfully updated {{theme.property_path}} in theme '{{theme.updated_theme}}'"
+      }
+    },
+    {
+      "id": "validation-failed",
+      "name": "Validation Failed",
+      "description": "Request validation failed - missing or invalid property path",
+      "priority": 2,
+      "template": {
+        "introduction": "Theme update validation failed",
+        "events": {
+          "principal_mcp.error.validation_failed": "Validation error: {{error.message}} (field: {{error.field}})"
+        },
+        "summary": "Update rejected - {{error.message}}"
+      }
+    },
+    {
+      "id": "update-failed",
+      "name": "Update Failed",
+      "description": "Theme update failed during preferences update",
+      "priority": 3,
+      "template": {
+        "introduction": "Theme update failed",
+        "events": {
+          "principal_mcp.theme.update_requested": "Requested update to {{theme.property_path}}",
+          "principal_mcp.error.theme_update_failed": "Update failed: {{error.message}}"
+        },
+        "summary": "Preferences update failed - {{error.message}}"
+      }
+    }
+  ]
+}

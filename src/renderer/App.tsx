@@ -123,7 +123,7 @@ function App() {
   const [hasUpdateAvailable, setHasUpdateAvailable] = React.useState(false);
   // Removed landingPageActions as add project buttons are now in the repository list header
 
-  // Add platform class to body for CSS targeting
+  // Add platform class to body for CSS targeting and initialize services
   React.useEffect(() => {
     const platform = navigator.platform.toLowerCase();
     if (platform.includes('mac')) {

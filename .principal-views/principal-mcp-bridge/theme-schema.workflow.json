@@ -1,0 +1,52 @@
+{
+  "version": "1.0.0",
+  "name": "Theme Schema",
+  "description": "GET /theme/schema endpoint for retrieving theme documentation and available themes",
+  "mode": "span-tree",
+  "canvas": ".principal-views/principal-mcp-bridge/principal-mcp-bridge.otel.canvas",
+  "spanPattern": "principal_mcp.theme_schema",
+  "scenarios": [
+    {
+      "id": "success",
+      "name": "Schema Retrieved Successfully",
+      "description": "Theme schema and available themes returned successfully",
+      "priority": 1,
+      "template": {
+        "introduction": "Retrieved theme schema for **{{theme.name}}**",
+        "events": {
+          "principal_mcp.theme.schema_requested": "Schema requested for theme: {{theme.target_theme}}",
+          "principal_mcp.theme.schema_retrieved": "Retrieved {{theme.schema_properties_count}} schema properties and {{theme.available_themes_count}} available themes"
+        },
+        "summary": "Successfully returned theme schema with {{theme.schema_properties_count}} configurable properties"
+      }
+    },
+    {
+      "id": "theme-not-found",
+      "name": "Theme Not Found",
+      "description": "Requested theme does not exist in predefined themes",
+      "priority": 2,
+      "template": {
+        "introduction": "Failed to retrieve schema - theme not found",
+        "events": {
+          "principal_mcp.theme.schema_requested": "Schema requested for theme: {{theme.target_theme}}",
+          "principal_mcp.error.theme_not_found": "Theme '{{theme.requested}}' not found: {{error.message}}"
+        },
+        "summary": "Schema request failed - unknown theme name"
+      }
+    },
+    {
+      "id": "server-error",
+      "name": "Server Error",
+      "description": "Schema request failed with server error",
+      "priority": 3,
+      "template": {
+        "introduction": "Theme schema request failed",
+        "events": {
+          "principal_mcp.server.request_received": "Server received schema request on port {{server.port}}",
+          "principal_mcp.error.validation_failed": "Request failed: {{error.message}}"
+        },
+        "summary": "Schema request encountered an error"
+      }
+    }
+  ]
+}

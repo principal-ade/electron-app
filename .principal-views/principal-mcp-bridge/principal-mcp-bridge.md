@@ -81,17 +81,27 @@ Port configuration is centralized in `src/shared/config/appBranding.ts`:
 
 ```typescript
 BRIDGE_PORTS: {
-  AGENT_SESSION_EVENTS: 3043,  // HTTP Event Server for agent telemetry
-  PRINCIPAL_MCP: 3044,         // Principal MCP Bridge
+  DEVELOPMENT: {
+    AGENT_SESSION_EVENTS: 3053,  // Dev port for agent telemetry
+    PRINCIPAL_MCP: 3054,         // Dev port for Principal MCP Bridge
+  },
+  PRODUCTION: {
+    AGENT_SESSION_EVENTS: 3043,  // Production port for agent telemetry
+    PRINCIPAL_MCP: 3044,         // Production port for Principal MCP Bridge
+  },
 }
 ```
+
+The bridge automatically selects the appropriate port based on `NODE_ENV`:
+- Development (`NODE_ENV=development`): Port 3054
+- Production: Port 3044
 
 ## Error Handling
 
 - Returns 400 for missing required fields (e.g., `dependencyId`)
 - Returns 500 for internal errors with descriptive messages
 - Logs all requests and errors to console with `[Principal MCP Bridge]` prefix
-- Fails fast if port 3044 is already in use (no retry/fallback)
+- Fails fast if the configured port is already in use (no retry/fallback)
 
 ## Security Considerations
 

@@ -2,7 +2,8 @@ import { UserPreferences } from '../../shared/types/userPreferences.types';
 import { UserPreferencesAPIEvents } from '../../shared/main-process-api-interfaces/UserPreferencesAPI';
 import { TypedMultiStoreWrapper } from '../storage-providers/typed-multistore-wrapper';
 import { StaticNamespaces } from '../storage-providers/types';
-import { ipcMain } from 'electron';
+import { ipcMain, BrowserWindow } from 'electron';
+import { trace } from '@opentelemetry/api';
 
 const USER_PREFERENCES_KEY = 'preferences';
 
@@ -60,6 +61,7 @@ export class UserPreferencesHandler {
 
   async updateUserPreferences(
     updates: Partial<UserPreferences>,
+    notifyRenderers: boolean = true,
   ): Promise<void> {
     const current = await this.getOrCreatePreferences();
     const updated = this.deepMerge(current, updates);
@@ -68,6 +70,48 @@ export class UserPreferencesHandler {
       updated,
       StaticNamespaces.USER_PREFERENCES,
     );
+
+    // Notify all renderer windows that preferences changed
+    if (notifyRenderers) {
+      this.broadcastPreferencesChanged(updated);
+    }
+  }
+
+  /**
+   * Broadcast preferences changed notification to all windows
+   */
+  private broadcastPreferencesChanged(preferences: UserPreferences): void {
+    const tracer = trace.getTracer('user-preferences');
+    const span = tracer.startSpan('user_preferences.broadcast');
+
+    try {
+      const windows = BrowserWindow.getAllWindows();
+      const activeWindows = windows.filter((win) => !win.isDestroyed());
+
+      span.addEvent('principal_mcp.theme.renderer_broadcast', {
+        'broadcast.window_count': activeWindows.length,
+        'broadcast.channel': UserPreferencesAPIEvents.PREFERENCES_CHANGED,
+        'broadcast.has_theme_overrides': !!preferences.customThemeOverrides,
+      });
+
+      for (const win of activeWindows) {
+        win.webContents.send(
+          UserPreferencesAPIEvents.PREFERENCES_CHANGED,
+          preferences,
+        );
+      }
+
+      span.addEvent('principal_mcp.theme.renderer_notified', {
+        'notification.windows_notified': activeWindows.length,
+        'notification.channel': UserPreferencesAPIEvents.PREFERENCES_CHANGED,
+      });
+
+      span.end();
+    } catch (error) {
+      span.recordException(error as Error);
+      span.end();
+      throw error;
+    }
   }
 
   private deepMerge<T extends object>(target: T, source: Partial<T>): T {

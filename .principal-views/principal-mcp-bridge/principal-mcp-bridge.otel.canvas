@@ -686,6 +686,371 @@
       "height": 100,
       "text": "**Port Config**\nappBranding.ts:\nBRIDGE_PORTS.\n  PRINCIPAL_MCP: 3044",
       "color": "#64748B"
+    },
+    {
+      "id": "theme-section-title",
+      "type": "text",
+      "x": 50,
+      "y": 550,
+      "width": 500,
+      "height": 40,
+      "color": "#64748B",
+      "text": "## Theme Routes\n**Routes for theme schema documentation and updates**"
+    },
+    {
+      "id": "theme-schema-route",
+      "type": "text",
+      "x": 300,
+      "y": 620,
+      "width": 220,
+      "height": 100,
+      "text": "GET /theme/schema\nReturns theme schema,\navailable themes, values",
+      "pv": {
+        "nodeType": "route-handler",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": ["src/main/principal-mcp/PrincipalMCPBridge.ts"],
+        "otel": {
+          "kind": "event",
+          "category": "theme",
+          "isNew": true,
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
+        "event": {
+          "name": "principal_mcp.theme.schema_requested",
+          "description": "Theme schema endpoint called",
+          "attributes": {
+            "theme.target_theme": {
+              "type": "string",
+              "description": "Theme name being queried (defaults to principalAI)"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "theme-schema-retrieved",
+      "type": "text",
+      "x": 570,
+      "y": 620,
+      "width": 200,
+      "height": 100,
+      "text": "Schema Retrieved\nwith theme values\nand available themes",
+      "pv": {
+        "nodeType": "service",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": ["src/main/principal-mcp/PrincipalMCPBridge.ts", "src/main/theme/themeHandler.ts"],
+        "otel": {
+          "kind": "event",
+          "category": "theme",
+          "isNew": true,
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
+        "event": {
+          "name": "principal_mcp.theme.schema_retrieved",
+          "description": "Theme schema successfully retrieved",
+          "attributes": {
+            "theme.name": {
+              "type": "string",
+              "description": "Retrieved theme name"
+            },
+            "theme.schema_properties_count": {
+              "type": "number",
+              "description": "Number of schema properties"
+            },
+            "theme.available_themes_count": {
+              "type": "number",
+              "description": "Number of available themes"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "theme-not-found-error",
+      "type": "text",
+      "x": 570,
+      "y": 750,
+      "width": 200,
+      "height": 60,
+      "text": "Theme Not Found\n(invalid theme name)",
+      "pv": {
+        "nodeType": "route-handler",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": ["src/main/principal-mcp/PrincipalMCPBridge.ts"],
+        "otel": {
+          "kind": "event",
+          "category": "error",
+          "isNew": true,
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
+        "event": {
+          "name": "principal_mcp.error.theme_not_found",
+          "description": "Requested theme does not exist",
+          "attributes": {
+            "theme.requested": {
+              "type": "string",
+              "description": "Theme name that was requested"
+            },
+            "error.message": {
+              "type": "string",
+              "description": "Error message"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "theme-update-route",
+      "type": "text",
+      "x": 300,
+      "y": 850,
+      "width": 220,
+      "height": 100,
+      "text": "POST /theme/update\nPartial updates to\ntheme properties",
+      "pv": {
+        "nodeType": "route-handler",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": ["src/main/principal-mcp/PrincipalMCPBridge.ts"],
+        "otel": {
+          "kind": "event",
+          "category": "theme",
+          "isNew": true,
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
+        "event": {
+          "name": "principal_mcp.theme.update_requested",
+          "description": "Theme update endpoint called",
+          "attributes": {
+            "theme.property_path": {
+              "type": "string",
+              "description": "Property path being updated (e.g., colors.primary)"
+            },
+            "theme.value_type": {
+              "type": "string",
+              "description": "Type of the new value"
+            },
+            "theme.target_theme": {
+              "type": "string",
+              "description": "Theme name to update (current if not specified)"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "theme-prefs-update",
+      "type": "text",
+      "x": 570,
+      "y": 850,
+      "width": 200,
+      "height": 60,
+      "text": "UserPreferencesHandler\nUpdates & Broadcasts",
+      "pv": {
+        "nodeType": "service",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": ["src/main/stores/userPreferencesHandler.ts"],
+        "otel": {
+          "kind": "event",
+          "category": "preferences",
+          "isNew": true,
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
+        "event": {
+          "name": "principal_mcp.theme.preferences_updated",
+          "description": "Theme overrides saved to preferences and broadcast to renderers",
+          "attributes": {
+            "theme.property_path": {
+              "type": "string",
+              "description": "Property path being updated"
+            },
+            "theme.target_theme": {
+              "type": "string",
+              "description": "Theme being updated"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "theme-renderer-broadcast",
+      "type": "text",
+      "x": 570,
+      "y": 930,
+      "width": 200,
+      "height": 60,
+      "text": "Broadcast to\nRenderer Windows",
+      "pv": {
+        "nodeType": "service",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": ["src/main/stores/userPreferencesHandler.ts"],
+        "otel": {
+          "kind": "event",
+          "category": "ipc",
+          "isNew": true,
+          "files": ["src/main/stores/userPreferencesHandler.ts"]
+        },
+        "event": {
+          "name": "principal_mcp.theme.renderer_broadcast",
+          "description": "Broadcasting preferences change to renderer windows",
+          "attributes": {
+            "broadcast.window_count": {
+              "type": "number",
+              "description": "Number of active windows to broadcast to"
+            },
+            "broadcast.channel": {
+              "type": "string",
+              "description": "IPC channel name"
+            },
+            "broadcast.has_theme_overrides": {
+              "type": "boolean",
+              "description": "Whether preferences include theme overrides"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "theme-renderer-notified",
+      "type": "text",
+      "x": 570,
+      "y": 1010,
+      "width": 200,
+      "height": 60,
+      "text": "Renderers Notified\nvia IPC",
+      "pv": {
+        "nodeType": "service",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": ["src/main/stores/userPreferencesHandler.ts"],
+        "otel": {
+          "kind": "event",
+          "category": "ipc",
+          "isNew": true,
+          "files": ["src/main/stores/userPreferencesHandler.ts"]
+        },
+        "event": {
+          "name": "principal_mcp.theme.renderer_notified",
+          "description": "Renderer windows have been notified of preferences change",
+          "attributes": {
+            "notification.windows_notified": {
+              "type": "number",
+              "description": "Number of windows that were notified"
+            },
+            "notification.channel": {
+              "type": "string",
+              "description": "IPC channel used for notification"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "theme-update-completed",
+      "type": "text",
+      "x": 840,
+      "y": 850,
+      "width": 200,
+      "height": 100,
+      "text": "Theme Update\nCompleted\n+ optional warning",
+      "pv": {
+        "nodeType": "service",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": ["src/main/principal-mcp/PrincipalMCPBridge.ts", "src/main/theme/themeHandler.ts", "src/renderer/providers/CustomThemeProvider.tsx"],
+        "otel": {
+          "kind": "event",
+          "category": "theme",
+          "isNew": true,
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
+        "event": {
+          "name": "principal_mcp.theme.update_completed",
+          "description": "Theme property successfully updated (with warning if not active theme)",
+          "attributes": {
+            "theme.property_path": {
+              "type": "string",
+              "description": "Property path that was updated"
+            },
+            "theme.updated_theme": {
+              "type": "string",
+              "description": "Name of the updated theme"
+            },
+            "theme.success": {
+              "type": "boolean",
+              "description": "Whether update was successful"
+            },
+            "theme.warning": {
+              "type": "string",
+              "description": "Warning if updated theme is not active (optional)"
+            },
+            "theme.active_theme": {
+              "type": "string",
+              "description": "Currently active theme if different (optional)"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "theme-update-failed",
+      "type": "text",
+      "x": 840,
+      "y": 980,
+      "width": 200,
+      "height": 60,
+      "text": "Theme Update\nFailed",
+      "pv": {
+        "nodeType": "service",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": ["src/main/principal-mcp/PrincipalMCPBridge.ts"],
+        "otel": {
+          "kind": "event",
+          "category": "error",
+          "isNew": true,
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
+        "event": {
+          "name": "principal_mcp.error.theme_update_failed",
+          "description": "Theme update failed",
+          "attributes": {
+            "theme.property_path": {
+              "type": "string",
+              "description": "Property path that failed to update"
+            },
+            "error.message": {
+              "type": "string",
+              "description": "Error message"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "theme-service-renderer",
+      "type": "text",
+      "x": 840,
+      "y": 620,
+      "width": 200,
+      "height": 100,
+      "text": "CustomThemeProvider\n+ ThemeService\nRe-applies theme on\npreference changes",
+      "color": "#EC4899"
+    },
+    {
+      "id": "theme-prefs-flow",
+      "type": "text",
+      "x": 50,
+      "y": 850,
+      "width": 200,
+      "height": 120,
+      "text": "**Update Flow**\n1. ThemeHandler updates prefs\n2. UserPreferencesHandler\n   broadcasts to windows\n3. CustomThemeProvider\n   re-applies theme",
+      "color": "#64748B"
     }
   ],
   "edges": [
@@ -892,6 +1257,138 @@
       "fromNode": "repo-monitoring-calling",
       "fromSide": "bottom",
       "toNode": "error-resolution-failed",
+      "toSide": "top",
+      "label": "if error",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "server-to-theme-schema",
+      "fromNode": "express-server",
+      "fromSide": "bottom",
+      "toNode": "theme-schema-route",
+      "toSide": "top",
+      "label": "GET /theme/schema",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "theme-schema-to-retrieved",
+      "fromNode": "theme-schema-route",
+      "fromSide": "right",
+      "toNode": "theme-schema-retrieved",
+      "toSide": "left",
+      "label": "get schema",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "theme-schema-to-not-found",
+      "fromNode": "theme-schema-route",
+      "fromSide": "bottom",
+      "toNode": "theme-not-found-error",
+      "toSide": "top",
+      "label": "if theme not found",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "theme-schema-to-service",
+      "fromNode": "theme-schema-retrieved",
+      "fromSide": "right",
+      "toNode": "theme-service-renderer",
+      "toSide": "left",
+      "label": "reads predefined themes",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "server-to-theme-update",
+      "fromNode": "express-server",
+      "fromSide": "bottom",
+      "toNode": "theme-update-route",
+      "toSide": "top",
+      "label": "POST /theme/update",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "theme-update-to-prefs",
+      "fromNode": "theme-update-route",
+      "fromSide": "right",
+      "toNode": "theme-prefs-update",
+      "toSide": "left",
+      "label": "update preferences",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "theme-prefs-to-broadcast",
+      "fromNode": "theme-prefs-update",
+      "fromSide": "bottom",
+      "toNode": "theme-renderer-broadcast",
+      "toSide": "top",
+      "label": "broadcast start",
+      "pv": {
+        "edgeType": "ipc-message"
+      }
+    },
+    {
+      "id": "theme-broadcast-to-notified",
+      "fromNode": "theme-renderer-broadcast",
+      "fromSide": "bottom",
+      "toNode": "theme-renderer-notified",
+      "toSide": "top",
+      "label": "IPC send",
+      "pv": {
+        "edgeType": "ipc-message"
+      }
+    },
+    {
+      "id": "theme-notified-to-service",
+      "fromNode": "theme-renderer-notified",
+      "fromSide": "right",
+      "toNode": "theme-service-renderer",
+      "toSide": "left",
+      "label": "CustomEvent",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "theme-service-to-completed",
+      "fromNode": "theme-service-renderer",
+      "fromSide": "bottom",
+      "toNode": "theme-update-completed",
+      "toSide": "top",
+      "label": "re-apply theme",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "theme-prefs-to-completed",
+      "fromNode": "theme-prefs-update",
+      "fromSide": "right",
+      "toNode": "theme-update-completed",
+      "toSide": "left",
+      "label": "success response",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "theme-prefs-to-failed",
+      "fromNode": "theme-prefs-update",
+      "fromSide": "bottom",
+      "toNode": "theme-update-failed",
       "toSide": "top",
       "label": "if error",
       "pv": {

@@ -3,7 +3,7 @@ import {
   UserPreferencesAPIEvents,
 } from '../../shared/main-process-api-interfaces/UserPreferencesAPI';
 import { UserPreferences } from '../../shared/types/userPreferences.types';
-import { ipcRenderer } from 'electron';
+import { ipcRenderer, IpcRendererEvent } from 'electron';
 
 export const userPreferencesAPI: UserPreferencesAPI = {
   getPreferences: async () => {
@@ -14,5 +14,20 @@ export const userPreferencesAPI: UserPreferencesAPI = {
       UserPreferencesAPIEvents.UPDATE_PREFERENCES,
       updates,
     );
+  },
+  onPreferencesChanged: (callback: (preferences: UserPreferences) => void) => {
+    const subscription = (
+      _event: IpcRendererEvent,
+      preferences: UserPreferences,
+    ) => {
+      callback(preferences);
+    };
+    ipcRenderer.on(UserPreferencesAPIEvents.PREFERENCES_CHANGED, subscription);
+    return () => {
+      ipcRenderer.removeListener(
+        UserPreferencesAPIEvents.PREFERENCES_CHANGED,
+        subscription,
+      );
+    };
   },
 };

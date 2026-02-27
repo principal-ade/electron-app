@@ -4,20 +4,31 @@ import { EventEmitter } from 'events';
 import { SpanStatusCode } from '@opentelemetry/api';
 import { APP_BRANDING } from '../../shared/config/appBranding';
 import { getManager as getRepositoryMonitoringManager } from '../repository-monitoring/ipcHandlers';
+import { getThemeHandler } from '../theme/themeHandler';
+import { isValidPropertyPath } from '../../shared/theme/themeSchema';
 import { getTracer } from '../telemetry';
 
 // Tracer for Principal MCP Bridge instrumentation
 const tracer = getTracer('principal-mcp-bridge');
 
+// Determine which port to use based on environment
+function getDefaultPort(): number {
+  const isDev = process.env.NODE_ENV === 'development';
+  const ports = isDev
+    ? APP_BRANDING.BRIDGE_PORTS.DEVELOPMENT
+    : APP_BRANDING.BRIDGE_PORTS.PRODUCTION;
+  return ports.PRINCIPAL_MCP;
+}
+
 export class PrincipalMCPBridge extends EventEmitter {
   private app: express.Application;
   private server: Server | null = null;
-  private port: number = APP_BRANDING.BRIDGE_PORTS.PRINCIPAL_MCP || 3043;
+  private port: number = getDefaultPort();
 
   constructor(startPort?: number) {
     super();
     this.app = express();
-    this.port = startPort || APP_BRANDING.BRIDGE_PORTS.PRINCIPAL_MCP || 3043;
+    this.port = startPort || getDefaultPort();
     this.setupMiddleware();
     this.setupRoutes();
   }
@@ -304,6 +315,247 @@ export class PrincipalMCPBridge extends EventEmitter {
         }
       },
     );
+
+    // ============================================
+    // THEME ROUTES
+    // ============================================
+
+    // GET /theme/schema - Get theme schema documentation and available themes
+    this.app.get('/theme/schema', async (req: Request, res: Response) => {
+      const span = tracer.startSpan('principal_mcp.theme_schema');
+
+      try {
+        const themeName = req.query.theme as string | undefined;
+
+        // Event: client request initiated
+        span.addEvent('principal_mcp.client.request_initiated', {
+          'http.method': 'GET',
+          'http.url': '/theme/schema',
+          'client.type': 'mcp',
+        });
+
+        // Event: server received request
+        span.addEvent('principal_mcp.server.request_received', {
+          'http.method': 'GET',
+          'http.path': '/theme/schema',
+          'server.port': this.port,
+          'theme.query_param': themeName || 'default',
+        });
+
+        // Event: schema requested
+        span.addEvent('principal_mcp.theme.schema_requested', {
+          'theme.target_theme': themeName || 'principalAI',
+        });
+
+        const themeHandler = getThemeHandler();
+        const schemaResponse = await themeHandler.getSchema(themeName);
+
+        if (!schemaResponse.success) {
+          span.addEvent('principal_mcp.error.theme_not_found', {
+            'theme.requested': themeName || 'default',
+            'error.message': schemaResponse.error || 'Theme not found',
+          });
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: schemaResponse.error || 'Theme not found',
+          });
+          res.status(404).json(schemaResponse);
+          return;
+        }
+
+        // Event: schema retrieved successfully
+        span.addEvent('principal_mcp.theme.schema_retrieved', {
+          'theme.name': schemaResponse.themeName || 'unknown',
+          'theme.schema_properties_count': schemaResponse.schema?.length || 0,
+          'theme.available_themes_count':
+            schemaResponse.availableThemes?.length || 0,
+        });
+
+        span.setStatus({ code: SpanStatusCode.OK });
+        res.json(schemaResponse);
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
+
+        span.addEvent('principal_mcp.error.schema_retrieval_failed', {
+          'error.message': errorMessage,
+          'error.type': 'schema_retrieval_error',
+        });
+
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: errorMessage,
+        });
+
+        console.error(
+          '[Principal MCP Bridge] Failed to get theme schema:',
+          error,
+        );
+        res.status(500).json({
+          success: false,
+          error: errorMessage,
+        });
+      } finally {
+        span.end();
+      }
+    });
+
+    // POST /theme/update - Update a theme property
+    this.app.post('/theme/update', async (req: Request, res: Response) => {
+      const span = tracer.startSpan('principal_mcp.theme_update');
+
+      try {
+        const { propertyPath, value, themeName } = req.body;
+
+        // Event: client request initiated
+        span.addEvent('principal_mcp.client.request_initiated', {
+          'http.method': 'POST',
+          'http.url': '/theme/update',
+          'client.type': 'mcp',
+        });
+
+        // Event: server received request
+        span.addEvent('principal_mcp.server.request_received', {
+          'http.method': 'POST',
+          'http.path': '/theme/update',
+          'server.port': this.port,
+        });
+
+        // Validate required fields
+        if (!propertyPath) {
+          span.addEvent('principal_mcp.error.validation_failed', {
+            'error.type': 'validation_error',
+            'error.field': 'propertyPath',
+            'error.message': 'propertyPath is required',
+          });
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: 'propertyPath is required',
+          });
+          res.status(400).json({
+            success: false,
+            error: 'propertyPath is required (e.g., "colors.primary", "fonts.body")',
+          });
+          return;
+        }
+
+        if (value === undefined || value === null) {
+          span.addEvent('principal_mcp.error.validation_failed', {
+            'error.type': 'validation_error',
+            'error.field': 'value',
+            'error.message': 'value is required',
+          });
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: 'value is required',
+          });
+          res.status(400).json({
+            success: false,
+            error: 'value is required',
+          });
+          return;
+        }
+
+        // Validate property path against schema
+        if (!isValidPropertyPath(propertyPath)) {
+          span.addEvent('principal_mcp.error.validation_failed', {
+            'error.type': 'validation_error',
+            'error.field': 'propertyPath',
+            'error.message': `Invalid property path: ${propertyPath}`,
+          });
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: `Invalid property path: ${propertyPath}`,
+          });
+          res.status(400).json({
+            success: false,
+            error: `Invalid property path: "${propertyPath}". Use GET /theme/schema to see valid property paths.`,
+          });
+          return;
+        }
+
+        // Event: theme update requested
+        span.addEvent('principal_mcp.theme.update_requested', {
+          'theme.property_path': propertyPath,
+          'theme.value_type': typeof value,
+          'theme.target_theme': themeName || 'current',
+        });
+
+        // Event: updating preferences (main process)
+        span.addEvent('principal_mcp.theme.preferences_updating', {
+          'theme.property_path': propertyPath,
+          'theme.target_theme': themeName || 'principalAI',
+        });
+
+        const themeHandler = getThemeHandler();
+        const result = await themeHandler.updateProperty({
+          propertyPath,
+          value,
+          themeName,
+        });
+
+        // Event: preferences updated and broadcast to renderers
+        span.addEvent('principal_mcp.theme.preferences_updated', {
+          'theme.property_path': propertyPath,
+          'theme.success': result.success,
+          'theme.active_theme': result.activeTheme || 'same',
+        });
+
+        if (!result.success) {
+          span.addEvent('principal_mcp.error.theme_update_failed', {
+            'theme.property_path': propertyPath,
+            'error.message': result.error || 'Unknown error',
+          });
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: result.error || 'Theme update failed',
+          });
+          res.status(500).json(result);
+          return;
+        }
+
+        // Event: theme update completed successfully
+        const completedAttrs: Record<string, string | boolean> = {
+          'theme.property_path': propertyPath,
+          'theme.updated_theme': result.themeName || 'unknown',
+          'theme.success': true,
+        };
+        if (result.warning) {
+          completedAttrs['theme.warning'] = result.warning;
+        }
+        if (result.activeTheme) {
+          completedAttrs['theme.active_theme'] = result.activeTheme;
+        }
+        span.addEvent('principal_mcp.theme.update_completed', completedAttrs);
+
+        span.setStatus({ code: SpanStatusCode.OK });
+        res.json(result);
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
+
+        span.addEvent('principal_mcp.error.theme_update_exception', {
+          'error.message': errorMessage,
+          'error.type': 'exception',
+        });
+
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: errorMessage,
+        });
+
+        console.error(
+          '[Principal MCP Bridge] Failed to update theme:',
+          error,
+        );
+        res.status(500).json({
+          success: false,
+          error: errorMessage,
+        });
+      } finally {
+        span.end();
+      }
+    });
   }
 
   public async start(): Promise<number> {

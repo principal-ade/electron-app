@@ -3,6 +3,7 @@ import { ThemeProvider } from '@principal-ade/industry-theme';
 import type { Theme } from '@principal-ade/industry-theme';
 import { ThemeService, ThemeChangeEvent } from '../services/ThemeService';
 import { transparentTheme } from '../themes/predefinedThemes';
+import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 
 interface CustomThemeProviderProps {
   children: React.ReactNode;
@@ -53,7 +54,7 @@ export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({
     }
 
     // Subscribe to theme changes for live switching
-    const unsubscribe = ThemeService.onThemeChange(
+    const unsubscribeTheme = ThemeService.onThemeChange(
       (event: ThemeChangeEvent) => {
         console.info(
           '[CustomThemeProvider] Theme change event received:',
@@ -63,8 +64,26 @@ export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({
       },
     );
 
+    // Subscribe to preference changes (e.g., from HTTP API via main process)
+    // Re-apply theme when customThemeOverrides change
+    const unsubscribePrefs = UserPreferencesService.onPreferencesUpdated(
+      async (prefs) => {
+        if (prefs.customThemeOverrides) {
+          console.info(
+            '[CustomThemeProvider] Preferences updated, re-applying theme',
+          );
+          const currentThemeName = ThemeService.getCurrentThemeName();
+          const theme = await ThemeService.getActiveTheme(currentThemeName);
+          if (theme) {
+            setSelectedTheme(theme);
+          }
+        }
+      },
+    );
+
     return () => {
-      unsubscribe();
+      unsubscribeTheme();
+      unsubscribePrefs();
     };
   }, [workspaceThemeName]);
 
