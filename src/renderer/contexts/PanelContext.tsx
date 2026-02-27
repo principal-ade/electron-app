@@ -202,6 +202,8 @@ interface ExtendedPanelContextValue extends PanelContextValue {
   // Typed slices for repository-composition-panels
   gitStatusWithFiles: DataSlice<GitStatusWithFiles | null>;
   packages: DataSlice<PackagesSliceData | null>;
+  /** Alexandria repository entry with GitHub metadata (for PackageCompositionPanel) */
+  repositoryEntry: DataSlice<AlexandriaEntry | null>;
 }
 
 // Provider value that contains context, actions, and events separately
@@ -970,6 +972,32 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
     [],
   );
 
+  // Repository entry slice (for PackageCompositionPanel GitHub visibility)
+  const repositoryEntrySlice = useMemo<DataSlice<AlexandriaEntry | null>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'repositoryEntry',
+      data: repository
+        ? ({
+            name: repository.name,
+            path: repository.path as unknown as AlexandriaEntry['path'],
+            remoteUrl: (repository as { remoteUrl?: string }).remoteUrl,
+            registeredAt: new Date().toISOString(),
+            hasViews: false,
+            viewCount: 0,
+            views: [],
+            github: (repository as { github?: AlexandriaEntry['github'] }).github,
+          } as AlexandriaEntry)
+        : null,
+      loading: false,
+      error: null,
+      refresh: async () => {
+        console.info('[PanelContext] Refreshing repository entry...');
+      },
+    }),
+    [repository],
+  );
+
   // Empty slices Map for backward compatibility with PanelContextValue interface
   const slices = useMemo<Map<string, DataSlice<unknown>>>(() => new Map(), []);
 
@@ -1628,6 +1656,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       // Typed slices for repository-composition-panels
       gitStatusWithFiles: gitStatusWithFilesSlice,
       packages: packagesSlice,
+      repositoryEntry: repositoryEntrySlice,
     }),
     [
       workspace,
@@ -1652,6 +1681,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       githubIssuesSlice,
       gitStatusWithFilesSlice,
       packagesSlice,
+      repositoryEntrySlice,
     ],
   );
 

@@ -151,9 +151,12 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
             </div>
             <span
               style={{
-                fontSize: '11px',
-                fontWeight: isActive ? '600' : '400',
-                lineHeight: 1,
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[0],
+                fontWeight: isActive
+                  ? theme.fontWeights.semibold
+                  : theme.fontWeights.body,
+                lineHeight: theme.lineHeights.tight,
                 textAlign: 'center',
                 maxWidth: '100%',
                 overflow: 'hidden',

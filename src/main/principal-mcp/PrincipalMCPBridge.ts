@@ -344,7 +344,7 @@ export class PrincipalMCPBridge extends EventEmitter {
 
         // Event: schema requested
         span.addEvent('principal_mcp.theme.schema_requested', {
-          'theme.target_theme': themeName || 'principalAI',
+          'theme.target_theme': themeName || 'user-selected',
         });
 
         const themeHandler = getThemeHandler();

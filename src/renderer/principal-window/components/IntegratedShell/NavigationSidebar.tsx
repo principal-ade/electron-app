@@ -105,8 +105,9 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
             alignItems: 'center',
             justifyContent: 'center',
             color: theme.colors.background,
-            fontWeight: 600,
-            fontSize: '12px',
+            fontFamily: theme.fonts.body,
+            fontWeight: theme.fontWeights.semibold,
+            fontSize: theme.fontSizes[0],
           }}
         >
           {user.login?.[0]?.toUpperCase() || 'U'}
@@ -206,9 +207,13 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
       {item.label && (
         <span
           style={{
-            fontSize: '11px',
-            fontWeight: activeView === item.id ? '600' : '400',
-            lineHeight: 1,
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[0],
+            fontWeight:
+              activeView === item.id
+                ? theme.fontWeights.semibold
+                : theme.fontWeights.body,
+            lineHeight: theme.lineHeights.tight,
             textAlign: 'center',
           }}
         >

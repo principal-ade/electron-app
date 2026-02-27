@@ -121,7 +121,13 @@ export class ThemeHandler {
    */
   async getSchema(themeName?: string): Promise<ThemeSchemaResponse> {
     try {
-      const targetThemeName = themeName || 'principalAI';
+      // If no theme specified, use the user's currently selected theme
+      let targetThemeName = themeName;
+      if (!targetThemeName) {
+        const prefsHandler = UserPreferencesHandler.getInstance();
+        const prefs = await prefsHandler.getUserPreferences();
+        targetThemeName = prefs.selectedTheme || 'principalAI';
+      }
       const themeMetadata = getThemeMetadata(targetThemeName);
 
       if (!themeMetadata) {

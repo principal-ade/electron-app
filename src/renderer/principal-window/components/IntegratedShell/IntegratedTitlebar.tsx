@@ -224,7 +224,7 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
           display: 'flex',
           alignItems: 'center',
           fontSize: theme.fontSizes[3],
-          fontWeight: 600,
+          fontWeight: theme.fontWeights.heading,
           color: accentColor,
           fontFamily: theme.fonts.heading,
           WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],

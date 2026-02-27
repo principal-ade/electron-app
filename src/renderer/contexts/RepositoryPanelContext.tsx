@@ -92,6 +92,7 @@ interface RepositoryPanelContextValue extends PanelContextValue {
   openTabs: DataSlice<unknown[]>;
   markdown: DataSlice<unknown>;
   packages: DataSlice<PackagesSliceData | null>;
+  repositoryEntry: DataSlice<AlexandriaEntry | null>;
   gitStatusWithFiles: DataSlice<GitStatusWithFiles | null>;
   alexandriaRepositories: DataSlice<AlexandriaRepositoriesSlice>;
   workspace: DataSlice<WorkspaceSlice>;
@@ -1803,6 +1804,34 @@ export const RepositoryPanelProvider: React.FC<
     [packagesData, packagesLoading, repositoryPath],
   );
 
+  // Repository entry slice (for PackageCompositionPanel GitHub visibility)
+  // Find the current repository's AlexandriaEntry from the loaded repositories
+  const currentAlexandriaEntry = useMemo(() => {
+    if (!repositoryPath || alexandriaRepositories.length === 0) return null;
+    return alexandriaRepositories.find(entry => entry.path === repositoryPath) || null;
+  }, [repositoryPath, alexandriaRepositories]);
+
+  const repositoryEntrySlice = useMemo<DataSlice<AlexandriaEntry | null>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'repositoryEntry',
+      data: currentAlexandriaEntry || (repositoryPath
+        ? ({
+            name: repositoryPath.split('/').pop() || '',
+            path: repositoryPath as unknown as AlexandriaEntry['path'],
+            registeredAt: new Date().toISOString(),
+            hasViews: false,
+            viewCount: 0,
+            views: [],
+          } as AlexandriaEntry)
+        : null),
+      loading: alexandriaRepositoriesLoading,
+      error: null,
+      refresh: async () => {},
+    }),
+    [repositoryPath, currentAlexandriaEntry, alexandriaRepositoriesLoading],
+  );
+
   // Explicit DataSlice: gitStatusWithFiles
   const gitStatusWithFilesSlice = useMemo<DataSlice<GitStatusWithFiles | null>>(
     () => ({
@@ -2281,6 +2310,7 @@ export const RepositoryPanelProvider: React.FC<
       openTabs: openTabsSlice,
       markdown: markdownSlice,
       packages: packagesSlice,
+      repositoryEntry: repositoryEntrySlice,
       gitStatusWithFiles: gitStatusWithFilesSlice,
       alexandriaRepositories: alexandriaRepositoriesSlice as DataSlice<AlexandriaRepositoriesSlice>,
       workspace: workspaceSlice as DataSlice<WorkspaceSlice>,
@@ -2315,6 +2345,7 @@ export const RepositoryPanelProvider: React.FC<
       openTabsSlice,
       markdownSlice,
       packagesSlice,
+      repositoryEntrySlice,
       gitStatusWithFilesSlice,
       alexandriaRepositoriesSlice,
       workspaceSlice,
