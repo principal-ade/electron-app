@@ -103,7 +103,7 @@ export class OtelCollectorService {
       port2.on('message', (event) => {
         try {
           const message = event.data;
-          if (message?.type === 'TRACE_BATCH' && message.payload) {
+          if (message?.type === 'RAW_OTLP_TRACE' && message.payload) {
             this.storeTrace(message.payload);
           }
         } catch (err) {
