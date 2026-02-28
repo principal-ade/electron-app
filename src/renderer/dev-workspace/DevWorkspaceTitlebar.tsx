@@ -4,50 +4,21 @@ import {
   Cloud,
   CloudOff,
   Terminal,
-  Globe,
   Check,
   Copy,
-  Play,
   BookOpen,
   ChevronDown,
-  PanelLeftClose,
-  PanelLeftOpen,
 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
-import {
-  PanelCollapseButton,
-} from '@principal-ade/panel-layouts';
 import { BaseTitlebar } from '../components/Titlebar/BaseTitlebar';
 import { GitSyncStatusIndicator } from '../components/Titlebar/GitSyncStatusIndicator';
 import { RepositoryAvatar } from '../components/repository-maps/RepositoryAvatar';
-import {
-  PanelSelectorDropdown,
-  type PanelOption,
-} from '../components/Titlebar/PanelSelectorDropdown';
 import type { Repository } from '../../shared/types/repository.types';
 import type { FileTreeSource } from '../types/file-tree-source';
 import { useRepositoryGitStatus } from '../hooks/useRepositoryGitStatus';
 import { findAvailablePort, waitForPortReady } from '../utils/portDetection';
 import { StorybookService, type StorybookPackage } from '../services/StorybookService';
 import type { PackageLayer } from '@principal-ai/codebase-composition';
-
-// Available panels for Dev workspace
-const AVAILABLE_PANELS: PanelOption[] = [
-  { id: 'agentsList', label: 'Agents' },
-  { id: 'canvasList', label: 'Architecture' },
-  { id: 'codeQuality', label: 'Code Quality' },
-  { id: 'docs', label: 'Documentation' },
-  { id: 'fileCity', label: 'File City' },
-  { id: 'gitChanges', label: 'File Tree' },
-  { id: 'kanban', label: 'Backlog' },
-  { id: 'localhostBrowser', label: 'Localhost Browser' },
-  { id: 'packageComposition', label: 'Package Composition' },
-  { id: 'skillsList', label: 'Skills' },
-  { id: 'terminal', label: 'Terminal' },
-  { id: 'traceList', label: 'Trace List' },
-  { id: 'traceViewer', label: 'Trace Viewer' },
-  { id: 'typeInformation', label: 'Type Information' },
-];
 
 // Panel configuration presets
 export interface PanelPreset {
@@ -168,12 +139,6 @@ export interface DevWorkspaceTitlebarProps {
   onToggleTerminalImplementation?: () => void;
   // Panel controls
   collapsed?: { left: boolean; right: boolean };
-  onToggleLeftSidebar?: () => void;
-  onToggleRightSidebar?: () => void;
-  // Web-ADE integration
-  onOpenInWebADE?: () => void;
-  // GitHub Actions
-  onOpenGitHubActions?: () => void;
   // Alexandria Workspace
   onOpenAlexandriaWorkspace?: () => void;
   // Panel configuration
@@ -214,10 +179,6 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
   terminalImplementation,
   onToggleTerminalImplementation,
   collapsed,
-  onToggleLeftSidebar,
-  onToggleRightSidebar,
-  onOpenInWebADE,
-  onOpenGitHubActions,
   onOpenAlexandriaWorkspace,
   currentLayout,
   onLayoutChange,
@@ -255,20 +216,6 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
       setTimeout(() => setCopiedPath(false), 2000);
     } catch (error) {
       console.error('[DevWorkspaceTitlebar] Failed to copy path:', error);
-    }
-  };
-
-  // Handler for changing the right panel
-  const handleRightPanelChange = (panelId: string) => {
-    if (currentLayout && onLayoutChange) {
-      onLayoutChange({ ...currentLayout, right: panelId });
-    }
-  };
-
-  // Handler to expand right panel if collapsed
-  const handleExpandRightPanel = () => {
-    if (collapsed?.right && onCollapsedChange) {
-      onCollapsedChange({ ...collapsed, right: false });
     }
   };
 
@@ -523,49 +470,6 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                 gap: '8px',
               }}
             >
-              {/* Collapse Left Panel Button */}
-              {onToggleLeftSidebar && (
-                <button
-                  onClick={onToggleLeftSidebar}
-                  title={collapsed?.left ? 'Expand left panel' : 'Collapse left panel'}
-                  style={{
-                    // @ts-ignore - WebkitAppRegion is not in CSSProperties
-                    WebkitAppRegion: 'no-drag',
-                    background: theme.colors.backgroundTertiary,
-                    border: `1px solid ${theme.colors.border}`,
-                    color: theme.colors.textSecondary,
-                    cursor: 'pointer',
-                    padding: '6px 12px',
-                    borderRadius: '6px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    transition: 'all 0.2s',
-                    fontSize: `${theme.fontSizes[1]}px`,
-                    fontWeight: theme.fontWeights.medium,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor =
-                      theme.colors.backgroundSecondary;
-                    e.currentTarget.style.borderColor = theme.colors.primary;
-                    e.currentTarget.style.color = theme.colors.text;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor =
-                      theme.colors.backgroundTertiary;
-                    e.currentTarget.style.borderColor = theme.colors.border;
-                    e.currentTarget.style.color = theme.colors.textSecondary;
-                  }}
-                >
-                  {collapsed?.left ? (
-                    <PanelLeftOpen size={14} />
-                  ) : (
-                    <PanelLeftClose size={14} />
-                  )}
-                  <span>{collapsed?.left ? 'Expand' : 'Collapse'}</span>
-                </button>
-              )}
-
               {/* Copy Path Button */}
               {repositoryPath && (
                 <button
@@ -871,7 +775,7 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
             WebkitAppRegion: 'no-drag',
           }}
         >
-          {/* Hover-reveal buttons: Web-ADE, Terminal toggle, Legacy */}
+          {/* Hover-reveal buttons: Alexandria, Terminal toggle */}
           <div
             style={{
               display: 'flex',
@@ -879,84 +783,6 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
               gap: '8px',
             }}
           >
-            {/* Open in Web-ADE Button */}
-            {onOpenInWebADE && (
-              <button
-                onClick={onOpenInWebADE}
-                title="Open in Web-ADE"
-                style={{
-                  // @ts-ignore - WebkitAppRegion is not in CSSProperties
-                  WebkitAppRegion: 'no-drag',
-                  background: theme.colors.backgroundTertiary,
-                  border: `1px solid ${theme.colors.border}`,
-                  color: theme.colors.textSecondary,
-                  cursor: 'pointer',
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  transition: 'all 0.2s',
-                  fontSize: `${theme.fontSizes[1]}px`,
-                  fontWeight: theme.fontWeights.medium,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    theme.colors.backgroundSecondary;
-                  e.currentTarget.style.borderColor = theme.colors.primary;
-                  e.currentTarget.style.color = theme.colors.text;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    theme.colors.backgroundTertiary;
-                  e.currentTarget.style.borderColor = theme.colors.border;
-                  e.currentTarget.style.color = theme.colors.textSecondary;
-                }}
-              >
-                <Globe size={14} />
-                <span>Web</span>
-              </button>
-            )}
-
-            {/* Open GitHub Actions Button */}
-            {onOpenGitHubActions && (
-              <button
-                onClick={onOpenGitHubActions}
-                title="Open GitHub Actions"
-                style={{
-                  // @ts-ignore - WebkitAppRegion is not in CSSProperties
-                  WebkitAppRegion: 'no-drag',
-                  background: theme.colors.backgroundTertiary,
-                  border: `1px solid ${theme.colors.border}`,
-                  color: theme.colors.textSecondary,
-                  cursor: 'pointer',
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  transition: 'all 0.2s',
-                  fontSize: `${theme.fontSizes[1]}px`,
-                  fontWeight: theme.fontWeights.medium,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    theme.colors.backgroundSecondary;
-                  e.currentTarget.style.borderColor = theme.colors.primary;
-                  e.currentTarget.style.color = theme.colors.text;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    theme.colors.backgroundTertiary;
-                  e.currentTarget.style.borderColor = theme.colors.border;
-                  e.currentTarget.style.color = theme.colors.textSecondary;
-                }}
-              >
-                <Play size={14} />
-                <span>Actions</span>
-              </button>
-            )}
-
             {/* Open Alexandria Workspace Button */}
             {onOpenAlexandriaWorkspace && (
               <button
@@ -1199,32 +1025,6 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
             )}
           </div>
 
-          {/* Right Panel Selector */}
-          {currentLayout && onLayoutChange && (
-            <PanelSelectorDropdown
-              side="right"
-              currentPanelId={currentLayout.right}
-              availablePanels={AVAILABLE_PANELS}
-              onPanelChange={handleRightPanelChange}
-              onExpand={handleExpandRightPanel}
-            />
-          )}
-
-          {/* Right Collapse Button - outside the panel selector */}
-          {onToggleRightSidebar && (
-            <PanelCollapseButton
-              isCollapsed={collapsed?.right ?? true}
-              onToggle={onToggleRightSidebar}
-              side="right"
-              iconSize={16}
-              style={{
-                background: theme.colors.backgroundTertiary,
-                border: `1px solid ${theme.colors.border}`,
-                borderRadius: '6px',
-                padding: '6px',
-              }}
-            />
-          )}
         </div>
       </BaseTitlebar>
     </div>

@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Theme } from '@principal-ade/industry-theme';
+import type { LucideIcon } from 'lucide-react';
 import {
   GitBranch,
   BookOpen,
@@ -9,33 +10,56 @@ import {
   CheckCircle,
   Package,
   Activity,
+  Building2,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
+  Globe,
+  Play,
 } from 'lucide-react';
+
+/**
+ * Panel icon configuration
+ */
+export interface PanelIconConfig {
+  id: string;
+  Icon: LucideIcon;
+  label: string;
+}
 
 /**
  * Panel icon sidebar props
  */
 export interface PanelIconSidebarProps {
-  /** ID of currently active left panel */
+  /** ID of currently active panel */
   currentPanelId: string;
   /** Callback when panel icon is clicked */
   onPanelChange: (panelId: string) => void;
   /** Theme for styling */
   theme: Theme;
-  /** Whether left panel is collapsed */
+  /** Whether panel is collapsed */
   collapsed?: boolean;
-  /** Callback to expand left panel if collapsed */
+  /** Callback to expand panel if collapsed */
   onExpand?: () => void;
-  /** Callback to collapse left panel */
+  /** Callback to collapse panel */
   onCollapse?: () => void;
   /** Position of the sidebar (affects border placement) */
   position?: 'left' | 'right';
+  /** Custom panel icons (defaults to LEFT_PANEL_ICONS) */
+  panelIcons?: PanelIconConfig[];
+  /** Show collapse button at the bottom of the sidebar */
+  showCollapseButton?: boolean;
+  /** Callback to open in Web-ADE (shown above collapse button) */
+  onOpenInWebADE?: () => void;
+  /** Callback to open GitHub Actions (shown above collapse button) */
+  onOpenGitHubActions?: () => void;
 }
 
 /**
- * Panel icon mapping - maps panel IDs to lucide-react icons and labels
- * Sorted alphabetically by label
+ * Default panel icons for left sidebar
  */
-const PANEL_ICONS = [
+export const LEFT_PANEL_ICONS: PanelIconConfig[] = [
   { id: 'packageComposition', Icon: Package, label: 'Info' },
   { id: 'codeQuality', Icon: CheckCircle, label: 'Quality' },
   { id: 'canvasList', Icon: Network, label: 'Stories' },
@@ -44,7 +68,14 @@ const PANEL_ICONS = [
   { id: 'gitChanges', Icon: GitBranch, label: 'Files' },
   { id: 'kanban', Icon: KanbanSquare, label: 'Backlog' },
   { id: 'traceList', Icon: Activity, label: 'Traces' },
-] as const;
+];
+
+/**
+ * Panel icons for right sidebar
+ */
+export const RIGHT_PANEL_ICONS: PanelIconConfig[] = [
+  { id: 'fileCity', Icon: Building2, label: 'File City' },
+];
 
 /**
  * PanelIconSidebar Component
@@ -60,6 +91,10 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
   onExpand,
   onCollapse,
   position = 'left',
+  panelIcons = LEFT_PANEL_ICONS,
+  showCollapseButton = false,
+  onOpenInWebADE,
+  onOpenGitHubActions,
 }) => {
   const handlePanelClick = (panelId: string) => {
     // If clicking on the same panel that's already visible and panel is expanded, collapse it
@@ -94,7 +129,7 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
         overflowX: 'hidden',
       }}
     >
-      {PANEL_ICONS.map(({ id, Icon, label }) => {
+      {panelIcons.map(({ id, Icon, label }) => {
         const isActive = currentPanelId === id;
 
         return (
@@ -169,6 +204,187 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
           </button>
         );
       })}
+
+      {/* Spacer to push action buttons and collapse button to bottom */}
+      {(showCollapseButton || onOpenInWebADE || onOpenGitHubActions) && <div style={{ flex: 1 }} />}
+
+      {/* Web-ADE button */}
+      {onOpenInWebADE && (
+        <button
+          onClick={onOpenInWebADE}
+          title="Open in Web-ADE"
+          aria-label="Open in Web-ADE"
+          style={{
+            width: 'calc(100% - 20px)',
+            height: '64px',
+            margin: '4px 10px',
+            padding: '4px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '4px',
+            border: 'none',
+            background: 'transparent',
+            cursor: 'pointer',
+            color: theme.colors.textSecondary,
+            transition: 'all 0.2s ease',
+          }}
+        >
+          <div
+            style={{
+              width: '36px',
+              height: '36px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '8px',
+              background: 'transparent',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = theme.colors.border;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            <Globe size={20} strokeWidth={1.5} />
+          </div>
+          <span
+            style={{
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[0],
+              fontWeight: theme.fontWeights.body,
+              lineHeight: theme.lineHeights.tight,
+              textAlign: 'center',
+            }}
+          >
+            Web
+          </span>
+        </button>
+      )}
+
+      {/* GitHub Actions button */}
+      {onOpenGitHubActions && (
+        <button
+          onClick={onOpenGitHubActions}
+          title="Open GitHub Actions"
+          aria-label="Open GitHub Actions"
+          style={{
+            width: 'calc(100% - 20px)',
+            height: '64px',
+            margin: '4px 10px',
+            padding: '4px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '4px',
+            border: 'none',
+            background: 'transparent',
+            cursor: 'pointer',
+            color: theme.colors.textSecondary,
+            transition: 'all 0.2s ease',
+          }}
+        >
+          <div
+            style={{
+              width: '36px',
+              height: '36px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '8px',
+              background: 'transparent',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = theme.colors.border;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            <Play size={20} strokeWidth={1.5} />
+          </div>
+          <span
+            style={{
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[0],
+              fontWeight: theme.fontWeights.body,
+              lineHeight: theme.lineHeights.tight,
+              textAlign: 'center',
+            }}
+          >
+            Actions
+          </span>
+        </button>
+      )}
+
+      {/* Collapse button at bottom */}
+      {showCollapseButton && (onCollapse || onExpand) && (
+        <button
+          onClick={() => {
+            if (collapsed && onExpand) {
+              onExpand();
+            } else if (!collapsed && onCollapse) {
+              onCollapse();
+            }
+          }}
+          title={collapsed ? 'Expand panel' : 'Collapse panel'}
+          aria-label={collapsed ? 'Expand panel' : 'Collapse panel'}
+          style={{
+            width: 'calc(100% - 20px)',
+            height: '48px',
+            margin: '4px 10px',
+            padding: '4px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '4px',
+            border: 'none',
+            background: 'transparent',
+            cursor: 'pointer',
+            color: theme.colors.textSecondary,
+            transition: 'all 0.2s ease',
+          }}
+        >
+          <div
+            style={{
+              width: '36px',
+              height: '36px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '8px',
+              background: 'transparent',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = theme.colors.border;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            {position === 'right' ? (
+              collapsed ? (
+                <PanelRightOpen size={20} strokeWidth={1.5} />
+              ) : (
+                <PanelRightClose size={20} strokeWidth={1.5} />
+              )
+            ) : (
+              collapsed ? (
+                <PanelLeftOpen size={20} strokeWidth={1.5} />
+              ) : (
+                <PanelLeftClose size={20} strokeWidth={1.5} />
+              )
+            )}
+          </div>
+        </button>
+      )}
     </div>
   );
 };

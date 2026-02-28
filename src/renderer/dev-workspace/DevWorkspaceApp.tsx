@@ -886,16 +886,6 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           showTerminalToggle ? handleToggleTerminalImplementation : undefined
         }
         collapsed={collapsed}
-        onToggleLeftSidebar={() =>
-          setCollapsed((prev) => ({ ...prev, left: !prev.left }))
-        }
-        onToggleRightSidebar={() =>
-          setCollapsed((prev) => ({ ...prev, right: !prev.right }))
-        }
-        onOpenInWebADE={githubInfo ? handleOpenInWebADE : undefined}
-        onOpenGitHubActions={
-          githubInfo && hasGitHubFolder ? handleOpenGitHubActions : undefined
-        }
         onOpenAlexandriaWorkspace={handleOpenAlexandriaWorkspace}
         currentLayout={
           layout as { left: string; middle: string; right: string }
@@ -925,6 +915,8 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           onLeftCollapseComplete={handleLeftCollapseComplete}
           traceSourceServiceName={traceSourceServiceName}
           onScopeNamesDiscovered={handleScopeNamesDiscovered}
+          onOpenInWebADE={githubInfo ? handleOpenInWebADE : undefined}
+          onOpenGitHubActions={githubInfo && hasGitHubFolder ? handleOpenGitHubActions : undefined}
         />
       </div>
 

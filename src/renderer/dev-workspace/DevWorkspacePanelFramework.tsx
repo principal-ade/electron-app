@@ -70,7 +70,7 @@ import { GitHubIssuesPanel, GitHubIssueDetailPanel } from '@industry-theme/githu
 import { panels as typeInformationPanels } from '../panels/TypeInformationPanel';
 import type { Repository } from '../../shared/types/repository.types';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
-import { PanelIconSidebar } from '../components/Sidebar/PanelIconSidebar';
+import { PanelIconSidebar, RIGHT_PANEL_ICONS } from '../components/Sidebar/PanelIconSidebar';
 import type {
   DocumentSelectedPayload,
   TaskSelectedPayload,
@@ -200,6 +200,10 @@ export interface DevWorkspacePanelFrameworkProps {
   onLeftCollapseComplete?: () => void;
   /** Callback when left panel expand animation completes */
   onLeftExpandComplete?: () => void;
+  /** Callback to open in Web-ADE */
+  onOpenInWebADE?: () => void;
+  /** Callback to open GitHub Actions */
+  onOpenGitHubActions?: () => void;
 }
 
 interface DevWorkspacePanelFrameworkInnerProps {
@@ -212,6 +216,8 @@ interface DevWorkspacePanelFrameworkInnerProps {
   onTabsChange?: (tabs: unknown[]) => void;
   onLeftCollapseComplete?: () => void;
   onLeftExpandComplete?: () => void;
+  onOpenInWebADE?: () => void;
+  onOpenGitHubActions?: () => void;
 }
 
 /**
@@ -290,7 +296,7 @@ const FileCityWithHighlights: React.FC<{
  */
 const DevWorkspacePanelFrameworkInner: React.FC<
   DevWorkspacePanelFrameworkInnerProps
-> = ({ collapsed, onCollapsedChange, layout, onLayoutChange, panelSizes, onPanelSizesChange, onTabsChange, onLeftCollapseComplete, onLeftExpandComplete }) => {
+> = ({ collapsed, onCollapsedChange, layout, onLayoutChange, panelSizes, onPanelSizesChange, onTabsChange, onLeftCollapseComplete, onLeftExpandComplete, onOpenInWebADE, onOpenGitHubActions }) => {
   const { theme } = useTheme();
   const { context, actions, events } = useRepositoryPanelProvider();
   const { context: terminalCtx, actions: terminalActions } =
@@ -2221,15 +2227,17 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           position: 'relative',
         }}
       >
-        {/* Panel Icon Sidebar */}
+        {/* Left Panel Icon Sidebar */}
         <PanelIconSidebar
-        currentPanelId={typeof layout.left === 'string' ? layout.left : ''}
-        onPanelChange={(panelId) => onLayoutChange({ ...layout, left: panelId })}
-        theme={theme}
-        collapsed={collapsed.left}
-        onExpand={() => onCollapsedChange({ ...collapsed, left: false })}
-        onCollapse={() => onCollapsedChange({ ...collapsed, left: true })}
-      />
+          currentPanelId={typeof layout.left === 'string' ? layout.left : ''}
+          onPanelChange={(panelId) => onLayoutChange({ ...layout, left: panelId })}
+          theme={theme}
+          collapsed={collapsed.left}
+          onExpand={() => onCollapsedChange({ ...collapsed, left: false })}
+          onCollapse={() => onCollapsedChange({ ...collapsed, left: true })}
+          position="left"
+          showCollapseButton
+        />
 
       {/* Main panel layout area */}
       <div
@@ -2319,6 +2327,21 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           </div>
         )}
       </div>
+
+      {/* Right Panel Icon Sidebar */}
+      <PanelIconSidebar
+        currentPanelId={typeof layout.right === 'string' ? layout.right : ''}
+        onPanelChange={(panelId) => onLayoutChange({ ...layout, right: panelId })}
+        theme={theme}
+        collapsed={collapsed.right}
+        onExpand={() => onCollapsedChange({ ...collapsed, right: false })}
+        onCollapse={() => onCollapsedChange({ ...collapsed, right: true })}
+        position="right"
+        panelIcons={RIGHT_PANEL_ICONS}
+        showCollapseButton
+        onOpenInWebADE={onOpenInWebADE}
+        onOpenGitHubActions={onOpenGitHubActions}
+      />
     </div>
   );
 };
@@ -2348,6 +2371,8 @@ export const DevWorkspacePanelFramework: React.FC<
   onScopeNamesDiscovered,
   onLeftCollapseComplete,
   onLeftExpandComplete,
+  onOpenInWebADE,
+  onOpenGitHubActions,
 }) => {
   // Use the same terminal context format as legacy MultiTerminalPanel
   // Legacy uses: terminal:${owner}/${name}
@@ -2395,6 +2420,8 @@ export const DevWorkspacePanelFramework: React.FC<
             onTabsChange={setTabsForProvider}
             onLeftCollapseComplete={onLeftCollapseComplete}
             onLeftExpandComplete={onLeftExpandComplete}
+            onOpenInWebADE={onOpenInWebADE}
+            onOpenGitHubActions={onOpenGitHubActions}
           />
         </AgentHighlightProvider>
       </TerminalProvider>
