@@ -4,7 +4,7 @@
   "description": "Health check endpoint flow for the Principal MCP Bridge",
   "mode": "span-tree",
   "canvas": ".principal-views/principal-mcp-bridge/principal-mcp-bridge.otel.canvas",
-  "spanPattern": "principal_mcp.health",
+  "spanPattern": "principal_mcp.health_check",
   "scenarios": [
     {
       "id": "health-check-success",

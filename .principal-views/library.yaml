@@ -10,6 +10,9 @@ resources:
     service.version: "0.0.410"
     deployment.environment: "development"
     project: "principal-ade"
+    owned-scopes:
+      - "principal-mcp-bridge"
+      - "window-manager"
 
   principal-ade-storybook:
     service.name: "principal-ade-storybook"

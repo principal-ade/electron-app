@@ -531,6 +531,39 @@
       }
     },
     {
+      "id": "resolution-no-suggestions",
+      "type": "text",
+      "x": 1100,
+      "y": 500,
+      "width": 200,
+      "height": 60,
+      "text": "No Suggestions\nAvailable",
+      "pv": {
+        "nodeType": "service",
+        "shape": "rectangle",
+        "status": "implemented",
+        "sources": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "resolution",
+          "isNew": true,
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
+        "event": {
+          "name": "principal_mcp.resolution.no_suggestions",
+          "description": "No install suggestions available for not-found dependency",
+          "attributes": {
+            "dependency.id": {
+              "type": "string",
+              "description": "Dependency ID"
+            }
+          }
+        }
+      }
+    },
+    {
       "id": "error-validation-failed",
       "type": "text",
       "x": 570,
@@ -1211,6 +1244,28 @@
     {
       "id": "suggestions-to-final",
       "fromNode": "resolution-suggestions",
+      "fromSide": "left",
+      "toNode": "repo-monitoring-manager",
+      "toSide": "bottom",
+      "label": "complete",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "package-not-found-to-no-suggestions",
+      "fromNode": "resolution-package-not-found",
+      "fromSide": "bottom",
+      "toNode": "resolution-no-suggestions",
+      "toSide": "top",
+      "label": "no suggestions",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "no-suggestions-to-final",
+      "fromNode": "resolution-no-suggestions",
       "fromSide": "left",
       "toNode": "repo-monitoring-manager",
       "toSide": "bottom",

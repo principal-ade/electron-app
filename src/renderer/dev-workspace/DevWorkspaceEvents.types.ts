@@ -101,6 +101,10 @@ export interface CanvasOpenPayload {
   workflowId?: string;
   workflow?: WorkflowTemplate | null;
   workflowFileInfo?: FileInfo | null;
+  // Trace focus fields - sent by TraceListPanel when opening from matched spans
+  traceId?: string;
+  spanId?: string;
+  scenarioId?: string;
 }
 
 /**

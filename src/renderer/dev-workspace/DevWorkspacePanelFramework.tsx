@@ -127,6 +127,10 @@ interface CanvasTab extends BaseTab {
   narrativePath?: string | null;
   narrativeTemplate?: WorkflowTemplate | null;
   narrativeFileInfo?: FileInfo | null;
+  // Trace focus fields - for highlighting matched spans when opened from TraceListPanel
+  selectedTraceId?: string | null;
+  highlightedSpanId?: string | null;
+  selectedScenarioId?: string | null;
 }
 
 /**
@@ -929,7 +933,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         }
 
         console.info('[DevWorkspacePanelFramework] Received canvas open event:', event);
-        const { canvasId, canvas, canvasFileInfo, workflowId, workflow, workflowFileInfo } = payload;
+        const { canvasId, canvas, canvasFileInfo, workflowId, workflow, workflowFileInfo, traceId, spanId, scenarioId } = payload;
 
         if (!canvasId || !canvas) {
           console.warn('[DevWorkspacePanelFramework] No canvas data in event:', event.payload);
@@ -965,6 +969,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               narrativePath: workflowFileInfo?.path || null,
               narrativeTemplate: workflow || null,
               narrativeFileInfo: workflowFileInfo || null,
+              // Update trace focus fields (for highlighting matched spans)
+              selectedTraceId: traceId || null,
+              highlightedSpanId: spanId || null,
+              selectedScenarioId: scenarioId || null,
             };
 
             setFocusTabId(prevTabs[existingTabIndex].id);
@@ -990,6 +998,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 narrativePath: workflowFileInfo?.path || null,
                 narrativeTemplate: workflow || null,
                 narrativeFileInfo: workflowFileInfo || null,
+                // Trace focus fields (for highlighting matched spans from TraceListPanel)
+                selectedTraceId: traceId || null,
+                highlightedSpanId: spanId || null,
+                selectedScenarioId: scenarioId || null,
                 closable: true,
               } as CanvasTab
             : {
@@ -1340,6 +1352,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 workflowPath={canvasTab.narrativePath}
                 workflowTemplate={canvasTab.narrativeTemplate}
                 workflowFileInfo={canvasTab.narrativeFileInfo}
+                // Trace focus props - for highlighting matched spans when opened from TraceListPanel
+                selectedTraceId={canvasTab.selectedTraceId}
+                highlightedSpanId={canvasTab.highlightedSpanId}
+                selectedScenarioIdProp={canvasTab.selectedScenarioId}
               />
             </div>
           );

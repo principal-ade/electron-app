@@ -236,6 +236,11 @@ export class PrincipalMCPBridge extends EventEmitter {
                 'suggestions.package_manager':
                   dependencyResolution.suggestions.packageManager || '',
               });
+            } else if (!dependencyResolution.found) {
+              // Event: no suggestions available
+              span.addEvent('principal_mcp.resolution.no_suggestions', {
+                'dependency.id': dependencyId,
+              });
             }
 
             // Event: final dependency resolved status

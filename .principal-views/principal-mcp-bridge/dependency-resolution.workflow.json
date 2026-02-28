@@ -4,7 +4,7 @@
   "description": "Flow of dependency resolution requests from external MCP clients through the bridge to repository monitoring",
   "mode": "span-tree",
   "canvas": ".principal-views/principal-mcp-bridge/principal-mcp-bridge.otel.canvas",
-  "spanPattern": "principal_mcp.dependency",
+  "spanPattern": "principal_mcp.dependency_resolution",
   "scenarios": [
     {
       "id": "dependency-found-in-alexandria",
@@ -57,17 +57,17 @@
       }
     },
     {
-      "id": "dependency-not-found",
-      "name": "Dependency Not Found",
-      "description": "Dependency could not be resolved from any registered source",
+      "id": "dependency-not-found-with-suggestions",
+      "name": "Dependency Not Found (With Suggestions)",
+      "description": "Dependency could not be resolved, but install suggestions are available",
       "priority": 3,
       "severity": "warning",
       "match": {
         "found": false,
-        "source": "none"
+        "has_suggestions": true
       },
       "template": {
-        "introduction": "**Dependency Not Found**\n\nThe dependency `{{dependency.id}}` could not be resolved from any registered repository.",
+        "introduction": "**Dependency Not Found**\n\nThe dependency `{{dependency.id}}` could not be resolved from any registered repository. Install suggestions are available.",
         "events": {
           "principal_mcp.client.request_initiated": "1. MCP client sent {{http.method}} request",
           "principal_mcp.server.request_received": "2. Bridge received request on port {{server.port}}",
@@ -83,10 +83,36 @@
       }
     },
     {
+      "id": "dependency-not-found",
+      "name": "Dependency Not Found",
+      "description": "Dependency could not be resolved from any registered source",
+      "priority": 4,
+      "severity": "warning",
+      "match": {
+        "found": false,
+        "has_suggestions": false
+      },
+      "template": {
+        "introduction": "**Dependency Not Found**\n\nThe dependency `{{dependency.id}}` could not be resolved from any registered repository.",
+        "events": {
+          "principal_mcp.client.request_initiated": "1. MCP client sent {{http.method}} request",
+          "principal_mcp.server.request_received": "2. Bridge received request on port {{server.port}}",
+          "principal_mcp.dependency.resolve_requested": "3. Resolving: `{{dependency.id}}`",
+          "principal_mcp.repo_monitoring.calling": "4. Calling repository monitoring manager...",
+          "principal_mcp.repo_monitoring.result_received": "5. Result received (found={{found}})",
+          "principal_mcp.resolution.alexandria_not_found": "6. Not in Alexandria registry",
+          "principal_mcp.resolution.package_not_found": "7. Not in any package.json",
+          "principal_mcp.resolution.no_suggestions": "8. No install suggestions available",
+          "principal_mcp.repo_monitoring.dependency_resolved": "9. Resolution complete (not found)"
+        },
+        "summary": "**Resolution Result:**\n- **Dependency:** `{{dependency.id}}`\n- **Found:** No\n\n**Checked Sources:**\n- Alexandria Registry: Not found\n- Package Dependencies: Not found\n\n**Possible Actions:**\n1. Clone the repository containing this dependency\n2. Register the repository in Alexandria\n3. Check if the dependency ID format is correct"
+      }
+    },
+    {
       "id": "resolution-error",
       "name": "Resolution Error",
       "description": "An error occurred during dependency resolution",
-      "priority": 4,
+      "priority": 5,
       "severity": "error",
       "match": {
         "resolution.success": false
@@ -108,7 +134,7 @@
       "id": "validation-error",
       "name": "Validation Error",
       "description": "Request validation failed - missing dependencyId",
-      "priority": 5,
+      "priority": 6,
       "severity": "error",
       "match": {
         "error.type": "validation_error"
