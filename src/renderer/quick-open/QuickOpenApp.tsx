@@ -41,6 +41,23 @@ interface QuickOpenWindow extends Window {
 // Cast window to QuickOpenWindow since we know electronAPI is always present
 const quickOpenWindow = window as unknown as QuickOpenWindow;
 
+/**
+ * Shorten a path by replacing the home directory with ~
+ */
+const shortenPath = (path: string): string => {
+  // macOS: /Users/username/...
+  const macMatch = path.match(/^\/Users\/[^/]+/);
+  if (macMatch) {
+    return path.replace(macMatch[0], '~');
+  }
+  // Linux: /home/username/...
+  const linuxMatch = path.match(/^\/home\/[^/]+/);
+  if (linuxMatch) {
+    return path.replace(linuxMatch[0], '~');
+  }
+  return path;
+};
+
 const QuickOpenApp: React.FC = () => {
   const { theme } = useTheme();
   const [items, setItems] = useState<QuickOpenItem[]>([]);
@@ -224,7 +241,6 @@ const QuickOpenApp: React.FC = () => {
           width: '600px',
           background: theme.colors.background,
           border: `1px solid ${theme.colors.border}`,
-          borderRadius: '8px',
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
           overflow: 'hidden',
           display: 'flex',
@@ -240,7 +256,7 @@ const QuickOpenApp: React.FC = () => {
           <input
             ref={searchInputRef}
             type="text"
-            placeholder="Search repositories and workspaces..."
+            placeholder="Search projects and workspaces..."
             value={searchQuery}
             onChange={handleSearchChange}
             onKeyDown={handleInputKeyDown}
@@ -274,7 +290,6 @@ const QuickOpenApp: React.FC = () => {
               justifyContent: 'center',
               background: 'rgba(0, 0, 0, 0.8)',
               zIndex: 1000,
-              borderRadius: '8px',
             }}
           >
             <div
@@ -325,12 +340,9 @@ const QuickOpenApp: React.FC = () => {
                     position: 'relative',
                     display: 'flex',
                     alignItems: 'center',
-                    padding: '12px 16px',
+                    padding: '16px 16px',
                     cursor: 'pointer',
                     borderBottom: `1px solid ${theme.colors.border}`,
-                    borderLeft: isSelected
-                      ? `3px solid ${theme.colors.primary}`
-                      : '3px solid transparent',
                     opacity: item.isOpen ? 0.7 : 1,
                   }}
                 >
@@ -358,8 +370,8 @@ const QuickOpenApp: React.FC = () => {
                   >
                     <div
                       style={{
-                        width: '32px',
-                        height: '32px',
+                        width: '64px',
+                        height: '64px',
                         borderRadius: '8px',
                         marginRight: '12px',
                         backgroundColor: theme.colors.backgroundTertiary,
@@ -404,15 +416,24 @@ const QuickOpenApp: React.FC = () => {
                       <div
                         style={{
                           color: theme.colors.text,
-                          fontSize: theme.fontSizes[3],
+                          fontSize: theme.fontSizes[4],
                           fontFamily: theme.fonts.body,
                           fontWeight: 500,
+                          lineHeight: '32px',
                           display: 'flex',
                           alignItems: 'center',
                           gap: '8px',
                         }}
                       >
-                        {item.name}
+                        <span
+                          style={{
+                            color: isSelected
+                              ? theme.colors.primary
+                              : theme.colors.text,
+                          }}
+                        >
+                          {item.name}
+                        </span>
                         {item.isOpen && (
                           <span
                             style={{
@@ -433,29 +454,21 @@ const QuickOpenApp: React.FC = () => {
                       {item.description && (
                         <div
                           style={{
-                            color: theme.colors.textSecondary,
-                            fontSize: theme.fontSizes[2],
+                            color: isSelected
+                              ? theme.colors.accent
+                              : theme.colors.textSecondary,
+                            fontSize: theme.fontSizes[3],
                             fontFamily: theme.fonts.body,
-                            marginTop: '4px',
+                            lineHeight: '32px',
+                            marginTop: '0',
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                           }}
                         >
-                          {item.description}
+                          {shortenPath(item.description)}
                         </div>
                       )}
-                    </div>
-                    <div
-                      style={{
-                        color: theme.colors.textSecondary,
-                        fontSize: theme.fontSizes[1],
-                        fontFamily: theme.fonts.body,
-                        textTransform: 'uppercase',
-                        marginLeft: '12px',
-                      }}
-                    >
-                      {item.type}
                     </div>
                   </div>
                 </div>
