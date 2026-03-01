@@ -595,7 +595,7 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                 fontSize: `${theme.fontSizes[2]}px`,
                 fontWeight: theme.fontWeights.medium,
                 fontFamily: theme.fonts.body,
-                color: theme.colors.text,
+                color: theme.colors.primary,
                 cursor: displayOwner ? 'pointer' : 'default',
               }}
               onClick={() => {
@@ -685,7 +685,7 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                   </span>
                   <span
                     style={{
-                      color: theme.colors.text,
+                      color: theme.colors.primary,
                       fontWeight: theme.fontWeights.medium,
                     }}
                   >
