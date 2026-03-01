@@ -1,0 +1,25 @@
+{
+  "version": "1.0.0",
+  "name": "Quality Color Mode Selection",
+  "description": "Monitors color mode selection from quality hexagon affecting File City visualization",
+  "mode": "span-tree",
+  "canvas": ".principal-views/quality-panel-interaction/quality-panel-interaction.otel.canvas",
+  "spanPattern": "quality.colorMode.change",
+  "scenarios": [
+    {
+      "id": "color-mode-select",
+      "name": "Select Quality Color Mode",
+      "description": "User clicks hexagon facet to change File City color mode",
+      "priority": 1,
+      "severity": "info",
+      "template": {
+        "introduction": "**Color Mode Selected**\n\nUser selected `{{colorMode.name}}` from quality hexagon",
+        "events": {
+          "quality.colorMode.selected": "1. User clicked hexagon facet: `{{colorMode.name}}`",
+          "quality.fileCity.rerendered": "2. **File City re-rendered with new color mode**"
+        },
+        "summary": "**Color Mode Change:**\n- Previous: {{colorMode.previous}}\n- New: {{colorMode.name}}\n\n**Effect:**\nFile City buildings now colored by {{colorMode.name}} metric."
+      }
+    }
+  ]
+}

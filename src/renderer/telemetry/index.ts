@@ -20,6 +20,7 @@ import {
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,
 } from '@opentelemetry/semantic-conventions';
+import { trace, type Tracer } from '@opentelemetry/api';
 import { defaultTelemetryConfig } from '../../telemetry/config';
 
 // Extend Window interface for app version
@@ -241,6 +242,27 @@ export function initializeTelemetry(windowType: string): void {
  */
 export async function shutdownTelemetry(): Promise<void> {
   await webTelemetry.shutdown();
+}
+
+/**
+ * Get a tracer for manual instrumentation in the renderer process
+ * Use this to create custom spans for tracking operations
+ *
+ * @example
+ * const tracer = getTracer('quality-panel');
+ * const span = tracer.startSpan('quality.artifact.fetching');
+ * try {
+ *   // do work
+ *   span.setStatus({ code: SpanStatusCode.OK });
+ * } catch (error) {
+ *   span.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
+ *   throw error;
+ * } finally {
+ *   span.end();
+ * }
+ */
+export function getTracer(name: string = 'principal-ade-renderer'): Tracer {
+  return trace.getTracer(name);
 }
 
 export { webTelemetry };

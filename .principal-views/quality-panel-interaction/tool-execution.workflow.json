@@ -1,0 +1,48 @@
+{
+  "version": "1.0.0",
+  "name": "Quality Tool Execution",
+  "description": "Monitors quality tool execution from UI click to results display",
+  "mode": "span-tree",
+  "canvas": ".principal-views/quality-panel-interaction/quality-panel-interaction.otel.canvas",
+  "spanPattern": "quality.tool.completed",
+  "scenarios": [
+    {
+      "id": "full-tool-execution",
+      "name": "Complete Tool Execution (Click to Results)",
+      "description": "Full flow from user clicking 'Run' to results displayed in panel",
+      "priority": 1,
+      "severity": "info",
+      "template": {
+        "introduction": "**Quality Tool Execution**\n\nExecuting quality tool for `{{repository.path}}`\n\nTool: {{tool.name}}\nPackage: {{package.path}}",
+        "events": {
+          "quality.tool.requested": "1. User clicked run for `{{tool.name}}`",
+          "quality.ipc.received": "2. IPC received: `repository-monitoring:execute-tool`",
+          "quality.service.executing": "3. QualityLensService executing request",
+          "quality.lens.running": "4. Lens running: {{lens.name}} for tool {{tool.name}}",
+          "quality.executor.spawning": "5. ElectronCLIBridgeExecutor spawning: `{{command.name}}`",
+          "quality.cli.completed": "6. CLI completed with exit code {{exit.code}} in {{duration.ms}}ms",
+          "quality.tool.completed": "7. **Tool execution complete** - {{issues.count}} issues found"
+        },
+        "summary": "**Execution Summary:**\n- Tool: {{tool.name}}\n- Exit Code: {{exit.code}}\n- Duration: {{duration.ms}}ms\n- Issues Found: {{issues.count}}"
+      }
+    },
+    {
+      "id": "tool-execution-error",
+      "name": "Tool Execution Error",
+      "description": "Flow when tool execution fails",
+      "priority": 2,
+      "severity": "error",
+      "template": {
+        "introduction": "**Tool Execution Failed**\n\nFailed to execute `{{tool.name}}` for `{{repository.path}}`",
+        "events": {
+          "quality.tool.requested": "1. User clicked run for `{{tool.name}}`",
+          "quality.ipc.received": "2. IPC invoke sent",
+          "quality.service.executing": "3. QualityLensService received request",
+          "quality.tool.error": "4. **Error**: {{error.message}}",
+          "quality.tool.completed": "5. Tool completed with error state"
+        },
+        "summary": "**Error Details:**\n- Tool: {{tool.name}}\n- Error: {{error.message}}\n- Duration: {{duration.ms}}ms\n\n**Possible Causes:**\n- Tool not installed\n- Configuration error\n- Permission denied"
+      }
+    }
+  ]
+}

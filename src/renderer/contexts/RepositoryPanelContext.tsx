@@ -35,6 +35,8 @@ import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-ser
 import { minimatch } from 'minimatch';
 import type { ColorMode, FileMetricData, QualitySliceData } from '@principal-ai/quality-lens-registry';
 import type { GlobalSkill } from '../../shared/main-process-api-interfaces/FileSystemAPI';
+import { getTracer } from '../telemetry';
+import { SpanStatusCode } from '@opentelemetry/api';
 import type { RegisteredTrace, VersionSnapshot, OtelExportTraceServiceRequest } from '@principal-ai/principal-view-core';
 import { LocalRegistry, TraceOrchestrator } from '@principal-ai/principal-view-core';
 import { OtelCollectorService } from '../main-process-api/OtelCollectorService';
@@ -52,6 +54,73 @@ import type { GitHubIssuesSliceData } from '@industry-theme/github-panels';
 // Color mode for file city visualization - imported from registry
 // The registry's ColorMode type includes all built-in and lens-based modes
 type FileCityColorMode = ColorMode;
+
+/**
+ * Split an OTLP batch by traceId into separate requests.
+ * This is needed because the collector may batch multiple traces together,
+ * but processTrace() expects one trace per request.
+ */
+function splitOtlpByTraceId(
+  otlpData: OtelExportTraceServiceRequest
+): OtelExportTraceServiceRequest[] {
+  // First, collect all unique traceIds
+  const traceIds = new Set<string>();
+  for (const resourceSpan of otlpData.resourceSpans || []) {
+    for (const scopeSpan of resourceSpan.scopeSpans || []) {
+      for (const span of scopeSpan.spans || []) {
+        traceIds.add((span as { traceId: string }).traceId);
+      }
+    }
+  }
+
+  // If only one traceId, return original data unchanged to avoid restructuring issues
+  if (traceIds.size <= 1) {
+    return [otlpData];
+  }
+
+  // Multiple traces - need to split
+  const traceMap = new Map<
+    string,
+    {
+      resourceSpans: Array<{
+        resource: unknown;
+        scopeSpans: Array<{
+          scope: unknown;
+          spans: unknown[];
+        }>;
+      }>;
+    }
+  >();
+
+  // Group spans by traceId, consolidating into single resourceSpan/scopeSpan per trace
+  for (const resourceSpan of otlpData.resourceSpans || []) {
+    for (const scopeSpan of resourceSpan.scopeSpans || []) {
+      for (const span of scopeSpan.spans || []) {
+        const traceId = (span as { traceId: string }).traceId;
+
+        if (!traceMap.has(traceId)) {
+          // Create a single resourceSpan with single scopeSpan for this trace
+          traceMap.set(traceId, {
+            resourceSpans: [{
+              resource: resourceSpan.resource,
+              scopeSpans: [{
+                scope: scopeSpan.scope,
+                spans: [],
+              }],
+            }],
+          });
+        }
+
+        // Add span to the first (and only) scopeSpan
+        const traceData = traceMap.get(traceId)!;
+        traceData.resourceSpans[0].scopeSpans[0].spans.push(span);
+      }
+    }
+  }
+
+  // Convert map to array of OtelExportTraceServiceRequest
+  return Array.from(traceMap.values()) as OtelExportTraceServiceRequest[];
+}
 
 // File city color modes slice data
 interface FileCityColorModesSliceData {
@@ -687,17 +756,41 @@ export const RepositoryPanelProvider: React.FC<
   // Listen for color mode change events from panels (e.g., quality hexagon clicks)
   // The QualityHexagonPanel emits 'quality:colorMode:select' with payload { colorMode }
   useEffect(() => {
+    const tracer = getTracer('quality-panel');
+
     // Listen for the event emitted by QualityHexagonPanel
     const unsubColorMode = events.on<{ colorMode: string }>(
       'quality:colorMode:select',
       (event) => {
         const { colorMode } = event.payload;
         if (colorMode) {
+          // Create a span for the color mode change operation
+          const span = tracer.startSpan('quality.colorMode.change', {
+            attributes: {
+              'colorMode.name': colorMode,
+              'colorMode.previous': fileCityColorMode || 'none',
+            },
+          });
+
+          // Emit color mode selected event
+          span.addEvent('quality.colorMode.selected', {
+            'colorMode.name': colorMode,
+            'colorMode.previous': fileCityColorMode || 'none',
+          });
+
           console.info(
             '[RepositoryPanelProvider] Color mode changed via quality:colorMode:select:',
             colorMode,
           );
           setFileCityColorMode(colorMode as FileCityColorMode);
+
+          // Emit File City re-render event
+          span.addEvent('quality.fileCity.rerendered', {
+            'colorMode.name': colorMode,
+          });
+
+          span.setStatus({ code: SpanStatusCode.OK });
+          span.end();
         }
       },
     );
@@ -716,7 +809,7 @@ export const RepositoryPanelProvider: React.FC<
       unsubColorMode?.();
       unsubLegacy?.();
     };
-  }, [events]);
+  }, [events, fileCityColorMode]);
 
   // Listen for refresh requests from AgenticResourcesPanel
   useEffect(() => {
@@ -784,6 +877,8 @@ export const RepositoryPanelProvider: React.FC<
 
   // Fetch quality metrics from GitHub Actions artifacts when repository changes
   useEffect(() => {
+    const tracer = getTracer('quality-panel');
+
     const fetchQualityMetrics = async () => {
       if (!repositoryPath) {
         setQualityData(null);
@@ -791,6 +886,14 @@ export const RepositoryPanelProvider: React.FC<
       }
 
       setQualityLoading(true);
+
+      // Start the parent span for the entire artifact fetch operation
+      const span = tracer.startSpan('quality.artifact.fetch', {
+        attributes: {
+          'repository.path': repositoryPath,
+        },
+      });
+
       try {
         // Get git remote info to determine owner/repo
         const remoteInfo =
@@ -799,6 +902,11 @@ export const RepositoryPanelProvider: React.FC<
           console.info(
             '[RepositoryPanelProvider] No git remote, cannot fetch quality metrics',
           );
+          span.addEvent('quality.artifact.skipped', {
+            'skip.reason': 'no_git_remote',
+          });
+          span.setStatus({ code: SpanStatusCode.OK });
+          span.end();
           setQualityData(null);
           return;
         }
@@ -806,14 +914,31 @@ export const RepositoryPanelProvider: React.FC<
         const githubInfo = parseGitHubRemote(remoteInfo.remoteUrl);
         if (!githubInfo) {
           console.info('[RepositoryPanelProvider] Not a GitHub repository');
+          span.addEvent('quality.artifact.skipped', {
+            'skip.reason': 'not_github',
+          });
+          span.setStatus({ code: SpanStatusCode.OK });
+          span.end();
           setQualityData(null);
           return;
         }
+
+        // Add GitHub info to span
+        span.setAttribute('github.owner', githubInfo.owner);
+        span.setAttribute('github.repo', githubInfo.repo);
 
         // Get git status to know the current branch
         const gitStatus =
           await RepositoryMonitoringService.getGitStatus(repositoryPath);
         const branch = gitStatus?.branch || 'main';
+        span.setAttribute('git.branch', branch);
+
+        // Emit fetching event
+        span.addEvent('quality.artifact.fetching', {
+          'github.owner': githubInfo.owner,
+          'github.repo': githubInfo.repo,
+          'git.branch': branch,
+        });
 
         console.info(
           `[RepositoryPanelProvider] Fetching quality metrics for ${githubInfo.owner}/${githubInfo.repo}@${branch}`,
@@ -828,6 +953,15 @@ export const RepositoryPanelProvider: React.FC<
           );
 
         if (artifactData) {
+          // Emit artifact received event
+          span.addEvent('quality.artifact.received', {
+            'github.owner': githubInfo.owner,
+            'github.repo': githubInfo.repo,
+            'git.branch': branch,
+            'packages.count': artifactData.qualityMetrics.packages.length,
+            'artifact.timestamp': artifactData.timestamp,
+          });
+
           // Transform to the format expected by the quality slice
           // Include lensesRan and isOrchestrator so the panel knows which metrics are configured
           const packages = artifactData.qualityMetrics.packages.map((pkg) => ({
@@ -855,10 +989,28 @@ export const RepositoryPanelProvider: React.FC<
             fileCoverage: artifactData.fileCoverage,
             fileMetrics: artifactData.fileMetrics as Record<string, FileMetricData[]> | undefined,
           });
+
+          // Emit context updated event
+          span.addEvent('quality.context.updated', {
+            'repository.path': repositoryPath,
+            'quality.packages.count': packages.length,
+            'quality.lastUpdated': artifactData.timestamp,
+          });
+
+          span.setAttribute('packages.count', packages.length);
+          span.setStatus({ code: SpanStatusCode.OK });
         } else {
+          // Emit not found event
+          span.addEvent('quality.artifact.notFound', {
+            'github.owner': githubInfo.owner,
+            'github.repo': githubInfo.repo,
+            'git.branch': branch,
+          });
+
           console.info(
             '[RepositoryPanelProvider] No quality artifacts found for this repository',
           );
+          span.setStatus({ code: SpanStatusCode.OK });
           setQualityData(null);
         }
       } catch (error) {
@@ -866,8 +1018,14 @@ export const RepositoryPanelProvider: React.FC<
           '[RepositoryPanelProvider] Failed to fetch quality metrics:',
           error,
         );
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: error instanceof Error ? error.message : 'Unknown error',
+        });
+        span.recordException(error instanceof Error ? error : new Error(String(error)));
         setQualityData(null);
       } finally {
+        span.end();
         setQualityLoading(false);
       }
     };
@@ -999,86 +1157,41 @@ export const RepositoryPanelProvider: React.FC<
                   return;
                 }
 
-                // Log BEFORE: Raw OTLP data
-                const resourceSpans = otlpData.resourceSpans || [];
-                const firstResource = resourceSpans[0];
-                const serviceNameAttr = firstResource?.resource?.attributes?.find(
-                  (attr: { key: string }) => attr.key === 'service.name'
-                );
-                const serviceName = serviceNameAttr?.value?.stringValue || 'unknown';
-                const spans = firstResource?.scopeSpans?.[0]?.spans || [];
+                // Split OTLP batch by traceId - collector may batch multiple traces together
+                const splitTraces = splitOtlpByTraceId(otlpData);
+                console.info(`[TraceProcessing] 📥 Received OTLP batch with ${splitTraces.length} trace(s)`);
 
-                console.info('[TraceProcessing] 📥 BEFORE - Raw OTLP Trace');
-                console.info('Service Name:', serviceName);
-                console.info('Resource Spans:', resourceSpans.length);
-                console.info('Spans:', spans.length);
-                console.info('Span Names:', spans.map((s: { name: string }) => s.name));
-                console.info('Raw OTLP:', otlpData);
-                // End trace logging group
+                // Process each trace separately
+                for (const singleTraceOtlp of splitTraces) {
+                  try {
+                    const registeredTrace = await traceOrchestrator.processTrace(singleTraceOtlp);
 
-                // Process the trace through TraceOrchestrator
-                try {
-                  const registeredTrace = await traceOrchestrator.processTrace(otlpData);
+                    // Log processed trace
+                    console.info('[TraceProcessing] 📤 Processed trace:', {
+                      traceId: registeredTrace.traceId,
+                      name: registeredTrace.name,
+                      spanCount: registeredTrace.spanCount,
+                      scenarioMatches: registeredTrace.scenarioMatches.length,
+                    });
 
-                  // Log AFTER: Processed RegisteredTrace
-                  console.info('[TraceProcessing] 📤 AFTER - Processed RegisteredTrace');
-                  console.info('Trace ID:', registeredTrace.traceId);
-                  console.info('Name:', registeredTrace.name);
-                  console.info('Duration:', registeredTrace.duration, 'ms');
-                  console.info('Span Count:', registeredTrace.spanCount);
-                  console.info('Has Errors:', registeredTrace.hasErrors);
-                  console.info('Resources:', registeredTrace.resources.length);
-                  registeredTrace.resources.forEach((r, i) => {
-                    console.info(`  Resource ${i}:`, {
-                      serviceName: r.serviceName,
-                      scopes: r.scopes.map(s => `${s.scope.name}@${s.scope.version}`),
+                    // Detailed span logging for debugging
+                    console.info('[TraceProcessing] 📋 Full RegisteredTrace:', JSON.stringify(registeredTrace, null, 2));
+
+                    setTelemetryTraces((prev) => {
+                      // Check for duplicates
+                      const existingIds = new Set(prev.map((t) => t.traceId));
+                      if (existingIds.has(registeredTrace.traceId)) {
+                        console.info('[RepositoryPanelProvider] Skipping duplicate trace:', registeredTrace.traceId);
+                        return prev;
+                      }
+
+                      // Keep only last 1000 traces
+                      const combined = [...prev, registeredTrace];
+                      return combined.slice(-1000);
                     });
-                  });
-                  console.info('Scenario Matches:', registeredTrace.scenarioMatches.length);
-                  registeredTrace.scenarioMatches.forEach((m, i) => {
-                    console.info(`  Match ${i}:`, {
-                      storyboard: m.storyboardName,
-                      workflow: m.workflowName,
-                      scenario: m.scenarioId,
-                      coverage: m.coveragePercent + '%',
-                      matchedSpans: m.matchedSpans.length,
-                    });
-                  });
-                  console.info('Storyboard Matches (orphaned):', registeredTrace.storyboardMatches.length);
-                  registeredTrace.storyboardMatches.forEach((m, i) => {
-                    console.info(`  Match ${i}:`, {
-                      storyboard: m.storyboardName,
-                      workflow: m.workflowName,
-                      orphanedSpans: m.orphanedSpans.length,
-                    });
-                  });
-                  console.info('Unmatched Spans:', registeredTrace.unmatchedSpans.spans.length);
-                  registeredTrace.unmatchedSpans.spans.forEach((s, i) => {
-                    console.info(`  Span ${i}:`, {
-                      name: s.spanName,
-                      scope: s.scopeName,
-                      reason: s.reason,
-                    });
-                  });
-                  if (registeredTrace.validationIssues?.length) {
-                    console.warn('Validation Issues:', registeredTrace.validationIssues);
+                  } catch (error) {
+                    console.error('[TraceProcessing] ❌ Failed to process trace:', error);
                   }
-                  // End trace logging group
-
-                  setTelemetryTraces((prev) => {
-                    // Check for duplicates
-                    const existingIds = new Set(prev.map((t) => t.traceId));
-                    if (existingIds.has(registeredTrace.traceId)) {
-                      console.info('[RepositoryPanelProvider] Skipping duplicate trace:', registeredTrace.traceId);
-                      return prev;
-                    }
-
-                    // Keep only last 1000 traces
-                    const combined = [...prev, registeredTrace];
-                    return combined.slice(-1000);
-                  });
-                } catch (error) {
-                  console.error('[TraceProcessing] ❌ Failed to process trace:', error);
                 }
 
                 return;

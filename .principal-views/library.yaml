@@ -13,6 +13,7 @@ resources:
     owned-scopes:
       - "principal-mcp-bridge"
       - "window-manager"
+      - "quality-panel"
 
   principal-ade-storybook:
     service.name: "principal-ade-storybook"

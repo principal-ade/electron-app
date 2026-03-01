@@ -1,0 +1,44 @@
+{
+  "version": "1.0.0",
+  "name": "Quality Artifacts Fetch",
+  "description": "Monitors fetching quality metrics from GitHub Actions artifacts",
+  "mode": "span-tree",
+  "canvas": ".principal-views/quality-panel-interaction/quality-panel-interaction.otel.canvas",
+  "spanPattern": "quality.artifact.fetch",
+  "scenarios": [
+    {
+      "id": "artifact-fetch-success",
+      "name": "Fetch Quality Artifacts (Success)",
+      "description": "Successfully fetch quality metrics from GitHub Actions",
+      "priority": 1,
+      "severity": "info",
+      "match": {
+        "packages.count": "> 0"
+      },
+      "template": {
+        "introduction": "**Fetching Quality Artifacts**\n\nLoading quality metrics from GitHub Actions for `{{github.owner}}/{{github.repo}}`",
+        "events": {
+          "quality.artifact.fetching": "1. Starting artifact fetch for `{{github.owner}}/{{github.repo}}`@{{git.branch}}",
+          "quality.artifact.received": "2. Artifact received with {{packages.count}} packages",
+          "quality.context.updated": "3. **Quality slice updated in context**"
+        },
+        "summary": "**Artifact Summary:**\n- Repository: `{{github.owner}}/{{github.repo}}`\n- Branch: `{{git.branch}}`\n- Packages: {{packages.count}}\n- Last Run: {{artifact.timestamp}}"
+      }
+    },
+    {
+      "id": "artifact-fetch-not-found",
+      "name": "No Quality Artifacts Found",
+      "description": "Repository has no quality artifacts (CI not configured)",
+      "priority": 2,
+      "severity": "warning",
+      "template": {
+        "introduction": "**No Quality Artifacts**\n\nNo quality metrics found for `{{github.owner}}/{{github.repo}}`",
+        "events": {
+          "quality.artifact.fetching": "1. Starting artifact fetch",
+          "quality.artifact.notFound": "2. **No quality artifacts found**"
+        },
+        "summary": "**Next Steps:**\n- Configure GitHub Actions workflow\n- Run quality tools locally via the panel\n- Push workflow file to enable CI quality metrics"
+      }
+    }
+  ]
+}
