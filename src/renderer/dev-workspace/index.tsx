@@ -13,6 +13,8 @@ import { initializeTelemetry } from '../telemetry';
 initializeTelemetry('dev-workspace');
 
 import { createRoot } from 'react-dom/client';
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 import mermaid from 'mermaid';
 
 import 'themed-markdown/dist/index.css';
@@ -89,7 +91,9 @@ const root = createRoot(container);
 root.render(
   <CustomThemeProvider>
     <AppErrorBoundary>
-      <DevWorkspaceApp />
+      <DndProvider backend={HTML5Backend}>
+        <DevWorkspaceApp />
+      </DndProvider>
     </AppErrorBoundary>
   </CustomThemeProvider>,
 );
