@@ -32,7 +32,7 @@ export const ProjectsViewHeader: React.FC<ProjectsViewHeaderProps> = ({
       padding: '0 32px',
       borderRadius,
       backgroundColor: isActive
-        ? theme.colors.primary
+        ? theme.colors.accent
         : theme.colors.backgroundSecondary,
       color: isActive ? theme.colors.background : theme.colors.textSecondary,
       cursor: 'pointer',

@@ -89,9 +89,9 @@ export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({
 
   // Show transparent theme while loading
   if (isLoading || !selectedTheme) {
-    return <ThemeProvider theme={transparentTheme}>{children}</ThemeProvider>;
+    return <ThemeProvider theme={transparentTheme} initialMode="light">{children}</ThemeProvider>;
   }
 
   // Render with the selected theme
-  return <ThemeProvider theme={selectedTheme}>{children}</ThemeProvider>;
+  return <ThemeProvider theme={selectedTheme} initialMode="light">{children}</ThemeProvider>;
 };

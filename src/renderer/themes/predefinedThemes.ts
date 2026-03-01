@@ -12,6 +12,19 @@ import {
   landingPageLightTheme,
 } from '@principal-ade/industry-theme';
 
+// Custom slate theme with our overrides
+const customSlateTheme: Theme = {
+  ...slateTheme,
+  colors: {
+    ...slateTheme.colors,
+    accent: '#a8c5db', // Light blue tint
+    primary: '#5b8bb8', // Steel blue - stronger blue
+  },
+  fonts: {
+    ...slateTheme.fonts,
+  },
+};
+
 // Transparent theme for loading state
 const transparentTheme: Theme = {
   space: [0, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80, 100, 128],
@@ -190,7 +203,7 @@ export const predefinedThemes: Record<
   slate: {
     name: 'Slate',
     description: 'Professional slate gray theme',
-    theme: slateTheme,
+    theme: customSlateTheme,
   },
   defaultMarkdown: {
     name: 'Default Markdown',
@@ -216,10 +229,10 @@ export const getThemeNames = (): string[] => {
 
 // Get theme by name
 export const getThemeByName = (name: string): Theme | undefined => {
-  // If theme doesn't exist, fall back to 'principalAI' as default
+  // If theme doesn't exist, fall back to 'slate' as default
   if (!predefinedThemes[name]) {
-    console.warn(`Theme '${name}' not found, falling back to 'principalAI'`);
-    return predefinedThemes['principalAI']?.theme;
+    console.warn(`Theme '${name}' not found, falling back to 'slate'`);
+    return predefinedThemes['slate']?.theme;
   }
   return predefinedThemes[name]?.theme;
 };

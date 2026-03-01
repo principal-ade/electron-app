@@ -43,7 +43,7 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
   const [showThemeButton, setShowThemeButton] = useState(true);
   const [showCustomizeButton, setShowCustomizeButton] = useState(true);
   const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string | null>(null);
-  const { theme, mode } = useTheme();
+  const { theme } = useTheme();
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
   useEffect(() => {
@@ -109,11 +109,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
       );
     };
   }, []);
-
-  const accentColor =
-    mode === 'dark' && theme.modes?.dark?.accent
-      ? theme.modes.dark.accent
-      : theme.colors.accent;
 
   const handleSelectBaseDirectory = async () => {
     const result = await FileSystemService.selectDirectory({
@@ -225,14 +220,14 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
           alignItems: 'center',
           fontSize: theme.fontSizes[3],
           fontWeight: theme.fontWeights.heading,
-          color: accentColor,
+          color: theme.colors.primary,
           fontFamily: theme.fonts.heading,
           WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
           pointerEvents: 'none',
           zIndex: 101,
         }}
       >
-        Principal Workspace
+        Principal AI
       </div>
 
       {/* Right controls */}

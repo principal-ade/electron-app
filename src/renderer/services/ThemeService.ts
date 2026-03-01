@@ -9,37 +9,9 @@ export interface ThemeChangeEvent {
   colorMode?: 'light' | 'dark';
 }
 
-/**
- * Deep merge utility for merging theme overrides
- */
-function deepMerge<T extends object>(target: T, source: Partial<T>): T {
-  const output = { ...target };
-
-  for (const key in source) {
-    if (
-      source[key] &&
-      typeof source[key] === 'object' &&
-      !Array.isArray(source[key])
-    ) {
-      if (key in target && typeof target[key] === 'object') {
-        (output as Record<string, unknown>)[key] = deepMerge(
-          target[key] as object,
-          source[key] as Partial<object>,
-        );
-      } else {
-        (output as Record<string, unknown>)[key] = source[key];
-      }
-    } else {
-      (output as Record<string, unknown>)[key] = source[key];
-    }
-  }
-
-  return output;
-}
-
 class ThemeServiceClass extends EventEmitter {
   private static instance: ThemeServiceClass;
-  private currentThemeName: string = 'principalAI';
+  private currentThemeName: string = 'slate';
   private currentColorMode: 'light' | 'dark' = 'dark';
   private currentThemeCache: Theme | null = null;
 
@@ -76,7 +48,7 @@ class ThemeServiceClass extends EventEmitter {
   }
 
   /**
-   * Get the active theme (with overrides applied)
+   * Get the active theme (customizations disabled - using base theme only)
    */
   async getActiveTheme(themeName?: string): Promise<Theme | undefined> {
     const name = themeName || this.currentThemeName;
@@ -84,18 +56,6 @@ class ThemeServiceClass extends EventEmitter {
 
     if (!baseTheme) {
       return undefined;
-    }
-
-    // Check for customizations
-    try {
-      const preferences = await UserPreferencesService.getPreferences();
-      const customizations = preferences.customThemeOverrides?.[name];
-
-      if (customizations) {
-        return deepMerge(baseTheme, customizations.overrides as Partial<Theme>);
-      }
-    } catch (error) {
-      console.error('[ThemeService] Failed to load theme overrides:', error);
     }
 
     return baseTheme;
