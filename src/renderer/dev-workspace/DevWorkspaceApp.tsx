@@ -205,6 +205,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   >('xterm');
   const [showTerminalToggle, setShowTerminalToggle] = useState(false);
   const [collapsed, setCollapsed] = useState({ left: false, right: false });
+  const [sidebarsHidden, setSidebarsHidden] = useState(false);
   const [layout, setLayout] = useState<PanelLayout>({
     left: 'packageComposition',
     middle: 'terminal',
@@ -899,6 +900,8 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         traceSourceServiceName={traceSourceServiceName}
         availableServiceNames={availableServiceNames}
         onTraceSourceServiceNameChange={setTraceSourceServiceName}
+        sidebarsHidden={sidebarsHidden}
+        onSidebarsHiddenChange={setSidebarsHidden}
       />
       <div className="flex-1 overflow-hidden">
         <DevWorkspacePanelFramework
@@ -917,6 +920,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           onScopeNamesDiscovered={handleScopeNamesDiscovered}
           onOpenInWebADE={githubInfo ? handleOpenInWebADE : undefined}
           onOpenGitHubActions={githubInfo && hasGitHubFolder ? handleOpenGitHubActions : undefined}
+          sidebarsHidden={sidebarsHidden}
         />
       </div>
 

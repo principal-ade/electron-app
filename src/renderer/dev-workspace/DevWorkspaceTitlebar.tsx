@@ -8,6 +8,8 @@ import {
   Copy,
   BookOpen,
   ChevronDown,
+  Columns3,
+  Square,
 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { BaseTitlebar } from '../components/Titlebar/BaseTitlebar';
@@ -168,6 +170,9 @@ export interface DevWorkspaceTitlebarProps {
   traceSourceServiceName?: string;
   availableServiceNames?: string[];
   onTraceSourceServiceNameChange?: (serviceName: string) => void;
+  // Sidebar visibility toggle
+  sidebarsHidden?: boolean;
+  onSidebarsHiddenChange?: (hidden: boolean) => void;
 }
 
 export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
@@ -190,6 +195,8 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
   traceSourceServiceName,
   availableServiceNames,
   onTraceSourceServiceNameChange,
+  sidebarsHidden,
+  onSidebarsHiddenChange,
 }) => {
   const { theme } = useTheme();
   const [copiedPath, setCopiedPath] = useState(false);
@@ -1021,6 +1028,64 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                 <span>
                   {terminalImplementation === 'ghostty' ? 'Ghostty' : 'XTerm'}
                 </span>
+              </button>
+            )}
+
+            {/* Focus Mode Toggle - Hide/Show both icon sidebars */}
+            {onSidebarsHiddenChange && (
+              <button
+                onClick={() => onSidebarsHiddenChange(!sidebarsHidden)}
+                title={
+                  sidebarsHidden
+                    ? 'Show sidebars'
+                    : 'Hide sidebars (Focus mode)'
+                }
+                style={{
+                  // @ts-ignore - WebkitAppRegion is not in CSSProperties
+                  WebkitAppRegion: 'no-drag',
+                  background: sidebarsHidden
+                    ? theme.colors.primary + '20'
+                    : theme.colors.backgroundTertiary,
+                  border: `1px solid ${
+                    sidebarsHidden ? theme.colors.primary : theme.colors.border
+                  }`,
+                  color: sidebarsHidden
+                    ? theme.colors.primary
+                    : theme.colors.textSecondary,
+                  cursor: 'pointer',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s',
+                  fontSize: `${theme.fontSizes[1]}px`,
+                  fontWeight: theme.fontWeights.medium,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundSecondary;
+                  e.currentTarget.style.borderColor = theme.colors.primary;
+                  e.currentTarget.style.color = theme.colors.text;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = sidebarsHidden
+                    ? theme.colors.primary + '20'
+                    : theme.colors.backgroundTertiary;
+                  e.currentTarget.style.borderColor = sidebarsHidden
+                    ? theme.colors.primary
+                    : theme.colors.border;
+                  e.currentTarget.style.color = sidebarsHidden
+                    ? theme.colors.primary
+                    : theme.colors.textSecondary;
+                }}
+              >
+                {sidebarsHidden ? (
+                  <Columns3 size={14} />
+                ) : (
+                  <Square size={14} />
+                )}
+                <span>{sidebarsHidden ? 'Sidebars' : 'Focus'}</span>
               </button>
             )}
           </div>

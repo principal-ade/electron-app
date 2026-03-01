@@ -208,6 +208,8 @@ export interface DevWorkspacePanelFrameworkProps {
   onOpenInWebADE?: () => void;
   /** Callback to open GitHub Actions */
   onOpenGitHubActions?: () => void;
+  /** Hide the icon sidebars (focus mode) */
+  sidebarsHidden?: boolean;
 }
 
 interface DevWorkspacePanelFrameworkInnerProps {
@@ -222,6 +224,7 @@ interface DevWorkspacePanelFrameworkInnerProps {
   onLeftExpandComplete?: () => void;
   onOpenInWebADE?: () => void;
   onOpenGitHubActions?: () => void;
+  sidebarsHidden?: boolean;
 }
 
 /**
@@ -300,7 +303,7 @@ const FileCityWithHighlights: React.FC<{
  */
 const DevWorkspacePanelFrameworkInner: React.FC<
   DevWorkspacePanelFrameworkInnerProps
-> = ({ collapsed, onCollapsedChange, layout, onLayoutChange, panelSizes, onPanelSizesChange, onTabsChange, onLeftCollapseComplete, onLeftExpandComplete, onOpenInWebADE, onOpenGitHubActions }) => {
+> = ({ collapsed, onCollapsedChange, layout, onLayoutChange, panelSizes, onPanelSizesChange, onTabsChange, onLeftCollapseComplete, onLeftExpandComplete, onOpenInWebADE, onOpenGitHubActions, sidebarsHidden }) => {
   const { theme } = useTheme();
   const { context, actions, events } = useRepositoryPanelProvider();
   const { context: terminalCtx, actions: terminalActions } =
@@ -2244,16 +2247,18 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         }}
       >
         {/* Left Panel Icon Sidebar */}
-        <PanelIconSidebar
-          currentPanelId={typeof layout.left === 'string' ? layout.left : ''}
-          onPanelChange={(panelId) => onLayoutChange({ ...layout, left: panelId })}
-          theme={theme}
-          collapsed={collapsed.left}
-          onExpand={() => onCollapsedChange({ ...collapsed, left: false })}
-          onCollapse={() => onCollapsedChange({ ...collapsed, left: true })}
-          position="left"
-          showCollapseButton
-        />
+        {!sidebarsHidden && (
+          <PanelIconSidebar
+            currentPanelId={typeof layout.left === 'string' ? layout.left : ''}
+            onPanelChange={(panelId) => onLayoutChange({ ...layout, left: panelId })}
+            theme={theme}
+            collapsed={collapsed.left}
+            onExpand={() => onCollapsedChange({ ...collapsed, left: false })}
+            onCollapse={() => onCollapsedChange({ ...collapsed, left: true })}
+            position="left"
+            showCollapseButton
+          />
+        )}
 
       {/* Main panel layout area */}
       <div
@@ -2345,19 +2350,21 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       </div>
 
       {/* Right Panel Icon Sidebar */}
-      <PanelIconSidebar
-        currentPanelId={typeof layout.right === 'string' ? layout.right : ''}
-        onPanelChange={(panelId) => onLayoutChange({ ...layout, right: panelId })}
-        theme={theme}
-        collapsed={collapsed.right}
-        onExpand={() => onCollapsedChange({ ...collapsed, right: false })}
-        onCollapse={() => onCollapsedChange({ ...collapsed, right: true })}
-        position="right"
-        panelIcons={RIGHT_PANEL_ICONS}
-        showCollapseButton
-        onOpenInWebADE={onOpenInWebADE}
-        onOpenGitHubActions={onOpenGitHubActions}
-      />
+      {!sidebarsHidden && (
+        <PanelIconSidebar
+          currentPanelId={typeof layout.right === 'string' ? layout.right : ''}
+          onPanelChange={(panelId) => onLayoutChange({ ...layout, right: panelId })}
+          theme={theme}
+          collapsed={collapsed.right}
+          onExpand={() => onCollapsedChange({ ...collapsed, right: false })}
+          onCollapse={() => onCollapsedChange({ ...collapsed, right: true })}
+          position="right"
+          panelIcons={RIGHT_PANEL_ICONS}
+          showCollapseButton
+          onOpenInWebADE={onOpenInWebADE}
+          onOpenGitHubActions={onOpenGitHubActions}
+        />
+      )}
     </div>
   );
 };
@@ -2389,6 +2396,7 @@ export const DevWorkspacePanelFramework: React.FC<
   onLeftExpandComplete,
   onOpenInWebADE,
   onOpenGitHubActions,
+  sidebarsHidden,
 }) => {
   // Use the same terminal context format as legacy MultiTerminalPanel
   // Legacy uses: terminal:${owner}/${name}
@@ -2438,6 +2446,7 @@ export const DevWorkspacePanelFramework: React.FC<
             onLeftExpandComplete={onLeftExpandComplete}
             onOpenInWebADE={onOpenInWebADE}
             onOpenGitHubActions={onOpenGitHubActions}
+            sidebarsHidden={sidebarsHidden}
           />
         </AgentHighlightProvider>
       </TerminalProvider>
