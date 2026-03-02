@@ -895,7 +895,12 @@ export const RepositoryPanelProvider: React.FC<
       });
 
       try {
-        // Get git remote info to determine owner/repo
+        // Step 1: Resolve git remote
+        span.addEvent('quality.artifact.step.remote', {
+          'step': 'Resolving git remote',
+          'repository.path': repositoryPath,
+        });
+
         const remoteInfo =
           await RepositoryMonitoringService.getGitRemoteInfo(repositoryPath);
         if (!remoteInfo?.remoteUrl) {
@@ -904,6 +909,7 @@ export const RepositoryPanelProvider: React.FC<
           );
           span.addEvent('quality.artifact.skipped', {
             'skip.reason': 'no_git_remote',
+            'message': 'Repository has no git remote configured',
           });
           span.setStatus({ code: SpanStatusCode.OK });
           span.end();
@@ -911,11 +917,19 @@ export const RepositoryPanelProvider: React.FC<
           return;
         }
 
+        span.addEvent('quality.artifact.step.remote.resolved', {
+          'step': 'Git remote resolved',
+          'remote.url': remoteInfo.remoteUrl,
+        });
+
+        // Step 2: Parse GitHub info
         const githubInfo = parseGitHubRemote(remoteInfo.remoteUrl);
         if (!githubInfo) {
           console.info('[RepositoryPanelProvider] Not a GitHub repository');
           span.addEvent('quality.artifact.skipped', {
             'skip.reason': 'not_github',
+            'message': 'Remote URL is not a GitHub repository',
+            'remote.url': remoteInfo.remoteUrl,
           });
           span.setStatus({ code: SpanStatusCode.OK });
           span.end();
@@ -927,13 +941,35 @@ export const RepositoryPanelProvider: React.FC<
         span.setAttribute('github.owner', githubInfo.owner);
         span.setAttribute('github.repo', githubInfo.repo);
 
-        // Get git status to know the current branch
+        span.addEvent('quality.artifact.step.github.parsed', {
+          'step': 'GitHub info parsed',
+          'github.owner': githubInfo.owner,
+          'github.repo': githubInfo.repo,
+        });
+
+        // Step 3: Get current branch
+        span.addEvent('quality.artifact.step.branch', {
+          'step': 'Getting current branch',
+        });
+
         const gitStatus =
           await RepositoryMonitoringService.getGitStatus(repositoryPath);
-        const branch = gitStatus?.branch || 'main';
+
+        // Debug: log gitStatus structure
+        console.info('[RepositoryPanelProvider] gitStatus:', JSON.stringify(gitStatus, null, 2));
+
+        // Extract branch - gitStatus.branch should be a string per GitStatusMetadata
+        const branch = gitStatus?.branch ?? 'main';
+        const branchSource = gitStatus?.branch ? 'git status' : 'default';
         span.setAttribute('git.branch', branch);
 
-        // Emit fetching event
+        span.addEvent('quality.artifact.step.branch.resolved', {
+          'step': 'Branch resolved',
+          'git.branch': branch,
+          'git.branchSource': branchSource,
+        });
+
+        // Step 4: Emit fetching event (starting API call)
         span.addEvent('quality.artifact.fetching', {
           'github.owner': githubInfo.owner,
           'github.repo': githubInfo.repo,
@@ -944,13 +980,28 @@ export const RepositoryPanelProvider: React.FC<
           `[RepositoryPanelProvider] Fetching quality metrics for ${githubInfo.owner}/${githubInfo.repo}@${branch}`,
         );
 
-        // Fetch from GitHub artifacts
+        // Step 5: Call GitHub API
+        span.addEvent('quality.artifact.step.api.calling', {
+          'step': 'Calling GitHub Actions API',
+          'github.owner': githubInfo.owner,
+          'github.repo': githubInfo.repo,
+          'git.branch': branch,
+        });
+
+        const apiStartTime = Date.now();
         const artifactData =
           await GitHubArtifactService.getLatestQualityMetrics(
             githubInfo.owner,
             githubInfo.repo,
             branch,
           );
+        const apiDuration = Date.now() - apiStartTime;
+
+        span.addEvent('quality.artifact.step.api.complete', {
+          'step': 'GitHub API call complete',
+          'api.duration.ms': apiDuration,
+          'api.found': artifactData !== null,
+        });
 
         if (artifactData) {
           // Emit artifact received event
@@ -1120,8 +1171,14 @@ export const RepositoryPanelProvider: React.FC<
     const registerTelemetryPort = async () => {
       try {
         // Generate window ID and determine service identifier
+        // Use traceSourceServiceName if provided, otherwise derive from repository
         windowId = `dev-workspace-${Date.now()}`;
-        serviceIdentifier = traceSourceServiceName || 'principal-ade';
+        serviceIdentifier = traceSourceServiceName || repository?.name || repositoryPath?.split('/').pop() || null;
+
+        if (!serviceIdentifier) {
+          console.warn('[RepositoryPanelProvider] No service identifier available, skipping telemetry registration');
+          return;
+        }
 
         console.info('[RepositoryPanelProvider] 🔌 Registering telemetry port');
         console.info('[RepositoryPanelProvider] traceSourceServiceName prop:', traceSourceServiceName);
@@ -1263,7 +1320,7 @@ export const RepositoryPanelProvider: React.FC<
         });
       }
     };
-  }, [traceSourceServiceName, traceOrchestrator]);
+  }, [traceSourceServiceName, traceOrchestrator, repository?.name, repositoryPath]);
 
   // Create actions object
   // Note: Terminal actions have been moved to TerminalContext

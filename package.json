@@ -199,7 +199,7 @@
     "@opentelemetry/sdk-trace-web": "^2.5.0",
     "@opentelemetry/semantic-conventions": "^1.39.0",
     "@principal-ade/agent-manager": "^1.1.0",
-    "@principal-ade/code-quality-panels": "^0.1.27",
+    "@principal-ade/code-quality-panels": "^0.1.29",
     "@principal-ade/dynamic-file-tree": "^0.1.75",
     "@principal-ade/industry-theme": "^0.1.8",
     "@principal-ade/industry-themed-monaco-editor": "^0.1.10",

@@ -16,11 +16,17 @@
         "packages.count": "> 0"
       },
       "template": {
-        "introduction": "**Fetching Quality Artifacts**\n\nLoading quality metrics from GitHub Actions for `{{github.owner}}/{{github.repo}}`",
+        "introduction": "**Fetching Quality Artifacts**\n\nLoading quality metrics from GitHub Actions",
         "events": {
-          "quality.artifact.fetching": "1. Starting artifact fetch for `{{github.owner}}/{{github.repo}}`@{{git.branch}}",
-          "quality.artifact.received": "2. Artifact received with {{packages.count}} packages",
-          "quality.context.updated": "3. **Quality slice updated in context**"
+          "quality.artifact.step.remote": "1. {{step}}...",
+          "quality.artifact.step.remote.resolved": "   Done: Remote: `{{remote.url}}`",
+          "quality.artifact.step.github.parsed": "2. {{step}}: `{{github.owner}}/{{github.repo}}`",
+          "quality.artifact.step.branch": "3. {{step}}...",
+          "quality.artifact.step.branch.resolved": "   Done: Branch: `{{git.branch}}` ({{git.branchSource}})",
+          "quality.artifact.step.api.calling": "4. {{step}}...",
+          "quality.artifact.step.api.complete": "   Done: API complete in {{api.duration.ms}}ms (found: {{api.found}})",
+          "quality.artifact.received": "5. **Artifact received** with {{packages.count}} packages",
+          "quality.context.updated": "6. Done: Quality context updated"
         },
         "summary": "**Artifact Summary:**\n- Repository: `{{github.owner}}/{{github.repo}}`\n- Branch: `{{git.branch}}`\n- Packages: {{packages.count}}\n- Last Run: {{artifact.timestamp}}"
       }
@@ -32,12 +38,56 @@
       "priority": 2,
       "severity": "warning",
       "template": {
-        "introduction": "**No Quality Artifacts**\n\nNo quality metrics found for `{{github.owner}}/{{github.repo}}`",
+        "introduction": "**No Quality Artifacts**\n\nSearching for quality metrics...",
         "events": {
-          "quality.artifact.fetching": "1. Starting artifact fetch",
-          "quality.artifact.notFound": "2. **No quality artifacts found**"
+          "quality.artifact.step.remote": "1. {{step}}...",
+          "quality.artifact.step.remote.resolved": "   Done: Remote: `{{remote.url}}`",
+          "quality.artifact.step.github.parsed": "2. {{step}}: `{{github.owner}}/{{github.repo}}`",
+          "quality.artifact.step.branch": "3. {{step}}...",
+          "quality.artifact.step.branch.resolved": "   Done: Branch: `{{git.branch}}` ({{git.branchSource}})",
+          "quality.artifact.step.api.calling": "4. {{step}}...",
+          "quality.artifact.step.api.complete": "   Done: API complete in {{api.duration.ms}}ms",
+          "quality.artifact.notFound": "5. **No artifacts found** for `{{github.owner}}/{{github.repo}}`@`{{git.branch}}`"
         },
-        "summary": "**Next Steps:**\n- Configure GitHub Actions workflow\n- Run quality tools locally via the panel\n- Push workflow file to enable CI quality metrics"
+        "summary": "**Repository:** `{{github.owner}}/{{github.repo}}`\n**Branch:** `{{git.branch}}`\n\n**Why no artifacts?**\n- No GitHub Actions workflow configured\n- Workflow hasn't run yet on this branch\n- Artifacts may have expired (90 day retention)\n\n**Next Steps:**\n- Configure `.github/workflows/quality.yml`\n- Run quality tools locally via the panel\n- Push to trigger CI workflow"
+      }
+    },
+    {
+      "id": "artifact-fetch-skipped-no-remote",
+      "name": "Skipped - No Git Remote",
+      "description": "Repository has no git remote configured",
+      "priority": 3,
+      "severity": "info",
+      "match": {
+        "skip.reason": "no_git_remote"
+      },
+      "template": {
+        "introduction": "**Artifact Fetch Skipped**\n\nNo git remote configured",
+        "events": {
+          "quality.artifact.step.remote": "1. {{step}}...",
+          "quality.artifact.step.remote.resolved": "   Remote: `{{remote.url}}`",
+          "quality.artifact.skipped": "   Warning: {{message}}"
+        },
+        "summary": "**Why skipped:**\nThis repository has no git remote configured. Quality artifacts are fetched from GitHub Actions, which requires a GitHub remote.\n\n**To enable:**\n1. Add a GitHub remote: `git remote add origin <url>`\n2. Push your code to GitHub\n3. Configure GitHub Actions workflow"
+      }
+    },
+    {
+      "id": "artifact-fetch-skipped-not-github",
+      "name": "Skipped - Not GitHub",
+      "description": "Repository remote is not GitHub",
+      "priority": 4,
+      "severity": "info",
+      "match": {
+        "skip.reason": "not_github"
+      },
+      "template": {
+        "introduction": "**Artifact Fetch Skipped**\n\nNot a GitHub repository",
+        "events": {
+          "quality.artifact.step.remote": "1. {{step}}...",
+          "quality.artifact.step.remote.resolved": "   Done: Remote: `{{remote.url}}`",
+          "quality.artifact.skipped": "   Warning: {{message}}"
+        },
+        "summary": "**Why skipped:**\nThe git remote (`{{remote.url}}`) is not a GitHub URL. Quality artifacts are currently only fetched from GitHub Actions.\n\n**Supported remotes:**\n- `git@github.com:owner/repo.git`\n- `https://github.com/owner/repo.git`"
       }
     }
   ]
