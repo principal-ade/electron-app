@@ -8,7 +8,6 @@
   "scenarios": [
     {
       "id": "first-time-setup",
-      "name": "First-Time GitHub Setup",
       "description": "Creating first collection and initializing GitHub repository",
       "priority": 1,
       "template": {

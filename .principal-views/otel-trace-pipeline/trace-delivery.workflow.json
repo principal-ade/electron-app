@@ -8,10 +8,8 @@
   "scenarios": [
     {
       "id": "successful-delivery-with-ui",
-      "name": "Complete Trace Delivery to UI",
       "description": "Trace successfully flows from app through collector to storage and is delivered to UI",
       "priority": 1,
-      "severity": "info",
       "template": {
         "introduction": "**Trace Delivered Successfully**\n\nTrace `{{trace.id}}` was created by the application, collected by the OTEL server, stored, and delivered to the UI.\n\n**End-to-End Latency:** ~{{collector.processing_time + storage.write_time + messageport.delivery_time}}ms",
         "events": {

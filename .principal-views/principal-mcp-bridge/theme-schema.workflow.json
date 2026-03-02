@@ -8,7 +8,6 @@
   "scenarios": [
     {
       "id": "success",
-      "name": "Schema Retrieved Successfully",
       "description": "Theme schema and available themes returned successfully",
       "priority": 1,
       "template": {
@@ -22,7 +21,6 @@
     },
     {
       "id": "theme-not-found",
-      "name": "Theme Not Found",
       "description": "Requested theme does not exist in predefined themes",
       "priority": 2,
       "template": {
@@ -36,7 +34,6 @@
     },
     {
       "id": "server-error",
-      "name": "Server Error",
       "description": "Schema request failed with server error",
       "priority": 3,
       "template": {

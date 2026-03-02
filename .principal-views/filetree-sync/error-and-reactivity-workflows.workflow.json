@@ -8,10 +8,8 @@
   "scenarios": [
     {
       "id": "panel-reactivity-success",
-      "name": "Success: Full Panel Reactivity",
       "description": "Complete flow from file change to panel re-render - everything working correctly",
       "priority": 1,
-      "severity": "info",
       "template": {
         "introduction": "**Panel Reactivity Success!**\n\nFile change successfully propagated through the entire pipeline and triggered panel re-render.\n\n**This demonstrates the PANEL_CONTEXT_REACTIVITY_PATTERN fix is working!**\n\nFile: `{{file.path}}`\nChange: {{file.event}}\nEnd-to-End Latency: ~{{cache.rebuild.duration_ms + render.duration_ms}}ms",
         "events": {
@@ -30,10 +28,8 @@
     },
     {
       "id": "manual-refresh-immediate",
-      "name": "Manual Refresh (Immediate)",
       "description": "User or system triggered manual cache refresh bypassing debounce",
       "priority": 2,
-      "severity": "info",
       "template": {
         "introduction": "**Manual Refresh Requested**\n\nAn explicit cache refresh was requested for `{{repository.path}}`.\n\nTrigger: {{refresh.trigger}}",
         "events": {

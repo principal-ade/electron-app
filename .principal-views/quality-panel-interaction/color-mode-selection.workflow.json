@@ -8,10 +8,8 @@
   "scenarios": [
     {
       "id": "color-mode-select",
-      "name": "Select Quality Color Mode",
       "description": "User clicks hexagon facet to change File City color mode",
       "priority": 1,
-      "severity": "info",
       "template": {
         "introduction": "**Color Mode Selected**\n\nUser selected `{{colorMode.name}}` from quality hexagon",
         "events": {

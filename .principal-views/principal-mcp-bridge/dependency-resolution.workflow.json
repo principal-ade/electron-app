@@ -8,14 +8,8 @@
   "scenarios": [
     {
       "id": "dependency-found-in-alexandria",
-      "name": "Found in Alexandria Registry",
       "description": "Dependency resolved successfully from a local repository in Alexandria",
       "priority": 1,
-      "severity": "info",
-      "match": {
-        "found": true,
-        "source": "alexandria"
-      },
       "template": {
         "introduction": "**Dependency Found in Alexandria**\n\nThe dependency `{{dependency.id}}` was resolved from a local repository clone registered in Alexandria.",
         "events": {
@@ -33,14 +27,8 @@
     },
     {
       "id": "dependency-found-in-package",
-      "name": "Found in Package Dependencies",
       "description": "Dependency resolved from a registered repository's package.json",
       "priority": 2,
-      "severity": "info",
-      "match": {
-        "found": true,
-        "source": "package"
-      },
       "template": {
         "introduction": "**Dependency Found in Package**\n\nThe dependency `{{dependency.id}}` was found in a registered repository's package.json.",
         "events": {
@@ -58,14 +46,8 @@
     },
     {
       "id": "dependency-not-found-with-suggestions",
-      "name": "Dependency Not Found (With Suggestions)",
       "description": "Dependency could not be resolved, but install suggestions are available",
       "priority": 3,
-      "severity": "warning",
-      "match": {
-        "found": false,
-        "has_suggestions": true
-      },
       "template": {
         "introduction": "**Dependency Not Found**\n\nThe dependency `{{dependency.id}}` could not be resolved from any registered repository. Install suggestions are available.",
         "events": {
@@ -84,14 +66,8 @@
     },
     {
       "id": "dependency-not-found",
-      "name": "Dependency Not Found",
       "description": "Dependency could not be resolved from any registered source",
       "priority": 4,
-      "severity": "warning",
-      "match": {
-        "found": false,
-        "has_suggestions": false
-      },
       "template": {
         "introduction": "**Dependency Not Found**\n\nThe dependency `{{dependency.id}}` could not be resolved from any registered repository.",
         "events": {
@@ -110,13 +86,8 @@
     },
     {
       "id": "resolution-error",
-      "name": "Resolution Error",
       "description": "An error occurred during dependency resolution",
       "priority": 5,
-      "severity": "error",
-      "match": {
-        "resolution.success": false
-      },
       "template": {
         "introduction": "**Dependency Resolution Failed**\n\nAn error occurred while resolving `{{dependency.id}}`.",
         "events": {
@@ -132,13 +103,8 @@
     },
     {
       "id": "validation-error",
-      "name": "Validation Error",
       "description": "Request validation failed - missing dependencyId",
       "priority": 6,
-      "severity": "error",
-      "match": {
-        "error.type": "validation_error"
-      },
       "template": {
         "introduction": "**Validation Error**\n\nThe request was rejected due to missing required field.",
         "events": {

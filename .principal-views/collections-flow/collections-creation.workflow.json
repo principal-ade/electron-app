@@ -8,7 +8,6 @@
   "scenarios": [
     {
       "id": "successful-creation-full",
-      "name": "Successful Collection Creation (Full Details)",
       "description": "User creates a new collection with icon and description, syncs to GitHub",
       "priority": 1,
       "template": {
@@ -35,7 +34,6 @@
     },
     {
       "id": "successful-creation-minimal",
-      "name": "Successful Collection Creation (Name Only)",
       "description": "User creates a new collection with just a name, no icon or description",
       "priority": 2,
       "template": {

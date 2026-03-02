@@ -8,10 +8,8 @@
   "scenarios": [
     {
       "id": "full-tool-execution",
-      "name": "Complete Tool Execution (Click to Results)",
       "description": "Full flow from user clicking 'Run' to results displayed in panel",
       "priority": 1,
-      "severity": "info",
       "template": {
         "introduction": "**Quality Tool Execution**\n\nExecuting quality tool for `{{repository.path}}`\n\nTool: {{tool.name}}\nPackage: {{package.path}}",
         "events": {
@@ -28,10 +26,8 @@
     },
     {
       "id": "tool-execution-error",
-      "name": "Tool Execution Error",
       "description": "Flow when tool execution fails",
       "priority": 2,
-      "severity": "error",
       "template": {
         "introduction": "**Tool Execution Failed**\n\nFailed to execute `{{tool.name}}` for `{{repository.path}}`",
         "events": {

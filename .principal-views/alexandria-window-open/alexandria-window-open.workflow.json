@@ -8,7 +8,6 @@
   "scenarios": [
     {
       "id": "named-workspace-new-window",
-      "name": "Open Named Workspace (New Window)",
       "description": "Opening a named workspace in a new window",
       "priority": 1,
       "template": {
@@ -33,7 +32,6 @@
     },
     {
       "id": "named-workspace-reuse-window",
-      "name": "Open Named Workspace (Reuse Window)",
       "description": "Focusing an existing window for a named workspace",
       "priority": 2,
       "template": {
@@ -54,7 +52,6 @@
     },
     {
       "id": "temp-workspace-new-window",
-      "name": "Open Temporary Repository Workspace",
       "description": "Opening a temporary workspace for a single repository",
       "priority": 3,
       "template": {
@@ -78,7 +75,6 @@
     },
     {
       "id": "workspace-not-found",
-      "name": "Workspace Not Found",
       "description": "Attempting to open a workspace that doesn't exist",
       "priority": 4,
       "template": {

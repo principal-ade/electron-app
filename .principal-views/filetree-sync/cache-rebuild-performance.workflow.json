@@ -8,10 +8,8 @@
   "scenarios": [
     {
       "id": "full-sync-with-ui",
-      "name": "Complete FileTree Sync (File to UI)",
       "description": "Full flow from file change to UI render - the complete success path",
       "priority": 1,
-      "severity": "info",
       "template": {
         "introduction": "**Complete FileTree Synchronization**\n\nSuccessfully synchronized file tree from file system change to UI update.\n\nRepository: `{{repository.path}}`\nTotal files: {{filetree.files_count}}",
         "events": {
@@ -33,10 +31,8 @@
     },
     {
       "id": "manual-refresh-flow",
-      "name": "Manual Cache Refresh",
       "description": "User or system triggered manual cache refresh (bypasses debounce)",
       "priority": 2,
-      "severity": "info",
       "template": {
         "introduction": "**Manual Refresh Requested**\n\nAn explicit cache refresh was requested for `{{repository.path}}`.\n\nTrigger: {{refresh.trigger}}",
         "events": {

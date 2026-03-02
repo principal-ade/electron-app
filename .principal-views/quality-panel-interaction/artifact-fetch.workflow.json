@@ -8,13 +8,8 @@
   "scenarios": [
     {
       "id": "artifact-fetch-success",
-      "name": "Fetch Quality Artifacts (Success)",
       "description": "Successfully fetch quality metrics from GitHub Actions",
       "priority": 1,
-      "severity": "info",
-      "match": {
-        "packages.count": "> 0"
-      },
       "template": {
         "introduction": "**Fetching Quality Artifacts**\n\nLoading quality metrics from GitHub Actions",
         "events": {
@@ -33,10 +28,8 @@
     },
     {
       "id": "artifact-fetch-not-found",
-      "name": "No Quality Artifacts Found",
       "description": "Repository has no quality artifacts (CI not configured)",
       "priority": 2,
-      "severity": "warning",
       "template": {
         "introduction": "**No Quality Artifacts**\n\nSearching for quality metrics...",
         "events": {
@@ -54,13 +47,8 @@
     },
     {
       "id": "artifact-fetch-skipped-no-remote",
-      "name": "Skipped - No Git Remote",
       "description": "Repository has no git remote configured",
       "priority": 3,
-      "severity": "info",
-      "match": {
-        "skip.reason": "no_git_remote"
-      },
       "template": {
         "introduction": "**Artifact Fetch Skipped**\n\nNo git remote configured",
         "events": {
@@ -73,13 +61,8 @@
     },
     {
       "id": "artifact-fetch-skipped-not-github",
-      "name": "Skipped - Not GitHub",
       "description": "Repository remote is not GitHub",
       "priority": 4,
-      "severity": "info",
-      "match": {
-        "skip.reason": "not_github"
-      },
       "template": {
         "introduction": "**Artifact Fetch Skipped**\n\nNot a GitHub repository",
         "events": {

@@ -8,10 +8,8 @@
   "scenarios": [
     {
       "id": "trace-selected-and-rendered",
-      "name": "Trace Selected and Visualized",
       "description": "User selected trace from SystemMonitor and trace details were rendered in DevWorkspace",
       "priority": 1,
-      "severity": "info",
       "template": {
         "introduction": "**Trace Visualization Complete**\n\nUser selected trace `{{trace.id}}` from SystemMonitor.\n\nDevWorkspace opened TraceDetailsPanel showing **{{spans.count}} spans** in {{render.duration_ms}}ms.",
         "events": {
@@ -25,10 +23,8 @@
     },
     {
       "id": "systemmonitor-polling-only",
-      "name": "SystemMonitor Polling Traces",
       "description": "SystemMonitor is polling and displaying traces but user hasn't selected any yet",
       "priority": 2,
-      "severity": "info",
       "template": {
         "introduction": "**Traces Available in SystemMonitor**\n\nSystemMonitor is polling the collector and displaying {{traces.fetched}} traces from {{services.count}} services.\n\nTraces are ready for user selection and visualization.",
         "events": {

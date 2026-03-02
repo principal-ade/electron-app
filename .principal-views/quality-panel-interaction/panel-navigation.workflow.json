@@ -8,10 +8,8 @@
   "scenarios": [
     {
       "id": "panel-open",
-      "name": "Open Quality Panel",
       "description": "User navigates to quality panel via sidebar icon",
       "priority": 1,
-      "severity": "info",
       "template": {
         "introduction": "**Quality Panel Opened**\n\nUser navigated to quality panel",
         "events": {

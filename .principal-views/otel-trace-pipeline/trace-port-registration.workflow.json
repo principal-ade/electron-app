@@ -8,10 +8,8 @@
   "scenarios": [
     {
       "id": "successful-port-registration",
-      "name": "MessagePort Successfully Registered",
       "description": "Window successfully registered a MessagePort to receive trace data from collector",
       "priority": 1,
-      "severity": "info",
       "template": {
         "introduction": "**MessagePort Registered**\n\nWindow `{{window.id}}` successfully registered to receive traces from source `{{source.url}}`.\n\nThe window will now receive real-time trace batches via MessagePort IPC.",
         "events": {
@@ -24,10 +22,8 @@
     },
     {
       "id": "port-registration-with-existing-traces",
-      "name": "Port Registered - Existing Traces Available",
       "description": "Window registered port and there are already traces in storage waiting to be retrieved",
       "priority": 2,
-      "severity": "info",
       "template": {
         "introduction": "**Port Registered with Backlog**\n\nWindow `{{window.id}}` registered for traces and there are {{storage.size}} traces already in storage.\n\nSystemMonitor polling will retrieve historical traces.",
         "events": {

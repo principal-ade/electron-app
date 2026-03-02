@@ -8,7 +8,6 @@
   "scenarios": [
     {
       "id": "success",
-      "name": "Theme Update Successful",
       "description": "Theme property updated successfully via UserPreferences",
       "priority": 1,
       "template": {
@@ -25,7 +24,6 @@
     },
     {
       "id": "validation-failed",
-      "name": "Validation Failed",
       "description": "Request validation failed - missing or invalid property path",
       "priority": 2,
       "template": {
@@ -38,7 +36,6 @@
     },
     {
       "id": "update-failed",
-      "name": "Update Failed",
       "description": "Theme update failed during preferences update",
       "priority": 3,
       "template": {
