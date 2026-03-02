@@ -1,0 +1,885 @@
+{
+  "pv": {
+    "name": "Agent MCP Installation",
+    "version": "1.0.0",
+    "description": "Flow for installing and configuring MCP servers for AI agents (Claude, Cline, OpenCode, Droid)",
+    "markdown": ".principal-views/agent-mcp-installation/agent-mcp-installation.md",
+    "nodeTypes": {
+      "ui-component": {
+        "label": "UI Component",
+        "color": "#3B82F6"
+      },
+      "renderer-service": {
+        "label": "Renderer Service",
+        "color": "#8B5CF6"
+      },
+      "ipc-handler": {
+        "label": "IPC Handler",
+        "color": "#22C55E"
+      },
+      "external-library": {
+        "label": "External Library",
+        "color": "#F59E0B"
+      },
+      "config-file": {
+        "label": "Config File",
+        "color": "#EC4899"
+      },
+      "error-state": {
+        "label": "Error State",
+        "color": "#EF4444"
+      }
+    },
+    "edgeTypes": {
+      "user-action": {
+        "label": "User Action",
+        "style": "solid",
+        "color": "#3B82F6"
+      },
+      "ipc-call": {
+        "label": "IPC Call",
+        "style": "solid",
+        "color": "#22C55E"
+      },
+      "function-call": {
+        "label": "Function Call",
+        "style": "solid",
+        "color": "#8B5CF6"
+      },
+      "file-operation": {
+        "label": "File Operation",
+        "style": "dashed",
+        "color": "#EC4899"
+      },
+      "error-flow": {
+        "label": "Error Flow",
+        "style": "dashed",
+        "color": "#EF4444"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "x": 300,
+      "y": -100,
+      "width": 500,
+      "height": 60,
+      "color": "#64748B",
+      "text": "# Agent MCP Installation\n**Configure MCP servers for Claude, Cline, OpenCode, and Droid**"
+    },
+    {
+      "id": "setup-wizard",
+      "type": "text",
+      "x": 50,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "text": "AgentSetupWizard\nStep 3: Enable MCP\nUser clicks toggle",
+      "pv": {
+        "nodeType": "ui-component",
+        "shape": "rectangle",
+        "status": "draft",
+        "sources": [
+          "src/renderer/pages/LandingPage/AgentConfigurationView/AgentSetupWizard.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ui",
+          "isNew": true
+        },
+        "event": {
+          "name": "agent_mcp.ui.toggle_clicked",
+          "description": "User clicks the MCP enable/disable toggle button",
+          "attributes": {
+            "agent.type": {
+              "type": "string",
+              "description": "Agent type: claude, cline, opencode, droid"
+            },
+            "mcp.current_status": {
+              "type": "boolean",
+              "description": "Current MCP enabled status before toggle"
+            },
+            "mcp.action": {
+              "type": "string",
+              "description": "Action being performed: enable or disable"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "detailed-view",
+      "type": "text",
+      "x": 50,
+      "y": 180,
+      "width": 200,
+      "height": 100,
+      "text": "DetailedConfigurationView\nMCP Tab Content\nAgent-specific UI",
+      "pv": {
+        "nodeType": "ui-component",
+        "shape": "rectangle",
+        "status": "draft",
+        "sources": [
+          "src/renderer/pages/LandingPage/AgentConfigurationView/DetailedConfigurationView.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ui",
+          "isNew": true
+        },
+        "event": {
+          "name": "agent_mcp.ui.detailed_view_opened",
+          "description": "User opens the detailed MCP configuration view",
+          "attributes": {
+            "agent.type": {
+              "type": "string",
+              "description": "Agent type being configured"
+            },
+            "view.mode": {
+              "type": "string",
+              "description": "Current view mode: hooks, mcp, install"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "renderer-service",
+      "type": "text",
+      "x": 300,
+      "y": 50,
+      "width": 220,
+      "height": 100,
+      "text": "AgentConfigurationService\nRenderer-side API\nCalls main process",
+      "pv": {
+        "nodeType": "renderer-service",
+        "shape": "rectangle",
+        "status": "draft",
+        "sources": [
+          "src/renderer/main-process-api/AgentConfigurationService.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "service",
+          "isNew": true
+        },
+        "event": {
+          "name": "agent_mcp.service.request_initiated",
+          "description": "Renderer service initiates MCP operation request",
+          "attributes": {
+            "agent.type": {
+              "type": "string",
+              "description": "Agent type"
+            },
+            "operation": {
+              "type": "string",
+              "description": "Operation: addMCPToAgent, removeMCPFromAgent, getAgentMCPStatus"
+            },
+            "server.name": {
+              "type": "string",
+              "description": "MCP server name being configured"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ipc-add-mcp",
+      "type": "text",
+      "x": 570,
+      "y": 50,
+      "width": 200,
+      "height": 80,
+      "text": "IPC Handler\nADD_MCP_TO_AGENT\nipcMain.handle",
+      "pv": {
+        "nodeType": "ipc-handler",
+        "shape": "rectangle",
+        "status": "draft",
+        "sources": [
+          "src/main/agent-management/agentConfigHandlers.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ipc",
+          "isNew": true
+        },
+        "event": {
+          "name": "agent_mcp.ipc.add_mcp_received",
+          "description": "Main process receives add MCP request via IPC",
+          "attributes": {
+            "agent.type": {
+              "type": "string",
+              "description": "Agent type"
+            },
+            "server.name": {
+              "type": "string",
+              "description": "Server name to add"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ipc-remove-mcp",
+      "type": "text",
+      "x": 570,
+      "y": 150,
+      "width": 200,
+      "height": 80,
+      "text": "IPC Handler\nREMOVE_MCP_FROM_AGENT\nipcMain.handle",
+      "pv": {
+        "nodeType": "ipc-handler",
+        "shape": "rectangle",
+        "status": "draft",
+        "sources": [
+          "src/main/agent-management/agentConfigHandlers.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ipc",
+          "isNew": true
+        },
+        "event": {
+          "name": "agent_mcp.ipc.remove_mcp_received",
+          "description": "Main process receives remove MCP request via IPC",
+          "attributes": {
+            "agent.type": {
+              "type": "string",
+              "description": "Agent type"
+            },
+            "server.name": {
+              "type": "string",
+              "description": "Server name to remove"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ipc-get-status",
+      "type": "text",
+      "x": 570,
+      "y": 250,
+      "width": 200,
+      "height": 80,
+      "text": "IPC Handler\nGET_AGENT_MCP_STATUS\nipcMain.handle",
+      "pv": {
+        "nodeType": "ipc-handler",
+        "shape": "rectangle",
+        "status": "draft",
+        "sources": [
+          "src/main/agent-management/agentConfigHandlers.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ipc",
+          "isNew": true
+        },
+        "event": {
+          "name": "agent_mcp.ipc.get_status_received",
+          "description": "Main process receives get MCP status request via IPC",
+          "attributes": {
+            "agent.type": {
+              "type": "string",
+              "description": "Agent type"
+            },
+            "server.name": {
+              "type": "string",
+              "description": "Server name to check"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "agent-manager-lib",
+      "type": "text",
+      "x": 840,
+      "y": 50,
+      "width": 220,
+      "height": 100,
+      "text": "@principal-ade/agent-manager\nenableAgentMCP()\ndisableAgentMCP()\ngetAgentMCPStatus()",
+      "pv": {
+        "nodeType": "external-library",
+        "shape": "rectangle",
+        "status": "draft",
+        "sources": [
+          "src/main/agent-management/agentConfigHandlers.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "library",
+          "isNew": true
+        },
+        "event": {
+          "name": "agent_mcp.library.operation_called",
+          "description": "External agent-manager library function called",
+          "attributes": {
+            "agent.type": {
+              "type": "string",
+              "description": "Agent type"
+            },
+            "library.function": {
+              "type": "string",
+              "description": "Function called: enableAgentMCP, disableAgentMCP, getAgentMCPStatus"
+            },
+            "server.name": {
+              "type": "string",
+              "description": "Server name parameter"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "claude-config",
+      "type": "text",
+      "x": 1100,
+      "y": 50,
+      "width": 200,
+      "height": 80,
+      "text": "Claude Config\n~/.claude.json\nmcpServers section",
+      "pv": {
+        "nodeType": "config-file",
+        "shape": "rectangle",
+        "status": "draft",
+        "sources": [
+          "src/main/agent-management/agentConfigHandlers.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "file",
+          "isNew": true
+        },
+        "event": {
+          "name": "agent_mcp.config.claude_updated",
+          "description": "Claude configuration file updated with MCP server",
+          "attributes": {
+            "config.path": {
+              "type": "string",
+              "description": "Path to config file: ~/.claude.json"
+            },
+            "mcp.server_count": {
+              "type": "number",
+              "description": "Number of MCP servers after update"
+            },
+            "mcp.has_principal": {
+              "type": "boolean",
+              "description": "Whether principal-mcp server is configured"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "cline-config",
+      "type": "text",
+      "x": 1100,
+      "y": 150,
+      "width": 200,
+      "height": 80,
+      "text": "Cline Config\nVS Code settings\nmcpServers section",
+      "pv": {
+        "nodeType": "config-file",
+        "shape": "rectangle",
+        "status": "draft",
+        "sources": [
+          "src/main/agent-management/agentConfigHandlers.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "file",
+          "isNew": true
+        },
+        "event": {
+          "name": "agent_mcp.config.cline_updated",
+          "description": "Cline configuration updated with MCP server",
+          "attributes": {
+            "config.path": {
+              "type": "string",
+              "description": "Path to Cline config"
+            },
+            "mcp.server_count": {
+              "type": "number",
+              "description": "Number of MCP servers after update"
+            },
+            "mcp.has_principal": {
+              "type": "boolean",
+              "description": "Whether principal-mcp server is configured"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "opencode-config",
+      "type": "text",
+      "x": 1100,
+      "y": 250,
+      "width": 200,
+      "height": 80,
+      "text": "OpenCode Config\n~/.config/openCode/\nopenCode.json",
+      "pv": {
+        "nodeType": "config-file",
+        "shape": "rectangle",
+        "status": "draft",
+        "sources": [
+          "src/main/agent-management/agentConfigHandlers.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "file",
+          "isNew": true
+        },
+        "event": {
+          "name": "agent_mcp.config.opencode_updated",
+          "description": "OpenCode configuration updated with MCP server",
+          "attributes": {
+            "config.path": {
+              "type": "string",
+              "description": "Path to config: ~/.config/openCode/openCode.json"
+            },
+            "mcp.server_count": {
+              "type": "number",
+              "description": "Number of MCP servers after update"
+            },
+            "mcp.has_principal": {
+              "type": "boolean",
+              "description": "Whether principal-mcp server is configured"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "droid-config",
+      "type": "text",
+      "x": 1100,
+      "y": 350,
+      "width": 200,
+      "height": 80,
+      "text": "Droid Config\n~/.factory/mcp.json\nmcpServers section",
+      "pv": {
+        "nodeType": "config-file",
+        "shape": "rectangle",
+        "status": "draft",
+        "sources": [
+          "src/main/agent-management/agentConfigHandlers.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "file",
+          "isNew": true
+        },
+        "event": {
+          "name": "agent_mcp.config.droid_updated",
+          "description": "Droid configuration updated with MCP server",
+          "attributes": {
+            "config.path": {
+              "type": "string",
+              "description": "Path to config: ~/.factory/mcp.json"
+            },
+            "mcp.server_count": {
+              "type": "number",
+              "description": "Number of MCP servers after update"
+            },
+            "mcp.has_principal": {
+              "type": "boolean",
+              "description": "Whether principal-mcp server is configured"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "operation-success",
+      "type": "text",
+      "x": 840,
+      "y": 200,
+      "width": 200,
+      "height": 80,
+      "text": "Operation Success\nReturns status:\nhasMCP, mcpCount",
+      "pv": {
+        "nodeType": "ipc-handler",
+        "shape": "rectangle",
+        "status": "draft",
+        "sources": [
+          "src/main/agent-management/agentConfigHandlers.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "result",
+          "isNew": true
+        },
+        "event": {
+          "name": "agent_mcp.operation.success",
+          "description": "MCP operation completed successfully",
+          "attributes": {
+            "agent.type": {
+              "type": "string",
+              "description": "Agent type"
+            },
+            "operation": {
+              "type": "string",
+              "description": "Operation performed"
+            },
+            "result.has_mcp": {
+              "type": "boolean",
+              "description": "Whether agent now has MCP configured"
+            },
+            "result.mcp_count": {
+              "type": "number",
+              "description": "Total number of MCP servers"
+            },
+            "result.config_path": {
+              "type": "string",
+              "description": "Path to the updated config file"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "operation-error",
+      "type": "text",
+      "x": 840,
+      "y": 320,
+      "width": 200,
+      "height": 80,
+      "text": "Operation Error\nReturns error message\nRollback if needed",
+      "pv": {
+        "nodeType": "error-state",
+        "shape": "rectangle",
+        "status": "draft",
+        "sources": [
+          "src/main/agent-management/agentConfigHandlers.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "error",
+          "isNew": true
+        },
+        "event": {
+          "name": "agent_mcp.operation.error",
+          "description": "MCP operation failed",
+          "attributes": {
+            "agent.type": {
+              "type": "string",
+              "description": "Agent type"
+            },
+            "operation": {
+              "type": "string",
+              "description": "Operation that failed"
+            },
+            "error.message": {
+              "type": "string",
+              "description": "Error message"
+            },
+            "error.type": {
+              "type": "string",
+              "description": "Error type: config_not_found, write_failed, parse_error"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ui-state-updated",
+      "type": "text",
+      "x": 300,
+      "y": 200,
+      "width": 220,
+      "height": 80,
+      "text": "UI State Updated\nsetMcpStatus()\nRefresh agent status",
+      "pv": {
+        "nodeType": "ui-component",
+        "shape": "rectangle",
+        "status": "draft",
+        "sources": [
+          "src/renderer/pages/LandingPage/AgentConfigurationView/AgentSetupWizard.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ui",
+          "isNew": true
+        },
+        "event": {
+          "name": "agent_mcp.ui.state_updated",
+          "description": "UI state updated after MCP operation",
+          "attributes": {
+            "agent.type": {
+              "type": "string",
+              "description": "Agent type"
+            },
+            "ui.mcp_enabled": {
+              "type": "boolean",
+              "description": "New MCP enabled state"
+            },
+            "ui.server_count": {
+              "type": "number",
+              "description": "Number of configured servers"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ui-error-shown",
+      "type": "text",
+      "x": 300,
+      "y": 320,
+      "width": 220,
+      "height": 80,
+      "text": "Error Displayed\nsetError() called\nUser sees message",
+      "pv": {
+        "nodeType": "error-state",
+        "shape": "rectangle",
+        "status": "draft",
+        "sources": [
+          "src/renderer/pages/LandingPage/AgentConfigurationView/AgentSetupWizard.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ui",
+          "isNew": true
+        },
+        "event": {
+          "name": "agent_mcp.ui.error_displayed",
+          "description": "Error message displayed to user",
+          "attributes": {
+            "agent.type": {
+              "type": "string",
+              "description": "Agent type"
+            },
+            "error.message": {
+              "type": "string",
+              "description": "Error message shown to user"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "app-branding",
+      "type": "text",
+      "x": 50,
+      "y": 320,
+      "width": 200,
+      "height": 100,
+      "text": "**Config Source**\nAPP_BRANDING.\nMCP_SERVER_CONFIG_KEY\nDefines server name",
+      "color": "#64748B"
+    },
+    {
+      "id": "supported-agents",
+      "type": "text",
+      "x": 50,
+      "y": 450,
+      "width": 200,
+      "height": 120,
+      "text": "**Supported Agents**\n- Claude (~/.claude.json)\n- Cline (VS Code ext)\n- OpenCode (config)\n- Droid (~/.factory/)",
+      "color": "#64748B"
+    }
+  ],
+  "edges": [
+    {
+      "id": "wizard-to-service",
+      "fromNode": "setup-wizard",
+      "fromSide": "right",
+      "toNode": "renderer-service",
+      "toSide": "left",
+      "label": "handleMCPToggle()",
+      "pv": {
+        "edgeType": "user-action"
+      }
+    },
+    {
+      "id": "detailed-to-service",
+      "fromNode": "detailed-view",
+      "fromSide": "right",
+      "toNode": "renderer-service",
+      "toSide": "left",
+      "label": "toggle MCP",
+      "pv": {
+        "edgeType": "user-action"
+      }
+    },
+    {
+      "id": "service-to-add-ipc",
+      "fromNode": "renderer-service",
+      "fromSide": "right",
+      "toNode": "ipc-add-mcp",
+      "toSide": "left",
+      "label": "addMCPToAgent()",
+      "pv": {
+        "edgeType": "ipc-call"
+      }
+    },
+    {
+      "id": "service-to-remove-ipc",
+      "fromNode": "renderer-service",
+      "fromSide": "right",
+      "toNode": "ipc-remove-mcp",
+      "toSide": "left",
+      "label": "removeMCPFromAgent()",
+      "pv": {
+        "edgeType": "ipc-call"
+      }
+    },
+    {
+      "id": "service-to-status-ipc",
+      "fromNode": "renderer-service",
+      "fromSide": "right",
+      "toNode": "ipc-get-status",
+      "toSide": "left",
+      "label": "getAgentMCPStatus()",
+      "pv": {
+        "edgeType": "ipc-call"
+      }
+    },
+    {
+      "id": "add-ipc-to-lib",
+      "fromNode": "ipc-add-mcp",
+      "fromSide": "right",
+      "toNode": "agent-manager-lib",
+      "toSide": "left",
+      "label": "enableAgentMCP()",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "remove-ipc-to-lib",
+      "fromNode": "ipc-remove-mcp",
+      "fromSide": "right",
+      "toNode": "agent-manager-lib",
+      "toSide": "left",
+      "label": "disableAgentMCP()",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "status-ipc-to-lib",
+      "fromNode": "ipc-get-status",
+      "fromSide": "right",
+      "toNode": "agent-manager-lib",
+      "toSide": "left",
+      "label": "getAgentMCPStatus()",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "lib-to-claude",
+      "fromNode": "agent-manager-lib",
+      "fromSide": "right",
+      "toNode": "claude-config",
+      "toSide": "left",
+      "label": "if claude",
+      "pv": {
+        "edgeType": "file-operation"
+      }
+    },
+    {
+      "id": "lib-to-cline",
+      "fromNode": "agent-manager-lib",
+      "fromSide": "right",
+      "toNode": "cline-config",
+      "toSide": "left",
+      "label": "if cline",
+      "pv": {
+        "edgeType": "file-operation"
+      }
+    },
+    {
+      "id": "lib-to-opencode",
+      "fromNode": "agent-manager-lib",
+      "fromSide": "right",
+      "toNode": "opencode-config",
+      "toSide": "left",
+      "label": "if opencode",
+      "pv": {
+        "edgeType": "file-operation"
+      }
+    },
+    {
+      "id": "lib-to-droid",
+      "fromNode": "agent-manager-lib",
+      "fromSide": "right",
+      "toNode": "droid-config",
+      "toSide": "left",
+      "label": "if droid",
+      "pv": {
+        "edgeType": "file-operation"
+      }
+    },
+    {
+      "id": "lib-to-success",
+      "fromNode": "agent-manager-lib",
+      "fromSide": "bottom",
+      "toNode": "operation-success",
+      "toSide": "top",
+      "label": "success",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "lib-to-error",
+      "fromNode": "agent-manager-lib",
+      "fromSide": "bottom",
+      "toNode": "operation-error",
+      "toSide": "top",
+      "label": "catch error",
+      "pv": {
+        "edgeType": "error-flow"
+      }
+    },
+    {
+      "id": "success-to-service",
+      "fromNode": "operation-success",
+      "fromSide": "left",
+      "toNode": "renderer-service",
+      "toSide": "right",
+      "label": "return status",
+      "pv": {
+        "edgeType": "ipc-call"
+      }
+    },
+    {
+      "id": "error-to-service",
+      "fromNode": "operation-error",
+      "fromSide": "left",
+      "toNode": "renderer-service",
+      "toSide": "right",
+      "label": "return error",
+      "pv": {
+        "edgeType": "error-flow"
+      }
+    },
+    {
+      "id": "service-to-ui-success",
+      "fromNode": "renderer-service",
+      "fromSide": "bottom",
+      "toNode": "ui-state-updated",
+      "toSide": "top",
+      "label": "update state",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "service-to-ui-error",
+      "fromNode": "renderer-service",
+      "fromSide": "bottom",
+      "toNode": "ui-error-shown",
+      "toSide": "top",
+      "label": "show error",
+      "pv": {
+        "edgeType": "error-flow"
+      }
+    }
+  ]
+}
