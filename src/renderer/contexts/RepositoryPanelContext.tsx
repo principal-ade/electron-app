@@ -146,6 +146,7 @@ export interface RepositoryPanelActions extends PanelActions {
   setActiveFile?: (filePath: string | null) => Promise<void>;
   // Telemetry management
   clearTelemetry?: () => Promise<void>;
+  removeTrace?: (traceId: string) => void;
 }
 
 // Extended context for repository panels
@@ -1538,6 +1539,11 @@ export const RepositoryPanelProvider: React.FC<
       clearTelemetry: async () => {
         console.info('[RepositoryPanelProvider] Clearing telemetry traces');
         setTelemetryTraces([]);
+      },
+
+      removeTrace: (traceId: string) => {
+        console.info('[RepositoryPanelProvider] Removing trace:', traceId);
+        setTelemetryTraces((prev) => prev.filter((t) => t.traceId !== traceId));
       },
     }),
     [repositoryPath, events, repository?.name],
