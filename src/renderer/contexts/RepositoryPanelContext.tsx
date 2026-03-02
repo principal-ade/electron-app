@@ -98,9 +98,10 @@ function splitOtlpByTraceId(
       for (const span of scopeSpan.spans || []) {
         const traceId = (span as { traceId: string }).traceId;
 
-        if (!traceMap.has(traceId)) {
+        let traceData = traceMap.get(traceId);
+        if (!traceData) {
           // Create a single resourceSpan with single scopeSpan for this trace
-          traceMap.set(traceId, {
+          traceData = {
             resourceSpans: [{
               resource: resourceSpan.resource,
               scopeSpans: [{
@@ -108,11 +109,11 @@ function splitOtlpByTraceId(
                 spans: [],
               }],
             }],
-          });
+          };
+          traceMap.set(traceId, traceData);
         }
 
         // Add span to the first (and only) scopeSpan
-        const traceData = traceMap.get(traceId)!;
         traceData.resourceSpans[0].scopeSpans[0].spans.push(span);
       }
     }
