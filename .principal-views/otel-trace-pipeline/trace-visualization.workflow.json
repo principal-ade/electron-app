@@ -8,35 +8,35 @@
   "scenarios": [
     {
       "id": "trace-selected-and-rendered",
-      "name": "✨ Trace Selected and Visualized",
+      "name": "Trace Selected and Visualized",
       "description": "User selected trace from SystemMonitor and trace details were rendered in DevWorkspace",
       "priority": 1,
       "severity": "info",
       "template": {
-        "introduction": "✨ **Trace Visualization Complete**\n\nUser selected trace `{{trace.id}}` from SystemMonitor.\n\nDevWorkspace opened TraceDetailsPanel showing **{{spans.count}} spans** in {{render.duration_ms}}ms.",
+        "introduction": "**Trace Visualization Complete**\n\nUser selected trace `{{trace.id}}` from SystemMonitor.\n\nDevWorkspace opened TraceDetailsPanel showing **{{spans.count}} spans** in {{render.duration_ms}}ms.",
         "events": {
-          "otel.systemmonitor.traces_polled": "1️⃣ SystemMonitor displayed {{traces.fetched}} traces ({{services.count}} services)",
-          "otel.eventbus.trace_event_emitted": "2️⃣ User selected trace → event bus emitted **{{event.type}}**",
-          "otel.devworkspace.trace_selected": "3️⃣ DevWorkspace created tab: **{{tab.label}}** ({{tab.id}})",
-          "otel.panel.trace_rendered": "4️⃣ ✨ **TraceDetailsPanel rendered** {{spans.count}} spans in {{render.duration_ms}}ms"
+          "otel.systemmonitor.traces_polled": "[1] SystemMonitor displayed {{traces.fetched}} traces ({{services.count}} services)",
+          "otel.eventbus.trace_event_emitted": "[2] User selected trace -> event bus emitted **{{event.type}}**",
+          "otel.devworkspace.trace_selected": "[3] DevWorkspace created tab: **{{tab.label}}** ({{tab.id}})",
+          "otel.panel.trace_rendered": "[4] **TraceDetailsPanel rendered** {{spans.count}} spans in {{render.duration_ms}}ms"
         },
-        "summary": "**Trace Details:**\n- Trace ID: `{{trace.id}}`\n- Tab: {{tab.label}}\n- Spans: {{spans.count}}\n- Services: {{services.count}}\n\n**Visualization Flow:**\n```\n1. SystemMonitor polls traces every 2s\n2. User clicks trace in list\n3. Panel event bus emits trace:selected\n4. DevWorkspace catches event\n5. Creates new tab: trace-{{trace.id}}\n6. TraceDetailsPanel renders with full OTLP data\n7. User sees span hierarchy, timing, attributes\n```\n\n**Performance:**\n- Traces Fetched: {{traces.fetched}}\n- Poll Interval: {{poll.interval_ms}}ms\n- Render Time: {{render.duration_ms}}ms\n\n**Panel Features:**\n- Span hierarchy (parent-child relationships)\n- Timing waterfall visualization\n- Span attributes display\n- Resource attributes\n- Status codes and messages\n\n**Event Flow:**\nSystemMonitor → EventBus → DevWorkspace → TraceDetailsPanel"
+        "summary": "**Trace Details:**\n- Trace ID: `{{trace.id}}`\n- Tab: {{tab.label}}\n- Spans: {{spans.count}}\n- Services: {{services.count}}\n\n**Visualization Flow:**\n```\n1. SystemMonitor polls traces every 2s\n2. User clicks trace in list\n3. Panel event bus emits trace:selected\n4. DevWorkspace catches event\n5. Creates new tab: trace-{{trace.id}}\n6. TraceDetailsPanel renders with full OTLP data\n7. User sees span hierarchy, timing, attributes\n```\n\n**Performance:**\n- Traces Fetched: {{traces.fetched}}\n- Poll Interval: {{poll.interval_ms}}ms\n- Render Time: {{render.duration_ms}}ms\n\n**Panel Features:**\n- Span hierarchy (parent-child relationships)\n- Timing waterfall visualization\n- Span attributes display\n- Resource attributes\n- Status codes and messages\n\n**Event Flow:**\nSystemMonitor -> EventBus -> DevWorkspace -> TraceDetailsPanel"
       }
     },
     {
       "id": "systemmonitor-polling-only",
-      "name": "📊 SystemMonitor Polling Traces",
+      "name": "SystemMonitor Polling Traces",
       "description": "SystemMonitor is polling and displaying traces but user hasn't selected any yet",
       "priority": 2,
       "severity": "info",
       "template": {
-        "introduction": "📊 **Traces Available in SystemMonitor**\n\nSystemMonitor is polling the collector and displaying {{traces.fetched}} traces from {{services.count}} services.\n\nTraces are ready for user selection and visualization.",
+        "introduction": "**Traces Available in SystemMonitor**\n\nSystemMonitor is polling the collector and displaying {{traces.fetched}} traces from {{services.count}} services.\n\nTraces are ready for user selection and visualization.",
         "events": {
-          "otel.storage.trace_stored": "1️⃣ Collector storage has {{storage.size}} traces",
-          "otel.systemmonitor.traces_polled": "2️⃣ SystemMonitor polled and retrieved {{traces.fetched}} traces (limit: {{traces.limit}})",
-          "otel.ipc.handler_invoked": "3️⃣ Used `getTraces` handler to fetch from storage"
+          "otel.storage.trace_stored": "[1] Collector storage has {{storage.size}} traces",
+          "otel.systemmonitor.traces_polled": "[2] SystemMonitor polled and retrieved {{traces.fetched}} traces (limit: {{traces.limit}})",
+          "otel.ipc.handler_invoked": "[3] Used `getTraces` handler to fetch from storage"
         },
-        "summary": "**SystemMonitor Status:**\n- Polling: Active ✅\n- Interval: {{poll.interval_ms}}ms (2 seconds)\n- Traces Fetched: {{traces.fetched}}\n- Limit: {{traces.limit}}\n- Services: {{services.count}}\n\n**Storage:**\n- Current Size: {{storage.size}}/{{storage.max_size}}\n- Format: Circular buffer\n- Retention: Last 50 traces\n\n**Data Flow:**\n```\nCollector Storage (50 traces max)\n        ↓ [every 2s]\nIPC Handler: getTraces(20)\n        ↓\nSystemMonitor TraceViewer\n        ↓\nGroups by service name\n        ↓\nConverts to AgentPrism format\n        ↓\nDisplays in collapsible sections\n```\n\n**Service Grouping:**\nTraces are automatically grouped by `service.name` attribute from resource attributes.\n\n**Available Actions:**\n- Click trace to open in DevWorkspace\n- Clear all traces button\n- Send test trace button\n- View collector status\n\n**What's Next:**\nUser can click any trace to visualize detailed span hierarchy in DevWorkspace."
+        "summary": "**SystemMonitor Status:**\n- Polling: Active\n- Interval: {{poll.interval_ms}}ms (2 seconds)\n- Traces Fetched: {{traces.fetched}}\n- Limit: {{traces.limit}}\n- Services: {{services.count}}\n\n**Storage:**\n- Current Size: {{storage.size}}/{{storage.max_size}}\n- Format: Circular buffer\n- Retention: Last 50 traces\n\n**Data Flow:**\n```\nCollector Storage (50 traces max)\n        | [every 2s]\nIPC Handler: getTraces(20)\n        |\nSystemMonitor TraceViewer\n        |\nGroups by service name\n        |\nConverts to AgentPrism format\n        |\nDisplays in collapsible sections\n```\n\n**Service Grouping:**\nTraces are automatically grouped by `service.name` attribute from resource attributes.\n\n**Available Actions:**\n- Click trace to open in DevWorkspace\n- Clear all traces button\n- Send test trace button\n- View collector status\n\n**What's Next:**\nUser can click any trace to visualize detailed span hierarchy in DevWorkspace."
       }
     }
   ]

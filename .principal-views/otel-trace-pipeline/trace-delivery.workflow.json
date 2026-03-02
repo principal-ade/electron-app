@@ -8,23 +8,23 @@
   "scenarios": [
     {
       "id": "successful-delivery-with-ui",
-      "name": "✅ Complete Trace Delivery to UI",
+      "name": "Complete Trace Delivery to UI",
       "description": "Trace successfully flows from app through collector to storage and is delivered to UI",
       "priority": 1,
       "severity": "info",
       "template": {
-        "introduction": "✅ **Trace Delivered Successfully**\n\nTrace `{{trace.id}}` was created by the application, collected by the OTEL server, stored, and delivered to the UI.\n\n**End-to-End Latency:** ~{{collector.processing_time + storage.write_time + messageport.delivery_time}}ms",
+        "introduction": "**Trace Delivered Successfully**\n\nTrace `{{trace.id}}` was created by the application, collected by the OTEL server, stored, and delivered to the UI.\n\n**End-to-End Latency:** ~{{collector.processing_time + storage.write_time + messageport.delivery_time}}ms",
         "events": {
-          "otel.trace.span_created": "1️⃣ Application created span: **{{span.name}}** (kind: {{span.kind}})",
-          "otel.endpoint.request_received": "2️⃣ OTLP endpoint received {{http.method}} request on port {{http.port}}",
-          "otel.collector.trace_received": "3️⃣ Collector parsed trace data ({{resource.spans.count}} resource spans)",
-          "otel.storage.trace_stored": "4️⃣ Trace stored in buffer ({{storage.size}}/{{storage.max_size}} traces)",
-          "otel.messageport.trace_routed": "5️⃣ Trace routed to window {{window.id}} via MessagePort",
-          "otel.subscriber.message_received": "6️⃣ Subscriber callback received {{payload.traces.count}} traces",
-          "otel.systemmonitor.traces_polled": "7️⃣ SystemMonitor polled and retrieved {{traces.fetched}} traces",
-          "otel.panel.trace_rendered": "8️⃣ ✨ **Trace rendered** ({{spans.count}} spans) in {{render.duration_ms}}ms"
+          "otel.trace.span_created": "[1] Application created span: **{{span.name}}** (kind: {{span.kind}})",
+          "otel.endpoint.request_received": "[2] OTLP endpoint received {{http.method}} request on port {{http.port}}",
+          "otel.collector.trace_received": "[3] Collector parsed trace data ({{resource.spans.count}} resource spans)",
+          "otel.storage.trace_stored": "[4] Trace stored in buffer ({{storage.size}}/{{storage.max_size}} traces)",
+          "otel.messageport.trace_routed": "[5] Trace routed to window {{window.id}} via MessagePort",
+          "otel.subscriber.message_received": "[6] Subscriber callback received {{payload.traces.count}} traces",
+          "otel.systemmonitor.traces_polled": "[7] SystemMonitor polled and retrieved {{traces.fetched}} traces",
+          "otel.panel.trace_rendered": "[8] **Trace rendered** ({{spans.count}} spans) in {{render.duration_ms}}ms"
         },
-        "summary": "**Delivery Pipeline Summary:**\n- Span Name: **{{span.name}}**\n- Trace ID: `{{trace.id}}`\n- Resource Spans: {{resource.spans.count}}\n- Total Spans: {{spans.count}}\n\n**Storage:**\n- Buffer Usage: {{storage.size}}/{{storage.max_size}}\n- Format: {{trace.format}}\n\n**Delivery:**\n- Target Window: {{window.id}}\n- Source URL: {{source.url}}\n- Port Registered: {{port.registered}}\n\n**Performance:**\n- Collector Processing: {{collector.processing_time}}ms\n- Storage Write: {{storage.write_time}}ms\n- MessagePort Delivery: {{messageport.delivery_time}}ms\n- UI Render: {{render.duration_ms}}ms\n\n**Complete Pipeline:**\nApp → OTLP Endpoint → Collector → Storage → MessagePort → Preload → UI"
+        "summary": "**Delivery Pipeline Summary:**\n- Span Name: **{{span.name}}**\n- Trace ID: `{{trace.id}}`\n- Resource Spans: {{resource.spans.count}}\n- Total Spans: {{spans.count}}\n\n**Storage:**\n- Buffer Usage: {{storage.size}}/{{storage.max_size}}\n- Format: {{trace.format}}\n\n**Delivery:**\n- Target Window: {{window.id}}\n- Source URL: {{source.url}}\n- Port Registered: {{port.registered}}\n\n**Performance:**\n- Collector Processing: {{collector.processing_time}}ms\n- Storage Write: {{storage.write_time}}ms\n- MessagePort Delivery: {{messageport.delivery_time}}ms\n- UI Render: {{render.duration_ms}}ms\n\n**Complete Pipeline:**\nApp -> OTLP Endpoint -> Collector -> Storage -> MessagePort -> Preload -> UI"
       }
     }
   ]

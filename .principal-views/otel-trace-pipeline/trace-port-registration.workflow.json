@@ -8,35 +8,35 @@
   "scenarios": [
     {
       "id": "successful-port-registration",
-      "name": "✅ MessagePort Successfully Registered",
+      "name": "MessagePort Successfully Registered",
       "description": "Window successfully registered a MessagePort to receive trace data from collector",
       "priority": 1,
       "severity": "info",
       "template": {
-        "introduction": "✅ **MessagePort Registered**\n\nWindow `{{window.id}}` successfully registered to receive traces from source `{{source.url}}`.\n\nThe window will now receive real-time trace batches via MessagePort IPC.",
+        "introduction": "**MessagePort Registered**\n\nWindow `{{window.id}}` successfully registered to receive traces from source `{{source.url}}`.\n\nThe window will now receive real-time trace batches via MessagePort IPC.",
         "events": {
-          "otel.ipc.handler_invoked": "1️⃣ IPC handler invoked: **{{handler.name}}** from window {{window.id}}",
-          "otel.preload.port_registered": "2️⃣ Preload bridge registered MessagePort (key: {{port.key}})",
-          "otel.subscriber.message_received": "3️⃣ ✅ Subscriber ready to receive traces ({{subscribers.count}} subscribers)"
+          "otel.ipc.handler_invoked": "[1] IPC handler invoked: **{{handler.name}}** from window {{window.id}}",
+          "otel.preload.port_registered": "[2] Preload bridge registered MessagePort (key: {{port.key}})",
+          "otel.subscriber.message_received": "[3] Subscriber ready to receive traces ({{subscribers.count}} subscribers)"
         },
-        "summary": "**Registration Details:**\n- Window ID: `{{window.id}}`\n- Source URL: `{{source.url}}`\n- Port Key: `{{port.key}}`\n- Subscribers: {{subscribers.count}}\n\n**IPC Setup:**\n1. Renderer invoked `otel-collector:registerPort`\n2. Main process created MessageChannelMain\n3. Port1 registered with collector service\n4. Port2 transferred to renderer via postMessage\n5. Preload bridge set up port.onmessage listener\n6. Subscriber callback registered\n\n**MessagePort Flow:**\n```\nRenderer (registerPort)\n    ↓ [IPC invoke]\nMain Process (create MessageChannel)\n    ↓ [port1 → collector]\nCollector (stores port for routing)\n    ↓ [port2 → renderer via postMessage]\nPreload (port.onmessage listener)\n    ↓ [callback on message]\nSubscriber (receives trace batches)\n```\n\n**What Happens Next:**\n- Collector will route matching traces to this port\n- Subscriber callbacks invoked on each TRACE_BATCH message\n- Port remains active until window closes or unregisters"
+        "summary": "**Registration Details:**\n- Window ID: `{{window.id}}`\n- Source URL: `{{source.url}}`\n- Port Key: `{{port.key}}`\n- Subscribers: {{subscribers.count}}\n\n**IPC Setup:**\n1. Renderer invoked `otel-collector:registerPort`\n2. Main process created MessageChannelMain\n3. Port1 registered with collector service\n4. Port2 transferred to renderer via postMessage\n5. Preload bridge set up port.onmessage listener\n6. Subscriber callback registered\n\n**MessagePort Flow:**\n```\nRenderer (registerPort)\n    | [IPC invoke]\nMain Process (create MessageChannel)\n    | [port1 -> collector]\nCollector (stores port for routing)\n    | [port2 -> renderer via postMessage]\nPreload (port.onmessage listener)\n    | [callback on message]\nSubscriber (receives trace batches)\n```\n\n**What Happens Next:**\n- Collector will route matching traces to this port\n- Subscriber callbacks invoked on each TRACE_BATCH message\n- Port remains active until window closes or unregisters"
       }
     },
     {
       "id": "port-registration-with-existing-traces",
-      "name": "📦 Port Registered - Existing Traces Available",
+      "name": "Port Registered - Existing Traces Available",
       "description": "Window registered port and there are already traces in storage waiting to be retrieved",
       "priority": 2,
       "severity": "info",
       "template": {
-        "introduction": "📦 **Port Registered with Backlog**\n\nWindow `{{window.id}}` registered for traces and there are {{storage.size}} traces already in storage.\n\nSystemMonitor polling will retrieve historical traces.",
+        "introduction": "**Port Registered with Backlog**\n\nWindow `{{window.id}}` registered for traces and there are {{storage.size}} traces already in storage.\n\nSystemMonitor polling will retrieve historical traces.",
         "events": {
-          "otel.ipc.handler_invoked": "1️⃣ Handler invoked: registerPort (window: {{window.id}})",
-          "otel.preload.port_registered": "2️⃣ Port registered successfully (key: {{port.key}})",
-          "otel.storage.trace_stored": "3️⃣ 📦 Storage contains {{storage.size}} traces ({{storage.size}}/{{storage.max_size}})",
-          "otel.systemmonitor.traces_polled": "4️⃣ Polling retrieved {{traces.fetched}} historical traces"
+          "otel.ipc.handler_invoked": "[1] Handler invoked: registerPort (window: {{window.id}})",
+          "otel.preload.port_registered": "[2] Port registered successfully (key: {{port.key}})",
+          "otel.storage.trace_stored": "[3] Storage contains {{storage.size}} traces ({{storage.size}}/{{storage.max_size}})",
+          "otel.systemmonitor.traces_polled": "[4] Polling retrieved {{traces.fetched}} historical traces"
         },
-        "summary": "**Registration + Backlog:**\n- Window: `{{window.id}}`\n- Port: Registered ✅\n- Storage: {{storage.size}} traces available\n- Fetched: {{traces.fetched}} traces\n\n**Trace Delivery Methods:**\n1. **Live MessagePort** - New traces routed immediately\n2. **Polling Retrieval** - SystemMonitor polls `getTraces()` every 2s\n\n**Storage Status:**\n- Current: {{storage.size}}/{{storage.max_size}}\n- Format: Circular buffer (FIFO)\n- Retention: Last 50 traces\n\n**Note:** This window will receive:\n- Historical traces via polling\n- New traces via MessagePort (live delivery)"
+        "summary": "**Registration + Backlog:**\n- Window: `{{window.id}}`\n- Port: Registered\n- Storage: {{storage.size}} traces available\n- Fetched: {{traces.fetched}} traces\n\n**Trace Delivery Methods:**\n1. **Live MessagePort** - New traces routed immediately\n2. **Polling Retrieval** - SystemMonitor polls `getTraces()` every 2s\n\n**Storage Status:**\n- Current: {{storage.size}}/{{storage.max_size}}\n- Format: Circular buffer (FIFO)\n- Retention: Last 50 traces\n\n**Note:** This window will receive:\n- Historical traces via polling\n- New traces via MessagePort (live delivery)"
       }
     }
   ]
