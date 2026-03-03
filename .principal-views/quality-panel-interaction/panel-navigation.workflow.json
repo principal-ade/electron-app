@@ -13,12 +13,12 @@
       "template": {
         "introduction": "**Quality Panel Opened**\n\nUser navigated to quality panel",
         "events": {
-          "quality.sidebar.clicked": "1. User clicked Quality icon in sidebar",
-          "quality.panel.switched": "2. Panel framework switched to `codeQuality`",
-          "quality.context.updated": "3. Context providing quality data",
-          "quality.panel.rendered": "4. **Quality hexagon rendered**"
+          "quality.sidebar.clicked": "1. User clicked Quality icon (panel: {{panel.id}}, prev: {{panel.previous}})",
+          "quality.panel.switched": "2. Panel framework switched to `{{panel.id}}`",
+          "quality.context.updated": "3. Context updated for {{repository.path}} ({{quality.packages.count}} packages, last: {{quality.lastUpdated}})",
+          "quality.panel.rendered": "4. **Quality hexagon rendered** for {{repository.path}} (hasData: {{quality.hasData}})"
         },
-        "summary": "**Panel State:**\n- Repository: `{{repository.path}}`\n- Quality Data: {{quality.hasData ? 'Available' : 'Not loaded'}}\n- Last Updated: {{quality.lastUpdated}}"
+        "summary": "**Panel State:**\n- Repository: `{{repository.path}}`\n- Quality Data: {{quality.hasData}}\n- Last Updated: {{quality.lastUpdated}}"
       }
     }
   ]

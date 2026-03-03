@@ -1,0 +1,81 @@
+{
+  "version": "1.0.0",
+  "name": "Agent MCP Installation",
+  "description": "Workflow for installing and configuring MCP servers for AI agents",
+  "mode": "span-tree",
+  "canvas": ".principal-views/agent-mcp-installation/agent-mcp-installation.otel.canvas",
+  "spanPattern": "agent_mcp",
+  "scenarios": [
+    {
+      "id": "enable-mcp-for-agent",
+      "description": "User enables MCP for an AI agent",
+      "priority": 1,
+      "template": {
+        "introduction": "**MCP Installation**\n\nEnabling MCP for **{{agent.type}}** agent",
+        "events": {
+          "agent_mcp.ui.toggle_clicked": "User clicked toggle for **{{agent.type}}** (current: {{mcp.current_status}}, action: {{mcp.action}})",
+          "agent_mcp.ui.detailed_view_opened": "Opened detailed view for **{{agent.type}}** in mode: {{view.mode}}",
+          "agent_mcp.service.request_initiated": "Service initiated **{{operation}}** for {{agent.type}} (server: {{server.name}})",
+          "agent_mcp.ipc.add_mcp_received": "IPC received add MCP request for {{agent.type}} (server: {{server.name}})",
+          "agent_mcp.library.operation_called": "Called library function **{{library.function}}** for {{agent.type}} (server: {{server.name}})",
+          "agent_mcp.config.claude_updated": "Updated Claude config at {{config.path}} ({{mcp.server_count}} servers, has principal: {{mcp.has_principal}})",
+          "agent_mcp.config.cline_updated": "Updated Cline config at {{config.path}} ({{mcp.server_count}} servers, has principal: {{mcp.has_principal}})",
+          "agent_mcp.config.opencode_updated": "Updated OpenCode config at {{config.path}} ({{mcp.server_count}} servers, has principal: {{mcp.has_principal}})",
+          "agent_mcp.config.droid_updated": "Updated Droid config at {{config.path}} ({{mcp.server_count}} servers, has principal: {{mcp.has_principal}})",
+          "agent_mcp.operation.success": "**Success**: {{operation}} for {{agent.type}} completed (hasMCP: {{result.has_mcp}}, count: {{result.mcp_count}}, path: {{result.config_path}})",
+          "agent_mcp.ui.state_updated": "UI updated for {{agent.type}} (enabled: {{ui.mcp_enabled}}, servers: {{ui.server_count}})"
+        },
+        "summary": "**MCP Configuration Complete:**\n- Agent: **{{agent.type}}**\n- Operation: {{operation}}\n- MCP Enabled: {{result.has_mcp}}\n- Server Count: {{result.mcp_count}}\n- Config Path: {{result.config_path}}"
+      }
+    },
+    {
+      "id": "disable-mcp-for-agent",
+      "description": "User disables MCP for an AI agent",
+      "priority": 2,
+      "template": {
+        "introduction": "**MCP Removal**\n\nDisabling MCP for **{{agent.type}}** agent",
+        "events": {
+          "agent_mcp.ui.toggle_clicked": "User clicked toggle for **{{agent.type}}** (current: {{mcp.current_status}}, action: {{mcp.action}})",
+          "agent_mcp.service.request_initiated": "Service initiated **{{operation}}** for {{agent.type}} (server: {{server.name}})",
+          "agent_mcp.ipc.remove_mcp_received": "IPC received remove MCP request for {{agent.type}} (server: {{server.name}})",
+          "agent_mcp.library.operation_called": "Called library function **{{library.function}}** for {{agent.type}} (server: {{server.name}})",
+          "agent_mcp.operation.success": "**Success**: {{operation}} for {{agent.type}} completed (hasMCP: {{result.has_mcp}}, count: {{result.mcp_count}}, path: {{result.config_path}})",
+          "agent_mcp.ui.state_updated": "UI updated for {{agent.type}} (enabled: {{ui.mcp_enabled}}, servers: {{ui.server_count}})"
+        },
+        "summary": "**MCP Removed:**\n- Agent: **{{agent.type}}**\n- MCP Enabled: {{result.has_mcp}}\n- Remaining Servers: {{result.mcp_count}}"
+      }
+    },
+    {
+      "id": "check-mcp-status",
+      "description": "Checking MCP status for an agent",
+      "priority": 3,
+      "template": {
+        "introduction": "**MCP Status Check**\n\nChecking status for **{{agent.type}}** agent",
+        "events": {
+          "agent_mcp.service.request_initiated": "Service initiated **{{operation}}** for {{agent.type}} (server: {{server.name}})",
+          "agent_mcp.ipc.get_status_received": "IPC received status check for {{agent.type}} (server: {{server.name}})",
+          "agent_mcp.library.operation_called": "Called library function **{{library.function}}** for {{agent.type}} (server: {{server.name}})",
+          "agent_mcp.operation.success": "Status retrieved for {{agent.type}} (hasMCP: {{result.has_mcp}}, count: {{result.mcp_count}}, path: {{result.config_path}})",
+          "agent_mcp.ui.state_updated": "UI updated for {{agent.type}} (enabled: {{ui.mcp_enabled}}, servers: {{ui.server_count}})"
+        },
+        "summary": "**MCP Status:**\n- Agent: **{{agent.type}}**\n- MCP Enabled: {{result.has_mcp}}\n- Server Count: {{result.mcp_count}}"
+      }
+    },
+    {
+      "id": "mcp-operation-error",
+      "description": "MCP operation failed with error",
+      "priority": 4,
+      "template": {
+        "introduction": "**MCP Operation Failed**\n\nError configuring MCP for **{{agent.type}}** agent",
+        "events": {
+          "agent_mcp.ui.toggle_clicked": "User clicked toggle for **{{agent.type}}** (current: {{mcp.current_status}}, action: {{mcp.action}})",
+          "agent_mcp.service.request_initiated": "Service initiated **{{operation}}** for {{agent.type}} (server: {{server.name}})",
+          "agent_mcp.library.operation_called": "Called library function **{{library.function}}** for {{agent.type}} (server: {{server.name}})",
+          "agent_mcp.operation.error": "**Error**: {{operation}} failed for {{agent.type}} - {{error.message}} (type: {{error.type}})",
+          "agent_mcp.ui.error_displayed": "Error displayed to user for {{agent.type}}: {{error.message}}"
+        },
+        "summary": "**Error:**\n- Agent: **{{agent.type}}**\n- Operation: {{operation}}\n- Error Type: {{error.type}}\n- Message: {{error.message}}"
+      }
+    }
+  ]
+}

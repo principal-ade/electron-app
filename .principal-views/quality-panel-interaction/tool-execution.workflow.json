@@ -11,15 +11,15 @@
       "description": "Full flow from user clicking 'Run' to results displayed in panel",
       "priority": 1,
       "template": {
-        "introduction": "**Quality Tool Execution**\n\nExecuting quality tool for `{{repository.path}}`\n\nTool: {{tool.name}}\nPackage: {{package.path}}",
+        "introduction": "**Quality Tool Execution**\n\nExecuting quality tool `{{tool.name}}` for `{{package.path}}`",
         "events": {
-          "quality.tool.requested": "1. User clicked run for `{{tool.name}}`",
-          "quality.ipc.received": "2. IPC received: `repository-monitoring:execute-tool`",
-          "quality.service.executing": "3. QualityLensService executing request",
-          "quality.lens.running": "4. Lens running: {{lens.name}} for tool {{tool.name}}",
-          "quality.executor.spawning": "5. ElectronCLIBridgeExecutor spawning: `{{command.name}}`",
-          "quality.cli.completed": "6. CLI completed with exit code {{exit.code}} in {{duration.ms}}ms",
-          "quality.tool.completed": "7. **Tool execution complete** - {{issues.count}} issues found"
+          "quality.tool.requested": "1. User clicked run for `{{tool.name}}` on {{package.path}}",
+          "quality.ipc.received": "2. IPC received: execute-tool for {{tool.name}} on {{repository.path}}",
+          "quality.service.executing": "3. QualityLensService executing {{tool.name}} via {{lens.name}} for {{package.path}}",
+          "quality.lens.running": "4. Lens running: {{lens.name}} in {{lens.cwd}}",
+          "quality.executor.spawning": "5. Executor spawning: `{{command.name}}` {{command.args}}",
+          "quality.cli.completed": "6. CLI {{tool.name}} completed (exit: {{exit.code}}, {{duration.ms}}ms)",
+          "quality.tool.completed": "7. **Tool complete** - {{tool.name}}: success={{success}}, {{issues.count}} issues, {{duration.ms}}ms"
         },
         "summary": "**Execution Summary:**\n- Tool: {{tool.name}}\n- Exit Code: {{exit.code}}\n- Duration: {{duration.ms}}ms\n- Issues Found: {{issues.count}}"
       }
@@ -29,15 +29,15 @@
       "description": "Flow when tool execution fails",
       "priority": 2,
       "template": {
-        "introduction": "**Tool Execution Failed**\n\nFailed to execute `{{tool.name}}` for `{{repository.path}}`",
+        "introduction": "**Tool Execution Failed**\n\nFailed to execute `{{tool.name}}`",
         "events": {
-          "quality.tool.requested": "1. User clicked run for `{{tool.name}}`",
-          "quality.ipc.received": "2. IPC invoke sent",
-          "quality.service.executing": "3. QualityLensService received request",
-          "quality.tool.error": "4. **Error**: {{error.message}}",
-          "quality.tool.completed": "5. Tool completed with error state"
+          "quality.tool.requested": "1. User clicked run for `{{tool.name}}` on {{package.path}}",
+          "quality.ipc.received": "2. IPC received for {{tool.name}} on {{repository.path}}",
+          "quality.service.executing": "3. QualityLensService executing {{tool.name}} via {{lens.name}} for {{package.path}}",
+          "quality.tool.error": "4. **Error**: {{error.message}} (code: {{error.code}}) for {{tool.name}}",
+          "quality.tool.completed": "5. Tool {{tool.name}} completed with error (success={{success}}, {{issues.count}} issues, {{duration.ms}}ms)"
         },
-        "summary": "**Error Details:**\n- Tool: {{tool.name}}\n- Error: {{error.message}}\n- Duration: {{duration.ms}}ms\n\n**Possible Causes:**\n- Tool not installed\n- Configuration error\n- Permission denied"
+        "summary": "**Error Details:**\n- Tool: {{tool.name}}\n- Error: {{error.message}}\n- Code: {{error.code}}"
       }
     }
   ]

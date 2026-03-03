@@ -1,0 +1,91 @@
+{
+  "version": "1.0.0",
+  "name": "Collection Map Interactions",
+  "description": "Workflow for repository positioning, region management, and layout operations in CollectionMapPanel",
+  "mode": "span-tree",
+  "canvas": ".principal-views/collection-map-interactions/collection-map-interactions.otel.canvas",
+  "spanPattern": "collection_map",
+  "scenarios": [
+    {
+      "id": "reposition-repository-success",
+      "description": "User drags and drops a repository to a new position",
+      "priority": 1,
+      "template": {
+        "introduction": "**Repository Repositioned**\n\nMoving repository **{{repository.name}}** to new position",
+        "events": {
+          "collection_map.ui.repository_drag_started": "Started dragging **{{repository.name}}** (ID: {{repository.id}}) from region: {{drag.source_region}} in collection {{collection.id}}",
+          "collection_map.ui.repository_dropped": "Dropped repository {{repository.id}} on {{drop.target_type}} (region: {{drop.target_region}}, position: {{drop.position.x}}, {{drop.position.y}})",
+          "collection_map.callback.position_updated": "Position callback invoked for **{{repository.name}}** ({{repository.id}}) in collection {{collection.id}}: x={{position.x}}, y={{position.y}}, size={{position.width}}x{{position.height}}, region={{region.id}}",
+          "collection_map.state.optimistic_update_applied": "Optimistic update applied for {{repository.id}} in {{collection.id}} (type: {{update.type}}, memberships: {{memberships.count}}, timestamp: {{optimistic.timestamp}})",
+          "collection_map.ui.rendered": "Map rendered for {{collection.id}} with {{repositories.count}} repos and {{regions.count}} regions (trigger: {{render.trigger}}, duration: {{render.duration_ms}}ms)",
+          "collection_map.github.sync_started": "GitHub sync started for {{repository.id}} in {{collection.id}} (operation: {{sync.operation}}, timestamp: {{sync.timestamp}})",
+          "collection_map.service.repository_removed": "Removing membership for {{repository.id}} from {{collection.id}} (reason: {{operation.reason}})",
+          "collection_map.service.repository_added": "Re-adding {{repository.id}} to {{collection.id}} with layout: x={{metadata.layout.x}}, y={{metadata.layout.y}}, size={{metadata.layout.width}}x{{metadata.layout.height}}, region={{metadata.region_id}}",
+          "collection_map.github.file_updated": "{{http.method}} {{http.url}} -> {{http.status_code}} (file: {{github.file.name}}, sha: {{github.file.sha}}, size: {{github.file.size_bytes}} bytes)",
+          "collection_map.github.sync_completed": "Sync completed for {{repository.id}} in {{collection.id}} (result: {{sync.result}}, duration: {{sync.duration_ms}}ms)"
+        },
+        "summary": "**Repository Repositioned:**\n- Repository: **{{repository.name}}** ({{repository.id}})\n- Collection: {{collection.id}}\n- New Position: ({{position.x}}, {{position.y}})\n- Size: {{position.width}}x{{position.height}}\n- Region: {{region.id}}\n- Sync Duration: {{sync.duration_ms}}ms"
+      }
+    },
+    {
+      "id": "assign-repository-to-region",
+      "description": "User assigns a repository to a region",
+      "priority": 2,
+      "template": {
+        "introduction": "**Repository Assigned to Region**\n\nAssigning repository to region **{{region.name}}**",
+        "events": {
+          "collection_map.ui.repository_drag_started": "Started dragging **{{repository.name}}** (ID: {{repository.id}}) from region: {{drag.source_region}} in collection {{collection.id}}",
+          "collection_map.ui.repository_dropped": "Dropped repository {{repository.id}} on {{drop.target_type}} (region: {{drop.target_region}}, position: {{drop.position.x}}, {{drop.position.y}})",
+          "collection_map.callback.repository_assigned": "Assignment callback invoked: {{repository.id}} -> region **{{region.name}}** ({{region.id}}) in {{collection.id}} (source: {{callback.source}})",
+          "collection_map.state.optimistic_update_applied": "Optimistic update applied for {{repository.id}} in {{collection.id}} (type: {{update.type}}, memberships: {{memberships.count}}, timestamp: {{optimistic.timestamp}})",
+          "collection_map.ui.rendered": "Map rendered for {{collection.id}} with {{repositories.count}} repos and {{regions.count}} regions (trigger: {{render.trigger}}, duration: {{render.duration_ms}}ms)",
+          "collection_map.github.sync_started": "GitHub sync started for {{repository.id}} in {{collection.id}} (operation: {{sync.operation}}, timestamp: {{sync.timestamp}})",
+          "collection_map.github.sync_completed": "Sync completed for {{repository.id}} in {{collection.id}} (result: {{sync.result}}, duration: {{sync.duration_ms}}ms)"
+        },
+        "summary": "**Repository Assigned:**\n- Repository: {{repository.id}}\n- Region: **{{region.name}}** ({{region.id}})\n- Collection: {{collection.id}}"
+      }
+    },
+    {
+      "id": "sync-failed-with-rollback",
+      "description": "GitHub sync fails and triggers rollback",
+      "priority": 3,
+      "template": {
+        "introduction": "**Sync Failed**\n\nGitHub sync failed, rolling back changes",
+        "events": {
+          "collection_map.callback.position_updated": "Position callback invoked for **{{repository.name}}** ({{repository.id}}) in collection {{collection.id}}: x={{position.x}}, y={{position.y}}, size={{position.width}}x{{position.height}}, region={{region.id}}",
+          "collection_map.state.optimistic_update_applied": "Optimistic update applied for {{repository.id}} in {{collection.id}} (type: {{update.type}}, memberships: {{memberships.count}}, timestamp: {{optimistic.timestamp}})",
+          "collection_map.github.sync_started": "GitHub sync started for {{repository.id}} in {{collection.id}} (operation: {{sync.operation}}, timestamp: {{sync.timestamp}})",
+          "collection_map.github.sync_failed": "**Sync failed** for {{repository.id}} in {{collection.id}}: {{error.message}} (code: {{error.code}}, duration: {{sync.duration_ms}}ms, rollback: {{rollback.triggered}})",
+          "collection_map.state.rollback_started": "Rolling back optimistic update (reason: {{rollback.reason}}, timestamp: {{rollback.timestamp}})"
+        },
+        "summary": "**Sync Failed:**\n- Repository: {{repository.id}}\n- Collection: {{collection.id}}\n- Error: {{error.message}}\n- Error Code: {{error.code}}\n- Rollback Triggered: {{rollback.triggered}}"
+      }
+    },
+    {
+      "id": "create-region",
+      "description": "User creates a new region on the map",
+      "priority": 4,
+      "template": {
+        "introduction": "**Region Created**\n\nCreating new region **{{region.name}}**",
+        "events": {
+          "collection_map.region.create_requested": "Create region requested in {{collection.id}}: name={{region.name}}, color={{region.color}}, position=({{region.position.x}}, {{region.position.y}})",
+          "collection_map.callback.region_created": "Region created: **{{region.name}}** ({{region.id}}) in {{collection.id}} (mode switched: {{layout.mode_switched}}, previous: {{layout.previous_mode}})"
+        },
+        "summary": "**Region Created:**\n- Region: **{{region.name}}** ({{region.id}})\n- Collection: {{collection.id}}\n- Color: {{region.color}}\n- Position: ({{region.position.x}}, {{region.position.y}})"
+      }
+    },
+    {
+      "id": "switch-layout-mode",
+      "description": "User switches between auto and manual layout mode",
+      "priority": 5,
+      "template": {
+        "introduction": "**Layout Mode Changed**\n\nSwitching from {{layout.previous_mode}} to {{layout.new_mode}}",
+        "events": {
+          "collection_map.layout.mode_switch_requested": "Mode switch requested in {{collection.id}}: {{layout.previous_mode}} -> {{layout.new_mode}} (action: {{user.action}})",
+          "collection_map.callback.layout_mode_switched": "Layout mode switched in {{collection.id}}: {{layout.previous_mode}} -> **{{layout.new_mode}}**"
+        },
+        "summary": "**Layout Mode Changed:**\n- Collection: {{collection.id}}\n- Previous Mode: {{layout.previous_mode}}\n- New Mode: **{{layout.new_mode}}**"
+      }
+    }
+  ]
+}
