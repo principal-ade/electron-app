@@ -7,61 +7,38 @@
   "spanPattern": "principal_mcp.theme_update",
   "scenarios": [
     {
-      "id": "success",
-      "description": "Theme property updated successfully via UserPreferences",
+      "id": "theme-update-flow",
+      "description": "Theme update flow - handles success and errors",
       "priority": 1,
       "template": {
-        "introduction": "Updated theme property **{{theme.property_path}}**",
+        "introduction": "**Theme Update**\n\nUpdating theme property **{{theme.property_path}}**",
         "events": {
           "principal_mcp.client.request_initiated": "1. Client ({{client.type}}) sent {{http.method}} request to {{http.url}}",
           "principal_mcp.server.request_received": "2. Server received {{http.method}} {{http.path}} on port {{server.port}}",
           "principal_mcp.health.checked": "3. Health: {{health.status}} at {{health.timestamp}} (port {{health.port}})",
-          "principal_mcp.theme.schema_requested": "4. Schema context for theme: {{theme.target_theme}}",
-          "principal_mcp.theme.schema_retrieved": "5. Schema loaded: **{{theme.name}}** ({{theme.schema_properties_count}} properties, {{theme.available_themes_count}} themes)",
-          "principal_mcp.theme.update_requested": "6. Requested update to {{theme.property_path}} for {{theme.target_theme}} (type: {{theme.value_type}})",
-          "principal_mcp.theme.preferences_updated": "7. Updated preferences for theme '{{theme.target_theme}}' at path {{theme.property_path}}",
-          "principal_mcp.theme.renderer_broadcast": "8. Broadcasting to {{broadcast.window_count}} window(s) via {{broadcast.channel}} (has_overrides: {{broadcast.has_theme_overrides}})",
-          "principal_mcp.theme.renderer_notified": "9. Notified {{notification.windows_notified}} renderer window(s) via {{notification.channel}}",
-          "principal_mcp.theme.update_completed": "10. Updated {{theme.property_path}} in theme '{{theme.updated_theme}}': success={{theme.success}}, warning={{theme.warning}}, active={{theme.active_theme}}"
+          "principal_mcp.theme.update_requested": "4. Requested update to {{theme.property_path}} for {{theme.target_theme}} (type: {{theme.value_type}})",
+          "principal_mcp.theme.preferences_updated": "5. Updated preferences for theme '{{theme.target_theme}}' at path {{theme.property_path}}",
+          "principal_mcp.theme.renderer_broadcast": "6. Broadcasting to {{broadcast.window_count}} window(s) via {{broadcast.channel}} (overrides: {{broadcast.has_theme_overrides}})",
+          "principal_mcp.theme.renderer_notified": "7. Notified {{notification.windows_notified}} renderer window(s) via {{notification.channel}}",
+          "principal_mcp.theme.update_completed": "8. Updated {{theme.property_path}} in theme '{{theme.updated_theme}}': success={{theme.success}}, warning={{theme.warning}}, active={{theme.active_theme}}",
+          "principal_mcp.error.theme_update_failed": "9. Update failed for {{theme.property_path}}: {{error.message}}",
+          "principal_mcp.theme.schema_requested": "10. [Theme] Schema: {{theme.target_theme}}",
+          "principal_mcp.theme.schema_retrieved": "11. [Theme] **{{theme.name}}** ({{theme.schema_properties_count}} props, {{theme.available_themes_count}} themes)",
+          "principal_mcp.error.theme_not_found": "12. [Theme] '{{theme.requested}}' not found: {{error.message}}",
+          "principal_mcp.dependency.resolve_requested": "13. [Dep] Resolving: `{{dependency.id}}` (root: {{repository.root}})",
+          "principal_mcp.repo_monitoring.calling": "14. [Dep] Calling repo monitoring for `{{dependency.id}}` (has_root={{has_repository_root}})",
+          "principal_mcp.repo_monitoring.result_received": "15. [Dep] Result for `{{dependency.id}}`: found={{found}}, alexandria={{has_alexandria_entry}}, package={{has_package_info}}, suggestions={{has_suggestions}}",
+          "principal_mcp.resolution.alexandria_found": "16. [Dep] Alexandria for `{{dependency.id}}`: {{alexandria.name}} at `{{alexandria.path}}` (remote: {{alexandria.remote_url}}, commit: {{alexandria.last_commit_hash}})",
+          "principal_mcp.resolution.alexandria_not_found": "17. [Dep] `{{dependency.id}}` not in Alexandria",
+          "principal_mcp.resolution.package_found": "18. [Dep] Package: `{{dependency.id}}` -> {{package.name}}@{{package.version}} at `{{package.path}}` (dev: {{package.is_dev_dependency}})",
+          "principal_mcp.resolution.package_not_found": "19. [Dep] `{{dependency.id}}` not in packages",
+          "principal_mcp.resolution.suggestions_generated": "20. [Dep] Suggestions for `{{dependency.id}}`: {{suggestions.install_commands}} (target: {{suggestions.target_package}}, pm: {{suggestions.package_manager}})",
+          "principal_mcp.resolution.no_suggestions": "21. [Dep] No suggestions for `{{dependency.id}}`",
+          "principal_mcp.error.validation_failed": "22. [Dep] Validation: {{error.field}} - {{error.message}} (type: {{error.type}})",
+          "principal_mcp.error.resolution_failed": "23. [Dep] Resolution failed for `{{dependency.id}}`: {{error.message}} (type: {{error.type}})",
+          "principal_mcp.repo_monitoring.dependency_resolved": "24. [Dep] Complete for `{{dependency.id}}`: success={{resolution.success}}, found={{found}}, source={{source}}"
         },
-        "summary": "Successfully updated {{theme.property_path}} in theme '{{theme.updated_theme}}'"
-      }
-    },
-    {
-      "id": "validation-failed",
-      "description": "Request validation failed - missing or invalid property path",
-      "priority": 2,
-      "template": {
-        "introduction": "Theme update validation failed",
-        "events": {
-          "principal_mcp.client.request_initiated": "1. Client ({{client.type}}) sent {{http.method}} request to {{http.url}}",
-          "principal_mcp.server.request_received": "2. Server received {{http.method}} {{http.path}} on port {{server.port}}",
-          "principal_mcp.health.checked": "3. Health: {{health.status}} at {{health.timestamp}} (port {{health.port}})",
-          "principal_mcp.theme.schema_requested": "4. Schema context for theme: {{theme.target_theme}}",
-          "principal_mcp.error.validation_failed": "5. Validation error: {{error.message}} (field: {{error.field}})",
-          "principal_mcp.error.theme_not_found": "6. Theme '{{theme.requested}}' not found: {{error.message}}",
-          "principal_mcp.error.theme_update_failed": "7. Update failed for path {{theme.property_path}}: {{error.message}}"
-        },
-        "summary": "Update rejected - {{error.message}}"
-      }
-    },
-    {
-      "id": "update-failed",
-      "description": "Theme update failed during preferences update",
-      "priority": 3,
-      "template": {
-        "introduction": "Theme update failed",
-        "events": {
-          "principal_mcp.client.request_initiated": "1. Client ({{client.type}}) sent {{http.method}} request to {{http.url}}",
-          "principal_mcp.server.request_received": "2. Server received {{http.method}} {{http.path}} on port {{server.port}}",
-          "principal_mcp.health.checked": "3. Health: {{health.status}} at {{health.timestamp}} (port {{health.port}})",
-          "principal_mcp.theme.schema_requested": "4. Schema context for theme: {{theme.target_theme}}",
-          "principal_mcp.theme.schema_retrieved": "5. Schema loaded: **{{theme.name}}** ({{theme.schema_properties_count}} properties, {{theme.available_themes_count}} themes)",
-          "principal_mcp.theme.update_requested": "6. Requested update to {{theme.property_path}} for {{theme.target_theme}}",
-          "principal_mcp.error.theme_not_found": "7. Theme '{{theme.requested}}' not found: {{error.message}}",
-          "principal_mcp.error.theme_update_failed": "8. Update failed for path {{theme.property_path}}: {{error.message}}"
-        },
-        "summary": "Preferences update failed - {{error.message}}"
+        "summary": "**Theme Update:**\n- Property: {{theme.property_path}}\n- Theme: {{theme.updated_theme}}\n- Success: {{theme.success}}"
       }
     }
   ]

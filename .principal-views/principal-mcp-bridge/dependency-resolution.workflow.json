@@ -20,23 +20,16 @@
           "principal_mcp.repo_monitoring.calling": "5. Calling repository monitoring for `{{dependency.id}}` (has_root={{has_repository_root}})",
           "principal_mcp.repo_monitoring.result_received": "6. Result for `{{dependency.id}}`: found={{found}}, alexandria={{has_alexandria_entry}}, package={{has_package_info}}, suggestions={{has_suggestions}}",
           "principal_mcp.resolution.alexandria_found": "7. **Found in Alexandria:** `{{dependency.id}}` -> {{alexandria.name}} at `{{alexandria.path}}` (remote: {{alexandria.remote_url}}, commit: {{alexandria.last_commit_hash}})",
-          "principal_mcp.resolution.alexandria_not_found": "8. `{{dependency.id}}` not in Alexandria",
-          "principal_mcp.resolution.package_found": "9. Found in package: `{{dependency.id}}` -> {{package.name}}@{{package.version}} at `{{package.path}}` (dev: {{package.is_dev_dependency}})",
-          "principal_mcp.resolution.package_not_found": "10. `{{dependency.id}}` not in packages",
-          "principal_mcp.resolution.suggestions_generated": "11. Suggestions for `{{dependency.id}}`: {{suggestions.install_commands}} (target: {{suggestions.target_package}}, pm: {{suggestions.package_manager}})",
-          "principal_mcp.resolution.no_suggestions": "12. No suggestions for `{{dependency.id}}`",
-          "principal_mcp.error.validation_failed": "13. Validation failed: {{error.field}} - {{error.message}} (type: {{error.type}})",
-          "principal_mcp.error.resolution_failed": "14. Resolution failed for `{{dependency.id}}`: {{error.message}} (type: {{error.type}})",
-          "principal_mcp.repo_monitoring.dependency_resolved": "15. Resolution complete for `{{dependency.id}}`: success={{resolution.success}}, found={{found}}, source={{source}}",
-          "principal_mcp.theme.schema_requested": "16. Theme schema requested: {{theme.target_theme}}",
-          "principal_mcp.theme.schema_retrieved": "17. Theme **{{theme.name}}** retrieved ({{theme.schema_properties_count}} props, {{theme.available_themes_count}} themes)",
-          "principal_mcp.error.theme_not_found": "18. Theme '{{theme.requested}}' not found: {{error.message}}",
-          "principal_mcp.theme.update_requested": "19. Theme update: {{theme.property_path}} for {{theme.target_theme}} (type: {{theme.value_type}})",
-          "principal_mcp.theme.preferences_updated": "20. Preferences updated: {{theme.property_path}} for {{theme.target_theme}}",
-          "principal_mcp.theme.renderer_broadcast": "21. Broadcast to {{broadcast.window_count}} windows via {{broadcast.channel}} (overrides: {{broadcast.has_theme_overrides}})",
-          "principal_mcp.theme.renderer_notified": "22. Notified {{notification.windows_notified}} windows via {{notification.channel}}",
-          "principal_mcp.theme.update_completed": "23. Theme update complete: {{theme.updated_theme}} (success={{theme.success}}, warning={{theme.warning}}, active={{theme.active_theme}})",
-          "principal_mcp.error.theme_update_failed": "24. Theme update failed for {{theme.property_path}}: {{error.message}}"
+          "principal_mcp.repo_monitoring.dependency_resolved": "8. Resolution complete for `{{dependency.id}}`: success={{resolution.success}}, found={{found}}, source={{source}}",
+          "principal_mcp.theme.schema_requested": "9. [Theme] Schema requested: {{theme.target_theme}}",
+          "principal_mcp.theme.schema_retrieved": "10. [Theme] **{{theme.name}}** retrieved ({{theme.schema_properties_count}} props, {{theme.available_themes_count}} themes)",
+          "principal_mcp.error.theme_not_found": "11. [Theme] '{{theme.requested}}' not found: {{error.message}}",
+          "principal_mcp.theme.update_requested": "12. [Theme] Update: {{theme.property_path}} for {{theme.target_theme}} (type: {{theme.value_type}})",
+          "principal_mcp.theme.preferences_updated": "13. [Theme] Preferences updated: {{theme.property_path}} for {{theme.target_theme}}",
+          "principal_mcp.theme.renderer_broadcast": "14. [Theme] Broadcast to {{broadcast.window_count}} windows via {{broadcast.channel}} (overrides: {{broadcast.has_theme_overrides}})",
+          "principal_mcp.theme.renderer_notified": "15. [Theme] Notified {{notification.windows_notified}} windows via {{notification.channel}}",
+          "principal_mcp.theme.update_completed": "16. [Theme] Complete: {{theme.property_path}} in {{theme.updated_theme}} (success={{theme.success}}, warning={{theme.warning}}, active={{theme.active_theme}})",
+          "principal_mcp.error.theme_update_failed": "17. [Theme] Failed for {{theme.property_path}}: {{error.message}}"
         },
         "summary": "**Resolution Result:**\n- **Dependency:** `{{dependency.id}}`\n- **Found:** Yes\n- **Source:** Alexandria Registry\n\n**Repository Details:**\n- Name: {{alexandria.name}}\n- Path: `{{alexandria.path}}`\n- Remote URL: {{alexandria.remote_url}}\n- Last Commit: {{alexandria.last_commit_hash}}"
       }
@@ -55,8 +48,8 @@
           "principal_mcp.repo_monitoring.calling": "5. Calling repository monitoring for `{{dependency.id}}` (has_root={{has_repository_root}})",
           "principal_mcp.repo_monitoring.result_received": "6. Result for `{{dependency.id}}`: found={{found}}, alexandria={{has_alexandria_entry}}, package={{has_package_info}}, suggestions={{has_suggestions}}",
           "principal_mcp.resolution.alexandria_not_found": "7. `{{dependency.id}}` not in Alexandria registry",
-          "principal_mcp.resolution.package_found": "8. **Found in package:** {{package.name}}@{{package.version}} at `{{package.path}}` (dev: {{package.is_dev_dependency}})",
-          "principal_mcp.repo_monitoring.dependency_resolved": "9. Resolution complete: success={{resolution.success}}, found={{found}}, source={{source}}"
+          "principal_mcp.resolution.package_found": "8. **Found in package:** `{{dependency.id}}` -> {{package.name}}@{{package.version}} at `{{package.path}}` (dev: {{package.is_dev_dependency}})",
+          "principal_mcp.repo_monitoring.dependency_resolved": "9. Resolution complete for `{{dependency.id}}`: success={{resolution.success}}, found={{found}}, source={{source}}"
         },
         "summary": "**Resolution Result:**\n- **Dependency:** `{{dependency.id}}`\n- **Found:** Yes\n- **Source:** Package Dependencies\n\n**Package Details:**\n- Name: {{package.name}}\n- Version: {{package.version}}\n- Path: `{{package.path}}`\n- Dev Dependency: {{package.is_dev_dependency}}"
       }
@@ -76,10 +69,10 @@
           "principal_mcp.repo_monitoring.result_received": "6. Result for `{{dependency.id}}`: found={{found}}, alexandria={{has_alexandria_entry}}, package={{has_package_info}}, suggestions={{has_suggestions}}",
           "principal_mcp.resolution.alexandria_not_found": "7. `{{dependency.id}}` not in Alexandria registry",
           "principal_mcp.resolution.package_not_found": "8. `{{dependency.id}}` not in any package.json",
-          "principal_mcp.resolution.suggestions_generated": "9. Suggestions for `{{dependency.id}}`: {{suggestions.install_commands}} (target: {{suggestions.target_package}})",
-          "principal_mcp.repo_monitoring.dependency_resolved": "10. Resolution complete: success={{resolution.success}}, found={{found}}, source={{source}}"
+          "principal_mcp.resolution.suggestions_generated": "9. Suggestions for `{{dependency.id}}`: {{suggestions.install_commands}} (target: {{suggestions.target_package}}, pm: {{suggestions.package_manager}})",
+          "principal_mcp.repo_monitoring.dependency_resolved": "10. Resolution complete for `{{dependency.id}}`: success={{resolution.success}}, found={{found}}, source={{source}}"
         },
-        "summary": "**Resolution Result:**\n- **Dependency:** `{{dependency.id}}`\n- **Found:** No\n\n**Checked Sources:**\n- Alexandria Registry: Not found\n- Package Dependencies: Not found\n\n**Suggestions:**\n- Install commands: {{suggestions.install_commands}}\n- Target package: {{suggestions.target_package}}\n\n**Possible Actions:**\n1. Clone the repository containing this dependency\n2. Register the repository in Alexandria\n3. Check if the dependency ID format is correct"
+        "summary": "**Resolution Result:**\n- **Dependency:** `{{dependency.id}}`\n- **Found:** No\n\n**Suggestions:**\n- Install commands: {{suggestions.install_commands}}\n- Target package: {{suggestions.target_package}}\n- Package manager: {{suggestions.package_manager}}"
       }
     },
     {
@@ -98,9 +91,9 @@
           "principal_mcp.resolution.alexandria_not_found": "7. `{{dependency.id}}` not in Alexandria registry",
           "principal_mcp.resolution.package_not_found": "8. `{{dependency.id}}` not in any package.json",
           "principal_mcp.resolution.no_suggestions": "9. No install suggestions available for `{{dependency.id}}`",
-          "principal_mcp.repo_monitoring.dependency_resolved": "10. Resolution complete: success={{resolution.success}}, found={{found}}, source={{source}}"
+          "principal_mcp.repo_monitoring.dependency_resolved": "10. Resolution complete for `{{dependency.id}}`: success={{resolution.success}}, found={{found}}, source={{source}}"
         },
-        "summary": "**Resolution Result:**\n- **Dependency:** `{{dependency.id}}`\n- **Found:** No\n\n**Checked Sources:**\n- Alexandria Registry: Not found\n- Package Dependencies: Not found\n\n**Possible Actions:**\n1. Clone the repository containing this dependency\n2. Register the repository in Alexandria\n3. Check if the dependency ID format is correct"
+        "summary": "**Resolution Result:**\n- **Dependency:** `{{dependency.id}}`\n- **Found:** No\n\n**Checked Sources:**\n- Alexandria Registry: Not found\n- Package Dependencies: Not found"
       }
     },
     {
@@ -115,10 +108,10 @@
           "principal_mcp.health.checked": "3. Health: {{health.status}} at {{health.timestamp}} (port {{health.port}})",
           "principal_mcp.dependency.resolve_requested": "4. Resolving: `{{dependency.id}}` (root: {{repository.root}})",
           "principal_mcp.repo_monitoring.calling": "5. Calling repository monitoring for `{{dependency.id}}` (has_root={{has_repository_root}})",
-          "principal_mcp.error.resolution_failed": "6. **Exception:** {{error.message}}",
-          "principal_mcp.repo_monitoring.dependency_resolved": "7. Resolution failed: success={{resolution.success}}, found={{found}}, source={{source}}"
+          "principal_mcp.error.resolution_failed": "6. **Exception for `{{dependency.id}}`:** {{error.message}} (type: {{error.type}})",
+          "principal_mcp.repo_monitoring.dependency_resolved": "7. Resolution failed for `{{dependency.id}}`: success={{resolution.success}}, found={{found}}, source={{source}}"
         },
-        "summary": "**Error Details:**\n- **Dependency:** `{{dependency.id}}`\n- **Error:** {{error.message}}\n\n**Troubleshooting:**\n1. Check if the Repository Monitoring Server is running\n2. Verify the dependency ID format\n3. Check application logs for detailed error information"
+        "summary": "**Error Details:**\n- **Dependency:** `{{dependency.id}}`\n- **Error:** {{error.message}}\n- **Type:** {{error.type}}"
       }
     },
     {
@@ -132,9 +125,9 @@
           "principal_mcp.server.request_received": "2. Bridge received {{http.method}} {{http.path}} on port {{server.port}}",
           "principal_mcp.health.checked": "3. Health: {{health.status}} at {{health.timestamp}} (port {{health.port}})",
           "principal_mcp.dependency.resolve_requested": "4. Checking request body for `{{dependency.id}}` (root: {{repository.root}})",
-          "principal_mcp.error.validation_failed": "5. **Validation failed:** {{error.field}} is required - {{error.message}}"
+          "principal_mcp.error.validation_failed": "5. **Validation failed:** {{error.field}} - {{error.message}} (type: {{error.type}})"
         },
-        "summary": "**Error:**\n- Missing required field: `dependencyId`\n\n**Expected Request Body:**\n```json\n{\n  \"dependencyId\": \"pkg:npm/@scope/package\",\n  \"repositoryRoot\": \"/path/to/repo\" // optional\n}\n```"
+        "summary": "**Error:**\n- Field: {{error.field}}\n- Message: {{error.message}}\n- Type: {{error.type}}"
       }
     }
   ]
