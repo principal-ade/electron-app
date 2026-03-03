@@ -13,9 +13,18 @@
       "template": {
         "introduction": "**MessagePort Registered**\n\nWindow `{{window.id}}` successfully registered to receive traces from source `{{source.url}}`.\n\nThe window will now receive real-time trace batches via MessagePort IPC.",
         "events": {
-          "otel.ipc.handler_invoked": "[1] IPC handler invoked: **{{handler.name}}** from window {{window.id}}",
-          "otel.preload.port_registered": "[2] Preload bridge registered MessagePort (key: {{port.key}})",
-          "otel.subscriber.message_received": "[3] Subscriber ready to receive traces ({{subscribers.count}} subscribers)"
+          "otel.trace.span_created": "[1] Application created span: **{{span.name}}** (trace: `{{trace.id}}`, kind: {{span.kind}})",
+          "otel.endpoint.request_received": "[2] OTLP endpoint received {{http.method}} request at {{http.url}} on port {{http.port}} (content-type: {{content.type}})",
+          "otel.collector.trace_received": "[3] Collector parsed trace in {{collector.mode}} mode ({{resource.spans.count}} resource spans, format: {{trace.format}})",
+          "otel.storage.trace_stored": "[4] Trace `{{trace.id}}` stored at {{storage.timestamp}} ({{storage.size}}/{{storage.max_size}} traces)",
+          "otel.messageport.trace_routed": "[5] Trace routed to window {{window.id}} via MessagePort from {{source.url}} (type: {{message.type}}, port registered: {{port.registered}})",
+          "otel.ipc.handler_invoked": "[6] IPC handler invoked: **{{handler.name}}** from window {{window.id}} (source: {{source.url}})",
+          "otel.preload.port_registered": "[7] Preload bridge registered MessagePort for window {{window.id}} from {{source.url}} (key: {{port.key}}, {{subscribers.count}} subscribers)",
+          "otel.subscriber.message_received": "[8] Subscriber {{subscriber.callback}} ready to receive {{message.type}} ({{payload.traces.count}} traces)",
+          "otel.systemmonitor.traces_polled": "[9] SystemMonitor polled {{traces.fetched}} traces (limit: {{traces.limit}}, {{services.count}} services, interval: {{poll.interval_ms}}ms)",
+          "otel.eventbus.trace_event_emitted": "[10] Event bus emitted **{{event.type}}** from {{event.source}} (trace: `{{payload.trace.id}}`)",
+          "otel.devworkspace.trace_selected": "[11] DevWorkspace opened trace `{{trace.id}}` (tab: {{tab.label}}, id: {{tab.id}})",
+          "otel.panel.trace_rendered": "[12] **Trace `{{trace.id}}` rendered** ({{spans.count}} spans) in {{render.duration_ms}}ms"
         },
         "summary": "**Registration Details:**\n- Window ID: `{{window.id}}`\n- Source URL: `{{source.url}}`\n- Port Key: `{{port.key}}`\n- Subscribers: {{subscribers.count}}\n\n**IPC Setup:**\n1. Renderer invoked `otel-collector:registerPort`\n2. Main process created MessageChannelMain\n3. Port1 registered with collector service\n4. Port2 transferred to renderer via postMessage\n5. Preload bridge set up port.onmessage listener\n6. Subscriber callback registered\n\n**MessagePort Flow:**\n```\nRenderer (registerPort)\n    | [IPC invoke]\nMain Process (create MessageChannel)\n    | [port1 -> collector]\nCollector (stores port for routing)\n    | [port2 -> renderer via postMessage]\nPreload (port.onmessage listener)\n    | [callback on message]\nSubscriber (receives trace batches)\n```\n\n**What Happens Next:**\n- Collector will route matching traces to this port\n- Subscriber callbacks invoked on each TRACE_BATCH message\n- Port remains active until window closes or unregisters"
       }
@@ -27,10 +36,18 @@
       "template": {
         "introduction": "**Port Registered with Backlog**\n\nWindow `{{window.id}}` registered for traces and there are {{storage.size}} traces already in storage.\n\nSystemMonitor polling will retrieve historical traces.",
         "events": {
-          "otel.ipc.handler_invoked": "[1] Handler invoked: registerPort (window: {{window.id}})",
-          "otel.preload.port_registered": "[2] Port registered successfully (key: {{port.key}})",
-          "otel.storage.trace_stored": "[3] Storage contains {{storage.size}} traces ({{storage.size}}/{{storage.max_size}})",
-          "otel.systemmonitor.traces_polled": "[4] Polling retrieved {{traces.fetched}} historical traces"
+          "otel.trace.span_created": "[1] Application created span: **{{span.name}}** (trace: `{{trace.id}}`, kind: {{span.kind}})",
+          "otel.endpoint.request_received": "[2] OTLP endpoint received {{http.method}} request at {{http.url}} on port {{http.port}} (content-type: {{content.type}})",
+          "otel.collector.trace_received": "[3] Collector parsed trace in {{collector.mode}} mode ({{resource.spans.count}} resource spans, format: {{trace.format}})",
+          "otel.messageport.trace_routed": "[4] Trace routed to window {{window.id}} via MessagePort from {{source.url}} (type: {{message.type}}, port registered: {{port.registered}})",
+          "otel.ipc.handler_invoked": "[5] Handler invoked: **{{handler.name}}** from window {{window.id}} (source: {{source.url}})",
+          "otel.preload.port_registered": "[6] Port registered for window {{window.id}} from {{source.url}} (key: {{port.key}}, {{subscribers.count}} subscribers)",
+          "otel.subscriber.message_received": "[7] Subscriber {{subscriber.callback}} ready to receive {{message.type}} ({{payload.traces.count}} traces)",
+          "otel.storage.trace_stored": "[8] Storage contains trace `{{trace.id}}` stored at {{storage.timestamp}} ({{storage.size}}/{{storage.max_size}} traces)",
+          "otel.systemmonitor.traces_polled": "[9] Polling retrieved {{traces.fetched}} historical traces (limit: {{traces.limit}}, {{services.count}} services, interval: {{poll.interval_ms}}ms)",
+          "otel.eventbus.trace_event_emitted": "[10] Event bus emitted **{{event.type}}** from {{event.source}} (trace: `{{payload.trace.id}}`)",
+          "otel.devworkspace.trace_selected": "[11] DevWorkspace opened trace `{{trace.id}}` (tab: {{tab.label}}, id: {{tab.id}})",
+          "otel.panel.trace_rendered": "[12] **Trace `{{trace.id}}` rendered** ({{spans.count}} spans) in {{render.duration_ms}}ms"
         },
         "summary": "**Registration + Backlog:**\n- Window: `{{window.id}}`\n- Port: Registered\n- Storage: {{storage.size}} traces available\n- Fetched: {{traces.fetched}} traces\n\n**Trace Delivery Methods:**\n1. **Live MessagePort** - New traces routed immediately\n2. **Polling Retrieval** - SystemMonitor polls `getTraces()` every 2s\n\n**Storage Status:**\n- Current: {{storage.size}}/{{storage.max_size}}\n- Format: Circular buffer (FIFO)\n- Retention: Last 50 traces\n\n**Note:** This window will receive:\n- Historical traces via polling\n- New traces via MessagePort (live delivery)"
       }

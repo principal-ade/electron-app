@@ -13,9 +13,13 @@
       "template": {
         "introduction": "**Health Check Successful**\n\nThe Principal MCP Bridge health endpoint responded successfully.",
         "events": {
-          "principal_mcp.client.request_initiated": "1. Client sent GET request to /health",
-          "principal_mcp.server.request_received": "2. Server received request on port {{server.port}}",
-          "principal_mcp.health.checked": "3. Health status: **{{health.status}}**"
+          "principal_mcp.client.request_initiated": "1. Client ({{client.type}}) sent {{http.method}} request to {{http.url}}",
+          "principal_mcp.server.request_received": "2. Server received {{http.method}} {{http.path}} on port {{server.port}}",
+          "principal_mcp.health.checked": "3. Health status: **{{health.status}}** at {{health.timestamp}} (port {{health.port}})",
+          "principal_mcp.dependency.resolve_requested": "4. No dependency resolution (health check only, root: {{repository.root}})",
+          "principal_mcp.repo_monitoring.calling": "5. No repo monitoring call (health check, dependency: {{dependency.id}}, has_root={{has_repository_root}})",
+          "principal_mcp.repo_monitoring.result_received": "6. No result (health check, dependency: {{dependency.id}}, found={{found}}, alexandria={{has_alexandria_entry}}, package={{has_package_info}}, suggestions={{has_suggestions}})",
+          "principal_mcp.repo_monitoring.dependency_resolved": "7. Health check complete: success={{resolution.success}}, found={{found}}, source={{source}}"
         },
         "summary": "**Health Status:**\n- Status: {{health.status}}\n- Port: {{health.port}}\n- Timestamp: {{health.timestamp}}\n\nThe bridge is running and accepting requests."
       }

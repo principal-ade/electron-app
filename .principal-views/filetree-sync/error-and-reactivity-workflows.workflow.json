@@ -13,15 +13,18 @@
       "template": {
         "introduction": "**Panel Reactivity Success!**\n\nFile change successfully propagated through the entire pipeline and triggered panel re-render.\n\n**This demonstrates the PANEL_CONTEXT_REACTIVITY_PATTERN fix is working!**\n\nFile: `{{file.path}}`\nChange: {{file.event}}\nEnd-to-End Latency: ~{{cache.rebuild.duration_ms + render.duration_ms}}ms",
         "events": {
-          "filetree.file.changed": "[1] File changed: `{{file.path}}` ({{file.event}})",
-          "filetree.watcher.detected": "[2] Watcher detected",
-          "filetree.worker.notified": "[3] Worker notified",
-          "filetree.cache.invalidated": "[4] Cache invalidated",
-          "filetree.cache.rebuild": "[5] Cache rebuilt in {{cache.rebuild.duration_ms}}ms -> v{{cache.version.after}}",
-          "filetree.cache.synced": "[6] CACHE_SYNC sent (v{{cache.version.after}})",
-          "filetree.preload.event_received": "[7] Preload received (duplicate: {{dedup.is_duplicate}})",
-          "filetree.context.updated": "[8] Context updated to v{{filetree.version}}",
-          "filetree.ui.rendered": "[9] **Panel rendered in {{render.duration_ms}}ms** (v{{filetree.version}})"
+          "filetree.file.changed": "[1] File changed in `{{repository.path}}`: `{{file.path}}` ({{file.event}})",
+          "filetree.watcher.detected": "[2] Watcher detected {{watcher.event}} in `{{repository.path}}`",
+          "filetree.worker.notified": "[3] Worker notified for `{{repository.path}}` (PID: {{worker.pid}})",
+          "filetree.workspace.changed": "[4] workspace:changed IPC event fired for `{{repository.path}}` at {{event.timestamp}}",
+          "filetree.cache.invalidated": "[5] Cache invalidated for `{{repository.path}}` (was v{{cache.version.before}}, rebuild scheduled: {{cache.rebuild.scheduled}})",
+          "filetree.debounce.triggered": "[6] Debounce for `{{repository.path}}`: {{debounce.changes_count}} changes over {{debounce.delay_ms}}ms",
+          "filetree.cache.rebuild": "[7] Cache rebuilt for `{{repository.path}}` in {{cache.rebuild.duration_ms}}ms -> v{{cache.version.after}} ({{filetree.files_count}} files)",
+          "filetree.cache.synced": "[8] CACHE_SYNC sent for `{{repository.path}}` (v{{cache.version.after}}, slice: {{cache.slice}}, {{event.payload.size_bytes}} bytes)",
+          "filetree.preload.event_received": "[9] Preload received {{event.type}} for `{{repository.path}}` (duplicate: {{dedup.is_duplicate}}, window: {{dedup.window_ms}}ms)",
+          "filetree.service.subscribed": "[10] Service subscribed for `{{repository.path}}`: {{subscription.type}}",
+          "filetree.context.updated": "[11] Context updated for `{{repository.path}}` to v{{filetree.version}} (source: {{update.source}})",
+          "filetree.ui.rendered": "[12] **Panel rendered for `{{repository.path}}` in {{render.duration_ms}}ms** (v{{filetree.version}})"
         },
         "summary": "**Performance Metrics:**\n- Cache rebuild: {{cache.rebuild.duration_ms}}ms\n- UI render: {{render.duration_ms}}ms\n- **Total latency: ~{{cache.rebuild.duration_ms + render.duration_ms}}ms**\n\n**Reactivity Pattern Working:**\n- Context passed directly (not via ref)\n- Context change detected by React\n- Panel re-rendered with new data\n- Version updated: {{filetree.version}}\n\n**Files in tree:** {{filetree.files_count}}\n**Repository:** `{{repository.path}}`"
       }
@@ -33,10 +36,11 @@
       "template": {
         "introduction": "**Manual Refresh Requested**\n\nAn explicit cache refresh was requested for `{{repository.path}}`.\n\nTrigger: {{refresh.trigger}}",
         "events": {
-          "filetree.refresh.requested": "[1] Manual refresh requested (trigger: {{refresh.trigger}})",
-          "filetree.cache.invalidated": "[2] Cache invalidated immediately",
-          "filetree.cache.rebuild": "[3] Immediate rebuild in {{cache.rebuild.duration_ms}}ms -> v{{cache.version.after}}",
-          "filetree.cache.synced": "[4] CACHE_SYNC sent"
+          "filetree.refresh.requested": "[1] Manual refresh requested for `{{repository.path}}` (trigger: {{refresh.trigger}})",
+          "filetree.cache.invalidated": "[2] Cache invalidated for `{{repository.path}}` immediately (was v{{cache.version.before}}, rebuild scheduled: {{cache.rebuild.scheduled}})",
+          "filetree.debounce.triggered": "[3] Debounce for `{{repository.path}}`: {{debounce.changes_count}} changes over {{debounce.delay_ms}}ms",
+          "filetree.cache.rebuild": "[4] Immediate rebuild for `{{repository.path}}` in {{cache.rebuild.duration_ms}}ms -> v{{cache.version.after}} ({{filetree.files_count}} files)",
+          "filetree.cache.synced": "[5] CACHE_SYNC sent for `{{repository.path}}` (v{{cache.version.after}}, slice: {{cache.slice}}, {{event.payload.size_bytes}} bytes)"
         },
         "summary": "**Immediate Rebuild Details:**\n- No debounce delay applied\n- Direct rebuild triggered\n- Duration: {{cache.rebuild.duration_ms}}ms\n- Files: {{filetree.files_count}}\n\n**Trigger:**\n- Manual refresh request, OR\n- Initial cache population, OR\n- Critical update path"
       }

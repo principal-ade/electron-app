@@ -13,21 +13,21 @@
       "template": {
         "introduction": "**Alexandria Window Opening**\n\nOpening workspace **\"{{workspace.name}}\"**",
         "events": {
-          "alexandria.window.open.flow": "Starting window open flow",
-          "alexandria.window.open.requested": "User triggered open from {{trigger.source}} (workspaceId: `{{workspace.id}}`)",
-          "alexandria.window.ipc.invoke": "WindowService invoked IPC channel: {{ipc.channel}}",
-          "alexandria.window.handler.received": "Main process received request, window mode: **{{window.mode}}**",
-          "alexandria.workspace.lookup": "Registry lookup: workspace **{{workspace.name}}** found with {{repository.count}} repositories",
-          "alexandria.workspace.found": "Workspace exists in registry",
-          "alexandria.window.creating": "Creating new window for workspace",
-          "window.createSpecial": "Creating new BrowserWindow (ID: {{window.id}}, type: {{window.type}})",
+          "alexandria.window.open.flow": "Starting **{{flow.name}}** flow",
+          "alexandria.window.open.requested": "User triggered open from {{trigger.source}} (workspaceId: `{{workspace.id}}`, repositoryId: `{{repository.id}}`)",
+          "alexandria.window.ipc.invoke": "WindowService invoked IPC channel: {{ipc.channel}} (workspaceId: `{{workspace.id}}`, hasRepositoryPath: {{has.repository.path}})",
+          "alexandria.window.handler.received": "Main process received request for **{{window.name}}**, workspace **{{workspace.name}}**, mode: **{{window.mode}}**",
+          "alexandria.workspace.lookup": "Registry lookup: workspace **{{workspace.name}}** (`{{workspace.id}}`) found={{workspace.found}} with {{repository.count}} repositories",
+          "alexandria.workspace.found": "Workspace **{{workspace.name}}** (`{{workspace.id}}`) exists in registry",
+          "alexandria.window.creating": "Creating new window **{{window.name}}** (type: {{window.type}}) for workspace",
+          "window.createSpecial": "Creating BrowserWindow (ID: {{window.id}}, type: {{window.type}}, purpose: {{window.purpose}}, reused: {{window.reused}})",
           "terminal.window.registered": "Terminal manager registered window {{window.id}}",
-          "alexandria.watches.acquired": "Acquired watches for {{repositories.watched}}/{{repositories.total}} repositories",
-          "window.loadURL": "Loading URL: {{url.path}}",
-          "alexandria.app.initialized": "Renderer initialized in {{init.duration.ms}}ms, panels: {{layout.panels}}",
-          "alexandria.window.ready": "Window ready in {{total.duration.ms}}ms with {{watches.active}} active watches"
+          "alexandria.watches.acquired": "Window {{window.id}} acquired watches (ref: {{watch.reference.id}}): {{repositories.watched}}/{{repositories.total}} succeeded, {{repositories.failed}} failed",
+          "window.loadURL": "Window {{window.id}} loading URL: {{url.path}} (hasWorkspaceId: {{url.has.workspace.id}}, hasRepositoryPath: {{url.has.repository.path}})",
+          "alexandria.app.initialized": "Renderer initialized for **{{workspace.name}}** (`{{workspace.id}}`) in {{init.duration.ms}}ms, {{repository.count}} repos, panels: {{layout.panels}}",
+          "alexandria.window.ready": "Window **{{window.name}}** ({{window.id}}) ready for workspace `{{workspace.id}}` in {{total.duration.ms}}ms with {{watches.active}} active watches"
         },
-        "summary": "**Window Details:**\n- Window ID: {{window.id}}\n- Workspace: **{{workspace.name}}**\n- Workspace ID: `{{workspace.id}}`\n- Repositories: {{repository.count}}\n\n**Performance:**\n- Total duration: {{total.duration.ms}}ms\n- Active watches: {{watches.active}}"
+        "summary": "**Window Details:**\n- Window ID: {{window.id}}\n- Window Name: {{window.name}}\n- Workspace: **{{workspace.name}}**\n- Workspace ID: `{{workspace.id}}`\n- Repositories: {{repository.count}}\n\n**Performance:**\n- Total duration: {{total.duration.ms}}ms\n- Active watches: {{watches.active}}"
       }
     },
     {
@@ -37,17 +37,17 @@
       "template": {
         "introduction": "**Alexandria Window Opening**\n\nOpening workspace **\"{{workspace.name}}\"** (reusing existing window)",
         "events": {
-          "alexandria.window.open.flow": "Starting window open flow",
-          "alexandria.window.open.requested": "User triggered open from {{trigger.source}} (workspaceId: `{{workspace.id}}`)",
-          "alexandria.window.ipc.invoke": "WindowService invoked IPC channel: {{ipc.channel}}",
-          "alexandria.window.handler.received": "Main process received request, window mode: **{{window.mode}}**",
-          "alexandria.workspace.lookup": "Registry lookup: workspace **{{workspace.name}}** found with {{repository.count}} repositories",
-          "alexandria.workspace.found": "Workspace exists in registry",
-          "alexandria.window.reusing": "Found existing window to reuse",
-          "window.createSpecial": "**Reusing existing window** {{window.id}}",
-          "alexandria.window.ready": "Window focused in {{total.duration.ms}}ms"
+          "alexandria.window.open.flow": "Starting **{{flow.name}}** flow",
+          "alexandria.window.open.requested": "User triggered open from {{trigger.source}} (workspaceId: `{{workspace.id}}`, repositoryId: `{{repository.id}}`)",
+          "alexandria.window.ipc.invoke": "WindowService invoked IPC channel: {{ipc.channel}} (workspaceId: `{{workspace.id}}`, hasRepositoryPath: {{has.repository.path}})",
+          "alexandria.window.handler.received": "Main process received request for **{{window.name}}**, workspace **{{workspace.name}}**, mode: **{{window.mode}}**",
+          "alexandria.workspace.lookup": "Registry lookup: workspace **{{workspace.name}}** (`{{workspace.id}}`) found={{workspace.found}} with {{repository.count}} repositories",
+          "alexandria.workspace.found": "Workspace **{{workspace.name}}** (`{{workspace.id}}`) exists in registry",
+          "alexandria.window.reusing": "Found existing window **{{window.name}}** ({{window.id}}) to reuse",
+          "window.createSpecial": "**Reusing existing window** {{window.id}} (type: {{window.type}}, purpose: {{window.purpose}}, reused: {{window.reused}})",
+          "alexandria.window.ready": "Window **{{window.name}}** ({{window.id}}) focused for workspace `{{workspace.id}}` in {{total.duration.ms}}ms"
         },
-        "summary": "**Result:** Focused existing window {{window.id}}"
+        "summary": "**Result:** Focused existing window **{{window.name}}** ({{window.id}})"
       }
     },
     {
@@ -57,20 +57,20 @@
       "template": {
         "introduction": "**Alexandria Window Opening**\n\nOpening temporary repository workspace",
         "events": {
-          "alexandria.window.open.flow": "Starting window open flow",
-          "alexandria.window.open.requested": "User triggered open from {{trigger.source}} (path: `{{repository.path}}`)",
-          "alexandria.window.ipc.invoke": "WindowService invoked IPC channel: {{ipc.channel}}",
-          "alexandria.window.handler.received": "Main process received request, window mode: **{{window.mode}}**",
-          "alexandria.window.temp.mode": "Opening in temporary workspace mode (no workspace ID)",
-          "alexandria.window.creating": "Creating new window for temporary workspace",
-          "window.createSpecial": "Creating new BrowserWindow (ID: {{window.id}}, type: {{window.type}})",
+          "alexandria.window.open.flow": "Starting **{{flow.name}}** flow",
+          "alexandria.window.open.requested": "User triggered open from {{trigger.source}} (path: `{{repository.path}}`, repositoryId: `{{repository.id}}`)",
+          "alexandria.window.ipc.invoke": "WindowService invoked IPC channel: {{ipc.channel}} (workspaceId: `{{workspace.id}}`, hasRepositoryPath: {{has.repository.path}})",
+          "alexandria.window.handler.received": "Main process received request for **{{window.name}}**, workspace **{{workspace.name}}**, mode: **{{window.mode}}**",
+          "alexandria.window.temp.mode": "Opening in temporary workspace mode for `{{repository.path}}` (repositoryId: `{{repository.id}}`)",
+          "alexandria.window.creating": "Creating new window **{{window.name}}** (type: {{window.type}}) for temporary workspace",
+          "window.createSpecial": "Creating BrowserWindow (ID: {{window.id}}, type: {{window.type}}, purpose: {{window.purpose}}, reused: {{window.reused}})",
           "terminal.window.registered": "Terminal manager registered window {{window.id}}",
-          "alexandria.watches.acquired": "Acquired watches for {{repositories.watched}}/{{repositories.total}} repositories",
-          "window.loadURL": "Loading URL: {{url.path}}",
-          "alexandria.app.initialized": "Renderer initialized in {{init.duration.ms}}ms, panels: {{layout.panels}}",
-          "alexandria.window.ready": "Window ready in {{total.duration.ms}}ms with {{watches.active}} active watches"
+          "alexandria.watches.acquired": "Window {{window.id}} acquired watches (ref: {{watch.reference.id}}): {{repositories.watched}}/{{repositories.total}} succeeded, {{repositories.failed}} failed",
+          "window.loadURL": "Window {{window.id}} loading URL: {{url.path}} (hasWorkspaceId: {{url.has.workspace.id}}, hasRepositoryPath: {{url.has.repository.path}})",
+          "alexandria.app.initialized": "Renderer initialized for **{{workspace.name}}** (`{{workspace.id}}`) in {{init.duration.ms}}ms, {{repository.count}} repos, panels: {{layout.panels}}",
+          "alexandria.window.ready": "Window **{{window.name}}** ({{window.id}}) ready for workspace `{{workspace.id}}` in {{total.duration.ms}}ms with {{watches.active}} active watches"
         },
-        "summary": "**Window Details:**\n- Window ID: {{window.id}}\n- Repository Path: `{{repository.path}}`\n\n**Performance:**\n- Total duration: {{total.duration.ms}}ms\n- Active watches: {{watches.active}}"
+        "summary": "**Window Details:**\n- Window ID: {{window.id}}\n- Window Name: {{window.name}}\n- Repository Path: `{{repository.path}}`\n\n**Performance:**\n- Total duration: {{total.duration.ms}}ms\n- Active watches: {{watches.active}}"
       }
     },
     {
@@ -80,15 +80,15 @@
       "template": {
         "introduction": "**Alexandria Window Opening**\n\nWorkspace lookup failed",
         "events": {
-          "alexandria.window.open.flow": "Starting window open flow",
-          "alexandria.window.open.requested": "User triggered open from {{trigger.source}} (workspaceId: `{{workspace.id}}`)",
-          "alexandria.window.ipc.invoke": "WindowService invoked IPC channel: {{ipc.channel}}",
-          "alexandria.window.handler.received": "Main process received request, window mode: **{{window.mode}}**",
-          "alexandria.workspace.lookup": "Registry lookup: **workspace not found**",
-          "alexandria.workspace.not_found": "Workspace `{{workspace.id}}` does not exist in registry",
-          "alexandria.window.open.failed": "Window open failed due to missing workspace"
+          "alexandria.window.open.flow": "Starting **{{flow.name}}** flow",
+          "alexandria.window.open.requested": "User triggered open from {{trigger.source}} (workspaceId: `{{workspace.id}}`, repositoryId: `{{repository.id}}`)",
+          "alexandria.window.ipc.invoke": "WindowService invoked IPC channel: {{ipc.channel}} (workspaceId: `{{workspace.id}}`, hasRepositoryPath: {{has.repository.path}})",
+          "alexandria.window.handler.received": "Main process received request for **{{window.name}}**, workspace **{{workspace.name}}**, mode: **{{window.mode}}**",
+          "alexandria.workspace.lookup": "Registry lookup: workspace **{{workspace.name}}** (`{{workspace.id}}`) found={{workspace.found}} with {{repository.count}} repositories",
+          "alexandria.workspace.not_found": "Workspace `{{workspace.id}}` does not exist in registry: {{error.message}}",
+          "alexandria.window.open.failed": "Window open failed: {{error.message}} (code: {{error.code}})"
         },
-        "summary": "**Error:** Workspace `{{workspace.id}}` not found in registry"
+        "summary": "**Error:** Workspace `{{workspace.id}}` not found in registry\n- Error: {{error.message}}\n- Code: {{error.code}}"
       }
     }
   ]

@@ -13,18 +13,18 @@
       "template": {
         "introduction": "**Complete FileTree Synchronization**\n\nSuccessfully synchronized file tree from file system change to UI update.\n\nRepository: `{{repository.path}}`\nTotal files: {{filetree.files_count}}",
         "events": {
-          "filetree.file.changed": "[1] File changed: `{{file.path}}` ({{file.event}})",
-          "filetree.watcher.detected": "[2] Chokidar watcher detected change",
-          "filetree.worker.notified": "[3] Worker notified (PID: {{worker.pid}})",
-          "filetree.workspace.changed": "[4] workspace:changed IPC event fired",
-          "filetree.cache.invalidated": "[5] Cache invalidated (was v{{cache.version.before}})",
-          "filetree.debounce.triggered": "[6] Debounce: {{debounce.changes_count}} changes over {{debounce.delay_ms}}ms",
-          "filetree.cache.rebuild": "[7] Cache rebuilt in {{cache.rebuild.duration_ms}}ms -> v{{cache.version.after}} ({{filetree.files_count}} files)",
-          "filetree.cache.synced": "[8] CACHE_SYNC event sent (v{{cache.version.after}}, slice: {{cache.slice}})",
-          "filetree.preload.event_received": "[9] Preload received {{event.type}} (duplicate: {{dedup.is_duplicate}})",
-          "filetree.service.subscribed": "[10] RepositoryMonitoringService subscription: {{subscription.type}}",
-          "filetree.context.updated": "[11] React context updated (v{{filetree.version}}, source: {{update.source}})",
-          "filetree.ui.rendered": "[12] **UI rendered in {{render.duration_ms}}ms** (displaying v{{filetree.version}})"
+          "filetree.file.changed": "[1] File changed in `{{repository.path}}`: `{{file.path}}` ({{file.event}})",
+          "filetree.watcher.detected": "[2] Chokidar watcher detected {{watcher.event}} in `{{repository.path}}`",
+          "filetree.worker.notified": "[3] Worker notified for `{{repository.path}}` (PID: {{worker.pid}})",
+          "filetree.workspace.changed": "[4] workspace:changed IPC event fired for `{{repository.path}}` at {{event.timestamp}}",
+          "filetree.cache.invalidated": "[5] Cache invalidated for `{{repository.path}}` (was v{{cache.version.before}}, rebuild scheduled: {{cache.rebuild.scheduled}})",
+          "filetree.debounce.triggered": "[6] Debounce for `{{repository.path}}`: {{debounce.changes_count}} changes over {{debounce.delay_ms}}ms",
+          "filetree.cache.rebuild": "[7] Cache rebuilt for `{{repository.path}}` in {{cache.rebuild.duration_ms}}ms -> v{{cache.version.after}} ({{filetree.files_count}} files)",
+          "filetree.cache.synced": "[8] CACHE_SYNC event sent for `{{repository.path}}` (v{{cache.version.after}}, slice: {{cache.slice}}, {{event.payload.size_bytes}} bytes)",
+          "filetree.preload.event_received": "[9] Preload received {{event.type}} for `{{repository.path}}` (duplicate: {{dedup.is_duplicate}}, window: {{dedup.window_ms}}ms)",
+          "filetree.service.subscribed": "[10] RepositoryMonitoringService subscription for `{{repository.path}}`: {{subscription.type}}",
+          "filetree.context.updated": "[11] React context updated for `{{repository.path}}` (v{{filetree.version}}, source: {{update.source}})",
+          "filetree.ui.rendered": "[12] **UI rendered for `{{repository.path}}` in {{render.duration_ms}}ms** (displaying v{{filetree.version}})"
         },
         "summary": "**Performance Summary:**\n- Cache rebuild: {{cache.rebuild.duration_ms}}ms\n- Debounce delay: {{debounce.delay_ms}}ms\n- UI render: {{render.duration_ms}}ms\n- **Total latency:** ~{{cache.rebuild.duration_ms + debounce.delay_ms + render.duration_ms}}ms\n\n**Metrics:**\n- Files in tree: {{filetree.files_count}}\n- Cache version: {{filetree.version}}\n- Changes batched: {{debounce.changes_count}}"
       }
@@ -36,10 +36,10 @@
       "template": {
         "introduction": "**Manual Refresh Requested**\n\nAn explicit cache refresh was requested for `{{repository.path}}`.\n\nTrigger: {{refresh.trigger}}",
         "events": {
-          "filetree.refresh.requested": "[1] Manual refresh triggered (source: {{refresh.trigger}})",
-          "filetree.cache.invalidated": "[2] Cache invalidated immediately (no debounce)",
-          "filetree.cache.rebuild": "[3] Cache rebuilt in {{cache.rebuild.duration_ms}}ms -> v{{cache.version.after}}",
-          "filetree.cache.synced": "[4] CACHE_SYNC event sent"
+          "filetree.refresh.requested": "[1] Manual refresh triggered for `{{repository.path}}` (source: {{refresh.trigger}})",
+          "filetree.cache.invalidated": "[2] Cache invalidated for `{{repository.path}}` immediately (no debounce, was v{{cache.version.before}}, rebuild scheduled: {{cache.rebuild.scheduled}})",
+          "filetree.cache.rebuild": "[3] Cache rebuilt for `{{repository.path}}` in {{cache.rebuild.duration_ms}}ms -> v{{cache.version.after}} ({{filetree.files_count}} files)",
+          "filetree.cache.synced": "[4] CACHE_SYNC event sent for `{{repository.path}}` (v{{cache.version.after}}, slice: {{cache.slice}}, {{event.payload.size_bytes}} bytes)"
         },
         "summary": "**Refresh Details:**\n- Trigger: {{refresh.trigger}}\n- Repository: `{{repository.path}}`\n- Duration: {{cache.rebuild.duration_ms}}ms\n\n**Note:** Manual refreshes bypass the debounce timer for immediate updates."
       }

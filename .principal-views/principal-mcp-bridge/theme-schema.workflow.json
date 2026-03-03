@@ -13,8 +13,16 @@
       "template": {
         "introduction": "Retrieved theme schema for **{{theme.name}}**",
         "events": {
-          "principal_mcp.theme.schema_requested": "Schema requested for theme: {{theme.target_theme}}",
-          "principal_mcp.theme.schema_retrieved": "Retrieved {{theme.schema_properties_count}} schema properties and {{theme.available_themes_count}} available themes"
+          "principal_mcp.client.request_initiated": "1. Client ({{client.type}}) sent {{http.method}} request to {{http.url}}",
+          "principal_mcp.server.request_received": "2. Server received {{http.method}} {{http.path}} on port {{server.port}}",
+          "principal_mcp.health.checked": "3. Health: {{health.status}} at {{health.timestamp}} (port {{health.port}})",
+          "principal_mcp.theme.schema_requested": "4. Schema requested for theme: {{theme.target_theme}}",
+          "principal_mcp.theme.schema_retrieved": "5. Retrieved **{{theme.name}}** with {{theme.schema_properties_count}} schema properties and {{theme.available_themes_count}} available themes",
+          "principal_mcp.theme.update_requested": "6. No update (schema only, target: {{theme.target_theme}})",
+          "principal_mcp.theme.preferences_updated": "7. No preferences updated (schema only, path: {{theme.property_path}})",
+          "principal_mcp.theme.renderer_broadcast": "8. No broadcast (schema only, channel: {{broadcast.channel}}, has_overrides: {{broadcast.has_theme_overrides}})",
+          "principal_mcp.theme.renderer_notified": "9. No notification (schema only, channel: {{notification.channel}})",
+          "principal_mcp.theme.update_completed": "10. Schema retrieved: success={{theme.success}}, warning={{theme.warning}}, active={{theme.active_theme}}"
         },
         "summary": "Successfully returned theme schema with {{theme.schema_properties_count}} configurable properties"
       }
@@ -26,8 +34,12 @@
       "template": {
         "introduction": "Failed to retrieve schema - theme not found",
         "events": {
-          "principal_mcp.theme.schema_requested": "Schema requested for theme: {{theme.target_theme}}",
-          "principal_mcp.error.theme_not_found": "Theme '{{theme.requested}}' not found: {{error.message}}"
+          "principal_mcp.client.request_initiated": "1. Client ({{client.type}}) sent {{http.method}} request to {{http.url}}",
+          "principal_mcp.server.request_received": "2. Server received {{http.method}} {{http.path}} on port {{server.port}}",
+          "principal_mcp.health.checked": "3. Health: {{health.status}} at {{health.timestamp}} (port {{health.port}})",
+          "principal_mcp.theme.schema_requested": "4. Schema requested for theme: {{theme.target_theme}}",
+          "principal_mcp.error.theme_not_found": "5. Theme '{{theme.requested}}' not found: {{error.message}}",
+          "principal_mcp.error.theme_update_failed": "6. Update failed for path {{theme.property_path}}: {{error.message}}"
         },
         "summary": "Schema request failed - unknown theme name"
       }
@@ -39,8 +51,13 @@
       "template": {
         "introduction": "Theme schema request failed",
         "events": {
-          "principal_mcp.server.request_received": "Server received schema request on port {{server.port}}",
-          "principal_mcp.error.validation_failed": "Request failed: {{error.message}}"
+          "principal_mcp.client.request_initiated": "1. Client ({{client.type}}) sent {{http.method}} request to {{http.url}}",
+          "principal_mcp.server.request_received": "2. Server received {{http.method}} {{http.path}} schema request on port {{server.port}}",
+          "principal_mcp.health.checked": "3. Health: {{health.status}} at {{health.timestamp}} (port {{health.port}})",
+          "principal_mcp.theme.schema_requested": "4. Schema requested for theme: {{theme.target_theme}}",
+          "principal_mcp.error.validation_failed": "5. Request failed: {{error.message}} (field: {{error.field}})",
+          "principal_mcp.error.theme_not_found": "6. Theme '{{theme.requested}}' not found: {{error.message}}",
+          "principal_mcp.error.theme_update_failed": "7. Update failed for path {{theme.property_path}}: {{error.message}}"
         },
         "summary": "Schema request encountered an error"
       }
