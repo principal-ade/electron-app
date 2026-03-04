@@ -13,11 +13,18 @@ import {
   Eye,
   EyeOff,
   Radio,
+  Terminal,
+  Loader2,
 } from 'lucide-react';
 import { RepositoryMonitoringService } from '../../../main-process-api/RepositoryMonitoringService';
 import { OtelCollectorService } from '../../../main-process-api/OtelCollectorService';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 import { TraceViewer } from './TraceViewer';
+import {
+  terminalClient,
+  onActivitySync,
+  type TerminalActivityState,
+} from '../../../tipc/terminalClient';
 import type {
   MonitoringStatus,
   GitStatus,
@@ -52,7 +59,8 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
   const [otelStatus, setOtelStatus] = useState<OtelCollectorStatus | null>(null);
   const [otelLoading, setOtelLoading] = useState(true);
   const [isSendingTestTrace, setIsSendingTestTrace] = useState(false);
-  const [activeTab, setActiveTab] = useState<'repository' | 'otel'>('repository');
+  const [activeTab, setActiveTab] = useState<'repository' | 'otel' | 'terminals'>('repository');
+  const [terminalActivities, setTerminalActivities] = useState<TerminalActivityState[]>([]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -151,6 +159,27 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
           }
         },
       );
+
+    return unsubscribe;
+  }, []);
+
+  // Listen for terminal activity sync and fetch initial state
+  useEffect(() => {
+    // Fetch initial activity state
+    const fetchInitialActivities = async () => {
+      try {
+        const activities = await terminalClient.getActivityState();
+        setTerminalActivities(activities);
+      } catch (error) {
+        console.error('Failed to fetch terminal activities:', error);
+      }
+    };
+    fetchInitialActivities();
+
+    // Subscribe to activity sync broadcasts
+    const unsubscribe = onActivitySync((activities) => {
+      setTerminalActivities(activities);
+    });
 
     return unsubscribe;
   }, []);
@@ -441,6 +470,14 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
             opacity: 0.5;
           }
         }
+        @keyframes spin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
       `}</style>
       {/* Header */}
       <div
@@ -532,6 +569,50 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
               >
                 <Radio size={14} />
                 OTEL Collector
+              </button>
+              <button
+                onClick={() => setActiveTab('terminals')}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  borderRadius: '6px',
+                  border: `1px solid ${activeTab === 'terminals' ? theme.colors.primary : theme.colors.border}`,
+                  backgroundColor: activeTab === 'terminals' ? `${theme.colors.primary}15` : 'transparent',
+                  color: activeTab === 'terminals' ? theme.colors.primary : theme.colors.text,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  fontFamily: theme.fonts.body,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  position: 'relative',
+                }}
+              >
+                <Terminal size={14} />
+                Agent Activity
+                {terminalActivities.filter(a => a.isWorking).length > 0 && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '-4px',
+                      right: '-4px',
+                      minWidth: '18px',
+                      height: '18px',
+                      borderRadius: '9px',
+                      backgroundColor: theme.colors.success,
+                      color: '#fff',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0 4px',
+                    }}
+                  >
+                    {terminalActivities.filter(a => a.isWorking).length}
+                  </span>
+                )}
               </button>
             </div>
           </div>
@@ -1002,6 +1083,191 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
             </div>
           )}
         </section>
+        )}
+
+        {/* Terminal Activity Content */}
+        {activeTab === 'terminals' && (
+          <section style={{ marginBottom: '32px' }}>
+            <h3
+              style={{
+                fontSize: '14px',
+                fontWeight: 600,
+                color: theme.colors.textSecondary,
+                marginBottom: '16px',
+                fontFamily: theme.fonts.heading,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+              }}
+            >
+              ACTIVE AGENT SESSIONS ({terminalActivities.filter(a => a.isWorking).length})
+            </h3>
+
+            <div
+              style={{
+                backgroundColor: theme.colors.backgroundSecondary,
+                borderRadius: '12px',
+                border: `1px solid ${theme.colors.border}`,
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                overflow: 'hidden',
+              }}
+            >
+              {terminalActivities.filter(a => a.isWorking).length === 0 ? (
+                <div
+                  style={{
+                    padding: '40px 24px',
+                    textAlign: 'center',
+                    color: theme.colors.textSecondary,
+                  }}
+                >
+                  <Terminal
+                    size={40}
+                    style={{ marginBottom: '12px', opacity: 0.5 }}
+                  />
+                  <div style={{ fontSize: '14px' }}>
+                    No agents currently working
+                  </div>
+                  <div style={{ fontSize: '12px', marginTop: '4px', opacity: 0.7 }}>
+                    Active terminal sessions will appear here when agents are working
+                  </div>
+                </div>
+              ) : (
+                terminalActivities
+                  .filter(a => a.isWorking)
+                  .map((activity, index, arr) => (
+                    <div
+                      key={activity.sessionId}
+                      style={{
+                        padding: '16px 20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '16px',
+                        borderBottom:
+                          index < arr.length - 1
+                            ? `1px solid ${theme.colors.border}`
+                            : 'none',
+                        transition: 'background-color 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor =
+                          'rgba(0, 0, 0, 0.02)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
+                    >
+                      {/* Spinner */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '8px',
+                          backgroundColor: `${theme.colors.success}15`,
+                          flexShrink: 0,
+                        }}
+                      >
+                        <Loader2
+                          size={18}
+                          style={{
+                            color: theme.colors.success,
+                            animation: 'spin 1s linear infinite',
+                          }}
+                        />
+                      </div>
+
+                      {/* Session Info */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontFamily: theme.fonts.monospace,
+                              fontSize: '13px',
+                              color: theme.colors.text,
+                              fontWeight: 500,
+                            }}
+                          >
+                            {activity.sessionId.substring(0, 12)}...
+                          </span>
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              backgroundColor: `${theme.colors.info}15`,
+                              color: theme.colors.info,
+                            }}
+                          >
+                            Window {activity.windowId}
+                          </span>
+                        </div>
+                        {activity.workingMessage && (
+                          <div
+                            style={{
+                              fontSize: '13px',
+                              color: theme.colors.textSecondary,
+                              marginTop: '4px',
+                            }}
+                          >
+                            {activity.workingMessage}
+                          </div>
+                        )}
+                        {activity.workingSubtitle && (
+                          <div
+                            style={{
+                              fontSize: '12px',
+                              color: theme.colors.textSecondary,
+                              marginTop: '2px',
+                              opacity: 0.7,
+                            }}
+                          >
+                            {activity.workingSubtitle}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Duration */}
+                      <div
+                        style={{
+                          fontSize: '12px',
+                          color: theme.colors.textSecondary,
+                          fontFamily: theme.fonts.monospace,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {Math.floor((Date.now() - activity.timestamp) / 1000)}s
+                      </div>
+                    </div>
+                  ))
+              )}
+            </div>
+
+            {/* All Sessions Summary */}
+            {terminalActivities.length > 0 && (
+              <div
+                style={{
+                  marginTop: '16px',
+                  padding: '12px 16px',
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  borderRadius: '8px',
+                  border: `1px solid ${theme.colors.border}`,
+                  fontSize: '12px',
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                Total tracked sessions: {terminalActivities.length} •
+                Working: {terminalActivities.filter(a => a.isWorking).length} •
+                Idle: {terminalActivities.filter(a => !a.isWorking).length}
+              </div>
+            )}
+          </section>
         )}
 
         {/* Registered Repositories Section - Repository Tab Only */}
