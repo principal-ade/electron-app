@@ -28,6 +28,20 @@ export interface TerminalContextValue {
   terminalSessions: TerminalInfo[];
   terminalContext: string;
   repositoryPath: string;
+  /** Terminal activity states from all windows (broadcast from main process) */
+  terminalActivities: TerminalActivityState[];
+}
+
+/**
+ * Activity tracking actions
+ */
+export interface TerminalActivityActions {
+  /** Update activity state for a terminal session (sends to main, broadcasts to all windows) */
+  updateActivity: (input: UpdateActivityInput) => Promise<void>;
+  /** Get activity state for a specific session (from local state) */
+  getActivityForSession: (sessionId: string) => TerminalActivityState | undefined;
+  /** Check if a session is currently working */
+  isSessionWorking: (sessionId: string) => boolean;
 }
 
 /**
@@ -36,6 +50,7 @@ export interface TerminalContextValue {
 export interface TerminalProviderValue {
   context: TerminalContextValue;
   actions: TerminalPanelActions;
+  activityActions: TerminalActivityActions;
 }
 
 const TerminalContext = createContext<TerminalProviderValue | null>(null);
@@ -59,6 +74,9 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
 }) => {
   // Track active terminal sessions
   const [terminalSessions, setTerminalSessions] = useState<TerminalInfo[]>([]);
+
+  // Track terminal activity states (broadcast from main process across all windows)
+  const [terminalActivities, setTerminalActivities] = useState<TerminalActivityState[]>([]);
 
   // Track terminal session subscriptions for cleanup
   const terminalSubscriptionsRef = useRef<Map<string, () => void>>(new Map());
@@ -91,6 +109,41 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
       // Clean up all terminal subscriptions
       subscriptions.forEach((unsub) => unsub());
       subscriptions.clear();
+    };
+  }, []);
+
+  // Listen for terminal activity sync broadcasts from main process
+  useEffect(() => {
+    // Fetch initial activity state
+    terminalClient
+      .getActivityState()
+      .then((activities) => {
+        console.info(
+          '[TerminalProvider] Loaded initial activity state:',
+          activities.length,
+          'active sessions',
+        );
+        setTerminalActivities(activities);
+      })
+      .catch((error) => {
+        console.error(
+          '[TerminalProvider] Failed to load initial activity state:',
+          error,
+        );
+      });
+
+    // Subscribe to activity sync broadcasts
+    const unsubscribe = onActivitySync((activities) => {
+      console.info(
+        '[TerminalProvider] Activity sync received:',
+        activities.length,
+        'active sessions',
+      );
+      setTerminalActivities(activities);
+    });
+
+    return () => {
+      unsubscribe();
     };
   }, []);
 
@@ -344,14 +397,45 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
     [repositoryPath, terminalContext],
   );
 
+  // Activity tracking actions
+  const updateActivity = useCallback(async (input: UpdateActivityInput) => {
+    console.info('[TerminalProvider] Updating activity:', input);
+    await terminalClient.updateActivity(input);
+  }, []);
+
+  const getActivityForSession = useCallback(
+    (sessionId: string) => {
+      return terminalActivities.find((a) => a.sessionId === sessionId);
+    },
+    [terminalActivities],
+  );
+
+  const isSessionWorking = useCallback(
+    (sessionId: string) => {
+      const activity = terminalActivities.find((a) => a.sessionId === sessionId);
+      return activity?.isWorking ?? false;
+    },
+    [terminalActivities],
+  );
+
+  const activityActions: TerminalActivityActions = useMemo(
+    () => ({
+      updateActivity,
+      getActivityForSession,
+      isSessionWorking,
+    }),
+    [updateActivity, getActivityForSession, isSessionWorking],
+  );
+
   // Create context value
   const context: TerminalContextValue = useMemo(
     () => ({
       terminalSessions,
       terminalContext,
       repositoryPath,
+      terminalActivities,
     }),
-    [terminalSessions, terminalContext, repositoryPath],
+    [terminalSessions, terminalContext, repositoryPath, terminalActivities],
   );
 
   // Provider value
@@ -359,8 +443,9 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
     () => ({
       context,
       actions,
+      activityActions,
     }),
-    [context, actions],
+    [context, actions, activityActions],
   );
 
   return (
@@ -395,5 +480,22 @@ export const useTerminalSessions = (): TerminalInfo[] => {
   const { context } = useTerminalProvider();
   return context.terminalSessions;
 };
+
+/**
+ * Hook to access terminal activity tracking
+ */
+export const useTerminalActivity = (): {
+  activities: TerminalActivityState[];
+  actions: TerminalActivityActions;
+} => {
+  const { context, activityActions } = useTerminalProvider();
+  return {
+    activities: context.terminalActivities,
+    actions: activityActions,
+  };
+};
+
+// Re-export types for convenience
+export type { TerminalActivityState, UpdateActivityInput };
 
 export default TerminalContext;
