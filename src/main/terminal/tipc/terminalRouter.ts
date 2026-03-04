@@ -10,9 +10,13 @@ import { BrowserWindow } from 'electron';
 import { getSessionManagerInstance } from '../sessionManagerSingleton';
 import { ownershipManager } from '../TerminalOwnershipManager';
 import { isPtyAvailable } from '../utils/ptyLoader';
+import type { TerminalActivityState } from '../../../shared/tipc/terminalRouterTypes';
 
 // Get singleton session manager instance
 const sessionManager = getSessionManagerInstance();
+
+// Activity tracking store - tracks which terminals have agents working
+const activityStore = new Map<string, TerminalActivityState>();
 
 const t = tipc.create();
 
@@ -245,6 +249,52 @@ export const terminalRouter = {
       console.log(`[TIPC] requestTerminalDataPort result: success=${success}`);
       return { success, reason: success ? undefined : 'Failed to create port' };
     }),
+
+  // ============================================
+  // Terminal Activity Tracking
+  // ============================================
+
+  updateActivity: t.procedure
+    .input<{
+      sessionId: string;
+      isWorking: boolean;
+      workingMessage?: string;
+      workingSubtitle?: string;
+    }>()
+    .action(async ({ input, context }) => {
+      const window = BrowserWindow.fromWebContents(context.sender);
+      if (!window) {
+        return;
+      }
+
+      if (input.isWorking) {
+        // Store activity state
+        const state: TerminalActivityState = {
+          sessionId: input.sessionId,
+          isWorking: input.isWorking,
+          workingMessage: input.workingMessage,
+          workingSubtitle: input.workingSubtitle,
+          windowId: window.id,
+          timestamp: Date.now(),
+        };
+        activityStore.set(input.sessionId, state);
+      } else {
+        // Remove from store when no longer working
+        activityStore.delete(input.sessionId);
+      }
+
+      // Broadcast to all windows
+      const activities = Array.from(activityStore.values());
+      BrowserWindow.getAllWindows().forEach((win) => {
+        if (!win.isDestroyed()) {
+          win.webContents.send('terminal:activity-sync', activities);
+        }
+      });
+    }),
+
+  getActivityState: t.procedure.action(async () => {
+    return Array.from(activityStore.values());
+  }),
 };
 
 // Export the session manager for cleanup on app quit

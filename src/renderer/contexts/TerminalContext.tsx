@@ -5,6 +5,7 @@ import React, {
   useState,
   useEffect,
   useRef,
+  useCallback,
   type ReactNode,
 } from 'react';
 import { TerminalService } from '../main-process-api/TerminalService';
@@ -13,6 +14,12 @@ import type {
   TerminalPanelActions,
   TerminalSessionInfo,
 } from '@industry-theme/xterm-terminal-panel';
+import {
+  terminalClient,
+  onActivitySync,
+  type TerminalActivityState,
+  type UpdateActivityInput,
+} from '../tipc/terminalClient';
 
 /**
  * Terminal context value

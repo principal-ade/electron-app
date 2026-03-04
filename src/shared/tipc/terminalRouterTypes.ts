@@ -76,6 +76,23 @@ export interface RequestDataPortResult {
   error?: string;
 }
 
+// Activity tracking types
+export interface UpdateActivityInput {
+  sessionId: string;
+  isWorking: boolean;
+  workingMessage?: string;
+  workingSubtitle?: string;
+}
+
+export interface TerminalActivityState {
+  sessionId: string;
+  isWorking: boolean;
+  workingMessage?: string;
+  workingSubtitle?: string;
+  windowId: number;
+  timestamp: number;
+}
+
 /**
  * Terminal Router Type - TIPC RouterType-compatible type
  *
@@ -146,5 +163,17 @@ export type TerminalRouterType = Record<
       context: ActionContext;
       input: RequestDataPortInput;
     }) => Promise<{ success: boolean; reason?: string }>;
+  };
+  updateActivity: {
+    action: (args: {
+      context: ActionContext;
+      input: UpdateActivityInput;
+    }) => Promise<void>;
+  };
+  getActivityState: {
+    action: (args: {
+      context: ActionContext;
+      input?: void;
+    }) => Promise<TerminalActivityState[]>;
   };
 }

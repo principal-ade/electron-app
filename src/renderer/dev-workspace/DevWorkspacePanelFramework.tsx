@@ -38,7 +38,6 @@ import {
   StoryboardListPanel,
   TraceListPanel,
   MultiCanvasPanel,
-  createMultiCanvasLayout,
   type CanvasEditorPanelProps,
 } from '@industry-theme/principal-view-panels';
 import type { RegisteredTrace } from '@principal-ai/principal-view-core';
@@ -1406,15 +1405,12 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             isActive,
           });
 
-          // Build the layout from the canvases
-          const layout = createMultiCanvasLayout(
-            multiCanvasTab.canvases.map((c) => ({
-              id: c.id,
-              canvas: c.canvas as import('@principal-ai/principal-view-core').ExtendedCanvas,
-              label: c.label || c.canvas.name,
-            })),
-            { direction: 'vertical', gap: 150 }
-          );
+          // Map canvases to canvasInfos format (id, path, label)
+          const canvasInfos = multiCanvasTab.canvases.map((c) => ({
+            id: c.id,
+            path: c.canvas.path,
+            label: c.label || c.canvas.name,
+          }));
 
           return (
             <div
@@ -1429,7 +1425,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               }}
             >
               <MultiCanvasPanel
-                layout={layout}
+                context={contextRef.current}
+                actions={actionsRef.current}
+                events={eventsRef.current}
+                canvasInfos={canvasInfos}
                 showGroups={true}
                 showControls={true}
                 showBackground={true}

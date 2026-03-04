@@ -17,6 +17,8 @@ import type {
   TerminalOwnershipResult,
   RefreshResult,
   TerminalRouterType,
+  UpdateActivityInput,
+  TerminalActivityState,
 } from '../../shared/tipc/terminalRouterTypes';
 
 // Extend Window interface for TypeScript
@@ -81,6 +83,8 @@ export interface TerminalClient {
     success: boolean;
     reason?: string;
   }>;
+  updateActivity: (input: UpdateActivityInput) => Promise<void>;
+  getActivityState: () => Promise<TerminalActivityState[]>;
 }
 
 // Lazy-initialized TIPC client for terminal operations
@@ -159,3 +163,21 @@ export const onPortReady = (
 ): (() => void) => {
   return window.electron.onPortReady(callback);
 };
+
+/**
+ * Subscribe to terminal activity sync broadcasts.
+ * This is called when any terminal's working state changes across any window.
+ */
+export const onActivitySync = (
+  callback: (activities: TerminalActivityState[]) => void,
+): (() => void) => {
+  return window.electron.ipcRenderer.on(
+    'terminal:activity-sync',
+    (_event: unknown, activities: TerminalActivityState[]) => {
+      callback(activities);
+    },
+  );
+};
+
+// Re-export types for convenience
+export type { UpdateActivityInput, TerminalActivityState };
