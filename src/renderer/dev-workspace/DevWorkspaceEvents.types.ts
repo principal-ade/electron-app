@@ -113,3 +113,27 @@ export interface CanvasOpenPayload {
 export interface DependencyGraphPayload {
   packages: PackageLayer[];
 }
+
+/**
+ * Canvas info for multi-canvas view
+ */
+export interface MultiCanvasInfo {
+  id: string;
+  canvas: {
+    id: string;
+    name: string;
+    path: string;
+  };
+  label?: string;
+  fileInfo?: FileInfo | null;
+}
+
+/**
+ * Payload when opening multi-canvas view
+ * Emitted by StoryboardListPanel "View All" button
+ */
+export interface MultiCanvasOpenPayload {
+  action: 'openMultiCanvas';
+  canvases: MultiCanvasInfo[];
+  canvasType: 'otel' | 'regular';
+}

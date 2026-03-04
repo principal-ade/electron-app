@@ -1,0 +1,586 @@
+{
+  "pv": {
+    "name": "Terminal Activity Tracking",
+    "version": "1.0.0",
+    "description": "Flow of terminal/agent working state from terminal panel through TIPC to main process store and cross-window broadcast",
+    "markdown": ".principal-views/terminal-activity-tracking/terminal-activity-tracking.md",
+    "nodeTypes": {
+      "terminal-panel": {
+        "label": "Terminal Panel",
+        "color": "#10B981"
+      },
+      "panel-host": {
+        "label": "Panel Host",
+        "color": "#3B82F6"
+      },
+      "tipc-client": {
+        "label": "TIPC Client",
+        "color": "#8B5CF6"
+      },
+      "tipc-router": {
+        "label": "TIPC Router",
+        "color": "#6366F1"
+      },
+      "activity-store": {
+        "label": "Activity Store",
+        "color": "#F59E0B"
+      },
+      "broadcast": {
+        "label": "Broadcast",
+        "color": "#EC4899"
+      },
+      "window": {
+        "label": "Window",
+        "color": "#14B8A6"
+      }
+    },
+    "edgeTypes": {
+      "event-emit": {
+        "label": "Event Emit",
+        "style": "solid",
+        "color": "#10B981"
+      },
+      "tipc-invoke": {
+        "label": "TIPC Invoke",
+        "style": "solid",
+        "color": "#6366F1"
+      },
+      "state-update": {
+        "label": "State Update",
+        "style": "solid",
+        "color": "#F59E0B"
+      },
+      "ipc-broadcast": {
+        "label": "IPC Broadcast",
+        "style": "dashed",
+        "color": "#EC4899"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "x": 300,
+      "y": -80,
+      "width": 500,
+      "height": 50,
+      "color": "#64748B",
+      "text": "# Terminal Activity Tracking\n**Agent working state propagation across windows**"
+    },
+    {
+      "id": "themed-terminal",
+      "type": "text",
+      "x": 50,
+      "y": 0,
+      "width": 200,
+      "height": 100,
+      "text": "ThemedTerminal\n\nisWorking prop changes\ntriggers state update",
+      "pv": {
+        "nodeType": "terminal-panel",
+        "shape": "rectangle",
+        "status": "draft",
+        "sources": ["external:industry-themed-xterm-terminal-panel/src/components/ThemedTerminal.tsx"],
+        "otel": {
+          "kind": "event",
+          "category": "ui",
+          "isNew": true
+        },
+        "event": {
+          "name": "terminal.activity.state_changed",
+          "description": "Terminal working state changed (blinds shown/hidden)",
+          "attributes": {
+            "session.id": {
+              "type": "string",
+              "description": "Terminal session ID"
+            },
+            "is_working": {
+              "type": "boolean",
+              "description": "Whether agent is currently working"
+            },
+            "working_message": {
+              "type": "string",
+              "description": "Message displayed on working overlay",
+              "display": false
+            },
+            "working_subtitle": {
+              "type": "string",
+              "description": "Subtitle displayed on working overlay",
+              "display": false
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "event-emitter",
+      "type": "text",
+      "x": 300,
+      "y": 0,
+      "width": 200,
+      "height": 100,
+      "text": "events.emit()\n\n'terminal:activity-change'\npayload with state",
+      "pv": {
+        "nodeType": "terminal-panel",
+        "shape": "rectangle",
+        "status": "draft",
+        "sources": ["external:industry-themed-xterm-terminal-panel/src/panels/TabbedTerminalPanel.tsx"],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "isNew": true
+        },
+        "event": {
+          "name": "terminal.activity.event_emitted",
+          "description": "Activity change event emitted from terminal panel to host",
+          "attributes": {
+            "event.type": {
+              "type": "string",
+              "description": "Event type: terminal:activity-change"
+            },
+            "event.source": {
+              "type": "string",
+              "description": "Source component: TabbedTerminalPanel"
+            },
+            "session.id": {
+              "type": "string",
+              "description": "Terminal session ID"
+            },
+            "is_working": {
+              "type": "boolean",
+              "description": "New working state"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "panel-host",
+      "type": "text",
+      "x": 550,
+      "y": 0,
+      "width": 200,
+      "height": 100,
+      "text": "Panel Host\n\nReceives event via\nevents.on() listener",
+      "pv": {
+        "nodeType": "panel-host",
+        "shape": "rectangle",
+        "status": "draft",
+        "sources": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "isNew": true
+        },
+        "event": {
+          "name": "terminal.activity.host_received",
+          "description": "Panel host received activity change event from terminal panel",
+          "attributes": {
+            "event.type": {
+              "type": "string",
+              "description": "Received event type",
+              "display": false
+            },
+            "session.id": {
+              "type": "string",
+              "description": "Terminal session ID"
+            },
+            "is_working": {
+              "type": "boolean",
+              "description": "Working state from event"
+            },
+            "handler.name": {
+              "type": "string",
+              "description": "Handler function name"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "tipc-client",
+      "type": "text",
+      "x": 550,
+      "y": 150,
+      "width": 200,
+      "height": 100,
+      "text": "terminalClient\n.updateActivity()\n\nTIPC invoke to main",
+      "pv": {
+        "nodeType": "tipc-client",
+        "shape": "rectangle",
+        "status": "draft",
+        "sources": ["src/renderer/tipc/terminalClient.ts"],
+        "otel": {
+          "kind": "event",
+          "category": "ipc",
+          "isNew": true
+        },
+        "event": {
+          "name": "terminal.activity.tipc_invoked",
+          "description": "TIPC client invoked updateActivity procedure",
+          "attributes": {
+            "procedure.name": {
+              "type": "string",
+              "description": "TIPC procedure: updateActivity"
+            },
+            "session.id": {
+              "type": "string",
+              "description": "Terminal session ID",
+              "display": false
+            },
+            "is_working": {
+              "type": "boolean",
+              "description": "Working state being sent"
+            },
+            "working_message": {
+              "type": "string",
+              "description": "Working message if provided",
+              "display": false
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "tipc-router",
+      "type": "text",
+      "x": 550,
+      "y": 300,
+      "width": 200,
+      "height": 120,
+      "text": "terminalRouter\n.updateActivity\n\nt.procedure\n.input<UpdateActivityInput>()\n.action()",
+      "pv": {
+        "nodeType": "tipc-router",
+        "shape": "rectangle",
+        "status": "draft",
+        "sources": ["src/main/terminal/tipc/terminalRouter.ts"],
+        "otel": {
+          "kind": "event",
+          "category": "ipc",
+          "isNew": true
+        },
+        "event": {
+          "name": "terminal.activity.router_handled",
+          "description": "TIPC router handled updateActivity procedure in main process",
+          "attributes": {
+            "procedure.name": {
+              "type": "string",
+              "description": "TIPC procedure: updateActivity",
+              "display": false
+            },
+            "window.id": {
+              "type": "number",
+              "description": "Source window ID from context.sender"
+            },
+            "session.id": {
+              "type": "string",
+              "description": "Terminal session ID"
+            },
+            "is_working": {
+              "type": "boolean",
+              "description": "Working state from input",
+              "display": false
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "activity-store",
+      "type": "text",
+      "x": 300,
+      "y": 300,
+      "width": 200,
+      "height": 120,
+      "text": "TerminalActivityStore\n\nMap<sessionId, {\n  isWorking,\n  message,\n  windowId,\n  timestamp\n}>",
+      "pv": {
+        "nodeType": "activity-store",
+        "shape": "rectangle",
+        "status": "draft",
+        "sources": ["src/main/terminal/tipc/terminalRouter.ts"],
+        "otel": {
+          "kind": "event",
+          "category": "storage",
+          "isNew": true
+        },
+        "event": {
+          "name": "terminal.activity.store_updated",
+          "description": "Activity store updated with new state",
+          "attributes": {
+            "session.id": {
+              "type": "string",
+              "description": "Terminal session ID"
+            },
+            "operation": {
+              "type": "string",
+              "description": "Operation: set or delete"
+            },
+            "store.size": {
+              "type": "number",
+              "description": "Current number of active sessions"
+            },
+            "is_working": {
+              "type": "boolean",
+              "description": "Working state stored",
+              "display": false
+            },
+            "window.id": {
+              "type": "number",
+              "description": "Window ID associated with session",
+              "display": false
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "broadcast",
+      "type": "text",
+      "x": 300,
+      "y": 470,
+      "width": 200,
+      "height": 100,
+      "text": "Broadcast\n\nBrowserWindow\n.getAllWindows()\n.forEach(send)",
+      "pv": {
+        "nodeType": "broadcast",
+        "shape": "rectangle",
+        "status": "draft",
+        "sources": ["src/main/terminal/tipc/terminalRouter.ts"],
+        "otel": {
+          "kind": "event",
+          "category": "ipc",
+          "isNew": true
+        },
+        "event": {
+          "name": "terminal.activity.broadcast_sent",
+          "description": "Activity state broadcast to all windows",
+          "attributes": {
+            "channel": {
+              "type": "string",
+              "description": "IPC channel: terminal:activity-sync"
+            },
+            "windows.count": {
+              "type": "number",
+              "description": "Number of windows receiving broadcast"
+            },
+            "activities.count": {
+              "type": "number",
+              "description": "Number of active sessions in payload"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "window-a",
+      "type": "text",
+      "x": 50,
+      "y": 620,
+      "width": 150,
+      "height": 100,
+      "text": "Window A\n\nReceives sync\nUpdates UI indicators",
+      "pv": {
+        "nodeType": "window",
+        "shape": "rectangle",
+        "status": "draft",
+        "sources": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"],
+        "otel": {
+          "kind": "event",
+          "category": "ui",
+          "isNew": true
+        },
+        "event": {
+          "name": "terminal.activity.sync_received",
+          "description": "Window received activity sync broadcast",
+          "attributes": {
+            "window.id": {
+              "type": "number",
+              "description": "Receiving window ID"
+            },
+            "activities.count": {
+              "type": "number",
+              "description": "Number of active sessions received"
+            },
+            "ui.updated": {
+              "type": "boolean",
+              "description": "Whether UI was updated"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "window-b",
+      "type": "text",
+      "x": 225,
+      "y": 620,
+      "width": 150,
+      "height": 100,
+      "text": "Window B\n\nReceives sync\nUpdates UI indicators",
+      "pv": {
+        "nodeType": "window",
+        "shape": "rectangle",
+        "status": "draft",
+        "sources": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"],
+        "otel": {
+          "kind": "event",
+          "category": "ui",
+          "isNew": true
+        },
+        "eventRef": "terminal.activity.sync_received"
+      }
+    },
+    {
+      "id": "window-c",
+      "type": "text",
+      "x": 400,
+      "y": 620,
+      "width": 150,
+      "height": 100,
+      "text": "Window C\n\nReceives sync\nUpdates UI indicators",
+      "pv": {
+        "nodeType": "window",
+        "shape": "rectangle",
+        "status": "draft",
+        "sources": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"],
+        "otel": {
+          "kind": "event",
+          "category": "ui",
+          "isNew": true
+        },
+        "eventRef": "terminal.activity.sync_received"
+      }
+    },
+    {
+      "id": "state-note",
+      "type": "text",
+      "x": 800,
+      "y": 0,
+      "width": 250,
+      "height": 180,
+      "text": "STATE PAYLOAD\n\nTerminalActivityState[] {\n  sessionId: string\n  isWorking: boolean\n  workingMessage?: string\n  workingSubtitle?: string\n  windowId: number\n  timestamp: number\n}",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "scenarios-note",
+      "type": "text",
+      "x": 800,
+      "y": 210,
+      "width": 250,
+      "height": 220,
+      "text": "SCENARIOS\n\n1. Agent Starts Working\n   blinds down -> store set\n\n2. Agent Stops Working\n   blinds up -> store delete\n\n3. Window Requests State\n   getActivityState() on load\n\n4. Session Destroyed\n   cleanup from store",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "use-cases-note",
+      "type": "text",
+      "x": 800,
+      "y": 460,
+      "width": 250,
+      "height": 160,
+      "text": "USE CASES\n\n- Badge in window title\n- Activity overview panel\n- Prevent close warning\n- Taskbar progress\n- Multi-window awareness",
+      "color": "#10B981"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "fromNode": "themed-terminal",
+      "toNode": "event-emitter",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "isWorking changes",
+      "pv": {
+        "edgeType": "event-emit"
+      }
+    },
+    {
+      "id": "e2",
+      "fromNode": "event-emitter",
+      "toNode": "panel-host",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "events.emit()",
+      "pv": {
+        "edgeType": "event-emit"
+      }
+    },
+    {
+      "id": "e3",
+      "fromNode": "panel-host",
+      "toNode": "tipc-client",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "call client",
+      "pv": {
+        "edgeType": "tipc-invoke"
+      }
+    },
+    {
+      "id": "e4",
+      "fromNode": "tipc-client",
+      "toNode": "tipc-router",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "TIPC invoke",
+      "pv": {
+        "edgeType": "tipc-invoke"
+      }
+    },
+    {
+      "id": "e5",
+      "fromNode": "tipc-router",
+      "toNode": "activity-store",
+      "fromSide": "left",
+      "toSide": "right",
+      "label": "store.update()",
+      "pv": {
+        "edgeType": "state-update"
+      }
+    },
+    {
+      "id": "e6",
+      "fromNode": "activity-store",
+      "toNode": "broadcast",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "trigger broadcast",
+      "pv": {
+        "edgeType": "state-update"
+      }
+    },
+    {
+      "id": "e7",
+      "fromNode": "broadcast",
+      "toNode": "window-a",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "webContents.send()",
+      "pv": {
+        "edgeType": "ipc-broadcast"
+      }
+    },
+    {
+      "id": "e8",
+      "fromNode": "broadcast",
+      "toNode": "window-b",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "webContents.send()",
+      "pv": {
+        "edgeType": "ipc-broadcast"
+      }
+    },
+    {
+      "id": "e9",
+      "fromNode": "broadcast",
+      "toNode": "window-c",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "webContents.send()",
+      "pv": {
+        "edgeType": "ipc-broadcast"
+      }
+    }
+  ]
+}

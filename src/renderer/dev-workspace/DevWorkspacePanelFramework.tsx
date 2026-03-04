@@ -37,6 +37,8 @@ import {
   CanvasEditorPanel,
   StoryboardListPanel,
   TraceListPanel,
+  MultiCanvasPanel,
+  createMultiCanvasLayout,
   type CanvasEditorPanelProps,
 } from '@industry-theme/principal-view-panels';
 import type { RegisteredTrace } from '@principal-ai/principal-view-core';
@@ -79,6 +81,8 @@ import type {
   MDXEditorPayload,
   CanvasOpenPayload,
   DependencyGraphPayload,
+  MultiCanvasOpenPayload,
+  MultiCanvasInfo,
 } from './DevWorkspaceEvents.types';
 
 /**
@@ -176,9 +180,18 @@ interface TraceDetailsTab extends BaseTab {
 }
 
 /**
+ * Tab type for multi-canvas view panel
+ */
+interface MultiCanvasTab extends BaseTab {
+  contentType: 'multi-canvas';
+  canvases: MultiCanvasInfo[];
+  canvasType: 'otel' | 'regular';
+}
+
+/**
  * Union type of all tab types used in DevWorkspace
  */
-type DevWorkspaceTab = TerminalTab | SkillTab | MarkdownTab | CanvasEditorTab | CanvasTab | FileEditorTab | MDXEditorTab | GitDiffTab | DependencyGraphTab | TraceDetailsTab;
+type DevWorkspaceTab = TerminalTab | SkillTab | MarkdownTab | CanvasEditorTab | CanvasTab | FileEditorTab | MDXEditorTab | GitDiffTab | DependencyGraphTab | TraceDetailsTab | MultiCanvasTab;
 
 export interface DevWorkspacePanelFrameworkProps {
   repositoryPath: string;
@@ -991,6 +1004,60 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           return [...prevTabs, newTab];
         });
       }),
+      // Multi-canvas open - create tab (from storyboard-list-panel "View All" button)
+      events.on('custom', (event) => {
+        const payload = event.payload as MultiCanvasOpenPayload;
+
+        // Only handle openMultiCanvas action from storyboard-list-panel
+        if (payload.action !== 'openMultiCanvas' || event.source !== 'storyboard-list-panel') {
+          return;
+        }
+
+        console.info('[DevWorkspacePanelFramework] Received multi-canvas open event:', event);
+        const { canvases, canvasType } = payload;
+
+        if (!canvases || canvases.length === 0) {
+          console.warn('[DevWorkspacePanelFramework] No canvases in multi-canvas event:', event.payload);
+          return;
+        }
+
+        setTabs((prevTabs) => {
+          // Check if multi-canvas tab already exists for this canvas type
+          const existingTabIndex = prevTabs.findIndex(
+            (t) => t.contentType === 'multi-canvas' && (t as MultiCanvasTab).canvasType === canvasType
+          );
+
+          const tabId = `multi-canvas-${canvasType}`;
+          const tabLabel = canvasType === 'otel' ? 'All OTEL Canvases' : 'All Architecture Canvases';
+
+          if (existingTabIndex !== -1) {
+            // Update existing tab with new canvases
+            console.info('[DevWorkspacePanelFramework] Updating existing multi-canvas tab');
+            const updatedTabs = [...prevTabs];
+            updatedTabs[existingTabIndex] = {
+              ...updatedTabs[existingTabIndex],
+              canvases,
+              canvasType,
+            } as MultiCanvasTab;
+            setFocusTabId(tabId);
+            return updatedTabs;
+          }
+
+          // Create new multi-canvas tab
+          const newTab: MultiCanvasTab = {
+            id: tabId,
+            label: tabLabel,
+            contentType: 'multi-canvas',
+            canvases,
+            canvasType,
+            closable: true,
+          };
+
+          console.info('[DevWorkspacePanelFramework] Creating new multi-canvas tab:', newTab);
+          setFocusTabId(newTab.id);
+          return [...prevTabs, newTab];
+        });
+      }),
     ];
 
     return () => {
@@ -1324,6 +1391,49 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 selectedWorkflowId={canvasTab.selectedNarrativeId}
                 workflowPath={canvasTab.narrativePath}
                 workflowFileInfo={canvasTab.narrativeFileInfo}
+              />
+            </div>
+          );
+        }
+
+        case 'multi-canvas': {
+          // Type assertion for TypeScript
+          const multiCanvasTab = tab as MultiCanvasTab;
+
+          console.info('[DevWorkspacePanelFramework] Rendering multi-canvas tab:', {
+            canvasCount: multiCanvasTab.canvases.length,
+            canvasType: multiCanvasTab.canvasType,
+            isActive,
+          });
+
+          // Build the layout from the canvases
+          const layout = createMultiCanvasLayout(
+            multiCanvasTab.canvases.map((c) => ({
+              id: c.id,
+              canvas: c.canvas as import('@principal-ai/principal-view-core').ExtendedCanvas,
+              label: c.label || c.canvas.name,
+            })),
+            { direction: 'vertical', gap: 150 }
+          );
+
+          return (
+            <div
+              style={{
+                height: '100%',
+                width: '100%',
+                overflow: 'hidden',
+                position: 'relative',
+                display: 'flex',
+                flexDirection: 'column',
+                background: theme.colors.background,
+              }}
+            >
+              <MultiCanvasPanel
+                layout={layout}
+                showGroups={true}
+                showControls={true}
+                showBackground={true}
+                showMinimap={true}
               />
             </div>
           );

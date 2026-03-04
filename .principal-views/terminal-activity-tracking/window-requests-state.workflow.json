@@ -1,0 +1,24 @@
+{
+  "version": "1.0.0",
+  "name": "Window Requests Activity State",
+  "description": "Flow when a window loads and requests current activity state from main process",
+  "mode": "span-tree",
+  "canvas": ".principal-views/terminal-activity-tracking/terminal-activity-tracking.otel.canvas",
+  "spanPattern": "terminal.activity.state_request",
+  "scenarios": [
+    {
+      "id": "window-requests-state",
+      "description": "New window opens or refreshes and requests current terminal activity state",
+      "priority": 1,
+      "template": {
+        "introduction": "**Window Requesting Activity State**\n\nWindow {{window.id}} is requesting the current terminal activity state to initialize its UI indicators.",
+        "events": {
+          "terminal.activity.tipc_invoked": "[1] TIPC client invoked **{{procedure.name}}**\n    Requesting current activity state, Working: {{is_working}}",
+          "terminal.activity.router_handled": "[2] TIPC router handled **getActivityState** in main process\n    Window ID: {{window.id}}, Session: `{{session.id}}`",
+          "terminal.activity.sync_received": "[3] Window {{window.id}} received state\n    Activities: {{activities.count}}, UI updated: {{ui.updated}}"
+        },
+        "summary": "**State Request Summary:**\n\n**Window:** {{window.id}}\n**Active Sessions:** {{activities.count}}\n\n**UI Updates:**\n- Activity indicators initialized\n- Badge counts updated\n- Working terminals highlighted"
+      }
+    }
+  ]
+}
