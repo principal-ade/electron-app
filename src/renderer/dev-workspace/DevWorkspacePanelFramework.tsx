@@ -324,9 +324,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   const [focusTabId, setFocusTabId] = useState<string | null>(null);
   const handleFocusTabHandled = useCallback(() => setFocusTabId(null), []);
 
-  // Track markdown files currently being loaded to prevent duplicate tabs
-  const loadingMarkdownFilesRef = React.useRef<Set<string>>(new Set());
-
   // Track terminal panel container width using ResizeObserver
   const [terminalPanelWidth, setTerminalPanelWidth] = useState<number>(0);
   const terminalPanelRef = React.useRef<HTMLDivElement>(null);
@@ -450,6 +447,57 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         );
         return;
       }
+
+      try {
+        // Set the active file (reads content and updates slice)
+        await actions.setActiveFile?.(filePath);
+
+        // Switch the right panel to markdown-viewer
+        onLayoutChange({ ...layout, right: 'markdown-viewer' });
+
+        // Expand the right panel if it's collapsed
+        if (collapsed.right) {
+          onCollapsedChange({ ...collapsed, right: false });
+        }
+
+        console.info(
+          '[DevWorkspacePanelFramework] Switched right panel to markdown-viewer for:',
+          filePath,
+        );
+      } catch (error) {
+        console.error(
+          '[DevWorkspacePanelFramework] Failed to open in right panel:',
+          error,
+        );
+      }
+    });
+
+    return unsubscribe;
+  }, [events, actions, layout, onLayoutChange, collapsed, onCollapsedChange]);
+
+  // Listen for file:opened events (from docs panel clicks) - open in right panel
+  useEffect(() => {
+    const unsubscribe = events.on('file:opened', async (event) => {
+      // Ignore re-emitted events from tabs to prevent loop
+      if (event.source === 'tab') {
+        console.info('[DevWorkspacePanelFramework] Ignoring tab re-emission');
+        return;
+      }
+
+      const payload = event.payload as MDXEditorPayload;
+      const filePath = payload.filePath || payload.path;
+
+      if (!filePath) {
+        console.warn('[DevWorkspacePanelFramework] No file path in file:opened event:', payload);
+        return;
+      }
+
+      // Only handle markdown files - open them in right panel
+      if (!filePath.endsWith('.md')) {
+        return; // Ignore non-markdown files
+      }
+
+      console.info('[DevWorkspacePanelFramework] Received file:opened event for markdown:', filePath);
 
       try {
         // Set the active file (reads content and updates slice)
@@ -725,6 +773,19 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         // Check if file is markdown
         const isMarkdown = filePath.endsWith('.md') || filePath.endsWith('.mdx');
 
+        // If from storyboard-list-panel and markdown, redirect to file:opened handler
+        // which opens in the right panel markdown-viewer
+        if (event.source === 'storyboard-list-panel' && isMarkdown) {
+          console.info('[DevWorkspacePanelFramework] Redirecting storyboard overview to file:opened handler');
+          events.emit({
+            type: 'file:opened',
+            source: 'storyboard-list-panel',
+            timestamp: Date.now(),
+            payload: { filePath, path: filePath },
+          });
+          return;
+        }
+
         // Markdown files always open in MDX editor, regardless of git status
         // For other files: use git diff panel for modified files (staged or unstaged), file editor for new/untracked files
         let contentType: 'mdx-editor' | 'git-diff' | 'file-editor';
@@ -790,81 +851,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           setFocusTabId(newTab.id);
           return [...prevTabs, newTab];
         });
-      }),
-      // Markdown file open in tab (from docs panel clicks)
-      events.on('file:opened', async (event) => {
-        // Ignore re-emitted events from tabs to prevent loop
-        if (event.source === 'tab') {
-          console.info('[DevWorkspacePanelFramework] Ignoring tab re-emission');
-          return;
-        }
-
-        const payload = event.payload as MDXEditorPayload;
-        const filePath = payload.filePath || payload.path;
-
-        if (!filePath) {
-          console.warn('[DevWorkspacePanelFramework] No file path in file:opened event:', payload);
-          return;
-        }
-
-        // Only handle markdown files - open them in tabs
-        if (!filePath.endsWith('.md')) {
-          return; // Ignore non-markdown files
-        }
-
-        console.info('[DevWorkspacePanelFramework] Received file:opened event for markdown:', filePath);
-        const fileName = filePath.split('/').pop() || 'Markdown';
-
-        // Check if this file is already being loaded (prevents duplicate tabs on rapid clicks)
-        if (loadingMarkdownFilesRef.current.has(filePath)) {
-          console.info('[DevWorkspacePanelFramework] Markdown file already being loaded:', filePath);
-          return;
-        }
-
-        // Mark this file as being loaded
-        loadingMarkdownFilesRef.current.add(filePath);
-
-        try {
-          // Pre-load the file content
-          console.info('[DevWorkspacePanelFramework] Pre-loading markdown file:', filePath);
-          if (actions.setActiveFile) {
-            await actions.setActiveFile(filePath);
-          }
-
-          // Check for existing tab first
-          const tabId = `markdown-${filePath}`;
-
-          setTabs((prevTabs) => {
-            const existingTab = prevTabs.find(
-              (t) => t.contentType === 'markdown' && (t as MarkdownTab).filePath === filePath
-            );
-
-            if (existingTab) {
-              console.info('[DevWorkspacePanelFramework] Markdown tab already exists:', existingTab.id);
-              return prevTabs; // Tab exists, don't create new one
-            }
-
-            // Create new tab with file already loaded
-            const newTab: MarkdownTab = {
-              id: tabId,
-              label: fileName,
-              contentType: 'markdown',
-              filePath: filePath,
-              fileName: fileName,
-              closable: true,
-            };
-
-            console.info('[DevWorkspacePanelFramework] Creating new markdown tab:', newTab);
-            return [...prevTabs, newTab];
-          });
-
-          // Focus the tab (existing or new) - do this outside setTabs to avoid batching issues
-          console.info('[DevWorkspacePanelFramework] Focusing markdown tab:', tabId);
-          setFocusTabId(tabId);
-        } finally {
-          // Always remove from loading set when done
-          loadingMarkdownFilesRef.current.delete(filePath);
-        }
       }),
       // Open file in MDX editor - create modal
       events.on('file:openInMdxEditor', async (event) => {
