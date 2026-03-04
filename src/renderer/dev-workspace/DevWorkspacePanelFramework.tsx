@@ -38,7 +38,6 @@ import {
   StoryboardListPanel,
   TraceListPanel,
   type CanvasEditorPanelProps,
-  type WorkflowScenariosPanelProps,
 } from '@industry-theme/principal-view-panels';
 import type { RegisteredTrace } from '@principal-ai/principal-view-core';
 import type { WorkflowTemplate } from '@principal-ai/principal-view-core';
@@ -381,9 +380,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   const TraceViewerPanelComponent = principalViewPanels.find(
     (p) => p.metadata?.id === 'principal-ai.trace-viewer',
   )?.component; // Cannot convert - component not exported
-  const CanvasDetailPanelComponent = principalViewPanels.find(
-    (p) => p.metadata?.id === 'principal-ai.workflow-scenarios',
-  )?.component as React.ComponentType<WorkflowScenariosPanelProps> | undefined; // Cannot convert - component not exported
+  // Note: CanvasDetailPanelComponent (WorkflowScenariosPanel) is no longer used
+  // CanvasEditorPanel now handles workflow scenarios via workflowTemplate prop (v0.12.1+)
   const StoryboardListPanelComponent = StoryboardListPanel;
   const TraceListPanelComponent = TraceListPanel;
   const FileCityPanelComponent = CodeCityPanel;
@@ -894,52 +892,72 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
         setTabs((prevTabs) => {
           // Determine content type based on whether workflow data is present
-          // If workflow clicked → canvas-detail, if canvas clicked → canvas-editor
+          // Both canvas and workflow clicks now use CanvasEditorPanel (v0.12.1+)
+          // Workflow clicks pass workflowTemplate to show ScenariosList side panel
           const hasWorkflow = !!(workflowId && workflow);
-          const contentType = hasWorkflow ? 'canvas-detail' : 'canvas-editor';
 
-          // Check if tab already exists for this canvas
+          // Check if tab already exists for this canvas (either canvas-editor or canvas-detail)
           const existingTabIndex = prevTabs.findIndex(
             (t) => {
-              if (hasWorkflow) {
-                return t.contentType === 'canvas-detail' && (t as CanvasTab).canvasId === canvasId;
-              } else {
-                return t.contentType === 'canvas-editor' && (t as CanvasEditorTab).canvasId === canvasId;
+              // Look for any existing tab for this canvas
+              if (t.contentType === 'canvas-detail') {
+                return (t as CanvasTab).canvasId === canvasId;
+              } else if (t.contentType === 'canvas-editor') {
+                return (t as CanvasEditorTab).canvasId === canvasId;
               }
+              return false;
             }
           );
 
-          if (existingTabIndex !== -1 && hasWorkflow) {
-            // Existing canvas-detail tab found - update it with new workflow information
-            console.info('[DevWorkspacePanelFramework] Updating existing canvas tab with new workflow:', prevTabs[existingTabIndex].id);
+          if (existingTabIndex !== -1) {
+            // Existing tab found - update it with workflow information (or clear it)
+            console.info('[DevWorkspacePanelFramework] Updating existing canvas tab:', prevTabs[existingTabIndex].id, hasWorkflow ? 'with workflow' : 'without workflow');
             const updatedTabs = [...prevTabs];
-            const existingTab = updatedTabs[existingTabIndex] as CanvasTab;
+            const existingTab = updatedTabs[existingTabIndex];
 
-            updatedTabs[existingTabIndex] = {
-              ...existingTab,
-              selectedNarrativeId: workflowId || null,
-              narrativePath: workflowFileInfo?.path || null,
-              narrativeTemplate: workflow || null,
-              narrativeFileInfo: workflowFileInfo || null,
-              // Update trace focus fields (for highlighting matched spans)
-              selectedTraceId: traceId || null,
-              highlightedSpanId: spanId || null,
-              selectedScenarioId: scenarioId || null,
-            };
+            // Update tab with workflow info, or clear workflow props if just canvas clicked
+            if (hasWorkflow) {
+              updatedTabs[existingTabIndex] = {
+                ...existingTab,
+                id: existingTab.id, // Keep the same ID to avoid tab duplication
+                label: workflow?.name || workflowId || canvas.name || canvasId,
+                contentType: 'canvas-detail',
+                canvasId: canvasId,
+                canvasPath: canvas.path,
+                canvasName: canvas.name || canvasId,
+                canvasFileInfo: canvasFileInfo || null,
+                selectedNarrativeId: workflowId || null,
+                narrativePath: workflowFileInfo?.path || null,
+                narrativeTemplate: workflow || null,
+                narrativeFileInfo: workflowFileInfo || null,
+                // Update trace focus fields (for highlighting matched spans)
+                selectedTraceId: traceId || null,
+                highlightedSpanId: spanId || null,
+                selectedScenarioId: scenarioId || null,
+              } as CanvasTab;
+            } else {
+              // Clear workflow props - show just the canvas editor
+              updatedTabs[existingTabIndex] = {
+                id: existingTab.id, // Keep the same ID
+                label: canvas.name || canvasId,
+                contentType: 'canvas-editor',
+                canvasId: canvasId,
+                canvasPath: canvas.path,
+                canvasName: canvas.name || canvasId,
+                canvasFileInfo: canvasFileInfo || null,
+                closable: existingTab.closable,
+              } as CanvasEditorTab;
+            }
 
-            setFocusTabId(prevTabs[existingTabIndex].id);
+            setFocusTabId(existingTab.id);
             return updatedTabs; // Tab updated, will be focused
-          } else if (existingTabIndex !== -1) {
-            // Existing tab found (canvas-editor) - focus it
-            console.info('[DevWorkspacePanelFramework] Canvas tab already exists, focusing:', prevTabs[existingTabIndex].id);
-            setFocusTabId(prevTabs[existingTabIndex].id);
-            return prevTabs; // Tab exists, will be focused
           }
 
-          // Create new canvas tab (editor or detail based on workflow presence)
+          // Create new canvas tab (use canvas-detail type if workflow present for proper rendering)
+          const contentType = hasWorkflow ? 'canvas-detail' : 'canvas-editor';
           const newTab: CanvasEditorTab | CanvasTab = hasWorkflow
             ? {
-                id: `canvas-detail-${canvasId}`,
+                id: `canvas-${canvasId}`,
                 label: workflow?.name || workflowId || canvas.name || canvasId,
                 contentType: 'canvas-detail',
                 canvasId: canvasId,
@@ -957,7 +975,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 closable: true,
               } as CanvasTab
             : {
-                id: `canvas-editor-${canvasId}`,
+                id: `canvas-${canvasId}`,
                 label: canvas.name || canvasId,
                 contentType: 'canvas-editor',
                 canvasId: canvasId,
@@ -1273,10 +1291,12 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           // Type assertion for TypeScript
           const canvasTab = tab as CanvasTab;
 
-          if (!CanvasDetailPanelComponent) {
+          // Use CanvasEditorPanel with workflow integration (v0.12.1+)
+          // This replaces WorkflowScenariosPanel with unified canvas+scenarios experience
+          if (!CanvasEditorPanelComponent) {
             return (
               <div style={{ padding: '2rem', color: theme.colors.textSecondary }}>
-                Canvas Detail panel not available
+                Canvas Editor panel not available
               </div>
             );
           }
@@ -1292,22 +1312,18 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 flexDirection: 'column',
               }}
             >
-              <CanvasDetailPanelComponent
+              <CanvasEditorPanelComponent
                 context={contextRef.current}
                 actions={actionsRef.current}
                 events={eventsRef.current}
-                selectedCanvasId={canvasTab.canvasId}
                 canvasPath={canvasTab.canvasPath}
                 canvasName={canvasTab.canvasName}
                 canvasFileInfo={canvasTab.canvasFileInfo}
+                // Workflow props - enables ScenariosList side panel
+                workflowTemplate={canvasTab.narrativeTemplate}
                 selectedWorkflowId={canvasTab.selectedNarrativeId}
                 workflowPath={canvasTab.narrativePath}
-                workflowTemplate={canvasTab.narrativeTemplate}
                 workflowFileInfo={canvasTab.narrativeFileInfo}
-                // Trace focus props - for highlighting matched spans when opened from TraceListPanel
-                selectedTraceId={canvasTab.selectedTraceId}
-                highlightedSpanId={canvasTab.highlightedSpanId}
-                selectedScenarioIdProp={canvasTab.selectedScenarioId}
               />
             </div>
           );
@@ -1498,7 +1514,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         }
       }
     },
-    [theme, SkillDetailPanelComponent, MarkdownPanelComponent, CanvasEditorPanelComponent, CanvasDetailPanelComponent, FileEditorPanelComponent, MDXEditorPanelComponent, GitDiffPanelComponent],
+    [theme, SkillDetailPanelComponent, MarkdownPanelComponent, CanvasEditorPanelComponent, FileEditorPanelComponent, MDXEditorPanelComponent, GitDiffPanelComponent],
   );
 
   // Define all panels using panel framework components
