@@ -80,7 +80,8 @@
         "nodeType": "terminal-panel",
         "shape": "rectangle",
         "status": "draft",
-        "sources": ["external:industry-themed-xterm-terminal-panel/src/components/ThemedTerminal.tsx"],
+        "origin": "external",
+        "references": ["@industry-theme/xterm-terminal-panel/src/components/ThemedTerminal.tsx"],
         "otel": {
           "kind": "event",
           "category": "ui",
@@ -124,7 +125,8 @@
         "nodeType": "terminal-panel",
         "shape": "rectangle",
         "status": "draft",
-        "sources": ["external:industry-themed-xterm-terminal-panel/src/panels/TabbedTerminalPanel.tsx"],
+        "origin": "external",
+        "references": ["@industry-theme/xterm-terminal-panel/src/panels/TabbedTerminalPanel.tsx"],
         "otel": {
           "kind": "event",
           "category": "lifecycle",
