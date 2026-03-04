@@ -17,7 +17,7 @@ import {
 // CSS is bundled inline in principal-view-panels, no separate import needed
 // Note: file-city-panel CSS is bundled inline, no separate import needed
 // Note: file-editing-panels CSS is now inlined in JS, no separate import needed
-import type { PanelEventEmitter, DataSlice } from '@principal-ade/panel-framework-core';
+import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import {
   RepositoryPanelProvider,
   useRepositoryPanelProvider,
@@ -31,7 +31,6 @@ import {
   useAgentHighlightProvider,
 } from '../contexts/AgentHighlightContext';
 import { TabbedTerminalPanel, type BaseTab, type TerminalTab } from '@industry-theme/xterm-terminal-panel';
-import { TabbedGhosttyTerminal } from '@industry-theme/ghostty-terminal-panel';
 import {
   panels as principalViewPanels,
   TraceDetailsPanel,
@@ -69,7 +68,6 @@ import { panels as agentPanels, type Skill, type SkillDetailPanelProps } from '@
 import { GitHubIssuesPanel, GitHubIssueDetailPanel } from '@industry-theme/github-panels';
 import { panels as typeInformationPanels } from '../panels/TypeInformationPanel';
 import type { Repository } from '../../shared/types/repository.types';
-import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { PanelIconSidebar, RIGHT_PANEL_ICONS } from '../components/Sidebar/PanelIconSidebar';
 import type {
   DocumentSelectedPayload,
@@ -244,30 +242,18 @@ const FileCityWithHighlights: React.FC<{
 
   // Create merged context for File City panel (includes agent highlight layers)
   const fileCityPanelContext = useMemo(() => {
-    // Create a new slices Map that includes agent highlight layers
-    const mergedSlices = new Map([
-      ...Array.from(context.slices?.entries() || []),
-      [
-        'agentHighlightLayers',
-        {
-          scope: 'repository' as const,
-          name: 'agentHighlightLayers',
-          data: agentHighlightCtx.highlightLayers,
-          loading: false,
-          error: null,
-          refresh: async () => {
-            // Agent highlight layers are updated reactively from events
-          },
-        },
-      ],
-    ]);
-
     return {
       ...context,
-      slices: mergedSlices,
-      // Override getSlice to use our merged slices Map
-      getSlice: <T = unknown>(name: string) => {
-        return mergedSlices.get(name) as DataSlice<T> | undefined;
+      // Add agent highlight layers as a typed slice property
+      agentHighlightLayers: {
+        scope: 'repository' as const,
+        name: 'agentHighlightLayers',
+        data: agentHighlightCtx.highlightLayers,
+        loading: false,
+        error: null,
+        refresh: async () => {
+          // Agent highlight layers are updated reactively from events
+        },
       },
       // Explicit properties for typed panel contexts (CodeCityPanelContext)
       fileTree: context.fileTree,
@@ -309,35 +295,12 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   const { context: terminalCtx, actions: terminalActions } =
     useTerminalProvider();
 
-  // Load terminal implementation preference (default to xterm)
-  const [terminalImplementation, setTerminalImplementation] = useState<
-    'xterm' | 'ghostty'
-  >('xterm');
-
   // Unified modal state for detail panels
   type DetailModal =
     | { panelId: 'githubIssueDetail'; data: unknown }
     | { panelId: 'mdxEditor'; data: { path: string } };
 
   const [detailModal, setDetailModal] = useState<DetailModal | null>(null);
-
-  useEffect(() => {
-    const loadPreference = async () => {
-      const prefs = await UserPreferencesService.getPreferences();
-      // Default to 'xterm' if not set
-      setTerminalImplementation(prefs.terminalImplementation ?? 'xterm');
-    };
-    loadPreference();
-
-    // Subscribe to preference updates so terminal switches when toggle is clicked
-    const unsubscribe = UserPreferencesService.onPreferencesUpdated((prefs) => {
-      if (prefs.terminalImplementation) {
-        setTerminalImplementation(prefs.terminalImplementation);
-      }
-    });
-
-    return unsubscribe;
-  }, []);
 
   // Get required props for tabbed terminal panels from TerminalContext
   const terminalContext = terminalCtx.terminalContext || 'terminal:default';
@@ -1558,45 +1521,35 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       {
         id: 'terminal',
         label: 'Terminal',
-        // Note: ghostty panel has different TerminalActions type - see TODO in ghostty-terminal-panel repo
-        content:
-          terminalImplementation === 'ghostty' ? (
-            <TabbedGhosttyTerminal
+        content: (
+          <div
+            ref={terminalPanelRef}
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <TabbedTerminalPanel<DevWorkspaceTab>
               context={terminalPanelContext}
-              actions={terminalActions as never}
+              actions={terminalActions}
               events={events}
               terminalContext={terminalContext}
               directory={terminalDirectory}
+              initialTabs={tabs}
+              onTabsChange={handleTabsChange}
+              renderTabContent={renderTabContent}
+              renderTabIcon={renderTabIcon}
+              renderTabLabel={renderTabLabel}
+              defaultScrollLocked={false}
+              width={terminalPanelWidth}
+              requestFocusTabId={focusTabId}
+              onFocusTabHandled={handleFocusTabHandled}
             />
-          ) : (
-            <div
-              ref={terminalPanelRef}
-              style={{
-                height: '100%',
-                width: '100%',
-                overflow: 'hidden',
-                display: 'flex',
-                flexDirection: 'column',
-              }}
-            >
-              <TabbedTerminalPanel<DevWorkspaceTab>
-                context={terminalPanelContext}
-                actions={terminalActions}
-                events={events}
-                terminalContext={terminalContext}
-                directory={terminalDirectory}
-                initialTabs={tabs}
-                onTabsChange={handleTabsChange}
-                renderTabContent={renderTabContent}
-                renderTabIcon={renderTabIcon}
-                renderTabLabel={renderTabLabel}
-                defaultScrollLocked={false}
-                width={terminalPanelWidth}
-                requestFocusTabId={focusTabId}
-                onFocusTabHandled={handleFocusTabHandled}
-              />
-            </div>
-          ),
+          </div>
+        ),
       },
       {
         id: 'traceViewer',
@@ -2219,7 +2172,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       context,
       actions,
       events,
-      terminalImplementation,
       terminalContext,
       terminalDirectory,
       terminalPanelContext,
@@ -2316,22 +2268,12 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               {/* Render appropriate detail panel based on panelId */}
               {detailModal.panelId === 'githubIssueDetail' && GitHubIssueDetailPanelComponent && (
                 <GitHubIssueDetailPanelComponent
-                  context={{
-                    ...context,
-                    slices: new Map([
-                      ...Array.from(context.slices?.entries() || []),
-                      ['selectedIssue', {
-                        scope: 'repository' as const,
-                        name: 'selectedIssue',
-                        data: detailModal.data,
-                        loading: false,
-                        error: null,
-                        refresh: async () => {},
-                      }],
-                    ]),
-                  }}
+                  context={context}
                   actions={actions}
                   events={events}
+                  // Note: Panel is event-driven. The issue:selected event that opened this modal
+                  // needs to be re-emitted for the panel to display the issue.
+                  // TODO: Add useEffect to re-emit issue:selected with source='modal' after mount
                 />
               )}
               {detailModal.panelId === 'mdxEditor' && MDXEditorPanelComponent && (

@@ -11,14 +11,19 @@ import type {
   PanelContextValue,
   PanelActions,
   PanelEventEmitter,
+  DataSlice,
 } from '@principal-ade/panel-framework-core';
 import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
 import type { RepositoryPanelActions } from '../contexts/RepositoryPanelContext';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { FolderGit2, GitBranch, RefreshCw, AlertCircle, Trash2, FolderOpen } from 'lucide-react';
 
+interface ProjectInfoPanelContext extends PanelContextValue {
+  gitStatusWithFiles?: DataSlice<GitStatusWithFiles | null>;
+}
+
 interface ProjectInfoPanelProps {
-  context: PanelContextValue;
+  context: ProjectInfoPanelContext;
   actions: PanelActions;
   events: PanelEventEmitter;
 }
@@ -36,9 +41,9 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
   const repository = context.currentScope?.repository;
 
   // Get git status from context slice
-  const gitSlice = context.getSlice<GitStatusWithFiles>('gitStatusWithFiles');
-  const hasGitData = context.hasSlice('gitStatusWithFiles');
-  const isGitLoading = context.isSliceLoading('gitStatusWithFiles');
+  const gitSlice = context.gitStatusWithFiles;
+  const hasGitData = gitSlice !== undefined;
+  const isGitLoading = gitSlice?.loading ?? false;
 
   // Use theme space array or fallback values
   const spacing = {

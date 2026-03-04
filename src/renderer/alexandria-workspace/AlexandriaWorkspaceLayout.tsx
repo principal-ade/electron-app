@@ -159,17 +159,11 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
         workspaceId: string,
       ) => {
         // Find the entry from workspace repositories slice
-        // In PanelContext, workspaceRepositories.data is AlexandriaEntry[] directly
-        const slice = context.getSlice<AlexandriaEntry[]>(
-          'workspaceRepositories',
-        );
-        const repositories = slice?.data || [];
-        const entry = repositories.find((r) => r.name === repositoryId);
+        const repositories = context.workspaceRepositories?.data?.repositories || [];
+        const entry = repositories.find((r: AlexandriaEntry) => r.name === repositoryId);
 
         // Get workspace info from context
-        // In PanelContext, workspace.data is Workspace directly
-        const workspaceSlice = context.getSlice<Workspace>('workspace');
-        const workspace = workspaceSlice?.data;
+        const workspace = context.workspace?.data?.workspace;
 
         if (entry && workspace) {
           setEntryToRemove(entry);

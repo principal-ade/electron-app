@@ -2,7 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { RefreshCw, Globe, ExternalLink, Terminal, Folder, X } from 'lucide-react';
 import type {
-  PanelComponentProps,
+  PanelContextValue,
+  PanelActions,
+  PanelEventEmitter,
+  DataSlice,
 } from '@principal-ade/panel-framework-core';
 import { LocalhostDetectionService } from '../../main-process-api/LocalhostDetectionService';
 
@@ -18,6 +21,16 @@ export interface RunningServer {
   path?: string;
 }
 
+interface LocalhostProcessesPanelContext extends PanelContextValue {
+  localhostServers?: DataSlice<RunningServer[]>;
+}
+
+interface LocalhostProcessesPanelProps {
+  context: LocalhostProcessesPanelContext;
+  actions: PanelActions;
+  events: PanelEventEmitter;
+}
+
 /**
  * LocalhostProcessesPanel - Displays running localhost development servers
  *
@@ -27,7 +40,7 @@ export interface RunningServer {
  * - A refresh button to trigger re-scanning for servers
  * - Click to open in external browser
  */
-export const LocalhostProcessesPanel: React.FC<PanelComponentProps> = ({
+export const LocalhostProcessesPanel: React.FC<LocalhostProcessesPanelProps> = ({
   context,
   actions: _actions,
   events,
@@ -37,7 +50,7 @@ export const LocalhostProcessesPanel: React.FC<PanelComponentProps> = ({
   const [killingPids, setKillingPids] = useState<Set<number>>(new Set());
 
   // Get localhost servers from context slice
-  const serversSlice = context?.getSlice<RunningServer[]>('localhostServers');
+  const serversSlice = context?.localhostServers;
   const servers = serversSlice?.data ?? [];
   const isLoading = serversSlice?.loading ?? false;
 

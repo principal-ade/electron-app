@@ -135,7 +135,10 @@ interface FileCityColorModesSliceData {
 export interface RepositoryPanelActions extends PanelActions {
   /** Read file content - supports all file types (not just markdown) - REQUIRED for MarkdownPanel */
   readFile: (filePath: string) => Promise<string>;
-  writeFile?: (filePath: string, content: string) => Promise<void>;
+  /** Write file content - REQUIRED for FileEditorPanel and MDXEditorPanel */
+  writeFile: (filePath: string, content: string) => Promise<void>;
+  /** Get file content at a specific git revision - REQUIRED for GitDiffPanel */
+  getFileContentAtRevision: (filePath: string, revision?: string) => Promise<string>;
   /** Open file in viewer - only supports markdown files */
   openFile?: (filePath: string) => Promise<void>;
   // Local Projects panel actions
@@ -1369,6 +1372,45 @@ export const RepositoryPanelProvider: React.FC<
           );
           throw error;
         }
+      },
+
+      getFileContentAtRevision: async (filePath: string, revision: string = 'HEAD') => {
+        if (!repositoryPath) {
+          throw new Error('No repository path set');
+        }
+
+        // Calculate the path relative to repository root
+        let pathRelativeToRepo = filePath;
+        if (filePath.startsWith('/')) {
+          // If absolute path, make it relative to repository root
+          if (filePath.startsWith(repositoryPath + '/')) {
+            pathRelativeToRepo = filePath.substring(repositoryPath.length + 1);
+          } else if (filePath === repositoryPath) {
+            pathRelativeToRepo = '';
+          } else {
+            throw new Error(`File path is outside repository: ${filePath}`);
+          }
+        }
+
+        console.info('[RepositoryPanelProvider] getFileContentAtRevision:', {
+          repositoryPath,
+          originalPath: filePath,
+          pathRelativeToRepo,
+          revision
+        });
+
+        // Use FileSystemService to call IPC with the relative path
+        const content = await FileSystemService.getFileContentAtRevision(
+          repositoryPath,
+          pathRelativeToRepo,
+          revision
+        );
+
+        if (content === null) {
+          throw new Error(`File not found at revision ${revision}: ${filePath}`);
+        }
+
+        return content;
       },
 
       openFile: async (filePath: string): Promise<void> => {

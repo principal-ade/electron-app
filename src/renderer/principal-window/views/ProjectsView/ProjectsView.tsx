@@ -225,10 +225,7 @@ const ProjectsViewContent: React.FC = () => {
       ...actions,
       removeLocalRepository: async (name: string, _deleteLocal: boolean) => {
         // Find the entry by name from the context
-        const slice = context.getSlice<{ repositories: AlexandriaEntry[] }>(
-          'alexandriaRepositories',
-        );
-        const repositories = slice?.data?.repositories || [];
+        const repositories = context.alexandriaRepositories?.data?.repositories || [];
         const entry = repositories.find((r) => r.name === name);
         if (entry) {
           setEntryToDelete(entry);
@@ -237,10 +234,7 @@ const ProjectsViewContent: React.FC = () => {
       },
       deleteWorkspace: async (workspaceId: string) => {
         // Find the workspace by ID from the context
-        const slice = context.getSlice<{ workspaces: Workspace[] }>(
-          'workspaces',
-        );
-        const workspaces = slice?.data?.workspaces || [];
+        const workspaces = context.workspaces?.data?.workspaces || [];
         const workspace = workspaces.find((w) => w.id === workspaceId);
         if (workspace) {
           setWorkspaceToDelete(workspace);
@@ -251,21 +245,13 @@ const ProjectsViewContent: React.FC = () => {
         repositoryId: string,
         workspaceId: string,
       ) => {
-        // Find the entry from workspace repositories slice
-        // In WorkspacesPanelContext, workspaceRepositories.data is AlexandriaEntry[] directly
-        const repoSlice = context.getSlice<AlexandriaEntry[]>(
-          'workspaceRepositories',
-        );
-        const repositories = repoSlice?.data || [];
-        const entry = repositories.find((r) => r.name === repositoryId);
+        // Find the entry from alexandria repositories slice
+        const repositories = context.alexandriaRepositories?.data?.repositories || [];
+        const entry = repositories.find((r: AlexandriaEntry) => r.name === repositoryId);
 
         // Find the workspace from workspaces slice
-        // In WorkspacesPanelContext, workspaces.data has { workspaces: Workspace[], ... }
-        const wsSlice = context.getSlice<{ workspaces: Workspace[] }>(
-          'workspaces',
-        );
-        const workspaces = wsSlice?.data?.workspaces || [];
-        const workspace = workspaces.find((w) => w.id === workspaceId);
+        const workspacesList = context.workspaces?.data?.workspaces || [];
+        const workspace = workspacesList.find((w: Workspace) => w.id === workspaceId);
 
         if (entry && workspace) {
           setEntryToRemoveFromWorkspace(entry);
@@ -415,8 +401,7 @@ const ProjectsViewContent: React.FC = () => {
   );
 
   // Get workspaces from context for create repository button
-  const workspacesSlice = context.getSlice<{ workspaces: Workspace[] }>('workspaces');
-  const workspaces = workspacesSlice?.data?.workspaces || [];
+  const workspaces = context.workspaces?.data?.workspaces || [];
 
   // Define layout configuration
   const layout = useMemo(() => {

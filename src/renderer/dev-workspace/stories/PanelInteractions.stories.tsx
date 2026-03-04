@@ -198,39 +198,12 @@ const MockRepositoryPanelProvider: React.FC<{
           name: 'mock-repo',
         },
       },
-      // Typed slice properties for direct access (new pattern)
+      // Typed slice properties for direct access
       fileTree: fileTreeSlice,
       gitStatusWithFiles: gitStatusWithFilesSlice,
       fileCityColorModes: fileCityColorModesSlice,
       packages: packagesSlice,
-      // Legacy Map-based slices (kept for backwards compatibility)
-      slices: new Map<string, DataSlice<unknown>>([
-        ['fileTree', fileTreeSlice],
-        ['gitStatusWithFiles', gitStatusWithFilesSlice],
-        ['fileCityColorModes', fileCityColorModesSlice],
-        ['packages', packagesSlice],
-      ]),
-      getSlice: function <T = unknown>(name: string): DataSlice<T> | undefined {
-        return this.slices.get(name) as DataSlice<T> | undefined;
-      },
-      getWorkspaceSlice: function <T = unknown>(_name: string): DataSlice<T> | undefined {
-        return undefined;
-      },
-      getRepositorySlice: function <T = unknown>(name: string): DataSlice<T> | undefined {
-        const slice = this.slices.get(name);
-        if (slice && slice.scope === 'repository') {
-          return slice as DataSlice<T>;
-        }
-        return undefined;
-      },
-      hasSlice: function (name: string, _scope?: 'workspace' | 'repository'): boolean {
-        return this.slices.has(name);
-      },
-      isSliceLoading: function (name: string, _scope?: 'workspace' | 'repository'): boolean {
-        const slice = this.slices.get(name);
-        return slice ? slice.loading : false;
-      },
-      refresh: async function (_scope?: 'workspace' | 'repository', _slice?: string): Promise<void> {
+      refresh: async (_scope?: 'workspace' | 'repository', _slice?: string): Promise<void> => {
         // Mock refresh - no-op
       },
     }),

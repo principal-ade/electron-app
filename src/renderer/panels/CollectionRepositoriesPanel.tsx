@@ -7,7 +7,7 @@
 
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import type { PanelContextValue, PanelActions, PanelEventEmitter } from '@principal-ade/panel-framework-core';
+import type { PanelContextValue, PanelActions, PanelEventEmitter, DataSlice } from '@principal-ade/panel-framework-core';
 import type { Collection } from '@principal-ai/alexandria-collections';
 import { ExternalLink, Github } from 'lucide-react';
 
@@ -16,8 +16,12 @@ interface CollectionRepositoriesSlice {
   repositoryIds: string[];
 }
 
+interface CollectionRepositoriesPanelContext extends PanelContextValue {
+  collectionRepositories?: DataSlice<CollectionRepositoriesSlice>;
+}
+
 interface CollectionRepositoriesPanelProps {
-  context: PanelContextValue;
+  context: CollectionRepositoriesPanelContext;
   actions: PanelActions;
   events: PanelEventEmitter;
 }
@@ -28,7 +32,7 @@ export const CollectionRepositoriesPanel: React.FC<CollectionRepositoriesPanelPr
   const { theme } = useTheme();
 
   // Get the collectionRepositories slice
-  const slice = context.getSlice<CollectionRepositoriesSlice>('collectionRepositories');
+  const slice = context.collectionRepositories;
   const collection = slice?.data?.collection;
   const repositoryIds = slice?.data?.repositoryIds || [];
 
