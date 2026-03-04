@@ -173,7 +173,9 @@ export const onActivitySync = (
 ): (() => void) => {
   return window.electron.ipcRenderer.on(
     'terminal:activity-sync',
-    (_event: unknown, activities: TerminalActivityState[]) => {
+    (...args: unknown[]) => {
+      // First arg is IPC event, second is activities array
+      const activities = args[1] as TerminalActivityState[];
       callback(activities);
     },
   );
