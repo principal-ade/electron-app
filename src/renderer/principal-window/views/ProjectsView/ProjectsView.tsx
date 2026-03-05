@@ -37,14 +37,14 @@ import { ProjectInfoPanel } from '../../../panels/ProjectInfoPanel';
 // Type for left panel view options
 export type LeftPanelView = 'local' | 'remote' | 'starred';
 
-const ProjectsViewContent: React.FC = () => {
+interface ProjectsViewContentProps {
+  mode: LeftPanelView;
+}
+
+const ProjectsViewContent: React.FC<ProjectsViewContentProps> = ({ mode }) => {
   const { theme } = useTheme();
   const { context, actions, events } = useProjectsPanelProvider();
   const { isAuthenticated } = useAuth();
-
-  // State for left panel view selection
-  const [leftPanelView, setLeftPanelView] =
-    useState<LeftPanelView>('local');
 
   // State for base default directory
   const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string | null>(null);
@@ -405,7 +405,7 @@ const ProjectsViewContent: React.FC = () => {
 
   // Define layout configuration
   const layout = useMemo(() => {
-    // Map left panel view to panel id
+    // Map mode to panel id
     const leftPanelMap: Record<LeftPanelView, string> = {
       local: 'local-projects',
       remote: 'github-projects',
@@ -413,11 +413,11 @@ const ProjectsViewContent: React.FC = () => {
     };
 
     return {
-      left: leftPanelMap[leftPanelView],
+      left: leftPanelMap[mode],
       middle: 'project-info',
       right: 'collection-repositories',
     };
-  }, [leftPanelView]);
+  }, [mode]);
 
   return (
     <>
@@ -431,8 +431,7 @@ const ProjectsViewContent: React.FC = () => {
       >
         {/* Header */}
         <ProjectsViewHeader
-          leftPanelView={leftPanelView}
-          onLeftPanelViewChange={setLeftPanelView}
+          mode={mode}
           onCreateRepository={handleCreateRepository}
         />
 
@@ -531,10 +530,14 @@ const ProjectsViewContent: React.FC = () => {
  * Uses @industry-theme/alexandria-panels for workspace and repository panels
  * with the ConfigurablePanelLayout for the three-panel layout.
  */
-export const ProjectsView: React.FC = () => {
+interface ProjectsViewProps {
+  mode: LeftPanelView;
+}
+
+export const ProjectsView: React.FC<ProjectsViewProps> = ({ mode }) => {
   return (
     <ProjectsPanelProvider>
-      <ProjectsViewContent />
+      <ProjectsViewContent mode={mode} />
     </ProjectsPanelProvider>
   );
 };

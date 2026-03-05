@@ -4,46 +4,23 @@ import { Github, Star, Folder, FilePlus2 } from 'lucide-react';
 import type { LeftPanelView } from './ProjectsView';
 
 interface ProjectsViewHeaderProps {
-  leftPanelView: LeftPanelView;
-  onLeftPanelViewChange: (view: LeftPanelView) => void;
+  mode: LeftPanelView;
   onCreateRepository?: () => void;
 }
 
+// Map mode to display info
+const modeConfig: Record<LeftPanelView, { icon: React.ReactNode; label: string }> = {
+  local: { icon: <Folder size={16} />, label: 'Local Projects' },
+  remote: { icon: <Github size={16} />, label: 'Remote Projects' },
+  starred: { icon: <Star size={16} />, label: 'Starred Projects' },
+};
+
 export const ProjectsViewHeader: React.FC<ProjectsViewHeaderProps> = ({
-  leftPanelView,
-  onLeftPanelViewChange,
+  mode,
   onCreateRepository,
 }) => {
   const { theme } = useTheme();
-
-  const getButtonStyle = (isActive: boolean, position: 'first' | 'middle' | 'last') => {
-    let borderRadius = '0';
-    if (position === 'first') {
-      borderRadius = '0';
-    } else if (position === 'last') {
-      borderRadius = '0';
-    }
-
-    return {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: '6px',
-      padding: '0 32px',
-      borderRadius,
-      backgroundColor: isActive
-        ? theme.colors.accent
-        : theme.colors.backgroundSecondary,
-      color: isActive ? theme.colors.background : theme.colors.textSecondary,
-      cursor: 'pointer',
-      transition: 'all 0.2s',
-      border: 'none',
-      fontSize: theme.fontSizes[1],
-      fontWeight: theme.fontWeights.medium,
-      height: '100%',
-      minWidth: 0,
-    };
-  };
+  const config = modeConfig[mode];
 
   return (
     <div
@@ -59,65 +36,20 @@ export const ProjectsViewHeader: React.FC<ProjectsViewHeaderProps> = ({
         flexShrink: 0,
       }}
     >
-      {/* Left: Panel View Toggle Buttons */}
-      <div style={{ display: 'flex', alignItems: 'stretch', gap: '0', height: '100%' }}>
-        <button
-          onClick={() => onLeftPanelViewChange('local')}
-          style={getButtonStyle(leftPanelView === 'local', 'first')}
-          onMouseEnter={(e) => {
-            if (leftPanelView !== 'local') {
-              e.currentTarget.style.backgroundColor =
-                theme.colors.backgroundTertiary;
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (leftPanelView !== 'local') {
-              e.currentTarget.style.backgroundColor =
-                theme.colors.backgroundSecondary;
-            }
-          }}
-        >
-          <Folder size={16} />
-          Local
-        </button>
-        <button
-          onClick={() => onLeftPanelViewChange('remote')}
-          style={getButtonStyle(leftPanelView === 'remote', 'middle')}
-          onMouseEnter={(e) => {
-            if (leftPanelView !== 'remote') {
-              e.currentTarget.style.backgroundColor =
-                theme.colors.backgroundTertiary;
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (leftPanelView !== 'remote') {
-              e.currentTarget.style.backgroundColor =
-                theme.colors.backgroundSecondary;
-            }
-          }}
-        >
-          <Github size={16} />
-          Remote
-        </button>
-        <button
-          onClick={() => onLeftPanelViewChange('starred')}
-          style={getButtonStyle(leftPanelView === 'starred', 'last')}
-          onMouseEnter={(e) => {
-            if (leftPanelView !== 'starred') {
-              e.currentTarget.style.backgroundColor =
-                theme.colors.backgroundTertiary;
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (leftPanelView !== 'starred') {
-              e.currentTarget.style.backgroundColor =
-                theme.colors.backgroundSecondary;
-            }
-          }}
-        >
-          <Star size={16} />
-          Starred
-        </button>
+      {/* Left: View Title */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '0 24px',
+          color: theme.colors.text,
+          fontSize: theme.fontSizes[2],
+          fontWeight: theme.fontWeights.semibold,
+        }}
+      >
+        {config.icon}
+        {config.label}
       </div>
 
       {/* Right: Create Button */}

@@ -27,7 +27,9 @@ export type NavigationView = InteractiveShellNavigationView;
 
 // Available views for switch command
 const VIEW_OPTIONS = [
-  'workspaces',
+  'local-projects',
+  'remote-projects',
+  'starred-projects',
   'settings',
   'monitoring',
   'auth',
@@ -100,7 +102,7 @@ const getViewDefaults = (
 };
 
 export const IntegratedShell: React.FC = () => {
-  const [activeView, setActiveView] = useState<NavigationView>('workspaces');
+  const [activeView, setActiveView] = useState<NavigationView>('local-projects');
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const { theme, mode } = useTheme();
   const { events } = usePrincipalEvents();
@@ -113,7 +115,9 @@ export const IntegratedShell: React.FC = () => {
     monitoring: { left: false, right: false },
     search: { left: false, right: false },
     settings: { left: false, right: false },
-    workspaces: { left: false, right: false },
+    'local-projects': { left: false, right: false },
+    'remote-projects': { left: false, right: false },
+    'starred-projects': { left: false, right: false },
     network: { left: false, right: false },
     processes: { left: false, right: false },
     connections: { left: false, right: false },
@@ -130,9 +134,13 @@ export const IntegratedShell: React.FC = () => {
       try {
         const prefs = await UserPreferencesService.getPreferences();
 
-        // Load active view
+        // Load active view (migrate 'workspaces' to 'local-projects')
         if (prefs.interactiveShell?.activeNavigationView) {
-          setActiveView(prefs.interactiveShell.activeNavigationView);
+          // Cast to string to handle legacy 'workspaces' value from storage
+          const savedView = prefs.interactiveShell.activeNavigationView as string;
+          // Migrate legacy 'workspaces' view to 'local-projects'
+          const view = savedView === 'workspaces' ? 'local-projects' : savedView;
+          setActiveView(view as NavigationView);
         }
 
         // Load collapsed states for all views
@@ -354,13 +362,15 @@ export const IntegratedShell: React.FC = () => {
           return { success: true };
         }
         case 'reset':
-          setActiveView('workspaces');
+          setActiveView('local-projects');
           setViewCollapsedStates({
             auth: { left: false, right: false },
             monitoring: { left: false, right: false },
             search: { left: false, right: false },
             settings: { left: false, right: false },
-            workspaces: { left: false, right: false },
+            'local-projects': { left: false, right: false },
+            'remote-projects': { left: false, right: false },
+            'starred-projects': { left: false, right: false },
             network: { left: false, right: false },
             processes: { left: false, right: false },
             connections: { left: false, right: false },
@@ -413,13 +423,15 @@ export const IntegratedShell: React.FC = () => {
         }
       }),
       events.on('panel:reset-layout', () => {
-        setActiveView('workspaces');
+        setActiveView('local-projects');
         setViewCollapsedStates({
           auth: { left: false, right: false },
           monitoring: { left: false, right: false },
           search: { left: false, right: false },
           settings: { left: false, right: false },
-          workspaces: { left: false, right: false },
+          'local-projects': { left: false, right: false },
+          'remote-projects': { left: false, right: false },
+          'starred-projects': { left: false, right: false },
           network: { left: false, right: false },
           processes: { left: false, right: false },
           connections: { left: false, right: false },
@@ -445,7 +457,7 @@ export const IntegratedShell: React.FC = () => {
     quickCommands: QUICK_COMMANDS,
     agentAvailable: false,
     initialSuggestions: [
-      '/switch workspaces',
+      '/switch local-projects',
       '/switch settings',
       '/collapse',
       '/reset',
@@ -524,7 +536,9 @@ export const IntegratedShell: React.FC = () => {
             )}
             {activeView === 'settings' && <Settings />}
             {activeView === 'auth' && <AuthView />}
-            {activeView === 'workspaces' && <ProjectsView />}
+            {activeView === 'local-projects' && <ProjectsView mode="local" />}
+            {activeView === 'remote-projects' && <ProjectsView mode="remote" />}
+            {activeView === 'starred-projects' && <ProjectsView mode="starred" />}
             {activeView === 'worlds' && <WorldsView />}
             {activeView === 'network' && <GitSyncView />}
             {activeView === 'processes' && <LocalhostProcessesView />}

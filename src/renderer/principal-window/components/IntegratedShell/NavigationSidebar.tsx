@@ -3,7 +3,9 @@ import {
   Settings,
   Activity,
   User,
-  LayoutGrid,
+  Folder,
+  Github,
+  Star,
   Users,
   Globe,
   Radio,
@@ -118,7 +120,9 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
     );
 
   const navItems: NavItem[] = [
-    { id: 'workspaces', icon: <LayoutGrid size={20} />, label: 'Projects' },
+    { id: 'local-projects', icon: <Folder size={20} />, label: 'Local' },
+    { id: 'remote-projects', icon: <Github size={20} />, label: 'Remote' },
+    { id: 'starred-projects', icon: <Star size={20} />, label: 'Starred' },
     { id: 'worlds', icon: <Map size={20} />, label: 'Worlds' },
     { id: 'skills', icon: <Zap size={20} />, label: 'Skills' },
     { id: 'network', icon: <Users size={20} />, label: 'Network' },
