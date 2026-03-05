@@ -7,8 +7,7 @@
 </p>
 
 <br>
-[![Watch the video](https://img.youtube.com)](https://www.youtube.com)
-
+[![Watch the video](https://img.youtu.be/vz48yhWE9s)](https://youtu.be/vz48yhWE9sk)
 
 <div align="center">
 
