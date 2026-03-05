@@ -7,8 +7,7 @@
 </p>
 
 <br>
-[![Watch the video](https://img.youtu.be/vz48yhWE9s)](https://youtu.be/vz48yhWE9sk)
-
+<iframe width="560" height="315" src="https://www.youtube.com/embed/vz48yhWE9sk?si=Fr7dBddBBVntPnnr" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 <div align="center">
 
 [![Build Status][github-actions-status]][github-actions-url]
