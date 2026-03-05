@@ -17,6 +17,7 @@ import {
   PanelRightOpen,
   Globe,
   Play,
+  Columns2,
 } from 'lucide-react';
 
 /**
@@ -54,6 +55,10 @@ export interface PanelIconSidebarProps {
   onOpenInWebADE?: () => void;
   /** Callback to open GitHub Actions (shown above collapse button) */
   onOpenGitHubActions?: () => void;
+  /** Callback to split middle and right panels 50/50 */
+  onSplitPanels?: () => void;
+  /** Custom buttons to render after panel icons */
+  customButtons?: React.ReactNode;
 }
 
 /**
@@ -95,6 +100,8 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
   showCollapseButton = false,
   onOpenInWebADE,
   onOpenGitHubActions,
+  onSplitPanels,
+  customButtons,
 }) => {
   const handlePanelClick = (panelId: string) => {
     // If clicking on the same panel that's already visible and panel is expanded, collapse it
@@ -205,8 +212,68 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
         );
       })}
 
+      {/* Custom buttons (e.g., Storybook) */}
+      {customButtons}
+
       {/* Spacer to push action buttons and collapse button to bottom */}
-      {(showCollapseButton || onOpenInWebADE || onOpenGitHubActions) && <div style={{ flex: 1 }} />}
+      {(showCollapseButton || onOpenInWebADE || onOpenGitHubActions || onSplitPanels) && <div style={{ flex: 1 }} />}
+
+      {/* Split panels button */}
+      {onSplitPanels && (
+        <button
+          onClick={onSplitPanels}
+          title="Split panels 50/50"
+          aria-label="Split panels 50/50"
+          style={{
+            width: 'calc(100% - 20px)',
+            height: '64px',
+            margin: '4px 10px',
+            padding: '4px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '4px',
+            border: 'none',
+            background: 'transparent',
+            cursor: 'pointer',
+            color: theme.colors.textSecondary,
+            transition: 'all 0.2s ease',
+          }}
+        >
+          <div
+            style={{
+              width: '36px',
+              height: '36px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '8px',
+              background: 'transparent',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = theme.colors.border;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            <Columns2 size={20} strokeWidth={1.5} />
+          </div>
+          <span
+            style={{
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[0],
+              fontWeight: theme.fontWeights.body,
+              lineHeight: theme.lineHeights.tight,
+              textAlign: 'center',
+            }}
+          >
+            Split
+          </span>
+        </button>
+      )}
 
       {/* Web-ADE button */}
       {onOpenInWebADE && (

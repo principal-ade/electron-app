@@ -9,6 +9,7 @@ import {
   UtilityProcess,
 } from 'electron';
 import { TerminalSession } from './types';
+import type { TerminalSessionMetadata } from '../../shared/tipc/terminalRouterTypes';
 import { ownershipManager } from './TerminalOwnershipManager';
 import { terminalEnvironment } from '../terminalEnvironment';
 import { TerminalAPIEvents } from '../../shared/main-process-api-interfaces/TerminalService';
@@ -394,6 +395,7 @@ export class TerminalSessionManager {
     directory: string,
     context?: string,
     command?: string,
+    metadata?: TerminalSessionMetadata,
   ): Promise<string> {
     const isReady = await this.ensureWorkerReady();
     if (!isReady) {
@@ -450,6 +452,8 @@ export class TerminalSessionManager {
       repoId,
       owner: null,
       remoteAttachments: new Set(),
+      // Dev server metadata
+      metadata,
     };
     this.sessions.set(sessionId, session);
     this.sessionPorts.set(sessionId, new Map());

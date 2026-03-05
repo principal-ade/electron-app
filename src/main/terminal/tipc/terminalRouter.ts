@@ -26,7 +26,7 @@ export const terminalRouter = {
   // ============================================
 
   createTerminalSession: t.procedure
-    .input<{ cwd?: string; command?: string; context?: string }>()
+    .input<{ cwd?: string; command?: string; context?: string; metadata?: import('../../../shared/tipc/terminalRouterTypes').TerminalSessionMetadata }>()
     .action(async ({ input, context }) => {
       if (!isPtyAvailable()) {
         throw new Error(
@@ -51,6 +51,7 @@ export const terminalRouter = {
         input.cwd || process.env.HOME || '/',
         input.context,
         input.command,
+        input.metadata,
       );
 
       // Create MessageChannel and send port to renderer
@@ -85,6 +86,7 @@ export const terminalRouter = {
           lastActivity: session.lastActivity,
           status: 'active' as const,
           ownedByWindowId: ownerWindowId,
+          metadata: session.metadata,
         };
       },
     );

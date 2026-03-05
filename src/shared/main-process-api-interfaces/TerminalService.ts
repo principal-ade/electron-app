@@ -22,6 +22,19 @@ export enum TerminalAPIEvents {
   REQUEST_DATA_PORT = 'terminal:requestDataPort', // Request a MessagePort for terminal data
 }
 
+/**
+ * Metadata for terminal sessions running dev servers.
+ * Used to persist port and context info across renderer restarts.
+ */
+export interface TerminalSessionMetadata {
+  /** Port number for dev servers (Storybook, npm run dev, etc.) */
+  port?: number;
+  /** Package/workspace name being run */
+  packageName?: string;
+  /** Type of dev server or script */
+  serverType?: 'storybook' | 'dev' | 'preview' | 'test';
+}
+
 export interface TerminalInfo {
   id: string;
   directory: string;
@@ -32,6 +45,7 @@ export interface TerminalInfo {
   status: 'active' | 'disconnected';
   ownedByWindowId?: number; // NEW: Which window has active ownership
   ownershipClaimedAt?: number; // NEW: When ownership was claimed
+  metadata?: TerminalSessionMetadata; // Dev server metadata
 }
 
 export interface TerminalOwnershipStatus {

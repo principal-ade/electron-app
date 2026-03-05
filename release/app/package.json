@@ -27,7 +27,7 @@
     "@industry-theme/markdown-panels": "^0.2.25",
     "@industry-theme/principal-view-panels": "^0.11.26",
     "@industry-theme/repository-composition-panels": "^0.6.29",
-    "@industry-theme/xterm-terminal-panel": "^0.4.1",
+    "@industry-theme/xterm-terminal-panel": "^0.5.2",
     "@mdxeditor/editor": "^3.50.0",
     "@modelcontextprotocol/sdk": "1.11.4",
     "@monaco-editor/react": "^4.7.0",

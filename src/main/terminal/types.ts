@@ -1,3 +1,5 @@
+import type { TerminalSessionMetadata } from '../../shared/tipc/terminalRouterTypes';
+
 export type TerminalPortMessage =
   | { type: 'WRITE'; data: string }
   | { type: 'RESIZE'; cols: number; rows: number }
@@ -36,6 +38,8 @@ export interface TerminalSession {
   // Ownership and remote access
   owner: TerminalOwner | null;
   remoteAttachments: Set<string>; // Set of remote clientIds
+  // Dev server metadata (port, package name, etc.)
+  metadata?: TerminalSessionMetadata;
 }
 
 export interface OwnershipStatus {

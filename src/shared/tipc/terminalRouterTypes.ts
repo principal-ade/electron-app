@@ -9,10 +9,24 @@ import type { ActionContext } from '@egoist/tipc/main';
 
 // Input/output types for terminal router procedures
 
+/**
+ * Metadata for terminal sessions running dev servers.
+ * Used to persist port and context info across renderer restarts.
+ */
+export interface TerminalSessionMetadata {
+  /** Port number for dev servers (Storybook, npm run dev, etc.) */
+  port?: number;
+  /** Package/workspace name being run */
+  packageName?: string;
+  /** Type of dev server or script */
+  serverType?: 'storybook' | 'dev' | 'preview' | 'test';
+}
+
 export interface CreateTerminalSessionInput {
   cwd?: string;
   command?: string;
   context?: string;
+  metadata?: TerminalSessionMetadata;
 }
 
 export interface DestroyTerminalSessionInput {
@@ -50,6 +64,7 @@ export interface TerminalSessionInfo {
   lastActivity: number;
   status?: string;
   ownedByWindowId?: number;
+  metadata?: TerminalSessionMetadata;
 }
 
 export interface TerminalOwnershipStatus {

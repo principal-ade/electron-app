@@ -17,6 +17,7 @@ import type {
   TerminalOwnershipStatus,
   TerminalOwnershipResult,
   RequestDataPortResult,
+  TerminalSessionMetadata,
 } from '../../shared/main-process-api-interfaces/TerminalService';
 
 export class TerminalService {
@@ -32,6 +33,7 @@ export class TerminalService {
       lastActivity: s.lastActivity,
       status: (s.status as 'active' | 'disconnected') || 'active',
       ownedByWindowId: s.ownedByWindowId,
+      metadata: s.metadata,
     }));
   }
 
@@ -49,8 +51,9 @@ export class TerminalService {
     dir: string,
     command: string,
     context?: string,
+    metadata?: TerminalSessionMetadata,
   ): Promise<string> {
-    return terminalClient.createTerminalSession({ cwd: dir, command, context });
+    return terminalClient.createTerminalSession({ cwd: dir, command, context, metadata });
   }
 
   static async destroy(id: string): Promise<void> {
