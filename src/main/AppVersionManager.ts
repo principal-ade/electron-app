@@ -134,6 +134,9 @@ export default class AppVersionManager {
     });
 
     // Check for updates every hour
+    const PERIODIC_CHECK_INTERVAL_MS = 60 * 60 * 1000;
+    const PERIODIC_CHECK_TIMEOUT_MS = 30 * 1000; // 30 second timeout
+
     setInterval(
       () => {
         if (this.mainWindow && !this.mainWindow.isDestroyed()) {
@@ -142,20 +145,32 @@ export default class AppVersionManager {
           // Start check workflow span for periodic check
           this.activeCheckSpan = tracer.startSpan('app_updates.check');
           this.activeCheckSpan.addEvent('app_updates.check.periodic', {
-            interval_ms: 60 * 60 * 1000,
+            'interval_ms': PERIODIC_CHECK_INTERVAL_MS,
+            'timeout_ms': PERIODIC_CHECK_TIMEOUT_MS,
           });
           this.activeCheckSpan.addEvent('app_updates.check.started', {
-            trigger: 'periodic',
-            current_version: app.getVersion(),
+            'trigger': 'periodic',
+            'current_version': app.getVersion(),
           });
 
-          autoUpdater.checkForUpdates().catch((err) => {
+          // Create a timeout promise to catch hangs
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            setTimeout(() => {
+              reject(new Error(`Update check timed out after ${PERIODIC_CHECK_TIMEOUT_MS}ms`));
+            }, PERIODIC_CHECK_TIMEOUT_MS);
+          });
+
+          // Race the check against the timeout
+          Promise.race([
+            autoUpdater.checkForUpdates(),
+            timeoutPromise,
+          ]).catch((err) => {
             log.error('[AppUpdater] Periodic update check failed:', err);
             this.emitErrorEvent('check', err);
           });
         }
       },
-      60 * 60 * 1000,
+      PERIODIC_CHECK_INTERVAL_MS,
     );
 
     initSpan.setStatus({ code: SpanStatusCode.OK });
@@ -272,7 +287,7 @@ export default class AppVersionManager {
       return 'file_not_found';
     } else if (errorMessage.includes('ECONNREFUSED') || errorMessage.includes('connect')) {
       return 'connection_refused';
-    } else if (errorMessage.includes('ETIMEDOUT')) {
+    } else if (errorMessage.includes('ETIMEDOUT') || errorMessage.includes('timed out')) {
       return 'timeout';
     } else if (errorMessage.includes('403') || errorMessage.includes('Forbidden')) {
       return 'forbidden';
@@ -339,9 +354,13 @@ export default class AppVersionManager {
 
     // Start check workflow span
     this.activeCheckSpan = tracer.startSpan('app_updates.check');
+    // Add manual/silent trigger event to distinguish from periodic checks
+    this.activeCheckSpan.addEvent('app_updates.check.user_triggered', {
+      'trigger': trigger,
+    });
     this.activeCheckSpan.addEvent('app_updates.check.started', {
-      trigger,
-      current_version: app.getVersion(),
+      'trigger': trigger,
+      'current_version': app.getVersion(),
     });
 
     // In dev mode, temporarily set allowDowngrade to ensure we can test

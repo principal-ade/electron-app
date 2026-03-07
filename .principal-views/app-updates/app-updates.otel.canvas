@@ -228,34 +228,7 @@
         "status": "draft",
         "references": [
           "src/main/AppVersionManager.ts"
-        ],
-        "otel": {
-          "kind": "event",
-          "category": "main_process",
-          "isNew": true
-        },
-        "event": {
-          "name": "app_updates.manager.initialized",
-          "description": "AppVersionManager initialized",
-          "attributes": {
-            "is_packaged": {
-              "type": "boolean",
-              "description": "Whether app is running as packaged build"
-            },
-            "version": {
-              "type": "string",
-              "description": "Current app version"
-            },
-            "platform": {
-              "type": "string",
-              "description": "Operating system platform"
-            },
-            "arch": {
-              "type": "string",
-              "description": "CPU architecture"
-            }
-          }
-        }
+        ]
       }
     },
     {
@@ -753,6 +726,42 @@
             "interval_ms": {
               "type": "number",
               "description": "Check interval in milliseconds"
+            },
+            "timeout_ms": {
+              "type": "number",
+              "description": "Check timeout in milliseconds"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "user-triggered-check",
+      "type": "text",
+      "x": 590,
+      "y": 380,
+      "width": 220,
+      "height": 80,
+      "text": "User Triggered Check\nManual or silent\ncheck via TIPC",
+      "pv": {
+        "nodeType": "main-process",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/main/AppVersionManager.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "update",
+          "isNew": true
+        },
+        "event": {
+          "name": "app_updates.check.user_triggered",
+          "description": "Manual or silent update check triggered by user action",
+          "attributes": {
+            "trigger": {
+              "type": "string",
+              "description": "Trigger type: manual or silent"
             }
           }
         }
@@ -772,22 +781,7 @@
         "status": "draft",
         "references": [
           "src/renderer/App.tsx"
-        ],
-        "otel": {
-          "kind": "event",
-          "category": "update",
-          "isNew": true
-        },
-        "event": {
-          "name": "app_updates.check.startup",
-          "description": "Silent update check on app startup",
-          "attributes": {
-            "window_type": {
-              "type": "string",
-              "description": "Type of window that triggered the check"
-            }
-          }
-        }
+        ]
       }
     },
     {
@@ -1076,6 +1070,17 @@
       "toNode": "check-for-updates",
       "toSide": "bottom",
       "label": "every hour",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "user-triggered-to-check",
+      "fromNode": "user-triggered-check",
+      "fromSide": "top",
+      "toNode": "check-for-updates",
+      "toSide": "bottom",
+      "label": "manual/silent",
       "pv": {
         "edgeType": "function-call"
       }
