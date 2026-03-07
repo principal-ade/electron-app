@@ -134,6 +134,8 @@ interface CanvasTab extends BaseTab {
   selectedTraceId?: string | null;
   highlightedSpanId?: string | null;
   selectedScenarioId?: string | null;
+  /** Full trace object for template interpolation */
+  selectedTrace?: RegisteredTrace | null;
 }
 
 /**
@@ -946,7 +948,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         }
 
         console.info('[DevWorkspacePanelFramework] Received canvas open event:', event);
-        const { canvasId, canvas, canvasFileInfo, workflowId, workflow, workflowFileInfo, traceId, spanId, scenarioId } = payload;
+        const { canvasId, canvas, canvasFileInfo, workflowId, workflow, workflowFileInfo, traceId, spanId, scenarioId, trace } = payload;
 
         if (!canvasId || !canvas) {
           console.warn('[DevWorkspacePanelFramework] No canvas data in event:', event.payload);
@@ -997,6 +999,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 selectedTraceId: traceId || null,
                 highlightedSpanId: spanId || null,
                 selectedScenarioId: scenarioId || null,
+                selectedTrace: trace || null,
               } as CanvasTab;
             } else {
               // Clear workflow props - show just the canvas editor
@@ -1035,6 +1038,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 selectedTraceId: traceId || null,
                 highlightedSpanId: spanId || null,
                 selectedScenarioId: scenarioId || null,
+                selectedTrace: trace || null,
                 closable: true,
               } as CanvasTab
             : {
@@ -1441,6 +1445,14 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 selectedWorkflowId={canvasTab.selectedNarrativeId}
                 workflowPath={canvasTab.narrativePath}
                 workflowFileInfo={canvasTab.narrativeFileInfo}
+                // Trace integration props - for auto-selecting scenario and template interpolation
+                selectedScenarioId={canvasTab.selectedScenarioId}
+                selectedTrace={canvasTab.selectedTrace}
+                traceMatchInfo={canvasTab.selectedTrace?.scenarioMatches?.map((m) => ({
+                  scenarioId: m.scenarioId,
+                  matchType: (m.matchType || 'full') as 'full' | 'partial',
+                  coveragePercent: m.coveragePercent,
+                }))}
               />
             </div>
           );

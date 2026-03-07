@@ -6,8 +6,10 @@ import {
   UpdateInfo,
 } from 'electron-updater';
 import log from 'electron-log';
+import { Span, SpanStatusCode } from '@opentelemetry/api';
 
 import { AppVersionManagerAPIEvent } from '../window/main-process-api-implementations/appVersionManagerApi';
+import { getTracer } from './telemetry';
 
 type WindowEventData =
   | UpdateInfo
@@ -17,10 +19,29 @@ type WindowEventData =
   | { version: string }
   | null;
 
+const tracer = getTracer('app-updates');
+
 export default class AppVersionManager {
   private mainWindow: BrowserWindow | null = null;
 
+  // Active workflow spans for tracking async operations
+  private activeCheckSpan: Span | null = null;
+  private activeDownloadSpan: Span | null = null;
+  private activeInstallSpan: Span | null = null;
+
+  // Track last known available version for telemetry
+  private lastAvailableVersion: string = '';
+
   constructor() {
+    // Emit manager initialization event (standalone span since it's synchronous)
+    const initSpan = tracer.startSpan('app_updates.manager.initialized');
+    initSpan.setAttributes({
+      is_packaged: app.isPackaged,
+      version: app.getVersion(),
+      platform: process.platform,
+      arch: process.arch,
+    });
+
     log.transports.file.level = 'info';
     autoUpdater.logger = log;
 
@@ -91,94 +112,25 @@ export default class AppVersionManager {
     this.setupEventHandlers();
 
     // Setup IPC handlers
+    // Legacy IPC handlers - delegate to public methods
     ipcMain.on(AppVersionManagerAPIEvent.DOWNLOAD_UPDATE, () => {
-      log.info('[AppUpdater] Download update requested via IPC');
-      console.log('[AppUpdater] Starting update download...');
-      autoUpdater.downloadUpdate().catch((err) => {
-        log.error('[AppUpdater] Download failed:', err);
-        console.error('[AppUpdater] Download failed:', err);
-        this.sendToWindow('update-error', err);
-      });
+      this.downloadUpdate();
     });
 
     ipcMain.on(AppVersionManagerAPIEvent.INSTALL_UPDATE, () => {
-      log.info('[AppUpdater] Install update requested via IPC');
-      console.log('[AppUpdater] Installing update and restarting...');
-      autoUpdater.quitAndInstall();
+      this.installUpdate();
     });
 
-    // Test handler to download without installing
-    ipcMain.on(AppVersionManagerAPIEvent.TEST_DOWNLOAD_UPDATE, async () => {
-      log.info(
-        '[AppUpdater] Test download requested - will download but NOT install',
-      );
-      console.log(
-        '[AppUpdater] Test mode: downloading update without auto-install',
-      );
-
-      // Send confirmation to renderer that test download is starting
-      this.sendToWindow('update-checking');
-
-      // Temporarily disable auto-install
-      const originalAutoInstall = autoUpdater.autoInstallOnAppQuit;
-      autoUpdater.autoInstallOnAppQuit = false;
-
-      try {
-        // First check if update is available
-        const updateCheckResult = await autoUpdater.checkForUpdates();
-        if (updateCheckResult && updateCheckResult.updateInfo) {
-          log.info('[AppUpdater] Update found, starting test download');
-          await autoUpdater.downloadUpdate();
-          log.info('[AppUpdater] Test download completed successfully');
-        } else {
-          log.info('[AppUpdater] No update available for test download');
-          this.sendToWindow('update-not-available', {
-            version: app.getVersion(),
-          });
-        }
-        // Restore original setting
-        autoUpdater.autoInstallOnAppQuit = originalAutoInstall;
-      } catch (err) {
-        log.error('[AppUpdater] Test download failed:', err);
-        console.error('[AppUpdater] Test download failed:', err);
-        this.sendToWindow(
-          'update-error',
-          err instanceof Error ? err : new Error(String(err)),
-        );
-        // Restore original setting
-        autoUpdater.autoInstallOnAppQuit = originalAutoInstall;
-      }
+    ipcMain.on(AppVersionManagerAPIEvent.TEST_DOWNLOAD_UPDATE, () => {
+      this.testDownloadUpdate();
     });
 
     ipcMain.on(AppVersionManagerAPIEvent.CHECK_FOR_UPDATE_MANUALLY, () => {
-      log.info('[AppUpdater] Manual update check requested');
-      console.log('[AppUpdater] Manual update check requested via IPC');
-
-      // In dev mode, temporarily set allowDowngrade to ensure we can test
-      if (!app.isPackaged) {
-        autoUpdater.allowDowngrade = true;
-        log.info('[AppUpdater] Dev mode: Allowing downgrade for testing');
-      }
-
-      autoUpdater.checkForUpdates().catch((err) => {
-        log.error('[AppUpdater] Update check failed:', err);
-        console.error('[AppUpdater] Update check failed:', err);
-      });
+      this.checkForUpdate('manual');
     });
 
     ipcMain.on(AppVersionManagerAPIEvent.CHECK_FOR_UPDATE_SILENTLY, () => {
-      log.info('[AppUpdater] Silent update check requested');
-      console.log('[AppUpdater] Silent update check requested via IPC');
-
-      // In dev mode, temporarily set allowDowngrade to ensure we can test
-      if (!app.isPackaged) {
-        autoUpdater.allowDowngrade = true;
-      }
-
-      autoUpdater.checkForUpdates().catch((err) => {
-        log.error('[AppUpdater] Silent update check failed:', err);
-        console.error('[AppUpdater] Silent update check failed:', err);
-      });
+      this.checkForUpdate('silent');
     });
 
     // Check for updates every hour
@@ -186,24 +138,58 @@ export default class AppVersionManager {
       () => {
         if (this.mainWindow && !this.mainWindow.isDestroyed()) {
           log.info('[AppUpdater] Periodic update check triggered');
+
+          // Start check workflow span for periodic check
+          this.activeCheckSpan = tracer.startSpan('app_updates.check');
+          this.activeCheckSpan.addEvent('app_updates.check.periodic', {
+            interval_ms: 60 * 60 * 1000,
+          });
+          this.activeCheckSpan.addEvent('app_updates.check.started', {
+            trigger: 'periodic',
+            current_version: app.getVersion(),
+          });
+
           autoUpdater.checkForUpdates().catch((err) => {
             log.error('[AppUpdater] Periodic update check failed:', err);
+            this.emitErrorEvent('check', err);
           });
         }
       },
       60 * 60 * 1000,
     );
+
+    initSpan.setStatus({ code: SpanStatusCode.OK });
+    initSpan.end();
   }
 
   private setupEventHandlers() {
     autoUpdater.on('update-available', (info: UpdateInfo) => {
       log.info('Update available:', JSON.stringify(info, null, 2));
+
+      // Track available version for telemetry
+      this.lastAvailableVersion = info.version;
+
+      // Add event to check span
+      this.activeCheckSpan?.addEvent('app_updates.check.available', {
+        available_version: info.version,
+        current_version: app.getVersion(),
+        release_date: info.releaseDate || '',
+      });
+      this.endCheckSpan(SpanStatusCode.OK);
+
       this.sendToWindow(AppVersionManagerAPIEvent.ON_UPDATE_AVAILABLE, info);
       this.sendToWindow('update-check-complete');
     });
 
     autoUpdater.on('update-not-available', (info: UpdateInfo) => {
       log.info('Update not available:', JSON.stringify(info, null, 2));
+
+      // Add event to check span
+      this.activeCheckSpan?.addEvent('app_updates.check.not_available', {
+        current_version: app.getVersion(),
+      });
+      this.endCheckSpan(SpanStatusCode.OK);
+
       this.sendToWindow(
         AppVersionManagerAPIEvent.ON_UPDATE_NOT_AVAILABLE,
         info,
@@ -218,6 +204,15 @@ export default class AppVersionManager {
         progressObj.total
       })`;
       log.info(log_message);
+
+      // Add progress event to download span
+      this.activeDownloadSpan?.addEvent('app_updates.download.progress', {
+        percent: progressObj.percent,
+        transferred: progressObj.transferred,
+        total: progressObj.total,
+        bytes_per_second: progressObj.bytesPerSecond,
+      });
+
       this.sendToWindow(
         AppVersionManagerAPIEvent.ON_UPDATE_DOWNLOAD_PROGRESS,
         progressObj,
@@ -226,9 +221,93 @@ export default class AppVersionManager {
 
     autoUpdater.on('update-downloaded', (info: UpdateDownloadedEvent) => {
       log.info('Update downloaded');
+
+      // Add completion event to download span
+      this.activeDownloadSpan?.addEvent('app_updates.download.completed', {
+        version: info.version,
+        download_path: info.downloadedFile || '',
+      });
+      this.endDownloadSpan(SpanStatusCode.OK);
+
       this.sendToWindow(AppVersionManagerAPIEvent.ON_UPDATE_DOWNLOADED, info);
       // No dialog - all update UI is handled in the Settings modal
     });
+
+    autoUpdater.on('error', (err: Error) => {
+      log.error('[AppUpdater] Error:', err);
+
+      // Emit error event to the active span
+      if (this.activeCheckSpan) {
+        this.emitErrorEvent('check', err);
+      } else if (this.activeDownloadSpan) {
+        this.emitErrorEvent('download', err);
+      }
+    });
+  }
+
+  private emitErrorEvent(phase: 'check' | 'download' | 'install', err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    const errorType = this.classifyError(errorMessage);
+
+    const errorAttributes = {
+      error_type: errorType,
+      error_message: errorMessage,
+      phase,
+    };
+
+    if (phase === 'check' && this.activeCheckSpan) {
+      this.activeCheckSpan.addEvent('app_updates.error.occurred', errorAttributes);
+      this.endCheckSpan(SpanStatusCode.ERROR, errorMessage);
+    } else if (phase === 'download' && this.activeDownloadSpan) {
+      this.activeDownloadSpan.addEvent('app_updates.error.occurred', errorAttributes);
+      this.endDownloadSpan(SpanStatusCode.ERROR, errorMessage);
+    } else if (phase === 'install' && this.activeInstallSpan) {
+      this.activeInstallSpan.addEvent('app_updates.error.occurred', errorAttributes);
+      this.endInstallSpan(SpanStatusCode.ERROR, errorMessage);
+    }
+  }
+
+  private classifyError(errorMessage: string): string {
+    if (errorMessage.includes('ENOENT') || errorMessage.includes('no such file')) {
+      return 'file_not_found';
+    } else if (errorMessage.includes('ECONNREFUSED') || errorMessage.includes('connect')) {
+      return 'connection_refused';
+    } else if (errorMessage.includes('ETIMEDOUT')) {
+      return 'timeout';
+    } else if (errorMessage.includes('403') || errorMessage.includes('Forbidden')) {
+      return 'forbidden';
+    } else if (errorMessage.includes('404') || errorMessage.includes('Not Found')) {
+      return 'not_found';
+    } else if (errorMessage.includes('CERT') || errorMessage.includes('certificate')) {
+      return 'certificate';
+    } else if (errorMessage.includes('sha512') || errorMessage.includes('checksum')) {
+      return 'checksum';
+    }
+    return 'unknown';
+  }
+
+  private endCheckSpan(code: SpanStatusCode, message?: string) {
+    if (this.activeCheckSpan) {
+      this.activeCheckSpan.setStatus({ code, message });
+      this.activeCheckSpan.end();
+      this.activeCheckSpan = null;
+    }
+  }
+
+  private endDownloadSpan(code: SpanStatusCode, message?: string) {
+    if (this.activeDownloadSpan) {
+      this.activeDownloadSpan.setStatus({ code, message });
+      this.activeDownloadSpan.end();
+      this.activeDownloadSpan = null;
+    }
+  }
+
+  private endInstallSpan(code: SpanStatusCode, message?: string) {
+    if (this.activeInstallSpan) {
+      this.activeInstallSpan.setStatus({ code, message });
+      this.activeInstallSpan.end();
+      this.activeInstallSpan = null;
+    }
   }
 
   private sendToWindow(channel: string, data?: WindowEventData) {
@@ -245,5 +324,142 @@ export default class AppVersionManager {
   initializeUpdater(mainWindow: BrowserWindow) {
     this.mainWindow = mainWindow;
     log.info('[AppUpdater] Main window initialized for updater');
+  }
+
+  // ===========================================================================
+  // Public methods for TIPC router
+  // ===========================================================================
+
+  /**
+   * Check for updates (manual or silent trigger)
+   */
+  checkForUpdate(trigger: 'manual' | 'silent'): void {
+    log.info(`[AppUpdater] ${trigger} update check requested`);
+    console.log(`[AppUpdater] ${trigger} update check requested via TIPC`);
+
+    // Start check workflow span
+    this.activeCheckSpan = tracer.startSpan('app_updates.check');
+    this.activeCheckSpan.addEvent('app_updates.check.started', {
+      trigger,
+      current_version: app.getVersion(),
+    });
+
+    // In dev mode, temporarily set allowDowngrade to ensure we can test
+    if (!app.isPackaged) {
+      autoUpdater.allowDowngrade = true;
+      if (trigger === 'manual') {
+        log.info('[AppUpdater] Dev mode: Allowing downgrade for testing');
+      }
+    }
+
+    autoUpdater.checkForUpdates().catch((err) => {
+      log.error(`[AppUpdater] ${trigger} update check failed:`, err);
+      console.error(`[AppUpdater] ${trigger} update check failed:`, err);
+      this.emitErrorEvent('check', err);
+    });
+  }
+
+  /**
+   * Download the available update
+   */
+  downloadUpdate(): void {
+    log.info('[AppUpdater] Download update requested via TIPC');
+    console.log('[AppUpdater] Starting update download...');
+
+    // Start download workflow span
+    this.activeDownloadSpan = tracer.startSpan('app_updates.download');
+    this.activeDownloadSpan.addEvent('app_updates.download.started', {
+      version: this.lastAvailableVersion,
+    });
+
+    autoUpdater.downloadUpdate().catch((err) => {
+      log.error('[AppUpdater] Download failed:', err);
+      console.error('[AppUpdater] Download failed:', err);
+      this.emitErrorEvent('download', err);
+      this.sendToWindow('update-error', err);
+    });
+  }
+
+  /**
+   * Install the downloaded update and restart
+   */
+  installUpdate(): void {
+    log.info('[AppUpdater] Install update requested via TIPC');
+    console.log('[AppUpdater] Installing update and restarting...');
+
+    // Start install workflow span
+    this.activeInstallSpan = tracer.startSpan('app_updates.install');
+    this.activeInstallSpan.addEvent('app_updates.install.started', {
+      version: this.lastAvailableVersion,
+    });
+
+    autoUpdater.quitAndInstall();
+  }
+
+  /**
+   * Test download without auto-install (dev mode)
+   */
+  async testDownloadUpdate(): Promise<void> {
+    log.info(
+      '[AppUpdater] Test download requested - will download but NOT install',
+    );
+    console.log(
+      '[AppUpdater] Test mode: downloading update without auto-install',
+    );
+
+    // Start download workflow span for test
+    this.activeDownloadSpan = tracer.startSpan('app_updates.download');
+    this.activeDownloadSpan.setAttribute('test_mode', true);
+
+    // Send confirmation to renderer that test download is starting
+    this.sendToWindow('update-checking');
+
+    // Temporarily disable auto-install
+    const originalAutoInstall = autoUpdater.autoInstallOnAppQuit;
+    autoUpdater.autoInstallOnAppQuit = false;
+
+    try {
+      // First check if update is available
+      const updateCheckResult = await autoUpdater.checkForUpdates();
+      if (updateCheckResult && updateCheckResult.updateInfo) {
+        log.info('[AppUpdater] Update found, starting test download');
+        this.activeDownloadSpan?.addEvent('app_updates.download.started', {
+          version: updateCheckResult.updateInfo.version,
+        });
+        await autoUpdater.downloadUpdate();
+        log.info('[AppUpdater] Test download completed successfully');
+      } else {
+        log.info('[AppUpdater] No update available for test download');
+        this.sendToWindow('update-not-available', {
+          version: app.getVersion(),
+        });
+        this.endDownloadSpan(SpanStatusCode.OK);
+      }
+      // Restore original setting
+      autoUpdater.autoInstallOnAppQuit = originalAutoInstall;
+    } catch (err) {
+      log.error('[AppUpdater] Test download failed:', err);
+      console.error('[AppUpdater] Test download failed:', err);
+      this.emitErrorEvent('download', err);
+      this.sendToWindow(
+        'update-error',
+        err instanceof Error ? err : new Error(String(err)),
+      );
+      // Restore original setting
+      autoUpdater.autoInstallOnAppQuit = originalAutoInstall;
+    }
+  }
+
+  /**
+   * Get current version info
+   */
+  getVersionInfo(): { version: string; isDevMode: boolean; isPackaged: boolean; platform: string; arch: string } {
+    return {
+      version: app.getVersion(),
+      isDevMode: !app.isPackaged,
+      isPackaged: app.isPackaged,
+      platform: process.platform,
+      arch: process.arch,
+    };
   }
 }

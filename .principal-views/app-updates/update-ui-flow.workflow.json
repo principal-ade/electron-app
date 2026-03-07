@@ -1,0 +1,63 @@
+{
+  "version": "1.0.0",
+  "name": "Update UI Flow",
+  "description": "Renderer-side UI interactions for the update system",
+  "mode": "span-tree",
+  "canvas": ".principal-views/app-updates/app-updates.otel.canvas",
+  "spanPattern": "app_updates.ui",
+  "scenarios": [
+    {
+      "id": "manual-check-flow",
+      "description": "User opens settings and manually checks for updates",
+      "priority": 1,
+      "template": {
+        "introduction": "**Manual Update Check**\n\nUser initiated an update check from the Settings panel.",
+        "events": {
+          "app_updates.ui.settings_opened": "1. Settings opened (v{{current_version}}, dev={{is_dev_mode}})",
+          "app_updates.user.check_requested": "2. User clicked Check for Updates (trigger={{trigger}})",
+          "app_updates.service.method_called": "3. Service method: {{method}}"
+        },
+        "summary": "**Manual Check Initiated**\n- From: Settings panel\n- Method: {{method}}"
+      }
+    },
+    {
+      "id": "download-flow",
+      "description": "User initiates download of available update",
+      "priority": 2,
+      "template": {
+        "introduction": "**Download Initiated**\n\nUser clicked to download an available update.",
+        "events": {
+          "app_updates.user.download_requested": "1. User clicked Download (v{{available_version}})",
+          "app_updates.service.method_called": "2. Service method: {{method}}",
+          "app_updates.ui.progress_updated": "3. Progress: {{percent}}%"
+        },
+        "summary": "**Download Started**\n- Version: v{{available_version}}"
+      }
+    },
+    {
+      "id": "install-flow",
+      "description": "User initiates installation of downloaded update",
+      "priority": 3,
+      "template": {
+        "introduction": "**Install Initiated**\n\nUser clicked to install the downloaded update.",
+        "events": {
+          "app_updates.user.install_requested": "1. User clicked Install & Restart (v{{version}})",
+          "app_updates.service.method_called": "2. Service method: {{method}}"
+        },
+        "summary": "**Install Started**\n- Version: v{{version}}\n- App will restart"
+      }
+    },
+    {
+      "id": "error-displayed",
+      "description": "Error shown to user during update process",
+      "priority": 4,
+      "template": {
+        "introduction": "**Error Displayed**\n\nAn error was shown to the user.",
+        "events": {
+          "app_updates.ui.error_displayed": "1. Error shown: {{user_message}} (type={{error_type}})"
+        },
+        "summary": "**Error**\n- Type: {{error_type}}\n- Message: {{user_message}}"
+      }
+    }
+  ]
+}

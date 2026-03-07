@@ -1,0 +1,92 @@
+{
+  "version": "1.0.0",
+  "name": "Update Check Flow",
+  "description": "Flow of checking for updates - manual, silent, or periodic",
+  "mode": "span-tree",
+  "canvas": ".principal-views/app-updates/app-updates.otel.canvas",
+  "spanPattern": "app_updates.check",
+  "scenarios": [
+    {
+      "id": "update-available",
+      "description": "Update check finds a new version available",
+      "priority": 1,
+      "template": {
+        "introduction": "**Update Available**\n\nA new version has been found and is ready to download.",
+        "events": {
+          "app_updates.ui.settings_opened": "1. Settings opened (v{{current_version}}, dev={{is_dev_mode}})",
+          "app_updates.user.check_requested": "2. User requested update check (trigger={{trigger}})",
+          "app_updates.service.method_called": "3. Service method called: {{method}}",
+          "app_updates.ipc.message_sent": "4. IPC: {{channel}} ({{direction}})",
+          "app_updates.check.started": "5. Check started for v{{current_version}} (trigger={{trigger}})",
+          "app_updates.check.available": "6. **Update found:** v{{current_version}} -> v{{available_version}} (released: {{release_date}})"
+        },
+        "summary": "**Update Available**\n- Current: v{{current_version}}\n- Available: v{{available_version}}\n- Ready to download"
+      }
+    },
+    {
+      "id": "no-update-available",
+      "description": "Update check confirms user is on latest version",
+      "priority": 2,
+      "template": {
+        "introduction": "**No Update Available**\n\nYou're running the latest version.",
+        "events": {
+          "app_updates.ui.settings_opened": "1. Settings opened (v{{current_version}}, dev={{is_dev_mode}})",
+          "app_updates.user.check_requested": "2. User requested update check (trigger={{trigger}})",
+          "app_updates.service.method_called": "3. Service method called: {{method}}",
+          "app_updates.ipc.message_sent": "4. IPC: {{channel}} ({{direction}})",
+          "app_updates.check.started": "5. Check started for v{{current_version}} (trigger={{trigger}})",
+          "app_updates.check.not_available": "6. No update: v{{current_version}} is the latest"
+        },
+        "summary": "**Up to Date**\n- Current: v{{current_version}}\n- Status: Latest version installed"
+      }
+    },
+    {
+      "id": "startup-check",
+      "description": "Silent update check on app startup",
+      "priority": 3,
+      "template": {
+        "introduction": "**Startup Update Check**\n\nSilent background check on app launch.",
+        "events": {
+          "app_updates.manager.initialized": "0. Manager initialized (v{{version}}, packaged={{is_packaged}}, {{platform}}/{{arch}})",
+          "app_updates.check.startup": "1. App startup: silent check from {{window_type}} window",
+          "app_updates.service.method_called": "2. Service: checkForUpdateSilently()",
+          "app_updates.ipc.message_sent": "3. IPC: {{channel}} ({{direction}})",
+          "app_updates.check.started": "4. Check started for v{{current_version}} (trigger={{trigger}})",
+          "app_updates.check.available": "5. [If found] Update: v{{current_version}} -> v{{available_version}}",
+          "app_updates.check.not_available": "5. [If latest] No update: v{{current_version}} is current"
+        },
+        "summary": "**Startup Check Complete**\n- Triggered by: {{window_type}} window\n- Ran silently in background"
+      }
+    },
+    {
+      "id": "periodic-check",
+      "description": "Automatic periodic update check (every 60 minutes)",
+      "priority": 4,
+      "template": {
+        "introduction": "**Periodic Update Check**\n\nAutomatic background check triggered by interval timer.",
+        "events": {
+          "app_updates.check.periodic": "1. Periodic check triggered (interval: {{interval_ms}}ms)",
+          "app_updates.check.started": "2. Check started for v{{current_version}} (trigger=periodic)",
+          "app_updates.check.available": "3. [If found] Update: v{{current_version}} -> v{{available_version}}",
+          "app_updates.check.not_available": "3. [If latest] No update available"
+        },
+        "summary": "**Periodic Check**\n- Interval: {{interval_ms}}ms (1 hour)\n- Runs automatically while app is open"
+      }
+    },
+    {
+      "id": "check-error",
+      "description": "Error occurred during update check",
+      "priority": 5,
+      "template": {
+        "introduction": "**Update Check Failed**\n\nAn error prevented the update check from completing.",
+        "events": {
+          "app_updates.user.check_requested": "1. User requested update check (trigger={{trigger}})",
+          "app_updates.check.started": "2. Check started for v{{current_version}}",
+          "app_updates.error.occurred": "3. **Error:** {{error_type}} during {{phase}} - {{error_message}}",
+          "app_updates.ui.error_displayed": "4. Error shown to user: {{user_message}}"
+        },
+        "summary": "**Error Details**\n- Type: {{error_type}}\n- Phase: {{phase}}\n- Message: {{error_message}}"
+      }
+    }
+  ]
+}

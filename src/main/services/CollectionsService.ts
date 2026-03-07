@@ -227,6 +227,9 @@ class CollectionsService {
         theme: input.theme,
         isDefault: input.isDefault,
         suggestedClonePath: input.suggestedClonePath,
+        visibility: 'private',
+        owner: '',
+        ownerType: 'user',
       });
 
       console.log('[CollectionsService] Created collection:', collection.name);

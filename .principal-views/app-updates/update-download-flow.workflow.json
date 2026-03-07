@@ -1,0 +1,45 @@
+{
+  "version": "1.0.0",
+  "name": "Update Download Flow",
+  "description": "Flow of downloading an available update",
+  "mode": "span-tree",
+  "canvas": ".principal-views/app-updates/app-updates.otel.canvas",
+  "spanPattern": "app_updates.download",
+  "scenarios": [
+    {
+      "id": "download-success",
+      "description": "Update downloaded successfully",
+      "priority": 1,
+      "template": {
+        "introduction": "**Download Successful**\n\nThe update has been downloaded and is ready to install.",
+        "events": {
+          "app_updates.check.available": "1. Update available: v{{available_version}}",
+          "app_updates.user.download_requested": "2. User clicked Download Update (v{{available_version}})",
+          "app_updates.service.method_called": "3. Service: {{method}}",
+          "app_updates.ipc.message_sent": "4. IPC: {{channel}} ({{direction}})",
+          "app_updates.download.started": "5. Download started for v{{version}}",
+          "app_updates.download.progress": "6. Progress: {{percent}}% ({{transferred}}/{{total}} bytes @ {{bytes_per_second}} B/s)",
+          "app_updates.ui.progress_updated": "7. Progress bar: {{percent}}%",
+          "app_updates.download.completed": "8. **Download complete:** v{{version}} at {{download_path}}"
+        },
+        "summary": "**Download Complete**\n- Version: v{{version}}\n- Status: Ready to install\n- Click \"Install & Restart\" to apply"
+      }
+    },
+    {
+      "id": "download-error",
+      "description": "Error occurred during download",
+      "priority": 2,
+      "template": {
+        "introduction": "**Download Failed**\n\nAn error prevented the update from downloading.",
+        "events": {
+          "app_updates.user.download_requested": "1. User clicked Download Update",
+          "app_updates.download.started": "2. Download started for v{{version}}",
+          "app_updates.download.progress": "3. Progress: {{percent}}% before failure",
+          "app_updates.error.occurred": "4. **Error:** {{error_type}} during {{phase}} - {{error_message}}",
+          "app_updates.ui.error_displayed": "5. Error shown: {{user_message}}"
+        },
+        "summary": "**Download Error**\n- Type: {{error_type}}\n- Phase: download\n- Message: {{error_message}}\n\n**Common fixes:**\n- Check internet connection\n- Verify proxy/firewall settings\n- Try again later"
+      }
+    }
+  ]
+}

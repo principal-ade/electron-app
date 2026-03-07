@@ -105,6 +105,8 @@ export interface CanvasOpenPayload {
   traceId?: string;
   spanId?: string;
   scenarioId?: string;
+  /** Full trace object for template interpolation and scenario matching */
+  trace?: RegisteredTrace;
 }
 
 /**

@@ -2,6 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { RefreshCw, Sparkles, Info } from 'lucide-react';
 import { AppVersionManagerService } from '../../../../main-process-api/AppVersionManagerService';
+import { getTracer } from '../../../../telemetry';
+import type { Span } from '@opentelemetry/api';
+import { SpanStatusCode } from '@opentelemetry/api';
+
+const tracer = getTracer('app-updates');
 
 export const UpdatesSettings: React.FC = () => {
   const { theme } = useTheme();
@@ -19,6 +24,9 @@ export const UpdatesSettings: React.FC = () => {
   const isDownloadingRef = useRef(false);
   const isDownloadedRef = useRef(false);
 
+  // UI workflow span - active while settings panel is open
+  const uiSpanRef = useRef<Span | null>(null);
+
   useEffect(() => {
     isDownloadingRef.current = isDownloading;
   }, [isDownloading]);
@@ -28,8 +36,20 @@ export const UpdatesSettings: React.FC = () => {
   }, [isDownloaded]);
 
   useEffect(() => {
-    AppVersionManagerService.getVersion().then(setCurrentVersion);
-    AppVersionManagerService.isDevMode().then(setIsDevMode);
+    // Start UI workflow span when settings opens
+    uiSpanRef.current = tracer.startSpan('app_updates.ui');
+
+    // Get version info and emit settings opened event
+    AppVersionManagerService.getVersion().then((version) => {
+      setCurrentVersion(version);
+      AppVersionManagerService.isDevMode().then((devMode) => {
+        setIsDevMode(devMode);
+        uiSpanRef.current?.addEvent('app_updates.ui.settings_opened', {
+          current_version: version,
+          is_dev_mode: devMode,
+        });
+      });
+    });
 
     const handleUpdateAvailable = (info: { version: string }) => {
       setUpdateAvailable(true);
@@ -58,6 +78,13 @@ export const UpdatesSettings: React.FC = () => {
       err: Error | { message?: string; toString(): string },
     ) => {
       const errorMessage = parseUpdateError(err);
+
+      // Emit error displayed event
+      uiSpanRef.current?.addEvent('app_updates.ui.error_displayed', {
+        error_type: isDownloadingRef.current ? 'download' : 'check',
+        user_message: errorMessage,
+      });
+
       if (isDownloadingRef.current) {
         setDownloadError(errorMessage);
         setIsDownloading(false);
@@ -81,6 +108,14 @@ export const UpdatesSettings: React.FC = () => {
           : progress.total
             ? ((progress.transferred || 0) / progress.total) * 100
             : 0;
+
+      // Emit progress updated event (throttled to 25% increments to reduce noise)
+      if (Math.floor(derivedPercent) % 25 === 0 && derivedPercent > 0) {
+        uiSpanRef.current?.addEvent('app_updates.ui.progress_updated', {
+          percent: derivedPercent,
+        });
+      }
+
       setDownloadProgress(Math.max(0, Math.min(100, derivedPercent)));
       setIsDownloading(true);
       setUpdateStatus('Downloading update...');
@@ -115,6 +150,12 @@ export const UpdatesSettings: React.FC = () => {
 
     return () => {
       unsubscribe.forEach((fn) => fn());
+      // End UI workflow span when settings closes
+      if (uiSpanRef.current) {
+        uiSpanRef.current.setStatus({ code: SpanStatusCode.OK });
+        uiSpanRef.current.end();
+        uiSpanRef.current = null;
+      }
     };
   }, []);
 
@@ -160,6 +201,11 @@ export const UpdatesSettings: React.FC = () => {
   };
 
   const checkForUpdates = () => {
+    // Emit user check requested event
+    uiSpanRef.current?.addEvent('app_updates.user.check_requested', {
+      trigger: 'manual',
+    });
+
     setIsChecking(true);
     setUpdateStatus(null);
     setDownloadError(null);
@@ -167,6 +213,11 @@ export const UpdatesSettings: React.FC = () => {
   };
 
   const downloadUpdate = () => {
+    // Emit user download requested event
+    uiSpanRef.current?.addEvent('app_updates.user.download_requested', {
+      available_version: availableVersion || '',
+    });
+
     setIsDownloading(true);
     setDownloadError(null);
     setDownloadProgress(0);
@@ -175,6 +226,11 @@ export const UpdatesSettings: React.FC = () => {
   };
 
   const installUpdate = () => {
+    // Emit user install requested event
+    uiSpanRef.current?.addEvent('app_updates.user.install_requested', {
+      version: availableVersion || '',
+    });
+
     setUpdateStatus('Installing update...');
     AppVersionManagerService.installUpdate();
   };
@@ -395,6 +451,10 @@ export const UpdatesSettings: React.FC = () => {
                       fontWeight: 600,
                     }}
                     onClick={() => {
+                      uiSpanRef.current?.addEvent('app_updates.user.download_requested', {
+                        available_version: availableVersion,
+                        test_mode: true,
+                      });
                       setIsDownloading(true);
                       setDownloadError(null);
                       setDownloadProgress(0);

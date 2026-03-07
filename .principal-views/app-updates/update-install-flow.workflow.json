@@ -1,0 +1,27 @@
+{
+  "version": "1.0.0",
+  "name": "Update Install Flow",
+  "description": "Flow of installing a downloaded update",
+  "mode": "span-tree",
+  "canvas": ".principal-views/app-updates/app-updates.otel.canvas",
+  "spanPattern": "app_updates.install",
+  "scenarios": [
+    {
+      "id": "install-success",
+      "description": "Update installed successfully and app restarted",
+      "priority": 1,
+      "template": {
+        "introduction": "**Installation Successful**\n\nThe update has been installed and the app is restarting.",
+        "events": {
+          "app_updates.download.completed": "1. Update downloaded: v{{version}}",
+          "app_updates.user.install_requested": "2. User clicked \"Install & Restart\" (v{{version}})",
+          "app_updates.service.method_called": "3. Service: {{method}}",
+          "app_updates.ipc.message_sent": "4. IPC: {{channel}} ({{direction}})",
+          "app_updates.install.started": "5. Installing v{{version}}...",
+          "app_updates.install.completed": "6. **Installed:** v{{previous_version}} -> v{{new_version}}"
+        },
+        "summary": "**Update Complete**\n- Previous: v{{previous_version}}\n- Installed: v{{new_version}}\n- Status: App restarting"
+      }
+    }
+  ]
+}

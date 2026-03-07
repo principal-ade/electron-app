@@ -19,7 +19,7 @@ import { ElectronFileSystemAdapter } from '../file-system/fileSystemHandlers';
 import { ElectronWindowManagerAdapter } from './windowManagerHandlers';
 import { GitHubAdapter } from '../version-control-providers/githubHandlers';
 import MenuBuilder from '../menu';
-import AppVersionManager from '../AppVersionManager';
+import { getAppVersionManagerInstance } from '../app-version';
 import { gitSyncWebSocketManager } from '../services/GitSyncWebSocketManager';
 import { orbitWebSocketManager } from '../services/OrbitWebSocketManager';
 
@@ -746,7 +746,7 @@ export async function createWindow(
     if (applicationWindows.size === 1) {
       log.info('[ModernWindow] Initializing AppUpdater for first window');
       try {
-        const updater = new AppVersionManager();
+        const updater = getAppVersionManagerInstance();
         updater.initializeUpdater(appWindow.window);
         log.info('[ModernWindow] AppUpdater initialized successfully');
       } catch (error) {

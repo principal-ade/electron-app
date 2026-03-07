@@ -220,7 +220,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   const pendingPanelSizesRef = useRef<{ left: number; middle: number; right: number } | null>(null);
   const [resetKey, setResetKey] = useState(0);
   const [hasGitHubFolder, setHasGitHubFolder] = useState(false);
-  const [packages, setPackages] = useState<PackageLayer[]>([]);
+  const [_packages, _setPackages] = useState<PackageLayer[]>([]);
   const [traceSourceServiceName, setTraceSourceServiceName] = useState<string>('all');
   const [availableServiceNames, setAvailableServiceNames] = useState<string[]>([]);
 
@@ -498,7 +498,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         console.info('[DevWorkspaceApp] Received packages data:', packagesData);
         if (packagesData?.packages) {
           console.info('[DevWorkspaceApp] Setting packages:', packagesData.packages);
-          setPackages(packagesData.packages);
+          _setPackages(packagesData.packages);
         } else {
           console.info('[DevWorkspaceApp] No packages in response');
         }
