@@ -153,13 +153,19 @@ class QuickOpen {
       log.info('[Quick Open] Window closed');
     });
 
-    // Handle blur - close when focus is lost
-    // TODO: Re-enable this once we fix the focus issues
-    // For now, let Escape key handle closing
-    // this.quickOpenWindow.on('blur', () => {
-    //   log.info('[Quick Open] Lost focus, closing');
-    //   this.hide();
-    // });
+    // Handle blur - close when app loses focus (switching to another app)
+    // We use setImmediate to let focus settle, then check if any app window has focus
+    // This avoids closing when clicking items within the window
+    this.quickOpenWindow.on('blur', () => {
+      setImmediate(() => {
+        const focusedWindow = BrowserWindow.getFocusedWindow();
+        if (!focusedWindow) {
+          // No window in our app has focus = user switched to another app
+          log.info('[Quick Open] App lost focus, closing');
+          this.hide();
+        }
+      });
+    });
 
     // Load the quick open HTML
     const targetUrl = resolveHtmlPath('quick-open.html');

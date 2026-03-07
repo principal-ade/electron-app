@@ -223,8 +223,13 @@ const QuickOpenApp: React.FC = () => {
     }
   };
 
+  const handleBackdropClick = () => {
+    quickOpenWindow.electronAPI.closeQuickOpen();
+  };
+
   return (
     <div
+      onClick={handleBackdropClick}
       style={{
         width: '100vw',
         height: '100vh',
@@ -236,6 +241,7 @@ const QuickOpenApp: React.FC = () => {
       }}
     >
       <div
+        onClick={(e) => e.stopPropagation()}
         style={{
           position: 'relative',
           width: '600px',
