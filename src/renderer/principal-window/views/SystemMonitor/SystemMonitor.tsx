@@ -591,7 +591,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
               >
                 <Terminal size={14} />
                 Agent Activity
-                {terminalActivities.filter(a => a.isWorking).length > 0 && (
+                {(terminalActivities?.filter(a => a.isWorking).length ?? 0) > 0 && (
                   <span
                     style={{
                       position: 'absolute',
@@ -610,7 +610,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                       padding: '0 4px',
                     }}
                   >
-                    {terminalActivities.filter(a => a.isWorking).length}
+                    {terminalActivities?.filter(a => a.isWorking).length ?? 0}
                   </span>
                 )}
               </button>
@@ -1099,7 +1099,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                 letterSpacing: '0.05em',
               }}
             >
-              ACTIVE AGENT SESSIONS ({terminalActivities.filter(a => a.isWorking).length})
+              ACTIVE AGENT SESSIONS ({terminalActivities?.filter(a => a.isWorking).length ?? 0})
             </h3>
 
             <div
@@ -1111,7 +1111,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                 overflow: 'hidden',
               }}
             >
-              {terminalActivities.filter(a => a.isWorking).length === 0 ? (
+              {(terminalActivities?.filter(a => a.isWorking).length ?? 0) === 0 ? (
                 <div
                   style={{
                     padding: '40px 24px',
@@ -1132,7 +1132,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                 </div>
               ) : (
                 terminalActivities
-                  .filter(a => a.isWorking)
+                  ?.filter(a => a.isWorking)
                   .map((activity, index, arr) => (
                     <div
                       key={activity.sessionId}
@@ -1250,7 +1250,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
             </div>
 
             {/* All Sessions Summary */}
-            {terminalActivities.length > 0 && (
+            {(terminalActivities?.length ?? 0) > 0 && (
               <div
                 style={{
                   marginTop: '16px',
@@ -1262,9 +1262,9 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                   color: theme.colors.textSecondary,
                 }}
               >
-                Total tracked sessions: {terminalActivities.length} •
-                Working: {terminalActivities.filter(a => a.isWorking).length} •
-                Idle: {terminalActivities.filter(a => !a.isWorking).length}
+                Total tracked sessions: {terminalActivities?.length ?? 0} •
+                Working: {terminalActivities?.filter(a => a.isWorking).length ?? 0} •
+                Idle: {terminalActivities?.filter(a => !a.isWorking).length ?? 0}
               </div>
             )}
           </section>
