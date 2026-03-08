@@ -461,7 +461,7 @@ export const StorybookSidebarButton: React.FC<StorybookSidebarButtonProps> = ({
             whiteSpace: 'nowrap',
           }}
         >
-          {isStarting ? 'Starting' : isRunning ? 'Stop SB' : 'Storybook'}
+          {isStarting ? 'Starting' : isRunning ? 'Stop SB' : 'StBk'}
         </span>
       </button>
 
