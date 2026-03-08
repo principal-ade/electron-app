@@ -28,6 +28,8 @@ import type {
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { CollectionsService } from '../main-process-api/CollectionsService';
 import { WindowService } from '../main-process-api/WindowService';
+import { getTracer } from '../telemetry';
+import { SpanStatusCode } from '@opentelemetry/api';
 import type { Collection, CollectionMembership } from '@principal-ai/alexandria-collections';
 import type { DiscoveredRepository } from '@industry-theme/alexandria-panels';
 
@@ -741,19 +743,21 @@ export const WorldsViewPanelProvider: React.FC<
 
       // Local repository actions
       openLocalRepository: async (entry: AlexandriaEntry) => {
+        const tracer = getTracer('alexandria-recently-opened');
+        const span = tracer.startSpan('alexandria.worlds_view.project_opened');
+        span.setAttribute('repository_name', entry.name);
+
         console.info(
           '[WorldsViewPanelProvider] Opening local repository:',
           entry.name,
         );
 
         try {
+          // Note: lastOpenedAt is updated centrally in openDevWorkspaceWindow
           await WindowService.openDevWorkspace({ alexandriaEntry: entry });
 
-          // Update lastOpenedAt timestamp
-          await AlexandriaService.updateLastOpened(entry.name);
-
-          // Note: We don't refresh repositories here to avoid unnecessary rerenders
-          // The lastOpenedAt update is just metadata and doesn't need immediate UI refresh
+          span.setStatus({ code: SpanStatusCode.OK });
+          span.end();
 
           events.emit({
             type: 'repository:opened',
@@ -766,6 +770,11 @@ export const WorldsViewPanelProvider: React.FC<
             '[WorldsViewPanelProvider] Failed to open repository:',
             error,
           );
+          span.recordException(
+            error instanceof Error ? error : new Error(String(error)),
+          );
+          span.setStatus({ code: SpanStatusCode.ERROR });
+          span.end();
           throw error;
         }
       },

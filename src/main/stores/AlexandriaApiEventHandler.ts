@@ -10,6 +10,8 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import { RepositoryRegistrationManager } from '@principal-ai/repository-monitoring-server';
 import { getManager as getRepositoryMonitoringManager } from '../repository-monitoring/ipcHandlers';
 import type { WorkspaceChangeEventPayload } from '@principal-ai/repository-monitoring-server';
+import { getTracer } from '../telemetry';
+import { SpanStatusCode } from '@opentelemetry/api';
 
 // MonitoringInternalEvent constants (matching the package)
 const MonitoringInternalEvent = {
@@ -46,10 +48,23 @@ export class AlexandriaApiEventHandler implements AlexandriaAPI {
     data: AlexandriaEntry | { name: string },
   ): void {
     const windows = BrowserWindow.getAllWindows();
-    windows.forEach((window) => {
-      if (!window.isDestroyed()) {
-        window.webContents.send(eventType, data);
-      }
+    const activeWindows = windows.filter((w) => !w.isDestroyed());
+
+    // Track broadcast for recently-opened flow
+    if (eventType === AlexandriaAPIEvent.REPOSITORY_UPDATED) {
+      const tracer = getTracer('alexandria-recently-opened');
+      const span = tracer.startSpan(
+        'alexandria.event.repository_updated_broadcast',
+      );
+      span.setAttributes({
+        repository_name: data.name,
+        window_count: activeWindows.length,
+      });
+      span.end();
+    }
+
+    activeWindows.forEach((window) => {
+      window.webContents.send(eventType, data);
     });
   }
 
@@ -112,7 +127,22 @@ export class AlexandriaApiEventHandler implements AlexandriaAPI {
   }
 
   async updateLastOpened(name: string) {
-    await this.registryService.updateLastOpened(name);
+    const tracer = getTracer('alexandria-recently-opened');
+    const span = tracer.startSpan('alexandria.main.ipc_handler_invoked');
+    span.setAttribute('repository_name', name);
+
+    try {
+      await this.registryService.updateLastOpened(name);
+      span.setStatus({ code: SpanStatusCode.OK });
+    } catch (error) {
+      span.recordException(
+        error instanceof Error ? error : new Error(String(error)),
+      );
+      span.setStatus({ code: SpanStatusCode.ERROR });
+      throw error;
+    } finally {
+      span.end();
+    }
   }
 
   async getRepositoryCount() {

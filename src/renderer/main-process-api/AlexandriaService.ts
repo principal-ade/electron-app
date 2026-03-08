@@ -8,6 +8,8 @@ import type {
   CodebaseView,
 } from '@principal-ai/alexandria-core-library/types';
 import type { AlexandriaChangeEvent } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
+import { getTracer } from '../telemetry';
+import { SpanStatusCode } from '@opentelemetry/api';
 
 export class AlexandriaService {
   static onRepositoryChange(
@@ -59,7 +61,26 @@ export class AlexandriaService {
   }
 
   static async updateLastOpened(name: string): Promise<void> {
-    return window.mainProcess.alexandria.updateLastOpened(name);
+    const tracer = getTracer('alexandria-recently-opened');
+    const span = tracer.startSpan('alexandria.service.update_last_opened_called');
+    span.setAttribute('repository_name', name);
+
+    try {
+      span.addEvent('alexandria.ipc.update_last_opened_sent', {
+        channel: 'alexandria:update-last-opened',
+        repository_name: name,
+      });
+      await window.mainProcess.alexandria.updateLastOpened(name);
+      span.setStatus({ code: SpanStatusCode.OK });
+    } catch (error) {
+      span.recordException(
+        error instanceof Error ? error : new Error(String(error)),
+      );
+      span.setStatus({ code: SpanStatusCode.ERROR });
+      throw error;
+    } finally {
+      span.end();
+    }
   }
 
   static async getRepositoryCount(): Promise<number> {

@@ -9,6 +9,8 @@ import React, {
 } from 'react';
 import type { Theme } from '@principal-ade/industry-theme';
 import { PanelEventBus } from '@principal-ade/panel-framework-core';
+import { getTracer } from '../telemetry';
+import { SpanStatusCode } from '@opentelemetry/api';
 import type {
   PanelContextValue,
   PanelActions,
@@ -271,12 +273,21 @@ export const ProjectsPanelProvider: React.FC<
 
   // Fetch all local repositories on mount
   useEffect(() => {
-    const fetchLocalRepositories = async () => {
+    const tracer = getTracer('alexandria-recently-opened');
+
+    const fetchLocalRepositories = async (_trigger?: string) => {
+      const span = tracer.startSpan('alexandria.context.repositories_fetched');
       setLocalRepositoriesLoading(true);
       try {
         const repos = await AlexandriaService.getRepositories();
 
         // Sort by lastOpenedAt (most recent first)
+        const withTimestamp = repos.filter((r) => r.lastOpenedAt).length;
+        span.addEvent('alexandria.context.repositories_sorted', {
+          total_count: repos.length,
+          with_timestamp_count: withTimestamp,
+        });
+
         const sorted = repos.sort((a, b) => {
           // Projects with lastOpenedAt come before those without
           if (a.lastOpenedAt && !b.lastOpenedAt) return -1;
@@ -290,23 +301,54 @@ export const ProjectsPanelProvider: React.FC<
           return new Date(bTime).getTime() - new Date(aTime).getTime();
         });
 
+        span.setAttributes({
+          total_count: repos.length,
+          with_last_opened_count: withTimestamp,
+        });
+
+        // UI display event - projects will be rendered with this data
+        span.addEvent('alexandria.ui.local_projects_displayed', {
+          repository_count: repos.length,
+          has_recently_opened: withTimestamp > 0,
+        });
+
+        span.setStatus({ code: SpanStatusCode.OK });
         setLocalRepositories(sorted);
       } catch (error) {
         console.error(
           '[ProjectsPanelProvider] Failed to fetch local repositories:',
           error,
         );
+        span.recordException(
+          error instanceof Error ? error : new Error(String(error)),
+        );
+        span.setStatus({ code: SpanStatusCode.ERROR });
         setLocalRepositories([]);
       } finally {
+        span.end();
         setLocalRepositoriesLoading(false);
       }
     };
 
-    fetchLocalRepositories();
+    fetchLocalRepositories('mount');
 
     // Listen for repository changes
-    const unsubscribe = AlexandriaService.onRepositoryChange(() => {
-      fetchLocalRepositories();
+    const unsubscribe = AlexandriaService.onRepositoryChange((event) => {
+      const changeSpan = tracer.startSpan(
+        'alexandria.context.change_listener_triggered',
+      );
+      changeSpan.setAttribute('trigger', 'repository_change_event');
+
+      // Track re-sort event for recently opened project
+      if (event?.repository?.name) {
+        changeSpan.addEvent('alexandria.ui.projects_resorted', {
+          newly_opened_project: event.repository.name,
+          new_position: 0, // After re-sort, the updated project moves to top
+        });
+      }
+
+      changeSpan.end();
+      fetchLocalRepositories('repository_change');
     });
 
     return unsubscribe;
@@ -1152,6 +1194,19 @@ export const ProjectsPanelProvider: React.FC<
 
       // openLocalRepository - accepts AlexandriaEntry as required by LocalProjectsPanelActions
       openLocalRepository: async (entry: AlexandriaEntry) => {
+        const tracer = getTracer('alexandria-recently-opened');
+        const span = tracer.startSpan('alexandria.action.open_local_repository');
+        span.setAttributes({
+          repository_name: entry.name,
+          repository_path: entry.path,
+        });
+
+        // Record user action event
+        span.addEvent('alexandria.user.project_opened', {
+          project_name: entry.name,
+          had_previous_open: !!entry.lastOpenedAt,
+        });
+
         console.info(
           '[ProjectsPanelProvider] Opening local repository:',
           entry.name,
@@ -1160,20 +1215,17 @@ export const ProjectsPanelProvider: React.FC<
         // Also select the repository for the info panel
         setSelectedRepository(entry);
 
-        // Update lastOpenedAt timestamp
-        try {
-          await AlexandriaService.updateLastOpened(entry.name);
-        } catch (error) {
-          console.error(
-            '[ProjectsPanelProvider] Failed to update lastOpenedAt:',
-            error,
-          );
-          // Don't block opening the project if update fails
-        }
-
+        // Note: lastOpenedAt is updated centrally in openDevWorkspaceWindow
         await WindowService.openDevWorkspace({
           alexandriaEntry: entry,
         });
+
+        span.addEvent('alexandria.window.dev_workspace_opened', {
+          repository_name: entry.name,
+        });
+        span.setStatus({ code: SpanStatusCode.OK });
+        span.end();
+
         events.emit({
           type: 'repository:opened',
           source: 'projects-view',
@@ -1184,6 +1236,9 @@ export const ProjectsPanelProvider: React.FC<
 
       // openRepository - for GitHub panels (takes string path)
       openRepository: async (localPath: string) => {
+        const tracer = getTracer('alexandria-recently-opened');
+        const span = tracer.startSpan('alexandria.action.open_local_repository');
+
         // Find the local repo entry by path
         const entry = localRepositories.find((r) => r.path === localPath);
         if (!entry) {
@@ -1191,8 +1246,24 @@ export const ProjectsPanelProvider: React.FC<
             '[ProjectsPanelProvider] Could not find repository at path:',
             localPath,
           );
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: 'Repository not found',
+          });
+          span.end();
           return;
         }
+
+        span.setAttributes({
+          repository_name: entry.name,
+          repository_path: entry.path,
+        });
+
+        // Record user action event
+        span.addEvent('alexandria.user.project_opened', {
+          project_name: entry.name,
+          had_previous_open: !!entry.lastOpenedAt,
+        });
 
         console.info(
           '[ProjectsPanelProvider] Opening repository from path:',
@@ -1202,20 +1273,17 @@ export const ProjectsPanelProvider: React.FC<
         // Also select the repository for the info panel
         setSelectedRepository(entry);
 
-        // Update lastOpenedAt timestamp
-        try {
-          await AlexandriaService.updateLastOpened(entry.name);
-        } catch (error) {
-          console.error(
-            '[ProjectsPanelProvider] Failed to update lastOpenedAt:',
-            error,
-          );
-          // Don't block opening the project if update fails
-        }
-
+        // Note: lastOpenedAt is updated centrally in openDevWorkspaceWindow
         await WindowService.openDevWorkspace({
           alexandriaEntry: entry,
         });
+
+        span.addEvent('alexandria.window.dev_workspace_opened', {
+          repository_name: entry.name,
+        });
+        span.setStatus({ code: SpanStatusCode.OK });
+        span.end();
+
         events.emit({
           type: 'repository:opened',
           source: 'projects-view',

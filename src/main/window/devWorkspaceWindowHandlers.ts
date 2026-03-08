@@ -18,6 +18,9 @@ import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { broadcastRepositoryWindowsChanged } from './modernWindowHandlers';
 import { getManager as getMonitoringManager } from '../repository-monitoring/ipcHandlers';
+import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
+import { getTracer } from '../telemetry';
+import { SpanStatusCode } from '@opentelemetry/api';
 
 const DEV_WORKSPACE_PURPOSE = 'dev-workspace';
 
@@ -46,6 +49,36 @@ export async function openDevWorkspaceWindow(
 ): Promise<{ windowId: number } | null> {
   const { alexandriaEntry } = options;
   const windowName = `${DEV_WORKSPACE_PURPOSE}-${alexandriaEntry.path}`;
+  const tracer = getTracer('alexandria-recently-opened');
+
+  // Update lastOpenedAt timestamp for the repository (fire-and-forget)
+  // This is done centrally here so ALL entry points (quick open, deep links, etc.) update the timestamp
+  const updateSpan = tracer.startSpan(
+    'alexandria.dev_workspace.update_last_opened',
+  );
+  updateSpan.setAttributes({
+    repository_name: alexandriaEntry.name,
+    repository_path: alexandriaEntry.path,
+  });
+
+  AlexandriaRegistryService.getInstance()
+    .updateLastOpened(alexandriaEntry.name)
+    .then(() => {
+      updateSpan.setStatus({ code: SpanStatusCode.OK });
+      updateSpan.end();
+    })
+    .catch((error) => {
+      console.error(
+        '[DevWorkspaceWindow] Failed to update lastOpenedAt:',
+        error,
+      );
+      updateSpan.recordException(
+        error instanceof Error ? error : new Error(String(error)),
+      );
+      updateSpan.setStatus({ code: SpanStatusCode.ERROR });
+      updateSpan.end();
+      // Don't block opening the window if update fails
+    });
 
   // Check if window already exists
   const existingId = specialWindows.get(windowName);

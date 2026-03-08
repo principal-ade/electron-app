@@ -18,6 +18,8 @@ import { gitClientFactory } from '../utils/gitClientFactory';
 import { FileSystemService } from '../file-system-service';
 import { LocalNodeGlobAdapter } from '../adapters/LocalNodeGlobAdapter';
 import { homedir } from 'os';
+import { getTracer } from '../telemetry';
+import { SpanStatusCode } from '@opentelemetry/api';
 
 export class AlexandriaRegistryService {
   private static instance: AlexandriaRegistryService;
@@ -313,9 +315,39 @@ export class AlexandriaRegistryService {
    * @param name - Repository name
    */
   async updateLastOpened(name: string): Promise<void> {
-    await this.outpostManager.updateRepository(name, {
-      lastOpenedAt: new Date().toISOString(),
+    const tracer = getTracer('alexandria-recently-opened');
+    const span = tracer.startSpan('alexandria.registry.timestamp_updated');
+    const timestamp = new Date().toISOString();
+
+    span.setAttributes({
+      repository_name: name,
+      timestamp,
     });
+
+    try {
+      await this.outpostManager.updateRepository(name, {
+        lastOpenedAt: timestamp,
+      });
+
+      span.addEvent('alexandria.outpost.repository_updated', {
+        repository_name: name,
+        field_updated: 'lastOpenedAt',
+      });
+
+      span.addEvent('alexandria.storage.metadata_persisted', {
+        repository_name: name,
+      });
+
+      span.setStatus({ code: SpanStatusCode.OK });
+    } catch (error) {
+      span.recordException(
+        error instanceof Error ? error : new Error(String(error)),
+      );
+      span.setStatus({ code: SpanStatusCode.ERROR });
+      throw error;
+    } finally {
+      span.end();
+    }
   }
 
   /**

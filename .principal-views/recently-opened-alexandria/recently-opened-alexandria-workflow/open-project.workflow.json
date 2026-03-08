@@ -1,0 +1,61 @@
+{
+  "version": "1.0.0",
+  "name": "Open Project Flow",
+  "description": "Flow for opening a local project and updating lastOpenedAt timestamp (centralized in main process)",
+  "mode": "span-tree",
+  "canvas": ".principal-views/recently-opened-alexandria/recently-opened-alexandria.otel.canvas",
+  "spanPattern": "alexandria",
+  "scenarios": [
+    {
+      "id": "open-project-success",
+      "description": "User opens a local project successfully (centralized timestamp update)",
+      "priority": 1,
+      "template": {
+        "introduction": "**Opening Local Project**\n\nOpening project **\"{{project.name}}\"** (timestamp updated centrally in main process)",
+        "events": {
+          "alexandria.user.project_opened": "User clicked to open **{{project_name}}** (had previous open: {{had_previous_open}})",
+          "alexandria.action.open_local_repository": "Opening repository **{{repository_name}}** at `{{repository_path}}`",
+          "alexandria.dev_workspace.update_last_opened": "Central timestamp update in main process for **{{repository_name}}**",
+          "alexandria.registry.timestamp_updated": "Timestamp updated for **{{repository_name}}**: `{{timestamp}}`",
+          "alexandria.outpost.repository_updated": "OutpostManager persisted update for **{{repository_name}}** (field: {{field_updated}})",
+          "alexandria.storage.metadata_persisted": "Metadata persisted to disk for **{{repository_name}}**",
+          "alexandria.event.repository_updated_broadcast": "Repository **{{repository_name}}** updated event broadcast to {{window_count}} window(s)",
+          "alexandria.window.dev_workspace_opened": "Dev workspace opened for **{{repository_name}}**"
+        },
+        "summary": "**Result:**\n- Project: **{{project.name}}**\n- Timestamp: `{{timestamp}}`\n- Status: Opened successfully"
+      }
+    },
+    {
+      "id": "open-project-with-refresh",
+      "description": "Project list refreshes after opening a project",
+      "priority": 2,
+      "template": {
+        "introduction": "**Project List Refresh**\n\nRefreshing project list after opening **\"{{project.name}}\"**",
+        "events": {
+          "alexandria.event.repository_updated_broadcast": "Repository **{{repository_name}}** updated event received",
+          "alexandria.context.change_listener_triggered": "Change listener triggered re-fetch (trigger: {{trigger}})",
+          "alexandria.context.repositories_fetched": "Fetched {{total_count}} repositories ({{with_last_opened_count}} with lastOpenedAt)",
+          "alexandria.context.repositories_sorted": "Sorted {{total_count}} repositories ({{with_timestamp_count}} with timestamps)",
+          "alexandria.ui.projects_resorted": "Project **{{newly_opened_project}}** moved to position {{new_position}}",
+          "alexandria.ui.local_projects_displayed": "Displaying {{repository_count}} projects (has recently opened: {{has_recently_opened}})"
+        },
+        "summary": "**Result:**\n- Total projects: {{total_count}}\n- Recently opened project moved to top"
+      }
+    },
+    {
+      "id": "open-from-any-entry-point",
+      "description": "Opening a project from any entry point (Quick Open, Worlds View, Deep Link, etc.)",
+      "priority": 3,
+      "template": {
+        "introduction": "**Opening from Any Entry Point**\n\nOpening project **\"{{project.name}}\"** - all paths go through central handler",
+        "events": {
+          "alexandria.worlds_view.project_opened": "Entry point: WorldsViewPanelContext opening **{{repository_name}}**",
+          "alexandria.dev_workspace.update_last_opened": "Central timestamp update for **{{repository_name}}** at `{{repository_path}}`",
+          "alexandria.registry.timestamp_updated": "Timestamp updated for **{{repository_name}}**: `{{timestamp}}`",
+          "alexandria.window.dev_workspace_opened": "Dev workspace opened for **{{repository_name}}**"
+        },
+        "summary": "**Result:**\n- Project: **{{project.name}}**\n- Entry point: Any (centralized handling)\n- Status: Opened successfully"
+      }
+    }
+  ]
+}
