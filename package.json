@@ -182,7 +182,7 @@
     "@industry-theme/markdown-panels": "^0.3.0",
     "@industry-theme/principal-view-panels": "^0.12.32",
     "@industry-theme/repository-composition-panels": "^0.7.0",
-    "@industry-theme/xterm-terminal-panel": "^0.5.3",
+    "@industry-theme/xterm-terminal-panel": "^0.5.4",
     "@modelcontextprotocol/sdk": "1.11.4",
     "@monaco-editor/react": "^4.7.0",
     "@octokit/rest": "^22.0.1",
