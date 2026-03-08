@@ -1292,7 +1292,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                 letterSpacing: '0.05em',
               }}
             >
-              REGISTERED DIRECTORIES ({status.repositories.length})
+              REGISTERED DIRECTORIES ({status.repositories?.length ?? 0})
             </h3>
 
             {/* Add repository button */}
@@ -1356,7 +1356,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                 {availableRepos
                   .filter(
                     (repo) =>
-                      !status.repositories.some((r) => r.path === repo.path),
+                      !status.repositories?.some((r) => r.path === repo.path),
                   )
                   .map((repo) => (
                     <button
@@ -1406,7 +1406,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                   ))}
                 {availableRepos.filter(
                   (repo) =>
-                    !status.repositories.some((r) => r.path === repo.path),
+                    !status.repositories?.some((r) => r.path === repo.path),
                 ).length === 0 && (
                   <div
                     style={{
@@ -1432,7 +1432,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
               overflow: 'hidden',
             }}
           >
-            {status.repositories.length === 0 ? (
+            {(status.repositories?.length ?? 0) === 0 ? (
               <div
                 style={{
                   padding: '24px',
@@ -1444,7 +1444,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                 No repositories currently being monitored
               </div>
             ) : (
-              status.repositories.map((repo, index) => {
+              status.repositories?.map((repo, index) => {
                 const treeData = fileTreeData.get(repo.path);
                 const gitStatus = gitStatusData.get(repo.path);
                 const repoPackageData = packageData.get(repo.path);
@@ -1456,7 +1456,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                       display: 'flex',
                       flexDirection: 'column',
                       borderBottom:
-                        index < status.repositories.length - 1
+                        index < (status.repositories?.length ?? 0) - 1
                           ? `1px solid ${theme.colors.border}`
                           : 'none',
                       transition: 'background-color 0.15s ease',
