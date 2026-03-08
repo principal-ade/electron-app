@@ -1,0 +1,24 @@
+{
+  "version": "1.0.0",
+  "name": "Panel Event Handling",
+  "description": "Span covering panel event handler execution - from event received to layout changed",
+  "mode": "span-tree",
+  "canvas": ".principal-views/dev-workspace-tabs/dev-workspace-tabs.otel.canvas",
+  "spanPattern": "devworkspace.panel.handle",
+  "scenarios": [
+    {
+      "id": "handle-panel-event",
+      "description": "Event handler processes panel open request",
+      "priority": 1,
+      "template": {
+        "introduction": "**Panel Event Handler**\n\nProcessing right panel open event",
+        "events": {
+          "devworkspace.handler.panel": "1. Panel handler invoked for `{{event.name}}`",
+          "devworkspace.activeFile.set": "2. Active file set: `{{file.path}}` (type: {{file.type}}, size: {{file.size}} bytes)",
+          "devworkspace.layout.changed": "3. Layout changed: {{panel.slot}} → `{{panel.new}}` (expanded: {{panel.expanded}})"
+        },
+        "summary": "**Result:** Right panel ready to render `{{file.path}}`"
+      }
+    }
+  ]
+}

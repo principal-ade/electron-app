@@ -15,6 +15,7 @@ resources:
       - "window-manager"
       - "quality-panel"
       - "app-updates"
+      - "devworkspace"
 
   principal-ade-storybook:
     service.name: "principal-ade-storybook"

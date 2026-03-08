@@ -1,0 +1,36 @@
+{
+  "version": "1.0.0",
+  "name": "Event Dispatch",
+  "description": "Span covering user trigger through event bus dispatch",
+  "mode": "span-tree",
+  "canvas": ".principal-views/dev-workspace-tabs/dev-workspace-tabs.otel.canvas",
+  "spanPattern": "devworkspace.event.dispatch",
+  "scenarios": [
+    {
+      "id": "dispatch-tab-event",
+      "description": "User triggers tab open, event dispatched",
+      "priority": 1,
+      "template": {
+        "introduction": "**Event Dispatch (Tab)**\n\nUser action triggers tab open event",
+        "events": {
+          "devworkspace.trigger.tab": "1. User triggered (source: {{trigger.source}}, action: {{trigger.action}})",
+          "devworkspace.eventbus.dispatch": "2. Event bus dispatching `{{event.name}}` (source: {{event.source}}) to {{handlers.count}} handler(s)"
+        },
+        "summary": "**Dispatched:** `{{event.name}}`"
+      }
+    },
+    {
+      "id": "dispatch-panel-event",
+      "description": "User triggers panel open, event dispatched",
+      "priority": 2,
+      "template": {
+        "introduction": "**Event Dispatch (Panel)**\n\nUser action triggers panel open event",
+        "events": {
+          "devworkspace.trigger.panel": "1. User triggered (source: {{trigger.source}}, action: {{trigger.action}})",
+          "devworkspace.eventbus.dispatch": "2. Event bus dispatching `{{event.name}}` (source: {{event.source}}) to {{handlers.count}} handler(s)"
+        },
+        "summary": "**Dispatched:** `{{event.name}}`"
+      }
+    }
+  ]
+}

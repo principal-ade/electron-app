@@ -1,0 +1,723 @@
+{
+  "pv": {
+    "version": "1.0.0",
+    "name": "DevWorkspace Tab & File Opening Flow",
+    "description": "Event flow through PanelEventBus to tabs or right panel",
+    "markdown": ".principal-views/dev-workspace-tabs/dev-workspace-tabs.md",
+    "nodeTypes": {
+      "trigger": {
+        "label": "Trigger",
+        "color": "#EC4899"
+      },
+      "event-bus": {
+        "label": "Event Bus",
+        "color": "#F59E0B"
+      },
+      "handler": {
+        "label": "Handler",
+        "color": "#6366F1"
+      },
+      "context": {
+        "label": "React Context",
+        "color": "#A855F7"
+      },
+      "tab-manager": {
+        "label": "Tab Manager",
+        "color": "#0EA5E9"
+      },
+      "panel": {
+        "label": "Panel",
+        "color": "#8B5CF6"
+      },
+      "renderer": {
+        "label": "Renderer",
+        "color": "#10B981"
+      },
+      "external": {
+        "label": "External",
+        "color": "#64748B"
+      }
+    },
+    "edgeTypes": {
+      "user-action": {
+        "label": "User Action",
+        "style": "solid",
+        "color": "#EC4899"
+      },
+      "event": {
+        "label": "Event",
+        "style": "dashed",
+        "color": "#F59E0B"
+      },
+      "data-flow": {
+        "label": "Data Flow",
+        "style": "solid",
+        "color": "#3B82F6"
+      },
+      "renders": {
+        "label": "Renders",
+        "style": "solid",
+        "color": "#10B981"
+      },
+      "dispatch": {
+        "label": "Dispatch",
+        "style": "solid",
+        "color": "#6366F1"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "x": 250,
+      "y": -140,
+      "width": 500,
+      "height": 80,
+      "color": "#64748B",
+      "text": "# DevWorkspace Tab & File Opening Flow\n**Centralized event bus dispatches to handlers**"
+    },
+    {
+      "id": "trigger-tab-intent",
+      "type": "text",
+      "x": 0,
+      "y": 0,
+      "width": 180,
+      "height": 100,
+      "text": "Tab Intent Trigger\n\n- Double-click file\n- Skill/Trace select\n- Canvas click\n- Context menu",
+      "pv": {
+        "nodeType": "trigger",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ui",
+          "isNew": true,
+          "files": [
+            "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+          ]
+        },
+        "event": {
+          "name": "devworkspace.trigger.tab",
+          "description": "User action with tab intent",
+          "attributes": {
+            "trigger.source": {
+              "type": "string",
+              "description": "Source panel"
+            },
+            "trigger.action": {
+              "type": "string",
+              "description": "User action type"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "trigger-panel-intent",
+      "type": "text",
+      "x": 0,
+      "y": 130,
+      "width": 180,
+      "height": 100,
+      "text": "Panel Intent Trigger\n\n- Single-click doc\n- Docs panel select\n- Preview action",
+      "pv": {
+        "nodeType": "trigger",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ui",
+          "isNew": true,
+          "files": [
+            "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+          ]
+        },
+        "event": {
+          "name": "devworkspace.trigger.panel",
+          "description": "User action with panel intent",
+          "attributes": {
+            "trigger.source": {
+              "type": "string",
+              "description": "Source panel"
+            },
+            "trigger.action": {
+              "type": "string",
+              "description": "User action type"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "event-bus",
+      "type": "text",
+      "x": 230,
+      "y": 40,
+      "width": 200,
+      "height": 150,
+      "text": "PanelEventBus\n\nevents.emit(name, payload)\n\nDispatches to all\nregistered handlers\nmatching event name",
+      "pv": {
+        "nodeType": "event-bus",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/contexts/PanelContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "event-system",
+          "isNew": true,
+          "files": [
+            "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+          ]
+        },
+        "event": {
+          "name": "devworkspace.eventbus.dispatch",
+          "description": "Event bus dispatching to handlers",
+          "attributes": {
+            "event.name": {
+              "type": "string",
+              "description": "Event name being dispatched"
+            },
+            "event.source": {
+              "type": "string",
+              "description": "Source component"
+            },
+            "handlers.count": {
+              "type": "number",
+              "description": "Number of handlers subscribed"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "tab-path-label",
+      "type": "text",
+      "x": 480,
+      "y": -20,
+      "width": 200,
+      "height": 40,
+      "color": "#0EA5E9",
+      "text": "## TAB HANDLERS"
+    },
+    {
+      "id": "handler-tab-events",
+      "type": "text",
+      "x": 480,
+      "y": 30,
+      "width": 200,
+      "height": 160,
+      "text": "Tab Event Handlers\n\nevents.on('file:open')\nevents.on('file:opened')\nevents.on('skill:selected')\nevents.on('trace:selected')\nevents.on('task:selected')\nevents.on('custom') // canvas\nevents.on('doc:openInTab')",
+      "pv": {
+        "nodeType": "handler",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "handler",
+          "isNew": true,
+          "files": [
+            "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+          ]
+        },
+        "event": {
+          "name": "devworkspace.handler.tab",
+          "description": "Tab event handler invoked",
+          "attributes": {
+            "event.name": {
+              "type": "string",
+              "description": "Event being handled"
+            },
+            "event.source": {
+              "type": "string",
+              "description": "Source for loop prevention"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "panel-path-label",
+      "type": "text",
+      "x": 480,
+      "y": 210,
+      "width": 200,
+      "height": 40,
+      "color": "#8B5CF6",
+      "text": "## PANEL HANDLERS"
+    },
+    {
+      "id": "handler-panel-events",
+      "type": "text",
+      "x": 480,
+      "y": 260,
+      "width": 200,
+      "height": 100,
+      "text": "Panel Event Handlers\n\nevents.on('doc:openInRightPanel')",
+      "pv": {
+        "nodeType": "handler",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "handler",
+          "isNew": true,
+          "files": [
+            "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+          ]
+        },
+        "event": {
+          "name": "devworkspace.handler.panel",
+          "description": "Panel event handler invoked",
+          "attributes": {
+            "event.name": {
+              "type": "string",
+              "description": "Event being handled"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "loop-check",
+      "type": "text",
+      "x": 730,
+      "y": 30,
+      "width": 160,
+      "height": 80,
+      "text": "Loop Prevention\n\nif (source === 'tab')\n  return; // skip",
+      "pv": {
+        "nodeType": "handler",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "handler",
+          "isNew": true,
+          "files": [
+            "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+          ]
+        },
+        "event": {
+          "name": "devworkspace.handler.loopCheck",
+          "description": "Loop prevention check",
+          "attributes": {
+            "event.source": {
+              "type": "string",
+              "description": "Event source"
+            },
+            "skipped": {
+              "type": "boolean",
+              "description": "Whether handler was skipped"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "check-existing-tab",
+      "type": "text",
+      "x": 730,
+      "y": 130,
+      "width": 160,
+      "height": 80,
+      "text": "Check Existing\n\ntabs.find(t => \n  t.id === tabId)\n\nfocus or create",
+      "pv": {
+        "nodeType": "tab-manager",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "tabs",
+          "isNew": true,
+          "files": [
+            "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+          ]
+        },
+        "event": {
+          "name": "devworkspace.tab.lookup",
+          "description": "Checking for existing tab",
+          "attributes": {
+            "tab.id": {
+              "type": "string",
+              "description": "Tab ID"
+            },
+            "tab.exists": {
+              "type": "boolean",
+              "description": "Whether found"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "create-focus-tab",
+      "type": "text",
+      "x": 940,
+      "y": 80,
+      "width": 160,
+      "height": 100,
+      "text": "Create & Focus\n\nsetTabs([...prev, tab])\nsetFocusTabId(id)",
+      "pv": {
+        "nodeType": "tab-manager",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "tabs",
+          "isNew": true,
+          "files": [
+            "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+          ]
+        },
+        "event": {
+          "name": "devworkspace.tab.created",
+          "description": "Tab created and focused",
+          "attributes": {
+            "tab.id": {
+              "type": "string",
+              "description": "Tab ID"
+            },
+            "tab.contentType": {
+              "type": "string",
+              "description": "Content type"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "render-tab",
+      "type": "text",
+      "x": 940,
+      "y": 210,
+      "width": 160,
+      "height": 80,
+      "text": "renderTabContent()\n\nSwitch on\ncontentType",
+      "pv": {
+        "nodeType": "renderer",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "render",
+          "isNew": true
+        },
+        "event": {
+          "name": "devworkspace.tab.rendered",
+          "description": "Tab content rendered",
+          "attributes": {
+            "tab.contentType": {
+              "type": "string",
+              "description": "Content type"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "set-active-file",
+      "type": "text",
+      "x": 730,
+      "y": 260,
+      "width": 160,
+      "height": 80,
+      "text": "setActiveFile()\n\nRead content\nUpdate slice",
+      "pv": {
+        "nodeType": "context",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/contexts/PanelContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "state",
+          "isNew": true,
+          "files": [
+            "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+          ]
+        },
+        "event": {
+          "name": "devworkspace.activeFile.set",
+          "description": "Active file updated",
+          "attributes": {
+            "file.path": {
+              "type": "string",
+              "description": "File path"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "change-layout",
+      "type": "text",
+      "x": 940,
+      "y": 320,
+      "width": 160,
+      "height": 80,
+      "text": "onLayoutChange()\n\nright: 'markdown-\nviewer'",
+      "pv": {
+        "nodeType": "panel",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "layout",
+          "isNew": true,
+          "files": [
+            "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+          ]
+        },
+        "event": {
+          "name": "devworkspace.layout.changed",
+          "description": "Layout changed",
+          "attributes": {
+            "panel.new": {
+              "type": "string",
+              "description": "New panel"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "tabbed-terminal-panel",
+      "type": "text",
+      "x": 1150,
+      "y": 80,
+      "width": 140,
+      "height": 100,
+      "text": "TabbedTerminal\nPanel\n\nMiddle slot\ncontainer",
+      "pv": {
+        "nodeType": "external",
+        "shape": "rectangle",
+        "status": "draft",
+        "otel": {
+          "kind": "event",
+          "category": "external",
+          "isNew": true
+        },
+        "references": [
+          "@industry-theme/xterm-terminal-panel"
+        ],
+        "event": {
+          "name": "devworkspace.tabbedPanel.render",
+          "description": "TabbedTerminalPanel renders tab",
+          "attributes": {
+            "tab.active": {
+              "type": "string",
+              "description": "Active tab"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "markdown-panel",
+      "type": "text",
+      "x": 1150,
+      "y": 280,
+      "width": 140,
+      "height": 100,
+      "text": "MarkdownPanel\n\nReads from\nactiveFile.data\nRight slot",
+      "pv": {
+        "nodeType": "renderer",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "render",
+          "isNew": true
+        },
+        "event": {
+          "name": "devworkspace.panel.markdown.rendered",
+          "description": "Markdown panel rendered",
+          "attributes": {
+            "file.path": {
+              "type": "string",
+              "description": "File displayed"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "key-diff",
+      "type": "text",
+      "x": 730,
+      "y": 420,
+      "width": 400,
+      "height": 80,
+      "color": "#64748B",
+      "text": "## Key: Event name determines handler\n\nTab events → Tab handlers → Create/focus tab → TabbedTerminalPanel\nPanel events → Panel handlers → setActiveFile → MarkdownPanel"
+    }
+  ],
+  "edges": [
+    {
+      "id": "trigger-tab-to-bus",
+      "fromNode": "trigger-tab-intent",
+      "fromSide": "right",
+      "toNode": "event-bus",
+      "toSide": "left",
+      "label": "emit",
+      "pv": {
+        "edgeType": "event"
+      }
+    },
+    {
+      "id": "trigger-panel-to-bus",
+      "fromNode": "trigger-panel-intent",
+      "fromSide": "right",
+      "toNode": "event-bus",
+      "toSide": "left",
+      "label": "emit",
+      "pv": {
+        "edgeType": "event"
+      }
+    },
+    {
+      "id": "bus-to-tab-handlers",
+      "fromNode": "event-bus",
+      "fromSide": "right",
+      "toNode": "handler-tab-events",
+      "toSide": "left",
+      "label": "dispatch",
+      "pv": {
+        "edgeType": "dispatch"
+      }
+    },
+    {
+      "id": "bus-to-panel-handlers",
+      "fromNode": "event-bus",
+      "fromSide": "right",
+      "toNode": "handler-panel-events",
+      "toSide": "left",
+      "label": "dispatch",
+      "pv": {
+        "edgeType": "dispatch"
+      }
+    },
+    {
+      "id": "tab-handler-to-loop",
+      "fromNode": "handler-tab-events",
+      "fromSide": "right",
+      "toNode": "loop-check",
+      "toSide": "left",
+      "label": "check",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "loop-to-existing",
+      "fromNode": "loop-check",
+      "fromSide": "bottom",
+      "toNode": "check-existing-tab",
+      "toSide": "top",
+      "label": "proceed",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "existing-to-create",
+      "fromNode": "check-existing-tab",
+      "fromSide": "right",
+      "toNode": "create-focus-tab",
+      "toSide": "left",
+      "label": "create/focus",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "create-to-render",
+      "fromNode": "create-focus-tab",
+      "fromSide": "bottom",
+      "toNode": "render-tab",
+      "toSide": "top",
+      "label": "render",
+      "pv": {
+        "edgeType": "renders"
+      }
+    },
+    {
+      "id": "render-to-tabbed",
+      "fromNode": "render-tab",
+      "fromSide": "right",
+      "toNode": "tabbed-terminal-panel",
+      "toSide": "left",
+      "label": "in",
+      "pv": {
+        "edgeType": "renders"
+      }
+    },
+    {
+      "id": "panel-handler-to-active",
+      "fromNode": "handler-panel-events",
+      "fromSide": "right",
+      "toNode": "set-active-file",
+      "toSide": "left",
+      "label": "call",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "active-to-layout",
+      "fromNode": "set-active-file",
+      "fromSide": "right",
+      "toNode": "change-layout",
+      "toSide": "left",
+      "label": "then",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "layout-to-markdown",
+      "fromNode": "change-layout",
+      "fromSide": "right",
+      "toNode": "markdown-panel",
+      "toSide": "left",
+      "label": "render",
+      "pv": {
+        "edgeType": "renders"
+      }
+    }
+  ]
+}

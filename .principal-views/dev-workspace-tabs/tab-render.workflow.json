@@ -1,0 +1,23 @@
+{
+  "version": "1.0.0",
+  "name": "Tab Content Render",
+  "description": "Span covering tab content rendering in TabbedTerminalPanel",
+  "mode": "span-tree",
+  "canvas": ".principal-views/dev-workspace-tabs/dev-workspace-tabs.otel.canvas",
+  "spanPattern": "devworkspace.tab.render",
+  "scenarios": [
+    {
+      "id": "render-tab-content",
+      "description": "Tab content component renders",
+      "priority": 1,
+      "template": {
+        "introduction": "**Tab Render**\n\nRendering tab content in TabbedTerminalPanel",
+        "events": {
+          "devworkspace.tab.rendered": "1. Tab content rendered (type: {{tab.contentType}})",
+          "devworkspace.tabbedPanel.render": "2. TabbedTerminalPanel active: `{{tab.active}}`"
+        },
+        "summary": "**Rendered:** {{tab.contentType}} tab"
+      }
+    }
+  ]
+}

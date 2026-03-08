@@ -1,0 +1,25 @@
+{
+  "version": "1.0.0",
+  "name": "Tab Event Handling",
+  "description": "Span covering tab event handler execution - from event received to tab created/focused",
+  "mode": "span-tree",
+  "canvas": ".principal-views/dev-workspace-tabs/dev-workspace-tabs.otel.canvas",
+  "spanPattern": "devworkspace.tab.handle",
+  "scenarios": [
+    {
+      "id": "handle-tab-event",
+      "description": "Event handler processes tab open request",
+      "priority": 1,
+      "template": {
+        "introduction": "**Tab Event Handler**\n\nProcessing tab open event",
+        "events": {
+          "devworkspace.handler.tab": "1. Tab handler invoked for `{{event.name}}` (source: {{event.source}})",
+          "devworkspace.handler.loopCheck": "2. Loop check (source: {{event.source}}, skipped: {{skipped}})",
+          "devworkspace.tab.lookup": "3. Tab lookup: `{{tab.id}}` (exists: {{tab.exists}})",
+          "devworkspace.tab.created": "4. Tab created: `{{tab.id}}` (type: {{tab.contentType}})"
+        },
+        "summary": "**Result:** Tab `{{tab.id}}` ready for render"
+      }
+    }
+  ]
+}

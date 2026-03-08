@@ -1,6 +1,8 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { flushSync } from 'react-dom';
 import { useTheme } from '@principal-ade/industry-theme';
+import { SpanStatusCode } from '@opentelemetry/api';
+import { getTracer } from '../telemetry';
 import {
   Sparkles,
   FileText,
@@ -10,6 +12,8 @@ import {
   GitBranch,
   Terminal,
   Activity,
+  History,
+  X,
 } from 'lucide-react';
 import {
   EditableConfigurablePanelLayout,
@@ -196,6 +200,15 @@ interface MultiCanvasTab extends BaseTab {
  * Union type of all tab types used in DevWorkspace
  */
 type DevWorkspaceTab = TerminalTab | SkillTab | MarkdownTab | CanvasEditorTab | CanvasTab | FileEditorTab | MDXEditorTab | GitDiffTab | DependencyGraphTab | TraceDetailsTab | MultiCanvasTab;
+
+/**
+ * History item for right panel document viewing
+ */
+interface RightPanelHistoryItem {
+  filePath: string;
+  fileName: string;
+  openedAt: number;
+}
 
 export interface DevWorkspacePanelFrameworkProps {
   repositoryPath: string;
@@ -388,6 +401,22 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   const [focusTabId, setFocusTabId] = useState<string | null>(null);
   const handleFocusTabHandled = useCallback(() => setFocusTabId(null), []);
 
+  // Right panel history - tracks documents opened in the right panel for quick navigation
+  const [rightPanelHistory, setRightPanelHistory] = useState<RightPanelHistoryItem[]>([]);
+  const [showRightPanelHistory, setShowRightPanelHistory] = useState(false);
+
+  // Handle clicking on a history item to re-open that file
+  const handleHistoryItemClick = useCallback(async (filePath: string) => {
+    setShowRightPanelHistory(false);
+    await actions.setActiveFile?.(filePath);
+    // Move to front of history
+    const fileName = filePath.split('/').pop() || 'Document';
+    setRightPanelHistory(prev => {
+      const filtered = prev.filter(item => item.filePath !== filePath);
+      return [{ filePath, fileName, openedAt: Date.now() }, ...filtered];
+    });
+  }, [actions]);
+
   // Track terminal panel container width using ResizeObserver
   const [terminalPanelWidth, setTerminalPanelWidth] = useState<number>(0);
   const terminalPanelRef = React.useRef<HTMLDivElement>(null);
@@ -493,6 +522,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
   // Listen for doc:openInRightPanel events (from Alexandria docs panel context menu)
   useEffect(() => {
+    const tracer = getTracer('devworkspace');
     const unsubscribe = events.on('doc:openInRightPanel', async (event) => {
       const doc = event.payload as DocumentSelectedPayload;
 
@@ -511,9 +541,59 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         return;
       }
 
+      // OTEL: Start event dispatch span
+      const dispatchSpan = tracer.startSpan('devworkspace.event.dispatch', {
+        attributes: {
+          'event.name': 'doc:openInRightPanel',
+          'event.source': event.source || 'unknown',
+        },
+      });
+
+      // OTEL: Add trigger event
+      dispatchSpan.addEvent('devworkspace.trigger.panel', {
+        'trigger.source': event.source || 'unknown',
+        'trigger.action': 'openInRightPanel',
+      });
+
+      // OTEL: Add eventbus dispatch event
+      dispatchSpan.addEvent('devworkspace.eventbus.dispatch', {
+        'event.name': 'doc:openInRightPanel',
+        'event.source': event.source || 'unknown',
+        'handlers.count': 1,
+      });
+
+      dispatchSpan.end();
+
+      // OTEL: Start panel handle span
+      const handleSpan = tracer.startSpan('devworkspace.panel.handle', {
+        attributes: {
+          'event.name': 'doc:openInRightPanel',
+          'file.path': filePath,
+        },
+      });
+
+      // OTEL: Add handler event
+      handleSpan.addEvent('devworkspace.handler.panel', {
+        'event.name': 'doc:openInRightPanel',
+      });
+
       try {
         // Set the active file (reads content and updates slice)
         await actions.setActiveFile?.(filePath);
+
+        // Add to right panel history (avoid duplicates, move to front if exists)
+        const fileName = filePath.split('/').pop() || 'Document';
+        setRightPanelHistory(prev => {
+          const filtered = prev.filter(item => item.filePath !== filePath);
+          return [{ filePath, fileName, openedAt: Date.now() }, ...filtered].slice(0, 20);
+        });
+
+        // OTEL: Add activeFile.set event
+        handleSpan.addEvent('devworkspace.activeFile.set', {
+          'file.path': filePath,
+          'file.type': 'markdown',
+          'file.size': 0, // Not available here
+        });
 
         // Switch the right panel to markdown-viewer
         onLayoutChange({ ...layout, right: 'markdown-viewer' });
@@ -523,66 +603,30 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           onCollapsedChange({ ...collapsed, right: false });
         }
 
-        console.info(
-          '[DevWorkspacePanelFramework] Switched right panel to markdown-viewer for:',
-          filePath,
-        );
-      } catch (error) {
-        console.error(
-          '[DevWorkspacePanelFramework] Failed to open in right panel:',
-          error,
-        );
-      }
-    });
+        // OTEL: Add layout.changed event
+        handleSpan.addEvent('devworkspace.layout.changed', {
+          'panel.slot': 'right',
+          'panel.new': 'markdown-viewer',
+          'panel.expanded': !collapsed.right || true,
+        });
 
-    return unsubscribe;
-  }, [events, actions, layout, onLayoutChange, collapsed, onCollapsedChange]);
-
-  // Listen for file:opened events (from docs panel clicks) - open in right panel
-  useEffect(() => {
-    const unsubscribe = events.on('file:opened', async (event) => {
-      // Ignore re-emitted events from tabs to prevent loop
-      if (event.source === 'tab') {
-        console.info('[DevWorkspacePanelFramework] Ignoring tab re-emission');
-        return;
-      }
-
-      const payload = event.payload as MDXEditorPayload;
-      const filePath = payload.filePath || payload.path;
-
-      if (!filePath) {
-        console.warn('[DevWorkspacePanelFramework] No file path in file:opened event:', payload);
-        return;
-      }
-
-      // Only handle markdown files - open them in right panel
-      if (!filePath.endsWith('.md')) {
-        return; // Ignore non-markdown files
-      }
-
-      console.info('[DevWorkspacePanelFramework] Received file:opened event for markdown:', filePath);
-
-      try {
-        // Set the active file (reads content and updates slice)
-        await actions.setActiveFile?.(filePath);
-
-        // Switch the right panel to markdown-viewer
-        onLayoutChange({ ...layout, right: 'markdown-viewer' });
-
-        // Expand the right panel if it's collapsed
-        if (collapsed.right) {
-          onCollapsedChange({ ...collapsed, right: false });
-        }
+        handleSpan.setStatus({ code: SpanStatusCode.OK });
 
         console.info(
           '[DevWorkspacePanelFramework] Switched right panel to markdown-viewer for:',
           filePath,
         );
       } catch (error) {
+        handleSpan.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: error instanceof Error ? error.message : 'Unknown error',
+        });
         console.error(
           '[DevWorkspacePanelFramework] Failed to open in right panel:',
           error,
         );
+      } finally {
+        handleSpan.end();
       }
     });
 
@@ -596,6 +640,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     const unsubscribers = [
       // Task detail - open task markdown file in MDX editor tab
       events.on('task:selected', (event) => {
+        const tracer = getTracer('devworkspace');
         // Ignore re-emitted events from tabs to prevent loop
         if (event.source === 'tab') return;
 
@@ -613,6 +658,54 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
         console.info('[DevWorkspacePanelFramework] Opening task file in MDX editor:', filePath);
 
+        // OTEL: Start event dispatch span
+        const dispatchSpan = tracer.startSpan('devworkspace.event.dispatch', {
+          attributes: {
+            'event.name': 'task:selected',
+            'event.source': event.source || 'unknown',
+          },
+        });
+
+        // OTEL: Add trigger event
+        dispatchSpan.addEvent('devworkspace.trigger.tab', {
+          'trigger.source': event.source || 'unknown',
+          'trigger.action': 'openTask',
+        });
+
+        // OTEL: Add eventbus dispatch event
+        dispatchSpan.addEvent('devworkspace.eventbus.dispatch', {
+          'event.name': 'task:selected',
+          'event.source': event.source || 'unknown',
+          'handlers.count': 1,
+        });
+
+        dispatchSpan.end();
+
+        // OTEL: Start tab handle span
+        const handleSpan = tracer.startSpan('devworkspace.tab.handle', {
+          attributes: {
+            'event.name': 'task:selected',
+            'file.path': filePath,
+          },
+        });
+
+        // OTEL: Add handler event
+        handleSpan.addEvent('devworkspace.handler.tab', {
+          'event.name': 'task:selected',
+          'event.source': event.source || 'unknown',
+        });
+
+        // OTEL: Add loop check event
+        handleSpan.addEvent('devworkspace.handler.loopCheck', {
+          'event.source': event.source || 'unknown',
+          'skipped': false,
+        });
+
+        // Track tab info from callback
+        let tabExists = false;
+        let tabId = '';
+        const sanitizedPath = filePath.replace(/[^a-zA-Z0-9-_]/g, '_');
+
         setTabs((prevTabs) => {
           // Check if tab already exists
           const existingTab = prevTabs.find(
@@ -620,6 +713,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           );
 
           if (existingTab) {
+            tabExists = true;
+            tabId = existingTab.id;
             console.info('[DevWorkspacePanelFramework] Task MDX editor tab already exists, focusing:', existingTab.id);
             setFocusTabId(existingTab.id);
             return prevTabs;
@@ -627,7 +722,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
           // Create new MDX editor tab
           // Use file path for deterministic ID (sanitize for valid ID)
-          const tabId = `task-${filePath.replace(/[^a-zA-Z0-9-_]/g, '_')}`;
+          tabId = `task-${sanitizedPath}`;
           const newTab: MDXEditorTab = {
             id: tabId,
             label: fileName,
@@ -641,9 +736,27 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           setFocusTabId(newTab.id);
           return [...prevTabs, newTab];
         });
+
+        // OTEL: Add tab lookup event
+        handleSpan.addEvent('devworkspace.tab.lookup', {
+          'tab.id': tabId || `task-${sanitizedPath}`,
+          'tab.exists': tabExists,
+        });
+
+        // OTEL: Add tab created event (only if new tab was created)
+        if (!tabExists) {
+          handleSpan.addEvent('devworkspace.tab.created', {
+            'tab.id': tabId || `task-${sanitizedPath}`,
+            'tab.contentType': 'mdx-editor',
+          });
+        }
+
+        handleSpan.setStatus({ code: SpanStatusCode.OK });
+        handleSpan.end();
       }),
       // Skill detail - create tab instead of modal
       events.on('skill:selected', (event) => {
+        const tracer = getTracer('devworkspace');
         console.info('[DevWorkspacePanelFramework] ===== SKILL SELECTED EVENT FIRED =====');
         console.info('[DevWorkspacePanelFramework] Event source:', event.source);
         console.info('[DevWorkspacePanelFramework] Event payload:', event.payload);
@@ -665,6 +778,53 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           return;
         }
 
+        // OTEL: Start event dispatch span
+        const dispatchSpan = tracer.startSpan('devworkspace.event.dispatch', {
+          attributes: {
+            'event.name': 'skill:selected',
+            'event.source': event.source || 'unknown',
+          },
+        });
+
+        // OTEL: Add trigger event
+        dispatchSpan.addEvent('devworkspace.trigger.tab', {
+          'trigger.source': event.source || 'unknown',
+          'trigger.action': 'openSkill',
+        });
+
+        // OTEL: Add eventbus dispatch event
+        dispatchSpan.addEvent('devworkspace.eventbus.dispatch', {
+          'event.name': 'skill:selected',
+          'event.source': event.source || 'unknown',
+          'handlers.count': 1,
+        });
+
+        dispatchSpan.end();
+
+        // OTEL: Start tab handle span
+        const handleSpan = tracer.startSpan('devworkspace.tab.handle', {
+          attributes: {
+            'event.name': 'skill:selected',
+            'skill.id': skill.id,
+          },
+        });
+
+        // OTEL: Add handler event
+        handleSpan.addEvent('devworkspace.handler.tab', {
+          'event.name': 'skill:selected',
+          'event.source': event.source || 'unknown',
+        });
+
+        // OTEL: Add loop check event (not skipped since we're past the check)
+        handleSpan.addEvent('devworkspace.handler.loopCheck', {
+          'event.source': event.source || 'unknown',
+          'skipped': false,
+        });
+
+        // Track tab info from callback
+        let tabExists = false;
+        let tabId = '';
+
         setTabs((prevTabs) => {
           // Check if tab already exists for this skill
           const existingTab = prevTabs.find(
@@ -673,14 +833,17 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
           if (existingTab) {
             // Tab exists - focus it
+            tabExists = true;
+            tabId = existingTab.id;
             console.info('[DevWorkspacePanelFramework] Skill tab already exists, focusing:', existingTab.id);
             setFocusTabId(existingTab.id);
             return prevTabs; // No change to tabs array
           }
 
           // Create new skill tab with full skill object for instant loading
+          tabId = `skill-${skill.id}`;
           const newTab: SkillTab = {
-            id: `skill-${skill.id}`,
+            id: tabId,
             label: skill.name || 'Skill',
             contentType: 'skill',
             skillId: skill.id,
@@ -693,9 +856,27 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           setFocusTabId(newTab.id);
           return [...prevTabs, newTab];
         });
+
+        // OTEL: Add tab lookup event
+        handleSpan.addEvent('devworkspace.tab.lookup', {
+          'tab.id': tabId || `skill-${skill.id}`,
+          'tab.exists': tabExists,
+        });
+
+        // OTEL: Add tab created event (only if new tab was created)
+        if (!tabExists) {
+          handleSpan.addEvent('devworkspace.tab.created', {
+            'tab.id': tabId || `skill-${skill.id}`,
+            'tab.contentType': 'skill',
+          });
+        }
+
+        handleSpan.setStatus({ code: SpanStatusCode.OK });
+        handleSpan.end();
       }),
       // Trace detail - create tab instead of modal
       events.on('trace:selected', (event) => {
+        const tracer = getTracer('devworkspace');
         console.info('[DevWorkspacePanelFramework] ===== TRACE SELECTED EVENT FIRED =====');
         console.info('[DevWorkspacePanelFramework] Event source:', event.source);
         console.info('[DevWorkspacePanelFramework] Event payload:', event.payload);
@@ -715,6 +896,53 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           return;
         }
 
+        // OTEL: Start event dispatch span
+        const dispatchSpan = tracer.startSpan('devworkspace.event.dispatch', {
+          attributes: {
+            'event.name': 'trace:selected',
+            'event.source': event.source || 'unknown',
+          },
+        });
+
+        // OTEL: Add trigger event
+        dispatchSpan.addEvent('devworkspace.trigger.tab', {
+          'trigger.source': event.source || 'unknown',
+          'trigger.action': 'openTrace',
+        });
+
+        // OTEL: Add eventbus dispatch event
+        dispatchSpan.addEvent('devworkspace.eventbus.dispatch', {
+          'event.name': 'trace:selected',
+          'event.source': event.source || 'unknown',
+          'handlers.count': 1,
+        });
+
+        dispatchSpan.end();
+
+        // OTEL: Start tab handle span
+        const handleSpan = tracer.startSpan('devworkspace.tab.handle', {
+          attributes: {
+            'event.name': 'trace:selected',
+            'trace.id': trace.traceId,
+          },
+        });
+
+        // OTEL: Add handler event
+        handleSpan.addEvent('devworkspace.handler.tab', {
+          'event.name': 'trace:selected',
+          'event.source': event.source || 'unknown',
+        });
+
+        // OTEL: Add loop check event
+        handleSpan.addEvent('devworkspace.handler.loopCheck', {
+          'event.source': event.source || 'unknown',
+          'skipped': false,
+        });
+
+        // Track tab info from callback
+        let tabExists = false;
+        let tabId = '';
+
         setTabs((prevTabs) => {
           // Check if tab already exists for this trace
           const existingTab = prevTabs.find(
@@ -723,6 +951,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
           if (existingTab) {
             // Tab exists - focus it
+            tabExists = true;
+            tabId = existingTab.id;
             console.info('[DevWorkspacePanelFramework] Trace details tab already exists, focusing:', existingTab.id);
             setFocusTabId(existingTab.id);
             return prevTabs; // No change to tabs array
@@ -733,8 +963,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           const registeredTrace = trace as RegisteredTrace;
           const traceName = registeredTrace.name || registeredTrace.traceId.substring(0, 8);
 
+          tabId = `trace-${registeredTrace.traceId}`;
           const newTab: TraceDetailsTab = {
-            id: `trace-${registeredTrace.traceId}`,
+            id: tabId,
             label: traceName,
             contentType: 'trace-details',
             traceId: registeredTrace.traceId,
@@ -752,9 +983,27 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           setFocusTabId(newTab.id);
           return [...prevTabs, newTab];
         });
+
+        // OTEL: Add tab lookup event
+        handleSpan.addEvent('devworkspace.tab.lookup', {
+          'tab.id': tabId || `trace-${trace.traceId}`,
+          'tab.exists': tabExists,
+        });
+
+        // OTEL: Add tab created event (only if new tab was created)
+        if (!tabExists) {
+          handleSpan.addEvent('devworkspace.tab.created', {
+            'tab.id': tabId || `trace-${trace.traceId}`,
+            'tab.contentType': 'trace-details',
+          });
+        }
+
+        handleSpan.setStatus({ code: SpanStatusCode.OK });
+        handleSpan.end();
       }),
       // Agent detail - open AGENTS.md file in markdown tab
       events.on('agent:selected', async (event) => {
+        const tracer = getTracer('devworkspace');
         // Ignore re-emitted events from tabs to prevent loop
         if (event.source === 'tab') return;
 
@@ -780,6 +1029,54 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
         console.info('[DevWorkspacePanelFramework] Opening agent file in MDX editor:', filePath);
 
+        // OTEL: Start event dispatch span
+        const dispatchSpan = tracer.startSpan('devworkspace.event.dispatch', {
+          attributes: {
+            'event.name': 'agent:selected',
+            'event.source': event.source || 'unknown',
+          },
+        });
+
+        // OTEL: Add trigger event
+        dispatchSpan.addEvent('devworkspace.trigger.tab', {
+          'trigger.source': event.source || 'unknown',
+          'trigger.action': 'openAgent',
+        });
+
+        // OTEL: Add eventbus dispatch event
+        dispatchSpan.addEvent('devworkspace.eventbus.dispatch', {
+          'event.name': 'agent:selected',
+          'event.source': event.source || 'unknown',
+          'handlers.count': 1,
+        });
+
+        dispatchSpan.end();
+
+        // OTEL: Start tab handle span
+        const handleSpan = tracer.startSpan('devworkspace.tab.handle', {
+          attributes: {
+            'event.name': 'agent:selected',
+            'file.path': filePath,
+          },
+        });
+
+        // OTEL: Add handler event
+        handleSpan.addEvent('devworkspace.handler.tab', {
+          'event.name': 'agent:selected',
+          'event.source': event.source || 'unknown',
+        });
+
+        // OTEL: Add loop check event
+        handleSpan.addEvent('devworkspace.handler.loopCheck', {
+          'event.source': event.source || 'unknown',
+          'skipped': false,
+        });
+
+        // Track tab info from callback
+        let tabExists = false;
+        let tabId = '';
+        const sanitizedPath = filePath.replace(/[^a-zA-Z0-9-_]/g, '_');
+
         setTabs((prevTabs) => {
           // Check if tab already exists (check both mdx-editor and markdown for backwards compat)
           const existingTab = prevTabs.find(
@@ -789,6 +1086,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           );
 
           if (existingTab) {
+            tabExists = true;
+            tabId = existingTab.id;
             console.info('[DevWorkspacePanelFramework] Agent MDX editor tab already exists, focusing:', existingTab.id);
             setFocusTabId(existingTab.id);
             return prevTabs;
@@ -796,7 +1095,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
           // Create new MDX editor tab
           // Use file path for deterministic ID (sanitize for valid ID)
-          const tabId = `agent-${filePath.replace(/[^a-zA-Z0-9-_]/g, '_')}`;
+          tabId = `agent-${sanitizedPath}`;
           const newTab: MDXEditorTab = {
             id: tabId,
             label: fileName,
@@ -810,6 +1109,258 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           setFocusTabId(newTab.id);
           return [...prevTabs, newTab];
         });
+
+        // OTEL: Add tab lookup event
+        handleSpan.addEvent('devworkspace.tab.lookup', {
+          'tab.id': tabId || `agent-${sanitizedPath}`,
+          'tab.exists': tabExists,
+        });
+
+        // OTEL: Add tab created event (only if new tab was created)
+        if (!tabExists) {
+          handleSpan.addEvent('devworkspace.tab.created', {
+            'tab.id': tabId || `agent-${sanitizedPath}`,
+            'tab.contentType': 'mdx-editor',
+          });
+        }
+
+        handleSpan.setStatus({ code: SpanStatusCode.OK });
+        handleSpan.end();
+      }),
+      // Doc open in tab - open documentation file in MDX editor tab
+      events.on('doc:openInTab', async (event) => {
+        const tracer = getTracer('devworkspace');
+        // Ignore re-emitted events from tabs to prevent loop
+        if (event.source === 'tab') return;
+
+        const doc = event.payload as DocumentSelectedPayload;
+
+        console.info('[DevWorkspacePanelFramework] Open in tab event received:', doc);
+
+        // Get the file path (prefer absolute path, fall back to relative)
+        const filePath = doc.path || doc.relativePath;
+
+        if (!filePath) {
+          console.warn('[DevWorkspacePanelFramework] No file path in doc:openInTab event');
+          return;
+        }
+
+        const fileName = filePath.split('/').pop() || 'Document';
+
+        // OTEL: Start event dispatch span
+        const dispatchSpan = tracer.startSpan('devworkspace.event.dispatch', {
+          attributes: {
+            'event.name': 'doc:openInTab',
+            'event.source': event.source || 'unknown',
+          },
+        });
+
+        // OTEL: Add trigger event
+        dispatchSpan.addEvent('devworkspace.trigger.tab', {
+          'trigger.source': event.source || 'unknown',
+          'trigger.action': 'openInTab',
+        });
+
+        // OTEL: Add eventbus dispatch event
+        dispatchSpan.addEvent('devworkspace.eventbus.dispatch', {
+          'event.name': 'doc:openInTab',
+          'event.source': event.source || 'unknown',
+          'handlers.count': 1,
+        });
+
+        dispatchSpan.end();
+
+        // OTEL: Start tab handle span
+        const handleSpan = tracer.startSpan('devworkspace.tab.handle', {
+          attributes: {
+            'event.name': 'doc:openInTab',
+            'file.path': filePath,
+          },
+        });
+
+        // OTEL: Add handler event
+        handleSpan.addEvent('devworkspace.handler.tab', {
+          'event.name': 'doc:openInTab',
+          'event.source': event.source || 'unknown',
+        });
+
+        // OTEL: Add loop check event
+        handleSpan.addEvent('devworkspace.handler.loopCheck', {
+          'event.source': event.source || 'unknown',
+          'skipped': false,
+        });
+
+        // Track tab info from callback
+        let tabExists = false;
+        let tabId = '';
+        const sanitizedPath = filePath.replace(/[^a-zA-Z0-9-_]/g, '_');
+
+        setTabs((prevTabs) => {
+          // Check if tab already exists (check both mdx-editor and markdown for backwards compat)
+          const existingTab = prevTabs.find(
+            (t) =>
+              (t.contentType === 'mdx-editor' && (t as MDXEditorTab).filePath === filePath) ||
+              (t.contentType === 'markdown' && (t as MarkdownTab).filePath === filePath)
+          );
+
+          if (existingTab) {
+            tabExists = true;
+            tabId = existingTab.id;
+            console.info('[DevWorkspacePanelFramework] Doc tab already exists, focusing:', existingTab.id);
+            setFocusTabId(existingTab.id);
+            return prevTabs;
+          }
+
+          // Create new MDX editor tab
+          tabId = `doc-${sanitizedPath}`;
+          const newTab: MDXEditorTab = {
+            id: tabId,
+            label: fileName,
+            contentType: 'mdx-editor',
+            filePath: filePath,
+            fileName: fileName,
+            closable: true,
+          };
+
+          console.info('[DevWorkspacePanelFramework] Creating new doc MDX editor tab:', newTab);
+          setFocusTabId(newTab.id);
+          return [...prevTabs, newTab];
+        });
+
+        // OTEL: Add tab lookup event
+        handleSpan.addEvent('devworkspace.tab.lookup', {
+          'tab.id': tabId || `doc-${sanitizedPath}`,
+          'tab.exists': tabExists,
+        });
+
+        // OTEL: Add tab created event (only if new tab was created)
+        if (!tabExists) {
+          handleSpan.addEvent('devworkspace.tab.created', {
+            'tab.id': tabId || `doc-${sanitizedPath}`,
+            'tab.contentType': 'mdx-editor',
+          });
+        }
+
+        handleSpan.setStatus({ code: SpanStatusCode.OK });
+        handleSpan.end();
+      }),
+      // File opened - open file in markdown tab (normal click on docs)
+      events.on('file:opened', async (event) => {
+        const tracer = getTracer('devworkspace');
+        // Ignore re-emitted events from tabs to prevent loop
+        if (event.source === 'tab') return;
+
+        const payload = event.payload as MDXEditorPayload;
+        const filePath = payload.filePath || payload.path;
+
+        if (!filePath) {
+          console.warn('[DevWorkspacePanelFramework] No file path in file:opened event');
+          return;
+        }
+
+        // Only handle markdown files
+        if (!filePath.endsWith('.md') && !filePath.endsWith('.mdx')) {
+          return;
+        }
+
+        const fileName = filePath.split('/').pop() || 'Document';
+
+        console.info('[DevWorkspacePanelFramework] file:opened - opening in tab:', filePath);
+
+        // OTEL: Start event dispatch span
+        const dispatchSpan = tracer.startSpan('devworkspace.event.dispatch', {
+          attributes: {
+            'event.name': 'file:opened',
+            'event.source': event.source || 'unknown',
+          },
+        });
+
+        // OTEL: Add trigger event
+        dispatchSpan.addEvent('devworkspace.trigger.tab', {
+          'trigger.source': event.source || 'unknown',
+          'trigger.action': 'openFile',
+        });
+
+        // OTEL: Add eventbus dispatch event
+        dispatchSpan.addEvent('devworkspace.eventbus.dispatch', {
+          'event.name': 'file:opened',
+          'event.source': event.source || 'unknown',
+          'handlers.count': 1,
+        });
+
+        dispatchSpan.end();
+
+        // OTEL: Start tab handle span
+        const handleSpan = tracer.startSpan('devworkspace.tab.handle', {
+          attributes: {
+            'event.name': 'file:opened',
+            'file.path': filePath,
+          },
+        });
+
+        // OTEL: Add handler event
+        handleSpan.addEvent('devworkspace.handler.tab', {
+          'event.name': 'file:opened',
+          'event.source': event.source || 'unknown',
+        });
+
+        // OTEL: Add loop check event
+        handleSpan.addEvent('devworkspace.handler.loopCheck', {
+          'event.source': event.source || 'unknown',
+          'skipped': false,
+        });
+
+        // Track tab info from callback
+        let tabExists = false;
+        let tabId = '';
+        const sanitizedPath = filePath.replace(/[^a-zA-Z0-9-_]/g, '_');
+
+        setTabs((prevTabs) => {
+          // Check if tab already exists
+          const existingTab = prevTabs.find(
+            (t) => t.contentType === 'markdown' && (t as MarkdownTab).filePath === filePath
+          );
+
+          if (existingTab) {
+            tabExists = true;
+            tabId = existingTab.id;
+            console.info('[DevWorkspacePanelFramework] file:opened tab already exists, focusing:', existingTab.id);
+            setFocusTabId(existingTab.id);
+            return prevTabs;
+          }
+
+          // Create new markdown tab
+          tabId = `file-${sanitizedPath}`;
+          const newTab: MarkdownTab = {
+            id: tabId,
+            label: fileName,
+            contentType: 'markdown',
+            filePath: filePath,
+            fileName: fileName,
+            closable: true,
+          };
+
+          console.info('[DevWorkspacePanelFramework] Creating new file:opened markdown tab:', newTab);
+          setFocusTabId(newTab.id);
+          return [...prevTabs, newTab];
+        });
+
+        // OTEL: Add tab lookup event
+        handleSpan.addEvent('devworkspace.tab.lookup', {
+          'tab.id': tabId || `file-${sanitizedPath}`,
+          'tab.exists': tabExists,
+        });
+
+        // OTEL: Add tab created event (only if new tab was created)
+        if (!tabExists) {
+          handleSpan.addEvent('devworkspace.tab.created', {
+            'tab.id': tabId || `file-${sanitizedPath}`,
+            'tab.contentType': 'markdown',
+          });
+        }
+
+        handleSpan.setStatus({ code: SpanStatusCode.OK });
+        handleSpan.end();
       }),
       // GitHub issue detail
       events.on('issue:selected', (event) => {
@@ -825,6 +1376,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       }),
       // File open from git changes panel
       events.on('file:open', (event) => {
+        const tracer = getTracer('devworkspace');
         // Ignore re-emitted events from tabs to prevent loop
         if (event.source === 'tab') return;
 
@@ -835,19 +1387,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
         // Check if file is markdown
         const isMarkdown = filePath.endsWith('.md') || filePath.endsWith('.mdx');
-
-        // If from storyboard-list-panel and markdown, redirect to file:opened handler
-        // which opens in the right panel markdown-viewer
-        if (event.source === 'storyboard-list-panel' && isMarkdown) {
-          console.info('[DevWorkspacePanelFramework] Redirecting storyboard overview to file:opened handler');
-          events.emit({
-            type: 'file:opened',
-            source: 'storyboard-list-panel',
-            timestamp: Date.now(),
-            payload: { filePath, path: filePath },
-          });
-          return;
-        }
 
         // Markdown files always open in MDX editor, regardless of git status
         // For other files: use git diff panel for modified files (staged or unstaged), file editor for new/untracked files
@@ -861,6 +1400,54 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
         console.info('[DevWorkspacePanelFramework] Git status:', payload.gitStatus, '-> Opening tab:', contentType);
 
+        // OTEL: Start event dispatch span
+        const dispatchSpan = tracer.startSpan('devworkspace.event.dispatch', {
+          attributes: {
+            'event.name': 'file:open',
+            'event.source': event.source || 'unknown',
+          },
+        });
+
+        // OTEL: Add trigger event
+        dispatchSpan.addEvent('devworkspace.trigger.tab', {
+          'trigger.source': event.source || 'unknown',
+          'trigger.action': 'openFile',
+        });
+
+        // OTEL: Add eventbus dispatch event
+        dispatchSpan.addEvent('devworkspace.eventbus.dispatch', {
+          'event.name': 'file:open',
+          'event.source': event.source || 'unknown',
+          'handlers.count': 1,
+        });
+
+        dispatchSpan.end();
+
+        // OTEL: Start tab handle span
+        const handleSpan = tracer.startSpan('devworkspace.tab.handle', {
+          attributes: {
+            'event.name': 'file:open',
+            'file.path': filePath,
+          },
+        });
+
+        // OTEL: Add handler event
+        handleSpan.addEvent('devworkspace.handler.tab', {
+          'event.name': 'file:open',
+          'event.source': event.source || 'unknown',
+        });
+
+        // OTEL: Add loop check event
+        handleSpan.addEvent('devworkspace.handler.loopCheck', {
+          'event.source': event.source || 'unknown',
+          'skipped': false,
+        });
+
+        // Track tab info from callback
+        let tabExists = false;
+        let tabId = '';
+        const sanitizedPath = filePath.replace(/[^a-zA-Z0-9-_]/g, '_');
+
         setTabs((prevTabs) => {
           // Check if tab already exists
           const existingTab = prevTabs.find(
@@ -871,6 +1458,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           );
 
           if (existingTab) {
+            tabExists = true;
+            tabId = existingTab.id;
             console.info('[DevWorkspacePanelFramework] Tab already exists, focusing:', existingTab.id);
             setFocusTabId(existingTab.id);
             return prevTabs;
@@ -878,11 +1467,11 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
           // Create new tab
           // Use file path for deterministic ID (sanitize for valid ID)
-          const sanitizedPath = filePath.replace(/[^a-zA-Z0-9-_]/g, '_');
           let newTab: FileEditorTab | MDXEditorTab | GitDiffTab;
           if (contentType === 'mdx-editor') {
+            tabId = `mdx-editor-${sanitizedPath}`;
             newTab = {
-              id: `mdx-editor-${sanitizedPath}`,
+              id: tabId,
               label: fileName,
               contentType: 'mdx-editor',
               filePath: filePath,
@@ -890,8 +1479,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               closable: true,
             };
           } else if (contentType === 'git-diff') {
+            tabId = `git-diff-${sanitizedPath}`;
             newTab = {
-              id: `git-diff-${sanitizedPath}`,
+              id: tabId,
               label: fileName,
               contentType: 'git-diff',
               filePath: filePath,
@@ -900,8 +1490,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               closable: true,
             };
           } else {
+            tabId = `file-editor-${sanitizedPath}`;
             newTab = {
-              id: `file-editor-${sanitizedPath}`,
+              id: tabId,
               label: fileName,
               contentType: 'file-editor',
               filePath: filePath,
@@ -914,6 +1505,23 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           setFocusTabId(newTab.id);
           return [...prevTabs, newTab];
         });
+
+        // OTEL: Add tab lookup event
+        handleSpan.addEvent('devworkspace.tab.lookup', {
+          'tab.id': tabId || `${contentType}-${sanitizedPath}`,
+          'tab.exists': tabExists,
+        });
+
+        // OTEL: Add tab created event (only if new tab was created)
+        if (!tabExists) {
+          handleSpan.addEvent('devworkspace.tab.created', {
+            'tab.id': tabId || `${contentType}-${sanitizedPath}`,
+            'tab.contentType': contentType,
+          });
+        }
+
+        handleSpan.setStatus({ code: SpanStatusCode.OK });
+        handleSpan.end();
       }),
       // Open file in MDX editor - create modal
       events.on('file:openInMdxEditor', async (event) => {
@@ -2018,11 +2626,123 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               flexDirection: 'column',
             }}
           >
-            <MarkdownPanelComponent
-              context={context}
-              actions={actions}
-              events={events}
-            />
+            {/* History toolbar */}
+            {rightPanelHistory.length > 0 && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-end',
+                  padding: '4px 8px',
+                  borderBottom: '1px solid var(--color-border, #333)',
+                  backgroundColor: 'var(--color-bg-secondary, #1a1a1a)',
+                  position: 'relative',
+                  flexShrink: 0,
+                }}
+              >
+                <button
+                  onClick={() => setShowRightPanelHistory(!showRightPanelHistory)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '4px 8px',
+                    background: showRightPanelHistory ? 'var(--color-bg-tertiary, #2a2a2a)' : 'transparent',
+                    border: '1px solid var(--color-border, #444)',
+                    borderRadius: '4px',
+                    color: 'var(--color-text-secondary, #aaa)',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                  }}
+                  title="View history"
+                >
+                  <History size={14} />
+                  <span>{rightPanelHistory.length}</span>
+                </button>
+                {showRightPanelHistory && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      right: '8px',
+                      zIndex: 100,
+                      backgroundColor: 'var(--color-bg-secondary, #1a1a1a)',
+                      border: '1px solid var(--color-border, #444)',
+                      borderRadius: '6px',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                      minWidth: '250px',
+                      maxWidth: '400px',
+                      maxHeight: '300px',
+                      overflow: 'auto',
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '8px 12px',
+                        borderBottom: '1px solid var(--color-border, #333)',
+                      }}
+                    >
+                      <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--color-text-secondary, #aaa)' }}>
+                        Recent Documents
+                      </span>
+                      <button
+                        onClick={() => setShowRightPanelHistory(false)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: '2px',
+                          color: 'var(--color-text-tertiary, #666)',
+                        }}
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                    {rightPanelHistory.map((item) => (
+                      <button
+                        key={item.filePath}
+                        onClick={() => handleHistoryItemClick(item.filePath)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          width: '100%',
+                          padding: '8px 12px',
+                          background: 'transparent',
+                          border: 'none',
+                          borderBottom: '1px solid var(--color-border, #222)',
+                          color: 'var(--color-text-primary, #fff)',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          fontSize: '13px',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary, #2a2a2a)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                      >
+                        <FileText size={14} style={{ flexShrink: 0, color: 'var(--color-text-secondary, #888)' }} />
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {item.fileName}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            <div style={{ flex: 1, overflow: 'hidden' }}>
+              <MarkdownPanelComponent
+                context={context}
+                actions={actions}
+                events={events}
+              />
+            </div>
           </div>
         ) : (
           <div>Markdown Viewer panel not available</div>

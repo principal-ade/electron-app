@@ -1,0 +1,22 @@
+{
+  "version": "1.0.0",
+  "name": "Panel Content Render",
+  "description": "Span covering markdown panel rendering in right slot",
+  "mode": "span-tree",
+  "canvas": ".principal-views/dev-workspace-tabs/dev-workspace-tabs.otel.canvas",
+  "spanPattern": "devworkspace.panel.render",
+  "scenarios": [
+    {
+      "id": "render-markdown-panel",
+      "description": "Markdown panel renders active file",
+      "priority": 1,
+      "template": {
+        "introduction": "**Panel Render**\n\nRendering markdown in right panel",
+        "events": {
+          "devworkspace.panel.markdown.rendered": "1. Markdown panel rendered: `{{file.path}}` ({{render.duration.ms}}ms)"
+        },
+        "summary": "**Rendered:** `{{file.path}}`"
+      }
+    }
+  ]
+}
