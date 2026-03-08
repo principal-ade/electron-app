@@ -481,6 +481,7 @@ export const StorybookSidebarButton: React.FC<StorybookSidebarButtonProps> = ({
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
             zIndex: 10000,
             minWidth: '200px',
+            fontFamily: theme.fonts.body,
           }}
         >
           {/* Show Stop option when running and viewing Storybook */}
@@ -510,7 +511,7 @@ export const StorybookSidebarButton: React.FC<StorybookSidebarButtonProps> = ({
                 e.currentTarget.style.backgroundColor = 'transparent';
               }}
             >
-              Stop Storybook
+              Stop StBk
               {selectedPackage && (
                 <div
                   style={{
