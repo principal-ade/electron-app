@@ -10,6 +10,7 @@
   "main": "dist/main/main.js",
   "dependencies": {
     "@ai-sdk/openai": "^1.3.23",
+    "@backlog-md/core": "^0.3.21",
     "@egoist/tipc": "^0.3.2",
     "@electron/notarize": "^3.0.0",
     "@excalidraw/excalidraw": "^0.18.0",
