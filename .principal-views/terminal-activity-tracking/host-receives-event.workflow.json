@@ -1,0 +1,23 @@
+{
+  "version": "1.0.0",
+  "name": "Host Receives Activity Event",
+  "description": "Panel host receives terminal activity change event from terminal panel",
+  "mode": "span-tree",
+  "canvas": ".principal-views/terminal-activity-tracking/terminal-activity-tracking.otel.canvas",
+  "spanPattern": "terminal.activity.host_handle",
+  "scenarios": [
+    {
+      "id": "host-receives-event",
+      "description": "Panel host processes activity change event and invokes TIPC",
+      "priority": 1,
+      "template": {
+        "introduction": "**Host Processing Activity Event**\n\nPanel host received terminal activity change and is forwarding to main process.",
+        "events": {
+          "terminal.activity.host_received": "[1] Host received via **{{handler.name}}**: session `{{session.id}}`, working={{is_working}}",
+          "terminal.activity.tipc_invoked": "[2] TIPC invoked: **{{procedure.name}}**, working={{is_working}}"
+        },
+        "summary": "**Host Event Summary:**\n- Session: `{{session.id}}`\n- Working: {{is_working}}"
+      }
+    }
+  ]
+}

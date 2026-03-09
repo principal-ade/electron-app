@@ -380,16 +380,46 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
   // Listen for terminal:activity-changed events from TabbedTerminalPanel and update activity state
   useEffect(() => {
+    const activityTracer = getTracer('devworkspace-activity');
+
     const unsubscribe = events.on('terminal:activity-changed', (event) => {
       if (event.type === 'terminal:activity-changed') {
         const payload = event.payload as TerminalActivityChangedEvent;
         console.info('[DevWorkspacePanelFramework] Terminal activity changed:', payload);
-        activityActions.updateActivity({
-          sessionId: payload.sessionId,
-          isWorking: payload.isWorking,
-          workingMessage: payload.message,
-          workingSubtitle: payload.subtitle,
-        });
+
+        // Start span for host handling the activity event
+        const span = activityTracer.startSpan('terminal.activity.host_handle');
+
+        try {
+          // Event: Host received the activity change from terminal panel
+          span.addEvent('terminal.activity.host_received', {
+            'session.id': payload.sessionId,
+            'is_working': payload.isWorking,
+            'handler.name': 'onTerminalActivityChanged',
+          });
+
+          // Event: TIPC invoked to update activity in main process
+          span.addEvent('terminal.activity.tipc_invoked', {
+            'procedure.name': 'updateActivity',
+            'is_working': payload.isWorking,
+          });
+
+          activityActions.updateActivity({
+            sessionId: payload.sessionId,
+            isWorking: payload.isWorking,
+            workingMessage: payload.message,
+            workingSubtitle: payload.subtitle,
+          });
+
+          span.setStatus({ code: SpanStatusCode.OK });
+        } catch (error) {
+          span.recordException(
+            error instanceof Error ? error : new Error(String(error)),
+          );
+          span.setStatus({ code: SpanStatusCode.ERROR });
+        } finally {
+          span.end();
+        }
       }
     });
 

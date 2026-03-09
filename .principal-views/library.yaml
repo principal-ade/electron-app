@@ -19,6 +19,9 @@ resources:
       - "otel-collector-service"
       - "otel-collector-ipc"
       - "trace-viewer"
+      - "terminal-activity"
+      - "devworkspace-activity"
+      - "terminal-activity-sync"
 
   principal-ade-storybook:
     service.name: "principal-ade-storybook"

@@ -8,6 +8,7 @@ import React, {
   useCallback,
   type ReactNode,
 } from 'react';
+import { SpanStatusCode } from '@opentelemetry/api';
 import { TerminalService } from '../main-process-api/TerminalService';
 import type { TerminalInfo } from '../../shared/main-process-api-interfaces/TerminalService';
 import type {
@@ -20,6 +21,7 @@ import {
   type TerminalActivityState,
   type UpdateActivityInput,
 } from '../tipc/terminalClient';
+import { getTracer } from '../telemetry';
 
 /**
  * Terminal context value
@@ -133,13 +135,35 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
       });
 
     // Subscribe to activity sync broadcasts
+    const activityTracer = getTracer('terminal-activity-sync');
+
     const unsubscribe = onActivitySync((activities) => {
-      console.info(
-        '[TerminalProvider] Activity sync received:',
-        activities.length,
-        'active sessions',
-      );
-      setTerminalActivities(activities);
+      const span = activityTracer.startSpan('terminal.activity.sync_handle');
+      const safeActivities = activities ?? [];
+
+      try {
+        // Event: Sync received from main process broadcast
+        span.addEvent('terminal.activity.sync_received', {
+          'activities.count': safeActivities.length,
+          'ui.updated': true,
+        });
+
+        console.info(
+          '[TerminalProvider] Activity sync received:',
+          safeActivities.length,
+          'active sessions',
+        );
+        setTerminalActivities(safeActivities);
+
+        span.setStatus({ code: SpanStatusCode.OK });
+      } catch (error) {
+        span.recordException(
+          error instanceof Error ? error : new Error(String(error)),
+        );
+        span.setStatus({ code: SpanStatusCode.ERROR });
+      } finally {
+        span.end();
+      }
     });
 
     return () => {

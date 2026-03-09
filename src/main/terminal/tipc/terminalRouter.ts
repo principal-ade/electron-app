@@ -7,10 +7,15 @@
 
 import { tipc } from '@egoist/tipc/main';
 import { BrowserWindow } from 'electron';
+import { SpanStatusCode } from '@opentelemetry/api';
 import { getSessionManagerInstance } from '../sessionManagerSingleton';
 import { ownershipManager } from '../TerminalOwnershipManager';
 import { isPtyAvailable } from '../utils/ptyLoader';
+import { getTracer } from '../../telemetry';
 import type { TerminalActivityState } from '../../../shared/tipc/terminalRouterTypes';
+
+// Tracer for terminal activity telemetry
+const tracer = getTracer('terminal-activity');
 
 // Get singleton session manager instance
 const sessionManager = getSessionManagerInstance();
@@ -264,34 +269,83 @@ export const terminalRouter = {
       workingSubtitle?: string;
     }>()
     .action(async ({ input, context }) => {
-      const window = BrowserWindow.fromWebContents(context.sender);
-      if (!window) {
-        return;
-      }
+      const span = tracer.startSpan('terminal.activity.update');
 
-      if (input.isWorking) {
-        // Store activity state
-        const state: TerminalActivityState = {
-          sessionId: input.sessionId,
-          isWorking: input.isWorking,
-          workingMessage: input.workingMessage,
-          workingSubtitle: input.workingSubtitle,
-          windowId: window.id,
-          timestamp: Date.now(),
-        };
-        activityStore.set(input.sessionId, state);
-      } else {
-        // Remove from store when no longer working
-        activityStore.delete(input.sessionId);
-      }
-
-      // Broadcast to all windows
-      const activities = Array.from(activityStore.values());
-      BrowserWindow.getAllWindows().forEach((win) => {
-        if (!win.isDestroyed()) {
-          win.webContents.send('terminal:activity-sync', activities);
+      try {
+        const window = BrowserWindow.fromWebContents(context.sender);
+        if (!window) {
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: 'No window found',
+          });
+          return;
         }
-      });
+
+        // Event: Router handled the TIPC procedure
+        span.addEvent('terminal.activity.router_handled', {
+          'window.id': window.id,
+          'session.id': input.sessionId,
+          'is_working': input.isWorking,
+        });
+
+        if (input.isWorking) {
+          // Store activity state
+          const state: TerminalActivityState = {
+            sessionId: input.sessionId,
+            isWorking: input.isWorking,
+            workingMessage: input.workingMessage,
+            workingSubtitle: input.workingSubtitle,
+            windowId: window.id,
+            timestamp: Date.now(),
+          };
+          activityStore.set(input.sessionId, state);
+
+          // Event: Agent started working
+          span.addEvent('terminal.activity.agent_started', {
+            'session.id': input.sessionId,
+            'store.size': activityStore.size,
+          });
+        } else {
+          // Remove from store when no longer working
+          activityStore.delete(input.sessionId);
+
+          // Event: Agent stopped working
+          span.addEvent('terminal.activity.agent_stopped', {
+            'session.id': input.sessionId,
+            'store.size': activityStore.size,
+          });
+        }
+
+        // Broadcast to all windows
+        const activities = Array.from(activityStore.values());
+        const allWindows = BrowserWindow.getAllWindows();
+        const activeWindowCount = allWindows.filter(
+          (w) => !w.isDestroyed(),
+        ).length;
+
+        allWindows.forEach((win) => {
+          if (!win.isDestroyed()) {
+            win.webContents.send('terminal:activity-sync', activities);
+          }
+        });
+
+        // Event: Broadcast sent
+        span.addEvent('terminal.activity.broadcast_sent', {
+          channel: 'terminal:activity-sync',
+          'windows.count': activeWindowCount,
+          'activities.count': activities.length,
+        });
+
+        span.setStatus({ code: SpanStatusCode.OK });
+      } catch (error) {
+        span.recordException(
+          error instanceof Error ? error : new Error(String(error)),
+        );
+        span.setStatus({ code: SpanStatusCode.ERROR });
+        throw error;
+      } finally {
+        span.end();
+      }
     }),
 
   getActivityState: t.procedure.action(async () => {

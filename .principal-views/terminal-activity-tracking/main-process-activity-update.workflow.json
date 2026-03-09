@@ -1,0 +1,38 @@
+{
+  "version": "1.0.0",
+  "name": "Terminal Activity Update (Main Process)",
+  "description": "Main process handling terminal activity state changes",
+  "mode": "span-tree",
+  "canvas": ".principal-views/terminal-activity-tracking/terminal-activity-tracking.otel.canvas",
+  "spanPattern": "terminal.activity.update",
+  "scenarios": [
+    {
+      "id": "agent-started",
+      "description": "Agent begins working - state added to store",
+      "priority": 1,
+      "template": {
+        "introduction": "**Agent Started Working**\n\nSession `{{session.id}}` from window {{window.id}} has started working.",
+        "events": {
+          "terminal.activity.router_handled": "[1] TIPC router handled\n    Window: {{window.id}}, Session: `{{session.id}}`",
+          "terminal.activity.agent_started": "[2] Agent started: `{{session.id}}`\n    Active sessions: {{store.size}}",
+          "terminal.activity.broadcast_sent": "[3] Broadcast on **{{channel}}**\n    Windows: {{windows.count}}, Activities: {{activities.count}}"
+        },
+        "summary": "**Started** `{{session.id}}` | Active: {{store.size}} | Notified: {{windows.count}} windows"
+      }
+    },
+    {
+      "id": "agent-stopped",
+      "description": "Agent stops working - state removed from store",
+      "priority": 2,
+      "template": {
+        "introduction": "**Agent Stopped Working**\n\nSession `{{session.id}}` from window {{window.id}} has completed work.",
+        "events": {
+          "terminal.activity.router_handled": "[1] TIPC router handled\n    Window: {{window.id}}, Session: `{{session.id}}`",
+          "terminal.activity.agent_stopped": "[2] Agent stopped: `{{session.id}}`\n    Remaining sessions: {{store.size}}",
+          "terminal.activity.broadcast_sent": "[3] Broadcast on **{{channel}}**\n    Windows: {{windows.count}}, Activities: {{activities.count}}"
+        },
+        "summary": "**Stopped** `{{session.id}}` | Remaining: {{store.size}} | Notified: {{windows.count}} windows"
+      }
+    }
+  ]
+}

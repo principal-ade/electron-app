@@ -1,0 +1,22 @@
+{
+  "version": "1.0.0",
+  "name": "Window Receives Activity Sync",
+  "description": "Window receives activity sync broadcast from main process",
+  "mode": "span-tree",
+  "canvas": ".principal-views/terminal-activity-tracking/terminal-activity-tracking.otel.canvas",
+  "spanPattern": "terminal.activity.sync_handle",
+  "scenarios": [
+    {
+      "id": "window-receives-sync",
+      "description": "Window receives broadcast and updates UI state",
+      "priority": 1,
+      "template": {
+        "introduction": "**Window Received Activity Sync**\n\nWindow received terminal activity broadcast from main process.",
+        "events": {
+          "terminal.activity.sync_received": "[1] Sync received: {{activities.count}} active sessions, UI updated={{ui.updated}}"
+        },
+        "summary": "**Sync Summary:**\n- Active Sessions: {{activities.count}}\n- UI Updated: {{ui.updated}}"
+      }
+    }
+  ]
+}

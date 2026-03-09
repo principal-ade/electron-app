@@ -69,92 +69,14 @@
       "text": "# Terminal Activity Tracking\n**Agent working state propagation across windows**"
     },
     {
-      "id": "themed-terminal",
+      "id": "external-origin",
       "type": "text",
       "x": 50,
       "y": 0,
-      "width": 200,
+      "width": 450,
       "height": 100,
-      "text": "ThemedTerminal\n\nisWorking prop changes\ntriggers state update",
-      "pv": {
-        "nodeType": "terminal-panel",
-        "shape": "rectangle",
-        "status": "draft",
-        "origin": "external",
-        "references": ["@industry-theme/xterm-terminal-panel/src/components/ThemedTerminal.tsx"],
-        "otel": {
-          "kind": "event",
-          "category": "ui",
-          "isNew": true
-        },
-        "event": {
-          "name": "terminal.activity.state_changed",
-          "description": "Terminal working state changed (blinds shown/hidden)",
-          "attributes": {
-            "session.id": {
-              "type": "string",
-              "description": "Terminal session ID"
-            },
-            "is_working": {
-              "type": "boolean",
-              "description": "Whether agent is currently working"
-            },
-            "working_message": {
-              "type": "string",
-              "description": "Message displayed on working overlay",
-              "display": false
-            },
-            "working_subtitle": {
-              "type": "string",
-              "description": "Subtitle displayed on working overlay",
-              "display": false
-            }
-          }
-        }
-      }
-    },
-    {
-      "id": "event-emitter",
-      "type": "text",
-      "x": 300,
-      "y": 0,
-      "width": 200,
-      "height": 100,
-      "text": "events.emit()\n\n'terminal:activity-change'\npayload with state",
-      "pv": {
-        "nodeType": "terminal-panel",
-        "shape": "rectangle",
-        "status": "draft",
-        "origin": "external",
-        "references": ["@industry-theme/xterm-terminal-panel/src/panels/TabbedTerminalPanel.tsx"],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "isNew": true
-        },
-        "event": {
-          "name": "terminal.activity.event_emitted",
-          "description": "Activity change event emitted from terminal panel to host",
-          "attributes": {
-            "event.type": {
-              "type": "string",
-              "description": "Event type: terminal:activity-change"
-            },
-            "event.source": {
-              "type": "string",
-              "description": "Source component: TabbedTerminalPanel"
-            },
-            "session.id": {
-              "type": "string",
-              "description": "Terminal session ID"
-            },
-            "is_working": {
-              "type": "boolean",
-              "description": "New working state"
-            }
-          }
-        }
-      }
+      "text": "**External Origin**\n\n@industry-theme/xterm-terminal-panel\nThemedTerminal → events.emit('terminal:activity-change')",
+      "color": "#64748B"
     },
     {
       "id": "panel-host",
@@ -167,12 +89,16 @@
       "pv": {
         "nodeType": "panel-host",
         "shape": "rectangle",
-        "status": "draft",
-        "references": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"],
+        "status": "implemented",
+        "references": [
+          "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+        ],
         "otel": {
           "kind": "event",
           "category": "lifecycle",
-          "isNew": true
+          "files": [
+            "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+          ]
         },
         "event": {
           "name": "terminal.activity.host_received",
@@ -210,12 +136,16 @@
       "pv": {
         "nodeType": "tipc-client",
         "shape": "rectangle",
-        "status": "draft",
-        "references": ["src/renderer/tipc/terminalClient.ts"],
+        "status": "implemented",
+        "references": [
+          "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+        ],
         "otel": {
           "kind": "event",
           "category": "ipc",
-          "isNew": true
+          "files": [
+            "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+          ]
         },
         "event": {
           "name": "terminal.activity.tipc_invoked",
@@ -246,20 +176,24 @@
     {
       "id": "tipc-router",
       "type": "text",
-      "x": 550,
-      "y": 300,
+      "x": 197,
+      "y": 255,
       "width": 200,
       "height": 120,
       "text": "terminalRouter\n.updateActivity\n\nt.procedure\n.input<UpdateActivityInput>()\n.action()",
       "pv": {
         "nodeType": "tipc-router",
         "shape": "rectangle",
-        "status": "draft",
-        "references": ["src/main/terminal/tipc/terminalRouter.ts"],
+        "status": "implemented",
+        "references": [
+          "src/main/terminal/tipc/terminalRouter.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "ipc",
-          "isNew": true
+          "files": [
+            "src/main/terminal/tipc/terminalRouter.ts"
+          ]
         },
         "event": {
           "name": "terminal.activity.router_handled",
@@ -288,48 +222,76 @@
       }
     },
     {
-      "id": "activity-store",
+      "id": "agent-started",
       "type": "text",
-      "x": 300,
-      "y": 300,
-      "width": 200,
-      "height": 120,
-      "text": "TerminalActivityStore\n\nMap<sessionId, {\n  isWorking,\n  message,\n  windowId,\n  timestamp\n}>",
+      "x": 101,
+      "y": 431,
+      "width": 180,
+      "height": 100,
+      "text": "Agent Started\n\nactivityStore.set()\nSession added",
       "pv": {
         "nodeType": "activity-store",
         "shape": "rectangle",
-        "status": "draft",
-        "references": ["src/main/terminal/tipc/terminalRouter.ts"],
+        "status": "implemented",
+        "references": [
+          "src/main/terminal/tipc/terminalRouter.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "storage",
-          "isNew": true
+          "files": [
+            "src/main/terminal/tipc/terminalRouter.ts"
+          ]
         },
         "event": {
-          "name": "terminal.activity.store_updated",
-          "description": "Activity store updated with new state",
+          "name": "terminal.activity.agent_started",
+          "description": "Agent started working - session added to store",
           "attributes": {
             "session.id": {
               "type": "string",
               "description": "Terminal session ID"
             },
-            "operation": {
-              "type": "string",
-              "description": "Operation: set or delete"
-            },
             "store.size": {
               "type": "number",
               "description": "Current number of active sessions"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "agent-stopped",
+      "type": "text",
+      "x": 323,
+      "y": 431,
+      "width": 180,
+      "height": 100,
+      "text": "Agent Stopped\n\nactivityStore.delete()\nSession removed",
+      "pv": {
+        "nodeType": "activity-store",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/main/terminal/tipc/terminalRouter.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "storage",
+          "files": [
+            "src/main/terminal/tipc/terminalRouter.ts"
+          ]
+        },
+        "event": {
+          "name": "terminal.activity.agent_stopped",
+          "description": "Agent stopped working - session removed from store",
+          "attributes": {
+            "session.id": {
+              "type": "string",
+              "description": "Terminal session ID"
             },
-            "is_working": {
-              "type": "boolean",
-              "description": "Working state stored",
-              "display": false
-            },
-            "window.id": {
+            "store.size": {
               "type": "number",
-              "description": "Window ID associated with session",
-              "display": false
+              "description": "Remaining active sessions"
             }
           }
         }
@@ -338,20 +300,24 @@
     {
       "id": "broadcast",
       "type": "text",
-      "x": 300,
-      "y": 470,
+      "x": 194,
+      "y": 585,
       "width": 200,
       "height": 100,
       "text": "Broadcast\n\nBrowserWindow\n.getAllWindows()\n.forEach(send)",
       "pv": {
         "nodeType": "broadcast",
         "shape": "rectangle",
-        "status": "draft",
-        "references": ["src/main/terminal/tipc/terminalRouter.ts"],
+        "status": "implemented",
+        "references": [
+          "src/main/terminal/tipc/terminalRouter.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "ipc",
-          "isNew": true
+          "files": [
+            "src/main/terminal/tipc/terminalRouter.ts"
+          ]
         },
         "event": {
           "name": "terminal.activity.broadcast_sent",
@@ -376,20 +342,24 @@
     {
       "id": "window-a",
       "type": "text",
-      "x": 50,
-      "y": 620,
+      "x": 44,
+      "y": 743,
       "width": 150,
       "height": 100,
       "text": "Window A\n\nReceives sync\nUpdates UI indicators",
       "pv": {
         "nodeType": "window",
         "shape": "rectangle",
-        "status": "draft",
-        "references": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"],
+        "status": "implemented",
+        "references": [
+          "src/renderer/contexts/TerminalContext.tsx"
+        ],
         "otel": {
           "kind": "event",
           "category": "ui",
-          "isNew": true
+          "files": [
+            "src/renderer/contexts/TerminalContext.tsx"
+          ]
         },
         "event": {
           "name": "terminal.activity.sync_received",
@@ -397,7 +367,8 @@
           "attributes": {
             "window.id": {
               "type": "number",
-              "description": "Receiving window ID"
+              "description": "Receiving window ID",
+              "display": false
             },
             "activities.count": {
               "type": "number",
@@ -414,20 +385,24 @@
     {
       "id": "window-b",
       "type": "text",
-      "x": 225,
-      "y": 620,
+      "x": 219,
+      "y": 743,
       "width": 150,
       "height": 100,
       "text": "Window B\n\nReceives sync\nUpdates UI indicators",
       "pv": {
         "nodeType": "window",
         "shape": "rectangle",
-        "status": "draft",
-        "references": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"],
+        "status": "implemented",
+        "references": [
+          "src/renderer/contexts/TerminalContext.tsx"
+        ],
         "otel": {
           "kind": "event",
           "category": "ui",
-          "isNew": true
+          "files": [
+            "src/renderer/contexts/TerminalContext.tsx"
+          ]
         },
         "event": {
           "name": "terminal.activity.sync_received",
@@ -435,7 +410,8 @@
           "attributes": {
             "window.id": {
               "type": "number",
-              "description": "Receiving window ID"
+              "description": "Receiving window ID",
+              "display": false
             },
             "activities.count": {
               "type": "number",
@@ -452,20 +428,24 @@
     {
       "id": "window-c",
       "type": "text",
-      "x": 400,
-      "y": 620,
+      "x": 394,
+      "y": 743,
       "width": 150,
       "height": 100,
       "text": "Window C\n\nReceives sync\nUpdates UI indicators",
       "pv": {
         "nodeType": "window",
         "shape": "rectangle",
-        "status": "draft",
-        "references": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"],
+        "status": "implemented",
+        "references": [
+          "src/renderer/contexts/TerminalContext.tsx"
+        ],
         "otel": {
           "kind": "event",
           "category": "ui",
-          "isNew": true
+          "files": [
+            "src/renderer/contexts/TerminalContext.tsx"
+          ]
         },
         "event": {
           "name": "terminal.activity.sync_received",
@@ -473,7 +453,8 @@
           "attributes": {
             "window.id": {
               "type": "number",
-              "description": "Receiving window ID"
+              "description": "Receiving window ID",
+              "display": false
             },
             "activities.count": {
               "type": "number",
@@ -521,22 +502,11 @@
   "edges": [
     {
       "id": "e1",
-      "fromNode": "themed-terminal",
-      "toNode": "event-emitter",
-      "fromSide": "right",
-      "toSide": "left",
-      "label": "isWorking changes",
-      "pv": {
-        "edgeType": "event-emit"
-      }
-    },
-    {
-      "id": "e2",
-      "fromNode": "event-emitter",
+      "fromNode": "external-origin",
       "toNode": "panel-host",
       "fromSide": "right",
       "toSide": "left",
-      "label": "events.emit()",
+      "label": "terminal:activity-change",
       "pv": {
         "edgeType": "event-emit"
       }
@@ -564,23 +534,34 @@
       }
     },
     {
-      "id": "e5",
+      "id": "e5b",
       "fromNode": "tipc-router",
-      "toNode": "activity-store",
-      "fromSide": "left",
-      "toSide": "right",
-      "label": "store.update()",
+      "toNode": "agent-stopped",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "store.delete()",
       "pv": {
         "edgeType": "state-update"
       }
     },
     {
-      "id": "e6",
-      "fromNode": "activity-store",
+      "id": "e6a",
+      "fromNode": "agent-started",
       "toNode": "broadcast",
       "fromSide": "bottom",
       "toSide": "top",
-      "label": "trigger broadcast",
+      "label": "broadcast",
+      "pv": {
+        "edgeType": "state-update"
+      }
+    },
+    {
+      "id": "e6b",
+      "fromNode": "agent-stopped",
+      "toNode": "broadcast",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "broadcast",
       "pv": {
         "edgeType": "state-update"
       }
@@ -616,6 +597,16 @@
       "label": "webContents.send()",
       "pv": {
         "edgeType": "ipc-broadcast"
+      }
+    },
+    {
+      "id": "edge-tipc-router-agent-started-1773079622676",
+      "fromNode": "tipc-router",
+      "toNode": "agent-started",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "state-update"
       }
     }
   ]
