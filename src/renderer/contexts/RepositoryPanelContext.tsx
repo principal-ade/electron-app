@@ -167,6 +167,12 @@ export interface RepositoryPanelActions extends PanelActions {
   // Telemetry management
   clearTelemetry?: () => Promise<void>;
   removeTrace?: (traceId: string) => void;
+  // Scenario visibility (for TraceListPanel)
+  updateScenarioFilterDefault?: (
+    workflowPath: string,
+    scenarioId: string,
+    filterDefault: boolean,
+  ) => Promise<void>;
 }
 
 // Extended context for repository panels
@@ -1624,6 +1630,68 @@ export const RepositoryPanelProvider: React.FC<
       removeTrace: (traceId: string) => {
         console.info('[RepositoryPanelProvider] Removing trace:', traceId);
         setTelemetryTraces((prev) => prev.filter((t) => t.traceId !== traceId));
+      },
+
+      updateScenarioFilterDefault: async (
+        workflowPath: string,
+        scenarioId: string,
+        filterDefault: boolean,
+      ) => {
+        console.info(
+          '[RepositoryPanelProvider] Updating scenario filterDefault:',
+          { workflowPath, scenarioId, filterDefault },
+        );
+        try {
+          // Resolve the absolute path
+          const absolutePath = workflowPath.startsWith('/')
+            ? workflowPath
+            : `${repositoryPath}/${workflowPath}`;
+
+          // Read the workflow file
+          const result = await FileSystemService.readFile(absolutePath);
+          if (!result) {
+            throw new Error(`Workflow file not found: ${workflowPath}`);
+          }
+          const content = typeof result === 'string' ? result : result.content;
+
+          // Parse and update the workflow JSON
+          const workflow = JSON.parse(content);
+          if (workflow.scenarios && Array.isArray(workflow.scenarios)) {
+            const scenario = workflow.scenarios.find(
+              (s: { id?: string }) => s.id === scenarioId,
+            );
+            if (scenario) {
+              scenario.filterDefault = filterDefault;
+            } else {
+              console.warn(
+                '[RepositoryPanelProvider] Scenario not found:',
+                scenarioId,
+              );
+              return;
+            }
+          } else {
+            console.warn(
+              '[RepositoryPanelProvider] No scenarios array in workflow:',
+              workflowPath,
+            );
+            return;
+          }
+
+          // Write the updated workflow back
+          await FileSystemService.writeFile(
+            absolutePath,
+            JSON.stringify(workflow, null, 2),
+          );
+          console.info(
+            '[RepositoryPanelProvider] Scenario filterDefault updated successfully',
+          );
+        } catch (error) {
+          console.error(
+            '[RepositoryPanelProvider] Failed to update scenario filterDefault:',
+            error,
+          );
+          throw error;
+        }
       },
     }),
     [repositoryPath, events, repository?.name],

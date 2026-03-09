@@ -11,7 +11,7 @@ interface ProjectsViewHeaderProps {
 // Map mode to display info
 const modeConfig: Record<LeftPanelView, { icon: React.ReactNode; label: string }> = {
   local: { icon: <Folder size={16} />, label: 'Local Projects' },
-  remote: { icon: <Github size={16} />, label: 'Remote Projects' },
+  remote: { icon: <Github size={16} />, label: 'Github Projects' },
   starred: { icon: <Star size={16} />, label: 'Starred Projects' },
 };
 

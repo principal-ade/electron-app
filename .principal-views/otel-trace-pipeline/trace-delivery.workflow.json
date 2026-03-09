@@ -17,7 +17,8 @@
           "otel.storage.trace_stored": "[2] Trace `{{trace.id}}` stored in buffer at {{storage.timestamp}} ({{storage.size}}/{{storage.max_size}} traces, {{spans.count}} spans)"
         },
         "summary": "**Storage Summary:**\n- Trace ID: `{{trace.id}}`\n- Resource Spans: {{resource.spans.count}}\n- Total Spans: {{spans.count}}\n- Buffer Usage: {{storage.size}}/{{storage.max_size}}\n- Format: {{trace.format}}\n- Mode: {{collector.mode}}"
-      }
+      },
+      "filterDefault": true
     }
   ]
 }

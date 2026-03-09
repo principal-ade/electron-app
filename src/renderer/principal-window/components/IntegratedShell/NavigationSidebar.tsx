@@ -121,7 +121,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
 
   const navItems: NavItem[] = [
     { id: 'local-projects', icon: <Folder size={20} />, label: 'Local' },
-    { id: 'remote-projects', icon: <Github size={20} />, label: 'Remote' },
+    { id: 'remote-projects', icon: <Github size={20} />, label: 'Github' },
     { id: 'starred-projects', icon: <Star size={20} />, label: 'Starred' },
     { id: 'worlds', icon: <Map size={20} />, label: 'Worlds' },
     { id: 'skills', icon: <Zap size={20} />, label: 'Skills' },
