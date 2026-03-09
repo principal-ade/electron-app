@@ -10,6 +10,7 @@ const HANDLERS = {
   STOP_OTEL_COLLECTOR: 'otel-collector:stop',
   GET_OTEL_COLLECTOR_STATUS: 'otel-collector:getStatus',
   REGISTER_TRACE_PORT: 'otel-collector:registerPort',
+  REGISTER_TRACE_PORT_FOR_SERVICES: 'otel-collector:registerPortForServices',
   UNREGISTER_TRACE_PORT: 'otel-collector:unregisterPort',
   UNREGISTER_TRACE_WINDOW: 'otel-collector:unregisterWindow',
   SEND_TEST_TRACE: 'otel-collector:sendTestTrace',
@@ -85,6 +86,32 @@ export function registerOtelCollectorHandlers(): void {
         return { success: true };
       } catch (err) {
         console.error('[IPC] Failed to register trace port:', err);
+        return { success: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+  );
+
+  // Register port for multiple services (single port receives traces from all listed services)
+  ipcMain.handle(
+    HANDLERS.REGISTER_TRACE_PORT_FOR_SERVICES,
+    (event, windowId: string, serviceIdentifiers: string[]): { success: boolean; error?: string } => {
+      try {
+        console.log(`[IPC] Registering trace port for window: ${windowId}, services: [${serviceIdentifiers.join(', ')}]`);
+
+        // Create a MessageChannel
+        const { port1, port2 } = new MessageChannelMain();
+
+        // Register port1 with the service for all specified services
+        service.registerPortForServices(windowId, serviceIdentifiers, port1);
+
+        // Send port2 to the renderer via postMessage
+        event.sender.postMessage('otel-collector:port', { windowId, serviceIdentifiers }, [port2]);
+
+        console.log(`[IPC] ✅ Trace port registered for ${serviceIdentifiers.length} services and sent to renderer`);
+
+        return { success: true };
+      } catch (err) {
+        console.error('[IPC] Failed to register trace port for services:', err);
         return { success: false, error: err instanceof Error ? err.message : String(err) };
       }
     }

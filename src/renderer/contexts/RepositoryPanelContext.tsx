@@ -123,6 +123,22 @@ function splitOtlpByTraceId(
   return Array.from(traceMap.values()) as OtelExportTraceServiceRequest[];
 }
 
+/**
+ * Extract service.name from OTLP trace data
+ */
+function extractServiceName(otlpData: OtelExportTraceServiceRequest): string | null {
+  try {
+    const resourceSpan = otlpData.resourceSpans?.[0];
+    if (!resourceSpan?.resource?.attributes) return null;
+
+    const attributes = resourceSpan.resource.attributes as Array<{ key: string; value: { stringValue?: string } }>;
+    const serviceAttr = attributes.find((attr) => attr.key === 'service.name');
+    return serviceAttr?.value?.stringValue || null;
+  } catch {
+    return null;
+  }
+}
+
 // File city color modes slice data
 interface FileCityColorModesSliceData {
   selectedColorMode: FileCityColorMode | null;
@@ -206,11 +222,13 @@ interface RepositoryPanelProviderProps {
   openTabs?: unknown[];
   /** Callback when scope names are discovered from library.yaml */
   onScopeNamesDiscovered?: (scopeNames: string[]) => void;
+  /** Callback when service trace counts change */
+  onServiceTraceCountsChange?: (counts: Map<string, number>, lastActiveService: string | null) => void;
 }
 
 export const RepositoryPanelProvider: React.FC<
   RepositoryPanelProviderProps
-> = ({ children, repositoryPath, repository, events, traceSourceServiceName, openTabs = [], onScopeNamesDiscovered }) => {
+> = ({ children, repositoryPath, repository, events, openTabs = [], onScopeNamesDiscovered, onServiceTraceCountsChange }) => {
   // Track file tree for the current repository
   const [fileTreeData, setFileTreeData] = useState<FileTree | null>(null);
   const [fileTreeLoading, setFileTreeLoading] = useState(false);
@@ -278,6 +296,20 @@ export const RepositoryPanelProvider: React.FC<
   // Track telemetry traces for trace viewer
   const [telemetryTraces, setTelemetryTraces] = useState<RegisteredTrace[]>([]);
   const [telemetryLoading, setTelemetryLoading] = useState(false);
+
+  // Discovered service/scope names from library.yaml (for trace port registration)
+  const [discoveredScopeNames, setDiscoveredScopeNames] = useState<string[]>([]);
+
+  // Track trace counts per service and most recent active service
+  const [serviceTraceCounts, setServiceTraceCounts] = useState<Map<string, number>>(new Map());
+  const [lastActiveService, setLastActiveService] = useState<string | null>(null);
+
+  // Notify parent when service trace counts change
+  useEffect(() => {
+    if (onServiceTraceCountsChange && serviceTraceCounts.size > 0) {
+      onServiceTraceCountsChange(serviceTraceCounts, lastActiveService);
+    }
+  }, [serviceTraceCounts, lastActiveService, onServiceTraceCountsChange]);
 
   // Track schematics (version snapshots from LocalRegistry)
   const [schematicsData, setSchematicsData] = useState<VersionSnapshot[]>([]);
@@ -690,7 +722,10 @@ export const RepositoryPanelProvider: React.FC<
           fileTreeSha: stableFileTreeData.sha,
         });
 
-        // Notify parent of discovered scope names (for dropdown, etc.)
+        // Store discovered scope names for port registration
+        setDiscoveredScopeNames(scopeNames);
+
+        // Notify parent of discovered scope names (for display, etc.)
         if (onScopeNamesDiscovered) {
           onScopeNamesDiscovered(scopeNames);
         }
@@ -1167,33 +1202,28 @@ export const RepositoryPanelProvider: React.FC<
     fetchGlobalSkills();
   }, []);
 
-  // Register MessagePort for OTEL traces
+  // Register MessagePort for OTEL traces from all discovered services
   useEffect(() => {
     let unsubscribe: (() => void) | null = null;
     let windowId: string | null = null;
-    let serviceIdentifier: string | null = null;
 
     const registerTelemetryPort = async () => {
       try {
-        // Generate window ID and determine service identifier
-        // Use traceSourceServiceName if provided, otherwise derive from repository
-        windowId = `dev-workspace-${Date.now()}`;
-        serviceIdentifier = traceSourceServiceName || repository?.name || repositoryPath?.split('/').pop() || null;
-
-        if (!serviceIdentifier) {
-          console.warn('[RepositoryPanelProvider] No service identifier available, skipping telemetry registration');
+        // Wait for scope names to be discovered from library.yaml
+        if (discoveredScopeNames.length === 0) {
+          console.info('[RepositoryPanelProvider] No scope names discovered yet, waiting...');
           return;
         }
 
-        console.info('[RepositoryPanelProvider] 🔌 Registering telemetry port');
-        console.info('[RepositoryPanelProvider] traceSourceServiceName prop:', traceSourceServiceName);
-        console.info('[RepositoryPanelProvider] Final serviceIdentifier:', serviceIdentifier);
+        windowId = `dev-workspace-${Date.now()}`;
+
+        console.info('[RepositoryPanelProvider] 🔌 Registering telemetry port for all services');
+        console.info('[RepositoryPanelProvider] Discovered scope names:', discoveredScopeNames);
         console.info('[RepositoryPanelProvider] Window ID:', windowId);
 
-        // Subscribe to OTEL messages (port is handled in preload)
-        unsubscribe = window.mainProcess.otelCollector.onOtelMessage(
+        // Subscribe to OTEL messages for all services (port is handled in preload)
+        unsubscribe = window.mainProcess.otelCollector.onOtelMessageForServices(
           windowId,
-          serviceIdentifier,
           async (data: unknown) => {
             try {
               const message = data as { type?: string; windowId?: string; serviceIdentifier?: string; timestamp?: number; payload?: unknown };
@@ -1239,6 +1269,17 @@ export const RepositoryPanelProvider: React.FC<
                     // Detailed span logging for debugging
                     console.info('[TraceProcessing] 📋 Full RegisteredTrace:', JSON.stringify(registeredTrace, null, 2));
 
+                    // Extract service name and increment count
+                    const serviceName = extractServiceName(singleTraceOtlp);
+                    if (serviceName) {
+                      setServiceTraceCounts((prev) => {
+                        const newCounts = new Map(prev);
+                        newCounts.set(serviceName, (newCounts.get(serviceName) || 0) + 1);
+                        return newCounts;
+                      });
+                      setLastActiveService(serviceName);
+                    }
+
                     setTelemetryTraces((prev) => {
                       // Check for duplicates
                       const existingIds = new Set(prev.map((t) => t.traceId));
@@ -1270,8 +1311,8 @@ export const RepositoryPanelProvider: React.FC<
           }
         );
 
-        // Trigger IPC registration (port will arrive in preload)
-        const response = await OtelCollectorService.registerPort(windowId, serviceIdentifier);
+        // Trigger IPC registration for all discovered services (port will arrive in preload)
+        const response = await OtelCollectorService.registerPortForServices(windowId, discoveredScopeNames);
 
         if (!response.success) {
           console.error('[RepositoryPanelProvider] Failed to register telemetry port:', response.error);
@@ -1280,16 +1321,17 @@ export const RepositoryPanelProvider: React.FC<
 
         console.info('[RepositoryPanelProvider] ✅ Telemetry port registration initiated');
         console.info('[RepositoryPanelProvider] Window ID:', windowId);
-        console.info('[RepositoryPanelProvider] Service identifier:', serviceIdentifier);
+        console.info('[RepositoryPanelProvider] Services:', discoveredScopeNames);
 
         // Send ready ping to server after a short delay to ensure subscription is set up
+        // Note: Using first scope name for the ping since the port is shared
         setTimeout(() => {
-          if (!windowId || !serviceIdentifier) return;
+          if (!windowId || discoveredScopeNames.length === 0) return;
           console.info('[RepositoryPanelProvider] 📤 Sending RENDERER_READY ping to server');
-          const sent = window.mainProcess.otelCollector.sendOtelMessage(windowId, serviceIdentifier, {
+          const sent = window.mainProcess.otelCollector.sendOtelMessage(windowId, discoveredScopeNames[0], {
             type: 'RENDERER_READY',
             windowId,
-            serviceIdentifier,
+            serviceIdentifiers: discoveredScopeNames,
             timestamp: Date.now(),
           });
           if (!sent) {
@@ -1306,26 +1348,21 @@ export const RepositoryPanelProvider: React.FC<
 
     registerTelemetryPort();
 
-    // Cleanup on unmount or when traceSourceServiceName changes
+    // Cleanup on unmount or when discoveredScopeNames changes
     return () => {
       // Unsubscribe from messages
       if (unsubscribe) {
         unsubscribe();
       }
 
-      // Clean up the port
-      if (windowId && serviceIdentifier) {
-        window.mainProcess.otelCollector.removeOtelPort(windowId, serviceIdentifier);
-      }
-
-      // Unregister from main process
-      if (windowId && serviceIdentifier) {
-        OtelCollectorService.unregisterPort(windowId, serviceIdentifier).catch((err) => {
-          console.warn('[RepositoryPanelProvider] Error unregistering port:', err);
+      // Unregister from main process - unregister window cleans up all services
+      if (windowId) {
+        OtelCollectorService.unregisterWindow(windowId).catch((err) => {
+          console.warn('[RepositoryPanelProvider] Error unregistering window:', err);
         });
       }
     };
-  }, [traceSourceServiceName, traceOrchestrator, repository?.name, repositoryPath]);
+  }, [discoveredScopeNames, traceOrchestrator]);
 
   // Create actions object
   // Note: Terminal actions have been moved to TerminalContext
@@ -2350,6 +2387,22 @@ export const RepositoryPanelProvider: React.FC<
     [telemetryTraces, telemetryLoading],
   );
 
+  // Explicit DataSlice: serviceTraceCounts
+  const serviceTraceCountsSlice = useMemo<DataSlice<Map<string, number>>>(
+    () => ({
+      scope: 'workspace' as const,
+      name: 'serviceTraceCounts',
+      data: serviceTraceCounts,
+      loading: false,
+      error: null,
+      refresh: async () => {
+        // Clear counts
+        setServiceTraceCounts(new Map());
+      },
+    }),
+    [serviceTraceCounts],
+  );
+
   // Panel-specific slices (from ExtendedPanelContextValue)
   // Terminal slice (managed by TerminalProvider, stub here for type compatibility)
   const terminalSlice = useMemo<DataSlice<TerminalSessionInfo[]>>(
@@ -2540,6 +2593,7 @@ export const RepositoryPanelProvider: React.FC<
       localhostServers: localhostServersSlice,
       globalSkills: globalSkillsSlice,
       telemetry: telemetrySlice,
+      serviceTraceCounts: serviceTraceCountsSlice,
       // Panel-specific slices (from ExtendedPanelContextValue)
       terminal: terminalSlice,
       feedProject: feedProjectSlice,
@@ -2575,6 +2629,7 @@ export const RepositoryPanelProvider: React.FC<
       localhostServersSlice,
       globalSkillsSlice,
       telemetrySlice,
+      serviceTraceCountsSlice,
       terminalSlice,
       feedProjectSlice,
       githubIssuesSlice,

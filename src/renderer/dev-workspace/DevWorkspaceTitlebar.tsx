@@ -150,10 +150,10 @@ export interface DevWorkspaceTitlebarProps {
   onPanelSizesChange?: (sizes: { left: number; middle: number; right: number }) => void;
   // Repository path for copy
   repositoryPath?: string;
-  // Trace source service name configuration
-  traceSourceServiceName?: string;
+  // Service names and trace counts
   availableServiceNames?: string[];
-  onTraceSourceServiceNameChange?: (serviceName: string) => void;
+  serviceTraceCounts?: Map<string, number>;
+  lastActiveService?: string | null;
   // Sidebar visibility toggle
   sidebarsHidden?: boolean;
   onSidebarsHiddenChange?: (hidden: boolean) => void;
@@ -174,14 +174,15 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
   onCollapsedChange: _onCollapsedChange,
   onPanelSizesChange: _onPanelSizesChange,
   repositoryPath,
-  traceSourceServiceName,
   availableServiceNames,
-  onTraceSourceServiceNameChange,
+  serviceTraceCounts,
+  lastActiveService,
   sidebarsHidden,
   onSidebarsHiddenChange,
 }) => {
   const { theme } = useTheme();
   const [copiedPath, setCopiedPath] = useState(false);
+  const [servicesExpanded, setServicesExpanded] = useState(false);
 
   // Handle copy repository path
   const handleCopyPath = async () => {
@@ -299,36 +300,120 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                 </button>
               )}
 
-              {/* Trace Source Selector */}
-              {onTraceSourceServiceNameChange && (
-                <div style={{ position: 'relative' }}>
-                  <select
-                    value={traceSourceServiceName || 'all'}
-                    onChange={(e) => onTraceSourceServiceNameChange(e.target.value)}
-                    title="Select service for trace routing"
+              {/* Service Trace Counts Display */}
+              {availableServiceNames && availableServiceNames.length > 0 && (
+                <div
+                  style={{
+                    position: 'relative',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  <button
+                    onClick={() => setServicesExpanded(!servicesExpanded)}
                     style={{
                       // @ts-ignore - WebkitAppRegion is not in CSSProperties
                       WebkitAppRegion: 'no-drag',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '4px 8px',
                       background: theme.colors.backgroundTertiary,
-                      border: `1px solid ${theme.colors.border}`,
-                      color: theme.colors.textSecondary,
-                      cursor: 'pointer',
-                      padding: '6px 12px',
                       borderRadius: '6px',
-                      fontSize: `${theme.fontSizes[1]}px`,
-                      fontWeight: theme.fontWeights.medium,
-                      outline: 'none',
+                      border: `1px solid ${theme.colors.border}`,
+                      cursor: 'pointer',
+                      fontSize: `${theme.fontSizes[0]}px`,
+                      color: theme.colors.textSecondary,
                     }}
+                    title={servicesExpanded ? 'Click to collapse' : 'Click to expand all services'}
                   >
-                    <option value="all">Traces: all services</option>
-                    {availableServiceNames && availableServiceNames.length > 0 && (
-                      availableServiceNames.map((serviceName) => (
-                        <option key={serviceName} value={serviceName}>
-                          Traces: {serviceName}
-                        </option>
-                      ))
+                    <span style={{ color: theme.colors.textTertiary }}>Traces:</span>
+                    {lastActiveService ? (
+                      <>
+                        <span style={{ color: theme.colors.success }}>{lastActiveService}</span>
+                        <span
+                          style={{
+                            background: theme.colors.success,
+                            color: '#fff',
+                            padding: '0 5px',
+                            borderRadius: '8px',
+                            fontSize: '10px',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {serviceTraceCounts?.get(lastActiveService) || 0}
+                        </span>
+                      </>
+                    ) : (
+                      <span style={{ color: theme.colors.textTertiary }}>waiting...</span>
                     )}
-                  </select>
+                    {availableServiceNames.length > 1 && (
+                      <span style={{ color: theme.colors.textTertiary, marginLeft: '2px' }}>
+                        {servicesExpanded ? '▲' : '▼'}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Expanded dropdown */}
+                  {servicesExpanded && availableServiceNames.length > 1 && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        marginTop: '4px',
+                        background: theme.colors.backgroundSecondary,
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: '6px',
+                        padding: '4px',
+                        zIndex: 1000,
+                        minWidth: '200px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                      }}
+                    >
+                      {availableServiceNames.map((serviceName) => {
+                        const count = serviceTraceCounts?.get(serviceName) || 0;
+                        const isActive = serviceName === lastActiveService;
+                        return (
+                          <div
+                            key={serviceName}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '6px 8px',
+                              borderRadius: '4px',
+                              background: isActive ? theme.colors.success + '15' : 'transparent',
+                            }}
+                          >
+                            <span
+                              style={{
+                                color: count > 0 ? theme.colors.text : theme.colors.textTertiary,
+                                fontSize: `${theme.fontSizes[0]}px`,
+                              }}
+                            >
+                              {serviceName}
+                              {isActive && (
+                                <span style={{ color: theme.colors.success, marginLeft: '4px' }}>●</span>
+                              )}
+                            </span>
+                            <span
+                              style={{
+                                background: count > 0 ? theme.colors.success : theme.colors.backgroundTertiary,
+                                color: count > 0 ? '#fff' : theme.colors.textTertiary,
+                                padding: '1px 6px',
+                                borderRadius: '8px',
+                                fontSize: '10px',
+                                fontWeight: 600,
+                              }}
+                            >
+                              {count}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

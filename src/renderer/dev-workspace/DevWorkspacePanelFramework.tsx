@@ -227,6 +227,8 @@ export interface DevWorkspacePanelFrameworkProps {
   traceSourceServiceName?: string;
   /** Callback when scope names are discovered from library.yaml */
   onScopeNamesDiscovered?: (scopeNames: string[]) => void;
+  /** Callback when service trace counts change */
+  onServiceTraceCountsChange?: (counts: Map<string, number>, lastActiveService: string | null) => void;
   /** Callback when left panel collapse animation completes */
   onLeftCollapseComplete?: () => void;
   /** Callback when left panel expand animation completes */
@@ -3254,6 +3256,7 @@ export const DevWorkspacePanelFramework: React.FC<
   events,
   traceSourceServiceName,
   onScopeNamesDiscovered,
+  onServiceTraceCountsChange,
   onLeftCollapseComplete,
   onLeftExpandComplete,
   onOpenInWebADE,
@@ -3287,9 +3290,9 @@ export const DevWorkspacePanelFramework: React.FC<
       repositoryPath={repositoryPath}
       repository={repositoryMetadata}
       events={events}
-      traceSourceServiceName={traceSourceServiceName}
       openTabs={tabsForProvider}
       onScopeNamesDiscovered={onScopeNamesDiscovered}
+      onServiceTraceCountsChange={onServiceTraceCountsChange}
     >
       <TerminalProvider
         repositoryPath={repositoryPath}

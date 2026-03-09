@@ -48,6 +48,14 @@ export interface OtelCollectorAPI {
   registerPort(windowId: string, serviceIdentifier: string): Promise<RegisterPortResponse>;
 
   /**
+   * Register a MessagePort to receive traces from multiple services
+   * A single port receives traces from all listed services.
+   * @param windowId - Unique window identifier
+   * @param serviceIdentifiers - Array of service identifiers
+   */
+  registerPortForServices(windowId: string, serviceIdentifiers: string[]): Promise<RegisterPortResponse>;
+
+  /**
    * Unregister a trace port for a specific service
    * @param windowId - Unique window identifier
    * @param serviceIdentifier - Service identifier to unregister
@@ -74,6 +82,14 @@ export interface OtelCollectorAPI {
    * @returns Unsubscribe function
    */
   onOtelMessage(windowId: string, serviceIdentifier: string, callback: (data: unknown) => void): () => void;
+
+  /**
+   * Subscribe to OTEL messages for multiple services (from registerPortForServices)
+   * @param windowId - Unique window identifier
+   * @param callback - Function to call when trace data arrives
+   * @returns Unsubscribe function
+   */
+  onOtelMessageForServices(windowId: string, callback: (data: unknown) => void): () => void;
 
   /**
    * Send a message to the OTEL collector for a specific service

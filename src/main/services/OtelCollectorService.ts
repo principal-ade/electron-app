@@ -115,8 +115,7 @@ export class OtelCollectorService {
       port2.start();
 
       // Register port1 with the server using wildcard to receive ALL traces
-      // Cast to any since MessagePortMain is API-compatible with worker_threads MessagePort
-      this.server.registerPort('__monitor__', WILDCARD_SOURCE, port1 as unknown as import('worker_threads').MessagePort);
+      this.server.registerPort('__monitor__', WILDCARD_SOURCE, port1);
       this.monitorPort = port2;
 
       console.log('[OtelCollectorService] Registered catch-all monitor port for trace storage');
@@ -164,9 +163,23 @@ export class OtelCollectorService {
       throw new Error('OTEL Collector not started');
     }
 
-    // Cast to any since MessagePortMain is API-compatible with worker_threads MessagePort
-    this.server.registerPort(windowId, serviceIdentifier, port as unknown as import('worker_threads').MessagePort);
+    this.server.registerPort(windowId, serviceIdentifier, port);
     console.log(`[OtelCollectorService] Registered port for window ${windowId}, service: ${serviceIdentifier}`);
+  }
+
+  /**
+   * Register a MessagePort for a window to receive traces from multiple services
+   * @param windowId - Unique window identifier
+   * @param serviceIdentifiers - Array of service identifiers
+   * @param port - MessagePort for trace delivery
+   */
+  registerPortForServices(windowId: string, serviceIdentifiers: string[], port: MessagePortMain): void {
+    if (!this.server) {
+      throw new Error('OTEL Collector not started');
+    }
+
+    this.server.registerPortForServices(windowId, serviceIdentifiers, port);
+    console.log(`[OtelCollectorService] Registered port for window ${windowId}, services: [${serviceIdentifiers.join(', ')}]`);
   }
 
   /**

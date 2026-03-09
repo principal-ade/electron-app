@@ -221,27 +221,21 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   const [resetKey, setResetKey] = useState(0);
   const [hasGitHubFolder, setHasGitHubFolder] = useState(false);
   const [_packages, _setPackages] = useState<PackageLayer[]>([]);
-  const [traceSourceServiceName, setTraceSourceServiceName] = useState<string>('all');
   const [availableServiceNames, setAvailableServiceNames] = useState<string[]>([]);
+  const [serviceTraceCounts, setServiceTraceCounts] = useState<Map<string, number>>(new Map());
+  const [lastActiveService, setLastActiveService] = useState<string | null>(null);
 
   // Callback when scope names are discovered from library.yaml by RepositoryPanelContext
   const handleScopeNamesDiscovered = useCallback((scopeNames: string[]) => {
     console.info('[DevWorkspaceApp] 📝 Scope names discovered from LocalRegistry:', scopeNames);
+    setAvailableServiceNames(scopeNames);
+  }, []);
 
-    if (scopeNames.length > 0) {
-      setAvailableServiceNames(scopeNames);
-
-      // Use first service name by default (only if not already set to a specific service)
-      if (traceSourceServiceName === 'all') {
-        const serviceName = scopeNames[0];
-        console.info('[DevWorkspaceApp] 📝 Auto-selecting first service name:', serviceName);
-        setTraceSourceServiceName(serviceName);
-      }
-    } else {
-      console.info('[DevWorkspaceApp] ⚠️ No scope names discovered, keeping "all"');
-      setAvailableServiceNames([]);
-    }
-  }, [traceSourceServiceName]);
+  // Callback when service trace counts change
+  const handleServiceTraceCountsChange = useCallback((counts: Map<string, number>, lastActive: string | null) => {
+    setServiceTraceCounts(counts);
+    setLastActiveService(lastActive);
+  }, []);
 
   // Create repository object from Alexandria entry data
   const repository: Repository = useMemo(
@@ -895,9 +889,9 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         onCollapsedChange={setCollapsed}
         onPanelSizesChange={handlePanelSizesChange}
         repositoryPath={repositoryPath}
-        traceSourceServiceName={traceSourceServiceName}
         availableServiceNames={availableServiceNames}
-        onTraceSourceServiceNameChange={setTraceSourceServiceName}
+        serviceTraceCounts={serviceTraceCounts}
+        lastActiveService={lastActiveService}
         sidebarsHidden={sidebarsHidden}
         onSidebarsHiddenChange={setSidebarsHidden}
       />
@@ -914,8 +908,8 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           onPanelSizesChange={handlePanelSizesChange}
           events={events}
           onLeftCollapseComplete={handleLeftCollapseComplete}
-          traceSourceServiceName={traceSourceServiceName}
           onScopeNamesDiscovered={handleScopeNamesDiscovered}
+          onServiceTraceCountsChange={handleServiceTraceCountsChange}
           onOpenInWebADE={githubInfo ? handleOpenInWebADE : undefined}
           onOpenGitHubActions={githubInfo && hasGitHubFolder ? handleOpenGitHubActions : undefined}
           sidebarsHidden={sidebarsHidden}

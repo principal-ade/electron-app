@@ -82,6 +82,21 @@ export class OtelCollectorService {
   }
 
   /**
+   * Register a MessagePort to receive traces from multiple services
+   * A single port receives traces from all listed services.
+   * @param windowId - Unique window identifier
+   * @param serviceIdentifiers - Array of service identifiers
+   */
+  static async registerPortForServices(windowId: string, serviceIdentifiers: string[]): Promise<OtelCollectorResponse> {
+    try {
+      return await window.mainProcess.otelCollector.registerPortForServices(windowId, serviceIdentifiers);
+    } catch (err) {
+      console.error('[OtelCollectorService] Failed to register port for services:', err);
+      return { success: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  }
+
+  /**
    * Unregister a trace port for a specific service
    * @param windowId - Unique window identifier
    * @param serviceIdentifier - Service identifier to unregister

@@ -24,8 +24,11 @@ const otelPorts = new Map<string, Port>();
 // Message subscribers - for receiving trace data
 const otelMessageSubscribers = new Map<string, Set<(data: unknown) => void>>();
 
+// Special key suffix for multi-service ports
+const MULTI_SERVICE_KEY = '__services__';
+
 // Listen for MessagePort delivery from main process
-ipcRenderer.on('otel-collector:port', (event, data: { windowId: string; serviceIdentifier: string }) => {
+ipcRenderer.on('otel-collector:port', (event, data: { windowId: string; serviceIdentifier?: string; serviceIdentifiers?: string[] }) => {
   console.info('[otelCollectorApi] 📨 Received otel-collector:port event', data);
 
   const [port] = event.ports;
@@ -34,7 +37,10 @@ ipcRenderer.on('otel-collector:port', (event, data: { windowId: string; serviceI
     return;
   }
 
-  const key = `${data.windowId}:${data.serviceIdentifier}`;
+  // Determine the key based on whether this is a single or multi-service registration
+  const key = data.serviceIdentifiers
+    ? `${data.windowId}:${MULTI_SERVICE_KEY}`
+    : `${data.windowId}:${data.serviceIdentifier}`;
 
   // Store the port
   otelPorts.set(key, port);
@@ -100,6 +106,27 @@ export const otelCollectorApi: OtelCollectorAPI = {
   },
 
   /**
+   * Register a MessagePort to receive traces from multiple services
+   * A single port receives traces from all listed services.
+   */
+  async registerPortForServices(windowId: string, serviceIdentifiers: string[]): Promise<RegisterPortResponse> {
+    const key = `${windowId}:${MULTI_SERVICE_KEY}`;
+
+    try {
+      // Trigger the IPC call to register the port for all services
+      const response = await ipcRenderer.invoke('otel-collector:registerPortForServices', windowId, serviceIdentifiers);
+
+      return response;
+    } catch (error) {
+      console.error(`[otelCollectorApi] ❌ Failed to register port for services ${key}:`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  },
+
+  /**
    * Unregister a trace port
    */
   async unregisterPort(windowId: string, serviceIdentifier: string): Promise<OtelCollectorResponse> {
@@ -144,6 +171,41 @@ export const otelCollectorApi: OtelCollectorAPI = {
   ): () => void {
     const key = `${windowId}:${serviceIdentifier}`;
     console.info(`[otelCollectorApi] 📝 Subscribing to OTEL messages for ${key}`);
+
+    // Initialize subscriber set for this key if needed
+    let subscribers = otelMessageSubscribers.get(key);
+    if (!subscribers) {
+      subscribers = new Set();
+      otelMessageSubscribers.set(key, subscribers);
+    }
+
+    // Add the callback to subscribers
+    subscribers.add(callback);
+
+    // Return unsubscribe function
+    return () => {
+      const subscribers = otelMessageSubscribers.get(key);
+      if (subscribers) {
+        subscribers.delete(callback);
+        console.info(`[otelCollectorApi] 🗑️ Unsubscribed from OTEL messages for ${key}`);
+
+        // Clean up empty subscriber sets
+        if (subscribers.size === 0) {
+          otelMessageSubscribers.delete(key);
+        }
+      }
+    };
+  },
+
+  /**
+   * Subscribe to OTEL messages for multiple services (from registerPortForServices)
+   */
+  onOtelMessageForServices(
+    windowId: string,
+    callback: (data: unknown) => void,
+  ): () => void {
+    const key = `${windowId}:${MULTI_SERVICE_KEY}`;
+    console.info(`[otelCollectorApi] 📝 Subscribing to OTEL messages for multi-service port ${key}`);
 
     // Initialize subscriber set for this key if needed
     let subscribers = otelMessageSubscribers.get(key);
