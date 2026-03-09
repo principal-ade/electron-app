@@ -59,7 +59,7 @@
       "pv": {
         "nodeType": "manager",
         "shape": "rectangle",
-        "sources": ["src/main/window/modernWindowManager.ts"]
+        "references": ["src/main/window/modernWindowManager.ts"]
       }
     },
     {
@@ -73,7 +73,7 @@
       "pv": {
         "nodeType": "primary-window",
         "shape": "rectangle",
-        "sources": ["src/main/window/modernWindowManager.ts"]
+        "references": ["src/main/window/modernWindowManager.ts"]
       }
     },
     {
@@ -87,7 +87,7 @@
       "pv": {
         "nodeType": "primary-window",
         "shape": "rectangle",
-        "sources": ["src/main/window/modernWindowHandlers.ts"]
+        "references": ["src/main/window/modernWindowHandlers.ts"]
       }
     },
     {
@@ -101,7 +101,7 @@
       "pv": {
         "nodeType": "workspace-window",
         "shape": "rectangle",
-        "sources": ["src/main/window/devWorkspaceWindowHandlers.ts"]
+        "references": ["src/main/window/devWorkspaceWindowHandlers.ts"]
       }
     },
     {
@@ -115,7 +115,7 @@
       "pv": {
         "nodeType": "workspace-window",
         "shape": "rectangle",
-        "sources": ["src/main/window/modernWindowHandlers.ts"]
+        "references": ["src/main/window/modernWindowHandlers.ts"]
       }
     },
     {
@@ -129,7 +129,7 @@
       "pv": {
         "nodeType": "external-window",
         "shape": "rectangle",
-        "sources": ["src/main/window/extensionWindowHandlers.ts"]
+        "references": ["src/main/window/extensionWindowHandlers.ts"]
       }
     },
     {
@@ -143,7 +143,7 @@
       "pv": {
         "nodeType": "viewer-window",
         "shape": "rectangle",
-        "sources": ["src/main/window/modernWindowHandlers.ts"]
+        "references": ["src/main/window/modernWindowHandlers.ts"]
       }
     },
     {
@@ -157,7 +157,7 @@
       "pv": {
         "nodeType": "viewer-window",
         "shape": "rectangle",
-        "sources": ["src/main/window/modernWindowHandlers.ts"]
+        "references": ["src/main/window/modernWindowHandlers.ts"]
       }
     },
         {
@@ -171,7 +171,7 @@
       "pv": {
         "nodeType": "utility-window",
         "shape": "rectangle",
-        "sources": ["src/main/window/windowSwitcher.ts"]
+        "references": ["src/main/window/windowSwitcher.ts"]
       }
     },
     {
@@ -185,7 +185,7 @@
       "pv": {
         "nodeType": "utility-window",
         "shape": "rectangle",
-        "sources": ["src/main/window/quickOpen.ts"]
+        "references": ["src/main/window/quickOpen.ts"]
       }
     },
     {
@@ -199,7 +199,7 @@
       "pv": {
         "nodeType": "external-window",
         "shape": "rectangle",
-        "sources": ["src/main/window/RemoteTerminalWindow.ts"]
+        "references": ["src/main/window/RemoteTerminalWindow.ts"]
       }
     }
   ],

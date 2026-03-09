@@ -81,7 +81,7 @@
         "nodeType": "ui-component",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/pages/LandingPage/AgentConfigurationView/AgentSetupWizard.tsx"
         ],
         "otel": {
@@ -121,7 +121,7 @@
         "nodeType": "ui-component",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/pages/LandingPage/AgentConfigurationView/DetailedConfigurationView.tsx"
         ],
         "otel": {
@@ -157,7 +157,7 @@
         "nodeType": "renderer-service",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/main-process-api/AgentConfigurationService.ts"
         ],
         "otel": {
@@ -197,7 +197,7 @@
         "nodeType": "ipc-handler",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/agent-management/agentConfigHandlers.ts"
         ],
         "otel": {
@@ -233,7 +233,7 @@
         "nodeType": "ipc-handler",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/agent-management/agentConfigHandlers.ts"
         ],
         "otel": {
@@ -269,7 +269,7 @@
         "nodeType": "ipc-handler",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/agent-management/agentConfigHandlers.ts"
         ],
         "otel": {
@@ -305,7 +305,7 @@
         "nodeType": "external-library",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/agent-management/agentConfigHandlers.ts"
         ],
         "otel": {
@@ -345,7 +345,7 @@
         "nodeType": "config-file",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/agent-management/agentConfigHandlers.ts"
         ],
         "otel": {
@@ -385,7 +385,7 @@
         "nodeType": "config-file",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/agent-management/agentConfigHandlers.ts"
         ],
         "otel": {
@@ -425,7 +425,7 @@
         "nodeType": "config-file",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/agent-management/agentConfigHandlers.ts"
         ],
         "otel": {
@@ -465,7 +465,7 @@
         "nodeType": "config-file",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/agent-management/agentConfigHandlers.ts"
         ],
         "otel": {
@@ -505,7 +505,7 @@
         "nodeType": "ipc-handler",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/agent-management/agentConfigHandlers.ts"
         ],
         "otel": {
@@ -553,7 +553,7 @@
         "nodeType": "error-state",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/agent-management/agentConfigHandlers.ts"
         ],
         "otel": {
@@ -597,7 +597,7 @@
         "nodeType": "ui-component",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/pages/LandingPage/AgentConfigurationView/AgentSetupWizard.tsx"
         ],
         "otel": {
@@ -637,7 +637,7 @@
         "nodeType": "error-state",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/pages/LandingPage/AgentConfigurationView/AgentSetupWizard.tsx"
         ],
         "otel": {

@@ -72,7 +72,7 @@
       "pv": {
         "nodeType": "renderer-component",
         "shape": "rectangle",
-        "sources": [
+        "references": [
           "src/renderer/contexts/RepositoryPanelContext.tsx"
         ]
       }
@@ -88,7 +88,7 @@
       "pv": {
         "nodeType": "renderer-service",
         "shape": "rectangle",
-        "sources": [
+        "references": [
           "src/renderer/main-process-api/AlexandriaService.ts"
         ]
       }
@@ -104,7 +104,7 @@
       "pv": {
         "nodeType": "preload",
         "shape": "rectangle",
-        "sources": [
+        "references": [
           "src/window/preload.ts"
         ]
       }
@@ -120,7 +120,7 @@
       "pv": {
         "nodeType": "preload",
         "shape": "rectangle",
-        "sources": [
+        "references": [
           "src/window/main-process-api-implementations/alexandriaApi.ts"
         ]
       }
@@ -136,7 +136,7 @@
       "pv": {
         "nodeType": "ipc-channel",
         "shape": "rectangle",
-        "sources": [
+        "references": [
           "src/shared/main-process-api-interfaces/AlexandriaAPI.ts"
         ]
       }
@@ -152,7 +152,7 @@
       "pv": {
         "nodeType": "main-handler",
         "shape": "rectangle",
-        "sources": [
+        "references": [
           "src/main/stores/AlexandriaApiEventHandler.ts"
         ]
       }
@@ -168,7 +168,7 @@
       "pv": {
         "nodeType": "main-service",
         "shape": "rectangle",
-        "sources": [
+        "references": [
           "src/main/stores/AlexandriaRegistryService.ts"
         ]
       }
@@ -197,7 +197,7 @@
       "pv": {
         "nodeType": "main-service",
         "shape": "rectangle",
-        "sources": [
+        "references": [
           "src/main/utils/gitClientFactory.ts"
         ]
       }

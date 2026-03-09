@@ -81,7 +81,7 @@
         "nodeType": "external-client",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
         "otel": {
@@ -121,7 +121,7 @@
         "nodeType": "http-server",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
         "otel": {
@@ -171,7 +171,7 @@
         "nodeType": "route-handler",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
         "otel": {
@@ -211,7 +211,7 @@
         "nodeType": "route-handler",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
         "otel": {
@@ -247,7 +247,7 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "implemented",
-        "sources": [
+        "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
         "otel": {
@@ -284,7 +284,7 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "implemented",
-        "sources": [
+        "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
         "otel": {
@@ -333,7 +333,7 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "implemented",
-        "sources": [
+        "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
         "otel": {
@@ -382,7 +382,7 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "implemented",
-        "sources": [
+        "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
         "otel": {
@@ -415,7 +415,7 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "implemented",
-        "sources": [
+        "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
         "otel": {
@@ -464,7 +464,7 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "implemented",
-        "sources": [
+        "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
         "otel": {
@@ -497,7 +497,7 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "implemented",
-        "sources": [
+        "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
         "otel": {
@@ -542,7 +542,7 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "implemented",
-        "sources": [
+        "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
         "otel": {
@@ -575,7 +575,7 @@
         "nodeType": "route-handler",
         "shape": "rectangle",
         "status": "implemented",
-        "sources": [
+        "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
         "otel": {
@@ -616,7 +616,7 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "implemented",
-        "sources": [
+        "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
         "otel": {
@@ -657,7 +657,7 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "implemented",
-        "sources": [
+        "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
         "otel": {
@@ -742,7 +742,7 @@
         "nodeType": "route-handler",
         "shape": "rectangle",
         "status": "implemented",
-        "sources": ["src/main/principal-mcp/PrincipalMCPBridge.ts"],
+        "references": ["src/main/principal-mcp/PrincipalMCPBridge.ts"],
         "otel": {
           "kind": "event",
           "category": "theme",
@@ -773,7 +773,7 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "implemented",
-        "sources": ["src/main/principal-mcp/PrincipalMCPBridge.ts", "src/main/theme/themeHandler.ts"],
+        "references": ["src/main/principal-mcp/PrincipalMCPBridge.ts", "src/main/theme/themeHandler.ts"],
         "otel": {
           "kind": "event",
           "category": "theme",
@@ -812,7 +812,7 @@
         "nodeType": "route-handler",
         "shape": "rectangle",
         "status": "implemented",
-        "sources": ["src/main/principal-mcp/PrincipalMCPBridge.ts"],
+        "references": ["src/main/principal-mcp/PrincipalMCPBridge.ts"],
         "otel": {
           "kind": "event",
           "category": "error",
@@ -847,7 +847,7 @@
         "nodeType": "route-handler",
         "shape": "rectangle",
         "status": "implemented",
-        "sources": ["src/main/principal-mcp/PrincipalMCPBridge.ts"],
+        "references": ["src/main/principal-mcp/PrincipalMCPBridge.ts"],
         "otel": {
           "kind": "event",
           "category": "theme",
@@ -886,7 +886,7 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "implemented",
-        "sources": ["src/main/stores/userPreferencesHandler.ts"],
+        "references": ["src/main/stores/userPreferencesHandler.ts"],
         "otel": {
           "kind": "event",
           "category": "preferences",
@@ -921,7 +921,7 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "implemented",
-        "sources": ["src/main/stores/userPreferencesHandler.ts"],
+        "references": ["src/main/stores/userPreferencesHandler.ts"],
         "otel": {
           "kind": "event",
           "category": "ipc",
@@ -960,7 +960,7 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "implemented",
-        "sources": ["src/main/stores/userPreferencesHandler.ts"],
+        "references": ["src/main/stores/userPreferencesHandler.ts"],
         "otel": {
           "kind": "event",
           "category": "ipc",
@@ -995,7 +995,7 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "implemented",
-        "sources": ["src/main/principal-mcp/PrincipalMCPBridge.ts", "src/main/theme/themeHandler.ts", "src/renderer/providers/CustomThemeProvider.tsx"],
+        "references": ["src/main/principal-mcp/PrincipalMCPBridge.ts", "src/main/theme/themeHandler.ts", "src/renderer/providers/CustomThemeProvider.tsx"],
         "otel": {
           "kind": "event",
           "category": "theme",
@@ -1042,7 +1042,7 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "implemented",
-        "sources": ["src/main/principal-mcp/PrincipalMCPBridge.ts"],
+        "references": ["src/main/principal-mcp/PrincipalMCPBridge.ts"],
         "otel": {
           "kind": "event",
           "category": "error",

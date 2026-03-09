@@ -11,7 +11,7 @@
       "color": "#8b5cf6",
       "pv": {
         "name": "Window Open Flow",
-        "sources": [
+        "references": [
           "src/main/window/modernWindowHandlers.ts"
         ],
         "status": "draft",
@@ -43,7 +43,7 @@
         "nodeType": "renderer-process",
         "icon": "Mouse",
         "name": "User Trigger",
-        "sources": [
+        "references": [
           "src/renderer/main-process-api/WindowService.ts"
         ],
         "status": "draft",
@@ -88,7 +88,7 @@
         "nodeType": "renderer-process",
         "icon": "Zap",
         "name": "Window Service",
-        "sources": [
+        "references": [
           "src/renderer/main-process-api/WindowService.ts"
         ],
         "status": "draft",
@@ -127,7 +127,7 @@
         "nodeType": "main-process",
         "icon": "Server",
         "name": "IPC Handler",
-        "sources": [
+        "references": [
           "src/main/window/modernWindowHandlers.ts"
         ],
         "status": "draft",
@@ -168,7 +168,7 @@
         "nodeType": "alexandria-service",
         "icon": "Database",
         "name": "Registry Lookup",
-        "sources": [
+        "references": [
           "src/main/stores/AlexandriaRegistryService.ts"
         ],
         "status": "draft",
@@ -209,7 +209,7 @@
         "nodeType": "main-process",
         "icon": "Box",
         "name": "Create Window",
-        "sources": [
+        "references": [
           "src/main/window/modernWindowManager.ts"
         ],
         "status": "implemented",
@@ -253,7 +253,7 @@
         "nodeType": "terminal-service",
         "icon": "Monitor",
         "name": "Terminal Register",
-        "sources": [
+        "references": [
           "src/main/terminal/index.ts"
         ],
         "status": "draft",
@@ -285,7 +285,7 @@
         "nodeType": "repo-monitoring-manager",
         "icon": "Eye",
         "name": "Watch Acquire",
-        "sources": [
+        "references": [
           "src/main/repository-monitoring/ipcHandlers.ts"
         ],
         "status": "draft",
@@ -329,7 +329,7 @@
         "nodeType": "main-process",
         "icon": "Globe",
         "name": "Load URL",
-        "sources": [
+        "references": [
           "src/main/window/modernWindowHandlers.ts"
         ],
         "status": "draft",
@@ -370,7 +370,7 @@
         "nodeType": "renderer-process",
         "icon": "Play",
         "name": "App Init",
-        "sources": [
+        "references": [
           "src/renderer/alexandria-workspace/AlexandriaWorkspaceApp.tsx"
         ],
         "status": "draft",
@@ -415,7 +415,7 @@
         "nodeType": "alexandria-workspace",
         "icon": "Check",
         "name": "Window Ready",
-        "sources": [
+        "references": [
           "src/renderer/alexandria-workspace/AlexandriaWorkspaceApp.tsx"
         ],
         "status": "draft",
@@ -459,7 +459,7 @@
         "nodeType": "alexandria-service",
         "icon": "CheckCircle",
         "name": "Workspace Found",
-        "sources": [
+        "references": [
           "src/main/stores/AlexandriaRegistryService.ts"
         ],
         "status": "draft",
@@ -494,7 +494,7 @@
         "nodeType": "alexandria-service",
         "icon": "XCircle",
         "name": "Workspace Not Found",
-        "sources": [
+        "references": [
           "src/main/stores/AlexandriaRegistryService.ts"
         ],
         "status": "draft",
@@ -529,7 +529,7 @@
         "nodeType": "main-process",
         "icon": "Clock",
         "name": "Temp Mode",
-        "sources": [
+        "references": [
           "src/main/window/modernWindowHandlers.ts"
         ],
         "status": "draft",
@@ -564,7 +564,7 @@
         "nodeType": "main-process",
         "icon": "Plus",
         "name": "Creating Window",
-        "sources": [
+        "references": [
           "src/main/window/modernWindowManager.ts"
         ],
         "status": "draft",
@@ -599,7 +599,7 @@
         "nodeType": "main-process",
         "icon": "RotateCw",
         "name": "Reusing Window",
-        "sources": [
+        "references": [
           "src/main/window/modernWindowManager.ts"
         ],
         "status": "draft",
@@ -634,7 +634,7 @@
         "nodeType": "main-process",
         "icon": "AlertTriangle",
         "name": "Open Failed",
-        "sources": [
+        "references": [
           "src/main/window/modernWindowHandlers.ts"
         ],
         "status": "draft",

@@ -228,7 +228,26 @@
         "status": "draft",
         "references": [
           "src/main/AppVersionManager.ts"
-        ]
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "isNew": true
+        },
+        "event": {
+          "name": "app_updates.manager.initialized",
+          "description": "AppVersionManager initialized and ready to handle updates",
+          "attributes": {
+            "auto_download": {
+              "type": "boolean",
+              "description": "Whether auto-download is enabled"
+            },
+            "auto_install": {
+              "type": "boolean",
+              "description": "Whether auto-install is enabled"
+            }
+          }
+        }
       }
     },
     {
@@ -283,9 +302,8 @@
           "src/main/AppVersionManager.ts"
         ],
         "boundary": {
-          "type": "framework-hook",
-          "action": "autoUpdater.checkForUpdates",
-          "interface": "electron-updater"
+          "direction": "outbound",
+          "node": { "pv.event.name": "electron-updater.checkForUpdates" }
         }
       }
     },
@@ -303,9 +321,8 @@
         "status": "draft",
         "references": [],
         "boundary": {
-          "type": "external-api",
-          "action": "GET latest-mac.yml",
-          "url": "https://github.com/principal-ade/landing-page/releases"
+          "direction": "outbound",
+          "node": { "pv.event.name": "github.releases.fetch" }
         }
       }
     },
@@ -781,7 +798,22 @@
         "status": "draft",
         "references": [
           "src/renderer/App.tsx"
-        ]
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "isNew": true
+        },
+        "event": {
+          "name": "app_updates.startup.check_triggered",
+          "description": "Silent update check triggered on app startup",
+          "attributes": {
+            "app_version": {
+              "type": "string",
+              "description": "Current app version at startup"
+            }
+          }
+        }
       }
     },
     {

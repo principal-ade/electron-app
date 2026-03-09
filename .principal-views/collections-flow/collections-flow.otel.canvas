@@ -90,7 +90,7 @@
         "nodeType": "ui-component",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/components/CreateCollectionModal.tsx"
         ],
         "otel": {
@@ -126,7 +126,7 @@
         "nodeType": "ui-component",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/contexts/WorldsViewPanelContext.tsx"
         ],
         "otel": {
@@ -162,7 +162,7 @@
         "nodeType": "context",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/contexts/WorldsViewPanelContext.tsx"
         ],
         "otel": {
@@ -202,7 +202,7 @@
         "nodeType": "renderer-service",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/main-process-api/CollectionsService.ts"
         ],
         "otel": {
@@ -238,7 +238,7 @@
         "nodeType": "preload",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/window/main-process-api-implementations/collectionsApi.ts"
         ],
         "otel": {
@@ -274,7 +274,7 @@
         "nodeType": "main-process",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/services/CollectionsService.ts"
         ],
         "otel": {
@@ -314,7 +314,7 @@
         "nodeType": "main-process",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/services/CollectionsService.ts"
         ],
         "otel": {
@@ -350,7 +350,7 @@
         "nodeType": "github-api",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/services/CollectionsService.ts"
         ],
         "otel": {
@@ -394,7 +394,7 @@
         "nodeType": "main-process",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/services/CollectionsService.ts"
         ],
         "otel": {
@@ -430,7 +430,7 @@
         "nodeType": "github-api",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/services/CollectionsService.ts"
         ],
         "otel": {
@@ -478,7 +478,7 @@
         "nodeType": "main-process",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/services/CollectionsService.ts"
         ],
         "otel": {
@@ -514,7 +514,7 @@
         "nodeType": "github-api",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/services/CollectionsService.ts"
         ],
         "otel": {
@@ -566,7 +566,7 @@
         "nodeType": "github-api",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/services/CollectionsService.ts"
         ],
         "otel": {
@@ -610,7 +610,7 @@
         "nodeType": "storage",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/services/CollectionsService.ts"
         ],
         "otel": {
@@ -650,7 +650,7 @@
         "nodeType": "context",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/contexts/WorldsViewPanelContext.tsx"
         ],
         "otel": {
@@ -686,7 +686,7 @@
         "nodeType": "ui-component",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/contexts/WorldsViewPanelContext.tsx"
         ],
         "otel": {
@@ -726,7 +726,7 @@
         "nodeType": "context",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/contexts/WorldsViewPanelContext.tsx"
         ],
         "otel": {

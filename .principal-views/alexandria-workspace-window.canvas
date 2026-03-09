@@ -26,7 +26,7 @@
         "icon": "AppWindow",
         "shape": "rectangle",
         "name": "Workspace App",
-        "sources": ["src/renderer/alexandria-workspace/AlexandriaWorkspaceApp.tsx"]
+        "references": ["src/renderer/alexandria-workspace/AlexandriaWorkspaceApp.tsx"]
       }
     },
     {
@@ -42,7 +42,7 @@
         "icon": "Layout",
         "shape": "rectangle",
         "name": "Workspace Layout",
-        "sources": ["src/renderer/alexandria-workspace/AlexandriaWorkspaceLayout.tsx"]
+        "references": ["src/renderer/alexandria-workspace/AlexandriaWorkspaceLayout.tsx"]
       }
     },
     {
@@ -58,7 +58,7 @@
         "icon": "LayoutList",
         "shape": "rectangle",
         "name": "Panel Sidebar",
-        "sources": ["src/renderer/components/Sidebar/PanelIconSidebar.tsx"]
+        "references": ["src/renderer/components/Sidebar/PanelIconSidebar.tsx"]
       }
     },
     {
@@ -74,7 +74,7 @@
         "icon": "Layers",
         "shape": "rectangle",
         "name": "Panel Provider",
-        "sources": ["src/renderer/contexts/PanelContext.tsx"]
+        "references": ["src/renderer/contexts/PanelContext.tsx"]
       }
     },
     {
@@ -90,7 +90,7 @@
         "icon": "Server",
         "shape": "rectangle",
         "name": "Main Process Handler",
-        "sources": ["src/main/stores/WorkspaceApiEventHandler.ts"]
+        "references": ["src/main/stores/WorkspaceApiEventHandler.ts"]
       }
     },
     {
@@ -106,7 +106,7 @@
         "icon": "Database",
         "shape": "hexagon",
         "name": "Registry Service",
-        "sources": ["src/main/stores/AlexandriaRegistryService.ts"]
+        "references": ["src/main/stores/AlexandriaRegistryService.ts"]
       }
     },
     {
@@ -137,7 +137,7 @@
         "icon": "Plug",
         "shape": "rectangle",
         "name": "Renderer Service",
-        "sources": ["src/renderer/main-process-api/WorkspaceService.ts"]
+        "references": ["src/renderer/main-process-api/WorkspaceService.ts"]
       }
     },
     {

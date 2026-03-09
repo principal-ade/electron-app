@@ -168,7 +168,7 @@
         "nodeType": "panel-host",
         "shape": "rectangle",
         "status": "draft",
-        "sources": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"],
+        "references": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"],
         "otel": {
           "kind": "event",
           "category": "lifecycle",
@@ -211,7 +211,7 @@
         "nodeType": "tipc-client",
         "shape": "rectangle",
         "status": "draft",
-        "sources": ["src/renderer/tipc/terminalClient.ts"],
+        "references": ["src/renderer/tipc/terminalClient.ts"],
         "otel": {
           "kind": "event",
           "category": "ipc",
@@ -255,7 +255,7 @@
         "nodeType": "tipc-router",
         "shape": "rectangle",
         "status": "draft",
-        "sources": ["src/main/terminal/tipc/terminalRouter.ts"],
+        "references": ["src/main/terminal/tipc/terminalRouter.ts"],
         "otel": {
           "kind": "event",
           "category": "ipc",
@@ -299,7 +299,7 @@
         "nodeType": "activity-store",
         "shape": "rectangle",
         "status": "draft",
-        "sources": ["src/main/terminal/tipc/terminalRouter.ts"],
+        "references": ["src/main/terminal/tipc/terminalRouter.ts"],
         "otel": {
           "kind": "event",
           "category": "storage",
@@ -347,7 +347,7 @@
         "nodeType": "broadcast",
         "shape": "rectangle",
         "status": "draft",
-        "sources": ["src/main/terminal/tipc/terminalRouter.ts"],
+        "references": ["src/main/terminal/tipc/terminalRouter.ts"],
         "otel": {
           "kind": "event",
           "category": "ipc",
@@ -385,7 +385,7 @@
         "nodeType": "window",
         "shape": "rectangle",
         "status": "draft",
-        "sources": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"],
+        "references": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"],
         "otel": {
           "kind": "event",
           "category": "ui",
@@ -423,13 +423,30 @@
         "nodeType": "window",
         "shape": "rectangle",
         "status": "draft",
-        "sources": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"],
+        "references": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"],
         "otel": {
           "kind": "event",
           "category": "ui",
           "isNew": true
         },
-        "eventRef": "terminal.activity.sync_received"
+        "event": {
+          "name": "terminal.activity.sync_received",
+          "description": "Window received activity sync broadcast",
+          "attributes": {
+            "window.id": {
+              "type": "number",
+              "description": "Receiving window ID"
+            },
+            "activities.count": {
+              "type": "number",
+              "description": "Number of active sessions received"
+            },
+            "ui.updated": {
+              "type": "boolean",
+              "description": "Whether UI was updated"
+            }
+          }
+        }
       }
     },
     {
@@ -444,13 +461,30 @@
         "nodeType": "window",
         "shape": "rectangle",
         "status": "draft",
-        "sources": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"],
+        "references": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"],
         "otel": {
           "kind": "event",
           "category": "ui",
           "isNew": true
         },
-        "eventRef": "terminal.activity.sync_received"
+        "event": {
+          "name": "terminal.activity.sync_received",
+          "description": "Window received activity sync broadcast",
+          "attributes": {
+            "window.id": {
+              "type": "number",
+              "description": "Receiving window ID"
+            },
+            "activities.count": {
+              "type": "number",
+              "description": "Number of active sessions received"
+            },
+            "ui.updated": {
+              "type": "boolean",
+              "description": "Whether UI was updated"
+            }
+          }
+        }
       }
     },
     {

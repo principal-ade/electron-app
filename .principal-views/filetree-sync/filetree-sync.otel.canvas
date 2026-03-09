@@ -113,7 +113,7 @@
         "nodeType": "file-system",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/repository-monitoring/ipcHandlers.ts"
         ],
         "otel": {
@@ -153,7 +153,7 @@
         "nodeType": "worker",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/repository-monitoring/ipcHandlers.ts"
         ],
         "otel": {
@@ -189,7 +189,7 @@
         "nodeType": "worker",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/repository-monitoring/ipcHandlers.ts"
         ],
         "otel": {
@@ -225,7 +225,7 @@
         "nodeType": "main-process",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/repository-monitoring/ipcHandlers.ts"
         ],
         "otel": {
@@ -261,7 +261,7 @@
         "nodeType": "cache",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/repository-monitoring/ipcHandlers.ts"
         ],
         "otel": {
@@ -301,7 +301,7 @@
         "nodeType": "timing",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/repository-monitoring/ipcHandlers.ts"
         ],
         "otel": {
@@ -341,7 +341,7 @@
         "nodeType": "worker",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/repository-monitoring/ipcHandlers.ts"
         ],
         "otel": {
@@ -385,7 +385,7 @@
         "nodeType": "main-process",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/repository-monitoring/ipcHandlers.ts"
         ],
         "otel": {
@@ -404,6 +404,10 @@
             "cache.version": {
               "type": "number",
               "description": "Cache version included in payload"
+            },
+            "cache.version.after": {
+              "type": "number",
+              "description": "Cache version after sync"
             },
             "cache.slice": {
               "type": "string",
@@ -429,7 +433,7 @@
         "nodeType": "preload",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/window/main-process-api-implementations/repositoryMonitoringApi.ts"
         ],
         "otel": {
@@ -473,7 +477,7 @@
         "nodeType": "renderer-service",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/main-process-api/RepositoryMonitoringService.ts"
         ],
         "otel": {
@@ -509,7 +513,7 @@
         "nodeType": "renderer-service",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/main-process-api/RepositoryMonitoringService.ts"
         ],
         "otel": {
@@ -545,7 +549,7 @@
         "nodeType": "context",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/contexts/RepositoryPanelContext.tsx"
         ],
         "otel": {
@@ -585,7 +589,7 @@
         "nodeType": "ui-component",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/contexts/RepositoryPanelContext.tsx"
         ],
         "otel": {

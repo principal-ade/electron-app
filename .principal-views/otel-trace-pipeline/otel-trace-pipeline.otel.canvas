@@ -102,7 +102,7 @@
         "nodeType": "external-service",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/services/OtelCollectorService.ts"
         ],
         "otel": {
@@ -142,7 +142,7 @@
         "nodeType": "http-endpoint",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/services/OtelCollectorService.ts"
         ],
         "otel": {
@@ -186,7 +186,7 @@
         "nodeType": "collector-server",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/services/OtelCollectorService.ts"
         ],
         "otel": {
@@ -226,7 +226,7 @@
         "nodeType": "storage",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/services/OtelCollectorService.ts"
         ],
         "otel": {
@@ -270,7 +270,7 @@
         "nodeType": "ipc-transport",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/services/OtelCollectorService.ts"
         ],
         "otel": {
@@ -314,7 +314,7 @@
         "nodeType": "ipc-handler",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/services/ipc/otelCollectorHandlers.ts"
         ],
         "otel": {
@@ -354,7 +354,7 @@
         "nodeType": "preload",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/window/main-process-api-implementations/otelCollectorApi.ts"
         ],
         "otel": {
@@ -398,7 +398,7 @@
         "nodeType": "renderer-service",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/window/main-process-api-implementations/otelCollectorApi.ts"
         ],
         "otel": {
@@ -438,7 +438,7 @@
         "nodeType": "ui-component",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
         "otel": {
@@ -478,7 +478,7 @@
         "nodeType": "ui-component",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
         "otel": {
@@ -518,7 +518,7 @@
         "nodeType": "ui-component",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/principal-window/views/SystemMonitor/TraceViewer.tsx"
         ],
         "otel": {
@@ -562,7 +562,7 @@
         "nodeType": "event-bus",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
         "otel": {

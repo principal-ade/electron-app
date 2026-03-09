@@ -28,29 +28,6 @@
         },
         "summary": "**Trace Details:**\n- Trace ID: `{{trace.id}}`\n- Tab: {{tab.label}}\n- Spans: {{spans.count}}\n- Services: {{services.count}}\n\n**Visualization Flow:**\n```\n1. SystemMonitor polls traces every 2s\n2. User clicks trace in list\n3. Panel event bus emits trace:selected\n4. DevWorkspace catches event\n5. Creates new tab: trace-{{trace.id}}\n6. TraceDetailsPanel renders with full OTLP data\n7. User sees span hierarchy, timing, attributes\n```\n\n**Performance:**\n- Traces Fetched: {{traces.fetched}}\n- Poll Interval: {{poll.interval_ms}}ms\n- Render Time: {{render.duration_ms}}ms\n\n**Panel Features:**\n- Span hierarchy (parent-child relationships)\n- Timing waterfall visualization\n- Span attributes display\n- Resource attributes\n- Status codes and messages\n\n**Event Flow:**\nSystemMonitor -> EventBus -> DevWorkspace -> TraceDetailsPanel"
       }
-    },
-    {
-      "id": "systemmonitor-polling-only",
-      "description": "SystemMonitor is polling and displaying traces but user hasn't selected any yet",
-      "priority": 2,
-      "template": {
-        "introduction": "**Traces Available in SystemMonitor**\n\nSystemMonitor is polling the collector and displaying {{traces.fetched}} traces from {{services.count}} services.\n\nTraces are ready for user selection and visualization.",
-        "events": {
-          "otel.trace.span_created": "[1] Application created span: **{{span.name}}** (trace: `{{trace.id}}`, kind: {{span.kind}})",
-          "otel.endpoint.request_received": "[2] OTLP endpoint received {{http.method}} request at {{http.url}} on port {{http.port}} (content-type: {{content.type}})",
-          "otel.collector.trace_received": "[3] Collector parsed trace in {{collector.mode}} mode ({{resource.spans.count}} resource spans, format: {{trace.format}})",
-          "otel.storage.trace_stored": "[4] Collector storage has trace `{{trace.id}}` stored at {{storage.timestamp}} ({{storage.size}}/{{storage.max_size}} traces)",
-          "otel.messageport.trace_routed": "[5] Trace routed to window {{window.id}} via MessagePort from {{source.url}} (type: {{message.type}}, port registered: {{port.registered}})",
-          "otel.ipc.handler_invoked": "[6] Used **{{handler.name}}** handler from window {{window.id}} (source: {{source.url}}) to fetch from storage",
-          "otel.preload.port_registered": "[7] Preload registered port for window {{window.id}} from {{source.url}} (key: {{port.key}}, {{subscribers.count}} subscribers)",
-          "otel.subscriber.message_received": "[8] Subscriber {{subscriber.callback}} received {{message.type}} ({{payload.traces.count}} traces)",
-          "otel.systemmonitor.traces_polled": "[9] SystemMonitor polled and retrieved {{traces.fetched}} traces (limit: {{traces.limit}}, {{services.count}} services, interval: {{poll.interval_ms}}ms)",
-          "otel.eventbus.trace_event_emitted": "[10] Event bus emitted **{{event.type}}** from {{event.source}} (trace: `{{payload.trace.id}}`)",
-          "otel.devworkspace.trace_selected": "[11] DevWorkspace opened trace `{{trace.id}}` (tab: {{tab.label}}, id: {{tab.id}})",
-          "otel.panel.trace_rendered": "[12] **Trace `{{trace.id}}` rendered** ({{spans.count}} spans) in {{render.duration_ms}}ms"
-        },
-        "summary": "**SystemMonitor Status:**\n- Polling: Active\n- Interval: {{poll.interval_ms}}ms (2 seconds)\n- Traces Fetched: {{traces.fetched}}\n- Limit: {{traces.limit}}\n- Services: {{services.count}}\n\n**Storage:**\n- Current Size: {{storage.size}}/{{storage.max_size}}\n- Format: Circular buffer\n- Retention: Last 50 traces\n\n**Data Flow:**\n```\nCollector Storage (50 traces max)\n        | [every 2s]\nIPC Handler: getTraces(20)\n        |\nSystemMonitor TraceViewer\n        |\nGroups by service name\n        |\nConverts to AgentPrism format\n        |\nDisplays in collapsible sections\n```\n\n**Service Grouping:**\nTraces are automatically grouped by `service.name` attribute from resource attributes.\n\n**Available Actions:**\n- Click trace to open in DevWorkspace\n- Clear all traces button\n- Send test trace button\n- View collector status\n\n**What's Next:**\nUser can click any trace to visualize detailed span hierarchy in DevWorkspace."
-      }
     }
   ]
 }

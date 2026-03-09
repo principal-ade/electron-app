@@ -7,9 +7,24 @@
   "spanPattern": "app_updates.check",
   "scenarios": [
     {
+      "id": "app-startup-check",
+      "description": "App initializes and performs silent update check on startup",
+      "priority": 1,
+      "template": {
+        "introduction": "**App Startup - Update Check**\n\nApp initialized and performed silent update check.",
+        "events": {
+          "app_updates.manager.initialized": "1. AppVersionManager initialized (autoDownload: {{auto_download}}, autoInstall: {{auto_install}})",
+          "app_updates.startup.check_triggered": "2. Startup check triggered for v{{app_version}}",
+          "app_updates.check.started": "3. Check started (trigger={{trigger}})",
+          "app_updates.check.available": "4. **Update found:** v{{current_version}} -> v{{available_version}}"
+        },
+        "summary": "**Startup Check**\n- Initialized: AppVersionManager\n- Current: v{{current_version}}\n- Available: v{{available_version}}"
+      }
+    },
+    {
       "id": "periodic-update-available",
       "description": "Periodic check finds a new version available",
-      "priority": 1,
+      "priority": 2,
       "template": {
         "introduction": "**Periodic Check - Update Available**\n\nAutomatic background check found a new version.",
         "events": {
@@ -23,7 +38,7 @@
     {
       "id": "periodic-no-update",
       "description": "Periodic check confirms user is on latest version",
-      "priority": 2,
+      "priority": 3,
       "template": {
         "introduction": "**Periodic Check - Up to Date**\n\nAutomatic background check found no updates.",
         "events": {
@@ -37,7 +52,7 @@
     {
       "id": "periodic-error",
       "description": "Periodic check failed with error or timeout",
-      "priority": 3,
+      "priority": 4,
       "template": {
         "introduction": "**Periodic Check - Error**\n\nThe automatic update check failed.",
         "events": {
@@ -51,7 +66,7 @@
     {
       "id": "manual-update-available",
       "description": "Manual/silent check finds a new version available",
-      "priority": 4,
+      "priority": 5,
       "template": {
         "introduction": "**Update Available**\n\nA new version has been found and is ready to download.",
         "events": {
@@ -65,7 +80,7 @@
     {
       "id": "manual-no-update",
       "description": "Manual/silent check confirms user is on latest version",
-      "priority": 5,
+      "priority": 6,
       "template": {
         "introduction": "**No Update Available**\n\nYou're running the latest version.",
         "events": {
@@ -79,7 +94,7 @@
     {
       "id": "manual-error",
       "description": "Manual/silent check failed with error",
-      "priority": 6,
+      "priority": 7,
       "template": {
         "introduction": "**Update Check Failed**\n\nAn error prevented the update check from completing.",
         "events": {

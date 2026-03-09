@@ -134,7 +134,7 @@
       "pv": {
         "nodeType": "event-manager",
         "shape": "rectangle",
-        "sources": [
+        "references": [
           "src/main/agent-session-events/EventServerManager.ts"
         ]
       }
@@ -150,7 +150,7 @@
       "pv": {
         "nodeType": "cache",
         "shape": "rectangle",
-        "sources": [
+        "references": [
           "src/main/agent-session-events/agentSessionSDKHandlers.ts"
         ]
       }
@@ -166,7 +166,7 @@
       "pv": {
         "nodeType": "ipc-handler",
         "shape": "rectangle",
-        "sources": [
+        "references": [
           "src/main/agent-session-events/agentSessionSDKHandlers.ts"
         ]
       }
@@ -195,7 +195,7 @@
       "pv": {
         "nodeType": "interface",
         "shape": "rectangle",
-        "sources": [
+        "references": [
           "src/shared/main-process-api-interfaces/AgentSessionSDKAPI.ts"
         ]
       }
@@ -211,7 +211,7 @@
       "pv": {
         "nodeType": "preload",
         "shape": "rectangle",
-        "sources": [
+        "references": [
           "src/window/preload.ts"
         ]
       }
@@ -227,7 +227,7 @@
       "pv": {
         "nodeType": "renderer-api",
         "shape": "rectangle",
-        "sources": [
+        "references": [
           "src/window/main-process-api-implementations/agentSessionSDKApi.ts"
         ]
       }
@@ -243,7 +243,7 @@
       "pv": {
         "nodeType": "service",
         "shape": "rectangle",
-        "sources": [
+        "references": [
           "src/renderer/main-process-api/AgentSessionSDKService.ts"
         ]
       }
@@ -259,7 +259,7 @@
       "pv": {
         "nodeType": "context",
         "shape": "rectangle",
-        "sources": [
+        "references": [
           "src/renderer/contexts/AgentHighlightContext.tsx"
         ]
       }
@@ -275,7 +275,7 @@
       "pv": {
         "nodeType": "service",
         "shape": "rectangle",
-        "sources": [
+        "references": [
           "src/renderer/services/EventHighlightService.ts"
         ]
       }
@@ -317,7 +317,7 @@
       "pv": {
         "nodeType": "interface",
         "shape": "rectangle",
-        "sources": [
+        "references": [
           "src/shared/main-process-api-interfaces/AgentSessionEventsAPI.ts"
         ]
       }

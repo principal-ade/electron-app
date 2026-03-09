@@ -471,6 +471,14 @@
             "file.path": {
               "type": "string",
               "description": "File path"
+            },
+            "file.type": {
+              "type": "string",
+              "description": "File type/extension"
+            },
+            "file.size": {
+              "type": "number",
+              "description": "File size in bytes"
             }
           }
         }
@@ -506,6 +514,14 @@
             "panel.new": {
               "type": "string",
               "description": "New panel"
+            },
+            "panel.slot": {
+              "type": "string",
+              "description": "Panel slot position"
+            },
+            "panel.expanded": {
+              "type": "boolean",
+              "description": "Whether panel is expanded"
             }
           }
         }
@@ -570,6 +586,10 @@
             "file.path": {
               "type": "string",
               "description": "File displayed"
+            },
+            "render.duration.ms": {
+              "type": "number",
+              "description": "Render duration in milliseconds"
             }
           }
         }

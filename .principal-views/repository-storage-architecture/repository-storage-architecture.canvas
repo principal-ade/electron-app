@@ -187,7 +187,7 @@
       "pv": {
         "nodeType": "service",
         "shape": "rectangle",
-        "sources": [
+        "references": [
           "src/main/stores/AlexandriaRegistryService.ts"
         ]
       }
@@ -203,7 +203,7 @@
       "pv": {
         "nodeType": "api",
         "shape": "rectangle",
-        "sources": [
+        "references": [
           "src/main/stores/AlexandriaApiEventHandler.ts"
         ]
       }
@@ -219,7 +219,7 @@
       "pv": {
         "nodeType": "api",
         "shape": "rectangle",
-        "sources": [
+        "references": [
           "src/renderer/main-process-api/AlexandriaService.ts"
         ]
       }
@@ -255,7 +255,7 @@
       "pv": {
         "nodeType": "external",
         "shape": "rectangle",
-        "sources": [
+        "references": [
           "src/main/agent-session-events/EventServerManager.ts"
         ]
       }
@@ -271,7 +271,7 @@
       "pv": {
         "nodeType": "renderer",
         "shape": "rectangle",
-        "sources": [
+        "references": [
           "src/renderer/components/repository-maps/RepositoryAvatar.tsx"
         ]
       }

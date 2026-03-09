@@ -94,7 +94,7 @@
         "nodeType": "ui-component",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/components/Sidebar/PanelIconSidebar.tsx"
         ],
         "otel": {
@@ -130,7 +130,7 @@
         "nodeType": "panel",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
         "otel": {
@@ -162,7 +162,7 @@
         "nodeType": "panel",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "node_modules/@principal-ade/code-quality-panels"
         ],
         "otel": {
@@ -198,7 +198,7 @@
         "nodeType": "context",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/contexts/RepositoryPanelContext.tsx"
         ],
         "otel": {
@@ -238,7 +238,7 @@
         "nodeType": "ui-component",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "node_modules/@principal-ade/code-quality-panels"
         ],
         "otel": {
@@ -274,7 +274,7 @@
         "nodeType": "ui-component",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
         "otel": {
@@ -306,7 +306,7 @@
         "nodeType": "ui-component",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "node_modules/@principal-ade/code-quality-panels"
         ],
         "otel": {
@@ -342,7 +342,7 @@
         "nodeType": "main-process",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/repository-monitoring/ipcHandlers.ts"
         ],
         "otel": {
@@ -378,7 +378,7 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/quality-lenses/QualityLensService.ts"
         ],
         "otel": {
@@ -418,7 +418,7 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "node_modules/@principal-ai/codebase-quality-lenses"
         ],
         "otel": {
@@ -454,7 +454,7 @@
         "nodeType": "executor",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/quality-lenses/ElectronCLIBridgeExecutor.ts"
         ],
         "otel": {
@@ -490,7 +490,7 @@
         "nodeType": "external-tool",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/quality-lenses/ElectronCLIBridgeExecutor.ts"
         ],
         "otel": {
@@ -530,7 +530,7 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/quality-lenses/QualityLensService.ts"
         ],
         "otel": {
@@ -574,7 +574,7 @@
         "nodeType": "external-api",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/contexts/RepositoryPanelContext.tsx"
         ],
         "otel": {
@@ -597,7 +597,7 @@
         "nodeType": "external-api",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/contexts/RepositoryPanelContext.tsx"
         ],
         "otel": {
@@ -633,7 +633,7 @@
         "nodeType": "external-api",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/contexts/RepositoryPanelContext.tsx"
         ],
         "otel": {
@@ -669,7 +669,7 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/main/quality-lenses/QualityLensService.ts"
         ],
         "otel": {
@@ -709,7 +709,7 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/contexts/RepositoryPanelContext.tsx"
         ],
         "otel": {
@@ -741,7 +741,7 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/contexts/RepositoryPanelContext.tsx"
         ],
         "otel": {
@@ -777,7 +777,7 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/contexts/RepositoryPanelContext.tsx"
         ],
         "otel": {
@@ -817,7 +817,7 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/contexts/RepositoryPanelContext.tsx"
         ],
         "otel": {
@@ -849,7 +849,7 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/contexts/RepositoryPanelContext.tsx"
         ],
         "otel": {
@@ -889,7 +889,7 @@
         "nodeType": "external-api",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/contexts/RepositoryPanelContext.tsx"
         ],
         "otel": {
@@ -921,7 +921,7 @@
         "nodeType": "external-api",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/contexts/RepositoryPanelContext.tsx"
         ],
         "otel": {
@@ -961,7 +961,7 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "draft",
-        "sources": [
+        "references": [
           "src/renderer/contexts/RepositoryPanelContext.tsx"
         ],
         "otel": {
