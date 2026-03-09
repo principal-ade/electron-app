@@ -344,8 +344,14 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                           {serviceTraceCounts?.get(lastActiveService) || 0}
                         </span>
                       </>
+                    ) : availableServiceNames.length === 1 ? (
+                      <span style={{ color: theme.colors.textSecondary }}>{availableServiceNames[0]}</span>
+                    ) : availableServiceNames.length > 1 ? (
+                      <span style={{ color: theme.colors.textSecondary }}>
+                        {availableServiceNames.length} services registered
+                      </span>
                     ) : (
-                      <span style={{ color: theme.colors.textTertiary }}>waiting...</span>
+                      <span style={{ color: theme.colors.textTertiary }}>no services</span>
                     )}
                     {availableServiceNames.length > 1 && (
                       <span style={{ color: theme.colors.textTertiary, marginLeft: '2px' }}>
