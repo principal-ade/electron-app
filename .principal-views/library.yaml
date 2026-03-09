@@ -22,6 +22,8 @@ resources:
       - "terminal-activity"
       - "devworkspace-activity"
       - "terminal-activity-sync"
+      - "alexandria-recently-opened"
+      - "user-preferences"
 
   principal-ade-storybook:
     service.name: "principal-ade-storybook"

@@ -326,13 +326,19 @@ export default class AppVersionManager {
   }
 
   private sendToWindow(channel: string, data?: WindowEventData) {
-    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-      this.mainWindow.webContents.send(channel, data);
-    } else {
-      // Log that we couldn't send the event because window isn't ready
+    // Broadcast to ALL windows since Settings can be open in any window
+    const windows = BrowserWindow.getAllWindows();
+    const activeWindows = windows.filter((w) => !w.isDestroyed());
+
+    if (activeWindows.length === 0) {
       log.warn(
-        `[AppUpdater] Unable to send event '${channel}' - window not available`,
+        `[AppUpdater] Unable to send event '${channel}' - no windows available`,
       );
+      return;
+    }
+
+    for (const window of activeWindows) {
+      window.webContents.send(channel, data);
     }
   }
 
