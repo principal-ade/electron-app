@@ -4,6 +4,8 @@
 
 import { ipcMain, MessageChannelMain } from 'electron';
 import { OtelCollectorService } from '../OtelCollectorService';
+import { getTracer } from '../../telemetry';
+import { SpanStatusCode } from '@opentelemetry/api';
 
 const HANDLERS = {
   START_OTEL_COLLECTOR: 'otel-collector:start',
@@ -68,7 +70,17 @@ export function registerOtelCollectorHandlers(): void {
   ipcMain.handle(
     HANDLERS.REGISTER_TRACE_PORT,
     (event, windowId: string, serviceIdentifier: string): { success: boolean; error?: string } => {
+      const tracer = getTracer('otel-collector-ipc');
+      const span = tracer.startSpan('otel.port.registration');
+
       try {
+        // Event: IPC handler invoked
+        span.addEvent('otel.ipc.handler_invoked', {
+          'handler.name': 'otel-collector:registerPort',
+          'window.id': windowId,
+          'source.url': serviceIdentifier,
+        });
+
         console.log(`[IPC] Registering trace port for window: ${windowId}, service: ${serviceIdentifier}`);
 
         // Create a MessageChannel
@@ -78,15 +90,27 @@ export function registerOtelCollectorHandlers(): void {
         // The server (PortRouter) will send a CONNECTION_CONFIRMED heartbeat after registration
         service.registerPort(windowId, serviceIdentifier, port1);
 
+        // Event: MessagePort registered for trace routing
+        span.addEvent('otel.messageport.trace_routed', {
+          'window.id': windowId,
+          'source.url': serviceIdentifier,
+          'message.type': 'REGISTER_PORT',
+          'port.registered': true,
+        });
+
         // Send port2 to the renderer via postMessage (same pattern as terminal)
         event.sender.postMessage('otel-collector:port', { windowId, serviceIdentifier }, [port2]);
 
         console.log(`[IPC] ✅ Trace port registered and sent to renderer`);
 
+        span.setStatus({ code: SpanStatusCode.OK });
         return { success: true };
       } catch (err) {
+        span.setStatus({ code: SpanStatusCode.ERROR, message: err instanceof Error ? err.message : String(err) });
         console.error('[IPC] Failed to register trace port:', err);
         return { success: false, error: err instanceof Error ? err.message : String(err) };
+      } finally {
+        span.end();
       }
     }
   );
@@ -95,7 +119,18 @@ export function registerOtelCollectorHandlers(): void {
   ipcMain.handle(
     HANDLERS.REGISTER_TRACE_PORT_FOR_SERVICES,
     (event, windowId: string, serviceIdentifiers: string[]): { success: boolean; error?: string } => {
+      const tracer = getTracer('otel-collector-ipc');
+      const span = tracer.startSpan('otel.port.registration');
+
       try {
+        // Event: IPC handler invoked
+        span.addEvent('otel.ipc.handler_invoked', {
+          'handler.name': 'otel-collector:registerPortForServices',
+          'window.id': windowId,
+          'source.url': serviceIdentifiers.join(','),
+          'services.count': serviceIdentifiers.length,
+        });
+
         console.log(`[IPC] Registering trace port for window: ${windowId}, services: [${serviceIdentifiers.join(', ')}]`);
 
         // Create a MessageChannel
@@ -104,15 +139,28 @@ export function registerOtelCollectorHandlers(): void {
         // Register port1 with the service for all specified services
         service.registerPortForServices(windowId, serviceIdentifiers, port1);
 
+        // Event: MessagePort registered for trace routing
+        span.addEvent('otel.messageport.trace_routed', {
+          'window.id': windowId,
+          'source.url': serviceIdentifiers.join(','),
+          'message.type': 'REGISTER_PORT_FOR_SERVICES',
+          'port.registered': true,
+          'services.count': serviceIdentifiers.length,
+        });
+
         // Send port2 to the renderer via postMessage
         event.sender.postMessage('otel-collector:port', { windowId, serviceIdentifiers }, [port2]);
 
         console.log(`[IPC] ✅ Trace port registered for ${serviceIdentifiers.length} services and sent to renderer`);
 
+        span.setStatus({ code: SpanStatusCode.OK });
         return { success: true };
       } catch (err) {
+        span.setStatus({ code: SpanStatusCode.ERROR, message: err instanceof Error ? err.message : String(err) });
         console.error('[IPC] Failed to register trace port for services:', err);
         return { success: false, error: err instanceof Error ? err.message : String(err) };
+      } finally {
+        span.end();
       }
     }
   );
@@ -221,12 +269,27 @@ export function registerOtelCollectorHandlers(): void {
 
   // Get stored traces
   ipcMain.handle(HANDLERS.GET_TRACES, (event, limit?: number) => {
+    const tracer = getTracer('otel-collector-ipc');
+    const span = tracer.startSpan('otel.trace.visualization');
+
     try {
       const traces = service.getTraces(limit);
+
+      // Event: IPC handler invoked for getting traces
+      span.addEvent('otel.ipc.handler_invoked', {
+        'handler.name': 'otel-collector:getTraces',
+        'traces.limit': limit || 50,
+        'traces.fetched': traces.length,
+      });
+
+      span.setStatus({ code: SpanStatusCode.OK });
       return { success: true, traces };
     } catch (err) {
+      span.setStatus({ code: SpanStatusCode.ERROR, message: err instanceof Error ? err.message : String(err) });
       console.error('[IPC] Failed to get traces:', err);
       return { success: false, error: err instanceof Error ? err.message : String(err), traces: [] };
+    } finally {
+      span.end();
     }
   });
 

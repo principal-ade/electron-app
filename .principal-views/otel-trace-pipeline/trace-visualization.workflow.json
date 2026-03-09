@@ -1,32 +1,46 @@
 {
   "version": "1.0.0",
   "name": "OTEL Trace Visualization",
-  "description": "User interaction flow for selecting and viewing trace details in the dev workspace",
+  "description": "User interaction flow for selecting and viewing trace details",
   "mode": "span-tree",
   "canvas": ".principal-views/otel-trace-pipeline/otel-trace-pipeline.otel.canvas",
   "spanPattern": "otel.trace.visualization",
   "scenarios": [
     {
-      "id": "trace-selected-and-rendered",
-      "description": "User selected trace from SystemMonitor and trace details were rendered in DevWorkspace",
+      "id": "main-process-get-traces",
+      "description": "Main process handles IPC request to fetch stored traces",
       "priority": 1,
       "template": {
-        "introduction": "**Trace Visualization Complete**\n\nUser selected trace `{{trace.id}}` from SystemMonitor.\n\nDevWorkspace opened TraceDetailsPanel showing **{{spans.count}} spans** in {{render.duration_ms}}ms.",
+        "introduction": "**Get Traces (Main Process)**\n\nIPC handler retrieved {{traces.fetched}} traces from storage.",
         "events": {
-          "otel.trace.span_created": "[1] Application created span: **{{span.name}}** (trace: `{{trace.id}}`, kind: {{span.kind}})",
-          "otel.endpoint.request_received": "[2] OTLP endpoint received {{http.method}} request at {{http.url}} on port {{http.port}} (content-type: {{content.type}})",
-          "otel.collector.trace_received": "[3] Collector parsed trace in {{collector.mode}} mode ({{resource.spans.count}} resource spans, format: {{trace.format}})",
-          "otel.storage.trace_stored": "[4] Trace `{{trace.id}}` stored at {{storage.timestamp}} ({{storage.size}}/{{storage.max_size}} traces)",
-          "otel.messageport.trace_routed": "[5] Trace routed to window {{window.id}} via MessagePort from {{source.url}} (type: {{message.type}}, port registered: {{port.registered}})",
-          "otel.ipc.handler_invoked": "[6] IPC handler **{{handler.name}}** invoked from window {{window.id}} (source: {{source.url}})",
-          "otel.preload.port_registered": "[7] Preload registered port for window {{window.id}} from {{source.url}} (key: {{port.key}}, {{subscribers.count}} subscribers)",
-          "otel.subscriber.message_received": "[8] Subscriber {{subscriber.callback}} received {{message.type}} ({{payload.traces.count}} traces)",
-          "otel.systemmonitor.traces_polled": "[9] SystemMonitor displayed {{traces.fetched}} traces (limit: {{traces.limit}}, {{services.count}} services, interval: {{poll.interval_ms}}ms)",
-          "otel.eventbus.trace_event_emitted": "[10] User selected trace -> event bus emitted **{{event.type}}** from {{event.source}} (trace: `{{payload.trace.id}}`)",
-          "otel.devworkspace.trace_selected": "[11] DevWorkspace created tab for trace `{{trace.id}}`: **{{tab.label}}** ({{tab.id}})",
-          "otel.panel.trace_rendered": "[12] **TraceDetailsPanel rendered** trace `{{trace.id}}` with {{spans.count}} spans in {{render.duration_ms}}ms"
+          "otel.ipc.handler_invoked": "[1] IPC handler **{{handler.name}}** invoked (limit: {{traces.limit}}, fetched: {{traces.fetched}})"
         },
-        "summary": "**Trace Details:**\n- Trace ID: `{{trace.id}}`\n- Tab: {{tab.label}}\n- Spans: {{spans.count}}\n- Services: {{services.count}}\n\n**Visualization Flow:**\n```\n1. SystemMonitor polls traces every 2s\n2. User clicks trace in list\n3. Panel event bus emits trace:selected\n4. DevWorkspace catches event\n5. Creates new tab: trace-{{trace.id}}\n6. TraceDetailsPanel renders with full OTLP data\n7. User sees span hierarchy, timing, attributes\n```\n\n**Performance:**\n- Traces Fetched: {{traces.fetched}}\n- Poll Interval: {{poll.interval_ms}}ms\n- Render Time: {{render.duration_ms}}ms\n\n**Panel Features:**\n- Span hierarchy (parent-child relationships)\n- Timing waterfall visualization\n- Span attributes display\n- Resource attributes\n- Status codes and messages\n\n**Event Flow:**\nSystemMonitor -> EventBus -> DevWorkspace -> TraceDetailsPanel"
+        "summary": "**Main Process Fetch:**\n- Handler: {{handler.name}}\n- Limit: {{traces.limit}}\n- Fetched: {{traces.fetched}}"
+      }
+    },
+    {
+      "id": "renderer-traces-polled",
+      "description": "TraceViewer polls and displays traces from collector",
+      "priority": 2,
+      "template": {
+        "introduction": "**Traces Polled (Renderer Process)**\n\nTraceViewer fetched {{traces.fetched}} traces from {{services.count}} services.",
+        "events": {
+          "otel.systemmonitor.traces_polled": "[1] SystemMonitor polled {{traces.fetched}} traces (limit: {{traces.limit}}, services: {{services.count}}, interval: {{poll.interval_ms}}ms)"
+        },
+        "summary": "**Polling Summary:**\n- Traces Fetched: {{traces.fetched}}\n- Trace Limit: {{traces.limit}}\n- Services: {{services.count}}\n- Poll Interval: {{poll.interval_ms}}ms"
+      }
+    },
+    {
+      "id": "renderer-trace-selected",
+      "description": "User selected a trace and it was rendered in the panel",
+      "priority": 3,
+      "template": {
+        "introduction": "**Trace Selected & Rendered (Renderer Process)**\n\nUser selected trace `{{trace.id}}` with {{spans.count}} spans.",
+        "events": {
+          "otel.devworkspace.trace_selected": "[1] Trace selected: `{{trace.id}}` (tab: {{tab.label}}, id: {{tab.id}}, spans: {{spans.count}})",
+          "otel.panel.trace_rendered": "[2] Trace rendered in {{render.duration_ms}}ms ({{spans.count}} spans)"
+        },
+        "summary": "**Selection & Render:**\n- Trace ID: `{{trace.id}}`\n- Tab Label: {{tab.label}}\n- Tab ID: {{tab.id}}\n- Spans: {{spans.count}}\n- Render Time: {{render.duration_ms}}ms\n\n**Panel Features:**\n- Span hierarchy view\n- OTLP data JSON display\n- Timing information"
       }
     }
   ]

@@ -6,6 +6,8 @@ import { OTELCollectorServer, ServerStats, WILDCARD_SOURCE, OTLPTraceRequest } f
 import { app, MessageChannelMain, MessagePortMain } from 'electron';
 import path from 'path';
 import os from 'os';
+import { getTracer } from '../telemetry';
+import { SpanStatusCode } from '@opentelemetry/api';
 
 /** OTLP (OpenTelemetry Protocol) trace data payload */
 type OTLPTraceData = OTLPTraceRequest;
@@ -230,9 +232,26 @@ export class OtelCollectorService {
    * Store a received trace
    */
   storeTrace(traceData: OTLPTraceData): void {
+    const tracer = getTracer('otel-collector-service');
+    const span = tracer.startSpan('otel.trace.delivery');
+
     try {
       // Extract trace ID from the data
       const traceId = this.extractTraceId(traceData);
+
+      // Count spans in the trace data
+      const resourceSpansCount = traceData.resourceSpans?.length || 0;
+      const totalSpansCount = traceData.resourceSpans?.reduce((acc, rs) => {
+        return acc + (rs.scopeSpans?.reduce((sacc, ss) => sacc + (ss.spans?.length || 0), 0) || 0);
+      }, 0) || 0;
+
+      // Event: Trace received by collector
+      span.addEvent('otel.collector.trace_received', {
+        'trace.id': traceId,
+        'collector.mode': 'electron',
+        'resource.spans.count': resourceSpansCount,
+        'trace.format': 'otlp-json',
+      });
 
       const trace: StoredTrace = {
         traceId,
@@ -246,9 +265,22 @@ export class OtelCollectorService {
         this.traces = this.traces.slice(0, this.MAX_TRACES);
       }
 
+      // Event: Trace stored in buffer
+      span.addEvent('otel.storage.trace_stored', {
+        'trace.id': traceId,
+        'storage.timestamp': new Date().toISOString(),
+        'storage.size': this.traces.length,
+        'storage.max_size': this.MAX_TRACES,
+        'spans.count': totalSpansCount,
+      });
+
+      span.setStatus({ code: SpanStatusCode.OK });
       console.log(`[OtelCollectorService] Stored trace ${traceId}, total: ${this.traces.length}`);
     } catch (err) {
+      span.setStatus({ code: SpanStatusCode.ERROR, message: err instanceof Error ? err.message : String(err) });
       console.error('[OtelCollectorService] Failed to store trace:', err);
+    } finally {
+      span.end();
     }
   }
 

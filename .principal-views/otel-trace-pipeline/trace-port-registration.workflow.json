@@ -1,32 +1,22 @@
 {
   "version": "1.0.0",
   "name": "OTEL Trace Port Registration",
-  "description": "Window registration process for receiving trace data via MessagePorts",
+  "description": "Window registration process for receiving trace data via MessagePorts (Main Process)",
   "mode": "span-tree",
   "canvas": ".principal-views/otel-trace-pipeline/otel-trace-pipeline.otel.canvas",
   "spanPattern": "otel.port.registration",
   "scenarios": [
     {
-      "id": "successful-port-registration",
-      "description": "Window successfully registered a MessagePort to receive trace data from collector",
+      "id": "port-registration",
+      "description": "Main process handles IPC request and registers MessagePort with collector",
       "priority": 1,
       "template": {
-        "introduction": "**MessagePort Registered**\n\nWindow `{{window.id}}` successfully registered to receive traces from source `{{source.url}}`.\n\nThe window will now receive real-time trace batches via MessagePort IPC.",
+        "introduction": "**Port Registration**\n\nIPC handler received registration request for window `{{window.id}}`.",
         "events": {
-          "otel.trace.span_created": "[1] Application created span: **{{span.name}}** (trace: `{{trace.id}}`, kind: {{span.kind}})",
-          "otel.endpoint.request_received": "[2] OTLP endpoint received {{http.method}} request at {{http.url}} on port {{http.port}} (content-type: {{content.type}})",
-          "otel.collector.trace_received": "[3] Collector parsed trace in {{collector.mode}} mode ({{resource.spans.count}} resource spans, format: {{trace.format}})",
-          "otel.storage.trace_stored": "[4] Trace `{{trace.id}}` stored at {{storage.timestamp}} ({{storage.size}}/{{storage.max_size}} traces)",
-          "otel.messageport.trace_routed": "[5] Trace routed to window {{window.id}} via MessagePort from {{source.url}} (type: {{message.type}}, port registered: {{port.registered}})",
-          "otel.ipc.handler_invoked": "[6] IPC handler invoked: **{{handler.name}}** from window {{window.id}} (source: {{source.url}})",
-          "otel.preload.port_registered": "[7] Preload bridge registered MessagePort for window {{window.id}} from {{source.url}} (key: {{port.key}}, {{subscribers.count}} subscribers)",
-          "otel.subscriber.message_received": "[8] Subscriber {{subscriber.callback}} ready to receive {{message.type}} ({{payload.traces.count}} traces)",
-          "otel.systemmonitor.traces_polled": "[9] SystemMonitor polled {{traces.fetched}} traces (limit: {{traces.limit}}, {{services.count}} services, interval: {{poll.interval_ms}}ms)",
-          "otel.eventbus.trace_event_emitted": "[10] Event bus emitted **{{event.type}}** from {{event.source}} (trace: `{{payload.trace.id}}`)",
-          "otel.devworkspace.trace_selected": "[11] DevWorkspace opened trace `{{trace.id}}` (tab: {{tab.label}}, id: {{tab.id}})",
-          "otel.panel.trace_rendered": "[12] **Trace `{{trace.id}}` rendered** ({{spans.count}} spans) in {{render.duration_ms}}ms"
+          "otel.ipc.handler_invoked": "[1] IPC handler **{{handler.name}}** invoked from window {{window.id}} (source: {{source.url}})",
+          "otel.messageport.trace_routed": "[2] MessagePort registered for window {{window.id}} (source: {{source.url}}, type: {{message.type}}, registered: {{port.registered}})"
         },
-        "summary": "**Registration Details:**\n- Window ID: `{{window.id}}`\n- Source URL: `{{source.url}}`\n- Port Key: `{{port.key}}`\n- Subscribers: {{subscribers.count}}\n\n**IPC Setup:**\n1. Renderer invoked `otel-collector:registerPort`\n2. Main process created MessageChannelMain\n3. Port1 registered with collector service\n4. Port2 transferred to renderer via postMessage\n5. Preload bridge set up port.onmessage listener\n6. Subscriber callback registered\n\n**MessagePort Flow:**\n```\nRenderer (registerPort)\n    | [IPC invoke]\nMain Process (create MessageChannel)\n    | [port1 -> collector]\nCollector (stores port for routing)\n    | [port2 -> renderer via postMessage]\nPreload (port.onmessage listener)\n    | [callback on message]\nSubscriber (receives trace batches)\n```\n\n**What Happens Next:**\n- Collector will route matching traces to this port\n- Subscriber callbacks invoked on each TRACE_BATCH message\n- Port remains active until window closes or unregisters"
+        "summary": "**Registration Summary:**\n- Handler: {{handler.name}}\n- Window ID: `{{window.id}}`\n- Source URL: `{{source.url}}`\n- Message Type: {{message.type}}\n- Port Registered: {{port.registered}}\n\n**Flow:**\n1. Renderer calls registerPort/registerPortForServices\n2. IPC invoke received in main process\n3. MessageChannelMain created\n4. Port1 registered with OtelCollectorService\n5. Port2 sent to renderer via postMessage"
       }
     }
   ]

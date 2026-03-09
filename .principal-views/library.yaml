@@ -16,6 +16,9 @@ resources:
       - "quality-panel"
       - "app-updates"
       - "devworkspace"
+      - "otel-collector-service"
+      - "otel-collector-ipc"
+      - "trace-viewer"
 
   principal-ade-storybook:
     service.name: "principal-ade-storybook"

@@ -3254,7 +3254,7 @@ export const DevWorkspacePanelFramework: React.FC<
   panelSizes,
   onPanelSizesChange,
   events,
-  traceSourceServiceName,
+  traceSourceServiceName: _traceSourceServiceName,
   onScopeNamesDiscovered,
   onServiceTraceCountsChange,
   onLeftCollapseComplete,

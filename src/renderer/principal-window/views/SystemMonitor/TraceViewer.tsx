@@ -1,7 +1,9 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { OtelCollectorService, type StoredTrace } from '../../../main-process-api/OtelCollectorService';
 import { RefreshCw, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { getTracer } from '../../../telemetry';
+import { SpanStatusCode } from '@opentelemetry/api';
 
 // OTLP KeyValue type (internal to @opentelemetry/otlp-transformer)
 type OTLPKeyValue = {
@@ -29,27 +31,89 @@ export const TraceViewer: React.FC<TraceViewerProps> = ({
   const { theme } = useTheme();
   const [traces, setTraces] = useState<StoredTrace[]>([]);
   const [selectedTrace, setSelectedTrace] = useState<StoredTrace | null>(null);
+  const renderStartTime = useRef<number>(0);
+
+  // Handle trace selection with instrumentation
+  const handleTraceSelect = (trace: StoredTrace) => {
+    const tracer = getTracer('trace-viewer');
+    const span = tracer.startSpan('otel.trace.visualization');
+
+    // Count spans in trace
+    const spansCount = trace.data?.resourceSpans?.reduce((acc, rs) => {
+      return acc + (rs.scopeSpans?.reduce((sacc, ss) => sacc + (ss.spans?.length || 0), 0) || 0);
+    }, 0) || 0;
+
+    // Event: Trace selected in DevWorkspace
+    span.addEvent('otel.devworkspace.trace_selected', {
+      'trace.id': trace.traceId,
+      'tab.label': `Trace ${trace.traceId.substring(0, 8)}`,
+      'tab.id': `trace-${trace.traceId}`,
+      'spans.count': spansCount,
+    });
+
+    renderStartTime.current = performance.now();
+    setSelectedTrace(trace);
+
+    // Event: Panel rendered (measure after state update)
+    requestAnimationFrame(() => {
+      const renderDuration = performance.now() - renderStartTime.current;
+      span.addEvent('otel.panel.trace_rendered', {
+        'trace.id': trace.traceId,
+        'spans.count': spansCount,
+        'render.duration_ms': Math.round(renderDuration),
+      });
+      span.setStatus({ code: SpanStatusCode.OK });
+      span.end();
+    });
+  };
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [collapsedSources, setCollapsedSources] = useState<Set<string>>(new Set());
 
   // Fetch traces
-  const fetchTraces = async () => {
+  const fetchTraces = useCallback(async () => {
+    const tracer = getTracer('trace-viewer');
+    const span = tracer.startSpan('otel.trace.visualization');
+
     try {
       const result = await OtelCollectorService.getTraces(20);
       if (result.success) {
         setTraces(result.traces);
         setError(null);
+
+        // Extract unique services from traces
+        const services = new Set<string>();
+        result.traces.forEach((trace) => {
+          const attrs = trace.data?.resourceSpans?.[0]?.resource?.attributes;
+          const serviceAttr = attrs?.find((a: { key: string }) => a.key === 'service.name');
+          if (serviceAttr?.value?.stringValue) {
+            services.add(serviceAttr.value.stringValue);
+          }
+        });
+
+        // Event: SystemMonitor polled traces
+        span.addEvent('otel.systemmonitor.traces_polled', {
+          'traces.fetched': result.traces.length,
+          'traces.limit': 20,
+          'services.count': services.size,
+          'poll.interval_ms': refreshInterval,
+        });
+
+        span.setStatus({ code: SpanStatusCode.OK });
       } else {
         setError(result.error || 'Failed to fetch traces');
+        span.setStatus({ code: SpanStatusCode.ERROR, message: result.error || 'Failed to fetch traces' });
       }
       setLoading(false);
     } catch (err) {
       console.error('Failed to fetch traces:', err);
       setError(err instanceof Error ? err.message : String(err));
       setLoading(false);
+      span.setStatus({ code: SpanStatusCode.ERROR, message: err instanceof Error ? err.message : String(err) });
+    } finally {
+      span.end();
     }
-  };
+  }, [refreshInterval]);
 
   // Auto-refresh traces
   useEffect(() => {
@@ -59,7 +123,7 @@ export const TraceViewer: React.FC<TraceViewerProps> = ({
       const interval = setInterval(fetchTraces, refreshInterval);
       return () => clearInterval(interval);
     }
-  }, [autoRefresh, refreshInterval]);
+  }, [autoRefresh, refreshInterval, fetchTraces]);
 
   // Extract service name from trace data
   const extractSource = (trace: StoredTrace): string => {
@@ -303,7 +367,7 @@ export const TraceViewer: React.FC<TraceViewerProps> = ({
                 {sourceTraces.map((trace) => (
                   <div
                     key={trace.traceId}
-                    onClick={() => setSelectedTrace(trace)}
+                    onClick={() => handleTraceSelect(trace)}
                     style={{
                       padding: '12px',
                       backgroundColor: selectedTrace?.traceId === trace.traceId
