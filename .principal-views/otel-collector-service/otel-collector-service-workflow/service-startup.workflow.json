@@ -1,0 +1,23 @@
+{
+  "version": "1.0.0",
+  "name": "OTEL Collector Service Startup",
+  "description": "Main process starts the OTEL collector service and spawns binary",
+  "mode": "span-tree",
+  "canvas": ".principal-views/otel-collector-service/otel-collector-service.otel.canvas",
+  "spanPattern": "otel.collector.service_started",
+  "scenarios": [
+    {
+      "id": "service-startup",
+      "description": "OtelCollectorService singleton starts and spawns native binary",
+      "priority": 1,
+      "template": {
+        "introduction": "**OTEL Collector Service Startup (Main Process)**\n\nStarting the OTEL collector service and spawning native binary.",
+        "events": {
+          "otel.collector.service_started": "[1] Collector service started (mode: {{collector.mode}}) - OTLP: **{{otlp.port}}**, wrapper: {{wrapper.port}}, collector: {{collector.port}}",
+          "otel.binary.process_spawned": "[2] Native OTEL collector binary spawned"
+        },
+        "summary": "**Startup Summary:**\n- Mode: {{collector.mode}}\n- OTLP Port: {{otlp.port}}\n- Wrapper Port: {{wrapper.port}}\n- Collector Port: {{collector.port}}"
+      }
+    }
+  ]
+}

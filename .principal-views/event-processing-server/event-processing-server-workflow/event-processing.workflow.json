@@ -1,0 +1,70 @@
+{
+  "version": "1.0.0",
+  "name": "Agent Event Processing",
+  "description": "Utility process receives and processes agent event through pipeline",
+  "mode": "span-tree",
+  "canvas": ".principal-views/event-processing-server/event-processing-server.otel.canvas",
+  "spanPattern": "event.pipeline.event_processed",
+  "scenarios": [
+    {
+      "id": "claude-event",
+      "description": "Claude agent event processed through pipeline",
+      "priority": 1,
+      "template": {
+        "introduction": "**Claude Event Processing (Utility Process)**\n\nProcessing Claude agent event through the pipeline.",
+        "events": {
+          "event.agent.claude_hook": "[1] Claude agent hook triggered",
+          "event.http.claude_received": "[2] HTTP received Claude event (provider: {{provider}}), {{duration_ms}}ms",
+          "event.pipeline.event_processed": "[3] Pipeline processed **{{provider}}** event: session `{{session.id}}` ({{event.type}}) in {{duration_ms}}ms",
+          "event.adapter.repo_resolved": "[4] Resolved repo: **{{repo.owner}}/{{repo.name}}** at {{repo.root}} (cache: {{cache.hit}})"
+        },
+        "summary": "**Processing Summary:**\n- Provider: Claude\n- Session: `{{session.id}}`\n- Event Type: {{event.type}}\n- Duration: {{duration_ms}}ms"
+      }
+    },
+    {
+      "id": "cline-event",
+      "description": "Cline agent event processed through pipeline",
+      "priority": 2,
+      "template": {
+        "introduction": "**Cline Event Processing (Utility Process)**\n\nProcessing Cline agent event through the pipeline.",
+        "events": {
+          "event.agent.cline_hook": "[1] Cline agent hook triggered",
+          "event.http.cline_received": "[2] HTTP received Cline event (provider: {{provider}}), {{duration_ms}}ms",
+          "event.pipeline.event_processed": "[3] Pipeline processed **{{provider}}** event: session `{{session.id}}` ({{event.type}}) in {{duration_ms}}ms",
+          "event.adapter.repo_resolved": "[4] Resolved repo: **{{repo.owner}}/{{repo.name}}** at {{repo.root}} (cache: {{cache.hit}})"
+        },
+        "summary": "**Processing Summary:**\n- Provider: Cline\n- Session: `{{session.id}}`\n- Event Type: {{event.type}}"
+      }
+    },
+    {
+      "id": "opencode-event",
+      "description": "OpenCode agent event processed through pipeline",
+      "priority": 3,
+      "template": {
+        "introduction": "**OpenCode Event Processing (Utility Process)**\n\nProcessing OpenCode agent event through the pipeline.",
+        "events": {
+          "event.agent.opencode_hook": "[1] OpenCode agent hook triggered",
+          "event.http.opencode_received": "[2] HTTP received OpenCode event (provider: {{provider}}), {{duration_ms}}ms",
+          "event.pipeline.event_processed": "[3] Pipeline processed **{{provider}}** event: session `{{session.id}}` ({{event.type}}) in {{duration_ms}}ms",
+          "event.adapter.repo_resolved": "[4] Resolved repo: **{{repo.owner}}/{{repo.name}}** at {{repo.root}} (cache: {{cache.hit}})"
+        },
+        "summary": "**Processing Summary:**\n- Provider: OpenCode\n- Session: `{{session.id}}`\n- Event Type: {{event.type}}"
+      }
+    },
+    {
+      "id": "droid-event",
+      "description": "Droid agent event processed through pipeline",
+      "priority": 4,
+      "template": {
+        "introduction": "**Droid Event Processing (Utility Process)**\n\nProcessing Droid agent event through the pipeline.",
+        "events": {
+          "event.agent.droid_hook": "[1] Droid agent hook triggered",
+          "event.http.droid_received": "[2] HTTP received Droid event (provider: {{provider}}), {{duration_ms}}ms",
+          "event.pipeline.event_processed": "[3] Pipeline processed **{{provider}}** event: session `{{session.id}}` ({{event.type}}) in {{duration_ms}}ms",
+          "event.adapter.repo_resolved": "[4] Resolved repo: **{{repo.owner}}/{{repo.name}}** at {{repo.root}} (cache: {{cache.hit}})"
+        },
+        "summary": "**Processing Summary:**\n- Provider: Droid\n- Session: `{{session.id}}`\n- Event Type: {{event.type}}"
+      }
+    }
+  ]
+}

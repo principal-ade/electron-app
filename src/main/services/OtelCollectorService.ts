@@ -50,6 +50,9 @@ export class OtelCollectorService {
 
     console.log('[OtelCollectorService] Starting OTEL Collector...');
 
+    const tracer = getTracer('otel-collector-service');
+    const span = tracer.startSpan('otel.collector.startup');
+
     try {
       // Determine binary path
       const binaryPath = this.getBinaryPath();
@@ -79,13 +82,25 @@ export class OtelCollectorService {
       // Register a catch-all port to receive and store all traces
       this.registerMonitorPort();
 
+      // Event: OTEL Collector Service started successfully
+      span.addEvent('otel.collector.service_started', {
+        'collector.mode': 'electron',
+        'otlp.port': otlpPort,
+        'wrapper.port': wrapperPort,
+        'collector.port': collectorPort,
+      });
+
+      span.setStatus({ code: SpanStatusCode.OK });
       console.log('[OtelCollectorService] OTEL Collector started successfully');
       console.log(`  - OTLP Endpoint: http://localhost:${otlpPort}`);
       console.log(`  - Wrapper Endpoint: http://localhost:${wrapperPort}`);
     } catch (err) {
+      span.setStatus({ code: SpanStatusCode.ERROR, message: err instanceof Error ? err.message : String(err) });
       console.error('[OtelCollectorService] Failed to start:', err);
       this.isRunning = false;
       throw err;
+    } finally {
+      span.end();
     }
   }
 

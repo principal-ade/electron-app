@@ -1,0 +1,23 @@
+{
+  "version": "1.0.0",
+  "name": "Event Server Startup",
+  "description": "Main process spawns the event processing utility process",
+  "mode": "span-tree",
+  "canvas": ".principal-views/event-processing-server/event-processing-server.otel.canvas",
+  "spanPattern": "event.server.manager_started",
+  "scenarios": [
+    {
+      "id": "server-startup",
+      "description": "EventServerManager spawns utility process and HTTP server starts",
+      "priority": 1,
+      "template": {
+        "introduction": "**Event Server Startup (Main Process)**\n\nEventServerManager is spawning the event processing utility process.",
+        "events": {
+          "event.server.manager_started": "[1] EventServerManager started on port **{{server.port}}** (auto-start: {{auto.start}})",
+          "event.server.http_started": "[2] HTTP server listening on port **{{server.port}}** with {{endpoints.count}} endpoints"
+        },
+        "summary": "**Startup Summary:**\n- Port: {{server.port}}\n- Auto-start: {{auto.start}}\n- Endpoints: {{endpoints.count}}"
+      }
+    }
+  ]
+}

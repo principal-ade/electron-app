@@ -13,6 +13,8 @@ import {
 } from 'electron';
 import { EventEmitter } from 'events';
 import * as path from 'path';
+import { getTracer } from '../telemetry';
+import { SpanStatusCode } from '@opentelemetry/api';
 
 import {
   ServerToMainMessage,
@@ -108,50 +110,69 @@ export class EventServerManager extends EventEmitter {
     repository: string,
     webContents: Electron.WebContents,
   ): boolean {
-    if (!this.worker) {
-      this.log('error', 'Cannot register port: worker not running');
+    const tracer = getTracer('event-server-manager');
+    const span = tracer.startSpan('event.port.registration');
+
+    try {
+      if (!this.worker) {
+        this.log('error', 'Cannot register port: worker not running');
+        span.setStatus({ code: SpanStatusCode.ERROR, message: 'Worker not running' });
+        return false;
+      }
+
+      // Clean up any existing registration for this window+repo
+      this.unregisterPortForWindow(windowId, repository);
+
+      // Create MessageChannel
+      const { port1, port2 } = new MessageChannelMain();
+
+      // Track the registration
+      let windowSet = this.registeredWindows.get(repository);
+      if (!windowSet) {
+        windowSet = new Set();
+        this.registeredWindows.set(repository, windowSet);
+      }
+      windowSet.add(windowId);
+
+      // Transfer port1 to the utility process
+      this.worker.postMessage(
+        {
+          type: 'REGISTER_PORT',
+          id: `register-${windowId}-${repository}-${Date.now()}`,
+          timestamp: Date.now(),
+          windowId,
+          repository,
+        },
+        [port1],
+      );
+
+      // Transfer port2 to the renderer
+      webContents.postMessage(
+        AgentSessionSDKAPIEvents.EVENT_PORT_READY,
+        { repository },
+        [port2],
+      );
+
+      // Event: MessagePort registered for window to receive events
+      span.addEvent('event.port.registered', {
+        'window.id': windowId,
+        'repository': repository,
+      });
+
+      span.setStatus({ code: SpanStatusCode.OK });
+      this.log(
+        'debug',
+        `Registered event port for window ${windowId} -> ${repository}`,
+      );
+
+      return true;
+    } catch (error) {
+      span.setStatus({ code: SpanStatusCode.ERROR, message: error instanceof Error ? error.message : String(error) });
+      this.log('error', `Failed to register port: ${error}`);
       return false;
+    } finally {
+      span.end();
     }
-
-    // Clean up any existing registration for this window+repo
-    this.unregisterPortForWindow(windowId, repository);
-
-    // Create MessageChannel
-    const { port1, port2 } = new MessageChannelMain();
-
-    // Track the registration
-    let windowSet = this.registeredWindows.get(repository);
-    if (!windowSet) {
-      windowSet = new Set();
-      this.registeredWindows.set(repository, windowSet);
-    }
-    windowSet.add(windowId);
-
-    // Transfer port1 to the utility process
-    this.worker.postMessage(
-      {
-        type: 'REGISTER_PORT',
-        id: `register-${windowId}-${repository}-${Date.now()}`,
-        timestamp: Date.now(),
-        windowId,
-        repository,
-      },
-      [port1],
-    );
-
-    // Transfer port2 to the renderer
-    webContents.postMessage(
-      AgentSessionSDKAPIEvents.EVENT_PORT_READY,
-      { repository },
-      [port2],
-    );
-
-    this.log(
-      'debug',
-      `Registered event port for window ${windowId} -> ${repository}`,
-    );
-
-    return true;
   }
 
   /**
@@ -210,6 +231,9 @@ export class EventServerManager extends EventEmitter {
       await app.whenReady();
     }
 
+    const tracer = getTracer('event-server-manager');
+    const span = tracer.startSpan('event.server.startup');
+
     try {
       this.log('info', 'Starting event processing server...');
       this.shutdownRequested = false;
@@ -218,14 +242,24 @@ export class EventServerManager extends EventEmitter {
       this.isRunning = true;
       this.restartAttempts = 0;
 
+      // Event: EventServerManager started and spawned utility process
+      span.addEvent('event.server.manager_started', {
+        'server.port': this.serverPort || 0,
+        'auto.start': this.config.autoStart,
+      });
+
+      span.setStatus({ code: SpanStatusCode.OK });
       this.log(
         'info',
         `Event processing server started on port ${this.serverPort}`,
       );
       this.emit('started', this.serverPort);
     } catch (error) {
+      span.setStatus({ code: SpanStatusCode.ERROR, message: error instanceof Error ? error.message : String(error) });
       this.log('error', `Failed to start event server: ${error}`);
       throw error;
+    } finally {
+      span.end();
     }
   }
 
@@ -370,18 +404,32 @@ export class EventServerManager extends EventEmitter {
    * Handle window broadcast requests from server
    */
   private handleWindowBroadcast(msg: WindowBroadcastMessage): void {
+    const tracer = getTracer('event-server-manager');
+    const span = tracer.startSpan('event.window.broadcast');
+
     try {
       const windows = BrowserWindow.getAllWindows();
       windows.forEach((window) => {
         window.webContents.send(msg.channel, msg.data);
       });
 
+      // Event: Window received session update broadcast
+      span.addEvent('event.window.session_updated', {
+        'session.id': (msg.data as { sessionId?: string })?.sessionId || '',
+        'directory': (msg.data as { directory?: string })?.directory || '',
+        'windows.count': windows.length,
+      });
+
+      span.setStatus({ code: SpanStatusCode.OK });
       this.log(
         'debug',
         `Broadcasted ${msg.channel} to ${windows.length} windows`,
       );
     } catch (error) {
+      span.setStatus({ code: SpanStatusCode.ERROR, message: error instanceof Error ? error.message : String(error) });
       this.log('error', `Window broadcast failed: ${error}`);
+    } finally {
+      span.end();
     }
   }
 

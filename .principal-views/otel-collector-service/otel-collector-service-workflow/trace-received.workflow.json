@@ -1,0 +1,25 @@
+{
+  "version": "1.0.0",
+  "name": "Trace Received and Stored",
+  "description": "Main process receives trace from collector and stores in buffer",
+  "mode": "span-tree",
+  "canvas": ".principal-views/otel-collector-service/otel-collector-service.otel.canvas",
+  "spanPattern": "otel.collector.trace_received",
+  "scenarios": [
+    {
+      "id": "trace-received-stored",
+      "description": "Trace received via monitor port and stored in circular buffer",
+      "priority": 1,
+      "template": {
+        "introduction": "**Trace Received (Main Process)**\n\nMonitor port received trace from collector binary.",
+        "events": {
+          "otel.external.trace_sent": "[1] External app sent trace",
+          "otel.endpoint.trace_received": "[2] HTTP endpoint received trace data",
+          "otel.collector.trace_received": "[3] Monitor port received trace `{{trace.id}}` (mode: {{collector.mode}}, format: {{trace.format}}, spans: {{resource.spans.count}})",
+          "otel.storage.trace_stored": "[4] Trace stored: `{{trace.id}}` at {{storage.timestamp}} ({{storage.size}}/{{storage.max_size}} traces, {{spans.count}} spans)"
+        },
+        "summary": "**Trace Summary:**\n- Trace ID: `{{trace.id}}`\n- Format: {{trace.format}}\n- Resource Spans: {{resource.spans.count}}\n- Total Spans: {{spans.count}}\n- Buffer: {{storage.size}}/{{storage.max_size}}"
+      }
+    }
+  ]
+}

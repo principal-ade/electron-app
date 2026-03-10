@@ -4,6 +4,7 @@
  */
 
 import { HttpEventServer } from './HttpEventServer';
+import { utilityTelemetry } from './telemetry';
 import type {
   MainToServerMessage,
   ServerToMainMessage,
@@ -201,6 +202,9 @@ let server: HttpEventServer;
 
 async function initialize(): Promise<void> {
   try {
+    // Initialize telemetry for the utility process
+    await utilityTelemetry.initialize();
+
     server = new HttpEventServer(sendToMain, {
       logLevel: process.env.DEBUG_EVENT_SERVER === 'true' ? 'debug' : 'info',
       enableObservability: process.env.DISABLE_OBSERVABILITY !== 'true',
@@ -248,33 +252,25 @@ if (process.parentPort) {
 
 // Handle process termination gracefully
 process.on('SIGTERM', () => {
-  if (server) {
-    server
-      .stop()
-      .then(() => {
-        process.exit(0);
-      })
-      .catch(() => {
-        process.exit(1);
-      });
-  } else {
+  const cleanup = async () => {
+    if (server) {
+      await server.stop();
+    }
+    await utilityTelemetry.shutdown();
     process.exit(0);
-  }
+  };
+  cleanup().catch(() => process.exit(1));
 });
 
 process.on('SIGINT', () => {
-  if (server) {
-    server
-      .stop()
-      .then(() => {
-        process.exit(0);
-      })
-      .catch(() => {
-        process.exit(1);
-      });
-  } else {
+  const cleanup = async () => {
+    if (server) {
+      await server.stop();
+    }
+    await utilityTelemetry.shutdown();
     process.exit(0);
-  }
+  };
+  cleanup().catch(() => process.exit(1));
 });
 
 // Handle uncaught exceptions

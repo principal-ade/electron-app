@@ -1,0 +1,22 @@
+{
+  "version": "1.0.0",
+  "name": "Trace Query",
+  "description": "Main process handles IPC request to fetch traces from storage",
+  "mode": "span-tree",
+  "canvas": ".principal-views/otel-collector-service/otel-collector-service.otel.canvas",
+  "spanPattern": "otel.ipc.handler_invoked",
+  "scenarios": [
+    {
+      "id": "get-traces",
+      "description": "IPC handler returns traces from storage",
+      "priority": 1,
+      "template": {
+        "introduction": "**Get Traces (Main Process)**\n\nReturning traces from storage to renderer.",
+        "events": {
+          "otel.ipc.handler_invoked": "[1] IPC handler **{{handler.name}}** invoked from window {{window.id}} (source: {{source.url}}, limit: {{traces.limit}}, fetched: {{traces.fetched}})"
+        },
+        "summary": "**Query Summary:**\n- Handler: {{handler.name}}\n- Window: {{window.id}}\n- Limit: {{traces.limit}}\n- Fetched: {{traces.fetched}}"
+      }
+    }
+  ]
+}

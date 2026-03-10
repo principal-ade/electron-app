@@ -97,7 +97,7 @@
       "pv": {
         "nodeType": "main-process",
         "shape": "rectangle",
-        "status": "approved",
+        "status": "implemented",
         "references": [
           "src/main/agent-session-events/EventServerManager.ts"
         ],
@@ -135,7 +135,7 @@
       "pv": {
         "nodeType": "http-server",
         "shape": "rectangle",
-        "status": "approved",
+        "status": "implemented",
         "references": [
           "src/event-processing-server/HttpEventServer.ts"
         ],
@@ -173,7 +173,7 @@
       "pv": {
         "nodeType": "http-endpoint",
         "shape": "rectangle",
-        "status": "approved",
+        "status": "implemented",
         "references": [
           "src/event-processing-server/HttpEventServer.ts"
         ],
@@ -211,7 +211,7 @@
       "pv": {
         "nodeType": "http-endpoint",
         "shape": "rectangle",
-        "status": "approved",
+        "status": "implemented",
         "references": [
           "src/event-processing-server/HttpEventServer.ts"
         ],
@@ -249,7 +249,7 @@
       "pv": {
         "nodeType": "http-endpoint",
         "shape": "rectangle",
-        "status": "approved",
+        "status": "implemented",
         "references": [
           "src/event-processing-server/HttpEventServer.ts"
         ],
@@ -287,7 +287,7 @@
       "pv": {
         "nodeType": "http-endpoint",
         "shape": "rectangle",
-        "status": "approved",
+        "status": "implemented",
         "references": [
           "src/event-processing-server/HttpEventServer.ts"
         ],
@@ -325,7 +325,7 @@
       "pv": {
         "nodeType": "pipeline",
         "shape": "rectangle",
-        "status": "approved",
+        "status": "implemented",
         "references": [
           "src/event-processing-server/HttpEventServer.ts",
           "src/event-processing-server/EventProcessingServer.ts"
@@ -372,7 +372,7 @@
       "pv": {
         "nodeType": "adapter",
         "shape": "rectangle",
-        "status": "approved",
+        "status": "implemented",
         "references": [
           "src/event-processing-server/HttpEventServer.ts",
           "src/event-processing-server/EventProcessingServer.ts"
@@ -546,7 +546,7 @@
       "pv": {
         "nodeType": "renderer",
         "shape": "rectangle",
-        "status": "approved",
+        "status": "implemented",
         "references": [
           "src/main/agent-session-events/EventServerManager.ts"
         ],
@@ -584,7 +584,7 @@
       "pv": {
         "nodeType": "main-process",
         "shape": "rectangle",
-        "status": "approved",
+        "status": "implemented",
         "references": [
           "src/main/agent-session-events/EventServerManager.ts"
         ],

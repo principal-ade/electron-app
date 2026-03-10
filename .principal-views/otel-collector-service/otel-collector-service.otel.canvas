@@ -93,7 +93,7 @@
       "pv": {
         "nodeType": "singleton",
         "shape": "rectangle",
-        "status": "approved",
+        "status": "implemented",
         "references": [
           "src/main/services/OtelCollectorService.ts"
         ],
@@ -371,7 +371,7 @@
       "pv": {
         "nodeType": "preload-api",
         "shape": "rectangle",
-        "status": "approved",
+        "status": "implemented",
         "references": [
           "src/window/main-process-api-implementations/otelCollectorApi.ts"
         ],
@@ -407,7 +407,7 @@
       "pv": {
         "nodeType": "storage",
         "shape": "rectangle",
-        "status": "approved",
+        "status": "implemented",
         "references": [
           "src/window/main-process-api-implementations/otelCollectorApi.ts"
         ],

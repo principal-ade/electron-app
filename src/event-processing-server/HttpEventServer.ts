@@ -19,6 +19,8 @@ import {
   PathNormalizationAdapter,
   SystemInfo,
 } from '@principal-ai/agent-monitoring';
+import { getTracer } from './telemetry';
+import { SpanStatusCode } from '@opentelemetry/api';
 
 const execAsync = promisify(exec);
 
@@ -370,6 +372,14 @@ export class HttpEventServer extends EventEmitter {
       });
     });
 
+    // Event name mapping for each agent (explicit for static analysis)
+    const eventNames: Record<SupportedAgent, string> = {
+      claude: 'event.http.claude_received',
+      cline: 'event.http.cline_received',
+      opencode: 'event.http.opencode_received',
+      droid: 'event.http.droid_received',
+    };
+
     // Setup routes for each supported agent
     SUPPORTED_AGENTS.forEach((agent) => {
       // hookPath includes the full path like "hooks/claude-hook.cjs", we just want the base name
@@ -387,12 +397,22 @@ export class HttpEventServer extends EventEmitter {
       // POST endpoint for agent events
       this.app.post(`/${routePath}`, async (req: Request, res: Response) => {
         const startTime = Date.now();
+        const tracer = getTracer('event-http-server');
+        const span = tracer.startSpan(`event.http.${agent}_request`);
 
         try {
           // Process the event
           await this.processAgentEvent(agent, req.body);
 
           const duration = Date.now() - startTime;
+
+          // Event: Agent event received via HTTP POST
+          span.addEvent(eventNames[agent], {
+            'provider': agent,
+            'duration_ms': duration,
+          });
+
+          span.setStatus({ code: SpanStatusCode.OK });
 
           // Return success response
           res.status(200).json({
@@ -403,6 +423,7 @@ export class HttpEventServer extends EventEmitter {
           });
         } catch (error) {
           this.errorCount++;
+          span.setStatus({ code: SpanStatusCode.ERROR, message: (error as Error).message });
           this.log('error', `Error processing ${agent} event: ${error}`);
 
           res.status(500).json({
@@ -410,6 +431,8 @@ export class HttpEventServer extends EventEmitter {
             provider: agent,
             error: (error as Error).message,
           });
+        } finally {
+          span.end();
         }
       });
 
@@ -439,6 +462,10 @@ export class HttpEventServer extends EventEmitter {
     provider: SupportedAgent,
     rawData: unknown,
   ): Promise<void> {
+    const tracer = getTracer('event-http-server');
+    const span = tracer.startSpan('event.pipeline.processing');
+    const startTime = Date.now();
+
     try {
       // Validate raw data
       if (!rawData || typeof rawData !== 'object') {
@@ -450,6 +477,26 @@ export class HttpEventServer extends EventEmitter {
         provider,
         rawData,
       );
+
+      const duration = Date.now() - startTime;
+
+      // Event: Event processed through AgentEventPipeline
+      span.addEvent('event.pipeline.event_processed', {
+        'provider': provider,
+        'session.id': repoNormalizedEvent.sessionId || '',
+        'event.type': repoNormalizedEvent.eventType?.toString() || '',
+        'duration_ms': duration,
+      });
+
+      // Event: Repository info resolved for event path (if applicable)
+      if (repoNormalizedEvent.repository) {
+        span.addEvent('event.adapter.repo_resolved', {
+          'repo.root': repoNormalizedEvent.repository.root || '',
+          'repo.owner': repoNormalizedEvent.repository.owner || '',
+          'repo.name': repoNormalizedEvent.repository.repo || '',
+          'cache.hit': false, // We don't track cache hits at this level
+        });
+      }
 
       // Send directly to registered renderer ports (for real-time UI updates)
       const repository = repoNormalizedEvent.repository?.root;
@@ -463,9 +510,14 @@ export class HttpEventServer extends EventEmitter {
           sendEventToPorts(repository, repoNormalizedEvent);
         }
       }
+
+      span.setStatus({ code: SpanStatusCode.OK });
     } catch (error) {
+      span.setStatus({ code: SpanStatusCode.ERROR, message: (error as Error).message });
       this.log('error', `Event processing failed: ${error}`);
       throw error;
+    } finally {
+      span.end();
     }
   }
 
@@ -545,10 +597,22 @@ export class HttpEventServer extends EventEmitter {
    * Start the HTTP server
    */
   async start(): Promise<void> {
+    const tracer = getTracer('event-http-server');
+    const span = tracer.startSpan('event.server.startup');
+
     return new Promise((resolve, reject) => {
       const tryPort = (port: number, retries: number) => {
         this.server = this.app.listen(port, () => {
           this.port = port;
+
+          // Event: HTTP server started listening for agent events
+          span.addEvent('event.server.http_started', {
+            'server.port': port,
+            'endpoints.count': SUPPORTED_AGENTS.length,
+          });
+
+          span.setStatus({ code: SpanStatusCode.OK });
+          span.end();
           this.log('info', `HTTP server listening on port ${port}`);
           resolve();
         });
@@ -558,6 +622,8 @@ export class HttpEventServer extends EventEmitter {
             this.log('warn', `Port ${port} in use, trying ${port + 1}`);
             tryPort(port + 1, retries - 1);
           } else {
+            span.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+            span.end();
             reject(err);
           }
         });

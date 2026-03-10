@@ -1,0 +1,24 @@
+{
+  "version": "1.0.0",
+  "name": "Preload Port Subscription",
+  "description": "Renderer preload receives MessagePort and sets up trace subscription",
+  "mode": "span-tree",
+  "canvas": ".principal-views/otel-collector-service/otel-collector-service.otel.canvas",
+  "spanPattern": "otel.preload.port_received",
+  "scenarios": [
+    {
+      "id": "port-subscription",
+      "description": "Preload receives port from main and registers subscriber",
+      "priority": 1,
+      "template": {
+        "introduction": "**Preload Port Subscription (Renderer)**\n\nPreload bridge received MessagePort and setting up trace subscription.",
+        "events": {
+          "otel.preload.port_received": "[1] Preload received port for window {{window.id}} (service: {{service.identifier}})",
+          "otel.preload.subscriber_added": "[2] Subscriber added: key={{key}}, count={{subscribers.count}}",
+          "otel.renderer.trace_displayed": "[3] Renderer displaying trace"
+        },
+        "summary": "**Subscription Summary:**\n- Window: {{window.id}}\n- Service: {{service.identifier}}\n- Subscribers: {{subscribers.count}}"
+      }
+    }
+  ]
+}

@@ -47,6 +47,13 @@ ipcRenderer.on('otel-collector:port', (event, data: { windowId: string; serviceI
 
   // Start the port to enable messaging
   port.start();
+
+  // Event: Preload bridge received MessagePort from main process
+  console.info('[OTEL_EVENT] otel.preload.port_received', JSON.stringify({
+    'window.id': data.windowId,
+    'service.identifier': data.serviceIdentifier || data.serviceIdentifiers?.join(',') || '',
+  }));
+
   console.info(`[otelCollectorApi] ✅ OTEL port started for ${key}`);
 
   // Set up message handler to route to subscribers
@@ -182,6 +189,12 @@ export const otelCollectorApi: OtelCollectorAPI = {
     // Add the callback to subscribers
     subscribers.add(callback);
 
+    // Event: Message subscriber registered for trace delivery
+    console.info('[OTEL_EVENT] otel.preload.subscriber_added', JSON.stringify({
+      'key': key,
+      'subscribers.count': subscribers.size,
+    }));
+
     // Return unsubscribe function
     return () => {
       const subscribers = otelMessageSubscribers.get(key);
@@ -216,6 +229,12 @@ export const otelCollectorApi: OtelCollectorAPI = {
 
     // Add the callback to subscribers
     subscribers.add(callback);
+
+    // Event: Message subscriber registered for trace delivery (multi-service)
+    console.info('[OTEL_EVENT] otel.preload.subscriber_added', JSON.stringify({
+      'key': key,
+      'subscribers.count': subscribers.size,
+    }));
 
     // Return unsubscribe function
     return () => {

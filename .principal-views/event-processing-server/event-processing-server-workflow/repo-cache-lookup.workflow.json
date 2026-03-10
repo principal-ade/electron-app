@@ -1,0 +1,22 @@
+{
+  "version": "1.0.0",
+  "name": "Repository Cache Lookup",
+  "description": "Git repository cache lookup during path normalization",
+  "mode": "span-tree",
+  "canvas": ".principal-views/event-processing-server/event-processing-server.otel.canvas",
+  "spanPattern": "event.cache.repo_lookup",
+  "scenarios": [
+    {
+      "id": "cache-lookup",
+      "description": "Cache lookup for git repository info",
+      "priority": 1,
+      "template": {
+        "introduction": "**Repository Cache Lookup (Utility Process)**\n\nLooking up git repository info from cache.",
+        "events": {
+          "event.cache.repo_lookup": "[1] Cache lookup: hit={{cache.hit}}, size={{cache.size}}"
+        },
+        "summary": "**Cache Summary:**\n- Hit: {{cache.hit}}\n- Cache Size: {{cache.size}}"
+      }
+    }
+  ]
+}
