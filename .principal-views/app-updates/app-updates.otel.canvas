@@ -89,13 +89,16 @@
       "pv": {
         "nodeType": "ui-component",
         "shape": "rectangle",
-        "status": "draft",
+        "status": "implemented",
         "references": [
           "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
         ],
         "otel": {
           "kind": "event",
-          "category": "ui"
+          "category": "ui",
+          "files": [
+            "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
+          ]
         },
         "event": {
           "name": "app_updates.ui.settings_opened",
@@ -124,13 +127,16 @@
       "pv": {
         "nodeType": "user-action",
         "shape": "rectangle",
-        "status": "draft",
+        "status": "implemented",
         "references": [
           "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
         ],
         "otel": {
           "kind": "event",
-          "category": "user_action"
+          "category": "user_action",
+          "files": [
+            "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
+          ]
         },
         "event": {
           "name": "app_updates.user.check_requested",
@@ -179,7 +185,7 @@
       "id": "ipc-bridge",
       "type": "text",
       "x": 320,
-      "y": 180,
+      "y": 179,
       "width": 220,
       "height": 100,
       "text": "IPC Bridge\n(appVersionManagerApi)\nipcRenderer.send()\nipcRenderer.on()",
@@ -221,13 +227,16 @@
       "pv": {
         "nodeType": "main-process",
         "shape": "rectangle",
-        "status": "draft",
+        "status": "implemented",
         "references": [
           "src/main/AppVersionManager.ts"
         ],
         "otel": {
           "kind": "event",
-          "category": "lifecycle"
+          "category": "lifecycle",
+          "files": [
+            "src/main/AppVersionManager.ts"
+          ]
         },
         "event": {
           "name": "app_updates.manager.initialized",
@@ -256,13 +265,16 @@
       "pv": {
         "nodeType": "main-process",
         "shape": "rectangle",
-        "status": "draft",
+        "status": "implemented",
         "references": [
           "src/main/AppVersionManager.ts"
         ],
         "otel": {
           "kind": "event",
-          "category": "update"
+          "category": "update",
+          "files": [
+            "src/main/AppVersionManager.ts"
+          ]
         },
         "event": {
           "name": "app_updates.check.started",
@@ -281,9 +293,51 @@
       }
     },
     {
+      "id": "github-request",
+      "type": "text",
+      "x": 907,
+      "y": 128,
+      "width": 220,
+      "height": 80,
+      "text": "GitHub HTTP Request\nGET latest-mac.yml\nTracks request timing",
+      "pv": {
+        "nodeType": "main-process",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/main/AppVersionManager.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "http",
+          "files": [
+            "src/main/AppVersionManager.ts"
+          ]
+        },
+        "event": {
+          "name": "app_updates.github.request_completed",
+          "description": "HTTP request to GitHub completed",
+          "attributes": {
+            "duration_ms": {
+              "type": "number",
+              "description": "Request duration in milliseconds"
+            },
+            "result": {
+              "type": "string",
+              "description": "Result: update_available or update_not_available"
+            },
+            "cached": {
+              "type": "boolean",
+              "description": "Whether the response may have been cached (no checking-for-update event fired)"
+            }
+          }
+        }
+      }
+    },
+    {
       "id": "auto-updater",
       "type": "text",
-      "x": 860,
+      "x": 1229,
       "y": 50,
       "width": 220,
       "height": 100,
@@ -306,7 +360,7 @@
     {
       "id": "github-releases",
       "type": "text",
-      "x": 1130,
+      "x": 1499,
       "y": 50,
       "width": 200,
       "height": 100,
@@ -327,21 +381,24 @@
     {
       "id": "update-available",
       "type": "text",
-      "x": 860,
-      "y": 180,
+      "x": 1214,
+      "y": 186,
       "width": 220,
       "height": 80,
       "text": "update-available\nevent\nNew version found",
       "pv": {
         "nodeType": "main-process",
         "shape": "rectangle",
-        "status": "draft",
+        "status": "implemented",
         "references": [
           "src/main/AppVersionManager.ts"
         ],
         "otel": {
           "kind": "event",
-          "category": "update"
+          "category": "update",
+          "files": [
+            "src/main/AppVersionManager.ts"
+          ]
         },
         "event": {
           "name": "app_updates.check.available",
@@ -368,21 +425,24 @@
     {
       "id": "update-not-available",
       "type": "text",
-      "x": 860,
-      "y": 280,
+      "x": 1197,
+      "y": 282,
       "width": 220,
       "height": 80,
       "text": "update-not-available\nevent\nAlready on latest",
       "pv": {
         "nodeType": "main-process",
         "shape": "rectangle",
-        "status": "draft",
+        "status": "implemented",
         "references": [
           "src/main/AppVersionManager.ts"
         ],
         "otel": {
           "kind": "event",
-          "category": "update"
+          "category": "update",
+          "files": [
+            "src/main/AppVersionManager.ts"
+          ]
         },
         "event": {
           "name": "app_updates.check.not_available",
@@ -407,13 +467,16 @@
       "pv": {
         "nodeType": "user-action",
         "shape": "rectangle",
-        "status": "draft",
+        "status": "implemented",
         "references": [
           "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
         ],
         "otel": {
           "kind": "event",
-          "category": "user_action"
+          "category": "user_action",
+          "files": [
+            "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
+          ]
         },
         "event": {
           "name": "app_updates.user.download_requested",
@@ -438,13 +501,16 @@
       "pv": {
         "nodeType": "main-process",
         "shape": "rectangle",
-        "status": "draft",
+        "status": "implemented",
         "references": [
           "src/main/AppVersionManager.ts"
         ],
         "otel": {
           "kind": "event",
-          "category": "download"
+          "category": "download",
+          "files": [
+            "src/main/AppVersionManager.ts"
+          ]
         },
         "event": {
           "name": "app_updates.download.started",
@@ -461,21 +527,24 @@
     {
       "id": "download-progress",
       "type": "text",
-      "x": 860,
-      "y": 400,
+      "x": 1197,
+      "y": 402,
       "width": 220,
       "height": 80,
       "text": "download-progress\nevent\nBytes transferred %",
       "pv": {
         "nodeType": "main-process",
         "shape": "rectangle",
-        "status": "draft",
+        "status": "implemented",
         "references": [
           "src/main/AppVersionManager.ts"
         ],
         "otel": {
           "kind": "event",
-          "category": "download"
+          "category": "download",
+          "files": [
+            "src/main/AppVersionManager.ts"
+          ]
         },
         "event": {
           "name": "app_updates.download.progress",
@@ -512,13 +581,16 @@
       "pv": {
         "nodeType": "ui-component",
         "shape": "rectangle",
-        "status": "draft",
+        "status": "implemented",
         "references": [
           "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
         ],
         "otel": {
           "kind": "event",
-          "category": "ui"
+          "category": "ui",
+          "files": [
+            "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
+          ]
         },
         "event": {
           "name": "app_updates.ui.progress_updated",
@@ -535,21 +607,24 @@
     {
       "id": "update-downloaded",
       "type": "text",
-      "x": 860,
-      "y": 500,
+      "x": 1197,
+      "y": 502,
       "width": 220,
       "height": 80,
       "text": "update-downloaded\nevent\nReady to install",
       "pv": {
         "nodeType": "main-process",
         "shape": "rectangle",
-        "status": "draft",
+        "status": "implemented",
         "references": [
           "src/main/AppVersionManager.ts"
         ],
         "otel": {
           "kind": "event",
-          "category": "download"
+          "category": "download",
+          "files": [
+            "src/main/AppVersionManager.ts"
+          ]
         },
         "event": {
           "name": "app_updates.download.completed",
@@ -579,13 +654,16 @@
       "pv": {
         "nodeType": "user-action",
         "shape": "rectangle",
-        "status": "draft",
+        "status": "implemented",
         "references": [
           "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
         ],
         "otel": {
           "kind": "event",
-          "category": "user_action"
+          "category": "user_action",
+          "files": [
+            "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
+          ]
         },
         "event": {
           "name": "app_updates.user.install_requested",
@@ -610,13 +688,16 @@
       "pv": {
         "nodeType": "main-process",
         "shape": "rectangle",
-        "status": "draft",
+        "status": "implemented",
         "references": [
           "src/main/AppVersionManager.ts"
         ],
         "otel": {
           "kind": "event",
-          "category": "install"
+          "category": "install",
+          "files": [
+            "src/main/AppVersionManager.ts"
+          ]
         },
         "event": {
           "name": "app_updates.install.started",
@@ -633,8 +714,8 @@
     {
       "id": "app-restart",
       "type": "text",
-      "x": 860,
-      "y": 620,
+      "x": 1197,
+      "y": 618,
       "width": 220,
       "height": 80,
       "text": "App Restarts\nwith new version\ninstalled",
@@ -674,14 +755,17 @@
       "pv": {
         "nodeType": "main-process",
         "shape": "rectangle",
-        "status": "draft",
+        "status": "implemented",
         "references": [
           "src/main/AppVersionManager.ts",
           "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
         ],
         "otel": {
           "kind": "event",
-          "category": "error"
+          "category": "error",
+          "files": [
+            "src/main/AppVersionManager.ts"
+          ]
         },
         "event": {
           "name": "app_updates.error.occurred",
@@ -714,13 +798,16 @@
       "pv": {
         "nodeType": "main-process",
         "shape": "rectangle",
-        "status": "draft",
+        "status": "implemented",
         "references": [
           "src/main/AppVersionManager.ts"
         ],
         "otel": {
           "kind": "event",
-          "category": "update"
+          "category": "update",
+          "files": [
+            "src/main/AppVersionManager.ts"
+          ]
         },
         "event": {
           "name": "app_updates.check.periodic",
@@ -749,13 +836,16 @@
       "pv": {
         "nodeType": "main-process",
         "shape": "rectangle",
-        "status": "draft",
+        "status": "implemented",
         "references": [
           "src/main/AppVersionManager.ts"
         ],
         "otel": {
           "kind": "event",
-          "category": "update"
+          "category": "update",
+          "files": [
+            "src/main/AppVersionManager.ts"
+          ]
         },
         "event": {
           "name": "app_updates.check.user_triggered",
@@ -813,7 +903,7 @@
     {
       "id": "config-note",
       "type": "text",
-      "x": 1130,
+      "x": 1499,
       "y": 180,
       "width": 200,
       "height": 120,
@@ -831,13 +921,16 @@
       "pv": {
         "nodeType": "ui-component",
         "shape": "rectangle",
-        "status": "draft",
+        "status": "implemented",
         "references": [
           "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
         ],
         "otel": {
           "kind": "event",
-          "category": "ui"
+          "category": "ui",
+          "files": [
+            "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
+          ]
         },
         "event": {
           "name": "app_updates.ui.error_displayed",
@@ -936,8 +1029,19 @@
       }
     },
     {
-      "id": "check-to-available",
+      "id": "check-to-github-request",
       "fromNode": "check-for-updates",
+      "fromSide": "right",
+      "toNode": "github-request",
+      "toSide": "left",
+      "label": "HTTP request",
+      "pv": {
+        "edgeType": "http-request"
+      }
+    },
+    {
+      "id": "github-request-to-available",
+      "fromNode": "github-request",
       "fromSide": "right",
       "toNode": "update-available",
       "toSide": "left",
@@ -947,8 +1051,8 @@
       }
     },
     {
-      "id": "check-to-not-available",
-      "fromNode": "check-for-updates",
+      "id": "github-request-to-not-available",
+      "fromNode": "github-request",
       "fromSide": "right",
       "toNode": "update-not-available",
       "toSide": "left",

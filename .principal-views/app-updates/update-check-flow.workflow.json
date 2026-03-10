@@ -16,7 +16,8 @@
           "app_updates.manager.initialized": "1. AppVersionManager initialized (autoDownload: {{auto_download}}, autoInstall: {{auto_install}})",
           "app_updates.startup.check_triggered": "2. Startup check triggered for v{{app_version}}",
           "app_updates.check.started": "3. Check started (trigger={{trigger}})",
-          "app_updates.check.available": "4. **Update found:** v{{current_version}} -> v{{available_version}}"
+          "app_updates.github.request_completed": "4. GitHub responded in {{duration_ms}}ms (result={{result}}, cached={{cached}})",
+          "app_updates.check.available": "5. **Update found:** v{{current_version}} -> v{{available_version}}"
         },
         "summary": "**Startup Check**\n- Initialized: AppVersionManager\n- Current: v{{current_version}}\n- Available: v{{available_version}}"
       }
@@ -30,7 +31,8 @@
         "events": {
           "app_updates.check.periodic": "1. Periodic check triggered (interval: {{interval_ms}}ms, timeout: {{timeout_ms}}ms)",
           "app_updates.check.started": "2. Check started for v{{current_version}} (trigger={{trigger}})",
-          "app_updates.check.available": "3. **Update found:** v{{current_version}} -> v{{available_version}} (released: {{release_date}})"
+          "app_updates.github.request_completed": "3. GitHub responded in {{duration_ms}}ms (result={{result}}, cached={{cached}})",
+          "app_updates.check.available": "4. **Update found:** v{{current_version}} -> v{{available_version}} (released: {{release_date}})"
         },
         "summary": "**Periodic Check - Update Available**\n- Interval: {{interval_ms}}ms\n- Current: v{{current_version}}\n- Available: v{{available_version}}"
       }
@@ -44,7 +46,8 @@
         "events": {
           "app_updates.check.periodic": "1. Periodic check triggered (interval: {{interval_ms}}ms, timeout: {{timeout_ms}}ms)",
           "app_updates.check.started": "2. Check started for v{{current_version}} (trigger={{trigger}})",
-          "app_updates.check.not_available": "3. No update: v{{current_version}} is the latest"
+          "app_updates.github.request_completed": "3. GitHub responded in {{duration_ms}}ms (result={{result}}, cached={{cached}})",
+          "app_updates.check.not_available": "4. No update: v{{current_version}} is the latest"
         },
         "summary": "**Periodic Check - Up to Date**\n- Interval: {{interval_ms}}ms\n- Status: Latest version installed"
       }
@@ -72,7 +75,8 @@
         "events": {
           "app_updates.check.user_triggered": "1. User triggered check (trigger={{trigger}})",
           "app_updates.check.started": "2. Check started for v{{current_version}}",
-          "app_updates.check.available": "3. **Update found:** v{{current_version}} -> v{{available_version}} (released: {{release_date}})"
+          "app_updates.github.request_completed": "3. GitHub responded in {{duration_ms}}ms (result={{result}}, cached={{cached}})",
+          "app_updates.check.available": "4. **Update found:** v{{current_version}} -> v{{available_version}} (released: {{release_date}})"
         },
         "summary": "**Update Available**\n- Current: v{{current_version}}\n- Available: v{{available_version}}\n- Ready to download"
       }
@@ -86,7 +90,8 @@
         "events": {
           "app_updates.check.user_triggered": "1. User triggered check (trigger={{trigger}})",
           "app_updates.check.started": "2. Check started for v{{current_version}}",
-          "app_updates.check.not_available": "3. No update: v{{current_version}} is the latest"
+          "app_updates.github.request_completed": "3. GitHub responded in {{duration_ms}}ms (result={{result}}, cached={{cached}})",
+          "app_updates.check.not_available": "4. No update: v{{current_version}} is the latest"
         },
         "summary": "**Up to Date**\n- Current: v{{current_version}}\n- Status: Latest version installed"
       }

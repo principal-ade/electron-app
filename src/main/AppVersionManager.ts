@@ -32,6 +32,9 @@ export default class AppVersionManager {
   // Track last known available version for telemetry
   private lastAvailableVersion: string = '';
 
+  // Track GitHub request start time for duration calculation
+  private githubRequestStartTime: number = 0;
+
   constructor() {
     // Emit manager initialization event (standalone span since it's synchronous)
     const initSpan = tracer.startSpan('app_updates.manager.initialized');
@@ -178,8 +181,31 @@ export default class AppVersionManager {
   }
 
   private setupEventHandlers() {
+    autoUpdater.on('checking-for-update', () => {
+      log.info('[AppUpdater] Checking for update - HTTP request started');
+
+      // Record start time for duration calculation
+      this.githubRequestStartTime = Date.now();
+
+      // Add event to check span - this fires when the actual HTTP request begins
+      this.activeCheckSpan?.addEvent('app_updates.github.request_started', {
+        feed_url: 'github:principal-ade/landing-page',
+      });
+    });
+
     autoUpdater.on('update-available', (info: UpdateInfo) => {
       log.info('Update available:', JSON.stringify(info, null, 2));
+
+      // Calculate request duration and emit completion event
+      const duration_ms = this.githubRequestStartTime > 0
+        ? Date.now() - this.githubRequestStartTime
+        : 0;
+      this.activeCheckSpan?.addEvent('app_updates.github.request_completed', {
+        duration_ms,
+        result: 'update_available',
+        cached: !this.githubRequestStartTime, // If no start time, likely cached
+      });
+      this.githubRequestStartTime = 0;
 
       // Track available version for telemetry
       this.lastAvailableVersion = info.version;
@@ -198,6 +224,17 @@ export default class AppVersionManager {
 
     autoUpdater.on('update-not-available', (info: UpdateInfo) => {
       log.info('Update not available:', JSON.stringify(info, null, 2));
+
+      // Calculate request duration and emit completion event
+      const duration_ms = this.githubRequestStartTime > 0
+        ? Date.now() - this.githubRequestStartTime
+        : 0;
+      this.activeCheckSpan?.addEvent('app_updates.github.request_completed', {
+        duration_ms,
+        result: 'update_not_available',
+        cached: !this.githubRequestStartTime, // If no start time, likely cached
+      });
+      this.githubRequestStartTime = 0;
 
       // Add event to check span
       this.activeCheckSpan?.addEvent('app_updates.check.not_available', {
