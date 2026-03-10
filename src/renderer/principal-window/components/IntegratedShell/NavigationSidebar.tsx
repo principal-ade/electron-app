@@ -3,7 +3,7 @@ import {
   Settings,
   Activity,
   User,
-  Folder,
+  Monitor,
   Github,
   Star,
   Users,
@@ -120,7 +120,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
     );
 
   const navItems: NavItem[] = [
-    { id: 'local-projects', icon: <Folder size={20} />, label: 'Local' },
+    { id: 'local-projects', icon: <Monitor size={20} />, label: 'Local' },
     { id: 'remote-projects', icon: <Github size={20} />, label: 'Github' },
     { id: 'starred-projects', icon: <Star size={20} />, label: 'Starred' },
     { id: 'worlds', icon: <Map size={20} />, label: 'Worlds' },

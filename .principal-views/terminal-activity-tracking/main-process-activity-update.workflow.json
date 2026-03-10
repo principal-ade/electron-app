@@ -32,7 +32,8 @@
           "terminal.activity.broadcast_sent": "[3] Broadcast on **{{channel}}**\n    Windows: {{windows.count}}, Activities: {{activities.count}}"
         },
         "summary": "**Stopped** `{{session.id}}` | Remaining: {{store.size}} | Notified: {{windows.count}} windows"
-      }
+      },
+      "filterDefault": true
     }
   ]
 }

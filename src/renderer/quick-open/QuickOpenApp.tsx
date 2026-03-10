@@ -350,22 +350,11 @@ const QuickOpenApp: React.FC = () => {
                     cursor: 'pointer',
                     borderBottom: `1px solid ${theme.colors.border}`,
                     opacity: item.isOpen ? 0.7 : 1,
+                    background: isSelected
+                      ? theme.colors.primary
+                      : 'transparent',
                   }}
                 >
-                  {/* Selection background */}
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      background: isSelected
-                        ? `${theme.colors.primary}20`
-                        : 'transparent',
-                      zIndex: -1,
-                    }}
-                  />
                   {/* Content */}
                   <div
                     style={{
@@ -434,7 +423,7 @@ const QuickOpenApp: React.FC = () => {
                         <span
                           style={{
                             color: isSelected
-                              ? theme.colors.primary
+                              ? theme.colors.textOnPrimary
                               : theme.colors.text,
                           }}
                         >
@@ -461,7 +450,7 @@ const QuickOpenApp: React.FC = () => {
                         <div
                           style={{
                             color: isSelected
-                              ? theme.colors.accent
+                              ? `${theme.colors.textOnPrimary}cc`
                               : theme.colors.textSecondary,
                             fontSize: theme.fontSizes[3],
                             fontFamily: theme.fonts.body,

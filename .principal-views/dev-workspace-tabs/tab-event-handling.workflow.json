@@ -19,7 +19,8 @@
           "devworkspace.tab.created": "4. Tab created: `{{tab.id}}` (type: {{tab.contentType}})"
         },
         "summary": "**Result:** Tab `{{tab.id}}` ready for render"
-      }
+      },
+      "filterDefault": true
     }
   ]
 }

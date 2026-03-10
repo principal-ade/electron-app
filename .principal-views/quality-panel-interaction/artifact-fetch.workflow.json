@@ -24,7 +24,8 @@
           "quality.context.updated": "9. Context updated for {{repository.path}} ({{quality.packages.count}} packages, last: {{quality.lastUpdated}})"
         },
         "summary": "**Artifact Summary:**\n- Repository: `{{github.owner}}/{{github.repo}}`\n- Branch: `{{git.branch}}`\n- Packages: {{packages.count}}\n- Last Run: {{artifact.timestamp}}"
-      }
+      },
+      "filterDefault": true
     },
     {
       "id": "artifact-fetch-not-found",

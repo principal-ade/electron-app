@@ -290,7 +290,6 @@ export class OtelCollectorService {
       });
 
       span.setStatus({ code: SpanStatusCode.OK });
-      console.log(`[OtelCollectorService] Stored trace ${traceId}, total: ${this.traces.length}`);
     } catch (err) {
       span.setStatus({ code: SpanStatusCode.ERROR, message: err instanceof Error ? err.message : String(err) });
       console.error('[OtelCollectorService] Failed to store trace:', err);

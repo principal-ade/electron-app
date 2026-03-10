@@ -16,7 +16,8 @@
           "terminal.activity.sync_received": "[1] Sync received: {{activities.count}} active sessions, UI updated={{ui.updated}}"
         },
         "summary": "**Sync Summary:**\n- Active Sessions: {{activities.count}}\n- UI Updated: {{ui.updated}}"
-      }
+      },
+      "filterDefault": true
     }
   ]
 }

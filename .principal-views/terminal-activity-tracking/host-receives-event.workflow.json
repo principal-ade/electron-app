@@ -17,7 +17,8 @@
           "terminal.activity.tipc_invoked": "[2] TIPC invoked: **{{procedure.name}}**, working={{is_working}}"
         },
         "summary": "**Host Event Summary:**\n- Session: `{{session.id}}`\n- Working: {{is_working}}"
-      }
+      },
+      "filterDefault": true
     }
   ]
 }
