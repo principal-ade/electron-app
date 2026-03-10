@@ -1287,9 +1287,6 @@ export const RepositoryPanelProvider: React.FC<
                       scenarioMatches: registeredTrace.scenarioMatches.length,
                     });
 
-                    // Detailed span logging for debugging
-                    console.info('[TraceProcessing] 📋 Full RegisteredTrace:', JSON.stringify(registeredTrace, null, 2));
-
                     // Extract service name for counting
                     const serviceName = extractServiceName(singleTraceOtlp);
                     if (serviceName) {
