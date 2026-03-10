@@ -49,8 +49,7 @@
         "status": "draft",
         "otel": {
           "kind": "event",
-          "category": "user-action",
-          "isNew": true
+          "category": "user-action"
         },
         "event": {
           "name": "alexandria.window.open.requested",
@@ -94,8 +93,7 @@
         "status": "draft",
         "otel": {
           "kind": "span",
-          "category": "ipc",
-          "isNew": true
+          "category": "ipc"
         },
         "event": {
           "name": "alexandria.window.ipc.invoke",
@@ -133,8 +131,7 @@
         "status": "draft",
         "otel": {
           "kind": "span",
-          "category": "ipc",
-          "isNew": true
+          "category": "ipc"
         },
         "event": {
           "name": "alexandria.window.handler.received",
@@ -174,8 +171,7 @@
         "status": "draft",
         "otel": {
           "kind": "span",
-          "category": "database",
-          "isNew": true
+          "category": "database"
         },
         "event": {
           "name": "alexandria.workspace.lookup",
@@ -259,8 +255,7 @@
         "status": "draft",
         "otel": {
           "kind": "event",
-          "category": "lifecycle",
-          "isNew": true
+          "category": "lifecycle"
         },
         "event": {
           "name": "terminal.window.registered",
@@ -291,8 +286,7 @@
         "status": "draft",
         "otel": {
           "kind": "span",
-          "category": "io",
-          "isNew": true
+          "category": "io"
         },
         "event": {
           "name": "alexandria.watches.acquired",
@@ -335,8 +329,7 @@
         "status": "draft",
         "otel": {
           "kind": "span",
-          "category": "navigation",
-          "isNew": true
+          "category": "navigation"
         },
         "event": {
           "name": "window.loadURL",
@@ -376,8 +369,7 @@
         "status": "draft",
         "otel": {
           "kind": "span",
-          "category": "lifecycle",
-          "isNew": true
+          "category": "lifecycle"
         },
         "event": {
           "name": "alexandria.app.initialized",
@@ -421,8 +413,7 @@
         "status": "draft",
         "otel": {
           "kind": "event",
-          "category": "lifecycle",
-          "isNew": true
+          "category": "lifecycle"
         },
         "event": {
           "name": "alexandria.window.ready",
@@ -465,8 +456,7 @@
         "status": "draft",
         "otel": {
           "kind": "event",
-          "category": "database",
-          "isNew": true
+          "category": "database"
         },
         "event": {
           "name": "alexandria.workspace.found",
@@ -500,8 +490,7 @@
         "status": "draft",
         "otel": {
           "kind": "event",
-          "category": "error",
-          "isNew": true
+          "category": "error"
         },
         "event": {
           "name": "alexandria.workspace.not_found",
@@ -535,8 +524,7 @@
         "status": "draft",
         "otel": {
           "kind": "event",
-          "category": "lifecycle",
-          "isNew": true
+          "category": "lifecycle"
         },
         "event": {
           "name": "alexandria.window.temp.mode",
@@ -570,8 +558,7 @@
         "status": "draft",
         "otel": {
           "kind": "event",
-          "category": "lifecycle",
-          "isNew": true
+          "category": "lifecycle"
         },
         "event": {
           "name": "alexandria.window.creating",
@@ -605,8 +592,7 @@
         "status": "draft",
         "otel": {
           "kind": "event",
-          "category": "lifecycle",
-          "isNew": true
+          "category": "lifecycle"
         },
         "event": {
           "name": "alexandria.window.reusing",
@@ -640,8 +626,7 @@
         "status": "draft",
         "otel": {
           "kind": "event",
-          "category": "error",
-          "isNew": true
+          "category": "error"
         },
         "event": {
           "name": "alexandria.window.open.failed",

@@ -1,0 +1,32 @@
+{
+  "version": "1.0.0",
+  "name": "Agent Event Processing",
+  "description": "Flow of agent session events from external agents through HTTP server to renderer windows",
+  "mode": "span-tree",
+  "canvas": ".principal-views/event-processing-server/event-processing-server.otel.canvas",
+  "spanPattern": "event.pipeline.event_processed",
+  "scenarios": [
+    {
+      "id": "agent-event-flow",
+      "description": "Agent sends event, HTTP server receives, pipeline processes, window updated",
+      "priority": 1,
+      "template": {
+        "introduction": "**Agent Event Processing**\n\nExternal agent sent an event that is being processed through the event pipeline.",
+        "events": {
+          "event.server.manager_started": "[1] EventServerManager started on port **{{server.port}}**",
+          "event.server.http_started": "[2] HTTP server listening on port **{{server.port}}** with {{endpoints.count}} endpoints",
+          "event.http.claude_received": "[3] Claude event received, processed in {{duration_ms}}ms",
+          "event.http.cline_received": "[3] Cline event received, processed in {{duration_ms}}ms",
+          "event.http.opencode_received": "[3] OpenCode event received, processed in {{duration_ms}}ms",
+          "event.http.droid_received": "[3] Droid event received, processed in {{duration_ms}}ms",
+          "event.pipeline.event_processed": "[4] Pipeline processed **{{provider}}** event for session `{{session.id}}` ({{event.type}}) in {{duration_ms}}ms",
+          "event.adapter.repo_resolved": "[5] Resolved repo: **{{repo.owner}}/{{repo.name}}** (cache hit: {{cache.hit}})",
+          "event.cache.repo_lookup": "[5b] Cache lookup: hit={{cache.hit}}, size={{cache.size}}",
+          "event.port.registered": "[6] Port registered for window {{window.id}} -> {{repository}}",
+          "event.window.session_updated": "[7] Window updated: session `{{session.id}}` in {{directory}}"
+        },
+        "summary": "**Event Processing Summary:**\n- Provider: {{provider}}\n- Session: `{{session.id}}`\n- Event Type: {{event.type}}"
+      }
+    }
+  ]
+}

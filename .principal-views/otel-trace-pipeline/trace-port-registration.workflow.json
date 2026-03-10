@@ -13,11 +13,17 @@
       "template": {
         "introduction": "**Port Registration**\n\nIPC handler received registration request for window `{{window.id}}`.",
         "events": {
+          "otel.external_service.activity": "[0] External application activity",
+          "otel.otlp_endpoint.activity": "[0b] OTLP HTTP endpoint activity",
           "otel.ipc.handler_invoked": "[1] IPC handler **{{handler.name}}** invoked from window {{window.id}} (source: {{source.url}})",
-          "otel.messageport.trace_routed": "[2] MessagePort registered for window {{window.id}} (source: {{source.url}}, type: {{message.type}}, registered: {{port.registered}})"
+          "otel.messageport.trace_routed": "[2] MessagePort registered for window {{window.id}} (source: {{source.url}}, type: {{message.type}}, registered: {{port.registered}})",
+          "otel.preload_bridge.activity": "[3] Preload bridge activity",
+          "otel.trace_message_subscriber.activity": "[4] Message subscriber activity",
+          "otel.event_bus.activity": "[5] Event bus activity"
         },
         "summary": "**Registration Summary:**\n- Handler: {{handler.name}}\n- Window ID: `{{window.id}}`\n- Source URL: `{{source.url}}`\n- Message Type: {{message.type}}\n- Port Registered: {{port.registered}}\n\n**Flow:**\n1. Renderer calls registerPort/registerPortForServices\n2. IPC invoke received in main process\n3. MessageChannelMain created\n4. Port1 registered with OtelCollectorService\n5. Port2 sent to renderer via postMessage"
-      }
+      },
+      "filterDefault": true
     }
   ]
 }

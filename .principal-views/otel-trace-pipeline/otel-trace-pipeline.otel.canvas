@@ -104,7 +104,15 @@
         "status": "draft",
         "references": [
           "src/main/services/OtelCollectorService.ts"
-        ]
+        ],
+        "otel": {
+          "kind": "span",
+          "category": "external"
+        },
+        "event": {
+          "name": "otel.external_service.activity",
+          "description": "Application Code activity"
+        }
       }
     },
     {
@@ -121,7 +129,15 @@
         "status": "draft",
         "references": [
           "src/main/services/OtelCollectorService.ts"
-        ]
+        ],
+        "otel": {
+          "kind": "span",
+          "category": "external"
+        },
+        "event": {
+          "name": "otel.otlp_endpoint.activity",
+          "description": "OTLP HTTP Endpoint activity"
+        }
       }
     },
     {
@@ -141,7 +157,10 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "trace"
+          "category": "trace",
+          "files": [
+            "src/main/services/OtelCollectorService.ts"
+          ]
         },
         "event": {
           "name": "otel.collector.trace_received",
@@ -185,7 +204,10 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "storage"
+          "category": "storage",
+          "files": [
+            "src/main/services/OtelCollectorService.ts"
+          ]
         },
         "event": {
           "name": "otel.storage.trace_stored",
@@ -232,7 +254,10 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ipc"
+          "category": "ipc",
+          "files": [
+            "src/main/services/ipc/otelCollectorHandlers.ts"
+          ]
         },
         "event": {
           "name": "otel.messageport.trace_routed",
@@ -275,7 +300,10 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ipc"
+          "category": "ipc",
+          "files": [
+            "src/main/services/ipc/otelCollectorHandlers.ts"
+          ]
         },
         "event": {
           "name": "otel.ipc.handler_invoked",
@@ -328,7 +356,15 @@
         "status": "draft",
         "references": [
           "src/window/main-process-api-implementations/otelCollectorApi.ts"
-        ]
+        ],
+        "otel": {
+          "kind": "span",
+          "category": "external"
+        },
+        "event": {
+          "name": "otel.preload_bridge.activity",
+          "description": "Preload Bridge activity"
+        }
       }
     },
     {
@@ -345,7 +381,15 @@
         "status": "draft",
         "references": [
           "src/window/main-process-api-implementations/otelCollectorApi.ts"
-        ]
+        ],
+        "otel": {
+          "kind": "span",
+          "category": "external"
+        },
+        "event": {
+          "name": "otel.trace_message_subscriber.activity",
+          "description": "Message Subscriber activity"
+        }
       }
     },
     {
@@ -365,7 +409,10 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ui"
+          "category": "ui",
+          "files": [
+            "src/renderer/principal-window/views/SystemMonitor/TraceViewer.tsx"
+          ]
         },
         "event": {
           "name": "otel.devworkspace.trace_selected",
@@ -408,7 +455,10 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ui"
+          "category": "ui",
+          "files": [
+            "src/renderer/principal-window/views/SystemMonitor/TraceViewer.tsx"
+          ]
         },
         "event": {
           "name": "otel.panel.trace_rendered",
@@ -448,7 +498,10 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ui"
+          "category": "ui",
+          "files": [
+            "src/renderer/principal-window/views/SystemMonitor/TraceViewer.tsx"
+          ]
         },
         "event": {
           "name": "otel.systemmonitor.traces_polled",
@@ -488,7 +541,15 @@
         "status": "draft",
         "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
-        ]
+        ],
+        "otel": {
+          "kind": "span",
+          "category": "external"
+        },
+        "event": {
+          "name": "otel.event_bus.activity",
+          "description": "Panel Event Bus activity"
+        }
       }
     }
   ],

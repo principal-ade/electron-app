@@ -86,8 +86,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "http",
-          "isNew": true
+          "category": "http"
         },
         "event": {
           "name": "principal_mcp.client.request_initiated",
@@ -126,8 +125,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "http",
-          "isNew": true
+          "category": "http"
         },
         "event": {
           "name": "principal_mcp.server.request_received",
@@ -176,8 +174,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "http",
-          "isNew": true
+          "category": "http"
         },
         "event": {
           "name": "principal_mcp.health.checked",
@@ -216,8 +213,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "http",
-          "isNew": true
+          "category": "http"
         },
         "event": {
           "name": "principal_mcp.dependency.resolve_requested",
@@ -253,8 +249,9 @@
         "otel": {
           "kind": "event",
           "category": "service",
-          "isNew": true,
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+          "files": [
+            "src/main/principal-mcp/PrincipalMCPBridge.ts"
+          ]
         },
         "event": {
           "name": "principal_mcp.repo_monitoring.calling",
@@ -290,8 +287,9 @@
         "otel": {
           "kind": "event",
           "category": "service",
-          "isNew": true,
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+          "files": [
+            "src/main/principal-mcp/PrincipalMCPBridge.ts"
+          ]
         },
         "event": {
           "name": "principal_mcp.repo_monitoring.result_received",
@@ -339,8 +337,9 @@
         "otel": {
           "kind": "event",
           "category": "resolution",
-          "isNew": true,
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+          "files": [
+            "src/main/principal-mcp/PrincipalMCPBridge.ts"
+          ]
         },
         "event": {
           "name": "principal_mcp.resolution.alexandria_found",
@@ -388,8 +387,9 @@
         "otel": {
           "kind": "event",
           "category": "resolution",
-          "isNew": true,
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+          "files": [
+            "src/main/principal-mcp/PrincipalMCPBridge.ts"
+          ]
         },
         "event": {
           "name": "principal_mcp.resolution.alexandria_not_found",
@@ -421,8 +421,9 @@
         "otel": {
           "kind": "event",
           "category": "resolution",
-          "isNew": true,
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+          "files": [
+            "src/main/principal-mcp/PrincipalMCPBridge.ts"
+          ]
         },
         "event": {
           "name": "principal_mcp.resolution.package_found",
@@ -470,8 +471,9 @@
         "otel": {
           "kind": "event",
           "category": "resolution",
-          "isNew": true,
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+          "files": [
+            "src/main/principal-mcp/PrincipalMCPBridge.ts"
+          ]
         },
         "event": {
           "name": "principal_mcp.resolution.package_not_found",
@@ -503,8 +505,9 @@
         "otel": {
           "kind": "event",
           "category": "resolution",
-          "isNew": true,
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+          "files": [
+            "src/main/principal-mcp/PrincipalMCPBridge.ts"
+          ]
         },
         "event": {
           "name": "principal_mcp.resolution.suggestions_generated",
@@ -548,8 +551,9 @@
         "otel": {
           "kind": "event",
           "category": "resolution",
-          "isNew": true,
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+          "files": [
+            "src/main/principal-mcp/PrincipalMCPBridge.ts"
+          ]
         },
         "event": {
           "name": "principal_mcp.resolution.no_suggestions",
@@ -581,8 +585,9 @@
         "otel": {
           "kind": "event",
           "category": "error",
-          "isNew": true,
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+          "files": [
+            "src/main/principal-mcp/PrincipalMCPBridge.ts"
+          ]
         },
         "event": {
           "name": "principal_mcp.error.validation_failed",
@@ -622,8 +627,9 @@
         "otel": {
           "kind": "event",
           "category": "error",
-          "isNew": true,
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+          "files": [
+            "src/main/principal-mcp/PrincipalMCPBridge.ts"
+          ]
         },
         "event": {
           "name": "principal_mcp.error.resolution_failed",
@@ -663,8 +669,9 @@
         "otel": {
           "kind": "event",
           "category": "service",
-          "isNew": true,
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+          "files": [
+            "src/main/principal-mcp/PrincipalMCPBridge.ts"
+          ]
         },
         "event": {
           "name": "principal_mcp.repo_monitoring.dependency_resolved",
@@ -742,12 +749,15 @@
         "nodeType": "route-handler",
         "shape": "rectangle",
         "status": "implemented",
-        "references": ["src/main/principal-mcp/PrincipalMCPBridge.ts"],
+        "references": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "theme",
-          "isNew": true,
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+          "files": [
+            "src/main/principal-mcp/PrincipalMCPBridge.ts"
+          ]
         },
         "event": {
           "name": "principal_mcp.theme.schema_requested",
@@ -773,12 +783,16 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "implemented",
-        "references": ["src/main/principal-mcp/PrincipalMCPBridge.ts", "src/main/theme/themeHandler.ts"],
+        "references": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts",
+          "src/main/theme/themeHandler.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "theme",
-          "isNew": true,
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+          "files": [
+            "src/main/principal-mcp/PrincipalMCPBridge.ts"
+          ]
         },
         "event": {
           "name": "principal_mcp.theme.schema_retrieved",
@@ -812,12 +826,15 @@
         "nodeType": "route-handler",
         "shape": "rectangle",
         "status": "implemented",
-        "references": ["src/main/principal-mcp/PrincipalMCPBridge.ts"],
+        "references": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "error",
-          "isNew": true,
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+          "files": [
+            "src/main/principal-mcp/PrincipalMCPBridge.ts"
+          ]
         },
         "event": {
           "name": "principal_mcp.error.theme_not_found",
@@ -847,12 +864,15 @@
         "nodeType": "route-handler",
         "shape": "rectangle",
         "status": "implemented",
-        "references": ["src/main/principal-mcp/PrincipalMCPBridge.ts"],
+        "references": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "theme",
-          "isNew": true,
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+          "files": [
+            "src/main/principal-mcp/PrincipalMCPBridge.ts"
+          ]
         },
         "event": {
           "name": "principal_mcp.theme.update_requested",
@@ -886,12 +906,15 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "implemented",
-        "references": ["src/main/stores/userPreferencesHandler.ts"],
+        "references": [
+          "src/main/stores/userPreferencesHandler.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "preferences",
-          "isNew": true,
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+          "files": [
+            "src/main/principal-mcp/PrincipalMCPBridge.ts"
+          ]
         },
         "event": {
           "name": "principal_mcp.theme.preferences_updated",
@@ -921,12 +944,15 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "implemented",
-        "references": ["src/main/stores/userPreferencesHandler.ts"],
+        "references": [
+          "src/main/stores/userPreferencesHandler.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "ipc",
-          "isNew": true,
-          "files": ["src/main/stores/userPreferencesHandler.ts"]
+          "files": [
+            "src/main/stores/userPreferencesHandler.ts"
+          ]
         },
         "event": {
           "name": "principal_mcp.theme.renderer_broadcast",
@@ -960,12 +986,15 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "implemented",
-        "references": ["src/main/stores/userPreferencesHandler.ts"],
+        "references": [
+          "src/main/stores/userPreferencesHandler.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "ipc",
-          "isNew": true,
-          "files": ["src/main/stores/userPreferencesHandler.ts"]
+          "files": [
+            "src/main/stores/userPreferencesHandler.ts"
+          ]
         },
         "event": {
           "name": "principal_mcp.theme.renderer_notified",
@@ -995,12 +1024,17 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "implemented",
-        "references": ["src/main/principal-mcp/PrincipalMCPBridge.ts", "src/main/theme/themeHandler.ts", "src/renderer/providers/CustomThemeProvider.tsx"],
+        "references": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts",
+          "src/main/theme/themeHandler.ts",
+          "src/renderer/providers/CustomThemeProvider.tsx"
+        ],
         "otel": {
           "kind": "event",
           "category": "theme",
-          "isNew": true,
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+          "files": [
+            "src/main/principal-mcp/PrincipalMCPBridge.ts"
+          ]
         },
         "event": {
           "name": "principal_mcp.theme.update_completed",
@@ -1042,12 +1076,15 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "implemented",
-        "references": ["src/main/principal-mcp/PrincipalMCPBridge.ts"],
+        "references": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "error",
-          "isNew": true,
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+          "files": [
+            "src/main/principal-mcp/PrincipalMCPBridge.ts"
+          ]
         },
         "event": {
           "name": "principal_mcp.error.theme_update_failed",

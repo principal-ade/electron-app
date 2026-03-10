@@ -96,8 +96,9 @@
         "otel": {
           "kind": "event",
           "category": "ui",
-          "isNew": false,
-          "files": ["src/renderer/contexts/ProjectsPanelContext.tsx"]
+          "files": [
+            "src/renderer/contexts/ProjectsPanelContext.tsx"
+          ]
         },
         "event": {
           "name": "alexandria.ui.local_projects_displayed",
@@ -133,8 +134,9 @@
         "otel": {
           "kind": "event",
           "category": "user_action",
-          "isNew": false,
-          "files": ["src/renderer/contexts/ProjectsPanelContext.tsx"]
+          "files": [
+            "src/renderer/contexts/ProjectsPanelContext.tsx"
+          ]
         },
         "event": {
           "name": "alexandria.user.project_opened",
@@ -171,8 +173,9 @@
         "otel": {
           "kind": "event",
           "category": "context",
-          "isNew": false,
-          "files": ["src/renderer/contexts/ProjectsPanelContext.tsx"]
+          "files": [
+            "src/renderer/contexts/ProjectsPanelContext.tsx"
+          ]
         },
         "event": {
           "name": "alexandria.context.repositories_fetched",
@@ -208,8 +211,9 @@
         "otel": {
           "kind": "event",
           "category": "sorting",
-          "isNew": false,
-          "files": ["src/renderer/contexts/ProjectsPanelContext.tsx"]
+          "files": [
+            "src/renderer/contexts/ProjectsPanelContext.tsx"
+          ]
         },
         "event": {
           "name": "alexandria.context.repositories_sorted",
@@ -245,8 +249,9 @@
         "otel": {
           "kind": "event",
           "category": "action",
-          "isNew": false,
-          "files": ["src/renderer/contexts/ProjectsPanelContext.tsx"]
+          "files": [
+            "src/renderer/contexts/ProjectsPanelContext.tsx"
+          ]
         },
         "event": {
           "name": "alexandria.action.open_local_repository",
@@ -282,8 +287,9 @@
         "otel": {
           "kind": "event",
           "category": "main",
-          "isNew": false,
-          "files": ["src/main/stores/AlexandriaRegistryService.ts"]
+          "files": [
+            "src/main/stores/AlexandriaRegistryService.ts"
+          ]
         },
         "event": {
           "name": "alexandria.registry.timestamp_updated",
@@ -317,8 +323,9 @@
         "otel": {
           "kind": "event",
           "category": "external",
-          "isNew": false,
-          "files": ["src/main/stores/AlexandriaRegistryService.ts"]
+          "files": [
+            "src/main/stores/AlexandriaRegistryService.ts"
+          ]
         },
         "event": {
           "name": "alexandria.outpost.repository_updated",
@@ -352,8 +359,9 @@
         "otel": {
           "kind": "event",
           "category": "storage",
-          "isNew": false,
-          "files": ["src/main/stores/AlexandriaRegistryService.ts"]
+          "files": [
+            "src/main/stores/AlexandriaRegistryService.ts"
+          ]
         },
         "event": {
           "name": "alexandria.storage.metadata_persisted",
@@ -385,8 +393,9 @@
         "otel": {
           "kind": "event",
           "category": "ipc",
-          "isNew": false,
-          "files": ["src/main/stores/AlexandriaApiEventHandler.ts"]
+          "files": [
+            "src/main/stores/AlexandriaApiEventHandler.ts"
+          ]
         },
         "event": {
           "name": "alexandria.event.repository_updated_broadcast",
@@ -422,8 +431,9 @@
         "otel": {
           "kind": "event",
           "category": "context",
-          "isNew": false,
-          "files": ["src/renderer/contexts/ProjectsPanelContext.tsx"]
+          "files": [
+            "src/renderer/contexts/ProjectsPanelContext.tsx"
+          ]
         },
         "event": {
           "name": "alexandria.context.change_listener_triggered",
@@ -455,8 +465,9 @@
         "otel": {
           "kind": "event",
           "category": "ui",
-          "isNew": false,
-          "files": ["src/renderer/contexts/ProjectsPanelContext.tsx"]
+          "files": [
+            "src/renderer/contexts/ProjectsPanelContext.tsx"
+          ]
         },
         "event": {
           "name": "alexandria.ui.projects_resorted",
@@ -492,8 +503,9 @@
         "otel": {
           "kind": "event",
           "category": "window",
-          "isNew": false,
-          "files": ["src/renderer/contexts/ProjectsPanelContext.tsx"]
+          "files": [
+            "src/renderer/contexts/ProjectsPanelContext.tsx"
+          ]
         },
         "event": {
           "name": "alexandria.window.dev_workspace_opened",
@@ -526,8 +538,9 @@
         "otel": {
           "kind": "event",
           "category": "context",
-          "isNew": false,
-          "files": ["src/renderer/contexts/WorldsViewPanelContext.tsx"]
+          "files": [
+            "src/renderer/contexts/WorldsViewPanelContext.tsx"
+          ]
         },
         "event": {
           "name": "alexandria.worlds_view.project_opened",
@@ -559,8 +572,9 @@
         "otel": {
           "kind": "event",
           "category": "window",
-          "isNew": false,
-          "files": ["src/main/window/devWorkspaceWindowHandlers.ts"]
+          "files": [
+            "src/main/window/devWorkspaceWindowHandlers.ts"
+          ]
         },
         "event": {
           "name": "alexandria.dev_workspace.update_last_opened",

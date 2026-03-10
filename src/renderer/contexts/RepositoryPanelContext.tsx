@@ -139,6 +139,11 @@ function extractServiceName(otlpData: OtelExportTraceServiceRequest): string | n
   }
 }
 
+/**
+ * Stored trace with service name for accurate counting
+ */
+type StoredTrace = RegisteredTrace & { serviceName: string | null };
+
 // File city color modes slice data
 interface FileCityColorModesSliceData {
   selectedColorMode: FileCityColorMode | null;
@@ -299,16 +304,26 @@ export const RepositoryPanelProvider: React.FC<
   const [globalSkillsData, setGlobalSkillsData] = useState<GlobalSkill[]>([]);
   const [globalSkillsLoading, setGlobalSkillsLoading] = useState(false);
 
-  // Track telemetry traces for trace viewer
-  const [telemetryTraces, setTelemetryTraces] = useState<RegisteredTrace[]>([]);
+  // Track telemetry traces for trace viewer (with serviceName for accurate counting)
+  const [telemetryTraces, setTelemetryTraces] = useState<StoredTrace[]>([]);
   const [telemetryLoading, setTelemetryLoading] = useState(false);
 
   // Discovered service/scope names from library.yaml (for trace port registration)
   const [discoveredScopeNames, setDiscoveredScopeNames] = useState<string[]>([]);
 
-  // Track trace counts per service and most recent active service
-  const [serviceTraceCounts, setServiceTraceCounts] = useState<Map<string, number>>(new Map());
+  // Track most recent active service
   const [lastActiveService, setLastActiveService] = useState<string | null>(null);
+
+  // Derive service trace counts from actual stored traces
+  const serviceTraceCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const trace of telemetryTraces) {
+      if (trace.serviceName) {
+        counts.set(trace.serviceName, (counts.get(trace.serviceName) || 0) + 1);
+      }
+    }
+    return counts;
+  }, [telemetryTraces]);
 
   // Notify parent when service trace counts change
   useEffect(() => {
@@ -1275,27 +1290,25 @@ export const RepositoryPanelProvider: React.FC<
                     // Detailed span logging for debugging
                     console.info('[TraceProcessing] 📋 Full RegisteredTrace:', JSON.stringify(registeredTrace, null, 2));
 
-                    // Extract service name and increment count
+                    // Extract service name for counting
                     const serviceName = extractServiceName(singleTraceOtlp);
                     if (serviceName) {
-                      setServiceTraceCounts((prev) => {
-                        const newCounts = new Map(prev);
-                        newCounts.set(serviceName, (newCounts.get(serviceName) || 0) + 1);
-                        return newCounts;
-                      });
                       setLastActiveService(serviceName);
                     }
+
+                    // Store trace with serviceName for accurate count derivation
+                    const storedTrace: StoredTrace = { ...registeredTrace, serviceName };
 
                     setTelemetryTraces((prev) => {
                       // Check for duplicates
                       const existingIds = new Set(prev.map((t) => t.traceId));
-                      if (existingIds.has(registeredTrace.traceId)) {
-                        console.info('[RepositoryPanelProvider] Skipping duplicate trace:', registeredTrace.traceId);
+                      if (existingIds.has(storedTrace.traceId)) {
+                        console.info('[RepositoryPanelProvider] Skipping duplicate trace:', storedTrace.traceId);
                         return prev;
                       }
 
                       // Keep only last 1000 traces
-                      const combined = [...prev, registeredTrace];
+                      const combined = [...prev, storedTrace];
                       return combined.slice(-1000);
                     });
                   } catch (error) {
@@ -2455,7 +2468,7 @@ export const RepositoryPanelProvider: React.FC<
     [telemetryTraces, telemetryLoading],
   );
 
-  // Explicit DataSlice: serviceTraceCounts
+  // Explicit DataSlice: serviceTraceCounts (derived from telemetryTraces)
   const serviceTraceCountsSlice = useMemo<DataSlice<Map<string, number>>>(
     () => ({
       scope: 'workspace' as const,
@@ -2464,8 +2477,8 @@ export const RepositoryPanelProvider: React.FC<
       loading: false,
       error: null,
       refresh: async () => {
-        // Clear counts
-        setServiceTraceCounts(new Map());
+        // Clear counts by clearing traces
+        setTelemetryTraces([]);
       },
     }),
     [serviceTraceCounts],

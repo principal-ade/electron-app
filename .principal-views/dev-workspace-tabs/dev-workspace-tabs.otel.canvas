@@ -95,7 +95,6 @@
         "otel": {
           "kind": "event",
           "category": "ui",
-          "isNew": true,
           "files": [
             "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
           ]
@@ -134,7 +133,6 @@
         "otel": {
           "kind": "event",
           "category": "ui",
-          "isNew": true,
           "files": [
             "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
           ]
@@ -173,7 +171,6 @@
         "otel": {
           "kind": "event",
           "category": "event-system",
-          "isNew": true,
           "files": [
             "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
           ]
@@ -226,7 +223,6 @@
         "otel": {
           "kind": "event",
           "category": "handler",
-          "isNew": true,
           "files": [
             "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
           ]
@@ -275,7 +271,6 @@
         "otel": {
           "kind": "event",
           "category": "handler",
-          "isNew": true,
           "files": [
             "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
           ]
@@ -310,7 +305,6 @@
         "otel": {
           "kind": "event",
           "category": "handler",
-          "isNew": true,
           "files": [
             "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
           ]
@@ -349,7 +343,6 @@
         "otel": {
           "kind": "event",
           "category": "tabs",
-          "isNew": true,
           "files": [
             "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
           ]
@@ -388,7 +381,6 @@
         "otel": {
           "kind": "event",
           "category": "tabs",
-          "isNew": true,
           "files": [
             "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
           ]
@@ -426,8 +418,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "render",
-          "isNew": true
+          "category": "render"
         },
         "event": {
           "name": "devworkspace.tab.rendered",
@@ -459,7 +450,6 @@
         "otel": {
           "kind": "event",
           "category": "state",
-          "isNew": true,
           "files": [
             "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
           ]
@@ -502,7 +492,6 @@
         "otel": {
           "kind": "event",
           "category": "layout",
-          "isNew": true,
           "files": [
             "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
           ]
@@ -541,8 +530,7 @@
         "status": "draft",
         "otel": {
           "kind": "event",
-          "category": "external",
-          "isNew": true
+          "category": "external"
         },
         "references": [
           "@industry-theme/xterm-terminal-panel"
@@ -576,8 +564,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "render",
-          "isNew": true
+          "category": "render"
         },
         "event": {
           "name": "devworkspace.panel.markdown.rendered",

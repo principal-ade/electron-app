@@ -95,8 +95,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ui",
-          "isNew": true
+          "category": "ui"
         },
         "event": {
           "name": "app_updates.ui.settings_opened",
@@ -131,8 +130,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "user_action",
-          "isNew": true
+          "category": "user_action"
         },
         "event": {
           "name": "app_updates.user.check_requested",
@@ -163,8 +161,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "service",
-          "isNew": true
+          "category": "service"
         },
         "event": {
           "name": "app_updates.service.method_called",
@@ -195,8 +192,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ipc",
-          "isNew": true
+          "category": "ipc"
         },
         "event": {
           "name": "app_updates.ipc.message_sent",
@@ -231,8 +227,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "lifecycle",
-          "isNew": true
+          "category": "lifecycle"
         },
         "event": {
           "name": "app_updates.manager.initialized",
@@ -267,8 +262,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "update",
-          "isNew": true
+          "category": "update"
         },
         "event": {
           "name": "app_updates.check.started",
@@ -303,7 +297,9 @@
         ],
         "boundary": {
           "direction": "outbound",
-          "node": { "pv.event.name": "electron-updater.checkForUpdates" }
+          "node": {
+            "pv.event.name": "electron-updater.checkForUpdates"
+          }
         }
       }
     },
@@ -322,7 +318,9 @@
         "references": [],
         "boundary": {
           "direction": "outbound",
-          "node": { "pv.event.name": "github.releases.fetch" }
+          "node": {
+            "pv.event.name": "github.releases.fetch"
+          }
         }
       }
     },
@@ -343,8 +341,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "update",
-          "isNew": true
+          "category": "update"
         },
         "event": {
           "name": "app_updates.check.available",
@@ -385,8 +382,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "update",
-          "isNew": true
+          "category": "update"
         },
         "event": {
           "name": "app_updates.check.not_available",
@@ -417,8 +413,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "user_action",
-          "isNew": true
+          "category": "user_action"
         },
         "event": {
           "name": "app_updates.user.download_requested",
@@ -449,8 +444,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "download",
-          "isNew": true
+          "category": "download"
         },
         "event": {
           "name": "app_updates.download.started",
@@ -481,8 +475,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "download",
-          "isNew": true
+          "category": "download"
         },
         "event": {
           "name": "app_updates.download.progress",
@@ -525,8 +518,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ui",
-          "isNew": true
+          "category": "ui"
         },
         "event": {
           "name": "app_updates.ui.progress_updated",
@@ -557,8 +549,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "download",
-          "isNew": true
+          "category": "download"
         },
         "event": {
           "name": "app_updates.download.completed",
@@ -594,8 +585,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "user_action",
-          "isNew": true
+          "category": "user_action"
         },
         "event": {
           "name": "app_updates.user.install_requested",
@@ -626,8 +616,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "install",
-          "isNew": true
+          "category": "install"
         },
         "event": {
           "name": "app_updates.install.started",
@@ -656,8 +645,7 @@
         "references": [],
         "otel": {
           "kind": "event",
-          "category": "install",
-          "isNew": true
+          "category": "install"
         },
         "event": {
           "name": "app_updates.install.completed",
@@ -693,8 +681,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "error",
-          "isNew": true
+          "category": "error"
         },
         "event": {
           "name": "app_updates.error.occurred",
@@ -733,8 +720,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "update",
-          "isNew": true
+          "category": "update"
         },
         "event": {
           "name": "app_updates.check.periodic",
@@ -769,8 +755,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "update",
-          "isNew": true
+          "category": "update"
         },
         "event": {
           "name": "app_updates.check.user_triggered",
@@ -801,8 +786,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "lifecycle",
-          "isNew": true
+          "category": "lifecycle"
         },
         "event": {
           "name": "app_updates.startup.check_triggered",
@@ -853,8 +837,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ui",
-          "isNew": true
+          "category": "ui"
         },
         "event": {
           "name": "app_updates.ui.error_displayed",

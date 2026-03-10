@@ -85,11 +85,12 @@
         "nodeType": "ui",
         "shape": "rectangle",
         "status": "draft",
-        "references": ["src/renderer/components/Sidebar/StorybookSidebarButton.tsx"],
+        "references": [
+          "src/renderer/components/Sidebar/StorybookSidebarButton.tsx"
+        ],
         "otel": {
           "kind": "event",
-          "category": "ui",
-          "isNew": true
+          "category": "ui"
         },
         "event": {
           "name": "storybook.button.clicked",
@@ -123,11 +124,13 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "draft",
-        "references": ["src/renderer/services/StorybookService.ts", "@principal-ai/codebase-composition"],
+        "references": [
+          "src/renderer/services/StorybookService.ts",
+          "@principal-ai/codebase-composition"
+        ],
         "otel": {
           "kind": "event",
-          "category": "detection",
-          "isNew": true
+          "category": "detection"
         },
         "event": {
           "name": "storybook.packages.detected",
@@ -161,11 +164,12 @@
         "nodeType": "port",
         "shape": "rectangle",
         "status": "draft",
-        "references": ["src/renderer/utils/portDetection.ts"],
+        "references": [
+          "src/renderer/utils/portDetection.ts"
+        ],
         "otel": {
           "kind": "event",
-          "category": "network",
-          "isNew": true
+          "category": "network"
         },
         "event": {
           "name": "storybook.port.found",
@@ -201,11 +205,12 @@
         "nodeType": "service",
         "shape": "rectangle",
         "status": "draft",
-        "references": ["src/renderer/services/StorybookService.ts"],
+        "references": [
+          "src/renderer/services/StorybookService.ts"
+        ],
         "otel": {
           "kind": "event",
-          "category": "lifecycle",
-          "isNew": true
+          "category": "lifecycle"
         },
         "event": {
           "name": "storybook.command.generated",
@@ -243,11 +248,12 @@
         "nodeType": "terminal",
         "shape": "rectangle",
         "status": "draft",
-        "references": ["src/renderer/components/Sidebar/StorybookSidebarButton.tsx"],
+        "references": [
+          "src/renderer/components/Sidebar/StorybookSidebarButton.tsx"
+        ],
         "otel": {
           "kind": "span",
-          "category": "lifecycle",
-          "isNew": true
+          "category": "lifecycle"
         },
         "event": {
           "name": "storybook.terminal.created",
@@ -286,11 +292,12 @@
         "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
-        "references": ["src/renderer/components/Sidebar/StorybookSidebarButton.tsx"],
+        "references": [
+          "src/renderer/components/Sidebar/StorybookSidebarButton.tsx"
+        ],
         "otel": {
           "kind": "event",
-          "category": "ipc",
-          "isNew": true
+          "category": "ipc"
         },
         "event": {
           "name": "storybook.session.event_emitted",
@@ -320,11 +327,12 @@
         "nodeType": "panel",
         "shape": "rectangle",
         "status": "draft",
-        "references": ["src/renderer/components/Sidebar/StorybookSidebarButton.tsx"],
+        "references": [
+          "src/renderer/components/Sidebar/StorybookSidebarButton.tsx"
+        ],
         "otel": {
           "kind": "event",
-          "category": "ui",
-          "isNew": true
+          "category": "ui"
         },
         "event": {
           "name": "storybook.layout.configured",
@@ -358,11 +366,12 @@
         "nodeType": "port",
         "shape": "rectangle",
         "status": "draft",
-        "references": ["src/renderer/utils/portDetection.ts"],
+        "references": [
+          "src/renderer/utils/portDetection.ts"
+        ],
         "otel": {
           "kind": "span",
-          "category": "network",
-          "isNew": true
+          "category": "network"
         },
         "event": {
           "name": "storybook.port.ready",
@@ -396,11 +405,12 @@
         "nodeType": "browser",
         "shape": "rectangle",
         "status": "draft",
-        "references": ["src/renderer/components/Sidebar/StorybookSidebarButton.tsx"],
+        "references": [
+          "src/renderer/components/Sidebar/StorybookSidebarButton.tsx"
+        ],
         "otel": {
           "kind": "event",
-          "category": "ui",
-          "isNew": true
+          "category": "ui"
         },
         "event": {
           "name": "storybook.browser.navigated",
@@ -435,11 +445,12 @@
         "nodeType": "ui",
         "shape": "rectangle",
         "status": "draft",
-        "references": ["src/renderer/components/Sidebar/StorybookSidebarButton.tsx"],
+        "references": [
+          "src/renderer/components/Sidebar/StorybookSidebarButton.tsx"
+        ],
         "otel": {
           "kind": "event",
-          "category": "ui",
-          "isNew": true
+          "category": "ui"
         },
         "event": {
           "name": "storybook.status.changed",
@@ -473,11 +484,12 @@
         "nodeType": "terminal",
         "shape": "rectangle",
         "status": "draft",
-        "references": ["src/renderer/components/Sidebar/StorybookSidebarButton.tsx"],
+        "references": [
+          "src/renderer/components/Sidebar/StorybookSidebarButton.tsx"
+        ],
         "otel": {
           "kind": "event",
-          "category": "lifecycle",
-          "isNew": true
+          "category": "lifecycle"
         },
         "event": {
           "name": "storybook.stopped",

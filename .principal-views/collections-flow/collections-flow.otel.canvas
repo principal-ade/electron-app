@@ -95,8 +95,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ui",
-          "isNew": true
+          "category": "ui"
         },
         "event": {
           "name": "collections.ui.modal_opened",
@@ -131,8 +130,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ui",
-          "isNew": true
+          "category": "ui"
         },
         "event": {
           "name": "collections.ui.create_requested",
@@ -167,8 +165,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "lifecycle",
-          "isNew": true
+          "category": "lifecycle"
         },
         "event": {
           "name": "collections.context.create_started",
@@ -207,8 +204,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ipc",
-          "isNew": true
+          "category": "ipc"
         },
         "event": {
           "name": "collections.renderer.ipc_invoked",
@@ -243,8 +239,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ipc",
-          "isNew": true
+          "category": "ipc"
         },
         "event": {
           "name": "collections.preload.forwarded",
@@ -279,8 +274,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "lifecycle",
-          "isNew": true
+          "category": "lifecycle"
         },
         "event": {
           "name": "collections.main.create_started",
@@ -319,8 +313,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "github",
-          "isNew": true
+          "category": "github"
         },
         "event": {
           "name": "collections.github.repo_check",
@@ -355,8 +348,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "http",
-          "isNew": true
+          "category": "http"
         },
         "event": {
           "name": "collections.github.api_request",
@@ -399,8 +391,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "github",
-          "isNew": true
+          "category": "github"
         },
         "event": {
           "name": "collections.github.sync_enabled",
@@ -435,8 +426,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "http",
-          "isNew": true
+          "category": "http"
         },
         "event": {
           "name": "collections.github.repo_created",
@@ -483,8 +473,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "github",
-          "isNew": true
+          "category": "github"
         },
         "event": {
           "name": "collections.github.sync_started",
@@ -519,8 +508,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "http",
-          "isNew": true
+          "category": "http"
         },
         "event": {
           "name": "collections.github.file_updated",
@@ -571,8 +559,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "http",
-          "isNew": true
+          "category": "http"
         },
         "event": {
           "name": "collections.github.memberships_updated",
@@ -615,8 +602,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "storage",
-          "isNew": true
+          "category": "storage"
         },
         "event": {
           "name": "collections.storage.persisted",
@@ -655,8 +641,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "lifecycle",
-          "isNew": true
+          "category": "lifecycle"
         },
         "event": {
           "name": "collections.context.refreshed",
@@ -691,8 +676,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ui",
-          "isNew": true
+          "category": "ui"
         },
         "event": {
           "name": "collections.ui.rendered",
@@ -731,8 +715,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "lifecycle",
-          "isNew": true
+          "category": "lifecycle"
         },
         "event": {
           "name": "collections.event.created_emitted",

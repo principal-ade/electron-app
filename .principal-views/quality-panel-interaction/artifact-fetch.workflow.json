@@ -43,7 +43,8 @@
           "quality.artifact.notFound": "8. **No artifacts found** for `{{github.owner}}/{{github.repo}}`"
         },
         "summary": "**Repository:** `{{github.owner}}/{{github.repo}}`\n**Branch:** `{{git.branch}}`\n\n**Why no artifacts?**\n- No GitHub Actions workflow configured\n- Workflow hasn't run yet on this branch\n- Artifacts may have expired (90 day retention)"
-      }
+      },
+      "filterDefault": true
     },
     {
       "id": "artifact-fetch-skipped",

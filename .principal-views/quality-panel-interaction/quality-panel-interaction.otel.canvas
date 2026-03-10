@@ -99,8 +99,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ui",
-          "isNew": true
+          "category": "ui"
         },
         "event": {
           "name": "quality.sidebar.clicked",
@@ -135,8 +134,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ui",
-          "isNew": true
+          "category": "ui"
         },
         "event": {
           "name": "quality.panel.switched",
@@ -167,8 +165,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ui",
-          "isNew": true
+          "category": "ui"
         },
         "event": {
           "name": "quality.panel.rendered",
@@ -203,8 +200,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "state",
-          "isNew": true
+          "category": "state"
         },
         "event": {
           "name": "quality.context.updated",
@@ -243,8 +239,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ui",
-          "isNew": true
+          "category": "ui"
         },
         "event": {
           "name": "quality.colorMode.selected",
@@ -279,8 +274,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ui",
-          "isNew": true
+          "category": "ui"
         },
         "event": {
           "name": "quality.fileCity.rerendered",
@@ -311,8 +305,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ui",
-          "isNew": true
+          "category": "ui"
         },
         "event": {
           "name": "quality.tool.requested",
@@ -347,8 +340,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ipc",
-          "isNew": true
+          "category": "ipc"
         },
         "event": {
           "name": "quality.ipc.received",
@@ -383,8 +375,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "service",
-          "isNew": true
+          "category": "service"
         },
         "event": {
           "name": "quality.service.executing",
@@ -423,8 +414,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "service",
-          "isNew": true
+          "category": "service"
         },
         "event": {
           "name": "quality.lens.running",
@@ -459,8 +449,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "execution",
-          "isNew": true
+          "category": "execution"
         },
         "event": {
           "name": "quality.executor.spawning",
@@ -495,8 +484,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "execution",
-          "isNew": true
+          "category": "execution"
         },
         "event": {
           "name": "quality.cli.completed",
@@ -535,8 +523,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "service",
-          "isNew": true
+          "category": "service"
         },
         "event": {
           "name": "quality.tool.completed",
@@ -579,8 +566,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "external",
-          "isNew": true
+          "category": "external"
         },
         "eventRef": "quality.artifact.step.api.calling"
       }
@@ -602,8 +588,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "external",
-          "isNew": true
+          "category": "external"
         },
         "event": {
           "name": "quality.artifact.received",
@@ -638,8 +623,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "external",
-          "isNew": true
+          "category": "external"
         },
         "event": {
           "name": "quality.artifact.notFound",
@@ -674,8 +658,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "error",
-          "isNew": true
+          "category": "error"
         },
         "event": {
           "name": "quality.tool.error",
@@ -714,8 +697,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "external",
-          "isNew": true
+          "category": "external"
         },
         "event": {
           "name": "quality.artifact.step.remote",
@@ -746,8 +728,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "external",
-          "isNew": true
+          "category": "external"
         },
         "event": {
           "name": "quality.artifact.step.remote.resolved",
@@ -782,8 +763,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "external",
-          "isNew": true
+          "category": "external"
         },
         "event": {
           "name": "quality.artifact.step.github.parsed",
@@ -822,8 +802,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "external",
-          "isNew": true
+          "category": "external"
         },
         "event": {
           "name": "quality.artifact.step.branch",
@@ -854,8 +833,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "external",
-          "isNew": true
+          "category": "external"
         },
         "event": {
           "name": "quality.artifact.step.branch.resolved",
@@ -894,8 +872,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "external",
-          "isNew": true
+          "category": "external"
         },
         "event": {
           "name": "quality.artifact.step.api.calling",
@@ -926,8 +903,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "external",
-          "isNew": true
+          "category": "external"
         },
         "event": {
           "name": "quality.artifact.step.api.complete",
@@ -966,8 +942,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "external",
-          "isNew": true
+          "category": "external"
         },
         "event": {
           "name": "quality.artifact.skipped",

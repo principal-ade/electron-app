@@ -118,8 +118,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "lifecycle",
-          "isNew": true
+          "category": "lifecycle"
         },
         "event": {
           "name": "filetree.file.changed",
@@ -158,8 +157,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "lifecycle",
-          "isNew": true
+          "category": "lifecycle"
         },
         "event": {
           "name": "filetree.watcher.detected",
@@ -194,8 +192,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "lifecycle",
-          "isNew": true
+          "category": "lifecycle"
         },
         "event": {
           "name": "filetree.worker.notified",
@@ -230,8 +227,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ipc",
-          "isNew": true
+          "category": "ipc"
         },
         "event": {
           "name": "filetree.workspace.changed",
@@ -266,8 +262,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "cache",
-          "isNew": true
+          "category": "cache"
         },
         "event": {
           "name": "filetree.cache.invalidated",
@@ -306,8 +301,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "performance",
-          "isNew": true
+          "category": "performance"
         },
         "event": {
           "name": "filetree.debounce.triggered",
@@ -346,8 +340,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "cache",
-          "isNew": true
+          "category": "cache"
         },
         "event": {
           "name": "filetree.cache.rebuild",
@@ -390,8 +383,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ipc",
-          "isNew": true
+          "category": "ipc"
         },
         "event": {
           "name": "filetree.cache.synced",
@@ -438,8 +430,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ipc",
-          "isNew": true
+          "category": "ipc"
         },
         "event": {
           "name": "filetree.preload.event_received",
@@ -482,8 +473,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "lifecycle",
-          "isNew": true
+          "category": "lifecycle"
         },
         "event": {
           "name": "filetree.service.subscribed",
@@ -518,8 +508,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "cache",
-          "isNew": true
+          "category": "cache"
         },
         "event": {
           "name": "filetree.refresh.requested",
@@ -554,8 +543,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ui",
-          "isNew": true
+          "category": "ui"
         },
         "event": {
           "name": "filetree.context.updated",
@@ -594,8 +582,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ui",
-          "isNew": true
+          "category": "ui"
         },
         "event": {
           "name": "filetree.ui.rendered",

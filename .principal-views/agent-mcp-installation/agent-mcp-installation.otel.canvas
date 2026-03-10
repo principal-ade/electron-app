@@ -86,8 +86,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ui",
-          "isNew": true
+          "category": "ui"
         },
         "event": {
           "name": "agent_mcp.ui.toggle_clicked",
@@ -126,8 +125,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ui",
-          "isNew": true
+          "category": "ui"
         },
         "event": {
           "name": "agent_mcp.ui.detailed_view_opened",
@@ -162,8 +160,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "service",
-          "isNew": true
+          "category": "service"
         },
         "event": {
           "name": "agent_mcp.service.request_initiated",
@@ -202,8 +199,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ipc",
-          "isNew": true
+          "category": "ipc"
         },
         "event": {
           "name": "agent_mcp.ipc.add_mcp_received",
@@ -238,8 +234,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ipc",
-          "isNew": true
+          "category": "ipc"
         },
         "event": {
           "name": "agent_mcp.ipc.remove_mcp_received",
@@ -274,8 +269,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ipc",
-          "isNew": true
+          "category": "ipc"
         },
         "event": {
           "name": "agent_mcp.ipc.get_status_received",
@@ -310,8 +304,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "library",
-          "isNew": true
+          "category": "library"
         },
         "event": {
           "name": "agent_mcp.library.operation_called",
@@ -350,8 +343,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "file",
-          "isNew": true
+          "category": "file"
         },
         "event": {
           "name": "agent_mcp.config.claude_updated",
@@ -390,8 +382,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "file",
-          "isNew": true
+          "category": "file"
         },
         "event": {
           "name": "agent_mcp.config.cline_updated",
@@ -430,8 +421,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "file",
-          "isNew": true
+          "category": "file"
         },
         "event": {
           "name": "agent_mcp.config.opencode_updated",
@@ -470,8 +460,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "file",
-          "isNew": true
+          "category": "file"
         },
         "event": {
           "name": "agent_mcp.config.droid_updated",
@@ -510,8 +499,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "result",
-          "isNew": true
+          "category": "result"
         },
         "event": {
           "name": "agent_mcp.operation.success",
@@ -558,8 +546,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "error",
-          "isNew": true
+          "category": "error"
         },
         "event": {
           "name": "agent_mcp.operation.error",
@@ -602,8 +589,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ui",
-          "isNew": true
+          "category": "ui"
         },
         "event": {
           "name": "agent_mcp.ui.state_updated",
@@ -642,8 +628,7 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "ui",
-          "isNew": true
+          "category": "ui"
         },
         "event": {
           "name": "agent_mcp.ui.error_displayed",
