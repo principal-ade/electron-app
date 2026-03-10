@@ -3,7 +3,7 @@
  * Updated to use @principal-ai/repository-monitoring-server package
  */
 
-import { ipcMain, BrowserWindow } from 'electron';
+import { ipcMain, BrowserWindow, app } from 'electron';
 import {
   RepositoryMonitoringManager,
   RepositoryMonitoringAPIEvent,
@@ -143,11 +143,16 @@ async function broadcastToRelevantWindows<T extends { repoPath: string }>(
  */
 export function getManager(): RepositoryMonitoringManager {
   if (!repositoryMonitoringManager) {
+    // Use different OTLP ports for dev vs production to avoid conflicts
+    const isDev = !app.isPackaged;
+    const otlpPort = parseInt(process.env.OTEL_OTLP_PORT || (isDev ? '14318' : '4318'), 10);
+
     repositoryMonitoringManager = new RepositoryMonitoringManager({
       autoStart: true,
       restartOnCrash: true,
       maxRestartAttempts: 3,
       logLevel: 'info',
+      otlpEndpoint: `http://localhost:${otlpPort}/v1/traces`,
     });
   }
   return repositoryMonitoringManager;
