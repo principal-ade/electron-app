@@ -1,0 +1,39 @@
+{
+  "version": "1.0.0",
+  "name": "Session List Sync",
+  "description": "Window requesting and receiving terminal session list",
+  "mode": "span-tree",
+  "canvas": ".principal-views/terminal-session-management/terminal-session-management.otel.canvas",
+  "spanPattern": "terminal.session.list",
+  "scenarios": [
+    {
+      "id": "session-list-request",
+      "description": "Window requests list of all terminal sessions",
+      "priority": 1,
+      "template": {
+        "introduction": "**Fetching Terminal Sessions**\n\nWindow requesting list of all active terminal sessions.",
+        "events": {
+          "terminal.session.list_requested": "[1] List requested by window={{window.id}}",
+          "terminal.session.list_returned": "[2] Returned {{session_count}} sessions"
+        },
+        "summary": "**Session List:**\n- Total Sessions: {{session_count}}\n- Requesting Window: {{window.id}}"
+      },
+      "filterDefault": true
+    },
+    {
+      "id": "session-port-request",
+      "description": "Window requests data port for existing session",
+      "priority": 2,
+      "template": {
+        "introduction": "**Requesting Session Port**\n\nWindow requesting MessagePort for terminal data streaming.",
+        "events": {
+          "terminal.session.port_requested": "[1] Port requested: session=`{{session.id}}`, window={{window.id}}",
+          "terminal.session.port_created": "[2] Port created and transferred",
+          "terminal.session.port_registered": "[3] Port registered with worker"
+        },
+        "summary": "**Port Established:**\n- Session: `{{session.id}}`\n- Window: {{window.id}}\n- Direct PTY streaming enabled"
+      },
+      "filterDefault": true
+    }
+  ]
+}

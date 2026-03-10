@@ -1,0 +1,54 @@
+{
+  "version": "1.0.0",
+  "name": "Ownership Transfer",
+  "description": "Terminal session ownership claim and transfer between windows",
+  "mode": "span-tree",
+  "canvas": ".principal-views/terminal-session-management/terminal-session-management.otel.canvas",
+  "spanPattern": "terminal.ownership",
+  "scenarios": [
+    {
+      "id": "ownership-claim-unowned",
+      "description": "Window claims ownership of unowned session",
+      "priority": 1,
+      "template": {
+        "introduction": "**Claiming Unowned Session**\n\nWindow claiming ownership of session with no current owner.",
+        "events": {
+          "terminal.ownership.check_requested": "[1] Ownership check: session=`{{session.id}}`, window={{window.id}}",
+          "terminal.ownership.claim_requested": "[2] Claim requested: session=`{{session.id}}`",
+          "terminal.ownership.changed": "[3] Ownership granted: new_owner={{new_owner.window_id}}"
+        },
+        "summary": "**Ownership Claimed:**\n- Session: `{{session.id}}`\n- New Owner: Window {{new_owner.window_id}}"
+      },
+      "filterDefault": true
+    },
+    {
+      "id": "ownership-transfer-force",
+      "description": "Window forcefully takes ownership from another window",
+      "priority": 2,
+      "template": {
+        "introduction": "**Force Ownership Transfer**\n\nWindow taking ownership from another window.",
+        "events": {
+          "terminal.ownership.claim_requested": "[1] Force claim: session=`{{session.id}}`, force=true",
+          "terminal.ownership.changed": "[2] Ownership transferred: previous={{previous_owner.window_id}}, new={{new_owner.window_id}}",
+          "terminal.ownership.loss_notified": "[3] Previous owner notified of loss"
+        },
+        "summary": "**Ownership Transferred:**\n- Session: `{{session.id}}`\n- Previous Owner: Window {{previous_owner.window_id}}\n- New Owner: Window {{new_owner.window_id}}"
+      },
+      "filterDefault": true
+    },
+    {
+      "id": "ownership-release",
+      "description": "Window releases ownership of session",
+      "priority": 3,
+      "template": {
+        "introduction": "**Releasing Ownership**\n\nWindow voluntarily releasing session ownership.",
+        "events": {
+          "terminal.ownership.release_requested": "[1] Release requested: session=`{{session.id}}`",
+          "terminal.ownership.released": "[2] Ownership released: session=`{{session.id}}`"
+        },
+        "summary": "**Ownership Released:**\n- Session: `{{session.id}}`\n- Now unowned"
+      },
+      "filterDefault": true
+    }
+  ]
+}

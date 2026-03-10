@@ -1,0 +1,517 @@
+{
+  "pv": {
+    "name": "Terminal Session Management",
+    "version": "1.0.0",
+    "description": "Lifecycle management of terminal sessions: creation, destruction, ownership, and port management",
+    "markdown": ".principal-views/terminal-session-management/terminal-session-management.md",
+    "nodeTypes": {
+      "renderer": {
+        "label": "Renderer",
+        "color": "#10B981"
+      },
+      "tipc-router": {
+        "label": "TIPC Router",
+        "color": "#6366F1"
+      },
+      "session-manager": {
+        "label": "Session Manager",
+        "color": "#F59E0B"
+      },
+      "ownership-manager": {
+        "label": "Ownership Manager",
+        "color": "#EC4899"
+      },
+      "worker": {
+        "label": "Worker",
+        "color": "#8B5CF6"
+      },
+      "store": {
+        "label": "Store",
+        "color": "#3B82F6"
+      },
+      "port": {
+        "label": "Port",
+        "color": "#14B8A6"
+      }
+    },
+    "edgeTypes": {
+      "tipc-invoke": {
+        "label": "TIPC Invoke",
+        "style": "solid",
+        "color": "#6366F1"
+      },
+      "method-call": {
+        "label": "Method Call",
+        "style": "solid",
+        "color": "#F59E0B"
+      },
+      "worker-message": {
+        "label": "Worker Message",
+        "style": "dashed",
+        "color": "#8B5CF6"
+      },
+      "state-update": {
+        "label": "State Update",
+        "style": "solid",
+        "color": "#3B82F6"
+      },
+      "port-transfer": {
+        "label": "Port Transfer",
+        "style": "dotted",
+        "color": "#14B8A6"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "x": 250,
+      "y": -100,
+      "width": 500,
+      "height": 50,
+      "color": "#64748B",
+      "text": "# Terminal Session Management\n**Lifecycle: Creation, Ownership, Destruction**"
+    },
+    {
+      "id": "renderer",
+      "type": "text",
+      "x": 50,
+      "y": 0,
+      "width": 200,
+      "height": 100,
+      "text": "Renderer Process\n\nterminalClient\n.createTerminalSession()",
+      "pv": {
+        "nodeType": "renderer",
+        "shape": "rectangle",
+        "status": "approved",
+        "references": [
+          "src/renderer/tipc/terminalClient.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ui",
+          "files": [
+            "src/renderer/tipc/terminalClient.ts"
+          ]
+        },
+        "event": {
+          "name": "terminal.session.create_requested",
+          "description": "Renderer requested terminal session creation via TIPC",
+          "attributes": {
+            "cwd": {
+              "type": "string",
+              "description": "Working directory for session"
+            },
+            "context": {
+              "type": "string",
+              "description": "Session context (principal, dashboard, etc.)"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "tipc-router",
+      "type": "text",
+      "x": 300,
+      "y": 0,
+      "width": 200,
+      "height": 100,
+      "text": "terminalRouter\n.createTerminalSession\n\nTIPC procedure handler",
+      "pv": {
+        "nodeType": "tipc-router",
+        "shape": "rectangle",
+        "status": "approved",
+        "references": [
+          "src/main/terminal/tipc/terminalRouter.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ipc",
+          "files": [
+            "src/main/terminal/tipc/terminalRouter.ts"
+          ]
+        },
+        "event": {
+          "name": "terminal.session.router_handled",
+          "description": "TIPC router handling session creation",
+          "attributes": {
+            "window.id": {
+              "type": "number",
+              "description": "Source window ID"
+            },
+            "can_create": {
+              "type": "boolean",
+              "description": "Whether session limit allows creation"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "session-manager",
+      "type": "text",
+      "x": 300,
+      "y": 150,
+      "width": 200,
+      "height": 120,
+      "text": "TerminalSessionManager\n\n.createSession()\n.destroySession()\n.getAllSessions()\n.updateActivity()",
+      "pv": {
+        "nodeType": "session-manager",
+        "shape": "rectangle",
+        "status": "approved",
+        "references": [
+          "src/main/terminal/TerminalSessionManager.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": [
+            "src/main/terminal/TerminalSessionManager.ts"
+          ]
+        },
+        "event": {
+          "name": "terminal.session.manager_action",
+          "description": "Session manager performing action",
+          "attributes": {
+            "action": {
+              "type": "string",
+              "description": "create, destroy, list, updateActivity"
+            },
+            "session.id": {
+              "type": "string",
+              "description": "Terminal session ID"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "sessions-store",
+      "type": "text",
+      "x": 50,
+      "y": 150,
+      "width": 200,
+      "height": 120,
+      "text": "Session Stores\n\nsessions: Map<id, Session>\nsessionsByRepo: Map\nactivityStore: Map\nsessionPorts: Map",
+      "pv": {
+        "nodeType": "store",
+        "shape": "rectangle",
+        "status": "approved",
+        "references": [
+          "src/main/terminal/TerminalSessionManager.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "storage",
+          "files": [
+            "src/main/terminal/TerminalSessionManager.ts"
+          ]
+        },
+        "event": {
+          "name": "terminal.session.store_updated",
+          "description": "Session store state changed",
+          "attributes": {
+            "operation": {
+              "type": "string",
+              "description": "set, delete, clear"
+            },
+            "session.id": {
+              "type": "string",
+              "description": "Terminal session ID"
+            },
+            "store.size": {
+              "type": "number",
+              "description": "Current store size"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ownership-manager",
+      "type": "text",
+      "x": 550,
+      "y": 150,
+      "width": 200,
+      "height": 100,
+      "text": "OwnershipManager\n\n.claimOwnership()\n.releaseOwnership()\n.checkOwnership()",
+      "pv": {
+        "nodeType": "ownership-manager",
+        "shape": "rectangle",
+        "status": "approved",
+        "references": [
+          "src/main/terminal/TerminalOwnershipManager.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ownership",
+          "files": [
+            "src/main/terminal/TerminalOwnershipManager.ts"
+          ]
+        },
+        "event": {
+          "name": "terminal.ownership.changed",
+          "description": "Terminal ownership changed",
+          "attributes": {
+            "session.id": {
+              "type": "string",
+              "description": "Terminal session ID"
+            },
+            "new_owner.window_id": {
+              "type": "number",
+              "description": "New owner window ID"
+            },
+            "previous_owner.window_id": {
+              "type": "number",
+              "description": "Previous owner window ID",
+              "display": false
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "worker",
+      "type": "text",
+      "x": 300,
+      "y": 320,
+      "width": 200,
+      "height": 100,
+      "text": "Terminal Worker\n(Utility Process)\n\nPTY management\nMessagePort streaming",
+      "pv": {
+        "nodeType": "worker",
+        "shape": "rectangle",
+        "status": "approved",
+        "references": [
+          "src/terminal-worker/worker-entry.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "process",
+          "files": [
+            "src/terminal-worker/worker-entry.ts"
+          ]
+        },
+        "event": {
+          "name": "terminal.worker.session_created",
+          "description": "Worker created PTY session",
+          "attributes": {
+            "session.id": {
+              "type": "string",
+              "description": "Terminal session ID"
+            },
+            "shell": {
+              "type": "string",
+              "description": "Shell path used"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "port-renderer",
+      "type": "text",
+      "x": 50,
+      "y": 320,
+      "width": 150,
+      "height": 80,
+      "text": "Renderer Port\n\nport2 via\npostMessage()",
+      "pv": {
+        "nodeType": "port",
+        "shape": "rectangle",
+        "status": "approved",
+        "references": [
+          "src/renderer/hooks/useTerminalPort.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ipc",
+          "files": [
+            "src/renderer/hooks/useTerminalPort.ts"
+          ]
+        },
+        "event": {
+          "name": "terminal.port.renderer_connected",
+          "description": "Renderer connected to terminal MessagePort",
+          "attributes": {
+            "session.id": {
+              "type": "string",
+              "description": "Terminal session ID"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "port-worker",
+      "type": "text",
+      "x": 550,
+      "y": 320,
+      "width": 150,
+      "height": 80,
+      "text": "Worker Port\n\nport1 via\npostMessage()",
+      "pv": {
+        "nodeType": "port",
+        "shape": "rectangle",
+        "status": "approved",
+        "references": [
+          "src/terminal-worker/worker-entry.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ipc",
+          "files": [
+            "src/terminal-worker/worker-entry.ts"
+          ]
+        },
+        "event": {
+          "name": "terminal.port.worker_registered",
+          "description": "Worker registered terminal MessagePort",
+          "attributes": {
+            "session.id": {
+              "type": "string",
+              "description": "Terminal session ID"
+            },
+            "window.id": {
+              "type": "number",
+              "description": "Window ID for this port"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "state-note",
+      "type": "text",
+      "x": 800,
+      "y": 0,
+      "width": 250,
+      "height": 200,
+      "text": "SESSION STATE\n\nTerminalSession {\n  id: string\n  directory: string\n  context?: string\n  createdAt: number\n  lastActivity: number\n  repoPath?: string\n  repoId?: string\n  owner: TerminalOwner\n  metadata?: Metadata\n}",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "limits-note",
+      "type": "text",
+      "x": 800,
+      "y": 230,
+      "width": 250,
+      "height": 120,
+      "text": "LIMITS & TRACKING\n\n- Max sessions: 20\n- Sessions indexed by ID\n- Secondary index by repo\n- Activity integrated here\n- Ports tracked per window",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "cleanup-note",
+      "type": "text",
+      "x": 800,
+      "y": 380,
+      "width": 250,
+      "height": 140,
+      "text": "CLEANUP ON DESTROY\n\n1. Close all ports\n2. Remove ownership\n3. Delete from sessions\n4. Delete from activityStore\n5. Remove repo index\n6. Notify WebSocket bridge",
+      "color": "#EC4899"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "fromNode": "renderer",
+      "toNode": "tipc-router",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "TIPC invoke",
+      "pv": {
+        "edgeType": "tipc-invoke"
+      }
+    },
+    {
+      "id": "e2",
+      "fromNode": "tipc-router",
+      "toNode": "session-manager",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "createSession()",
+      "pv": {
+        "edgeType": "method-call"
+      }
+    },
+    {
+      "id": "e3",
+      "fromNode": "tipc-router",
+      "toNode": "ownership-manager",
+      "fromSide": "right",
+      "toSide": "top",
+      "label": "claimOwnership()",
+      "pv": {
+        "edgeType": "method-call"
+      }
+    },
+    {
+      "id": "e4",
+      "fromNode": "session-manager",
+      "toNode": "sessions-store",
+      "fromSide": "left",
+      "toSide": "right",
+      "label": "sessions.set()",
+      "pv": {
+        "edgeType": "state-update"
+      }
+    },
+    {
+      "id": "e5",
+      "fromNode": "session-manager",
+      "toNode": "worker",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "CREATE_SESSION",
+      "pv": {
+        "edgeType": "worker-message"
+      }
+    },
+    {
+      "id": "e6",
+      "fromNode": "worker",
+      "toNode": "session-manager",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "label": "SESSION_CREATED",
+      "pv": {
+        "edgeType": "worker-message"
+      }
+    },
+    {
+      "id": "e7",
+      "fromNode": "session-manager",
+      "toNode": "port-renderer",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "port2",
+      "pv": {
+        "edgeType": "port-transfer"
+      }
+    },
+    {
+      "id": "e8",
+      "fromNode": "session-manager",
+      "toNode": "port-worker",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "port1",
+      "pv": {
+        "edgeType": "port-transfer"
+      }
+    },
+    {
+      "id": "e9",
+      "fromNode": "port-renderer",
+      "toNode": "port-worker",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "PTY data (direct)",
+      "pv": {
+        "edgeType": "port-transfer"
+      }
+    }
+  ]
+}

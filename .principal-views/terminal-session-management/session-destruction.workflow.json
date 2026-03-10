@@ -1,0 +1,42 @@
+{
+  "version": "1.0.0",
+  "name": "Session Destruction",
+  "description": "Terminal session destruction and cleanup flow",
+  "mode": "span-tree",
+  "canvas": ".principal-views/terminal-session-management/terminal-session-management.otel.canvas",
+  "spanPattern": "terminal.session.destroy",
+  "scenarios": [
+    {
+      "id": "session-destruction",
+      "description": "Terminal session destroyed with full cleanup",
+      "priority": 1,
+      "template": {
+        "introduction": "**Destroying Terminal Session**\n\nSession being destroyed with full cleanup of ports, ownership, and activity state.",
+        "events": {
+          "terminal.session.destroy_requested": "[1] Destroy requested: session=`{{session.id}}`",
+          "terminal.session.worker_notified": "[2] Worker notified: DESTROY_SESSION",
+          "terminal.session.ports_closed": "[3] Ports closed: count={{port_count}}",
+          "terminal.ownership.removed": "[4] Ownership removed: session=`{{session.id}}`",
+          "terminal.session.activity_cleared": "[5] Activity cleared: session=`{{session.id}}`",
+          "terminal.session.store_cleaned": "[6] Session removed from stores"
+        },
+        "summary": "**Session Destroyed:**\n- Session ID: `{{session.id}}`\n- Cleanup complete: ports, ownership, activity, stores"
+      },
+      "filterDefault": true
+    },
+    {
+      "id": "session-exit-from-worker",
+      "description": "Session exit triggered by PTY process exit in worker",
+      "priority": 2,
+      "template": {
+        "introduction": "**Session Exit (PTY Terminated)**\n\nWorker reported PTY process exit. Cleaning up session.",
+        "events": {
+          "terminal.worker.session_exit": "[1] Worker: SESSION_EXIT, code={{exit_code}}",
+          "terminal.session.cleanup_triggered": "[2] Cleanup triggered for session=`{{session.id}}`"
+        },
+        "summary": "**Session Exited:**\n- Session ID: `{{session.id}}`\n- Exit Code: {{exit_code}}"
+      },
+      "filterDefault": true
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "version": "1.0.0",
+  "name": "Session Creation",
+  "description": "Terminal session creation flow from renderer through TIPC to worker",
+  "mode": "span-tree",
+  "canvas": ".principal-views/terminal-session-management/terminal-session-management.otel.canvas",
+  "spanPattern": "terminal.session.create",
+  "scenarios": [
+    {
+      "id": "session-creation-success",
+      "description": "Successful terminal session creation with PTY and MessagePort setup",
+      "priority": 1,
+      "template": {
+        "introduction": "**Creating Terminal Session**\n\nRenderer requested new terminal session. Session manager coordinating with worker.",
+        "events": {
+          "terminal.session.create_requested": "[1] Renderer requested session: cwd=`{{cwd}}`, context={{context}}",
+          "terminal.session.router_handled": "[2] Router handling: window={{window.id}}, can_create={{can_create}}",
+          "terminal.session.manager_action": "[3] Manager action: {{action}}, session=`{{session.id}}`",
+          "terminal.worker.session_created": "[4] Worker created PTY: session=`{{session.id}}`, shell={{shell}}",
+          "terminal.ownership.changed": "[5] Ownership claimed: session=`{{session.id}}`, owner={{new_owner.window_id}}"
+        },
+        "summary": "**Session Created:**\n- Session ID: `{{session.id}}`\n- Directory: `{{cwd}}`\n- Owner Window: {{window.id}}"
+      },
+      "filterDefault": true
+    },
+    {
+      "id": "session-creation-limit-reached",
+      "description": "Session creation blocked due to max session limit",
+      "priority": 2,
+      "template": {
+        "introduction": "**Session Creation Blocked**\n\nMaximum session limit reached.",
+        "events": {
+          "terminal.session.create_requested": "[1] Renderer requested session: cwd=`{{cwd}}`",
+          "terminal.session.router_handled": "[2] Router rejected: can_create={{can_create}}"
+        },
+        "summary": "**Creation Failed:**\n- Reason: Maximum sessions (20) reached"
+      },
+      "filterDefault": false
+    }
+  ]
+}

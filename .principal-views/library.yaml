@@ -24,6 +24,7 @@ resources:
       - "terminal-activity-sync"
       - "alexandria-recently-opened"
       - "user-preferences"
+      - "event-server-manager"
 
   principal-ade-storybook:
     service.name: "principal-ade-storybook"

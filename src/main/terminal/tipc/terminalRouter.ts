@@ -12,16 +12,12 @@ import { getSessionManagerInstance } from '../sessionManagerSingleton';
 import { ownershipManager } from '../TerminalOwnershipManager';
 import { isPtyAvailable } from '../utils/ptyLoader';
 import { getTracer } from '../../telemetry';
-import type { TerminalActivityState } from '../../../shared/tipc/terminalRouterTypes';
 
 // Tracer for terminal activity telemetry
 const tracer = getTracer('terminal-activity');
 
 // Get singleton session manager instance
 const sessionManager = getSessionManagerInstance();
-
-// Activity tracking store - tracks which terminals have agents working
-const activityStore = new Map<string, TerminalActivityState>();
 
 const t = tipc.create();
 
@@ -288,36 +284,36 @@ export const terminalRouter = {
           'is_working': input.isWorking,
         });
 
-        if (input.isWorking) {
-          // Store activity state
-          const state: TerminalActivityState = {
-            sessionId: input.sessionId,
-            isWorking: input.isWorking,
-            workingMessage: input.workingMessage,
-            workingSubtitle: input.workingSubtitle,
-            windowId: window.id,
-            timestamp: Date.now(),
-          };
-          activityStore.set(input.sessionId, state);
+        // Update activity in session manager (validates session exists)
+        const { activities, sessionExists } = sessionManager.updateActivity(
+          input.sessionId,
+          window.id,
+          input.isWorking,
+          input.workingMessage,
+          input.workingSubtitle,
+        );
 
-          // Event: Agent started working
+        // Log warning if session doesn't exist (but still track activity for graceful handling)
+        if (!sessionExists) {
+          console.warn(
+            `[Terminal] Activity update for non-existent session: ${input.sessionId}`,
+          );
+        }
+
+        // Event: Agent started/stopped working
+        if (input.isWorking) {
           span.addEvent('terminal.activity.agent_started', {
             'session.id': input.sessionId,
-            'store.size': activityStore.size,
+            'store.size': sessionManager.getActivityStoreSize(),
           });
         } else {
-          // Remove from store when no longer working
-          activityStore.delete(input.sessionId);
-
-          // Event: Agent stopped working
           span.addEvent('terminal.activity.agent_stopped', {
             'session.id': input.sessionId,
-            'store.size': activityStore.size,
+            'store.size': sessionManager.getActivityStoreSize(),
           });
         }
 
         // Broadcast to all windows
-        const activities = Array.from(activityStore.values());
         const allWindows = BrowserWindow.getAllWindows();
         const activeWindowCount = allWindows.filter(
           (w) => !w.isDestroyed(),
@@ -349,7 +345,7 @@ export const terminalRouter = {
     }),
 
   getActivityState: t.procedure.action(async () => {
-    return Array.from(activityStore.values());
+    return sessionManager.getActivityState();
   }),
 };
 

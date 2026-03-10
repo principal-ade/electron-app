@@ -9,7 +9,10 @@ import {
   UtilityProcess,
 } from 'electron';
 import { TerminalSession } from './types';
-import type { TerminalSessionMetadata } from '../../shared/tipc/terminalRouterTypes';
+import type {
+  TerminalSessionMetadata,
+  TerminalActivityState,
+} from '../../shared/tipc/terminalRouterTypes';
 import { ownershipManager } from './TerminalOwnershipManager';
 import { terminalEnvironment } from '../terminalEnvironment';
 import { TerminalAPIEvents } from '../../shared/main-process-api-interfaces/TerminalService';
@@ -41,6 +44,9 @@ export class TerminalSessionManager {
   private sessionsByRepo: Map<string, string> = new Map(); // "repoPath:context" -> sessionId
   private maxSessions = 20;
   private rendererWindows: Set<BrowserWindow> = new Set();
+
+  // Activity tracking - which terminals have agents actively working
+  private activityStore: Map<string, TerminalActivityState> = new Map();
 
   // WebSocket bridge for remote terminal access (optional)
   private wsBridge: TerminalWebSocketBridge | null = null;
@@ -504,6 +510,9 @@ export class TerminalSessionManager {
     ownershipManager.removeSession(sessionId);
     this.sessions.delete(sessionId);
 
+    // Clean up activity tracking (prevents ghost entries)
+    this.activityStore.delete(sessionId);
+
     for (const [repo, sid] of Array.from(this.sessionsByRepo.entries())) {
       if (sid === sessionId) {
         this.sessionsByRepo.delete(repo);
@@ -612,6 +621,59 @@ export class TerminalSessionManager {
       return true;
     }
     return false;
+  }
+
+  // =============================================================================
+  // Activity Tracking
+  // =============================================================================
+
+  /**
+   * Update the activity state for a terminal session.
+   * Called when an agent starts or stops working.
+   * Returns the current activity state for broadcasting.
+   */
+  updateActivity(
+    sessionId: string,
+    windowId: number,
+    isWorking: boolean,
+    workingMessage?: string,
+    workingSubtitle?: string,
+  ): { activities: TerminalActivityState[]; sessionExists: boolean } {
+    // Validate session exists
+    const sessionExists = this.sessions.has(sessionId);
+
+    if (isWorking) {
+      const state: TerminalActivityState = {
+        sessionId,
+        isWorking,
+        workingMessage,
+        workingSubtitle,
+        windowId,
+        timestamp: Date.now(),
+      };
+      this.activityStore.set(sessionId, state);
+    } else {
+      this.activityStore.delete(sessionId);
+    }
+
+    return {
+      activities: Array.from(this.activityStore.values()),
+      sessionExists,
+    };
+  }
+
+  /**
+   * Get all current activity states.
+   */
+  getActivityState(): TerminalActivityState[] {
+    return Array.from(this.activityStore.values());
+  }
+
+  /**
+   * Get the activity store size (for telemetry).
+   */
+  getActivityStoreSize(): number {
+    return this.activityStore.size;
   }
 
   // =============================================================================

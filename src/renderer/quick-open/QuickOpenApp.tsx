@@ -350,9 +350,7 @@ const QuickOpenApp: React.FC = () => {
                     cursor: 'pointer',
                     borderBottom: `1px solid ${theme.colors.border}`,
                     opacity: item.isOpen ? 0.7 : 1,
-                    background: isSelected
-                      ? theme.colors.primary
-                      : 'transparent',
+                    background: 'transparent',
                   }}
                 >
                   {/* Content */}
@@ -422,9 +420,14 @@ const QuickOpenApp: React.FC = () => {
                       >
                         <span
                           style={{
-                            color: isSelected
-                              ? theme.colors.textOnPrimary
-                              : theme.colors.text,
+                            color: theme.colors.text,
+                            borderBottom: isSelected
+                              ? `2px solid ${theme.colors.primary}`
+                              : '2px solid transparent',
+                            paddingBottom: '0px',
+                            paddingLeft: '1px',
+                            paddingRight: '3px',
+                            marginLeft: '-1px',
                           }}
                         >
                           {item.name}
@@ -449,9 +452,7 @@ const QuickOpenApp: React.FC = () => {
                       {item.description && (
                         <div
                           style={{
-                            color: isSelected
-                              ? `${theme.colors.textOnPrimary}cc`
-                              : theme.colors.textSecondary,
+                            color: theme.colors.textSecondary,
                             fontSize: theme.fontSizes[3],
                             fontFamily: theme.fonts.body,
                             lineHeight: '32px',
