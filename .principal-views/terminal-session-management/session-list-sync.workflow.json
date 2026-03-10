@@ -8,30 +8,17 @@
   "scenarios": [
     {
       "id": "session-list-request",
-      "description": "Window requests list of all terminal sessions",
+      "description": "Window requests list of all terminal sessions and data port",
       "priority": 1,
       "template": {
-        "introduction": "**Fetching Terminal Sessions**\n\nWindow requesting list of all active terminal sessions.",
+        "introduction": "**Fetching Terminal Sessions**\n\nWindow requesting list of sessions and establishing data ports.",
         "events": {
-          "terminal.session.list_requested": "[1] List requested by window={{window.id}}",
-          "terminal.session.list_returned": "[2] Returned {{session_count}} sessions"
+          "terminal.session.router_handled": "[1] Router handling list: window={{window.id}}, can_create={{can_create}}",
+          "terminal.session.manager_action": "[2] Manager {{action}}: session=`{{session.id}}`",
+          "terminal.port.worker_registered": "[3] Worker port registered: session=`{{session.id}}`, window={{window.id}}",
+          "terminal.port.renderer_connected": "[4] Renderer port connected: session=`{{session.id}}`"
         },
-        "summary": "**Session List:**\n- Total Sessions: {{session_count}}\n- Requesting Window: {{window.id}}"
-      },
-      "filterDefault": true
-    },
-    {
-      "id": "session-port-request",
-      "description": "Window requests data port for existing session",
-      "priority": 2,
-      "template": {
-        "introduction": "**Requesting Session Port**\n\nWindow requesting MessagePort for terminal data streaming.",
-        "events": {
-          "terminal.session.port_requested": "[1] Port requested: session=`{{session.id}}`, window={{window.id}}",
-          "terminal.session.port_created": "[2] Port created and transferred",
-          "terminal.session.port_registered": "[3] Port registered with worker"
-        },
-        "summary": "**Port Established:**\n- Session: `{{session.id}}`\n- Window: {{window.id}}\n- Direct PTY streaming enabled"
+        "summary": "**Session List Retrieved:**\n- Requesting Window: {{window.id}}"
       },
       "filterDefault": true
     }

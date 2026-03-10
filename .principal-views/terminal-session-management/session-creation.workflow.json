@@ -15,27 +15,16 @@
         "events": {
           "terminal.session.create_requested": "[1] Renderer requested session: cwd=`{{cwd}}`, context={{context}}",
           "terminal.session.router_handled": "[2] Router handling: window={{window.id}}, can_create={{can_create}}",
-          "terminal.session.manager_action": "[3] Manager action: {{action}}, session=`{{session.id}}`",
-          "terminal.worker.session_created": "[4] Worker created PTY: session=`{{session.id}}`, shell={{shell}}",
-          "terminal.ownership.changed": "[5] Ownership claimed: session=`{{session.id}}`, owner={{new_owner.window_id}}"
+          "terminal.session.manager_action": "[3] Manager {{action}}: session=`{{session.id}}`",
+          "terminal.session.store_updated": "[4] Store {{operation}}: session=`{{session.id}}`, size={{store.size}}",
+          "terminal.worker.session_created": "[5] Worker created PTY: session=`{{session.id}}`, shell={{shell}}",
+          "terminal.ownership.changed": "[6] Ownership claimed: session=`{{session.id}}`, owner={{new_owner.window_id}}",
+          "terminal.port.worker_registered": "[7] Worker port registered: session=`{{session.id}}`, window={{window.id}}",
+          "terminal.port.renderer_connected": "[8] Renderer port connected: session=`{{session.id}}`"
         },
         "summary": "**Session Created:**\n- Session ID: `{{session.id}}`\n- Directory: `{{cwd}}`\n- Owner Window: {{window.id}}"
       },
       "filterDefault": true
-    },
-    {
-      "id": "session-creation-limit-reached",
-      "description": "Session creation blocked due to max session limit",
-      "priority": 2,
-      "template": {
-        "introduction": "**Session Creation Blocked**\n\nMaximum session limit reached.",
-        "events": {
-          "terminal.session.create_requested": "[1] Renderer requested session: cwd=`{{cwd}}`",
-          "terminal.session.router_handled": "[2] Router rejected: can_create={{can_create}}"
-        },
-        "summary": "**Creation Failed:**\n- Reason: Maximum sessions (20) reached"
-      },
-      "filterDefault": false
     }
   ]
 }
