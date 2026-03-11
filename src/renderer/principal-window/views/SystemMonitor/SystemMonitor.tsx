@@ -25,6 +25,7 @@ import {
   onActivitySync,
   type TerminalActivityState,
 } from '../../../tipc/terminalClient';
+import type { TerminalSessionInfo } from '../../../../shared/tipc/terminalRouterTypes';
 import type {
   MonitoringStatus,
   GitStatus,
@@ -61,6 +62,8 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
   const [isSendingTestTrace, setIsSendingTestTrace] = useState(false);
   const [activeTab, setActiveTab] = useState<'repository' | 'otel' | 'terminals'>('repository');
   const [terminalActivities, setTerminalActivities] = useState<TerminalActivityState[]>([]);
+  const [allTerminalSessions, setAllTerminalSessions] = useState<TerminalSessionInfo[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -184,6 +187,36 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
     return unsubscribe;
   }, []);
 
+  // Fetch all terminal sessions (session management)
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+
+    const fetchAllSessions = async () => {
+      try {
+        const sessions = await terminalClient.listTerminalSessions();
+        setAllTerminalSessions(sessions);
+        setSessionsLoading(false);
+      } catch (error) {
+        console.error('Failed to fetch terminal sessions:', error);
+        setSessionsLoading(false);
+      }
+    };
+
+    // Initial fetch
+    fetchAllSessions();
+
+    // Poll every 2 seconds when terminals tab is active
+    if (activeTab === 'terminals') {
+      interval = setInterval(fetchAllSessions, 2000);
+    }
+
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [activeTab]);
+
   // Simple sparkline component
   const Sparkline: React.FC<{
     data: number[];
@@ -221,6 +254,17 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
   const formatBytes = (bytes: number) => {
     const mb = bytes / 1024 / 1024;
     return mb < 1000 ? `${mb.toFixed(1)} MB` : `${(mb / 1024).toFixed(2)} GB`;
+  };
+
+  const formatDuration = (ms: number) => {
+    const seconds = Math.floor(ms / 1000);
+    if (seconds < 60) return `${seconds}s ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
   };
 
   const handleRegisterRepository = async (path: string) => {
@@ -1085,7 +1129,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
         </section>
         )}
 
-        {/* Terminal Activity Content */}
+        {/* Terminal Sessions Content */}
         {activeTab === 'terminals' && (
           <section style={{ marginBottom: '32px' }}>
             <h3
@@ -1099,7 +1143,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                 letterSpacing: '0.05em',
               }}
             >
-              ACTIVE AGENT SESSIONS ({terminalActivities?.filter(a => a.isWorking).length ?? 0})
+              TERMINAL SESSIONS ({allTerminalSessions.length})
             </h3>
 
             <div
@@ -1111,7 +1155,25 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                 overflow: 'hidden',
               }}
             >
-              {(terminalActivities?.filter(a => a.isWorking).length ?? 0) === 0 ? (
+              {sessionsLoading ? (
+                <div
+                  style={{
+                    padding: '24px',
+                    textAlign: 'center',
+                    color: theme.colors.textSecondary,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <Loader2
+                    size={16}
+                    style={{ animation: 'spin 1s linear infinite' }}
+                  />
+                  Loading sessions...
+                </div>
+              ) : allTerminalSessions.length === 0 ? (
                 <div
                   style={{
                     padding: '40px 24px',
@@ -1124,133 +1186,224 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                     style={{ marginBottom: '12px', opacity: 0.5 }}
                   />
                   <div style={{ fontSize: '14px' }}>
-                    No agents currently working
+                    No terminal sessions
                   </div>
                   <div style={{ fontSize: '12px', marginTop: '4px', opacity: 0.7 }}>
-                    Active terminal sessions will appear here when agents are working
+                    Terminal sessions will appear here when created
                   </div>
                 </div>
               ) : (
-                terminalActivities
-                  ?.filter(a => a.isWorking)
-                  .map((activity, index, arr) => (
-                    <div
-                      key={activity.sessionId}
-                      style={{
-                        padding: '16px 20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '16px',
-                        borderBottom:
-                          index < arr.length - 1
-                            ? `1px solid ${theme.colors.border}`
-                            : 'none',
-                        transition: 'background-color 0.15s ease',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor =
-                          'rgba(0, 0, 0, 0.02)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                      }}
-                    >
-                      {/* Spinner */}
+                // Sort sessions: working first, then by lastActivity
+                [...allTerminalSessions]
+                  .sort((a, b) => {
+                    const aWorking = terminalActivities?.find(act => act.sessionId === a.id)?.isWorking ?? false;
+                    const bWorking = terminalActivities?.find(act => act.sessionId === b.id)?.isWorking ?? false;
+                    if (aWorking && !bWorking) return -1;
+                    if (!aWorking && bWorking) return 1;
+                    return b.lastActivity - a.lastActivity;
+                  })
+                  .map((session, index) => {
+                    const activity = terminalActivities?.find(a => a.sessionId === session.id);
+                    const isWorking = activity?.isWorking ?? false;
+                    const timeSinceActivity = Date.now() - session.lastActivity;
+                    const timeSinceCreated = Date.now() - session.createdAt;
+
+                    return (
                       <div
+                        key={session.id}
                         style={{
+                          padding: '16px 20px',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '32px',
-                          height: '32px',
-                          borderRadius: '8px',
-                          backgroundColor: `${theme.colors.success}15`,
-                          flexShrink: 0,
+                          gap: '16px',
+                          borderBottom:
+                            index < allTerminalSessions.length - 1
+                              ? `1px solid ${theme.colors.border}`
+                              : 'none',
+                          transition: 'background-color 0.15s ease',
+                          backgroundColor: isWorking ? `${theme.colors.success}05` : 'transparent',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = isWorking
+                            ? `${theme.colors.success}10`
+                            : 'rgba(0, 0, 0, 0.02)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = isWorking
+                            ? `${theme.colors.success}05`
+                            : 'transparent';
                         }}
                       >
-                        <Loader2
-                          size={18}
-                          style={{
-                            color: theme.colors.success,
-                            animation: 'spin 1s linear infinite',
-                          }}
-                        />
-                      </div>
-
-                      {/* Session Info */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
+                        {/* Status Icon */}
                         <div
                           style={{
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '8px',
+                            justifyContent: 'center',
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '8px',
+                            backgroundColor: isWorking
+                              ? `${theme.colors.success}15`
+                              : `${theme.colors.textSecondary}10`,
+                            flexShrink: 0,
                           }}
                         >
-                          <span
-                            style={{
-                              fontFamily: theme.fonts.monospace,
-                              fontSize: '13px',
-                              color: theme.colors.text,
-                              fontWeight: 500,
-                            }}
-                          >
-                            {activity.sessionId.substring(0, 12)}...
-                          </span>
-                          <span
-                            style={{
-                              fontSize: '11px',
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              backgroundColor: `${theme.colors.info}15`,
-                              color: theme.colors.info,
-                            }}
-                          >
-                            Window {activity.windowId}
-                          </span>
+                          {isWorking ? (
+                            <Loader2
+                              size={18}
+                              style={{
+                                color: theme.colors.success,
+                                animation: 'spin 1s linear infinite',
+                              }}
+                            />
+                          ) : (
+                            <Terminal
+                              size={18}
+                              style={{ color: theme.colors.textSecondary }}
+                            />
+                          )}
                         </div>
-                        {activity.workingMessage && (
-                          <div
-                            style={{
-                              fontSize: '13px',
-                              color: theme.colors.textSecondary,
-                              marginTop: '4px',
-                            }}
-                          >
-                            {activity.workingMessage}
-                          </div>
-                        )}
-                        {activity.workingSubtitle && (
-                          <div
-                            style={{
-                              fontSize: '12px',
-                              color: theme.colors.textSecondary,
-                              marginTop: '2px',
-                              opacity: 0.7,
-                            }}
-                          >
-                            {activity.workingSubtitle}
-                          </div>
-                        )}
-                      </div>
 
-                      {/* Duration */}
-                      <div
-                        style={{
-                          fontSize: '12px',
-                          color: theme.colors.textSecondary,
-                          fontFamily: theme.fonts.monospace,
-                          flexShrink: 0,
-                        }}
-                      >
-                        {Math.floor((Date.now() - activity.timestamp) / 1000)}s
+                        {/* Session Info */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              flexWrap: 'wrap',
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontFamily: theme.fonts.monospace,
+                                fontSize: '13px',
+                                color: theme.colors.text,
+                                fontWeight: 500,
+                              }}
+                            >
+                              {session.id.substring(0, 12)}...
+                            </span>
+                            {session.context && (
+                              <span
+                                style={{
+                                  fontSize: '11px',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  backgroundColor: `${theme.colors.primary}15`,
+                                  color: theme.colors.primary,
+                                }}
+                              >
+                                {session.context}
+                              </span>
+                            )}
+                            {session.ownedByWindowId && (
+                              <span
+                                style={{
+                                  fontSize: '11px',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  backgroundColor: `${theme.colors.info}15`,
+                                  color: theme.colors.info,
+                                }}
+                              >
+                                Window {session.ownedByWindowId}
+                              </span>
+                            )}
+                            {isWorking && (
+                              <span
+                                style={{
+                                  fontSize: '11px',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  backgroundColor: `${theme.colors.success}15`,
+                                  color: theme.colors.success,
+                                  fontWeight: 500,
+                                }}
+                              >
+                                Working
+                              </span>
+                            )}
+                            {session.metadata?.serverType && (
+                              <span
+                                style={{
+                                  fontSize: '11px',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  backgroundColor: `${theme.colors.warning}15`,
+                                  color: theme.colors.warning,
+                                }}
+                              >
+                                {session.metadata.serverType}
+                                {session.metadata.port && `:${session.metadata.port}`}
+                              </span>
+                            )}
+                          </div>
+                          {(session.cwd || session.directory) && (
+                            <div
+                              style={{
+                                fontSize: '12px',
+                                color: theme.colors.textSecondary,
+                                marginTop: '4px',
+                                fontFamily: theme.fonts.monospace,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {session.cwd || session.directory}
+                            </div>
+                          )}
+                          {activity?.workingMessage && (
+                            <div
+                              style={{
+                                fontSize: '12px',
+                                color: theme.colors.success,
+                                marginTop: '4px',
+                              }}
+                            >
+                              {activity.workingMessage}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Timestamps / Working Duration */}
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'flex-end',
+                            fontSize: '11px',
+                            color: theme.colors.textSecondary,
+                            fontFamily: theme.fonts.monospace,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {isWorking && activity ? (
+                            <div style={{ color: theme.colors.success, fontWeight: 500 }}>
+                              Working for {Math.floor((Date.now() - activity.timestamp) / 1000)}s
+                            </div>
+                          ) : (
+                            <div title="Time since last activity">
+                              Active {formatDuration(timeSinceActivity)}
+                            </div>
+                          )}
+                          <div
+                            style={{ marginTop: '2px', opacity: 0.7 }}
+                            title="Time since creation"
+                          >
+                            Created {formatDuration(timeSinceCreated)}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
               )}
             </div>
 
-            {/* All Sessions Summary */}
-            {(terminalActivities?.length ?? 0) > 0 && (
+            {/* Summary Stats */}
+            {allTerminalSessions.length > 0 && (
               <div
                 style={{
                   marginTop: '16px',
@@ -1260,11 +1413,28 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                   border: `1px solid ${theme.colors.border}`,
                   fontSize: '12px',
                   color: theme.colors.textSecondary,
+                  display: 'flex',
+                  gap: '16px',
+                  flexWrap: 'wrap',
                 }}
               >
-                Total tracked sessions: {terminalActivities?.length ?? 0} •
-                Working: {terminalActivities?.filter(a => a.isWorking).length ?? 0} •
-                Idle: {terminalActivities?.filter(a => !a.isWorking).length ?? 0}
+                <span>Total: {allTerminalSessions.length}</span>
+                <span>•</span>
+                <span style={{ color: theme.colors.success }}>
+                  Working: {terminalActivities?.filter(a => a.isWorking).length ?? 0}
+                </span>
+                <span>•</span>
+                <span>
+                  Idle: {allTerminalSessions.length - (terminalActivities?.filter(a => a.isWorking).length ?? 0)}
+                </span>
+                {allTerminalSessions.some(s => s.ownedByWindowId) && (
+                  <>
+                    <span>•</span>
+                    <span>
+                      Windows: {new Set(allTerminalSessions.filter(s => s.ownedByWindowId).map(s => s.ownedByWindowId)).size}
+                    </span>
+                  </>
+                )}
               </div>
             )}
           </section>

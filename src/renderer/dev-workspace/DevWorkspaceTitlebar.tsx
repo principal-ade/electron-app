@@ -317,12 +317,14 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                       display: 'flex',
                       alignItems: 'center',
                       gap: '6px',
-                      padding: '4px 8px',
+                      padding: '6px 12px',
                       background: theme.colors.backgroundTertiary,
                       borderRadius: '6px',
                       border: `1px solid ${theme.colors.border}`,
                       cursor: 'pointer',
-                      fontSize: `${theme.fontSizes[0]}px`,
+                      fontSize: `${theme.fontSizes[1]}px`,
+                      fontWeight: theme.fontWeights.medium,
+                      fontFamily: theme.fonts.body,
                       color: theme.colors.textSecondary,
                     }}
                     title={servicesExpanded ? 'Click to collapse' : 'Click to expand all services'}
@@ -395,7 +397,9 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                             <span
                               style={{
                                 color: count > 0 ? theme.colors.text : theme.colors.textTertiary,
-                                fontSize: `${theme.fontSizes[0]}px`,
+                                fontSize: `${theme.fontSizes[1]}px`,
+                                fontWeight: theme.fontWeights.medium,
+                                fontFamily: theme.fonts.body,
                               }}
                             >
                               {serviceName}
@@ -407,9 +411,9 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                               style={{
                                 background: count > 0 ? theme.colors.success : theme.colors.backgroundTertiary,
                                 color: count > 0 ? '#fff' : theme.colors.textTertiary,
-                                padding: '1px 6px',
+                                padding: '2px 8px',
                                 borderRadius: '8px',
-                                fontSize: '10px',
+                                fontSize: `${theme.fontSizes[0]}px`,
                                 fontWeight: 600,
                               }}
                             >
