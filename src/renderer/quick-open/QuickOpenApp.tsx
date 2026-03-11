@@ -20,6 +20,8 @@ interface QuickOpenItem {
   avatarUrl?: string;
   // Full AlexandriaEntry for repositories (passed through to main process when opening)
   alexandriaEntry?: AlexandriaEntry;
+  // Last opened timestamp for sorting and display
+  lastOpenedAt?: string;
 }
 
 // Quick Open specific window type - electronAPI is always defined in this context
@@ -56,6 +58,75 @@ const shortenPath = (path: string): string => {
     return path.replace(linuxMatch[0], '~');
   }
   return path;
+};
+
+/**
+ * Highlight matching text by splitting into segments
+ */
+const highlightMatch = (
+  text: string,
+  query: string,
+  highlightColor: string,
+): React.ReactNode => {
+  if (!query.trim()) {
+    return text;
+  }
+
+  const lowerText = text.toLowerCase();
+  const lowerQuery = query.toLowerCase();
+  const index = lowerText.indexOf(lowerQuery);
+
+  if (index === -1) {
+    return text;
+  }
+
+  const before = text.slice(0, index);
+  const match = text.slice(index, index + query.length);
+  const after = text.slice(index + query.length);
+
+  return (
+    <>
+      {before}
+      <span style={{ color: highlightColor, fontWeight: 600 }}>{match}</span>
+      {after}
+    </>
+  );
+};
+
+/**
+ * Format a timestamp as relative time (e.g., "2 hours ago", "yesterday")
+ */
+const formatRelativeTime = (timestamp: string | undefined): string => {
+  if (!timestamp) return '';
+
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSeconds = Math.floor(diffMs / 1000);
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffSeconds < 60) {
+    return 'just now';
+  } else if (diffMinutes < 60) {
+    return `${diffMinutes}m ago`;
+  } else if (diffHours < 24) {
+    return `${diffHours}h ago`;
+  } else if (diffDays === 1) {
+    return 'yesterday';
+  } else if (diffDays < 7) {
+    return `${diffDays}d ago`;
+  } else if (diffDays < 30) {
+    const weeks = Math.floor(diffDays / 7);
+    return `${weeks}w ago`;
+  } else if (diffDays < 365) {
+    const months = Math.floor(diffDays / 30);
+    return `${months}mo ago`;
+  } else {
+    const years = Math.floor(diffDays / 365);
+    return `${years}y ago`;
+  }
 };
 
 const QuickOpenApp: React.FC = () => {
@@ -415,37 +486,63 @@ const QuickOpenApp: React.FC = () => {
                           lineHeight: '32px',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '8px',
+                          justifyContent: 'space-between',
                         }}
                       >
-                        <span
+                        <div
                           style={{
-                            color: theme.colors.text,
-                            borderBottom: isSelected
-                              ? `2px solid ${theme.colors.primary}`
-                              : '2px solid transparent',
-                            paddingBottom: '0px',
-                            paddingLeft: '1px',
-                            paddingRight: '3px',
-                            marginLeft: '-1px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            minWidth: 0,
                           }}
                         >
-                          {item.name}
-                        </span>
-                        {item.isOpen && (
                           <span
                             style={{
-                              display: 'inline-block',
-                              padding: '2px 6px',
-                              background: theme.colors.primary,
-                              color: theme.colors.background,
-                              fontSize: theme.fontSizes[1],
-                              fontFamily: theme.fonts.body,
-                              borderRadius: '3px',
-                              fontWeight: 600,
+                              color: theme.colors.text,
+                              borderBottom: isSelected
+                                ? `2px solid ${theme.colors.primary}`
+                                : '2px solid transparent',
+                              paddingBottom: '0px',
+                              paddingLeft: '1px',
+                              paddingRight: '3px',
+                              marginLeft: '-1px',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
                             }}
                           >
-                            Open
+                            {highlightMatch(item.name, searchQuery, theme.colors.primary)}
+                          </span>
+                          {item.isOpen && (
+                            <span
+                              style={{
+                                display: 'inline-block',
+                                padding: '2px 6px',
+                                background: theme.colors.primary,
+                                color: theme.colors.background,
+                                fontSize: theme.fontSizes[1],
+                                fontFamily: theme.fonts.body,
+                                borderRadius: '3px',
+                                fontWeight: 600,
+                              }}
+                            >
+                              Open
+                            </span>
+                          )}
+                        </div>
+                        {item.lastOpenedAt && (
+                          <span
+                            style={{
+                              color: theme.colors.textSecondary,
+                              fontSize: theme.fontSizes[2],
+                              fontFamily: theme.fonts.body,
+                              fontWeight: 400,
+                              flexShrink: 0,
+                              marginLeft: '12px',
+                            }}
+                          >
+                            {formatRelativeTime(item.lastOpenedAt)}
                           </span>
                         )}
                       </div>
@@ -462,7 +559,7 @@ const QuickOpenApp: React.FC = () => {
                             textOverflow: 'ellipsis',
                           }}
                         >
-                          {shortenPath(item.description)}
+                          {highlightMatch(shortenPath(item.description), searchQuery, theme.colors.primary)}
                         </div>
                       )}
                     </div>

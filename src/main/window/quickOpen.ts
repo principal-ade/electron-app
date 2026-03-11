@@ -29,6 +29,8 @@ interface QuickOpenItem {
   avatarUrl?: string;
   // Full AlexandriaEntry for repositories (so we can pass complete data when opening)
   alexandriaEntry?: AlexandriaEntry;
+  // Last opened timestamp for sorting and display
+  lastOpenedAt?: string;
 }
 
 class QuickOpen {
@@ -266,6 +268,7 @@ class QuickOpen {
           openWindowId: openRepo?.id,
           avatarUrl,
           alexandriaEntry: repo,
+          lastOpenedAt: repo.lastOpenedAt,
         });
       }
 
@@ -281,8 +284,21 @@ class QuickOpen {
           description: workspace.description,
           isOpen: !!openWorkspace,
           openWindowId: openWorkspace?.windowId,
+          lastOpenedAt: workspace.lastOpenedAt,
         });
       }
+
+      // Sort items: open windows first, then by lastOpenedAt (most recent first)
+      items.sort((a, b) => {
+        // Open items come first
+        if (a.isOpen && !b.isOpen) return -1;
+        if (!a.isOpen && b.isOpen) return 1;
+
+        // Then sort by lastOpenedAt (most recent first)
+        const aTime = a.lastOpenedAt ? new Date(a.lastOpenedAt).getTime() : 0;
+        const bTime = b.lastOpenedAt ? new Date(b.lastOpenedAt).getTime() : 0;
+        return bTime - aTime;
+      });
 
       log.info(
         `[Quick Open] Loaded ${items.length} items (${repositories.length} repos, ${workspaces.length} workspaces)`,
