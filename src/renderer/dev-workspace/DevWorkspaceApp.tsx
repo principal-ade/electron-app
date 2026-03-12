@@ -71,6 +71,7 @@ function useWindowData(): AlexandriaEntryData | null {
 // Available panel IDs for switch command
 const PANEL_IDS = [
   'terminal',
+  'terminalSessions',
   'principalView',
   'fileCity',
   'docs',
@@ -207,7 +208,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   const [collapsed, setCollapsed] = useState({ left: false, right: false });
   const [sidebarsHidden, setSidebarsHidden] = useState(false);
   const [layout, setLayout] = useState<PanelLayout>({
-    left: 'packageComposition',
+    left: 'terminalSessions',
     middle: 'terminal',
     right: 'fileCity',
   });
@@ -421,7 +422,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
       }),
       events.on('panel:reset-layout', () => {
         setLayout({
-          left: 'packageComposition',
+          left: 'terminalSessions',
           middle: 'terminal',
           right: 'fileCity',
         });

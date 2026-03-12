@@ -194,8 +194,6 @@ export default class AppVersionManager {
     });
 
     autoUpdater.on('update-available', (info: UpdateInfo) => {
-      log.info('Update available:', JSON.stringify(info, null, 2));
-
       // Calculate request duration and emit completion event
       const duration_ms = this.githubRequestStartTime > 0
         ? Date.now() - this.githubRequestStartTime

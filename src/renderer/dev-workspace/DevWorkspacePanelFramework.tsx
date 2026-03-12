@@ -73,6 +73,7 @@ import { panels as backlogPanels } from '@industry-theme/backlogmd-kanban-panel'
 import { panels as agentPanels, type Skill, type SkillDetailPanelProps } from '@industry-theme/agent-panels';
 import { GitHubIssuesPanel, GitHubIssueDetailPanel } from '@industry-theme/github-panels';
 import { panels as typeInformationPanels } from '../panels/TypeInformationPanel';
+import { TerminalSessionsPanel } from '../panels/terminal-sessions';
 import type { Repository } from '../../shared/types/repository.types';
 import { PanelIconSidebar, RIGHT_PANEL_ICONS } from '../components/Sidebar/PanelIconSidebar';
 import { StorybookSidebarButton } from '../components/Sidebar/StorybookSidebarButton';
@@ -1849,6 +1850,22 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     return unsubscribe;
   }, [events]);
 
+  // Listen for terminal session selection from TerminalSessionsPanel
+  useEffect(() => {
+    const unsubscribe = events.on('principal-ade.terminal-sessions:session-selected', (event) => {
+      console.info('[DevWorkspacePanelFramework] Terminal session selected:', event);
+      const payload = event.payload as { sessionId: string };
+
+      if (payload?.sessionId) {
+        // Switch to terminal panel in middle and focus the selected session tab
+        onLayoutChange({ ...layout, middle: 'terminal' });
+        setFocusTabId(payload.sessionId);
+      }
+    });
+
+    return unsubscribe;
+  }, [events, layout, onLayoutChange]);
+
   // Close modal on Escape key
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -3066,6 +3083,28 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           </div>
         ) : (
           <div>Type Information panel not available</div>
+        ),
+      },
+      {
+        id: 'terminalSessions',
+        label: 'Terminal Sessions',
+        content: (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <TerminalSessionsPanel
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
         ),
       },
     ],

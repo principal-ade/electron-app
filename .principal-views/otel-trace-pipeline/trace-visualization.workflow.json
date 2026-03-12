@@ -21,7 +21,8 @@
           "otel.event_bus.activity": "[4] Event bus activity"
         },
         "summary": "**Main Process Fetch:**\n- Handler: {{handler.name}}\n- Limit: {{traces.limit}}\n- Fetched: {{traces.fetched}}"
-      }
+      },
+      "filterDefault": true
     },
     {
       "id": "renderer-traces-polled",
@@ -33,7 +34,8 @@
           "otel.systemmonitor.traces_polled": "[1] SystemMonitor polled {{traces.fetched}} traces (limit: {{traces.limit}}, services: {{services.count}}, interval: {{poll.interval_ms}}ms)"
         },
         "summary": "**Polling Summary:**\n- Traces Fetched: {{traces.fetched}}\n- Trace Limit: {{traces.limit}}\n- Services: {{services.count}}\n- Poll Interval: {{poll.interval_ms}}ms"
-      }
+      },
+      "filterDefault": true
     },
     {
       "id": "renderer-trace-selected",

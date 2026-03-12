@@ -31,6 +31,12 @@ export const windowAPI: WindowAPI = {
     ipcRenderer.invoke(WindowEvent.FOCUS_OR_CREATE_MAIN_WINDOW),
 
   /**
+   * Focus a window by its ID
+   */
+  focusWindowById: (windowId: number) =>
+    ipcRenderer.invoke(WindowEvent.FOCUS_WINDOW_BY_ID, windowId),
+
+  /**
    * Get the unique ID of the current window
    */
   getWindowId: () => ipcRenderer.invoke(WindowEvent.GET_WINDOW_ID),

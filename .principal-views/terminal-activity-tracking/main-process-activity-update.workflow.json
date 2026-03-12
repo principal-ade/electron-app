@@ -18,7 +18,8 @@
           "terminal.activity.broadcast_sent": "[3] Broadcast on **{{channel}}**\n    Windows: {{windows.count}}, Activities: {{activities.count}}"
         },
         "summary": "**Started** `{{session.id}}` | Active: {{store.size}} | Notified: {{windows.count}} windows"
-      }
+      },
+      "filterDefault": true
     },
     {
       "id": "agent-stopped",

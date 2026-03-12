@@ -532,6 +532,7 @@ export class TerminalSessionManager {
       };
       this.sendToWorker(message);
       this.cleanupSession(sessionId);
+
       console.log(`[Terminal] Session destroyed: ${sessionId}`);
 
       // Notify WebSocket bridge of session destruction

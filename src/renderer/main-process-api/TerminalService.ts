@@ -11,6 +11,7 @@ import {
   onOwnershipLost,
   writeToTerminalPort,
   onPortReady,
+  onSessionsChanged,
 } from '../tipc/terminalClient';
 import type {
   TerminalInfo,
@@ -147,5 +148,29 @@ export class TerminalService {
     ) => void,
   ): () => void {
     return onPortReady(callback);
+  }
+
+  /**
+   * Subscribe to terminal sessions changed events.
+   * Called when sessions are created or destroyed in any window.
+   */
+  static onSessionsChanged(
+    callback: (sessions: TerminalInfo[]) => void,
+  ): () => void {
+    return onSessionsChanged((sessions) => {
+      // Map to TerminalInfo format for consistency
+      const mapped: TerminalInfo[] = sessions.map((s) => ({
+        id: s.id,
+        directory: s.directory || s.cwd || '',
+        context: s.context,
+        agentSessionId: s.agentSessionId,
+        createdAt: s.createdAt,
+        lastActivity: s.lastActivity,
+        status: (s.status as 'active' | 'disconnected') || 'active',
+        ownedByWindowId: s.ownedByWindowId,
+        metadata: s.metadata,
+      }));
+      callback(mapped);
+    });
   }
 }

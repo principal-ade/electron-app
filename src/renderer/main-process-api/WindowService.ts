@@ -57,6 +57,28 @@ export class WindowService {
   }
 
   /**
+   * Get the current window's ID
+   * @returns The Electron BrowserWindow ID
+   */
+  static async getWindowId(): Promise<number> {
+    return window.mainProcess.window.getWindowId();
+  }
+
+  /**
+   * Focus a window by its ID
+   * @param windowId - The Electron BrowserWindow ID to focus
+   * @returns True if the window was found and focused, false otherwise
+   */
+  static async focusWindowById(windowId: number): Promise<boolean> {
+    try {
+      return await window.mainProcess.window.focusWindowById(windowId);
+    } catch (error) {
+      console.error('[WindowService] Failed to focus window:', error);
+      return false;
+    }
+  }
+
+  /**
    * Check if a repository window is already open
    * @param repository - Alexandria repository entry to check
    * @returns True if the repository window is open, false otherwise

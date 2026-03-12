@@ -18,6 +18,7 @@ import {
   Globe,
   Play,
   Columns2,
+  Terminal,
 } from 'lucide-react';
 
 /**
@@ -65,6 +66,7 @@ export interface PanelIconSidebarProps {
  * Default panel icons for left sidebar
  */
 export const LEFT_PANEL_ICONS: PanelIconConfig[] = [
+  { id: 'terminalSessions', Icon: Terminal, label: 'Terminals' },
   { id: 'packageComposition', Icon: Package, label: 'Info' },
   { id: 'codeQuality', Icon: CheckCircle, label: 'Quality' },
   { id: 'canvasList', Icon: Network, label: 'Stories' },

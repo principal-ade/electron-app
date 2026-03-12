@@ -63,6 +63,13 @@ export interface WindowAPI {
   focusOrCreateMainWindow(): Promise<boolean>;
 
   /**
+   * Focus a window by its ID
+   * @param windowId - The Electron BrowserWindow ID to focus
+   * @returns True if the window was found and focused, false otherwise
+   */
+  focusWindowById(windowId: number): Promise<boolean>;
+
+  /**
    * Get the unique ID of the current window
    * Useful for isolating resources (like terminal sessions) per window
    * @returns The Electron BrowserWindow ID
