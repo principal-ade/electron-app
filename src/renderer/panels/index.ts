@@ -12,3 +12,10 @@ export {
   LocalhostProcessesPanel,
   type RunningServer,
 } from './localhost-processes';
+
+// Terminal Sessions Panel
+export {
+  panels as terminalSessionsPanels,
+  terminalSessionsPanelDefinition,
+  TerminalSessionsPanel,
+} from './terminal-sessions';

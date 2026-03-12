@@ -13,18 +13,14 @@
       "template": {
         "introduction": "**Creating Terminal Session**\n\nRenderer requested new terminal session. Session manager coordinating with worker.",
         "events": {
-          "terminal.session.create_requested": "[1] Renderer requested session: cwd=`{{cwd}}`, context={{context}}",
-          "terminal.session.router_handled": "[2] Router handling: window={{window.id}}, can_create={{can_create}}",
-          "terminal.session.manager_action": "[3] Manager {{action}}: session=`{{session.id}}`",
-          "terminal.session.store_updated": "[4] Store {{operation}}: session=`{{session.id}}`, size={{store.size}}",
-          "terminal.worker.session_created": "[5] Worker created PTY: session=`{{session.id}}`, shell={{shell}}",
-          "terminal.ownership.changed": "[6] Ownership claimed: session=`{{session.id}}`, owner={{new_owner.window_id}}",
-          "terminal.port.worker_registered": "[7] Worker port registered: session=`{{session.id}}`, window={{window.id}}",
-          "terminal.port.renderer_connected": "[8] Renderer port connected: session=`{{session.id}}`"
+          "terminal.session.router_handled": "[1] Router handling: window={{window.id}}, can_create={{can_create}}",
+          "terminal.session.manager_action": "[2] Manager {{action}}: session=`{{session.id}}`",
+          "terminal.session.store_updated": "[3] Store {{operation}}: session=`{{session.id}}`, size={{store.size}}",
+          "terminal.sessions.broadcast": "[4] Broadcast: {{sessions.count}} sessions to {{windows.count}} windows"
         },
-        "summary": "**Session Created:**\n- Session ID: `{{session.id}}`\n- Directory: `{{cwd}}`\n- Owner Window: {{window.id}}"
+        "summary": "**Session Created:**\n- Session ID: `{{session.id}}`"
       },
-      "filterDefault": true
+      "filterDefault": false
     }
   ]
 }

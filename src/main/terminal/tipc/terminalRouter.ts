@@ -16,10 +16,52 @@ import { getTracer } from '../../telemetry';
 // Tracer for terminal activity telemetry
 const tracer = getTracer('terminal-activity');
 
+// Tracer for terminal session management telemetry
+const sessionTracer = getTracer('terminal-session-management');
+
 // Get singleton session manager instance
 const sessionManager = getSessionManagerInstance();
 
 const t = tipc.create();
+
+/**
+ * Broadcast terminal sessions list to all windows.
+ * Called when sessions are created or destroyed.
+ * Returns counts for telemetry.
+ */
+function broadcastSessionsChanged(): { sessionsCount: number; windowsCount: number } {
+  const sessions = Array.from(sessionManager.getAllSessions().entries()).map(
+    ([id, session]) => {
+      const owner = ownershipManager.getOwner(id);
+      const ownerWindowId =
+        owner && owner.type === 'local' ? parseInt(owner.id, 10) : undefined;
+      return {
+        id,
+        cwd: session.directory,
+        directory: session.directory,
+        context: session.context,
+        agentSessionId: undefined,
+        createdAt: session.createdAt,
+        lastActivity: session.lastActivity,
+        status: 'active' as const,
+        ownedByWindowId: ownerWindowId,
+        metadata: session.metadata,
+      };
+    },
+  );
+
+  const allWindows = BrowserWindow.getAllWindows();
+  let windowsCount = 0;
+
+  allWindows.forEach((win) => {
+    if (!win.isDestroyed()) {
+      win.webContents.send('terminal:sessions-changed', sessions);
+      windowsCount++;
+    }
+  });
+
+  return { sessionsCount: sessions.length, windowsCount };
+}
 
 export const terminalRouter = {
   // ============================================
@@ -29,45 +71,135 @@ export const terminalRouter = {
   createTerminalSession: t.procedure
     .input<{ cwd?: string; command?: string; context?: string; metadata?: import('../../../shared/tipc/terminalRouterTypes').TerminalSessionMetadata }>()
     .action(async ({ input, context }) => {
-      if (!isPtyAvailable()) {
-        throw new Error(
-          'Terminal functionality is not available in this build',
+      const span = sessionTracer.startSpan('terminal.session.create');
+
+      try {
+        if (!isPtyAvailable()) {
+          span.setStatus({ code: SpanStatusCode.ERROR, message: 'PTY not available' });
+          throw new Error(
+            'Terminal functionality is not available in this build',
+          );
+        }
+
+        const window = BrowserWindow.fromWebContents(context.sender);
+        if (!window) {
+          span.setStatus({ code: SpanStatusCode.ERROR, message: 'No window found' });
+          throw new Error('No window found for terminal session');
+        }
+
+        const canCreate = sessionManager.canCreateSession();
+
+        // Event: Router handled session creation request
+        span.addEvent('terminal.session.router_handled', {
+          'window.id': window.id,
+          can_create: canCreate,
+        });
+
+        // Check session limit
+        if (!canCreate) {
+          span.setStatus({ code: SpanStatusCode.ERROR, message: 'Session limit reached' });
+          throw new Error(
+            `Maximum number of terminal sessions (${sessionManager.getMaxSessions()}) reached`,
+          );
+        }
+
+        // Create the session
+        const sessionId = await sessionManager.createSession(
+          input.cwd || process.env.HOME || '/',
+          input.context,
+          input.command,
+          input.metadata,
         );
+
+        span.setAttribute('session.id', sessionId);
+
+        // Event: Manager action - create
+        span.addEvent('terminal.session.manager_action', {
+          action: 'create',
+          'session.id': sessionId,
+        });
+
+        // Event: Store updated
+        span.addEvent('terminal.session.store_updated', {
+          operation: 'set',
+          'session.id': sessionId,
+          'store.size': sessionManager.getAllSessions().size,
+        });
+
+        // Create MessageChannel and send port to renderer
+        sessionManager.createMessageChannelForSession(sessionId, window.id);
+
+        // Auto-claim ownership for the creating window
+        const ownershipResult = ownershipManager.claimOwnership(sessionId, window.id);
+        console.log('[Terminal] Ownership claimed:', { sessionId, windowId: window.id, result: ownershipResult });
+
+        // Verify ownership was set
+        const verifyOwner = ownershipManager.getOwner(sessionId);
+        console.log('[Terminal] Verified owner after claim:', { sessionId, owner: verifyOwner });
+
+        // Broadcast session list change to all windows
+        try {
+          const { sessionsCount, windowsCount } = broadcastSessionsChanged();
+          span.addEvent('terminal.sessions.broadcast', {
+            'sessions.count': sessionsCount,
+            'windows.count': windowsCount,
+          });
+        } catch (err) {
+          console.warn('[Terminal] Failed to broadcast session change:', err);
+        }
+
+        span.setStatus({ code: SpanStatusCode.OK });
+        return sessionId;
+      } catch (error) {
+        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        throw error;
+      } finally {
+        span.end();
       }
-
-      const window = BrowserWindow.fromWebContents(context.sender);
-      if (!window) {
-        throw new Error('No window found for terminal session');
-      }
-
-      // Check session limit
-      if (!sessionManager.canCreateSession()) {
-        throw new Error(
-          `Maximum number of terminal sessions (${sessionManager.getMaxSessions()}) reached`,
-        );
-      }
-
-      // Create the session
-      const sessionId = await sessionManager.createSession(
-        input.cwd || process.env.HOME || '/',
-        input.context,
-        input.command,
-        input.metadata,
-      );
-
-      // Create MessageChannel and send port to renderer
-      sessionManager.createMessageChannelForSession(sessionId, window.id);
-
-      // Auto-claim ownership for the creating window
-      ownershipManager.claimOwnership(sessionId, window.id);
-
-      return sessionId;
     }),
 
   destroyTerminalSession: t.procedure
     .input<{ sessionId: string }>()
     .action(async ({ input }) => {
-      sessionManager.destroySession(input.sessionId);
+      const span = sessionTracer.startSpan('terminal.session.destroy');
+      span.setAttribute('session.id', input.sessionId);
+
+      try {
+        // Event: Manager action - destroy
+        span.addEvent('terminal.session.manager_action', {
+          action: 'destroy',
+          'session.id': input.sessionId,
+        });
+
+        // Destroy the session
+        await sessionManager.destroySession(input.sessionId);
+
+        // Event: Store updated
+        span.addEvent('terminal.session.store_updated', {
+          operation: 'delete',
+          'session.id': input.sessionId,
+          'store.size': sessionManager.getAllSessions().size,
+        });
+
+        // Broadcast session list change to all windows
+        try {
+          const { sessionsCount, windowsCount } = broadcastSessionsChanged();
+          span.addEvent('terminal.sessions.broadcast', {
+            'sessions.count': sessionsCount,
+            'windows.count': windowsCount,
+          });
+        } catch (err) {
+          console.warn('[Terminal] Failed to broadcast session change:', err);
+        }
+
+        span.setStatus({ code: SpanStatusCode.OK });
+      } catch (error) {
+        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        span.setStatus({ code: SpanStatusCode.ERROR });
+        throw error;
+      } finally {
+        span.end();
+      }
     }),
 
   listTerminalSessions: t.procedure.action(async () => {
@@ -178,6 +310,8 @@ export const terminalRouter = {
         return { success: false, reason: 'Session not found' };
       }
 
+      const previousOwner = ownershipManager.getOwner(input.sessionId);
+
       const result = ownershipManager.claimOwnership(
         input.sessionId,
         window.id,
@@ -185,6 +319,17 @@ export const terminalRouter = {
       );
 
       console.log(`[TIPC] claimTerminalOwnership result:`, result);
+
+      // Telemetry: Ownership changed
+      if (result.success) {
+        const span = sessionTracer.startSpan('terminal.ownership');
+        span.addEvent('terminal.ownership.changed', {
+          'session.id': input.sessionId,
+          'new_owner.window_id': window.id,
+          'previous_owner.window_id': previousOwner?.type === 'local' ? parseInt(previousOwner.id, 10) : -1,
+        });
+        span.end();
+      }
 
       // If ownership was taken from another window, notify them
       if (

@@ -11,13 +11,13 @@
       "description": "Terminal session destroyed with full cleanup",
       "priority": 1,
       "template": {
-        "introduction": "**Destroying Terminal Session**\n\nSession being destroyed with full cleanup of ports, ownership, and activity state.",
+        "introduction": "**Destroying Terminal Session**\n\nSession being destroyed with full cleanup of ports and stores.",
         "events": {
           "terminal.session.manager_action": "[1] Manager {{action}}: session=`{{session.id}}`",
           "terminal.session.store_updated": "[2] Store {{operation}}: session=`{{session.id}}`, size={{store.size}}",
-          "terminal.ownership.changed": "[3] Ownership released: session=`{{session.id}}`, was_owner={{new_owner.window_id}}"
+          "terminal.sessions.broadcast": "[3] Broadcast: {{sessions.count}} sessions to {{windows.count}} windows"
         },
-        "summary": "**Session Destroyed:**\n- Session ID: `{{session.id}}`\n- Cleanup complete: ports, ownership, activity, stores"
+        "summary": "**Session Destroyed:**\n- Session ID: `{{session.id}}`\n- Cleanup complete"
       },
       "filterDefault": true
     }

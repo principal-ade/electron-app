@@ -134,6 +134,37 @@ cleanupSession()
 - **Maximum sessions**: 20 (configurable via `maxSessions`)
 - Enforced in `canCreateSession()` before creation
 
+## Terminal Sessions Panel
+
+The `TerminalSessionsPanel` provides a UI for viewing and switching between terminal sessions across all windows.
+
+### Features
+- Lists all terminal sessions sorted by creation time
+- Visual distinction between local (this window) and external sessions
+- Click local session → switch to that terminal tab
+- Click external session → focus the owning window
+
+### Session Broadcast
+When sessions are created or destroyed, the router broadcasts to all windows:
+```typescript
+// In terminalRouter.ts
+function broadcastSessionsChanged(): void {
+  const sessions = Array.from(sessionManager.getAllSessions().entries()).map(...);
+  BrowserWindow.getAllWindows().forEach((win) => {
+    win.webContents.send('terminal:sessions-changed', sessions);
+  });
+}
+```
+
+### Window Focus
+External session clicks trigger window focus via IPC:
+```typescript
+// In TerminalSessionsPanel
+if (!isLocalSession && session.ownedByWindowId) {
+  await WindowService.focusWindowById(session.ownedByWindowId);
+}
+```
+
 ## Related Architecture
 
 - **Terminal Activity Tracking**: See `.principal-views/terminal-activity-tracking/` for agent working state propagation
@@ -150,6 +181,11 @@ cleanupSession()
 **Worker:**
 - `src/terminal-worker/index.ts` - Utility process entry
 - `src/terminal-worker/types.ts` - Message types
+
+**Renderer:**
+- `src/renderer/panels/terminal-sessions/TerminalSessionsPanel.tsx` - Sessions panel UI
+- `src/renderer/tipc/terminalClient.ts` - TIPC client with onSessionsChanged()
+- `src/renderer/main-process-api/WindowService.ts` - Window focus API
 
 **Shared:**
 - `src/shared/tipc/terminalRouterTypes.ts` - Shared type definitions

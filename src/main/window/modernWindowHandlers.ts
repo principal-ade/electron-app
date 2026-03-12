@@ -3,7 +3,7 @@
  * Handles all window creation requests from renderer process
  */
 
-import { ipcMain } from 'electron';
+import { ipcMain, BrowserWindow } from 'electron';
 import {
   createSpecialWindow,
   focusOrCreateMainWindow,
@@ -332,5 +332,30 @@ export function registerModernWindowHandlers(): void {
   ipcMain.handle(WindowEvent.FOCUS_OR_CREATE_MAIN_WINDOW, async () => {
     const window = await focusOrCreateMainWindow();
     return window !== null;
+  });
+
+  // Focus a window by its ID
+  ipcMain.handle(
+    WindowEvent.FOCUS_WINDOW_BY_ID,
+    async (_event, windowId: number) => {
+      const window = BrowserWindow.fromId(windowId);
+      if (window && !window.isDestroyed()) {
+        if (window.isMinimized()) {
+          window.restore();
+        }
+        window.focus();
+        return true;
+      }
+      return false;
+    },
+  );
+
+  // Get the current window's ID
+  ipcMain.handle(WindowEvent.GET_WINDOW_ID, (event) => {
+    const window = BrowserWindow.fromWebContents(event.sender);
+    if (window && !window.isDestroyed()) {
+      return window.id;
+    }
+    return null;
   });
 }

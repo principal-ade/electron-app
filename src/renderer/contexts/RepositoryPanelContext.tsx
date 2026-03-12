@@ -27,6 +27,7 @@ import {
   LocalhostDetectionService,
   type RunningServer,
 } from '../main-process-api/LocalhostDetectionService';
+import { TerminalService } from '../main-process-api/TerminalService';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import { FileTreeCore, createFileTreeSource } from '@principal-ai/repository-abstraction';
@@ -294,6 +295,10 @@ export const RepositoryPanelProvider: React.FC<
   // Track localhost servers
   const [localhostServers, setLocalhostServers] = useState<RunningServer[]>([]);
   const [localhostServersLoading, setLocalhostServersLoading] = useState(false);
+
+  // Track terminal sessions
+  const [terminalSessions, setTerminalSessions] = useState<TerminalSessionInfo[]>([]);
+  const [terminalSessionsLoading, setTerminalSessionsLoading] = useState(false);
 
   // Track active file for markdown panel (and other file viewers)
   const [activeFileData, setActiveFileData] = useState<ActiveFileSlice | null>(null);
@@ -1198,6 +1203,64 @@ export const RepositoryPanelProvider: React.FC<
     };
   }, []);
 
+  // Fetch terminal sessions and subscribe to TIPC updates
+  useEffect(() => {
+    const fetchTerminalSessions = async () => {
+      setTerminalSessionsLoading(true);
+      try {
+        const sessions = await TerminalService.list();
+        // Map TerminalInfo to TerminalSessionInfo
+        const sessionInfos: TerminalSessionInfo[] = sessions.map((s) => ({
+          id: s.id,
+          pid: 0,
+          cwd: s.directory || '',
+          shell: '',
+          createdAt: s.createdAt || Date.now(),
+          lastActivity: s.lastActivity || Date.now(),
+          context: s.context,
+          status: s.status,
+          metadata: s.metadata,
+          agentSessionId: s.agentSessionId,
+          ownedByWindowId: s.ownedByWindowId,
+        }));
+        setTerminalSessions(sessionInfos);
+      } catch (error) {
+        console.error(
+          '[RepositoryPanelContext] Failed to fetch terminal sessions:',
+          error,
+        );
+      } finally {
+        setTerminalSessionsLoading(false);
+      }
+    };
+
+    // Initial fetch
+    fetchTerminalSessions();
+
+    // Subscribe to session changes via TIPC (from main process)
+    const unsubscribeSessions = TerminalService.onSessionsChanged((sessions) => {
+      // Map TerminalInfo to TerminalSessionInfo
+      const sessionInfos: TerminalSessionInfo[] = sessions.map((s) => ({
+        id: s.id,
+        pid: 0,
+        cwd: s.directory || '',
+        shell: '',
+        createdAt: s.createdAt || Date.now(),
+        lastActivity: s.lastActivity || Date.now(),
+        context: s.context,
+        status: s.status,
+        metadata: s.metadata,
+        agentSessionId: s.agentSessionId,
+        ownedByWindowId: s.ownedByWindowId,
+      }));
+      setTerminalSessions(sessionInfos);
+    });
+
+    return () => {
+      unsubscribeSessions();
+    };
+  }, []);
+
   // Fetch global skills from ~/.claude and ~/.agent
   useEffect(() => {
     const fetchGlobalSkills = async () => {
@@ -1248,7 +1311,6 @@ export const RepositoryPanelProvider: React.FC<
           async (data: unknown) => {
             try {
               const message = data as { type?: string; windowId?: string; serviceIdentifier?: string; timestamp?: number; payload?: unknown };
-              console.info('[RepositoryPanelProvider] Received OTEL message:', message?.type || message);
 
               // Check if this is a connection confirmation heartbeat from the server
               if (message?.type === 'CONNECTION_CONFIRMED') {
@@ -1272,20 +1334,11 @@ export const RepositoryPanelProvider: React.FC<
 
                 // Split OTLP batch by traceId - collector may batch multiple traces together
                 const splitTraces = splitOtlpByTraceId(otlpData);
-                console.info(`[TraceProcessing] 📥 Received OTLP batch with ${splitTraces.length} trace(s)`);
 
                 // Process each trace separately
                 for (const singleTraceOtlp of splitTraces) {
                   try {
                     const registeredTrace = await traceOrchestrator.processTrace(singleTraceOtlp);
-
-                    // Log processed trace
-                    console.info('[TraceProcessing] 📤 Processed trace:', {
-                      traceId: registeredTrace.traceId,
-                      name: registeredTrace.name,
-                      spanCount: registeredTrace.spanCount,
-                      scenarioMatches: registeredTrace.scenarioMatches.length,
-                    });
 
                     // Extract service name for counting
                     const serviceName = extractServiceName(singleTraceOtlp);
@@ -2482,17 +2535,42 @@ export const RepositoryPanelProvider: React.FC<
   );
 
   // Panel-specific slices (from ExtendedPanelContextValue)
-  // Terminal slice (managed by TerminalProvider, stub here for type compatibility)
+  // Terminal slice - provides terminal sessions data
   const terminalSlice = useMemo<DataSlice<TerminalSessionInfo[]>>(
     () => ({
       scope: 'repository' as const,
       name: 'terminal',
-      data: [],
-      loading: false,
+      data: terminalSessions,
+      loading: terminalSessionsLoading,
       error: null,
-      refresh: async () => {},
+      refresh: async () => {
+        setTerminalSessionsLoading(true);
+        try {
+          const sessions = await TerminalService.list();
+          const sessionInfos: TerminalSessionInfo[] = sessions.map((s) => ({
+            id: s.id,
+            pid: 0,
+            cwd: s.directory || '',
+            shell: '',
+            createdAt: s.createdAt || Date.now(),
+            lastActivity: s.lastActivity || Date.now(),
+            context: s.context,
+            status: s.status,
+            metadata: s.metadata,
+            agentSessionId: s.agentSessionId,
+          }));
+          setTerminalSessions(sessionInfos);
+        } catch (error) {
+          console.error(
+            '[RepositoryPanelContext] Failed to refresh terminal sessions:',
+            error,
+          );
+        } finally {
+          setTerminalSessionsLoading(false);
+        }
+      },
     }),
-    [],
+    [terminalSessions, terminalSessionsLoading],
   );
 
   // Feed project slice (for FeedCodeCityPanel)

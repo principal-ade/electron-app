@@ -10,6 +10,7 @@ export enum WindowEvent {
   OPEN_EXTENSION_WINDOW = 'window:open-extension-window',
   OPEN_ALEXANDRIA_WORKSPACE = 'window:open-alexandria-workspace',
   FOCUS_OR_CREATE_MAIN_WINDOW = 'window:focus-or-create-main',
+  FOCUS_WINDOW_BY_ID = 'window:focus-by-id',
   GET_WINDOW_ID = 'window:get-window-id',
   IS_REPOSITORY_WINDOW_OPEN = 'window:is-repository-window-open',
   REPOSITORY_WINDOWS_CHANGED = 'window:repository-windows-changed',

@@ -1,0 +1,38 @@
+{
+  "version": "1.0.0",
+  "name": "Session Panel Click",
+  "description": "User clicked a terminal session in the sessions panel",
+  "mode": "span-tree",
+  "canvas": ".principal-views/terminal-session-management/terminal-session-management.otel.canvas",
+  "spanPattern": "terminal.panel.session_click",
+  "scenarios": [
+    {
+      "id": "session-click-local",
+      "description": "User clicked a local session to switch tabs",
+      "priority": 1,
+      "template": {
+        "introduction": "**Local Session Selected**\n\nUser clicked on a local terminal session to switch tabs.",
+        "events": {
+          "terminal.panel.session_clicked": "[1] Session `{{session.id}}` clicked - is_local={{is_local}}, owner={{owner.window_id}}, current={{current.window_id}}",
+          "terminal.panel.session_selected": "[2] Switching to session `{{session.id}}`"
+        },
+        "summary": "**Session:** `{{session.id}}`\n- Switched to local terminal tab"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "session-click-external",
+      "description": "User clicked an external session to focus its window",
+      "priority": 2,
+      "template": {
+        "introduction": "**External Session Clicked**\n\nUser clicked on a session owned by another window.",
+        "events": {
+          "terminal.panel.session_clicked": "[1] Session `{{session.id}}` clicked - is_local={{is_local}}, owner={{owner.window_id}}, current={{current.window_id}}",
+          "terminal.panel.window_focused": "[2] Focused window {{target.window_id}} for session `{{session.id}}`"
+        },
+        "summary": "**Session:** `{{session.id}}`\n- Focused window: {{target.window_id}}"
+      },
+      "filterDefault": false
+    }
+  ]
+}

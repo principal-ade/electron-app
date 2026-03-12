@@ -1,0 +1,23 @@
+{
+  "version": "1.0.0",
+  "name": "Worker Session Created",
+  "description": "Terminal worker process created a PTY session",
+  "mode": "span-tree",
+  "canvas": ".principal-views/terminal-session-management/terminal-session-management.otel.canvas",
+  "spanPattern": "terminal.worker.session",
+  "scenarios": [
+    {
+      "id": "worker-session-created",
+      "description": "Worker successfully created PTY session",
+      "priority": 1,
+      "template": {
+        "introduction": "**Worker Session Created**\n\nTerminal worker process created a new PTY session.",
+        "events": {
+          "terminal.worker.session_created": "[1] Worker created PTY for session `{{session.id}}` using shell: {{shell}}"
+        },
+        "summary": "**Session:** `{{session.id}}`\n- Shell: {{shell}}"
+      },
+      "filterDefault": false
+    }
+  ]
+}

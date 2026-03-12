@@ -1,0 +1,23 @@
+{
+  "version": "1.0.0",
+  "name": "Session Request",
+  "description": "Renderer requesting terminal session creation via TIPC",
+  "mode": "span-tree",
+  "canvas": ".principal-views/terminal-session-management/terminal-session-management.otel.canvas",
+  "spanPattern": "terminal.session.request",
+  "scenarios": [
+    {
+      "id": "session-request",
+      "description": "Renderer requesting new terminal session",
+      "priority": 1,
+      "template": {
+        "introduction": "**Requesting Terminal Session**\n\nRenderer requesting new terminal session via TIPC.",
+        "events": {
+          "terminal.session.create_requested": "[1] Request: cwd=`{{cwd}}`, context={{context}}"
+        },
+        "summary": "**Session Requested**"
+      },
+      "filterDefault": true
+    }
+  ]
+}

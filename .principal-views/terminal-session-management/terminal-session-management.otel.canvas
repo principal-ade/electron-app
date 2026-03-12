@@ -76,15 +76,15 @@
     {
       "id": "renderer",
       "type": "text",
-      "x": 50,
-      "y": 0,
+      "x": -10,
+      "y": 100,
       "width": 200,
       "height": 100,
       "text": "Renderer Process\n\nterminalClient\n.createTerminalSession()",
       "pv": {
         "nodeType": "renderer",
         "shape": "rectangle",
-        "status": "approved",
+        "status": "implemented",
         "references": [
           "src/renderer/tipc/terminalClient.ts"
         ],
@@ -114,15 +114,15 @@
     {
       "id": "tipc-router",
       "type": "text",
-      "x": 300,
-      "y": 0,
-      "width": 200,
+      "x": 250,
+      "y": 50,
+      "width": 205,
       "height": 100,
       "text": "terminalRouter\n.createTerminalSession\n\nTIPC procedure handler",
       "pv": {
         "nodeType": "tipc-router",
         "shape": "rectangle",
-        "status": "approved",
+        "status": "implemented",
         "references": [
           "src/main/terminal/tipc/terminalRouter.ts"
         ],
@@ -152,15 +152,15 @@
     {
       "id": "session-manager",
       "type": "text",
-      "x": 300,
-      "y": 150,
+      "x": 252,
+      "y": 350,
       "width": 200,
       "height": 120,
       "text": "TerminalSessionManager\n\n.createSession()\n.destroySession()\n.getAllSessions()\n.updateActivity()",
       "pv": {
         "nodeType": "session-manager",
         "shape": "rectangle",
-        "status": "approved",
+        "status": "implemented",
         "references": [
           "src/main/terminal/TerminalSessionManager.ts"
         ],
@@ -168,7 +168,7 @@
           "kind": "event",
           "category": "lifecycle",
           "files": [
-            "src/main/terminal/TerminalSessionManager.ts"
+            "src/main/terminal/tipc/terminalRouter.ts"
           ]
         },
         "event": {
@@ -190,15 +190,15 @@
     {
       "id": "sessions-store",
       "type": "text",
-      "x": 50,
-      "y": 150,
+      "x": 552,
+      "y": 277,
       "width": 200,
       "height": 120,
       "text": "Session Stores\n\nsessions: Map<id, Session>\nsessionsByRepo: Map\nactivityStore: Map\nsessionPorts: Map",
       "pv": {
         "nodeType": "store",
         "shape": "rectangle",
-        "status": "approved",
+        "status": "implemented",
         "references": [
           "src/main/terminal/TerminalSessionManager.ts"
         ],
@@ -206,7 +206,7 @@
           "kind": "event",
           "category": "storage",
           "files": [
-            "src/main/terminal/TerminalSessionManager.ts"
+            "src/main/terminal/tipc/terminalRouter.ts"
           ]
         },
         "event": {
@@ -232,23 +232,24 @@
     {
       "id": "ownership-manager",
       "type": "text",
-      "x": 550,
-      "y": 150,
+      "x": 554,
+      "y": 152,
       "width": 200,
       "height": 100,
       "text": "OwnershipManager\n\n.claimOwnership()\n.releaseOwnership()\n.checkOwnership()",
       "pv": {
         "nodeType": "ownership-manager",
         "shape": "rectangle",
-        "status": "approved",
+        "status": "implemented",
         "references": [
-          "src/main/terminal/TerminalOwnershipManager.ts"
+          "src/main/terminal/TerminalOwnershipManager.ts",
+          "src/main/terminal/tipc/terminalRouter.ts"
         ],
         "otel": {
           "kind": "event",
           "category": "ownership",
           "files": [
-            "src/main/terminal/TerminalOwnershipManager.ts"
+            "src/main/terminal/tipc/terminalRouter.ts"
           ]
         },
         "event": {
@@ -275,9 +276,9 @@
     {
       "id": "worker",
       "type": "text",
-      "x": 300,
-      "y": 320,
-      "width": 200,
+      "x": 537,
+      "y": 436,
+      "width": 218,
       "height": 100,
       "text": "Terminal Worker\n(Utility Process)\n\nPTY management\nMessagePort streaming",
       "pv": {
@@ -313,9 +314,9 @@
     {
       "id": "port-renderer",
       "type": "text",
-      "x": 50,
-      "y": 320,
-      "width": 150,
+      "x": -286,
+      "y": 579,
+      "width": 214,
       "height": 80,
       "text": "Renderer Port\n\nport2 via\npostMessage()",
       "pv": {
@@ -347,9 +348,9 @@
     {
       "id": "port-worker",
       "type": "text",
-      "x": 550,
-      "y": 320,
-      "width": 150,
+      "x": 248,
+      "y": 579,
+      "width": 206,
       "height": 80,
       "text": "Worker Port\n\nport1 via\npostMessage()",
       "pv": {
@@ -411,6 +412,163 @@
       "height": 140,
       "text": "CLEANUP ON DESTROY\n\n1. Close all ports\n2. Remove ownership\n3. Delete from sessions\n4. Delete from activityStore\n5. Remove repo index\n6. Notify WebSocket bridge",
       "color": "#EC4899"
+    },
+    {
+      "id": "sessions-panel",
+      "type": "text",
+      "x": -278,
+      "y": -20,
+      "width": 200,
+      "height": 120,
+      "text": "TerminalSessionsPanel\n\nLeft sidebar panel\n- Lists all sessions\n- Shows ownership\n- Click to switch/focus",
+      "pv": {
+        "nodeType": "renderer",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/panels/terminal-sessions/TerminalSessionsPanel.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ui",
+          "files": [
+            "src/renderer/panels/terminal-sessions/TerminalSessionsPanel.tsx"
+          ]
+        },
+        "event": {
+          "name": "terminal.panel.session_clicked",
+          "description": "User clicked a session in the terminal sessions panel",
+          "attributes": {
+            "session.id": {
+              "type": "string",
+              "description": "Terminal session ID"
+            },
+            "is_local": {
+              "type": "boolean",
+              "description": "Whether session is owned by this window"
+            },
+            "owner.window_id": {
+              "type": "number",
+              "description": "Window ID that owns the session"
+            },
+            "current.window_id": {
+              "type": "number",
+              "description": "Current window ID making the click"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "session-selected",
+      "type": "text",
+      "x": -278,
+      "y": 320,
+      "width": 200,
+      "height": 80,
+      "text": "Session Selected\n\nSwitch to local\nterminal tab",
+      "pv": {
+        "nodeType": "renderer",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/panels/terminal-sessions/TerminalSessionsPanel.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ui",
+          "files": [
+            "src/renderer/panels/terminal-sessions/TerminalSessionsPanel.tsx"
+          ]
+        },
+        "event": {
+          "name": "terminal.panel.session_selected",
+          "description": "Local session was selected to switch terminal tab",
+          "attributes": {
+            "session.id": {
+              "type": "string",
+              "description": "Terminal session ID"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "sessions-broadcast",
+      "type": "text",
+      "x": 553,
+      "y": -10,
+      "width": 200,
+      "height": 100,
+      "text": "Sessions Broadcast\n\nbroadcastSessionsChanged()\n→ terminal:sessions-changed\nto all windows",
+      "pv": {
+        "nodeType": "tipc-router",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/main/terminal/tipc/terminalRouter.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ipc",
+          "files": [
+            "src/main/terminal/tipc/terminalRouter.ts"
+          ]
+        },
+        "event": {
+          "name": "terminal.sessions.broadcast",
+          "description": "Broadcasting session list to all windows",
+          "attributes": {
+            "sessions.count": {
+              "type": "number",
+              "description": "Number of sessions being broadcast"
+            },
+            "windows.count": {
+              "type": "number",
+              "description": "Number of windows receiving broadcast"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "window-focus",
+      "type": "text",
+      "x": -278,
+      "y": 195,
+      "width": 200,
+      "height": 100,
+      "text": "Window Focus\n\nWindowService\n.focusWindowById()\n→ Focus other window",
+      "pv": {
+        "nodeType": "renderer",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/panels/terminal-sessions/TerminalSessionsPanel.tsx",
+          "src/renderer/main-process-api/WindowService.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ui",
+          "files": [
+            "src/renderer/panels/terminal-sessions/TerminalSessionsPanel.tsx"
+          ]
+        },
+        "event": {
+          "name": "terminal.panel.window_focused",
+          "description": "Focused another window to view its terminal session",
+          "attributes": {
+            "target.window_id": {
+              "type": "number",
+              "description": "Window ID being focused"
+            },
+            "session.id": {
+              "type": "string",
+              "description": "Session that triggered the focus"
+            }
+          }
+        }
+      }
     }
   ],
   "edges": [
@@ -434,50 +592,6 @@
       "label": "createSession()",
       "pv": {
         "edgeType": "method-call"
-      }
-    },
-    {
-      "id": "e3",
-      "fromNode": "tipc-router",
-      "toNode": "ownership-manager",
-      "fromSide": "right",
-      "toSide": "top",
-      "label": "claimOwnership()",
-      "pv": {
-        "edgeType": "method-call"
-      }
-    },
-    {
-      "id": "e4",
-      "fromNode": "session-manager",
-      "toNode": "sessions-store",
-      "fromSide": "left",
-      "toSide": "right",
-      "label": "sessions.set()",
-      "pv": {
-        "edgeType": "state-update"
-      }
-    },
-    {
-      "id": "e5",
-      "fromNode": "session-manager",
-      "toNode": "worker",
-      "fromSide": "bottom",
-      "toSide": "top",
-      "label": "CREATE_SESSION",
-      "pv": {
-        "edgeType": "worker-message"
-      }
-    },
-    {
-      "id": "e6",
-      "fromNode": "worker",
-      "toNode": "session-manager",
-      "fromSide": "top",
-      "toSide": "bottom",
-      "label": "SESSION_CREATED",
-      "pv": {
-        "edgeType": "worker-message"
       }
     },
     {
@@ -511,6 +625,101 @@
       "label": "PTY data (direct)",
       "pv": {
         "edgeType": "port-transfer"
+      }
+    },
+    {
+      "id": "e10",
+      "fromNode": "tipc-router",
+      "toNode": "sessions-broadcast",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "on create/destroy",
+      "pv": {
+        "edgeType": "method-call"
+      }
+    },
+    {
+      "id": "e11",
+      "fromNode": "sessions-broadcast",
+      "toNode": "sessions-panel",
+      "fromSide": "left",
+      "toSide": "right",
+      "label": "terminal:sessions-changed",
+      "pv": {
+        "edgeType": "tipc-invoke"
+      }
+    },
+    {
+      "id": "e12",
+      "fromNode": "sessions-panel",
+      "toNode": "renderer",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "session-selected",
+      "pv": {
+        "edgeType": "method-call"
+      }
+    },
+    {
+      "id": "e13",
+      "fromNode": "sessions-panel",
+      "toNode": "window-focus",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "click external",
+      "pv": {
+        "edgeType": "method-call"
+      }
+    },
+    {
+      "id": "e14",
+      "fromNode": "sessions-panel",
+      "toNode": "session-selected",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "click local",
+      "pv": {
+        "edgeType": "method-call"
+      }
+    },
+    {
+      "id": "edge-tipc-router-ownership-manager-1773328982858",
+      "fromNode": "tipc-router",
+      "toNode": "ownership-manager",
+      "fromSide": "right",
+      "toSide": "left",
+      "pv": {
+        "edgeType": "method-call"
+      }
+    },
+    {
+      "id": "edge-worker-session-manager-1773328982858",
+      "fromNode": "worker",
+      "toNode": "session-manager",
+      "fromSide": "top",
+      "toSide": "right",
+      "pv": {
+        "edgeType": "worker-message"
+      }
+    },
+    {
+      "id": "edge-session-manager-sessions-store-1773328982858",
+      "fromNode": "session-manager",
+      "toNode": "sessions-store",
+      "fromSide": "right",
+      "toSide": "left",
+      "pv": {
+        "edgeType": "state-update"
+      }
+    },
+    {
+      "id": "edge-session-manager-worker-1773328982858",
+      "fromNode": "session-manager",
+      "toNode": "worker",
+      "fromSide": "bottom",
+      "toSide": "left",
+      "pv": {
+        "edgeType": "worker-message"
       }
     }
   ]

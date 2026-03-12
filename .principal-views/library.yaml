@@ -25,6 +25,9 @@ resources:
       - "alexandria-recently-opened"
       - "user-preferences"
       - "event-server-manager"
+      - "terminal-session"
+      - "terminal-session-management"
+      - "terminal-sessions-panel"
 
   principal-ade-storybook:
     service.name: "principal-ade-storybook"

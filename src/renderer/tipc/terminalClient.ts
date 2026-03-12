@@ -6,6 +6,7 @@
  */
 
 import { createClient } from '@egoist/tipc/renderer';
+import { getTracer } from '../telemetry';
 import type {
   CreateTerminalSessionInput,
   DestroyTerminalSessionInput,
@@ -87,6 +88,9 @@ export interface TerminalClient {
   getActivityState: () => Promise<TerminalActivityState[]>;
 }
 
+// Tracer for terminal session telemetry
+const tracer = getTracer('terminal-session');
+
 // Lazy-initialized TIPC client for terminal operations
 // We use lazy initialization because window.electron is injected by the preload script
 // and isn't available at module load time.
@@ -107,9 +111,42 @@ function getTerminalClient(): TerminalClient {
   return _terminalClient;
 }
 
+/**
+ * Wrapped createTerminalSession with telemetry
+ */
+async function createTerminalSessionWithTelemetry(
+  input: CreateTerminalSessionInput,
+): Promise<string> {
+  const span = tracer.startSpan('terminal.session.request');
+
+  try {
+    // Event: Renderer requested terminal session creation
+    span.addEvent('terminal.session.create_requested', {
+      cwd: input.cwd || '',
+      context: input.context || '',
+    });
+
+    const client = getTerminalClient();
+    const sessionId = await client.createTerminalSession(input);
+
+    span.setAttribute('session.id', sessionId);
+    return sessionId;
+  } catch (error) {
+    span.recordException(error instanceof Error ? error : new Error(String(error)));
+    throw error;
+  } finally {
+    span.end();
+  }
+}
+
 // Export a proxy object that lazily accesses the client
 export const terminalClient: TerminalClient = new Proxy({} as TerminalClient, {
   get(_target, prop: keyof TerminalClient) {
+    // Intercept createTerminalSession for telemetry
+    if (prop === 'createTerminalSession') {
+      return createTerminalSessionWithTelemetry;
+    }
+
     const client = getTerminalClient();
     const value = client[prop];
     if (typeof value === 'function') {
@@ -174,12 +211,29 @@ export const onActivitySync = (
   return window.electron.ipcRenderer.on(
     'terminal:activity-sync',
     (...args: unknown[]) => {
-      // First arg is IPC event, second is activities array
-      const activities = args[1] as TerminalActivityState[];
+      // Preload strips IPC event, so first arg is activities array
+      const activities = args[0] as TerminalActivityState[];
       callback(activities);
     },
   );
 };
 
+/**
+ * Subscribe to terminal sessions changed broadcasts.
+ * This is called when terminal sessions are created or destroyed.
+ */
+export const onSessionsChanged = (
+  callback: (sessions: TerminalSessionInfo[]) => void,
+): (() => void) => {
+  return window.electron.ipcRenderer.on(
+    'terminal:sessions-changed',
+    (...args: unknown[]) => {
+      // Preload strips IPC event, so first arg is sessions array
+      const sessions = args[0] as TerminalSessionInfo[];
+      callback(sessions);
+    },
+  );
+};
+
 // Re-export types for convenience
-export type { UpdateActivityInput, TerminalActivityState };
+export type { UpdateActivityInput, TerminalActivityState, TerminalSessionInfo };
