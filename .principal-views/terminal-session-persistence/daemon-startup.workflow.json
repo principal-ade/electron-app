@@ -1,0 +1,40 @@
+{
+  "version": "1.0.0",
+  "name": "Daemon Startup",
+  "description": "PTY daemon process initialization and socket creation",
+  "mode": "span-tree",
+  "canvas": ".principal-views/terminal-session-persistence/terminal-session-persistence.otel.canvas",
+  "spanPattern": "terminal.daemon.startup",
+  "scenarios": [
+    {
+      "id": "daemon-startup-fresh",
+      "description": "Daemon starts fresh with no existing sessions",
+      "priority": 1,
+      "template": {
+        "introduction": "**PTY Daemon Starting**\n\nInitializing independent PTY daemon process.",
+        "events": {
+          "terminal.daemon.socket_created": "[1] Socket created: `{{socket.path}}`",
+          "terminal.daemon.server_listening": "[2] Server listening, permissions={{socket.permissions}}",
+          "terminal.daemon.ready": "[3] Daemon ready, sessions={{sessions.count}}"
+        },
+        "summary": "**Daemon Ready**\n- Socket: `{{socket.path}}`\n- Sessions: {{sessions.count}}"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "daemon-startup-recovery",
+      "description": "Daemon starts and discovers orphaned PTY processes",
+      "priority": 2,
+      "template": {
+        "introduction": "**PTY Daemon Recovery**\n\nDaemon starting with existing sessions to recover.",
+        "events": {
+          "terminal.daemon.socket_created": "[1] Socket created: `{{socket.path}}`",
+          "terminal.daemon.sessions_recovered": "[2] Recovered {{sessions.count}} existing sessions",
+          "terminal.daemon.ready": "[3] Daemon ready with recovered state"
+        },
+        "summary": "**Daemon Recovered**\n- Sessions restored: {{sessions.count}}"
+      },
+      "filterDefault": false
+    }
+  ]
+}

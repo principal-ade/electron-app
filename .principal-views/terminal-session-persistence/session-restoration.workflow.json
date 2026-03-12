@@ -1,0 +1,59 @@
+{
+  "version": "1.0.0",
+  "name": "Session Restoration",
+  "description": "Restoring terminal sessions after app restart/update",
+  "mode": "span-tree",
+  "canvas": ".principal-views/terminal-session-persistence/terminal-session-persistence.otel.canvas",
+  "spanPattern": "terminal.persistence.restore",
+  "scenarios": [
+    {
+      "id": "restore-after-update",
+      "description": "Restore sessions after app update",
+      "priority": 1,
+      "template": {
+        "introduction": "**Restoring Terminal Sessions**\n\nApp restarted after update, restoring sessions from daemon.",
+        "events": {
+          "terminal.persistence.restore_started": "[1] Restoration started",
+          "terminal.daemon.sessions_received": "[2] Daemon reports {{sessions.count}} sessions",
+          "terminal.persistence.session_restoring": "[3] Restoring session `{{session.id}}`",
+          "terminal.persistence.scrollback_requested": "[4] Requesting scrollback for `{{session.id}}`",
+          "terminal.persistence.scrollback_received": "[5] Scrollback received: {{scrollback.lines}} lines",
+          "terminal.persistence.port_created": "[6] MessagePort wired to renderer",
+          "terminal.persistence.restore_complete": "[7] Session `{{session.id}}` restored"
+        },
+        "summary": "**Sessions Restored**\n- Restored: {{sessions.restored}}/{{sessions.total}}\n- Running processes preserved"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "restore-fresh-start",
+      "description": "Fresh start with no sessions to restore",
+      "priority": 2,
+      "template": {
+        "introduction": "**Checking for Sessions**\n\nApp starting, checking daemon for existing sessions.",
+        "events": {
+          "terminal.daemon.sessions_received": "[1] Daemon reports 0 sessions",
+          "terminal.persistence.no_sessions": "[2] No sessions to restore (fresh start)"
+        },
+        "summary": "**Fresh Start**\n- No existing sessions"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "restore-partial-failure",
+      "description": "Some sessions failed to restore",
+      "priority": 3,
+      "template": {
+        "introduction": "**Restoring Sessions (Partial)**\n\nSome sessions may have exited while app was down.",
+        "events": {
+          "terminal.daemon.sessions_received": "[1] Daemon reports {{sessions.count}} sessions",
+          "terminal.persistence.session_restoring": "[2] Restoring session `{{session.id}}`",
+          "terminal.persistence.session_exited": "[3] Session `{{session.id}}` had exited (code={{exit.code}})",
+          "terminal.persistence.restore_complete": "[4] Restoration complete with warnings"
+        },
+        "summary": "**Partial Restoration**\n- Restored: {{sessions.restored}}\n- Exited: {{sessions.exited}}"
+      },
+      "filterDefault": false
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "version": "1.0.0",
+  "name": "App Update Flow",
+  "description": "Full app update cycle with terminal session preservation",
+  "mode": "span-tree",
+  "canvas": ".principal-views/terminal-session-persistence/terminal-session-persistence.otel.canvas",
+  "spanPattern": "terminal.persistence.update",
+  "scenarios": [
+    {
+      "id": "update-with-preservation",
+      "description": "Complete update flow preserving terminal sessions",
+      "priority": 1,
+      "template": {
+        "introduction": "**App Update with Session Preservation**\n\nUpdate available, preparing to preserve terminal sessions.",
+        "events": {
+          "app.update.available": "[1] Update available: v{{update.version}}",
+          "app.update.user_accepted": "[2] User accepted update",
+          "terminal.persistence.prepare_started": "[3] Preparing sessions for restart",
+          "terminal.persistence.metadata_saved": "[4] Session metadata saved (optional)",
+          "terminal.daemon.client_disconnecting": "[5] Disconnecting from daemon gracefully",
+          "terminal.daemon.client_disconnected": "[6] Socket closed, daemon stays alive",
+          "app.update.installing": "[7] Installing update...",
+          "app.quit": "[8] App quitting",
+          "app.restart": "[9] App restarting (v{{update.version}})",
+          "terminal.daemon.client_connected": "[10] Reconnected to daemon",
+          "terminal.persistence.restore_complete": "[11] {{sessions.count}} sessions restored"
+        },
+        "summary": "**Update Complete**\n- Updated to: v{{update.version}}\n- Sessions preserved: {{sessions.count}}\n- Running processes: intact"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "update-daemon-not-running",
+      "description": "Update when no terminal sessions exist",
+      "priority": 2,
+      "template": {
+        "introduction": "**App Update (No Sessions)**\n\nNo active terminal sessions, simple update.",
+        "events": {
+          "app.update.available": "[1] Update available: v{{update.version}}",
+          "terminal.persistence.no_sessions": "[2] No sessions to preserve",
+          "app.update.installing": "[3] Installing update...",
+          "app.restart": "[4] App restarted"
+        },
+        "summary": "**Update Complete**\n- Updated to: v{{update.version}}\n- No sessions to preserve"
+      },
+      "filterDefault": false
+    }
+  ]
+}

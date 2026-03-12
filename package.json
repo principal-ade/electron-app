@@ -1,6 +1,6 @@
 {
   "name": "principal-ade",
-  "version": "0.0.465",
+  "version": "0.0.466",
   "description": "Principal ADE  - The future of Agentic Development Environment",
   "type": "module",
   "keywords": [
@@ -201,7 +201,7 @@
     "@opentelemetry/semantic-conventions": "^1.39.0",
     "@principal-ade/agent-manager": "^1.1.0",
     "@principal-ade/code-quality-panels": "^0.2.0",
-    "@principal-ade/dynamic-file-tree": "^0.2.6",
+    "@principal-ade/dynamic-file-tree": "^0.2.7",
     "@principal-ade/industry-theme": "^0.1.8",
     "@principal-ade/industry-themed-monaco-editor": "^0.1.10",
     "@principal-ade/panel-framework-core": "^0.5.1",

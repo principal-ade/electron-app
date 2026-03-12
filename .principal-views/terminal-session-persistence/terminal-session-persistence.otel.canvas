@@ -1,0 +1,587 @@
+{
+  "pv": {
+    "name": "Terminal Session Persistence",
+    "version": "1.0.0",
+    "description": "External PTY daemon architecture for preserving terminal sessions across app updates",
+    "markdown": ".principal-views/terminal-session-persistence/terminal-session-persistence.md",
+    "nodeTypes": {
+      "electron": {
+        "label": "Electron",
+        "color": "#10B981"
+      },
+      "daemon-client": {
+        "label": "Daemon Client",
+        "color": "#6366F1"
+      },
+      "socket": {
+        "label": "Socket",
+        "color": "#14B8A6"
+      },
+      "daemon": {
+        "label": "PTY Daemon",
+        "color": "#F59E0B"
+      },
+      "pty": {
+        "label": "PTY Process",
+        "color": "#8B5CF6"
+      },
+      "update": {
+        "label": "Update",
+        "color": "#EC4899"
+      },
+      "renderer": {
+        "label": "Renderer",
+        "color": "#3B82F6"
+      }
+    },
+    "edgeTypes": {
+      "socket-ipc": {
+        "label": "Socket IPC",
+        "style": "solid",
+        "color": "#14B8A6"
+      },
+      "method-call": {
+        "label": "Method Call",
+        "style": "solid",
+        "color": "#F59E0B"
+      },
+      "spawn": {
+        "label": "Spawn",
+        "style": "dashed",
+        "color": "#8B5CF6"
+      },
+      "lifecycle": {
+        "label": "Lifecycle",
+        "style": "dotted",
+        "color": "#EC4899"
+      },
+      "port-transfer": {
+        "label": "Port Transfer",
+        "style": "solid",
+        "color": "#3B82F6"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "x": 200,
+      "y": -150,
+      "width": 600,
+      "height": 60,
+      "color": "#64748B",
+      "text": "# Terminal Session Persistence\n**External PTY Daemon for Update Survival**"
+    },
+    {
+      "id": "electron-boundary",
+      "type": "text",
+      "x": -50,
+      "y": -50,
+      "width": 450,
+      "height": 400,
+      "color": "#10B981",
+      "text": "ELECTRON APP PROCESS"
+    },
+    {
+      "id": "session-manager",
+      "type": "text",
+      "x": 0,
+      "y": 20,
+      "width": 200,
+      "height": 100,
+      "text": "TerminalSessionManager\n\n.createSession()\n.restoreSessions()\n.prepareForRestart()",
+      "pv": {
+        "nodeType": "electron",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/main/terminal/TerminalSessionManager.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": [
+            "src/main/terminal/TerminalSessionManager.ts"
+          ]
+        },
+        "event": {
+          "name": "terminal.persistence.manager_action",
+          "description": "Session manager coordinating with daemon",
+          "attributes": {
+            "action": {
+              "type": "string",
+              "description": "create, restore, prepareForRestart"
+            },
+            "session.count": {
+              "type": "number",
+              "description": "Number of sessions involved"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "daemon-client",
+      "type": "text",
+      "x": 0,
+      "y": 170,
+      "width": 200,
+      "height": 120,
+      "text": "PtyDaemonClient\n\n.connect()\n.createSession()\n.listSessions()\n.onReconnected()",
+      "pv": {
+        "nodeType": "daemon-client",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [],
+        "otel": {
+          "kind": "event",
+          "category": "ipc",
+          "files": []
+        },
+        "event": {
+          "name": "terminal.daemon.client_action",
+          "description": "Daemon client communicating with PTY daemon",
+          "attributes": {
+            "action": {
+              "type": "string",
+              "description": "connect, send, reconnect"
+            },
+            "message.type": {
+              "type": "string",
+              "description": "Protocol message type"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "renderer",
+      "type": "text",
+      "x": 230,
+      "y": 20,
+      "width": 150,
+      "height": 100,
+      "text": "Renderer\n\nTerminal UI\nxterm.js\nMessagePort",
+      "pv": {
+        "nodeType": "renderer",
+        "shape": "rectangle",
+        "status": "approved",
+        "references": [
+          "src/renderer/contexts/TerminalContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ui",
+          "files": [
+            "src/renderer/contexts/TerminalContext.tsx"
+          ]
+        },
+        "event": {
+          "name": "terminal.renderer.data_received",
+          "description": "Renderer received terminal data via MessagePort",
+          "attributes": {
+            "session.id": {
+              "type": "string",
+              "description": "Terminal session ID"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "unix-socket",
+      "type": "text",
+      "x": 0,
+      "y": 400,
+      "width": 200,
+      "height": 80,
+      "text": "Unix Domain Socket\n\n~/.your-app/\npty-daemon.sock",
+      "pv": {
+        "nodeType": "socket",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [],
+        "otel": {
+          "kind": "event",
+          "category": "ipc",
+          "files": []
+        },
+        "event": {
+          "name": "terminal.socket.message",
+          "description": "Message passed through Unix socket",
+          "attributes": {
+            "direction": {
+              "type": "string",
+              "description": "client_to_daemon or daemon_to_client"
+            },
+            "message.type": {
+              "type": "string",
+              "description": "Protocol message type"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "daemon-boundary",
+      "type": "text",
+      "x": -50,
+      "y": 530,
+      "width": 550,
+      "height": 320,
+      "color": "#F59E0B",
+      "text": "PTY DAEMON PROCESS (Independent)"
+    },
+    {
+      "id": "daemon-server",
+      "type": "text",
+      "x": 0,
+      "y": 600,
+      "width": 200,
+      "height": 120,
+      "text": "SocketServer\n\nnet.createServer()\nJSON protocol\nClient multiplexing",
+      "pv": {
+        "nodeType": "daemon",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [],
+        "otel": {
+          "kind": "event",
+          "category": "server",
+          "files": []
+        },
+        "event": {
+          "name": "terminal.daemon.server_event",
+          "description": "Daemon socket server event",
+          "attributes": {
+            "event": {
+              "type": "string",
+              "description": "client_connected, client_disconnected, message_received"
+            },
+            "clients.count": {
+              "type": "number",
+              "description": "Number of connected clients"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "daemon-session-mgr",
+      "type": "text",
+      "x": 250,
+      "y": 600,
+      "width": 200,
+      "height": 120,
+      "text": "DaemonSessionManager\n\nsessions: Map<id, PTY>\nscrollback buffers\nPTY lifecycle",
+      "pv": {
+        "nodeType": "daemon",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": []
+        },
+        "event": {
+          "name": "terminal.daemon.session_action",
+          "description": "Daemon session manager action",
+          "attributes": {
+            "action": {
+              "type": "string",
+              "description": "create, destroy, list"
+            },
+            "session.id": {
+              "type": "string",
+              "description": "Terminal session ID"
+            },
+            "sessions.count": {
+              "type": "number",
+              "description": "Total session count"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "pty-1",
+      "type": "text",
+      "x": 0,
+      "y": 760,
+      "width": 100,
+      "height": 60,
+      "text": "PTY 1\n/bin/zsh",
+      "pv": {
+        "nodeType": "pty",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [],
+        "otel": {
+          "kind": "event",
+          "category": "process",
+          "files": []
+        },
+        "event": {
+          "name": "terminal.pty.data",
+          "description": "PTY process output data",
+          "attributes": {
+            "session.id": {
+              "type": "string",
+              "description": "Terminal session ID"
+            },
+            "data.size": {
+              "type": "number",
+              "description": "Bytes of data"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "pty-2",
+      "type": "text",
+      "x": 120,
+      "y": 760,
+      "width": 100,
+      "height": 60,
+      "text": "PTY 2\n/bin/zsh",
+      "pv": {
+        "nodeType": "pty",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [],
+        "otel": {
+          "kind": "event",
+          "category": "process",
+          "files": []
+        },
+        "event": {
+          "name": "terminal.pty.spawned",
+          "description": "PTY process spawned by daemon",
+          "attributes": {
+            "session.id": {
+              "type": "string",
+              "description": "Terminal session ID"
+            },
+            "pid": {
+              "type": "number",
+              "description": "Process ID"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "pty-3",
+      "type": "text",
+      "x": 240,
+      "y": 760,
+      "width": 100,
+      "height": 60,
+      "text": "PTY 3\n/bin/zsh",
+      "pv": {
+        "nodeType": "pty",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [],
+        "otel": {
+          "kind": "event",
+          "category": "process",
+          "files": []
+        },
+        "event": {
+          "name": "terminal.pty.exit",
+          "description": "PTY process exited",
+          "attributes": {
+            "session.id": {
+              "type": "string",
+              "description": "Terminal session ID"
+            },
+            "exit.code": {
+              "type": "number",
+              "description": "Exit code"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "pty-n",
+      "type": "text",
+      "x": 360,
+      "y": 760,
+      "width": 100,
+      "height": 60,
+      "text": "PTY N\n...",
+      "pv": {
+        "nodeType": "pty",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [],
+        "otel": {
+          "kind": "event",
+          "category": "process",
+          "files": []
+        },
+        "event": {
+          "name": "terminal.pty.resize",
+          "description": "PTY process resized",
+          "attributes": {
+            "session.id": {
+              "type": "string",
+              "description": "Terminal session ID"
+            },
+            "cols": {
+              "type": "number",
+              "description": "Column count"
+            },
+            "rows": {
+              "type": "number",
+              "description": "Row count"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "update-flow",
+      "type": "text",
+      "x": 500,
+      "y": 0,
+      "width": 280,
+      "height": 250,
+      "color": "#EC4899",
+      "text": "UPDATE FLOW\n\n1. Update available\n2. User clicks Install\n3. prepareForRestart()\n   - Save metadata (optional)\n   - Disconnect socket\n4. App quits\n5. Daemon keeps running\n6. App restarts (v2)\n7. connect() to daemon\n8. listSessions() returns\n   existing sessions\n9. Restore UI state\n10. Reattach to terminals"
+    },
+    {
+      "id": "survival-note",
+      "type": "text",
+      "x": 500,
+      "y": 280,
+      "width": 280,
+      "height": 150,
+      "color": "#10B981",
+      "text": "SESSION SURVIVAL\n\nDaemon process:\n- Spawned with detached: true\n- Runs independently\n- Holds PTY processes alive\n- Maintains scrollback buffers\n- Survives app restart/update"
+    },
+    {
+      "id": "protocol-note",
+      "type": "text",
+      "x": 500,
+      "y": 460,
+      "width": 280,
+      "height": 200,
+      "color": "#6366F1",
+      "text": "PROTOCOL MESSAGES\n\nClient -> Daemon:\n- create, write, resize\n- destroy, list, attach\n- ping\n\nDaemon -> Client:\n- created, data, exit\n- error, sessions\n- scrollback, pong"
+    },
+    {
+      "id": "reconnect-note",
+      "type": "text",
+      "x": 500,
+      "y": 690,
+      "width": 280,
+      "height": 140,
+      "color": "#14B8A6",
+      "text": "RECONNECTION\n\nOn disconnect:\n- Schedule retry (1s intervals)\n- Emit 'disconnected' event\n- UI shows status\n\nOn reconnect:\n- Sync session state\n- Reattach to sessions\n- Emit 'reconnected' event"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "fromNode": "session-manager",
+      "toNode": "daemon-client",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "delegates to",
+      "pv": {
+        "edgeType": "method-call"
+      }
+    },
+    {
+      "id": "e2",
+      "fromNode": "daemon-client",
+      "toNode": "unix-socket",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "net.connect()",
+      "pv": {
+        "edgeType": "socket-ipc"
+      }
+    },
+    {
+      "id": "e3",
+      "fromNode": "unix-socket",
+      "toNode": "daemon-server",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "JSON messages",
+      "pv": {
+        "edgeType": "socket-ipc"
+      }
+    },
+    {
+      "id": "e4",
+      "fromNode": "daemon-server",
+      "toNode": "daemon-session-mgr",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "route messages",
+      "pv": {
+        "edgeType": "method-call"
+      }
+    },
+    {
+      "id": "e5",
+      "fromNode": "daemon-session-mgr",
+      "toNode": "pty-1",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "spawn",
+      "pv": {
+        "edgeType": "spawn"
+      }
+    },
+    {
+      "id": "e6",
+      "fromNode": "daemon-session-mgr",
+      "toNode": "pty-2",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "spawn"
+      }
+    },
+    {
+      "id": "e7",
+      "fromNode": "daemon-session-mgr",
+      "toNode": "pty-3",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "spawn"
+      }
+    },
+    {
+      "id": "e8",
+      "fromNode": "daemon-session-mgr",
+      "toNode": "pty-n",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "spawn"
+      }
+    },
+    {
+      "id": "e9",
+      "fromNode": "session-manager",
+      "toNode": "renderer",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "MessagePort",
+      "pv": {
+        "edgeType": "port-transfer"
+      }
+    }
+  ]
+}
