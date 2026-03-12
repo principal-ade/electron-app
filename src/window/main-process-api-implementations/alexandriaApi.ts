@@ -1,3 +1,10 @@
+/**
+ * Alexandria API implementation for preload scripts
+ *
+ * Uses TIPC for type-safe RPC calls and legacy IPC for event subscriptions.
+ * Method names are prefixed with 'alexandria_' to avoid collisions with other routers.
+ */
+
 import { ipcRenderer } from 'electron';
 import type {
   AlexandriaAPI,
@@ -9,9 +16,17 @@ import {
 } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 
+/**
+ * TIPC-based invoke helper
+ * Uses prefixed method names to match the router
+ */
+const tipcInvoke = <T>(method: string, input?: unknown): Promise<T> => {
+  return ipcRenderer.invoke(`alexandria_${method}`, input);
+};
+
 export const alexandriaAPI: AlexandriaAPI = {
+  // Event subscriptions still use legacy IPC (TIPC doesn't support events)
   onRepositoryChange: (callback: (event: AlexandriaChangeEvent) => void) => {
-    // Create IPC listener functions
     const handleAdded = (
       _event: Electron.IpcRendererEvent,
       data: AlexandriaEntry,
@@ -31,12 +46,10 @@ export const alexandriaAPI: AlexandriaAPI = {
       callback({ type: AlexandriaEventType.REMOVED, name: data.name });
     };
 
-    // Register listeners
     ipcRenderer.on(AlexandriaAPIEvent.REPOSITORY_ADDED, handleAdded);
     ipcRenderer.on(AlexandriaAPIEvent.REPOSITORY_UPDATED, handleUpdated);
     ipcRenderer.on(AlexandriaAPIEvent.REPOSITORY_REMOVED, handleRemoved);
 
-    // Return unsubscribe function
     return () => {
       ipcRenderer.removeListener(
         AlexandriaAPIEvent.REPOSITORY_ADDED,
@@ -52,30 +65,37 @@ export const alexandriaAPI: AlexandriaAPI = {
       );
     };
   },
-  getRepositories: () => ipcRenderer.invoke(AlexandriaAPIEvent.GET_ALL),
-  getRepository: (name: string) =>
-    ipcRenderer.invoke(AlexandriaAPIEvent.GET, name),
+
+  // All RPC calls use TIPC router methods (with alexandria_ prefix)
+  getRepositories: () => tipcInvoke('getRepositories'),
+
+  getRepository: (name: string) => tipcInvoke('getRepository', { name }),
+
   getRepositoryByPath: (path: string) =>
-    ipcRenderer.invoke(AlexandriaAPIEvent.GET_BY_PATH, path),
+    tipcInvoke('getRepositoryByPath', { path }),
+
   registerRepository: (name: string, path: string) =>
-    ipcRenderer.invoke(AlexandriaAPIEvent.REGISTER, name, path),
+    tipcInvoke('registerRepository', { name, path }),
+
   removeRepository: (name: string, deleteLocal?: boolean) =>
-    ipcRenderer.invoke(AlexandriaAPIEvent.REMOVE, name, deleteLocal),
+    tipcInvoke('removeRepository', { name, deleteLocal }),
+
   searchRepositories: (query: string) =>
-    ipcRenderer.invoke(AlexandriaAPIEvent.SEARCH, query),
-  getRepositoriesWithViews: () =>
-    ipcRenderer.invoke(AlexandriaAPIEvent.GET_WITH_VIEWS),
+    tipcInvoke('searchRepositories', { query }),
+
+  getRepositoriesWithViews: () => tipcInvoke('getRepositoriesWithViews'),
+
   refreshRepository: (name: string) =>
-    ipcRenderer.invoke(AlexandriaAPIEvent.REFRESH, name),
+    tipcInvoke('refreshRepository', { name }),
+
   updateLastOpened: (name: string) =>
-    ipcRenderer.invoke(AlexandriaAPIEvent.UPDATE_LAST_OPENED, name),
-  getRepositoryCount: () => ipcRenderer.invoke(AlexandriaAPIEvent.GET_COUNT),
+    tipcInvoke('updateLastOpened', { name }),
+
+  getRepositoryCount: () => tipcInvoke('getRepositoryCount'),
+
   getCodebaseViews: (repositoryPath: string) =>
-    ipcRenderer.invoke(AlexandriaAPIEvent.GET_CODEBASE_VIEWS, repositoryPath),
+    tipcInvoke('getCodebaseViews', { repositoryPath }),
+
   getCodebaseView: (repositoryPath: string, viewId: string) =>
-    ipcRenderer.invoke(
-      AlexandriaAPIEvent.GET_CODEBASE_VIEW,
-      repositoryPath,
-      viewId,
-    ),
+    tipcInvoke('getCodebaseView', { repositoryPath, viewId }),
 };

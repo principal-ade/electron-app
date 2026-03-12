@@ -612,51 +612,6 @@ export class AlexandriaRegistryService {
   }
 
   /**
-   * Refresh GitHub metadata for all repositories that don't have it or show as 'local'
-   * This is useful for fixing repositories that were added before GitHub metadata fetching was implemented
-   */
-  async refreshAllGitHubMetadata(): Promise<void> {
-    const entries = this.outpostManager.getAllEntries();
-
-    for (const entry of entries) {
-      // Check if GitHub metadata is missing or shows as 'local'
-      if (
-        !entry.github?.owner ||
-        entry.github.owner === 'local' ||
-        entry.github.owner === 'unknown'
-      ) {
-        console.log(
-          `[refreshAllGitHubMetadata] Refreshing metadata for: ${entry.name}`,
-        );
-
-        try {
-          const githubMetadata = await this.fetchGitHubMetadata(
-            entry.remoteUrl,
-          );
-          if (githubMetadata) {
-            await this.outpostManager.updateGitHubMetadata(
-              entry.name,
-              githubMetadata,
-            );
-            console.log(
-              `[refreshAllGitHubMetadata] Updated GitHub metadata for: ${entry.name}`,
-            );
-          }
-        } catch (error) {
-          console.error(
-            `[refreshAllGitHubMetadata] Failed to update ${entry.name}:`,
-            error,
-          );
-        }
-      }
-    }
-
-    console.log(
-      '[refreshAllGitHubMetadata] Finished refreshing GitHub metadata',
-    );
-  }
-
-  /**
    * Get untracked markdown documents in a repository
    * These are markdown files not associated with any CodebaseView
    * @param name - Repository name

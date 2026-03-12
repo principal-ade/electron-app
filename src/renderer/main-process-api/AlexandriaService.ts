@@ -1,6 +1,6 @@
 /**
  * Renderer-side service for Alexandria repository management
- * Communicates with main process via IPC using window.mainProcess
+ * Uses TIPC client for type-safe RPC with main process
  */
 
 import type {
@@ -8,10 +8,15 @@ import type {
   CodebaseView,
 } from '@principal-ai/alexandria-core-library/types';
 import type { AlexandriaChangeEvent } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
+import { alexandriaClient } from '../tipc/alexandriaClient';
 import { getTracer } from '../telemetry';
 import { SpanStatusCode } from '@opentelemetry/api';
 
 export class AlexandriaService {
+  /**
+   * Subscribe to repository change events
+   * Note: This still uses the legacy IPC event system since TIPC doesn't support events
+   */
   static onRepositoryChange(
     callback: (event: AlexandriaChangeEvent) => void,
   ): () => void {
@@ -19,45 +24,45 @@ export class AlexandriaService {
   }
 
   static async getRepositories(): Promise<AlexandriaEntry[]> {
-    return window.mainProcess.alexandria.getRepositories();
+    return alexandriaClient.getRepositories();
   }
 
   static async getRepository(name: string): Promise<AlexandriaEntry | null> {
-    return window.mainProcess.alexandria.getRepository(name);
+    return alexandriaClient.getRepository({ name });
   }
 
   static async getRepositoryByPath(
     path: string,
   ): Promise<AlexandriaEntry | null> {
-    return window.mainProcess.alexandria.getRepositoryByPath(path);
+    return alexandriaClient.getRepositoryByPath({ path });
   }
 
   static async registerRepository(
     name: string,
     path: string,
   ): Promise<AlexandriaEntry> {
-    return window.mainProcess.alexandria.registerRepository(name, path);
+    return alexandriaClient.registerRepository({ name, path });
   }
 
   static async removeRepository(
     name: string,
     deleteLocal?: boolean,
   ): Promise<boolean> {
-    return window.mainProcess.alexandria.removeRepository(name, deleteLocal);
+    return alexandriaClient.removeRepository({ name, deleteLocal });
   }
 
   static async searchRepositories(query: string): Promise<AlexandriaEntry[]> {
-    return window.mainProcess.alexandria.searchRepositories(query);
+    return alexandriaClient.searchRepositories({ query });
   }
 
   static async getRepositoriesWithViews(): Promise<AlexandriaEntry[]> {
-    return window.mainProcess.alexandria.getRepositoriesWithViews();
+    return alexandriaClient.getRepositoriesWithViews();
   }
 
   static async refreshRepository(
     name: string,
   ): Promise<AlexandriaEntry | null> {
-    return window.mainProcess.alexandria.refreshRepository(name);
+    return alexandriaClient.refreshRepository({ name });
   }
 
   static async updateLastOpened(name: string): Promise<void> {
@@ -70,7 +75,7 @@ export class AlexandriaService {
         channel: 'alexandria:update-last-opened',
         repository_name: name,
       });
-      await window.mainProcess.alexandria.updateLastOpened(name);
+      await alexandriaClient.updateLastOpened({ name });
       span.setStatus({ code: SpanStatusCode.OK });
     } catch (error) {
       span.recordException(
@@ -84,7 +89,7 @@ export class AlexandriaService {
   }
 
   static async getRepositoryCount(): Promise<number> {
-    return window.mainProcess.alexandria.getRepositoryCount();
+    return alexandriaClient.getRepositoryCount();
   }
 
   /**
@@ -94,7 +99,7 @@ export class AlexandriaService {
   static async getCodebaseViews(
     repositoryPath: string,
   ): Promise<CodebaseView[]> {
-    return window.mainProcess.alexandria.getCodebaseViews(repositoryPath);
+    return alexandriaClient.getCodebaseViews({ repositoryPath });
   }
 
   /**
@@ -106,9 +111,6 @@ export class AlexandriaService {
     repositoryPath: string,
     viewId: string,
   ): Promise<CodebaseView | null> {
-    return window.mainProcess.alexandria.getCodebaseView(
-      repositoryPath,
-      viewId,
-    );
+    return alexandriaClient.getCodebaseView({ repositoryPath, viewId });
   }
 }

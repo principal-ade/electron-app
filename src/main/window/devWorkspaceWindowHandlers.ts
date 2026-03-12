@@ -80,6 +80,40 @@ export async function openDevWorkspaceWindow(
       // Don't block opening the window if update fails
     });
 
+  // Refresh GitHub metadata for the repository (fire-and-forget)
+  // This ensures we have up-to-date description, stars, topics, etc.
+  const refreshSpan = tracer.startSpan(
+    'alexandria.dev_workspace.refresh_github_metadata',
+  );
+  refreshSpan.setAttributes({
+    repository_name: alexandriaEntry.name,
+    repository_path: alexandriaEntry.path,
+  });
+
+  AlexandriaRegistryService.getInstance()
+    .refreshRepository(alexandriaEntry.name)
+    .then((updatedEntry) => {
+      if (updatedEntry) {
+        console.log(
+          `[DevWorkspaceWindow] Refreshed GitHub metadata for ${alexandriaEntry.name}`,
+        );
+      }
+      refreshSpan.setStatus({ code: SpanStatusCode.OK });
+      refreshSpan.end();
+    })
+    .catch((error) => {
+      console.error(
+        '[DevWorkspaceWindow] Failed to refresh GitHub metadata:',
+        error,
+      );
+      refreshSpan.recordException(
+        error instanceof Error ? error : new Error(String(error)),
+      );
+      refreshSpan.setStatus({ code: SpanStatusCode.ERROR });
+      refreshSpan.end();
+      // Don't block opening the window if refresh fails
+    });
+
   // Check if window already exists
   const existingId = specialWindows.get(windowName);
   if (existingId) {
