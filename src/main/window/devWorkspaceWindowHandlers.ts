@@ -140,6 +140,7 @@ export async function openDevWorkspaceWindow(
     localPath: alexandriaEntry.path,
     remoteUrl: alexandriaEntry.remoteUrl,
     purpose: windowName,
+    alexandriaEntry,
   };
 
   // Get primary display dimensions for full-screen size

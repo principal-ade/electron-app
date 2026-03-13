@@ -18,48 +18,75 @@ Currently, terminal sessions are destroyed when the app updates:
 
 ## Architecture Decision
 
-**Approach: External PTY Daemon with Socket IPC**
+**Approach: External PTY Daemon with Worker-Direct Connection**
 
-Instead of running PTY processes in a utility worker (child of Electron), run them in a separate long-lived daemon process that:
+Instead of running PTY processes in a utility worker (child of Electron), run them in a separate long-lived daemon process. The key insight is that the **utility worker connects directly to the daemon**, bypassing the main process for data flow. This keeps the main process responsive.
 
-- Starts independently of Electron
-- Communicates via Unix domain socket (or named pipe on Windows)
-- Survives app restarts/updates
-- Manages session lifecycle and scrollback buffers
+**Design Principles:**
+- Daemon spawns PTY processes and survives app restarts
+- Worker connects directly to daemon via Unix socket (no main process relay)
+- Main process only handles control messages (create, destroy, list)
+- Data flows: Daemon → Worker → MessagePort → Renderer (bypasses main!)
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         Electron App                                 │
-├─────────────────────────────────────────────────────────────────────┤
-│  Main Process                                                        │
-│  ┌────────────────────────┐      ┌────────────────────────────────┐ │
-│  │ TerminalSessionManager │ ───→ │ PtyDaemonClient                │ │
-│  │ (coordinator)          │      │ - Connects to socket           │ │
-│  └────────────────────────┘      │ - Multiplexes sessions         │ │
-│                                   │ - Handles reconnection         │ │
-│                                   └───────────────┬────────────────┘ │
-└───────────────────────────────────────────────────┼─────────────────┘
-                                                    │
-                                          Unix Socket IPC
-                                    ~/.your-app/pty-daemon.sock
-                                                    │
-┌───────────────────────────────────────────────────┼─────────────────┐
-│                      PTY Daemon (Separate Process)                   │
-├───────────────────────────────────────────────────┼─────────────────┤
-│  ┌────────────────────────────────────────────────────────────────┐ │
-│  │ SessionManager                                                  │ │
-│  │ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐           │ │
-│  │ │ PTY 1    │ │ PTY 2    │ │ PTY 3    │ │ PTY 4    │  ...      │ │
-│  │ │ /bin/zsh │ │ /bin/zsh │ │ /bin/zsh │ │ /bin/zsh │           │ │
-│  │ └──────────┘ └──────────┘ └──────────┘ └──────────┘           │ │
-│  └────────────────────────────────────────────────────────────────┘ │
-│                                                                      │
-│  - Runs independently of Electron lifecycle                         │
-│  - Persists sessions across app restarts                            │
-│  - Maintains scrollback buffers for reattachment                    │
-│  - Auto-starts when needed, optional idle shutdown                  │
-└──────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           Electron App                                   │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌─────────────────┐         ┌─────────────────────────────────────┐    │
+│  │    Renderer     │◄──────►│       Utility Worker                 │    │
+│  │                 │ Message │                                      │    │
+│  │  Terminal UI    │  Port   │  - Holds MessagePorts               │    │
+│  │  xterm.js       │ (direct)│  - Connects to daemon socket        │    │
+│  │                 │         │  - Bridges socket ↔ ports           │    │
+│  └─────────────────┘         └──────────────┬──────────────────────┘    │
+│                                              │                           │
+│  ┌─────────────────┐                         │ Unix Socket               │
+│  │  Main Process   │ control messages only   │ (PTY data)               │
+│  │                 │─────────────────────────┤                           │
+│  │  Session Mgr    │ create/destroy/list     │                           │
+│  │  (coordinator)  │                         │                           │
+│  └─────────────────┘                         │                           │
+│                                              │                           │
+└──────────────────────────────────────────────┼───────────────────────────┘
+                                               │
+                                     ~/.principal/pty-daemon.sock
+                                               │
+┌──────────────────────────────────────────────┼───────────────────────────┐
+│                    PTY Daemon (Independent Process)                       │
+├──────────────────────────────────────────────┼───────────────────────────┤
+│                                              │                            │
+│  ┌─────────────────────────────────────────────────────────────────────┐ │
+│  │ DaemonSessionManager                                                 │ │
+│  │ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐                 │ │
+│  │ │ PTY 1    │ │ PTY 2    │ │ PTY 3    │ │ PTY N    │  ...           │ │
+│  │ │ /bin/zsh │ │ /bin/zsh │ │ /bin/zsh │ │ /bin/zsh │                 │ │
+│  │ └──────────┘ └──────────┘ └──────────┘ └──────────┘                 │ │
+│  └─────────────────────────────────────────────────────────────────────┘ │
+│                                                                           │
+│  ✓ Runs independently of Electron lifecycle                              │
+│  ✓ Persists sessions across app restarts/updates                         │
+│  ✓ Maintains scrollback buffers for reattachment                         │
+│  ✓ Auto-starts when needed, idle shutdown after 30min                    │
+└───────────────────────────────────────────────────────────────────────────┘
 ```
+
+## Why Worker-Direct Connection?
+
+**Problem with Main Process Relay:**
+Terminal output can be high-volume (compilation, `cat` large files, verbose logs). If main process relays all PTY data, it causes UI jank - laggy window dragging, slow menus, input delays.
+
+**Solution:**
+Worker connects directly to daemon socket. Data flows without touching main process:
+```
+PTY Output:  Daemon → Unix socket → Worker → port1 → port2 → Renderer
+User Input:  Renderer → port2 → port1 → Worker → Unix socket → Daemon → PTY
+```
+
+Main process only handles infrequent control operations:
+- Create/destroy sessions
+- List sessions on startup
+- Coordinate ownership
 
 ## Communication Protocol
 
@@ -107,41 +134,123 @@ interface SessionInfo {
 
 ## Data Flow
 
+### PTY Data Flow (High-Frequency - Bypasses Main)
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                    PTY OUTPUT (daemon → renderer)                 │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│  PTY Process                                                      │
+│      │ stdout/stderr                                              │
+│      ▼                                                            │
+│  DaemonSessionManager.onData()                                    │
+│      │ JSON: { type: 'data', id, data }                          │
+│      ▼                                                            │
+│  Unix Socket ──────────────────────────────────────────────────► │
+│                                                                   │
+│  ◄─────────────────────────────────────────── Utility Worker     │
+│      │ parse JSON, lookup session port                           │
+│      ▼                                                            │
+│  port1.postMessage({ type: 'DATA', data })                       │
+│      │ MessageChannel (direct transfer)                          │
+│      ▼                                                            │
+│  port2.onmessage() ──► xterm.js.write(data)                      │
+│                                                                   │
+│  ✓ Main process NOT involved in data path                        │
+└──────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────┐
+│                    USER INPUT (renderer → daemon)                 │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│  xterm.js.onData(input)                                          │
+│      │                                                            │
+│      ▼                                                            │
+│  port2.postMessage({ type: 'WRITE', data: input })               │
+│      │ MessageChannel (direct transfer)                          │
+│      ▼                                                            │
+│  Utility Worker: port1.onmessage()                               │
+│      │ JSON: { type: 'write', id, data }                         │
+│      ▼                                                            │
+│  Unix Socket ──────────────────────────────────────────────────► │
+│                                                                   │
+│  ◄─────────────────────────────────────────── PTY Daemon         │
+│      │ ptyProcess.write(data)                                    │
+│      ▼                                                            │
+│  PTY stdin                                                        │
+│                                                                   │
+│  ✓ Main process NOT involved in data path                        │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Control Flow (Low-Frequency - Through Main)
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│               SESSION CREATION (main coordinates)                 │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│  Renderer: "Create new terminal"                                  │
+│      │ IPC                                                        │
+│      ▼                                                            │
+│  Main: TerminalSessionManager.createSession()                     │
+│      │ postMessage to worker                                      │
+│      ▼                                                            │
+│  Worker: send({ type: 'create', id, cwd }) via socket            │
+│      │                                                            │
+│      ▼                                                            │
+│  Daemon: spawn PTY, respond { type: 'created', id, pid }         │
+│      │                                                            │
+│      ▼                                                            │
+│  Worker: notify main "session created"                            │
+│      │                                                            │
+│      ▼                                                            │
+│  Main: create MessageChannel, transfer ports                      │
+│      │ port1 → worker, port2 → renderer                          │
+│      ▼                                                            │
+│  Data flow now bypasses main!                                     │
+└──────────────────────────────────────────────────────────────────┘
+```
+
 ### App Startup (Fresh)
 
 ```
 App Launch
     │
     ▼
-PtyDaemonClient.connect()
+Main: Initialize worker
     │
-    ├── Socket exists? ──No──→ startDaemon()
-    │         │                     │
-    │        Yes              spawn detached
-    │         │                     │
-    │         ▼                     ▼
-    └──→ net.connect(SOCKET_PATH)
-              │
-              ▼
-    Daemon sends 'sessions' message
-              │
-              ▼
-    sessions.length === 0 (fresh start)
+    ▼
+Worker: Check if daemon socket exists
+    │
+    ├── No ──→ Main spawns daemon (detached)
+    │                │
+    │          Wait for socket
+    │                │
+    ▼                ▼
+Worker: net.connect(SOCKET_PATH)
+    │
+    ▼
+Daemon sends 'sessions' message
+    │
+    ▼
+sessions.length === 0 (fresh start)
+    │
+    ▼
+Worker notifies main: "ready, 0 sessions"
 ```
 
-### App Startup (After Update)
+### App Startup (After Update) - Session Restoration
 
 ```
 App Launch (v2)
     │
     ▼
-PtyDaemonClient.connect()
+Main: Initialize worker
     │
     ▼
-Socket exists (daemon still running)
-    │
-    ▼
-net.connect(SOCKET_PATH)
+Worker: net.connect(SOCKET_PATH)
     │
     ▼
 Daemon sends 'sessions' message
@@ -150,31 +259,24 @@ Daemon sends 'sessions' message
 [session1, session2, session3] ← Existing sessions!
     │
     ▼
-For each session:
+Worker notifies main: "3 existing sessions"
+    │
+    ▼
+Main: For each session:
+    │
     ├── Restore to TerminalSessionManager
-    ├── Send 'attach' to get scrollback
-    └── Re-wire MessagePort to renderer
-```
-
-### Session Creation via Daemon
-
-```
-Renderer requests new terminal
-         │
-         ▼
-TerminalSessionManager.createSession()
-         │
-         ▼
-daemonClient.send({ type: 'create', id, cwd })
-         │
-         ▼
-Daemon spawns PTY process
-         │
-         ▼
-Daemon sends { type: 'created', id, pid }
-         │
-         ▼
-Session stored in manager, MessagePort wired
+    ├── Create MessageChannel
+    ├── Transfer port1 to worker, port2 to renderer
+    └── Worker: send 'attach' to get scrollback
+              │
+              ▼
+        Daemon sends scrollback data
+              │
+              ▼
+        Worker forwards via port1 → renderer
+              │
+              ▼
+        xterm.js displays restored content
 ```
 
 ### App Update Flow
@@ -189,59 +291,78 @@ User clicks "Install Update"
 app.on('before-quit')
     │
     ▼
-TerminalSessionManager.prepareForRestart()
+Main: TerminalSessionManager.prepareForRestart()
     │
-    ├── Save session metadata to disk (optional)
-    └── Disconnect from daemon (socket closes cleanly)
+    ├── Save session metadata to disk (cwd, context, etc.)
+    └── Tell worker to disconnect cleanly
               │
               ▼
-        Daemon stays alive
+        Worker: socket.end()
+              │
+              ▼
+        Daemon stays alive (no clients, but has sessions)
         PTY processes continue running
+        Scrollback buffers preserved
               │
               ▼
-App quits, updater replaces binary
+App quits, worker dies, updater replaces binary
               │
               ▼
 App launches (v2)
               │
               ▼
-PtyDaemonClient.connect()
+New worker connects to existing daemon
               │
               ▼
-Daemon sends existing sessions
-              │
-              ▼
-Sessions restored with full state
+Sessions restored with full scrollback!
 ```
 
 ## Key Components
 
-### PtyDaemon (New)
+### PtyDaemon (Standalone Process)
 
-Standalone Node.js process:
-- **Location**: `src/pty-daemon/` or separate package
+Standalone Node.js process that manages PTY lifecycles:
+- **Location**: `src/pty-daemon/`
 - **Entry**: `daemon.ts` - Socket server + session management
-- **Lifecycle**: Spawned detached, runs independently
-- **Socket**: `~/.your-app/pty-daemon.sock`
+- **Lifecycle**: Spawned detached by main process, runs independently
+- **Socket**: `~/.principal/pty-daemon.sock`
+- **Key Classes**:
+  - `SocketServer` - Accepts client connections, multiplexes messages
+  - `DaemonSessionManager` - Spawns PTYs via node-pty, manages lifecycle
+  - `ScrollbackBuffer` - Circular buffer per session for reattachment
 
-### PtyDaemonClient (New)
+### Utility Worker (Modified)
 
-Client for main process:
-- **Location**: `src/main/terminal/PtyDaemonClient.ts`
+Electron utility process that bridges MessagePorts ↔ Daemon:
+- **Location**: `src/terminal-worker/`
+- **Key Change**: No longer spawns PTYs directly
 - **Responsibilities**:
-  - Connect to daemon (start if needed)
-  - Send/receive messages
-  - Handle reconnection on disconnect
-  - Emit events for session data
+  - Connect to daemon via Unix socket
+  - Hold MessagePorts (port1 per session)
+  - Bridge: socket data ↔ MessagePort messages
+  - Notify main of session events (created, exited)
 
-### Modified TerminalSessionManager
+### PtyDaemonClient (In Worker)
 
-Existing manager adapted to use daemon:
+Socket client that runs inside the utility worker:
+- **Location**: `src/terminal-worker/PtyDaemonClient.ts`
+- **Responsibilities**:
+  - Connect to daemon socket
+  - Send/receive JSON messages
+  - Handle reconnection with backoff
+  - Route PTY data to correct MessagePort
+
+### Modified TerminalSessionManager (Main Process)
+
+Coordinator that delegates to worker:
+- **Location**: `src/main/terminal/TerminalSessionManager.ts`
 - **Changes**:
-  - Replace worker communication with daemon client
-  - Add session restoration on startup
-  - Remove worker lifecycle management
+  - Sends control messages to worker (create, destroy, list)
+  - Worker handles daemon communication
+  - Creates MessageChannels, transfers ports
+  - Handles session restoration on startup
   - Keep ownership + activity tracking (unchanged)
+- **Does NOT**: Handle PTY data (that's worker ↔ renderer direct)
 
 ## Daemon Lifecycle
 
@@ -302,51 +423,64 @@ fs.chmodSync(SOCKET_PATH, 0o600);
 
 ## Migration Path
 
-### Phase 1: Daemon Infrastructure
-- Implement PtyDaemon process
-- Implement PtyDaemonClient
-- Add daemon spawn/connect logic
+### Phase 1: Daemon Infrastructure ✓
+- ✓ Implement PtyDaemon process (`src/pty-daemon/`)
+- ✓ Implement socket server and session manager
+- ✓ Add daemon spawn logic
+- ✓ Test daemon standalone
 
-### Phase 2: Session Manager Integration
-- Modify TerminalSessionManager to use daemon
+### Phase 2: Worker Integration
+- Modify utility worker to connect to daemon socket
+- Worker no longer spawns PTYs directly
+- Worker bridges socket ↔ MessagePort
+- Keep MessagePort flow to renderer unchanged
+
+### Phase 3: Session Manager Updates
+- Main sends control messages to worker
+- Worker handles daemon protocol
 - Add session restoration on startup
-- Keep existing ownership/activity tracking
+- Update shutdown to disconnect (not destroy)
 
-### Phase 3: UI Updates
-- Show "Restoring sessions..." on startup
-- Add daemon status indicator (optional)
-- Handle reconnection gracefully
+### Phase 4: UI Updates
+- Show "Restoring sessions..." indicator
+- Handle reconnection state in UI
+- Add daemon status to debug info
 
-### Phase 4: Cleanup
-- Remove utility worker code
-- Update shutdown flow
+### Phase 5: Cleanup & Polish
+- Remove direct node-pty usage from worker
 - Add telemetry for persistence success rate
+- Handle edge cases (daemon crash, socket errors)
 
 ## Comparison with Current Architecture
 
-| Aspect | Utility Worker (Current) | External Daemon (Proposed) |
-|--------|-------------------------|---------------------------|
-| Process lifecycle | Child of Electron | Independent |
+| Aspect | Current (Worker spawns PTY) | New (Worker → Daemon → PTY) |
+|--------|----------------------------|----------------------------|
+| PTY lifecycle | Tied to worker/app | Independent of app |
 | Survives app restart | No | Yes |
 | Survives app update | No | Yes |
 | Running processes | Lost on quit | Preserved |
-| Scrollback history | Lost on quit | Preserved |
-| Complexity | Lower | Higher |
-| IPC mechanism | MessagePort | Unix socket |
-| Startup overhead | None | Daemon spawn if needed |
+| Scrollback history | Lost on quit | Preserved in daemon |
+| Data path | Worker → MessagePort → Renderer | Daemon → Worker → MessagePort → Renderer |
+| Main process load | Control only | Control only (unchanged) |
+| Complexity | Medium | Higher |
+| Startup overhead | Worker spawn | Worker spawn + daemon connect |
 
-## Key Files (Proposed)
+## Key Files
 
-**Daemon Process:**
-- `src/pty-daemon/daemon.ts` - Main daemon entry
-- `src/pty-daemon/SessionManager.ts` - PTY session management
+**Daemon Process (New):**
+- `src/pty-daemon/daemon.ts` - Main daemon entry point
+- `src/pty-daemon/DaemonSessionManager.ts` - PTY spawning and lifecycle
 - `src/pty-daemon/SocketServer.ts` - Unix socket server
-- `src/pty-daemon/types.ts` - Protocol types
+- `src/pty-daemon/ScrollbackBuffer.ts` - Circular buffer for scrollback
+- `src/pty-daemon/Logger.ts` - Daemon logging
+
+**Utility Worker (Modified):**
+- `src/terminal-worker/worker-entry.ts` - Modified to connect to daemon
+- `src/terminal-worker/DaemonBridge.ts` - Socket ↔ MessagePort bridge
 
 **Main Process:**
-- `src/main/terminal/PtyDaemonClient.ts` - Daemon client
-- `src/main/terminal/TerminalSessionManager.ts` - Modified to use daemon
-- `src/main/terminal/sessionRestoration.ts` - Startup restoration logic
+- `src/main/terminal/TerminalSessionManager.ts` - Coordinates worker
+- `src/main/terminal/daemonSpawner.ts` - Spawns daemon if not running
 
 **Shared:**
 - `src/shared/pty-daemon/protocol.ts` - Message type definitions

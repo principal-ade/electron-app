@@ -7,14 +7,22 @@ import { BrowserWindow, screen, ipcMain, app } from 'electron';
 import path from 'path';
 import log from 'electron-log';
 import { resolveHtmlPath } from '../util';
-import { applicationWindows } from './types';
+import { applicationWindows, PrimaryWindowType } from './types';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+
+interface SwitcherWindow {
+  id: number;
+  title: string;
+  primaryType: PrimaryWindowType;
+  alexandriaEntry?: AlexandriaEntry;
+}
 
 class WindowSwitcher {
   private switcherWindow: BrowserWindow | null = null;
   private isActive = false;
   private cycleMode = false; // true if opened with Command+;, false if opened with Command+'
   private selectedIndex = 0;
-  private windowList: Array<{ id: number; title: string }> = [];
+  private windowList: SwitcherWindow[] = [];
 
   /**
    * Show the window switcher overlay (toggle mode - Command+')
@@ -229,12 +237,31 @@ class WindowSwitcher {
       if (appWindow.window && !appWindow.window.isDestroyed()) {
         // Simply use the metadata display name!
         const title = appWindow.metadata?.displayName ?? 'Untitled Window';
+        const primaryType =
+          appWindow.metadata?.primaryType ?? PrimaryWindowType.UNKNOWN;
+        let alexandriaEntry = appWindow.metadata?.alexandriaEntry;
+
+        // Construct a synthetic AlexandriaEntry for the main window
+        if (primaryType === PrimaryWindowType.MAIN && !alexandriaEntry) {
+          alexandriaEntry = {
+            name: 'Principal ADE',
+            path: '',
+            remoteUrl: '',
+            github: {
+              owner: 'anthropics',
+              description: 'Home',
+              stars: 0,
+              primaryLanguage: '',
+              license: '',
+            },
+          } as AlexandriaEntry;
+        }
 
         log.info(
-          `[Window Switcher] Window ${id} title: ${title} (type: ${appWindow.metadata?.primaryType})`,
+          `[Window Switcher] Window ${id} title: ${title} (type: ${primaryType}, hasEntry: ${!!alexandriaEntry})`,
         );
 
-        this.windowList.push({ id, title });
+        this.windowList.push({ id, title, primaryType, alexandriaEntry });
       }
     }
 
@@ -311,6 +338,12 @@ class WindowSwitcher {
     this.switcherWindow.on('closed', () => {
       this.switcherWindow = null;
       this.isActive = false;
+    });
+
+    // Hide when window loses focus (e.g., user switches apps)
+    this.switcherWindow.on('blur', () => {
+      log.info('[Window Switcher] Lost focus, hiding');
+      this.hide();
     });
 
     // Show and focus the window

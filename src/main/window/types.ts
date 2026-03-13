@@ -7,6 +7,7 @@ import { BrowserWindow } from 'electron';
 import type { ElectronFileSystemAdapter } from '../file-system/fileSystemHandlers';
 import type { ElectronWindowManagerAdapter } from './windowManagerHandlers';
 import type { GitHubAdapter } from '../version-control-providers/githubHandlers';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
 /**
  * Window features configuration
@@ -49,6 +50,8 @@ export interface WindowMetadata {
   workspaceId?: string;
   // Original purpose string for backward compatibility
   purpose?: string;
+  // Full AlexandriaEntry for rich display in window switcher
+  alexandriaEntry?: AlexandriaEntry;
 }
 
 /**

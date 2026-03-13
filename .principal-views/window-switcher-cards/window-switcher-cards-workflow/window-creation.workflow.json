@@ -1,0 +1,27 @@
+{
+  "version": "1.0.0",
+  "name": "Window Creation with Entry",
+  "description": "Dev workspace window created with AlexandriaEntry stored in metadata",
+  "mode": "span-tree",
+  "canvas": ".principal-views/window-switcher-cards/window-switcher-cards.otel.canvas",
+  "spanPattern": "window.open",
+  "scenarios": [
+    {
+      "id": "window-creation-with-entry",
+      "description": "Quick Open triggers window creation, storing AlexandriaEntry for card display",
+      "priority": 1,
+      "template": {
+        "introduction": "**Opening Project Window**\n\nUser selected project from Quick Open, creating window with AlexandriaEntry metadata.",
+        "events": {
+          "window.open.quick_open_triggered": "[1] Quick Open: project=`{{entry.name}}`, url={{entry.remoteUrl}}",
+          "window.open.dev_workspace_created": "[2] Window created: id={{window.id}}, project=`{{entry.name}}`, has_github={{entry.has_github}}",
+          "window.metadata.updated": "[3] Metadata stored: window={{window.id}}, has_entry={{has_entry}}",
+          "window.store.accessed": "[4] Store {{operation}}: {{store.size}} windows",
+          "window_switcher.window.serialized": "[5] Window serialized for switcher: id={{window.id}}, has_entry={{has_entry}}"
+        },
+        "summary": "**Window Ready:**\n- Window ID: {{window.id}}\n- Project: `{{entry.name}}`\n- Has GitHub data: {{entry.has_github}}"
+      },
+      "filterDefault": false
+    }
+  ]
+}

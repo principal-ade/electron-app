@@ -1,0 +1,28 @@
+{
+  "version": "1.0.0",
+  "name": "Window Switch",
+  "description": "User triggers window switcher and selects a window to focus",
+  "mode": "span-tree",
+  "canvas": ".principal-views/window-switcher-cards/window-switcher-cards.otel.canvas",
+  "spanPattern": "window_switcher",
+  "scenarios": [
+    {
+      "id": "window-switch-success",
+      "description": "User opens window switcher and selects a project window",
+      "priority": 1,
+      "template": {
+        "introduction": "**Window Switcher Activated**\n\nUser triggered window switcher to switch between open project windows.",
+        "events": {
+          "window_switcher.shortcut_triggered": "[1] Shortcut: {{shortcut}} mode activated",
+          "window.store.accessed": "[2] Store {{operation}}: {{store.size}} windows",
+          "window_switcher.list.updated": "[3] Window list updated: {{windows.count}} windows ({{windows.with_entry}} with project data)",
+          "window_switcher.window.serialized": "[4] Serialized window={{window.id}}, has_entry={{has_entry}}",
+          "window_switcher.rendered": "[5] Rendered {{cards.count}} cards, selected index={{selected.index}}",
+          "window_switcher.window_selected": "[6] Selected: window={{target.window_id}}, project=`{{target.name}}`, method={{selection.method}}"
+        },
+        "summary": "**Window Switched:**\n- Target: `{{target.name}}`\n- Method: {{selection.method}}"
+      },
+      "filterDefault": false
+    }
+  ]
+}

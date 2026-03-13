@@ -13,6 +13,10 @@
         "label": "Daemon Client",
         "color": "#6366F1"
       },
+      "worker": {
+        "label": "Utility Worker",
+        "color": "#A855F7"
+      },
       "socket": {
         "label": "Socket",
         "color": "#14B8A6"
@@ -76,8 +80,8 @@
     {
       "id": "electron-boundary",
       "type": "text",
-      "x": -50,
-      "y": -50,
+      "x": 1127,
+      "y": 706,
       "width": 450,
       "height": 400,
       "color": "#10B981",
@@ -226,10 +230,10 @@
     {
       "id": "daemon-boundary",
       "type": "text",
-      "x": -50,
-      "y": 530,
+      "x": 621,
+      "y": 1067,
       "width": 550,
-      "height": 320,
+      "height": 370,
       "color": "#F59E0B",
       "text": "PTY DAEMON PROCESS (Independent)"
     },
@@ -458,8 +462,8 @@
     {
       "id": "survival-note",
       "type": "text",
-      "x": 500,
-      "y": 280,
+      "x": 551,
+      "y": 658,
       "width": 280,
       "height": 150,
       "color": "#10B981",
@@ -468,8 +472,8 @@
     {
       "id": "protocol-note",
       "type": "text",
-      "x": 500,
-      "y": 460,
+      "x": 767,
+      "y": 705,
       "width": 280,
       "height": 200,
       "color": "#6366F1",
@@ -478,12 +482,394 @@
     {
       "id": "reconnect-note",
       "type": "text",
-      "x": 500,
-      "y": 690,
+      "x": 765,
+      "y": 907,
       "width": 280,
       "height": 140,
       "color": "#14B8A6",
       "text": "RECONNECTION\n\nOn disconnect:\n- Schedule retry (1s intervals)\n- Emit 'disconnected' event\n- UI shows status\n\nOn reconnect:\n- Sync session state\n- Reattach to sessions\n- Emit 'reconnected' event"
+    },
+    {
+      "id": "daemon-lifecycle",
+      "type": "text",
+      "x": 245,
+      "y": 484,
+      "width": 200,
+      "height": 60,
+      "text": "Daemon Lifecycle\n\nstartup → ready → shutdown",
+      "pv": {
+        "nodeType": "daemon",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": []
+        },
+        "event": {
+          "name": "terminal.daemon.startup",
+          "description": "Daemon process lifecycle events",
+          "attributes": {
+            "phase": {
+              "type": "string",
+              "description": "starting, ready, shutting_down, shutdown"
+            },
+            "reason": {
+              "type": "string",
+              "description": "Reason for shutdown (idle, signal, error)"
+            },
+            "uptime.ms": {
+              "type": "number",
+              "description": "Daemon uptime in milliseconds"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "connection-state",
+      "type": "text",
+      "x": 0,
+      "y": 320,
+      "width": 200,
+      "height": 60,
+      "text": "Connection State\n\nconnecting → connected → disconnected",
+      "pv": {
+        "nodeType": "socket",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [],
+        "otel": {
+          "kind": "event",
+          "category": "connection",
+          "files": []
+        },
+        "event": {
+          "name": "terminal.socket.connection",
+          "description": "Socket connection state changes",
+          "attributes": {
+            "state": {
+              "type": "string",
+              "description": "connecting, connected, disconnected, reconnecting"
+            },
+            "attempt": {
+              "type": "number",
+              "description": "Reconnection attempt number"
+            },
+            "error": {
+              "type": "string",
+              "description": "Error code if failed (ECONNREFUSED, ENOENT)"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "persistence-store",
+      "type": "text",
+      "x": 230,
+      "y": 140,
+      "width": 150,
+      "height": 100,
+      "text": "Persistence Store\n\n~/.your-app/\nsessions.json\nmetadata backup",
+      "pv": {
+        "nodeType": "electron",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [],
+        "otel": {
+          "kind": "event",
+          "category": "persistence",
+          "files": []
+        },
+        "event": {
+          "name": "terminal.persistence.store",
+          "description": "Session metadata persistence to disk",
+          "attributes": {
+            "action": {
+              "type": "string",
+              "description": "save, load, clear"
+            },
+            "session.count": {
+              "type": "number",
+              "description": "Number of sessions in store"
+            },
+            "file.path": {
+              "type": "string",
+              "description": "Path to persistence file"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "scrollback-buffer",
+      "type": "text",
+      "x": 251,
+      "y": 862,
+      "width": 200,
+      "height": 80,
+      "text": "Scrollback Buffers\n\nPer-session circular buffer\nCapture on write, replay on attach",
+      "pv": {
+        "nodeType": "daemon",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [],
+        "otel": {
+          "kind": "event",
+          "category": "data",
+          "files": []
+        },
+        "event": {
+          "name": "terminal.scrollback.action",
+          "description": "Scrollback buffer operations",
+          "attributes": {
+            "action": {
+              "type": "string",
+              "description": "capture, replay, clear"
+            },
+            "session.id": {
+              "type": "string",
+              "description": "Terminal session ID"
+            },
+            "buffer.size": {
+              "type": "number",
+              "description": "Current buffer size in bytes"
+            },
+            "lines.count": {
+              "type": "number",
+              "description": "Number of lines in buffer"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "error-handling",
+      "type": "text",
+      "x": 800,
+      "y": 0,
+      "width": 250,
+      "height": 220,
+      "color": "#EF4444",
+      "text": "ERROR HANDLING\n\nDaemon Errors:\n- PTY spawn failure\n- Socket bind failure\n- Session not found\n\nSocket Errors:\n- ECONNREFUSED (no daemon)\n- ENOENT (socket missing)\n- EPIPE (daemon crashed)\n\nRecovery:\n- Auto-reconnect with backoff\n- Spawn daemon if missing\n- UI error state"
+    },
+    {
+      "id": "error-events",
+      "type": "text",
+      "x": 800,
+      "y": 240,
+      "width": 250,
+      "height": 100,
+      "text": "Error Events\n\nterminal.daemon.error\nterminal.socket.error\nterminal.pty.error",
+      "pv": {
+        "nodeType": "update",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [],
+        "otel": {
+          "kind": "event",
+          "category": "error",
+          "files": []
+        },
+        "event": {
+          "name": "terminal.error",
+          "description": "Error events across terminal subsystem",
+          "attributes": {
+            "source": {
+              "type": "string",
+              "description": "daemon, socket, pty, client"
+            },
+            "error.code": {
+              "type": "string",
+              "description": "Error code"
+            },
+            "error.message": {
+              "type": "string",
+              "description": "Error message"
+            },
+            "session.id": {
+              "type": "string",
+              "description": "Affected session ID if applicable"
+            },
+            "recoverable": {
+              "type": "boolean",
+              "description": "Whether error is recoverable"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "health-check",
+      "type": "text",
+      "x": 800,
+      "y": 360,
+      "width": 250,
+      "height": 120,
+      "text": "Health Monitoring\n\nping/pong heartbeat\nClient sends ping every 30s\nTimeout triggers reconnect\nDaemon tracks client liveness",
+      "pv": {
+        "nodeType": "socket",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [],
+        "otel": {
+          "kind": "event",
+          "category": "health",
+          "files": []
+        },
+        "event": {
+          "name": "terminal.health.check",
+          "description": "Health check ping/pong",
+          "attributes": {
+            "direction": {
+              "type": "string",
+              "description": "ping (client→daemon) or pong (daemon→client)"
+            },
+            "latency.ms": {
+              "type": "number",
+              "description": "Round-trip latency in milliseconds"
+            },
+            "missed.count": {
+              "type": "number",
+              "description": "Consecutive missed pongs"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "idle-shutdown",
+      "type": "text",
+      "x": 800,
+      "y": 500,
+      "width": 250,
+      "height": 120,
+      "text": "Idle Shutdown\n\nNo sessions + no clients\nfor IDLE_TIMEOUT (30min)\n→ daemon exits gracefully\n\nPrevents orphaned daemons",
+      "pv": {
+        "nodeType": "daemon",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": []
+        },
+        "event": {
+          "name": "terminal.daemon.idle",
+          "description": "Daemon idle state monitoring",
+          "attributes": {
+            "idle.duration.ms": {
+              "type": "number",
+              "description": "Time idle in milliseconds"
+            },
+            "sessions.count": {
+              "type": "number",
+              "description": "Active session count"
+            },
+            "clients.count": {
+              "type": "number",
+              "description": "Connected client count"
+            },
+            "action": {
+              "type": "string",
+              "description": "check, warning, shutdown"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "utility-worker",
+      "type": "text",
+      "x": 230,
+      "y": 280,
+      "width": 200,
+      "height": 120,
+      "text": "Utility Worker\n\n- Connects to daemon socket\n- Holds MessagePorts\n- Bridges socket ↔ ports\n- NO PTY spawning",
+      "pv": {
+        "nodeType": "worker",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/terminal-worker/worker-entry.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "bridge",
+          "files": [
+            "src/terminal-worker/worker-entry.ts"
+          ]
+        },
+        "event": {
+          "name": "terminal.worker.action",
+          "description": "Worker bridging events",
+          "attributes": {
+            "action": {
+              "type": "string",
+              "description": "socket_connect, socket_disconnect, port_received, data_bridged"
+            },
+            "session.id": {
+              "type": "string",
+              "description": "Terminal session ID"
+            },
+            "direction": {
+              "type": "string",
+              "description": "socket_to_port or port_to_socket"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "daemon-bridge",
+      "type": "text",
+      "x": 230,
+      "y": 420,
+      "width": 200,
+      "height": 80,
+      "text": "DaemonBridge\n\nSocket client in worker\nRoutes data to ports",
+      "pv": {
+        "nodeType": "worker",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [],
+        "otel": {
+          "kind": "event",
+          "category": "ipc",
+          "files": []
+        },
+        "event": {
+          "name": "terminal.bridge.data",
+          "description": "Data bridged between socket and MessagePort",
+          "attributes": {
+            "session.id": {
+              "type": "string",
+              "description": "Terminal session ID"
+            },
+            "data.size": {
+              "type": "number",
+              "description": "Bytes of data bridged"
+            },
+            "direction": {
+              "type": "string",
+              "description": "to_renderer or to_daemon"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "worker-data-flow",
+      "type": "text",
+      "x": 500,
+      "y": 280,
+      "width": 280,
+      "height": 180,
+      "color": "#A855F7",
+      "text": "WORKER DATA PATH\n(Bypasses Main Process)\n\nPTY Output:\nDaemon → Socket → Worker\n→ port1 → port2 → Renderer\n\nUser Input:\nRenderer → port2 → port1\n→ Worker → Socket → Daemon\n\n✓ Main process NOT involved"
     }
   ],
   "edges": [
@@ -581,6 +967,127 @@
       "label": "MessagePort",
       "pv": {
         "edgeType": "port-transfer"
+      }
+    },
+    {
+      "id": "e10",
+      "fromNode": "daemon-client",
+      "toNode": "connection-state",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "manages",
+      "pv": {
+        "edgeType": "lifecycle"
+      }
+    },
+    {
+      "id": "e11",
+      "fromNode": "connection-state",
+      "toNode": "unix-socket",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "state of",
+      "pv": {
+        "edgeType": "socket-ipc"
+      }
+    },
+    {
+      "id": "e12",
+      "fromNode": "session-manager",
+      "toNode": "persistence-store",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "save/load metadata",
+      "pv": {
+        "edgeType": "lifecycle"
+      }
+    },
+    {
+      "id": "e13",
+      "fromNode": "daemon-session-mgr",
+      "toNode": "scrollback-buffer",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "maintains",
+      "pv": {
+        "edgeType": "method-call"
+      }
+    },
+    {
+      "id": "e14",
+      "fromNode": "daemon-server",
+      "toNode": "daemon-lifecycle",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "label": "lifecycle",
+      "pv": {
+        "edgeType": "lifecycle"
+      }
+    },
+    {
+      "id": "e15",
+      "fromNode": "daemon-lifecycle",
+      "toNode": "idle-shutdown",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "triggers",
+      "pv": {
+        "edgeType": "lifecycle"
+      }
+    },
+    {
+      "id": "e16",
+      "fromNode": "connection-state",
+      "toNode": "health-check",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "monitors",
+      "pv": {
+        "edgeType": "lifecycle"
+      }
+    },
+    {
+      "id": "e17",
+      "fromNode": "renderer",
+      "toNode": "utility-worker",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "MessagePort (direct)",
+      "pv": {
+        "edgeType": "port-transfer"
+      }
+    },
+    {
+      "id": "e18",
+      "fromNode": "session-manager",
+      "toNode": "utility-worker",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "control only",
+      "pv": {
+        "edgeType": "method-call"
+      }
+    },
+    {
+      "id": "e19",
+      "fromNode": "utility-worker",
+      "toNode": "daemon-bridge",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "contains",
+      "pv": {
+        "edgeType": "method-call"
+      }
+    },
+    {
+      "id": "e20",
+      "fromNode": "daemon-bridge",
+      "toNode": "unix-socket",
+      "fromSide": "left",
+      "toSide": "right",
+      "label": "direct socket (data)",
+      "pv": {
+        "edgeType": "socket-ipc"
       }
     }
   ]

@@ -10,8 +10,15 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 console.info('[Preload-WindowSwitcher] Electron imports successful');
 
+interface SwitcherWindow {
+  id: number;
+  title: string;
+  primaryType: string;
+  alexandriaEntry?: unknown; // Full AlexandriaEntry, typed as unknown for preload isolation
+}
+
 interface WindowListData {
-  windows: Array<{ id: number; title: string }>;
+  windows: SwitcherWindow[];
   selectedIndex: number;
 }
 

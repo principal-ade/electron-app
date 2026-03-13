@@ -1,0 +1,253 @@
+/**
+ * SocketServer
+ *
+ * Unix domain socket server for PTY daemon.
+ * Handles client connections and message routing.
+ */
+import * as net from 'net';
+import * as fs from 'fs';
+import { EventEmitter } from 'events';
+import { serializeMessage, parseMessage, isClientMessage, } from '../shared/pty-daemon/protocol';
+import { SOCKET_PATH, DAEMON_DIR } from '../shared/pty-daemon/constants';
+export class SocketServer extends EventEmitter {
+    server = null;
+    clients = new Map();
+    clientIdCounter = 0;
+    sessionManager;
+    socketPath;
+    logger;
+    constructor(sessionManager, logger, socketPath) {
+        super();
+        this.sessionManager = sessionManager;
+        this.socketPath = socketPath || SOCKET_PATH;
+        this.logger = logger;
+        // Forward session manager messages to all clients
+        this.sessionManager.on('message', (msg) => {
+            this.broadcast(msg);
+        });
+    }
+    /**
+     * Start the socket server.
+     */
+    async start() {
+        // Ensure daemon directory exists
+        await this.ensureDirectory();
+        // Remove stale socket file if it exists
+        await this.cleanupSocket();
+        return new Promise((resolve, reject) => {
+            this.server = net.createServer((socket) => {
+                this.handleConnection(socket);
+            });
+            this.server.on('error', (err) => {
+                this.logger.error('Server error:', err);
+                reject(err);
+            });
+            this.server.listen(this.socketPath, () => {
+                this.logger.info(`Socket server listening on ${this.socketPath}`);
+                // Set socket permissions (Unix only)
+                if (process.platform !== 'win32') {
+                    try {
+                        fs.chmodSync(this.socketPath, 0o600);
+                    }
+                    catch (err) {
+                        this.logger.warn('Failed to set socket permissions:', err);
+                    }
+                }
+                resolve();
+            });
+        });
+    }
+    /**
+     * Stop the socket server.
+     */
+    async stop() {
+        // Close all client connections
+        for (const [, client] of this.clients) {
+            client.socket.destroy();
+        }
+        this.clients.clear();
+        // Close server
+        if (this.server) {
+            await new Promise((resolve) => {
+                this.server.close(() => {
+                    resolve();
+                });
+            });
+            this.server = null;
+        }
+        // Clean up socket file
+        await this.cleanupSocket();
+        this.logger.info('Socket server stopped');
+    }
+    /**
+     * Get connected client count.
+     */
+    getClientCount() {
+        return this.clients.size;
+    }
+    /**
+     * Broadcast a message to all connected clients.
+     */
+    broadcast(msg) {
+        const data = serializeMessage(msg);
+        for (const [, client] of this.clients) {
+            try {
+                client.socket.write(data);
+            }
+            catch (err) {
+                this.logger.error(`Failed to send to client ${client.id}:`, err);
+            }
+        }
+    }
+    /**
+     * Send a message to a specific client.
+     */
+    sendToClient(clientId, msg) {
+        const client = this.clients.get(clientId);
+        if (!client)
+            return;
+        try {
+            client.socket.write(serializeMessage(msg));
+        }
+        catch (err) {
+            this.logger.error(`Failed to send to client ${clientId}:`, err);
+        }
+    }
+    /**
+     * Handle new client connection.
+     */
+    handleConnection(socket) {
+        const clientId = ++this.clientIdCounter;
+        const client = {
+            id: clientId,
+            socket,
+            buffer: '',
+        };
+        this.clients.set(clientId, client);
+        this.logger.info(`Client ${clientId} connected (${this.clients.size} total)`);
+        this.emit('clientConnected', clientId);
+        // Send current session list to new client
+        this.sendToClient(clientId, {
+            type: 'sessions',
+            sessions: this.sessionManager.listSessions(),
+        });
+        // Handle incoming data
+        socket.on('data', (data) => {
+            this.handleData(client, data);
+        });
+        // Handle client disconnect
+        socket.on('close', () => {
+            this.clients.delete(clientId);
+            this.logger.info(`Client ${clientId} disconnected (${this.clients.size} total)`);
+            this.emit('clientDisconnected', clientId);
+        });
+        // Handle errors
+        socket.on('error', (err) => {
+            this.logger.error(`Client ${clientId} error:`, err);
+            this.clients.delete(clientId);
+            this.emit('clientDisconnected', clientId);
+        });
+    }
+    /**
+     * Handle incoming data from a client.
+     */
+    handleData(client, data) {
+        // Append to buffer
+        client.buffer += data.toString('utf-8');
+        // Process complete messages (newline-delimited)
+        let newlineIndex;
+        while ((newlineIndex = client.buffer.indexOf('\n')) !== -1) {
+            const line = client.buffer.slice(0, newlineIndex);
+            client.buffer = client.buffer.slice(newlineIndex + 1);
+            if (line.trim()) {
+                this.handleMessage(client.id, line);
+            }
+        }
+    }
+    /**
+     * Handle a parsed message from a client.
+     */
+    handleMessage(clientId, line) {
+        const msg = parseMessage(line);
+        if (!msg || !isClientMessage(msg)) {
+            this.sendToClient(clientId, {
+                type: 'error',
+                error: 'Invalid message format',
+            });
+            return;
+        }
+        this.logger.debug(`Received from client ${clientId}:`, msg.type);
+        switch (msg.type) {
+            case 'create':
+                this.sessionManager.createSession(msg);
+                break;
+            case 'write':
+                this.sessionManager.write(msg.id, msg.data);
+                break;
+            case 'resize':
+                this.sessionManager.resize(msg.id, msg.cols, msg.rows);
+                break;
+            case 'destroy':
+                this.sessionManager.destroy(msg.id);
+                break;
+            case 'list':
+                this.sendToClient(clientId, {
+                    type: 'sessions',
+                    sessions: this.sessionManager.listSessions(),
+                });
+                break;
+            case 'attach': {
+                const scrollback = this.sessionManager.attach(msg.id);
+                if (scrollback !== null) {
+                    this.sendToClient(clientId, {
+                        type: 'scrollback',
+                        id: msg.id,
+                        data: scrollback,
+                    });
+                }
+                break;
+            }
+            case 'ping':
+                this.sendToClient(clientId, { type: 'pong' });
+                break;
+            default:
+                this.sendToClient(clientId, {
+                    type: 'error',
+                    error: `Unknown message type: ${msg.type}`,
+                });
+        }
+    }
+    /**
+     * Ensure daemon directory exists.
+     */
+    async ensureDirectory() {
+        try {
+            await fs.promises.mkdir(DAEMON_DIR, { recursive: true, mode: 0o700 });
+        }
+        catch (err) {
+            // Directory may already exist
+            if (err.code !== 'EEXIST') {
+                throw err;
+            }
+        }
+    }
+    /**
+     * Clean up stale socket file.
+     */
+    async cleanupSocket() {
+        if (process.platform === 'win32') {
+            // Named pipes don't need cleanup
+            return;
+        }
+        try {
+            await fs.promises.unlink(this.socketPath);
+            this.logger.debug('Removed stale socket file');
+        }
+        catch (err) {
+            // File may not exist
+            if (err.code !== 'ENOENT') {
+                this.logger.warn('Failed to remove socket file:', err);
+            }
+        }
+    }
+}

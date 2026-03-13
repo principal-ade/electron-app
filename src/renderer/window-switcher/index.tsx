@@ -5,6 +5,7 @@ initializeTelemetry('window-switcher');
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { WindowSwitcherApp } from './WindowSwitcherApp';
+import { CustomThemeProvider } from '../providers/CustomThemeProvider';
 import './window-switcher.css';
 
 const container = document.getElementById('root');
@@ -14,4 +15,8 @@ if (!container) {
 }
 
 const root = createRoot(container);
-root.render(<WindowSwitcherApp />);
+root.render(
+  <CustomThemeProvider>
+    <WindowSwitcherApp />
+  </CustomThemeProvider>,
+);
