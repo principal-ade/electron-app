@@ -85,6 +85,7 @@
     "electron-store": "^10.1.0",
     "electron-updater": "^6.3.9",
     "express": "^5.1.0",
+    "framer-motion": "^12.36.0",
     "globby": "^16.0.0",
     "gpt-tokenizer": "^3.0.1",
     "hast-util-sanitize": "^5.0.2",
