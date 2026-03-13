@@ -1,11 +1,15 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Github, Star, Folder, FilePlus2 } from 'lucide-react';
+import { Github, Star, Folder, FilePlus2, LayoutGrid, PanelLeftClose } from 'lucide-react';
 import type { LeftPanelView } from './ProjectsView';
 
 interface ProjectsViewHeaderProps {
   mode: LeftPanelView;
   onCreateRepository?: () => void;
+  /** Whether grid view is currently active */
+  isGridView?: boolean;
+  /** Callback when grid view toggle is clicked */
+  onToggleGridView?: () => void;
 }
 
 // Map mode to display info
@@ -18,6 +22,8 @@ const modeConfig: Record<LeftPanelView, { icon: React.ReactNode; label: string }
 export const ProjectsViewHeader: React.FC<ProjectsViewHeaderProps> = ({
   mode,
   onCreateRepository,
+  isGridView = false,
+  onToggleGridView,
 }) => {
   const { theme } = useTheme();
   const config = modeConfig[mode];
@@ -52,10 +58,52 @@ export const ProjectsViewHeader: React.FC<ProjectsViewHeaderProps> = ({
         {config.label}
       </div>
 
-      {/* Right: Create Button */}
+      {/* Right: Action Buttons */}
       <div
         style={{ display: 'flex', alignItems: 'stretch', gap: '0', height: '100%' }}
       >
+        {/* Grid/List Toggle Button - Only show for local mode */}
+        {mode === 'local' && onToggleGridView && (
+          <button
+            onClick={onToggleGridView}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              padding: '0 24px',
+              borderRadius: '0',
+              backgroundColor: isGridView
+                ? theme.colors.primary
+                : theme.colors.backgroundSecondary,
+              color: isGridView
+                ? theme.colors.background
+                : theme.colors.textSecondary,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              border: 'none',
+              fontSize: theme.fontSizes[1],
+              fontWeight: theme.fontWeights.medium,
+              height: '100%',
+              minWidth: 0,
+            }}
+            onMouseEnter={(e) => {
+              if (!isGridView) {
+                e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isGridView) {
+                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+              }
+            }}
+            title={isGridView ? 'Switch to panel view' : 'Switch to grid view'}
+          >
+            {isGridView ? <PanelLeftClose size={16} /> : <LayoutGrid size={16} />}
+            {isGridView ? 'Panels' : 'Grid'}
+          </button>
+        )}
+
         {/* Create Repository Button */}
         {onCreateRepository && (
           <button

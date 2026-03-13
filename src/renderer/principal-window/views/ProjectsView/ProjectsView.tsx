@@ -9,6 +9,7 @@ import {
   GitHubProjectsPanel,
   UserCollectionsPanel,
 } from '@industry-theme/alexandria-panels';
+import { LocalProjectGridPanelContent } from '@industry-theme/repository-composition-panels';
 import type { GitHubRepository } from '@industry-theme/alexandria-panels';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { FolderGit2, Folder, FolderOpen, Star, Github } from 'lucide-react';
@@ -96,6 +97,14 @@ const ProjectsViewContent: React.FC<ProjectsViewContentProps> = ({ mode }) => {
   const { theme } = useTheme();
   const { context, actions, events } = useProjectsPanelProvider();
   const { isAuthenticated } = useAuth();
+
+  // State for grid view mode (only applies to local mode)
+  const [isGridView, setIsGridView] = useState(false);
+
+  // Toggle grid view handler
+  const handleToggleGridView = useCallback(() => {
+    setIsGridView((prev) => !prev);
+  }, []);
 
   // State for base default directory
   const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string | null>(null);
@@ -381,6 +390,41 @@ const ProjectsViewContent: React.FC<ProjectsViewContentProps> = ({ mode }) => {
         ),
       },
       {
+        id: 'local-projects-grid',
+        label: 'Local Projects Grid',
+        icon: <Folder size={16} />,
+        content: (
+          <LocalProjectGridPanelContent
+            context={{
+              localProjects: {
+                data: context.alexandriaRepositories?.data?.repositories || null,
+                loading: context.alexandriaRepositories?.loading || false,
+                scope: 'repository',
+                name: 'localProjects',
+                error: null,
+                refresh: async () => context.refresh('repository', 'alexandriaRepositories'),
+              },
+              currentScope: { type: 'workspace' },
+              refresh: context.refresh,
+            }}
+            actions={{
+              openProject: async (entry) => {
+                await actions.openLocalRepository?.(entry);
+              },
+              selectProject: (entry) => {
+                events.emit({
+                  type: 'industry-theme.local-projects:repository-selected',
+                  source: 'local-projects-grid',
+                  timestamp: Date.now(),
+                  payload: { entry },
+                });
+              },
+            }}
+            events={events}
+          />
+        ),
+      },
+      {
         id: 'project-info',
         label: 'Project Info',
         icon: <FolderGit2 size={16} />,
@@ -460,6 +504,15 @@ const ProjectsViewContent: React.FC<ProjectsViewContentProps> = ({ mode }) => {
 
   // Define layout configuration
   const layout = useMemo(() => {
+    // If grid view is active for local mode, show grid panel in middle
+    if (mode === 'local' && isGridView) {
+      return {
+        left: 'local-projects',
+        middle: 'local-projects-grid',
+        right: 'collection-repositories',
+      };
+    }
+
     // Map mode to panel id
     const leftPanelMap: Record<LeftPanelView, string> = {
       local: 'local-projects',
@@ -472,7 +525,17 @@ const ProjectsViewContent: React.FC<ProjectsViewContentProps> = ({ mode }) => {
       middle: 'project-info',
       right: 'collection-repositories',
     };
-  }, [mode]);
+  }, [mode, isGridView]);
+
+  // Collapsed state - collapse left and right when grid view is active
+  const collapsedState = useMemo(() => {
+    if (mode === 'local' && isGridView) {
+      return { left: true, right: true };
+    }
+    return panelState.type === 'three-panel'
+      ? panelState.collapsed
+      : { left: false, right: false };
+  }, [mode, isGridView, panelState]);
 
   return (
     <>
@@ -488,6 +551,8 @@ const ProjectsViewContent: React.FC<ProjectsViewContentProps> = ({ mode }) => {
         <ProjectsViewHeader
           mode={mode}
           onCreateRepository={handleCreateRepository}
+          isGridView={isGridView}
+          onToggleGridView={handleToggleGridView}
         />
 
         {/* Panel Layout */}
@@ -501,11 +566,7 @@ const ProjectsViewContent: React.FC<ProjectsViewContentProps> = ({ mode }) => {
               : { left: 25, middle: 50, right: 25 }
           }
           minSizes={{ left: 15, middle: 30, right: 20 }}
-          collapsed={
-            panelState.type === 'three-panel'
-              ? panelState.collapsed
-              : { left: false, right: false }
-          }
+          collapsed={collapsedState}
           style={{ flex: 1, width: '100%', minHeight: 0 }}
           theme={theme}
           showCollapseButtons={false}
