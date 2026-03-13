@@ -1086,15 +1086,17 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
           const cwd = options?.cwd || workspace.path;
 
           // Always create a new session - each tab should have its own PTY
+          const metadata = repository ? { repoName: repository.name } : undefined;
           let sessionId: string;
           if (options?.command) {
             sessionId = await TerminalService.createWithCommand(
               cwd,
               options.command,
               sessionContext,
+              metadata,
             );
           } else {
-            sessionId = await TerminalService.create(cwd, sessionContext);
+            sessionId = await TerminalService.create(cwd, sessionContext, metadata);
           }
 
           // Subscribe to this terminal's data channel and forward to panel event bus
@@ -1563,7 +1565,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
         },
       };
     },
-    [events, workspace, repository?.path, repository?.name, terminalContext],
+    [events, workspace, repository, terminalContext],
   );
 
   // Create adapters for panels to use (memoized to avoid recreating on every render)

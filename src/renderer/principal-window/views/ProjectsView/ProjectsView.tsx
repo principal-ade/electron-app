@@ -11,7 +11,7 @@ import {
 } from '@industry-theme/alexandria-panels';
 import type { GitHubRepository } from '@industry-theme/alexandria-panels';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import { FolderGit2, Folder, FolderOpen, Star } from 'lucide-react';
+import { FolderGit2, Folder, FolderOpen, Star, Github } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuthState';
 import {
   ProjectsPanelProvider,
@@ -30,6 +30,57 @@ import { WorkspaceService } from '../../../main-process-api/WorkspaceService';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 import { CollectionRepositoriesPanel } from '../../../panels/CollectionRepositoriesPanel';
 import { ProjectInfoPanel } from '../../../panels/ProjectInfoPanel';
+
+/**
+ * Empty state shown when user is not authenticated for GitHub panels
+ */
+const GitHubLoginEmptyState: React.FC<{ type: 'projects' | 'starred' }> = ({ type }) => {
+  const { theme } = useTheme();
+
+  return (
+    <div
+      style={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 32,
+        textAlign: 'center',
+      }}
+    >
+      <Github
+        size={48}
+        style={{
+          color: theme.colors.textSecondary,
+          marginBottom: 16,
+          opacity: 0.5,
+        }}
+      />
+      <div
+        style={{
+          fontSize: 16,
+          fontWeight: 500,
+          color: theme.colors.text,
+          marginBottom: 8,
+        }}
+      >
+        Sign in to GitHub
+      </div>
+      <div
+        style={{
+          fontSize: 14,
+          color: theme.colors.textSecondary,
+          maxWidth: 280,
+        }}
+      >
+        {type === 'starred'
+          ? 'Sign in to see your starred repositories'
+          : 'Sign in to see your GitHub projects'}
+      </div>
+    </div>
+  );
+};
 
 /**
  * Inner content component that uses the panel context
@@ -345,26 +396,30 @@ const ProjectsViewContent: React.FC<ProjectsViewContentProps> = ({ mode }) => {
         id: 'github-projects',
         label: 'GitHub Projects',
         icon: <FolderGit2 size={16} />,
-        content: (
+        content: isAuthenticated ? (
           <GitHubProjectsPanel
             context={context}
             actions={actions}
             events={events}
             defaultShowSearch
           />
+        ) : (
+          <GitHubLoginEmptyState type="projects" />
         ),
       },
       {
         id: 'github-starred',
         label: 'Starred',
         icon: <Star size={16} />,
-        content: (
+        content: isAuthenticated ? (
           <GitHubStarredPanel
             context={context}
             actions={actions}
             events={events}
             defaultShowSearch
           />
+        ) : (
+          <GitHubLoginEmptyState type="starred" />
         ),
       },
       // Only include collections panels if user is authenticated

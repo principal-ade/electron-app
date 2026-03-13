@@ -38,14 +38,22 @@ export class TerminalService {
     }));
   }
 
-  static async create(dir: string, context?: string): Promise<string> {
-    return terminalClient.createTerminalSession({ cwd: dir, context });
+  static async create(
+    dir: string,
+    context?: string,
+    metadata?: TerminalSessionMetadata,
+  ): Promise<string> {
+    return terminalClient.createTerminalSession({ cwd: dir, context, metadata });
   }
 
-  static async getOrCreate(dir: string, context?: string): Promise<string> {
+  static async getOrCreate(
+    dir: string,
+    context?: string,
+    metadata?: TerminalSessionMetadata,
+  ): Promise<string> {
     // For TIPC, we use createTerminalSession which handles creation
     // The session manager will reuse existing sessions based on context
-    return terminalClient.createTerminalSession({ cwd: dir, context });
+    return terminalClient.createTerminalSession({ cwd: dir, context, metadata });
   }
 
   static async createWithCommand(

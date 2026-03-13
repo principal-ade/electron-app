@@ -61,6 +61,8 @@ interface TerminalProviderProps {
   children: ReactNode;
   repositoryPath: string;
   terminalContext: string;
+  /** Repository name for display in terminal sessions panel */
+  repoName?: string;
 }
 
 /**
@@ -73,6 +75,7 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
   children,
   repositoryPath,
   terminalContext,
+  repoName,
 }) => {
   // Track active terminal sessions
   const [terminalSessions, setTerminalSessions] = useState<TerminalInfo[]>([]);
@@ -245,9 +248,11 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
             context: s.context,
           })),
         });
+        const metadata = repoName ? { repoName } : undefined;
         const sessionId = await TerminalService.getOrCreate(
           cwd,
           sessionContext,
+          metadata,
         );
 
         // Subscribe to this terminal's data channel
@@ -418,7 +423,7 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
         return TerminalService.onPortReady(callback);
       },
     }),
-    [repositoryPath, terminalContext],
+    [repositoryPath, terminalContext, repoName],
   );
 
   // Activity tracking actions

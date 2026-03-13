@@ -1,3 +1,8 @@
+// Re-export shared types from TIPC (single source of truth)
+export type { TerminalSessionMetadata } from '../tipc/terminalRouterTypes';
+
+import type { TerminalSessionMetadata } from '../tipc/terminalRouterTypes';
+
 // Type alias for MessagePort to avoid TypeScript type/value confusion
 type Port = InstanceType<typeof MessagePort>;
 
@@ -20,19 +25,6 @@ export enum TerminalAPIEvents {
   OWNERSHIP_LOST = 'terminal:ownershipLost',
   PORT_READY = 'terminal:portReady', // MessagePort ready for direct streaming
   REQUEST_DATA_PORT = 'terminal:requestDataPort', // Request a MessagePort for terminal data
-}
-
-/**
- * Metadata for terminal sessions running dev servers.
- * Used to persist port and context info across renderer restarts.
- */
-export interface TerminalSessionMetadata {
-  /** Port number for dev servers (Storybook, npm run dev, etc.) */
-  port?: number;
-  /** Package/workspace name being run */
-  packageName?: string;
-  /** Type of dev server or script */
-  serverType?: 'storybook' | 'dev' | 'preview' | 'test';
 }
 
 export interface TerminalInfo {
@@ -62,6 +54,7 @@ export interface TerminalOwnershipResult {
   ownedByWindowId?: number;
   previousOwner?: number;
 }
+
 export interface TerminalData {
   sessionId: string;
   data: string;

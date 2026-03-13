@@ -7,15 +7,16 @@
   "spanPattern": "terminal.daemon.client",
   "scenarios": [
     {
-      "id": "connect-daemon-running",
-      "description": "Connect to already running daemon",
+      "id": "connect-existing-daemon",
+      "description": "Connect to already running daemon with existing sessions",
       "priority": 1,
       "template": {
         "introduction": "**Connecting to PTY Daemon**\n\nDaemon already running, connecting via socket.",
         "events": {
-          "terminal.daemon.client_connecting": "[1] Connecting to `{{socket.path}}`",
-          "terminal.daemon.client_connected": "[2] Connected successfully",
-          "terminal.daemon.sessions_received": "[3] Received {{sessions.count}} existing sessions"
+          "terminal.daemon.client_action": "[1] Client {{action}}: {{message.type}}",
+          "terminal.socket.message": "[2] Socket {{direction}}: {{message.type}}",
+          "terminal.daemon.session_action": "[3] Session {{action}}: `{{session.id}}` ({{sessions.count}} total)",
+          "terminal.pty.spawned": "[4] PTY `{{session.id}}` running (pid={{pid}})"
         },
         "summary": "**Connected**\n- Existing sessions: {{sessions.count}}"
       },
@@ -28,30 +29,11 @@
       "template": {
         "introduction": "**Starting PTY Daemon**\n\nNo daemon found, spawning new process.",
         "events": {
-          "terminal.daemon.client_connect_failed": "[1] Socket not found, spawning daemon",
-          "terminal.daemon.spawn_started": "[2] Spawning daemon process (detached)",
-          "terminal.daemon.spawn_waiting": "[3] Waiting for socket...",
-          "terminal.daemon.client_connected": "[4] Connected to new daemon",
-          "terminal.daemon.sessions_received": "[5] Sessions: {{sessions.count}} (fresh start)"
+          "terminal.daemon.client_action": "[1] Client {{action}}: {{message.type}}",
+          "terminal.daemon.server_event": "[2] Server {{event}}: {{clients.count}} clients",
+          "terminal.socket.message": "[3] Socket {{direction}}: {{message.type}}"
         },
-        "summary": "**Daemon Started**\n- New daemon spawned\n- Sessions: {{sessions.count}}"
-      },
-      "filterDefault": false
-    },
-    {
-      "id": "connect-reconnect",
-      "description": "Reconnecting after daemon disconnect",
-      "priority": 3,
-      "template": {
-        "introduction": "**Reconnecting to Daemon**\n\nConnection lost, attempting reconnection.",
-        "events": {
-          "terminal.daemon.client_disconnected": "[1] Connection lost",
-          "terminal.daemon.reconnect_scheduled": "[2] Reconnect scheduled in {{delay}}ms",
-          "terminal.daemon.client_reconnecting": "[3] Attempting reconnection...",
-          "terminal.daemon.client_connected": "[4] Reconnected successfully",
-          "terminal.daemon.sessions_synced": "[5] Session state synchronized"
-        },
-        "summary": "**Reconnected**\n- Sessions preserved: {{sessions.count}}"
+        "summary": "**Daemon Started**\n- New daemon spawned"
       },
       "filterDefault": false
     }

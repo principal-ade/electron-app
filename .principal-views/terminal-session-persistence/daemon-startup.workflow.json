@@ -7,32 +7,16 @@
   "spanPattern": "terminal.daemon.startup",
   "scenarios": [
     {
-      "id": "daemon-startup-fresh",
-      "description": "Daemon starts fresh with no existing sessions",
+      "id": "daemon-startup",
+      "description": "Daemon initializes and begins accepting connections",
       "priority": 1,
       "template": {
         "introduction": "**PTY Daemon Starting**\n\nInitializing independent PTY daemon process.",
         "events": {
-          "terminal.daemon.socket_created": "[1] Socket created: `{{socket.path}}`",
-          "terminal.daemon.server_listening": "[2] Server listening, permissions={{socket.permissions}}",
-          "terminal.daemon.ready": "[3] Daemon ready, sessions={{sessions.count}}"
+          "terminal.daemon.server_event": "[1] Server {{event}}: {{clients.count}} clients",
+          "terminal.daemon.session_action": "[2] Session manager {{action}}: `{{session.id}}` ({{sessions.count}} total)"
         },
-        "summary": "**Daemon Ready**\n- Socket: `{{socket.path}}`\n- Sessions: {{sessions.count}}"
-      },
-      "filterDefault": false
-    },
-    {
-      "id": "daemon-startup-recovery",
-      "description": "Daemon starts and discovers orphaned PTY processes",
-      "priority": 2,
-      "template": {
-        "introduction": "**PTY Daemon Recovery**\n\nDaemon starting with existing sessions to recover.",
-        "events": {
-          "terminal.daemon.socket_created": "[1] Socket created: `{{socket.path}}`",
-          "terminal.daemon.sessions_recovered": "[2] Recovered {{sessions.count}} existing sessions",
-          "terminal.daemon.ready": "[3] Daemon ready with recovered state"
-        },
-        "summary": "**Daemon Recovered**\n- Sessions restored: {{sessions.count}}"
+        "summary": "**Daemon Ready**\n- Sessions: {{sessions.count}}"
       },
       "filterDefault": false
     }

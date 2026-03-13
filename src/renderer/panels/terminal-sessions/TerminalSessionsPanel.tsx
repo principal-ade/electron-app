@@ -1,18 +1,43 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Terminal, Folder, Clock, Activity, Loader2, ExternalLink } from 'lucide-react';
+import { Terminal, Clock, Activity, Loader2, ExternalLink } from 'lucide-react';
 import type {
   PanelContextValue,
   PanelActions,
   PanelEventEmitter,
   DataSlice,
 } from '@principal-ade/panel-framework-core';
+import type { Tracer, Span } from '@opentelemetry/api';
 import type { TerminalSessionInfo } from '../../../shared/tipc/terminalRouterTypes';
 import { WindowService } from '../../main-process-api/WindowService';
-import { getTracer } from '../../telemetry';
 
-// Tracer for terminal sessions panel telemetry
-const tracer = getTracer('terminal-sessions-panel');
+/**
+ * No-op tracer for use in Storybook or when telemetry is not available
+ */
+const noopSpan: Span = {
+  addEvent: () => noopSpan,
+  addLink: () => noopSpan,
+  addLinks: () => noopSpan,
+  end: () => {},
+  isRecording: () => false,
+  recordException: () => {},
+  setAttribute: () => noopSpan,
+  setAttributes: () => noopSpan,
+  setStatus: () => noopSpan,
+  spanContext: () => ({ traceId: '', spanId: '', traceFlags: 0 }),
+  updateName: () => noopSpan,
+};
+
+const noopTracer: Tracer = {
+  startSpan: () => noopSpan,
+  startActiveSpan: ((...args: unknown[]) => {
+    // Handle all overloads by finding the function argument
+    const fn = args.find((arg) => typeof arg === 'function') as
+      | ((span: Span) => unknown)
+      | undefined;
+    return fn ? fn(noopSpan) : undefined;
+  }) as Tracer['startActiveSpan'],
+};
 
 /**
  * Extended context with terminal sessions data slice
@@ -28,6 +53,8 @@ interface TerminalSessionsPanelProps {
   context: TerminalSessionsPanelContext;
   actions: PanelActions;
   events: PanelEventEmitter;
+  /** Optional tracer for telemetry. Defaults to no-op tracer for Storybook compatibility. */
+  tracer?: Tracer;
 }
 
 /**
@@ -58,21 +85,14 @@ function getSessionDirectory(session: TerminalSessionInfo): string {
  * Get display name for a terminal session
  */
 function getSessionDisplayName(session: TerminalSessionInfo): string {
-  // If there's metadata with a package name, use it
-  if (session.metadata?.packageName) {
-    return session.metadata.packageName;
+  // Prefer repoName from metadata
+  if (session.metadata?.repoName) {
+    return session.metadata.repoName;
   }
 
-  // If there's a context, extract a meaningful name
-  if (session.context) {
-    // Context format is typically "repoPath:subcontext"
-    const parts = session.context.split(':');
-    if (parts.length > 1) {
-      return parts[parts.length - 1];
-    }
-    // Get just the last part of the path
-    const pathParts = session.context.split('/');
-    return pathParts[pathParts.length - 1] || session.context;
+  // Fall back to packageName if available
+  if (session.metadata?.packageName) {
+    return session.metadata.packageName;
   }
 
   // Fall back to directory name
@@ -107,6 +127,7 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
   context,
   actions: _actions,
   events,
+  tracer = noopTracer,
 }) => {
   const { theme } = useTheme();
   const [currentWindowId, setCurrentWindowId] = useState<number | null>(null);
@@ -275,7 +296,6 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
             {sortedSessions.map((session) => {
               const displayName = getSessionDisplayName(session);
               const contextBadge = getContextBadge(session);
-              const directory = getSessionDirectory(session);
               const isActive = session.status === 'active';
               const isLocalSession = session.ownedByWindowId === currentWindowId;
 
@@ -400,37 +420,12 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
                         fontSize: theme.fontSizes[0],
                         color: theme.colors.textTertiary,
                         display: 'flex',
-                        gap: '12px',
-                        flexWrap: 'wrap',
                         alignItems: 'center',
+                        gap: '4px',
                       }}
                     >
-                      <span
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          fontFamily: theme.fonts.monospace,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          maxWidth: '250px',
-                        }}
-                        title={directory}
-                      >
-                        <Folder size={12} />
-                        {directory}
-                      </span>
-                      <span
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                        }}
-                      >
-                        <Clock size={12} />
-                        {formatRelativeTime(session.lastActivity)}
-                      </span>
+                      <Clock size={12} />
+                      {formatRelativeTime(session.lastActivity)}
                     </div>
                   </div>
 

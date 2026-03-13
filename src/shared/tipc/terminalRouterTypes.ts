@@ -20,6 +20,8 @@ export interface TerminalSessionMetadata {
   packageName?: string;
   /** Type of dev server or script */
   serverType?: 'storybook' | 'dev' | 'preview' | 'test';
+  /** Repository name for display purposes */
+  repoName?: string;
 }
 
 export interface CreateTerminalSessionInput {

@@ -3103,6 +3103,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               context={context}
               actions={actions}
               events={events}
+              tracer={getTracer('terminal-sessions-panel')}
             />
           </div>
         ),
@@ -3366,6 +3367,7 @@ export const DevWorkspacePanelFramework: React.FC<
       <TerminalProvider
         repositoryPath={repositoryPath}
         terminalContext={terminalContext}
+        repoName={repositoryMetadata.name}
       >
         <AgentHighlightProvider repositoryPath={repositoryPath}>
           <DevWorkspacePanelFrameworkInner
