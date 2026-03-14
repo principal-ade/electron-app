@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Terminal, Clock, Activity, Loader2, ExternalLink } from 'lucide-react';
+import { Terminal, Clock, Activity, Loader2 } from 'lucide-react';
 import type {
   PanelContextValue,
   PanelActions,
@@ -393,24 +393,6 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
                           }}
                         >
                           :{session.metadata.port}
-                        </span>
-                      )}
-                      {!isLocalSession && (
-                        <span
-                          style={{
-                            fontSize: theme.fontSizes[0],
-                            color: theme.colors.textTertiary,
-                            backgroundColor: theme.colors.backgroundSecondary,
-                            padding: '2px 6px',
-                            borderRadius: theme.radii[0],
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                          }}
-                          title="Session in another window"
-                        >
-                          <ExternalLink size={10} />
-                          other window
                         </span>
                       )}
                     </div>

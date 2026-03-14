@@ -1,0 +1,582 @@
+{
+  "nodes": [
+    {
+      "id": "group-services",
+      "type": "group",
+      "x": 0,
+      "y": -200,
+      "width": 1500,
+      "height": 160,
+      "label": "Service Resources",
+      "pv": {
+        "description": "Top-level service identities that emit telemetry"
+      }
+    },
+    {
+      "id": "principal-ade",
+      "type": "text",
+      "x": 20,
+      "y": -160,
+      "width": 340,
+      "height": 100,
+      "text": "principal-ade",
+      "pv": {
+        "nodeType": "scope",
+        "description": "Main Electron application - orchestrates all subsystems",
+        "otel": {
+          "scope": "principal-ade"
+        }
+      }
+    },
+    {
+      "id": "principal-ade-daemon",
+      "type": "text",
+      "x": 400,
+      "y": -160,
+      "width": 340,
+      "height": 100,
+      "text": "principal-ade-daemon",
+      "pv": {
+        "nodeType": "scope",
+        "description": "Standalone PTY daemon process for persistent terminal sessions",
+        "otel": {
+          "scope": "principal-ade-daemon"
+        }
+      }
+    },
+    {
+      "id": "principal-ade-storybook",
+      "type": "text",
+      "x": 780,
+      "y": -160,
+      "width": 340,
+      "height": 100,
+      "text": "principal-ade-storybook",
+      "pv": {
+        "nodeType": "scope",
+        "description": "Storybook development environment for UI components",
+        "otel": {
+          "scope": "principal-ade-storybook"
+        }
+      }
+    },
+    {
+      "id": "principal-ade-tests",
+      "type": "text",
+      "x": 1160,
+      "y": -160,
+      "width": 320,
+      "height": 100,
+      "text": "principal-ade-tests",
+      "pv": {
+        "nodeType": "scope",
+        "description": "Integration test suite runner",
+        "otel": {
+          "scope": "principal-ade-tests"
+        }
+      }
+    },
+    {
+      "id": "group-terminal",
+      "type": "group",
+      "x": 0,
+      "y": 0,
+      "width": 600,
+      "height": 400,
+      "label": "Terminal Scopes",
+      "pv": {
+        "description": "Scopes related to terminal session management and PTY operations"
+      }
+    },
+    {
+      "id": "terminal-activity",
+      "type": "text",
+      "x": 20,
+      "y": 40,
+      "width": 260,
+      "height": 100,
+      "text": "terminal-activity",
+      "pv": {
+        "nodeType": "scope",
+        "description": "Tracks terminal user activity and command execution patterns",
+        "otel": {
+          "scope": "terminal-activity"
+        }
+      }
+    },
+    {
+      "id": "terminal-activity-sync",
+      "type": "text",
+      "x": 320,
+      "y": 40,
+      "width": 260,
+      "height": 100,
+      "text": "terminal-activity-sync",
+      "pv": {
+        "nodeType": "scope",
+        "description": "Synchronizes terminal activity state across processes",
+        "otel": {
+          "scope": "terminal-activity-sync"
+        }
+      }
+    },
+    {
+      "id": "terminal-session",
+      "type": "text",
+      "x": 20,
+      "y": 160,
+      "width": 260,
+      "height": 100,
+      "text": "terminal-session",
+      "pv": {
+        "nodeType": "scope",
+        "description": "Individual terminal session lifecycle and I/O handling",
+        "otel": {
+          "scope": "terminal-session"
+        }
+      }
+    },
+    {
+      "id": "terminal-session-management",
+      "type": "text",
+      "x": 320,
+      "y": 160,
+      "width": 260,
+      "height": 100,
+      "text": "terminal-session-management",
+      "pv": {
+        "nodeType": "scope",
+        "description": "Manages multiple terminal sessions, creation, and cleanup",
+        "otel": {
+          "scope": "terminal-session-management"
+        }
+      }
+    },
+    {
+      "id": "terminal-sessions-panel",
+      "type": "text",
+      "x": 20,
+      "y": 280,
+      "width": 260,
+      "height": 100,
+      "text": "terminal-sessions-panel",
+      "pv": {
+        "nodeType": "scope",
+        "description": "UI panel displaying terminal sessions list and controls",
+        "otel": {
+          "scope": "terminal-sessions-panel"
+        }
+      }
+    },
+    {
+      "id": "terminal-daemon",
+      "type": "text",
+      "x": 320,
+      "y": 280,
+      "width": 260,
+      "height": 100,
+      "text": "terminal.daemon",
+      "pv": {
+        "nodeType": "scope",
+        "description": "PTY daemon process managing persistent terminal sessions via Unix socket",
+        "otel": {
+          "scope": "terminal.daemon"
+        }
+      }
+    },
+    {
+      "id": "group-workspace",
+      "type": "group",
+      "x": 650,
+      "y": 0,
+      "width": 400,
+      "height": 280,
+      "label": "Workspace Scopes",
+      "pv": {
+        "description": "Scopes related to development workspace management"
+      }
+    },
+    {
+      "id": "devworkspace",
+      "type": "text",
+      "x": 670,
+      "y": 40,
+      "width": 360,
+      "height": 100,
+      "text": "devworkspace",
+      "pv": {
+        "nodeType": "scope",
+        "description": "Development workspace state and configuration management",
+        "otel": {
+          "scope": "devworkspace"
+        }
+      }
+    },
+    {
+      "id": "devworkspace-activity",
+      "type": "text",
+      "x": 670,
+      "y": 160,
+      "width": 360,
+      "height": 100,
+      "text": "devworkspace-activity",
+      "pv": {
+        "nodeType": "scope",
+        "description": "Tracks user activity within development workspaces",
+        "otel": {
+          "scope": "devworkspace-activity"
+        }
+      }
+    },
+    {
+      "id": "group-ui",
+      "type": "group",
+      "x": 0,
+      "y": 440,
+      "width": 600,
+      "height": 280,
+      "label": "UI Scopes",
+      "pv": {
+        "description": "Scopes related to UI components and window management"
+      }
+    },
+    {
+      "id": "window-manager",
+      "type": "text",
+      "x": 20,
+      "y": 480,
+      "width": 260,
+      "height": 100,
+      "text": "window-manager",
+      "pv": {
+        "nodeType": "scope",
+        "description": "Manages Electron window lifecycle, positioning, and state",
+        "otel": {
+          "scope": "window-manager"
+        }
+      }
+    },
+    {
+      "id": "quality-panel",
+      "type": "text",
+      "x": 320,
+      "y": 480,
+      "width": 260,
+      "height": 100,
+      "text": "quality-panel",
+      "pv": {
+        "nodeType": "scope",
+        "description": "Code quality visualization panel with metrics and lenses",
+        "otel": {
+          "scope": "quality-panel"
+        }
+      }
+    },
+    {
+      "id": "trace-viewer",
+      "type": "text",
+      "x": 20,
+      "y": 600,
+      "width": 260,
+      "height": 100,
+      "text": "trace-viewer",
+      "pv": {
+        "nodeType": "scope",
+        "description": "OpenTelemetry trace visualization and analysis panel",
+        "otel": {
+          "scope": "trace-viewer"
+        }
+      }
+    },
+    {
+      "id": "group-observability",
+      "type": "group",
+      "x": 650,
+      "y": 320,
+      "width": 400,
+      "height": 400,
+      "label": "Observability Scopes",
+      "pv": {
+        "description": "Scopes related to telemetry collection and event processing"
+      }
+    },
+    {
+      "id": "otel-collector-service",
+      "type": "text",
+      "x": 670,
+      "y": 360,
+      "width": 360,
+      "height": 100,
+      "text": "otel-collector-service",
+      "pv": {
+        "nodeType": "scope",
+        "description": "Main process OTLP collector service receiving and processing traces",
+        "otel": {
+          "scope": "otel-collector-service"
+        }
+      }
+    },
+    {
+      "id": "otel-collector-ipc",
+      "type": "text",
+      "x": 670,
+      "y": 480,
+      "width": 360,
+      "height": 100,
+      "text": "otel-collector-ipc",
+      "pv": {
+        "nodeType": "scope",
+        "description": "IPC layer for trace data between renderer and main process",
+        "otel": {
+          "scope": "otel-collector-ipc"
+        }
+      }
+    },
+    {
+      "id": "event-server-manager",
+      "type": "text",
+      "x": 670,
+      "y": 600,
+      "width": 360,
+      "height": 100,
+      "text": "event-server-manager",
+      "pv": {
+        "nodeType": "scope",
+        "description": "Manages HTTP event server for external agent integrations",
+        "otel": {
+          "scope": "event-server-manager"
+        }
+      }
+    },
+    {
+      "id": "group-data",
+      "type": "group",
+      "x": 1100,
+      "y": 0,
+      "width": 400,
+      "height": 280,
+      "label": "Data & Storage Scopes",
+      "pv": {
+        "description": "Scopes related to data persistence and user preferences"
+      }
+    },
+    {
+      "id": "user-preferences",
+      "type": "text",
+      "x": 1120,
+      "y": 40,
+      "width": 360,
+      "height": 100,
+      "text": "user-preferences",
+      "pv": {
+        "nodeType": "scope",
+        "description": "User settings and preferences persistence",
+        "otel": {
+          "scope": "user-preferences"
+        }
+      }
+    },
+    {
+      "id": "alexandria-recently-opened",
+      "type": "text",
+      "x": 1120,
+      "y": 160,
+      "width": 360,
+      "height": 100,
+      "text": "alexandria-recently-opened",
+      "pv": {
+        "nodeType": "scope",
+        "description": "Tracks recently opened files and projects in Alexandria workspace",
+        "otel": {
+          "scope": "alexandria-recently-opened"
+        }
+      }
+    },
+    {
+      "id": "group-integration",
+      "type": "group",
+      "x": 1100,
+      "y": 320,
+      "width": 400,
+      "height": 280,
+      "label": "Integration Scopes",
+      "pv": {
+        "description": "Scopes for external service integrations"
+      }
+    },
+    {
+      "id": "principal-mcp-bridge",
+      "type": "text",
+      "x": 1120,
+      "y": 360,
+      "width": 360,
+      "height": 100,
+      "text": "principal-mcp-bridge",
+      "pv": {
+        "nodeType": "scope",
+        "description": "Model Context Protocol bridge for AI agent integrations",
+        "otel": {
+          "scope": "principal-mcp-bridge"
+        }
+      }
+    },
+    {
+      "id": "app-updates",
+      "type": "text",
+      "x": 1120,
+      "y": 480,
+      "width": 360,
+      "height": 100,
+      "text": "app-updates",
+      "pv": {
+        "nodeType": "scope",
+        "description": "Application update checking and installation",
+        "otel": {
+          "scope": "app-updates"
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-terminal-activity-to-sync",
+      "fromNode": "terminal-activity",
+      "fromSide": "right",
+      "toNode": "terminal-activity-sync",
+      "toSide": "left",
+      "pv": {
+        "description": "Activity events synced across processes"
+      }
+    },
+    {
+      "id": "edge-session-to-management",
+      "fromNode": "terminal-session",
+      "fromSide": "right",
+      "toNode": "terminal-session-management",
+      "toSide": "left",
+      "pv": {
+        "description": "Session lifecycle managed by management scope"
+      }
+    },
+    {
+      "id": "edge-panel-to-management",
+      "fromNode": "terminal-sessions-panel",
+      "fromSide": "right",
+      "toNode": "terminal-session-management",
+      "toSide": "bottom",
+      "pv": {
+        "description": "Panel requests session operations"
+      }
+    },
+    {
+      "id": "edge-session-to-daemon",
+      "fromNode": "terminal-session",
+      "fromSide": "bottom",
+      "toNode": "terminal-daemon",
+      "toSide": "top",
+      "pv": {
+        "description": "Session communicates with daemon via Unix socket"
+      }
+    },
+    {
+      "id": "edge-management-to-daemon",
+      "fromNode": "terminal-session-management",
+      "fromSide": "bottom",
+      "toNode": "terminal-daemon",
+      "toSide": "top",
+      "pv": {
+        "description": "Management controls daemon lifecycle"
+      }
+    },
+    {
+      "id": "edge-activity-to-session",
+      "fromNode": "terminal-activity",
+      "fromSide": "bottom",
+      "toNode": "terminal-session",
+      "toSide": "top",
+      "pv": {
+        "description": "Activity tracking monitors sessions"
+      }
+    },
+    {
+      "id": "edge-devworkspace-to-activity",
+      "fromNode": "devworkspace",
+      "fromSide": "bottom",
+      "toNode": "devworkspace-activity",
+      "toSide": "top",
+      "pv": {
+        "description": "Workspace emits activity events"
+      }
+    },
+    {
+      "id": "edge-collector-ipc-to-service",
+      "fromNode": "otel-collector-ipc",
+      "fromSide": "top",
+      "toNode": "otel-collector-service",
+      "toSide": "bottom",
+      "pv": {
+        "description": "IPC forwards traces to collector service"
+      }
+    },
+    {
+      "id": "edge-trace-viewer-to-collector",
+      "fromNode": "trace-viewer",
+      "fromSide": "right",
+      "toNode": "otel-collector-service",
+      "toSide": "left",
+      "pv": {
+        "description": "Trace viewer queries collected traces"
+      }
+    },
+    {
+      "id": "edge-quality-to-workspace",
+      "fromNode": "quality-panel",
+      "fromSide": "top",
+      "toNode": "devworkspace",
+      "toSide": "bottom",
+      "pv": {
+        "description": "Quality panel operates within workspace context"
+      }
+    },
+    {
+      "id": "edge-window-to-preferences",
+      "fromNode": "window-manager",
+      "fromSide": "right",
+      "toNode": "user-preferences",
+      "toSide": "left",
+      "pv": {
+        "description": "Window state persisted in preferences"
+      }
+    },
+    {
+      "id": "edge-mcp-to-event-server",
+      "fromNode": "principal-mcp-bridge",
+      "fromSide": "bottom",
+      "toNode": "event-server-manager",
+      "toSide": "right",
+      "pv": {
+        "description": "MCP bridge uses event server for agent communication"
+      }
+    },
+    {
+      "id": "edge-ade-to-terminal",
+      "fromNode": "principal-ade",
+      "fromSide": "bottom",
+      "toNode": "group-terminal",
+      "toSide": "top",
+      "pv": {
+        "description": "Main app owns terminal scopes"
+      }
+    },
+    {
+      "id": "edge-daemon-to-terminal-daemon",
+      "fromNode": "principal-ade-daemon",
+      "fromSide": "bottom",
+      "toNode": "terminal-daemon",
+      "toSide": "top",
+      "pv": {
+        "description": "Daemon process owns terminal.daemon scope"
+      }
+    }
+  ]
+}

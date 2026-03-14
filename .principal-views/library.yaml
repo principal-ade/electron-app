@@ -11,23 +11,68 @@ resources:
     deployment.environment: "development"
     project: "principal-ade"
     owned-scopes:
-      - "principal-mcp-bridge"
-      - "window-manager"
-      - "quality-panel"
-      - "app-updates"
-      - "devworkspace"
-      - "otel-collector-service"
-      - "otel-collector-ipc"
-      - "trace-viewer"
-      - "terminal-activity"
-      - "devworkspace-activity"
-      - "terminal-activity-sync"
-      - "alexandria-recently-opened"
-      - "user-preferences"
-      - "event-server-manager"
-      - "terminal-session"
-      - "terminal-session-management"
-      - "terminal-sessions-panel"
+      # Terminal scopes (indigo/violet family)
+      terminal-activity:
+        color: "#6366F1"
+        description: "Tracks terminal user activity and command execution patterns"
+      terminal-activity-sync:
+        color: "#818CF8"
+        description: "Synchronizes terminal activity state across processes"
+      terminal-session:
+        color: "#4F46E5"
+        description: "Individual terminal session lifecycle and I/O handling"
+      terminal-session-management:
+        color: "#4338CA"
+        description: "Manages multiple terminal sessions, creation, and cleanup"
+      terminal-sessions-panel:
+        color: "#A5B4FC"
+        description: "UI panel displaying terminal sessions list and controls"
+
+      # Workspace scopes (emerald/green family)
+      devworkspace:
+        color: "#10B981"
+        description: "Development workspace state and configuration management"
+      devworkspace-activity:
+        color: "#34D399"
+        description: "Tracks user activity within development workspaces"
+
+      # UI scopes (pink/rose family)
+      window-manager:
+        color: "#EC4899"
+        description: "Manages Electron window lifecycle, positioning, and state"
+      quality-panel:
+        color: "#F472B6"
+        description: "Code quality visualization panel with metrics and lenses"
+      trace-viewer:
+        color: "#DB2777"
+        description: "OpenTelemetry trace visualization and analysis panel"
+
+      # Observability scopes (teal/cyan family)
+      otel-collector-service:
+        color: "#14B8A6"
+        description: "Main process OTLP collector service receiving and processing traces"
+      otel-collector-ipc:
+        color: "#2DD4BF"
+        description: "IPC layer for trace data between renderer and main process"
+      event-server-manager:
+        color: "#0D9488"
+        description: "Manages HTTP event server for external agent integrations"
+
+      # Data scopes (purple family)
+      user-preferences:
+        color: "#8B5CF6"
+        description: "User settings and preferences persistence"
+      alexandria-recently-opened:
+        color: "#A78BFA"
+        description: "Tracks recently opened files and projects in Alexandria workspace"
+
+      # Integration scopes (orange/amber family)
+      principal-mcp-bridge:
+        color: "#F59E0B"
+        description: "Model Context Protocol bridge for AI agent integrations"
+      app-updates:
+        color: "#FBBF24"
+        description: "Application update checking and installation"
 
   principal-ade-storybook:
     service.name: "principal-ade-storybook"
@@ -49,7 +94,9 @@ resources:
     process.type: "pty-daemon"
     project: "principal-ade"
     owned-scopes:
-      - "terminal.daemon"
+      terminal.daemon:
+        color: "#3730A3"
+        description: "PTY daemon process managing persistent terminal sessions via Unix socket"
 
 nodeComponents:
   # ============================================
