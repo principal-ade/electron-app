@@ -148,6 +148,8 @@ export async function spawnDaemon(): Promise<void> {
   const daemonEnv: NodeJS.ProcessEnv = {
     ...process.env,
     NODE_ENV: process.env.NODE_ENV || 'production',
+    // CRITICAL: Tell Electron to run as Node.js, not as the full Electron app
+    ELECTRON_RUN_AS_NODE: '1',
   };
 
   // In packaged app, add NODE_PATH so daemon can find unpacked native modules
