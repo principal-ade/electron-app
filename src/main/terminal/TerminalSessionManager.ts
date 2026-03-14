@@ -16,6 +16,11 @@ import type {
 import { ownershipManager } from './TerminalOwnershipManager';
 import { terminalEnvironment } from '../terminalEnvironment';
 import { TerminalAPIEvents } from '../../shared/main-process-api-interfaces/TerminalService';
+import { ensureDaemonRunning } from './daemonSpawner';
+import { SOCKET_PATH } from '../../shared/pty-daemon/constants';
+
+// Feature flag for daemon mode (enabled by default, set USE_PTY_DAEMON=false to disable)
+const USE_DAEMON_MODE = process.env.USE_PTY_DAEMON !== 'false';
 import type {
   MainToWorkerMessage,
   WorkerToMainMessage,
@@ -27,6 +32,9 @@ import type {
   RegisterPortMessage,
   UnregisterPortMessage,
   SetOwnerMessage,
+  ConnectDaemonMessage,
+  DisconnectDaemonMessage,
+  DaemonSessionInfo,
 } from '../../terminal-worker/types';
 
 /**
@@ -74,6 +82,11 @@ export class TerminalSessionManager {
   // Track MessageChannels - we only keep track of which ports exist, the actual data flows worker<->renderer
   private sessionPorts: Map<string, Map<number, MessageChannelMain>> =
     new Map();
+
+  // Daemon connection state
+  private isDaemonConnected = false;
+  private daemonConnectedPromise: Promise<void> | null = null;
+  private daemonConnectedResolve: (() => void) | null = null;
 
   constructor() {
     this.initializeWorker();
@@ -234,7 +247,7 @@ export class TerminalSessionManager {
   private handleWorkerMessage(msg: WorkerToMainMessage): void {
     switch (msg.type) {
       case 'READY':
-        console.log('[Terminal] Worker is ready');
+        console.log(`[Terminal] Worker is ready (mode: ${USE_DAEMON_MODE ? 'DAEMON' : 'LEGACY'})`);
         this.isWorkerReady = true;
         if (this.workerReadyResolve) {
           this.workerReadyResolve();
@@ -244,6 +257,11 @@ export class TerminalSessionManager {
           this.sendToWorker(pending);
         }
         this.pendingMessages = [];
+
+        // In daemon mode, start daemon and connect worker to it
+        if (USE_DAEMON_MODE) {
+          this.initializeDaemonConnection();
+        }
         break;
 
       case 'SESSION_CREATED': {
@@ -276,6 +294,111 @@ export class TerminalSessionManager {
       case 'WORKER_ERROR':
         console.error(`[Terminal] Worker error: ${msg.error}`, msg.context);
         break;
+
+      case 'DAEMON_CONNECTED':
+        console.log('[Terminal] Worker connected to PTY daemon');
+        this.isDaemonConnected = true;
+        if (this.daemonConnectedResolve) {
+          this.daemonConnectedResolve();
+        }
+        break;
+
+      case 'DAEMON_DISCONNECTED':
+        console.warn(
+          '[Terminal] Worker disconnected from PTY daemon:',
+          msg.error,
+        );
+        this.isDaemonConnected = false;
+        break;
+
+      case 'DAEMON_SESSIONS':
+        console.log(
+          `[Terminal] Received ${msg.sessions.length} existing sessions from daemon`,
+        );
+        this.restoreSessionsFromDaemon(msg.sessions);
+        break;
+    }
+  }
+
+  /**
+   * Initialize daemon and connect worker to it
+   */
+  private async initializeDaemonConnection(): Promise<void> {
+    try {
+      // Create promise for daemon connection
+      this.daemonConnectedPromise = new Promise((resolve) => {
+        this.daemonConnectedResolve = resolve;
+      });
+
+      // Ensure daemon is running
+      console.log('[Terminal] Starting PTY daemon...');
+      await ensureDaemonRunning();
+      console.log('[Terminal] PTY daemon is running');
+
+      // Tell worker to connect to daemon
+      const connectMsg: ConnectDaemonMessage = {
+        type: 'CONNECT_DAEMON',
+        id: 'connect-daemon',
+        timestamp: Date.now(),
+        socketPath: SOCKET_PATH,
+      };
+      this.sendToWorker(connectMsg);
+    } catch (error) {
+      console.error('[Terminal] Failed to initialize daemon connection:', error);
+    }
+  }
+
+  /**
+   * Restore sessions received from daemon after app restart
+   */
+  private restoreSessionsFromDaemon(daemonSessions: DaemonSessionInfo[]): void {
+    console.log(`[Terminal] Restoring ${daemonSessions.length} sessions from daemon`);
+
+    for (const info of daemonSessions) {
+      // Check if we already have this session
+      if (this.sessions.has(info.id)) {
+        console.log(`[Terminal] Session ${info.id} already exists, skipping`);
+        continue;
+      }
+
+      // Create session tracking in main
+      const session: TerminalSession = {
+        id: info.id,
+        pty: null as unknown as ReturnType<typeof import('node-pty').spawn>,
+        directory: info.cwd,
+        context: undefined,
+        createdAt: new Date(info.createdAt).getTime(),
+        lastActivity: new Date(info.lastActivity).getTime(),
+        repoPath: undefined, // Will be detected below
+        repoId: undefined,
+        owner: null,
+        remoteAttachments: new Set(),
+      };
+      this.sessions.set(info.id, session);
+      this.sessionPorts.set(info.id, new Map());
+
+      // Try to find git root for restored session
+      this.findGitRoot(info.cwd).then((repoPath) => {
+        if (repoPath) {
+          session.repoPath = repoPath;
+          this.getRepoIdFromPath(repoPath).then((repoId) => {
+            session.repoId = repoId;
+          });
+        }
+      });
+
+      console.log(`[Terminal] Restored session ${info.id} (cwd: ${info.cwd})`);
+    }
+
+    // Broadcast to renderers that sessions were restored
+    if (daemonSessions.length > 0) {
+      this.broadcastToRendererWindows(TerminalAPIEvents.SESSIONS_RESTORED, {
+        sessions: daemonSessions.map((s) => ({
+          id: s.id,
+          directory: s.cwd,
+          createdAt: new Date(s.createdAt).getTime(),
+        })),
+      });
     }
   }
 
@@ -315,6 +438,42 @@ export class TerminalSessionManager {
         return this.isWorkerReady;
       } catch (error) {
         console.error('[Terminal] Worker ready failed:', error);
+        return false;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Ensure terminal backend is ready before creating sessions.
+   * In legacy mode, just waits for worker.
+   * In daemon mode, also waits for daemon connection.
+   */
+  private async ensureDaemonReady(): Promise<boolean> {
+    // First ensure worker is ready
+    const workerReady = await this.ensureWorkerReady();
+    if (!workerReady) return false;
+
+    // In legacy mode, worker ready is sufficient
+    if (!USE_DAEMON_MODE) {
+      return true;
+    }
+
+    // In daemon mode, also wait for daemon connection
+    if (this.isDaemonConnected) return true;
+
+    // Wait for daemon connection
+    if (this.daemonConnectedPromise) {
+      const timeoutPromise = new Promise<void>((_, reject) => {
+        setTimeout(() => reject(new Error('Daemon connection timeout')), 15000);
+      });
+
+      try {
+        await Promise.race([this.daemonConnectedPromise, timeoutPromise]);
+        return this.isDaemonConnected;
+      } catch (error) {
+        console.error('[Terminal] Daemon connection failed:', error);
         return false;
       }
     }
@@ -403,9 +562,9 @@ export class TerminalSessionManager {
     command?: string,
     metadata?: TerminalSessionMetadata,
   ): Promise<string> {
-    const isReady = await this.ensureWorkerReady();
+    const isReady = await this.ensureDaemonReady();
     if (!isReady) {
-      throw new Error('Terminal worker not available');
+      throw new Error('Terminal daemon not available');
     }
 
     const sessionId = uuidv4();
@@ -560,10 +719,32 @@ export class TerminalSessionManager {
   }
 
   /**
-   * Shutdown the terminal worker completely (called on app quit)
+   * Shutdown the terminal worker (called on app quit)
+   * Sessions are NOT destroyed - they persist in the daemon for restoration
    */
   shutdown(): void {
-    this.destroyAllSessions();
+    console.log('[Terminal] Shutting down (sessions will persist in daemon)');
+
+    // Close all ports and clean up local state
+    // But don't destroy sessions - they persist in daemon
+    for (const sessionId of this.sessions.keys()) {
+      this.closeAllPortsForSession(sessionId);
+      ownershipManager.removeSession(sessionId);
+    }
+    this.sessions.clear();
+    this.sessionsByRepo.clear();
+    this.sessionPorts.clear();
+    this.activityStore.clear();
+
+    // Tell worker to disconnect from daemon (but not destroy sessions)
+    if (this.worker && this.isDaemonConnected) {
+      const disconnectMsg: DisconnectDaemonMessage = {
+        type: 'DISCONNECT_DAEMON',
+        id: 'disconnect-daemon',
+        timestamp: Date.now(),
+      };
+      this.sendToWorker(disconnectMsg);
+    }
 
     // Shutdown worker
     if (this.worker) {
@@ -573,6 +754,21 @@ export class TerminalSessionManager {
         timestamp: Date.now(),
       });
     }
+
+    this.isDaemonConnected = false;
+  }
+
+  /**
+   * Force destroy all sessions (e.g., user explicitly closes all terminals)
+   * This DOES destroy sessions in the daemon
+   */
+  destroyAllSessionsForce(): void {
+    for (const sessionId of this.sessions.keys()) {
+      this.destroySession(sessionId);
+    }
+    this.sessions.clear();
+    this.sessionsByRepo.clear();
+    this.sessionPorts.clear();
   }
 
   writeToSession(sessionId: string, data: string): void {

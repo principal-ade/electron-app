@@ -90,8 +90,8 @@
     {
       "id": "session-manager",
       "type": "text",
-      "x": 0,
-      "y": 20,
+      "x": -30,
+      "y": 13,
       "width": 200,
       "height": 100,
       "text": "TerminalSessionManager\n\n.createSession()\n.restoreSessions()\n.prepareForRestart()",
@@ -128,8 +128,8 @@
     {
       "id": "daemon-client",
       "type": "text",
-      "x": 0,
-      "y": 170,
+      "x": -158,
+      "y": 179,
       "width": 200,
       "height": 120,
       "text": "PtyDaemonClient\n\n.connect()\n.createSession()\n.listSessions()\n.onReconnected()",
@@ -162,8 +162,8 @@
     {
       "id": "renderer",
       "type": "text",
-      "x": 230,
-      "y": 20,
+      "x": 383,
+      "y": -71,
       "width": 150,
       "height": 100,
       "text": "Renderer\n\nTerminal UI\nxterm.js\nMessagePort",
@@ -196,8 +196,8 @@
     {
       "id": "unix-socket",
       "type": "text",
-      "x": 0,
-      "y": 400,
+      "x": -158,
+      "y": 499,
       "width": 200,
       "height": 80,
       "text": "Unix Domain Socket\n\n~/.your-app/\npty-daemon.sock",
@@ -241,7 +241,7 @@
       "id": "daemon-server",
       "type": "text",
       "x": 0,
-      "y": 600,
+      "y": 659,
       "width": 200,
       "height": 120,
       "text": "SocketServer\n\nnet.createServer()\nJSON protocol\nClient multiplexing",
@@ -274,8 +274,8 @@
     {
       "id": "daemon-session-mgr",
       "type": "text",
-      "x": 250,
-      "y": 600,
+      "x": 276,
+      "y": 659,
       "width": 200,
       "height": 120,
       "text": "DaemonSessionManager\n\nsessions: Map<id, PTY>\nscrollback buffers\nPTY lifecycle",
@@ -312,8 +312,8 @@
     {
       "id": "pty-1",
       "type": "text",
-      "x": 0,
-      "y": 760,
+      "x": -159,
+      "y": 867,
       "width": 100,
       "height": 60,
       "text": "PTY 1\n/bin/zsh",
@@ -346,8 +346,8 @@
     {
       "id": "pty-2",
       "type": "text",
-      "x": 120,
-      "y": 760,
+      "x": -39,
+      "y": 867,
       "width": 100,
       "height": 60,
       "text": "PTY 2\n/bin/zsh",
@@ -380,8 +380,8 @@
     {
       "id": "pty-3",
       "type": "text",
-      "x": 240,
-      "y": 760,
+      "x": 81,
+      "y": 867,
       "width": 100,
       "height": 60,
       "text": "PTY 3\n/bin/zsh",
@@ -414,8 +414,8 @@
     {
       "id": "pty-n",
       "type": "text",
-      "x": 360,
-      "y": 760,
+      "x": 201,
+      "y": 867,
       "width": 100,
       "height": 60,
       "text": "PTY N\n...",
@@ -452,8 +452,8 @@
     {
       "id": "update-flow",
       "type": "text",
-      "x": 500,
-      "y": 0,
+      "x": 1109,
+      "y": 5,
       "width": 280,
       "height": 250,
       "color": "#EC4899",
@@ -462,8 +462,8 @@
     {
       "id": "survival-note",
       "type": "text",
-      "x": 551,
-      "y": 658,
+      "x": 1057,
+      "y": 570,
       "width": 280,
       "height": 150,
       "color": "#10B981",
@@ -492,8 +492,8 @@
     {
       "id": "daemon-lifecycle",
       "type": "text",
-      "x": 245,
-      "y": 484,
+      "x": 495,
+      "y": 532,
       "width": 200,
       "height": 60,
       "text": "Daemon Lifecycle\n\nstartup → ready → shutdown",
@@ -508,16 +508,16 @@
           "files": []
         },
         "event": {
-          "name": "terminal.daemon.startup",
-          "description": "Daemon process lifecycle events",
+          "name": "terminal.daemon.phase",
+          "description": "Daemon process lifecycle phase changes",
           "attributes": {
             "phase": {
               "type": "string",
-              "description": "starting, ready, shutting_down, shutdown"
+              "description": "starting, ready, shutdown"
             },
             "reason": {
               "type": "string",
-              "description": "Reason for shutdown (idle, signal, error)"
+              "description": "Reason for phase change"
             },
             "uptime.ms": {
               "type": "number",
@@ -530,8 +530,8 @@
     {
       "id": "connection-state",
       "type": "text",
-      "x": 0,
-      "y": 320,
+      "x": 16,
+      "y": 364,
       "width": 200,
       "height": 60,
       "text": "Connection State\n\nconnecting → connected → disconnected",
@@ -568,8 +568,8 @@
     {
       "id": "persistence-store",
       "type": "text",
-      "x": 230,
-      "y": 140,
+      "x": 109,
+      "y": 180,
       "width": 150,
       "height": 100,
       "text": "Persistence Store\n\n~/.your-app/\nsessions.json\nmetadata backup",
@@ -606,8 +606,8 @@
     {
       "id": "scrollback-buffer",
       "type": "text",
-      "x": 251,
-      "y": 862,
+      "x": 441,
+      "y": 868,
       "width": 200,
       "height": 80,
       "text": "Scrollback Buffers\n\nPer-session circular buffer\nCapture on write, replay on attach",
@@ -648,8 +648,8 @@
     {
       "id": "error-handling",
       "type": "text",
-      "x": 800,
-      "y": 0,
+      "x": 1126,
+      "y": 280,
       "width": 250,
       "height": 220,
       "color": "#EF4444",
@@ -658,8 +658,8 @@
     {
       "id": "error-events",
       "type": "text",
-      "x": 800,
-      "y": 240,
+      "x": 658,
+      "y": 159,
       "width": 250,
       "height": 100,
       "text": "Error Events\n\nterminal.daemon.error\nterminal.socket.error\nterminal.pty.error",
@@ -704,8 +704,8 @@
     {
       "id": "health-check",
       "type": "text",
-      "x": 800,
-      "y": 360,
+      "x": 652,
+      "y": 333,
       "width": 250,
       "height": 120,
       "text": "Health Monitoring\n\nping/pong heartbeat\nClient sends ping every 30s\nTimeout triggers reconnect\nDaemon tracks client liveness",
@@ -742,8 +742,8 @@
     {
       "id": "idle-shutdown",
       "type": "text",
-      "x": 800,
-      "y": 500,
+      "x": 783,
+      "y": 502,
       "width": 250,
       "height": 120,
       "text": "Idle Shutdown\n\nNo sessions + no clients\nfor IDLE_TIMEOUT (30min)\n→ daemon exits gracefully\n\nPrevents orphaned daemons",
@@ -784,8 +784,8 @@
     {
       "id": "utility-worker",
       "type": "text",
-      "x": 230,
-      "y": 280,
+      "x": 358,
+      "y": 92,
       "width": 200,
       "height": 120,
       "text": "Utility Worker\n\n- Connects to daemon socket\n- Holds MessagePorts\n- Bridges socket ↔ ports\n- NO PTY spawning",
@@ -826,8 +826,8 @@
     {
       "id": "daemon-bridge",
       "type": "text",
-      "x": 230,
-      "y": 420,
+      "x": 191,
+      "y": 500,
       "width": 200,
       "height": 80,
       "text": "DaemonBridge\n\nSocket client in worker\nRoutes data to ports",
@@ -864,8 +864,8 @@
     {
       "id": "worker-data-flow",
       "type": "text",
-      "x": 500,
-      "y": 280,
+      "x": 1345,
+      "y": 285,
       "width": 280,
       "height": 180,
       "color": "#A855F7",

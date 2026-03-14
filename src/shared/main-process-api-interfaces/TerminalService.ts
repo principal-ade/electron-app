@@ -25,6 +25,7 @@ export enum TerminalAPIEvents {
   OWNERSHIP_LOST = 'terminal:ownershipLost',
   PORT_READY = 'terminal:portReady', // MessagePort ready for direct streaming
   REQUEST_DATA_PORT = 'terminal:requestDataPort', // Request a MessagePort for terminal data
+  SESSIONS_RESTORED = 'terminal:sessionsRestored', // Sessions restored from daemon after app restart
 }
 
 export interface TerminalInfo {

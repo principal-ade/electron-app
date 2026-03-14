@@ -28,13 +28,13 @@ export class Logger {
 
   debug(...args: unknown[]): void {
     if (LOG_LEVELS[this.level] <= LOG_LEVELS.debug) {
-      console.log(this.timestamp(), this.prefix, '[DEBUG]', ...args);
+      console.info(this.timestamp(), this.prefix, '[DEBUG]', ...args);
     }
   }
 
   info(...args: unknown[]): void {
     if (LOG_LEVELS[this.level] <= LOG_LEVELS.info) {
-      console.log(this.timestamp(), this.prefix, '[INFO]', ...args);
+      console.info(this.timestamp(), this.prefix, '[INFO]', ...args);
     }
   }
 

@@ -18,6 +18,11 @@ import {
 import { DaemonSessionManager } from './DaemonSessionManager';
 import { SOCKET_PATH, DAEMON_DIR } from '../shared/pty-daemon/constants';
 import { Logger } from './Logger';
+import {
+  addServerEvent,
+  addSocketConnectionEvent,
+  addHealthCheckEvent,
+} from './telemetry';
 
 interface ConnectedClient {
   id: number;
@@ -68,6 +73,9 @@ export class SocketServer extends EventEmitter {
       this.server.listen(this.socketPath, () => {
         this.logger.info(`Socket server listening on ${this.socketPath}`);
 
+        // Add server listening event
+        addServerEvent('listening', this.clients.size);
+
         // Set socket permissions (Unix only)
         if (process.platform !== 'win32') {
           try {
@@ -104,6 +112,9 @@ export class SocketServer extends EventEmitter {
 
     // Clean up socket file
     await this.cleanupSocket();
+
+    // Add server stopped event
+    addServerEvent('stopped', 0);
 
     this.logger.info('Socket server stopped');
   }
@@ -158,6 +169,10 @@ export class SocketServer extends EventEmitter {
 
     this.clients.set(clientId, client);
     this.logger.info(`Client ${clientId} connected (${this.clients.size} total)`);
+
+    // Add connection event
+    addSocketConnectionEvent('connected', clientId);
+
     this.emit('clientConnected', clientId);
 
     // Send current session list to new client
@@ -175,6 +190,10 @@ export class SocketServer extends EventEmitter {
     socket.on('close', () => {
       this.clients.delete(clientId);
       this.logger.info(`Client ${clientId} disconnected (${this.clients.size} total)`);
+
+      // Add disconnection event
+      addSocketConnectionEvent('disconnected', clientId);
+
       this.emit('clientDisconnected', clientId);
     });
 
@@ -182,6 +201,10 @@ export class SocketServer extends EventEmitter {
     socket.on('error', (err) => {
       this.logger.error(`Client ${clientId} error:`, err);
       this.clients.delete(clientId);
+
+      // Add error event
+      addSocketConnectionEvent('error', clientId, err.message);
+
       this.emit('clientDisconnected', clientId);
     });
   }
@@ -258,6 +281,8 @@ export class SocketServer extends EventEmitter {
       }
 
       case 'ping':
+        // Add health check event
+        addHealthCheckEvent('pong', 0, 0);
         this.sendToClient(clientId, { type: 'pong' });
         break;
 

@@ -1,6 +1,12 @@
 /**
  * Terminal worker entry point
- * Runs in an Electron utility process to keep PTY operations off the main thread
+ * Runs in an Electron utility process to keep terminal operations off the main thread
+ *
+ * Supports two modes:
+ * - Legacy mode (default): Spawns PTYs directly using node-pty
+ * - Daemon mode: Connects to external PTY daemon for session persistence
+ *
+ * Daemon mode is enabled by default. Set USE_PTY_DAEMON=false to disable.
  */
 
 import type {
@@ -19,7 +25,15 @@ import type {
   UnregisterPortMessage,
   SetOwnerMessage,
   ShutdownMessage,
+  ConnectDaemonMessage,
+  DisconnectDaemonMessage,
+  DaemonConnectedMessage,
+  DaemonDisconnectedMessage,
+  DaemonSessionsMessage,
 } from './types';
+
+// Feature flag for daemon mode (enabled by default, set USE_PTY_DAEMON=false to disable)
+const USE_DAEMON_MODE = process.env.USE_PTY_DAEMON !== 'false';
 
 // Type guards inlined to avoid webpack module resolution issues
 function isMainToWorkerMessage(msg: unknown): msg is MainToWorkerMessage {
@@ -82,6 +96,18 @@ function isShutdownMessage(msg: MainToWorkerMessage): msg is ShutdownMessage {
   return msg.type === 'SHUTDOWN';
 }
 
+function isConnectDaemonMessage(
+  msg: MainToWorkerMessage,
+): msg is ConnectDaemonMessage {
+  return msg.type === 'CONNECT_DAEMON';
+}
+
+function isDisconnectDaemonMessage(
+  msg: MainToWorkerMessage,
+): msg is DisconnectDaemonMessage {
+  return msg.type === 'DISCONNECT_DAEMON';
+}
+
 // MessagePort type for utility process
 interface MessagePortLike {
   postMessage: (message: unknown) => void;
@@ -90,7 +116,7 @@ interface MessagePortLike {
   close: () => void;
 }
 
-// PTY interface (node-pty types)
+// PTY interface (node-pty types) - only used in legacy mode
 interface IPty {
   onData: (callback: (data: string) => void) => void;
   onExit: (callback: (exitInfo: { exitCode: number }) => void) => void;
@@ -114,7 +140,7 @@ interface PtyModule {
 // Session state
 interface TerminalSession {
   id: string;
-  pty: IPty;
+  pty: IPty | null; // Only set in legacy mode
   directory: string;
   context?: string;
   ownerWindowId?: number;
@@ -126,10 +152,19 @@ interface TerminalSession {
 const sessions: Map<string, TerminalSession> = new Map();
 // sessionId -> windowId -> port
 const sessionPorts: Map<string, Map<number, MessagePortLike>> = new Map();
+
+// Legacy mode: node-pty module
 let pty: PtyModule | null = null;
 
+// Daemon mode: bridge and pending callbacks
+let daemonBridge: import('./DaemonBridge').DaemonBridge | null = null;
+const pendingCreations: Map<
+  string,
+  { resolve: () => void; reject: (err: Error) => void }
+> = new Map();
+
 // =============================================================================
-// PTY Loading
+// PTY Loading (Legacy Mode)
 // =============================================================================
 
 function loadPty(): PtyModule | null {
@@ -188,10 +223,161 @@ function sendToRenderer(sessionId: string, data: string): void {
 }
 
 // =============================================================================
+// Daemon Connection (Daemon Mode Only)
+// =============================================================================
+
+async function connectToDaemon(_socketPath: string): Promise<void> {
+  if (!USE_DAEMON_MODE) {
+    console.warn('[TerminalWorker] CONNECT_DAEMON received but daemon mode is disabled');
+    return;
+  }
+
+  if (daemonBridge?.connected) {
+    console.warn('[TerminalWorker] Already connected to daemon');
+    return;
+  }
+
+  // Dynamic import to avoid loading when not in daemon mode
+  const { DaemonBridge } = await import('./DaemonBridge');
+  daemonBridge = new DaemonBridge();
+
+  // Wire up daemon events
+  daemonBridge.on('data', (sessionId: string, data: string) => {
+    const session = sessions.get(sessionId);
+    if (session) {
+      session.lastActivity = Date.now();
+    }
+    sendToRenderer(sessionId, data);
+  });
+
+  daemonBridge.on('created', (sessionId: string, _pid: number) => {
+    const pending = pendingCreations.get(sessionId);
+    if (pending) {
+      pending.resolve();
+      pendingCreations.delete(sessionId);
+    }
+  });
+
+  daemonBridge.on('exit', (sessionId: string, exitCode: number, _signal?: string) => {
+    const exitMsg: SessionExitMessage = {
+      type: 'SESSION_EXIT',
+      id: `session-exit-${sessionId}`,
+      timestamp: Date.now(),
+      sessionId,
+      exitCode,
+    };
+    sendToMain(exitMsg);
+    cleanupSession(sessionId);
+  });
+
+  daemonBridge.on('session-error', (sessionId: string, error: string) => {
+    const pending = pendingCreations.get(sessionId);
+    if (pending) {
+      pending.reject(new Error(error));
+      pendingCreations.delete(sessionId);
+      return;
+    }
+
+    sendToMain({
+      type: 'SESSION_ERROR',
+      id: `session-error-${sessionId}`,
+      timestamp: Date.now(),
+      sessionId,
+      error,
+    });
+  });
+
+  daemonBridge.on('disconnected', (error?: Error) => {
+    console.warn('[TerminalWorker] Disconnected from daemon:', error?.message);
+    const msg: DaemonDisconnectedMessage = {
+      type: 'DAEMON_DISCONNECTED',
+      id: 'daemon-disconnected',
+      timestamp: Date.now(),
+      error: error?.message,
+    };
+    sendToMain(msg);
+  });
+
+  daemonBridge.on('error', (error: Error) => {
+    console.error('[TerminalWorker] Daemon bridge error:', error.message);
+  });
+
+  try {
+    const existingSessions = await daemonBridge.connect();
+
+    console.info(
+      `[TerminalWorker] Connected to daemon, ${existingSessions.length} existing sessions`,
+    );
+
+    const connectedMsg: DaemonConnectedMessage = {
+      type: 'DAEMON_CONNECTED',
+      id: 'daemon-connected',
+      timestamp: Date.now(),
+    };
+    sendToMain(connectedMsg);
+
+    if (existingSessions.length > 0) {
+      const sessionsMsg: DaemonSessionsMessage = {
+        type: 'DAEMON_SESSIONS',
+        id: 'daemon-sessions',
+        timestamp: Date.now(),
+        sessions: existingSessions,
+      };
+      sendToMain(sessionsMsg);
+
+      for (const info of existingSessions) {
+        const session: TerminalSession = {
+          id: info.id,
+          pty: null,
+          directory: info.cwd,
+          createdAt: new Date(info.createdAt).getTime(),
+          lastActivity: new Date(info.lastActivity).getTime(),
+        };
+        sessions.set(info.id, session);
+        sessionPorts.set(info.id, new Map());
+      }
+    }
+  } catch (error) {
+    console.error('[TerminalWorker] Failed to connect to daemon:', error);
+    const msg: DaemonDisconnectedMessage = {
+      type: 'DAEMON_DISCONNECTED',
+      id: 'daemon-connect-failed',
+      timestamp: Date.now(),
+      error: error instanceof Error ? error.message : String(error),
+    };
+    sendToMain(msg);
+    throw error;
+  }
+}
+
+function disconnectFromDaemon(): void {
+  if (daemonBridge) {
+    daemonBridge.disconnect();
+    daemonBridge = null;
+  }
+}
+
+// =============================================================================
 // Session Management
 // =============================================================================
 
-function createSession(
+async function createSession(
+  sessionId: string,
+  directory: string,
+  shell: string,
+  env: Record<string, string>,
+  context?: string,
+  command?: string,
+): Promise<void> {
+  if (USE_DAEMON_MODE) {
+    await createSessionDaemon(sessionId, directory, shell, env, context, command);
+  } else {
+    createSessionLegacy(sessionId, directory, shell, env, context, command);
+  }
+}
+
+// Legacy mode: spawn PTY directly
+function createSessionLegacy(
   sessionId: string,
   directory: string,
   shell: string,
@@ -234,13 +420,11 @@ function createSession(
     sessions.set(sessionId, session);
     sessionPorts.set(sessionId, new Map());
 
-    // Handle PTY data - send to owner via MessagePort
     ptyProcess.onData((data: string) => {
       session.lastActivity = Date.now();
       sendToRenderer(sessionId, data);
     });
 
-    // Handle PTY exit
     ptyProcess.onExit((exitInfo: { exitCode: number }) => {
       const exitMsg: SessionExitMessage = {
         type: 'SESSION_EXIT',
@@ -253,7 +437,6 @@ function createSession(
       cleanupSession(sessionId);
     });
 
-    // Send success message
     const successMsg: SessionCreatedMessage = {
       type: 'SESSION_CREATED',
       id: `session-created-${sessionId}`,
@@ -263,7 +446,6 @@ function createSession(
     };
     sendToMain(successMsg);
 
-    // Send initial command or newline
     if (command) {
       setTimeout(() => {
         ptyProcess.write(`${command}\r`);
@@ -286,23 +468,120 @@ function createSession(
   }
 }
 
+// Daemon mode: send to daemon
+async function createSessionDaemon(
+  sessionId: string,
+  directory: string,
+  shell: string,
+  env: Record<string, string>,
+  context?: string,
+  command?: string,
+): Promise<void> {
+  if (!daemonBridge?.connected) {
+    const errorMsg: SessionCreatedMessage = {
+      type: 'SESSION_CREATED',
+      id: `session-created-${sessionId}`,
+      timestamp: Date.now(),
+      sessionId,
+      success: false,
+      error: 'Not connected to daemon',
+    };
+    sendToMain(errorMsg);
+    return;
+  }
+
+  try {
+    const now = Date.now();
+    const session: TerminalSession = {
+      id: sessionId,
+      pty: null,
+      directory,
+      context,
+      createdAt: now,
+      lastActivity: now,
+    };
+    sessions.set(sessionId, session);
+    sessionPorts.set(sessionId, new Map());
+
+    const creationPromise = new Promise<void>((resolve, reject) => {
+      pendingCreations.set(sessionId, { resolve, reject });
+    });
+
+    daemonBridge.send({
+      type: 'create',
+      id: sessionId,
+      cwd: directory,
+      shell,
+      env,
+    });
+
+    await creationPromise;
+
+    const successMsg: SessionCreatedMessage = {
+      type: 'SESSION_CREATED',
+      id: `session-created-${sessionId}`,
+      timestamp: Date.now(),
+      sessionId,
+      success: true,
+    };
+    sendToMain(successMsg);
+
+    if (command) {
+      setTimeout(() => {
+        daemonBridge?.send({
+          type: 'write',
+          id: sessionId,
+          data: `${command}\r`,
+        });
+      }, 500);
+    } else {
+      setTimeout(() => {
+        daemonBridge?.send({
+          type: 'write',
+          id: sessionId,
+          data: '\r',
+        });
+      }, 200);
+    }
+  } catch (error) {
+    sessions.delete(sessionId);
+    sessionPorts.delete(sessionId);
+
+    const errorMsg: SessionCreatedMessage = {
+      type: 'SESSION_CREATED',
+      id: `session-created-${sessionId}`,
+      timestamp: Date.now(),
+      sessionId,
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+    sendToMain(errorMsg);
+  }
+}
+
 function destroySession(sessionId: string): void {
   const session = sessions.get(sessionId);
   if (session) {
-    try {
-      session.pty.kill();
-    } catch (error) {
-      console.error(
-        `[TerminalWorker] Error killing PTY for session ${sessionId}:`,
-        error,
-      );
+    if (USE_DAEMON_MODE) {
+      daemonBridge?.send({
+        type: 'destroy',
+        id: sessionId,
+      });
+    } else if (session.pty) {
+      try {
+        session.pty.kill();
+      } catch (error) {
+        console.error(
+          `[TerminalWorker] Error killing PTY for session ${sessionId}:`,
+          error,
+        );
+      }
     }
     cleanupSession(sessionId);
   }
 }
 
 function cleanupSession(sessionId: string): void {
-  // Close all ports for this session
   const ports = sessionPorts.get(sessionId);
   if (ports) {
     for (const port of ports.values()) {
@@ -322,7 +601,15 @@ function writeToSession(sessionId: string, data: string): void {
   const session = sessions.get(sessionId);
   if (session) {
     session.lastActivity = Date.now();
-    session.pty.write(data);
+    if (USE_DAEMON_MODE && daemonBridge?.connected) {
+      daemonBridge.send({
+        type: 'write',
+        id: sessionId,
+        data,
+      });
+    } else if (session.pty) {
+      session.pty.write(data);
+    }
   }
 }
 
@@ -334,12 +621,20 @@ function resizeSession(
 ): void {
   const session = sessions.get(sessionId);
   if (session) {
-    if (force) {
-      // Force SIGWINCH by temporarily changing dimensions
-      session.pty.resize(cols + 1, rows);
-      session.pty.resize(cols, rows);
-    } else {
-      session.pty.resize(cols, rows);
+    if (USE_DAEMON_MODE && daemonBridge?.connected) {
+      daemonBridge.send({
+        type: 'resize',
+        id: sessionId,
+        cols,
+        rows,
+      });
+    } else if (session.pty) {
+      if (force) {
+        session.pty.resize(cols + 1, rows);
+        session.pty.resize(cols, rows);
+      } else {
+        session.pty.resize(cols, rows);
+      }
     }
   }
 }
@@ -347,7 +642,15 @@ function resizeSession(
 function refreshSession(sessionId: string): void {
   const session = sessions.get(sessionId);
   if (session) {
-    session.pty.write('\x0c'); // Ctrl+L
+    if (USE_DAEMON_MODE && daemonBridge?.connected) {
+      daemonBridge.send({
+        type: 'write',
+        id: sessionId,
+        data: '\x0c',
+      });
+    } else if (session.pty) {
+      session.pty.write('\x0c'); // Ctrl+L
+    }
   }
 }
 
@@ -378,13 +681,27 @@ function registerPort(
   ports.set(windowId, port);
   port.start();
 
-  // Listen for messages from renderer
   port.on('message', (event: { data: unknown }) => {
     handleRendererMessage(sessionId, event.data as RendererToWorkerPortMessage);
   });
 
   if (isOwner) {
     session.ownerWindowId = windowId;
+
+    // In daemon mode, request scrollback
+    if (USE_DAEMON_MODE && daemonBridge?.connected) {
+      daemonBridge.send({
+        type: 'attach',
+        id: sessionId,
+      });
+
+      const scrollbackHandler = (scrollbackSessionId: string, data: string) => {
+        if (scrollbackSessionId === sessionId && data) {
+          sendToRenderer(sessionId, data);
+        }
+      };
+      daemonBridge.once('scrollback', scrollbackHandler);
+    }
   }
 
   console.info(
@@ -406,7 +723,6 @@ function unregisterPort(sessionId: string, windowId: number): void {
     ports.delete(windowId);
   }
 
-  // Clear owner if this was the owner
   const session = sessions.get(sessionId);
   if (session && session.ownerWindowId === windowId) {
     session.ownerWindowId = undefined;
@@ -428,10 +744,9 @@ function handleRendererMessage(
   if (!session) return;
 
   if (message.type === 'WRITE') {
-    session.lastActivity = Date.now();
-    session.pty.write(message.data);
+    writeToSession(sessionId, message.data);
   } else if (message.type === 'RESIZE') {
-    session.pty.resize(message.cols, message.rows);
+    resizeSession(sessionId, message.cols, message.rows);
   }
 }
 
@@ -465,7 +780,13 @@ function handleMessage(rawMessage: unknown): void {
     return;
   }
 
-  if (isCreateSessionMessage(message)) {
+  if (isConnectDaemonMessage(message)) {
+    connectToDaemon(message.socketPath).catch((error) => {
+      console.error('[TerminalWorker] Failed to connect to daemon:', error);
+    });
+  } else if (isDisconnectDaemonMessage(message)) {
+    disconnectFromDaemon();
+  } else if (isCreateSessionMessage(message)) {
     createSession(
       message.sessionId,
       message.directory,
@@ -507,28 +828,50 @@ function handleMessage(rawMessage: unknown): void {
 function shutdown(): void {
   console.info('[TerminalWorker] Shutting down...');
 
-  // Destroy all sessions
-  for (const sessionId of sessions.keys()) {
-    destroySession(sessionId);
+  if (USE_DAEMON_MODE) {
+    // Disconnect from daemon (sessions persist)
+    disconnectFromDaemon();
+  } else {
+    // Destroy all sessions
+    for (const sessionId of sessions.keys()) {
+      destroySession(sessionId);
+    }
   }
+
+  // Close all ports
+  for (const ports of sessionPorts.values()) {
+    for (const port of ports.values()) {
+      try {
+        port.close();
+      } catch {
+        // Port may already be closed
+      }
+    }
+  }
+  sessionPorts.clear();
+  sessions.clear();
 
   process.exit(0);
 }
 
 function initialize(): void {
-  // Load node-pty
-  pty = loadPty();
+  console.info(`[TerminalWorker] Mode: ${USE_DAEMON_MODE ? 'DAEMON' : 'LEGACY'}`);
 
-  if (!pty) {
-    const errorMsg: WorkerErrorMessage = {
-      type: 'WORKER_ERROR',
-      id: 'init-error',
-      timestamp: Date.now(),
-      error: 'Failed to load node-pty',
-    };
-    sendToMain(errorMsg);
-    process.exit(1);
-    return;
+  if (!USE_DAEMON_MODE) {
+    // Legacy mode: load node-pty
+    pty = loadPty();
+
+    if (!pty) {
+      const errorMsg: WorkerErrorMessage = {
+        type: 'WORKER_ERROR',
+        id: 'init-error',
+        timestamp: Date.now(),
+        error: 'Failed to load node-pty',
+      };
+      sendToMain(errorMsg);
+      process.exit(1);
+      return;
+    }
   }
 
   // Send ready signal

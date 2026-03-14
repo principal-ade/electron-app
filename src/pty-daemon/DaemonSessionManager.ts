@@ -18,6 +18,7 @@ import {
   DEFAULT_ROWS,
   TERM_TYPE,
 } from '../shared/pty-daemon/constants';
+import { addSessionActionEvent, addErrorEvent } from './telemetry';
 
 // node-pty is loaded dynamically to avoid webpack bundling issues
 let pty: typeof import('node-pty') | null = null;
@@ -133,6 +134,9 @@ export class DaemonSessionManager extends EventEmitter {
       // Store session
       this.sessions.set(id, session);
 
+      // Add telemetry event
+      addSessionActionEvent('created', id, this.sessions.size);
+
       // Emit created message
       this.emitMessage({
         type: 'created',
@@ -149,6 +153,15 @@ export class DaemonSessionManager extends EventEmitter {
         }
       }, 100);
     } catch (error) {
+      // Add error telemetry event
+      addErrorEvent(
+        'session.create',
+        error instanceof Error ? error.message : String(error),
+        'SESSION_CREATE_FAILED',
+        id,
+        false,
+      );
+
       this.emitMessage({
         type: 'error',
         id,
@@ -212,6 +225,10 @@ export class DaemonSessionManager extends EventEmitter {
     }
 
     this.sessions.delete(sessionId);
+
+    // Add telemetry event
+    addSessionActionEvent('destroyed', sessionId, this.sessions.size);
+
     this.emit('sessionDestroyed', sessionId);
   }
 
@@ -249,6 +266,9 @@ export class DaemonSessionManager extends EventEmitter {
       });
       return null;
     }
+
+    // Add telemetry event
+    addSessionActionEvent('attached', sessionId, this.sessions.size);
 
     return session.scrollback.getAll();
   }

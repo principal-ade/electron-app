@@ -20,7 +20,7 @@
         },
         "summary": "**Session Created:**\n- Session ID: `{{session.id}}`"
       },
-      "filterDefault": false
+      "filterDefault": true
     }
   ]
 }

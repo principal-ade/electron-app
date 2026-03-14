@@ -13,10 +13,13 @@
       "template": {
         "introduction": "**Connecting to PTY Daemon**\n\nDaemon already running, connecting via socket.",
         "events": {
-          "terminal.daemon.client_action": "[1] Client {{action}}: {{message.type}}",
-          "terminal.socket.message": "[2] Socket {{direction}}: {{message.type}}",
-          "terminal.daemon.session_action": "[3] Session {{action}}: `{{session.id}}` ({{sessions.count}} total)",
-          "terminal.pty.spawned": "[4] PTY `{{session.id}}` running (pid={{pid}})"
+          "terminal.socket.connection": "[1] Socket {{state}}: attempt={{attempt}}, error={{error}}",
+          "terminal.worker.action": "[2] Worker {{action}}: session=`{{session.id}}`, direction={{direction}}",
+          "terminal.daemon.client_action": "[3] Client {{action}}: {{message.type}}",
+          "terminal.socket.message": "[4] Socket {{direction}}: {{message.type}}",
+          "terminal.daemon.session_action": "[5] Session {{action}}: `{{session.id}}` ({{sessions.count}} total)",
+          "terminal.pty.spawned": "[6] PTY `{{session.id}}` running (pid={{pid}})",
+          "terminal.health.check": "[7] Health {{direction}}: latency={{latency.ms}}ms, missed={{missed.count}}"
         },
         "summary": "**Connected**\n- Existing sessions: {{sessions.count}}"
       },
@@ -29,11 +32,27 @@
       "template": {
         "introduction": "**Starting PTY Daemon**\n\nNo daemon found, spawning new process.",
         "events": {
-          "terminal.daemon.client_action": "[1] Client {{action}}: {{message.type}}",
-          "terminal.daemon.server_event": "[2] Server {{event}}: {{clients.count}} clients",
-          "terminal.socket.message": "[3] Socket {{direction}}: {{message.type}}"
+          "terminal.socket.connection": "[1] Socket {{state}}: attempt={{attempt}}, error={{error}}",
+          "terminal.daemon.phase": "[2] Daemon {{phase}}: {{reason}} (uptime={{uptime.ms}}ms)",
+          "terminal.worker.action": "[3] Worker {{action}}: session=`{{session.id}}`, direction={{direction}}",
+          "terminal.daemon.client_action": "[4] Client {{action}}: {{message.type}}",
+          "terminal.daemon.server_event": "[5] Server {{event}}: {{clients.count}} clients",
+          "terminal.socket.message": "[6] Socket {{direction}}: {{message.type}}"
         },
         "summary": "**Daemon Started**\n- New daemon spawned"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "connect-error",
+      "description": "Connection failed with error",
+      "priority": 3,
+      "template": {
+        "introduction": "**Connection Error**\n\nConnection to daemon failed.",
+        "events": {
+          "terminal.error": "[1] Error: {{source}} - {{error.message}} (code={{error.code}}, session={{session.id}}, recoverable={{recoverable}})"
+        },
+        "summary": "**Connection Failed**\n- Check daemon status"
       },
       "filterDefault": false
     }

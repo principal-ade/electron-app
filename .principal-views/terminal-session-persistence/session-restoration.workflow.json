@@ -14,11 +14,15 @@
         "introduction": "**Restoring Terminal Sessions**\n\nApp restarted after update, restoring sessions from daemon.",
         "events": {
           "terminal.persistence.manager_action": "[1] Manager {{action}}: {{session.count}} sessions",
-          "terminal.daemon.client_action": "[2] Client {{action}}: {{message.type}}",
-          "terminal.daemon.session_action": "[3] Session {{action}}: `{{session.id}}` ({{sessions.count}} total)",
-          "terminal.pty.data": "[4] Scrollback for `{{session.id}}`: {{data.size}} bytes",
-          "terminal.pty.resize": "[5] Terminal `{{session.id}}` resized to {{cols}}x{{rows}}",
-          "terminal.renderer.data_received": "[6] Renderer connected to `{{session.id}}`"
+          "terminal.persistence.store": "[2] Store {{action}}: {{session.count}} sessions, path={{file.path}}",
+          "terminal.daemon.client_action": "[3] Client {{action}}: {{message.type}}",
+          "terminal.socket.connection": "[4] Socket {{state}}: attempt={{attempt}}, error={{error}}",
+          "terminal.daemon.session_action": "[5] Session {{action}}: `{{session.id}}` ({{sessions.count}} total)",
+          "terminal.scrollback.action": "[6] Scrollback {{action}}: `{{session.id}}` ({{lines.count}} lines, {{buffer.size}} bytes)",
+          "terminal.bridge.data": "[7] Bridge {{direction}}: `{{session.id}}` ({{data.size}} bytes)",
+          "terminal.pty.data": "[8] PTY data for `{{session.id}}`: {{data.size}} bytes",
+          "terminal.pty.resize": "[9] Terminal `{{session.id}}` resized to {{cols}}x{{rows}}",
+          "terminal.renderer.data_received": "[10] Renderer connected to `{{session.id}}`"
         },
         "summary": "**Sessions Restored**\n- Restored: {{session.count}}\n- Running processes preserved"
       },
@@ -32,10 +36,42 @@
         "introduction": "**Restoring Sessions (Partial)**\n\nSome sessions may have exited while app was down.",
         "events": {
           "terminal.persistence.manager_action": "[1] Manager {{action}}: {{session.count}} sessions",
-          "terminal.daemon.session_action": "[2] Session {{action}}: `{{session.id}}`",
-          "terminal.pty.exit": "[3] Session `{{session.id}}` exited (code={{exit.code}})"
+          "terminal.persistence.store": "[2] Store {{action}}: {{session.count}} sessions, path={{file.path}}",
+          "terminal.daemon.session_action": "[3] Session {{action}}: `{{session.id}}`",
+          "terminal.daemon.client_action": "[4] Client {{action}}: {{message.type}}",
+          "terminal.pty.exit": "[5] Session `{{session.id}}` exited (code={{exit.code}})"
         },
         "summary": "**Partial Restoration**\n- Some sessions had exited"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "restore-scrollback-only",
+      "description": "Restore terminal content from scrollback buffer without full session restore",
+      "priority": 3,
+      "template": {
+        "introduction": "**Restoring Scrollback Only**\n\nRetrieving terminal history from daemon (session already active).",
+        "events": {
+          "terminal.daemon.client_action": "[1] Client {{action}}: {{message.type}}",
+          "terminal.scrollback.action": "[2] Scrollback {{action}}: `{{session.id}}` ({{lines.count}} lines, {{buffer.size}} bytes)",
+          "terminal.bridge.data": "[3] Bridge {{direction}}: `{{session.id}}` ({{data.size}} bytes)",
+          "terminal.health.check": "[4] Health {{direction}}: latency={{latency.ms}}ms, missed={{missed.count}}",
+          "terminal.renderer.data_received": "[5] Renderer received scrollback for `{{session.id}}`"
+        },
+        "summary": "**Scrollback Restored**\n- History available"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "restore-error",
+      "description": "Error occurred during session restoration",
+      "priority": 4,
+      "template": {
+        "introduction": "**Restoration Error**\n\nAn error occurred while restoring sessions.",
+        "events": {
+          "terminal.error": "[1] Error: {{source}} - {{error.message}} (code={{error.code}}, session={{session.id}}, recoverable={{recoverable}})"
+        },
+        "summary": "**Error During Restoration**\n- Check logs for details"
       },
       "filterDefault": false
     }

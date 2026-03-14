@@ -42,6 +42,15 @@ resources:
     test.suite: "integration"
     project: "principal-ade"
 
+  principal-ade-daemon:
+    service.name: "principal-ade-daemon"
+    service.version: "0.0.410"
+    deployment.environment: "development"
+    process.type: "pty-daemon"
+    project: "principal-ade"
+    owned-scopes:
+      - "terminal.daemon"
+
 nodeComponents:
   # ============================================
   # PROCESSES
@@ -51,6 +60,12 @@ nodeComponents:
     description: "Electron main process - Node.js backend handling IPC, services, and system operations"
     tags: ["process"]
     color: "#4F46E5"
+
+  pty-daemon:
+    defaultLabel: "PTY Daemon"
+    description: "Standalone Node.js process managing persistent PTY sessions via Unix socket"
+    tags: ["process"]
+    color: "#0D9488"
 
   renderer-process:
     defaultLabel: "Renderer Process"

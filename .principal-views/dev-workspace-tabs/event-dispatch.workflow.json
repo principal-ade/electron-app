@@ -17,7 +17,8 @@
           "devworkspace.eventbus.dispatch": "2. Event bus dispatching `{{event.name}}` (source: {{event.source}}) to {{handlers.count}} handler(s)"
         },
         "summary": "**Dispatched:** `{{event.name}}`"
-      }
+      },
+      "filterDefault": true
     },
     {
       "id": "dispatch-panel-event",

@@ -13,12 +13,11 @@
       "template": {
         "introduction": "**PTY Daemon Starting**\n\nInitializing independent PTY daemon process.",
         "events": {
-          "terminal.daemon.server_event": "[1] Server {{event}}: {{clients.count}} clients",
-          "terminal.daemon.session_action": "[2] Session manager {{action}}: `{{session.id}}` ({{sessions.count}} total)"
+          "terminal.daemon.phase": "[1] Daemon {{phase}}: {{reason}} (uptime={{uptime.ms}}ms)",
+          "terminal.daemon.server_event": "[2] Server {{event}}: {{clients.count}} clients"
         },
-        "summary": "**Daemon Ready**\n- Sessions: {{sessions.count}}"
-      },
-      "filterDefault": false
+        "summary": "**Daemon Ready**"
+      }
     }
   ]
 }

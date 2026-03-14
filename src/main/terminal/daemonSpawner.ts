@@ -21,13 +21,31 @@ import {
  * Get the path to the daemon bundle.
  */
 export function getDaemonPath(): string {
-  // In production, it's next to the main bundle
-  // In development, it's in dist/main
-  const basePath = app.isPackaged
-    ? path.join(process.resourcesPath, 'app.asar', 'dist', 'main')
-    : path.join(__dirname);
+  if (app.isPackaged) {
+    // In production, daemon is unpacked from asar for proper subprocess execution
+    // (configured in package.json asarUnpack)
+    return path.join(process.resourcesPath, 'app.asar.unpacked', 'dist', 'main', 'pty-daemon.cjs');
+  } else {
+    // In development, app.getAppPath() returns .erb/dll/ due to webpack
+    // We need to go up to the actual project root
+    const appPath = app.getAppPath();
+    const projectRoot = appPath.includes('.erb/dll')
+      ? path.resolve(appPath, '..', '..')
+      : appPath;
+    return path.join(projectRoot, 'dist', 'main', 'pty-daemon.cjs');
+  }
+}
 
-  return path.join(basePath, 'pty-daemon.cjs');
+/**
+ * Get the NODE_PATH for native modules in a packaged app.
+ * node-pty is unpacked from asar, so we need to tell Node where to find it.
+ */
+function getNodePathForPackaged(): string {
+  if (app.isPackaged) {
+    // Native modules are in app.asar.unpacked/node_modules
+    return path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules');
+  }
+  return '';
 }
 
 /**
@@ -109,6 +127,7 @@ export async function getDaemonPid(): Promise<number | null> {
  */
 export async function spawnDaemon(): Promise<void> {
   const daemonPath = getDaemonPath();
+  console.log(`[daemonSpawner] Daemon path: ${daemonPath}`);
 
   // Check if daemon file exists
   try {
@@ -125,14 +144,26 @@ export async function spawnDaemon(): Promise<void> {
     await fs.promises.unlink(SOCKET_PATH).catch(() => {});
   }
 
+  // Build environment for daemon
+  const daemonEnv: NodeJS.ProcessEnv = {
+    ...process.env,
+    NODE_ENV: process.env.NODE_ENV || 'production',
+  };
+
+  // In packaged app, add NODE_PATH so daemon can find unpacked native modules
+  const nodePath = getNodePathForPackaged();
+  if (nodePath) {
+    daemonEnv.NODE_PATH = nodePath;
+  }
+
   // Spawn daemon as detached process
+  // Use Electron's embedded Node.js runtime (process.execPath)
   const child = spawn(process.execPath, [daemonPath], {
     detached: true,
     stdio: 'ignore',
-    env: {
-      ...process.env,
-      NODE_ENV: process.env.NODE_ENV || 'production',
-    },
+    env: daemonEnv,
+    // Set cwd to user's home directory to avoid issues with asar paths
+    cwd: app.isPackaged ? DAEMON_DIR : undefined,
   });
 
   // Unref to allow parent to exit independently

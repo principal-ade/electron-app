@@ -14,11 +14,81 @@
         "introduction": "**App Update with Session Preservation**\n\nUpdate available, preparing to preserve terminal sessions.",
         "events": {
           "terminal.persistence.manager_action": "[1] Manager {{action}}: {{session.count}} sessions to preserve",
-          "terminal.daemon.client_action": "[2] Client {{action}}: {{message.type}}",
-          "terminal.socket.message": "[3] Socket {{direction}}: {{message.type}} - daemon stays alive",
-          "terminal.daemon.session_action": "[4] Session {{action}}: `{{session.id}}` ({{sessions.count}} restored)"
+          "terminal.persistence.store": "[2] Store {{action}}: {{session.count}} sessions, path={{file.path}}",
+          "terminal.daemon.client_action": "[3] Client {{action}}: {{message.type}}",
+          "terminal.socket.connection": "[4] Socket {{state}}: attempt={{attempt}}, error={{error}}",
+          "terminal.socket.message": "[5] Socket {{direction}}: {{message.type}} - daemon stays alive",
+          "terminal.daemon.session_action": "[6] Session {{action}}: `{{session.id}}` ({{sessions.count}} restored)",
+          "terminal.scrollback.action": "[7] Scrollback {{action}}: `{{session.id}}` ({{lines.count}} lines, {{buffer.size}} bytes)",
+          "terminal.bridge.data": "[8] Bridge {{direction}}: `{{session.id}}` ({{data.size}} bytes)"
         },
         "summary": "**Update Complete**\n- Sessions preserved: {{sessions.count}}\n- Running processes: intact"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "update-reconnection",
+      "description": "App reconnects to daemon after update restart",
+      "priority": 2,
+      "template": {
+        "introduction": "**Reconnecting After Update**\n\nApp restarted, reconnecting to preserved sessions.",
+        "events": {
+          "terminal.daemon.phase": "[1] Daemon {{phase}}: {{reason}} (uptime={{uptime.ms}}ms)",
+          "terminal.socket.connection": "[2] Socket {{state}}: attempt={{attempt}}, error={{error}}",
+          "terminal.worker.action": "[3] Worker {{action}}: direction={{direction}}, session=`{{session.id}}`",
+          "terminal.daemon.client_action": "[4] Client {{action}}: {{message.type}}",
+          "terminal.daemon.server_event": "[5] Server {{event}}: {{clients.count}} clients",
+          "terminal.daemon.session_action": "[6] Session {{action}}: `{{session.id}}` ({{sessions.count}} total)",
+          "terminal.health.check": "[7] Health {{direction}}: latency={{latency.ms}}ms, missed={{missed.count}}",
+          "terminal.renderer.data_received": "[8] Renderer connected to `{{session.id}}`"
+        },
+        "summary": "**Reconnected**\n- Sessions restored from daemon"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "update-pty-restore",
+      "description": "PTY processes restored after update",
+      "priority": 3,
+      "template": {
+        "introduction": "**PTY Restoration**\n\nRestoring terminal processes and output.",
+        "events": {
+          "terminal.pty.spawned": "[1] PTY `{{session.id}}` running (pid={{pid}})",
+          "terminal.pty.data": "[2] PTY data for `{{session.id}}`: {{data.size}} bytes",
+          "terminal.pty.resize": "[3] Terminal `{{session.id}}` resized to {{cols}}x{{rows}}",
+          "terminal.bridge.data": "[4] Bridge {{direction}}: `{{session.id}}` ({{data.size}} bytes)",
+          "terminal.renderer.data_received": "[5] Renderer received data for `{{session.id}}`"
+        },
+        "summary": "**PTY Restored**\n- Terminal output flowing"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "update-session-exit",
+      "description": "Handle session exits during update restoration",
+      "priority": 4,
+      "template": {
+        "introduction": "**Session Exit During Update**\n\nSome sessions exited while app was updating.",
+        "events": {
+          "terminal.daemon.session_action": "[1] Session {{action}}: `{{session.id}}` ({{sessions.count}} total)",
+          "terminal.pty.exit": "[2] Session `{{session.id}}` exited (code={{exit.code}})",
+          "terminal.daemon.idle": "[3] Idle check: {{idle.duration.ms}}ms, sessions={{sessions.count}}, clients={{clients.count}}, action={{action}}",
+          "terminal.persistence.store": "[4] Store {{action}}: {{session.count}} sessions, path={{file.path}}"
+        },
+        "summary": "**Session Exit Handled**\n- Some sessions may need restart"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "update-error",
+      "description": "Error occurred during update process",
+      "priority": 5,
+      "template": {
+        "introduction": "**Update Error**\n\nAn error occurred during the update process.",
+        "events": {
+          "terminal.error": "[1] Error: {{source}} - {{error.message}} (code={{error.code}}, session={{session.id}}, recoverable={{recoverable}})"
+        },
+        "summary": "**Error During Update**\n- Check logs for details"
       },
       "filterDefault": false
     }

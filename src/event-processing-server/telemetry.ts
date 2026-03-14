@@ -62,7 +62,7 @@ class UtilityProcessTelemetryProvider {
       trace.setGlobalTracerProvider(this.provider);
 
       this.isInitialized = true;
-      console.log('[UtilityTelemetry] Utility process telemetry initialized');
+      console.info('[UtilityTelemetry] Utility process telemetry initialized');
     } catch (error) {
       console.error('[UtilityTelemetry] Failed to initialize:', error);
       this.provider = null;

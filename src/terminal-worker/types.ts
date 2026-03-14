@@ -72,6 +72,15 @@ export interface ShutdownMessage extends BaseMessage {
   type: 'SHUTDOWN';
 }
 
+export interface ConnectDaemonMessage extends BaseMessage {
+  type: 'CONNECT_DAEMON';
+  socketPath: string;
+}
+
+export interface DisconnectDaemonMessage extends BaseMessage {
+  type: 'DISCONNECT_DAEMON';
+}
+
 export type MainToWorkerMessage =
   | CreateSessionMessage
   | DestroySessionMessage
@@ -81,7 +90,9 @@ export type MainToWorkerMessage =
   | RegisterPortMessage
   | UnregisterPortMessage
   | SetOwnerMessage
-  | ShutdownMessage;
+  | ShutdownMessage
+  | ConnectDaemonMessage
+  | DisconnectDaemonMessage;
 
 // =============================================================================
 // Worker -> Main Messages
@@ -116,12 +127,42 @@ export interface WorkerErrorMessage extends BaseMessage {
   context?: Record<string, unknown>;
 }
 
+export interface DaemonConnectedMessage extends BaseMessage {
+  type: 'DAEMON_CONNECTED';
+}
+
+export interface DaemonDisconnectedMessage extends BaseMessage {
+  type: 'DAEMON_DISCONNECTED';
+  error?: string;
+}
+
+export interface DaemonSessionsMessage extends BaseMessage {
+  type: 'DAEMON_SESSIONS';
+  sessions: DaemonSessionInfo[];
+}
+
+/**
+ * Session info from daemon (matches protocol.ts SessionInfo)
+ */
+export interface DaemonSessionInfo {
+  id: string;
+  cwd: string;
+  pid: number;
+  createdAt: string;
+  lastActivity: string;
+  cols: number;
+  rows: number;
+}
+
 export type WorkerToMainMessage =
   | ReadyMessage
   | SessionCreatedMessage
   | SessionExitMessage
   | SessionErrorMessage
-  | WorkerErrorMessage;
+  | WorkerErrorMessage
+  | DaemonConnectedMessage
+  | DaemonDisconnectedMessage
+  | DaemonSessionsMessage;
 
 // =============================================================================
 // Port Messages (sent via MessagePort between worker and renderer)

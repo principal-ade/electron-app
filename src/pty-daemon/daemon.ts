@@ -20,6 +20,12 @@ import {
   LogLevel,
   DEFAULT_LOG_LEVEL,
 } from '../shared/pty-daemon/constants';
+import {
+  daemonTelemetry,
+  addPhaseEvent,
+  addIdleEvent,
+  addErrorEvent,
+} from './telemetry';
 
 // Parse command line arguments
 function parseArgs(): { socketPath: string; logLevel: LogLevel } {
@@ -52,6 +58,13 @@ async function main(): Promise<void> {
   logger.info(`Log level: ${logLevel}`);
   logger.info(`PID: ${process.pid}`);
 
+  // Initialize telemetry and start the startup workflow span
+  await daemonTelemetry.initialize();
+  daemonTelemetry.startStartupWorkflow();
+
+  // Add starting event
+  addPhaseEvent('starting', 'daemon process initializing');
+
   // Ensure daemon directory exists
   try {
     await fs.promises.mkdir(DAEMON_DIR, { recursive: true, mode: 0o700 });
@@ -76,16 +89,46 @@ async function main(): Promise<void> {
 
   // Idle shutdown timer
   let idleTimer: NodeJS.Timeout | null = null;
+  let idleStartTime: number | null = null;
 
   function resetIdleTimer(): void {
     if (idleTimer) {
       clearTimeout(idleTimer);
+      // Add cancelled event if we were idle
+      if (idleStartTime !== null) {
+        const idleDuration = Date.now() - idleStartTime;
+        addIdleEvent(
+          idleDuration,
+          sessionManager.getSessionCount(),
+          server.getClientCount(),
+          'cancelled',
+        );
+        idleStartTime = null;
+      }
     }
 
     // Only start idle timer if no sessions and no clients
     if (sessionManager.getSessionCount() === 0 && server.getClientCount() === 0) {
       logger.debug('Starting idle shutdown timer...');
+      idleStartTime = Date.now();
+
+      // Add checking event
+      addIdleEvent(
+        0,
+        sessionManager.getSessionCount(),
+        server.getClientCount(),
+        'checking',
+      );
+
       idleTimer = setTimeout(() => {
+        // Add timeout event
+        addIdleEvent(
+          idleStartTime ? Date.now() - idleStartTime : IDLE_TIMEOUT_MS,
+          sessionManager.getSessionCount(),
+          server.getClientCount(),
+          'timeout',
+        );
+
         logger.info('Idle timeout reached, shutting down...');
         shutdown();
       }, IDLE_TIMEOUT_MS);
@@ -124,6 +167,9 @@ async function main(): Promise<void> {
 
     logger.info('Shutting down...');
 
+    // Add shutdown event
+    addPhaseEvent('shutdown', 'graceful shutdown requested');
+
     // Clear idle timer
     if (idleTimer) {
       clearTimeout(idleTimer);
@@ -141,6 +187,9 @@ async function main(): Promise<void> {
     } catch {
       // Ignore
     }
+
+    // Flush telemetry before exit (this ends the workflow span)
+    await daemonTelemetry.shutdown();
 
     logger.info('Shutdown complete');
     process.exit(0);
@@ -164,11 +213,30 @@ async function main(): Promise<void> {
   // Handle uncaught errors
   process.on('uncaughtException', (err) => {
     logger.error('Uncaught exception:', err);
+
+    // Add error event
+    addErrorEvent(
+      'daemon.uncaughtException',
+      err.message,
+      'UNCAUGHT_EXCEPTION',
+      undefined,
+      false,
+    );
+
     shutdown();
   });
 
   process.on('unhandledRejection', (reason) => {
     logger.error('Unhandled rejection:', reason);
+
+    // Add error event
+    addErrorEvent(
+      'daemon.unhandledRejection',
+      reason instanceof Error ? reason.message : String(reason),
+      'UNHANDLED_REJECTION',
+      undefined,
+      true, // Usually recoverable
+    );
   });
 
   // Start server
@@ -176,10 +244,25 @@ async function main(): Promise<void> {
     await server.start();
     logger.info('PTY daemon ready');
 
+    // Add ready event and end the startup workflow
+    addPhaseEvent('ready', 'daemon accepting connections');
+    daemonTelemetry.endStartupWorkflow();
+
     // Start idle timer (will shut down if no activity)
     resetIdleTimer();
   } catch (err) {
     logger.error('Failed to start server:', err);
+
+    // Add error event
+    addErrorEvent(
+      'daemon.startup',
+      err instanceof Error ? err.message : String(err),
+      'STARTUP_FAILED',
+      undefined,
+      false,
+    );
+
+    await daemonTelemetry.shutdown();
     process.exit(1);
   }
 }
