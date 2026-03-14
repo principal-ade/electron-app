@@ -3,6 +3,7 @@
  */
 
 import { OTELCollectorServer, ServerStats, WILDCARD_SOURCE, OTLPTraceRequest } from '@principal-ai/otel-collector-server';
+import type { MessagePort } from 'worker_threads';
 import { app, MessageChannelMain, MessagePortMain } from 'electron';
 import path from 'path';
 import os from 'os';
@@ -132,7 +133,8 @@ export class OtelCollectorService {
       port2.start();
 
       // Register port1 with the server using wildcard to receive ALL traces
-      this.server.registerPort('__monitor__', WILDCARD_SOURCE, port1);
+      // Cast MessagePortMain to MessagePort - they're compatible at runtime in Electron
+      this.server.registerPort('__monitor__', WILDCARD_SOURCE, port1 as unknown as MessagePort);
       this.monitorPort = port2;
 
       console.log('[OtelCollectorService] Registered catch-all monitor port for trace storage');
@@ -180,7 +182,8 @@ export class OtelCollectorService {
       throw new Error('OTEL Collector not started');
     }
 
-    this.server.registerPort(windowId, serviceIdentifier, port);
+    // Cast MessagePortMain to MessagePort - they're compatible at runtime in Electron
+    this.server.registerPort(windowId, serviceIdentifier, port as unknown as MessagePort);
     console.log(`[OtelCollectorService] Registered port for window ${windowId}, service: ${serviceIdentifier}`);
   }
 
@@ -195,7 +198,12 @@ export class OtelCollectorService {
       throw new Error('OTEL Collector not started');
     }
 
-    this.server.registerPortForServices(windowId, serviceIdentifiers, port);
+    // Register the port for each service identifier
+    // Cast MessagePortMain to MessagePort - they're compatible at runtime in Electron
+    const portAsMessagePort = port as unknown as MessagePort;
+    for (const serviceIdentifier of serviceIdentifiers) {
+      this.server.registerPort(windowId, serviceIdentifier, portAsMessagePort);
+    }
     console.log(`[OtelCollectorService] Registered port for window ${windowId}, services: [${serviceIdentifiers.join(', ')}]`);
   }
 
