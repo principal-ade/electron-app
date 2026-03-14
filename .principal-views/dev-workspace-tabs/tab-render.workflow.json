@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Tab Content Render",
   "description": "Span covering tab content rendering in TabbedTerminalPanel",
-  "mode": "span-tree",
   "canvas": ".principal-views/dev-workspace-tabs/dev-workspace-tabs.otel.canvas",
   "spanPattern": "devworkspace.tab.render",
   "scenarios": [

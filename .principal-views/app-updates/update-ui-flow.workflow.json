@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Update UI Flow",
   "description": "Renderer-side UI interactions for the update system",
-  "mode": "span-tree",
   "canvas": ".principal-views/app-updates/app-updates.otel.canvas",
   "spanPattern": "app_updates.ui",
   "scenarios": [

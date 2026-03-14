@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Terminal Activity Update (Main Process)",
   "description": "Main process handling terminal activity state changes",
-  "mode": "span-tree",
   "canvas": ".principal-views/terminal-activity-tracking/terminal-activity-tracking.otel.canvas",
   "spanPattern": "terminal.activity.update",
   "scenarios": [

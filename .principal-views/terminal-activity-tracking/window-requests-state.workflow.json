@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Window Requests Activity State",
   "description": "Flow when a window loads and requests current activity state from main process",
-  "mode": "span-tree",
   "canvas": ".principal-views/terminal-activity-tracking/terminal-activity-tracking.otel.canvas",
   "spanPattern": "terminal.activity.state_request",
   "scenarios": [

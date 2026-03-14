@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Ownership Transfer",
   "description": "Terminal session ownership claim and transfer between windows",
-  "mode": "span-tree",
   "canvas": ".principal-views/terminal-session-management/terminal-session-management.otel.canvas",
   "spanPattern": "terminal.ownership",
   "scenarios": [

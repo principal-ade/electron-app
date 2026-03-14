@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Window Session Broadcast",
   "description": "Renderer window receives session update from main process",
-  "mode": "span-tree",
   "canvas": ".principal-views/event-processing-server/event-processing-server.otel.canvas",
   "spanPattern": "event.window.session_updated",
   "scenarios": [

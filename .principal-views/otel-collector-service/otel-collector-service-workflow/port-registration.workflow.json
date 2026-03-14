@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Trace Port Registration",
   "description": "Main process handles IPC request to register MessagePort for trace delivery",
-  "mode": "span-tree",
   "canvas": ".principal-views/otel-collector-service/otel-collector-service.otel.canvas",
   "spanPattern": "otel.messageport.trace_routed",
   "scenarios": [

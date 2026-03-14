@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Quality Panel Navigation",
   "description": "Monitors panel navigation to/from quality panel",
-  "mode": "span-tree",
   "canvas": ".principal-views/quality-panel-interaction/quality-panel-interaction.otel.canvas",
   "spanPattern": "quality.panel.rendered",
   "scenarios": [

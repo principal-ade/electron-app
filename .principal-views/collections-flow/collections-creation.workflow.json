@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Collection Creation",
   "description": "Standard workflow for creating a new collection in an existing GitHub setup",
-  "mode": "span-tree",
   "canvas": ".principal-views/collections-flow/collections-flow.otel.canvas",
   "spanPattern": "collections.create",
   "scenarios": [

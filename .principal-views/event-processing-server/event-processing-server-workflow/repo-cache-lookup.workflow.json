@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Repository Cache Lookup",
   "description": "Git repository cache lookup during path normalization",
-  "mode": "span-tree",
   "canvas": ".principal-views/event-processing-server/event-processing-server.otel.canvas",
   "spanPattern": "event.cache.repo_lookup",
   "scenarios": [

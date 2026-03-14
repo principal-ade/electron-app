@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Theme Update",
   "description": "POST /theme/update endpoint for updating theme properties via UserPreferences",
-  "mode": "span-tree",
   "canvas": ".principal-views/principal-mcp-bridge/principal-mcp-bridge.otel.canvas",
   "spanPattern": "principal_mcp.theme_update",
   "scenarios": [

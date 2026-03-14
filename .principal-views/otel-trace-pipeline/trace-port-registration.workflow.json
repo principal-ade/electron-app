@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "OTEL Trace Port Registration",
   "description": "Window registration process for receiving trace data via MessagePorts (Main Process)",
-  "mode": "span-tree",
   "canvas": ".principal-views/otel-trace-pipeline/otel-trace-pipeline.otel.canvas",
   "spanPattern": "otel.port.registration",
   "scenarios": [

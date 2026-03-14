@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "OTEL Trace Visualization",
   "description": "User interaction flow for selecting and viewing trace details",
-  "mode": "span-tree",
   "canvas": ".principal-views/otel-trace-pipeline/otel-trace-pipeline.otel.canvas",
   "spanPattern": "otel.trace.visualization",
   "scenarios": [

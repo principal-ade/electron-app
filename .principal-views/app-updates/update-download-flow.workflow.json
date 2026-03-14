@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Update Download Flow",
   "description": "Flow of downloading an available update",
-  "mode": "span-tree",
   "canvas": ".principal-views/app-updates/app-updates.otel.canvas",
   "spanPattern": "app_updates.download",
   "scenarios": [

@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Principal MCP Health Check",
   "description": "Health check endpoint flow for the Principal MCP Bridge",
-  "mode": "span-tree",
   "canvas": ".principal-views/principal-mcp-bridge/principal-mcp-bridge.otel.canvas",
   "spanPattern": "principal_mcp.health_check",
   "scenarios": [

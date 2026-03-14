@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Daemon Startup",
   "description": "PTY daemon process initialization and socket creation",
-  "mode": "span-tree",
   "canvas": ".principal-views/terminal-session-persistence/terminal-session-persistence.otel.canvas",
   "spanPattern": "terminal.daemon.startup",
   "scenarios": [

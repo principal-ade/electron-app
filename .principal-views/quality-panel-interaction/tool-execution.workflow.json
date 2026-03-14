@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Quality Tool Execution",
   "description": "Monitors quality tool execution from UI click to results display",
-  "mode": "span-tree",
   "canvas": ".principal-views/quality-panel-interaction/quality-panel-interaction.otel.canvas",
   "spanPattern": "quality.tool.completed",
   "scenarios": [

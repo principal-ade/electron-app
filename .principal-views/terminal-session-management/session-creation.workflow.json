@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Session Creation",
   "description": "Terminal session creation flow from renderer through TIPC to worker",
-  "mode": "span-tree",
   "canvas": ".principal-views/terminal-session-management/terminal-session-management.otel.canvas",
   "spanPattern": "terminal.session.create",
   "scenarios": [

@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Host Receives Activity Event",
   "description": "Panel host receives terminal activity change event from terminal panel",
-  "mode": "span-tree",
   "canvas": ".principal-views/terminal-activity-tracking/terminal-activity-tracking.otel.canvas",
   "spanPattern": "terminal.activity.host_handle",
   "scenarios": [

@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Update Install Flow",
   "description": "Flow of installing a downloaded update",
-  "mode": "span-tree",
   "canvas": ".principal-views/app-updates/app-updates.otel.canvas",
   "spanPattern": "app_updates.install",
   "scenarios": [

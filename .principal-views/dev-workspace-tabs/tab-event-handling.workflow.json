@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Tab Event Handling",
   "description": "Span covering tab event handler execution - from event received to tab created/focused",
-  "mode": "span-tree",
   "canvas": ".principal-views/dev-workspace-tabs/dev-workspace-tabs.otel.canvas",
   "spanPattern": "devworkspace.tab.handle",
   "scenarios": [

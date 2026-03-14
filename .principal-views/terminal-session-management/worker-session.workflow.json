@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Worker Session Created",
   "description": "Terminal worker process created a PTY session",
-  "mode": "span-tree",
   "canvas": ".principal-views/terminal-session-management/terminal-session-management.otel.canvas",
   "spanPattern": "terminal.worker.session",
   "scenarios": [

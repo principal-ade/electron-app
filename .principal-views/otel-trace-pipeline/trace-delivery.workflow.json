@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "OTEL Trace Delivery (Main Process)",
   "description": "Main process span for receiving and storing trace data from the OTEL collector",
-  "mode": "span-tree",
   "canvas": ".principal-views/otel-trace-pipeline/otel-trace-pipeline.otel.canvas",
   "spanPattern": "otel.trace.delivery",
   "scenarios": [

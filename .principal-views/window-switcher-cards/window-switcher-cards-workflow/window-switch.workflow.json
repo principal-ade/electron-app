@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Window Switch",
   "description": "User triggers window switcher and selects a window to focus",
-  "mode": "span-tree",
   "canvas": ".principal-views/window-switcher-cards/window-switcher-cards.otel.canvas",
   "spanPattern": "window_switcher",
   "scenarios": [

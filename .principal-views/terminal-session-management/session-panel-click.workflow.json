@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Session Panel Click",
   "description": "User clicked a terminal session in the sessions panel",
-  "mode": "span-tree",
   "canvas": ".principal-views/terminal-session-management/terminal-session-management.otel.canvas",
   "spanPattern": "terminal.panel.session_click",
   "scenarios": [

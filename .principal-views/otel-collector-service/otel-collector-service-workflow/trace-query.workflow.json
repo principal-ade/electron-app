@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Trace Query",
   "description": "Main process handles IPC request to fetch traces from storage",
-  "mode": "span-tree",
   "canvas": ".principal-views/otel-collector-service/otel-collector-service.otel.canvas",
   "spanPattern": "otel.ipc.handler_invoked",
   "scenarios": [

@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Quality Artifacts Fetch",
   "description": "Monitors fetching quality metrics from GitHub Actions artifacts",
-  "mode": "span-tree",
   "canvas": ".principal-views/quality-panel-interaction/quality-panel-interaction.otel.canvas",
   "spanPattern": "quality.artifact.fetch",
   "scenarios": [

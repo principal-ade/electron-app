@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Panel Content Render",
   "description": "Span covering markdown panel rendering in right slot",
-  "mode": "span-tree",
   "canvas": ".principal-views/dev-workspace-tabs/dev-workspace-tabs.otel.canvas",
   "spanPattern": "devworkspace.panel.render",
   "scenarios": [

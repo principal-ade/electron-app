@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Start Storybook",
   "description": "User clicks the Storybook button to start a Storybook dev server",
-  "mode": "span-tree",
   "canvas": ".principal-views/storybook-button/storybook-button.otel.canvas",
   "spanPattern": "storybook.session",
   "scenarios": [

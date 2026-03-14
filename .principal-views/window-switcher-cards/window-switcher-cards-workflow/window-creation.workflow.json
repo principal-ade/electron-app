@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Window Creation with Entry",
   "description": "Dev workspace window created with AlexandriaEntry stored in metadata",
-  "mode": "span-tree",
   "canvas": ".principal-views/window-switcher-cards/window-switcher-cards.otel.canvas",
   "spanPattern": "window.open",
   "scenarios": [

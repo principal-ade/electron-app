@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Theme Schema",
   "description": "GET /theme/schema endpoint for retrieving theme documentation and available themes",
-  "mode": "span-tree",
   "canvas": ".principal-views/principal-mcp-bridge/principal-mcp-bridge.otel.canvas",
   "spanPattern": "principal_mcp.theme_schema",
   "scenarios": [

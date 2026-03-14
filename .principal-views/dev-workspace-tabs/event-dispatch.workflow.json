@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Event Dispatch",
   "description": "Span covering user trigger through event bus dispatch",
-  "mode": "span-tree",
   "canvas": ".principal-views/dev-workspace-tabs/dev-workspace-tabs.otel.canvas",
   "spanPattern": "devworkspace.event.dispatch",
   "scenarios": [

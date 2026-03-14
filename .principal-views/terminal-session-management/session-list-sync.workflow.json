@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Session List Sync",
   "description": "Window requesting and receiving terminal session list",
-  "mode": "span-tree",
   "canvas": ".principal-views/terminal-session-management/terminal-session-management.otel.canvas",
   "spanPattern": "terminal.session.list",
   "scenarios": [

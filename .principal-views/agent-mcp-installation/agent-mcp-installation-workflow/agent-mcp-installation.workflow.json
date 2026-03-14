@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Agent MCP Installation",
   "description": "Workflow for installing and configuring MCP servers for AI agents",
-  "mode": "span-tree",
   "canvas": ".principal-views/agent-mcp-installation/agent-mcp-installation.otel.canvas",
   "spanPattern": "agent_mcp",
   "scenarios": [

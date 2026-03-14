@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Preload Port Subscription",
   "description": "Renderer preload receives MessagePort and sets up trace subscription",
-  "mode": "span-tree",
   "canvas": ".principal-views/otel-collector-service/otel-collector-service.otel.canvas",
   "spanPattern": "otel.preload.port_received",
   "scenarios": [

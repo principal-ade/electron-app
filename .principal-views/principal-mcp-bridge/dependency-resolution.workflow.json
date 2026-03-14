@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Principal MCP Dependency Resolution",
   "description": "Flow of dependency resolution requests from external MCP clients through the bridge to repository monitoring",
-  "mode": "span-tree",
   "canvas": ".principal-views/principal-mcp-bridge/principal-mcp-bridge.otel.canvas",
   "spanPattern": "principal_mcp.dependency_resolution",
   "scenarios": [

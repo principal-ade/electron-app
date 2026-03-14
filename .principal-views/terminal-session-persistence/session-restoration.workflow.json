@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Session Restoration",
   "description": "Restoring terminal sessions after app restart/update",
-  "mode": "span-tree",
   "canvas": ".principal-views/terminal-session-persistence/terminal-session-persistence.otel.canvas",
   "spanPattern": "terminal.persistence.restore",
   "scenarios": [

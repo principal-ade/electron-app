@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "FileTree Sync: Error & Reactivity Analysis",
   "description": "Detects errors, reactivity issues, multi-window patterns, and different operation types in file tree sync",
-  "mode": "span-tree",
   "canvas": ".principal-views/filetree-sync/filetree-sync.otel.canvas",
   "spanPattern": "filetree.sync",
   "scenarios": [

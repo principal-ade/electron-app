@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Cache Rebuild Performance Monitor",
   "description": "Monitors filetree cache rebuild performance and detects slow rebuilds",
-  "mode": "span-tree",
   "canvas": ".principal-views/filetree-sync/filetree-sync.otel.canvas",
   "spanPattern": "filetree.cache.rebuild",
   "scenarios": [

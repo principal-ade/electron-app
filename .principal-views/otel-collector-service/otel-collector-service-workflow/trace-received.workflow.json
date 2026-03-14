@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Trace Received and Stored",
   "description": "Main process receives trace from collector and stores in buffer",
-  "mode": "span-tree",
   "canvas": ".principal-views/otel-collector-service/otel-collector-service.otel.canvas",
   "spanPattern": "otel.collector.trace_received",
   "scenarios": [

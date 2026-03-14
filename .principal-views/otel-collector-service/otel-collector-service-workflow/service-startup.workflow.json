@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "OTEL Collector Service Startup",
   "description": "Main process starts the OTEL collector service and spawns binary",
-  "mode": "span-tree",
   "canvas": ".principal-views/otel-collector-service/otel-collector-service.otel.canvas",
   "spanPattern": "otel.collector.service_started",
   "scenarios": [

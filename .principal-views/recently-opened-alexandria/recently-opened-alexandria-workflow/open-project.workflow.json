@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Open Project Flow",
   "description": "Flow for opening a local project and updating lastOpenedAt timestamp (centralized in main process)",
-  "mode": "span-tree",
   "canvas": ".principal-views/recently-opened-alexandria/recently-opened-alexandria.otel.canvas",
   "spanPattern": "alexandria",
   "scenarios": [

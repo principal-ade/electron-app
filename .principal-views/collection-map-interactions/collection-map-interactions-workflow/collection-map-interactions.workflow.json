@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Collection Map Interactions",
   "description": "Workflow for repository positioning, region management, and layout operations in CollectionMapPanel",
-  "mode": "span-tree",
   "canvas": ".principal-views/collection-map-interactions/collection-map-interactions.otel.canvas",
   "spanPattern": "collection_map",
   "scenarios": [

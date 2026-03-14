@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Update Check Flow",
   "description": "Main process flow of checking for updates - manual, silent, or periodic",
-  "mode": "span-tree",
   "canvas": ".principal-views/app-updates/app-updates.otel.canvas",
   "spanPattern": "app_updates.check",
   "scenarios": [

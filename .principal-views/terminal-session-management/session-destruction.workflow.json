@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Session Destruction",
   "description": "Terminal session destruction and cleanup flow",
-  "mode": "span-tree",
   "canvas": ".principal-views/terminal-session-management/terminal-session-management.otel.canvas",
   "spanPattern": "terminal.session.destroy",
   "scenarios": [

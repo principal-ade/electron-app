@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Session Request",
   "description": "Renderer requesting terminal session creation via TIPC",
-  "mode": "span-tree",
   "canvas": ".principal-views/terminal-session-management/terminal-session-management.otel.canvas",
   "spanPattern": "terminal.session.request",
   "scenarios": [

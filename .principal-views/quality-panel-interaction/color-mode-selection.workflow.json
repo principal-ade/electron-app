@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Quality Color Mode Selection",
   "description": "Monitors color mode selection from quality hexagon affecting File City visualization",
-  "mode": "span-tree",
   "canvas": ".principal-views/quality-panel-interaction/quality-panel-interaction.otel.canvas",
   "spanPattern": "quality.colorMode.change",
   "scenarios": [

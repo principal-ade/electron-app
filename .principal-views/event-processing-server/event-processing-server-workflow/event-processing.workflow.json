@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Agent Event Processing",
   "description": "Utility process receives and processes agent event through pipeline",
-  "mode": "span-tree",
   "canvas": ".principal-views/event-processing-server/event-processing-server.otel.canvas",
   "spanPattern": "event.pipeline.event_processed",
   "scenarios": [

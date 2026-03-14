@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Window Receives Activity Sync",
   "description": "Window receives activity sync broadcast from main process",
-  "mode": "span-tree",
   "canvas": ".principal-views/terminal-activity-tracking/terminal-activity-tracking.otel.canvas",
   "spanPattern": "terminal.activity.sync_handle",
   "scenarios": [

@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "name": "Alexandria Window Opening",
   "description": "Workflows for opening Alexandria Workspace windows",
-  "mode": "span-tree",
   "canvas": ".principal-views/alexandria-window-open/alexandria-window-open.otel.canvas",
   "spanPattern": "alexandria.window",
   "scenarios": [
