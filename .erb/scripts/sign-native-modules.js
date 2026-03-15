@@ -18,17 +18,35 @@ async function findNativeModules(appPath) {
   // Specific native modules we know about
   const knownNativeModules = [
     'node-pty/build/Release/pty.node',
+    'node-pty/build/Release/spawn-helper', // Helper binary for Unix PTY spawning
     'node-pty/build/Release/conpty.node',
     'node-pty/build/Release/conpty_console_list.node',
   ];
 
+  // Also check prebuilds directory
+  const knownPrebuilds = [
+    'node-pty/prebuilds/darwin-arm64/pty.node',
+    'node-pty/prebuilds/darwin-arm64/spawn-helper',
+    'node-pty/prebuilds/darwin-x64/pty.node',
+    'node-pty/prebuilds/darwin-x64/spawn-helper',
+  ];
+
   for (const searchPath of searchPaths) {
     if (fs.existsSync(searchPath)) {
+      // Check known native modules
       for (const modulePath of knownNativeModules) {
         const fullPath = path.join(searchPath, modulePath);
         if (fs.existsSync(fullPath)) {
           nativeModules.push(fullPath);
           console.log(`Found native module: ${fullPath}`);
+        }
+      }
+      // Check prebuilds
+      for (const modulePath of knownPrebuilds) {
+        const fullPath = path.join(searchPath, modulePath);
+        if (fs.existsSync(fullPath)) {
+          nativeModules.push(fullPath);
+          console.log(`Found prebuild: ${fullPath}`);
         }
       }
     }
@@ -45,7 +63,7 @@ async function findNativeModules(appPath) {
       
       if (stat.isDirectory() && !file.startsWith('.')) {
         findNodeFiles(fullPath);
-      } else if (file.endsWith('.node')) {
+      } else if (file.endsWith('.node') || file === 'spawn-helper') {
         if (!nativeModules.includes(fullPath)) {
           nativeModules.push(fullPath);
           console.log(`Found native module: ${fullPath}`);
