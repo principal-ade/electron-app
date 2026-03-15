@@ -162,13 +162,60 @@ try {
     }
   }
 
-  const publishArg = shouldPublish
-    ? '--publish always'
-    : '--publish never';
-  execSync(`npx electron-builder build ${publishArg}`, {
+  // Always build without publishing first (we'll publish after fixing DMGs)
+  execSync(`npx electron-builder build --publish never`, {
     cwd: projectRoot,
     stdio: 'inherit',
   });
+
+  // Step 6: Rebuild DMGs with hdiutil to fix missing Electron Framework
+  // (electron-builder's dmg-builder has a bug that drops the framework binary)
+  if (process.platform === 'darwin') {
+    console.log('🔧 Rebuilding DMGs with hdiutil...');
+    execSync('node .erb/scripts/rebuild-dmg.js', {
+      cwd: projectRoot,
+      stdio: 'inherit',
+    });
+  }
+
+  // Step 7: Publish if requested (now with fixed DMGs)
+  if (shouldPublish) {
+    console.log('📤 Publishing to GitHub...');
+    const version = mainPackageJson.version;
+    const buildDir = path.join(projectRoot, 'release', 'build');
+
+    // Create GitHub release on landing-page repo
+    const repo = 'principal-ade/landing-page';
+    try {
+      execSync(`gh release create v${version} --repo ${repo} --title "v${version}" --generate-notes`, {
+        cwd: projectRoot,
+        stdio: 'inherit',
+      });
+    } catch (e) {
+      // Release might already exist, that's ok
+      console.log(`ℹ️  Release v${version} may already exist, uploading assets...`);
+    }
+
+    // Upload all build artifacts
+    const artifacts = fs.readdirSync(buildDir).filter(f =>
+      f.endsWith('.dmg') || f.endsWith('.zip') || f.endsWith('.exe') ||
+      f.endsWith('.AppImage') || f.endsWith('.yml') || f.endsWith('.yaml') ||
+      f.endsWith('.blockmap')
+    );
+
+    for (const artifact of artifacts) {
+      const artifactPath = path.join(buildDir, artifact);
+      console.log(`📤 Uploading ${artifact}...`);
+      try {
+        execSync(`gh release upload v${version} "${artifactPath}" --repo ${repo} --clobber`, {
+          cwd: projectRoot,
+          stdio: 'inherit',
+        });
+      } catch (e) {
+        console.warn(`⚠️  Failed to upload ${artifact}: ${e.message}`);
+      }
+    }
+  }
 
   console.log('✨ Build completed successfully!');
 } catch (error) {
