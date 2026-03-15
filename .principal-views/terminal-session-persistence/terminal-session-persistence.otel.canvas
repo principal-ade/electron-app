@@ -282,12 +282,16 @@
       "pv": {
         "nodeType": "daemon",
         "shape": "rectangle",
-        "status": "draft",
-        "references": [],
+        "status": "implemented",
+        "references": [
+          "src/pty-daemon/DaemonSessionManager.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "lifecycle",
-          "files": []
+          "files": [
+            "src/pty-daemon/telemetry.ts"
+          ]
         },
         "event": {
           "name": "terminal.daemon.session_action",
@@ -354,12 +358,17 @@
       "pv": {
         "nodeType": "pty",
         "shape": "rectangle",
-        "status": "draft",
-        "references": [],
+        "status": "implemented",
+        "references": [
+          "src/pty-daemon/telemetry.ts",
+          "src/pty-daemon/DaemonSessionManager.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "process",
-          "files": []
+          "files": [
+            "src/pty-daemon/telemetry.ts"
+          ]
         },
         "event": {
           "name": "terminal.pty.spawned",
@@ -444,6 +453,136 @@
             "rows": {
               "type": "number",
               "description": "Row count"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "pty-spawn-attempt",
+      "type": "text",
+      "x": 321,
+      "y": 867,
+      "width": 120,
+      "height": 60,
+      "text": "Spawn Attempt\n(debug)",
+      "pv": {
+        "nodeType": "pty",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/pty-daemon/telemetry.ts",
+          "src/pty-daemon/DaemonSessionManager.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "process",
+          "files": [
+            "src/pty-daemon/telemetry.ts"
+          ]
+        },
+        "event": {
+          "name": "terminal.pty.spawn_attempt",
+          "description": "PTY spawn attempt with full parameters for debugging",
+          "attributes": {
+            "session.id": {
+              "type": "string",
+              "description": "Terminal session ID"
+            },
+            "shell.path": {
+              "type": "string",
+              "description": "Shell executable path"
+            },
+            "cwd": {
+              "type": "string",
+              "description": "Working directory"
+            },
+            "cols": {
+              "type": "number",
+              "description": "Column count"
+            },
+            "rows": {
+              "type": "number",
+              "description": "Row count"
+            },
+            "env.keys": {
+              "type": "string",
+              "description": "Comma-separated environment variable keys"
+            },
+            "process.cwd": {
+              "type": "string",
+              "description": "Daemon process working directory"
+            },
+            "process.execPath": {
+              "type": "string",
+              "description": "Daemon executable path"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "pty-spawn-failed",
+      "type": "text",
+      "x": 441,
+      "y": 787,
+      "width": 120,
+      "height": 60,
+      "text": "Spawn Failed\n(error)",
+      "pv": {
+        "nodeType": "pty",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/pty-daemon/telemetry.ts",
+          "src/pty-daemon/DaemonSessionManager.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "error",
+          "files": [
+            "src/pty-daemon/telemetry.ts"
+          ]
+        },
+        "event": {
+          "name": "terminal.pty.spawn_failed",
+          "description": "PTY spawn failure with detailed context",
+          "attributes": {
+            "session.id": {
+              "type": "string",
+              "description": "Terminal session ID"
+            },
+            "error.message": {
+              "type": "string",
+              "description": "Error message from node-pty"
+            },
+            "shell.path": {
+              "type": "string",
+              "description": "Shell that failed to spawn"
+            },
+            "cwd": {
+              "type": "string",
+              "description": "Requested working directory"
+            },
+            "process.cwd": {
+              "type": "string",
+              "description": "Daemon process working directory"
+            },
+            "process.execPath": {
+              "type": "string",
+              "description": "Daemon executable path"
+            },
+            "process.env.PATH": {
+              "type": "string",
+              "description": "PATH environment variable"
+            },
+            "process.env.SHELL": {
+              "type": "string",
+              "description": "SHELL environment variable"
+            },
+            "process.env.HOME": {
+              "type": "string",
+              "description": "HOME environment variable"
             }
           }
         }
@@ -666,12 +805,17 @@
       "pv": {
         "nodeType": "update",
         "shape": "rectangle",
-        "status": "draft",
-        "references": [],
+        "status": "implemented",
+        "references": [
+          "src/pty-daemon/telemetry.ts",
+          "src/pty-daemon/DaemonSessionManager.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "error",
-          "files": []
+          "files": [
+            "src/pty-daemon/telemetry.ts"
+          ]
         },
         "event": {
           "name": "terminal.error",
@@ -1088,6 +1232,28 @@
       "label": "direct socket (data)",
       "pv": {
         "edgeType": "socket-ipc"
+      }
+    },
+    {
+      "id": "e21",
+      "fromNode": "daemon-session-mgr",
+      "toNode": "pty-spawn-attempt",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "attempt",
+      "pv": {
+        "edgeType": "spawn"
+      }
+    },
+    {
+      "id": "e22",
+      "fromNode": "pty-spawn-attempt",
+      "toNode": "pty-spawn-failed",
+      "fromSide": "right",
+      "toSide": "bottom",
+      "label": "on error",
+      "pv": {
+        "edgeType": "lifecycle"
       }
     }
   ]

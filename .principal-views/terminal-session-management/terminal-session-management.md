@@ -165,6 +165,77 @@ if (!isLocalSession && session.ownedByWindowId) {
 }
 ```
 
+## Session Persistence & Reconnection
+
+### PTY Daemon Architecture
+
+Terminal sessions persist across app restarts via a **PTY daemon** - a standalone process that manages PTY sessions independently of the Electron app:
+
+```
+App Shutdown:
+├─ TerminalSessionManager.shutdown()
+├─ Worker disconnects from daemon (but doesn't destroy sessions)
+└─ Sessions continue running in daemon
+
+App Restart:
+├─ Worker reconnects to daemon via Unix socket
+├─ Daemon sends DAEMON_SESSIONS with all existing sessions
+├─ SessionManager restores sessions to memory
+└─ Broadcasts SESSIONS_RESTORED to all windows
+```
+
+### Session Reconnection Flow
+
+When a renderer window starts (or restarts), terminal tabs appear but are **not automatically connected**. The reconnection sequence is:
+
+1. **Load Sessions**: `TerminalContext` fetches session list via `TerminalService.list()`
+2. **Display Tabs**: Tabs are created for each session in the list
+3. **User Interaction Required**: Currently, reconnection only triggers when user clicks a tab
+4. **Reconnection Steps** (in `onTerminalData`):
+   - Claim ownership via `TerminalService.claimOwnership()`
+   - Request data port via `TerminalService.requestDataPort()`
+   - Refresh terminal display via `TerminalService.refresh()`
+
+### Reconnection Gap (Known Issue)
+
+**Problem**: After renderer restart, tabs show blank/stale terminals because:
+- Session list is loaded (tabs appear)
+- But ownership is not automatically claimed
+- MessagePort is not automatically delivered
+- Terminal shows no content until user manually clicks the tab
+
+**Solution** (Draft): Add auto-reconnection handler in `TerminalContext`:
+
+```typescript
+// Listen for SESSIONS_RESTORED event
+useEffect(() => {
+  const unsubscribe = TerminalService.onSessionsRestored((sessions) => {
+    // Filter sessions matching this window's terminalContext
+    const matchingSessions = sessions.filter(s =>
+      s.context?.startsWith(terminalContext)
+    );
+
+    // Auto-reconnect each matching session
+    for (const session of matchingSessions) {
+      TerminalService.claimOwnership(session.id)
+        .then(() => TerminalService.requestDataPort(session.id))
+        .then(() => TerminalService.refresh(session.id));
+    }
+  });
+
+  return () => unsubscribe();
+}, [terminalContext]);
+```
+
+### Events
+
+| Event | Direction | Description |
+|-------|-----------|-------------|
+| `DAEMON_SESSIONS` | Daemon → Worker | Sessions sent when worker connects |
+| `SESSIONS_RESTORED` | Main → Renderer | Broadcast after restoring from daemon |
+| `PORT_READY` | Main → Renderer | MessagePort delivered for data streaming |
+| `OWNERSHIP_LOST` | Main → Renderer | Another window claimed this session |
+
 ## Related Architecture
 
 - **Terminal Activity Tracking**: See `.principal-views/terminal-activity-tracking/` for agent working state propagation

@@ -32,6 +32,14 @@
       "port": {
         "label": "Port",
         "color": "#14B8A6"
+      },
+      "daemon": {
+        "label": "PTY Daemon",
+        "color": "#EF4444"
+      },
+      "reconnect": {
+        "label": "Reconnect Handler",
+        "color": "#22C55E"
       }
     },
     "edgeTypes": {
@@ -59,6 +67,16 @@
         "label": "Port Transfer",
         "style": "dotted",
         "color": "#14B8A6"
+      },
+      "daemon-message": {
+        "label": "Daemon Message",
+        "style": "dashed",
+        "color": "#EF4444"
+      },
+      "reconnect-trigger": {
+        "label": "Reconnect Trigger",
+        "style": "solid",
+        "color": "#22C55E"
       }
     }
   },
@@ -569,6 +587,164 @@
           }
         }
       }
+    },
+    {
+      "id": "pty-daemon",
+      "type": "text",
+      "x": 537,
+      "y": 560,
+      "width": 218,
+      "height": 100,
+      "text": "PTY Daemon\n(Persistent Process)\n\nSurvives app restart\nStores session state",
+      "pv": {
+        "nodeType": "daemon",
+        "shape": "rectangle",
+        "status": "approved",
+        "references": [
+          "src/main/terminal/PtyDaemonClient.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "process",
+          "files": [
+            "src/main/terminal/PtyDaemonClient.ts"
+          ]
+        },
+        "event": {
+          "name": "terminal.daemon.sessions_sent",
+          "description": "Daemon sends existing sessions on worker connect",
+          "attributes": {
+            "sessions.count": {
+              "type": "number",
+              "description": "Number of sessions sent"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "sessions-restored-broadcast",
+      "type": "text",
+      "x": 250,
+      "y": 200,
+      "width": 205,
+      "height": 100,
+      "text": "Sessions Restored\n\nSESSIONS_RESTORED\nevent to all windows\n(on app restart)",
+      "pv": {
+        "nodeType": "tipc-router",
+        "shape": "rectangle",
+        "status": "approved",
+        "references": [
+          "src/main/terminal/TerminalSessionManager.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ipc",
+          "files": [
+            "src/main/terminal/TerminalSessionManager.ts"
+          ]
+        },
+        "event": {
+          "name": "terminal.sessions.restored",
+          "description": "Sessions restored from daemon broadcast to renderers",
+          "attributes": {
+            "sessions.count": {
+              "type": "number",
+              "description": "Number of restored sessions"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "auto-reconnect-handler",
+      "type": "text",
+      "x": -10,
+      "y": 220,
+      "width": 200,
+      "height": 120,
+      "text": "Auto-Reconnect Handler\n\nTerminalContext\n.onSessionsRestored()\n\n1. Filter by context\n2. Claim ownership\n3. Request data port",
+      "pv": {
+        "nodeType": "reconnect",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/renderer/contexts/TerminalContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "ui",
+          "files": [
+            "src/renderer/contexts/TerminalContext.tsx"
+          ]
+        },
+        "event": {
+          "name": "terminal.session.auto_reconnect",
+          "description": "Auto-reconnecting to restored session",
+          "attributes": {
+            "session.id": {
+              "type": "string",
+              "description": "Session being reconnected"
+            },
+            "context": {
+              "type": "string",
+              "description": "Terminal context for filtering"
+            },
+            "reconnect.success": {
+              "type": "boolean",
+              "description": "Whether reconnection succeeded"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "reconnect-gap-note",
+      "type": "text",
+      "x": 800,
+      "y": 530,
+      "width": 280,
+      "height": 200,
+      "text": "RECONNECTION GAP (BUG)\n\nCurrent behavior:\n1. App restarts\n2. Sessions restored from daemon\n3. Tabs appear (from session list)\n4. BUT no auto-reconnect!\n5. User must click each tab\n\nFix: Listen for SESSIONS_RESTORED\nand auto-trigger reconnection\nfor matching context sessions.",
+      "color": "#EF4444"
+    },
+    {
+      "id": "reconnect-error",
+      "type": "text",
+      "x": -10,
+      "y": 360,
+      "width": 200,
+      "height": 100,
+      "text": "Reconnect Error\n\nOwnership denied or\nport delivery failed",
+      "pv": {
+        "nodeType": "reconnect",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/renderer/contexts/TerminalContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "error",
+          "files": [
+            "src/renderer/contexts/TerminalContext.tsx"
+          ]
+        },
+        "event": {
+          "name": "terminal.session.reconnect_error",
+          "description": "Session reconnection failed",
+          "attributes": {
+            "session.id": {
+              "type": "string",
+              "description": "Terminal session ID"
+            },
+            "error.reason": {
+              "type": "string",
+              "description": "Reason for reconnection failure"
+            }
+          }
+        }
+      }
     }
   ],
   "edges": [
@@ -720,6 +896,83 @@
       "toSide": "left",
       "pv": {
         "edgeType": "worker-message"
+      }
+    },
+    {
+      "id": "edge-worker-daemon",
+      "fromNode": "worker",
+      "toNode": "pty-daemon",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "connect to daemon",
+      "pv": {
+        "edgeType": "daemon-message"
+      }
+    },
+    {
+      "id": "edge-daemon-worker",
+      "fromNode": "pty-daemon",
+      "toNode": "worker",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "label": "DAEMON_SESSIONS",
+      "pv": {
+        "edgeType": "daemon-message"
+      }
+    },
+    {
+      "id": "edge-session-manager-restored-broadcast",
+      "fromNode": "session-manager",
+      "toNode": "sessions-restored-broadcast",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "label": "on daemon restore",
+      "pv": {
+        "edgeType": "method-call"
+      }
+    },
+    {
+      "id": "edge-restored-broadcast-auto-reconnect",
+      "fromNode": "sessions-restored-broadcast",
+      "toNode": "auto-reconnect-handler",
+      "fromSide": "left",
+      "toSide": "right",
+      "label": "SESSIONS_RESTORED",
+      "pv": {
+        "edgeType": "reconnect-trigger"
+      }
+    },
+    {
+      "id": "edge-auto-reconnect-ownership",
+      "fromNode": "auto-reconnect-handler",
+      "toNode": "tipc-router",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "claimOwnership()",
+      "pv": {
+        "edgeType": "tipc-invoke"
+      }
+    },
+    {
+      "id": "edge-auto-reconnect-port",
+      "fromNode": "auto-reconnect-handler",
+      "toNode": "port-renderer",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "requestDataPort()",
+      "pv": {
+        "edgeType": "reconnect-trigger"
+      }
+    },
+    {
+      "id": "edge-auto-reconnect-error",
+      "fromNode": "auto-reconnect-handler",
+      "toNode": "reconnect-error",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "on failure",
+      "pv": {
+        "edgeType": "reconnect-trigger"
       }
     }
   ]

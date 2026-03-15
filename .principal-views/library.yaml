@@ -94,9 +94,7 @@ resources:
     process.type: "pty-daemon"
     project: "principal-ade"
     owned-scopes:
-      terminal.daemon:
-        color: "#3730A3"
-        description: "PTY daemon process managing persistent terminal sessions via Unix socket"
+      - "terminal.daemon"
 
 nodeComponents:
   # ============================================
