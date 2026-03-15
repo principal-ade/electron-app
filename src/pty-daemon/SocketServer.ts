@@ -105,8 +105,9 @@ export class SocketServer extends EventEmitter {
 
     // Close server
     if (this.server) {
+      const server = this.server;
       await new Promise<void>((resolve) => {
-        this.server!.close(() => {
+        server.close(() => {
           resolve();
         });
       });

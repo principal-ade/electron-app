@@ -175,13 +175,14 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
 
   // Get terminal sessions from context slice
   const terminalSlice = context?.terminal;
-  const sessions = terminalSlice?.data ?? [];
+  const sessionsData = terminalSlice?.data;
   const isLoading = terminalSlice?.loading ?? false;
 
   // Sort sessions by creation time (oldest first)
   const sortedSessions = useMemo(() => {
+    const sessions = sessionsData ?? [];
     return [...sessions].sort((a, b) => a.createdAt - b.createdAt);
-  }, [sessions]);
+  }, [sessionsData]);
 
   const handleSessionClick = async (session: TerminalSessionInfo) => {
     const isLocalSession = session.ownedByWindowId === currentWindowId;
@@ -269,7 +270,7 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
             >
               Terminal Sessions
             </h2>
-            {sessions.length >= 5 && (
+            {sortedSessions.length >= 5 && (
               <span
                 style={{
                   fontSize: theme.fontSizes[1],
@@ -280,7 +281,7 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
                   borderRadius: theme.radii[0],
                 }}
               >
-                {sessions.length}
+                {sortedSessions.length}
               </span>
             )}
           </div>
@@ -461,7 +462,7 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
                           :{session.metadata.port}
                         </span>
                       )}
-                      {isWorking && (
+                      {isWorking ? (
                         <span
                           style={{
                             fontSize: theme.fontSizes[0],
@@ -475,17 +476,18 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
                         >
                           Working
                         </span>
+                      ) : (
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                        >
+                          <Clock size={12} />
+                          {formatRelativeTime(session.lastActivity)}
+                        </div>
                       )}
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                        }}
-                      >
-                        <Clock size={12} />
-                        {formatRelativeTime(session.lastActivity)}
-                      </div>
                     </div>
                   </div>
 

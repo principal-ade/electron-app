@@ -32,7 +32,6 @@ let pty: typeof import('node-pty') | null = null;
 function loadNodePty(): typeof import('node-pty') {
   if (!pty) {
     // Use eval to prevent webpack from trying to bundle node-pty
-    // eslint-disable-next-line no-eval
     pty = eval('require')('node-pty') as typeof import('node-pty');
   }
   return pty;

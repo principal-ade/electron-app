@@ -206,10 +206,11 @@ export const WindowSwitcherApp: React.FC = () => {
   const electronAPI =
     typeof window !== 'undefined' ? window.electronAPI : undefined;
 
-  // Initialize z-index order when windows change
+  // Initialize z-index order when window count changes
+  const windowCount = windows.length;
   useEffect(() => {
-    setZIndexOrder(windows.map((_, i) => i));
-  }, [windows.length]);
+    setZIndexOrder(Array.from({ length: windowCount }, (_, i) => i));
+  }, [windowCount]);
 
   useEffect(() => {
     windowsRef.current = windows;
