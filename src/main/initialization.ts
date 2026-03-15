@@ -4,6 +4,7 @@ import path from 'path';
 import { registerIpcMain } from '@egoist/tipc/main';
 import { initializeStorage } from './stores/initialization';
 import { terminalRouter } from './terminal/tipc';
+import { initializeTerminalSettings } from './terminal/sessionManagerSingleton';
 import { githubRouter } from './github/tipc';
 import { appVersionRouter } from './app-version/tipc';
 import { alexandriaRouter } from './alexandria/tipc';
@@ -263,6 +264,9 @@ const registerAllIpcHandlers = async () => {
   // Register User Preferences handlers
   const userPreferencesHandler = new UserPreferencesHandler(typedStore);
   userPreferencesHandler.registerHandlers();
+
+  // Initialize terminal settings (reads daemon mode preference)
+  await initializeTerminalSettings();
 
   // Initialize and register Extension Discovery handlers
   await extensionDiscoveryService.initialize();

@@ -15,15 +15,20 @@ import {
   Radio,
   Terminal,
   Loader2,
+  Server,
+  Clock,
+  Cpu,
 } from 'lucide-react';
 import { RepositoryMonitoringService } from '../../../main-process-api/RepositoryMonitoringService';
 import { OtelCollectorService } from '../../../main-process-api/OtelCollectorService';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
+import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { TraceViewer } from './TraceViewer';
 import {
   terminalClient,
   onActivitySync,
   type TerminalActivityState,
+  type DaemonStatusResponse,
 } from '../../../tipc/terminalClient';
 import type { TerminalSessionInfo } from '../../../../shared/tipc/terminalRouterTypes';
 import type {
@@ -64,6 +69,10 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
   const [terminalActivities, setTerminalActivities] = useState<TerminalActivityState[]>([]);
   const [allTerminalSessions, setAllTerminalSessions] = useState<TerminalSessionInfo[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [daemonStatus, setDaemonStatus] = useState<DaemonStatusResponse | null>(null);
+  const [isDaemonControlling, setIsDaemonControlling] = useState(false);
+  const [usePtyDaemon, setUsePtyDaemon] = useState<boolean>(false);
+  const [isDaemonModeChanging, setIsDaemonModeChanging] = useState(false);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -216,6 +225,48 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
       }
     };
   }, [activeTab]);
+
+  // Fetch daemon status when terminals tab is active
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+
+    const fetchDaemonStatus = async () => {
+      try {
+        const status = await terminalClient.getDaemonStatus();
+        setDaemonStatus(status);
+      } catch (error) {
+        console.error('Failed to fetch daemon status:', error);
+        setDaemonStatus({ isRunning: false, status: null });
+      }
+    };
+
+    // Initial fetch
+    if (activeTab === 'terminals') {
+      fetchDaemonStatus();
+      // Poll every 2 seconds
+      interval = setInterval(fetchDaemonStatus, 2000);
+    }
+
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [activeTab]);
+
+  // Load daemon mode preference
+  useEffect(() => {
+    const loadDaemonModePreference = async () => {
+      try {
+        const prefs = await UserPreferencesService.getPreferences();
+        // Default to false (disabled) - daemon has production issues
+        setUsePtyDaemon(prefs.usePtyDaemon === true);
+      } catch (error) {
+        console.error('Failed to load daemon mode preference:', error);
+      }
+    };
+    loadDaemonModePreference();
+  }, []);
 
   // Simple sparkline component
   const Sparkline: React.FC<{
@@ -1132,6 +1183,477 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
         {/* Terminal Sessions Content */}
         {activeTab === 'terminals' && (
           <section style={{ marginBottom: '32px' }}>
+            {/* Daemon Status Card */}
+            <div
+              style={{
+                backgroundColor: theme.colors.backgroundSecondary,
+                borderRadius: '12px',
+                border: `1px solid ${theme.colors.border}`,
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                padding: '20px',
+                marginBottom: '24px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    backgroundColor: !usePtyDaemon
+                      ? `${theme.colors.textSecondary}15`
+                      : daemonStatus?.isRunning
+                        ? `${theme.colors.success}15`
+                        : `${theme.colors.error}15`,
+                  }}
+                >
+                  <Server
+                    size={22}
+                    style={{
+                      color: !usePtyDaemon
+                        ? theme.colors.textSecondary
+                        : daemonStatus?.isRunning
+                          ? theme.colors.success
+                          : theme.colors.error,
+                    }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <h3
+                    style={{
+                      fontSize: '16px',
+                      fontWeight: 600,
+                      color: theme.colors.text,
+                      margin: 0,
+                      fontFamily: theme.fonts.heading,
+                    }}
+                  >
+                    PTY Daemon
+                  </h3>
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      color: !usePtyDaemon
+                        ? theme.colors.textSecondary
+                        : daemonStatus?.isRunning
+                          ? theme.colors.success
+                          : theme.colors.error,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: '6px',
+                        height: '6px',
+                        borderRadius: '50%',
+                        backgroundColor: !usePtyDaemon
+                          ? theme.colors.textSecondary
+                          : daemonStatus?.isRunning
+                            ? theme.colors.success
+                            : theme.colors.error,
+                      }}
+                    />
+                    {usePtyDaemon
+                      ? (daemonStatus?.isRunning ? 'Running' : 'Not Running')
+                      : 'Disabled'
+                    }
+                  </div>
+                </div>
+                {usePtyDaemon && (
+                  <button
+                    onClick={async () => {
+                      setIsDaemonControlling(true);
+                      try {
+                        if (daemonStatus?.isRunning) {
+                          await terminalClient.stopDaemon();
+                        } else {
+                          await terminalClient.startDaemon();
+                        }
+                        // Refresh status after action
+                        const status = await terminalClient.getDaemonStatus();
+                        setDaemonStatus(status);
+                      } catch (error) {
+                        console.error('Failed to control daemon:', error);
+                      } finally {
+                        setIsDaemonControlling(false);
+                      }
+                    }}
+                    disabled={isDaemonControlling}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 16px',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      borderRadius: '8px',
+                      border: 'none',
+                      cursor: isDaemonControlling ? 'not-allowed' : 'pointer',
+                      backgroundColor: daemonStatus?.isRunning
+                        ? `${theme.colors.error}15`
+                        : `${theme.colors.success}15`,
+                      color: daemonStatus?.isRunning
+                        ? theme.colors.error
+                        : theme.colors.success,
+                      transition: 'all 0.2s ease',
+                      opacity: isDaemonControlling ? 0.6 : 1,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isDaemonControlling) {
+                        e.currentTarget.style.backgroundColor = daemonStatus?.isRunning
+                          ? `${theme.colors.error}25`
+                          : `${theme.colors.success}25`;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = daemonStatus?.isRunning
+                        ? `${theme.colors.error}15`
+                        : `${theme.colors.success}15`;
+                    }}
+                  >
+                    {isDaemonControlling ? (
+                      <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                    ) : (
+                      <Power size={14} />
+                    )}
+                    {isDaemonControlling
+                      ? (daemonStatus?.isRunning ? 'Stopping...' : 'Starting...')
+                      : (daemonStatus?.isRunning ? 'Stop' : 'Start')
+                    }
+                  </button>
+                )}
+              </div>
+
+              {usePtyDaemon && daemonStatus?.isRunning && daemonStatus.status && (
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                    gap: '16px',
+                  }}
+                >
+                  {/* PID */}
+                  <div>
+                    <div
+                      style={{
+                        fontSize: '11px',
+                        color: theme.colors.textSecondary,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        marginBottom: '4px',
+                      }}
+                    >
+                      PID
+                    </div>
+                    <div
+                      style={{
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        color: theme.colors.text,
+                        fontFamily: theme.fonts.monospace,
+                      }}
+                    >
+                      {daemonStatus.status.pid}
+                    </div>
+                  </div>
+
+                  {/* Uptime */}
+                  <div>
+                    <div
+                      style={{
+                        fontSize: '11px',
+                        color: theme.colors.textSecondary,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        marginBottom: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <Clock size={10} />
+                      Uptime
+                    </div>
+                    <div
+                      style={{
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        color: theme.colors.text,
+                      }}
+                    >
+                      {(() => {
+                        const uptime = daemonStatus.status.uptime;
+                        const hours = Math.floor(uptime / 3600000);
+                        const minutes = Math.floor((uptime % 3600000) / 60000);
+                        const seconds = Math.floor((uptime % 60000) / 1000);
+                        if (hours > 0) return `${hours}h ${minutes}m`;
+                        if (minutes > 0) return `${minutes}m ${seconds}s`;
+                        return `${seconds}s`;
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Sessions */}
+                  <div>
+                    <div
+                      style={{
+                        fontSize: '11px',
+                        color: theme.colors.textSecondary,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        marginBottom: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <Terminal size={10} />
+                      Sessions
+                    </div>
+                    <div
+                      style={{
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        color: theme.colors.text,
+                      }}
+                    >
+                      {daemonStatus.status.sessionCount}
+                    </div>
+                  </div>
+
+                  {/* Clients */}
+                  <div>
+                    <div
+                      style={{
+                        fontSize: '11px',
+                        color: theme.colors.textSecondary,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        marginBottom: '4px',
+                      }}
+                    >
+                      Clients
+                    </div>
+                    <div
+                      style={{
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        color: theme.colors.text,
+                      }}
+                    >
+                      {daemonStatus.status.clientCount}
+                    </div>
+                  </div>
+
+                  {/* Memory */}
+                  <div>
+                    <div
+                      style={{
+                        fontSize: '11px',
+                        color: theme.colors.textSecondary,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        marginBottom: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <Cpu size={10} />
+                      Memory (Heap)
+                    </div>
+                    <div
+                      style={{
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        color: theme.colors.text,
+                      }}
+                    >
+                      {(daemonStatus.status.memoryUsage.heapUsed / 1024 / 1024).toFixed(1)} MB
+                    </div>
+                  </div>
+
+                  {/* RSS */}
+                  <div>
+                    <div
+                      style={{
+                        fontSize: '11px',
+                        color: theme.colors.textSecondary,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        marginBottom: '4px',
+                      }}
+                    >
+                      RSS
+                    </div>
+                    <div
+                      style={{
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        color: theme.colors.text,
+                      }}
+                    >
+                      {(daemonStatus.status.memoryUsage.rss / 1024 / 1024).toFixed(1)} MB
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!usePtyDaemon && (
+                <div
+                  style={{
+                    fontSize: '13px',
+                    color: theme.colors.textSecondary,
+                    padding: '12px 16px',
+                    backgroundColor: `${theme.colors.textSecondary}08`,
+                    borderRadius: '8px',
+                    border: `1px solid ${theme.colors.textSecondary}20`,
+                  }}
+                >
+                  PTY daemon is disabled. Terminals use legacy mode (node-pty directly in worker).
+                </div>
+              )}
+
+              {usePtyDaemon && !daemonStatus?.isRunning && (
+                <div
+                  style={{
+                    fontSize: '13px',
+                    color: theme.colors.textSecondary,
+                    padding: '12px 16px',
+                    backgroundColor: `${theme.colors.error}08`,
+                    borderRadius: '8px',
+                    border: `1px solid ${theme.colors.error}20`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '16px',
+                  }}
+                >
+                  <span>The PTY daemon is not running. Terminal sessions will start the daemon automatically.</span>
+                  <button
+                    onClick={async () => {
+                      setIsDaemonControlling(true);
+                      try {
+                        await terminalClient.startDaemon();
+                        const status = await terminalClient.getDaemonStatus();
+                        setDaemonStatus(status);
+                      } catch (error) {
+                        console.error('Failed to start daemon:', error);
+                      } finally {
+                        setIsDaemonControlling(false);
+                      }
+                    }}
+                    disabled={isDaemonControlling}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '6px 12px',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      borderRadius: '6px',
+                      border: 'none',
+                      cursor: isDaemonControlling ? 'not-allowed' : 'pointer',
+                      backgroundColor: theme.colors.success,
+                      color: 'white',
+                      transition: 'all 0.2s ease',
+                      opacity: isDaemonControlling ? 0.6 : 1,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {isDaemonControlling ? (
+                      <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
+                    ) : (
+                      <Power size={12} />
+                    )}
+                    {isDaemonControlling ? 'Starting...' : 'Start Now'}
+                  </button>
+                </div>
+              )}
+
+              {/* Daemon Mode Toggle */}
+              <div
+                style={{
+                  marginTop: '16px',
+                  paddingTop: '16px',
+                  borderTop: `1px solid ${theme.colors.border}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      color: theme.colors.text,
+                      marginBottom: '2px',
+                    }}
+                  >
+                    Use PTY Daemon
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '11px',
+                      color: theme.colors.textSecondary,
+                    }}
+                  >
+                    {usePtyDaemon ? 'Enabled' : 'Disabled'} · Requires app restart
+                  </div>
+                </div>
+                <button
+                  onClick={async () => {
+                    setIsDaemonModeChanging(true);
+                    try {
+                      const newValue = !usePtyDaemon;
+                      await UserPreferencesService.updatePreferences({
+                        usePtyDaemon: newValue,
+                      });
+                      setUsePtyDaemon(newValue);
+                    } catch (error) {
+                      console.error('Failed to update daemon mode preference:', error);
+                    } finally {
+                      setIsDaemonModeChanging(false);
+                    }
+                  }}
+                  disabled={isDaemonModeChanging}
+                  style={{
+                    position: 'relative',
+                    width: '44px',
+                    height: '24px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    cursor: isDaemonModeChanging ? 'not-allowed' : 'pointer',
+                    backgroundColor: usePtyDaemon
+                      ? theme.colors.success
+                      : theme.colors.textSecondary,
+                    transition: 'background-color 0.2s ease',
+                    opacity: isDaemonModeChanging ? 0.6 : 1,
+                  }}
+                >
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '2px',
+                      left: usePtyDaemon ? '22px' : '2px',
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '50%',
+                      backgroundColor: 'white',
+                      transition: 'left 0.2s ease',
+                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
+                    }}
+                  />
+                </button>
+              </div>
+            </div>
+
             <h3
               style={{
                 fontSize: '14px',

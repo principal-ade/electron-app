@@ -20,6 +20,8 @@ import type {
   TerminalRouterType,
   UpdateActivityInput,
   TerminalActivityState,
+  DaemonStatusResponse,
+  DaemonControlResult,
 } from '../../shared/tipc/terminalRouterTypes';
 
 // Extend Window interface for TypeScript
@@ -86,6 +88,9 @@ export interface TerminalClient {
   }>;
   updateActivity: (input: UpdateActivityInput) => Promise<void>;
   getActivityState: () => Promise<TerminalActivityState[]>;
+  getDaemonStatus: () => Promise<DaemonStatusResponse>;
+  startDaemon: () => Promise<DaemonControlResult>;
+  stopDaemon: () => Promise<DaemonControlResult>;
 }
 
 // Tracer for terminal session telemetry
@@ -236,4 +241,4 @@ export const onSessionsChanged = (
 };
 
 // Re-export types for convenience
-export type { UpdateActivityInput, TerminalActivityState, TerminalSessionInfo };
+export type { UpdateActivityInput, TerminalActivityState, TerminalSessionInfo, DaemonStatusResponse, DaemonControlResult };

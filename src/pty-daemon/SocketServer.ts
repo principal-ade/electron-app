@@ -11,6 +11,7 @@ import { EventEmitter } from 'events';
 import {
   ClientMessage,
   DaemonMessage,
+  DaemonStatusInfo,
   serializeMessage,
   parseMessage,
   isClientMessage,
@@ -37,12 +38,14 @@ export class SocketServer extends EventEmitter {
   private sessionManager: DaemonSessionManager;
   private socketPath: string;
   private logger: Logger;
+  private daemonStartedAt: Date;
 
-  constructor(sessionManager: DaemonSessionManager, logger: Logger, socketPath?: string) {
+  constructor(sessionManager: DaemonSessionManager, logger: Logger, socketPath?: string, startedAt?: Date) {
     super();
     this.sessionManager = sessionManager;
     this.socketPath = socketPath || SOCKET_PATH;
     this.logger = logger;
+    this.daemonStartedAt = startedAt || new Date();
 
     // Forward session manager messages to all clients
     this.sessionManager.on('message', (msg: DaemonMessage) => {
@@ -124,6 +127,26 @@ export class SocketServer extends EventEmitter {
    */
   getClientCount(): number {
     return this.clients.size;
+  }
+
+  /**
+   * Get daemon status information.
+   */
+  getDaemonStatus(): DaemonStatusInfo {
+    const memUsage = process.memoryUsage();
+    return {
+      pid: process.pid,
+      uptime: Date.now() - this.daemonStartedAt.getTime(),
+      sessionCount: this.sessionManager.getSessionCount(),
+      clientCount: this.clients.size,
+      memoryUsage: {
+        heapUsed: memUsage.heapUsed,
+        heapTotal: memUsage.heapTotal,
+        external: memUsage.external,
+        rss: memUsage.rss,
+      },
+      startedAt: this.daemonStartedAt.toISOString(),
+    };
   }
 
   /**
@@ -284,6 +307,13 @@ export class SocketServer extends EventEmitter {
         // Add health check event
         addHealthCheckEvent('pong', 0, 0);
         this.sendToClient(clientId, { type: 'pong' });
+        break;
+
+      case 'status':
+        this.sendToClient(clientId, {
+          type: 'status',
+          status: this.getDaemonStatus(),
+        });
         break;
 
       default:

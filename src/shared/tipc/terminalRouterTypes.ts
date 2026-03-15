@@ -110,6 +110,33 @@ export interface TerminalActivityState {
   timestamp: number;
 }
 
+// Daemon status types
+export interface DaemonMemoryUsage {
+  heapUsed: number;
+  heapTotal: number;
+  external: number;
+  rss: number;
+}
+
+export interface DaemonStatusInfo {
+  pid: number;
+  uptime: number; // milliseconds since daemon started
+  sessionCount: number;
+  clientCount: number;
+  memoryUsage: DaemonMemoryUsage;
+  startedAt: string; // ISO timestamp
+}
+
+export interface DaemonStatusResponse {
+  isRunning: boolean;
+  status: DaemonStatusInfo | null;
+}
+
+export interface DaemonControlResult {
+  success: boolean;
+  error?: string;
+}
+
 /**
  * Terminal Router Type - TIPC RouterType-compatible type
  *
@@ -192,5 +219,23 @@ export type TerminalRouterType = Record<
       context: ActionContext;
       input?: void;
     }) => Promise<TerminalActivityState[]>;
+  };
+  getDaemonStatus: {
+    action: (args: {
+      context: ActionContext;
+      input?: void;
+    }) => Promise<DaemonStatusResponse>;
+  };
+  startDaemon: {
+    action: (args: {
+      context: ActionContext;
+      input?: void;
+    }) => Promise<DaemonControlResult>;
+  };
+  stopDaemon: {
+    action: (args: {
+      context: ActionContext;
+      input?: void;
+    }) => Promise<DaemonControlResult>;
   };
 }

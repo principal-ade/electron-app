@@ -32,8 +32,10 @@ class DaemonTelemetryProvider {
       return;
     }
 
-    // Use port 4318 for HTTP OTLP (standard port)
-    const otlpPort = parseInt(process.env.OTEL_OTLP_PORT || '4318', 10);
+    // Use port 14318 for dev, 4318 for production
+    const isDev = process.env.NODE_ENV !== 'production';
+    const defaultPort = isDev ? '14318' : '4318';
+    const otlpPort = parseInt(process.env.OTEL_OTLP_PORT || defaultPort, 10);
     const endpoint = `http://localhost:${otlpPort}`;
 
     // Check if collector is available
@@ -309,4 +311,94 @@ export function addErrorEvent(
     });
     span.setStatus({ code: SpanStatusCode.ERROR, message: errorMessage });
   }
+}
+
+/**
+ * Add a terminal.pty.spawn_attempt event - captures details before spawn
+ */
+export function addPtySpawnAttemptEvent(
+  sessionId: string,
+  shellPath: string,
+  cwd: string,
+  cols: number,
+  rows: number,
+  envKeys: string[],
+): void {
+  // Try to find spawn-helper path for debugging
+  let spawnHelperPath = 'unknown';
+  try {
+    const path = require('path');
+    // node-pty spawn-helper is relative to the node-pty module
+    const nodePtyPath = require.resolve('node-pty');
+    spawnHelperPath = path.join(path.dirname(nodePtyPath), '..', 'build', 'Release', 'spawn-helper');
+  } catch {
+    spawnHelperPath = 'resolve-failed';
+  }
+
+  const tracer = getTracer();
+  const span = tracer.startSpan('terminal.pty.spawn_attempt');
+  span.addEvent('terminal.pty.spawn_attempt', {
+    'session.id': sessionId,
+    'shell.path': shellPath,
+    'cwd': cwd,
+    'cols': cols,
+    'rows': rows,
+    'env.keys': envKeys.join(','),
+    'process.cwd': process.cwd(),
+    'process.execPath': process.execPath,
+    'spawn.helper.path': spawnHelperPath,
+    'node.pty.resolved': (() => {
+      try {
+        return require.resolve('node-pty');
+      } catch {
+        return 'unresolved';
+      }
+    })(),
+  });
+  span.end();
+
+}
+
+/**
+ * Add a terminal.pty.spawned event - after successful spawn
+ */
+export function addPtySpawnedEvent(
+  sessionId: string,
+  pid: number,
+): void {
+  const tracer = getTracer();
+  const span = tracer.startSpan('terminal.pty.spawned');
+  span.addEvent('terminal.pty.spawned', {
+    'session.id': sessionId,
+    'pid': pid,
+  });
+  span.end();
+
+}
+
+/**
+ * Add a terminal.pty.spawn_failed event - captures spawn failure details
+ */
+export function addPtySpawnFailedEvent(
+  sessionId: string,
+  errorMessage: string,
+  shellPath: string,
+  cwd: string,
+): void {
+  const tracer = getTracer();
+  const span = tracer.startSpan('terminal.pty.spawn_failed');
+  span.addEvent('terminal.pty.spawn_failed', {
+    'session.id': sessionId,
+    'error.message': errorMessage,
+    'shell.path': shellPath,
+    'cwd': cwd,
+    'process.cwd': process.cwd(),
+    'process.execPath': process.execPath,
+    'process.env.PATH': process.env.PATH || '',
+    'process.env.SHELL': process.env.SHELL || '',
+    'process.env.HOME': process.env.HOME || '',
+  });
+  span.setStatus({ code: SpanStatusCode.ERROR, message: errorMessage });
+  span.end();
+
 }

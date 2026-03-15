@@ -67,14 +67,10 @@ export interface PanelIconSidebarProps {
  */
 export const LEFT_PANEL_ICONS: PanelIconConfig[] = [
   { id: 'terminalSessions', Icon: Terminal, label: 'Terminals' },
-  { id: 'packageComposition', Icon: Package, label: 'Info' },
-  { id: 'codeQuality', Icon: CheckCircle, label: 'Quality' },
   { id: 'canvasList', Icon: Network, label: 'Stories' },
   { id: 'docs', Icon: BookOpen, label: 'Docs' },
-  { id: 'agentsList', Icon: Bot, label: 'Agents' },
+  { id: 'agentsList', Icon: Bot, label: 'Skills' },
   { id: 'gitChanges', Icon: GitBranch, label: 'Files' },
-  { id: 'kanban', Icon: KanbanSquare, label: 'Backlog' },
-  { id: 'traceList', Icon: Activity, label: 'Traces' },
 ];
 
 /**
@@ -82,6 +78,10 @@ export const LEFT_PANEL_ICONS: PanelIconConfig[] = [
  */
 export const RIGHT_PANEL_ICONS: PanelIconConfig[] = [
   { id: 'fileCity', Icon: Building2, label: 'File City' },
+  { id: 'packageComposition', Icon: Package, label: 'Info' },
+  { id: 'codeQuality', Icon: CheckCircle, label: 'Quality' },
+  { id: 'kanban', Icon: KanbanSquare, label: 'Backlog' },
+  { id: 'traceList', Icon: Activity, label: 'Traces' },
 ];
 
 /**

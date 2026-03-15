@@ -5,9 +5,21 @@
  * for use by both TIPC router and legacy handlers.
  */
 
-import { TerminalSessionManager } from './TerminalSessionManager';
+import { TerminalSessionManager, initializeDaemonModeSetting } from './TerminalSessionManager';
 
 let instance: TerminalSessionManager | null = null;
+let daemonModeInitialized = false;
+
+/**
+ * Initialize daemon mode setting from user preferences.
+ * Should be called early in app startup, after UserPreferencesHandler is initialized.
+ */
+export async function initializeTerminalSettings(): Promise<void> {
+  if (!daemonModeInitialized) {
+    await initializeDaemonModeSetting();
+    daemonModeInitialized = true;
+  }
+}
 
 export function getSessionManagerInstance(): TerminalSessionManager {
   if (!instance) {

@@ -18,7 +18,13 @@ import {
   DEFAULT_ROWS,
   TERM_TYPE,
 } from '../shared/pty-daemon/constants';
-import { addSessionActionEvent, addErrorEvent } from './telemetry';
+import {
+  addSessionActionEvent,
+  addErrorEvent,
+  addPtySpawnAttemptEvent,
+  addPtySpawnedEvent,
+  addPtySpawnFailedEvent,
+} from './telemetry';
 
 // node-pty is loaded dynamically to avoid webpack bundling issues
 let pty: typeof import('node-pty') | null = null;
@@ -85,6 +91,16 @@ export class DaemonSessionManager extends EventEmitter {
         TERM: TERM_TYPE,
       };
 
+      // Log spawn attempt with all details for debugging
+      addPtySpawnAttemptEvent(
+        id,
+        shellPath,
+        cwd,
+        cols,
+        rows,
+        Object.keys(ptyEnv),
+      );
+
       // Spawn PTY process
       const ptyProcess = nodePty.spawn(shellPath, [], {
         name: TERM_TYPE,
@@ -93,6 +109,9 @@ export class DaemonSessionManager extends EventEmitter {
         cwd,
         env: ptyEnv as Record<string, string>,
       });
+
+      // Log successful spawn
+      addPtySpawnedEvent(id, ptyProcess.pid);
 
       const session: PtySession = {
         id,
@@ -153,10 +172,30 @@ export class DaemonSessionManager extends EventEmitter {
         }
       }, 100);
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const shellPath = shell || this.getDefaultShell();
+
+      // Log detailed error for daemon.log
+      console.error('[DaemonSessionManager] PTY spawn failed:');
+      console.error('  Session ID:', id);
+      console.error('  Shell:', shellPath);
+      console.error('  CWD:', cwd);
+      console.error('  Error:', errorMessage);
+      console.error('  process.execPath:', process.execPath);
+      console.error('  process.cwd():', process.cwd());
+      console.error('  PATH:', process.env.PATH);
+      console.error('  SHELL:', process.env.SHELL);
+      if (error instanceof Error && error.stack) {
+        console.error('  Stack:', error.stack);
+      }
+
+      // Add detailed spawn failure telemetry
+      addPtySpawnFailedEvent(id, errorMessage, shellPath, cwd);
+
       // Add error telemetry event
       addErrorEvent(
         'session.create',
-        error instanceof Error ? error.message : String(error),
+        errorMessage,
         'SESSION_CREATE_FAILED',
         id,
         false,
@@ -278,6 +317,20 @@ export class DaemonSessionManager extends EventEmitter {
    */
   getSessionCount(): number {
     return this.sessions.size;
+  }
+
+  /**
+   * Get session statistics for daemon status.
+   */
+  getSessionStats(): { count: number; totalScrollbackBytes: number } {
+    let totalScrollbackBytes = 0;
+    for (const session of this.sessions.values()) {
+      totalScrollbackBytes += session.scrollback.getByteSize();
+    }
+    return {
+      count: this.sessions.size,
+      totalScrollbackBytes,
+    };
   }
 
   /**

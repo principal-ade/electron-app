@@ -84,6 +84,8 @@ export interface UserPreferences {
   terminalImplementation?: 'xterm' | 'ghostty'; // default: 'xterm'
   /** Show the terminal implementation toggle button in dev-workspace titlebar (default: false) */
   showTerminalImplementationToggle?: boolean;
+  /** Use PTY daemon for terminal sessions (default: false). Requires app restart to take effect. */
+  usePtyDaemon?: boolean;
 
   // Repository management
   /** Base default directory - the top-level directory for all Principal work */

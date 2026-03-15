@@ -18,9 +18,40 @@ import { terminalEnvironment } from '../terminalEnvironment';
 import { TerminalAPIEvents } from '../../shared/main-process-api-interfaces/TerminalService';
 import { ensureDaemonRunning } from './daemonSpawner';
 import { SOCKET_PATH } from '../../shared/pty-daemon/constants';
+import { UserPreferencesHandler } from '../stores/userPreferencesHandler';
 
-// Feature flag for daemon mode (enabled by default, set USE_PTY_DAEMON=false to disable)
-const USE_DAEMON_MODE = process.env.USE_PTY_DAEMON !== 'false';
+// Cached daemon mode setting - loaded once at startup
+let cachedDaemonModeEnabled: boolean | null = null;
+
+/**
+ * Initialize daemon mode setting from user preferences.
+ * Must be called during app initialization before terminals are created.
+ */
+export async function initializeDaemonModeSetting(): Promise<void> {
+  try {
+    const prefsHandler = UserPreferencesHandler.getInstance();
+    const prefs = await prefsHandler.getUserPreferences();
+    // Default to false (disabled) - daemon has production issues
+    cachedDaemonModeEnabled = prefs.usePtyDaemon === true;
+    console.log(`[Terminal] Daemon mode setting: ${cachedDaemonModeEnabled ? 'ENABLED' : 'DISABLED'}`);
+  } catch (error) {
+    console.warn('[Terminal] Failed to load daemon mode preference, defaulting to disabled:', error);
+    cachedDaemonModeEnabled = false;
+  }
+}
+
+/**
+ * Get daemon mode setting from cached value.
+ * Defaults to false (disabled) if not yet initialized.
+ */
+function getDaemonModeEnabled(): boolean {
+  if (cachedDaemonModeEnabled === null) {
+    // Not yet initialized, default to false (disabled)
+    console.warn('[Terminal] Daemon mode setting not initialized, defaulting to disabled');
+    return false;
+  }
+  return cachedDaemonModeEnabled;
+}
 import type {
   MainToWorkerMessage,
   WorkerToMainMessage,
@@ -187,12 +218,16 @@ export class TerminalSessionManager {
 
     console.log(`[Terminal] Spawning terminal worker from: ${workerPath}`);
 
+    // Pass daemon mode setting to worker via environment
+    const useDaemonMode = getDaemonModeEnabled();
+
     this.worker = utilityProcess.fork(workerPath, [], {
       serviceName: 'terminal-worker',
       stdio: 'pipe',
       env: {
         ...process.env,
         NODE_ENV: process.env.NODE_ENV || 'development',
+        USE_PTY_DAEMON: useDaemonMode ? 'true' : 'false',
       },
     });
 
@@ -246,8 +281,9 @@ export class TerminalSessionManager {
 
   private handleWorkerMessage(msg: WorkerToMainMessage): void {
     switch (msg.type) {
-      case 'READY':
-        console.log(`[Terminal] Worker is ready (mode: ${USE_DAEMON_MODE ? 'DAEMON' : 'LEGACY'})`);
+      case 'READY': {
+        const useDaemonMode = getDaemonModeEnabled();
+        console.log(`[Terminal] Worker is ready (mode: ${useDaemonMode ? 'DAEMON' : 'LEGACY'})`);
         this.isWorkerReady = true;
         if (this.workerReadyResolve) {
           this.workerReadyResolve();
@@ -259,10 +295,11 @@ export class TerminalSessionManager {
         this.pendingMessages = [];
 
         // In daemon mode, start daemon and connect worker to it
-        if (USE_DAEMON_MODE) {
+        if (useDaemonMode) {
           this.initializeDaemonConnection();
         }
         break;
+      }
 
       case 'SESSION_CREATED': {
         const callback = this.pendingSessionCallbacks.get(msg.sessionId);
@@ -456,7 +493,7 @@ export class TerminalSessionManager {
     if (!workerReady) return false;
 
     // In legacy mode, worker ready is sufficient
-    if (!USE_DAEMON_MODE) {
+    if (!getDaemonModeEnabled()) {
       return true;
     }
 
@@ -564,7 +601,8 @@ export class TerminalSessionManager {
   ): Promise<string> {
     const isReady = await this.ensureDaemonReady();
     if (!isReady) {
-      throw new Error('Terminal daemon not available');
+      const mode = getDaemonModeEnabled() ? 'daemon' : 'legacy';
+      throw new Error(`Terminal backend not available (mode: ${mode})`);
     }
 
     const sessionId = uuidv4();

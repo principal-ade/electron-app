@@ -84,8 +84,9 @@ async function main(): Promise<void> {
   }
 
   // Initialize components
+  const daemonStartedAt = new Date();
   const sessionManager = new DaemonSessionManager();
-  const server = new SocketServer(sessionManager, logger, socketPath);
+  const server = new SocketServer(sessionManager, logger, socketPath, daemonStartedAt);
 
   // Idle shutdown timer
   let idleTimer: NodeJS.Timeout | null = null;

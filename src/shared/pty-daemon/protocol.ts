@@ -50,6 +50,10 @@ export interface PingMessage {
   type: 'ping';
 }
 
+export interface StatusMessage {
+  type: 'status';
+}
+
 export type ClientMessage =
   | CreateSessionMessage
   | WriteMessage
@@ -57,7 +61,8 @@ export type ClientMessage =
   | DestroyMessage
   | ListMessage
   | AttachMessage
-  | PingMessage;
+  | PingMessage
+  | StatusMessage;
 
 // ============================================================================
 // Daemon → Client Messages
@@ -103,6 +108,25 @@ export interface PongMessage {
   type: 'pong';
 }
 
+export interface DaemonStatusInfo {
+  pid: number;
+  uptime: number; // milliseconds since daemon started
+  sessionCount: number;
+  clientCount: number;
+  memoryUsage: {
+    heapUsed: number;
+    heapTotal: number;
+    external: number;
+    rss: number;
+  };
+  startedAt: string; // ISO timestamp
+}
+
+export interface DaemonStatusMessage {
+  type: 'status';
+  status: DaemonStatusInfo;
+}
+
 export type DaemonMessage =
   | CreatedMessage
   | DataMessage
@@ -110,7 +134,8 @@ export type DaemonMessage =
   | ErrorMessage
   | SessionsMessage
   | ScrollbackMessage
-  | PongMessage;
+  | PongMessage
+  | DaemonStatusMessage;
 
 // ============================================================================
 // Shared Types
@@ -158,7 +183,7 @@ export function parseMessage<T extends ClientMessage | DaemonMessage>(
 export function isClientMessage(msg: unknown): msg is ClientMessage {
   if (!msg || typeof msg !== 'object') return false;
   const m = msg as { type?: string };
-  return ['create', 'write', 'resize', 'destroy', 'list', 'attach', 'ping'].includes(
+  return ['create', 'write', 'resize', 'destroy', 'list', 'attach', 'ping', 'status'].includes(
     m.type ?? ''
   );
 }
@@ -169,7 +194,7 @@ export function isClientMessage(msg: unknown): msg is ClientMessage {
 export function isDaemonMessage(msg: unknown): msg is DaemonMessage {
   if (!msg || typeof msg !== 'object') return false;
   const m = msg as { type?: string };
-  return ['created', 'data', 'exit', 'error', 'sessions', 'scrollback', 'pong'].includes(
+  return ['created', 'data', 'exit', 'error', 'sessions', 'scrollback', 'pong', 'status'].includes(
     m.type ?? ''
   );
 }

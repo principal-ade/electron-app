@@ -11,6 +11,7 @@ import {
   ClientMessage,
   DaemonMessage,
   SessionInfo,
+  DaemonStatusInfo,
   serializeMessage,
   parseMessage,
   isDaemonMessage,
@@ -295,6 +296,24 @@ export class PtyDaemonClient extends EventEmitter {
   }
 
   /**
+   * Get daemon status information.
+   */
+  async getDaemonStatus(): Promise<DaemonStatusInfo> {
+    this.send({ type: 'status' });
+
+    return this.waitForResponse<DaemonStatusInfo>(
+      'status',
+      (response) => {
+        if (response.type === 'status') {
+          return response.status;
+        }
+        return null;
+      },
+      5000
+    );
+  }
+
+  /**
    * Send a message to the daemon.
    */
   private send(msg: ClientMessage): void {
@@ -361,6 +380,7 @@ export class PtyDaemonClient extends EventEmitter {
 
       case 'created':
       case 'scrollback':
+      case 'status':
         // Handled by pending callbacks
         break;
     }

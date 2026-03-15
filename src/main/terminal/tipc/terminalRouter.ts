@@ -12,6 +12,7 @@ import { getSessionManagerInstance } from '../sessionManagerSingleton';
 import { ownershipManager } from '../TerminalOwnershipManager';
 import { isPtyAvailable } from '../utils/ptyLoader';
 import { getTracer } from '../../telemetry';
+import { getDaemonStatus, isDaemonRunning, stopDaemon, ensureDaemonRunning } from '../daemonSpawner';
 
 // Tracer for terminal activity telemetry
 const tracer = getTracer('terminal-activity');
@@ -491,6 +492,46 @@ export const terminalRouter = {
 
   getActivityState: t.procedure.action(async () => {
     return sessionManager.getActivityState();
+  }),
+
+  // ============================================
+  // Daemon Status
+  // ============================================
+
+  getDaemonStatus: t.procedure.action(async () => {
+    const isRunning = await isDaemonRunning();
+    if (!isRunning) {
+      return {
+        isRunning: false,
+        status: null,
+      };
+    }
+
+    const status = await getDaemonStatus();
+    return {
+      isRunning: true,
+      status,
+    };
+  }),
+
+  startDaemon: t.procedure.action(async () => {
+    try {
+      await ensureDaemonRunning();
+      return { success: true };
+    } catch (error) {
+      console.error('[Terminal] Failed to start daemon:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }),
+
+  stopDaemon: t.procedure.action(async () => {
+    try {
+      await stopDaemon();
+      return { success: true };
+    } catch (error) {
+      console.error('[Terminal] Failed to stop daemon:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
   }),
 };
 

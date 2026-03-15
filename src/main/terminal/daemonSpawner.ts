@@ -16,6 +16,12 @@ import {
   DAEMON_START_TIMEOUT_MS,
   DAEMON_START_POLL_INTERVAL_MS,
 } from '../../shared/pty-daemon/constants';
+import type { DaemonStatusInfo } from '../../shared/pty-daemon/protocol';
+
+/**
+ * Log file path for daemon output debugging
+ */
+const DAEMON_LOG_FILE = path.join(DAEMON_DIR, 'daemon.log');
 
 /**
  * Get the path to the daemon bundle.
@@ -145,9 +151,11 @@ export async function spawnDaemon(): Promise<void> {
   }
 
   // Build environment for daemon
+  // Use app.isPackaged to determine NODE_ENV since process.env.NODE_ENV may be undefined
+  const nodeEnv = app.isPackaged ? 'production' : 'development';
   const daemonEnv: NodeJS.ProcessEnv = {
     ...process.env,
-    NODE_ENV: process.env.NODE_ENV || 'production',
+    NODE_ENV: nodeEnv,
     // CRITICAL: Tell Electron to run as Node.js, not as the full Electron app
     ELECTRON_RUN_AS_NODE: '1',
   };
@@ -158,15 +166,34 @@ export async function spawnDaemon(): Promise<void> {
     daemonEnv.NODE_PATH = nodePath;
   }
 
+  // Open log file for daemon output (helps debug startup issues)
+  const logFd = fs.openSync(DAEMON_LOG_FILE, 'a');
+  const logHeader = `\n\n=== Daemon spawn at ${new Date().toISOString()} ===\n`;
+  logHeader && fs.writeSync(logFd, logHeader);
+
+  console.log(`[daemonSpawner] Daemon log: ${DAEMON_LOG_FILE}`);
+  console.log(`[daemonSpawner] Using execPath: ${process.execPath}`);
+  console.log(`[daemonSpawner] Using daemonPath: ${daemonPath}`);
+  console.log(`[daemonSpawner] CWD: ${app.isPackaged ? path.join(process.resourcesPath, 'app.asar.unpacked') : 'default'}`);
+  console.log(`[daemonSpawner] NODE_PATH: ${nodePath || 'none'}`);
+  console.log(`[daemonSpawner] NODE_ENV: ${nodeEnv}`);
+  console.log(`[daemonSpawner] app.isPackaged: ${app.isPackaged}`);
+
   // Spawn daemon as detached process
   // Use Electron's embedded Node.js runtime (process.execPath)
   const child = spawn(process.execPath, [daemonPath], {
     detached: true,
-    stdio: 'ignore',
+    stdio: ['ignore', logFd, logFd], // Redirect stdout/stderr to log file
     env: daemonEnv,
-    // Set cwd to user's home directory to avoid issues with asar paths
-    cwd: app.isPackaged ? DAEMON_DIR : undefined,
+    // Keep cwd as the app resources directory so node-pty can resolve spawn-helper
+    // The daemon script path is absolute, so it will still run correctly
+    cwd: app.isPackaged
+      ? path.join(process.resourcesPath, 'app.asar.unpacked')
+      : undefined,
   });
+
+  // Close our handle to the log file (daemon keeps its own)
+  fs.closeSync(logFd);
 
   // Unref to allow parent to exit independently
   child.unref();
@@ -215,6 +242,72 @@ export async function ensureDaemonRunning(): Promise<void> {
   // Wait for socket
   await waitForSocket();
   console.log('[daemonSpawner] Daemon is ready');
+}
+
+/**
+ * Get daemon status information.
+ * Returns null if daemon is not running or not responding.
+ */
+export async function getDaemonStatus(): Promise<DaemonStatusInfo | null> {
+  return new Promise((resolve) => {
+    // First check if socket file exists (Unix)
+    if (process.platform !== 'win32') {
+      try {
+        fs.accessSync(SOCKET_PATH);
+      } catch {
+        resolve(null);
+        return;
+      }
+    }
+
+    // Try to connect and get status
+    const socket = net.createConnection(SOCKET_PATH);
+    let buffer = '';
+    let responded = false;
+
+    const timeout = setTimeout(() => {
+      if (!responded) {
+        socket.destroy();
+        resolve(null);
+      }
+    }, 3000);
+
+    socket.on('connect', () => {
+      socket.write('{"type":"status"}\n');
+    });
+
+    socket.on('data', (data) => {
+      buffer += data.toString();
+      // Look for complete JSON message (newline-delimited)
+      const newlineIndex = buffer.indexOf('\n');
+      if (newlineIndex !== -1) {
+        const line = buffer.slice(0, newlineIndex);
+        try {
+          const msg = JSON.parse(line);
+          if (msg.type === 'status' && msg.status) {
+            responded = true;
+            clearTimeout(timeout);
+            socket.destroy();
+            resolve(msg.status as DaemonStatusInfo);
+          }
+        } catch {
+          // Invalid JSON, continue waiting
+        }
+      }
+    });
+
+    socket.on('error', () => {
+      clearTimeout(timeout);
+      resolve(null);
+    });
+
+    socket.on('close', () => {
+      clearTimeout(timeout);
+      if (!responded) {
+        resolve(null);
+      }
+    });
+  });
 }
 
 /**

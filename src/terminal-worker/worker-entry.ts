@@ -6,7 +6,7 @@
  * - Legacy mode (default): Spawns PTYs directly using node-pty
  * - Daemon mode: Connects to external PTY daemon for session persistence
  *
- * Daemon mode is enabled by default. Set USE_PTY_DAEMON=false to disable.
+ * Daemon mode is disabled by default. Set USE_PTY_DAEMON=true to enable.
  */
 
 import type {
@@ -32,8 +32,8 @@ import type {
   DaemonSessionsMessage,
 } from './types';
 
-// Feature flag for daemon mode (enabled by default, set USE_PTY_DAEMON=false to disable)
-const USE_DAEMON_MODE = process.env.USE_PTY_DAEMON !== 'false';
+// Feature flag for daemon mode (disabled by default due to production issues)
+const USE_DAEMON_MODE = process.env.USE_PTY_DAEMON === 'true';
 
 // Type guards inlined to avoid webpack module resolution issues
 function isMainToWorkerMessage(msg: unknown): msg is MainToWorkerMessage {
