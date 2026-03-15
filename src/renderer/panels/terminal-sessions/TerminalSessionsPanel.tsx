@@ -10,6 +10,11 @@ import type {
 import type { Tracer, Span } from '@opentelemetry/api';
 import type { TerminalSessionInfo } from '../../../shared/tipc/terminalRouterTypes';
 import { WindowService } from '../../main-process-api/WindowService';
+import {
+  terminalClient,
+  onActivitySync,
+  type TerminalActivityState,
+} from '../../tipc/terminalClient';
 
 /**
  * No-op tracer for use in Storybook or when telemetry is not available
@@ -131,12 +136,41 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
 }) => {
   const { theme } = useTheme();
   const [currentWindowId, setCurrentWindowId] = useState<number | null>(null);
+  const [terminalActivities, setTerminalActivities] = useState<TerminalActivityState[]>([]);
 
   // Get the current window ID on mount
   useEffect(() => {
     WindowService.getWindowId()
       .then((id) => setCurrentWindowId(id))
       .catch(() => {});
+  }, []);
+
+  // Fetch terminal activity state and subscribe to updates
+  useEffect(() => {
+    // Fetch initial activity state
+    const fetchInitialActivities = async () => {
+      try {
+        const activities = await terminalClient.getActivityState();
+        setTerminalActivities(activities);
+      } catch (_error) {
+        // Silently fail - may not be available in Storybook
+      }
+    };
+    fetchInitialActivities();
+
+    // Subscribe to activity sync broadcasts
+    let unsubscribe: (() => void) | undefined;
+    try {
+      unsubscribe = onActivitySync((activities) => {
+        setTerminalActivities(activities);
+      });
+    } catch (_error) {
+      // Silently fail - may not be available in Storybook
+    }
+
+    return () => {
+      unsubscribe?.();
+    };
   }, []);
 
   // Get terminal sessions from context slice
@@ -194,12 +228,18 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
         width: '100%',
         backgroundColor: theme.colors.background,
         overflow: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
       <div
         style={{
           padding: '16px',
           boxSizing: 'border-box',
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          minHeight: 0,
         }}
       >
         {/* Header */}
@@ -218,28 +258,31 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
               gap: '10px',
             }}
           >
-            <Terminal size={20} color={theme.colors.primary} />
             <h2
               style={{
                 fontSize: theme.fontSizes[3],
                 fontWeight: theme.fontWeights.semibold,
+                fontFamily: theme.fonts.body,
                 color: theme.colors.text,
                 margin: 0,
               }}
             >
               Terminal Sessions
             </h2>
-            <span
-              style={{
-                fontSize: theme.fontSizes[1],
-                color: theme.colors.textTertiary,
-                backgroundColor: theme.colors.backgroundSecondary,
-                padding: '2px 8px',
-                borderRadius: theme.radii[0],
-              }}
-            >
-              {sessions.length}
-            </span>
+            {sessions.length >= 5 && (
+              <span
+                style={{
+                  fontSize: theme.fontSizes[1],
+                  fontFamily: theme.fonts.body,
+                  color: theme.colors.textTertiary,
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  padding: '2px 8px',
+                  borderRadius: theme.radii[0],
+                }}
+              >
+                {sessions.length}
+              </span>
+            )}
           </div>
 
           {isLoading && (
@@ -255,22 +298,25 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
         {sortedSessions.length === 0 ? (
           <div
             style={{
-              padding: '32px',
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
               textAlign: 'center',
               color: theme.colors.textSecondary,
-              backgroundColor: theme.colors.backgroundSecondary,
-              borderRadius: theme.radii[1],
             }}
           >
             <Terminal
-              size={32}
+              size={48}
               color={theme.colors.textTertiary}
-              style={{ marginBottom: '12px' }}
+              style={{ marginBottom: '16px' }}
             />
             <p
               style={{
                 margin: 0,
                 fontSize: theme.fontSizes[2],
+                fontFamily: theme.fonts.body,
               }}
             >
               No active terminal sessions
@@ -279,6 +325,7 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
               style={{
                 margin: '8px 0 0 0',
                 fontSize: theme.fontSizes[1],
+                fontFamily: theme.fonts.body,
                 color: theme.colors.textTertiary,
               }}
             >
@@ -298,6 +345,8 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
               const contextBadge = getContextBadge(session);
               const isActive = session.status === 'active';
               const isLocalSession = session.ownedByWindowId === currentWindowId;
+              const activity = terminalActivities.find(a => a.sessionId === session.id);
+              const isWorking = activity?.isWorking ?? false;
 
               return (
                 <button
@@ -348,16 +397,20 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
                           width: '8px',
                           height: '8px',
                           borderRadius: '50%',
-                          backgroundColor: isActive
+                          backgroundColor: isWorking
                             ? theme.colors.success
-                            : theme.colors.warning,
+                            : isActive
+                              ? theme.colors.success
+                              : theme.colors.warning,
                           flexShrink: 0,
+                          animation: isWorking ? 'pulse 2s infinite' : 'none',
                         }}
-                        title={isActive ? 'Active' : 'Disconnected'}
+                        title={isWorking ? 'Working' : isActive ? 'Active' : 'Disconnected'}
                       />
                       <span
                         style={{
                           fontWeight: theme.fontWeights.medium,
+                          fontFamily: theme.fonts.body,
                           color: theme.colors.text,
                           fontSize: theme.fontSizes[2],
                           overflow: 'hidden',
@@ -367,10 +420,23 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
                       >
                         {displayName}
                       </span>
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize: theme.fontSizes[0],
+                        fontFamily: theme.fonts.body,
+                        color: theme.colors.textTertiary,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                      }}
+                    >
                       {contextBadge && (
                         <span
                           style={{
                             fontSize: theme.fontSizes[0],
+                            fontFamily: theme.fonts.body,
                             color: theme.colors.textSecondary,
                             backgroundColor: theme.colors.background,
                             padding: '2px 6px',
@@ -395,19 +461,31 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
                           :{session.metadata.port}
                         </span>
                       )}
-                    </div>
-
-                    <div
-                      style={{
-                        fontSize: theme.fontSizes[0],
-                        color: theme.colors.textTertiary,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      <Clock size={12} />
-                      {formatRelativeTime(session.lastActivity)}
+                      {isWorking && (
+                        <span
+                          style={{
+                            fontSize: theme.fontSizes[0],
+                            fontFamily: theme.fonts.body,
+                            color: theme.colors.success,
+                            backgroundColor: `${theme.colors.success}15`,
+                            padding: '2px 6px',
+                            borderRadius: theme.radii[0],
+                            fontWeight: theme.fontWeights.medium,
+                          }}
+                        >
+                          Working
+                        </span>
+                      )}
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        <Clock size={12} />
+                        {formatRelativeTime(session.lastActivity)}
+                      </div>
                     </div>
                   </div>
 
@@ -439,6 +517,10 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
         }
       `}</style>
     </div>
