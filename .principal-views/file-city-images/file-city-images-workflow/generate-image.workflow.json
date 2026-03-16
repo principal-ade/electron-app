@@ -1,0 +1,71 @@
+{
+  "version": "1.0.0",
+  "name": "File City Image Generation",
+  "description": "Generate PNG visualization images for repositories using cached file trees",
+  "canvas": ".principal-views/file-city-images/file-city-images.otel.canvas",
+  "spanPattern": "file_city.image.generation",
+  "scenarios": [
+    {
+      "id": "cache-hit",
+      "description": "Cached image found and returned immediately",
+      "priority": 1,
+      "template": {
+        "introduction": "**File City Image Request (Cache Hit)**\n\nCached PNG image found for repository.",
+        "events": {
+          "file_city.image.requested": "[1] Image requested for `{{repo_path}}`",
+          "file_city.cache.checked": "[2] Cache check for `{{repo_path}}`: key={{cache_key}}, hit={{cache_hit}}",
+          "file_city.image.cache_hit": "[3] Returning cached image for `{{repo_path}}`: {{cache_path}}"
+        },
+        "summary": "**Result:** Returned cached image\n- Repository: `{{repo_path}}`\n- Cache path: {{cache_path}}"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "generation-success",
+      "description": "New image generated from file tree and cached",
+      "priority": 2,
+      "template": {
+        "introduction": "**File City Image Generation**\n\nGenerating new PNG visualization from file tree.",
+        "events": {
+          "file_city.image.requested": "[1] Image requested for `{{repo_path}}`",
+          "file_city.cache.checked": "[2] Cache miss for `{{repo_path}}`: key={{cache_key}}",
+          "file_city.filetree.fetched": "[3] FileTree fetched for `{{repo_path}}`: {{file_count}} files, SHA={{tree_sha}}",
+          "file_city.image.generation_started": "[4] Generating image for `{{repo_path}}`: {{image_width}}x{{image_height}} PNG, {{file_count}} files",
+          "file_city.image.generation_complete": "[5] Saved image for `{{repo_path}}` to {{cache_path}} in {{duration_ms}}ms ({{file_size_bytes}} bytes)"
+        },
+        "summary": "**Result:** Image generated successfully\n- Repository: `{{repo_path}}`\n- Files visualized: {{file_count}}\n- Generation time: {{duration_ms}}ms\n- Cache path: {{cache_path}}"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "no-filetree",
+      "description": "Repository not opened yet, no file tree in cache",
+      "priority": 3,
+      "template": {
+        "introduction": "**File City Image Request (Skipped)**\n\nNo file tree available for repository.",
+        "events": {
+          "file_city.image.requested": "[1] Image requested for `{{repo_path}}`",
+          "file_city.cache.checked": "[2] Cache miss for `{{repo_path}}`: key={{cache_key}}",
+          "file_city.filetree.fetched": "[3] FileTree fetch for `{{repo_path}}`: has_tree={{has_tree}}",
+          "file_city.image.skipped": "[4] Skipped `{{repo_path}}`: {{reason}}"
+        },
+        "summary": "**Result:** Image generation skipped\n- Repository: `{{repo_path}}`\n- Reason: {{reason}}\n- Open the repository first to populate file tree cache"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "generation-error",
+      "description": "Error occurred during image generation",
+      "priority": 4,
+      "template": {
+        "introduction": "**File City Image Generation Error**\n\nFailed to generate image for repository.",
+        "events": {
+          "file_city.image.requested": "[1] Image requested for `{{repo_path}}`",
+          "file_city.image.error": "[ERROR] `{{repo_path}}` - {{error_type}} in {{phase}}: {{error_message}}"
+        },
+        "summary": "**Result:** Generation failed\n- Repository: `{{repo_path}}`\n- Error: {{error_type}}\n- Message: {{error_message}}\n- Phase: {{phase}}"
+      },
+      "filterDefault": false
+    }
+  ]
+}
