@@ -472,6 +472,10 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
                             padding: '2px 6px',
                             borderRadius: theme.radii[0],
                             fontWeight: theme.fontWeights.medium,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            height: '18px',
+                            boxSizing: 'border-box',
                           }}
                         >
                           Working
@@ -479,9 +483,10 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
                       ) : (
                         <div
                           style={{
-                            display: 'flex',
+                            display: 'inline-flex',
                             alignItems: 'center',
                             gap: '4px',
+                            height: '18px',
                           }}
                         >
                           <Clock size={12} />

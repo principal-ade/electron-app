@@ -1,6 +1,6 @@
 {
   "name": "principal-ade",
-  "version": "0.0.483",
+  "version": "0.0.484",
   "description": "Principal ADE  - The future of Agentic Development Environment",
   "type": "module",
   "keywords": [
@@ -184,7 +184,7 @@
     "@industry-theme/localhost-panels": "^0.2.0",
     "@industry-theme/markdown-panels": "^0.3.0",
     "@industry-theme/principal-view-panels": "^0.12.52",
-    "@industry-theme/repository-composition-panels": "^0.7.39",
+    "@industry-theme/repository-composition-panels": "^0.7.60",
     "@industry-theme/xterm-terminal-panel": "^0.5.5",
     "@modelcontextprotocol/sdk": "1.11.4",
     "@monaco-editor/react": "^4.7.0",

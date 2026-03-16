@@ -14,11 +14,11 @@ type SwitcherWindow = {
 };
 
 // Grid configuration
-const GRID_COLS = 5;
-const GRID_ROWS = 3;
-const CARD_WIDTH = 220;
-const CARD_HEIGHT = 300;
-const CARD_GAP = 30;
+const GRID_COLS = 4;
+const GRID_ROWS = 2;
+const CARD_WIDTH = 353;
+const CARD_HEIGHT = 588;
+const CARD_GAP = 24;
 
 // Grid cell index (row * GRID_COLS + col)
 type GridPosition = number;
