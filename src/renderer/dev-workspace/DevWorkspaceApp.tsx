@@ -210,6 +210,8 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   const [showTerminalToggle, setShowTerminalToggle] = useState(false);
   const [collapsed, setCollapsed] = useState({ left: false, right: false });
   const [sidebarsHidden, setSidebarsHidden] = useState(false);
+  // Store collapsed state before entering focus mode so we can restore it
+  const collapsedBeforeFocusModeRef = useRef<{ left: boolean; right: boolean } | null>(null);
   const [layout, setLayout] = useState<PanelLayout>({
     left: 'terminalSessions',
     middle: 'terminal',
@@ -917,6 +919,26 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     setCollapsed((prev) => ({ ...prev, left: false }));
   }, []);
 
+  // Handle focus mode toggle - hides sidebars AND collapses panels
+  const handleSidebarsHiddenChange = useCallback((hidden: boolean) => {
+    if (hidden) {
+      // Entering focus mode: store current collapsed state, then collapse both panels
+      collapsedBeforeFocusModeRef.current = { ...collapsed };
+      setSidebarsHidden(true);
+      setCollapsed({ left: true, right: true });
+    } else {
+      // Exiting focus mode: restore previous collapsed state
+      setSidebarsHidden(false);
+      if (collapsedBeforeFocusModeRef.current) {
+        setCollapsed(collapsedBeforeFocusModeRef.current);
+        collapsedBeforeFocusModeRef.current = null;
+      } else {
+        // Fallback: expand both panels if no previous state
+        setCollapsed({ left: false, right: false });
+      }
+    }
+  }, [collapsed]);
+
   // Handle left panel collapse complete - apply pending sizes
   const handleLeftCollapseComplete = useCallback(() => {
     if (pendingPanelSizesRef.current) {
@@ -965,7 +987,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         serviceTraceCounts={serviceTraceCounts}
         lastActiveService={lastActiveService}
         sidebarsHidden={sidebarsHidden}
-        onSidebarsHiddenChange={setSidebarsHidden}
+        onSidebarsHiddenChange={handleSidebarsHiddenChange}
       />
       <div className="flex-1 overflow-hidden">
         <DevWorkspacePanelFramework
