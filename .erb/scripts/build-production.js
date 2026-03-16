@@ -197,6 +197,8 @@ try {
     }
 
     // Upload all build artifacts
+    // Note: Files need to be renamed to replace spaces with hyphens to match
+    // what electron-builder puts in latest-mac.yml (gh CLI converts spaces to dots)
     const artifacts = fs.readdirSync(buildDir).filter(f =>
       f.endsWith('.dmg') || f.endsWith('.zip') || f.endsWith('.exe') ||
       f.endsWith('.AppImage') || f.endsWith('.yml') || f.endsWith('.yaml') ||
@@ -205,14 +207,23 @@ try {
 
     for (const artifact of artifacts) {
       const artifactPath = path.join(buildDir, artifact);
-      console.log(`📤 Uploading ${artifact}...`);
+      // Rename file if it contains spaces (to match yml expectations)
+      const newName = artifact.replace(/ /g, '-');
+      const newPath = path.join(buildDir, newName);
+
+      if (artifact !== newName) {
+        fs.renameSync(artifactPath, newPath);
+        console.log(`📝 Renamed: ${artifact} → ${newName}`);
+      }
+
+      console.log(`📤 Uploading ${newName}...`);
       try {
-        execSync(`gh release upload v${version} "${artifactPath}" --repo ${repo} --clobber`, {
+        execSync(`gh release upload v${version} "${newPath}" --repo ${repo} --clobber`, {
           cwd: projectRoot,
           stdio: 'inherit',
         });
       } catch (e) {
-        console.warn(`⚠️  Failed to upload ${artifact}: ${e.message}`);
+        console.warn(`⚠️  Failed to upload ${newName}: ${e.message}`);
       }
     }
   }
