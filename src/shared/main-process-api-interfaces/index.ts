@@ -45,6 +45,7 @@ import type { RecentReposAPI } from './RecentReposAPI';
 import type { SkillLockAPI } from './SkillLockAPI';
 import type { OtelCollectorAPI } from './OtelCollectorAPI';
 import type { ExtensionAPI } from './ExtensionAPI';
+import type { FileCityImageAPI } from './FileCityImageAPI';
 
 /**
  * Terminal Bridge API Interface (Remote Terminal Viewer only)
@@ -122,6 +123,7 @@ export interface MainProcessAPI {
   recentRepos: RecentReposAPI;
   skillLock: SkillLockAPI;
   extension: ExtensionAPI;
+  fileCityImage: FileCityImageAPI;
   /** Only available in Remote Terminal Viewer window */
   terminalBridge?: TerminalBridgeAPI;
 }

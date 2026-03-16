@@ -76,6 +76,7 @@ import { registerGitHubArtifactHandlers } from './services/ipc/githubArtifactHan
 import { registerCollectionsHandlers } from './services/CollectionsService';
 import { ElectronClipboardAdapter } from './system/clipboardHandler';
 import { registerSkillLockHandlers } from './skills/skillLockHandlers';
+import { registerFileCityImageHandlers } from './stores/FileCityImageService';
 
 // let agentSessionEventsHttpBridge: AgentSessionEventsHttpBridge | null = null;
 let principalMCPBridgePort: number | null = null;
@@ -184,6 +185,7 @@ const registerAllIpcHandlers = async () => {
   //registerStorageHandlers();
   registerStoreHandlers();
   registerRepositoryMonitoringHandlers(); // Register repository monitoring handlers
+  registerFileCityImageHandlers(); // Register File City image generation handlers
   registerOtelCollectorHandlers(); // Register OTEL collector handlers
   registerActIntegrationHandlers();
   registerSecretHandlers();

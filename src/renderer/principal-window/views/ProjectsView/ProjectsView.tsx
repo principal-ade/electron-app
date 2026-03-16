@@ -1,8 +1,9 @@
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ConfigurablePanelLayout } from '@principal-ade/panels';
 import '@principal-ade/panels/panels.css';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
+import { FileCityImageService } from '../../../main-process-api/FileCityImageService';
 import {
   LocalProjectsPanel,
   GitHubStarredPanel,
@@ -31,6 +32,42 @@ import { WorkspaceService } from '../../../main-process-api/WorkspaceService';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 import { CollectionRepositoriesPanel } from '../../../panels/CollectionRepositoriesPanel';
 import { ProjectInfoPanel } from '../../../panels/ProjectInfoPanel';
+
+/**
+ * Hook to fetch File City images for entries
+ * Returns a function that gets the image URL for a given entry path
+ */
+function useFileCityImages(entries: AlexandriaEntry[] | null): (path: string) => string | undefined {
+  const [imageMap, setImageMap] = useState<Map<string, string>>(new Map());
+  const fetchingRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!entries || entries.length === 0) return;
+
+    // Fetch images for entries that don't have one yet
+    entries.forEach(async (entry) => {
+      // Skip if already in map or currently fetching
+      if (imageMap.has(entry.path) || fetchingRef.current.has(entry.path)) {
+        return;
+      }
+
+      fetchingRef.current.add(entry.path);
+
+      try {
+        const imageUrl = await FileCityImageService.getImage(entry.path);
+        if (imageUrl) {
+          setImageMap((prev) => new Map(prev).set(entry.path, imageUrl));
+        }
+      } catch (error) {
+        console.warn('[useFileCityImages] Failed to get image for', entry.path, error);
+      } finally {
+        fetchingRef.current.delete(entry.path);
+      }
+    });
+  }, [entries, imageMap]);
+
+  return useCallback((path: string) => imageMap.get(path), [imageMap]);
+}
 
 /**
  * Empty state shown when user is not authenticated for GitHub panels
@@ -97,6 +134,12 @@ const ProjectsViewContent: React.FC<ProjectsViewContentProps> = ({ mode }) => {
   const { theme } = useTheme();
   const { context, actions, events } = useProjectsPanelProvider();
   const { isAuthenticated } = useAuth();
+
+  // Get repositories for File City images
+  const repositories = context.alexandriaRepositories?.data?.repositories || null;
+
+  // Hook to fetch File City visualization images for project cards
+  const getFileCityImage = useFileCityImages(repositories);
 
   // State for grid view mode (only applies to local mode)
   const [isGridView, setIsGridView] = useState(false);
@@ -406,6 +449,7 @@ const ProjectsViewContent: React.FC<ProjectsViewContentProps> = ({ mode }) => {
               },
               currentScope: { type: 'workspace' },
               refresh: context.refresh,
+              getCustomImageUrl: (entry) => getFileCityImage(entry.path),
             }}
             actions={{
               openProject: async (entry) => {
@@ -496,7 +540,7 @@ const ProjectsViewContent: React.FC<ProjectsViewContentProps> = ({ mode }) => {
           ]
         : []),
     ],
-    [context, actions, overriddenActions, events, isAuthenticated],
+    [context, actions, overriddenActions, events, isAuthenticated, getFileCityImage],
   );
 
   // Get workspaces from context for create repository button
