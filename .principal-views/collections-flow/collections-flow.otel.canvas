@@ -32,6 +32,14 @@
       "storage": {
         "label": "GitHub Storage",
         "color": "#0D9488"
+      },
+      "event": {
+        "label": "Event",
+        "color": "#3B82F6"
+      },
+      "boundary": {
+        "label": "Boundary",
+        "color": "#64748B"
       }
     },
     "edgeTypes": {
@@ -87,16 +95,12 @@
       "height": 100,
       "text": "CreateCollectionModal\n(user enters name,\ndescription, icon)",
       "pv": {
-        "nodeType": "ui-component",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/components/CreateCollectionModal.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui"
-        },
         "event": {
           "name": "collections.ui.modal_opened",
           "description": "User opened create collection modal",
@@ -122,16 +126,12 @@
       "height": 80,
       "text": "UserCollectionsPanel\n(displays list,\nemits events)",
       "pv": {
-        "nodeType": "ui-component",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/contexts/WorldsViewPanelContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui"
-        },
         "event": {
           "name": "collections.ui.create_requested",
           "description": "User clicked create collection button",
@@ -157,16 +157,12 @@
       "height": 100,
       "text": "WorldsViewPanelContext\n- createCollection()\n- manages state\n- emits events",
       "pv": {
-        "nodeType": "context",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/contexts/WorldsViewPanelContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle"
-        },
         "event": {
           "name": "collections.context.create_started",
           "description": "Context received create collection request",
@@ -196,16 +192,12 @@
       "height": 100,
       "text": "CollectionsService\n(renderer)\nIPC wrapper",
       "pv": {
-        "nodeType": "renderer-service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/main-process-api/CollectionsService.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ipc"
-        },
         "event": {
           "name": "collections.renderer.ipc_invoked",
           "description": "Renderer service invoked IPC method",
@@ -231,16 +223,12 @@
       "height": 100,
       "text": "Preload Bridge\n(collectionsApi)\nIPC boundary",
       "pv": {
-        "nodeType": "preload",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/window/main-process-api-implementations/collectionsApi.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ipc"
-        },
         "event": {
           "name": "collections.preload.forwarded",
           "description": "Preload bridge forwarded IPC call to main process",
@@ -266,16 +254,12 @@
       "height": 120,
       "text": "CollectionsService\n(main process)\n- createCollection()\n- validates input\n- generates ID",
       "pv": {
-        "nodeType": "main-process",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/services/CollectionsService.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle"
-        },
         "event": {
           "name": "collections.main.create_started",
           "description": "Main process started collection creation",
@@ -305,16 +289,12 @@
       "height": 100,
       "text": "Check GitHub Repo\ncheckGitHubRepo()\nDoes web-ade-collections\nexist?",
       "pv": {
-        "nodeType": "main-process",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/services/CollectionsService.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "github"
-        },
         "event": {
           "name": "collections.github.repo_check",
           "description": "Checking if web-ade-collections repository exists",
@@ -340,16 +320,12 @@
       "height": 100,
       "text": "GitHub API\nGET /user/repos\n(check existence)",
       "pv": {
-        "nodeType": "github-api",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/services/CollectionsService.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "http"
-        },
         "event": {
           "name": "collections.github.api_request",
           "description": "GitHub API request to check repository existence",
@@ -383,16 +359,12 @@
       "height": 100,
       "text": "Enable GitHub Sync\nenableGitHubSync()\nCreate repo if needed",
       "pv": {
-        "nodeType": "main-process",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/services/CollectionsService.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "github"
-        },
         "event": {
           "name": "collections.github.sync_enabled",
           "description": "GitHub sync enabled, repository created if needed",
@@ -418,16 +390,12 @@
       "height": 100,
       "text": "GitHub API\nPOST /user/repos\n(create repository)",
       "pv": {
-        "nodeType": "github-api",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/services/CollectionsService.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "http"
-        },
         "event": {
           "name": "collections.github.repo_created",
           "description": "Created web-ade-collections repository on GitHub",
@@ -465,16 +433,12 @@
       "height": 120,
       "text": "Sync to GitHub\nsyncToGitHub()\n- Update collections.json\n- Update memberships.json",
       "pv": {
-        "nodeType": "main-process",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/services/CollectionsService.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "github"
-        },
         "event": {
           "name": "collections.github.sync_started",
           "description": "Started syncing collections to GitHub",
@@ -500,16 +464,12 @@
       "height": 100,
       "text": "GitHub API\nPUT contents/\ncollections.json\n(with SHA)",
       "pv": {
-        "nodeType": "github-api",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/services/CollectionsService.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "http"
-        },
         "event": {
           "name": "collections.github.file_updated",
           "description": "Updated collections.json file on GitHub",
@@ -551,16 +511,12 @@
       "height": 100,
       "text": "GitHub API\nPUT contents/\nmemberships.json\n(with SHA)",
       "pv": {
-        "nodeType": "github-api",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/services/CollectionsService.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "http"
-        },
         "event": {
           "name": "collections.github.memberships_updated",
           "description": "Updated collection-memberships.json file on GitHub",
@@ -594,16 +550,12 @@
       "height": 120,
       "text": "GitHub Storage\nweb-ade-collections/\n- collections.json\n- memberships.json",
       "pv": {
-        "nodeType": "storage",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/services/CollectionsService.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "storage"
-        },
         "event": {
           "name": "collections.storage.persisted",
           "description": "Collections data persisted to GitHub storage",
@@ -633,16 +585,12 @@
       "height": 100,
       "text": "Context State Update\nfetchCollections()\nRefresh collections list",
       "pv": {
-        "nodeType": "context",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/contexts/WorldsViewPanelContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle"
-        },
         "event": {
           "name": "collections.context.refreshed",
           "description": "Context state refreshed with new collections",
@@ -668,16 +616,12 @@
       "height": 100,
       "text": "UI Re-render\nCollections list\nupdated with new item",
       "pv": {
-        "nodeType": "ui-component",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/contexts/WorldsViewPanelContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui"
-        },
         "event": {
           "name": "collections.ui.rendered",
           "description": "UI component re-rendered with updated collections",
@@ -707,16 +651,12 @@
       "height": 80,
       "text": "Event Emitted\ncollection:created\n(PanelEventBus)",
       "pv": {
-        "nodeType": "context",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/contexts/WorldsViewPanelContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle"
-        },
         "event": {
           "name": "collections.event.created_emitted",
           "description": "collection:created event emitted on PanelEventBus",

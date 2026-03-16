@@ -40,6 +40,14 @@
       "timing": {
         "label": "Timing/Debounce",
         "color": "#F59E0B"
+      },
+      "event": {
+        "label": "Event",
+        "color": "#3B82F6"
+      },
+      "boundary": {
+        "label": "Boundary",
+        "color": "#64748B"
       }
     },
     "edgeTypes": {
@@ -110,16 +118,12 @@
       "height": 80,
       "text": "File System\n(user creates/\nmodifies/deletes files)",
       "pv": {
-        "nodeType": "file-system",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/repository-monitoring/ipcHandlers.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle"
-        },
         "event": {
           "name": "filetree.file.changed",
           "description": "File system change detected by chokidar watcher",
@@ -149,16 +153,12 @@
       "height": 80,
       "text": "Git Watcher\n(chokidar)\nDetects changes",
       "pv": {
-        "nodeType": "worker",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/repository-monitoring/ipcHandlers.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle"
-        },
         "event": {
           "name": "filetree.watcher.detected",
           "description": "Chokidar watcher detected file system change",
@@ -184,16 +184,12 @@
       "height": 80,
       "text": "Repository Monitoring\nWorker\n(utility process)",
       "pv": {
-        "nodeType": "worker",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/repository-monitoring/ipcHandlers.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle"
-        },
         "event": {
           "name": "filetree.worker.notified",
           "description": "Worker process received file change notification",
@@ -219,16 +215,12 @@
       "height": 80,
       "text": "workspace:changed\nIPC Event\n(immediate)",
       "pv": {
-        "nodeType": "main-process",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/repository-monitoring/ipcHandlers.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ipc"
-        },
         "event": {
           "name": "filetree.workspace.changed",
           "description": "IPC event emitted immediately when workspace files change",
@@ -254,16 +246,12 @@
       "height": 80,
       "text": "Cache Registry\n(Worker-side cache\nwith version tracking)",
       "pv": {
-        "nodeType": "cache",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/repository-monitoring/ipcHandlers.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "cache"
-        },
         "event": {
           "name": "filetree.cache.invalidated",
           "description": "Cache marked as stale and scheduled for rebuild",
@@ -293,16 +281,12 @@
       "height": 80,
       "text": "250ms Debounce\n(waits for file\noperations to settle)",
       "pv": {
-        "nodeType": "timing",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/repository-monitoring/ipcHandlers.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "performance"
-        },
         "event": {
           "name": "filetree.debounce.triggered",
           "description": "Debounce timer completed, cache rebuild starting",
@@ -332,16 +316,12 @@
       "height": 80,
       "text": "Cache Rebuild\n(file tree builder)\nversion++",
       "pv": {
-        "nodeType": "worker",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/repository-monitoring/ipcHandlers.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "cache"
-        },
         "event": {
           "name": "filetree.cache.rebuild",
           "description": "Cache rebuild completed with incremented version",
@@ -375,16 +355,12 @@
       "height": 80,
       "text": "CACHE_SYNC\nIPC Event\n(with fresh data)",
       "pv": {
-        "nodeType": "main-process",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/repository-monitoring/ipcHandlers.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ipc"
-        },
         "event": {
           "name": "filetree.cache.synced",
           "description": "Cache sync event emitted with fresh file tree data",
@@ -422,16 +398,12 @@
       "height": 100,
       "text": "Preload Bridge\n(repositoryMonitoringApi)\n+ Deduplication Guard\n(50ms window)",
       "pv": {
-        "nodeType": "preload",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/window/main-process-api-implementations/repositoryMonitoringApi.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ipc"
-        },
         "event": {
           "name": "filetree.preload.event_received",
           "description": "Preload bridge received IPC event, deduplication check applied",
@@ -465,16 +437,12 @@
       "height": 80,
       "text": "RepositoryMonitoring\nService\n(renderer wrapper)",
       "pv": {
-        "nodeType": "renderer-service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/main-process-api/RepositoryMonitoringService.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle"
-        },
         "event": {
           "name": "filetree.service.subscribed",
           "description": "Service subscribed to monitoring events",
@@ -500,16 +468,12 @@
       "height": 80,
       "text": "refreshRepository()\nInvalidates cache\n→ triggers rebuild",
       "pv": {
-        "nodeType": "renderer-service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/main-process-api/RepositoryMonitoringService.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "cache"
-        },
         "event": {
           "name": "filetree.refresh.requested",
           "description": "Explicit cache refresh requested from renderer",
@@ -535,16 +499,12 @@
       "height": 100,
       "text": "RepositoryPanelContext\n- onWorkspaceChange\n- onCacheSync\n- fileTreeVersion state",
       "pv": {
-        "nodeType": "context",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/contexts/RepositoryPanelContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui"
-        },
         "event": {
           "name": "filetree.context.updated",
           "description": "React context updated with new file tree data",
@@ -574,16 +534,12 @@
       "height": 80,
       "text": "File Tree UI\n(panels, file explorer)\nre-renders",
       "pv": {
-        "nodeType": "ui-component",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/contexts/RepositoryPanelContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui"
-        },
         "event": {
           "name": "filetree.ui.rendered",
           "description": "UI component re-rendered with updated file tree",

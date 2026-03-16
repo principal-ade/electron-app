@@ -32,6 +32,10 @@
       "event": {
         "label": "Event",
         "color": "#14B8A6"
+      },
+      "boundary": {
+        "label": "Boundary",
+        "color": "#64748B"
       }
     },
     "edgeTypes": {
@@ -82,16 +86,12 @@
       "height": 100,
       "text": "Storybook Button\n\nUser clicks button\nin right sidebar",
       "pv": {
-        "nodeType": "ui",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/components/Sidebar/StorybookSidebarButton.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui"
-        },
         "event": {
           "name": "storybook.button.clicked",
           "description": "User clicked the Storybook button in titlebar",
@@ -121,17 +121,13 @@
       "height": 120,
       "text": "StorybookService\n.findStorybookPackages()\n\nUses codebase-composition\nPackageLayer[] data",
       "pv": {
-        "nodeType": "service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/services/StorybookService.ts",
           "@principal-ai/codebase-composition"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "detection"
-        },
         "event": {
           "name": "storybook.packages.detected",
           "description": "Storybook packages detected in codebase composition",
@@ -161,16 +157,12 @@
       "height": 100,
       "text": "findAvailablePort()\n\nScans 6006-6020\nfinds first free port",
       "pv": {
-        "nodeType": "port",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/utils/portDetection.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "network"
-        },
         "event": {
           "name": "storybook.port.found",
           "description": "Found available port for Storybook server",
@@ -202,16 +194,12 @@
       "height": 120,
       "text": "StorybookService\n.getStorybookCommand()\n\nnpm run storybook\nor npx storybook dev",
       "pv": {
-        "nodeType": "service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/services/StorybookService.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle"
-        },
         "event": {
           "name": "storybook.command.generated",
           "description": "Generated Storybook command based on package.json scripts",
@@ -245,16 +233,12 @@
       "height": 120,
       "text": "Terminal Session\n\nCreate with context:\nterminal:{owner}/\n{repo}:storybook",
       "pv": {
-        "nodeType": "terminal",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/components/Sidebar/StorybookSidebarButton.tsx"
         ],
-        "otel": {
-          "kind": "span",
-          "category": "lifecycle"
-        },
         "event": {
           "name": "storybook.terminal.created",
           "description": "Terminal session created for Storybook process",
@@ -295,10 +279,6 @@
         "references": [
           "src/renderer/components/Sidebar/StorybookSidebarButton.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ipc"
-        },
         "event": {
           "name": "storybook.session.event_emitted",
           "description": "Terminal session created event emitted to panel framework",
@@ -324,16 +304,12 @@
       "height": 120,
       "text": "Panel Layout\n\n- Collapse left panel\n- 50/50 middle/right\n- Right: localhostBrowser",
       "pv": {
-        "nodeType": "panel",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/components/Sidebar/StorybookSidebarButton.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui"
-        },
         "event": {
           "name": "storybook.layout.configured",
           "description": "Panel layout reconfigured for Storybook development",
@@ -363,16 +339,12 @@
       "height": 100,
       "text": "waitForPortReady()\n\nPolls port every 1s\n30s timeout",
       "pv": {
-        "nodeType": "port",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/utils/portDetection.ts"
         ],
-        "otel": {
-          "kind": "span",
-          "category": "network"
-        },
         "event": {
           "name": "storybook.port.ready",
           "description": "Storybook server port became responsive",
@@ -402,16 +374,12 @@
       "height": 100,
       "text": "Browser Navigate\n\nprincipal-ade.\nlocalhost-browser:\nnavigate",
       "pv": {
-        "nodeType": "browser",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/components/Sidebar/StorybookSidebarButton.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui"
-        },
         "event": {
           "name": "storybook.browser.navigated",
           "description": "Localhost browser panel navigated to Storybook URL",
@@ -442,16 +410,12 @@
       "height": 80,
       "text": "Status: Running\n\nButton shows 'Stop SB'\nwith green highlight",
       "pv": {
-        "nodeType": "ui",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/components/Sidebar/StorybookSidebarButton.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui"
-        },
         "event": {
           "name": "storybook.status.changed",
           "description": "Storybook button status changed",
@@ -481,16 +445,12 @@
       "height": 100,
       "text": "Stop Storybook\n\nterminal.destroy()\nreset state\nrestore panels",
       "pv": {
-        "nodeType": "terminal",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/components/Sidebar/StorybookSidebarButton.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle"
-        },
         "event": {
           "name": "storybook.stopped",
           "description": "Storybook process stopped and resources cleaned up",

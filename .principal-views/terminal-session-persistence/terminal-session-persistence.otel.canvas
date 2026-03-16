@@ -36,6 +36,14 @@
       "renderer": {
         "label": "Renderer",
         "color": "#3B82F6"
+      },
+      "event": {
+        "label": "Event",
+        "color": "#3B82F6"
+      },
+      "boundary": {
+        "label": "Boundary",
+        "color": "#64748B"
       }
     },
     "edgeTypes": {
@@ -96,19 +104,12 @@
       "height": 100,
       "text": "TerminalSessionManager\n\n.createSession()\n.restoreSessions()\n.prepareForRestart()",
       "pv": {
-        "nodeType": "electron",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/terminal/TerminalSessionManager.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": [
-            "src/main/terminal/TerminalSessionManager.ts"
-          ]
-        },
         "event": {
           "name": "terminal.persistence.manager_action",
           "description": "Session manager coordinating with daemon",
@@ -134,15 +135,10 @@
       "height": 120,
       "text": "PtyDaemonClient\n\n.connect()\n.createSession()\n.listSessions()\n.onReconnected()",
       "pv": {
-        "nodeType": "daemon-client",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [],
-        "otel": {
-          "kind": "event",
-          "category": "ipc",
-          "files": []
-        },
         "event": {
           "name": "terminal.daemon.client_action",
           "description": "Daemon client communicating with PTY daemon",
@@ -168,19 +164,12 @@
       "height": 100,
       "text": "Renderer\n\nTerminal UI\nxterm.js\nMessagePort",
       "pv": {
-        "nodeType": "renderer",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "approved",
         "references": [
           "src/renderer/contexts/TerminalContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui",
-          "files": [
-            "src/renderer/contexts/TerminalContext.tsx"
-          ]
-        },
         "event": {
           "name": "terminal.renderer.data_received",
           "description": "Renderer received terminal data via MessagePort",
@@ -202,15 +191,10 @@
       "height": 80,
       "text": "Unix Domain Socket\n\n~/.your-app/\npty-daemon.sock",
       "pv": {
-        "nodeType": "socket",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [],
-        "otel": {
-          "kind": "event",
-          "category": "ipc",
-          "files": []
-        },
         "event": {
           "name": "terminal.socket.message",
           "description": "Message passed through Unix socket",
@@ -246,15 +230,10 @@
       "height": 120,
       "text": "SocketServer\n\nnet.createServer()\nJSON protocol\nClient multiplexing",
       "pv": {
-        "nodeType": "daemon",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [],
-        "otel": {
-          "kind": "event",
-          "category": "server",
-          "files": []
-        },
         "event": {
           "name": "terminal.daemon.server_event",
           "description": "Daemon socket server event",
@@ -280,19 +259,12 @@
       "height": 120,
       "text": "DaemonSessionManager\n\nsessions: Map<id, PTY>\nscrollback buffers\nPTY lifecycle",
       "pv": {
-        "nodeType": "daemon",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/pty-daemon/DaemonSessionManager.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": [
-            "src/pty-daemon/telemetry.ts"
-          ]
-        },
         "event": {
           "name": "terminal.daemon.session_action",
           "description": "Daemon session manager action",
@@ -322,15 +294,10 @@
       "height": 60,
       "text": "PTY 1\n/bin/zsh",
       "pv": {
-        "nodeType": "pty",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [],
-        "otel": {
-          "kind": "event",
-          "category": "process",
-          "files": []
-        },
         "event": {
           "name": "terminal.pty.data",
           "description": "PTY process output data",
@@ -356,20 +323,13 @@
       "height": 60,
       "text": "PTY 2\n/bin/zsh",
       "pv": {
-        "nodeType": "pty",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/pty-daemon/telemetry.ts",
           "src/pty-daemon/DaemonSessionManager.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "process",
-          "files": [
-            "src/pty-daemon/telemetry.ts"
-          ]
-        },
         "event": {
           "name": "terminal.pty.spawned",
           "description": "PTY process spawned by daemon",
@@ -395,15 +355,10 @@
       "height": 60,
       "text": "PTY 3\n/bin/zsh",
       "pv": {
-        "nodeType": "pty",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [],
-        "otel": {
-          "kind": "event",
-          "category": "process",
-          "files": []
-        },
         "event": {
           "name": "terminal.pty.exit",
           "description": "PTY process exited",
@@ -429,15 +384,10 @@
       "height": 60,
       "text": "PTY N\n...",
       "pv": {
-        "nodeType": "pty",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [],
-        "otel": {
-          "kind": "event",
-          "category": "process",
-          "files": []
-        },
         "event": {
           "name": "terminal.pty.resize",
           "description": "PTY process resized",
@@ -467,20 +417,13 @@
       "height": 60,
       "text": "Spawn Attempt\n(debug)",
       "pv": {
-        "nodeType": "pty",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/pty-daemon/telemetry.ts",
           "src/pty-daemon/DaemonSessionManager.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "process",
-          "files": [
-            "src/pty-daemon/telemetry.ts"
-          ]
-        },
         "event": {
           "name": "terminal.pty.spawn_attempt",
           "description": "PTY spawn attempt with full parameters for debugging",
@@ -530,20 +473,13 @@
       "height": 60,
       "text": "Spawn Failed\n(error)",
       "pv": {
-        "nodeType": "pty",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/pty-daemon/telemetry.ts",
           "src/pty-daemon/DaemonSessionManager.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": [
-            "src/pty-daemon/telemetry.ts"
-          ]
-        },
         "event": {
           "name": "terminal.pty.spawn_failed",
           "description": "PTY spawn failure with detailed context",
@@ -637,15 +573,10 @@
       "height": 60,
       "text": "Daemon Lifecycle\n\nstartup → ready → shutdown",
       "pv": {
-        "nodeType": "daemon",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": []
-        },
         "event": {
           "name": "terminal.daemon.phase",
           "description": "Daemon process lifecycle phase changes",
@@ -675,15 +606,10 @@
       "height": 60,
       "text": "Connection State\n\nconnecting → connected → disconnected",
       "pv": {
-        "nodeType": "socket",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [],
-        "otel": {
-          "kind": "event",
-          "category": "connection",
-          "files": []
-        },
         "event": {
           "name": "terminal.socket.connection",
           "description": "Socket connection state changes",
@@ -713,15 +639,10 @@
       "height": 100,
       "text": "Persistence Store\n\n~/.your-app/\nsessions.json\nmetadata backup",
       "pv": {
-        "nodeType": "electron",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [],
-        "otel": {
-          "kind": "event",
-          "category": "persistence",
-          "files": []
-        },
         "event": {
           "name": "terminal.persistence.store",
           "description": "Session metadata persistence to disk",
@@ -751,15 +672,10 @@
       "height": 80,
       "text": "Scrollback Buffers\n\nPer-session circular buffer\nCapture on write, replay on attach",
       "pv": {
-        "nodeType": "daemon",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [],
-        "otel": {
-          "kind": "event",
-          "category": "data",
-          "files": []
-        },
         "event": {
           "name": "terminal.scrollback.action",
           "description": "Scrollback buffer operations",
@@ -803,20 +719,13 @@
       "height": 100,
       "text": "Error Events\n\nterminal.daemon.error\nterminal.socket.error\nterminal.pty.error",
       "pv": {
-        "nodeType": "update",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/pty-daemon/telemetry.ts",
           "src/pty-daemon/DaemonSessionManager.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": [
-            "src/pty-daemon/telemetry.ts"
-          ]
-        },
         "event": {
           "name": "terminal.error",
           "description": "Error events across terminal subsystem",
@@ -854,15 +763,10 @@
       "height": 120,
       "text": "Health Monitoring\n\nping/pong heartbeat\nClient sends ping every 30s\nTimeout triggers reconnect\nDaemon tracks client liveness",
       "pv": {
-        "nodeType": "socket",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [],
-        "otel": {
-          "kind": "event",
-          "category": "health",
-          "files": []
-        },
         "event": {
           "name": "terminal.health.check",
           "description": "Health check ping/pong",
@@ -892,15 +796,10 @@
       "height": 120,
       "text": "Idle Shutdown\n\nNo sessions + no clients\nfor IDLE_TIMEOUT (30min)\n→ daemon exits gracefully\n\nPrevents orphaned daemons",
       "pv": {
-        "nodeType": "daemon",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": []
-        },
         "event": {
           "name": "terminal.daemon.idle",
           "description": "Daemon idle state monitoring",
@@ -934,19 +833,12 @@
       "height": 120,
       "text": "Utility Worker\n\n- Connects to daemon socket\n- Holds MessagePorts\n- Bridges socket ↔ ports\n- NO PTY spawning",
       "pv": {
-        "nodeType": "worker",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/terminal-worker/worker-entry.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "bridge",
-          "files": [
-            "src/terminal-worker/worker-entry.ts"
-          ]
-        },
         "event": {
           "name": "terminal.worker.action",
           "description": "Worker bridging events",
@@ -976,15 +868,10 @@
       "height": 80,
       "text": "DaemonBridge\n\nSocket client in worker\nRoutes data to ports",
       "pv": {
-        "nodeType": "worker",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [],
-        "otel": {
-          "kind": "event",
-          "category": "ipc",
-          "files": []
-        },
         "event": {
           "name": "terminal.bridge.data",
           "description": "Data bridged between socket and MessagePort",

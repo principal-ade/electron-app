@@ -40,6 +40,14 @@
       "reconnect": {
         "label": "Reconnect Handler",
         "color": "#22C55E"
+      },
+      "event": {
+        "label": "Event",
+        "color": "#3B82F6"
+      },
+      "boundary": {
+        "label": "Boundary",
+        "color": "#64748B"
       }
     },
     "edgeTypes": {
@@ -100,19 +108,12 @@
       "height": 100,
       "text": "Renderer Process\n\nterminalClient\n.createTerminalSession()",
       "pv": {
-        "nodeType": "renderer",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/tipc/terminalClient.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui",
-          "files": [
-            "src/renderer/tipc/terminalClient.ts"
-          ]
-        },
         "event": {
           "name": "terminal.session.create_requested",
           "description": "Renderer requested terminal session creation via TIPC",
@@ -138,19 +139,12 @@
       "height": 100,
       "text": "terminalRouter\n.createTerminalSession\n\nTIPC procedure handler",
       "pv": {
-        "nodeType": "tipc-router",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/terminal/tipc/terminalRouter.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ipc",
-          "files": [
-            "src/main/terminal/tipc/terminalRouter.ts"
-          ]
-        },
         "event": {
           "name": "terminal.session.router_handled",
           "description": "TIPC router handling session creation",
@@ -176,19 +170,12 @@
       "height": 120,
       "text": "TerminalSessionManager\n\n.createSession()\n.destroySession()\n.getAllSessions()\n.updateActivity()",
       "pv": {
-        "nodeType": "session-manager",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/terminal/TerminalSessionManager.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": [
-            "src/main/terminal/tipc/terminalRouter.ts"
-          ]
-        },
         "event": {
           "name": "terminal.session.manager_action",
           "description": "Session manager performing action",
@@ -214,19 +201,12 @@
       "height": 120,
       "text": "Session Stores\n\nsessions: Map<id, Session>\nsessionsByRepo: Map\nactivityStore: Map\nsessionPorts: Map",
       "pv": {
-        "nodeType": "store",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/terminal/TerminalSessionManager.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "storage",
-          "files": [
-            "src/main/terminal/tipc/terminalRouter.ts"
-          ]
-        },
         "event": {
           "name": "terminal.session.store_updated",
           "description": "Session store state changed",
@@ -256,20 +236,13 @@
       "height": 100,
       "text": "OwnershipManager\n\n.claimOwnership()\n.releaseOwnership()\n.checkOwnership()",
       "pv": {
-        "nodeType": "ownership-manager",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/terminal/TerminalOwnershipManager.ts",
           "src/main/terminal/tipc/terminalRouter.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ownership",
-          "files": [
-            "src/main/terminal/tipc/terminalRouter.ts"
-          ]
-        },
         "event": {
           "name": "terminal.ownership.changed",
           "description": "Terminal ownership changed",
@@ -300,19 +273,12 @@
       "height": 100,
       "text": "Terminal Worker\n(Utility Process)\n\nPTY management\nMessagePort streaming",
       "pv": {
-        "nodeType": "worker",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "approved",
         "references": [
           "src/terminal-worker/worker-entry.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "process",
-          "files": [
-            "src/terminal-worker/worker-entry.ts"
-          ]
-        },
         "event": {
           "name": "terminal.worker.session_created",
           "description": "Worker created PTY session",
@@ -338,19 +304,12 @@
       "height": 80,
       "text": "Renderer Port\n\nport2 via\npostMessage()",
       "pv": {
-        "nodeType": "port",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "approved",
         "references": [
           "src/renderer/hooks/useTerminalPort.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ipc",
-          "files": [
-            "src/renderer/hooks/useTerminalPort.ts"
-          ]
-        },
         "event": {
           "name": "terminal.port.renderer_connected",
           "description": "Renderer connected to terminal MessagePort",
@@ -372,19 +331,12 @@
       "height": 80,
       "text": "Worker Port\n\nport1 via\npostMessage()",
       "pv": {
-        "nodeType": "port",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "approved",
         "references": [
           "src/terminal-worker/worker-entry.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ipc",
-          "files": [
-            "src/terminal-worker/worker-entry.ts"
-          ]
-        },
         "event": {
           "name": "terminal.port.worker_registered",
           "description": "Worker registered terminal MessagePort",
@@ -440,19 +392,12 @@
       "height": 120,
       "text": "TerminalSessionsPanel\n\nLeft sidebar panel\n- Lists all sessions\n- Shows ownership\n- Click to switch/focus",
       "pv": {
-        "nodeType": "renderer",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/panels/terminal-sessions/TerminalSessionsPanel.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui",
-          "files": [
-            "src/renderer/panels/terminal-sessions/TerminalSessionsPanel.tsx"
-          ]
-        },
         "event": {
           "name": "terminal.panel.session_clicked",
           "description": "User clicked a session in the terminal sessions panel",
@@ -486,19 +431,12 @@
       "height": 80,
       "text": "Session Selected\n\nSwitch to local\nterminal tab",
       "pv": {
-        "nodeType": "renderer",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/panels/terminal-sessions/TerminalSessionsPanel.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui",
-          "files": [
-            "src/renderer/panels/terminal-sessions/TerminalSessionsPanel.tsx"
-          ]
-        },
         "event": {
           "name": "terminal.panel.session_selected",
           "description": "Local session was selected to switch terminal tab",
@@ -520,19 +458,12 @@
       "height": 100,
       "text": "Sessions Broadcast\n\nbroadcastSessionsChanged()\n→ terminal:sessions-changed\nto all windows",
       "pv": {
-        "nodeType": "tipc-router",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/terminal/tipc/terminalRouter.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ipc",
-          "files": [
-            "src/main/terminal/tipc/terminalRouter.ts"
-          ]
-        },
         "event": {
           "name": "terminal.sessions.broadcast",
           "description": "Broadcasting session list to all windows",
@@ -558,20 +489,13 @@
       "height": 100,
       "text": "Window Focus\n\nWindowService\n.focusWindowById()\n→ Focus other window",
       "pv": {
-        "nodeType": "renderer",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/panels/terminal-sessions/TerminalSessionsPanel.tsx",
           "src/renderer/main-process-api/WindowService.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui",
-          "files": [
-            "src/renderer/panels/terminal-sessions/TerminalSessionsPanel.tsx"
-          ]
-        },
         "event": {
           "name": "terminal.panel.window_focused",
           "description": "Focused another window to view its terminal session",
@@ -597,19 +521,12 @@
       "height": 100,
       "text": "PTY Daemon\n(Persistent Process)\n\nSurvives app restart\nStores session state",
       "pv": {
-        "nodeType": "daemon",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "approved",
         "references": [
           "src/main/terminal/PtyDaemonClient.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "process",
-          "files": [
-            "src/main/terminal/PtyDaemonClient.ts"
-          ]
-        },
         "event": {
           "name": "terminal.daemon.sessions_sent",
           "description": "Daemon sends existing sessions on worker connect",
@@ -631,19 +548,12 @@
       "height": 100,
       "text": "Sessions Restored\n\nSESSIONS_RESTORED\nevent to all windows\n(on app restart)",
       "pv": {
-        "nodeType": "tipc-router",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "approved",
         "references": [
           "src/main/terminal/TerminalSessionManager.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ipc",
-          "files": [
-            "src/main/terminal/TerminalSessionManager.ts"
-          ]
-        },
         "event": {
           "name": "terminal.sessions.restored",
           "description": "Sessions restored from daemon broadcast to renderers",
@@ -665,19 +575,12 @@
       "height": 120,
       "text": "Auto-Reconnect Handler\n\nTerminalContext\n.onSessionsRestored()\n\n1. Filter by context\n2. Claim ownership\n3. Request data port",
       "pv": {
-        "nodeType": "reconnect",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/contexts/TerminalContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui",
-          "files": [
-            "src/renderer/contexts/TerminalContext.tsx"
-          ]
-        },
         "event": {
           "name": "terminal.session.auto_reconnect",
           "description": "Auto-reconnecting to restored session",
@@ -717,19 +620,12 @@
       "height": 100,
       "text": "Reconnect Error\n\nOwnership denied or\nport delivery failed",
       "pv": {
-        "nodeType": "reconnect",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/contexts/TerminalContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": [
-            "src/renderer/contexts/TerminalContext.tsx"
-          ]
-        },
         "event": {
           "name": "terminal.session.reconnect_error",
           "description": "Session reconnection failed",

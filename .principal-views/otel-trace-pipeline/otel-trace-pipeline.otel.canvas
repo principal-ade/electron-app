@@ -44,6 +44,14 @@
       "event-bus": {
         "label": "Event Bus",
         "color": "#F59E0B"
+      },
+      "event": {
+        "label": "Event",
+        "color": "#3B82F6"
+      },
+      "boundary": {
+        "label": "Boundary",
+        "color": "#64748B"
       }
     },
     "edgeTypes": {
@@ -99,16 +107,12 @@
       "height": 100,
       "text": "Application Code\n(instrumented with\n@opentelemetry/api)",
       "pv": {
-        "nodeType": "external-service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/services/OtelCollectorService.ts"
         ],
-        "otel": {
-          "kind": "span",
-          "category": "external"
-        },
         "event": {
           "name": "otel.external_service.activity",
           "description": "Application Code activity"
@@ -124,16 +128,12 @@
       "height": 100,
       "text": "OTLP HTTP Endpoint\nlocalhost:4318/v1/traces\n(or :14318 in dev)",
       "pv": {
-        "nodeType": "http-endpoint",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/services/OtelCollectorService.ts"
         ],
-        "otel": {
-          "kind": "span",
-          "category": "external"
-        },
         "event": {
           "name": "otel.otlp_endpoint.activity",
           "description": "OTLP HTTP Endpoint activity"
@@ -149,19 +149,12 @@
       "height": 120,
       "text": "OTELCollectorServer\n(@principal-ai/\notel-collector-server)\nReceives & processes",
       "pv": {
-        "nodeType": "collector-server",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/services/OtelCollectorService.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "trace",
-          "files": [
-            "src/main/services/OtelCollectorService.ts"
-          ]
-        },
         "event": {
           "name": "otel.collector.trace_received",
           "description": "OTEL collector server received and parsed trace data",
@@ -196,19 +189,12 @@
       "height": 100,
       "text": "Trace Storage\n(circular buffer)\nMAX_TRACES = 50",
       "pv": {
-        "nodeType": "storage",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/services/OtelCollectorService.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "storage",
-          "files": [
-            "src/main/services/OtelCollectorService.ts"
-          ]
-        },
         "event": {
           "name": "otel.storage.trace_stored",
           "description": "Trace stored in circular buffer with timestamp and ID",
@@ -246,19 +232,12 @@
       "height": 120,
       "text": "MessagePort System\nRoutes traces to\nspecific windows\n(windowId:serviceIdentifier)",
       "pv": {
-        "nodeType": "ipc-transport",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/services/ipc/otelCollectorHandlers.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ipc",
-          "files": [
-            "src/main/services/ipc/otelCollectorHandlers.ts"
-          ]
-        },
         "event": {
           "name": "otel.messageport.trace_routed",
           "description": "Trace batch sent to registered MessagePort for specific window",
@@ -292,19 +271,12 @@
       "height": 140,
       "text": "IPC Handlers\n- registerPort\n- unregisterPort\n- getTraces\n- clearTraces\n- getStatus",
       "pv": {
-        "nodeType": "ipc-handler",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/services/ipc/otelCollectorHandlers.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ipc",
-          "files": [
-            "src/main/services/ipc/otelCollectorHandlers.ts"
-          ]
-        },
         "event": {
           "name": "otel.ipc.handler_invoked",
           "description": "IPC handler invoked from renderer process",
@@ -351,16 +323,12 @@
       "height": 120,
       "text": "Preload Bridge\n(otelCollectorApi)\nManages ports &\nsubscriptions",
       "pv": {
-        "nodeType": "preload",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/window/main-process-api-implementations/otelCollectorApi.ts"
         ],
-        "otel": {
-          "kind": "span",
-          "category": "external"
-        },
         "event": {
           "name": "otel.preload_bridge.activity",
           "description": "Preload Bridge activity"
@@ -376,16 +344,12 @@
       "height": 100,
       "text": "Message Subscriber\nonOtelMessage()\ncallback receives\ntrace batches",
       "pv": {
-        "nodeType": "renderer-service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/window/main-process-api-implementations/otelCollectorApi.ts"
         ],
-        "otel": {
-          "kind": "span",
-          "category": "external"
-        },
         "event": {
           "name": "otel.trace_message_subscriber.activity",
           "description": "Message Subscriber activity"
@@ -401,19 +365,12 @@
       "height": 120,
       "text": "DevWorkspace\nPanelFramework\nHandles trace:selected\nevent",
       "pv": {
-        "nodeType": "ui-component",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/principal-window/views/SystemMonitor/TraceViewer.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui",
-          "files": [
-            "src/renderer/principal-window/views/SystemMonitor/TraceViewer.tsx"
-          ]
-        },
         "event": {
           "name": "otel.devworkspace.trace_selected",
           "description": "User selected trace, creating trace details tab",
@@ -447,19 +404,12 @@
       "height": 100,
       "text": "TraceDetailsPanel\n(@industry-theme/\nprincipal-view-panels)\nVisualizes spans",
       "pv": {
-        "nodeType": "ui-component",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/principal-window/views/SystemMonitor/TraceViewer.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui",
-          "files": [
-            "src/renderer/principal-window/views/SystemMonitor/TraceViewer.tsx"
-          ]
-        },
         "event": {
           "name": "otel.panel.trace_rendered",
           "description": "TraceDetailsPanel rendered trace with span hierarchy",
@@ -490,19 +440,12 @@
       "height": 120,
       "text": "SystemMonitor\nTraceViewer\nPolls getTraces()\nevery 2 seconds",
       "pv": {
-        "nodeType": "ui-component",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/principal-window/views/SystemMonitor/TraceViewer.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui",
-          "files": [
-            "src/renderer/principal-window/views/SystemMonitor/TraceViewer.tsx"
-          ]
-        },
         "event": {
           "name": "otel.systemmonitor.traces_polled",
           "description": "SystemMonitor polled and received traces from storage",
@@ -536,16 +479,12 @@
       "height": 80,
       "text": "Panel Event Bus\ntrace:selected\nevent",
       "pv": {
-        "nodeType": "event-bus",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
-        "otel": {
-          "kind": "span",
-          "category": "external"
-        },
         "event": {
           "name": "otel.event_bus.activity",
           "description": "Panel Event Bus activity"

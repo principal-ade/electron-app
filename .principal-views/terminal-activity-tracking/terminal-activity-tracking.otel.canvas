@@ -32,6 +32,14 @@
       "window": {
         "label": "Window",
         "color": "#14B8A6"
+      },
+      "event": {
+        "label": "Event",
+        "color": "#3B82F6"
+      },
+      "boundary": {
+        "label": "Boundary",
+        "color": "#64748B"
       }
     },
     "edgeTypes": {
@@ -87,19 +95,12 @@
       "height": 100,
       "text": "Panel Host\n\nReceives event via\nevents.on() listener",
       "pv": {
-        "nodeType": "panel-host",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": [
-            "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
-          ]
-        },
         "event": {
           "name": "terminal.activity.host_received",
           "description": "Panel host received activity change event from terminal panel",
@@ -134,19 +135,12 @@
       "height": 100,
       "text": "terminalClient\n.updateActivity()\n\nTIPC invoke to main",
       "pv": {
-        "nodeType": "tipc-client",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ipc",
-          "files": [
-            "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
-          ]
-        },
         "event": {
           "name": "terminal.activity.tipc_invoked",
           "description": "TIPC client invoked updateActivity procedure",
@@ -182,19 +176,12 @@
       "height": 120,
       "text": "terminalRouter\n.updateActivity\n\nt.procedure\n.input<UpdateActivityInput>()\n.action()",
       "pv": {
-        "nodeType": "tipc-router",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/terminal/tipc/terminalRouter.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ipc",
-          "files": [
-            "src/main/terminal/tipc/terminalRouter.ts"
-          ]
-        },
         "event": {
           "name": "terminal.activity.router_handled",
           "description": "TIPC router handled updateActivity procedure in main process",
@@ -230,19 +217,12 @@
       "height": 100,
       "text": "Agent Started\n\nactivityStore.set()\nSession added",
       "pv": {
-        "nodeType": "activity-store",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/terminal/tipc/terminalRouter.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "storage",
-          "files": [
-            "src/main/terminal/tipc/terminalRouter.ts"
-          ]
-        },
         "event": {
           "name": "terminal.activity.agent_started",
           "description": "Agent started working - session added to store",
@@ -268,19 +248,12 @@
       "height": 100,
       "text": "Agent Stopped\n\nactivityStore.delete()\nSession removed",
       "pv": {
-        "nodeType": "activity-store",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/terminal/tipc/terminalRouter.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "storage",
-          "files": [
-            "src/main/terminal/tipc/terminalRouter.ts"
-          ]
-        },
         "event": {
           "name": "terminal.activity.agent_stopped",
           "description": "Agent stopped working - session removed from store",
@@ -306,19 +279,12 @@
       "height": 100,
       "text": "Broadcast\n\nBrowserWindow\n.getAllWindows()\n.forEach(send)",
       "pv": {
-        "nodeType": "broadcast",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/terminal/tipc/terminalRouter.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ipc",
-          "files": [
-            "src/main/terminal/tipc/terminalRouter.ts"
-          ]
-        },
         "event": {
           "name": "terminal.activity.broadcast_sent",
           "description": "Activity state broadcast to all windows",
@@ -348,19 +314,12 @@
       "height": 100,
       "text": "Window A\n\nReceives sync\nUpdates UI indicators",
       "pv": {
-        "nodeType": "window",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/contexts/TerminalContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui",
-          "files": [
-            "src/renderer/contexts/TerminalContext.tsx"
-          ]
-        },
         "event": {
           "name": "terminal.activity.sync_received",
           "description": "Window received activity sync broadcast",
@@ -391,19 +350,12 @@
       "height": 100,
       "text": "Window B\n\nReceives sync\nUpdates UI indicators",
       "pv": {
-        "nodeType": "window",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/contexts/TerminalContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui",
-          "files": [
-            "src/renderer/contexts/TerminalContext.tsx"
-          ]
-        },
         "event": {
           "name": "terminal.activity.sync_received",
           "description": "Window received activity sync broadcast",
@@ -434,19 +386,12 @@
       "height": 100,
       "text": "Window C\n\nReceives sync\nUpdates UI indicators",
       "pv": {
-        "nodeType": "window",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/contexts/TerminalContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui",
-          "files": [
-            "src/renderer/contexts/TerminalContext.tsx"
-          ]
-        },
         "event": {
           "name": "terminal.activity.sync_received",
           "description": "Window received activity sync broadcast",

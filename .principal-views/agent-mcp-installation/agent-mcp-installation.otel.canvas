@@ -28,6 +28,14 @@
       "error-state": {
         "label": "Error State",
         "color": "#EF4444"
+      },
+      "event": {
+        "label": "Event",
+        "color": "#3B82F6"
+      },
+      "boundary": {
+        "label": "Boundary",
+        "color": "#64748B"
       }
     },
     "edgeTypes": {
@@ -78,16 +86,12 @@
       "height": 100,
       "text": "AgentSetupWizard\nStep 3: Enable MCP\nUser clicks toggle",
       "pv": {
-        "nodeType": "ui-component",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/pages/LandingPage/AgentConfigurationView/AgentSetupWizard.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui"
-        },
         "event": {
           "name": "agent_mcp.ui.toggle_clicked",
           "description": "User clicks the MCP enable/disable toggle button",
@@ -117,16 +121,12 @@
       "height": 100,
       "text": "DetailedConfigurationView\nMCP Tab Content\nAgent-specific UI",
       "pv": {
-        "nodeType": "ui-component",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/pages/LandingPage/AgentConfigurationView/DetailedConfigurationView.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui"
-        },
         "event": {
           "name": "agent_mcp.ui.detailed_view_opened",
           "description": "User opens the detailed MCP configuration view",
@@ -152,16 +152,12 @@
       "height": 100,
       "text": "AgentConfigurationService\nRenderer-side API\nCalls main process",
       "pv": {
-        "nodeType": "renderer-service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/main-process-api/AgentConfigurationService.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "service"
-        },
         "event": {
           "name": "agent_mcp.service.request_initiated",
           "description": "Renderer service initiates MCP operation request",
@@ -191,16 +187,12 @@
       "height": 80,
       "text": "IPC Handler\nADD_MCP_TO_AGENT\nipcMain.handle",
       "pv": {
-        "nodeType": "ipc-handler",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/agent-management/agentConfigHandlers.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ipc"
-        },
         "event": {
           "name": "agent_mcp.ipc.add_mcp_received",
           "description": "Main process receives add MCP request via IPC",
@@ -226,16 +218,12 @@
       "height": 80,
       "text": "IPC Handler\nREMOVE_MCP_FROM_AGENT\nipcMain.handle",
       "pv": {
-        "nodeType": "ipc-handler",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/agent-management/agentConfigHandlers.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ipc"
-        },
         "event": {
           "name": "agent_mcp.ipc.remove_mcp_received",
           "description": "Main process receives remove MCP request via IPC",
@@ -261,16 +249,12 @@
       "height": 80,
       "text": "IPC Handler\nGET_AGENT_MCP_STATUS\nipcMain.handle",
       "pv": {
-        "nodeType": "ipc-handler",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/agent-management/agentConfigHandlers.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ipc"
-        },
         "event": {
           "name": "agent_mcp.ipc.get_status_received",
           "description": "Main process receives get MCP status request via IPC",
@@ -296,16 +280,12 @@
       "height": 100,
       "text": "@principal-ade/agent-manager\nenableAgentMCP()\ndisableAgentMCP()\ngetAgentMCPStatus()",
       "pv": {
-        "nodeType": "external-library",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/agent-management/agentConfigHandlers.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "library"
-        },
         "event": {
           "name": "agent_mcp.library.operation_called",
           "description": "External agent-manager library function called",
@@ -335,16 +315,12 @@
       "height": 80,
       "text": "Claude Config\n~/.claude.json\nmcpServers section",
       "pv": {
-        "nodeType": "config-file",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/agent-management/agentConfigHandlers.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "file"
-        },
         "event": {
           "name": "agent_mcp.config.claude_updated",
           "description": "Claude configuration file updated with MCP server",
@@ -374,16 +350,12 @@
       "height": 80,
       "text": "Cline Config\nVS Code settings\nmcpServers section",
       "pv": {
-        "nodeType": "config-file",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/agent-management/agentConfigHandlers.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "file"
-        },
         "event": {
           "name": "agent_mcp.config.cline_updated",
           "description": "Cline configuration updated with MCP server",
@@ -413,16 +385,12 @@
       "height": 80,
       "text": "OpenCode Config\n~/.config/openCode/\nopenCode.json",
       "pv": {
-        "nodeType": "config-file",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/agent-management/agentConfigHandlers.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "file"
-        },
         "event": {
           "name": "agent_mcp.config.opencode_updated",
           "description": "OpenCode configuration updated with MCP server",
@@ -452,16 +420,12 @@
       "height": 80,
       "text": "Droid Config\n~/.factory/mcp.json\nmcpServers section",
       "pv": {
-        "nodeType": "config-file",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/agent-management/agentConfigHandlers.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "file"
-        },
         "event": {
           "name": "agent_mcp.config.droid_updated",
           "description": "Droid configuration updated with MCP server",
@@ -491,16 +455,12 @@
       "height": 80,
       "text": "Operation Success\nReturns status:\nhasMCP, mcpCount",
       "pv": {
-        "nodeType": "ipc-handler",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/agent-management/agentConfigHandlers.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "result"
-        },
         "event": {
           "name": "agent_mcp.operation.success",
           "description": "MCP operation completed successfully",
@@ -538,16 +498,12 @@
       "height": 80,
       "text": "Operation Error\nReturns error message\nRollback if needed",
       "pv": {
-        "nodeType": "error-state",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/agent-management/agentConfigHandlers.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error"
-        },
         "event": {
           "name": "agent_mcp.operation.error",
           "description": "MCP operation failed",
@@ -581,16 +537,12 @@
       "height": 80,
       "text": "UI State Updated\nsetMcpStatus()\nRefresh agent status",
       "pv": {
-        "nodeType": "ui-component",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/pages/LandingPage/AgentConfigurationView/AgentSetupWizard.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui"
-        },
         "event": {
           "name": "agent_mcp.ui.state_updated",
           "description": "UI state updated after MCP operation",
@@ -620,16 +572,12 @@
       "height": 80,
       "text": "Error Displayed\nsetError() called\nUser sees message",
       "pv": {
-        "nodeType": "error-state",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/pages/LandingPage/AgentConfigurationView/AgentSetupWizard.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui"
-        },
         "event": {
           "name": "agent_mcp.ui.error_displayed",
           "description": "Error message displayed to user",

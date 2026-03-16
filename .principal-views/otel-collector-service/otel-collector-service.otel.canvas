@@ -36,6 +36,14 @@
       "renderer": {
         "label": "Renderer Process",
         "color": "#EC4899"
+      },
+      "event": {
+        "label": "Event",
+        "color": "#3B82F6"
+      },
+      "boundary": {
+        "label": "Boundary",
+        "color": "#64748B"
       }
     },
     "edgeTypes": {
@@ -91,17 +99,12 @@
       "height": 140,
       "text": "OtelCollectorService\n(Singleton)\n- start() / stop()\n- registerPort()\n- storeTrace()\n- getTraces()",
       "pv": {
-        "nodeType": "singleton",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/services/OtelCollectorService.ts"
         ],
-        "otel": {
-          "kind": "span",
-          "category": "service",
-          "files": ["src/main/services/OtelCollectorService.ts"]
-        },
         "event": {
           "name": "otel.collector.service_started",
           "description": "OTEL Collector Service started successfully",
@@ -135,16 +138,12 @@
       "height": 100,
       "text": "OTELCollectorServer\n(@principal-ai/\notel-collector-server)\nNative binary process",
       "pv": {
-        "nodeType": "external-binary",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/services/OtelCollectorService.ts"
         ],
-        "otel": {
-          "kind": "span",
-          "category": "external"
-        },
         "event": {
           "name": "otel.binary.process_spawned",
           "description": "Native OTEL collector binary spawned"
@@ -160,16 +159,12 @@
       "height": 80,
       "text": "OTLP HTTP Endpoint\nlocalhost:4318/v1/traces\n(or :14318 in dev)",
       "pv": {
-        "nodeType": "http-endpoint",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/services/OtelCollectorService.ts"
         ],
-        "otel": {
-          "kind": "span",
-          "category": "http"
-        },
         "event": {
           "name": "otel.endpoint.trace_received",
           "description": "HTTP endpoint received trace data"
@@ -185,17 +180,12 @@
       "height": 120,
       "text": "Trace Storage\n(circular buffer)\nMAX_TRACES = 50\nstoreTrace()\ngetTraces()",
       "pv": {
-        "nodeType": "storage",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/services/OtelCollectorService.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "storage",
-          "files": ["src/main/services/OtelCollectorService.ts"]
-        },
         "event": {
           "name": "otel.storage.trace_stored",
           "description": "Trace stored in circular buffer",
@@ -233,17 +223,12 @@
       "height": 100,
       "text": "Monitor Port\n(catch-all)\nWILDCARD_SOURCE\nReceives ALL traces",
       "pv": {
-        "nodeType": "messageport",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/services/OtelCollectorService.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "trace",
-          "files": ["src/main/services/OtelCollectorService.ts"]
-        },
         "event": {
           "name": "otel.collector.trace_received",
           "description": "Trace received via monitor port",
@@ -277,17 +262,12 @@
       "height": 180,
       "text": "IPC Handlers\n- otel-collector:start\n- otel-collector:stop\n- otel-collector:getStatus\n- otel-collector:registerPort\n- otel-collector:getTraces\n- otel-collector:clearTraces\n- otel-collector:sendTestTrace",
       "pv": {
-        "nodeType": "ipc-handler",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/services/ipc/otelCollectorHandlers.ts"
         ],
-        "otel": {
-          "kind": "span",
-          "category": "ipc",
-          "files": ["src/main/services/ipc/otelCollectorHandlers.ts"]
-        },
         "event": {
           "name": "otel.ipc.handler_invoked",
           "description": "IPC handler invoked from renderer",
@@ -325,17 +305,12 @@
       "height": 100,
       "text": "Port Registration\nregisterPort(windowId, service)\nMessageChannelMain\nport1 -> server\nport2 -> renderer",
       "pv": {
-        "nodeType": "messageport",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/services/ipc/otelCollectorHandlers.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ipc",
-          "files": ["src/main/services/ipc/otelCollectorHandlers.ts"]
-        },
         "event": {
           "name": "otel.messageport.trace_routed",
           "description": "MessagePort registered for trace routing",
@@ -369,17 +344,12 @@
       "height": 160,
       "text": "otelCollectorApi\n(Preload Bridge)\n- start() / stop()\n- registerPort()\n- getTraces()\n- onOtelMessage()\n- sendOtelMessage()",
       "pv": {
-        "nodeType": "preload-api",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/window/main-process-api-implementations/otelCollectorApi.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ipc",
-          "files": ["src/window/main-process-api-implementations/otelCollectorApi.ts"]
-        },
         "event": {
           "name": "otel.preload.port_received",
           "description": "Preload bridge received MessagePort from main process",
@@ -405,17 +375,12 @@
       "height": 100,
       "text": "Port Storage (Preload)\notelPorts: Map<key, Port>\notelMessageSubscribers\nkey = windowId:service",
       "pv": {
-        "nodeType": "storage",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/window/main-process-api-implementations/otelCollectorApi.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "storage",
-          "files": ["src/window/main-process-api-implementations/otelCollectorApi.ts"]
-        },
         "event": {
           "name": "otel.preload.subscriber_added",
           "description": "Message subscriber registered for trace delivery",
@@ -441,16 +406,12 @@
       "height": 100,
       "text": "Renderer Window\n(SystemMonitor,\nDevWorkspace)\nReceives trace data",
       "pv": {
-        "nodeType": "renderer",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/principal-window/views/SystemMonitor/TraceViewer.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui"
-        },
         "event": {
           "name": "otel.renderer.trace_displayed",
           "description": "Renderer window displaying trace data"
@@ -466,14 +427,10 @@
       "height": 80,
       "text": "External Application\n(instrumented with\n@opentelemetry/api)",
       "pv": {
-        "nodeType": "external-binary",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [],
-        "otel": {
-          "kind": "span",
-          "category": "external"
-        },
         "event": {
           "name": "otel.external.trace_sent",
           "description": "External application sent OTLP trace"

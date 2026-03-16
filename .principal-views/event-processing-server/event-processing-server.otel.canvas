@@ -40,6 +40,14 @@
       "renderer": {
         "label": "Renderer",
         "color": "#EC4899"
+      },
+      "event": {
+        "label": "Event",
+        "color": "#3B82F6"
+      },
+      "boundary": {
+        "label": "Boundary",
+        "color": "#64748B"
       }
     },
     "edgeTypes": {
@@ -95,19 +103,12 @@
       "height": 140,
       "text": "EventServerManager\n(Main Process)\n- start() / stop()\n- spawnWorker()\n- registerPortForWindow()\n- handleWindowBroadcast()",
       "pv": {
-        "nodeType": "main-process",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/agent-session-events/EventServerManager.ts"
         ],
-        "otel": {
-          "kind": "span",
-          "category": "lifecycle",
-          "files": [
-            "src/main/agent-session-events/EventServerManager.ts"
-          ]
-        },
         "event": {
           "name": "event.server.manager_started",
           "description": "EventServerManager started and spawned utility process",
@@ -133,19 +134,12 @@
       "height": 140,
       "text": "HttpEventServer\n(Utility Process)\nExpress server\nPort 3043 (prod)\nPort 3045 (dev)",
       "pv": {
-        "nodeType": "http-server",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/event-processing-server/HttpEventServer.ts"
         ],
-        "otel": {
-          "kind": "span",
-          "category": "http",
-          "files": [
-            "src/event-processing-server/HttpEventServer.ts"
-          ]
-        },
         "event": {
           "name": "event.server.http_started",
           "description": "HTTP server started listening for agent events",
@@ -171,19 +165,12 @@
       "height": 60,
       "text": "/claude-hook\nPOST endpoint",
       "pv": {
-        "nodeType": "http-endpoint",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/event-processing-server/HttpEventServer.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "http",
-          "files": [
-            "src/event-processing-server/HttpEventServer.ts"
-          ]
-        },
         "event": {
           "name": "event.http.claude_received",
           "description": "Claude agent event received via HTTP POST",
@@ -209,19 +196,12 @@
       "height": 60,
       "text": "/cline-hook\nPOST endpoint",
       "pv": {
-        "nodeType": "http-endpoint",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/event-processing-server/HttpEventServer.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "http",
-          "files": [
-            "src/event-processing-server/HttpEventServer.ts"
-          ]
-        },
         "event": {
           "name": "event.http.cline_received",
           "description": "Cline agent event received via HTTP POST",
@@ -247,19 +227,12 @@
       "height": 60,
       "text": "/opencode-hook\nPOST endpoint",
       "pv": {
-        "nodeType": "http-endpoint",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/event-processing-server/HttpEventServer.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "http",
-          "files": [
-            "src/event-processing-server/HttpEventServer.ts"
-          ]
-        },
         "event": {
           "name": "event.http.opencode_received",
           "description": "OpenCode agent event received via HTTP POST",
@@ -285,19 +258,12 @@
       "height": 60,
       "text": "/droid-hook\nPOST endpoint",
       "pv": {
-        "nodeType": "http-endpoint",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/event-processing-server/HttpEventServer.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "http",
-          "files": [
-            "src/event-processing-server/HttpEventServer.ts"
-          ]
-        },
         "event": {
           "name": "event.http.droid_received",
           "description": "Droid agent event received via HTTP POST",
@@ -323,20 +289,13 @@
       "height": 120,
       "text": "AgentEventPipeline\n(@principal-ai/\nagent-monitoring)\nprocessRawEvent()\nNormalizes events",
       "pv": {
-        "nodeType": "pipeline",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/event-processing-server/HttpEventServer.ts",
           "src/event-processing-server/EventProcessingServer.ts"
         ],
-        "otel": {
-          "kind": "span",
-          "category": "processing",
-          "files": [
-            "src/event-processing-server/HttpEventServer.ts"
-          ]
-        },
         "event": {
           "name": "event.pipeline.event_processed",
           "description": "Event processed through AgentEventPipeline",
@@ -370,20 +329,13 @@
       "height": 100,
       "text": "ServerPathNormalization\nAdapter\nGit repo detection\nPath resolution",
       "pv": {
-        "nodeType": "adapter",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/event-processing-server/HttpEventServer.ts",
           "src/event-processing-server/EventProcessingServer.ts"
         ],
-        "otel": {
-          "kind": "span",
-          "category": "normalization",
-          "files": [
-            "src/event-processing-server/HttpEventServer.ts"
-          ]
-        },
         "event": {
           "name": "event.adapter.repo_resolved",
           "description": "Repository info resolved for event path",
@@ -417,16 +369,12 @@
       "height": 80,
       "text": "GitRepoCache\nLRU cache by git root\nAvoids repeated lookups",
       "pv": {
-        "nodeType": "cache",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/event-processing-server/EventProcessingServer.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "cache"
-        },
         "event": {
           "name": "event.cache.repo_lookup",
           "description": "Git repository cache lookup",
@@ -452,14 +400,10 @@
       "height": 60,
       "text": "Claude Code\nAgent",
       "pv": {
-        "nodeType": "external-agent",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [],
-        "otel": {
-          "kind": "span",
-          "category": "external"
-        },
         "event": {
           "name": "event.agent.claude_hook",
           "description": "Claude Code agent sending event via hook"
@@ -475,14 +419,10 @@
       "height": 60,
       "text": "Cline\nAgent",
       "pv": {
-        "nodeType": "external-agent",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [],
-        "otel": {
-          "kind": "span",
-          "category": "external"
-        },
         "event": {
           "name": "event.agent.cline_hook",
           "description": "Cline agent sending event via hook"
@@ -498,14 +438,10 @@
       "height": 60,
       "text": "OpenCode\nAgent",
       "pv": {
-        "nodeType": "external-agent",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [],
-        "otel": {
-          "kind": "span",
-          "category": "external"
-        },
         "event": {
           "name": "event.agent.opencode_hook",
           "description": "OpenCode agent sending event via hook"
@@ -521,14 +457,10 @@
       "height": 60,
       "text": "Droid\nAgent",
       "pv": {
-        "nodeType": "external-agent",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [],
-        "otel": {
-          "kind": "span",
-          "category": "external"
-        },
         "event": {
           "name": "event.agent.droid_hook",
           "description": "Droid agent sending event via hook"
@@ -544,19 +476,12 @@
       "height": 100,
       "text": "Renderer Window\nReceives SESSION_UPDATED\nReal-time UI updates",
       "pv": {
-        "nodeType": "renderer",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/agent-session-events/EventServerManager.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui",
-          "files": [
-            "src/main/agent-session-events/EventServerManager.ts"
-          ]
-        },
         "event": {
           "name": "event.window.session_updated",
           "description": "Window received session update broadcast",
@@ -582,19 +507,12 @@
       "height": 100,
       "text": "Port Registration\nregisterPortForWindow()\nMessageChannelMain\nDirect event delivery",
       "pv": {
-        "nodeType": "main-process",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/agent-session-events/EventServerManager.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ipc",
-          "files": [
-            "src/main/agent-session-events/EventServerManager.ts"
-          ]
-        },
         "event": {
           "name": "event.port.registered",
           "description": "MessagePort registered for window to receive events",

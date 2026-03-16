@@ -1,0 +1,421 @@
+{
+  "pv": {
+    "name": "File City Images",
+    "version": "1.0.0",
+    "description": "File City visualization image generation for repository project cards",
+    "markdown": ".principal-views/file-city-images/file-city-images.md",
+    "nodeTypes": {
+      "event": {
+        "label": "Event",
+        "color": "#3B82F6"
+      },
+      "boundary": {
+        "label": "Boundary",
+        "color": "#64748B"
+      }
+    },
+    "edgeTypes": {
+      "function-call": {
+        "label": "Function Call",
+        "style": "solid",
+        "color": "#3B82F6"
+      },
+      "cache-check": {
+        "label": "Cache Check",
+        "style": "dashed",
+        "color": "#8B5CF6"
+      },
+      "data-flow": {
+        "label": "Data Flow",
+        "style": "solid",
+        "color": "#22C55E"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "x": 250,
+      "y": -50,
+      "width": 400,
+      "height": 50,
+      "color": "#64748B",
+      "text": "# File City Image Generation\n**PNG visualization for repository cards**"
+    },
+    {
+      "id": "image-requested",
+      "type": "text",
+      "x": 100,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "text": "Image Requested\n\nRenderer requests image\nfor repository path",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/main/stores/FileCityImageService.ts"
+        ],
+        "event": {
+          "name": "file_city.image.requested",
+          "description": "Image generation requested for a repository",
+          "attributes": {
+            "repo_path": {
+              "type": "string",
+              "description": "Absolute path to the repository",
+              "required": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "cache-check",
+      "type": "text",
+      "x": 100,
+      "y": 200,
+      "width": 200,
+      "height": 100,
+      "text": "Cache Check\n\nCheck if cached PNG\nexists for file tree SHA",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/main/stores/FileCityImageService.ts"
+        ],
+        "event": {
+          "name": "file_city.cache.checked",
+          "description": "Checked disk cache for existing image",
+          "attributes": {
+            "repo_path": {
+              "type": "string",
+              "description": "Repository path",
+              "required": true
+            },
+            "cache_key": {
+              "type": "string",
+              "description": "SHA256 hash used as cache key",
+              "required": true
+            },
+            "cache_hit": {
+              "type": "boolean",
+              "description": "Whether cached image was found",
+              "required": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "cache-hit",
+      "type": "text",
+      "x": 400,
+      "y": 200,
+      "width": 200,
+      "height": 100,
+      "text": "Cache Hit\n\nReturn cached file:// URL\nNo generation needed",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/main/stores/FileCityImageService.ts"
+        ],
+        "event": {
+          "name": "file_city.image.cache_hit",
+          "description": "Cached image found and returned",
+          "attributes": {
+            "repo_path": {
+              "type": "string",
+              "description": "Repository path",
+              "required": true
+            },
+            "cache_path": {
+              "type": "string",
+              "description": "Path to cached PNG file",
+              "required": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "get-filetree",
+      "type": "text",
+      "x": 100,
+      "y": 350,
+      "width": 200,
+      "height": 100,
+      "text": "Get FileTree\n\nFetch from repository\nmonitoring cache",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/main/stores/FileCityImageService.ts"
+        ],
+        "event": {
+          "name": "file_city.filetree.fetched",
+          "description": "FileTree fetched from repository-monitoring cache",
+          "attributes": {
+            "repo_path": {
+              "type": "string",
+              "description": "Repository path",
+              "required": true
+            },
+            "file_count": {
+              "type": "integer",
+              "description": "Number of files in tree"
+            },
+            "tree_sha": {
+              "type": "string",
+              "description": "SHA of the file tree"
+            },
+            "has_tree": {
+              "type": "boolean",
+              "description": "Whether file tree was available",
+              "required": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "no-filetree",
+      "type": "text",
+      "x": 400,
+      "y": 350,
+      "width": 200,
+      "height": 100,
+      "text": "No FileTree\n\nRepository not opened yet\nReturn null",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/main/stores/FileCityImageService.ts"
+        ],
+        "event": {
+          "name": "file_city.image.skipped",
+          "description": "Image generation skipped - no file tree available",
+          "attributes": {
+            "repo_path": {
+              "type": "string",
+              "description": "Repository path",
+              "required": true
+            },
+            "reason": {
+              "type": "string",
+              "description": "Why generation was skipped",
+              "required": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "generate-image",
+      "type": "text",
+      "x": 100,
+      "y": 500,
+      "width": 200,
+      "height": 100,
+      "text": "Generate Image\n\nBuild city layout and\nrender to PNG canvas",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/main/stores/FileCityImageService.ts"
+        ],
+        "event": {
+          "name": "file_city.image.generation_started",
+          "description": "Started generating File City image",
+          "attributes": {
+            "repo_path": {
+              "type": "string",
+              "description": "Repository path",
+              "required": true
+            },
+            "file_count": {
+              "type": "integer",
+              "description": "Number of files to visualize",
+              "required": true
+            },
+            "image_width": {
+              "type": "integer",
+              "description": "Output image width in pixels"
+            },
+            "image_height": {
+              "type": "integer",
+              "description": "Output image height in pixels"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "save-cache",
+      "type": "text",
+      "x": 100,
+      "y": 650,
+      "width": 200,
+      "height": 100,
+      "text": "Save to Cache\n\nWrite PNG to disk\nfor future requests",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/main/stores/FileCityImageService.ts"
+        ],
+        "event": {
+          "name": "file_city.image.generation_complete",
+          "description": "Image generated and saved to cache",
+          "attributes": {
+            "repo_path": {
+              "type": "string",
+              "description": "Repository path",
+              "required": true
+            },
+            "cache_path": {
+              "type": "string",
+              "description": "Path where image was saved",
+              "required": true
+            },
+            "duration_ms": {
+              "type": "integer",
+              "description": "Time taken to generate image"
+            },
+            "file_size_bytes": {
+              "type": "integer",
+              "description": "Size of generated PNG"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "generation-error",
+      "type": "text",
+      "x": 400,
+      "y": 500,
+      "width": 200,
+      "height": 100,
+      "text": "Error\n\nGeneration failed\nReturn null",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/main/stores/FileCityImageService.ts"
+        ],
+        "event": {
+          "name": "file_city.image.error",
+          "description": "Error occurred during image generation",
+          "attributes": {
+            "repo_path": {
+              "type": "string",
+              "description": "Repository path",
+              "required": true
+            },
+            "error_type": {
+              "type": "string",
+              "description": "Type of error",
+              "required": true
+            },
+            "error_message": {
+              "type": "string",
+              "description": "Error message",
+              "required": true
+            },
+            "phase": {
+              "type": "string",
+              "description": "Phase where error occurred (cache_check, filetree_fetch, generation, save)"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "request-to-cache",
+      "fromNode": "image-requested",
+      "fromSide": "bottom",
+      "toNode": "cache-check",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "cache-to-hit",
+      "fromNode": "cache-check",
+      "fromSide": "right",
+      "toNode": "cache-hit",
+      "toSide": "left",
+      "label": "found",
+      "pv": {
+        "edgeType": "cache-check"
+      }
+    },
+    {
+      "id": "cache-to-filetree",
+      "fromNode": "cache-check",
+      "fromSide": "bottom",
+      "toNode": "get-filetree",
+      "toSide": "top",
+      "label": "not found",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "filetree-to-no",
+      "fromNode": "get-filetree",
+      "fromSide": "right",
+      "toNode": "no-filetree",
+      "toSide": "left",
+      "label": "no tree",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "filetree-to-generate",
+      "fromNode": "get-filetree",
+      "fromSide": "bottom",
+      "toNode": "generate-image",
+      "toSide": "top",
+      "label": "has tree",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "generate-to-save",
+      "fromNode": "generate-image",
+      "fromSide": "bottom",
+      "toNode": "save-cache",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "generate-to-error",
+      "fromNode": "generate-image",
+      "fromSide": "right",
+      "toNode": "generation-error",
+      "toSide": "left",
+      "label": "error",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    }
+  ]
+}

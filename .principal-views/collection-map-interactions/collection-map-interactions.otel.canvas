@@ -28,6 +28,14 @@
       "state": {
         "label": "State Management",
         "color": "#F59E0B"
+      },
+      "event": {
+        "label": "Event",
+        "color": "#3B82F6"
+      },
+      "boundary": {
+        "label": "Boundary",
+        "color": "#64748B"
       }
     },
     "edgeTypes": {
@@ -83,16 +91,12 @@
       "height": 100,
       "text": "User Interaction\n(drag repository\ncard onto map)",
       "pv": {
-        "nodeType": "ui-component",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui"
-        },
         "event": {
           "name": "collection_map.ui.repository_drag_started",
           "description": "User started dragging a repository card on the collection map",
@@ -126,16 +130,12 @@
       "height": 100,
       "text": "Drop Event\n(repository dropped\non region or position)",
       "pv": {
-        "nodeType": "ui-component",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui"
-        },
         "event": {
           "name": "collection_map.ui.repository_dropped",
           "description": "User dropped repository on map or region",
@@ -173,16 +173,12 @@
       "height": 100,
       "text": "onRepositoryAssigned\n(assign repo to region)",
       "pv": {
-        "nodeType": "callback",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/contexts/WorldsViewPanelContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle"
-        },
         "event": {
           "name": "collection_map.callback.repository_assigned",
           "description": "Repository assigned to region callback invoked",
@@ -220,16 +216,12 @@
       "height": 120,
       "text": "onRepositoryPositionUpdated\n(update x, y coordinates\nand size)",
       "pv": {
-        "nodeType": "callback",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/contexts/WorldsViewPanelContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle"
-        },
         "event": {
           "name": "collection_map.callback.position_updated",
           "description": "Repository position updated callback invoked",
@@ -279,16 +271,12 @@
       "height": 100,
       "text": "Optimistic Update\n(immediate UI feedback\nvia setCollectionMemberships)",
       "pv": {
-        "nodeType": "state",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/contexts/WorldsViewPanelContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "state"
-        },
         "event": {
           "name": "collection_map.state.optimistic_update_applied",
           "description": "Optimistic state update applied before GitHub sync",
@@ -326,16 +314,12 @@
       "height": 100,
       "text": "UI Re-render\n(map updates instantly\nwith new position)",
       "pv": {
-        "nodeType": "ui-component",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui"
-        },
         "event": {
           "name": "collection_map.ui.rendered",
           "description": "CollectionMapPanel re-rendered with updated positions",
@@ -373,16 +357,12 @@
       "height": 100,
       "text": "GitHub Sync Started\n(background sync\nto web-ade-collections)",
       "pv": {
-        "nodeType": "service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/contexts/WorldsViewPanelContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "github"
-        },
         "event": {
           "name": "collection_map.github.sync_started",
           "description": "Background GitHub sync started for repository metadata update",
@@ -416,16 +396,12 @@
       "height": 100,
       "text": "CollectionsService\n.removeRepository()\n(delete membership)",
       "pv": {
-        "nodeType": "service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/services/CollectionsService.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "github"
-        },
         "event": {
           "name": "collection_map.service.repository_removed",
           "description": "Removing repository membership before re-adding with updated metadata",
@@ -455,16 +431,12 @@
       "height": 120,
       "text": "CollectionsService\n.addRepository()\n(re-add with new\nmetadata.layout)",
       "pv": {
-        "nodeType": "service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/services/CollectionsService.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "github"
-        },
         "event": {
           "name": "collection_map.service.repository_added",
           "description": "Re-adding repository with updated layout metadata",
@@ -510,16 +482,12 @@
       "height": 100,
       "text": "GitHub API\nPUT /contents/\ncollection-memberships.json",
       "pv": {
-        "nodeType": "github-api",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/services/CollectionsService.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "http"
-        },
         "event": {
           "name": "collection_map.github.file_updated",
           "description": "Updated collection-memberships.json with new position data",
@@ -561,16 +529,12 @@
       "height": 100,
       "text": "Sync Complete\n(position persisted\nto GitHub)",
       "pv": {
-        "nodeType": "service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/contexts/WorldsViewPanelContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "github"
-        },
         "event": {
           "name": "collection_map.github.sync_completed",
           "description": "GitHub sync completed successfully",
@@ -604,16 +568,12 @@
       "height": 120,
       "text": "Sync Failed\n(rollback via\nfetchCollections)",
       "pv": {
-        "nodeType": "service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/contexts/WorldsViewPanelContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error"
-        },
         "event": {
           "name": "collection_map.github.sync_failed",
           "description": "GitHub sync failed, rolling back optimistic update",
@@ -655,16 +615,12 @@
       "height": 100,
       "text": "Rollback: fetchCollections()\n(restore from GitHub\ntruth)",
       "pv": {
-        "nodeType": "state",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/contexts/WorldsViewPanelContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "state"
-        },
         "event": {
           "name": "collection_map.state.rollback_started",
           "description": "Rolling back optimistic update by fetching from GitHub",
@@ -690,16 +646,12 @@
       "height": 100,
       "text": "Create Region\n(user adds custom\nregion to map)",
       "pv": {
-        "nodeType": "ui-component",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui"
-        },
         "event": {
           "name": "collection_map.region.create_requested",
           "description": "User requested to create a new region",
@@ -737,16 +689,12 @@
       "height": 100,
       "text": "onRegionCreated\n(add region to\ncollection.metadata)",
       "pv": {
-        "nodeType": "callback",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/contexts/WorldsViewPanelContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle"
-        },
         "event": {
           "name": "collection_map.callback.region_created",
           "description": "Region created callback invoked",
@@ -784,16 +732,12 @@
       "height": 100,
       "text": "Switch Layout Mode\n(user toggles\nauto ↔ manual)",
       "pv": {
-        "nodeType": "ui-component",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui"
-        },
         "event": {
           "name": "collection_map.layout.mode_switch_requested",
           "description": "User requested to switch layout mode",
@@ -827,16 +771,12 @@
       "height": 100,
       "text": "onSwitchLayoutMode\n(update collection\nmetadata.layoutMode)",
       "pv": {
-        "nodeType": "callback",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/contexts/WorldsViewPanelContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle"
-        },
         "event": {
           "name": "collection_map.callback.layout_mode_switched",
           "description": "Layout mode switch callback invoked",

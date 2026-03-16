@@ -32,6 +32,14 @@
       "user-action": {
         "label": "User Action",
         "color": "#EC4899"
+      },
+      "event": {
+        "label": "Event",
+        "color": "#3B82F6"
+      },
+      "boundary": {
+        "label": "Boundary",
+        "color": "#64748B"
       }
     },
     "edgeTypes": {
@@ -87,19 +95,12 @@
       "height": 100,
       "text": "LocalProjectsPanel\n(UI Component)\nDisplays sorted list\nof local repositories",
       "pv": {
-        "nodeType": "ui-component",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/contexts/ProjectsPanelContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui",
-          "files": [
-            "src/renderer/contexts/ProjectsPanelContext.tsx"
-          ]
-        },
         "event": {
           "name": "alexandria.ui.local_projects_displayed",
           "description": "Local projects panel rendered with sorted repositories",
@@ -125,19 +126,12 @@
       "height": 80,
       "text": "User Opens Project\n(Click on project row)",
       "pv": {
-        "nodeType": "user-action",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/contexts/ProjectsPanelContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "user_action",
-          "files": [
-            "src/renderer/contexts/ProjectsPanelContext.tsx"
-          ]
-        },
         "event": {
           "name": "alexandria.user.project_opened",
           "description": "User clicked to open a local project",
@@ -163,20 +157,13 @@
       "height": 120,
       "text": "ProjectsPanelContext\n(Context Provider)\n- fetchLocalRepositories()\n- openLocalRepository()\n- Sorts by lastOpenedAt",
       "pv": {
-        "nodeType": "context-provider",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/contexts/ProjectsPanelContext.tsx:279-291",
           "src/renderer/contexts/ProjectsPanelContext.tsx:1154-1183"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "context",
-          "files": [
-            "src/renderer/contexts/ProjectsPanelContext.tsx"
-          ]
-        },
         "event": {
           "name": "alexandria.context.repositories_fetched",
           "description": "Local repositories fetched and sorted",
@@ -202,19 +189,12 @@
       "height": 100,
       "text": "Sort Logic\n1. lastOpenedAt first\n2. Then by timestamp desc\n3. Fallback to registeredAt",
       "pv": {
-        "nodeType": "context-provider",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/contexts/ProjectsPanelContext.tsx:279-291"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "sorting",
-          "files": [
-            "src/renderer/contexts/ProjectsPanelContext.tsx"
-          ]
-        },
         "event": {
           "name": "alexandria.context.repositories_sorted",
           "description": "Repositories sorted by lastOpenedAt timestamp",
@@ -240,19 +220,12 @@
       "height": 80,
       "text": "openLocalRepository()\nUpdates timestamp then\nopens dev workspace",
       "pv": {
-        "nodeType": "context-provider",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/contexts/ProjectsPanelContext.tsx:1154-1183"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "action",
-          "files": [
-            "src/renderer/contexts/ProjectsPanelContext.tsx"
-          ]
-        },
         "event": {
           "name": "alexandria.action.open_local_repository",
           "description": "Opening local repository action triggered",
@@ -278,19 +251,12 @@
       "height": 100,
       "text": "AlexandriaRegistryService\nupdateLastOpened()\nSets timestamp to\nnew Date().toISOString()",
       "pv": {
-        "nodeType": "main-process",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/stores/AlexandriaRegistryService.ts:312-319"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "main",
-          "files": [
-            "src/main/stores/AlexandriaRegistryService.ts"
-          ]
-        },
         "event": {
           "name": "alexandria.registry.timestamp_updated",
           "description": "lastOpenedAt timestamp updated in registry",
@@ -316,17 +282,10 @@
       "height": 100,
       "text": "AlexandriaOutpostManager\n(@principal-ai/\nalexandria-core-library)\nupdateRepository()",
       "pv": {
-        "nodeType": "external-library",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [],
-        "otel": {
-          "kind": "event",
-          "category": "external",
-          "files": [
-            "src/main/stores/AlexandriaRegistryService.ts"
-          ]
-        },
         "event": {
           "name": "alexandria.outpost.repository_updated",
           "description": "AlexandriaOutpostManager updated repository metadata",
@@ -352,17 +311,10 @@
       "height": 80,
       "text": "Disk Storage\nRepository metadata\npersisted to disk",
       "pv": {
-        "nodeType": "external-library",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [],
-        "otel": {
-          "kind": "event",
-          "category": "storage",
-          "files": [
-            "src/main/stores/AlexandriaRegistryService.ts"
-          ]
-        },
         "event": {
           "name": "alexandria.storage.metadata_persisted",
           "description": "Repository metadata written to disk",
@@ -384,19 +336,12 @@
       "height": 100,
       "text": "REPOSITORY_UPDATED\nEvent\nBroadcast to all\nrenderer windows",
       "pv": {
-        "nodeType": "main-process",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/stores/AlexandriaApiEventHandler.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ipc",
-          "files": [
-            "src/main/stores/AlexandriaApiEventHandler.ts"
-          ]
-        },
         "event": {
           "name": "alexandria.event.repository_updated_broadcast",
           "description": "Repository updated event broadcast to windows",
@@ -422,19 +367,12 @@
       "height": 100,
       "text": "onRepositoryChange()\nListener in Context\nTriggers re-fetch\nof repositories",
       "pv": {
-        "nodeType": "context-provider",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/contexts/ProjectsPanelContext.tsx:307-313"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "context",
-          "files": [
-            "src/renderer/contexts/ProjectsPanelContext.tsx"
-          ]
-        },
         "event": {
           "name": "alexandria.context.change_listener_triggered",
           "description": "Repository change listener triggered re-fetch",
@@ -456,19 +394,12 @@
       "height": 100,
       "text": "UI Re-renders\nNewly opened project\nmoves to top of list",
       "pv": {
-        "nodeType": "ui-component",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/contexts/ProjectsPanelContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui",
-          "files": [
-            "src/renderer/contexts/ProjectsPanelContext.tsx"
-          ]
-        },
         "event": {
           "name": "alexandria.ui.projects_resorted",
           "description": "Project list re-sorted after timestamp update",
@@ -494,19 +425,12 @@
       "height": 80,
       "text": "WindowService\nopenDevWorkspace()\nOpens project in\nnew dev workspace",
       "pv": {
-        "nodeType": "renderer-service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/contexts/ProjectsPanelContext.tsx:1174"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "window",
-          "files": [
-            "src/renderer/contexts/ProjectsPanelContext.tsx"
-          ]
-        },
         "event": {
           "name": "alexandria.window.dev_workspace_opened",
           "description": "Dev workspace window opened for project",
@@ -528,20 +452,13 @@
       "height": 100,
       "text": "Other Entry Points\n(WorldsView, QuickOpen,\nDeep Links, etc.)\nAll call openDevWorkspace()",
       "pv": {
-        "nodeType": "context-provider",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/contexts/WorldsViewPanelContext.tsx:740-771",
           "src/main/window/quickOpen.ts:333"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "context",
-          "files": [
-            "src/renderer/contexts/WorldsViewPanelContext.tsx"
-          ]
-        },
         "event": {
           "name": "alexandria.worlds_view.project_opened",
           "description": "Project opened via WorldsViewPanelContext",
@@ -563,19 +480,12 @@
       "height": 100,
       "text": "openDevWorkspaceWindow\n(Main Process - Central)\nUpdates lastOpenedAt\nfor ALL entry points",
       "pv": {
-        "nodeType": "main-process",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/window/devWorkspaceWindowHandlers.ts:44-181"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "window",
-          "files": [
-            "src/main/window/devWorkspaceWindowHandlers.ts"
-          ]
-        },
         "event": {
           "name": "alexandria.dev_workspace.update_last_opened",
           "description": "Central timestamp update when dev workspace opens",

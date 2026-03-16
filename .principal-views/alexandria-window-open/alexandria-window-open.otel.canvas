@@ -15,10 +15,6 @@
           "src/main/window/modernWindowHandlers.ts"
         ],
         "status": "draft",
-        "otel": {
-          "kind": "span",
-          "category": "lifecycle"
-        },
         "event": {
           "name": "alexandria.window.open.flow",
           "attributes": {
@@ -40,17 +36,13 @@
       "height": 220,
       "color": "#22c55e",
       "pv": {
-        "nodeType": "renderer-process",
+        "nodeType": "event",
         "icon": "Mouse",
         "name": "User Trigger",
         "references": [
           "src/renderer/main-process-api/WindowService.ts"
         ],
         "status": "draft",
-        "otel": {
-          "kind": "event",
-          "category": "user-action"
-        },
         "event": {
           "name": "alexandria.window.open.requested",
           "attributes": {
@@ -84,17 +76,13 @@
       "height": 200,
       "color": "#06b6d4",
       "pv": {
-        "nodeType": "renderer-process",
+        "nodeType": "event",
         "icon": "Zap",
         "name": "Window Service",
         "references": [
           "src/renderer/main-process-api/WindowService.ts"
         ],
         "status": "draft",
-        "otel": {
-          "kind": "span",
-          "category": "ipc"
-        },
         "event": {
           "name": "alexandria.window.ipc.invoke",
           "attributes": {
@@ -122,17 +110,13 @@
       "height": 220,
       "color": "#ef4444",
       "pv": {
-        "nodeType": "main-process",
+        "nodeType": "event",
         "icon": "Server",
         "name": "IPC Handler",
         "references": [
           "src/main/window/modernWindowHandlers.ts"
         ],
         "status": "draft",
-        "otel": {
-          "kind": "span",
-          "category": "ipc"
-        },
         "event": {
           "name": "alexandria.window.handler.received",
           "attributes": {
@@ -162,17 +146,13 @@
       "height": 180,
       "color": "#ef4444",
       "pv": {
-        "nodeType": "alexandria-service",
+        "nodeType": "event",
         "icon": "Database",
         "name": "Registry Lookup",
         "references": [
           "src/main/stores/AlexandriaRegistryService.ts"
         ],
         "status": "draft",
-        "otel": {
-          "kind": "span",
-          "category": "database"
-        },
         "event": {
           "name": "alexandria.workspace.lookup",
           "attributes": {
@@ -202,20 +182,13 @@
       "height": 200,
       "color": "#4f46e5",
       "pv": {
-        "nodeType": "main-process",
+        "nodeType": "event",
         "icon": "Box",
         "name": "Create Window",
         "references": [
           "src/main/window/modernWindowManager.ts"
         ],
         "status": "implemented",
-        "otel": {
-          "kind": "span",
-          "category": "lifecycle",
-          "files": [
-            "src/main/window/modernWindowManager.ts"
-          ]
-        },
         "event": {
           "name": "window.createSpecial",
           "attributes": {
@@ -246,17 +219,13 @@
       "height": 140,
       "color": "#818cf8",
       "pv": {
-        "nodeType": "terminal-service",
+        "nodeType": "event",
         "icon": "Monitor",
         "name": "Terminal Register",
         "references": [
           "src/main/terminal/index.ts"
         ],
         "status": "draft",
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle"
-        },
         "event": {
           "name": "terminal.window.registered",
           "attributes": {
@@ -277,17 +246,13 @@
       "height": 240,
       "color": "#0d9488",
       "pv": {
-        "nodeType": "repo-monitoring-manager",
+        "nodeType": "event",
         "icon": "Eye",
         "name": "Watch Acquire",
         "references": [
           "src/main/repository-monitoring/ipcHandlers.ts"
         ],
         "status": "draft",
-        "otel": {
-          "kind": "span",
-          "category": "io"
-        },
         "event": {
           "name": "alexandria.watches.acquired",
           "attributes": {
@@ -320,17 +285,13 @@
       "height": 180,
       "color": "#4f46e5",
       "pv": {
-        "nodeType": "main-process",
+        "nodeType": "event",
         "icon": "Globe",
         "name": "Load URL",
         "references": [
           "src/main/window/modernWindowHandlers.ts"
         ],
         "status": "draft",
-        "otel": {
-          "kind": "span",
-          "category": "navigation"
-        },
         "event": {
           "name": "window.loadURL",
           "attributes": {
@@ -360,17 +321,13 @@
       "height": 240,
       "color": "#22c55e",
       "pv": {
-        "nodeType": "renderer-process",
+        "nodeType": "event",
         "icon": "Play",
         "name": "App Init",
         "references": [
           "src/renderer/alexandria-workspace/AlexandriaWorkspaceApp.tsx"
         ],
         "status": "draft",
-        "otel": {
-          "kind": "span",
-          "category": "lifecycle"
-        },
         "event": {
           "name": "alexandria.app.initialized",
           "attributes": {
@@ -404,17 +361,13 @@
       "height": 200,
       "color": "#22c55e",
       "pv": {
-        "nodeType": "alexandria-workspace",
+        "nodeType": "event",
         "icon": "Check",
         "name": "Window Ready",
         "references": [
           "src/renderer/alexandria-workspace/AlexandriaWorkspaceApp.tsx"
         ],
         "status": "draft",
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle"
-        },
         "event": {
           "name": "alexandria.window.ready",
           "attributes": {
@@ -447,17 +400,13 @@
       "height": 100,
       "color": "#22c55e",
       "pv": {
-        "nodeType": "alexandria-service",
+        "nodeType": "event",
         "icon": "CheckCircle",
         "name": "Workspace Found",
         "references": [
           "src/main/stores/AlexandriaRegistryService.ts"
         ],
         "status": "draft",
-        "otel": {
-          "kind": "event",
-          "category": "database"
-        },
         "event": {
           "name": "alexandria.workspace.found",
           "attributes": {
@@ -481,17 +430,13 @@
       "height": 100,
       "color": "#ef4444",
       "pv": {
-        "nodeType": "alexandria-service",
+        "nodeType": "event",
         "icon": "XCircle",
         "name": "Workspace Not Found",
         "references": [
           "src/main/stores/AlexandriaRegistryService.ts"
         ],
         "status": "draft",
-        "otel": {
-          "kind": "event",
-          "category": "error"
-        },
         "event": {
           "name": "alexandria.workspace.not_found",
           "attributes": {
@@ -515,17 +460,13 @@
       "height": 100,
       "color": "#f59e0b",
       "pv": {
-        "nodeType": "main-process",
+        "nodeType": "event",
         "icon": "Clock",
         "name": "Temp Mode",
         "references": [
           "src/main/window/modernWindowHandlers.ts"
         ],
         "status": "draft",
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle"
-        },
         "event": {
           "name": "alexandria.window.temp.mode",
           "attributes": {
@@ -549,17 +490,13 @@
       "height": 80,
       "color": "#4f46e5",
       "pv": {
-        "nodeType": "main-process",
+        "nodeType": "event",
         "icon": "Plus",
         "name": "Creating Window",
         "references": [
           "src/main/window/modernWindowManager.ts"
         ],
         "status": "draft",
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle"
-        },
         "event": {
           "name": "alexandria.window.creating",
           "attributes": {
@@ -583,17 +520,13 @@
       "height": 80,
       "color": "#06b6d4",
       "pv": {
-        "nodeType": "main-process",
+        "nodeType": "event",
         "icon": "RotateCw",
         "name": "Reusing Window",
         "references": [
           "src/main/window/modernWindowManager.ts"
         ],
         "status": "draft",
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle"
-        },
         "event": {
           "name": "alexandria.window.reusing",
           "attributes": {
@@ -617,17 +550,13 @@
       "height": 80,
       "color": "#ef4444",
       "pv": {
-        "nodeType": "main-process",
+        "nodeType": "event",
         "icon": "AlertTriangle",
         "name": "Open Failed",
         "references": [
           "src/main/window/modernWindowHandlers.ts"
         ],
         "status": "draft",
-        "otel": {
-          "kind": "event",
-          "category": "error"
-        },
         "event": {
           "name": "alexandria.window.open.failed",
           "attributes": {
@@ -892,6 +821,16 @@
         "danger": "#ef4444",
         "warning": "#eab308",
         "info": "#06b6d4"
+      }
+    },
+    "nodeTypes": {
+      "event": {
+        "label": "Event",
+        "color": "#3B82F6"
+      },
+      "boundary": {
+        "label": "Boundary",
+        "color": "#64748B"
       }
     }
   }

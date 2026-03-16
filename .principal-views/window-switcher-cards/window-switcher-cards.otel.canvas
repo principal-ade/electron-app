@@ -24,6 +24,14 @@
       "component": {
         "label": "Component",
         "color": "#EC4899"
+      },
+      "event": {
+        "label": "Event",
+        "color": "#3B82F6"
+      },
+      "boundary": {
+        "label": "Boundary",
+        "color": "#64748B"
       }
     },
     "edgeTypes": {
@@ -69,19 +77,12 @@
       "height": 100,
       "text": "Quick Open\n\nopenDevWorkspaceWindow()\nwith alexandriaEntry",
       "pv": {
-        "nodeType": "main-process",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "approved",
         "references": [
           "src/main/window/quickOpen.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "navigation",
-          "files": [
-            "src/main/window/quickOpen.ts"
-          ]
-        },
         "event": {
           "name": "window.open.quick_open_triggered",
           "description": "User selected a project from Quick Open",
@@ -107,19 +108,12 @@
       "height": 100,
       "text": "devWorkspaceWindowHandlers\n\nopenDevWorkspaceWindow()\nStores alexandriaEntry\nin window metadata",
       "pv": {
-        "nodeType": "window-manager",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/window/devWorkspaceWindowHandlers.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": [
-            "src/main/window/devWorkspaceWindowHandlers.ts"
-          ]
-        },
         "event": {
           "name": "window.open.dev_workspace_created",
           "description": "Dev workspace window created with AlexandriaEntry stored",
@@ -149,19 +143,12 @@
       "height": 120,
       "text": "WindowMetadata\n\nprimaryType: PrimaryWindowType\ndisplayName: string\nremoteUrl?: string\nlocalPath?: string\nalexandriaEntry?: AlexandriaEntry",
       "pv": {
-        "nodeType": "store",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/window/types.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "storage",
-          "files": [
-            "src/main/window/types.ts"
-          ]
-        },
         "event": {
           "name": "window.metadata.updated",
           "description": "Window metadata updated with AlexandriaEntry",
@@ -187,19 +174,12 @@
       "height": 100,
       "text": "applicationWindows\n\nMap<number, IModernApplicationWindow>\n\nStores all open windows\nwith their metadata",
       "pv": {
-        "nodeType": "store",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "approved",
         "references": [
           "src/main/window/types.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "storage",
-          "files": [
-            "src/main/window/types.ts"
-          ]
-        },
         "event": {
           "name": "window.store.accessed",
           "description": "Application windows store accessed",
@@ -225,19 +205,12 @@
       "height": 120,
       "text": "WindowSwitcher (Main)\n\nupdateWindowList()\nsendWindowList()\n\nIterates applicationWindows\nExtracts alexandriaEntry",
       "pv": {
-        "nodeType": "main-process",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/window/windowSwitcher.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui",
-          "files": [
-            "src/main/window/windowSwitcher.ts"
-          ]
-        },
         "event": {
           "name": "window_switcher.list.updated",
           "description": "Window switcher updated its window list with AlexandriaEntry data",
@@ -263,20 +236,13 @@
       "height": 120,
       "text": "SwitcherWindow Type\n\nid: number\ntitle: string\nalexandriaEntry?: AlexandriaEntry\nprimaryType: PrimaryWindowType",
       "pv": {
-        "nodeType": "store",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/window/windowSwitcher.ts",
           "src/renderer/window-switcher/WindowSwitcherApp.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "storage",
-          "files": [
-            "src/main/window/windowSwitcher.ts"
-          ]
-        },
         "event": {
           "name": "window_switcher.window.serialized",
           "description": "Window data serialized for IPC transfer",
@@ -302,19 +268,12 @@
       "height": 100,
       "text": "WindowSwitcherApp\n\nReceives window list\nwith AlexandriaEntry\nRenders LocalProjectCard",
       "pv": {
-        "nodeType": "renderer",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/window-switcher/WindowSwitcherApp.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui",
-          "files": [
-            "src/renderer/window-switcher/WindowSwitcherApp.tsx"
-          ]
-        },
         "event": {
           "name": "window_switcher.rendered",
           "description": "Window switcher UI rendered with project cards",
@@ -370,19 +329,12 @@
       "height": 80,
       "text": "Window Selected\n\nUser clicks card or\npresses Enter",
       "pv": {
-        "nodeType": "renderer",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "approved",
         "references": [
           "src/renderer/window-switcher/WindowSwitcherApp.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui",
-          "files": [
-            "src/renderer/window-switcher/WindowSwitcherApp.tsx"
-          ]
-        },
         "event": {
           "name": "window_switcher.window_selected",
           "description": "User selected a window to switch to",
@@ -432,19 +384,12 @@
       "height": 80,
       "text": "Keyboard Shortcut\n\nCommand+' (toggle)\nCommand+; (cycle)",
       "pv": {
-        "nodeType": "main-process",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "approved",
         "references": [
           "src/main/main.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "input",
-          "files": [
-            "src/main/main.ts"
-          ]
-        },
         "event": {
           "name": "window_switcher.shortcut_triggered",
           "description": "User triggered window switcher via keyboard",

@@ -28,6 +28,14 @@
       "utility-process": {
         "label": "Utility Process",
         "color": "#EC4899"
+      },
+      "event": {
+        "label": "Event",
+        "color": "#3B82F6"
+      },
+      "boundary": {
+        "label": "Boundary",
+        "color": "#64748B"
       }
     },
     "edgeTypes": {
@@ -78,16 +86,12 @@
       "height": 100,
       "text": "MCP Client\n(AI Agent Tool)\nClaude Code, Cline,\nOpenCode, etc.",
       "pv": {
-        "nodeType": "external-client",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "http"
-        },
         "event": {
           "name": "principal_mcp.client.request_initiated",
           "description": "External MCP client initiates HTTP request to the bridge",
@@ -117,16 +121,12 @@
       "height": 100,
       "text": "PrincipalMCPBridge\n(Express Server)\nlocalhost:3044",
       "pv": {
-        "nodeType": "http-server",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "http"
-        },
         "event": {
           "name": "principal_mcp.server.request_received",
           "description": "Express server receives incoming HTTP request",
@@ -166,16 +166,12 @@
       "height": 100,
       "text": "GET /health\nReturns server status,\ntimestamp, port",
       "pv": {
-        "nodeType": "route-handler",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "http"
-        },
         "event": {
           "name": "principal_mcp.health.checked",
           "description": "Health check endpoint invoked",
@@ -205,16 +201,12 @@
       "height": 100,
       "text": "POST /dependencies/resolve\nResolves dependency info\nvia repository monitoring",
       "pv": {
-        "nodeType": "route-handler",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "http"
-        },
         "event": {
           "name": "principal_mcp.dependency.resolve_requested",
           "description": "Dependency resolution endpoint called",
@@ -240,19 +232,12 @@
       "height": 60,
       "text": "Calling Repo Monitoring\nManager",
       "pv": {
-        "nodeType": "service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "service",
-          "files": [
-            "src/main/principal-mcp/PrincipalMCPBridge.ts"
-          ]
-        },
         "event": {
           "name": "principal_mcp.repo_monitoring.calling",
           "description": "About to call repository monitoring manager",
@@ -278,19 +263,12 @@
       "height": 60,
       "text": "Result Received\nfrom Monitoring",
       "pv": {
-        "nodeType": "service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "service",
-          "files": [
-            "src/main/principal-mcp/PrincipalMCPBridge.ts"
-          ]
-        },
         "event": {
           "name": "principal_mcp.repo_monitoring.result_received",
           "description": "Raw result received from monitoring manager",
@@ -328,19 +306,12 @@
       "height": 60,
       "text": "Found in Alexandria\nRegistry",
       "pv": {
-        "nodeType": "service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "resolution",
-          "files": [
-            "src/main/principal-mcp/PrincipalMCPBridge.ts"
-          ]
-        },
         "event": {
           "name": "principal_mcp.resolution.alexandria_found",
           "description": "Dependency found in Alexandria registry",
@@ -378,19 +349,12 @@
       "height": 60,
       "text": "Not in Alexandria\nRegistry",
       "pv": {
-        "nodeType": "service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "resolution",
-          "files": [
-            "src/main/principal-mcp/PrincipalMCPBridge.ts"
-          ]
-        },
         "event": {
           "name": "principal_mcp.resolution.alexandria_not_found",
           "description": "Dependency not found in Alexandria registry",
@@ -412,19 +376,12 @@
       "height": 60,
       "text": "Found in Package\nDependencies",
       "pv": {
-        "nodeType": "service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "resolution",
-          "files": [
-            "src/main/principal-mcp/PrincipalMCPBridge.ts"
-          ]
-        },
         "event": {
           "name": "principal_mcp.resolution.package_found",
           "description": "Dependency found in package.json",
@@ -462,19 +419,12 @@
       "height": 60,
       "text": "Not in Package\nDependencies",
       "pv": {
-        "nodeType": "service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "resolution",
-          "files": [
-            "src/main/principal-mcp/PrincipalMCPBridge.ts"
-          ]
-        },
         "event": {
           "name": "principal_mcp.resolution.package_not_found",
           "description": "Dependency not found in package.json",
@@ -496,19 +446,12 @@
       "height": 60,
       "text": "Install Suggestions\nGenerated",
       "pv": {
-        "nodeType": "service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "resolution",
-          "files": [
-            "src/main/principal-mcp/PrincipalMCPBridge.ts"
-          ]
-        },
         "event": {
           "name": "principal_mcp.resolution.suggestions_generated",
           "description": "Install suggestions generated for not-found dependency",
@@ -542,19 +485,12 @@
       "height": 60,
       "text": "No Suggestions\nAvailable",
       "pv": {
-        "nodeType": "service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "resolution",
-          "files": [
-            "src/main/principal-mcp/PrincipalMCPBridge.ts"
-          ]
-        },
         "event": {
           "name": "principal_mcp.resolution.no_suggestions",
           "description": "No install suggestions available for not-found dependency",
@@ -576,19 +512,12 @@
       "height": 60,
       "text": "Validation Failed\n(missing dependencyId)",
       "pv": {
-        "nodeType": "route-handler",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": [
-            "src/main/principal-mcp/PrincipalMCPBridge.ts"
-          ]
-        },
         "event": {
           "name": "principal_mcp.error.validation_failed",
           "description": "Request validation failed",
@@ -618,19 +547,12 @@
       "height": 60,
       "text": "Resolution Failed\n(exception thrown)",
       "pv": {
-        "nodeType": "service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": [
-            "src/main/principal-mcp/PrincipalMCPBridge.ts"
-          ]
-        },
         "event": {
           "name": "principal_mcp.error.resolution_failed",
           "description": "Dependency resolution threw an exception",
@@ -660,19 +582,12 @@
       "height": 80,
       "text": "Final Resolution\nResult",
       "pv": {
-        "nodeType": "service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "service",
-          "files": [
-            "src/main/principal-mcp/PrincipalMCPBridge.ts"
-          ]
-        },
         "event": {
           "name": "principal_mcp.repo_monitoring.dependency_resolved",
           "description": "Final dependency resolution status",
@@ -746,19 +661,12 @@
       "height": 100,
       "text": "GET /theme/schema\nReturns theme schema,\navailable themes, values",
       "pv": {
-        "nodeType": "route-handler",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "theme",
-          "files": [
-            "src/main/principal-mcp/PrincipalMCPBridge.ts"
-          ]
-        },
         "event": {
           "name": "principal_mcp.theme.schema_requested",
           "description": "Theme schema endpoint called",
@@ -780,20 +688,13 @@
       "height": 100,
       "text": "Schema Retrieved\nwith theme values\nand available themes",
       "pv": {
-        "nodeType": "service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts",
           "src/main/theme/themeHandler.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "theme",
-          "files": [
-            "src/main/principal-mcp/PrincipalMCPBridge.ts"
-          ]
-        },
         "event": {
           "name": "principal_mcp.theme.schema_retrieved",
           "description": "Theme schema successfully retrieved",
@@ -823,19 +724,12 @@
       "height": 60,
       "text": "Theme Not Found\n(invalid theme name)",
       "pv": {
-        "nodeType": "route-handler",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": [
-            "src/main/principal-mcp/PrincipalMCPBridge.ts"
-          ]
-        },
         "event": {
           "name": "principal_mcp.error.theme_not_found",
           "description": "Requested theme does not exist",
@@ -861,19 +755,12 @@
       "height": 100,
       "text": "POST /theme/update\nPartial updates to\ntheme properties",
       "pv": {
-        "nodeType": "route-handler",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "theme",
-          "files": [
-            "src/main/principal-mcp/PrincipalMCPBridge.ts"
-          ]
-        },
         "event": {
           "name": "principal_mcp.theme.update_requested",
           "description": "Theme update endpoint called",
@@ -903,19 +790,12 @@
       "height": 60,
       "text": "UserPreferencesHandler\nUpdates & Broadcasts",
       "pv": {
-        "nodeType": "service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/stores/userPreferencesHandler.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "preferences",
-          "files": [
-            "src/main/principal-mcp/PrincipalMCPBridge.ts"
-          ]
-        },
         "event": {
           "name": "principal_mcp.theme.preferences_updated",
           "description": "Theme overrides saved to preferences and broadcast to renderers",
@@ -941,19 +821,12 @@
       "height": 60,
       "text": "Broadcast to\nRenderer Windows",
       "pv": {
-        "nodeType": "service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/stores/userPreferencesHandler.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ipc",
-          "files": [
-            "src/main/stores/userPreferencesHandler.ts"
-          ]
-        },
         "event": {
           "name": "principal_mcp.theme.renderer_broadcast",
           "description": "Broadcasting preferences change to renderer windows",
@@ -983,19 +856,12 @@
       "height": 60,
       "text": "Renderers Notified\nvia IPC",
       "pv": {
-        "nodeType": "service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/stores/userPreferencesHandler.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ipc",
-          "files": [
-            "src/main/stores/userPreferencesHandler.ts"
-          ]
-        },
         "event": {
           "name": "principal_mcp.theme.renderer_notified",
           "description": "Renderer windows have been notified of preferences change",
@@ -1021,7 +887,7 @@
       "height": 100,
       "text": "Theme Update\nCompleted\n+ optional warning",
       "pv": {
-        "nodeType": "service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
@@ -1029,13 +895,6 @@
           "src/main/theme/themeHandler.ts",
           "src/renderer/providers/CustomThemeProvider.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "theme",
-          "files": [
-            "src/main/principal-mcp/PrincipalMCPBridge.ts"
-          ]
-        },
         "event": {
           "name": "principal_mcp.theme.update_completed",
           "description": "Theme property successfully updated (with warning if not active theme)",
@@ -1073,19 +932,12 @@
       "height": 60,
       "text": "Theme Update\nFailed",
       "pv": {
-        "nodeType": "service",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": [
-            "src/main/principal-mcp/PrincipalMCPBridge.ts"
-          ]
-        },
         "event": {
           "name": "principal_mcp.error.theme_update_failed",
           "description": "Theme update failed",

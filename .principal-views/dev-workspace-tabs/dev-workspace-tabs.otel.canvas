@@ -36,6 +36,14 @@
       "external": {
         "label": "External",
         "color": "#64748B"
+      },
+      "event": {
+        "label": "Event",
+        "color": "#3B82F6"
+      },
+      "boundary": {
+        "label": "Boundary",
+        "color": "#64748B"
       }
     },
     "edgeTypes": {
@@ -86,19 +94,12 @@
       "height": 100,
       "text": "Tab Intent Trigger\n\n- Double-click file\n- Skill/Trace select\n- Canvas click\n- Context menu",
       "pv": {
-        "nodeType": "trigger",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui",
-          "files": [
-            "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
-          ]
-        },
         "event": {
           "name": "devworkspace.trigger.tab",
           "description": "User action with tab intent",
@@ -124,19 +125,12 @@
       "height": 100,
       "text": "Panel Intent Trigger\n\n- Single-click doc\n- Docs panel select\n- Preview action",
       "pv": {
-        "nodeType": "trigger",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "ui",
-          "files": [
-            "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
-          ]
-        },
         "event": {
           "name": "devworkspace.trigger.panel",
           "description": "User action with panel intent",
@@ -162,19 +156,12 @@
       "height": 150,
       "text": "PanelEventBus\n\nevents.emit(name, payload)\n\nDispatches to all\nregistered handlers\nmatching event name",
       "pv": {
-        "nodeType": "event-bus",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/contexts/PanelContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "event-system",
-          "files": [
-            "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
-          ]
-        },
         "event": {
           "name": "devworkspace.eventbus.dispatch",
           "description": "Event bus dispatching to handlers",
@@ -214,19 +201,12 @@
       "height": 160,
       "text": "Tab Event Handlers\n\nevents.on('file:open')\nevents.on('file:opened')\nevents.on('skill:selected')\nevents.on('trace:selected')\nevents.on('task:selected')\nevents.on('custom') // canvas\nevents.on('doc:openInTab')",
       "pv": {
-        "nodeType": "handler",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "handler",
-          "files": [
-            "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
-          ]
-        },
         "event": {
           "name": "devworkspace.handler.tab",
           "description": "Tab event handler invoked",
@@ -262,19 +242,12 @@
       "height": 100,
       "text": "Panel Event Handlers\n\nevents.on('doc:openInRightPanel')",
       "pv": {
-        "nodeType": "handler",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "handler",
-          "files": [
-            "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
-          ]
-        },
         "event": {
           "name": "devworkspace.handler.panel",
           "description": "Panel event handler invoked",
@@ -296,19 +269,12 @@
       "height": 80,
       "text": "Loop Prevention\n\nif (source === 'tab')\n  return; // skip",
       "pv": {
-        "nodeType": "handler",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "handler",
-          "files": [
-            "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
-          ]
-        },
         "event": {
           "name": "devworkspace.handler.loopCheck",
           "description": "Loop prevention check",
@@ -334,19 +300,12 @@
       "height": 80,
       "text": "Check Existing\n\ntabs.find(t => \n  t.id === tabId)\n\nfocus or create",
       "pv": {
-        "nodeType": "tab-manager",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "tabs",
-          "files": [
-            "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
-          ]
-        },
         "event": {
           "name": "devworkspace.tab.lookup",
           "description": "Checking for existing tab",
@@ -372,19 +331,12 @@
       "height": 100,
       "text": "Create & Focus\n\nsetTabs([...prev, tab])\nsetFocusTabId(id)",
       "pv": {
-        "nodeType": "tab-manager",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "tabs",
-          "files": [
-            "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
-          ]
-        },
         "event": {
           "name": "devworkspace.tab.created",
           "description": "Tab created and focused",
@@ -410,16 +362,12 @@
       "height": 80,
       "text": "renderTabContent()\n\nSwitch on\ncontentType",
       "pv": {
-        "nodeType": "renderer",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "render"
-        },
         "event": {
           "name": "devworkspace.tab.rendered",
           "description": "Tab content rendered",
@@ -441,19 +389,12 @@
       "height": 80,
       "text": "setActiveFile()\n\nRead content\nUpdate slice",
       "pv": {
-        "nodeType": "context",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/contexts/PanelContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "state",
-          "files": [
-            "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
-          ]
-        },
         "event": {
           "name": "devworkspace.activeFile.set",
           "description": "Active file updated",
@@ -483,19 +424,12 @@
       "height": 80,
       "text": "onLayoutChange()\n\nright: 'markdown-\nviewer'",
       "pv": {
-        "nodeType": "panel",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "implemented",
         "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "layout",
-          "files": [
-            "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
-          ]
-        },
         "event": {
           "name": "devworkspace.layout.changed",
           "description": "Layout changed",
@@ -525,13 +459,9 @@
       "height": 100,
       "text": "TabbedTerminal\nPanel\n\nMiddle slot\ncontainer",
       "pv": {
-        "nodeType": "external",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
-        "otel": {
-          "kind": "event",
-          "category": "external"
-        },
         "references": [
           "@industry-theme/xterm-terminal-panel"
         ],
@@ -556,16 +486,12 @@
       "height": 100,
       "text": "MarkdownPanel\n\nReads from\nactiveFile.data\nRight slot",
       "pv": {
-        "nodeType": "renderer",
+        "nodeType": "event",
         "shape": "rectangle",
         "status": "draft",
         "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "render"
-        },
         "event": {
           "name": "devworkspace.panel.markdown.rendered",
           "description": "Markdown panel rendered",
