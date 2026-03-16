@@ -33,6 +33,7 @@ import { agentSessionSDKApi } from './main-process-api-implementations/agentSess
 import { githubArtifactAPI } from './main-process-api-implementations/githubArtifactApi';
 import { localhostDetectionAPI } from './main-process-api-implementations/localhostDetectionApi';
 import { otelCollectorApi } from './main-process-api-implementations/otelCollectorApi';
+import { gitAPI } from './main-process-api-implementations/gitApi';
 
 console.info('[Preload-DevWorkspace] API imports successful');
 
@@ -54,6 +55,7 @@ const devWorkspaceAPI: DevWorkspaceMainProcessAPI = {
   githubArtifact: githubArtifactAPI,
   localhostDetection: localhostDetectionAPI,
   otelCollector: otelCollectorApi,
+  git: gitAPI,
 };
 
 // Expose the mainProcess API

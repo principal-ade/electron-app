@@ -28,6 +28,7 @@ import type { AgentSessionSDKAPI } from './AgentSessionSDKAPI';
 import type { GitHubArtifactAPI } from './GitHubArtifactAPI';
 import type { LocalhostDetectionAPI } from './LocalhostDetectionAPI';
 import type { OtelCollectorAPI } from './OtelCollectorAPI';
+import type { GitAPI } from './GitAPI';
 
 export interface DevWorkspaceMainProcessAPI {
   terminal: TerminalAPI;
@@ -43,6 +44,7 @@ export interface DevWorkspaceMainProcessAPI {
   githubArtifact: GitHubArtifactAPI;
   localhostDetection: LocalhostDetectionAPI;
   otelCollector: OtelCollectorAPI;
+  git: GitAPI;
 }
 
 // Re-export the individual API types for convenience
@@ -59,3 +61,4 @@ export type { AgentSessionSDKAPI } from './AgentSessionSDKAPI';
 export type { GitHubArtifactAPI } from './GitHubArtifactAPI';
 export type { LocalhostDetectionAPI } from './LocalhostDetectionAPI';
 export type { OtelCollectorAPI } from './OtelCollectorAPI';
+export type { GitAPI } from './GitAPI';

@@ -647,4 +647,36 @@ export class GitService {
   ): () => void {
     return window.mainProcess.git.onLocalCloneMissing(callback);
   }
+
+  /**
+   * Set the URL for a remote
+   * @param directory - Repository directory
+   * @param remoteName - Name of the remote (e.g., 'origin')
+   * @param url - New URL for the remote
+   */
+  static async setRemoteUrl(
+    directory: string,
+    remoteName: string,
+    url: string,
+  ): Promise<{ success: boolean; message: string }> {
+    console.info(`[GitService] Setting remote ${remoteName} URL to: ${url}`);
+    try {
+      await window.mainProcess.git.execCommand(directory, [
+        'remote',
+        'set-url',
+        remoteName,
+        url,
+      ]);
+      return {
+        success: true,
+        message: `Remote ${remoteName} URL updated successfully`,
+      };
+    } catch (error: unknown) {
+      console.error('[GitService] Failed to set remote URL:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to set remote URL',
+      };
+    }
+  }
 }
