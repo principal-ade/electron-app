@@ -110,7 +110,7 @@ export interface UserPreferences {
   showTerminalShowAllButton?: boolean; // Show/hide the show all terminals button in terminal panels (default: true)
 
   // Presence preferences
-  presenceAutoConnect?: boolean; // Automatically connect to presence server on startup (default: true)
+  presenceAutoConnect?: boolean; // Automatically connect to presence server on startup (default: false)
 
   // Titlebar button visibility
   titlebarButtons?: {
@@ -230,3 +230,13 @@ export interface UserPreferences {
   // - customArchitectureLayers: src/renderer/services/storage/CustomLayersStorageService.ts:3
   // - sessionContexts: src/renderer/services/sessionContextService.ts (with pattern `sessionContexts:${directory}`)
 }
+
+/**
+ * Centralized default values for user preferences.
+ * Import and use these instead of hardcoding defaults throughout the codebase.
+ */
+export const USER_PREFERENCE_DEFAULTS: {
+  presenceAutoConnect: boolean;
+} = {
+  presenceAutoConnect: false,
+};

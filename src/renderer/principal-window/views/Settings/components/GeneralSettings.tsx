@@ -7,6 +7,7 @@ import { ThemeService } from '../../../../services/ThemeService';
 import type { EditorId } from '../../../../../shared/types/editor.types';
 import { EDITOR_LABELS } from '../../../../../shared/types/editor.types';
 import type { UserPreferences } from '../../../../../shared/types/userPreferences.types';
+import { USER_PREFERENCE_DEFAULTS } from '../../../../../shared/types/userPreferences.types';
 import {
   predefinedThemes,
   getThemeNames,
@@ -33,7 +34,9 @@ export const GeneralSettings: React.FC = () => {
     useState(true);
   const [showMonitorButton, setShowMonitorButton] = useState(false);
   const [showSearchButton, setShowSearchButton] = useState(false);
-  const [presenceAutoConnect, setPresenceAutoConnect] = useState(true);
+  const [presenceAutoConnect, setPresenceAutoConnect] = useState(
+    USER_PREFERENCE_DEFAULTS.presenceAutoConnect,
+  );
 
   const editorOptions = useMemo(
     () => Object.entries(EDITOR_LABELS) as Array<[EditorId, string]>,
@@ -61,7 +64,9 @@ export const GeneralSettings: React.FC = () => {
       setShowTerminalShowAllButton(prefs.showTerminalShowAllButton ?? true);
       setShowMonitorButton(prefs.showMonitorButton ?? false);
       setShowSearchButton(prefs.showSearchButton ?? false);
-      setPresenceAutoConnect(prefs.presenceAutoConnect ?? true);
+      setPresenceAutoConnect(
+        prefs.presenceAutoConnect ?? USER_PREFERENCE_DEFAULTS.presenceAutoConnect,
+      );
     };
 
     UserPreferencesService.getPreferences()

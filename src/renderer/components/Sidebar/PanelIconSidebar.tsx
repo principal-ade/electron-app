@@ -71,6 +71,7 @@ export const LEFT_PANEL_ICONS: PanelIconConfig[] = [
   { id: 'docs', Icon: BookOpen, label: 'Docs' },
   { id: 'agentsList', Icon: Bot, label: 'Skills' },
   { id: 'gitChanges', Icon: GitBranch, label: 'Files' },
+  { id: 'traceList', Icon: Activity, label: 'Traces' },
 ];
 
 /**
@@ -81,7 +82,6 @@ export const RIGHT_PANEL_ICONS: PanelIconConfig[] = [
   { id: 'packageComposition', Icon: Package, label: 'Info' },
   { id: 'codeQuality', Icon: CheckCircle, label: 'Quality' },
   { id: 'kanban', Icon: KanbanSquare, label: 'Backlog' },
-  { id: 'traceList', Icon: Activity, label: 'Traces' },
 ];
 
 /**
