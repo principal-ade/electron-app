@@ -20,7 +20,7 @@ export enum FileCityImageAPIEvent {
 export interface FileCityImageAPI {
   /**
    * Get or generate a File City image for a repository
-   * Returns file:// URL to the cached image, or null if file tree isn't cached
+   * Returns data URL (base64) for the image, or null if file tree isn't cached
    */
   getImage: (repoPath: string) => Promise<string | null>;
 

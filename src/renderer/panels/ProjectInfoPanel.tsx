@@ -5,8 +5,9 @@
  * and git status. This panel will eventually be moved to its own package.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
+import { getTracer } from '../telemetry';
 import type {
   PanelContextValue,
   PanelActions,
@@ -17,9 +18,14 @@ import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
 import type { RepositoryPanelActions } from '../contexts/RepositoryPanelContext';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { FolderGit2, GitBranch, RefreshCw, AlertCircle, Trash2, FolderOpen } from 'lucide-react';
+import { LocalProjectCard } from '@industry-theme/repository-composition-panels';
 
 interface ProjectInfoPanelContext extends PanelContextValue {
   gitStatusWithFiles?: DataSlice<GitStatusWithFiles | null>;
+}
+
+interface ProjectInfoPanelActions extends PanelActions {
+  getFileCityImage: (repoPath: string) => Promise<string | null>;
 }
 
 interface ProjectInfoPanelProps {
@@ -36,6 +42,10 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
   const { theme } = useTheme();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showWarningModal, setShowWarningModal] = useState(false);
+  const [fileCityImageUrl, setFileCityImageUrl] = useState<string | null>(null);
+
+  // Cast actions to include our extended type
+  const extendedActions = actions as ProjectInfoPanelActions;
 
   // Get repository info from context
   const repository = context.currentScope?.repository;
@@ -182,6 +192,77 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
 
     return () => unsubscribers.forEach((unsub) => unsub());
   }, [events]);
+
+  // Store span ref so we can add events across useEffects
+  const fileCitySpanRef = useRef<ReturnType<ReturnType<typeof getTracer>['startSpan']> | null>(null);
+  const lastRenderedUrlRef = useRef<string | null>(null);
+
+  // Fetch File City image when repository changes
+  useEffect(() => {
+    const tracer = getTracer('file-city-renderer');
+
+    if (repository?.path) {
+      const repoPath = repository.path;
+
+      // Start span and store in ref
+      const span = tracer.startSpan('file_city.renderer.fetch_image');
+      fileCitySpanRef.current = span;
+
+      // Event: Action called
+      span.addEvent('file_city.renderer.action_called', {
+        repo_path: repoPath,
+      });
+
+      console.info('[ProjectInfoPanel] Fetching File City image for:', repoPath);
+
+      extendedActions.getFileCityImage(repoPath).then((url) => {
+        // Event: URL received
+        span.addEvent('file_city.renderer.url_received', {
+          repo_path: repoPath,
+          has_url: url !== null,
+          url: url ?? 'null',
+        });
+
+        console.info('[ProjectInfoPanel] File City image URL:', url);
+        setFileCityImageUrl(url);
+
+        // Event: State updated
+        span.addEvent('file_city.renderer.state_updated', {
+          repo_path: repoPath,
+          url: url ?? 'null',
+        });
+
+        // Don't end span here - wait for card_rendered event
+      }).catch((error) => {
+        span.addEvent('file_city.renderer.error', {
+          repo_path: repoPath,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        span.end();
+        fileCitySpanRef.current = null;
+      });
+    } else {
+      setFileCityImageUrl(null);
+    }
+  }, [repository?.path, extendedActions]);
+
+  // Track when card renders with image URL - adds event to the same span
+  useEffect(() => {
+    if (repository?.path && fileCityImageUrl !== lastRenderedUrlRef.current) {
+      const span = fileCitySpanRef.current;
+      if (span) {
+        span.addEvent('file_city.renderer.card_rendered', {
+          repo_path: repository.path,
+          has_custom_image: fileCityImageUrl !== null,
+          image_url: fileCityImageUrl ?? 'null',
+        });
+        span.end();
+        fileCitySpanRef.current = null;
+      }
+      lastRenderedUrlRef.current = fileCityImageUrl;
+      console.info('[ProjectInfoPanel] Card rendered with image:', fileCityImageUrl);
+    }
+  }, [repository?.path, fileCityImageUrl]);
 
   // No repository selected
   if (!repository) {
@@ -372,17 +453,30 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
           padding: spacing.md,
         }}
       >
-        {/* Git Status */}
-        {hasGitData && (
-          <section
-            style={{
-              padding: spacing.md,
-              marginBottom: spacing.md,
-              background: theme.colors.backgroundSecondary,
-              borderRadius: borderRadius,
-              border: `1px solid ${theme.colors.border}`,
-            }}
-          >
+        {/* File City Card and Git Status - Side by Side */}
+        <div style={{ display: 'flex', gap: spacing.md, marginBottom: spacing.md }}>
+          {/* File City Card - Left */}
+          <div style={{ flexShrink: 0 }}>
+            <LocalProjectCard
+              entry={repository as unknown as AlexandriaEntry}
+              customImageUrl={fileCityImageUrl ?? undefined}
+              width={280}
+              height={467}
+              onOpen={() => handleOpenProject()}
+            />
+          </div>
+
+          {/* Git Status - Right */}
+          {hasGitData && (
+            <section
+              style={{
+                flex: 1,
+                padding: spacing.md,
+                background: theme.colors.backgroundSecondary,
+                borderRadius: borderRadius,
+                border: `1px solid ${theme.colors.border}`,
+              }}
+            >
             <div
               style={{
                 display: 'flex',
@@ -678,7 +772,8 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
               </p>
             )}
           </section>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Warning Modal */}

@@ -15,6 +15,7 @@ interface SwitcherWindow {
   title: string;
   primaryType: string;
   alexandriaEntry?: unknown; // Full AlexandriaEntry, typed as unknown for preload isolation
+  fileCityImageUrl?: string;
 }
 
 interface WindowListData {

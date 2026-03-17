@@ -25,6 +25,7 @@ resources:
     description: "Electron renderer process - Chromium/React UI"
     owned-scopes:
       - "principal-ade-renderer"
+      - "file-city-renderer"
 
   principal-ade-daemon:
     service.name: "principal-ade-daemon"

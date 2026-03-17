@@ -363,6 +363,163 @@
           }
         }
       }
+    },
+    {
+      "id": "renderer-section",
+      "type": "text",
+      "x": 700,
+      "y": -50,
+      "width": 400,
+      "height": 50,
+      "color": "#64748B",
+      "text": "# Renderer Process\n**ProjectInfoPanel image display**"
+    },
+    {
+      "id": "renderer-action-called",
+      "type": "text",
+      "x": 700,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "text": "Action Called\n\ngetFileCityImage action\ninvoked by panel",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/contexts/ProjectsPanelContext.tsx",
+          "src/renderer/panels/ProjectInfoPanel.tsx"
+        ],
+        "otel": {
+          "files": ["src/renderer/panels/ProjectInfoPanel.tsx"]
+        },
+        "event": {
+          "name": "file_city.renderer.action_called",
+          "description": "Renderer action called to fetch File City image",
+          "attributes": {
+            "repo_path": {
+              "type": "string",
+              "description": "Repository path requested",
+              "required": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "renderer-url-received",
+      "type": "text",
+      "x": 700,
+      "y": 200,
+      "width": 200,
+      "height": 100,
+      "text": "URL Received\n\nIPC response with\nfile:// URL or null",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/panels/ProjectInfoPanel.tsx"
+        ],
+        "otel": {
+          "files": ["src/renderer/panels/ProjectInfoPanel.tsx"]
+        },
+        "event": {
+          "name": "file_city.renderer.url_received",
+          "description": "URL received from main process",
+          "attributes": {
+            "repo_path": {
+              "type": "string",
+              "description": "Repository path",
+              "required": true
+            },
+            "url": {
+              "type": "string",
+              "description": "file:// URL or null"
+            },
+            "has_url": {
+              "type": "boolean",
+              "description": "Whether a URL was returned",
+              "required": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "renderer-state-updated",
+      "type": "text",
+      "x": 700,
+      "y": 350,
+      "width": 200,
+      "height": 100,
+      "text": "State Updated\n\nReact state set with\nimage URL",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/panels/ProjectInfoPanel.tsx"
+        ],
+        "otel": {
+          "files": ["src/renderer/panels/ProjectInfoPanel.tsx"]
+        },
+        "event": {
+          "name": "file_city.renderer.state_updated",
+          "description": "React state updated with image URL",
+          "attributes": {
+            "repo_path": {
+              "type": "string",
+              "description": "Repository path",
+              "required": true
+            },
+            "url": {
+              "type": "string",
+              "description": "URL set in state"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "renderer-card-rendered",
+      "type": "text",
+      "x": 700,
+      "y": 500,
+      "width": 200,
+      "height": 100,
+      "text": "Card Rendered\n\nLocalProjectCard receives\ncustomImageUrl prop",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/panels/ProjectInfoPanel.tsx"
+        ],
+        "otel": {
+          "files": ["src/renderer/panels/ProjectInfoPanel.tsx"]
+        },
+        "event": {
+          "name": "file_city.renderer.card_rendered",
+          "description": "LocalProjectCard rendered with image URL",
+          "attributes": {
+            "repo_path": {
+              "type": "string",
+              "description": "Repository path",
+              "required": true
+            },
+            "has_custom_image": {
+              "type": "boolean",
+              "description": "Whether customImageUrl prop was provided",
+              "required": true
+            },
+            "image_url": {
+              "type": "string",
+              "description": "The customImageUrl prop value"
+            }
+          }
+        }
+      }
     }
   ],
   "edges": [
@@ -437,6 +594,60 @@
       "toNode": "generation-error",
       "toSide": "left",
       "label": "error",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "renderer-action-to-request",
+      "fromNode": "renderer-action-called",
+      "fromSide": "left",
+      "toNode": "image-requested",
+      "toSide": "right",
+      "label": "IPC",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "cache-hit-to-renderer",
+      "fromNode": "cache-hit",
+      "fromSide": "right",
+      "toNode": "renderer-url-received",
+      "toSide": "left",
+      "label": "IPC response",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "save-to-renderer",
+      "fromNode": "save-cache",
+      "fromSide": "right",
+      "toNode": "renderer-url-received",
+      "toSide": "left",
+      "label": "IPC response",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "renderer-url-to-state",
+      "fromNode": "renderer-url-received",
+      "fromSide": "bottom",
+      "toNode": "renderer-state-updated",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "renderer-state-to-card",
+      "fromNode": "renderer-state-updated",
+      "fromSide": "bottom",
+      "toNode": "renderer-card-rendered",
+      "toSide": "top",
+      "label": "re-render",
       "pv": {
         "edgeType": "data-flow"
       }

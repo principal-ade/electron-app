@@ -170,7 +170,7 @@ export class FileCityImageService {
 
   /**
    * Get or generate a File City image for a repository
-   * Returns the file:// URL to the image, or null if the file tree isn't cached
+   * Returns data URL (base64) for the image, or null if the file tree isn't cached
    */
   async getImageForRepository(repoPath: string): Promise<string | null> {
     await this.ensureInitialized();
@@ -229,7 +229,9 @@ export class FileCityImageService {
           'cache_path': cachedPath,
         });
         span.setStatus({ code: SpanStatusCode.OK });
-        return `file://${cachedPath}`;
+        // Return as data URL since renderer cannot load file:// URLs with webSecurity enabled
+        const cachedBuffer = await fs.readFile(cachedPath);
+        return `data:image/png;base64,${cachedBuffer.toString('base64')}`;
       }
 
       // Generate new image using the FileTree
@@ -247,7 +249,8 @@ export class FileCityImageService {
       const cachePath = this.getCachePath(cacheKey);
       await fs.writeFile(cachePath, imageBuffer);
 
-      const imageUrl = `file://${cachePath}`;
+      // Return as data URL since renderer cannot load file:// URLs with webSecurity enabled
+      const imageUrl = `data:image/png;base64,${imageBuffer.toString('base64')}`;
       console.log('[FileCityImageService] Image saved to:', cachePath);
 
       // Emit generation complete event

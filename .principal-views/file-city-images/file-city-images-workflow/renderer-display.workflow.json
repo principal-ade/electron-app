@@ -1,0 +1,25 @@
+{
+  "version": "1.0.0",
+  "name": "File City Renderer Display",
+  "description": "Renderer-side flow for displaying File City images in ProjectInfoPanel",
+  "canvas": ".principal-views/file-city-images/file-city-images.otel.canvas",
+  "spanPattern": "file_city.renderer.fetch_image",
+  "scenarios": [
+    {
+      "id": "display-success",
+      "description": "Renderer successfully fetches and passes File City image to card component",
+      "priority": 1,
+      "template": {
+        "introduction": "**Renderer Image Display**\n\nProjectInfoPanel fetches and displays File City image.",
+        "events": {
+          "file_city.renderer.action_called": "[1] Action called for `{{repo_path}}`",
+          "file_city.renderer.url_received": "[2] URL received for `{{repo_path}}`: has_url={{has_url}}, url={{url}}",
+          "file_city.renderer.state_updated": "[3] React state updated for `{{repo_path}}`: url={{url}}",
+          "file_city.renderer.card_rendered": "[4] Card rendered for `{{repo_path}}`: has_custom_image={{has_custom_image}}, image_url={{image_url}}"
+        },
+        "summary": "**Result:** Image passed to card component\n- Repository: `{{repo_path}}`\n- Image URL: {{url}}"
+      },
+      "filterDefault": false
+    }
+  ]
+}

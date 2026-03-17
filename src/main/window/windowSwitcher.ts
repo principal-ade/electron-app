@@ -9,12 +9,14 @@ import log from 'electron-log';
 import { resolveHtmlPath } from '../util';
 import { applicationWindows, PrimaryWindowType } from './types';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import { FileCityImageService } from '../stores/FileCityImageService';
 
 interface SwitcherWindow {
   id: number;
   title: string;
   primaryType: PrimaryWindowType;
   alexandriaEntry?: AlexandriaEntry;
+  fileCityImageUrl?: string;
 }
 
 class WindowSwitcher {
@@ -27,7 +29,7 @@ class WindowSwitcher {
   /**
    * Show the window switcher overlay (toggle mode - Command+')
    */
-  public show(): void {
+  public async show(): Promise<void> {
     // Only show if one of our app windows is currently focused
     const focusedWindow = BrowserWindow.getFocusedWindow();
     const isOurAppFocused =
@@ -38,7 +40,7 @@ class WindowSwitcher {
       return;
     }
 
-    this.updateWindowList();
+    await this.updateWindowList();
 
     if (this.windowList.length === 0) {
       log.info('No windows to switch between');
@@ -69,7 +71,7 @@ class WindowSwitcher {
   /**
    * Show and cycle to next window (cycle mode - Command+;)
    */
-  public showAndCycle(): void {
+  public async showAndCycle(): Promise<void> {
     // Only show if one of our app windows is currently focused
     const focusedWindow = BrowserWindow.getFocusedWindow();
     const isOurAppFocused =
@@ -80,7 +82,7 @@ class WindowSwitcher {
       return;
     }
 
-    this.updateWindowList();
+    await this.updateWindowList();
 
     if (this.windowList.length === 0) {
       log.info('No windows to switch between');
@@ -222,7 +224,7 @@ class WindowSwitcher {
   /**
    * Update the list of available windows
    */
-  private updateWindowList(): void {
+  private async updateWindowList(): Promise<void> {
     this.windowList = [];
 
     log.info(
@@ -266,6 +268,23 @@ class WindowSwitcher {
     }
 
     log.info(`Window switcher found ${this.windowList.length} windows`);
+
+    // Fetch File City images for windows with paths (in parallel)
+    const fileCityService = FileCityImageService.getInstance();
+    await Promise.all(
+      this.windowList.map(async (win) => {
+        if (win.alexandriaEntry?.path) {
+          try {
+            const imageUrl = await fileCityService.getImageForRepository(win.alexandriaEntry.path);
+            if (imageUrl) {
+              win.fileCityImageUrl = imageUrl;
+            }
+          } catch (error) {
+            log.warn(`[Window Switcher] Failed to get File City image for ${win.alexandriaEntry.path}:`, error);
+          }
+        }
+      })
+    );
   }
 
   /**

@@ -46,6 +46,7 @@ import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonit
 import { CollectionsService } from '../main-process-api/CollectionsService';
 import { GitService } from '../main-process-api/GitService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
+import { FileCityImageService } from '../main-process-api/FileCityImageService';
 import type { CollectionMembership } from '@principal-ai/alexandria-collections';
 import type { DiscoveredRepository } from '@industry-theme/alexandria-panels';
 
@@ -93,6 +94,8 @@ interface ProjectsPanelActions
   deleteStaleRepo?: (repoName: string) => Promise<void>;
   getStaleRepoCount?: () => number;
   shouldShowStaleBadge?: () => boolean;
+  // File City image action
+  getFileCityImage: (repoPath: string) => Promise<string | null>;
 }
 
 /**
@@ -129,6 +132,8 @@ export interface ProjectsPanelContextType {
   githubStarred: DataSlice<GitHubStarredSlice>;
   // UserCollectionsPanelContext
   userCollections: DataSlice<UserCollectionsSlice>;
+  // Git status for selected repository
+  gitStatusWithFiles: DataSlice<GitStatusWithFiles | null>;
   // Additional properties for coordination between panels
   selectedWorkspace: Workspace | null;
   setSelectedWorkspace: (workspace: Workspace | null) => void;
@@ -1049,7 +1054,7 @@ export const ProjectsPanelProvider: React.FC<
   );
 
   // Explicit DataSlice: gitStatusWithFiles
-  const _gitStatusWithFilesSlice = useMemo<DataSlice<GitStatusWithFiles | null>>(
+  const gitStatusWithFilesSlice = useMemo<DataSlice<GitStatusWithFiles | null>>(
     () => ({
       scope: 'repository' as const,
       name: 'gitStatusWithFiles',
@@ -1751,6 +1756,11 @@ export const ProjectsPanelProvider: React.FC<
         }
         return staleRepos.length > 0;
       },
+
+      // File City image action
+      getFileCityImage: async (repoPath: string) => {
+        return FileCityImageService.getImage(repoPath);
+      },
     }),
     [events, selectedWorkspace, localRepositories, fetchStarredRepositories, fetchGitHubProjects, fetchCollections, getStaleRepos, getRandomStaleRepo, staleRepoPrefs, staleRepos],
   );
@@ -1827,6 +1837,7 @@ export const ProjectsPanelProvider: React.FC<
       githubProjects: githubProjectsSlice,
       githubStarred: githubStarredSlice,
       userCollections: userCollectionsSlice,
+      gitStatusWithFiles: gitStatusWithFilesSlice,
     }),
     [
       slices,
@@ -1840,6 +1851,7 @@ export const ProjectsPanelProvider: React.FC<
       githubProjectsSlice,
       githubStarredSlice,
       userCollectionsSlice,
+      gitStatusWithFilesSlice,
     ],
   );
 

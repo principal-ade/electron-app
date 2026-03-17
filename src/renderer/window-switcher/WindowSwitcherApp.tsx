@@ -11,14 +11,15 @@ type SwitcherWindow = {
   title: string;
   primaryType?: string;
   alexandriaEntry?: AlexandriaEntry;
+  fileCityImageUrl?: string;
 };
 
 // Grid configuration
-const GRID_COLS = 4;
+const GRID_COLS = 5;
 const GRID_ROWS = 2;
-const CARD_WIDTH = 353;
-const CARD_HEIGHT = 588;
-const CARD_GAP = 24;
+const CARD_WIDTH = 180;
+const CARD_HEIGHT = 300;
+const CARD_GAP = 16;
 
 // Grid cell index (row * GRID_COLS + col)
 type GridPosition = number;
@@ -654,6 +655,7 @@ export const WindowSwitcherApp: React.FC = () => {
                 {win.alexandriaEntry ? (
                   <LocalProjectCard
                     entry={win.alexandriaEntry}
+                    customImageUrl={win.fileCityImageUrl}
                     width={CARD_WIDTH}
                     height={CARD_HEIGHT}
                     isSelected={originalIndex === selectedIndex}

@@ -8,10 +8,10 @@
 export class FileCityImageService {
   /**
    * Get or generate a File City image for a repository
-   * Returns file:// URL to the cached image, or null if file tree isn't cached
+   * Returns data URL (base64) for the image, or null if file tree isn't cached
    *
    * @param repoPath - The path to the repository
-   * @returns Promise resolving to file:// URL or null
+   * @returns Promise resolving to data URL or null
    */
   static async getImage(repoPath: string): Promise<string | null> {
     return window.mainProcess.fileCityImage.getImage(repoPath);
