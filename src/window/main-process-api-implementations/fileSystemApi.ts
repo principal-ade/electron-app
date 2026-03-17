@@ -179,6 +179,9 @@ export const fileSystemAPI: FileSystemAPI = {
   getDirectoryStats: async (dirPath: string) => {
     return ipcRenderer.invoke(FileSystemAPIEvent.GET_DIRECTORY_STATS, dirPath);
   },
+  getDirectoryInfo: async (dirPath: string) => {
+    return ipcRenderer.invoke(FileSystemAPIEvent.GET_DIRECTORY_INFO, dirPath);
+  },
   getGlobalSkills: async () => {
     return ipcRenderer.invoke(FileSystemAPIEvent.GET_GLOBAL_SKILLS);
   },

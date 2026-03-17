@@ -13,6 +13,8 @@ import { app, protocol, ipcMain, dialog, BrowserWindow } from 'electron';
 import log from 'electron-log';
 import { windowSwitcher } from './window/windowSwitcher';
 import { quickOpen } from './window/quickOpen';
+import { splashScreen } from './window/splashScreen';
+import { getPostUpdateDetector } from './app-version/postUpdateDetection';
 import {
   createWindow,
   applicationWindows,
@@ -526,6 +528,13 @@ app
     // Window handlers are now registered in initializeServices() via modernWindowHandlers
 
     // Note: Window switcher shortcuts are registered via per-window keyboard listeners below
+
+    // Check for post-update and show splash screen
+    const postUpdateDetector = getPostUpdateDetector();
+    postUpdateDetector.checkForPostUpdate();
+
+    // Show splash screen before creating main window
+    await splashScreen.show();
 
     createWindow();
 

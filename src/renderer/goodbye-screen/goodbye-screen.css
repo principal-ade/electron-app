@@ -1,0 +1,69 @@
+/* Goodbye Screen Styles */
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+}
+
+/* Progress bar animation */
+@keyframes goodbyeProgress {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Fade in animation for container */
+@keyframes goodbyeFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Scale and fade animation */
+@keyframes goodbyeScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes goodbyeScaleOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.1);
+  }
+}
+
+/* Pulse animation for logo */
+@keyframes goodbyePulse {
+  0%,
+  100% {
+    box-shadow: 0 0 40px rgba(var(--primary-rgb), 0.4);
+  }
+  50% {
+    box-shadow: 0 0 80px rgba(var(--primary-rgb), 0.6);
+  }
+}

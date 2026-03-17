@@ -65,6 +65,8 @@ import { registerObservabilityHandlers } from './observability/observabilityHand
 import { registerActIntegrationHandlers } from './services/ipc/act/actIntegrationHandlers';
 import { setupWindowSwitcherHandlers } from './window/windowSwitcher';
 import { setupQuickOpenHandlers } from './window/quickOpen';
+import { setupGoodbyeScreenHandlers } from './window/goodbyeScreen';
+import { setupSplashScreenHandlers } from './window/splashScreen';
 import { registerDevWorkspaceWindowHandlers } from './window/devWorkspaceWindowHandlers';
 import { registerExtensionWindowHandlers } from './window/extensionWindowHandlers';
 import { extensionDiscoveryService } from './services/ExtensionDiscoveryService';
@@ -182,6 +184,8 @@ const registerAllIpcHandlers = async () => {
   registerExtensionWindowHandlers(); // Register extension browser window handlers
   setupWindowSwitcherHandlers(); // Register window switcher handlers
   setupQuickOpenHandlers(); // Register quick open handlers
+  setupGoodbyeScreenHandlers(); // Register goodbye screen handlers
+  setupSplashScreenHandlers(); // Register splash screen handlers
   //registerStorageHandlers();
   registerStoreHandlers();
   registerRepositoryMonitoringHandlers(); // Register repository monitoring handlers

@@ -282,4 +282,57 @@ export class FileSystemService {
       return false;
     }
   }
+
+  /**
+   * Get directory info including size and modification time
+   * @param dirPath - Path to the directory
+   * @returns Promise with sizeBytes and mtime (ISO string)
+   */
+  static async getDirectoryInfo(
+    dirPath: string,
+  ): Promise<{ sizeBytes: number; mtime: string }> {
+    try {
+      // Get modification time from stat
+      const stats = await fsPromises.stat(dirPath);
+      const mtime = stats.mtime.toISOString();
+
+      // Get directory size using platform-specific commands
+      let sizeBytes = 0;
+
+      if (process.platform === 'darwin' || process.platform === 'linux') {
+        // Use du -sk for size in KB
+        const { exec } = await import('child_process');
+        const { promisify } = await import('util');
+        const execAsync = promisify(exec);
+
+        try {
+          const { stdout } = await execAsync(`du -sk "${dirPath}"`);
+          const sizeKB = parseInt(stdout.trim().split(/\s+/)[0]) || 0;
+          sizeBytes = sizeKB * 1024;
+        } catch (error) {
+          console.error(`Error getting directory size for ${dirPath}:`, error);
+        }
+      } else if (process.platform === 'win32') {
+        // Windows: use PowerShell to get folder size
+        const { exec } = await import('child_process');
+        const { promisify } = await import('util');
+        const execAsync = promisify(exec);
+
+        try {
+          const { stdout } = await execAsync(
+            `powershell -command "(Get-ChildItem -Path '${dirPath}' -Recurse | Measure-Object -Property Length -Sum).Sum"`,
+          );
+          sizeBytes = parseInt(stdout.trim()) || 0;
+        } catch (error) {
+          console.error(`Error getting directory size for ${dirPath}:`, error);
+        }
+      }
+
+      return { sizeBytes, mtime };
+    } catch (error) {
+      console.error(`Error getting directory info for ${dirPath}:`, error);
+      // Return defaults if we can't read the directory
+      return { sizeBytes: 0, mtime: new Date(0).toISOString() };
+    }
+  }
 }

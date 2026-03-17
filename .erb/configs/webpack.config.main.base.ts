@@ -14,6 +14,7 @@ const configuration: webpack.Configuration = {
     ...Object.keys(externals || {}),
     'node-pty',
     'keytar',
+    'canvas',
   ],
 
   stats: 'errors-only',

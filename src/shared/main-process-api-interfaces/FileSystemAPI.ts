@@ -18,6 +18,7 @@ export enum FileSystemAPIEvent {
   GET_HOME_PATH = 'file-system:get-home-path',
   GET_CURRENT_WORKING_DIRECTORY = 'file-system:get-current-working-directory',
   GET_DIRECTORY_STATS = 'file-system:get-directory-stats',
+  GET_DIRECTORY_INFO = 'file-system:get-directory-info',
   GET_GLOBAL_SKILLS = 'file-system:get-global-skills',
   GET_FILE_CONTENT_AT_REVISION = 'file-system:get-file-content-at-revision',
 
@@ -331,6 +332,10 @@ export interface FileSystemAPI {
     totalFiles: number;
     totalDirectories: number;
     totalSize: number;
+  } | null>;
+  getDirectoryInfo: (dirPath: string) => Promise<{
+    sizeBytes: number;
+    mtime: string;
   } | null>;
   getGlobalSkills: () => Promise<GlobalSkill[]>;
   getFileContentAtRevision: (

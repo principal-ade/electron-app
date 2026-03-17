@@ -76,6 +76,16 @@ const extensionWindowEntryPath = path.join(
   'extension-window',
   'index.tsx',
 );
+const goodbyeScreenEntryPath = path.join(
+  webpackPaths.srcRendererPath,
+  'goodbye-screen',
+  'index.tsx',
+);
+const splashScreenEntryPath = path.join(
+  webpackPaths.srcRendererPath,
+  'splash-screen',
+  'index.tsx',
+);
 
 // Define entry points - use object format for multiple named entries
 const entryPoints: { [key: string]: string } = {};
@@ -201,6 +211,44 @@ if (fs.existsSync(extensionWindowEntryPath)) {
       filename: 'extension-window.html',
       template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
       chunks: ['extension-window'],
+      minify: {
+        collapseWhitespace: true,
+        removeAttributeQuotes: true,
+        removeComments: true,
+      },
+      isBrowser: false,
+      isDevelopment: true,
+    }),
+  );
+}
+
+// Add Goodbye Screen entry if it exists
+if (fs.existsSync(goodbyeScreenEntryPath)) {
+  entryPoints['goodbye-screen'] = goodbyeScreenEntryPath;
+  htmlPlugins.push(
+    new HtmlWebpackPlugin({
+      filename: 'goodbye-screen.html',
+      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
+      chunks: ['goodbye-screen'],
+      minify: {
+        collapseWhitespace: true,
+        removeAttributeQuotes: true,
+        removeComments: true,
+      },
+      isBrowser: false,
+      isDevelopment: true,
+    }),
+  );
+}
+
+// Add Splash Screen entry if it exists
+if (fs.existsSync(splashScreenEntryPath)) {
+  entryPoints['splash-screen'] = splashScreenEntryPath;
+  htmlPlugins.push(
+    new HtmlWebpackPlugin({
+      filename: 'splash-screen.html',
+      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
+      chunks: ['splash-screen'],
       minify: {
         collapseWhitespace: true,
         removeAttributeQuotes: true,
@@ -511,6 +559,14 @@ const configuration: webpack.Configuration = {
         {
           from: /^\/quick-open.html/,
           to: '/quick-open.html',
+        },
+        {
+          from: /^\/goodbye-screen.html/,
+          to: '/goodbye-screen.html',
+        },
+        {
+          from: /^\/splash-screen.html/,
+          to: '/splash-screen.html',
         },
         { from: /^\/index.html/, to: '/index.html' },
         { from: /./, to: '/index.html' }

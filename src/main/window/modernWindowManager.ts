@@ -22,6 +22,7 @@ import MenuBuilder from '../menu';
 import { getAppVersionManagerInstance } from '../app-version';
 import { gitSyncWebSocketManager } from '../services/GitSyncWebSocketManager';
 import { orbitWebSocketManager } from '../services/OrbitWebSocketManager';
+import { splashScreen } from './splashScreen';
 
 // Import shared types and data structures
 import {
@@ -594,6 +595,11 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
       });
       this.window.show();
       showSpan.end();
+
+      // Close splash screen when main window is ready
+      if (splashScreen.isShowing()) {
+        splashScreen.close();
+      }
 
       // Skip maximize - window already starts at full size
       // if (this.features.maximizeOnShow) {

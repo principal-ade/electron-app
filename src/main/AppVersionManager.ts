@@ -10,6 +10,7 @@ import { Span, SpanStatusCode } from '@opentelemetry/api';
 
 import { AppVersionManagerAPIEvent } from '../window/main-process-api-implementations/appVersionManagerApi';
 import { getTracer } from './telemetry';
+import { goodbyeScreen } from './window/goodbyeScreen';
 
 type WindowEventData =
   | UpdateInfo
@@ -442,6 +443,7 @@ export default class AppVersionManager {
 
   /**
    * Install the downloaded update and restart
+   * Shows goodbye screen before quitting
    */
   installUpdate(): void {
     log.info('[AppUpdater] Install update requested via TIPC');
@@ -453,7 +455,9 @@ export default class AppVersionManager {
       version: this.lastAvailableVersion,
     });
 
-    autoUpdater.quitAndInstall();
+    // Show goodbye screen instead of directly calling quitAndInstall
+    // The goodbye screen will close other windows and then call quitAndInstall
+    goodbyeScreen.show(this.lastAvailableVersion);
   }
 
   /**

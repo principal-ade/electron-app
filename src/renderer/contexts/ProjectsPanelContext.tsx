@@ -86,6 +86,23 @@ interface ProjectsPanelActions
   trackRepository?: (name: string, path: string) => Promise<void>;
   // Select a repository without opening a new window (for ProjectInfoPanel)
   selectRepository?: (entry: AlexandriaEntry) => Promise<void>;
+  // Stale repo review actions
+  getStaleRepos?: () => Promise<StaleRepoInfo[]>;
+  getRandomStaleRepo?: () => Promise<StaleRepoInfo | null>;
+  snoozeStaleRepo?: (repoName: string) => Promise<void>;
+  deleteStaleRepo?: (repoName: string) => Promise<void>;
+  getStaleRepoCount?: () => number;
+  shouldShowStaleBadge?: () => boolean;
+}
+
+/**
+ * Information about a stale repository
+ */
+export interface StaleRepoInfo {
+  entry: AlexandriaEntry;
+  sizeBytes: number;
+  mtime: string;
+  daysSinceModified: number;
 }
 
 /**
@@ -117,6 +134,8 @@ export interface ProjectsPanelContextType {
   setSelectedWorkspace: (workspace: Workspace | null) => void;
   selectedCollection: Collection | null;
   setSelectedCollection: (collection: Collection | null) => void;
+  // Stale repo review
+  staleRepos: StaleRepoInfo[];
 }
 
 /**
@@ -213,6 +232,20 @@ export const ProjectsPanelProvider: React.FC<
   const [collectionsGitHubRepoUrl, setCollectionsGitHubRepoUrl] = useState<
     string | null | undefined
   >();
+
+  // State for stale repo review
+  const [staleRepos, setStaleRepos] = useState<StaleRepoInfo[]>([]);
+  const [staleRepoPrefsLoaded, setStaleRepoPrefsLoaded] = useState(false);
+  const [staleRepoPrefs, setStaleRepoPrefs] = useState<{
+    thresholdDays: number;
+    snoozeDurationDays: number;
+    snoozedRepos: Record<string, number>;
+    lastBadgeShownDate?: string;
+  }>({
+    thresholdDays: 10,
+    snoozeDurationDays: 10,
+    snoozedRepos: {},
+  });
 
   // Fetch workspaces on mount
   useEffect(() => {
@@ -414,6 +447,144 @@ export const ProjectsPanelProvider: React.FC<
 
     return unsubscribe;
   }, [localRepositories, baseDefaultDirectory]); // Re-run when local repos change to update discovered list
+
+  // Load stale repo preferences on mount
+  useEffect(() => {
+    const loadStaleRepoPrefs = async () => {
+      try {
+        const prefs = await UserPreferencesService.getPreferences();
+        if (prefs.staleRepoReview) {
+          setStaleRepoPrefs(prefs.staleRepoReview);
+        }
+        setStaleRepoPrefsLoaded(true);
+        console.info('[ProjectsPanelProvider] Stale repo prefs loaded:', prefs.staleRepoReview || 'using defaults');
+      } catch (error) {
+        console.error('[ProjectsPanelProvider] Failed to load stale repo prefs:', error);
+        setStaleRepoPrefsLoaded(true); // Still mark as loaded to allow check to proceed
+      }
+    };
+    loadStaleRepoPrefs();
+
+    // Subscribe to preference updates
+    const unsubscribe = UserPreferencesService.onPreferencesUpdated((prefs) => {
+      if (prefs.staleRepoReview) {
+        setStaleRepoPrefs(prefs.staleRepoReview);
+      }
+    });
+
+    return unsubscribe;
+  }, []);
+
+  // Auto-check for stale repos when local repositories are loaded and prefs are ready
+  useEffect(() => {
+    console.info('[ProjectsPanelProvider] Stale repo check effect:', {
+      repoCount: localRepositories.length,
+      loading: localRepositoriesLoading,
+      prefsLoaded: staleRepoPrefsLoaded,
+    });
+    if (localRepositories.length > 0 && !localRepositoriesLoading && staleRepoPrefsLoaded) {
+      console.info('[ProjectsPanelProvider] Starting stale repo check...');
+      // Small delay to avoid blocking initial render
+      const timer = setTimeout(async () => {
+        const staleList = await getStaleReposInternal();
+        console.info('[ProjectsPanelProvider] Stale repo check complete:', {
+          staleCount: staleList.length,
+          staleRepos: staleList.map(r => r.entry.name),
+        });
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [localRepositories, localRepositoriesLoading, staleRepoPrefsLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Internal function to identify stale repos (used by useEffect and exported callback)
+  const getStaleReposInternal = async (): Promise<StaleRepoInfo[]> => {
+    const now = Date.now();
+    const thresholdMs = staleRepoPrefs.thresholdDays * 24 * 60 * 60 * 1000;
+    const staleList: StaleRepoInfo[] = [];
+    const orphanedEntries: string[] = [];
+
+    console.info('[ProjectsPanelProvider] getStaleReposInternal:', {
+      repoCount: localRepositories.length,
+      thresholdDays: staleRepoPrefs.thresholdDays,
+      snoozedRepos: Object.keys(staleRepoPrefs.snoozedRepos),
+    });
+
+    for (const repo of localRepositories) {
+      // Skip if snoozed
+      const snoozeUntil = staleRepoPrefs.snoozedRepos[repo.name];
+      if (snoozeUntil && snoozeUntil > now) {
+        continue;
+      }
+
+      // Get directory info
+      try {
+        const dirInfo = await FileSystemService.getDirectoryInfo(repo.path);
+        const epochTime = new Date(0).toISOString();
+
+        // Check if directory info is invalid (doesn't exist or failed to read)
+        if (!dirInfo || dirInfo.mtime === epochTime) {
+          // Directory doesn't exist or can't be read - mark for cleanup
+          orphanedEntries.push(repo.name);
+          continue;
+        }
+
+        const mtime = new Date(dirInfo.mtime).getTime();
+        const daysSinceModified = Math.floor((now - mtime) / (24 * 60 * 60 * 1000));
+
+        // Sanity check - if days is unreasonable (> 10 years), skip it
+        if (daysSinceModified > 3650) {
+          console.warn(`[ProjectsPanelProvider] Suspicious mtime for ${repo.path}: ${daysSinceModified} days`);
+          continue;
+        }
+
+        // Check if stale based on mtime
+        if (now - mtime > thresholdMs) {
+          staleList.push({
+            entry: repo,
+            sizeBytes: dirInfo.sizeBytes,
+            mtime: dirInfo.mtime,
+            daysSinceModified,
+          });
+        }
+      } catch {
+        // Directory doesn't exist - mark for cleanup
+        orphanedEntries.push(repo.name);
+      }
+    }
+
+    // Clean up orphaned entries (folders that no longer exist)
+    if (orphanedEntries.length > 0) {
+      console.info(`[ProjectsPanelProvider] Cleaning up ${orphanedEntries.length} orphaned Alexandria entries`);
+      for (const name of orphanedEntries) {
+        try {
+          await AlexandriaService.removeRepository(name, false);
+        } catch (error) {
+          console.warn(`[ProjectsPanelProvider] Failed to clean up orphaned entry ${name}:`, error);
+        }
+      }
+      // Refresh local repositories after cleanup
+      const repos = await AlexandriaService.getRepositories();
+      setLocalRepositories(repos);
+    }
+
+    // Sort by oldest first
+    staleList.sort((a, b) => a.daysSinceModified - b.daysSinceModified);
+    setStaleRepos(staleList);
+    return staleList;
+  };
+
+  // Callback to identify stale repos (wraps internal function)
+  const getStaleRepos = useCallback(async (): Promise<StaleRepoInfo[]> => {
+    return getStaleReposInternal();
+  }, [localRepositories, staleRepoPrefs]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Get a random stale repo for review
+  const getRandomStaleRepo = useCallback(async (): Promise<StaleRepoInfo | null> => {
+    const repos = await getStaleRepos();
+    if (repos.length === 0) return null;
+    const randomIndex = Math.floor(Math.random() * repos.length);
+    return repos[randomIndex];
+  }, [getStaleRepos]);
 
   // Fetch GitHub starred repositories
   const fetchStarredRepositories = useCallback(async () => {
@@ -1527,8 +1698,61 @@ export const ProjectsPanelProvider: React.FC<
         const url = `https://github.com/${repositoryId}`;
         window.open(url, '_blank');
       },
+
+      // Stale repo review actions
+      getStaleRepos,
+      getRandomStaleRepo,
+
+      snoozeStaleRepo: async (repoName: string) => {
+        console.info('[ProjectsPanelProvider] Snoozing stale repo:', repoName);
+        const snoozeUntil = Date.now() + staleRepoPrefs.snoozeDurationDays * 24 * 60 * 60 * 1000;
+        const updatedSnoozed = {
+          ...staleRepoPrefs.snoozedRepos,
+          [repoName]: snoozeUntil,
+        };
+
+        await UserPreferencesService.updatePreferences({
+          staleRepoReview: {
+            ...staleRepoPrefs,
+            snoozedRepos: updatedSnoozed,
+          },
+        });
+
+        // Update local state
+        setStaleRepoPrefs((prev) => ({
+          ...prev,
+          snoozedRepos: updatedSnoozed,
+        }));
+
+        // Remove from stale repos list
+        setStaleRepos((prev) => prev.filter((r) => r.entry.name !== repoName));
+      },
+
+      deleteStaleRepo: async (repoName: string) => {
+        console.info('[ProjectsPanelProvider] Deleting stale repo:', repoName);
+        // Delete from disk (deleteLocal = true)
+        await AlexandriaService.removeRepository(repoName, true);
+
+        // Remove from stale repos list
+        setStaleRepos((prev) => prev.filter((r) => r.entry.name !== repoName));
+
+        // Refresh local repositories
+        const repos = await AlexandriaService.getRepositories();
+        setLocalRepositories(repos);
+      },
+
+      getStaleRepoCount: () => staleRepos.length,
+
+      shouldShowStaleBadge: () => {
+        // Only show badge once per day
+        const today = new Date().toISOString().split('T')[0];
+        if (staleRepoPrefs.lastBadgeShownDate === today) {
+          return false;
+        }
+        return staleRepos.length > 0;
+      },
     }),
-    [events, selectedWorkspace, localRepositories, fetchStarredRepositories, fetchGitHubProjects, fetchCollections],
+    [events, selectedWorkspace, localRepositories, fetchStarredRepositories, fetchGitHubProjects, fetchCollections, getStaleRepos, getRandomStaleRepo, staleRepoPrefs, staleRepos],
   );
 
   // Create context value following web-ade pattern
@@ -1595,6 +1819,7 @@ export const ProjectsPanelProvider: React.FC<
       setSelectedWorkspace,
       selectedCollection,
       setSelectedCollection,
+      staleRepos,
       // Explicit typed slice properties
       alexandriaRepositories: alexandriaRepositoriesSlice,
       workspaces: workspacesSlice,
@@ -1608,6 +1833,7 @@ export const ProjectsPanelProvider: React.FC<
       selectedWorkspace,
       selectedCollection,
       selectedRepository,
+      staleRepos,
       alexandriaRepositoriesSlice,
       workspacesSlice,
       workspaceSlice,

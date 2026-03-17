@@ -41,6 +41,16 @@ const quickOpenEntryPath = path.join(
   'quick-open',
   'index.tsx',
 );
+const goodbyeScreenEntryPath = path.join(
+  webpackPaths.srcRendererPath,
+  'goodbye-screen',
+  'index.tsx',
+);
+const splashScreenEntryPath = path.join(
+  webpackPaths.srcRendererPath,
+  'splash-screen',
+  'index.tsx',
+);
 
 // Define entry points - use object format for multiple named entries
 const entryPoints: { [key: string]: string } = {};
@@ -111,6 +121,44 @@ if (fs.existsSync(quickOpenEntryPath)) {
       filename: 'quick-open.html',
       template: path.join(webpackPaths.srcRendererPath, 'quick-open.ejs'),
       chunks: ['quick-open'],
+      minify: {
+        collapseWhitespace: true,
+        removeAttributeQuotes: true,
+        removeComments: true,
+      },
+      isBrowser: false,
+      isDevelopment: false,
+    }),
+  );
+}
+
+// Add goodbye screen entry if it exists
+if (fs.existsSync(goodbyeScreenEntryPath)) {
+  entryPoints['goodbye-screen'] = goodbyeScreenEntryPath;
+  htmlPlugins.push(
+    new HtmlWebpackPlugin({
+      filename: 'goodbye-screen.html',
+      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
+      chunks: ['goodbye-screen'],
+      minify: {
+        collapseWhitespace: true,
+        removeAttributeQuotes: true,
+        removeComments: true,
+      },
+      isBrowser: false,
+      isDevelopment: false,
+    }),
+  );
+}
+
+// Add splash screen entry if it exists
+if (fs.existsSync(splashScreenEntryPath)) {
+  entryPoints['splash-screen'] = splashScreenEntryPath;
+  htmlPlugins.push(
+    new HtmlWebpackPlugin({
+      filename: 'splash-screen.html',
+      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
+      chunks: ['splash-screen'],
       minify: {
         collapseWhitespace: true,
         removeAttributeQuotes: true,

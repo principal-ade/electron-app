@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Github, Star, Folder, FilePlus2, LayoutGrid, PanelLeftClose } from 'lucide-react';
+import { Github, Star, Folder, FilePlus2, LayoutGrid, PanelLeftClose, Clock } from 'lucide-react';
 import type { LeftPanelView } from './ProjectsView';
 
 interface ProjectsViewHeaderProps {
@@ -10,6 +10,12 @@ interface ProjectsViewHeaderProps {
   isGridView?: boolean;
   /** Callback when grid view toggle is clicked */
   onToggleGridView?: () => void;
+  /** Number of stale repos to review */
+  staleRepoCount?: number;
+  /** Whether to show the stale badge (1 per day limit) */
+  showStaleBadge?: boolean;
+  /** Callback when stale review button is clicked */
+  onReviewStaleRepos?: () => void;
 }
 
 // Map mode to display info
@@ -24,6 +30,9 @@ export const ProjectsViewHeader: React.FC<ProjectsViewHeaderProps> = ({
   onCreateRepository,
   isGridView = false,
   onToggleGridView,
+  staleRepoCount = 0,
+  showStaleBadge = false,
+  onReviewStaleRepos,
 }) => {
   const { theme } = useTheme();
   const config = modeConfig[mode];
@@ -62,6 +71,54 @@ export const ProjectsViewHeader: React.FC<ProjectsViewHeaderProps> = ({
       <div
         style={{ display: 'flex', alignItems: 'stretch', gap: '0', height: '100%' }}
       >
+        {/* Stale Repo Review Button - Only show for local mode when there are stale repos */}
+        {mode === 'local' && staleRepoCount > 0 && onReviewStaleRepos && (
+          <button
+            onClick={onReviewStaleRepos}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              padding: '0 24px',
+              borderRadius: '0',
+              backgroundColor: theme.colors.backgroundSecondary,
+              color: theme.colors.warning || '#f59e0b',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              border: 'none',
+              fontSize: theme.fontSizes[1],
+              fontWeight: theme.fontWeights.medium,
+              height: '100%',
+              minWidth: 0,
+              position: 'relative',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+            }}
+            title={`Review ${staleRepoCount} stale project${staleRepoCount !== 1 ? 's' : ''}`}
+          >
+            <Clock size={16} />
+            Review
+            {showStaleBadge && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '12px',
+                  right: '12px',
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: theme.colors.warning || '#f59e0b',
+                }}
+              />
+            )}
+          </button>
+        )}
+
         {/* Grid/List Toggle Button - Only show for local mode */}
         {mode === 'local' && onToggleGridView && (
           <button

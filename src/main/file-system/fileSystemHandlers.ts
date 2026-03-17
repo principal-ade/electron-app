@@ -17,6 +17,7 @@ import { isSymlink, removeSkillSymlink } from '../skills/symlinkUtils';
 import { RecentReposService } from '../services/RecentReposService';
 import { RecentReposAPIEvent } from '../../shared/main-process-api-interfaces/RecentReposAPI';
 import { gitClientFactory } from '../utils/gitClientFactory';
+import { FileSystemService } from '../file-system-service';
 
 export class ElectronFileSystemAdapter {
   private rootPath: string | null = null;
@@ -1332,6 +1333,18 @@ export function registerFileSystemIpcHandlers(
         return null;
       }
       return appWindow.fileSystemAdapter.getDirectoryStats(dirPath);
+    },
+  );
+
+  ipcMain.handle(
+    FileSystemAPIEvent.GET_DIRECTORY_INFO,
+    async (_event, dirPath: string) => {
+      try {
+        return FileSystemService.getDirectoryInfo(dirPath);
+      } catch (error) {
+        console.error('GET_DIRECTORY_INFO: Error getting directory info', error);
+        return null;
+      }
     },
   );
 

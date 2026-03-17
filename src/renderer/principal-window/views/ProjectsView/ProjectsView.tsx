@@ -32,6 +32,8 @@ import { WorkspaceService } from '../../../main-process-api/WorkspaceService';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 import { CollectionRepositoriesPanel } from '../../../panels/CollectionRepositoriesPanel';
 import { ProjectInfoPanel } from '../../../panels/ProjectInfoPanel';
+import { StaleRepoReviewModal } from './StaleRepoReviewModal';
+import type { StaleRepoInfo } from '../../../contexts/ProjectsPanelContext';
 
 /**
  * Hook to fetch File City images for entries
@@ -187,6 +189,10 @@ const ProjectsViewContent: React.FC<ProjectsViewContentProps> = ({ mode }) => {
   const [workspaceForRemoval, setWorkspaceForRemoval] =
     useState<Workspace | null>(null);
 
+  // State for stale repo review modal
+  const [isStaleReviewModalOpen, setIsStaleReviewModalOpen] = useState(false);
+  const [staleRepos, setStaleRepos] = useState<StaleRepoInfo[]>([]);
+
   // Load base default directory
   useEffect(() => {
     const loadBaseDirectory = async () => {
@@ -215,6 +221,47 @@ const ProjectsViewContent: React.FC<ProjectsViewContentProps> = ({ mode }) => {
     setIsCloneModalOpen(false);
     setCloneModalInitialUrl(undefined);
   }, []);
+
+  // Handle stale repo review modal - picks a random stale repo
+  const handleOpenStaleReviewModal = useCallback(async () => {
+    if (actions.getRandomStaleRepo) {
+      const repo = await actions.getRandomStaleRepo();
+      if (repo) {
+        setStaleRepos([repo]); // Show just the one random repo
+        setIsStaleReviewModalOpen(true);
+      }
+    }
+  }, [actions]);
+
+  const handleCloseStaleReviewModal = useCallback(() => {
+    setIsStaleReviewModalOpen(false);
+  }, []);
+
+  const handleStaleRepoKeep = useCallback(
+    async (repoName: string) => {
+      if (actions.snoozeStaleRepo) {
+        await actions.snoozeStaleRepo(repoName);
+        // Update local state
+        setStaleRepos((prev) => prev.filter((r) => r.entry.name !== repoName));
+      }
+    },
+    [actions],
+  );
+
+  const handleStaleRepoDelete = useCallback(
+    async (repoName: string) => {
+      if (actions.deleteStaleRepo) {
+        await actions.deleteStaleRepo(repoName);
+        // Update local state
+        setStaleRepos((prev) => prev.filter((r) => r.entry.name !== repoName));
+      }
+    },
+    [actions],
+  );
+
+  // Get stale repo count directly from context
+  const staleRepoCount = context.staleRepos?.length ?? 0;
+  const showStaleBadge = staleRepoCount > 0; // Show badge when there are stale repos
 
   // Handle create workspace modal close
   const handleCloseCreateWorkspaceModal = useCallback(() => {
@@ -597,6 +644,9 @@ const ProjectsViewContent: React.FC<ProjectsViewContentProps> = ({ mode }) => {
           onCreateRepository={handleCreateRepository}
           isGridView={isGridView}
           onToggleGridView={handleToggleGridView}
+          staleRepoCount={staleRepoCount}
+          showStaleBadge={showStaleBadge}
+          onReviewStaleRepos={handleOpenStaleReviewModal}
         />
 
         {/* Panel Layout */}
@@ -679,6 +729,15 @@ const ProjectsViewContent: React.FC<ProjectsViewContentProps> = ({ mode }) => {
         onClose={handleCloseCreateRepositoryModal}
         workspaces={workspaces}
         baseDefaultDirectory={baseDefaultDirectory}
+      />
+
+      {/* Stale Repo Review Modal */}
+      <StaleRepoReviewModal
+        isOpen={isStaleReviewModalOpen}
+        staleRepos={staleRepos}
+        onClose={handleCloseStaleReviewModal}
+        onDelete={handleStaleRepoDelete}
+        onKeep={handleStaleRepoKeep}
       />
     </>
   );

@@ -210,6 +210,18 @@ export interface UserPreferences {
   /** Custom directory for panel extensions (default: ~/.principal/extensions) */
   extensionsDirectory?: string;
 
+  // Stale repo review preferences
+  staleRepoReview?: {
+    /** Days before repo is considered stale (default: 10) */
+    thresholdDays: number;
+    /** How long to snooze after "keep" action (default: 10 days) */
+    snoozeDurationDays: number;
+    /** Map of repoName -> snoozeUntil timestamp (ms since epoch) */
+    snoozedRepos: Record<string, number>;
+    /** ISO date string of when badge was last shown (for 1-per-day limit) */
+    lastBadgeShownDate?: string;
+  };
+
   // TODO: Add these fields that are currently using direct storage.get/set calls:
   // - aiConfiguration: src/renderer/services/ai/SessionSummaryService.ts:223
   //                     src/renderer/services/ai/ArchitecturalScaffoldService.ts:117,142

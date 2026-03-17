@@ -84,6 +84,12 @@ export class FileSystemService {
     return window.mainProcess.fileSystem.getDirectoryStats(dirPath);
   }
 
+  static async getDirectoryInfo(
+    dirPath: string,
+  ): Promise<{ sizeBytes: number; mtime: string } | null> {
+    return window.mainProcess.fileSystem.getDirectoryInfo(dirPath);
+  }
+
   static async getHomePath(): Promise<string> {
     return window.mainProcess.fileSystem.getHomePath();
   }

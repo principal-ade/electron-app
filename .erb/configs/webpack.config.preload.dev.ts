@@ -40,6 +40,14 @@ const configuration: webpack.Configuration = {
       webpackPaths.srcWindowPath,
       'preload-window-switcher.ts',
     ),
+    'preload-goodbye-screen': path.join(
+      webpackPaths.srcWindowPath,
+      'preload-goodbye-screen.ts',
+    ),
+    'preload-splash-screen': path.join(
+      webpackPaths.srcWindowPath,
+      'preload-splash-screen.ts',
+    ),
   },
 
   output: {

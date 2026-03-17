@@ -86,7 +86,7 @@ const configuration: webpack.Configuration = {
       }
 
       // For main and preload, externalize node_modules as usual
-      if (Object.keys(externals || {}).includes(request) || ['node-pty', 'keytar'].includes(request)) {
+      if (Object.keys(externals || {}).includes(request) || ['node-pty', 'keytar', 'canvas'].includes(request)) {
         return callback(null, `commonjs ${request}`);
       }
       callback();
