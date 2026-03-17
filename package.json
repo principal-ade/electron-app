@@ -1,6 +1,6 @@
 {
   "name": "principal-ade",
-  "version": "0.0.487",
+  "version": "0.0.488",
   "description": "Principal ADE  - The future of Agentic Development Environment",
   "type": "module",
   "keywords": [
@@ -183,7 +183,7 @@
     "@industry-theme/github-panels": "^0.4.0",
     "@industry-theme/localhost-panels": "^0.2.0",
     "@industry-theme/markdown-panels": "^0.3.0",
-    "@industry-theme/principal-view-panels": "0.12.54",
+    "@industry-theme/principal-view-panels": "0.12.55",
     "@industry-theme/repository-composition-panels": "^0.7.62",
     "@industry-theme/xterm-terminal-panel": "^0.5.5",
     "@modelcontextprotocol/sdk": "1.11.4",
@@ -203,7 +203,7 @@
     "@opentelemetry/semantic-conventions": "^1.39.0",
     "@principal-ade/agent-manager": "^1.1.0",
     "@principal-ade/code-quality-panels": "^0.2.0",
-    "@principal-ade/dynamic-file-tree": "0.2.24",
+    "@principal-ade/dynamic-file-tree": "0.2.26",
     "@principal-ade/industry-theme": "^0.1.8",
     "@principal-ade/industry-themed-monaco-editor": "^0.1.10",
     "@principal-ade/panel-framework-core": "^0.5.1",
@@ -290,7 +290,6 @@
     "zod": "3.25.17"
   },
   "devDependencies": {
-    "node-addon-api": "^8.0.0",
     "@babel/core": "^7.24.9",
     "@babel/helper-compilation-targets": "^7.27.2",
     "@babel/preset-env": "^7.24.8",
@@ -369,6 +368,8 @@
     "monaco-editor-webpack-plugin": "^7.1.0",
     "nan": "^2.23.0",
     "node-abi": "^4.14.0",
+    "node-addon-api": "^8.0.0",
+    "node-loader": "^2.1.0",
     "path-browserify": "^1.0.1",
     "playwright": "^1.52.0",
     "postcss": "^8.5.3",

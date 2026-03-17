@@ -27,6 +27,7 @@ import { FileSystemService } from '../main-process-api/FileSystemService';
 import { WindowService } from '../main-process-api/WindowService';
 import { gitSyncConnectionManager } from '../services/git-sync/GitSyncConnectionManager';
 import { APP_BRANDING } from '../../shared/config/appBranding';
+import { FileCityImageService } from '../main-process-api/FileCityImageService';
 import { AlexandriaEventType } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
 
 /**
@@ -210,6 +211,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   const [showTerminalToggle, setShowTerminalToggle] = useState(false);
   const [collapsed, setCollapsed] = useState({ left: false, right: false });
   const [sidebarsHidden, setSidebarsHidden] = useState(false);
+  const [isGeneratingFileCityImage, setIsGeneratingFileCityImage] = useState(false);
   // Store collapsed state before entering focus mode so we can restore it
   const collapsedBeforeFocusModeRef = useRef<{ left: boolean; right: boolean } | null>(null);
   const [layout, setLayout] = useState<PanelLayout>({
@@ -939,6 +941,26 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     }
   }, [collapsed]);
 
+  // Handle File City image generation
+  const handleGenerateFileCityImage = useCallback(async () => {
+    if (!repositoryPath || isGeneratingFileCityImage) return;
+
+    setIsGeneratingFileCityImage(true);
+    try {
+      console.info('[DevWorkspaceApp] Generating File City image for:', repositoryPath);
+      const imageUrl = await FileCityImageService.getImage(repositoryPath);
+      if (imageUrl) {
+        console.info('[DevWorkspaceApp] File City image generated:', imageUrl);
+      } else {
+        console.warn('[DevWorkspaceApp] No File City image generated (file tree not cached)');
+      }
+    } catch (error) {
+      console.error('[DevWorkspaceApp] Failed to generate File City image:', error);
+    } finally {
+      setIsGeneratingFileCityImage(false);
+    }
+  }, [repositoryPath, isGeneratingFileCityImage]);
+
   // Handle left panel collapse complete - apply pending sizes
   const handleLeftCollapseComplete = useCallback(() => {
     if (pendingPanelSizesRef.current) {
@@ -988,6 +1010,8 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         lastActiveService={lastActiveService}
         sidebarsHidden={sidebarsHidden}
         onSidebarsHiddenChange={handleSidebarsHiddenChange}
+        onGenerateFileCityImage={repositoryPath ? handleGenerateFileCityImage : undefined}
+        isGeneratingFileCityImage={isGeneratingFileCityImage}
       />
       <div className="flex-1 overflow-hidden">
         <DevWorkspacePanelFramework

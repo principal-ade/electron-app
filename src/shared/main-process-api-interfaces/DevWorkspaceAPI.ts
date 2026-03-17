@@ -29,6 +29,7 @@ import type { GitHubArtifactAPI } from './GitHubArtifactAPI';
 import type { LocalhostDetectionAPI } from './LocalhostDetectionAPI';
 import type { OtelCollectorAPI } from './OtelCollectorAPI';
 import type { GitAPI } from './GitAPI';
+import type { FileCityImageAPI } from './FileCityImageAPI';
 
 export interface DevWorkspaceMainProcessAPI {
   terminal: TerminalAPI;
@@ -45,6 +46,7 @@ export interface DevWorkspaceMainProcessAPI {
   localhostDetection: LocalhostDetectionAPI;
   otelCollector: OtelCollectorAPI;
   git: GitAPI;
+  fileCityImage: FileCityImageAPI;
 }
 
 // Re-export the individual API types for convenience
@@ -62,3 +64,4 @@ export type { GitHubArtifactAPI } from './GitHubArtifactAPI';
 export type { LocalhostDetectionAPI } from './LocalhostDetectionAPI';
 export type { OtelCollectorAPI } from './OtelCollectorAPI';
 export type { GitAPI } from './GitAPI';
+export type { FileCityImageAPI } from './FileCityImageAPI';

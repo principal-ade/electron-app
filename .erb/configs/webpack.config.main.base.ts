@@ -41,6 +41,11 @@ const configuration: webpack.Configuration = {
           fullySpecified: false,
         },
       },
+      // Handle native .node modules - emit them as separate files
+      {
+        test: /\.node$/,
+        loader: 'node-loader',
+      },
     ],
   },
 

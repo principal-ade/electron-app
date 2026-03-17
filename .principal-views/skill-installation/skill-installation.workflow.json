@@ -1,0 +1,74 @@
+{
+  "version": "1.0.0",
+  "name": "Skill Installation",
+  "description": "Workflow for browsing, installing, and managing skills for AI agents",
+  "canvas": ".principal-views/skill-installation/skill-installation.otel.canvas",
+  "spanPattern": "skill",
+  "scenarios": [
+    {
+      "id": "install-skill-to-agents",
+      "description": "User installs a skill to one or more agent directories",
+      "priority": 1,
+      "template": {
+        "introduction": "**Skill Installation**\n\nInstalling **{{skill.name}}** from GitHub",
+        "events": {
+          "skill.ui.view_opened": "Opened skill browser in **{{view.mode}}** mode ({{skills.installed_count}} installed)",
+          "skill.ui.install_clicked": "User clicked install for **{{skill.name}}** (status: {{skill.current_status}}, source: {{skill.source_repo}})",
+          "skill.ui.modal_confirmed": "Confirmed installation to **{{directories.count}}** directories (action: {{action.type}})",
+          "skill.service.install_requested": "Service initiating install for **{{skill.name}}** ({{files.count}} files, destination: {{destination.type}})",
+          "skill.ipc.install_received": "IPC received install request for **{{skill.name}}** ({{files.count}} files)",
+          "skill.github.files_downloaded": "Downloaded **{{files.downloaded}}** files from {{github.owner}}/{{github.repo}} ({{bytes.total}} bytes)",
+          "skill.fs.canonical_written": "Written to canonical location: {{path}} ({{files.written}} files)",
+          "skill.fs.symlinks_created": "Created **{{symlinks.count}}** symlinks",
+          "skill.lock.updated": "Lock file updated for **{{skill.name}}** (SHA: {{skill.sha}})",
+          "skill.install.success": "**Success**: Installed **{{skill.name}}** to {{installed.path}} ({{files.installed}} files, {{duration_ms}}ms)",
+          "skill.ui.state_refreshed": "UI refreshed for **{{skill.name}}** (new status: {{ui.new_status}}, in {{directories.installed}} directories)"
+        },
+        "summary": "**Installation Complete:**\n- Skill: **{{skill.name}}**\n- Files Installed: {{files.installed}}\n- Path: {{installed.path}}\n- Duration: {{duration_ms}}ms"
+      }
+    },
+    {
+      "id": "check-skill-updates",
+      "description": "Check for available skill updates",
+      "priority": 2,
+      "template": {
+        "introduction": "**Checking Updates**\n\nScanning installed skills for updates",
+        "events": {
+          "skill.ui.view_opened": "Opened skill browser in **{{view.mode}}** mode ({{skills.installed_count}} installed)",
+          "skill.service.lock_checked": "Checked lock for **{{skill.name}}** (installed: {{skill.installed}}, SHA: {{skill.sha}})",
+          "skill.ui.state_refreshed": "Found updates for {{skill.name}} (new status: {{ui.new_status}})"
+        },
+        "summary": "**Update Check Complete:**\n- Skill: **{{skill.name}}**\n- Update Available: {{ui.new_status}}"
+      }
+    },
+    {
+      "id": "detect-agent-directories",
+      "description": "Detecting available agent directories",
+      "priority": 3,
+      "template": {
+        "introduction": "**Directory Detection**\n\nScanning for agent directories",
+        "events": {
+          "skill.service.directories_detected": "Detected **{{directories.count}}** directories (types: {{directories.types}})",
+          "skill.ui.agent_setup_opened": "Opened agent setup modal (existing: {{existing_dirs}})"
+        },
+        "summary": "**Directories Found:**\n- Count: **{{directories.count}}**\n- Types: {{directories.types}}"
+      }
+    },
+    {
+      "id": "skill-installation-error",
+      "description": "Skill installation failed with error",
+      "priority": 4,
+      "template": {
+        "introduction": "**Installation Failed**\n\nError installing **{{skill.name}}**",
+        "events": {
+          "skill.ui.install_clicked": "User clicked install for **{{skill.name}}** (status: {{skill.current_status}})",
+          "skill.service.install_requested": "Service initiating install for **{{skill.name}}** ({{files.count}} files)",
+          "skill.ipc.install_received": "IPC received install request for **{{skill.name}}**",
+          "skill.install.error": "**Error**: Installation failed for **{{skill.name}}** - {{error.message}} (type: {{error.type}})",
+          "skill.ui.error_displayed": "Error displayed: {{error.message}} for {{skill.name}}"
+        },
+        "summary": "**Error:**\n- Skill: **{{skill.name}}**\n- Error Type: {{error.type}}\n- Message: {{error.message}}"
+      }
+    }
+  ]
+}

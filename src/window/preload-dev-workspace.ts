@@ -34,6 +34,7 @@ import { githubArtifactAPI } from './main-process-api-implementations/githubArti
 import { localhostDetectionAPI } from './main-process-api-implementations/localhostDetectionApi';
 import { otelCollectorApi } from './main-process-api-implementations/otelCollectorApi';
 import { gitAPI } from './main-process-api-implementations/gitApi';
+import { fileCityImageAPI } from './main-process-api-implementations/fileCityImageApi';
 
 console.info('[Preload-DevWorkspace] API imports successful');
 
@@ -56,6 +57,7 @@ const devWorkspaceAPI: DevWorkspaceMainProcessAPI = {
   localhostDetection: localhostDetectionAPI,
   otelCollector: otelCollectorApi,
   git: gitAPI,
+  fileCityImage: fileCityImageAPI,
 };
 
 // Expose the mainProcess API

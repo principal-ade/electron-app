@@ -43,6 +43,15 @@ function useFileCityImages(entries: AlexandriaEntry[] | null): (path: string) =>
   const [imageMap, setImageMap] = useState<Map<string, string>>(new Map());
   const fetchingRef = useRef<Set<string>>(new Set());
 
+  // Listen for image generation events from other windows
+  useEffect(() => {
+    const unsubscribe = FileCityImageService.onImageGenerated((repoPath, imageUrl) => {
+      console.info('[useFileCityImages] Image generated for:', repoPath);
+      setImageMap((prev) => new Map(prev).set(repoPath, imageUrl));
+    });
+    return unsubscribe;
+  }, []);
+
   useEffect(() => {
     if (!entries || entries.length === 0) return;
 

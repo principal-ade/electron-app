@@ -54,10 +54,13 @@
       "pv": {
         "nodeType": "event",
         "shape": "rectangle",
-        "status": "draft",
+        "status": "implemented",
         "references": [
           "src/main/stores/FileCityImageService.ts"
         ],
+        "otel": {
+          "files": ["src/main/stores/FileCityImageService.ts"]
+        },
         "event": {
           "name": "file_city.image.requested",
           "description": "Image generation requested for a repository",
@@ -82,10 +85,13 @@
       "pv": {
         "nodeType": "event",
         "shape": "rectangle",
-        "status": "draft",
+        "status": "implemented",
         "references": [
           "src/main/stores/FileCityImageService.ts"
         ],
+        "otel": {
+          "files": ["src/main/stores/FileCityImageService.ts"]
+        },
         "event": {
           "name": "file_city.cache.checked",
           "description": "Checked disk cache for existing image",
@@ -120,10 +126,13 @@
       "pv": {
         "nodeType": "event",
         "shape": "rectangle",
-        "status": "draft",
+        "status": "implemented",
         "references": [
           "src/main/stores/FileCityImageService.ts"
         ],
+        "otel": {
+          "files": ["src/main/stores/FileCityImageService.ts"]
+        },
         "event": {
           "name": "file_city.image.cache_hit",
           "description": "Cached image found and returned",
@@ -153,10 +162,13 @@
       "pv": {
         "nodeType": "event",
         "shape": "rectangle",
-        "status": "draft",
+        "status": "implemented",
         "references": [
           "src/main/stores/FileCityImageService.ts"
         ],
+        "otel": {
+          "files": ["src/main/stores/FileCityImageService.ts"]
+        },
         "event": {
           "name": "file_city.filetree.fetched",
           "description": "FileTree fetched from repository-monitoring cache",
@@ -194,10 +206,13 @@
       "pv": {
         "nodeType": "event",
         "shape": "rectangle",
-        "status": "draft",
+        "status": "implemented",
         "references": [
           "src/main/stores/FileCityImageService.ts"
         ],
+        "otel": {
+          "files": ["src/main/stores/FileCityImageService.ts"]
+        },
         "event": {
           "name": "file_city.image.skipped",
           "description": "Image generation skipped - no file tree available",
@@ -227,10 +242,13 @@
       "pv": {
         "nodeType": "event",
         "shape": "rectangle",
-        "status": "draft",
+        "status": "implemented",
         "references": [
           "src/main/stores/FileCityImageService.ts"
         ],
+        "otel": {
+          "files": ["src/main/stores/FileCityImageService.ts"]
+        },
         "event": {
           "name": "file_city.image.generation_started",
           "description": "Started generating File City image",
@@ -268,10 +286,13 @@
       "pv": {
         "nodeType": "event",
         "shape": "rectangle",
-        "status": "draft",
+        "status": "implemented",
         "references": [
           "src/main/stores/FileCityImageService.ts"
         ],
+        "otel": {
+          "files": ["src/main/stores/FileCityImageService.ts"]
+        },
         "event": {
           "name": "file_city.image.generation_complete",
           "description": "Image generated and saved to cache",
@@ -309,10 +330,13 @@
       "pv": {
         "nodeType": "event",
         "shape": "rectangle",
-        "status": "draft",
+        "status": "implemented",
         "references": [
           "src/main/stores/FileCityImageService.ts"
         ],
+        "otel": {
+          "files": ["src/main/stores/FileCityImageService.ts"]
+        },
         "event": {
           "name": "file_city.image.error",
           "description": "Error occurred during image generation",

@@ -10,4 +10,14 @@ export const fileCityImageAPI: FileCityImageAPI = {
   hasImage: async (repoPath: string): Promise<boolean> => {
     return ipcRenderer.invoke(FileCityImageAPIEvent.HAS_IMAGE, repoPath);
   },
+
+  onImageGenerated: (callback: (repoPath: string, imageUrl: string) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, repoPath: string, imageUrl: string) => {
+      callback(repoPath, imageUrl);
+    };
+    ipcRenderer.on(FileCityImageAPIEvent.IMAGE_GENERATED, handler);
+    return () => {
+      ipcRenderer.removeListener(FileCityImageAPIEvent.IMAGE_GENERATED, handler);
+    };
+  },
 };

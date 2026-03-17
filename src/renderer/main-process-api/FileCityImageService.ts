@@ -26,4 +26,15 @@ export class FileCityImageService {
   static async hasImage(repoPath: string): Promise<boolean> {
     return window.mainProcess.fileCityImage.hasImage(repoPath);
   }
+
+  /**
+   * Subscribe to image generation events
+   * Called when a new image is generated for any repository
+   *
+   * @param callback - Function called with (repoPath, imageUrl) when image is generated
+   * @returns Unsubscribe function
+   */
+  static onImageGenerated(callback: (repoPath: string, imageUrl: string) => void): () => void {
+    return window.mainProcess.fileCityImage.onImageGenerated(callback);
+  }
 }

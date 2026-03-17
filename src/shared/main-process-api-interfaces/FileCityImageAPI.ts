@@ -11,6 +11,7 @@
 export enum FileCityImageAPIEvent {
   GET_IMAGE = 'file-city:get-image',
   HAS_IMAGE = 'file-city:has-image',
+  IMAGE_GENERATED = 'file-city:image-generated',
 }
 
 /**
@@ -27,4 +28,10 @@ export interface FileCityImageAPI {
    * Check if a File City image exists for a repository (without generating)
    */
   hasImage: (repoPath: string) => Promise<boolean>;
+
+  /**
+   * Subscribe to image generation events
+   * Called when a new image is generated for a repository
+   */
+  onImageGenerated: (callback: (repoPath: string, imageUrl: string) => void) => () => void;
 }
