@@ -1,0 +1,27 @@
+{
+  "version": "1.0.0",
+  "name": "Markdown Tab Events",
+  "description": "All events that open markdown files in tabs - unified to use MarkdownTab (not MDXEditorTab)",
+  "canvas": ".principal-views/dev-workspace-tabs/dev-workspace-tabs.otel.canvas",
+  "spanPattern": "devworkspace.tab.handle",
+  "scenarios": [
+    {
+      "id": "open-markdown-tab",
+      "description": "Any markdown-related event (file:open, file:opened, doc:openInTab, agent:selected, task:selected) creates a MarkdownTab",
+      "priority": 1,
+      "template": {
+        "introduction": "**Open Markdown Tab**\n\nEvent `{{event.name}}` triggered to open a markdown file",
+        "events": {
+          "devworkspace.trigger.tab": "1. User triggered (source: {{trigger.source}}, action: {{trigger.action}})",
+          "devworkspace.eventbus.dispatch": "2. Event bus dispatching `{{event.name}}` (source: {{event.source}}) to {{handlers.count}} handler(s)",
+          "devworkspace.handler.tab": "3. Handler invoked for `{{event.name}}` (source: {{event.source}})",
+          "devworkspace.handler.loopCheck": "4. Loop check (source: {{event.source}}, skipped: {{skipped}})",
+          "devworkspace.tab.lookup": "5. Tab lookup: `{{tab.id}}` (exists: {{tab.exists}})",
+          "devworkspace.tab.created": "6. Created MarkdownTab: `{{tab.id}}` (type: {{tab.contentType}})"
+        },
+        "summary": "**Result:** MarkdownTab `{{tab.id}}` ready for `{{file.path}}`"
+      },
+      "filterDefault": true
+    }
+  ]
+}

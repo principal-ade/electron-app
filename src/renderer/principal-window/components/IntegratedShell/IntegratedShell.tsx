@@ -181,8 +181,8 @@ export const IntegratedShell: React.FC = () => {
       try {
         const prefs = await UserPreferencesService.getPreferences();
 
-        // Check if auto-connect is disabled (defaults to true if undefined)
-        if (prefs.presenceAutoConnect === false) {
+        // Check if auto-connect is disabled (defaults to false if undefined)
+        if (prefs.presenceAutoConnect !== true) {
           return;
         }
 

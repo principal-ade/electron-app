@@ -671,7 +671,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     console.info('[DevWorkspacePanelFramework] Registering event handlers, events object:', events);
 
     const unsubscribers = [
-      // Task detail - open task markdown file in MDX editor tab
+      // Task detail - open task markdown file in markdown tab
       events.on('task:selected', (event) => {
         const tracer = getTracer('devworkspace');
         // Ignore re-emitted events from tabs to prevent loop
@@ -689,7 +689,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         const filePath = task.filePath;
         const fileName = task.title || filePath.split('/').pop() || 'Task';
 
-        console.info('[DevWorkspacePanelFramework] Opening task file in MDX editor:', filePath);
+        console.info('[DevWorkspacePanelFramework] Opening task file in markdown tab:', filePath);
 
         // OTEL: Start event dispatch span
         const dispatchSpan = tracer.startSpan('devworkspace.event.dispatch', {
@@ -742,30 +742,30 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         setTabs((prevTabs) => {
           // Check if tab already exists
           const existingTab = prevTabs.find(
-            (t) => t.contentType === 'mdx-editor' && (t as MDXEditorTab).filePath === filePath
+            (t) => t.contentType === 'markdown' && (t as MarkdownTab).filePath === filePath
           );
 
           if (existingTab) {
             tabExists = true;
             tabId = existingTab.id;
-            console.info('[DevWorkspacePanelFramework] Task MDX editor tab already exists, focusing:', existingTab.id);
+            console.info('[DevWorkspacePanelFramework] Task markdown tab already exists, focusing:', existingTab.id);
             setFocusTabId(existingTab.id);
             return prevTabs;
           }
 
-          // Create new MDX editor tab
+          // Create new markdown tab
           // Use file path for deterministic ID (sanitize for valid ID)
           tabId = `task-${sanitizedPath}`;
-          const newTab: MDXEditorTab = {
+          const newTab: MarkdownTab = {
             id: tabId,
             label: fileName,
-            contentType: 'mdx-editor',
+            contentType: 'markdown',
             filePath: filePath,
             fileName: fileName,
             closable: true,
           };
 
-          console.info('[DevWorkspacePanelFramework] Creating new task MDX editor tab:', newTab);
+          console.info('[DevWorkspacePanelFramework] Creating new task markdown tab:', newTab);
           setFocusTabId(newTab.id);
           return [...prevTabs, newTab];
         });
@@ -780,7 +780,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         if (!tabExists) {
           handleSpan.addEvent('devworkspace.tab.created', {
             'tab.id': tabId || `task-${sanitizedPath}`,
-            'tab.contentType': 'mdx-editor',
+            'tab.contentType': 'markdown',
           });
         }
 
@@ -1060,7 +1060,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         const filePath = `${repoPath}/${agent.path}`;
         const fileName = agent.name || agent.path.split('/').pop() || 'AGENTS.md';
 
-        console.info('[DevWorkspacePanelFramework] Opening agent file in MDX editor:', filePath);
+        console.info('[DevWorkspacePanelFramework] Opening agent file in markdown tab:', filePath);
 
         // OTEL: Start event dispatch span
         const dispatchSpan = tracer.startSpan('devworkspace.event.dispatch', {
@@ -1111,34 +1111,32 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         const sanitizedPath = filePath.replace(/[^a-zA-Z0-9-_]/g, '_');
 
         setTabs((prevTabs) => {
-          // Check if tab already exists (check both mdx-editor and markdown for backwards compat)
+          // Check if tab already exists
           const existingTab = prevTabs.find(
-            (t) =>
-              (t.contentType === 'mdx-editor' && (t as MDXEditorTab).filePath === filePath) ||
-              (t.contentType === 'markdown' && (t as MarkdownTab).filePath === filePath)
+            (t) => t.contentType === 'markdown' && (t as MarkdownTab).filePath === filePath
           );
 
           if (existingTab) {
             tabExists = true;
             tabId = existingTab.id;
-            console.info('[DevWorkspacePanelFramework] Agent MDX editor tab already exists, focusing:', existingTab.id);
+            console.info('[DevWorkspacePanelFramework] Agent markdown tab already exists, focusing:', existingTab.id);
             setFocusTabId(existingTab.id);
             return prevTabs;
           }
 
-          // Create new MDX editor tab
+          // Create new markdown tab
           // Use file path for deterministic ID (sanitize for valid ID)
           tabId = `agent-${sanitizedPath}`;
-          const newTab: MDXEditorTab = {
+          const newTab: MarkdownTab = {
             id: tabId,
             label: fileName,
-            contentType: 'mdx-editor',
+            contentType: 'markdown',
             filePath: filePath,
             fileName: fileName,
             closable: true,
           };
 
-          console.info('[DevWorkspacePanelFramework] Creating new agent MDX editor tab:', newTab);
+          console.info('[DevWorkspacePanelFramework] Creating new agent markdown tab:', newTab);
           setFocusTabId(newTab.id);
           return [...prevTabs, newTab];
         });
@@ -1153,14 +1151,14 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         if (!tabExists) {
           handleSpan.addEvent('devworkspace.tab.created', {
             'tab.id': tabId || `agent-${sanitizedPath}`,
-            'tab.contentType': 'mdx-editor',
+            'tab.contentType': 'markdown',
           });
         }
 
         handleSpan.setStatus({ code: SpanStatusCode.OK });
         handleSpan.end();
       }),
-      // Doc open in tab - open documentation file in MDX editor tab
+      // Doc open in tab - open documentation file in markdown tab
       events.on('doc:openInTab', async (event) => {
         const tracer = getTracer('devworkspace');
         // Ignore re-emitted events from tabs to prevent loop
@@ -1229,11 +1227,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         const sanitizedPath = filePath.replace(/[^a-zA-Z0-9-_]/g, '_');
 
         setTabs((prevTabs) => {
-          // Check if tab already exists (check both mdx-editor and markdown for backwards compat)
+          // Check if tab already exists
           const existingTab = prevTabs.find(
-            (t) =>
-              (t.contentType === 'mdx-editor' && (t as MDXEditorTab).filePath === filePath) ||
-              (t.contentType === 'markdown' && (t as MarkdownTab).filePath === filePath)
+            (t) => t.contentType === 'markdown' && (t as MarkdownTab).filePath === filePath
           );
 
           if (existingTab) {
@@ -1244,18 +1240,18 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             return prevTabs;
           }
 
-          // Create new MDX editor tab
+          // Create new markdown tab
           tabId = `doc-${sanitizedPath}`;
-          const newTab: MDXEditorTab = {
+          const newTab: MarkdownTab = {
             id: tabId,
             label: fileName,
-            contentType: 'mdx-editor',
+            contentType: 'markdown',
             filePath: filePath,
             fileName: fileName,
             closable: true,
           };
 
-          console.info('[DevWorkspacePanelFramework] Creating new doc MDX editor tab:', newTab);
+          console.info('[DevWorkspacePanelFramework] Creating new doc markdown tab:', newTab);
           setFocusTabId(newTab.id);
           return [...prevTabs, newTab];
         });
@@ -1270,7 +1266,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         if (!tabExists) {
           handleSpan.addEvent('devworkspace.tab.created', {
             'tab.id': tabId || `doc-${sanitizedPath}`,
-            'tab.contentType': 'mdx-editor',
+            'tab.contentType': 'markdown',
           });
         }
 
@@ -1421,11 +1417,11 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         // Check if file is markdown
         const isMarkdown = filePath.endsWith('.md') || filePath.endsWith('.mdx');
 
-        // Markdown files always open in MDX editor, regardless of git status
+        // Markdown files always open in markdown viewer, regardless of git status
         // For other files: use git diff panel for modified files (staged or unstaged), file editor for new/untracked files
-        let contentType: 'mdx-editor' | 'git-diff' | 'file-editor';
+        let contentType: 'markdown' | 'git-diff' | 'file-editor';
         if (isMarkdown) {
-          contentType = 'mdx-editor';
+          contentType = 'markdown';
         } else {
           const isModified = payload.gitStatus === 'unstaged' || payload.gitStatus === 'staged';
           contentType = isModified ? 'git-diff' : 'file-editor';
@@ -1486,7 +1482,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           const existingTab = prevTabs.find(
             (t) =>
               ((t.contentType === 'file-editor' && (t as FileEditorTab).filePath === filePath) ||
-                (t.contentType === 'mdx-editor' && (t as MDXEditorTab).filePath === filePath) ||
+                (t.contentType === 'markdown' && (t as MarkdownTab).filePath === filePath) ||
                 (t.contentType === 'git-diff' && (t as GitDiffTab).filePath === filePath))
           );
 
@@ -1500,13 +1496,13 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
           // Create new tab
           // Use file path for deterministic ID (sanitize for valid ID)
-          let newTab: FileEditorTab | MDXEditorTab | GitDiffTab;
-          if (contentType === 'mdx-editor') {
-            tabId = `mdx-editor-${sanitizedPath}`;
+          let newTab: FileEditorTab | MarkdownTab | GitDiffTab;
+          if (contentType === 'markdown') {
+            tabId = `markdown-${sanitizedPath}`;
             newTab = {
               id: tabId,
               label: fileName,
-              contentType: 'mdx-editor',
+              contentType: 'markdown',
               filePath: filePath,
               fileName: fileName,
               closable: true,
