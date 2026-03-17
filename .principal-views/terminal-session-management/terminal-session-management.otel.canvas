@@ -4,6 +4,7 @@
     "version": "1.0.0",
     "description": "Lifecycle management of terminal sessions: creation, destruction, ownership, and port management",
     "markdown": ".principal-views/terminal-session-management/terminal-session-management.md",
+    "scope": "principal-ade",
     "nodeTypes": {
       "renderer": {
         "label": "Renderer",
@@ -114,6 +115,9 @@
         "references": [
           "src/renderer/tipc/terminalClient.ts"
         ],
+        "otel": {
+          "files": ["src/renderer/tipc/terminalClient.ts"]
+        },
         "event": {
           "name": "terminal.session.create_requested",
           "description": "Renderer requested terminal session creation via TIPC",
@@ -145,6 +149,9 @@
         "references": [
           "src/main/terminal/tipc/terminalRouter.ts"
         ],
+        "otel": {
+          "files": ["src/main/terminal/tipc/terminalRouter.ts"]
+        },
         "event": {
           "name": "terminal.session.router_handled",
           "description": "TIPC router handling session creation",
@@ -176,6 +183,9 @@
         "references": [
           "src/main/terminal/TerminalSessionManager.ts"
         ],
+        "otel": {
+          "files": ["src/main/terminal/tipc/terminalRouter.ts"]
+        },
         "event": {
           "name": "terminal.session.manager_action",
           "description": "Session manager performing action",
@@ -207,6 +217,9 @@
         "references": [
           "src/main/terminal/TerminalSessionManager.ts"
         ],
+        "otel": {
+          "files": ["src/main/terminal/tipc/terminalRouter.ts"]
+        },
         "event": {
           "name": "terminal.session.store_updated",
           "description": "Session store state changed",
@@ -243,6 +256,9 @@
           "src/main/terminal/TerminalOwnershipManager.ts",
           "src/main/terminal/tipc/terminalRouter.ts"
         ],
+        "otel": {
+          "files": ["src/main/terminal/tipc/terminalRouter.ts"]
+        },
         "event": {
           "name": "terminal.ownership.changed",
           "description": "Terminal ownership changed",
@@ -275,7 +291,7 @@
       "pv": {
         "nodeType": "event",
         "shape": "rectangle",
-        "status": "approved",
+        "status": "draft",
         "references": [
           "src/terminal-worker/worker-entry.ts"
         ],
@@ -306,7 +322,7 @@
       "pv": {
         "nodeType": "event",
         "shape": "rectangle",
-        "status": "approved",
+        "status": "draft",
         "references": [
           "src/renderer/hooks/useTerminalPort.ts"
         ],
@@ -333,7 +349,7 @@
       "pv": {
         "nodeType": "event",
         "shape": "rectangle",
-        "status": "approved",
+        "status": "draft",
         "references": [
           "src/terminal-worker/worker-entry.ts"
         ],
@@ -398,6 +414,9 @@
         "references": [
           "src/renderer/panels/terminal-sessions/TerminalSessionsPanel.tsx"
         ],
+        "otel": {
+          "files": ["src/renderer/panels/terminal-sessions/TerminalSessionsPanel.tsx"]
+        },
         "event": {
           "name": "terminal.panel.session_clicked",
           "description": "User clicked a session in the terminal sessions panel",
@@ -408,15 +427,18 @@
             },
             "is_local": {
               "type": "boolean",
-              "description": "Whether session is owned by this window"
+              "description": "Whether session is owned by this window",
+              "display": false
             },
             "owner.window_id": {
               "type": "number",
-              "description": "Window ID that owns the session"
+              "description": "Window ID that owns the session",
+              "display": false
             },
             "current.window_id": {
               "type": "number",
-              "description": "Current window ID making the click"
+              "description": "Current window ID making the click",
+              "display": false
             }
           }
         }
@@ -437,6 +459,9 @@
         "references": [
           "src/renderer/panels/terminal-sessions/TerminalSessionsPanel.tsx"
         ],
+        "otel": {
+          "files": ["src/renderer/panels/terminal-sessions/TerminalSessionsPanel.tsx"]
+        },
         "event": {
           "name": "terminal.panel.session_selected",
           "description": "Local session was selected to switch terminal tab",
@@ -464,6 +489,9 @@
         "references": [
           "src/main/terminal/tipc/terminalRouter.ts"
         ],
+        "otel": {
+          "files": ["src/main/terminal/tipc/terminalRouter.ts"]
+        },
         "event": {
           "name": "terminal.sessions.broadcast",
           "description": "Broadcasting session list to all windows",
@@ -496,6 +524,9 @@
           "src/renderer/panels/terminal-sessions/TerminalSessionsPanel.tsx",
           "src/renderer/main-process-api/WindowService.ts"
         ],
+        "otel": {
+          "files": ["src/renderer/panels/terminal-sessions/TerminalSessionsPanel.tsx"]
+        },
         "event": {
           "name": "terminal.panel.window_focused",
           "description": "Focused another window to view its terminal session",
@@ -523,7 +554,7 @@
       "pv": {
         "nodeType": "event",
         "shape": "rectangle",
-        "status": "approved",
+        "status": "draft",
         "references": [
           "src/main/terminal/PtyDaemonClient.ts"
         ],
@@ -550,7 +581,7 @@
       "pv": {
         "nodeType": "event",
         "shape": "rectangle",
-        "status": "approved",
+        "status": "draft",
         "references": [
           "src/main/terminal/TerminalSessionManager.ts"
         ],

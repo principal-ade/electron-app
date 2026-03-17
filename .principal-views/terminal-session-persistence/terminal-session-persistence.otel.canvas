@@ -4,6 +4,7 @@
     "version": "1.0.0",
     "description": "External PTY daemon architecture for preserving terminal sessions across app updates",
     "markdown": ".principal-views/terminal-session-persistence/terminal-session-persistence.md",
+    "scope": "principal-ade-daemon",
     "nodeTypes": {
       "electron": {
         "label": "Electron",
@@ -166,7 +167,7 @@
       "pv": {
         "nodeType": "event",
         "shape": "rectangle",
-        "status": "approved",
+        "status": "draft",
         "references": [
           "src/renderer/contexts/TerminalContext.tsx"
         ],
@@ -265,6 +266,9 @@
         "references": [
           "src/pty-daemon/DaemonSessionManager.ts"
         ],
+        "otel": {
+          "files": ["src/pty-daemon/telemetry.ts"]
+        },
         "event": {
           "name": "terminal.daemon.session_action",
           "description": "Daemon session manager action",
@@ -330,13 +334,17 @@
           "src/pty-daemon/telemetry.ts",
           "src/pty-daemon/DaemonSessionManager.ts"
         ],
+        "otel": {
+          "files": ["src/pty-daemon/telemetry.ts"]
+        },
         "event": {
           "name": "terminal.pty.spawned",
           "description": "PTY process spawned by daemon",
           "attributes": {
             "session.id": {
               "type": "string",
-              "description": "Terminal session ID"
+              "description": "Terminal session ID",
+              "display": false
             },
             "pid": {
               "type": "number",
@@ -424,15 +432,19 @@
           "src/pty-daemon/telemetry.ts",
           "src/pty-daemon/DaemonSessionManager.ts"
         ],
+        "otel": {
+          "files": ["src/pty-daemon/telemetry.ts"]
+        },
         "event": {
           "name": "terminal.pty.spawn_attempt",
           "description": "PTY spawn attempt with full parameters for debugging",
           "attributes": {
             "session.id": {
               "type": "string",
-              "description": "Terminal session ID"
+              "description": "Terminal session ID",
+              "display": false
             },
-            "shell.path": {
+            "shell": {
               "type": "string",
               "description": "Shell executable path"
             },
@@ -440,25 +452,35 @@
               "type": "string",
               "description": "Working directory"
             },
+            "shell.path": {
+              "type": "string",
+              "description": "Shell executable path",
+              "display": false
+            },
             "cols": {
               "type": "number",
-              "description": "Column count"
+              "description": "Column count",
+              "display": false
             },
             "rows": {
               "type": "number",
-              "description": "Row count"
+              "description": "Row count",
+              "display": false
             },
             "env.keys": {
               "type": "string",
-              "description": "Comma-separated environment variable keys"
+              "description": "Comma-separated environment variable keys",
+              "display": false
             },
             "process.cwd": {
               "type": "string",
-              "description": "Daemon process working directory"
+              "description": "Daemon process working directory",
+              "display": false
             },
             "process.execPath": {
               "type": "string",
-              "description": "Daemon executable path"
+              "description": "Daemon executable path",
+              "display": false
             }
           }
         }
@@ -480,45 +502,61 @@
           "src/pty-daemon/telemetry.ts",
           "src/pty-daemon/DaemonSessionManager.ts"
         ],
+        "otel": {
+          "files": ["src/pty-daemon/telemetry.ts"]
+        },
         "event": {
           "name": "terminal.pty.spawn_failed",
           "description": "PTY spawn failure with detailed context",
           "attributes": {
             "session.id": {
               "type": "string",
-              "description": "Terminal session ID"
+              "description": "Terminal session ID",
+              "display": false
             },
-            "error.message": {
+            "error": {
               "type": "string",
               "description": "Error message from node-pty"
             },
+            "error.message": {
+              "type": "string",
+              "description": "Error message from node-pty",
+              "display": false
+            },
             "shell.path": {
               "type": "string",
-              "description": "Shell that failed to spawn"
+              "description": "Shell that failed to spawn",
+              "display": false
             },
             "cwd": {
               "type": "string",
-              "description": "Requested working directory"
+              "description": "Requested working directory",
+              "display": false
             },
             "process.cwd": {
               "type": "string",
-              "description": "Daemon process working directory"
+              "description": "Daemon process working directory",
+              "display": false
             },
             "process.execPath": {
               "type": "string",
-              "description": "Daemon executable path"
+              "description": "Daemon executable path",
+              "display": false
             },
             "process.env.PATH": {
               "type": "string",
-              "description": "PATH environment variable"
+              "description": "PATH environment variable",
+              "display": false
             },
             "process.env.SHELL": {
               "type": "string",
-              "description": "SHELL environment variable"
+              "description": "SHELL environment variable",
+              "display": false
             },
             "process.env.HOME": {
               "type": "string",
-              "description": "HOME environment variable"
+              "description": "HOME environment variable",
+              "display": false
             }
           }
         }
@@ -726,6 +764,9 @@
           "src/pty-daemon/telemetry.ts",
           "src/pty-daemon/DaemonSessionManager.ts"
         ],
+        "otel": {
+          "files": ["src/pty-daemon/telemetry.ts"]
+        },
         "event": {
           "name": "terminal.error",
           "description": "Error events across terminal subsystem",

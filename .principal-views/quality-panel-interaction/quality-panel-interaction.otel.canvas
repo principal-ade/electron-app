@@ -4,6 +4,7 @@
     "version": "1.0.0",
     "description": "Complete event flow from panel navigation through tool execution to results display, including GitHub artifact fetching and color mode selection",
     "markdown": ".principal-views/quality-panel-interaction/quality-panel-interaction.md",
+    "scope": "principal-ade-renderer",
     "nodeTypes": {
       "ui-component": {
         "label": "UI Component",
@@ -520,7 +521,12 @@
         "references": [
           "src/renderer/contexts/RepositoryPanelContext.tsx"
         ],
-        "eventRef": "quality.artifact.step.api.calling"
+        "boundary": {
+          "direction": "outbound",
+          "node": {
+            "pv.event.name": "quality.artifact.step.api.calling"
+          }
+        }
       }
     },
     {

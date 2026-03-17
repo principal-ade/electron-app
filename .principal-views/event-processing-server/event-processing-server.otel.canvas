@@ -4,6 +4,7 @@
     "version": "1.0.0",
     "description": "Agent session event processing server running in Electron utility process. Receives events from Claude, Cline, OpenCode, and Droid agents via HTTP webhooks and processes them through the AgentEventPipeline.",
     "markdown": ".principal-views/event-processing-server/event-processing-server.md",
+    "scope": "principal-ade",
     "nodeTypes": {
       "main-process": {
         "label": "Main Process",
@@ -109,6 +110,9 @@
         "references": [
           "src/main/agent-session-events/EventServerManager.ts"
         ],
+        "otel": {
+          "files": ["src/main/agent-session-events/EventServerManager.ts"]
+        },
         "event": {
           "name": "event.server.manager_started",
           "description": "EventServerManager started and spawned utility process",
@@ -140,6 +144,9 @@
         "references": [
           "src/event-processing-server/HttpEventServer.ts"
         ],
+        "otel": {
+          "files": ["src/event-processing-server/HttpEventServer.ts"]
+        },
         "event": {
           "name": "event.server.http_started",
           "description": "HTTP server started listening for agent events",
@@ -171,6 +178,9 @@
         "references": [
           "src/event-processing-server/HttpEventServer.ts"
         ],
+        "otel": {
+          "files": ["src/event-processing-server/HttpEventServer.ts"]
+        },
         "event": {
           "name": "event.http.claude_received",
           "description": "Claude agent event received via HTTP POST",
@@ -202,6 +212,9 @@
         "references": [
           "src/event-processing-server/HttpEventServer.ts"
         ],
+        "otel": {
+          "files": ["src/event-processing-server/HttpEventServer.ts"]
+        },
         "event": {
           "name": "event.http.cline_received",
           "description": "Cline agent event received via HTTP POST",
@@ -233,6 +246,9 @@
         "references": [
           "src/event-processing-server/HttpEventServer.ts"
         ],
+        "otel": {
+          "files": ["src/event-processing-server/HttpEventServer.ts"]
+        },
         "event": {
           "name": "event.http.opencode_received",
           "description": "OpenCode agent event received via HTTP POST",
@@ -264,6 +280,9 @@
         "references": [
           "src/event-processing-server/HttpEventServer.ts"
         ],
+        "otel": {
+          "files": ["src/event-processing-server/HttpEventServer.ts"]
+        },
         "event": {
           "name": "event.http.droid_received",
           "description": "Droid agent event received via HTTP POST",
@@ -296,6 +315,9 @@
           "src/event-processing-server/HttpEventServer.ts",
           "src/event-processing-server/EventProcessingServer.ts"
         ],
+        "otel": {
+          "files": ["src/event-processing-server/HttpEventServer.ts"]
+        },
         "event": {
           "name": "event.pipeline.event_processed",
           "description": "Event processed through AgentEventPipeline",
@@ -336,6 +358,9 @@
           "src/event-processing-server/HttpEventServer.ts",
           "src/event-processing-server/EventProcessingServer.ts"
         ],
+        "otel": {
+          "files": ["src/event-processing-server/HttpEventServer.ts"]
+        },
         "event": {
           "name": "event.adapter.repo_resolved",
           "description": "Repository info resolved for event path",
@@ -482,6 +507,9 @@
         "references": [
           "src/main/agent-session-events/EventServerManager.ts"
         ],
+        "otel": {
+          "files": ["src/main/agent-session-events/EventServerManager.ts"]
+        },
         "event": {
           "name": "event.window.session_updated",
           "description": "Window received session update broadcast",
@@ -513,6 +541,9 @@
         "references": [
           "src/main/agent-session-events/EventServerManager.ts"
         ],
+        "otel": {
+          "files": ["src/main/agent-session-events/EventServerManager.ts"]
+        },
         "event": {
           "name": "event.port.registered",
           "description": "MessagePort registered for window to receive events",

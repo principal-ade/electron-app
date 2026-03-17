@@ -4,6 +4,7 @@
     "name": "DevWorkspace Tab & File Opening Flow",
     "description": "Event flow through PanelEventBus to tabs or right panel",
     "markdown": ".principal-views/dev-workspace-tabs/dev-workspace-tabs.md",
+    "scope": "principal-ade-renderer",
     "nodeTypes": {
       "trigger": {
         "label": "Trigger",
@@ -100,6 +101,9 @@
         "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
+        "otel": {
+          "files": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"]
+        },
         "event": {
           "name": "devworkspace.trigger.tab",
           "description": "User action with tab intent",
@@ -131,6 +135,9 @@
         "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
+        "otel": {
+          "files": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"]
+        },
         "event": {
           "name": "devworkspace.trigger.panel",
           "description": "User action with panel intent",
@@ -162,6 +169,9 @@
         "references": [
           "src/renderer/contexts/PanelContext.tsx"
         ],
+        "otel": {
+          "files": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"]
+        },
         "event": {
           "name": "devworkspace.eventbus.dispatch",
           "description": "Event bus dispatching to handlers",
@@ -207,6 +217,9 @@
         "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
+        "otel": {
+          "files": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"]
+        },
         "event": {
           "name": "devworkspace.handler.tab",
           "description": "Tab event handler invoked",
@@ -248,6 +261,9 @@
         "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
+        "otel": {
+          "files": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"]
+        },
         "event": {
           "name": "devworkspace.handler.panel",
           "description": "Panel event handler invoked",
@@ -275,6 +291,9 @@
         "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
+        "otel": {
+          "files": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"]
+        },
         "event": {
           "name": "devworkspace.handler.loopCheck",
           "description": "Loop prevention check",
@@ -306,6 +325,9 @@
         "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
+        "otel": {
+          "files": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"]
+        },
         "event": {
           "name": "devworkspace.tab.lookup",
           "description": "Checking for existing tab",
@@ -337,6 +359,9 @@
         "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
+        "otel": {
+          "files": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"]
+        },
         "event": {
           "name": "devworkspace.tab.created",
           "description": "Tab created and focused",
@@ -395,6 +420,9 @@
         "references": [
           "src/renderer/contexts/PanelContext.tsx"
         ],
+        "otel": {
+          "files": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"]
+        },
         "event": {
           "name": "devworkspace.activeFile.set",
           "description": "Active file updated",
@@ -430,6 +458,9 @@
         "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
+        "otel": {
+          "files": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"]
+        },
         "event": {
           "name": "devworkspace.layout.changed",
           "description": "Layout changed",

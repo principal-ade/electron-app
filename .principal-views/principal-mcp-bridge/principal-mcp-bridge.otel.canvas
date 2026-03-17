@@ -4,6 +4,7 @@
     "version": "1.0.0",
     "description": "HTTP bridge enabling external AI agents (MCP tools) to interact with the Electron app's repository monitoring capabilities",
     "markdown": ".principal-views/principal-mcp-bridge/principal-mcp-bridge.md",
+    "scope": "principal-ade",
     "nodeTypes": {
       "external-client": {
         "label": "External Client",
@@ -238,6 +239,9 @@
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
+        "otel": {
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
         "event": {
           "name": "principal_mcp.repo_monitoring.calling",
           "description": "About to call repository monitoring manager",
@@ -269,6 +273,9 @@
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
+        "otel": {
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
         "event": {
           "name": "principal_mcp.repo_monitoring.result_received",
           "description": "Raw result received from monitoring manager",
@@ -312,6 +319,9 @@
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
+        "otel": {
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
         "event": {
           "name": "principal_mcp.resolution.alexandria_found",
           "description": "Dependency found in Alexandria registry",
@@ -355,6 +365,9 @@
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
+        "otel": {
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
         "event": {
           "name": "principal_mcp.resolution.alexandria_not_found",
           "description": "Dependency not found in Alexandria registry",
@@ -382,6 +395,9 @@
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
+        "otel": {
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
         "event": {
           "name": "principal_mcp.resolution.package_found",
           "description": "Dependency found in package.json",
@@ -425,6 +441,9 @@
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
+        "otel": {
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
         "event": {
           "name": "principal_mcp.resolution.package_not_found",
           "description": "Dependency not found in package.json",
@@ -452,6 +471,9 @@
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
+        "otel": {
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
         "event": {
           "name": "principal_mcp.resolution.suggestions_generated",
           "description": "Install suggestions generated for not-found dependency",
@@ -491,6 +513,9 @@
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
+        "otel": {
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
         "event": {
           "name": "principal_mcp.resolution.no_suggestions",
           "description": "No install suggestions available for not-found dependency",
@@ -518,6 +543,9 @@
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
+        "otel": {
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
         "event": {
           "name": "principal_mcp.error.validation_failed",
           "description": "Request validation failed",
@@ -553,6 +581,9 @@
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
+        "otel": {
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
         "event": {
           "name": "principal_mcp.error.resolution_failed",
           "description": "Dependency resolution threw an exception",
@@ -588,6 +619,9 @@
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
+        "otel": {
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
         "event": {
           "name": "principal_mcp.repo_monitoring.dependency_resolved",
           "description": "Final dependency resolution status",
@@ -667,6 +701,9 @@
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
+        "otel": {
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
         "event": {
           "name": "principal_mcp.theme.schema_requested",
           "description": "Theme schema endpoint called",
@@ -695,6 +732,9 @@
           "src/main/principal-mcp/PrincipalMCPBridge.ts",
           "src/main/theme/themeHandler.ts"
         ],
+        "otel": {
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
         "event": {
           "name": "principal_mcp.theme.schema_retrieved",
           "description": "Theme schema successfully retrieved",
@@ -730,6 +770,9 @@
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
+        "otel": {
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
         "event": {
           "name": "principal_mcp.error.theme_not_found",
           "description": "Requested theme does not exist",
@@ -761,6 +804,9 @@
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
+        "otel": {
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
         "event": {
           "name": "principal_mcp.theme.update_requested",
           "description": "Theme update endpoint called",
@@ -796,6 +842,9 @@
         "references": [
           "src/main/stores/userPreferencesHandler.ts"
         ],
+        "otel": {
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
         "event": {
           "name": "principal_mcp.theme.preferences_updated",
           "description": "Theme overrides saved to preferences and broadcast to renderers",
@@ -827,6 +876,9 @@
         "references": [
           "src/main/stores/userPreferencesHandler.ts"
         ],
+        "otel": {
+          "files": ["src/main/stores/userPreferencesHandler.ts"]
+        },
         "event": {
           "name": "principal_mcp.theme.renderer_broadcast",
           "description": "Broadcasting preferences change to renderer windows",
@@ -862,6 +914,9 @@
         "references": [
           "src/main/stores/userPreferencesHandler.ts"
         ],
+        "otel": {
+          "files": ["src/main/stores/userPreferencesHandler.ts"]
+        },
         "event": {
           "name": "principal_mcp.theme.renderer_notified",
           "description": "Renderer windows have been notified of preferences change",
@@ -895,6 +950,9 @@
           "src/main/theme/themeHandler.ts",
           "src/renderer/providers/CustomThemeProvider.tsx"
         ],
+        "otel": {
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
         "event": {
           "name": "principal_mcp.theme.update_completed",
           "description": "Theme property successfully updated (with warning if not active theme)",
@@ -938,6 +996,9 @@
         "references": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ],
+        "otel": {
+          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
+        },
         "event": {
           "name": "principal_mcp.error.theme_update_failed",
           "description": "Theme update failed",

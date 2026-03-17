@@ -12,6 +12,7 @@
       "template": {
         "introduction": "**Auto-Reconnecting Terminal Sessions**\n\nRenderer received SESSIONS_RESTORED event. Auto-reconnecting matching sessions.",
         "events": {
+          "terminal.daemon.sessions_sent": "[0] Daemon sent sessions: {{sessions.count}} sessions available",
           "terminal.sessions.restored": "[1] Sessions restored: {{sessions.count}} sessions from daemon",
           "terminal.session.auto_reconnect": "[2] Auto-reconnecting: session=`{{session.id}}`, context={{context}}",
           "terminal.ownership.changed": "[3] Ownership claimed: session=`{{session.id}}`, owner={{new_owner.window_id}}",

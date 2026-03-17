@@ -4,6 +4,7 @@
     "version": "1.0.0",
     "description": "Electron auto-update system using electron-updater with GitHub releases",
     "markdown": ".principal-views/app-updates/app-updates.md",
+    "scope": "principal-ade",
     "nodeTypes": {
       "ui-component": {
         "label": "UI Component",
@@ -97,6 +98,9 @@
         "references": [
           "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
         ],
+        "otel": {
+          "files": ["src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"]
+        },
         "event": {
           "name": "app_updates.ui.settings_opened",
           "description": "User opened the Updates settings panel",
@@ -128,6 +132,9 @@
         "references": [
           "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
         ],
+        "otel": {
+          "files": ["src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"]
+        },
         "event": {
           "name": "app_updates.user.check_requested",
           "description": "User clicked the Check for Updates button",
@@ -213,6 +220,9 @@
         "references": [
           "src/main/AppVersionManager.ts"
         ],
+        "otel": {
+          "files": ["src/main/AppVersionManager.ts"]
+        },
         "event": {
           "name": "app_updates.manager.initialized",
           "description": "AppVersionManager initialized and ready to handle updates",
@@ -244,6 +254,9 @@
         "references": [
           "src/main/AppVersionManager.ts"
         ],
+        "otel": {
+          "files": ["src/main/AppVersionManager.ts"]
+        },
         "event": {
           "name": "app_updates.check.started",
           "description": "Update check initiated",
@@ -275,6 +288,9 @@
         "references": [
           "src/main/AppVersionManager.ts"
         ],
+        "otel": {
+          "files": ["src/main/AppVersionManager.ts"]
+        },
         "event": {
           "name": "app_updates.github.request_completed",
           "description": "HTTP request to GitHub completed",
@@ -354,6 +370,9 @@
         "references": [
           "src/main/AppVersionManager.ts"
         ],
+        "otel": {
+          "files": ["src/main/AppVersionManager.ts"]
+        },
         "event": {
           "name": "app_updates.check.available",
           "description": "Update available event received",
@@ -391,6 +410,9 @@
         "references": [
           "src/main/AppVersionManager.ts"
         ],
+        "otel": {
+          "files": ["src/main/AppVersionManager.ts"]
+        },
         "event": {
           "name": "app_updates.check.not_available",
           "description": "No update available - already on latest",
@@ -418,6 +440,9 @@
         "references": [
           "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
         ],
+        "otel": {
+          "files": ["src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"]
+        },
         "event": {
           "name": "app_updates.user.download_requested",
           "description": "User clicked Download Update button",
@@ -445,6 +470,9 @@
         "references": [
           "src/main/AppVersionManager.ts"
         ],
+        "otel": {
+          "files": ["src/main/AppVersionManager.ts"]
+        },
         "event": {
           "name": "app_updates.download.started",
           "description": "Update download initiated",
@@ -472,6 +500,9 @@
         "references": [
           "src/main/AppVersionManager.ts"
         ],
+        "otel": {
+          "files": ["src/main/AppVersionManager.ts"]
+        },
         "event": {
           "name": "app_updates.download.progress",
           "description": "Download progress update",
@@ -511,6 +542,9 @@
         "references": [
           "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
         ],
+        "otel": {
+          "files": ["src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"]
+        },
         "event": {
           "name": "app_updates.ui.progress_updated",
           "description": "Progress bar UI updated",
@@ -538,6 +572,9 @@
         "references": [
           "src/main/AppVersionManager.ts"
         ],
+        "otel": {
+          "files": ["src/main/AppVersionManager.ts"]
+        },
         "event": {
           "name": "app_updates.download.completed",
           "description": "Update download completed successfully",
@@ -570,6 +607,9 @@
         "references": [
           "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
         ],
+        "otel": {
+          "files": ["src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"]
+        },
         "event": {
           "name": "app_updates.user.install_requested",
           "description": "User clicked Install & Restart button",
@@ -597,6 +637,9 @@
         "references": [
           "src/main/AppVersionManager.ts"
         ],
+        "otel": {
+          "files": ["src/main/AppVersionManager.ts"]
+        },
         "event": {
           "name": "app_updates.install.started",
           "description": "Update installation initiated",
@@ -654,6 +697,9 @@
           "src/main/AppVersionManager.ts",
           "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
         ],
+        "otel": {
+          "files": ["src/main/AppVersionManager.ts"]
+        },
         "event": {
           "name": "app_updates.error.occurred",
           "description": "Error occurred during update process",
@@ -689,6 +735,9 @@
         "references": [
           "src/main/AppVersionManager.ts"
         ],
+        "otel": {
+          "files": ["src/main/AppVersionManager.ts"]
+        },
         "event": {
           "name": "app_updates.check.periodic",
           "description": "Periodic update check triggered",
@@ -720,6 +769,9 @@
         "references": [
           "src/main/AppVersionManager.ts"
         ],
+        "otel": {
+          "files": ["src/main/AppVersionManager.ts"]
+        },
         "event": {
           "name": "app_updates.check.user_triggered",
           "description": "Manual or silent update check triggered by user action",
@@ -794,6 +846,9 @@
         "references": [
           "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
         ],
+        "otel": {
+          "files": ["src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"]
+        },
         "event": {
           "name": "app_updates.ui.error_displayed",
           "description": "Error message displayed to user",

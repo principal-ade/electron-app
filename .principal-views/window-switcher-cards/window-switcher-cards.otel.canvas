@@ -4,6 +4,7 @@
     "version": "1.0.0",
     "description": "Integration of LocalProjectCard from industry-themed-repository-composition-panels into the Window Switcher overlay",
     "markdown": ".principal-views/window-switcher-cards/window-switcher-cards.md",
+    "scope": "principal-ade",
     "nodeTypes": {
       "renderer": {
         "label": "Renderer",
@@ -79,7 +80,7 @@
       "pv": {
         "nodeType": "event",
         "shape": "rectangle",
-        "status": "approved",
+        "status": "draft",
         "references": [
           "src/main/window/quickOpen.ts"
         ],
@@ -176,7 +177,7 @@
       "pv": {
         "nodeType": "event",
         "shape": "rectangle",
-        "status": "approved",
+        "status": "draft",
         "references": [
           "src/main/window/types.ts"
         ],
@@ -331,7 +332,7 @@
       "pv": {
         "nodeType": "event",
         "shape": "rectangle",
-        "status": "approved",
+        "status": "draft",
         "references": [
           "src/renderer/window-switcher/WindowSwitcherApp.tsx"
         ],
@@ -386,7 +387,7 @@
       "pv": {
         "nodeType": "event",
         "shape": "rectangle",
-        "status": "approved",
+        "status": "draft",
         "references": [
           "src/main/main.ts"
         ],

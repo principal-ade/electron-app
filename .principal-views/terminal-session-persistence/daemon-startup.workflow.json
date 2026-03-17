@@ -13,7 +13,10 @@
         "introduction": "**PTY Daemon Starting**\n\nInitializing independent PTY daemon process.",
         "events": {
           "terminal.daemon.phase": "[1] Daemon {{phase}}: {{reason}} (uptime={{uptime.ms}}ms)",
-          "terminal.daemon.server_event": "[2] Server {{event}}: {{clients.count}} clients"
+          "terminal.daemon.server_event": "[2] Server {{event}}: {{clients.count}} clients",
+          "terminal.pty.spawn_attempt": "[3] PTY spawn attempt: shell={{shell}}, cwd={{cwd}}",
+          "terminal.pty.spawned": "[4] PTY spawned: pid={{pid}}",
+          "terminal.pty.spawn_failed": "[!] PTY spawn failed: error={{error}}"
         },
         "summary": "**Daemon Ready**"
       }

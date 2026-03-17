@@ -4,6 +4,7 @@
     "version": "1.0.0",
     "description": "Flow of terminal/agent working state from terminal panel through TIPC to main process store and cross-window broadcast",
     "markdown": ".principal-views/terminal-activity-tracking/terminal-activity-tracking.md",
+    "scope": "principal-ade",
     "nodeTypes": {
       "terminal-panel": {
         "label": "Terminal Panel",
@@ -101,6 +102,9 @@
         "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
+        "otel": {
+          "files": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"]
+        },
         "event": {
           "name": "terminal.activity.host_received",
           "description": "Panel host received activity change event from terminal panel",
@@ -141,6 +145,9 @@
         "references": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ],
+        "otel": {
+          "files": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"]
+        },
         "event": {
           "name": "terminal.activity.tipc_invoked",
           "description": "TIPC client invoked updateActivity procedure",
@@ -182,6 +189,9 @@
         "references": [
           "src/main/terminal/tipc/terminalRouter.ts"
         ],
+        "otel": {
+          "files": ["src/main/terminal/tipc/terminalRouter.ts"]
+        },
         "event": {
           "name": "terminal.activity.router_handled",
           "description": "TIPC router handled updateActivity procedure in main process",
@@ -223,6 +233,9 @@
         "references": [
           "src/main/terminal/tipc/terminalRouter.ts"
         ],
+        "otel": {
+          "files": ["src/main/terminal/tipc/terminalRouter.ts"]
+        },
         "event": {
           "name": "terminal.activity.agent_started",
           "description": "Agent started working - session added to store",
@@ -254,6 +267,9 @@
         "references": [
           "src/main/terminal/tipc/terminalRouter.ts"
         ],
+        "otel": {
+          "files": ["src/main/terminal/tipc/terminalRouter.ts"]
+        },
         "event": {
           "name": "terminal.activity.agent_stopped",
           "description": "Agent stopped working - session removed from store",
@@ -285,6 +301,9 @@
         "references": [
           "src/main/terminal/tipc/terminalRouter.ts"
         ],
+        "otel": {
+          "files": ["src/main/terminal/tipc/terminalRouter.ts"]
+        },
         "event": {
           "name": "terminal.activity.broadcast_sent",
           "description": "Activity state broadcast to all windows",
@@ -320,6 +339,9 @@
         "references": [
           "src/renderer/contexts/TerminalContext.tsx"
         ],
+        "otel": {
+          "files": ["src/renderer/contexts/TerminalContext.tsx"]
+        },
         "event": {
           "name": "terminal.activity.sync_received",
           "description": "Window received activity sync broadcast",
@@ -356,6 +378,9 @@
         "references": [
           "src/renderer/contexts/TerminalContext.tsx"
         ],
+        "otel": {
+          "files": ["src/renderer/contexts/TerminalContext.tsx"]
+        },
         "event": {
           "name": "terminal.activity.sync_received",
           "description": "Window received activity sync broadcast",
@@ -392,6 +417,9 @@
         "references": [
           "src/renderer/contexts/TerminalContext.tsx"
         ],
+        "otel": {
+          "files": ["src/renderer/contexts/TerminalContext.tsx"]
+        },
         "event": {
           "name": "terminal.activity.sync_received",
           "description": "Window received activity sync broadcast",

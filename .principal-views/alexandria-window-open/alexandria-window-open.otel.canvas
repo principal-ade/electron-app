@@ -189,6 +189,9 @@
           "src/main/window/modernWindowManager.ts"
         ],
         "status": "implemented",
+        "otel": {
+          "files": ["src/main/window/modernWindowManager.ts"]
+        },
         "event": {
           "name": "window.createSpecial",
           "attributes": {
@@ -812,7 +815,7 @@
     "name": "Alexandria Window Opening Flow",
     "description": "OTEL-traced lifecycle of opening an Alexandria Workspace window - from user trigger through IPC to ready state",
     "markdown": ".principal-views/alexandria-window-open/alexandria-window-open.md",
-    "scope": "alexandria.window",
+    "scope": "principal-ade",
     "display": {
       "layout": "manual",
       "theme": {

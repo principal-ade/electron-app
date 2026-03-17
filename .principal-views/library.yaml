@@ -5,75 +5,40 @@ description: "Principal ADE - The future of Agentic Development Environment"
 # Service resource registry
 # Define all services in this repository with their OTEL resource attributes
 resources:
+  # ============================================
+  # PRODUCTION SCOPES (Process Boundaries)
+  # ============================================
   principal-ade:
     service.name: "principal-ade"
     service.version: "0.0.410"
     deployment.environment: "development"
     project: "principal-ade"
+    description: "Electron main process - Node.js runtime"
     owned-scopes:
-      # Terminal scopes (indigo/violet family)
-      terminal-activity:
-        color: "#6366F1"
-        description: "Tracks terminal user activity and command execution patterns"
-      terminal-activity-sync:
-        color: "#818CF8"
-        description: "Synchronizes terminal activity state across processes"
-      terminal-session:
-        color: "#4F46E5"
-        description: "Individual terminal session lifecycle and I/O handling"
-      terminal-session-management:
-        color: "#4338CA"
-        description: "Manages multiple terminal sessions, creation, and cleanup"
-      terminal-sessions-panel:
-        color: "#A5B4FC"
-        description: "UI panel displaying terminal sessions list and controls"
+      - "principal-ade"
 
-      # Workspace scopes (emerald/green family)
-      devworkspace:
-        color: "#10B981"
-        description: "Development workspace state and configuration management"
-      devworkspace-activity:
-        color: "#34D399"
-        description: "Tracks user activity within development workspaces"
+  principal-ade-renderer:
+    service.name: "principal-ade"
+    service.version: "0.0.410"
+    deployment.environment: "development"
+    project: "principal-ade"
+    description: "Electron renderer process - Chromium/React UI"
+    owned-scopes:
+      - "principal-ade-renderer"
 
-      # UI scopes (pink/rose family)
-      window-manager:
-        color: "#EC4899"
-        description: "Manages Electron window lifecycle, positioning, and state"
-      quality-panel:
-        color: "#F472B6"
-        description: "Code quality visualization panel with metrics and lenses"
-      trace-viewer:
-        color: "#DB2777"
-        description: "OpenTelemetry trace visualization and analysis panel"
+  principal-ade-daemon:
+    service.name: "principal-ade-daemon"
+    service.version: "0.0.410"
+    deployment.environment: "development"
+    process.type: "pty-daemon"
+    project: "principal-ade"
+    description: "Standalone PTY daemon process"
+    owned-scopes:
+      - "principal-ade-daemon"
 
-      # Observability scopes (teal/cyan family)
-      otel-collector-service:
-        color: "#14B8A6"
-        description: "Main process OTLP collector service receiving and processing traces"
-      otel-collector-ipc:
-        color: "#2DD4BF"
-        description: "IPC layer for trace data between renderer and main process"
-      event-server-manager:
-        color: "#0D9488"
-        description: "Manages HTTP event server for external agent integrations"
-
-      # Data scopes (purple family)
-      user-preferences:
-        color: "#8B5CF6"
-        description: "User settings and preferences persistence"
-      alexandria-recently-opened:
-        color: "#A78BFA"
-        description: "Tracks recently opened files and projects in Alexandria workspace"
-
-      # Integration scopes (orange/amber family)
-      principal-mcp-bridge:
-        color: "#F59E0B"
-        description: "Model Context Protocol bridge for AI agent integrations"
-      app-updates:
-        color: "#FBBF24"
-        description: "Application update checking and installation"
-
+  # ============================================
+  # DEVELOPMENT SCOPES
+  # ============================================
   principal-ade-storybook:
     service.name: "principal-ade-storybook"
     service.version: "0.0.410"
@@ -87,16 +52,16 @@ resources:
     test.suite: "integration"
     project: "principal-ade"
 
-  principal-ade-daemon:
-    service.name: "principal-ade-daemon"
-    service.version: "0.0.410"
-    deployment.environment: "development"
-    process.type: "pty-daemon"
-    project: "principal-ade"
-    owned-scopes:
-      - "terminal.daemon"
-
 nodeComponents:
+  # ============================================
+  # SPAN CONVENTIONS
+  # ============================================
+  span-convention:
+    defaultLabel: "Span Convention"
+    description: "OpenTelemetry span naming convention definition"
+    tags: ["otel", "span"]
+    color: "#22C55E"
+
   # ============================================
   # PROCESSES
   # ============================================

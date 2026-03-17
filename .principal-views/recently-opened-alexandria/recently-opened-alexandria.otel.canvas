@@ -4,6 +4,7 @@
     "version": "1.0.0",
     "description": "Flow for tracking and sorting local projects by last opened timestamp",
     "markdown": ".principal-views/recently-opened-alexandria/recently-opened-alexandria.md",
+    "scope": "principal-ade",
     "nodeTypes": {
       "ui-component": {
         "label": "UI Component",
@@ -101,6 +102,9 @@
         "references": [
           "src/renderer/contexts/ProjectsPanelContext.tsx"
         ],
+        "otel": {
+          "files": ["src/renderer/contexts/ProjectsPanelContext.tsx"]
+        },
         "event": {
           "name": "alexandria.ui.local_projects_displayed",
           "description": "Local projects panel rendered with sorted repositories",
@@ -132,6 +136,9 @@
         "references": [
           "src/renderer/contexts/ProjectsPanelContext.tsx"
         ],
+        "otel": {
+          "files": ["src/renderer/contexts/ProjectsPanelContext.tsx"]
+        },
         "event": {
           "name": "alexandria.user.project_opened",
           "description": "User clicked to open a local project",
@@ -164,6 +171,9 @@
           "src/renderer/contexts/ProjectsPanelContext.tsx:279-291",
           "src/renderer/contexts/ProjectsPanelContext.tsx:1154-1183"
         ],
+        "otel": {
+          "files": ["src/renderer/contexts/ProjectsPanelContext.tsx"]
+        },
         "event": {
           "name": "alexandria.context.repositories_fetched",
           "description": "Local repositories fetched and sorted",
@@ -195,6 +205,9 @@
         "references": [
           "src/renderer/contexts/ProjectsPanelContext.tsx:279-291"
         ],
+        "otel": {
+          "files": ["src/renderer/contexts/ProjectsPanelContext.tsx"]
+        },
         "event": {
           "name": "alexandria.context.repositories_sorted",
           "description": "Repositories sorted by lastOpenedAt timestamp",
@@ -226,6 +239,9 @@
         "references": [
           "src/renderer/contexts/ProjectsPanelContext.tsx:1154-1183"
         ],
+        "otel": {
+          "files": ["src/renderer/contexts/ProjectsPanelContext.tsx"]
+        },
         "event": {
           "name": "alexandria.action.open_local_repository",
           "description": "Opening local repository action triggered",
@@ -257,6 +273,9 @@
         "references": [
           "src/main/stores/AlexandriaRegistryService.ts:312-319"
         ],
+        "otel": {
+          "files": ["src/main/stores/AlexandriaRegistryService.ts"]
+        },
         "event": {
           "name": "alexandria.registry.timestamp_updated",
           "description": "lastOpenedAt timestamp updated in registry",
@@ -286,6 +305,9 @@
         "shape": "rectangle",
         "status": "implemented",
         "references": [],
+        "otel": {
+          "files": ["src/main/stores/AlexandriaRegistryService.ts"]
+        },
         "event": {
           "name": "alexandria.outpost.repository_updated",
           "description": "AlexandriaOutpostManager updated repository metadata",
@@ -315,6 +337,9 @@
         "shape": "rectangle",
         "status": "implemented",
         "references": [],
+        "otel": {
+          "files": ["src/main/stores/AlexandriaRegistryService.ts"]
+        },
         "event": {
           "name": "alexandria.storage.metadata_persisted",
           "description": "Repository metadata written to disk",
@@ -342,6 +367,9 @@
         "references": [
           "src/main/stores/AlexandriaApiEventHandler.ts"
         ],
+        "otel": {
+          "files": ["src/main/stores/AlexandriaApiEventHandler.ts"]
+        },
         "event": {
           "name": "alexandria.event.repository_updated_broadcast",
           "description": "Repository updated event broadcast to windows",
@@ -373,6 +401,9 @@
         "references": [
           "src/renderer/contexts/ProjectsPanelContext.tsx:307-313"
         ],
+        "otel": {
+          "files": ["src/renderer/contexts/ProjectsPanelContext.tsx"]
+        },
         "event": {
           "name": "alexandria.context.change_listener_triggered",
           "description": "Repository change listener triggered re-fetch",
@@ -400,6 +431,9 @@
         "references": [
           "src/renderer/contexts/ProjectsPanelContext.tsx"
         ],
+        "otel": {
+          "files": ["src/renderer/contexts/ProjectsPanelContext.tsx"]
+        },
         "event": {
           "name": "alexandria.ui.projects_resorted",
           "description": "Project list re-sorted after timestamp update",
@@ -431,6 +465,9 @@
         "references": [
           "src/renderer/contexts/ProjectsPanelContext.tsx:1174"
         ],
+        "otel": {
+          "files": ["src/renderer/contexts/ProjectsPanelContext.tsx"]
+        },
         "event": {
           "name": "alexandria.window.dev_workspace_opened",
           "description": "Dev workspace window opened for project",
@@ -459,6 +496,7 @@
           "src/renderer/contexts/WorldsViewPanelContext.tsx:740-771",
           "src/main/window/quickOpen.ts:333"
         ],
+        "status": "draft",
         "event": {
           "name": "alexandria.worlds_view.project_opened",
           "description": "Project opened via WorldsViewPanelContext",
@@ -486,6 +524,9 @@
         "references": [
           "src/main/window/devWorkspaceWindowHandlers.ts:44-181"
         ],
+        "otel": {
+          "files": ["src/main/window/devWorkspaceWindowHandlers.ts"]
+        },
         "event": {
           "name": "alexandria.dev_workspace.update_last_opened",
           "description": "Central timestamp update when dev workspace opens",

@@ -4,6 +4,7 @@
     "version": "1.0.0",
     "description": "Lifecycle management, port registration, and trace storage for the OpenTelemetry collector service running in Electron main process",
     "markdown": ".principal-views/otel-collector-service/otel-collector-service.md",
+    "scope": "principal-ade",
     "nodeTypes": {
       "singleton": {
         "label": "Singleton Service",
@@ -105,6 +106,9 @@
         "references": [
           "src/main/services/OtelCollectorService.ts"
         ],
+        "otel": {
+          "files": ["src/main/services/OtelCollectorService.ts"]
+        },
         "event": {
           "name": "otel.collector.service_started",
           "description": "OTEL Collector Service started successfully",
@@ -186,6 +190,9 @@
         "references": [
           "src/main/services/OtelCollectorService.ts"
         ],
+        "otel": {
+          "files": ["src/main/services/OtelCollectorService.ts"]
+        },
         "event": {
           "name": "otel.storage.trace_stored",
           "description": "Trace stored in circular buffer",
@@ -229,6 +236,9 @@
         "references": [
           "src/main/services/OtelCollectorService.ts"
         ],
+        "otel": {
+          "files": ["src/main/services/OtelCollectorService.ts"]
+        },
         "event": {
           "name": "otel.collector.trace_received",
           "description": "Trace received via monitor port",
@@ -268,6 +278,9 @@
         "references": [
           "src/main/services/ipc/otelCollectorHandlers.ts"
         ],
+        "otel": {
+          "files": ["src/main/services/ipc/otelCollectorHandlers.ts"]
+        },
         "event": {
           "name": "otel.ipc.handler_invoked",
           "description": "IPC handler invoked from renderer",
@@ -311,6 +324,9 @@
         "references": [
           "src/main/services/ipc/otelCollectorHandlers.ts"
         ],
+        "otel": {
+          "files": ["src/main/services/ipc/otelCollectorHandlers.ts"]
+        },
         "event": {
           "name": "otel.messageport.trace_routed",
           "description": "MessagePort registered for trace routing",
@@ -346,7 +362,7 @@
       "pv": {
         "nodeType": "event",
         "shape": "rectangle",
-        "status": "implemented",
+        "status": "draft",
         "references": [
           "src/window/main-process-api-implementations/otelCollectorApi.ts"
         ],
@@ -377,7 +393,7 @@
       "pv": {
         "nodeType": "event",
         "shape": "rectangle",
-        "status": "implemented",
+        "status": "draft",
         "references": [
           "src/window/main-process-api-implementations/otelCollectorApi.ts"
         ],

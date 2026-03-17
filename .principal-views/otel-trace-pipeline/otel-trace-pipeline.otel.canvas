@@ -4,6 +4,7 @@
     "version": "1.0.0",
     "description": "Complete flow of OpenTelemetry traces from application code through OTEL collector to dev workspace window visualization",
     "markdown": ".principal-views/otel-trace-pipeline/otel-trace-pipeline.md",
+    "scope": "principal-ade",
     "nodeTypes": {
       "external-service": {
         "label": "External Service",
@@ -155,6 +156,9 @@
         "references": [
           "src/main/services/OtelCollectorService.ts"
         ],
+        "otel": {
+          "files": ["src/main/services/OtelCollectorService.ts"]
+        },
         "event": {
           "name": "otel.collector.trace_received",
           "description": "OTEL collector server received and parsed trace data",
@@ -195,6 +199,9 @@
         "references": [
           "src/main/services/OtelCollectorService.ts"
         ],
+        "otel": {
+          "files": ["src/main/services/OtelCollectorService.ts"]
+        },
         "event": {
           "name": "otel.storage.trace_stored",
           "description": "Trace stored in circular buffer with timestamp and ID",
@@ -238,6 +245,9 @@
         "references": [
           "src/main/services/ipc/otelCollectorHandlers.ts"
         ],
+        "otel": {
+          "files": ["src/main/services/ipc/otelCollectorHandlers.ts"]
+        },
         "event": {
           "name": "otel.messageport.trace_routed",
           "description": "Trace batch sent to registered MessagePort for specific window",
@@ -277,6 +287,9 @@
         "references": [
           "src/main/services/ipc/otelCollectorHandlers.ts"
         ],
+        "otel": {
+          "files": ["src/main/services/ipc/otelCollectorHandlers.ts"]
+        },
         "event": {
           "name": "otel.ipc.handler_invoked",
           "description": "IPC handler invoked from renderer process",
@@ -371,6 +384,9 @@
         "references": [
           "src/renderer/principal-window/views/SystemMonitor/TraceViewer.tsx"
         ],
+        "otel": {
+          "files": ["src/renderer/principal-window/views/SystemMonitor/TraceViewer.tsx"]
+        },
         "event": {
           "name": "otel.devworkspace.trace_selected",
           "description": "User selected trace, creating trace details tab",
@@ -410,6 +426,9 @@
         "references": [
           "src/renderer/principal-window/views/SystemMonitor/TraceViewer.tsx"
         ],
+        "otel": {
+          "files": ["src/renderer/principal-window/views/SystemMonitor/TraceViewer.tsx"]
+        },
         "event": {
           "name": "otel.panel.trace_rendered",
           "description": "TraceDetailsPanel rendered trace with span hierarchy",
@@ -446,6 +465,9 @@
         "references": [
           "src/renderer/principal-window/views/SystemMonitor/TraceViewer.tsx"
         ],
+        "otel": {
+          "files": ["src/renderer/principal-window/views/SystemMonitor/TraceViewer.tsx"]
+        },
         "event": {
           "name": "otel.systemmonitor.traces_polled",
           "description": "SystemMonitor polled and received traces from storage",
