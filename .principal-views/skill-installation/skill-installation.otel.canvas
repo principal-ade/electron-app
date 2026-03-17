@@ -319,7 +319,7 @@
               "type": "string",
               "description": "GitHub URL"
             },
-            "destination": {
+            "install_destination": {
               "type": "string",
               "description": "Installation destination"
             },
@@ -482,7 +482,7 @@
               "type": "number",
               "description": "Number of symlinks created"
             },
-            "directories": {
+            "target_directories": {
               "type": "array",
               "description": "Target directories for symlinks"
             }

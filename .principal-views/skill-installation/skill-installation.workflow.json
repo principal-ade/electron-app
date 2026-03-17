@@ -14,13 +14,13 @@
         "events": {
           "skill.ui.view_opened": "Opened skill browser in **{{view.mode}}** mode ({{skills.installed_count}} installed)",
           "skill.ui.install_clicked": "User clicked install for **{{skill.name}}** (status: {{skill.current_status}}, source: {{skill.source_repo}})",
-          "skill.ui.modal_confirmed": "Confirmed installation to **{{directories.count}}** directories (action: {{action.type}})",
-          "skill.service.install_requested": "Service initiating install for **{{skill.name}}** ({{files.count}} files, destination: {{destination.type}})",
-          "skill.ipc.install_received": "IPC received install request for **{{skill.name}}** ({{files.count}} files)",
+          "skill.ui.modal_confirmed": "Confirmed installation of **{{skill.name}}** to **{{directories.count}}** directories: {{directories.selected}} (action: {{action.type}})",
+          "skill.service.install_requested": "Service initiating install for **{{skill.name}}** from {{github.url}} ({{files.count}} files, destination: {{destination.type}})",
+          "skill.ipc.install_received": "IPC received install request for **{{skill.name}}** from {{github.url}} to {{install_destination}} ({{files.count}} files)",
           "skill.github.files_downloaded": "Downloaded **{{files.downloaded}}** files from {{github.owner}}/{{github.repo}} ({{bytes.total}} bytes)",
           "skill.fs.canonical_written": "Written to canonical location: {{path}} ({{files.written}} files)",
-          "skill.fs.symlinks_created": "Created **{{symlinks.count}}** symlinks",
-          "skill.lock.updated": "Lock file updated for **{{skill.name}}** (SHA: {{skill.sha}})",
+          "skill.fs.symlinks_created": "Created **{{symlinks.count}}** symlinks to {{target_directories}}",
+          "skill.lock.updated": "Lock file updated for **{{skill.name}}** (SHA: {{skill.sha}}, source: {{skill.source}}, installed: {{installed_at}})",
           "skill.install.success": "**Success**: Installed **{{skill.name}}** to {{installed.path}} ({{files.installed}} files, {{duration_ms}}ms)",
           "skill.ui.state_refreshed": "UI refreshed for **{{skill.name}}** (new status: {{ui.new_status}}, in {{directories.installed}} directories)"
         },
@@ -36,6 +36,7 @@
         "events": {
           "skill.ui.view_opened": "Opened skill browser in **{{view.mode}}** mode ({{skills.installed_count}} installed)",
           "skill.service.lock_checked": "Checked lock for **{{skill.name}}** (installed: {{skill.installed}}, SHA: {{skill.sha}})",
+          "skill.ipc.lock_operation": "IPC handling lock **{{operation}}** for **{{skill.name}}**",
           "skill.ui.state_refreshed": "Found updates for {{skill.name}} (new status: {{ui.new_status}})"
         },
         "summary": "**Update Check Complete:**\n- Skill: **{{skill.name}}**\n- Update Available: {{ui.new_status}}"
@@ -49,6 +50,7 @@
         "introduction": "**Directory Detection**\n\nScanning for agent directories",
         "events": {
           "skill.service.directories_detected": "Detected **{{directories.count}}** directories (types: {{directories.types}})",
+          "skill.ipc.detect_dirs_received": "IPC received detect directories request (scope: {{scan.scope}})",
           "skill.ui.agent_setup_opened": "Opened agent setup modal (existing: {{existing_dirs}})"
         },
         "summary": "**Directories Found:**\n- Count: **{{directories.count}}**\n- Types: {{directories.types}}"
