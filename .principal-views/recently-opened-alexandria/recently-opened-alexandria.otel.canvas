@@ -330,7 +330,7 @@
       "y": 330,
       "width": 220,
       "height": 100,
-      "label": "REPOSITORY_UPDATED",
+      "label": "Repository Updated",
       "shape": "rectangle",
       "event": {
         "name": "alexandria.event.repository_updated_broadcast",

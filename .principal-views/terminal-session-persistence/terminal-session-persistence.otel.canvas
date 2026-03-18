@@ -405,18 +405,13 @@
             "description": "Terminal session ID",
             "display": false
           },
-          "shell": {
+          "shell.path": {
             "type": "string",
             "description": "Shell executable path"
           },
           "cwd": {
             "type": "string",
             "description": "Working directory"
-          },
-          "shell.path": {
-            "type": "string",
-            "description": "Shell executable path",
-            "display": false
           },
           "cols": {
             "type": "number",
@@ -470,14 +465,9 @@
             "description": "Terminal session ID",
             "display": false
           },
-          "error": {
-            "type": "string",
-            "description": "Error message from node-pty"
-          },
           "error.message": {
             "type": "string",
-            "description": "Error message from node-pty",
-            "display": false
+            "description": "Error message from node-pty"
           },
           "shell.path": {
             "type": "string",

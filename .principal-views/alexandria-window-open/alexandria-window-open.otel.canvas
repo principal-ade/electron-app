@@ -8,23 +8,7 @@
       "y": -180,
       "width": 450,
       "height": 80,
-      "color": "#8b5cf6",
-      "pv": {
-        "name": "Window Open Flow",
-        "references": [
-          "src/main/window/modernWindowHandlers.ts"
-        ],
-        "status": "draft",
-        "event": {
-          "name": "alexandria.window.open.flow",
-          "attributes": {
-            "flow.name": {
-              "type": "string",
-              "value": "alexandria-window-open"
-            }
-          }
-        }
-      }
+      "color": "#8b5cf6"
     },
     {
       "id": "trigger",

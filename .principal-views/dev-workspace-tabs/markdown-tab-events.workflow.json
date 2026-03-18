@@ -3,7 +3,7 @@
   "name": "Markdown Tab Events",
   "description": "All events that open markdown files in tabs - unified to use MarkdownTab (not MDXEditorTab)",
   "canvas": ".principal-views/dev-workspace-tabs/dev-workspace-tabs.otel.canvas",
-  "spanPattern": "devworkspace.tab.handle",
+  "spanPattern": "devworkspace.tab.markdown",
   "scenarios": [
     {
       "id": "open-markdown-tab",

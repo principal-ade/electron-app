@@ -19,7 +19,7 @@
           "filetree.cache.invalidated": "[5] Cache invalidated for `{{repository.path}}` (was v{{cache.version.before}}, rebuild scheduled: {{cache.rebuild.scheduled}})",
           "filetree.debounce.triggered": "[6] Debounce for `{{repository.path}}`: {{debounce.changes_count}} changes over {{debounce.delay_ms}}ms",
           "filetree.cache.rebuild": "[7] Cache rebuilt for `{{repository.path}}` in {{cache.rebuild.duration_ms}}ms -> v{{cache.version.after}} ({{filetree.files_count}} files)",
-          "filetree.cache.synced": "[8] CACHE_SYNC event sent for `{{repository.path}}` (v{{cache.version.after}}, slice: {{cache.slice}}, {{event.payload.size_bytes}} bytes)",
+          "filetree.cache.synced": "[8] CACHE_SYNC event sent for `{{repository.path}}` (v{{cache.version_number}} → v{{cache.version.after}}, slice: {{cache.slice}}, {{event.payload.size_bytes}} bytes)",
           "filetree.preload.event_received": "[9] Preload received {{event.type}} for `{{repository.path}}` (duplicate: {{dedup.is_duplicate}}, window: {{dedup.window_ms}}ms)",
           "filetree.service.subscribed": "[10] RepositoryMonitoringService subscription for `{{repository.path}}`: {{subscription.type}}",
           "filetree.context.updated": "[11] React context updated for `{{repository.path}}` (v{{filetree.version}}, source: {{update.source}})",
@@ -38,7 +38,7 @@
           "filetree.refresh.requested": "[1] Manual refresh triggered for `{{repository.path}}` (source: {{refresh.trigger}})",
           "filetree.cache.invalidated": "[2] Cache invalidated for `{{repository.path}}` immediately (no debounce, was v{{cache.version.before}}, rebuild scheduled: {{cache.rebuild.scheduled}})",
           "filetree.cache.rebuild": "[3] Cache rebuilt for `{{repository.path}}` in {{cache.rebuild.duration_ms}}ms -> v{{cache.version.after}} ({{filetree.files_count}} files)",
-          "filetree.cache.synced": "[4] CACHE_SYNC event sent for `{{repository.path}}` (v{{cache.version.after}}, slice: {{cache.slice}}, {{event.payload.size_bytes}} bytes)"
+          "filetree.cache.synced": "[4] CACHE_SYNC event sent for `{{repository.path}}` (v{{cache.version_number}} → v{{cache.version.after}}, slice: {{cache.slice}}, {{event.payload.size_bytes}} bytes)"
         },
         "summary": "**Refresh Details:**\n- Trigger: {{refresh.trigger}}\n- Repository: `{{repository.path}}`\n- Duration: {{cache.rebuild.duration_ms}}ms\n\n**Note:** Manual refreshes bypass the debounce timer for immediate updates."
       }

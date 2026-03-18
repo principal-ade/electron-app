@@ -325,7 +325,7 @@
       "y": 481,
       "width": 180,
       "height": 80,
-      "label": "CACHE_SYNC",
+      "label": "Cache Sync",
       "shape": "rectangle",
       "event": {
         "name": "filetree.cache.synced",
@@ -335,7 +335,7 @@
             "type": "string",
             "description": "Repository root path"
           },
-          "cache.version": {
+          "cache.version_number": {
             "type": "number",
             "description": "Cache version included in payload"
           },

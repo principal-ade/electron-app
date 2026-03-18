@@ -19,7 +19,7 @@
           "filetree.cache.invalidated": "[5] Cache invalidated for `{{repository.path}}` (was v{{cache.version.before}}, rebuild scheduled: {{cache.rebuild.scheduled}})",
           "filetree.debounce.triggered": "[6] Debounce for `{{repository.path}}`: {{debounce.changes_count}} changes over {{debounce.delay_ms}}ms",
           "filetree.cache.rebuild": "[7] Cache rebuilt for `{{repository.path}}` in {{cache.rebuild.duration_ms}}ms -> v{{cache.version.after}} ({{filetree.files_count}} files)",
-          "filetree.cache.synced": "[8] CACHE_SYNC sent for `{{repository.path}}` (v{{cache.version.after}}, slice: {{cache.slice}}, {{event.payload.size_bytes}} bytes)",
+          "filetree.cache.synced": "[8] CACHE_SYNC sent for `{{repository.path}}` (v{{cache.version_number}} → v{{cache.version.after}}, slice: {{cache.slice}}, {{event.payload.size_bytes}} bytes)",
           "filetree.preload.event_received": "[9] Preload received {{event.type}} for `{{repository.path}}` (duplicate: {{dedup.is_duplicate}}, window: {{dedup.window_ms}}ms)",
           "filetree.service.subscribed": "[10] Service subscribed for `{{repository.path}}`: {{subscription.type}}",
           "filetree.context.updated": "[11] Context updated for `{{repository.path}}` to v{{filetree.version}} (source: {{update.source}})",
@@ -39,7 +39,7 @@
           "filetree.cache.invalidated": "[2] Cache invalidated for `{{repository.path}}` immediately (was v{{cache.version.before}}, rebuild scheduled: {{cache.rebuild.scheduled}})",
           "filetree.debounce.triggered": "[3] Debounce for `{{repository.path}}`: {{debounce.changes_count}} changes over {{debounce.delay_ms}}ms",
           "filetree.cache.rebuild": "[4] Immediate rebuild for `{{repository.path}}` in {{cache.rebuild.duration_ms}}ms -> v{{cache.version.after}} ({{filetree.files_count}} files)",
-          "filetree.cache.synced": "[5] CACHE_SYNC sent for `{{repository.path}}` (v{{cache.version.after}}, slice: {{cache.slice}}, {{event.payload.size_bytes}} bytes)"
+          "filetree.cache.synced": "[5] CACHE_SYNC sent for `{{repository.path}}` (v{{cache.version_number}} → v{{cache.version.after}}, slice: {{cache.slice}}, {{event.payload.size_bytes}} bytes)"
         },
         "summary": "**Immediate Rebuild Details:**\n- No debounce delay applied\n- Direct rebuild triggered\n- Duration: {{cache.rebuild.duration_ms}}ms\n- Files: {{filetree.files_count}}\n\n**Trigger:**\n- Manual refresh request, OR\n- Initial cache population, OR\n- Critical update path"
       }
