@@ -98,118 +98,106 @@
     },
     {
       "id": "session-manager",
-      "type": "text",
+      "type": "otel-event",
       "x": -30,
       "y": 13,
       "width": 200,
       "height": 100,
-      "text": "TerminalSessionManager\n\n.createSession()\n.restoreSessions()\n.prepareForRestart()",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/terminal/TerminalSessionManager.ts"
-        ],
-        "event": {
-          "name": "terminal.persistence.manager_action",
-          "description": "Session manager coordinating with daemon",
-          "attributes": {
-            "action": {
-              "type": "string",
-              "description": "create, restore, prepareForRestart"
-            },
-            "session.count": {
-              "type": "number",
-              "description": "Number of sessions involved"
-            }
+      "label": "TerminalSessionManager",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.persistence.manager_action",
+        "description": "Session manager coordinating with daemon",
+        "attributes": {
+          "action": {
+            "type": "string",
+            "description": "create, restore, prepareForRestart"
+          },
+          "session.count": {
+            "type": "number",
+            "description": "Number of sessions involved"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "daemon-client",
-      "type": "text",
+      "type": "otel-event",
       "x": -158,
       "y": 179,
       "width": 200,
       "height": 120,
-      "text": "PtyDaemonClient\n\n.connect()\n.createSession()\n.listSessions()\n.onReconnected()",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [],
-        "event": {
-          "name": "terminal.daemon.client_action",
-          "description": "Daemon client communicating with PTY daemon",
-          "attributes": {
-            "action": {
-              "type": "string",
-              "description": "connect, send, reconnect"
-            },
-            "message.type": {
-              "type": "string",
-              "description": "Protocol message type"
-            }
+      "label": "PtyDaemonClient",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.daemon.client_action",
+        "description": "Daemon client communicating with PTY daemon",
+        "attributes": {
+          "action": {
+            "type": "string",
+            "description": "connect, send, reconnect"
+          },
+          "message.type": {
+            "type": "string",
+            "description": "Protocol message type"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "renderer",
-      "type": "text",
+      "type": "otel-event",
       "x": 383,
       "y": -71,
       "width": 150,
       "height": 100,
-      "text": "Renderer\n\nTerminal UI\nxterm.js\nMessagePort",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/contexts/TerminalContext.tsx"
-        ],
-        "event": {
-          "name": "terminal.renderer.data_received",
-          "description": "Renderer received terminal data via MessagePort",
-          "attributes": {
-            "session.id": {
-              "type": "string",
-              "description": "Terminal session ID"
-            }
+      "label": "Renderer",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.renderer.data_received",
+        "description": "Renderer received terminal data via MessagePort",
+        "attributes": {
+          "session.id": {
+            "type": "string",
+            "description": "Terminal session ID"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "unix-socket",
-      "type": "text",
+      "type": "otel-event",
       "x": -158,
       "y": 499,
       "width": 200,
       "height": 80,
-      "text": "Unix Domain Socket\n\n~/.your-app/\npty-daemon.sock",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [],
-        "event": {
-          "name": "terminal.socket.message",
-          "description": "Message passed through Unix socket",
-          "attributes": {
-            "direction": {
-              "type": "string",
-              "description": "client_to_daemon or daemon_to_client"
-            },
-            "message.type": {
-              "type": "string",
-              "description": "Protocol message type"
-            }
+      "label": "Unix Domain Socket",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.socket.message",
+        "description": "Message passed through Unix socket",
+        "attributes": {
+          "direction": {
+            "type": "string",
+            "description": "client_to_daemon or daemon_to_client"
+          },
+          "message.type": {
+            "type": "string",
+            "description": "Protocol message type"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
@@ -224,342 +212,315 @@
     },
     {
       "id": "daemon-server",
-      "type": "text",
+      "type": "otel-event",
       "x": 0,
       "y": 659,
       "width": 200,
       "height": 120,
-      "text": "SocketServer\n\nnet.createServer()\nJSON protocol\nClient multiplexing",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [],
-        "event": {
-          "name": "terminal.daemon.server_event",
-          "description": "Daemon socket server event",
-          "attributes": {
-            "event": {
-              "type": "string",
-              "description": "client_connected, client_disconnected, message_received"
-            },
-            "clients.count": {
-              "type": "number",
-              "description": "Number of connected clients"
-            }
+      "label": "SocketServer",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.daemon.server_event",
+        "description": "Daemon socket server event",
+        "attributes": {
+          "event": {
+            "type": "string",
+            "description": "client_connected, client_disconnected, message_received"
+          },
+          "clients.count": {
+            "type": "number",
+            "description": "Number of connected clients"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "daemon-session-mgr",
-      "type": "text",
+      "type": "otel-event",
       "x": 276,
       "y": 659,
       "width": 200,
       "height": 120,
-      "text": "DaemonSessionManager\n\nsessions: Map<id, PTY>\nscrollback buffers\nPTY lifecycle",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/pty-daemon/DaemonSessionManager.ts"
-        ],
-        "otel": {
-          "files": ["src/pty-daemon/telemetry.ts"]
-        },
-        "event": {
-          "name": "terminal.daemon.session_action",
-          "description": "Daemon session manager action",
-          "attributes": {
-            "action": {
-              "type": "string",
-              "description": "create, destroy, list"
-            },
-            "session.id": {
-              "type": "string",
-              "description": "Terminal session ID"
-            },
-            "sessions.count": {
-              "type": "number",
-              "description": "Total session count"
-            }
+      "label": "DaemonSessionManager",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.daemon.session_action",
+        "description": "Daemon session manager action",
+        "attributes": {
+          "action": {
+            "type": "string",
+            "description": "create, destroy, list"
+          },
+          "session.id": {
+            "type": "string",
+            "description": "Terminal session ID"
+          },
+          "sessions.count": {
+            "type": "number",
+            "description": "Total session count"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/pty-daemon/telemetry.ts"
+        ]
       }
     },
     {
       "id": "pty-1",
-      "type": "text",
+      "type": "otel-event",
       "x": -159,
       "y": 867,
       "width": 100,
       "height": 60,
-      "text": "PTY 1\n/bin/zsh",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [],
-        "event": {
-          "name": "terminal.pty.data",
-          "description": "PTY process output data",
-          "attributes": {
-            "session.id": {
-              "type": "string",
-              "description": "Terminal session ID"
-            },
-            "data.size": {
-              "type": "number",
-              "description": "Bytes of data"
-            }
+      "label": "PTY 1",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.pty.data",
+        "description": "PTY process output data",
+        "attributes": {
+          "session.id": {
+            "type": "string",
+            "description": "Terminal session ID"
+          },
+          "data.size": {
+            "type": "number",
+            "description": "Bytes of data"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "pty-2",
-      "type": "text",
+      "type": "otel-event",
       "x": -39,
       "y": 867,
       "width": 100,
       "height": 60,
-      "text": "PTY 2\n/bin/zsh",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/pty-daemon/telemetry.ts",
-          "src/pty-daemon/DaemonSessionManager.ts"
-        ],
-        "otel": {
-          "files": ["src/pty-daemon/telemetry.ts"]
-        },
-        "event": {
-          "name": "terminal.pty.spawned",
-          "description": "PTY process spawned by daemon",
-          "attributes": {
-            "session.id": {
-              "type": "string",
-              "description": "Terminal session ID",
-              "display": false
-            },
-            "pid": {
-              "type": "number",
-              "description": "Process ID"
-            }
+      "label": "PTY 2",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.pty.spawned",
+        "description": "PTY process spawned by daemon",
+        "attributes": {
+          "session.id": {
+            "type": "string",
+            "description": "Terminal session ID",
+            "display": false
+          },
+          "pid": {
+            "type": "number",
+            "description": "Process ID"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/pty-daemon/telemetry.ts"
+        ]
       }
     },
     {
       "id": "pty-3",
-      "type": "text",
+      "type": "otel-event",
       "x": 81,
       "y": 867,
       "width": 100,
       "height": 60,
-      "text": "PTY 3\n/bin/zsh",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [],
-        "event": {
-          "name": "terminal.pty.exit",
-          "description": "PTY process exited",
-          "attributes": {
-            "session.id": {
-              "type": "string",
-              "description": "Terminal session ID"
-            },
-            "exit.code": {
-              "type": "number",
-              "description": "Exit code"
-            }
+      "label": "PTY 3",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.pty.exit",
+        "description": "PTY process exited",
+        "attributes": {
+          "session.id": {
+            "type": "string",
+            "description": "Terminal session ID"
+          },
+          "exit.code": {
+            "type": "number",
+            "description": "Exit code"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "pty-n",
-      "type": "text",
+      "type": "otel-event",
       "x": 201,
       "y": 867,
       "width": 100,
       "height": 60,
-      "text": "PTY N\n...",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [],
-        "event": {
-          "name": "terminal.pty.resize",
-          "description": "PTY process resized",
-          "attributes": {
-            "session.id": {
-              "type": "string",
-              "description": "Terminal session ID"
-            },
-            "cols": {
-              "type": "number",
-              "description": "Column count"
-            },
-            "rows": {
-              "type": "number",
-              "description": "Row count"
-            }
+      "label": "PTY N",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.pty.resize",
+        "description": "PTY process resized",
+        "attributes": {
+          "session.id": {
+            "type": "string",
+            "description": "Terminal session ID"
+          },
+          "cols": {
+            "type": "number",
+            "description": "Column count"
+          },
+          "rows": {
+            "type": "number",
+            "description": "Row count"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "pty-spawn-attempt",
-      "type": "text",
+      "type": "otel-event",
       "x": 321,
       "y": 867,
       "width": 120,
       "height": 60,
-      "text": "Spawn Attempt\n(debug)",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/pty-daemon/telemetry.ts",
-          "src/pty-daemon/DaemonSessionManager.ts"
-        ],
-        "otel": {
-          "files": ["src/pty-daemon/telemetry.ts"]
-        },
-        "event": {
-          "name": "terminal.pty.spawn_attempt",
-          "description": "PTY spawn attempt with full parameters for debugging",
-          "attributes": {
-            "session.id": {
-              "type": "string",
-              "description": "Terminal session ID",
-              "display": false
-            },
-            "shell": {
-              "type": "string",
-              "description": "Shell executable path"
-            },
-            "cwd": {
-              "type": "string",
-              "description": "Working directory"
-            },
-            "shell.path": {
-              "type": "string",
-              "description": "Shell executable path",
-              "display": false
-            },
-            "cols": {
-              "type": "number",
-              "description": "Column count",
-              "display": false
-            },
-            "rows": {
-              "type": "number",
-              "description": "Row count",
-              "display": false
-            },
-            "env.keys": {
-              "type": "string",
-              "description": "Comma-separated environment variable keys",
-              "display": false
-            },
-            "process.cwd": {
-              "type": "string",
-              "description": "Daemon process working directory",
-              "display": false
-            },
-            "process.execPath": {
-              "type": "string",
-              "description": "Daemon executable path",
-              "display": false
-            }
+      "label": "Spawn Attempt",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.pty.spawn_attempt",
+        "description": "PTY spawn attempt with full parameters for debugging",
+        "attributes": {
+          "session.id": {
+            "type": "string",
+            "description": "Terminal session ID",
+            "display": false
+          },
+          "shell": {
+            "type": "string",
+            "description": "Shell executable path"
+          },
+          "cwd": {
+            "type": "string",
+            "description": "Working directory"
+          },
+          "shell.path": {
+            "type": "string",
+            "description": "Shell executable path",
+            "display": false
+          },
+          "cols": {
+            "type": "number",
+            "description": "Column count",
+            "display": false
+          },
+          "rows": {
+            "type": "number",
+            "description": "Row count",
+            "display": false
+          },
+          "env.keys": {
+            "type": "string",
+            "description": "Comma-separated environment variable keys",
+            "display": false
+          },
+          "process.cwd": {
+            "type": "string",
+            "description": "Daemon process working directory",
+            "display": false
+          },
+          "process.execPath": {
+            "type": "string",
+            "description": "Daemon executable path",
+            "display": false
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/pty-daemon/telemetry.ts"
+        ]
       }
     },
     {
       "id": "pty-spawn-failed",
-      "type": "text",
+      "type": "otel-event",
       "x": 441,
       "y": 787,
       "width": 120,
       "height": 60,
-      "text": "Spawn Failed\n(error)",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/pty-daemon/telemetry.ts",
-          "src/pty-daemon/DaemonSessionManager.ts"
-        ],
-        "otel": {
-          "files": ["src/pty-daemon/telemetry.ts"]
-        },
-        "event": {
-          "name": "terminal.pty.spawn_failed",
-          "description": "PTY spawn failure with detailed context",
-          "attributes": {
-            "session.id": {
-              "type": "string",
-              "description": "Terminal session ID",
-              "display": false
-            },
-            "error": {
-              "type": "string",
-              "description": "Error message from node-pty"
-            },
-            "error.message": {
-              "type": "string",
-              "description": "Error message from node-pty",
-              "display": false
-            },
-            "shell.path": {
-              "type": "string",
-              "description": "Shell that failed to spawn",
-              "display": false
-            },
-            "cwd": {
-              "type": "string",
-              "description": "Requested working directory",
-              "display": false
-            },
-            "process.cwd": {
-              "type": "string",
-              "description": "Daemon process working directory",
-              "display": false
-            },
-            "process.execPath": {
-              "type": "string",
-              "description": "Daemon executable path",
-              "display": false
-            },
-            "process.env.PATH": {
-              "type": "string",
-              "description": "PATH environment variable",
-              "display": false
-            },
-            "process.env.SHELL": {
-              "type": "string",
-              "description": "SHELL environment variable",
-              "display": false
-            },
-            "process.env.HOME": {
-              "type": "string",
-              "description": "HOME environment variable",
-              "display": false
-            }
+      "label": "Spawn Failed",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.pty.spawn_failed",
+        "description": "PTY spawn failure with detailed context",
+        "attributes": {
+          "session.id": {
+            "type": "string",
+            "description": "Terminal session ID",
+            "display": false
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message from node-pty"
+          },
+          "error.message": {
+            "type": "string",
+            "description": "Error message from node-pty",
+            "display": false
+          },
+          "shell.path": {
+            "type": "string",
+            "description": "Shell that failed to spawn",
+            "display": false
+          },
+          "cwd": {
+            "type": "string",
+            "description": "Requested working directory",
+            "display": false
+          },
+          "process.cwd": {
+            "type": "string",
+            "description": "Daemon process working directory",
+            "display": false
+          },
+          "process.execPath": {
+            "type": "string",
+            "description": "Daemon executable path",
+            "display": false
+          },
+          "process.env.PATH": {
+            "type": "string",
+            "description": "PATH environment variable",
+            "display": false
+          },
+          "process.env.SHELL": {
+            "type": "string",
+            "description": "SHELL environment variable",
+            "display": false
+          },
+          "process.env.HOME": {
+            "type": "string",
+            "description": "HOME environment variable",
+            "display": false
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/pty-daemon/telemetry.ts"
+        ]
       }
     },
     {
@@ -604,138 +565,130 @@
     },
     {
       "id": "daemon-lifecycle",
-      "type": "text",
+      "type": "otel-event",
       "x": 495,
       "y": 532,
       "width": 200,
       "height": 60,
-      "text": "Daemon Lifecycle\n\nstartup → ready → shutdown",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [],
-        "event": {
-          "name": "terminal.daemon.phase",
-          "description": "Daemon process lifecycle phase changes",
-          "attributes": {
-            "phase": {
-              "type": "string",
-              "description": "starting, ready, shutdown"
-            },
-            "reason": {
-              "type": "string",
-              "description": "Reason for phase change"
-            },
-            "uptime.ms": {
-              "type": "number",
-              "description": "Daemon uptime in milliseconds"
-            }
+      "label": "Daemon Lifecycle",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.daemon.phase",
+        "description": "Daemon process lifecycle phase changes",
+        "attributes": {
+          "phase": {
+            "type": "string",
+            "description": "starting, ready, shutdown"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Reason for phase change"
+          },
+          "uptime.ms": {
+            "type": "number",
+            "description": "Daemon uptime in milliseconds"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "connection-state",
-      "type": "text",
+      "type": "otel-event",
       "x": 16,
       "y": 364,
       "width": 200,
       "height": 60,
-      "text": "Connection State\n\nconnecting → connected → disconnected",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [],
-        "event": {
-          "name": "terminal.socket.connection",
-          "description": "Socket connection state changes",
-          "attributes": {
-            "state": {
-              "type": "string",
-              "description": "connecting, connected, disconnected, reconnecting"
-            },
-            "attempt": {
-              "type": "number",
-              "description": "Reconnection attempt number"
-            },
-            "error": {
-              "type": "string",
-              "description": "Error code if failed (ECONNREFUSED, ENOENT)"
-            }
+      "label": "Connection State",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.socket.connection",
+        "description": "Socket connection state changes",
+        "attributes": {
+          "state": {
+            "type": "string",
+            "description": "connecting, connected, disconnected, reconnecting"
+          },
+          "attempt": {
+            "type": "number",
+            "description": "Reconnection attempt number"
+          },
+          "error": {
+            "type": "string",
+            "description": "Error code if failed (ECONNREFUSED, ENOENT)"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "persistence-store",
-      "type": "text",
+      "type": "otel-event",
       "x": 109,
       "y": 180,
       "width": 150,
       "height": 100,
-      "text": "Persistence Store\n\n~/.your-app/\nsessions.json\nmetadata backup",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [],
-        "event": {
-          "name": "terminal.persistence.store",
-          "description": "Session metadata persistence to disk",
-          "attributes": {
-            "action": {
-              "type": "string",
-              "description": "save, load, clear"
-            },
-            "session.count": {
-              "type": "number",
-              "description": "Number of sessions in store"
-            },
-            "file.path": {
-              "type": "string",
-              "description": "Path to persistence file"
-            }
+      "label": "Persistence Store",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.persistence.store",
+        "description": "Session metadata persistence to disk",
+        "attributes": {
+          "action": {
+            "type": "string",
+            "description": "save, load, clear"
+          },
+          "session.count": {
+            "type": "number",
+            "description": "Number of sessions in store"
+          },
+          "file.path": {
+            "type": "string",
+            "description": "Path to persistence file"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "scrollback-buffer",
-      "type": "text",
+      "type": "otel-event",
       "x": 441,
       "y": 868,
       "width": 200,
       "height": 80,
-      "text": "Scrollback Buffers\n\nPer-session circular buffer\nCapture on write, replay on attach",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [],
-        "event": {
-          "name": "terminal.scrollback.action",
-          "description": "Scrollback buffer operations",
-          "attributes": {
-            "action": {
-              "type": "string",
-              "description": "capture, replay, clear"
-            },
-            "session.id": {
-              "type": "string",
-              "description": "Terminal session ID"
-            },
-            "buffer.size": {
-              "type": "number",
-              "description": "Current buffer size in bytes"
-            },
-            "lines.count": {
-              "type": "number",
-              "description": "Number of lines in buffer"
-            }
+      "label": "Scrollback Buffers",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.scrollback.action",
+        "description": "Scrollback buffer operations",
+        "attributes": {
+          "action": {
+            "type": "string",
+            "description": "capture, replay, clear"
+          },
+          "session.id": {
+            "type": "string",
+            "description": "Terminal session ID"
+          },
+          "buffer.size": {
+            "type": "number",
+            "description": "Current buffer size in bytes"
+          },
+          "lines.count": {
+            "type": "number",
+            "description": "Number of lines in buffer"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
@@ -750,187 +703,172 @@
     },
     {
       "id": "error-events",
-      "type": "text",
+      "type": "otel-event",
       "x": 658,
       "y": 159,
       "width": 250,
       "height": 100,
-      "text": "Error Events\n\nterminal.daemon.error\nterminal.socket.error\nterminal.pty.error",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/pty-daemon/telemetry.ts",
-          "src/pty-daemon/DaemonSessionManager.ts"
-        ],
-        "otel": {
-          "files": ["src/pty-daemon/telemetry.ts"]
-        },
-        "event": {
-          "name": "terminal.error",
-          "description": "Error events across terminal subsystem",
-          "attributes": {
-            "source": {
-              "type": "string",
-              "description": "daemon, socket, pty, client"
-            },
-            "error.code": {
-              "type": "string",
-              "description": "Error code"
-            },
-            "error.message": {
-              "type": "string",
-              "description": "Error message"
-            },
-            "session.id": {
-              "type": "string",
-              "description": "Affected session ID if applicable"
-            },
-            "recoverable": {
-              "type": "boolean",
-              "description": "Whether error is recoverable"
-            }
+      "label": "Error Events",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.error",
+        "description": "Error events across terminal subsystem",
+        "attributes": {
+          "source": {
+            "type": "string",
+            "description": "daemon, socket, pty, client"
+          },
+          "error.code": {
+            "type": "string",
+            "description": "Error code"
+          },
+          "error.message": {
+            "type": "string",
+            "description": "Error message"
+          },
+          "session.id": {
+            "type": "string",
+            "description": "Affected session ID if applicable"
+          },
+          "recoverable": {
+            "type": "boolean",
+            "description": "Whether error is recoverable"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/pty-daemon/telemetry.ts"
+        ]
       }
     },
     {
       "id": "health-check",
-      "type": "text",
+      "type": "otel-event",
       "x": 652,
       "y": 333,
       "width": 250,
       "height": 120,
-      "text": "Health Monitoring\n\nping/pong heartbeat\nClient sends ping every 30s\nTimeout triggers reconnect\nDaemon tracks client liveness",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [],
-        "event": {
-          "name": "terminal.health.check",
-          "description": "Health check ping/pong",
-          "attributes": {
-            "direction": {
-              "type": "string",
-              "description": "ping (client→daemon) or pong (daemon→client)"
-            },
-            "latency.ms": {
-              "type": "number",
-              "description": "Round-trip latency in milliseconds"
-            },
-            "missed.count": {
-              "type": "number",
-              "description": "Consecutive missed pongs"
-            }
+      "label": "Health Monitoring",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.health.check",
+        "description": "Health check ping/pong",
+        "attributes": {
+          "direction": {
+            "type": "string",
+            "description": "ping (client→daemon) or pong (daemon→client)"
+          },
+          "latency.ms": {
+            "type": "number",
+            "description": "Round-trip latency in milliseconds"
+          },
+          "missed.count": {
+            "type": "number",
+            "description": "Consecutive missed pongs"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "idle-shutdown",
-      "type": "text",
+      "type": "otel-event",
       "x": 783,
       "y": 502,
       "width": 250,
       "height": 120,
-      "text": "Idle Shutdown\n\nNo sessions + no clients\nfor IDLE_TIMEOUT (30min)\n→ daemon exits gracefully\n\nPrevents orphaned daemons",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [],
-        "event": {
-          "name": "terminal.daemon.idle",
-          "description": "Daemon idle state monitoring",
-          "attributes": {
-            "idle.duration.ms": {
-              "type": "number",
-              "description": "Time idle in milliseconds"
-            },
-            "sessions.count": {
-              "type": "number",
-              "description": "Active session count"
-            },
-            "clients.count": {
-              "type": "number",
-              "description": "Connected client count"
-            },
-            "action": {
-              "type": "string",
-              "description": "check, warning, shutdown"
-            }
+      "label": "Idle Shutdown",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.daemon.idle",
+        "description": "Daemon idle state monitoring",
+        "attributes": {
+          "idle.duration.ms": {
+            "type": "number",
+            "description": "Time idle in milliseconds"
+          },
+          "sessions.count": {
+            "type": "number",
+            "description": "Active session count"
+          },
+          "clients.count": {
+            "type": "number",
+            "description": "Connected client count"
+          },
+          "action": {
+            "type": "string",
+            "description": "check, warning, shutdown"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "utility-worker",
-      "type": "text",
+      "type": "otel-event",
       "x": 358,
       "y": 92,
       "width": 200,
       "height": 120,
-      "text": "Utility Worker\n\n- Connects to daemon socket\n- Holds MessagePorts\n- Bridges socket ↔ ports\n- NO PTY spawning",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/terminal-worker/worker-entry.ts"
-        ],
-        "event": {
-          "name": "terminal.worker.action",
-          "description": "Worker bridging events",
-          "attributes": {
-            "action": {
-              "type": "string",
-              "description": "socket_connect, socket_disconnect, port_received, data_bridged"
-            },
-            "session.id": {
-              "type": "string",
-              "description": "Terminal session ID"
-            },
-            "direction": {
-              "type": "string",
-              "description": "socket_to_port or port_to_socket"
-            }
+      "label": "Utility Worker",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.worker.action",
+        "description": "Worker bridging events",
+        "attributes": {
+          "action": {
+            "type": "string",
+            "description": "socket_connect, socket_disconnect, port_received, data_bridged"
+          },
+          "session.id": {
+            "type": "string",
+            "description": "Terminal session ID"
+          },
+          "direction": {
+            "type": "string",
+            "description": "socket_to_port or port_to_socket"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "daemon-bridge",
-      "type": "text",
+      "type": "otel-event",
       "x": 191,
       "y": 500,
       "width": 200,
       "height": 80,
-      "text": "DaemonBridge\n\nSocket client in worker\nRoutes data to ports",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [],
-        "event": {
-          "name": "terminal.bridge.data",
-          "description": "Data bridged between socket and MessagePort",
-          "attributes": {
-            "session.id": {
-              "type": "string",
-              "description": "Terminal session ID"
-            },
-            "data.size": {
-              "type": "number",
-              "description": "Bytes of data bridged"
-            },
-            "direction": {
-              "type": "string",
-              "description": "to_renderer or to_daemon"
-            }
+      "label": "DaemonBridge",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.bridge.data",
+        "description": "Data bridged between socket and MessagePort",
+        "attributes": {
+          "session.id": {
+            "type": "string",
+            "description": "Terminal session ID"
+          },
+          "data.size": {
+            "type": "number",
+            "description": "Bytes of data bridged"
+          },
+          "direction": {
+            "type": "string",
+            "description": "to_renderer or to_daemon"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {

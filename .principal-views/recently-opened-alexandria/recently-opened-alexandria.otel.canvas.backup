@@ -1,0 +1,723 @@
+{
+  "pv": {
+    "name": "Recently Opened Alexandria Entries",
+    "version": "1.0.0",
+    "description": "Flow for tracking and sorting local projects by last opened timestamp",
+    "markdown": ".principal-views/recently-opened-alexandria/recently-opened-alexandria.md",
+    "scope": "principal-ade-main",
+    "nodeTypes": {
+      "ui-component": {
+        "label": "UI Component",
+        "color": "#3B82F6"
+      },
+      "context-provider": {
+        "label": "Context Provider",
+        "color": "#8B5CF6"
+      },
+      "renderer-service": {
+        "label": "Renderer Service",
+        "color": "#A855F7"
+      },
+      "ipc-bridge": {
+        "label": "IPC Bridge",
+        "color": "#F59E0B"
+      },
+      "main-process": {
+        "label": "Main Process",
+        "color": "#22C55E"
+      },
+      "external-library": {
+        "label": "External Library",
+        "color": "#64748B"
+      },
+      "user-action": {
+        "label": "User Action",
+        "color": "#EC4899"
+      },
+      "event": {
+        "label": "Event",
+        "color": "#3B82F6"
+      },
+      "boundary": {
+        "label": "Boundary",
+        "color": "#64748B"
+      }
+    },
+    "edgeTypes": {
+      "user-interaction": {
+        "label": "User Interaction",
+        "style": "solid",
+        "color": "#EC4899"
+      },
+      "ipc-send": {
+        "label": "IPC Send",
+        "style": "solid",
+        "color": "#F59E0B"
+      },
+      "ipc-receive": {
+        "label": "IPC Receive",
+        "style": "dashed",
+        "color": "#F59E0B"
+      },
+      "function-call": {
+        "label": "Function Call",
+        "style": "solid",
+        "color": "#3B82F6"
+      },
+      "event-emit": {
+        "label": "Event Emit",
+        "style": "dashed",
+        "color": "#8B5CF6"
+      },
+      "data-flow": {
+        "label": "Data Flow",
+        "style": "solid",
+        "color": "#22C55E"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "x": 400,
+      "y": -100,
+      "width": 550,
+      "height": 60,
+      "color": "#64748B",
+      "text": "# Recently Opened Alexandria Entries\n**Tracking and sorting local projects by last opened timestamp**"
+    },
+    {
+      "id": "local-projects-panel",
+      "type": "text",
+      "x": 50,
+      "y": 50,
+      "width": 220,
+      "height": 100,
+      "text": "LocalProjectsPanel\n(UI Component)\nDisplays sorted list\nof local repositories",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/contexts/ProjectsPanelContext.tsx"
+        ],
+        "otel": {
+          "files": ["src/renderer/contexts/ProjectsPanelContext.tsx"]
+        },
+        "event": {
+          "name": "alexandria.ui.local_projects_displayed",
+          "description": "Local projects panel rendered with sorted repositories",
+          "attributes": {
+            "repository_count": {
+              "type": "number",
+              "description": "Number of repositories displayed"
+            },
+            "has_recently_opened": {
+              "type": "boolean",
+              "description": "Whether any projects have lastOpenedAt timestamp"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "open-project-action",
+      "type": "text",
+      "x": 50,
+      "y": 180,
+      "width": 220,
+      "height": 80,
+      "text": "User Opens Project\n(Click on project row)",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/contexts/ProjectsPanelContext.tsx"
+        ],
+        "otel": {
+          "files": ["src/renderer/contexts/ProjectsPanelContext.tsx"]
+        },
+        "event": {
+          "name": "alexandria.user.project_opened",
+          "description": "User clicked to open a local project",
+          "attributes": {
+            "project_name": {
+              "type": "string",
+              "description": "Name of the project being opened"
+            },
+            "had_previous_open": {
+              "type": "boolean",
+              "description": "Whether project had a previous lastOpenedAt"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "projects-panel-context",
+      "type": "text",
+      "x": 320,
+      "y": 50,
+      "width": 240,
+      "height": 120,
+      "text": "ProjectsPanelContext\n(Context Provider)\n- fetchLocalRepositories()\n- openLocalRepository()\n- Sorts by lastOpenedAt",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/contexts/ProjectsPanelContext.tsx:279-291",
+          "src/renderer/contexts/ProjectsPanelContext.tsx:1154-1183"
+        ],
+        "otel": {
+          "files": ["src/renderer/contexts/ProjectsPanelContext.tsx"]
+        },
+        "event": {
+          "name": "alexandria.context.repositories_fetched",
+          "description": "Local repositories fetched and sorted",
+          "attributes": {
+            "total_count": {
+              "type": "number",
+              "description": "Total number of repositories"
+            },
+            "with_last_opened_count": {
+              "type": "number",
+              "description": "Repositories with lastOpenedAt timestamp"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "sort-logic",
+      "type": "text",
+      "x": 320,
+      "y": 200,
+      "width": 240,
+      "height": 100,
+      "text": "Sort Logic\n1. lastOpenedAt first\n2. Then by timestamp desc\n3. Fallback to registeredAt",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/contexts/ProjectsPanelContext.tsx:279-291"
+        ],
+        "otel": {
+          "files": ["src/renderer/contexts/ProjectsPanelContext.tsx"]
+        },
+        "event": {
+          "name": "alexandria.context.repositories_sorted",
+          "description": "Repositories sorted by lastOpenedAt timestamp",
+          "attributes": {
+            "total_count": {
+              "type": "number",
+              "description": "Total repositories sorted"
+            },
+            "with_timestamp_count": {
+              "type": "number",
+              "description": "Repositories with lastOpenedAt"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "open-local-repository",
+      "type": "text",
+      "x": 320,
+      "y": 330,
+      "width": 240,
+      "height": 80,
+      "text": "openLocalRepository()\nUpdates timestamp then\nopens dev workspace",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/contexts/ProjectsPanelContext.tsx:1154-1183"
+        ],
+        "otel": {
+          "files": ["src/renderer/contexts/ProjectsPanelContext.tsx"]
+        },
+        "event": {
+          "name": "alexandria.action.open_local_repository",
+          "description": "Opening local repository action triggered",
+          "attributes": {
+            "repository_name": {
+              "type": "string",
+              "description": "Name of repository being opened"
+            },
+            "repository_path": {
+              "type": "string",
+              "description": "Local path to repository"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "registry-service",
+      "type": "text",
+      "x": 880,
+      "y": 180,
+      "width": 220,
+      "height": 100,
+      "text": "AlexandriaRegistryService\nupdateLastOpened()\nSets timestamp to\nnew Date().toISOString()",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/main/stores/AlexandriaRegistryService.ts:312-319"
+        ],
+        "otel": {
+          "files": ["src/main/stores/AlexandriaRegistryService.ts"]
+        },
+        "event": {
+          "name": "alexandria.registry.timestamp_updated",
+          "description": "lastOpenedAt timestamp updated in registry",
+          "attributes": {
+            "repository_name": {
+              "type": "string",
+              "description": "Repository name updated"
+            },
+            "timestamp": {
+              "type": "string",
+              "description": "New ISO 8601 timestamp"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "outpost-manager",
+      "type": "text",
+      "x": 1150,
+      "y": 50,
+      "width": 220,
+      "height": 100,
+      "text": "AlexandriaOutpostManager\n(@principal-ai/\nalexandria-core-library)\nupdateRepository()",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [],
+        "otel": {
+          "files": ["src/main/stores/AlexandriaRegistryService.ts"]
+        },
+        "event": {
+          "name": "alexandria.outpost.repository_updated",
+          "description": "AlexandriaOutpostManager updated repository metadata",
+          "attributes": {
+            "repository_name": {
+              "type": "string",
+              "description": "Repository name updated"
+            },
+            "field_updated": {
+              "type": "string",
+              "description": "Field that was updated (lastOpenedAt)"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "disk-storage",
+      "type": "text",
+      "x": 1150,
+      "y": 180,
+      "width": 220,
+      "height": 80,
+      "text": "Disk Storage\nRepository metadata\npersisted to disk",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [],
+        "otel": {
+          "files": ["src/main/stores/AlexandriaRegistryService.ts"]
+        },
+        "event": {
+          "name": "alexandria.storage.metadata_persisted",
+          "description": "Repository metadata written to disk",
+          "attributes": {
+            "repository_name": {
+              "type": "string",
+              "description": "Repository name"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "repository-change-event",
+      "type": "text",
+      "x": 880,
+      "y": 330,
+      "width": 220,
+      "height": 100,
+      "text": "REPOSITORY_UPDATED\nEvent\nBroadcast to all\nrenderer windows",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/main/stores/AlexandriaApiEventHandler.ts"
+        ],
+        "otel": {
+          "files": ["src/main/stores/AlexandriaApiEventHandler.ts"]
+        },
+        "event": {
+          "name": "alexandria.event.repository_updated_broadcast",
+          "description": "Repository updated event broadcast to windows",
+          "attributes": {
+            "repository_name": {
+              "type": "string",
+              "description": "Updated repository name"
+            },
+            "window_count": {
+              "type": "number",
+              "description": "Number of windows notified"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "on-repository-change",
+      "type": "text",
+      "x": 610,
+      "y": 330,
+      "width": 220,
+      "height": 100,
+      "text": "onRepositoryChange()\nListener in Context\nTriggers re-fetch\nof repositories",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/contexts/ProjectsPanelContext.tsx:307-313"
+        ],
+        "otel": {
+          "files": ["src/renderer/contexts/ProjectsPanelContext.tsx"]
+        },
+        "event": {
+          "name": "alexandria.context.change_listener_triggered",
+          "description": "Repository change listener triggered re-fetch",
+          "attributes": {
+            "trigger": {
+              "type": "string",
+              "description": "Event that triggered the re-fetch"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "re-sort-display",
+      "type": "text",
+      "x": 50,
+      "y": 330,
+      "width": 220,
+      "height": 100,
+      "text": "UI Re-renders\nNewly opened project\nmoves to top of list",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/contexts/ProjectsPanelContext.tsx"
+        ],
+        "otel": {
+          "files": ["src/renderer/contexts/ProjectsPanelContext.tsx"]
+        },
+        "event": {
+          "name": "alexandria.ui.projects_resorted",
+          "description": "Project list re-sorted after timestamp update",
+          "attributes": {
+            "newly_opened_project": {
+              "type": "string",
+              "description": "Project that was just opened"
+            },
+            "new_position": {
+              "type": "number",
+              "description": "New position in list (should be 0)"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "window-service",
+      "type": "text",
+      "x": 320,
+      "y": 450,
+      "width": 240,
+      "height": 80,
+      "text": "WindowService\nopenDevWorkspace()\nOpens project in\nnew dev workspace",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/contexts/ProjectsPanelContext.tsx:1174"
+        ],
+        "otel": {
+          "files": ["src/renderer/contexts/ProjectsPanelContext.tsx"]
+        },
+        "event": {
+          "name": "alexandria.window.dev_workspace_opened",
+          "description": "Dev workspace window opened for project",
+          "attributes": {
+            "repository_name": {
+              "type": "string",
+              "description": "Repository opened in workspace"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "worlds-view-entry",
+      "type": "text",
+      "x": 50,
+      "y": 500,
+      "width": 220,
+      "height": 100,
+      "text": "Other Entry Points\n(WorldsView, QuickOpen,\nDeep Links, etc.)\nAll call openDevWorkspace()",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/contexts/WorldsViewPanelContext.tsx:740-771",
+          "src/main/window/quickOpen.ts:333"
+        ],
+        "status": "draft",
+        "event": {
+          "name": "alexandria.worlds_view.project_opened",
+          "description": "Project opened via WorldsViewPanelContext",
+          "attributes": {
+            "repository_name": {
+              "type": "string",
+              "description": "Repository name opened"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "dev-workspace-handler",
+      "type": "text",
+      "x": 610,
+      "y": 530,
+      "width": 240,
+      "height": 100,
+      "text": "openDevWorkspaceWindow\n(Main Process - Central)\nUpdates lastOpenedAt\nfor ALL entry points",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/main/window/devWorkspaceWindowHandlers.ts:44-181"
+        ],
+        "otel": {
+          "files": ["src/main/window/devWorkspaceWindowHandlers.ts"]
+        },
+        "event": {
+          "name": "alexandria.dev_workspace.update_last_opened",
+          "description": "Central timestamp update when dev workspace opens",
+          "attributes": {
+            "repository_name": {
+              "type": "string",
+              "description": "Repository name being opened"
+            },
+            "repository_path": {
+              "type": "string",
+              "description": "Repository path"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "data-model-note",
+      "type": "text",
+      "x": 1150,
+      "y": 300,
+      "width": 220,
+      "height": 120,
+      "text": "**AlexandriaEntry**\n- name: string\n- path: string\n- lastOpenedAt?: string\n- registeredAt: string\n(ISO 8601 timestamps)",
+      "color": "#64748B"
+    },
+    {
+      "id": "fire-and-forget-note",
+      "type": "text",
+      "x": 610,
+      "y": 450,
+      "width": 220,
+      "height": 100,
+      "text": "**Non-blocking**\nTimestamp update is\nfire-and-forget.\nDoesn't block opening\nthe workspace.",
+      "color": "#64748B"
+    }
+  ],
+  "edges": [
+    {
+      "id": "panel-to-context",
+      "fromNode": "local-projects-panel",
+      "fromSide": "right",
+      "toNode": "projects-panel-context",
+      "toSide": "left",
+      "label": "uses context",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "user-to-context",
+      "fromNode": "open-project-action",
+      "fromSide": "right",
+      "toNode": "open-local-repository",
+      "toSide": "left",
+      "label": "triggers action",
+      "pv": {
+        "edgeType": "user-interaction"
+      }
+    },
+    {
+      "id": "context-to-sort",
+      "fromNode": "projects-panel-context",
+      "fromSide": "bottom",
+      "toNode": "sort-logic",
+      "toSide": "top",
+      "label": "applies sort",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "open-to-window-service",
+      "fromNode": "open-local-repository",
+      "fromSide": "right",
+      "toNode": "window-service",
+      "toSide": "left",
+      "label": "openDevWorkspace()",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "registry-to-outpost",
+      "fromNode": "registry-service",
+      "fromSide": "right",
+      "toNode": "outpost-manager",
+      "toSide": "left",
+      "label": "updateRepository()",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "outpost-to-disk",
+      "fromNode": "outpost-manager",
+      "fromSide": "bottom",
+      "toNode": "disk-storage",
+      "toSide": "top",
+      "label": "persists",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "registry-to-event",
+      "fromNode": "registry-service",
+      "fromSide": "bottom",
+      "toNode": "repository-change-event",
+      "toSide": "top",
+      "label": "emits change",
+      "pv": {
+        "edgeType": "event-emit"
+      }
+    },
+    {
+      "id": "event-to-listener",
+      "fromNode": "repository-change-event",
+      "fromSide": "left",
+      "toNode": "on-repository-change",
+      "toSide": "right",
+      "label": "via IPC",
+      "pv": {
+        "edgeType": "ipc-receive"
+      }
+    },
+    {
+      "id": "listener-to-context",
+      "fromNode": "on-repository-change",
+      "fromSide": "left",
+      "toNode": "projects-panel-context",
+      "toSide": "right",
+      "label": "fetchLocalRepositories()",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "context-to-ui",
+      "fromNode": "projects-panel-context",
+      "fromSide": "left",
+      "toNode": "re-sort-display",
+      "toSide": "right",
+      "label": "state update",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "open-to-window",
+      "fromNode": "open-local-repository",
+      "fromSide": "bottom",
+      "toNode": "window-service",
+      "toSide": "top",
+      "label": "openDevWorkspace()",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "worlds-to-window-service",
+      "fromNode": "worlds-view-entry",
+      "fromSide": "right",
+      "toNode": "window-service",
+      "toSide": "bottom",
+      "label": "openDevWorkspace()",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "window-service-to-handler",
+      "fromNode": "window-service",
+      "fromSide": "right",
+      "toNode": "dev-workspace-handler",
+      "toSide": "left",
+      "label": "IPC invoke",
+      "pv": {
+        "edgeType": "ipc-send"
+      }
+    },
+    {
+      "id": "handler-to-registry-service",
+      "fromNode": "dev-workspace-handler",
+      "fromSide": "right",
+      "toNode": "registry-service",
+      "toSide": "bottom",
+      "label": "updateLastOpened()",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    }
+  ]
+}

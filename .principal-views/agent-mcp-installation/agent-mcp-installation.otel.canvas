@@ -79,519 +79,459 @@
     },
     {
       "id": "setup-wizard",
-      "type": "text",
+      "type": "otel-event",
       "x": 50,
       "y": 50,
       "width": 200,
       "height": 100,
-      "text": "AgentSetupWizard\nStep 3: Enable MCP\nUser clicks toggle",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/pages/LandingPage/AgentConfigurationView/AgentSetupWizard.tsx"
-        ],
-        "event": {
-          "name": "agent_mcp.ui.toggle_clicked",
-          "description": "User clicks the MCP enable/disable toggle button",
-          "attributes": {
-            "agent.type": {
-              "type": "string",
-              "description": "Agent type: claude, cline, opencode, droid"
-            },
-            "mcp.current_status": {
-              "type": "boolean",
-              "description": "Current MCP enabled status before toggle"
-            },
-            "mcp.action": {
-              "type": "string",
-              "description": "Action being performed: enable or disable"
-            }
+      "label": "AgentSetupWizard",
+      "shape": "rectangle",
+      "event": {
+        "name": "agent_mcp.ui.toggle_clicked",
+        "description": "User clicks the MCP enable/disable toggle button",
+        "attributes": {
+          "agent.type": {
+            "type": "string",
+            "description": "Agent type: claude, cline, opencode, droid"
+          },
+          "mcp.current_status": {
+            "type": "boolean",
+            "description": "Current MCP enabled status before toggle"
+          },
+          "mcp.action": {
+            "type": "string",
+            "description": "Action being performed: enable or disable"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "detailed-view",
-      "type": "text",
+      "type": "otel-event",
       "x": 50,
       "y": 180,
       "width": 200,
       "height": 100,
-      "text": "DetailedConfigurationView\nMCP Tab Content\nAgent-specific UI",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/pages/LandingPage/AgentConfigurationView/DetailedConfigurationView.tsx"
-        ],
-        "event": {
-          "name": "agent_mcp.ui.detailed_view_opened",
-          "description": "User opens the detailed MCP configuration view",
-          "attributes": {
-            "agent.type": {
-              "type": "string",
-              "description": "Agent type being configured"
-            },
-            "view.mode": {
-              "type": "string",
-              "description": "Current view mode: hooks, mcp, install"
-            }
+      "label": "DetailedConfigurationView",
+      "shape": "rectangle",
+      "event": {
+        "name": "agent_mcp.ui.detailed_view_opened",
+        "description": "User opens the detailed MCP configuration view",
+        "attributes": {
+          "agent.type": {
+            "type": "string",
+            "description": "Agent type being configured"
+          },
+          "view.mode": {
+            "type": "string",
+            "description": "Current view mode: hooks, mcp, install"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "renderer-service",
-      "type": "text",
+      "type": "otel-event",
       "x": 300,
       "y": 50,
       "width": 220,
       "height": 100,
-      "text": "AgentConfigurationService\nRenderer-side API\nCalls main process",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/main-process-api/AgentConfigurationService.ts"
-        ],
-        "event": {
-          "name": "agent_mcp.service.request_initiated",
-          "description": "Renderer service initiates MCP operation request",
-          "attributes": {
-            "agent.type": {
-              "type": "string",
-              "description": "Agent type"
-            },
-            "operation": {
-              "type": "string",
-              "description": "Operation: addMCPToAgent, removeMCPFromAgent, getAgentMCPStatus"
-            },
-            "server.name": {
-              "type": "string",
-              "description": "MCP server name being configured"
-            }
+      "label": "AgentConfigurationService",
+      "shape": "rectangle",
+      "event": {
+        "name": "agent_mcp.service.request_initiated",
+        "description": "Renderer service initiates MCP operation request",
+        "attributes": {
+          "agent.type": {
+            "type": "string",
+            "description": "Agent type"
+          },
+          "operation": {
+            "type": "string",
+            "description": "Operation: addMCPToAgent, removeMCPFromAgent, getAgentMCPStatus"
+          },
+          "server.name": {
+            "type": "string",
+            "description": "MCP server name being configured"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "ipc-add-mcp",
-      "type": "text",
+      "type": "otel-event",
       "x": 570,
       "y": 50,
       "width": 200,
       "height": 80,
-      "text": "IPC Handler\nADD_MCP_TO_AGENT\nipcMain.handle",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/agent-management/agentConfigHandlers.ts"
-        ],
-        "event": {
-          "name": "agent_mcp.ipc.add_mcp_received",
-          "description": "Main process receives add MCP request via IPC",
-          "attributes": {
-            "agent.type": {
-              "type": "string",
-              "description": "Agent type"
-            },
-            "server.name": {
-              "type": "string",
-              "description": "Server name to add"
-            }
+      "label": "IPC Handler",
+      "shape": "rectangle",
+      "event": {
+        "name": "agent_mcp.ipc.add_mcp_received",
+        "description": "Main process receives add MCP request via IPC",
+        "attributes": {
+          "agent.type": {
+            "type": "string",
+            "description": "Agent type"
+          },
+          "server.name": {
+            "type": "string",
+            "description": "Server name to add"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "ipc-remove-mcp",
-      "type": "text",
+      "type": "otel-event",
       "x": 570,
       "y": 150,
       "width": 200,
       "height": 80,
-      "text": "IPC Handler\nREMOVE_MCP_FROM_AGENT\nipcMain.handle",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/agent-management/agentConfigHandlers.ts"
-        ],
-        "event": {
-          "name": "agent_mcp.ipc.remove_mcp_received",
-          "description": "Main process receives remove MCP request via IPC",
-          "attributes": {
-            "agent.type": {
-              "type": "string",
-              "description": "Agent type"
-            },
-            "server.name": {
-              "type": "string",
-              "description": "Server name to remove"
-            }
+      "label": "IPC Handler",
+      "shape": "rectangle",
+      "event": {
+        "name": "agent_mcp.ipc.remove_mcp_received",
+        "description": "Main process receives remove MCP request via IPC",
+        "attributes": {
+          "agent.type": {
+            "type": "string",
+            "description": "Agent type"
+          },
+          "server.name": {
+            "type": "string",
+            "description": "Server name to remove"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "ipc-get-status",
-      "type": "text",
+      "type": "otel-event",
       "x": 570,
       "y": 250,
       "width": 200,
       "height": 80,
-      "text": "IPC Handler\nGET_AGENT_MCP_STATUS\nipcMain.handle",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/agent-management/agentConfigHandlers.ts"
-        ],
-        "event": {
-          "name": "agent_mcp.ipc.get_status_received",
-          "description": "Main process receives get MCP status request via IPC",
-          "attributes": {
-            "agent.type": {
-              "type": "string",
-              "description": "Agent type"
-            },
-            "server.name": {
-              "type": "string",
-              "description": "Server name to check"
-            }
+      "label": "IPC Handler",
+      "shape": "rectangle",
+      "event": {
+        "name": "agent_mcp.ipc.get_status_received",
+        "description": "Main process receives get MCP status request via IPC",
+        "attributes": {
+          "agent.type": {
+            "type": "string",
+            "description": "Agent type"
+          },
+          "server.name": {
+            "type": "string",
+            "description": "Server name to check"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "agent-manager-lib",
-      "type": "text",
+      "type": "otel-event",
       "x": 840,
       "y": 50,
       "width": 220,
       "height": 100,
-      "text": "@principal-ade/agent-manager\nenableAgentMCP()\ndisableAgentMCP()\ngetAgentMCPStatus()",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/agent-management/agentConfigHandlers.ts"
-        ],
-        "event": {
-          "name": "agent_mcp.library.operation_called",
-          "description": "External agent-manager library function called",
-          "attributes": {
-            "agent.type": {
-              "type": "string",
-              "description": "Agent type"
-            },
-            "library.function": {
-              "type": "string",
-              "description": "Function called: enableAgentMCP, disableAgentMCP, getAgentMCPStatus"
-            },
-            "server.name": {
-              "type": "string",
-              "description": "Server name parameter"
-            }
+      "label": "@principal-ade/agent-manager",
+      "shape": "rectangle",
+      "event": {
+        "name": "agent_mcp.library.operation_called",
+        "description": "External agent-manager library function called",
+        "attributes": {
+          "agent.type": {
+            "type": "string",
+            "description": "Agent type"
+          },
+          "library.function": {
+            "type": "string",
+            "description": "Function called: enableAgentMCP, disableAgentMCP, getAgentMCPStatus"
+          },
+          "server.name": {
+            "type": "string",
+            "description": "Server name parameter"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "claude-config",
-      "type": "text",
+      "type": "otel-event",
       "x": 1100,
       "y": 50,
       "width": 200,
       "height": 80,
-      "text": "Claude Config\n~/.claude.json\nmcpServers section",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/agent-management/agentConfigHandlers.ts"
-        ],
-        "event": {
-          "name": "agent_mcp.config.claude_updated",
-          "description": "Claude configuration file updated with MCP server",
-          "attributes": {
-            "config.path": {
-              "type": "string",
-              "description": "Path to config file: ~/.claude.json"
-            },
-            "mcp.server_count": {
-              "type": "number",
-              "description": "Number of MCP servers after update"
-            },
-            "mcp.has_principal": {
-              "type": "boolean",
-              "description": "Whether principal-mcp server is configured"
-            }
+      "label": "Claude Config",
+      "shape": "rectangle",
+      "event": {
+        "name": "agent_mcp.config.claude_updated",
+        "description": "Claude configuration file updated with MCP server",
+        "attributes": {
+          "config.path": {
+            "type": "string",
+            "description": "Path to config file: ~/.claude.json"
+          },
+          "mcp.server_count": {
+            "type": "number",
+            "description": "Number of MCP servers after update"
+          },
+          "mcp.has_principal": {
+            "type": "boolean",
+            "description": "Whether principal-mcp server is configured"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "cline-config",
-      "type": "text",
+      "type": "otel-event",
       "x": 1100,
       "y": 150,
       "width": 200,
       "height": 80,
-      "text": "Cline Config\nVS Code settings\nmcpServers section",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/agent-management/agentConfigHandlers.ts"
-        ],
-        "event": {
-          "name": "agent_mcp.config.cline_updated",
-          "description": "Cline configuration updated with MCP server",
-          "attributes": {
-            "config.path": {
-              "type": "string",
-              "description": "Path to Cline config"
-            },
-            "mcp.server_count": {
-              "type": "number",
-              "description": "Number of MCP servers after update"
-            },
-            "mcp.has_principal": {
-              "type": "boolean",
-              "description": "Whether principal-mcp server is configured"
-            }
+      "label": "Cline Config",
+      "shape": "rectangle",
+      "event": {
+        "name": "agent_mcp.config.cline_updated",
+        "description": "Cline configuration updated with MCP server",
+        "attributes": {
+          "config.path": {
+            "type": "string",
+            "description": "Path to Cline config"
+          },
+          "mcp.server_count": {
+            "type": "number",
+            "description": "Number of MCP servers after update"
+          },
+          "mcp.has_principal": {
+            "type": "boolean",
+            "description": "Whether principal-mcp server is configured"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "opencode-config",
-      "type": "text",
+      "type": "otel-event",
       "x": 1100,
       "y": 250,
       "width": 200,
       "height": 80,
-      "text": "OpenCode Config\n~/.config/openCode/\nopenCode.json",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/agent-management/agentConfigHandlers.ts"
-        ],
-        "event": {
-          "name": "agent_mcp.config.opencode_updated",
-          "description": "OpenCode configuration updated with MCP server",
-          "attributes": {
-            "config.path": {
-              "type": "string",
-              "description": "Path to config: ~/.config/openCode/openCode.json"
-            },
-            "mcp.server_count": {
-              "type": "number",
-              "description": "Number of MCP servers after update"
-            },
-            "mcp.has_principal": {
-              "type": "boolean",
-              "description": "Whether principal-mcp server is configured"
-            }
+      "label": "OpenCode Config",
+      "shape": "rectangle",
+      "event": {
+        "name": "agent_mcp.config.opencode_updated",
+        "description": "OpenCode configuration updated with MCP server",
+        "attributes": {
+          "config.path": {
+            "type": "string",
+            "description": "Path to config: ~/.config/openCode/openCode.json"
+          },
+          "mcp.server_count": {
+            "type": "number",
+            "description": "Number of MCP servers after update"
+          },
+          "mcp.has_principal": {
+            "type": "boolean",
+            "description": "Whether principal-mcp server is configured"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "droid-config",
-      "type": "text",
+      "type": "otel-event",
       "x": 1100,
       "y": 350,
       "width": 200,
       "height": 80,
-      "text": "Droid Config\n~/.factory/mcp.json\nmcpServers section",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/agent-management/agentConfigHandlers.ts"
-        ],
-        "event": {
-          "name": "agent_mcp.config.droid_updated",
-          "description": "Droid configuration updated with MCP server",
-          "attributes": {
-            "config.path": {
-              "type": "string",
-              "description": "Path to config: ~/.factory/mcp.json"
-            },
-            "mcp.server_count": {
-              "type": "number",
-              "description": "Number of MCP servers after update"
-            },
-            "mcp.has_principal": {
-              "type": "boolean",
-              "description": "Whether principal-mcp server is configured"
-            }
+      "label": "Droid Config",
+      "shape": "rectangle",
+      "event": {
+        "name": "agent_mcp.config.droid_updated",
+        "description": "Droid configuration updated with MCP server",
+        "attributes": {
+          "config.path": {
+            "type": "string",
+            "description": "Path to config: ~/.factory/mcp.json"
+          },
+          "mcp.server_count": {
+            "type": "number",
+            "description": "Number of MCP servers after update"
+          },
+          "mcp.has_principal": {
+            "type": "boolean",
+            "description": "Whether principal-mcp server is configured"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "operation-success",
-      "type": "text",
+      "type": "otel-event",
       "x": 840,
       "y": 200,
       "width": 200,
       "height": 80,
-      "text": "Operation Success\nReturns status:\nhasMCP, mcpCount",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/agent-management/agentConfigHandlers.ts"
-        ],
-        "event": {
-          "name": "agent_mcp.operation.success",
-          "description": "MCP operation completed successfully",
-          "attributes": {
-            "agent.type": {
-              "type": "string",
-              "description": "Agent type"
-            },
-            "operation": {
-              "type": "string",
-              "description": "Operation performed"
-            },
-            "result.has_mcp": {
-              "type": "boolean",
-              "description": "Whether agent now has MCP configured"
-            },
-            "result.mcp_count": {
-              "type": "number",
-              "description": "Total number of MCP servers"
-            },
-            "result.config_path": {
-              "type": "string",
-              "description": "Path to the updated config file"
-            }
+      "label": "Operation Success",
+      "shape": "rectangle",
+      "event": {
+        "name": "agent_mcp.operation.success",
+        "description": "MCP operation completed successfully",
+        "attributes": {
+          "agent.type": {
+            "type": "string",
+            "description": "Agent type"
+          },
+          "operation": {
+            "type": "string",
+            "description": "Operation performed"
+          },
+          "result.has_mcp": {
+            "type": "boolean",
+            "description": "Whether agent now has MCP configured"
+          },
+          "result.mcp_count": {
+            "type": "number",
+            "description": "Total number of MCP servers"
+          },
+          "result.config_path": {
+            "type": "string",
+            "description": "Path to the updated config file"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "operation-error",
-      "type": "text",
+      "type": "otel-event",
       "x": 840,
       "y": 320,
       "width": 200,
       "height": 80,
-      "text": "Operation Error\nReturns error message\nRollback if needed",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/agent-management/agentConfigHandlers.ts"
-        ],
-        "event": {
-          "name": "agent_mcp.operation.error",
-          "description": "MCP operation failed",
-          "attributes": {
-            "agent.type": {
-              "type": "string",
-              "description": "Agent type"
-            },
-            "operation": {
-              "type": "string",
-              "description": "Operation that failed"
-            },
-            "error.message": {
-              "type": "string",
-              "description": "Error message"
-            },
-            "error.type": {
-              "type": "string",
-              "description": "Error type: config_not_found, write_failed, parse_error"
-            }
+      "label": "Operation Error",
+      "shape": "rectangle",
+      "event": {
+        "name": "agent_mcp.operation.error",
+        "description": "MCP operation failed",
+        "attributes": {
+          "agent.type": {
+            "type": "string",
+            "description": "Agent type"
+          },
+          "operation": {
+            "type": "string",
+            "description": "Operation that failed"
+          },
+          "error.message": {
+            "type": "string",
+            "description": "Error message"
+          },
+          "error.type": {
+            "type": "string",
+            "description": "Error type: config_not_found, write_failed, parse_error"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "ui-state-updated",
-      "type": "text",
+      "type": "otel-event",
       "x": 300,
       "y": 200,
       "width": 220,
       "height": 80,
-      "text": "UI State Updated\nsetMcpStatus()\nRefresh agent status",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/pages/LandingPage/AgentConfigurationView/AgentSetupWizard.tsx"
-        ],
-        "event": {
-          "name": "agent_mcp.ui.state_updated",
-          "description": "UI state updated after MCP operation",
-          "attributes": {
-            "agent.type": {
-              "type": "string",
-              "description": "Agent type"
-            },
-            "ui.mcp_enabled": {
-              "type": "boolean",
-              "description": "New MCP enabled state"
-            },
-            "ui.server_count": {
-              "type": "number",
-              "description": "Number of configured servers"
-            }
+      "label": "UI State Updated",
+      "shape": "rectangle",
+      "event": {
+        "name": "agent_mcp.ui.state_updated",
+        "description": "UI state updated after MCP operation",
+        "attributes": {
+          "agent.type": {
+            "type": "string",
+            "description": "Agent type"
+          },
+          "ui.mcp_enabled": {
+            "type": "boolean",
+            "description": "New MCP enabled state"
+          },
+          "ui.server_count": {
+            "type": "number",
+            "description": "Number of configured servers"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "ui-error-shown",
-      "type": "text",
+      "type": "otel-event",
       "x": 300,
       "y": 320,
       "width": 220,
       "height": 80,
-      "text": "Error Displayed\nsetError() called\nUser sees message",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/pages/LandingPage/AgentConfigurationView/AgentSetupWizard.tsx"
-        ],
-        "event": {
-          "name": "agent_mcp.ui.error_displayed",
-          "description": "Error message displayed to user",
-          "attributes": {
-            "agent.type": {
-              "type": "string",
-              "description": "Agent type"
-            },
-            "error.message": {
-              "type": "string",
-              "description": "Error message shown to user"
-            }
+      "label": "Error Displayed",
+      "shape": "rectangle",
+      "event": {
+        "name": "agent_mcp.ui.error_displayed",
+        "description": "Error message displayed to user",
+        "attributes": {
+          "agent.type": {
+            "type": "string",
+            "description": "Agent type"
+          },
+          "error.message": {
+            "type": "string",
+            "description": "Error message shown to user"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {

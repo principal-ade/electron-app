@@ -1,0 +1,731 @@
+{
+  "pv": {
+    "name": "FileTree Sync Event Flow",
+    "version": "1.0.0",
+    "description": "Complete event flow from file system changes to UI updates, including cache invalidation, rebuilding, and deduplication",
+    "markdown": ".principal-views/filetree-sync/filetree-sync.md",
+    "nodeTypes": {
+      "file-system": {
+        "label": "File System",
+        "color": "#64748B"
+      },
+      "worker": {
+        "label": "Worker Process",
+        "color": "#0D9488"
+      },
+      "cache": {
+        "label": "Cache",
+        "color": "#14B8A6"
+      },
+      "main-process": {
+        "label": "Main Process",
+        "color": "#4F46E5"
+      },
+      "preload": {
+        "label": "Preload Bridge",
+        "color": "#14B8A6"
+      },
+      "renderer-service": {
+        "label": "Renderer Service",
+        "color": "#7C3AED"
+      },
+      "context": {
+        "label": "React Context",
+        "color": "#A855F7"
+      },
+      "ui-component": {
+        "label": "UI Component",
+        "color": "#EC4899"
+      },
+      "timing": {
+        "label": "Timing/Debounce",
+        "color": "#F59E0B"
+      },
+      "event": {
+        "label": "Event",
+        "color": "#3B82F6"
+      },
+      "boundary": {
+        "label": "Boundary",
+        "color": "#64748B"
+      }
+    },
+    "edgeTypes": {
+      "file-watch": {
+        "label": "File Watch",
+        "style": "dashed",
+        "color": "#22C55E"
+      },
+      "worker-message": {
+        "label": "Worker Message",
+        "style": "solid",
+        "color": "#0D9488"
+      },
+      "ipc-event": {
+        "label": "IPC Event",
+        "style": "solid",
+        "color": "#818CF8"
+      },
+      "ipc-invoke": {
+        "label": "IPC Invoke",
+        "style": "solid",
+        "color": "#6366F1"
+      },
+      "subscription": {
+        "label": "Subscription",
+        "style": "dashed",
+        "color": "#A855F7"
+      },
+      "cache-invalidate": {
+        "label": "Cache Invalidate",
+        "style": "solid",
+        "color": "#EF4444"
+      },
+      "cache-rebuild": {
+        "label": "Cache Rebuild",
+        "style": "solid",
+        "color": "#22C55E"
+      },
+      "data-flow": {
+        "label": "Data Flow",
+        "style": "solid",
+        "color": "#3B82F6"
+      },
+      "trigger": {
+        "label": "Triggers",
+        "style": "solid",
+        "color": "#F59E0B"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "x": 300,
+      "y": -100,
+      "width": 500,
+      "height": 60,
+      "color": "#64748B",
+      "text": "# FileTree Sync: Complete Event Flow\n**From file changes to UI updates with cache invalidation**"
+    },
+    {
+      "id": "file-system",
+      "type": "text",
+      "x": 50,
+      "y": 0,
+      "width": 180,
+      "height": 80,
+      "text": "File System\n(user creates/\nmodifies/deletes files)",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/main/repository-monitoring/ipcHandlers.ts"
+        ],
+        "event": {
+          "name": "filetree.file.changed",
+          "description": "File system change detected by chokidar watcher",
+          "attributes": {
+            "file.path": {
+              "type": "string",
+              "description": "Absolute path to the changed file"
+            },
+            "file.event": {
+              "type": "string",
+              "description": "Type of change: add, change, unlink, addDir, unlinkDir"
+            },
+            "repository.path": {
+              "type": "string",
+              "description": "Repository root path"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "git-watcher",
+      "type": "text",
+      "x": 50,
+      "y": 120,
+      "width": 180,
+      "height": 80,
+      "text": "Git Watcher\n(chokidar)\nDetects changes",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/main/repository-monitoring/ipcHandlers.ts"
+        ],
+        "event": {
+          "name": "filetree.watcher.detected",
+          "description": "Chokidar watcher detected file system change",
+          "attributes": {
+            "repository.path": {
+              "type": "string",
+              "description": "Repository root path"
+            },
+            "watcher.event": {
+              "type": "string",
+              "description": "Chokidar event type"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "repo-monitoring-worker",
+      "type": "text",
+      "x": 280,
+      "y": 120,
+      "width": 200,
+      "height": 80,
+      "text": "Repository Monitoring\nWorker\n(utility process)",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/main/repository-monitoring/ipcHandlers.ts"
+        ],
+        "event": {
+          "name": "filetree.worker.notified",
+          "description": "Worker process received file change notification",
+          "attributes": {
+            "repository.path": {
+              "type": "string",
+              "description": "Repository root path"
+            },
+            "worker.pid": {
+              "type": "number",
+              "description": "Worker process ID"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "workspace-changed-event",
+      "type": "text",
+      "x": 530,
+      "y": 120,
+      "width": 180,
+      "height": 80,
+      "text": "workspace:changed\nIPC Event\n(immediate)",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/main/repository-monitoring/ipcHandlers.ts"
+        ],
+        "event": {
+          "name": "filetree.workspace.changed",
+          "description": "IPC event emitted immediately when workspace files change",
+          "attributes": {
+            "repository.path": {
+              "type": "string",
+              "description": "Repository root path"
+            },
+            "event.timestamp": {
+              "type": "number",
+              "description": "Timestamp of event emission"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "cache-registry",
+      "type": "text",
+      "x": 280,
+      "y": 250,
+      "width": 200,
+      "height": 80,
+      "text": "Cache Registry\n(Worker-side cache\nwith version tracking)",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/main/repository-monitoring/ipcHandlers.ts"
+        ],
+        "event": {
+          "name": "filetree.cache.invalidated",
+          "description": "Cache marked as stale and scheduled for rebuild",
+          "attributes": {
+            "repository.path": {
+              "type": "string",
+              "description": "Repository root path"
+            },
+            "cache.version.before": {
+              "type": "number",
+              "description": "Cache version before invalidation"
+            },
+            "cache.rebuild.scheduled": {
+              "type": "boolean",
+              "description": "Whether rebuild was scheduled"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "debounce-timer",
+      "type": "text",
+      "x": 527,
+      "y": 323,
+      "width": 180,
+      "height": 80,
+      "text": "250ms Debounce\n(waits for file\noperations to settle)",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/main/repository-monitoring/ipcHandlers.ts"
+        ],
+        "event": {
+          "name": "filetree.debounce.triggered",
+          "description": "Debounce timer completed, cache rebuild starting",
+          "attributes": {
+            "repository.path": {
+              "type": "string",
+              "description": "Repository root path"
+            },
+            "debounce.delay_ms": {
+              "type": "number",
+              "description": "Debounce delay in milliseconds (250)"
+            },
+            "debounce.changes_count": {
+              "type": "number",
+              "description": "Number of changes that were batched"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "cache-rebuild",
+      "type": "text",
+      "x": 281,
+      "y": 484,
+      "width": 200,
+      "height": 80,
+      "text": "Cache Rebuild\n(file tree builder)\nversion++",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/main/repository-monitoring/ipcHandlers.ts"
+        ],
+        "event": {
+          "name": "filetree.cache.rebuild",
+          "description": "Cache rebuild completed with incremented version",
+          "attributes": {
+            "repository.path": {
+              "type": "string",
+              "description": "Repository root path"
+            },
+            "cache.version.after": {
+              "type": "number",
+              "description": "New cache version after rebuild"
+            },
+            "cache.rebuild.duration_ms": {
+              "type": "number",
+              "description": "Time taken to rebuild cache"
+            },
+            "filetree.files_count": {
+              "type": "number",
+              "description": "Number of files in the rebuilt tree"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "cache-sync-event",
+      "type": "text",
+      "x": 527,
+      "y": 481,
+      "width": 180,
+      "height": 80,
+      "text": "CACHE_SYNC\nIPC Event\n(with fresh data)",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/main/repository-monitoring/ipcHandlers.ts"
+        ],
+        "event": {
+          "name": "filetree.cache.synced",
+          "description": "Cache sync event emitted with fresh file tree data",
+          "attributes": {
+            "repository.path": {
+              "type": "string",
+              "description": "Repository root path"
+            },
+            "cache.version": {
+              "type": "number",
+              "description": "Cache version included in payload"
+            },
+            "cache.version.after": {
+              "type": "number",
+              "description": "Cache version after sync"
+            },
+            "cache.slice": {
+              "type": "string",
+              "description": "Cache slice type (e.g., 'fileTree')"
+            },
+            "event.payload.size_bytes": {
+              "type": "number",
+              "description": "Size of the event payload"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "preload-bridge",
+      "type": "text",
+      "x": 758,
+      "y": 361,
+      "width": 200,
+      "height": 100,
+      "text": "Preload Bridge\n(repositoryMonitoringApi)\n+ Deduplication Guard\n(50ms window)",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/window/main-process-api-implementations/repositoryMonitoringApi.ts"
+        ],
+        "event": {
+          "name": "filetree.preload.event_received",
+          "description": "Preload bridge received IPC event, deduplication check applied",
+          "attributes": {
+            "repository.path": {
+              "type": "string",
+              "description": "Repository root path"
+            },
+            "event.type": {
+              "type": "string",
+              "description": "Event type (workspace:changed or CACHE_SYNC)"
+            },
+            "dedup.is_duplicate": {
+              "type": "boolean",
+              "description": "Whether event was identified as duplicate"
+            },
+            "dedup.window_ms": {
+              "type": "number",
+              "description": "Deduplication time window (50ms)"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "repo-monitoring-service",
+      "type": "text",
+      "x": 1010,
+      "y": 120,
+      "width": 200,
+      "height": 80,
+      "text": "RepositoryMonitoring\nService\n(renderer wrapper)",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/renderer/main-process-api/RepositoryMonitoringService.ts"
+        ],
+        "event": {
+          "name": "filetree.service.subscribed",
+          "description": "Service subscribed to monitoring events",
+          "attributes": {
+            "repository.path": {
+              "type": "string",
+              "description": "Repository root path"
+            },
+            "subscription.type": {
+              "type": "string",
+              "description": "Subscription type (workspace_change or cache_sync)"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "refresh-repository",
+      "type": "text",
+      "x": 1010,
+      "y": 250,
+      "width": 200,
+      "height": 80,
+      "text": "refreshRepository()\nInvalidates cache\n→ triggers rebuild",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/renderer/main-process-api/RepositoryMonitoringService.ts"
+        ],
+        "event": {
+          "name": "filetree.refresh.requested",
+          "description": "Explicit cache refresh requested from renderer",
+          "attributes": {
+            "repository.path": {
+              "type": "string",
+              "description": "Repository root path"
+            },
+            "refresh.trigger": {
+              "type": "string",
+              "description": "What triggered the refresh (workspace_change, user_action, etc)"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "repository-panel-context",
+      "type": "text",
+      "x": 1010,
+      "y": 380,
+      "width": 200,
+      "height": 100,
+      "text": "RepositoryPanelContext\n- onWorkspaceChange\n- onCacheSync\n- fileTreeVersion state",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/renderer/contexts/RepositoryPanelContext.tsx"
+        ],
+        "event": {
+          "name": "filetree.context.updated",
+          "description": "React context updated with new file tree data",
+          "attributes": {
+            "repository.path": {
+              "type": "string",
+              "description": "Repository root path"
+            },
+            "filetree.version": {
+              "type": "number",
+              "description": "File tree cache version"
+            },
+            "update.source": {
+              "type": "string",
+              "description": "Update source (cache_sync event)"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "file-tree-ui",
+      "type": "text",
+      "x": 1260,
+      "y": 390,
+      "width": 180,
+      "height": 80,
+      "text": "File Tree UI\n(panels, file explorer)\nre-renders",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/renderer/contexts/RepositoryPanelContext.tsx"
+        ],
+        "event": {
+          "name": "filetree.ui.rendered",
+          "description": "UI component re-rendered with updated file tree",
+          "attributes": {
+            "repository.path": {
+              "type": "string",
+              "description": "Repository root path"
+            },
+            "filetree.version": {
+              "type": "number",
+              "description": "File tree cache version being displayed"
+            },
+            "render.duration_ms": {
+              "type": "number",
+              "description": "Time taken to render the component"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "fs-to-watcher",
+      "fromNode": "file-system",
+      "fromSide": "bottom",
+      "toNode": "git-watcher",
+      "toSide": "top",
+      "label": "file change",
+      "pv": {
+        "edgeType": "file-watch"
+      }
+    },
+    {
+      "id": "watcher-to-worker",
+      "fromNode": "git-watcher",
+      "fromSide": "right",
+      "toNode": "repo-monitoring-worker",
+      "toSide": "left",
+      "label": "notify",
+      "pv": {
+        "edgeType": "worker-message"
+      }
+    },
+    {
+      "id": "worker-to-workspace-event",
+      "fromNode": "repo-monitoring-worker",
+      "fromSide": "right",
+      "toNode": "workspace-changed-event",
+      "toSide": "left",
+      "label": "emit immediately",
+      "pv": {
+        "edgeType": "ipc-event"
+      }
+    },
+    {
+      "id": "worker-to-cache",
+      "fromNode": "repo-monitoring-worker",
+      "fromSide": "bottom",
+      "toNode": "cache-registry",
+      "toSide": "top",
+      "label": "invalidate cache",
+      "pv": {
+        "edgeType": "cache-invalidate"
+      }
+    },
+    {
+      "id": "cache-to-debounce",
+      "fromNode": "cache-registry",
+      "fromSide": "right",
+      "toNode": "debounce-timer",
+      "toSide": "left",
+      "label": "schedule rebuild",
+      "pv": {
+        "edgeType": "trigger"
+      }
+    },
+    {
+      "id": "debounce-to-rebuild",
+      "fromNode": "debounce-timer",
+      "fromSide": "bottom",
+      "toNode": "cache-sync-event",
+      "toSide": "top",
+      "label": "after 250ms",
+      "pv": {
+        "edgeType": "trigger"
+      }
+    },
+    {
+      "id": "cache-to-rebuild",
+      "fromNode": "cache-registry",
+      "fromSide": "bottom",
+      "toNode": "cache-rebuild",
+      "toSide": "top",
+      "label": "rebuild",
+      "pv": {
+        "edgeType": "cache-rebuild"
+      }
+    },
+    {
+      "id": "rebuild-to-sync-event",
+      "fromNode": "cache-rebuild",
+      "fromSide": "right",
+      "toNode": "cache-sync-event",
+      "toSide": "left",
+      "label": "emit with fresh data",
+      "pv": {
+        "edgeType": "ipc-event"
+      }
+    },
+    {
+      "id": "workspace-event-to-preload",
+      "fromNode": "workspace-changed-event",
+      "fromSide": "right",
+      "toNode": "preload-bridge",
+      "toSide": "top",
+      "label": "workspace:changed",
+      "pv": {
+        "edgeType": "ipc-event"
+      }
+    },
+    {
+      "id": "cache-sync-to-preload",
+      "fromNode": "cache-sync-event",
+      "fromSide": "right",
+      "toNode": "preload-bridge",
+      "toSide": "bottom",
+      "label": "CACHE_SYNC",
+      "pv": {
+        "edgeType": "ipc-event"
+      }
+    },
+    {
+      "id": "preload-to-service",
+      "fromNode": "preload-bridge",
+      "fromSide": "right",
+      "toNode": "repo-monitoring-service",
+      "toSide": "left",
+      "label": "exposes API",
+      "pv": {
+        "edgeType": "subscription"
+      }
+    },
+    {
+      "id": "service-to-refresh",
+      "fromNode": "repo-monitoring-service",
+      "fromSide": "bottom",
+      "toNode": "refresh-repository",
+      "toSide": "top",
+      "label": "provides method",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "refresh-to-cache",
+      "fromNode": "refresh-repository",
+      "fromSide": "left",
+      "toNode": "cache-registry",
+      "toSide": "right",
+      "label": "IPC invoke",
+      "pv": {
+        "edgeType": "ipc-invoke"
+      }
+    },
+    {
+      "id": "service-to-context",
+      "fromNode": "repo-monitoring-service",
+      "fromSide": "bottom",
+      "toNode": "repository-panel-context",
+      "toSide": "top",
+      "label": "used by",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "context-to-ui",
+      "fromNode": "repository-panel-context",
+      "fromSide": "right",
+      "toNode": "file-tree-ui",
+      "toSide": "left",
+      "label": "provides fileTreeData",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    }
+  ]
+}

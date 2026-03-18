@@ -1,0 +1,1158 @@
+{
+  "pv": {
+    "name": "App Updates",
+    "version": "1.0.0",
+    "description": "Electron auto-update system using electron-updater with GitHub releases",
+    "markdown": ".principal-views/app-updates/app-updates.md",
+    "scope": "principal-ade-main",
+    "nodeTypes": {
+      "ui-component": {
+        "label": "UI Component",
+        "color": "#3B82F6"
+      },
+      "renderer-service": {
+        "label": "Renderer Service",
+        "color": "#8B5CF6"
+      },
+      "ipc-bridge": {
+        "label": "IPC Bridge",
+        "color": "#F59E0B"
+      },
+      "main-process": {
+        "label": "Main Process",
+        "color": "#22C55E"
+      },
+      "external-service": {
+        "label": "External Service",
+        "color": "#64748B"
+      },
+      "user-action": {
+        "label": "User Action",
+        "color": "#EC4899"
+      },
+      "boundary": {
+        "label": "Boundary",
+        "color": "#94A3B8"
+      },
+      "event": {
+        "label": "Event",
+        "color": "#3B82F6"
+      }
+    },
+    "edgeTypes": {
+      "user-interaction": {
+        "label": "User Interaction",
+        "style": "solid",
+        "color": "#EC4899"
+      },
+      "ipc-send": {
+        "label": "IPC Send",
+        "style": "solid",
+        "color": "#F59E0B"
+      },
+      "ipc-receive": {
+        "label": "IPC Receive",
+        "style": "dashed",
+        "color": "#F59E0B"
+      },
+      "function-call": {
+        "label": "Function Call",
+        "style": "solid",
+        "color": "#3B82F6"
+      },
+      "http-request": {
+        "label": "HTTP Request",
+        "style": "solid",
+        "color": "#22C55E"
+      },
+      "event-emit": {
+        "label": "Event Emit",
+        "style": "dashed",
+        "color": "#8B5CF6"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "x": 300,
+      "y": -100,
+      "width": 500,
+      "height": 60,
+      "color": "#64748B",
+      "text": "# App Updates System\n**Electron auto-update via electron-updater + GitHub Releases**"
+    },
+    {
+      "id": "settings-modal",
+      "type": "text",
+      "x": 50,
+      "y": 50,
+      "width": 220,
+      "height": 100,
+      "text": "UpdatesSettings\n(Settings Modal)\nShows version, status,\ndownload progress",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
+        ],
+        "otel": {
+          "files": ["src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"]
+        },
+        "event": {
+          "name": "app_updates.ui.settings_opened",
+          "description": "User opened the Updates settings panel",
+          "attributes": {
+            "current_version": {
+              "type": "string",
+              "description": "Currently installed app version"
+            },
+            "is_dev_mode": {
+              "type": "boolean",
+              "description": "Whether running in development mode"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "check-button",
+      "type": "text",
+      "x": 50,
+      "y": 180,
+      "width": 220,
+      "height": 80,
+      "text": "Check for Updates\nButton\n(Manual trigger)",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
+        ],
+        "otel": {
+          "files": ["src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"]
+        },
+        "event": {
+          "name": "app_updates.user.check_requested",
+          "description": "User clicked the Check for Updates button",
+          "attributes": {
+            "trigger": {
+              "type": "string",
+              "description": "How the check was triggered: manual, silent, periodic"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "version-service",
+      "type": "text",
+      "x": 320,
+      "y": 50,
+      "width": 220,
+      "height": 100,
+      "text": "AppVersionManagerService\n(Renderer API)\nWraps IPC calls for\nReact components",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/renderer/main-process-api/AppVersionManagerService.ts"
+        ],
+        "event": {
+          "name": "app_updates.service.method_called",
+          "description": "AppVersionManagerService method invoked",
+          "attributes": {
+            "method": {
+              "type": "string",
+              "description": "Method name: checkForUpdate, downloadUpdate, installUpdate"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ipc-bridge",
+      "type": "text",
+      "x": 320,
+      "y": 179,
+      "width": 220,
+      "height": 100,
+      "text": "IPC Bridge\n(appVersionManagerApi)\nipcRenderer.send()\nipcRenderer.on()",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/window/main-process-api-implementations/appVersionManagerApi.ts"
+        ],
+        "event": {
+          "name": "app_updates.ipc.message_sent",
+          "description": "IPC message sent from renderer to main",
+          "attributes": {
+            "channel": {
+              "type": "string",
+              "description": "IPC channel name"
+            },
+            "direction": {
+              "type": "string",
+              "description": "Direction: renderer_to_main or main_to_renderer"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "app-version-manager",
+      "type": "text",
+      "x": 590,
+      "y": 50,
+      "width": 220,
+      "height": 100,
+      "text": "AppVersionManager\n(Main Process)\nHandles IPC, configures\nautoUpdater",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/main/AppVersionManager.ts"
+        ],
+        "otel": {
+          "files": ["src/main/AppVersionManager.ts"]
+        },
+        "event": {
+          "name": "app_updates.manager.initialized",
+          "description": "AppVersionManager initialized and ready to handle updates",
+          "attributes": {
+            "auto_download": {
+              "type": "boolean",
+              "description": "Whether auto-download is enabled"
+            },
+            "auto_install": {
+              "type": "boolean",
+              "description": "Whether auto-install is enabled"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "check-for-updates",
+      "type": "text",
+      "x": 590,
+      "y": 180,
+      "width": 220,
+      "height": 80,
+      "text": "checkForUpdates()\nQueries GitHub releases\nfor new versions",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/main/AppVersionManager.ts"
+        ],
+        "otel": {
+          "files": ["src/main/AppVersionManager.ts"]
+        },
+        "event": {
+          "name": "app_updates.check.started",
+          "description": "Update check initiated",
+          "attributes": {
+            "trigger": {
+              "type": "string",
+              "description": "Trigger type: manual, silent, periodic"
+            },
+            "current_version": {
+              "type": "string",
+              "description": "Current app version"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "github-request",
+      "type": "text",
+      "x": 907,
+      "y": 128,
+      "width": 220,
+      "height": 80,
+      "text": "GitHub HTTP Request\nGET latest-mac.yml\nTracks request timing",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/main/AppVersionManager.ts"
+        ],
+        "otel": {
+          "files": ["src/main/AppVersionManager.ts"]
+        },
+        "event": {
+          "name": "app_updates.github.request_completed",
+          "description": "HTTP request to GitHub completed",
+          "attributes": {
+            "duration_ms": {
+              "type": "number",
+              "description": "Request duration in milliseconds"
+            },
+            "result": {
+              "type": "string",
+              "description": "Result: update_available or update_not_available"
+            },
+            "cached": {
+              "type": "boolean",
+              "description": "Whether the response may have been cached (no checking-for-update event fired)"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "auto-updater",
+      "type": "text",
+      "x": 1229,
+      "y": 50,
+      "width": 220,
+      "height": 100,
+      "text": "electron-updater\n(autoUpdater)\nCore update library\nwith event emitters",
+      "pv": {
+        "nodeType": "boundary",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/main/AppVersionManager.ts"
+        ],
+        "boundary": {
+          "direction": "outbound",
+          "node": {
+            "pv.event.name": "electron-updater.checkForUpdates"
+          }
+        }
+      }
+    },
+    {
+      "id": "github-releases",
+      "type": "text",
+      "x": 1499,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "text": "GitHub Releases\n(principal-ade/\nlanding-page)\nlatest-mac.yml",
+      "pv": {
+        "nodeType": "boundary",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [],
+        "boundary": {
+          "direction": "outbound",
+          "node": {
+            "pv.event.name": "github.releases.fetch"
+          }
+        }
+      }
+    },
+    {
+      "id": "update-available",
+      "type": "text",
+      "x": 1214,
+      "y": 186,
+      "width": 220,
+      "height": 80,
+      "text": "update-available\nevent\nNew version found",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/main/AppVersionManager.ts"
+        ],
+        "otel": {
+          "files": ["src/main/AppVersionManager.ts"]
+        },
+        "event": {
+          "name": "app_updates.check.available",
+          "description": "Update available event received",
+          "attributes": {
+            "available_version": {
+              "type": "string",
+              "description": "New version available"
+            },
+            "current_version": {
+              "type": "string",
+              "description": "Current installed version",
+              "display": false
+            },
+            "release_date": {
+              "type": "string",
+              "description": "Release date of new version",
+              "display": false
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "update-not-available",
+      "type": "text",
+      "x": 1197,
+      "y": 282,
+      "width": 220,
+      "height": 80,
+      "text": "update-not-available\nevent\nAlready on latest",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/main/AppVersionManager.ts"
+        ],
+        "otel": {
+          "files": ["src/main/AppVersionManager.ts"]
+        },
+        "event": {
+          "name": "app_updates.check.not_available",
+          "description": "No update available - already on latest",
+          "attributes": {
+            "current_version": {
+              "type": "string",
+              "description": "Current installed version"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "download-button",
+      "type": "text",
+      "x": 50,
+      "y": 400,
+      "width": 220,
+      "height": 80,
+      "text": "Download Update\nButton\n(Shows when available)",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
+        ],
+        "otel": {
+          "files": ["src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"]
+        },
+        "event": {
+          "name": "app_updates.user.download_requested",
+          "description": "User clicked Download Update button",
+          "attributes": {
+            "available_version": {
+              "type": "string",
+              "description": "Version being downloaded"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "download-update",
+      "type": "text",
+      "x": 590,
+      "y": 400,
+      "width": 220,
+      "height": 80,
+      "text": "downloadUpdate()\nDownloads installer\nfrom GitHub",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/main/AppVersionManager.ts"
+        ],
+        "otel": {
+          "files": ["src/main/AppVersionManager.ts"]
+        },
+        "event": {
+          "name": "app_updates.download.started",
+          "description": "Update download initiated",
+          "attributes": {
+            "version": {
+              "type": "string",
+              "description": "Version being downloaded"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "download-progress",
+      "type": "text",
+      "x": 1197,
+      "y": 402,
+      "width": 220,
+      "height": 80,
+      "text": "download-progress\nevent\nBytes transferred %",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/main/AppVersionManager.ts"
+        ],
+        "otel": {
+          "files": ["src/main/AppVersionManager.ts"]
+        },
+        "event": {
+          "name": "app_updates.download.progress",
+          "description": "Download progress update",
+          "attributes": {
+            "percent": {
+              "type": "number",
+              "description": "Download completion percentage"
+            },
+            "transferred": {
+              "type": "number",
+              "description": "Bytes transferred"
+            },
+            "total": {
+              "type": "number",
+              "description": "Total bytes to download"
+            },
+            "bytes_per_second": {
+              "type": "number",
+              "description": "Download speed"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "progress-bar",
+      "type": "text",
+      "x": 50,
+      "y": 500,
+      "width": 220,
+      "height": 80,
+      "text": "Progress Bar UI\nDownloading... X%\nReal-time updates",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
+        ],
+        "otel": {
+          "files": ["src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"]
+        },
+        "event": {
+          "name": "app_updates.ui.progress_updated",
+          "description": "Progress bar UI updated",
+          "attributes": {
+            "percent": {
+              "type": "number",
+              "description": "Current progress percentage"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "update-downloaded",
+      "type": "text",
+      "x": 1197,
+      "y": 502,
+      "width": 220,
+      "height": 80,
+      "text": "update-downloaded\nevent\nReady to install",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/main/AppVersionManager.ts"
+        ],
+        "otel": {
+          "files": ["src/main/AppVersionManager.ts"]
+        },
+        "event": {
+          "name": "app_updates.download.completed",
+          "description": "Update download completed successfully",
+          "attributes": {
+            "version": {
+              "type": "string",
+              "description": "Downloaded version"
+            },
+            "download_path": {
+              "type": "string",
+              "description": "Path where update was downloaded",
+              "display": false
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "install-button",
+      "type": "text",
+      "x": 50,
+      "y": 620,
+      "width": 220,
+      "height": 80,
+      "text": "Install & Restart\nButton\n(Shows when downloaded)",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
+        ],
+        "otel": {
+          "files": ["src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"]
+        },
+        "event": {
+          "name": "app_updates.user.install_requested",
+          "description": "User clicked Install & Restart button",
+          "attributes": {
+            "version": {
+              "type": "string",
+              "description": "Version to be installed"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "quit-and-install",
+      "type": "text",
+      "x": 590,
+      "y": 620,
+      "width": 220,
+      "height": 80,
+      "text": "quitAndInstall()\nCloses app, installs\nupdate, relaunches",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/main/AppVersionManager.ts"
+        ],
+        "otel": {
+          "files": ["src/main/AppVersionManager.ts"]
+        },
+        "event": {
+          "name": "app_updates.install.started",
+          "description": "Update installation initiated",
+          "attributes": {
+            "version": {
+              "type": "string",
+              "description": "Version being installed"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "app-restart",
+      "type": "text",
+      "x": 1197,
+      "y": 618,
+      "width": 220,
+      "height": 80,
+      "text": "App Restarts\nwith new version\ninstalled",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [],
+        "event": {
+          "name": "app_updates.install.completed",
+          "description": "Update installation completed and app restarted",
+          "attributes": {
+            "new_version": {
+              "type": "string",
+              "description": "Newly installed version"
+            },
+            "previous_version": {
+              "type": "string",
+              "description": "Previous version before update"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "error-handling",
+      "type": "text",
+      "x": 590,
+      "y": 750,
+      "width": 220,
+      "height": 100,
+      "text": "Error Handling\nNetwork, certificate,\nchecksum, timeout\nerrors",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/main/AppVersionManager.ts",
+          "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
+        ],
+        "otel": {
+          "files": ["src/main/AppVersionManager.ts"]
+        },
+        "event": {
+          "name": "app_updates.error.occurred",
+          "description": "Error occurred during update process",
+          "attributes": {
+            "error_type": {
+              "type": "string",
+              "description": "Error type: network, certificate, checksum, timeout, etc."
+            },
+            "error_message": {
+              "type": "string",
+              "description": "Human-readable error message"
+            },
+            "phase": {
+              "type": "string",
+              "description": "Phase where error occurred: check, download, install"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "periodic-check",
+      "type": "text",
+      "x": 590,
+      "y": 280,
+      "width": 220,
+      "height": 80,
+      "text": "Periodic Check\nEvery 60 minutes\n(setInterval)",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/main/AppVersionManager.ts"
+        ],
+        "otel": {
+          "files": ["src/main/AppVersionManager.ts"]
+        },
+        "event": {
+          "name": "app_updates.check.periodic",
+          "description": "Periodic update check triggered",
+          "attributes": {
+            "interval_ms": {
+              "type": "number",
+              "description": "Check interval in milliseconds"
+            },
+            "timeout_ms": {
+              "type": "number",
+              "description": "Check timeout in milliseconds"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "user-triggered-check",
+      "type": "text",
+      "x": 590,
+      "y": 380,
+      "width": 220,
+      "height": 80,
+      "text": "User Triggered Check\nManual or silent\ncheck via TIPC",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/main/AppVersionManager.ts"
+        ],
+        "otel": {
+          "files": ["src/main/AppVersionManager.ts"]
+        },
+        "event": {
+          "name": "app_updates.check.user_triggered",
+          "description": "Manual or silent update check triggered by user action",
+          "attributes": {
+            "trigger": {
+              "type": "string",
+              "description": "Trigger type: manual or silent"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "startup-check",
+      "type": "text",
+      "x": 320,
+      "y": 300,
+      "width": 220,
+      "height": 80,
+      "text": "Startup Check\nApp.tsx calls\ncheckForUpdateSilently()",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/renderer/App.tsx"
+        ],
+        "event": {
+          "name": "app_updates.startup.check_triggered",
+          "description": "Silent update check triggered on app startup",
+          "attributes": {
+            "app_version": {
+              "type": "string",
+              "description": "Current app version at startup"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "dev-mode-note",
+      "type": "text",
+      "x": 50,
+      "y": 290,
+      "width": 220,
+      "height": 100,
+      "text": "**Dev Mode**\nTest Download button\nallows testing without\nauto-install",
+      "color": "#64748B"
+    },
+    {
+      "id": "config-note",
+      "type": "text",
+      "x": 1499,
+      "y": 180,
+      "width": 200,
+      "height": 120,
+      "text": "**Update Config**\nautoDownload: false\nautoInstall: false\nUser controls timing\nof downloads/installs",
+      "color": "#64748B"
+    },
+    {
+      "id": "error-ui",
+      "type": "text",
+      "x": 50,
+      "y": 750,
+      "width": 220,
+      "height": 100,
+      "text": "Error UI\nUser-friendly messages\nfor common failures:\nNetwork, SHA512, etc.",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "implemented",
+        "references": [
+          "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
+        ],
+        "otel": {
+          "files": ["src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"]
+        },
+        "event": {
+          "name": "app_updates.ui.error_displayed",
+          "description": "Error message displayed to user",
+          "attributes": {
+            "error_type": {
+              "type": "string",
+              "description": "Type of error displayed",
+              "display": false
+            },
+            "user_message": {
+              "type": "string",
+              "description": "User-friendly error message"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "settings-to-service",
+      "fromNode": "settings-modal",
+      "fromSide": "right",
+      "toNode": "version-service",
+      "toSide": "left",
+      "label": "uses service",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "check-button-to-service",
+      "fromNode": "check-button",
+      "fromSide": "right",
+      "toNode": "version-service",
+      "toSide": "left",
+      "label": "checkForUpdate()",
+      "pv": {
+        "edgeType": "user-interaction"
+      }
+    },
+    {
+      "id": "service-to-ipc",
+      "fromNode": "version-service",
+      "fromSide": "bottom",
+      "toNode": "ipc-bridge",
+      "toSide": "top",
+      "label": "ipcRenderer.send()",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "ipc-to-manager",
+      "fromNode": "ipc-bridge",
+      "fromSide": "right",
+      "toNode": "app-version-manager",
+      "toSide": "left",
+      "label": "IPC message",
+      "pv": {
+        "edgeType": "ipc-send"
+      }
+    },
+    {
+      "id": "manager-to-check",
+      "fromNode": "app-version-manager",
+      "fromSide": "bottom",
+      "toNode": "check-for-updates",
+      "toSide": "top",
+      "label": "handles IPC",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "manager-to-autoupdater",
+      "fromNode": "app-version-manager",
+      "fromSide": "right",
+      "toNode": "auto-updater",
+      "toSide": "left",
+      "label": "configures",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "autoupdater-to-github",
+      "fromNode": "auto-updater",
+      "fromSide": "right",
+      "toNode": "github-releases",
+      "toSide": "left",
+      "label": "HTTPS GET",
+      "pv": {
+        "edgeType": "http-request"
+      }
+    },
+    {
+      "id": "check-to-github-request",
+      "fromNode": "check-for-updates",
+      "fromSide": "right",
+      "toNode": "github-request",
+      "toSide": "left",
+      "label": "HTTP request",
+      "pv": {
+        "edgeType": "http-request"
+      }
+    },
+    {
+      "id": "github-request-to-available",
+      "fromNode": "github-request",
+      "fromSide": "right",
+      "toNode": "update-available",
+      "toSide": "left",
+      "label": "if newer version",
+      "pv": {
+        "edgeType": "event-emit"
+      }
+    },
+    {
+      "id": "github-request-to-not-available",
+      "fromNode": "github-request",
+      "fromSide": "right",
+      "toNode": "update-not-available",
+      "toSide": "left",
+      "label": "if latest",
+      "pv": {
+        "edgeType": "event-emit"
+      }
+    },
+    {
+      "id": "available-to-ipc",
+      "fromNode": "update-available",
+      "fromSide": "left",
+      "toNode": "ipc-bridge",
+      "toSide": "right",
+      "label": "sendToWindow()",
+      "pv": {
+        "edgeType": "ipc-receive"
+      }
+    },
+    {
+      "id": "not-available-to-ipc",
+      "fromNode": "update-not-available",
+      "fromSide": "left",
+      "toNode": "ipc-bridge",
+      "toSide": "right",
+      "label": "sendToWindow()",
+      "pv": {
+        "edgeType": "ipc-receive"
+      }
+    },
+    {
+      "id": "download-button-to-service",
+      "fromNode": "download-button",
+      "fromSide": "right",
+      "toNode": "version-service",
+      "toSide": "left",
+      "label": "downloadUpdate()",
+      "pv": {
+        "edgeType": "user-interaction"
+      }
+    },
+    {
+      "id": "service-to-download",
+      "fromNode": "version-service",
+      "fromSide": "bottom",
+      "toNode": "download-update",
+      "toSide": "top",
+      "label": "via IPC",
+      "pv": {
+        "edgeType": "ipc-send"
+      }
+    },
+    {
+      "id": "download-to-progress",
+      "fromNode": "download-update",
+      "fromSide": "right",
+      "toNode": "download-progress",
+      "toSide": "left",
+      "label": "emits progress",
+      "pv": {
+        "edgeType": "event-emit"
+      }
+    },
+    {
+      "id": "progress-to-ui",
+      "fromNode": "download-progress",
+      "fromSide": "left",
+      "toNode": "progress-bar",
+      "toSide": "right",
+      "label": "via IPC",
+      "pv": {
+        "edgeType": "ipc-receive"
+      }
+    },
+    {
+      "id": "download-to-downloaded",
+      "fromNode": "download-update",
+      "fromSide": "bottom",
+      "toNode": "update-downloaded",
+      "toSide": "top",
+      "label": "on complete",
+      "pv": {
+        "edgeType": "event-emit"
+      }
+    },
+    {
+      "id": "install-button-to-service",
+      "fromNode": "install-button",
+      "fromSide": "right",
+      "toNode": "version-service",
+      "toSide": "left",
+      "label": "installUpdate()",
+      "pv": {
+        "edgeType": "user-interaction"
+      }
+    },
+    {
+      "id": "service-to-install",
+      "fromNode": "version-service",
+      "fromSide": "bottom",
+      "toNode": "quit-and-install",
+      "toSide": "top",
+      "label": "via IPC",
+      "pv": {
+        "edgeType": "ipc-send"
+      }
+    },
+    {
+      "id": "install-to-restart",
+      "fromNode": "quit-and-install",
+      "fromSide": "right",
+      "toNode": "app-restart",
+      "toSide": "left",
+      "label": "quitAndInstall()",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "startup-to-check",
+      "fromNode": "startup-check",
+      "fromSide": "right",
+      "toNode": "check-for-updates",
+      "toSide": "left",
+      "label": "silent check",
+      "pv": {
+        "edgeType": "ipc-send"
+      }
+    },
+    {
+      "id": "periodic-to-check",
+      "fromNode": "periodic-check",
+      "fromSide": "top",
+      "toNode": "check-for-updates",
+      "toSide": "bottom",
+      "label": "every hour",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "user-triggered-to-check",
+      "fromNode": "user-triggered-check",
+      "fromSide": "top",
+      "toNode": "check-for-updates",
+      "toSide": "bottom",
+      "label": "manual/silent",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "error-to-ui",
+      "fromNode": "error-handling",
+      "fromSide": "left",
+      "toNode": "error-ui",
+      "toSide": "right",
+      "label": "via IPC",
+      "pv": {
+        "edgeType": "ipc-receive"
+      }
+    },
+    {
+      "id": "download-to-error",
+      "fromNode": "download-update",
+      "fromSide": "bottom",
+      "toNode": "error-handling",
+      "toSide": "top",
+      "label": "on failure",
+      "pv": {
+        "edgeType": "event-emit"
+      }
+    },
+    {
+      "id": "check-to-error",
+      "fromNode": "check-for-updates",
+      "fromSide": "bottom",
+      "toNode": "error-handling",
+      "toSide": "top",
+      "label": "on failure",
+      "pv": {
+        "edgeType": "event-emit"
+      }
+    }
+  ]
+}

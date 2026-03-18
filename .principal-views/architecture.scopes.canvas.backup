@@ -8,226 +8,274 @@
   "nodes": [
     {
       "id": "principal-ade-main",
-      "type": "otel-scope",
+      "type": "text",
       "x": 0,
       "y": 0,
       "width": 400,
       "height": 280,
       "color": "#4F46E5",
-      "label": "Main Process",
-      "description": "Electron main process - Node.js runtime handling IPC, services, and system operations",
-      "otel": {
-        "scope": "principal-ade-main"
+      "text": "**Main Process**\nElectron main process (Node.js)\n\n*Span namespaces:*\n`window.*` `project.*` `fs.*`\n`app.update.*` `mcp.*`\n`terminal.session.*`\n`ipc.handle.*`",
+      "pv": {
+        "nodeType": "scope",
+        "description": "Electron main process - Node.js runtime handling IPC, services, and system operations",
+        "otel": {
+          "scope": "principal-ade-main"
+        }
       }
     },
     {
       "id": "principal-ade-principal-window",
-      "type": "otel-scope",
+      "type": "text",
       "x": 60,
       "y": -355,
       "width": 280,
       "height": 140,
       "color": "#7C3AED",
-      "label": "Principal Window",
-      "description": "Principal Window - main app shell with auth, workspaces, settings",
-      "otel": {
-        "scope": "principal-ade-principal-window"
+      "text": "**Principal Window**\nMain app shell\n\n*Span namespaces:*\n`ipc.invoke.*`",
+      "pv": {
+        "nodeType": "scope",
+        "description": "Principal Window - main app shell with auth, workspaces, settings",
+        "otel": {
+          "scope": "principal-ade-principal-window"
+        }
       }
     },
     {
       "id": "principal-ade-dev-workspace",
-      "type": "otel-scope",
+      "type": "text",
       "x": 391,
       "y": -356,
       "width": 280,
       "height": 140,
       "color": "#8B5CF6",
-      "label": "Dev Workspace",
-      "description": "Dev Workspace - development environment with panels and terminal",
-      "otel": {
-        "scope": "principal-ade-dev-workspace"
+      "text": "**Dev Workspace**\nDevelopment environment\n\n*Span namespaces:*\n`devworkspace.*` `terminal.panel.*`",
+      "pv": {
+        "nodeType": "scope",
+        "description": "Dev Workspace - development environment with panels and terminal",
+        "otel": {
+          "scope": "principal-ade-dev-workspace"
+        }
       }
     },
     {
       "id": "principal-ade-alexandria",
-      "type": "otel-scope",
+      "type": "text",
       "x": -269,
       "y": -356,
       "width": 280,
       "height": 140,
       "color": "#A855F7",
-      "label": "Alexandria",
-      "description": "Alexandria Workspace - knowledge base and code exploration",
-      "otel": {
-        "scope": "principal-ade-alexandria"
+      "text": "**Alexandria**\nKnowledge workspace\n\n*Span namespaces:*\n`alexandria.*` `quality.panel.*`",
+      "pv": {
+        "nodeType": "scope",
+        "description": "Alexandria Workspace - knowledge base and code exploration",
+        "otel": {
+          "scope": "principal-ade-alexandria"
+        }
       }
     },
     {
       "id": "principal-ade-event-processor",
-      "type": "otel-scope",
+      "type": "text",
       "x": -235,
       "y": 420,
       "width": 280,
       "height": 140,
       "color": "#F59E0B",
-      "label": "Event Processor",
-      "description": "Event Processing Server - utility process for agent session events",
-      "otel": {
-        "scope": "principal-ade-event-processor"
+      "text": "**Event Processor**\nUtility process (Node.js)\n\n*Span namespaces:*\n`event.*` `agent.*`",
+      "pv": {
+        "nodeType": "scope",
+        "description": "Event Processing Server - utility process for agent session events",
+        "otel": {
+          "scope": "principal-ade-event-processor"
+        }
       }
     },
     {
       "id": "principal-ade-repo-monitor",
-      "type": "otel-scope",
+      "type": "text",
       "x": 100,
       "y": 437,
       "width": 200,
       "height": 100,
       "color": "#14B8A6",
-      "label": "Repo Monitor",
-      "description": "Repository Monitoring Server - utility process for file watching and cache building",
-      "otel": {
-        "scope": "principal-ade-repo-monitor"
+      "text": "**Repo Monitor**\nUtility process (Node.js)",
+      "pv": {
+        "nodeType": "scope",
+        "description": "Repository Monitoring Server - utility process for file watching and cache building",
+        "otel": {
+          "scope": "principal-ade-repo-monitor"
+        }
       }
     },
     {
       "id": "principal-ade-terminal-worker",
-      "type": "otel-scope",
+      "type": "text",
       "x": 340,
       "y": 412,
       "width": 220,
       "height": 80,
       "color": "#6366F1",
-      "label": "Terminal Worker",
-      "description": "Terminal session router - bridges main process to PTY daemon or manages PTYs directly",
-      "otel": {
-        "scope": "principal-ade-terminal-worker"
+      "text": "**Terminal Worker**\nUtility process (Node.js)\n\n*No telemetry yet*",
+      "pv": {
+        "nodeType": "scope",
+        "description": "Terminal session router - bridges main process to PTY daemon or manages PTYs directly",
+        "otel": {
+          "scope": "principal-ade-terminal-worker"
+        }
       }
     },
     {
       "id": "principal-ade-cli-bridge",
-      "type": "otel-scope",
+      "type": "text",
       "x": -467,
       "y": 420,
       "width": 200,
       "height": 80,
       "color": "#6366F1",
-      "label": "CLI Bridge",
-      "description": "CLI command executor - runs git, npm, and other CLI tools in isolated workers",
-      "otel": {
-        "scope": "principal-ade-cli-bridge"
+      "text": "**CLI Bridge**\nUtility process (Node.js)\n\n*No telemetry yet*",
+      "pv": {
+        "nodeType": "scope",
+        "description": "CLI command executor - runs git, npm, and other CLI tools in isolated workers",
+        "otel": {
+          "scope": "principal-ade-cli-bridge"
+        }
       }
     },
     {
       "id": "principal-ade-daemon",
-      "type": "otel-scope",
+      "type": "text",
       "x": 250,
       "y": 662,
       "width": 400,
       "height": 200,
       "color": "#0D9488",
-      "label": "PTY Daemon",
-      "description": "Standalone PTY daemon process managing persistent terminal sessions via Unix socket",
-      "otel": {
-        "scope": "principal-ade-daemon"
+      "text": "**PTY Daemon**\nStandalone Node.js process\n\n*Span namespaces:*\n`terminal.daemon.*`\n`terminal.pty.*`",
+      "pv": {
+        "nodeType": "scope",
+        "description": "Standalone PTY daemon process managing persistent terminal sessions via Unix socket",
+        "otel": {
+          "scope": "principal-ade-daemon"
+        }
       }
     },
     {
       "id": "principal-ade-storybook",
-      "type": "otel-scope",
+      "type": "text",
       "x": 1270,
       "y": -3,
       "width": 300,
       "height": 120,
       "color": "#EC4899",
-      "label": "Storybook",
-      "description": "Storybook development environment for UI components",
-      "otel": {
-        "scope": "principal-ade-storybook"
+      "text": "**Storybook**\nUI component dev environment\n\n*For development only*",
+      "pv": {
+        "nodeType": "scope",
+        "description": "Storybook development environment for UI components",
+        "otel": {
+          "scope": "principal-ade-storybook"
+        }
       }
     },
     {
       "id": "principal-ade-tests",
-      "type": "otel-scope",
+      "type": "text",
       "x": 1271,
       "y": 159,
       "width": 300,
       "height": 120,
       "color": "#F59E0B",
-      "label": "Test Runner",
-      "description": "Integration test suite runner",
-      "otel": {
-        "scope": "principal-ade-tests"
+      "text": "**Test Runner**\nIntegration test suite\n\n*For testing only*",
+      "pv": {
+        "nodeType": "scope",
+        "description": "Integration test suite runner",
+        "otel": {
+          "scope": "principal-ade-tests"
+        }
       }
     },
     {
       "id": "external-github",
-      "type": "otel-scope",
+      "type": "text",
       "x": 818,
       "y": 25,
       "width": 300,
       "height": 100,
       "color": "#64748B",
-      "label": "GitHub API",
-      "description": "External GitHub API - trace context via W3C traceparent headers",
-      "otel": {
-        "scope": "external"
+      "text": "**GitHub API**\nExternal service\n\n*W3C trace context headers*",
+      "pv": {
+        "nodeType": "scope",
+        "description": "External GitHub API - trace context via W3C traceparent headers",
+        "otel": {
+          "scope": "external"
+        }
       }
     },
     {
       "id": "external-agents",
-      "type": "otel-scope",
+      "type": "text",
       "x": 818,
       "y": 154,
       "width": 300,
       "height": 100,
       "color": "#64748B",
-      "label": "Agent Connections",
-      "description": "External agent connections via event server",
-      "otel": {
-        "scope": "external"
+      "text": "**Agent Connections**\nExternal HTTP clients\n\n*W3C trace context headers*",
+      "pv": {
+        "nodeType": "scope",
+        "description": "External agent connections via event server",
+        "otel": {
+          "scope": "external"
+        }
       }
     },
     {
       "id": "external-auth-server",
-      "type": "otel-scope",
+      "type": "text",
       "x": 818,
       "y": 280,
       "width": 300,
       "height": 100,
       "color": "#64748B",
-      "label": "Auth Server",
-      "description": "Principal ADE Auth Server - OAuth flow, JWT tokens, room/orbit/presence tokens",
-      "otel": {
-        "scope": "external"
+      "text": "**Auth Server**\nauth.principal-ade.com\n\nOAuth, tokens, presence",
+      "pv": {
+        "nodeType": "scope",
+        "description": "Principal ADE Auth Server - OAuth flow, JWT tokens, room/orbit/presence tokens",
+        "otel": {
+          "scope": "external"
+        }
       }
     },
     {
       "id": "external-traffic-controller",
-      "type": "otel-scope",
+      "type": "text",
       "x": 818,
       "y": 406,
       "width": 300,
       "height": 100,
       "color": "#64748B",
-      "label": "Traffic Controller",
-      "description": "Repository Traffic Controller - real-time collaboration, git-sync, WebRTC signaling",
-      "otel": {
-        "scope": "external"
+      "text": "**Traffic Controller**\nWebSocket server\n\nCollaboration, WebRTC signaling",
+      "pv": {
+        "nodeType": "scope",
+        "description": "Repository Traffic Controller - real-time collaboration, git-sync, WebRTC signaling",
+        "otel": {
+          "scope": "external"
+        }
       }
     },
     {
       "id": "external-npm-registry",
-      "type": "otel-scope",
+      "type": "text",
       "x": 818,
       "y": 532,
       "width": 300,
       "height": 80,
       "color": "#64748B",
-      "label": "NPM Registry",
-      "description": "NPM Registry - package versions, licenses, vulnerability info",
-      "otel": {
-        "scope": "external"
+      "text": "**NPM Registry**\nregistry.npmjs.org\n\nPackage metadata",
+      "pv": {
+        "nodeType": "scope",
+        "description": "NPM Registry - package versions, licenses, vulnerability info",
+        "otel": {
+          "scope": "external"
+        }
       }
     },
     {

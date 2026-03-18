@@ -80,72 +80,64 @@
     },
     {
       "id": "mcp-client",
-      "type": "text",
+      "type": "otel-event",
       "x": 50,
       "y": 50,
       "width": 200,
       "height": 100,
-      "text": "MCP Client\n(AI Agent Tool)\nClaude Code, Cline,\nOpenCode, etc.",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/principal-mcp/PrincipalMCPBridge.ts"
-        ],
-        "event": {
-          "name": "principal_mcp.client.request_initiated",
-          "description": "External MCP client initiates HTTP request to the bridge",
-          "attributes": {
-            "http.method": {
-              "type": "string",
-              "description": "HTTP method: POST or GET"
-            },
-            "http.url": {
-              "type": "string",
-              "description": "Target endpoint URL"
-            },
-            "client.type": {
-              "type": "string",
-              "description": "Type of MCP client making the request"
-            }
+      "label": "MCP Client",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.client.request_initiated",
+        "description": "External MCP client initiates HTTP request to the bridge",
+        "attributes": {
+          "http.method": {
+            "type": "string",
+            "description": "HTTP method: POST or GET"
+          },
+          "http.url": {
+            "type": "string",
+            "description": "Target endpoint URL"
+          },
+          "client.type": {
+            "type": "string",
+            "description": "Type of MCP client making the request"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "express-server",
-      "type": "text",
+      "type": "otel-event",
       "x": 300,
       "y": 50,
       "width": 220,
       "height": 100,
-      "text": "PrincipalMCPBridge\n(Express Server)\nlocalhost:3044",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/principal-mcp/PrincipalMCPBridge.ts"
-        ],
-        "event": {
-          "name": "principal_mcp.server.request_received",
-          "description": "Express server receives incoming HTTP request",
-          "attributes": {
-            "http.method": {
-              "type": "string",
-              "description": "HTTP method: GET, POST, OPTIONS"
-            },
-            "http.path": {
-              "type": "string",
-              "description": "Request path: /health, /dependencies/resolve"
-            },
-            "server.port": {
-              "type": "number",
-              "description": "Server port: 3044"
-            }
+      "label": "PrincipalMCPBridge",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.server.request_received",
+        "description": "Express server receives incoming HTTP request",
+        "attributes": {
+          "http.method": {
+            "type": "string",
+            "description": "HTTP method: GET, POST, OPTIONS"
+          },
+          "http.path": {
+            "type": "string",
+            "description": "Request path: /health, /dependencies/resolve"
+          },
+          "server.port": {
+            "type": "number",
+            "description": "Server port: 3044"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
@@ -160,490 +152,438 @@
     },
     {
       "id": "health-route",
-      "type": "text",
+      "type": "otel-event",
       "x": 570,
       "y": 50,
       "width": 200,
       "height": 100,
-      "text": "GET /health\nReturns server status,\ntimestamp, port",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/principal-mcp/PrincipalMCPBridge.ts"
-        ],
-        "event": {
-          "name": "principal_mcp.health.checked",
-          "description": "Health check endpoint invoked",
-          "attributes": {
-            "health.status": {
-              "type": "string",
-              "description": "Health status: ok"
-            },
-            "health.timestamp": {
-              "type": "number",
-              "description": "Server timestamp"
-            },
-            "health.port": {
-              "type": "number",
-              "description": "Server port"
-            }
+      "label": "GET /health",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.health.checked",
+        "description": "Health check endpoint invoked",
+        "attributes": {
+          "health.status": {
+            "type": "string",
+            "description": "Health status: ok"
+          },
+          "health.timestamp": {
+            "type": "number",
+            "description": "Server timestamp"
+          },
+          "health.port": {
+            "type": "number",
+            "description": "Server port"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "resolve-route",
-      "type": "text",
+      "type": "otel-event",
       "x": 570,
       "y": 180,
       "width": 220,
       "height": 100,
-      "text": "POST /dependencies/resolve\nResolves dependency info\nvia repository monitoring",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/principal-mcp/PrincipalMCPBridge.ts"
-        ],
-        "event": {
-          "name": "principal_mcp.dependency.resolve_requested",
-          "description": "Dependency resolution endpoint called",
-          "attributes": {
-            "dependency.id": {
-              "type": "string",
-              "description": "Dependency identifier to resolve"
-            },
-            "repository.root": {
-              "type": "string",
-              "description": "Repository root path (optional)"
-            }
+      "label": "POST /dependencies/resolve",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.dependency.resolve_requested",
+        "description": "Dependency resolution endpoint called",
+        "attributes": {
+          "dependency.id": {
+            "type": "string",
+            "description": "Dependency identifier to resolve"
+          },
+          "repository.root": {
+            "type": "string",
+            "description": "Repository root path (optional)"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "repo-monitoring-calling",
-      "type": "text",
+      "type": "otel-event",
       "x": 840,
       "y": 100,
       "width": 220,
       "height": 60,
-      "text": "Calling Repo Monitoring\nManager",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/principal-mcp/PrincipalMCPBridge.ts"
-        ],
-        "otel": {
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
-        },
-        "event": {
-          "name": "principal_mcp.repo_monitoring.calling",
-          "description": "About to call repository monitoring manager",
-          "attributes": {
-            "dependency.id": {
-              "type": "string",
-              "description": "Dependency ID being resolved"
-            },
-            "has_repository_root": {
-              "type": "boolean",
-              "description": "Whether repository root was provided"
-            }
+      "label": "Calling Repo Monitoring",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.repo_monitoring.calling",
+        "description": "About to call repository monitoring manager",
+        "attributes": {
+          "dependency.id": {
+            "type": "string",
+            "description": "Dependency ID being resolved"
+          },
+          "has_repository_root": {
+            "type": "boolean",
+            "description": "Whether repository root was provided"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ]
       }
     },
     {
       "id": "repo-monitoring-result",
-      "type": "text",
+      "type": "otel-event",
       "x": 840,
       "y": 180,
       "width": 220,
       "height": 60,
-      "text": "Result Received\nfrom Monitoring",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/principal-mcp/PrincipalMCPBridge.ts"
-        ],
-        "otel": {
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
-        },
-        "event": {
-          "name": "principal_mcp.repo_monitoring.result_received",
-          "description": "Raw result received from monitoring manager",
-          "attributes": {
-            "dependency.id": {
-              "type": "string",
-              "description": "Dependency ID"
-            },
-            "found": {
-              "type": "boolean",
-              "description": "Whether dependency was found"
-            },
-            "has_alexandria_entry": {
-              "type": "boolean",
-              "description": "Has Alexandria registry entry"
-            },
-            "has_package_info": {
-              "type": "boolean",
-              "description": "Has package.json info"
-            },
-            "has_suggestions": {
-              "type": "boolean",
-              "description": "Has install suggestions"
-            }
+      "label": "Result Received",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.repo_monitoring.result_received",
+        "description": "Raw result received from monitoring manager",
+        "attributes": {
+          "dependency.id": {
+            "type": "string",
+            "description": "Dependency ID"
+          },
+          "found": {
+            "type": "boolean",
+            "description": "Whether dependency was found"
+          },
+          "has_alexandria_entry": {
+            "type": "boolean",
+            "description": "Has Alexandria registry entry"
+          },
+          "has_package_info": {
+            "type": "boolean",
+            "description": "Has package.json info"
+          },
+          "has_suggestions": {
+            "type": "boolean",
+            "description": "Has install suggestions"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ]
       }
     },
     {
       "id": "resolution-alexandria-found",
-      "type": "text",
+      "type": "otel-event",
       "x": 1100,
       "y": 100,
       "width": 200,
       "height": 60,
-      "text": "Found in Alexandria\nRegistry",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/principal-mcp/PrincipalMCPBridge.ts"
-        ],
-        "otel": {
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
-        },
-        "event": {
-          "name": "principal_mcp.resolution.alexandria_found",
-          "description": "Dependency found in Alexandria registry",
-          "attributes": {
-            "dependency.id": {
-              "type": "string",
-              "description": "Dependency ID"
-            },
-            "alexandria.name": {
-              "type": "string",
-              "description": "Repository name"
-            },
-            "alexandria.path": {
-              "type": "string",
-              "description": "Local path"
-            },
-            "alexandria.remote_url": {
-              "type": "string",
-              "description": "Remote URL"
-            },
-            "alexandria.last_commit_hash": {
-              "type": "string",
-              "description": "Last commit hash"
-            }
+      "label": "Found in Alexandria",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.resolution.alexandria_found",
+        "description": "Dependency found in Alexandria registry",
+        "attributes": {
+          "dependency.id": {
+            "type": "string",
+            "description": "Dependency ID"
+          },
+          "alexandria.name": {
+            "type": "string",
+            "description": "Repository name"
+          },
+          "alexandria.path": {
+            "type": "string",
+            "description": "Local path"
+          },
+          "alexandria.remote_url": {
+            "type": "string",
+            "description": "Remote URL"
+          },
+          "alexandria.last_commit_hash": {
+            "type": "string",
+            "description": "Last commit hash"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ]
       }
     },
     {
       "id": "resolution-alexandria-not-found",
-      "type": "text",
+      "type": "otel-event",
       "x": 1100,
       "y": 180,
       "width": 200,
       "height": 60,
-      "text": "Not in Alexandria\nRegistry",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/principal-mcp/PrincipalMCPBridge.ts"
-        ],
-        "otel": {
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
-        },
-        "event": {
-          "name": "principal_mcp.resolution.alexandria_not_found",
-          "description": "Dependency not found in Alexandria registry",
-          "attributes": {
-            "dependency.id": {
-              "type": "string",
-              "description": "Dependency ID"
-            }
+      "label": "Not in Alexandria",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.resolution.alexandria_not_found",
+        "description": "Dependency not found in Alexandria registry",
+        "attributes": {
+          "dependency.id": {
+            "type": "string",
+            "description": "Dependency ID"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ]
       }
     },
     {
       "id": "resolution-package-found",
-      "type": "text",
+      "type": "otel-event",
       "x": 1100,
       "y": 260,
       "width": 200,
       "height": 60,
-      "text": "Found in Package\nDependencies",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/principal-mcp/PrincipalMCPBridge.ts"
-        ],
-        "otel": {
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
-        },
-        "event": {
-          "name": "principal_mcp.resolution.package_found",
-          "description": "Dependency found in package.json",
-          "attributes": {
-            "dependency.id": {
-              "type": "string",
-              "description": "Dependency ID"
-            },
-            "package.name": {
-              "type": "string",
-              "description": "Package name"
-            },
-            "package.version": {
-              "type": "string",
-              "description": "Package version"
-            },
-            "package.path": {
-              "type": "string",
-              "description": "Package path"
-            },
-            "package.is_dev_dependency": {
-              "type": "boolean",
-              "description": "Is dev dependency"
-            }
+      "label": "Found in Package",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.resolution.package_found",
+        "description": "Dependency found in package.json",
+        "attributes": {
+          "dependency.id": {
+            "type": "string",
+            "description": "Dependency ID"
+          },
+          "package.name": {
+            "type": "string",
+            "description": "Package name"
+          },
+          "package.version": {
+            "type": "string",
+            "description": "Package version"
+          },
+          "package.path": {
+            "type": "string",
+            "description": "Package path"
+          },
+          "package.is_dev_dependency": {
+            "type": "boolean",
+            "description": "Is dev dependency"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ]
       }
     },
     {
       "id": "resolution-package-not-found",
-      "type": "text",
+      "type": "otel-event",
       "x": 1100,
       "y": 340,
       "width": 200,
       "height": 60,
-      "text": "Not in Package\nDependencies",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/principal-mcp/PrincipalMCPBridge.ts"
-        ],
-        "otel": {
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
-        },
-        "event": {
-          "name": "principal_mcp.resolution.package_not_found",
-          "description": "Dependency not found in package.json",
-          "attributes": {
-            "dependency.id": {
-              "type": "string",
-              "description": "Dependency ID"
-            }
+      "label": "Not in Package",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.resolution.package_not_found",
+        "description": "Dependency not found in package.json",
+        "attributes": {
+          "dependency.id": {
+            "type": "string",
+            "description": "Dependency ID"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ]
       }
     },
     {
       "id": "resolution-suggestions",
-      "type": "text",
+      "type": "otel-event",
       "x": 1100,
       "y": 420,
       "width": 200,
       "height": 60,
-      "text": "Install Suggestions\nGenerated",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/principal-mcp/PrincipalMCPBridge.ts"
-        ],
-        "otel": {
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
-        },
-        "event": {
-          "name": "principal_mcp.resolution.suggestions_generated",
-          "description": "Install suggestions generated for not-found dependency",
-          "attributes": {
-            "dependency.id": {
-              "type": "string",
-              "description": "Dependency ID"
-            },
-            "suggestions.install_commands": {
-              "type": "string",
-              "description": "Suggested install commands"
-            },
-            "suggestions.target_package": {
-              "type": "string",
-              "description": "Target package"
-            },
-            "suggestions.package_manager": {
-              "type": "string",
-              "description": "Package manager"
-            }
+      "label": "Install Suggestions",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.resolution.suggestions_generated",
+        "description": "Install suggestions generated for not-found dependency",
+        "attributes": {
+          "dependency.id": {
+            "type": "string",
+            "description": "Dependency ID"
+          },
+          "suggestions.install_commands": {
+            "type": "string",
+            "description": "Suggested install commands"
+          },
+          "suggestions.target_package": {
+            "type": "string",
+            "description": "Target package"
+          },
+          "suggestions.package_manager": {
+            "type": "string",
+            "description": "Package manager"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ]
       }
     },
     {
       "id": "resolution-no-suggestions",
-      "type": "text",
+      "type": "otel-event",
       "x": 1100,
       "y": 500,
       "width": 200,
       "height": 60,
-      "text": "No Suggestions\nAvailable",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/principal-mcp/PrincipalMCPBridge.ts"
-        ],
-        "otel": {
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
-        },
-        "event": {
-          "name": "principal_mcp.resolution.no_suggestions",
-          "description": "No install suggestions available for not-found dependency",
-          "attributes": {
-            "dependency.id": {
-              "type": "string",
-              "description": "Dependency ID"
-            }
+      "label": "No Suggestions",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.resolution.no_suggestions",
+        "description": "No install suggestions available for not-found dependency",
+        "attributes": {
+          "dependency.id": {
+            "type": "string",
+            "description": "Dependency ID"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ]
       }
     },
     {
       "id": "error-validation-failed",
-      "type": "text",
+      "type": "otel-event",
       "x": 570,
       "y": 310,
       "width": 200,
       "height": 60,
-      "text": "Validation Failed\n(missing dependencyId)",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/principal-mcp/PrincipalMCPBridge.ts"
-        ],
-        "otel": {
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
-        },
-        "event": {
-          "name": "principal_mcp.error.validation_failed",
-          "description": "Request validation failed",
-          "attributes": {
-            "error.type": {
-              "type": "string",
-              "description": "Error type: validation_error"
-            },
-            "error.field": {
-              "type": "string",
-              "description": "Field that failed validation"
-            },
-            "error.message": {
-              "type": "string",
-              "description": "Error message"
-            }
+      "label": "Validation Failed",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.error.validation_failed",
+        "description": "Request validation failed",
+        "attributes": {
+          "error.type": {
+            "type": "string",
+            "description": "Error type: validation_error"
+          },
+          "error.field": {
+            "type": "string",
+            "description": "Field that failed validation"
+          },
+          "error.message": {
+            "type": "string",
+            "description": "Error message"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ]
       }
     },
     {
       "id": "error-resolution-failed",
-      "type": "text",
+      "type": "otel-event",
       "x": 840,
       "y": 460,
       "width": 200,
       "height": 60,
-      "text": "Resolution Failed\n(exception thrown)",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/principal-mcp/PrincipalMCPBridge.ts"
-        ],
-        "otel": {
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
-        },
-        "event": {
-          "name": "principal_mcp.error.resolution_failed",
-          "description": "Dependency resolution threw an exception",
-          "attributes": {
-            "dependency.id": {
-              "type": "string",
-              "description": "Dependency ID"
-            },
-            "error.type": {
-              "type": "string",
-              "description": "Error type: resolution_error"
-            },
-            "error.message": {
-              "type": "string",
-              "description": "Error message"
-            }
+      "label": "Resolution Failed",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.error.resolution_failed",
+        "description": "Dependency resolution threw an exception",
+        "attributes": {
+          "dependency.id": {
+            "type": "string",
+            "description": "Dependency ID"
+          },
+          "error.type": {
+            "type": "string",
+            "description": "Error type: resolution_error"
+          },
+          "error.message": {
+            "type": "string",
+            "description": "Error message"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ]
       }
     },
     {
       "id": "repo-monitoring-manager",
-      "type": "text",
+      "type": "otel-event",
       "x": 840,
       "y": 260,
       "width": 220,
       "height": 80,
-      "text": "Final Resolution\nResult",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/principal-mcp/PrincipalMCPBridge.ts"
-        ],
-        "otel": {
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
-        },
-        "event": {
-          "name": "principal_mcp.repo_monitoring.dependency_resolved",
-          "description": "Final dependency resolution status",
-          "attributes": {
-            "dependency.id": {
-              "type": "string",
-              "description": "Resolved dependency ID"
-            },
-            "resolution.success": {
-              "type": "boolean",
-              "description": "Whether resolution succeeded"
-            },
-            "found": {
-              "type": "boolean",
-              "description": "Whether dependency was found"
-            },
-            "source": {
-              "type": "string",
-              "description": "Resolution source: alexandria, package, or none"
-            }
+      "label": "Final Resolution",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.repo_monitoring.dependency_resolved",
+        "description": "Final dependency resolution status",
+        "attributes": {
+          "dependency.id": {
+            "type": "string",
+            "description": "Resolved dependency ID"
+          },
+          "resolution.success": {
+            "type": "boolean",
+            "description": "Whether resolution succeeded"
+          },
+          "found": {
+            "type": "boolean",
+            "description": "Whether dependency was found"
+          },
+          "source": {
+            "type": "string",
+            "description": "Resolution source: alexandria, package, or none"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ]
       }
     },
     {
@@ -688,331 +628,292 @@
     },
     {
       "id": "theme-schema-route",
-      "type": "text",
+      "type": "otel-event",
       "x": 300,
       "y": 620,
       "width": 220,
       "height": 100,
-      "text": "GET /theme/schema\nReturns theme schema,\navailable themes, values",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/principal-mcp/PrincipalMCPBridge.ts"
-        ],
-        "otel": {
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
-        },
-        "event": {
-          "name": "principal_mcp.theme.schema_requested",
-          "description": "Theme schema endpoint called",
-          "attributes": {
-            "theme.target_theme": {
-              "type": "string",
-              "description": "Theme name being queried (defaults to principalAI)"
-            }
+      "label": "GET /theme/schema",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.theme.schema_requested",
+        "description": "Theme schema endpoint called",
+        "attributes": {
+          "theme.target_theme": {
+            "type": "string",
+            "description": "Theme name being queried (defaults to principalAI)"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ]
       }
     },
     {
       "id": "theme-schema-retrieved",
-      "type": "text",
+      "type": "otel-event",
       "x": 570,
       "y": 620,
       "width": 200,
       "height": 100,
-      "text": "Schema Retrieved\nwith theme values\nand available themes",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/principal-mcp/PrincipalMCPBridge.ts",
-          "src/main/theme/themeHandler.ts"
-        ],
-        "otel": {
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
-        },
-        "event": {
-          "name": "principal_mcp.theme.schema_retrieved",
-          "description": "Theme schema successfully retrieved",
-          "attributes": {
-            "theme.name": {
-              "type": "string",
-              "description": "Retrieved theme name"
-            },
-            "theme.schema_properties_count": {
-              "type": "number",
-              "description": "Number of schema properties"
-            },
-            "theme.available_themes_count": {
-              "type": "number",
-              "description": "Number of available themes"
-            }
+      "label": "Schema Retrieved",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.theme.schema_retrieved",
+        "description": "Theme schema successfully retrieved",
+        "attributes": {
+          "theme.name": {
+            "type": "string",
+            "description": "Retrieved theme name"
+          },
+          "theme.schema_properties_count": {
+            "type": "number",
+            "description": "Number of schema properties"
+          },
+          "theme.available_themes_count": {
+            "type": "number",
+            "description": "Number of available themes"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ]
       }
     },
     {
       "id": "theme-not-found-error",
-      "type": "text",
+      "type": "otel-event",
       "x": 570,
       "y": 750,
       "width": 200,
       "height": 60,
-      "text": "Theme Not Found\n(invalid theme name)",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/principal-mcp/PrincipalMCPBridge.ts"
-        ],
-        "otel": {
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
-        },
-        "event": {
-          "name": "principal_mcp.error.theme_not_found",
-          "description": "Requested theme does not exist",
-          "attributes": {
-            "theme.requested": {
-              "type": "string",
-              "description": "Theme name that was requested"
-            },
-            "error.message": {
-              "type": "string",
-              "description": "Error message"
-            }
+      "label": "Theme Not Found",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.error.theme_not_found",
+        "description": "Requested theme does not exist",
+        "attributes": {
+          "theme.requested": {
+            "type": "string",
+            "description": "Theme name that was requested"
+          },
+          "error.message": {
+            "type": "string",
+            "description": "Error message"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ]
       }
     },
     {
       "id": "theme-update-route",
-      "type": "text",
+      "type": "otel-event",
       "x": 300,
       "y": 850,
       "width": 220,
       "height": 100,
-      "text": "POST /theme/update\nPartial updates to\ntheme properties",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/principal-mcp/PrincipalMCPBridge.ts"
-        ],
-        "otel": {
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
-        },
-        "event": {
-          "name": "principal_mcp.theme.update_requested",
-          "description": "Theme update endpoint called",
-          "attributes": {
-            "theme.property_path": {
-              "type": "string",
-              "description": "Property path being updated (e.g., colors.primary)"
-            },
-            "theme.value_type": {
-              "type": "string",
-              "description": "Type of the new value"
-            },
-            "theme.target_theme": {
-              "type": "string",
-              "description": "Theme name to update (current if not specified)"
-            }
+      "label": "POST /theme/update",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.theme.update_requested",
+        "description": "Theme update endpoint called",
+        "attributes": {
+          "theme.property_path": {
+            "type": "string",
+            "description": "Property path being updated (e.g., colors.primary)"
+          },
+          "theme.value_type": {
+            "type": "string",
+            "description": "Type of the new value"
+          },
+          "theme.target_theme": {
+            "type": "string",
+            "description": "Theme name to update (current if not specified)"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ]
       }
     },
     {
       "id": "theme-prefs-update",
-      "type": "text",
+      "type": "otel-event",
       "x": 570,
       "y": 850,
       "width": 200,
       "height": 60,
-      "text": "UserPreferencesHandler\nUpdates & Broadcasts",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/stores/userPreferencesHandler.ts"
-        ],
-        "otel": {
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
-        },
-        "event": {
-          "name": "principal_mcp.theme.preferences_updated",
-          "description": "Theme overrides saved to preferences and broadcast to renderers",
-          "attributes": {
-            "theme.property_path": {
-              "type": "string",
-              "description": "Property path being updated"
-            },
-            "theme.target_theme": {
-              "type": "string",
-              "description": "Theme being updated"
-            }
+      "label": "UserPreferencesHandler",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.theme.preferences_updated",
+        "description": "Theme overrides saved to preferences and broadcast to renderers",
+        "attributes": {
+          "theme.property_path": {
+            "type": "string",
+            "description": "Property path being updated"
+          },
+          "theme.target_theme": {
+            "type": "string",
+            "description": "Theme being updated"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ]
       }
     },
     {
       "id": "theme-renderer-broadcast",
-      "type": "text",
+      "type": "otel-event",
       "x": 570,
       "y": 930,
       "width": 200,
       "height": 60,
-      "text": "Broadcast to\nRenderer Windows",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/stores/userPreferencesHandler.ts"
-        ],
-        "otel": {
-          "files": ["src/main/stores/userPreferencesHandler.ts"]
-        },
-        "event": {
-          "name": "principal_mcp.theme.renderer_broadcast",
-          "description": "Broadcasting preferences change to renderer windows",
-          "attributes": {
-            "broadcast.window_count": {
-              "type": "number",
-              "description": "Number of active windows to broadcast to"
-            },
-            "broadcast.channel": {
-              "type": "string",
-              "description": "IPC channel name"
-            },
-            "broadcast.has_theme_overrides": {
-              "type": "boolean",
-              "description": "Whether preferences include theme overrides"
-            }
+      "label": "Broadcast to",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.theme.renderer_broadcast",
+        "description": "Broadcasting preferences change to renderer windows",
+        "attributes": {
+          "broadcast.window_count": {
+            "type": "number",
+            "description": "Number of active windows to broadcast to"
+          },
+          "broadcast.channel": {
+            "type": "string",
+            "description": "IPC channel name"
+          },
+          "broadcast.has_theme_overrides": {
+            "type": "boolean",
+            "description": "Whether preferences include theme overrides"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/stores/userPreferencesHandler.ts"
+        ]
       }
     },
     {
       "id": "theme-renderer-notified",
-      "type": "text",
+      "type": "otel-event",
       "x": 570,
       "y": 1010,
       "width": 200,
       "height": 60,
-      "text": "Renderers Notified\nvia IPC",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/stores/userPreferencesHandler.ts"
-        ],
-        "otel": {
-          "files": ["src/main/stores/userPreferencesHandler.ts"]
-        },
-        "event": {
-          "name": "principal_mcp.theme.renderer_notified",
-          "description": "Renderer windows have been notified of preferences change",
-          "attributes": {
-            "notification.windows_notified": {
-              "type": "number",
-              "description": "Number of windows that were notified"
-            },
-            "notification.channel": {
-              "type": "string",
-              "description": "IPC channel used for notification"
-            }
+      "label": "Renderers Notified",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.theme.renderer_notified",
+        "description": "Renderer windows have been notified of preferences change",
+        "attributes": {
+          "notification.windows_notified": {
+            "type": "number",
+            "description": "Number of windows that were notified"
+          },
+          "notification.channel": {
+            "type": "string",
+            "description": "IPC channel used for notification"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/stores/userPreferencesHandler.ts"
+        ]
       }
     },
     {
       "id": "theme-update-completed",
-      "type": "text",
+      "type": "otel-event",
       "x": 840,
       "y": 850,
       "width": 200,
       "height": 100,
-      "text": "Theme Update\nCompleted\n+ optional warning",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/principal-mcp/PrincipalMCPBridge.ts",
-          "src/main/theme/themeHandler.ts",
-          "src/renderer/providers/CustomThemeProvider.tsx"
-        ],
-        "otel": {
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
-        },
-        "event": {
-          "name": "principal_mcp.theme.update_completed",
-          "description": "Theme property successfully updated (with warning if not active theme)",
-          "attributes": {
-            "theme.property_path": {
-              "type": "string",
-              "description": "Property path that was updated"
-            },
-            "theme.updated_theme": {
-              "type": "string",
-              "description": "Name of the updated theme"
-            },
-            "theme.success": {
-              "type": "boolean",
-              "description": "Whether update was successful"
-            },
-            "theme.warning": {
-              "type": "string",
-              "description": "Warning if updated theme is not active (optional)"
-            },
-            "theme.active_theme": {
-              "type": "string",
-              "description": "Currently active theme if different (optional)"
-            }
+      "label": "Theme Update",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.theme.update_completed",
+        "description": "Theme property successfully updated (with warning if not active theme)",
+        "attributes": {
+          "theme.property_path": {
+            "type": "string",
+            "description": "Property path that was updated"
+          },
+          "theme.updated_theme": {
+            "type": "string",
+            "description": "Name of the updated theme"
+          },
+          "theme.success": {
+            "type": "boolean",
+            "description": "Whether update was successful"
+          },
+          "theme.warning": {
+            "type": "string",
+            "description": "Warning if updated theme is not active (optional)"
+          },
+          "theme.active_theme": {
+            "type": "string",
+            "description": "Currently active theme if different (optional)"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ]
       }
     },
     {
       "id": "theme-update-failed",
-      "type": "text",
+      "type": "otel-event",
       "x": 840,
       "y": 980,
       "width": 200,
       "height": 60,
-      "text": "Theme Update\nFailed",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/principal-mcp/PrincipalMCPBridge.ts"
-        ],
-        "otel": {
-          "files": ["src/main/principal-mcp/PrincipalMCPBridge.ts"]
-        },
-        "event": {
-          "name": "principal_mcp.error.theme_update_failed",
-          "description": "Theme update failed",
-          "attributes": {
-            "theme.property_path": {
-              "type": "string",
-              "description": "Property path that failed to update"
-            },
-            "error.message": {
-              "type": "string",
-              "description": "Error message"
-            }
+      "label": "Theme Update",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.error.theme_update_failed",
+        "description": "Theme update failed",
+        "attributes": {
+          "theme.property_path": {
+            "type": "string",
+            "description": "Property path that failed to update"
+          },
+          "error.message": {
+            "type": "string",
+            "description": "Error message"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ]
       }
     },
     {

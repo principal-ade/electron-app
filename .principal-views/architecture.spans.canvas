@@ -8,401 +8,338 @@
   "nodes": [
     {
       "id": "window-create",
-      "type": "text",
+      "type": "otel-span-convention",
       "x": 0,
       "y": 0,
       "width": 280,
       "height": 100,
       "color": "#8B5CF6",
-      "text": "**Create Window**\nOpens and initializes a new Electron BrowserWindow\n`window.create`",
-      "pv": {
-        "nodeType": "span-convention",
-        "description": "Span covering window creation lifecycle",
-        "otel": {
-          "scope": "principal-ade-main",
-          "spanPattern": "window.create",
-          "spanKind": "internal"
-        }
+      "label": "Create Window",
+      "description": "Span covering window creation lifecycle",
+      "otel": {
+        "spanPattern": "window.create",
+        "spanKind": "internal",
+        "scope": "principal-ade-main"
       }
     },
     {
       "id": "window-focus",
-      "type": "text",
+      "type": "otel-span-convention",
       "x": 300,
       "y": 0,
       "width": 280,
       "height": 100,
       "color": "#8B5CF6",
-      "text": "**Focus Window**\nBrings window to front and activates it\n`window.focus`",
-      "pv": {
-        "nodeType": "span-convention",
-        "description": "Span covering window focus operation",
-        "otel": {
-          "scope": "principal-ade-main",
-          "spanPattern": "window.focus",
-          "spanKind": "internal"
-        }
+      "label": "Focus Window",
+      "description": "Span covering window focus operation",
+      "otel": {
+        "spanPattern": "window.focus",
+        "spanKind": "internal",
+        "scope": "principal-ade-main"
       }
     },
     {
       "id": "window-close",
-      "type": "text",
+      "type": "otel-span-convention",
       "x": 600,
       "y": 0,
       "width": 280,
       "height": 100,
       "color": "#8B5CF6",
-      "text": "**Close Window**\nCloses window and cleans up resources\n`window.close`",
-      "pv": {
-        "nodeType": "span-convention",
-        "description": "Span covering window close and cleanup",
-        "otel": {
-          "scope": "principal-ade-main",
-          "spanPattern": "window.close",
-          "spanKind": "internal"
-        }
+      "label": "Close Window",
+      "description": "Span covering window close and cleanup",
+      "otel": {
+        "spanPattern": "window.close",
+        "spanKind": "internal",
+        "scope": "principal-ade-main"
       }
     },
     {
       "id": "session-create",
-      "type": "text",
+      "type": "otel-span-convention",
       "x": -320,
       "y": 127,
       "width": 280,
       "height": 100,
       "color": "#22C55E",
-      "text": "**Create Terminal Session**\nInitializes a new terminal session in main process\n`terminal.session.create`",
-      "pv": {
-        "nodeType": "span-convention",
-        "description": "Span covering terminal session creation",
-        "otel": {
-          "scope": "principal-ade-main",
-          "spanPattern": "terminal.session.create",
-          "spanKind": "internal"
-        }
+      "label": "Create Terminal Session",
+      "description": "Span covering terminal session creation",
+      "otel": {
+        "spanPattern": "terminal.session.create",
+        "spanKind": "internal",
+        "scope": "principal-ade-main"
       }
     },
     {
       "id": "session-connect",
-      "type": "text",
+      "type": "otel-span-convention",
       "x": 300,
       "y": 120,
       "width": 280,
       "height": 100,
       "color": "#22C55E",
-      "text": "**Connect to Daemon**\nEstablishes connection to PTY daemon via socket\n`terminal.session.connect`",
-      "pv": {
-        "nodeType": "span-convention",
-        "description": "Span covering connection to PTY daemon",
-        "otel": {
-          "scope": "principal-ade-main",
-          "spanPattern": "terminal.session.connect",
-          "spanKind": "client"
-        }
+      "label": "Connect to Daemon",
+      "description": "Span covering connection to PTY daemon",
+      "otel": {
+        "spanPattern": "terminal.session.connect",
+        "spanKind": "client",
+        "scope": "principal-ade-main"
       }
     },
     {
       "id": "session-destroy",
-      "type": "text",
+      "type": "otel-span-convention",
       "x": 600,
       "y": 120,
       "width": 280,
       "height": 100,
       "color": "#22C55E",
-      "text": "**Destroy Terminal Session**\nTears down session and releases resources\n`terminal.session.destroy`",
-      "pv": {
-        "nodeType": "span-convention",
-        "description": "Span covering session destruction",
-        "otel": {
-          "scope": "principal-ade-main",
-          "spanPattern": "terminal.session.destroy",
-          "spanKind": "internal"
-        }
+      "label": "Destroy Terminal Session",
+      "description": "Span covering session destruction",
+      "otel": {
+        "spanPattern": "terminal.session.destroy",
+        "spanKind": "internal",
+        "scope": "principal-ade-main"
       }
     },
     {
       "id": "pty-spawn",
-      "type": "text",
+      "type": "otel-span-convention",
       "x": -317,
       "y": 264,
       "width": 280,
       "height": 100,
       "color": "#F59E0B",
-      "text": "**Spawn PTY Process**\nForks a new pseudo-terminal in the daemon\n`terminal.pty.spawn`",
-      "pv": {
-        "nodeType": "span-convention",
-        "description": "Span covering PTY process spawn",
-        "otel": {
-          "scope": "principal-ade-daemon",
-          "spanPattern": "terminal.pty.spawn",
-          "spanKind": "internal"
-        }
+      "label": "Spawn PTY Process",
+      "description": "Span covering PTY process spawn",
+      "otel": {
+        "spanPattern": "terminal.pty.spawn",
+        "spanKind": "internal",
+        "scope": "principal-ade-daemon"
       }
     },
     {
       "id": "pty-write",
-      "type": "text",
+      "type": "otel-span-convention",
       "x": 300,
       "y": 240,
       "width": 280,
       "height": 100,
       "color": "#F59E0B",
-      "text": "**Write to PTY**\nSends input data to the terminal process\n`terminal.pty.write`",
-      "pv": {
-        "nodeType": "span-convention",
-        "description": "Span covering data write to PTY",
-        "otel": {
-          "scope": "principal-ade-daemon",
-          "spanPattern": "terminal.pty.write",
-          "spanKind": "internal"
-        }
+      "label": "Write to PTY",
+      "description": "Span covering data write to PTY",
+      "otel": {
+        "spanPattern": "terminal.pty.write",
+        "spanKind": "internal",
+        "scope": "principal-ade-daemon"
       }
     },
     {
       "id": "pty-resize",
-      "type": "text",
+      "type": "otel-span-convention",
       "x": 600,
       "y": 240,
       "width": 280,
       "height": 100,
       "color": "#F59E0B",
-      "text": "**Resize PTY**\nUpdates terminal dimensions (rows/cols)\n`terminal.pty.resize`",
-      "pv": {
-        "nodeType": "span-convention",
-        "description": "Span covering PTY resize operation",
-        "otel": {
-          "scope": "principal-ade-daemon",
-          "spanPattern": "terminal.pty.resize",
-          "spanKind": "internal"
-        }
+      "label": "Resize PTY",
+      "description": "Span covering PTY resize operation",
+      "otel": {
+        "spanPattern": "terminal.pty.resize",
+        "spanKind": "internal",
+        "scope": "principal-ade-daemon"
       }
     },
     {
       "id": "update-check",
-      "type": "text",
+      "type": "otel-span-convention",
       "x": -328,
       "y": 392,
       "width": 280,
       "height": 100,
       "color": "#3B82F6",
-      "text": "**Check for Updates**\nQueries GitHub releases for new versions\n`app.update.check`",
-      "pv": {
-        "nodeType": "span-convention",
-        "description": "Span covering update check against GitHub",
-        "otel": {
-          "scope": "principal-ade-main",
-          "spanPattern": "app.update.check",
-          "spanKind": "client"
-        }
+      "label": "Check for Updates",
+      "description": "Span covering update check against GitHub",
+      "otel": {
+        "spanPattern": "app.update.check",
+        "spanKind": "client",
+        "scope": "principal-ade-main"
       }
     },
     {
       "id": "update-download",
-      "type": "text",
+      "type": "otel-span-convention",
       "x": 300,
       "y": 360,
       "width": 280,
       "height": 100,
       "color": "#3B82F6",
-      "text": "**Download Update**\nDownloads new version from GitHub releases\n`app.update.download`",
-      "pv": {
-        "nodeType": "span-convention",
-        "description": "Span covering update download",
-        "otel": {
-          "scope": "principal-ade-main",
-          "spanPattern": "app.update.download",
-          "spanKind": "client"
-        }
+      "label": "Download Update",
+      "description": "Span covering update download",
+      "otel": {
+        "spanPattern": "app.update.download",
+        "spanKind": "client",
+        "scope": "principal-ade-main"
       }
     },
     {
       "id": "update-install",
-      "type": "text",
+      "type": "otel-span-convention",
       "x": 600,
       "y": 360,
       "width": 280,
       "height": 100,
       "color": "#3B82F6",
-      "text": "**Install Update**\nQuits app, installs update, and relaunches\n`app.update.install`",
-      "pv": {
-        "nodeType": "span-convention",
-        "description": "Span covering update installation",
-        "otel": {
-          "scope": "principal-ade-main",
-          "spanPattern": "app.update.install",
-          "spanKind": "internal"
-        }
+      "label": "Install Update",
+      "description": "Span covering update installation",
+      "otel": {
+        "spanPattern": "app.update.install",
+        "spanKind": "internal",
+        "scope": "principal-ade-main"
       }
     },
     {
       "id": "ipc-handle",
-      "type": "text",
+      "type": "otel-span-convention",
       "x": 472,
       "y": 805,
       "width": 280,
       "height": 100,
       "color": "#EC4899",
-      "text": "**Handle IPC Request**\nMain process receives and handles IPC call\n`ipc.handle.{channel}`",
-      "pv": {
-        "nodeType": "span-convention",
-        "description": "Span covering IPC handler execution in main process",
-        "otel": {
-          "scope": "principal-ade-main",
-          "spanPattern": "ipc.handle.*",
-          "spanKind": "server"
-        }
+      "label": "Handle IPC Request",
+      "description": "Span covering IPC handler execution in main process",
+      "otel": {
+        "spanPattern": "ipc.handle.*",
+        "spanKind": "server",
+        "scope": "principal-ade-main"
       }
     },
     {
       "id": "ipc-invoke",
-      "type": "text",
+      "type": "otel-span-convention",
       "x": 60,
       "y": 484,
       "width": 280,
       "height": 100,
       "color": "#EC4899",
-      "text": "**Invoke IPC Call**\nRenderer sends request to main process\n`ipc.invoke.{channel}`",
-      "pv": {
-        "nodeType": "span-convention",
-        "description": "Span covering IPC invocation from renderer",
-        "otel": {
-          "scope": "principal-ade-renderer",
-          "spanPattern": "ipc.invoke.*",
-          "spanKind": "client"
-        }
+      "label": "Invoke IPC Call",
+      "description": "Span covering IPC invocation from renderer",
+      "otel": {
+        "spanPattern": "ipc.invoke.*",
+        "spanKind": "client",
+        "scope": "principal-ade-renderer"
       }
     },
     {
       "id": "project-open",
-      "type": "text",
+      "type": "otel-span-convention",
       "x": 600,
       "y": 480,
       "width": 280,
       "height": 100,
       "color": "#64748B",
-      "text": "**Open Project**\nLoads project directory and initializes workspace\n`project.open`",
-      "pv": {
-        "nodeType": "span-convention",
-        "description": "Span covering project open operation",
-        "otel": {
-          "scope": "principal-ade-main",
-          "spanPattern": "project.open",
-          "spanKind": "internal"
-        }
+      "label": "Open Project",
+      "description": "Span covering project open operation",
+      "otel": {
+        "spanPattern": "project.open",
+        "spanKind": "internal",
+        "scope": "principal-ade-main"
       }
     },
     {
       "id": "fs-read",
-      "type": "text",
+      "type": "otel-span-convention",
       "x": -329,
       "y": 666,
       "width": 280,
       "height": 100,
       "color": "#14B8A6",
-      "text": "**Read File**\nReads file contents from disk\n`fs.read`",
-      "pv": {
-        "nodeType": "span-convention",
-        "description": "Span covering file read operation",
-        "otel": {
-          "scope": "principal-ade-main",
-          "spanPattern": "fs.read",
-          "spanKind": "internal"
-        }
+      "label": "Read File",
+      "description": "Span covering file read operation",
+      "otel": {
+        "spanPattern": "fs.read",
+        "spanKind": "internal",
+        "scope": "principal-ade-main"
       }
     },
     {
       "id": "fs-write",
-      "type": "text",
+      "type": "otel-span-convention",
       "x": -330,
       "y": 526,
       "width": 280,
       "height": 100,
       "color": "#14B8A6",
-      "text": "**Write File**\nWrites content to file on disk\n`fs.write`",
-      "pv": {
-        "nodeType": "span-convention",
-        "description": "Span covering file write operation",
-        "otel": {
-          "scope": "principal-ade-main",
-          "spanPattern": "fs.write",
-          "spanKind": "internal"
-        }
+      "label": "Write File",
+      "description": "Span covering file write operation",
+      "otel": {
+        "spanPattern": "fs.write",
+        "spanKind": "internal",
+        "scope": "principal-ade-main"
       }
     },
     {
       "id": "fs-tree-build",
-      "type": "text",
+      "type": "otel-span-convention",
       "x": 600,
       "y": 600,
       "width": 280,
       "height": 100,
       "color": "#14B8A6",
-      "text": "**Build File Tree**\nScans directory and builds tree structure\n`fs.tree.build`",
-      "pv": {
-        "nodeType": "span-convention",
-        "description": "Span covering file tree construction",
-        "otel": {
-          "scope": "principal-ade-main",
-          "spanPattern": "fs.tree.build",
-          "spanKind": "internal"
-        }
+      "label": "Build File Tree",
+      "description": "Span covering file tree construction",
+      "otel": {
+        "spanPattern": "fs.tree.build",
+        "spanKind": "internal",
+        "scope": "principal-ade-main"
       }
     },
     {
       "id": "daemon-start",
-      "type": "text",
+      "type": "otel-span-convention",
       "x": -333,
       "y": 799,
       "width": 280,
       "height": 100,
       "color": "#F59E0B",
-      "text": "**Start Daemon**\nInitializes PTY daemon process and socket\n`terminal.daemon.start`",
-      "pv": {
-        "nodeType": "span-convention",
-        "description": "Span covering daemon startup",
-        "otel": {
-          "scope": "principal-ade-daemon",
-          "spanPattern": "terminal.daemon.start",
-          "spanKind": "internal"
-        }
+      "label": "Start Daemon",
+      "description": "Span covering daemon startup",
+      "otel": {
+        "spanPattern": "terminal.daemon.start",
+        "spanKind": "internal",
+        "scope": "principal-ade-daemon"
       }
     },
     {
       "id": "daemon-client-connect",
-      "type": "text",
+      "type": "otel-span-convention",
       "x": 314,
       "y": 753,
       "width": 280,
       "height": 100,
       "color": "#F59E0B",
-      "text": "**Accept Client Connection**\nDaemon accepts incoming socket connection\n`terminal.daemon.client.connect`",
-      "pv": {
-        "nodeType": "span-convention",
-        "description": "Span covering client connection to daemon",
-        "otel": {
-          "scope": "principal-ade-daemon",
-          "spanPattern": "terminal.daemon.client.connect",
-          "spanKind": "server"
-        }
+      "label": "Accept Client Connection",
+      "description": "Span covering client connection to daemon",
+      "otel": {
+        "spanPattern": "terminal.daemon.client.connect",
+        "spanKind": "server",
+        "scope": "principal-ade-daemon"
       }
     },
     {
       "id": "mcp-tool-execute",
-      "type": "text",
+      "type": "otel-span-convention",
       "x": 600,
       "y": 720,
       "width": 280,
       "height": 100,
       "color": "#A855F7",
-      "text": "**Execute MCP Tool**\nRuns a Model Context Protocol tool\n`mcp.tool.execute`",
-      "pv": {
-        "nodeType": "span-convention",
-        "description": "Span covering MCP tool execution",
-        "otel": {
-          "scope": "principal-ade-main",
-          "spanPattern": "mcp.tool.execute",
-          "spanKind": "server"
-        }
+      "label": "Execute MCP Tool",
+      "description": "Span covering MCP tool execution",
+      "otel": {
+        "spanPattern": "mcp.tool.execute",
+        "spanKind": "server",
+        "scope": "principal-ade-main"
       }
     }
   ],

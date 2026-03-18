@@ -93,785 +93,685 @@
     },
     {
       "id": "panel-sidebar",
-      "type": "text",
+      "type": "otel-event",
       "x": 50,
       "y": 0,
       "width": 180,
       "height": 80,
-      "text": "Panel Icon Sidebar\n(Quality icon)\nCheckCircle",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/components/Sidebar/PanelIconSidebar.tsx"
-        ],
-        "event": {
-          "name": "quality.sidebar.clicked",
-          "description": "User clicked Quality icon in panel sidebar",
-          "attributes": {
-            "panel.id": {
-              "type": "string",
-              "description": "Panel ID being switched to (codeQuality)"
-            },
-            "panel.previous": {
-              "type": "string",
-              "description": "Previously active panel ID"
-            }
+      "label": "Panel Icon Sidebar",
+      "shape": "rectangle",
+      "event": {
+        "name": "quality.sidebar.clicked",
+        "description": "User clicked Quality icon in panel sidebar",
+        "attributes": {
+          "panel.id": {
+            "type": "string",
+            "description": "Panel ID being switched to (codeQuality)"
+          },
+          "panel.previous": {
+            "type": "string",
+            "description": "Previously active panel ID"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "panel-framework",
-      "type": "text",
+      "type": "otel-event",
       "x": 280,
       "y": 0,
       "width": 200,
       "height": 80,
-      "text": "DevWorkspace\nPanelFramework\n(panel switching)",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
-        ],
-        "event": {
-          "name": "quality.panel.switched",
-          "description": "Panel framework switched to quality panel",
-          "attributes": {
-            "panel.id": {
-              "type": "string",
-              "description": "Active panel ID"
-            }
+      "label": "DevWorkspace",
+      "shape": "rectangle",
+      "event": {
+        "name": "quality.panel.switched",
+        "description": "Panel framework switched to quality panel",
+        "attributes": {
+          "panel.id": {
+            "type": "string",
+            "description": "Active panel ID"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "quality-panel",
-      "type": "text",
+      "type": "otel-event",
       "x": 530,
       "y": 0,
       "width": 200,
       "height": 80,
-      "text": "QualityHexagonPanel\n(@principal-ade/\ncode-quality-panels)",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "node_modules/@principal-ade/code-quality-panels"
-        ],
-        "event": {
-          "name": "quality.panel.rendered",
-          "description": "Quality hexagon panel rendered",
-          "attributes": {
-            "repository.path": {
-              "type": "string",
-              "description": "Repository path"
-            },
-            "quality.hasData": {
-              "type": "boolean",
-              "description": "Whether quality data is available"
-            }
+      "label": "QualityHexagonPanel",
+      "shape": "rectangle",
+      "event": {
+        "name": "quality.panel.rendered",
+        "description": "Quality hexagon panel rendered",
+        "attributes": {
+          "repository.path": {
+            "type": "string",
+            "description": "Repository path"
+          },
+          "quality.hasData": {
+            "type": "boolean",
+            "description": "Whether quality data is available"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "repository-context",
-      "type": "text",
+      "type": "otel-event",
       "x": 530,
       "y": 130,
       "width": 200,
       "height": 100,
-      "text": "RepositoryPanelContext\n- qualitySlice\n- colorMode state\n- executeTool action",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/contexts/RepositoryPanelContext.tsx"
-        ],
-        "event": {
-          "name": "quality.context.updated",
-          "description": "Quality data updated in React context",
-          "attributes": {
-            "repository.path": {
-              "type": "string",
-              "description": "Repository path"
-            },
-            "quality.packages.count": {
-              "type": "number",
-              "description": "Number of packages with quality data"
-            },
-            "quality.lastUpdated": {
-              "type": "number",
-              "description": "Timestamp of quality data"
-            }
+      "label": "RepositoryPanelContext",
+      "shape": "rectangle",
+      "event": {
+        "name": "quality.context.updated",
+        "description": "Quality data updated in React context",
+        "attributes": {
+          "repository.path": {
+            "type": "string",
+            "description": "Repository path"
+          },
+          "quality.packages.count": {
+            "type": "number",
+            "description": "Number of packages with quality data"
+          },
+          "quality.lastUpdated": {
+            "type": "number",
+            "description": "Timestamp of quality data"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "hexagon-click",
-      "type": "text",
+      "type": "otel-event",
       "x": 780,
       "y": 0,
       "width": 180,
       "height": 80,
-      "text": "Hexagon Facet Click\n(select color mode)\nemits event",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "node_modules/@principal-ade/code-quality-panels"
-        ],
-        "event": {
-          "name": "quality.colorMode.selected",
-          "description": "User selected color mode from quality hexagon",
-          "attributes": {
-            "colorMode.name": {
-              "type": "string",
-              "description": "Selected color mode name"
-            },
-            "colorMode.previous": {
-              "type": "string",
-              "description": "Previous color mode"
-            }
+      "label": "Hexagon Facet Click",
+      "shape": "rectangle",
+      "event": {
+        "name": "quality.colorMode.selected",
+        "description": "User selected color mode from quality hexagon",
+        "attributes": {
+          "colorMode.name": {
+            "type": "string",
+            "description": "Selected color mode name"
+          },
+          "colorMode.previous": {
+            "type": "string",
+            "description": "Previous color mode"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "file-city",
-      "type": "text",
+      "type": "otel-event",
       "x": 780,
       "y": 130,
       "width": 180,
       "height": 80,
-      "text": "File City\n(re-renders with\nnew color mode)",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
-        ],
-        "event": {
-          "name": "quality.fileCity.rerendered",
-          "description": "File City re-rendered with quality color mode",
-          "attributes": {
-            "colorMode.name": {
-              "type": "string",
-              "description": "Active color mode"
-            }
+      "label": "File City",
+      "shape": "rectangle",
+      "event": {
+        "name": "quality.fileCity.rerendered",
+        "description": "File City re-rendered with quality color mode",
+        "attributes": {
+          "colorMode.name": {
+            "type": "string",
+            "description": "Active color mode"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "run-tool-button",
-      "type": "text",
+      "type": "otel-event",
       "x": 50,
       "y": 280,
       "width": 180,
       "height": 80,
-      "text": "Run Tool Button\n(ESLint/Jest/TSC/Knip)\nuser clicks",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "node_modules/@principal-ade/code-quality-panels"
-        ],
-        "event": {
-          "name": "quality.tool.requested",
-          "description": "User requested tool execution",
-          "attributes": {
-            "tool.name": {
-              "type": "string",
-              "description": "Tool name (eslint, jest, tsc, knip)"
-            },
-            "package.path": {
-              "type": "string",
-              "description": "Package path for tool execution"
-            }
+      "label": "Run Tool Button",
+      "shape": "rectangle",
+      "event": {
+        "name": "quality.tool.requested",
+        "description": "User requested tool execution",
+        "attributes": {
+          "tool.name": {
+            "type": "string",
+            "description": "Tool name (eslint, jest, tsc, knip)"
+          },
+          "package.path": {
+            "type": "string",
+            "description": "Package path for tool execution"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "ipc-handler",
-      "type": "text",
+      "type": "otel-event",
       "x": 280,
       "y": 280,
       "width": 200,
       "height": 80,
-      "text": "IPC Handler\nrepository-monitoring:\nexecute-tool",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/repository-monitoring/ipcHandlers.ts"
-        ],
-        "event": {
-          "name": "quality.ipc.received",
-          "description": "IPC handler received tool execution request",
-          "attributes": {
-            "tool.name": {
-              "type": "string",
-              "description": "Requested tool name"
-            },
-            "repository.path": {
-              "type": "string",
-              "description": "Repository path"
-            }
+      "label": "IPC Handler",
+      "shape": "rectangle",
+      "event": {
+        "name": "quality.ipc.received",
+        "description": "IPC handler received tool execution request",
+        "attributes": {
+          "tool.name": {
+            "type": "string",
+            "description": "Requested tool name"
+          },
+          "repository.path": {
+            "type": "string",
+            "description": "Repository path"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "quality-lens-service",
-      "type": "text",
+      "type": "otel-event",
       "x": 530,
       "y": 280,
       "width": 200,
       "height": 80,
-      "text": "QualityLensService\n(singleton)\nexecuteTool()",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/quality-lenses/QualityLensService.ts"
-        ],
-        "event": {
-          "name": "quality.service.executing",
-          "description": "QualityLensService executing tool request",
-          "attributes": {
-            "tool.name": {
-              "type": "string",
-              "description": "Tool being executed"
-            },
-            "lens.name": {
-              "type": "string",
-              "description": "Lens used for execution"
-            },
-            "package.path": {
-              "type": "string",
-              "description": "Package path"
-            }
+      "label": "QualityLensService",
+      "shape": "rectangle",
+      "event": {
+        "name": "quality.service.executing",
+        "description": "QualityLensService executing tool request",
+        "attributes": {
+          "tool.name": {
+            "type": "string",
+            "description": "Tool being executed"
+          },
+          "lens.name": {
+            "type": "string",
+            "description": "Lens used for execution"
+          },
+          "package.path": {
+            "type": "string",
+            "description": "Package path"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "quality-lens",
-      "type": "text",
+      "type": "otel-event",
       "x": 530,
       "y": 400,
       "width": 200,
       "height": 100,
-      "text": "Quality Lens\n- ESLintLens\n- JestLens\n- TypeScriptLens\n- KnipLens",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "node_modules/@principal-ai/codebase-quality-lenses"
-        ],
-        "event": {
-          "name": "quality.lens.running",
-          "description": "Quality lens running tool pipeline",
-          "attributes": {
-            "lens.name": {
-              "type": "string",
-              "description": "Lens name"
-            },
-            "lens.cwd": {
-              "type": "string",
-              "description": "Working directory"
-            }
+      "label": "Quality Lens",
+      "shape": "rectangle",
+      "event": {
+        "name": "quality.lens.running",
+        "description": "Quality lens running tool pipeline",
+        "attributes": {
+          "lens.name": {
+            "type": "string",
+            "description": "Lens name"
+          },
+          "lens.cwd": {
+            "type": "string",
+            "description": "Working directory"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "cli-executor",
-      "type": "text",
+      "type": "otel-event",
       "x": 780,
       "y": 280,
       "width": 200,
       "height": 80,
-      "text": "ElectronCLIBridge\nExecutor\n(execute command)",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/quality-lenses/ElectronCLIBridgeExecutor.ts"
-        ],
-        "event": {
-          "name": "quality.executor.spawning",
-          "description": "Executor spawning CLI process",
-          "attributes": {
-            "command.name": {
-              "type": "string",
-              "description": "Command being executed"
-            },
-            "command.args": {
-              "type": "string",
-              "description": "Command arguments"
-            }
+      "label": "ElectronCLIBridge",
+      "shape": "rectangle",
+      "event": {
+        "name": "quality.executor.spawning",
+        "description": "Executor spawning CLI process",
+        "attributes": {
+          "command.name": {
+            "type": "string",
+            "description": "Command being executed"
+          },
+          "command.args": {
+            "type": "string",
+            "description": "Command arguments"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "external-tools",
-      "type": "text",
+      "type": "otel-event",
       "x": 780,
       "y": 400,
       "width": 200,
       "height": 100,
-      "text": "External CLI Tools\n- eslint\n- jest\n- tsc\n- knip",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/quality-lenses/ElectronCLIBridgeExecutor.ts"
-        ],
-        "event": {
-          "name": "quality.cli.completed",
-          "description": "External CLI tool completed execution",
-          "attributes": {
-            "tool.name": {
-              "type": "string",
-              "description": "Tool name"
-            },
-            "exit.code": {
-              "type": "number",
-              "description": "Exit code"
-            },
-            "duration.ms": {
-              "type": "number",
-              "description": "Execution duration in ms"
-            }
+      "label": "External CLI Tools",
+      "shape": "rectangle",
+      "event": {
+        "name": "quality.cli.completed",
+        "description": "External CLI tool completed execution",
+        "attributes": {
+          "tool.name": {
+            "type": "string",
+            "description": "Tool name"
+          },
+          "exit.code": {
+            "type": "number",
+            "description": "Exit code"
+          },
+          "duration.ms": {
+            "type": "number",
+            "description": "Execution duration in ms"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "tool-result",
-      "type": "text",
+      "type": "otel-event",
       "x": 1030,
       "y": 280,
       "width": 180,
       "height": 80,
-      "text": "Tool Result\nLensResult\n(issues, metrics)",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/quality-lenses/QualityLensService.ts"
-        ],
-        "event": {
-          "name": "quality.tool.completed",
-          "description": "Tool execution completed with results",
-          "attributes": {
-            "tool.name": {
-              "type": "string",
-              "description": "Tool name"
-            },
-            "success": {
-              "type": "boolean",
-              "description": "Whether execution succeeded"
-            },
-            "issues.count": {
-              "type": "number",
-              "description": "Number of issues found"
-            },
-            "duration.ms": {
-              "type": "number",
-              "description": "Total execution duration"
-            }
+      "label": "Tool Result",
+      "shape": "rectangle",
+      "event": {
+        "name": "quality.tool.completed",
+        "description": "Tool execution completed with results",
+        "attributes": {
+          "tool.name": {
+            "type": "string",
+            "description": "Tool name"
+          },
+          "success": {
+            "type": "boolean",
+            "description": "Whether execution succeeded"
+          },
+          "issues.count": {
+            "type": "number",
+            "description": "Number of issues found"
+          },
+          "duration.ms": {
+            "type": "number",
+            "description": "Total execution duration"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "github-api",
-      "type": "text",
+      "type": "otel-boundary",
       "x": 50,
       "y": 550,
       "width": 180,
       "height": 80,
-      "text": "GitHub Actions API\n(artifacts endpoint)\nquality metrics",
-      "pv": {
-        "nodeType": "boundary",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/contexts/RepositoryPanelContext.tsx"
-        ],
-        "boundary": {
-          "direction": "outbound",
-          "node": {
-            "pv.event.name": "quality.artifact.step.api.calling"
-          }
+      "label": "GitHub Actions API",
+      "shape": "rectangle",
+      "otel": {
+        "status": "draft"
+      },
+      "boundary": {
+        "direction": "outbound",
+        "node": {
+          "pv.event.name": "quality.artifact.step.api.calling"
         }
       }
     },
     {
       "id": "artifact-data",
-      "type": "text",
+      "type": "otel-event",
       "x": 280,
       "y": 550,
       "width": 200,
       "height": 80,
-      "text": "Quality Artifact\n(JSON metrics from\nCI workflow)",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/contexts/RepositoryPanelContext.tsx"
-        ],
-        "event": {
-          "name": "quality.artifact.received",
-          "description": "Quality artifact data received from GitHub",
-          "attributes": {
-            "packages.count": {
-              "type": "number",
-              "description": "Number of packages in artifact"
-            },
-            "artifact.timestamp": {
-              "type": "number",
-              "description": "When artifact was created"
-            }
+      "label": "Quality Artifact",
+      "shape": "rectangle",
+      "event": {
+        "name": "quality.artifact.received",
+        "description": "Quality artifact data received from GitHub",
+        "attributes": {
+          "packages.count": {
+            "type": "number",
+            "description": "Number of packages in artifact"
+          },
+          "artifact.timestamp": {
+            "type": "number",
+            "description": "When artifact was created"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "artifact-not-found",
-      "type": "text",
+      "type": "otel-event",
       "x": 530,
       "y": 550,
       "width": 180,
       "height": 80,
-      "text": "Artifact Not Found\n(no CI configured\nor no artifacts)",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/contexts/RepositoryPanelContext.tsx"
-        ],
-        "event": {
-          "name": "quality.artifact.notFound",
-          "description": "No quality artifacts found in GitHub Actions",
-          "attributes": {
-            "github.owner": {
-              "type": "string",
-              "description": "GitHub repository owner"
-            },
-            "github.repo": {
-              "type": "string",
-              "description": "GitHub repository name"
-            }
+      "label": "Artifact Not Found",
+      "shape": "rectangle",
+      "event": {
+        "name": "quality.artifact.notFound",
+        "description": "No quality artifacts found in GitHub Actions",
+        "attributes": {
+          "github.owner": {
+            "type": "string",
+            "description": "GitHub repository owner"
+          },
+          "github.repo": {
+            "type": "string",
+            "description": "GitHub repository name"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "tool-error",
-      "type": "text",
+      "type": "otel-event",
       "x": 1030,
       "y": 400,
       "width": 180,
       "height": 80,
-      "text": "Tool Error\n(execution failed)\nerror state",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/quality-lenses/QualityLensService.ts"
-        ],
-        "event": {
-          "name": "quality.tool.error",
-          "description": "Tool execution encountered an error",
-          "attributes": {
-            "tool.name": {
-              "type": "string",
-              "description": "Tool that failed"
-            },
-            "error.message": {
-              "type": "string",
-              "description": "Error message"
-            },
-            "error.code": {
-              "type": "string",
-              "description": "Error code if available"
-            }
+      "label": "Tool Error",
+      "shape": "rectangle",
+      "event": {
+        "name": "quality.tool.error",
+        "description": "Tool execution encountered an error",
+        "attributes": {
+          "tool.name": {
+            "type": "string",
+            "description": "Tool that failed"
+          },
+          "error.message": {
+            "type": "string",
+            "description": "Error message"
+          },
+          "error.code": {
+            "type": "string",
+            "description": "Error code if available"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "artifact-step-remote",
-      "type": "text",
+      "type": "otel-event",
       "x": 50,
       "y": 700,
       "width": 160,
       "height": 70,
-      "text": "Step: Get Remote\n(reading git remote)",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/contexts/RepositoryPanelContext.tsx"
-        ],
-        "event": {
-          "name": "quality.artifact.step.remote",
-          "description": "Starting to get git remote URL",
-          "attributes": {
-            "step": {
-              "type": "string",
-              "description": "Step description"
-            }
+      "label": "Step: Get Remote",
+      "shape": "rectangle",
+      "event": {
+        "name": "quality.artifact.step.remote",
+        "description": "Starting to get git remote URL",
+        "attributes": {
+          "step": {
+            "type": "string",
+            "description": "Step description"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "artifact-step-remote-resolved",
-      "type": "text",
+      "type": "otel-event",
       "x": 230,
       "y": 700,
       "width": 160,
       "height": 70,
-      "text": "Remote Resolved\n(git remote URL)",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/contexts/RepositoryPanelContext.tsx"
-        ],
-        "event": {
-          "name": "quality.artifact.step.remote.resolved",
-          "description": "Git remote URL resolved",
-          "attributes": {
-            "step": {
-              "type": "string",
-              "description": "Step description"
-            },
-            "remote.url": {
-              "type": "string",
-              "description": "Git remote URL"
-            }
+      "label": "Remote Resolved",
+      "shape": "rectangle",
+      "event": {
+        "name": "quality.artifact.step.remote.resolved",
+        "description": "Git remote URL resolved",
+        "attributes": {
+          "step": {
+            "type": "string",
+            "description": "Step description"
+          },
+          "remote.url": {
+            "type": "string",
+            "description": "Git remote URL"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "artifact-step-github-parsed",
-      "type": "text",
+      "type": "otel-event",
       "x": 410,
       "y": 700,
       "width": 160,
       "height": 70,
-      "text": "GitHub Parsed\n(owner/repo)",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/contexts/RepositoryPanelContext.tsx"
-        ],
-        "event": {
-          "name": "quality.artifact.step.github.parsed",
-          "description": "GitHub owner/repo parsed from remote URL",
-          "attributes": {
-            "step": {
-              "type": "string",
-              "description": "Step description"
-            },
-            "github.owner": {
-              "type": "string",
-              "description": "GitHub repository owner"
-            },
-            "github.repo": {
-              "type": "string",
-              "description": "GitHub repository name"
-            }
+      "label": "GitHub Parsed",
+      "shape": "rectangle",
+      "event": {
+        "name": "quality.artifact.step.github.parsed",
+        "description": "GitHub owner/repo parsed from remote URL",
+        "attributes": {
+          "step": {
+            "type": "string",
+            "description": "Step description"
+          },
+          "github.owner": {
+            "type": "string",
+            "description": "GitHub repository owner"
+          },
+          "github.repo": {
+            "type": "string",
+            "description": "GitHub repository name"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "artifact-step-branch",
-      "type": "text",
+      "type": "otel-event",
       "x": 590,
       "y": 700,
       "width": 160,
       "height": 70,
-      "text": "Step: Get Branch\n(reading git status)",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/contexts/RepositoryPanelContext.tsx"
-        ],
-        "event": {
-          "name": "quality.artifact.step.branch",
-          "description": "Starting to get current branch",
-          "attributes": {
-            "step": {
-              "type": "string",
-              "description": "Step description"
-            }
+      "label": "Step: Get Branch",
+      "shape": "rectangle",
+      "event": {
+        "name": "quality.artifact.step.branch",
+        "description": "Starting to get current branch",
+        "attributes": {
+          "step": {
+            "type": "string",
+            "description": "Step description"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "artifact-step-branch-resolved",
-      "type": "text",
+      "type": "otel-event",
       "x": 770,
       "y": 700,
       "width": 160,
       "height": 70,
-      "text": "Branch Resolved\n(current branch)",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/contexts/RepositoryPanelContext.tsx"
-        ],
-        "event": {
-          "name": "quality.artifact.step.branch.resolved",
-          "description": "Current branch resolved",
-          "attributes": {
-            "step": {
-              "type": "string",
-              "description": "Step description"
-            },
-            "git.branch": {
-              "type": "string",
-              "description": "Current git branch"
-            },
-            "git.branchSource": {
-              "type": "string",
-              "description": "How branch was determined"
-            }
+      "label": "Branch Resolved",
+      "shape": "rectangle",
+      "event": {
+        "name": "quality.artifact.step.branch.resolved",
+        "description": "Current branch resolved",
+        "attributes": {
+          "step": {
+            "type": "string",
+            "description": "Step description"
+          },
+          "git.branch": {
+            "type": "string",
+            "description": "Current git branch"
+          },
+          "git.branchSource": {
+            "type": "string",
+            "description": "How branch was determined"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "artifact-step-api-calling",
-      "type": "text",
+      "type": "otel-event",
       "x": 950,
       "y": 700,
       "width": 160,
       "height": 70,
-      "text": "Step: API Call\n(calling GitHub)",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/contexts/RepositoryPanelContext.tsx"
-        ],
-        "event": {
-          "name": "quality.artifact.step.api.calling",
-          "description": "Calling GitHub Actions API",
-          "attributes": {
-            "step": {
-              "type": "string",
-              "description": "Step description"
-            }
+      "label": "Step: API Call",
+      "shape": "rectangle",
+      "event": {
+        "name": "quality.artifact.step.api.calling",
+        "description": "Calling GitHub Actions API",
+        "attributes": {
+          "step": {
+            "type": "string",
+            "description": "Step description"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "artifact-step-api-complete",
-      "type": "text",
+      "type": "otel-event",
       "x": 1130,
       "y": 700,
       "width": 160,
       "height": 70,
-      "text": "API Complete\n(response received)",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/contexts/RepositoryPanelContext.tsx"
-        ],
-        "event": {
-          "name": "quality.artifact.step.api.complete",
-          "description": "GitHub API call completed",
-          "attributes": {
-            "step": {
-              "type": "string",
-              "description": "Step description"
-            },
-            "api.duration.ms": {
-              "type": "number",
-              "description": "API call duration in milliseconds"
-            },
-            "api.found": {
-              "type": "boolean",
-              "description": "Whether artifact was found"
-            }
+      "label": "API Complete",
+      "shape": "rectangle",
+      "event": {
+        "name": "quality.artifact.step.api.complete",
+        "description": "GitHub API call completed",
+        "attributes": {
+          "step": {
+            "type": "string",
+            "description": "Step description"
+          },
+          "api.duration.ms": {
+            "type": "number",
+            "description": "API call duration in milliseconds"
+          },
+          "api.found": {
+            "type": "boolean",
+            "description": "Whether artifact was found"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "artifact-skipped",
-      "type": "text",
+      "type": "otel-event",
       "x": 770,
       "y": 550,
       "width": 180,
       "height": 80,
-      "text": "Artifact Skipped\n(no remote or\nnot GitHub)",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/contexts/RepositoryPanelContext.tsx"
-        ],
-        "event": {
-          "name": "quality.artifact.skipped",
-          "description": "Artifact fetch skipped (no git remote or not GitHub)",
-          "attributes": {
-            "message": {
-              "type": "string",
-              "description": "Skip reason message"
-            },
-            "skip.reason": {
-              "type": "string",
-              "description": "Skip reason code (no_git_remote, not_github)"
-            }
+      "label": "Artifact Skipped",
+      "shape": "rectangle",
+      "event": {
+        "name": "quality.artifact.skipped",
+        "description": "Artifact fetch skipped (no git remote or not GitHub)",
+        "attributes": {
+          "message": {
+            "type": "string",
+            "description": "Skip reason message"
+          },
+          "skip.reason": {
+            "type": "string",
+            "description": "Skip reason code (no_git_remote, not_github)"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     }
   ],

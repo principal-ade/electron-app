@@ -63,7 +63,10 @@ const configuration: webpack.Configuration = {
       }
 
       // For main and preload, externalize node_modules as usual
-      if (Object.keys(externals || {}).includes(request) || ['node-pty', 'keytar', 'canvas'].includes(request)) {
+      // Native modules need special handling - check both exact match and sub-paths
+      const nativeModules = ['node-pty', 'keytar', 'canvas'];
+      const isNativeModule = nativeModules.some(mod => request === mod || request?.startsWith(`${mod}/`));
+      if (Object.keys(externals || {}).includes(request) || isNativeModule) {
         return callback(null, `commonjs ${request}`);
       }
       callback();

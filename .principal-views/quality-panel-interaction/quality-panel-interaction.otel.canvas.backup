@@ -1,0 +1,1188 @@
+{
+  "pv": {
+    "name": "Quality Panel Interaction Flow",
+    "version": "1.0.0",
+    "description": "Complete event flow from panel navigation through tool execution to results display, including GitHub artifact fetching and color mode selection",
+    "markdown": ".principal-views/quality-panel-interaction/quality-panel-interaction.md",
+    "scope": "principal-ade-renderer",
+    "nodeTypes": {
+      "ui-component": {
+        "label": "UI Component",
+        "color": "#EC4899"
+      },
+      "panel": {
+        "label": "Panel",
+        "color": "#8B5CF6"
+      },
+      "context": {
+        "label": "React Context",
+        "color": "#A855F7"
+      },
+      "main-process": {
+        "label": "Main Process",
+        "color": "#4F46E5"
+      },
+      "service": {
+        "label": "Service",
+        "color": "#059669"
+      },
+      "executor": {
+        "label": "Executor",
+        "color": "#0D9488"
+      },
+      "external-tool": {
+        "label": "External Tool",
+        "color": "#64748B"
+      },
+      "external-api": {
+        "label": "External API",
+        "color": "#F59E0B"
+      },
+      "event": {
+        "label": "Event",
+        "color": "#3B82F6"
+      },
+      "boundary": {
+        "label": "Boundary",
+        "color": "#64748B"
+      }
+    },
+    "edgeTypes": {
+      "user-action": {
+        "label": "User Action",
+        "style": "solid",
+        "color": "#EC4899"
+      },
+      "ipc-invoke": {
+        "label": "IPC Invoke",
+        "style": "solid",
+        "color": "#6366F1"
+      },
+      "event": {
+        "label": "Event",
+        "style": "dashed",
+        "color": "#A855F7"
+      },
+      "data-flow": {
+        "label": "Data Flow",
+        "style": "solid",
+        "color": "#3B82F6"
+      },
+      "executes": {
+        "label": "Executes",
+        "style": "solid",
+        "color": "#0D9488"
+      },
+      "http": {
+        "label": "HTTP",
+        "style": "solid",
+        "color": "#F59E0B"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "x": 300,
+      "y": -100,
+      "width": 500,
+      "height": 60,
+      "color": "#64748B",
+      "text": "# Quality Panel Interaction Flow\n**From navigation to tool execution and visualization**"
+    },
+    {
+      "id": "panel-sidebar",
+      "type": "text",
+      "x": 50,
+      "y": 0,
+      "width": 180,
+      "height": 80,
+      "text": "Panel Icon Sidebar\n(Quality icon)\nCheckCircle",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/renderer/components/Sidebar/PanelIconSidebar.tsx"
+        ],
+        "event": {
+          "name": "quality.sidebar.clicked",
+          "description": "User clicked Quality icon in panel sidebar",
+          "attributes": {
+            "panel.id": {
+              "type": "string",
+              "description": "Panel ID being switched to (codeQuality)"
+            },
+            "panel.previous": {
+              "type": "string",
+              "description": "Previously active panel ID"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "panel-framework",
+      "type": "text",
+      "x": 280,
+      "y": 0,
+      "width": 200,
+      "height": 80,
+      "text": "DevWorkspace\nPanelFramework\n(panel switching)",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+        ],
+        "event": {
+          "name": "quality.panel.switched",
+          "description": "Panel framework switched to quality panel",
+          "attributes": {
+            "panel.id": {
+              "type": "string",
+              "description": "Active panel ID"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "quality-panel",
+      "type": "text",
+      "x": 530,
+      "y": 0,
+      "width": 200,
+      "height": 80,
+      "text": "QualityHexagonPanel\n(@principal-ade/\ncode-quality-panels)",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "node_modules/@principal-ade/code-quality-panels"
+        ],
+        "event": {
+          "name": "quality.panel.rendered",
+          "description": "Quality hexagon panel rendered",
+          "attributes": {
+            "repository.path": {
+              "type": "string",
+              "description": "Repository path"
+            },
+            "quality.hasData": {
+              "type": "boolean",
+              "description": "Whether quality data is available"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "repository-context",
+      "type": "text",
+      "x": 530,
+      "y": 130,
+      "width": 200,
+      "height": 100,
+      "text": "RepositoryPanelContext\n- qualitySlice\n- colorMode state\n- executeTool action",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/renderer/contexts/RepositoryPanelContext.tsx"
+        ],
+        "event": {
+          "name": "quality.context.updated",
+          "description": "Quality data updated in React context",
+          "attributes": {
+            "repository.path": {
+              "type": "string",
+              "description": "Repository path"
+            },
+            "quality.packages.count": {
+              "type": "number",
+              "description": "Number of packages with quality data"
+            },
+            "quality.lastUpdated": {
+              "type": "number",
+              "description": "Timestamp of quality data"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "hexagon-click",
+      "type": "text",
+      "x": 780,
+      "y": 0,
+      "width": 180,
+      "height": 80,
+      "text": "Hexagon Facet Click\n(select color mode)\nemits event",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "node_modules/@principal-ade/code-quality-panels"
+        ],
+        "event": {
+          "name": "quality.colorMode.selected",
+          "description": "User selected color mode from quality hexagon",
+          "attributes": {
+            "colorMode.name": {
+              "type": "string",
+              "description": "Selected color mode name"
+            },
+            "colorMode.previous": {
+              "type": "string",
+              "description": "Previous color mode"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "file-city",
+      "type": "text",
+      "x": 780,
+      "y": 130,
+      "width": 180,
+      "height": 80,
+      "text": "File City\n(re-renders with\nnew color mode)",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+        ],
+        "event": {
+          "name": "quality.fileCity.rerendered",
+          "description": "File City re-rendered with quality color mode",
+          "attributes": {
+            "colorMode.name": {
+              "type": "string",
+              "description": "Active color mode"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "run-tool-button",
+      "type": "text",
+      "x": 50,
+      "y": 280,
+      "width": 180,
+      "height": 80,
+      "text": "Run Tool Button\n(ESLint/Jest/TSC/Knip)\nuser clicks",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "node_modules/@principal-ade/code-quality-panels"
+        ],
+        "event": {
+          "name": "quality.tool.requested",
+          "description": "User requested tool execution",
+          "attributes": {
+            "tool.name": {
+              "type": "string",
+              "description": "Tool name (eslint, jest, tsc, knip)"
+            },
+            "package.path": {
+              "type": "string",
+              "description": "Package path for tool execution"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ipc-handler",
+      "type": "text",
+      "x": 280,
+      "y": 280,
+      "width": 200,
+      "height": 80,
+      "text": "IPC Handler\nrepository-monitoring:\nexecute-tool",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/main/repository-monitoring/ipcHandlers.ts"
+        ],
+        "event": {
+          "name": "quality.ipc.received",
+          "description": "IPC handler received tool execution request",
+          "attributes": {
+            "tool.name": {
+              "type": "string",
+              "description": "Requested tool name"
+            },
+            "repository.path": {
+              "type": "string",
+              "description": "Repository path"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "quality-lens-service",
+      "type": "text",
+      "x": 530,
+      "y": 280,
+      "width": 200,
+      "height": 80,
+      "text": "QualityLensService\n(singleton)\nexecuteTool()",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/main/quality-lenses/QualityLensService.ts"
+        ],
+        "event": {
+          "name": "quality.service.executing",
+          "description": "QualityLensService executing tool request",
+          "attributes": {
+            "tool.name": {
+              "type": "string",
+              "description": "Tool being executed"
+            },
+            "lens.name": {
+              "type": "string",
+              "description": "Lens used for execution"
+            },
+            "package.path": {
+              "type": "string",
+              "description": "Package path"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "quality-lens",
+      "type": "text",
+      "x": 530,
+      "y": 400,
+      "width": 200,
+      "height": 100,
+      "text": "Quality Lens\n- ESLintLens\n- JestLens\n- TypeScriptLens\n- KnipLens",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "node_modules/@principal-ai/codebase-quality-lenses"
+        ],
+        "event": {
+          "name": "quality.lens.running",
+          "description": "Quality lens running tool pipeline",
+          "attributes": {
+            "lens.name": {
+              "type": "string",
+              "description": "Lens name"
+            },
+            "lens.cwd": {
+              "type": "string",
+              "description": "Working directory"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "cli-executor",
+      "type": "text",
+      "x": 780,
+      "y": 280,
+      "width": 200,
+      "height": 80,
+      "text": "ElectronCLIBridge\nExecutor\n(execute command)",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/main/quality-lenses/ElectronCLIBridgeExecutor.ts"
+        ],
+        "event": {
+          "name": "quality.executor.spawning",
+          "description": "Executor spawning CLI process",
+          "attributes": {
+            "command.name": {
+              "type": "string",
+              "description": "Command being executed"
+            },
+            "command.args": {
+              "type": "string",
+              "description": "Command arguments"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "external-tools",
+      "type": "text",
+      "x": 780,
+      "y": 400,
+      "width": 200,
+      "height": 100,
+      "text": "External CLI Tools\n- eslint\n- jest\n- tsc\n- knip",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/main/quality-lenses/ElectronCLIBridgeExecutor.ts"
+        ],
+        "event": {
+          "name": "quality.cli.completed",
+          "description": "External CLI tool completed execution",
+          "attributes": {
+            "tool.name": {
+              "type": "string",
+              "description": "Tool name"
+            },
+            "exit.code": {
+              "type": "number",
+              "description": "Exit code"
+            },
+            "duration.ms": {
+              "type": "number",
+              "description": "Execution duration in ms"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "tool-result",
+      "type": "text",
+      "x": 1030,
+      "y": 280,
+      "width": 180,
+      "height": 80,
+      "text": "Tool Result\nLensResult\n(issues, metrics)",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/main/quality-lenses/QualityLensService.ts"
+        ],
+        "event": {
+          "name": "quality.tool.completed",
+          "description": "Tool execution completed with results",
+          "attributes": {
+            "tool.name": {
+              "type": "string",
+              "description": "Tool name"
+            },
+            "success": {
+              "type": "boolean",
+              "description": "Whether execution succeeded"
+            },
+            "issues.count": {
+              "type": "number",
+              "description": "Number of issues found"
+            },
+            "duration.ms": {
+              "type": "number",
+              "description": "Total execution duration"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "github-api",
+      "type": "text",
+      "x": 50,
+      "y": 550,
+      "width": 180,
+      "height": 80,
+      "text": "GitHub Actions API\n(artifacts endpoint)\nquality metrics",
+      "pv": {
+        "nodeType": "boundary",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/renderer/contexts/RepositoryPanelContext.tsx"
+        ],
+        "boundary": {
+          "direction": "outbound",
+          "node": {
+            "pv.event.name": "quality.artifact.step.api.calling"
+          }
+        }
+      }
+    },
+    {
+      "id": "artifact-data",
+      "type": "text",
+      "x": 280,
+      "y": 550,
+      "width": 200,
+      "height": 80,
+      "text": "Quality Artifact\n(JSON metrics from\nCI workflow)",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/renderer/contexts/RepositoryPanelContext.tsx"
+        ],
+        "event": {
+          "name": "quality.artifact.received",
+          "description": "Quality artifact data received from GitHub",
+          "attributes": {
+            "packages.count": {
+              "type": "number",
+              "description": "Number of packages in artifact"
+            },
+            "artifact.timestamp": {
+              "type": "number",
+              "description": "When artifact was created"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "artifact-not-found",
+      "type": "text",
+      "x": 530,
+      "y": 550,
+      "width": 180,
+      "height": 80,
+      "text": "Artifact Not Found\n(no CI configured\nor no artifacts)",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/renderer/contexts/RepositoryPanelContext.tsx"
+        ],
+        "event": {
+          "name": "quality.artifact.notFound",
+          "description": "No quality artifacts found in GitHub Actions",
+          "attributes": {
+            "github.owner": {
+              "type": "string",
+              "description": "GitHub repository owner"
+            },
+            "github.repo": {
+              "type": "string",
+              "description": "GitHub repository name"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "tool-error",
+      "type": "text",
+      "x": 1030,
+      "y": 400,
+      "width": 180,
+      "height": 80,
+      "text": "Tool Error\n(execution failed)\nerror state",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/main/quality-lenses/QualityLensService.ts"
+        ],
+        "event": {
+          "name": "quality.tool.error",
+          "description": "Tool execution encountered an error",
+          "attributes": {
+            "tool.name": {
+              "type": "string",
+              "description": "Tool that failed"
+            },
+            "error.message": {
+              "type": "string",
+              "description": "Error message"
+            },
+            "error.code": {
+              "type": "string",
+              "description": "Error code if available"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "artifact-step-remote",
+      "type": "text",
+      "x": 50,
+      "y": 700,
+      "width": 160,
+      "height": 70,
+      "text": "Step: Get Remote\n(reading git remote)",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/renderer/contexts/RepositoryPanelContext.tsx"
+        ],
+        "event": {
+          "name": "quality.artifact.step.remote",
+          "description": "Starting to get git remote URL",
+          "attributes": {
+            "step": {
+              "type": "string",
+              "description": "Step description"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "artifact-step-remote-resolved",
+      "type": "text",
+      "x": 230,
+      "y": 700,
+      "width": 160,
+      "height": 70,
+      "text": "Remote Resolved\n(git remote URL)",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/renderer/contexts/RepositoryPanelContext.tsx"
+        ],
+        "event": {
+          "name": "quality.artifact.step.remote.resolved",
+          "description": "Git remote URL resolved",
+          "attributes": {
+            "step": {
+              "type": "string",
+              "description": "Step description"
+            },
+            "remote.url": {
+              "type": "string",
+              "description": "Git remote URL"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "artifact-step-github-parsed",
+      "type": "text",
+      "x": 410,
+      "y": 700,
+      "width": 160,
+      "height": 70,
+      "text": "GitHub Parsed\n(owner/repo)",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/renderer/contexts/RepositoryPanelContext.tsx"
+        ],
+        "event": {
+          "name": "quality.artifact.step.github.parsed",
+          "description": "GitHub owner/repo parsed from remote URL",
+          "attributes": {
+            "step": {
+              "type": "string",
+              "description": "Step description"
+            },
+            "github.owner": {
+              "type": "string",
+              "description": "GitHub repository owner"
+            },
+            "github.repo": {
+              "type": "string",
+              "description": "GitHub repository name"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "artifact-step-branch",
+      "type": "text",
+      "x": 590,
+      "y": 700,
+      "width": 160,
+      "height": 70,
+      "text": "Step: Get Branch\n(reading git status)",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/renderer/contexts/RepositoryPanelContext.tsx"
+        ],
+        "event": {
+          "name": "quality.artifact.step.branch",
+          "description": "Starting to get current branch",
+          "attributes": {
+            "step": {
+              "type": "string",
+              "description": "Step description"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "artifact-step-branch-resolved",
+      "type": "text",
+      "x": 770,
+      "y": 700,
+      "width": 160,
+      "height": 70,
+      "text": "Branch Resolved\n(current branch)",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/renderer/contexts/RepositoryPanelContext.tsx"
+        ],
+        "event": {
+          "name": "quality.artifact.step.branch.resolved",
+          "description": "Current branch resolved",
+          "attributes": {
+            "step": {
+              "type": "string",
+              "description": "Step description"
+            },
+            "git.branch": {
+              "type": "string",
+              "description": "Current git branch"
+            },
+            "git.branchSource": {
+              "type": "string",
+              "description": "How branch was determined"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "artifact-step-api-calling",
+      "type": "text",
+      "x": 950,
+      "y": 700,
+      "width": 160,
+      "height": 70,
+      "text": "Step: API Call\n(calling GitHub)",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/renderer/contexts/RepositoryPanelContext.tsx"
+        ],
+        "event": {
+          "name": "quality.artifact.step.api.calling",
+          "description": "Calling GitHub Actions API",
+          "attributes": {
+            "step": {
+              "type": "string",
+              "description": "Step description"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "artifact-step-api-complete",
+      "type": "text",
+      "x": 1130,
+      "y": 700,
+      "width": 160,
+      "height": 70,
+      "text": "API Complete\n(response received)",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/renderer/contexts/RepositoryPanelContext.tsx"
+        ],
+        "event": {
+          "name": "quality.artifact.step.api.complete",
+          "description": "GitHub API call completed",
+          "attributes": {
+            "step": {
+              "type": "string",
+              "description": "Step description"
+            },
+            "api.duration.ms": {
+              "type": "number",
+              "description": "API call duration in milliseconds"
+            },
+            "api.found": {
+              "type": "boolean",
+              "description": "Whether artifact was found"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "artifact-skipped",
+      "type": "text",
+      "x": 770,
+      "y": 550,
+      "width": 180,
+      "height": 80,
+      "text": "Artifact Skipped\n(no remote or\nnot GitHub)",
+      "pv": {
+        "nodeType": "event",
+        "shape": "rectangle",
+        "status": "draft",
+        "references": [
+          "src/renderer/contexts/RepositoryPanelContext.tsx"
+        ],
+        "event": {
+          "name": "quality.artifact.skipped",
+          "description": "Artifact fetch skipped (no git remote or not GitHub)",
+          "attributes": {
+            "message": {
+              "type": "string",
+              "description": "Skip reason message"
+            },
+            "skip.reason": {
+              "type": "string",
+              "description": "Skip reason code (no_git_remote, not_github)"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "sidebar-to-framework",
+      "fromNode": "panel-sidebar",
+      "fromSide": "right",
+      "toNode": "panel-framework",
+      "toSide": "left",
+      "label": "onPanelChange",
+      "pv": {
+        "edgeType": "user-action"
+      }
+    },
+    {
+      "id": "framework-to-panel",
+      "fromNode": "panel-framework",
+      "fromSide": "right",
+      "toNode": "quality-panel",
+      "toSide": "left",
+      "label": "mounts panel",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "panel-to-context",
+      "fromNode": "quality-panel",
+      "fromSide": "bottom",
+      "toNode": "repository-context",
+      "toSide": "top",
+      "label": "reads qualitySlice",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "panel-to-hexagon",
+      "fromNode": "quality-panel",
+      "fromSide": "right",
+      "toNode": "hexagon-click",
+      "toSide": "left",
+      "label": "user clicks facet",
+      "pv": {
+        "edgeType": "user-action"
+      }
+    },
+    {
+      "id": "hexagon-to-context",
+      "fromNode": "hexagon-click",
+      "fromSide": "bottom",
+      "toNode": "repository-context",
+      "toSide": "right",
+      "label": "quality:colorMode:select",
+      "pv": {
+        "edgeType": "event"
+      }
+    },
+    {
+      "id": "context-to-filecity",
+      "fromNode": "repository-context",
+      "fromSide": "right",
+      "toNode": "file-city",
+      "toSide": "left",
+      "label": "colorMode update",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "run-to-ipc",
+      "fromNode": "run-tool-button",
+      "fromSide": "right",
+      "toNode": "ipc-handler",
+      "toSide": "left",
+      "label": "IPC invoke",
+      "pv": {
+        "edgeType": "ipc-invoke"
+      }
+    },
+    {
+      "id": "ipc-to-service",
+      "fromNode": "ipc-handler",
+      "fromSide": "right",
+      "toNode": "quality-lens-service",
+      "toSide": "left",
+      "label": "executeTool()",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "service-to-lens",
+      "fromNode": "quality-lens-service",
+      "fromSide": "bottom",
+      "toNode": "quality-lens",
+      "toSide": "top",
+      "label": "find & configure lens",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "service-to-executor",
+      "fromNode": "quality-lens-service",
+      "fromSide": "right",
+      "toNode": "cli-executor",
+      "toSide": "left",
+      "label": "uses executor",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "lens-to-executor",
+      "fromNode": "quality-lens",
+      "fromSide": "right",
+      "toNode": "cli-executor",
+      "toSide": "bottom",
+      "label": "execute()",
+      "pv": {
+        "edgeType": "executes"
+      }
+    },
+    {
+      "id": "executor-to-tools",
+      "fromNode": "cli-executor",
+      "fromSide": "bottom",
+      "toNode": "external-tools",
+      "toSide": "top",
+      "label": "child_process.spawn",
+      "pv": {
+        "edgeType": "executes"
+      }
+    },
+    {
+      "id": "tools-to-result",
+      "fromNode": "external-tools",
+      "fromSide": "right",
+      "toNode": "tool-result",
+      "toSide": "bottom",
+      "label": "stdout/stderr",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "executor-to-result",
+      "fromNode": "cli-executor",
+      "fromSide": "right",
+      "toNode": "tool-result",
+      "toSide": "left",
+      "label": "parse output",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "github-to-artifact",
+      "fromNode": "github-api",
+      "fromSide": "right",
+      "toNode": "artifact-data",
+      "toSide": "left",
+      "label": "HTTP GET",
+      "pv": {
+        "edgeType": "http"
+      }
+    },
+    {
+      "id": "artifact-to-context",
+      "fromNode": "artifact-data",
+      "fromSide": "right",
+      "toNode": "repository-context",
+      "toSide": "bottom",
+      "label": "setQualityData",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "service-to-error",
+      "fromNode": "quality-lens-service",
+      "fromSide": "bottom",
+      "toNode": "tool-error",
+      "toSide": "top",
+      "label": "on error",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "github-to-notfound",
+      "fromNode": "github-api",
+      "fromSide": "right",
+      "toNode": "artifact-not-found",
+      "toSide": "left",
+      "label": "404 / empty",
+      "pv": {
+        "edgeType": "http"
+      }
+    },
+    {
+      "id": "step-remote-to-resolved",
+      "fromNode": "artifact-step-remote",
+      "fromSide": "right",
+      "toNode": "artifact-step-remote-resolved",
+      "toSide": "left",
+      "label": "git remote",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "step-resolved-to-github",
+      "fromNode": "artifact-step-remote-resolved",
+      "fromSide": "right",
+      "toNode": "artifact-step-github-parsed",
+      "toSide": "left",
+      "label": "parse URL",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "step-github-to-branch",
+      "fromNode": "artifact-step-github-parsed",
+      "fromSide": "right",
+      "toNode": "artifact-step-branch",
+      "toSide": "left",
+      "label": "next step",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "step-branch-to-resolved",
+      "fromNode": "artifact-step-branch",
+      "fromSide": "right",
+      "toNode": "artifact-step-branch-resolved",
+      "toSide": "left",
+      "label": "git status",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "step-branch-to-api",
+      "fromNode": "artifact-step-branch-resolved",
+      "fromSide": "right",
+      "toNode": "artifact-step-api-calling",
+      "toSide": "left",
+      "label": "call API",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "step-api-to-complete",
+      "fromNode": "artifact-step-api-calling",
+      "fromSide": "right",
+      "toNode": "artifact-step-api-complete",
+      "toSide": "left",
+      "label": "HTTP response",
+      "pv": {
+        "edgeType": "http"
+      }
+    },
+    {
+      "id": "step-api-to-received",
+      "fromNode": "artifact-step-api-complete",
+      "fromSide": "top",
+      "toNode": "artifact-data",
+      "toSide": "bottom",
+      "label": "artifact found",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "step-api-to-notfound",
+      "fromNode": "artifact-step-api-complete",
+      "fromSide": "top",
+      "toNode": "artifact-not-found",
+      "toSide": "bottom",
+      "label": "not found",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "step-remote-to-skipped",
+      "fromNode": "artifact-step-remote",
+      "fromSide": "top",
+      "toNode": "artifact-skipped",
+      "toSide": "bottom",
+      "label": "no remote",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "step-github-to-skipped",
+      "fromNode": "artifact-step-github-parsed",
+      "fromSide": "top",
+      "toNode": "artifact-skipped",
+      "toSide": "bottom",
+      "label": "not GitHub",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    }
+  ]
+}

@@ -28,549 +28,469 @@
     },
     {
       "id": "trigger",
-      "type": "text",
-      "text": "# User Trigger\n\n**Entry Points:**\n- Feed card click\n- Quick Open menu\n- Workspace list\n- CLI open command\n\n**Options:**\n- `workspaceId` - Named workspace\n- `repositoryPath` - Temp workspace\n- `repositoryId` - PURL identifier",
+      "type": "otel-event",
       "x": -3,
       "y": 0,
       "width": 280,
       "height": 220,
       "color": "#22c55e",
-      "pv": {
-        "nodeType": "event",
-        "icon": "Mouse",
-        "name": "User Trigger",
-        "references": [
-          "src/renderer/main-process-api/WindowService.ts"
-        ],
-        "status": "draft",
-        "event": {
-          "name": "alexandria.window.open.requested",
-          "attributes": {
-            "workspace.id": {
-              "type": "string",
-              "description": "Workspace UUID if opening named workspace"
-            },
-            "repository.path": {
-              "type": "string",
-              "description": "Local path if opening single repo"
-            },
-            "repository.id": {
-              "type": "string",
-              "description": "PURL or GitHub ID"
-            },
-            "trigger.source": {
-              "type": "string",
-              "description": "Where the open was triggered from"
-            }
+      "label": "User Trigger",
+      "icon": "Mouse",
+      "event": {
+        "name": "alexandria.window.open.requested",
+        "attributes": {
+          "workspace.id": {
+            "type": "string",
+            "description": "Workspace UUID if opening named workspace"
+          },
+          "repository.path": {
+            "type": "string",
+            "description": "Local path if opening single repo"
+          },
+          "repository.id": {
+            "type": "string",
+            "description": "PURL or GitHub ID"
+          },
+          "trigger.source": {
+            "type": "string",
+            "description": "Where the open was triggered from"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "window-service",
-      "type": "text",
-      "text": "# WindowService (Renderer)\n\n```typescript\nWindowService\n  .openAlexandriaWorkspace({\n    workspaceId,\n    repositoryPath,\n    repositoryId\n  })\n```\n\nCalls `window.mainProcess.window.openAlexandriaWorkspace()`",
+      "type": "otel-event",
       "x": 350,
       "y": 0,
       "width": 300,
       "height": 200,
       "color": "#06b6d4",
-      "pv": {
-        "nodeType": "event",
-        "icon": "Zap",
-        "name": "Window Service",
-        "references": [
-          "src/renderer/main-process-api/WindowService.ts"
-        ],
-        "status": "draft",
-        "event": {
-          "name": "alexandria.window.ipc.invoke",
-          "attributes": {
-            "ipc.channel": {
-              "type": "string",
-              "value": "window:open-alexandria-workspace"
-            },
-            "workspace.id": {
-              "type": "string"
-            },
-            "has.repository.path": {
-              "type": "boolean"
-            }
+      "label": "Window Service",
+      "icon": "Zap",
+      "event": {
+        "name": "alexandria.window.ipc.invoke",
+        "attributes": {
+          "ipc.channel": {
+            "type": "string",
+            "value": "window:open-alexandria-workspace"
+          },
+          "workspace.id": {
+            "type": "string"
+          },
+          "has.repository.path": {
+            "type": "boolean"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "ipc-handler",
-      "type": "text",
-      "text": "# IPC Handler (Main)\n\n`WindowEvent.OPEN_ALEXANDRIA_WORKSPACE`\n\n**Determines:**\n- Window name (unique ID)\n- Display name for titlebar\n- Metadata for tracking\n\n**Modes:**\n- `alexandria-workspace-{id}`\n- `alexandria-workspace-temp-{path}`",
+      "type": "otel-event",
       "x": 720,
       "y": 0,
       "width": 280,
       "height": 220,
       "color": "#ef4444",
-      "pv": {
-        "nodeType": "event",
-        "icon": "Server",
-        "name": "IPC Handler",
-        "references": [
-          "src/main/window/modernWindowHandlers.ts"
-        ],
-        "status": "draft",
-        "event": {
-          "name": "alexandria.window.handler.received",
-          "attributes": {
-            "window.name": {
-              "type": "string",
-              "description": "Unique window identifier"
-            },
-            "window.mode": {
-              "type": "string",
-              "description": "workspace or temp"
-            },
-            "workspace.name": {
-              "type": "string",
-              "description": "Display name for titlebar"
-            }
+      "label": "IPC Handler",
+      "icon": "Server",
+      "event": {
+        "name": "alexandria.window.handler.received",
+        "attributes": {
+          "window.name": {
+            "type": "string",
+            "description": "Unique window identifier"
+          },
+          "window.mode": {
+            "type": "string",
+            "description": "workspace or temp"
+          },
+          "workspace.name": {
+            "type": "string",
+            "description": "Display name for titlebar"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "registry-lookup",
-      "type": "text",
-      "text": "# Registry Lookup\n\n**If workspaceId provided:**\n```typescript\nservice.getWorkspace(workspaceId)\n```\n\n**Fetches:**\n- Workspace name\n- suggestedClonePath\n- Theme settings\n- Member repositories",
+      "type": "otel-event",
       "x": 720,
       "y": 290,
       "width": 280,
       "height": 180,
       "color": "#ef4444",
-      "pv": {
-        "nodeType": "event",
-        "icon": "Database",
-        "name": "Registry Lookup",
-        "references": [
-          "src/main/stores/AlexandriaRegistryService.ts"
-        ],
-        "status": "draft",
-        "event": {
-          "name": "alexandria.workspace.lookup",
-          "attributes": {
-            "workspace.id": {
-              "type": "string"
-            },
-            "workspace.found": {
-              "type": "boolean"
-            },
-            "workspace.name": {
-              "type": "string"
-            },
-            "repository.count": {
-              "type": "number"
-            }
+      "label": "Registry Lookup",
+      "icon": "Database",
+      "event": {
+        "name": "alexandria.workspace.lookup",
+        "attributes": {
+          "workspace.id": {
+            "type": "string"
+          },
+          "workspace.found": {
+            "type": "boolean"
+          },
+          "workspace.name": {
+            "type": "string"
+          },
+          "repository.count": {
+            "type": "number"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "create-window",
-      "type": "text",
-      "text": "# createSpecialWindow\n\n**Creates BrowserWindow:**\n- Size: 1280x832 (min 1024x720)\n- Features: FS, GitHub, Menu\n- Metadata: primaryType, displayName\n\n**Reuse check:**\n- If window exists → focus & return\n- If destroyed → clean up & create",
+      "type": "otel-event",
       "x": 350,
       "y": 280,
       "width": 300,
       "height": 200,
       "color": "#4f46e5",
-      "pv": {
-        "nodeType": "event",
-        "icon": "Box",
-        "name": "Create Window",
-        "references": [
-          "src/main/window/modernWindowManager.ts"
-        ],
-        "status": "implemented",
-        "otel": {
-          "files": ["src/main/window/modernWindowManager.ts"]
-        },
-        "event": {
-          "name": "window.createSpecial",
-          "attributes": {
-            "window.purpose": {
-              "type": "string"
-            },
-            "window.reused": {
-              "type": "boolean"
-            },
-            "window.id": {
-              "type": "number"
-            },
-            "window.type": {
-              "type": "string",
-              "description": "secondary or minimal"
-            }
+      "label": "Create Window",
+      "icon": "Box",
+      "event": {
+        "name": "window.createSpecial",
+        "attributes": {
+          "window.purpose": {
+            "type": "string"
+          },
+          "window.reused": {
+            "type": "boolean"
+          },
+          "window.id": {
+            "type": "number"
+          },
+          "window.type": {
+            "type": "string",
+            "description": "secondary or minimal"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/window/modernWindowManager.ts"
+        ]
       }
     },
     {
       "id": "terminal-register",
-      "type": "text",
-      "text": "# Terminal Registration\n\n```typescript\nterminalManager\n  .setMainWindow(window)\n```\n\nEnables terminal events to be routed to this window",
+      "type": "otel-event",
       "x": 0,
       "y": 310,
       "width": 280,
       "height": 140,
       "color": "#818cf8",
-      "pv": {
-        "nodeType": "event",
-        "icon": "Monitor",
-        "name": "Terminal Register",
-        "references": [
-          "src/main/terminal/index.ts"
-        ],
-        "status": "draft",
-        "event": {
-          "name": "terminal.window.registered",
-          "attributes": {
-            "window.id": {
-              "type": "number"
-            }
+      "label": "Terminal Register",
+      "icon": "Monitor",
+      "event": {
+        "name": "terminal.window.registered",
+        "attributes": {
+          "window.id": {
+            "type": "number"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "watch-acquire",
-      "type": "text",
-      "text": "# Acquire Repository Watches\n\n**Background task (non-blocking):**\n\n1. Get repositories in workspace\n2. Filter those with valid paths\n3. `acquireWatch(path, referenceId)`\n\n**Reference ID:**\n`alexandria-workspace:{windowId}`\n\n**On window close:**\n→ `releaseWatch()` for all paths",
+      "type": "otel-event",
       "x": -4,
       "y": 589,
       "width": 280,
       "height": 240,
       "color": "#0d9488",
-      "pv": {
-        "nodeType": "event",
-        "icon": "Eye",
-        "name": "Watch Acquire",
-        "references": [
-          "src/main/repository-monitoring/ipcHandlers.ts"
-        ],
-        "status": "draft",
-        "event": {
-          "name": "alexandria.watches.acquired",
-          "attributes": {
-            "window.id": {
-              "type": "number"
-            },
-            "watch.reference.id": {
-              "type": "string"
-            },
-            "repositories.total": {
-              "type": "number"
-            },
-            "repositories.watched": {
-              "type": "number"
-            },
-            "repositories.failed": {
-              "type": "number"
-            }
+      "label": "Watch Acquire",
+      "icon": "Eye",
+      "event": {
+        "name": "alexandria.watches.acquired",
+        "attributes": {
+          "window.id": {
+            "type": "number"
+          },
+          "watch.reference.id": {
+            "type": "string"
+          },
+          "repositories.total": {
+            "type": "number"
+          },
+          "repositories.watched": {
+            "type": "number"
+          },
+          "repositories.failed": {
+            "type": "number"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "load-url",
-      "type": "text",
-      "text": "# Load Window URL\n\n```typescript\nwindow.loadURL(\n  `alexandria-workspace.html\n    ?workspaceId={id}\n    &repositoryPath={path}\n    &repositoryId={purl}`\n)\n```\n\nParams passed via URL query string",
+      "type": "otel-event",
       "x": 317,
       "y": 617,
       "width": 300,
       "height": 180,
       "color": "#4f46e5",
-      "pv": {
-        "nodeType": "event",
-        "icon": "Globe",
-        "name": "Load URL",
-        "references": [
-          "src/main/window/modernWindowHandlers.ts"
-        ],
-        "status": "draft",
-        "event": {
-          "name": "window.loadURL",
-          "attributes": {
-            "window.id": {
-              "type": "number"
-            },
-            "url.path": {
-              "type": "string"
-            },
-            "url.has.workspace.id": {
-              "type": "boolean"
-            },
-            "url.has.repository.path": {
-              "type": "boolean"
-            }
+      "label": "Load URL",
+      "icon": "Globe",
+      "event": {
+        "name": "window.loadURL",
+        "attributes": {
+          "window.id": {
+            "type": "number"
+          },
+          "url.path": {
+            "type": "string"
+          },
+          "url.has.workspace.id": {
+            "type": "boolean"
+          },
+          "url.has.repository.path": {
+            "type": "boolean"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "app-init",
-      "type": "text",
-      "text": "# AlexandriaWorkspaceApp\n\n**Renderer initialization:**\n\n1. Parse `window.location.hash`\n2. Extract workspaceId/repoPath\n3. Load workspace from service\n4. Initialize panel framework\n5. Set up event listeners\n\n**Ready when:**\n- Workspace loaded\n- Layout rendered\n- Panels mounted",
+      "type": "otel-event",
       "x": 325,
       "y": 876,
       "width": 280,
       "height": 240,
       "color": "#22c55e",
-      "pv": {
-        "nodeType": "event",
-        "icon": "Play",
-        "name": "App Init",
-        "references": [
-          "src/renderer/alexandria-workspace/AlexandriaWorkspaceApp.tsx"
-        ],
-        "status": "draft",
-        "event": {
-          "name": "alexandria.app.initialized",
-          "attributes": {
-            "workspace.id": {
-              "type": "string"
-            },
-            "workspace.name": {
-              "type": "string"
-            },
-            "repository.count": {
-              "type": "number"
-            },
-            "layout.panels": {
-              "type": "string",
-              "description": "Comma-separated panel IDs"
-            },
-            "init.duration.ms": {
-              "type": "number"
-            }
+      "label": "App Init",
+      "icon": "Play",
+      "event": {
+        "name": "alexandria.app.initialized",
+        "attributes": {
+          "workspace.id": {
+            "type": "string"
+          },
+          "workspace.name": {
+            "type": "string"
+          },
+          "repository.count": {
+            "type": "number"
+          },
+          "layout.panels": {
+            "type": "string",
+            "description": "Comma-separated panel IDs"
+          },
+          "init.duration.ms": {
+            "type": "number"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "window-ready",
-      "type": "text",
-      "text": "# Window Ready\n\n**Final state:**\n- Window visible & focused\n- Panels rendering\n- Watches active\n- Terminal available\n\n**Broadcast:**\n`REPOSITORY_WINDOWS_CHANGED`\nto all other windows",
+      "type": "otel-event",
       "x": 339,
       "y": 1188,
       "width": 250,
       "height": 200,
       "color": "#22c55e",
-      "pv": {
-        "nodeType": "event",
-        "icon": "Check",
-        "name": "Window Ready",
-        "references": [
-          "src/renderer/alexandria-workspace/AlexandriaWorkspaceApp.tsx"
-        ],
-        "status": "draft",
-        "event": {
-          "name": "alexandria.window.ready",
-          "attributes": {
-            "window.id": {
-              "type": "number"
-            },
-            "window.name": {
-              "type": "string"
-            },
-            "workspace.id": {
-              "type": "string"
-            },
-            "total.duration.ms": {
-              "type": "number"
-            },
-            "watches.active": {
-              "type": "number"
-            }
+      "label": "Window Ready",
+      "icon": "Check",
+      "event": {
+        "name": "alexandria.window.ready",
+        "attributes": {
+          "window.id": {
+            "type": "number"
+          },
+          "window.name": {
+            "type": "string"
+          },
+          "workspace.id": {
+            "type": "string"
+          },
+          "total.duration.ms": {
+            "type": "number"
+          },
+          "watches.active": {
+            "type": "number"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "workspace-found",
-      "type": "text",
-      "text": "# Workspace Found\n\nWorkspace exists in registry, proceeding with window creation",
+      "type": "otel-event",
       "x": 735,
       "y": 502,
       "width": 250,
       "height": 100,
       "color": "#22c55e",
-      "pv": {
-        "nodeType": "event",
-        "icon": "CheckCircle",
-        "name": "Workspace Found",
-        "references": [
-          "src/main/stores/AlexandriaRegistryService.ts"
-        ],
-        "status": "draft",
-        "event": {
-          "name": "alexandria.workspace.found",
-          "attributes": {
-            "workspace.id": {
-              "type": "string"
-            },
-            "workspace.name": {
-              "type": "string"
-            }
+      "label": "Workspace Found",
+      "icon": "CheckCircle",
+      "event": {
+        "name": "alexandria.workspace.found",
+        "attributes": {
+          "workspace.id": {
+            "type": "string"
+          },
+          "workspace.name": {
+            "type": "string"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "workspace-not-found",
-      "type": "text",
-      "text": "# Workspace Not Found\n\nWorkspace ID not in registry, cannot proceed",
+      "type": "otel-event",
       "x": 1198,
       "y": 331,
       "width": 250,
       "height": 100,
       "color": "#ef4444",
-      "pv": {
-        "nodeType": "event",
-        "icon": "XCircle",
-        "name": "Workspace Not Found",
-        "references": [
-          "src/main/stores/AlexandriaRegistryService.ts"
-        ],
-        "status": "draft",
-        "event": {
-          "name": "alexandria.workspace.not_found",
-          "attributes": {
-            "workspace.id": {
-              "type": "string"
-            },
-            "error.message": {
-              "type": "string"
-            }
+      "label": "Workspace Not Found",
+      "icon": "XCircle",
+      "event": {
+        "name": "alexandria.workspace.not_found",
+        "attributes": {
+          "workspace.id": {
+            "type": "string"
+          },
+          "error.message": {
+            "type": "string"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "temp-mode",
-      "type": "text",
-      "text": "# Temporary Mode\n\nOpening without workspace ID - single repository mode",
+      "type": "otel-event",
       "x": 1030,
       "y": 504,
       "width": 250,
       "height": 100,
       "color": "#f59e0b",
-      "pv": {
-        "nodeType": "event",
-        "icon": "Clock",
-        "name": "Temp Mode",
-        "references": [
-          "src/main/window/modernWindowHandlers.ts"
-        ],
-        "status": "draft",
-        "event": {
-          "name": "alexandria.window.temp.mode",
-          "attributes": {
-            "repository.path": {
-              "type": "string"
-            },
-            "repository.id": {
-              "type": "string"
-            }
+      "label": "Temp Mode",
+      "icon": "Clock",
+      "event": {
+        "name": "alexandria.window.temp.mode",
+        "attributes": {
+          "repository.path": {
+            "type": "string"
+          },
+          "repository.id": {
+            "type": "string"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "window-creating",
-      "type": "text",
-      "text": "# Creating Window\n\nNew BrowserWindow being created",
+      "type": "otel-event",
       "x": 872,
       "y": 699,
       "width": 200,
       "height": 80,
       "color": "#4f46e5",
-      "pv": {
-        "nodeType": "event",
-        "icon": "Plus",
-        "name": "Creating Window",
-        "references": [
-          "src/main/window/modernWindowManager.ts"
-        ],
-        "status": "draft",
-        "event": {
-          "name": "alexandria.window.creating",
-          "attributes": {
-            "window.name": {
-              "type": "string"
-            },
-            "window.type": {
-              "type": "string"
-            }
+      "label": "Creating Window",
+      "icon": "Plus",
+      "event": {
+        "name": "alexandria.window.creating",
+        "attributes": {
+          "window.name": {
+            "type": "string"
+          },
+          "window.type": {
+            "type": "string"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "window-reusing",
-      "type": "text",
-      "text": "# Reusing Window\n\nExisting window found, focusing instead of creating",
+      "type": "otel-event",
       "x": 651,
       "y": 701,
       "width": 200,
       "height": 80,
       "color": "#06b6d4",
-      "pv": {
-        "nodeType": "event",
-        "icon": "RotateCw",
-        "name": "Reusing Window",
-        "references": [
-          "src/main/window/modernWindowManager.ts"
-        ],
-        "status": "draft",
-        "event": {
-          "name": "alexandria.window.reusing",
-          "attributes": {
-            "window.id": {
-              "type": "number"
-            },
-            "window.name": {
-              "type": "string"
-            }
+      "label": "Reusing Window",
+      "icon": "RotateCw",
+      "event": {
+        "name": "alexandria.window.reusing",
+        "attributes": {
+          "window.id": {
+            "type": "number"
+          },
+          "window.name": {
+            "type": "string"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "open-failed",
-      "type": "text",
-      "text": "# Open Failed\n\nWindow open failed due to error",
+      "type": "otel-event",
       "x": 1535,
       "y": 341,
       "width": 250,
       "height": 80,
       "color": "#ef4444",
-      "pv": {
-        "nodeType": "event",
-        "icon": "AlertTriangle",
-        "name": "Open Failed",
-        "references": [
-          "src/main/window/modernWindowHandlers.ts"
-        ],
-        "status": "draft",
-        "event": {
-          "name": "alexandria.window.open.failed",
-          "attributes": {
-            "error.message": {
-              "type": "string"
-            },
-            "error.code": {
-              "type": "string"
-            }
+      "label": "Open Failed",
+      "icon": "AlertTriangle",
+      "event": {
+        "name": "alexandria.window.open.failed",
+        "attributes": {
+          "error.message": {
+            "type": "string"
+          },
+          "error.code": {
+            "type": "string"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     }
   ],

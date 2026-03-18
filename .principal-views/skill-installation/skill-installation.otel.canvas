@@ -84,616 +84,544 @@
     },
     {
       "id": "skill-browser-view",
-      "type": "text",
+      "type": "otel-event",
       "x": -152,
       "y": 36,
       "width": 220,
       "height": 100,
-      "text": "SkillBrowserView\nMain skills view\nBrowse/Installed modes",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/principal-window/views/SkillBrowserView/SkillBrowserView.tsx"
-        ],
-        "event": {
-          "name": "skill.ui.view_opened",
-          "description": "User opens the skill browser view",
-          "attributes": {
-            "view.mode": {
-              "type": "string",
-              "description": "Current view mode: browse or installed"
-            },
-            "skills.installed_count": {
-              "type": "number",
-              "description": "Number of currently installed skills"
-            }
+      "label": "SkillBrowserView",
+      "shape": "rectangle",
+      "event": {
+        "name": "skill.ui.view_opened",
+        "description": "User opens the skill browser view",
+        "attributes": {
+          "view.mode": {
+            "type": "string",
+            "description": "Current view mode: browse or installed"
+          },
+          "skills.installed_count": {
+            "type": "number",
+            "description": "Number of currently installed skills"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "install-toolbar",
-      "type": "text",
+      "type": "otel-event",
       "x": -284,
       "y": 199,
       "width": 220,
       "height": 100,
-      "text": "InstallSkillToolbar\nShows install status\nTriggers installation",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/principal-window/views/SkillBrowserView/InstallSkillToolbar.tsx"
-        ],
-        "event": {
-          "name": "skill.ui.install_clicked",
-          "description": "User clicks install button on skill toolbar",
-          "attributes": {
-            "skill.name": {
-              "type": "string",
-              "description": "Name of skill being installed"
-            },
-            "skill.source_repo": {
-              "type": "string",
-              "description": "GitHub repository source"
-            },
-            "skill.current_status": {
-              "type": "string",
-              "description": "Current status: not_installed, installed, update_available"
-            }
+      "label": "InstallSkillToolbar",
+      "shape": "rectangle",
+      "event": {
+        "name": "skill.ui.install_clicked",
+        "description": "User clicks install button on skill toolbar",
+        "attributes": {
+          "skill.name": {
+            "type": "string",
+            "description": "Name of skill being installed"
+          },
+          "skill.source_repo": {
+            "type": "string",
+            "description": "GitHub repository source"
+          },
+          "skill.current_status": {
+            "type": "string",
+            "description": "Current status: not_installed, installed, update_available"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "installation-modal",
-      "type": "text",
+      "type": "otel-event",
       "x": -284,
       "y": 391,
       "width": 220,
       "height": 100,
-      "text": "SkillInstallationModal\nDirectory selection\nMulti-agent install",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/principal-window/views/SkillBrowserView/SkillInstallationModal.tsx"
-        ],
-        "event": {
-          "name": "skill.ui.modal_confirmed",
-          "description": "User confirms skill installation with selected directories",
-          "attributes": {
-            "skill.name": {
-              "type": "string",
-              "description": "Name of skill being installed"
-            },
-            "directories.selected": {
-              "type": "array",
-              "description": "Array of selected directory IDs"
-            },
-            "directories.count": {
-              "type": "number",
-              "description": "Number of directories selected for installation"
-            },
-            "action.type": {
-              "type": "string",
-              "description": "Action type: install, uninstall, update"
-            }
+      "label": "SkillInstallationModal",
+      "shape": "rectangle",
+      "event": {
+        "name": "skill.ui.modal_confirmed",
+        "description": "User confirms skill installation with selected directories",
+        "attributes": {
+          "skill.name": {
+            "type": "string",
+            "description": "Name of skill being installed"
+          },
+          "directories.selected": {
+            "type": "array",
+            "description": "Array of selected directory IDs"
+          },
+          "directories.count": {
+            "type": "number",
+            "description": "Number of directories selected for installation"
+          },
+          "action.type": {
+            "type": "string",
+            "description": "Action type: install, uninstall, update"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "github-service",
-      "type": "text",
+      "type": "otel-event",
       "x": 205,
       "y": 113,
       "width": 220,
       "height": 100,
-      "text": "GithubService\ngetTree(), getFileContent()\ninstallSkill()",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/main-process-api/GithubService.ts"
-        ],
-        "event": {
-          "name": "skill.service.install_requested",
-          "description": "Renderer service initiates skill installation request",
-          "attributes": {
-            "skill.name": {
-              "type": "string",
-              "description": "Skill name"
-            },
-            "github.url": {
-              "type": "string",
-              "description": "GitHub URL of skill"
-            },
-            "destination.type": {
-              "type": "string",
-              "description": "Destination type: global-universal, global-claude, project-claude, etc."
-            },
-            "files.count": {
-              "type": "number",
-              "description": "Number of files to install"
-            }
+      "label": "GithubService",
+      "shape": "rectangle",
+      "event": {
+        "name": "skill.service.install_requested",
+        "description": "Renderer service initiates skill installation request",
+        "attributes": {
+          "skill.name": {
+            "type": "string",
+            "description": "Skill name"
+          },
+          "github.url": {
+            "type": "string",
+            "description": "GitHub URL of skill"
+          },
+          "destination.type": {
+            "type": "string",
+            "description": "Destination type: global-universal, global-claude, project-claude, etc."
+          },
+          "files.count": {
+            "type": "number",
+            "description": "Number of files to install"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "filesystem-service",
-      "type": "text",
+      "type": "otel-event",
       "x": 82,
       "y": 237,
       "width": 220,
       "height": 100,
-      "text": "FileSystemService\ndetectPresetDirectories()\ngetAllLocalSkills()",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/main-process-api/FileSystemService.ts"
-        ],
-        "event": {
-          "name": "skill.service.directories_detected",
-          "description": "Service detects available agent directories",
-          "attributes": {
-            "directories.count": {
-              "type": "number",
-              "description": "Number of directories detected"
-            },
-            "directories.types": {
-              "type": "array",
-              "description": "Types of directories found: claude, opencode, cursor, windsurf"
-            }
+      "label": "FileSystemService",
+      "shape": "rectangle",
+      "event": {
+        "name": "skill.service.directories_detected",
+        "description": "Service detects available agent directories",
+        "attributes": {
+          "directories.count": {
+            "type": "number",
+            "description": "Number of directories detected"
+          },
+          "directories.types": {
+            "type": "array",
+            "description": "Types of directories found: claude, opencode, cursor, windsurf"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "skill-lock-service",
-      "type": "text",
+      "type": "otel-event",
       "x": 80,
       "y": 362,
       "width": 220,
       "height": 100,
-      "text": "SkillLockService\ngetSkillEntry()\ncheckUpdates()",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/main-process-api/SkillLockService.ts"
-        ],
-        "event": {
-          "name": "skill.service.lock_checked",
-          "description": "Service checks skill lock file for metadata",
-          "attributes": {
-            "skill.name": {
-              "type": "string",
-              "description": "Skill name being checked"
-            },
-            "skill.installed": {
-              "type": "boolean",
-              "description": "Whether skill is in lock file"
-            },
-            "skill.sha": {
-              "type": "string",
-              "description": "Current installed SHA"
-            }
+      "label": "SkillLockService",
+      "shape": "rectangle",
+      "event": {
+        "name": "skill.service.lock_checked",
+        "description": "Service checks skill lock file for metadata",
+        "attributes": {
+          "skill.name": {
+            "type": "string",
+            "description": "Skill name being checked"
+          },
+          "skill.installed": {
+            "type": "boolean",
+            "description": "Whether skill is in lock file"
+          },
+          "skill.sha": {
+            "type": "string",
+            "description": "Current installed SHA"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "ipc-install-skill",
-      "type": "text",
+      "type": "otel-event",
       "x": 530,
       "y": -15,
       "width": 200,
       "height": 100,
-      "text": "IPC Handler\nINSTALL_SKILL\nipcMain.handle",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/version-control-providers/githubHandlers.ts"
-        ],
-        "event": {
-          "name": "skill.ipc.install_received",
-          "description": "Main process receives install skill request via IPC",
-          "attributes": {
-            "skill.name": {
-              "type": "string",
-              "description": "Skill name"
-            },
-            "github.url": {
-              "type": "string",
-              "description": "GitHub URL"
-            },
-            "install_destination": {
-              "type": "string",
-              "description": "Installation destination"
-            },
-            "files.count": {
-              "type": "number",
-              "description": "Number of files to download"
-            }
+      "label": "IPC Handler",
+      "shape": "rectangle",
+      "event": {
+        "name": "skill.ipc.install_received",
+        "description": "Main process receives install skill request via IPC",
+        "attributes": {
+          "skill.name": {
+            "type": "string",
+            "description": "Skill name"
+          },
+          "github.url": {
+            "type": "string",
+            "description": "GitHub URL"
+          },
+          "install_destination": {
+            "type": "string",
+            "description": "Installation destination"
+          },
+          "files.count": {
+            "type": "number",
+            "description": "Number of files to download"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "ipc-detect-dirs",
-      "type": "text",
+      "type": "otel-event",
       "x": 439,
       "y": 247,
       "width": 200,
       "height": 80,
-      "text": "IPC Handler\nDETECT_PRESET_DIRS\nipcMain.handle",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/services/ipc/fileSystemHandlers.ts"
-        ],
-        "event": {
-          "name": "skill.ipc.detect_dirs_received",
-          "description": "Main process receives detect directories request",
-          "attributes": {
-            "scan.scope": {
-              "type": "string",
-              "description": "Scope of directory scan"
-            }
+      "label": "IPC Handler",
+      "shape": "rectangle",
+      "event": {
+        "name": "skill.ipc.detect_dirs_received",
+        "description": "Main process receives detect directories request",
+        "attributes": {
+          "scan.scope": {
+            "type": "string",
+            "description": "Scope of directory scan"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "ipc-skill-lock",
-      "type": "text",
+      "type": "otel-event",
       "x": 470,
       "y": 373,
       "width": 200,
       "height": 80,
-      "text": "IPC Handler\nSKILL_LOCK ops\nGET/ADD/REMOVE/UPDATE",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/skills/skillLockHandlers.ts"
-        ],
-        "event": {
-          "name": "skill.ipc.lock_operation",
-          "description": "Main process handles skill lock file operation",
-          "attributes": {
-            "operation": {
-              "type": "string",
-              "description": "Operation: get, add, remove, update"
-            },
-            "skill.name": {
-              "type": "string",
-              "description": "Skill name"
-            }
+      "label": "IPC Handler",
+      "shape": "rectangle",
+      "event": {
+        "name": "skill.ipc.lock_operation",
+        "description": "Main process handles skill lock file operation",
+        "attributes": {
+          "operation": {
+            "type": "string",
+            "description": "Operation: get, add, remove, update"
+          },
+          "skill.name": {
+            "type": "string",
+            "description": "Skill name"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "github-api",
-      "type": "text",
+      "type": "otel-event",
       "x": 820,
       "y": -15,
       "width": 200,
       "height": 100,
-      "text": "GitHub API\nfetch tree\ndownload files",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/version-control-providers/githubHandlers.ts"
-        ],
-        "event": {
-          "name": "skill.github.files_downloaded",
-          "description": "Files downloaded from GitHub repository",
-          "attributes": {
-            "github.owner": {
-              "type": "string",
-              "description": "Repository owner"
-            },
-            "github.repo": {
-              "type": "string",
-              "description": "Repository name"
-            },
-            "files.downloaded": {
-              "type": "number",
-              "description": "Number of files downloaded"
-            },
-            "bytes.total": {
-              "type": "number",
-              "description": "Total bytes downloaded"
-            }
+      "label": "GitHub API",
+      "shape": "rectangle",
+      "event": {
+        "name": "skill.github.files_downloaded",
+        "description": "Files downloaded from GitHub repository",
+        "attributes": {
+          "github.owner": {
+            "type": "string",
+            "description": "Repository owner"
+          },
+          "github.repo": {
+            "type": "string",
+            "description": "Repository name"
+          },
+          "files.downloaded": {
+            "type": "number",
+            "description": "Number of files downloaded"
+          },
+          "bytes.total": {
+            "type": "number",
+            "description": "Total bytes downloaded"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "canonical-write",
-      "type": "text",
+      "type": "otel-event",
       "x": 1090,
       "y": -5,
       "width": 200,
       "height": 80,
-      "text": "Canonical Location\n~/.agents/skills/\nPrimary file storage",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/version-control-providers/githubHandlers.ts"
-        ],
-        "event": {
-          "name": "skill.fs.canonical_written",
-          "description": "Skill files written to canonical location",
-          "attributes": {
-            "path": {
-              "type": "string",
-              "description": "Canonical path: ~/.agents/skills/{skillName}"
-            },
-            "files.written": {
-              "type": "number",
-              "description": "Number of files written"
-            }
+      "label": "Canonical Location",
+      "shape": "rectangle",
+      "event": {
+        "name": "skill.fs.canonical_written",
+        "description": "Skill files written to canonical location",
+        "attributes": {
+          "path": {
+            "type": "string",
+            "description": "Canonical path: ~/.agents/skills/{skillName}"
+          },
+          "files.written": {
+            "type": "number",
+            "description": "Number of files written"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "symlink-creation",
-      "type": "text",
+      "type": "otel-event",
       "x": 1090,
       "y": 150,
       "width": 200,
       "height": 80,
-      "text": "Symlinks Created\nAgent directories\n~/.claude/skills/ etc",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/version-control-providers/githubHandlers.ts"
-        ],
-        "event": {
-          "name": "skill.fs.symlinks_created",
-          "description": "Symlinks created in agent-specific directories",
-          "attributes": {
-            "symlinks.count": {
-              "type": "number",
-              "description": "Number of symlinks created"
-            },
-            "target_directories": {
-              "type": "array",
-              "description": "Target directories for symlinks"
-            }
+      "label": "Symlinks Created",
+      "shape": "rectangle",
+      "event": {
+        "name": "skill.fs.symlinks_created",
+        "description": "Symlinks created in agent-specific directories",
+        "attributes": {
+          "symlinks.count": {
+            "type": "number",
+            "description": "Number of symlinks created"
+          },
+          "target_directories": {
+            "type": "array",
+            "description": "Target directories for symlinks"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "lock-file-update",
-      "type": "text",
+      "type": "otel-event",
       "x": 1090,
       "y": 297,
       "width": 200,
       "height": 80,
-      "text": "Lock File Updated\nskills.lock.json\nMetadata persisted",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/skills/skillLockHandlers.ts"
-        ],
-        "event": {
-          "name": "skill.lock.updated",
-          "description": "Skill lock file updated with installation metadata",
-          "attributes": {
-            "skill.name": {
-              "type": "string",
-              "description": "Installed skill name"
-            },
-            "skill.sha": {
-              "type": "string",
-              "description": "Git tree SHA"
-            },
-            "skill.source": {
-              "type": "string",
-              "description": "Source GitHub URL"
-            },
-            "installed_at": {
-              "type": "string",
-              "description": "Installation timestamp"
-            }
+      "label": "Lock File Updated",
+      "shape": "rectangle",
+      "event": {
+        "name": "skill.lock.updated",
+        "description": "Skill lock file updated with installation metadata",
+        "attributes": {
+          "skill.name": {
+            "type": "string",
+            "description": "Installed skill name"
+          },
+          "skill.sha": {
+            "type": "string",
+            "description": "Git tree SHA"
+          },
+          "skill.source": {
+            "type": "string",
+            "description": "Source GitHub URL"
+          },
+          "installed_at": {
+            "type": "string",
+            "description": "Installation timestamp"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "operation-success",
-      "type": "text",
+      "type": "otel-event",
       "x": 766,
       "y": 124,
       "width": 200,
       "height": 80,
-      "text": "Installation Success\nReturns installed path\nFiles count",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/version-control-providers/githubHandlers.ts"
-        ],
-        "event": {
-          "name": "skill.install.success",
-          "description": "Skill installation completed successfully",
-          "attributes": {
-            "skill.name": {
-              "type": "string",
-              "description": "Installed skill name"
-            },
-            "installed.path": {
-              "type": "string",
-              "description": "Path where skill was installed"
-            },
-            "files.installed": {
-              "type": "number",
-              "description": "Number of files installed"
-            },
-            "duration_ms": {
-              "type": "number",
-              "description": "Installation duration in milliseconds"
-            }
+      "label": "Installation Success",
+      "shape": "rectangle",
+      "event": {
+        "name": "skill.install.success",
+        "description": "Skill installation completed successfully",
+        "attributes": {
+          "skill.name": {
+            "type": "string",
+            "description": "Installed skill name"
+          },
+          "installed.path": {
+            "type": "string",
+            "description": "Path where skill was installed"
+          },
+          "files.installed": {
+            "type": "number",
+            "description": "Number of files installed"
+          },
+          "duration_ms": {
+            "type": "number",
+            "description": "Installation duration in milliseconds"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "operation-error",
-      "type": "text",
+      "type": "otel-event",
       "x": 942,
       "y": 395,
       "width": 200,
       "height": 80,
-      "text": "Installation Error\nReturns error message\nCleanup if needed",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/version-control-providers/githubHandlers.ts"
-        ],
-        "event": {
-          "name": "skill.install.error",
-          "description": "Skill installation failed",
-          "attributes": {
-            "skill.name": {
-              "type": "string",
-              "description": "Skill that failed to install"
-            },
-            "error.message": {
-              "type": "string",
-              "description": "Error message"
-            },
-            "error.type": {
-              "type": "string",
-              "description": "Error type: network_error, write_failed, permission_denied"
-            }
+      "label": "Installation Error",
+      "shape": "rectangle",
+      "event": {
+        "name": "skill.install.error",
+        "description": "Skill installation failed",
+        "attributes": {
+          "skill.name": {
+            "type": "string",
+            "description": "Skill that failed to install"
+          },
+          "error.message": {
+            "type": "string",
+            "description": "Error message"
+          },
+          "error.type": {
+            "type": "string",
+            "description": "Error type: network_error, write_failed, permission_denied"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "ui-refresh",
-      "type": "text",
+      "type": "otel-event",
       "x": 347,
       "y": 500,
       "width": 220,
       "height": 80,
-      "text": "UI State Refreshed\nInstalled skills updated\nStatus badges changed",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/principal-window/views/SkillBrowserView/SkillBrowserView.tsx"
-        ],
-        "event": {
-          "name": "skill.ui.state_refreshed",
-          "description": "UI state refreshed after installation",
-          "attributes": {
-            "skill.name": {
-              "type": "string",
-              "description": "Skill that was installed"
-            },
-            "ui.new_status": {
-              "type": "string",
-              "description": "New installation status"
-            },
-            "directories.installed": {
-              "type": "number",
-              "description": "Number of directories where skill is now installed"
-            }
+      "label": "UI State Refreshed",
+      "shape": "rectangle",
+      "event": {
+        "name": "skill.ui.state_refreshed",
+        "description": "UI state refreshed after installation",
+        "attributes": {
+          "skill.name": {
+            "type": "string",
+            "description": "Skill that was installed"
+          },
+          "ui.new_status": {
+            "type": "string",
+            "description": "New installation status"
+          },
+          "directories.installed": {
+            "type": "number",
+            "description": "Number of directories where skill is now installed"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "ui-error-shown",
-      "type": "text",
+      "type": "otel-event",
       "x": 205,
       "y": 607,
       "width": 220,
       "height": 80,
-      "text": "Error Displayed\nToast notification\nUser sees message",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/principal-window/views/SkillBrowserView/SkillBrowserView.tsx"
-        ],
-        "event": {
-          "name": "skill.ui.error_displayed",
-          "description": "Error message displayed to user",
-          "attributes": {
-            "error.message": {
-              "type": "string",
-              "description": "Error message shown to user"
-            },
-            "skill.name": {
-              "type": "string",
-              "description": "Skill that failed"
-            }
+      "label": "Error Displayed",
+      "shape": "rectangle",
+      "event": {
+        "name": "skill.ui.error_displayed",
+        "description": "Error message displayed to user",
+        "attributes": {
+          "error.message": {
+            "type": "string",
+            "description": "Error message shown to user"
+          },
+          "skill.name": {
+            "type": "string",
+            "description": "Skill that failed"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "agent-setup-modal",
-      "type": "text",
+      "type": "otel-event",
       "x": -152,
       "y": 530,
       "width": 220,
       "height": 100,
-      "text": "AgentSetupModal\nCreate agent directories\nClaude/OpenCode/Cursor",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/principal-window/views/SkillBrowserView/AgentSetupModal.tsx"
-        ],
-        "event": {
-          "name": "skill.ui.agent_setup_opened",
-          "description": "User opens agent setup modal to create directories",
-          "attributes": {
-            "existing_dirs": {
-              "type": "array",
-              "description": "Currently existing agent directories"
-            }
+      "label": "AgentSetupModal",
+      "shape": "rectangle",
+      "event": {
+        "name": "skill.ui.agent_setup_opened",
+        "description": "User opens agent setup modal to create directories",
+        "attributes": {
+          "existing_dirs": {
+            "type": "array",
+            "description": "Currently existing agent directories"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {

@@ -89,356 +89,320 @@
     },
     {
       "id": "panel-host",
-      "type": "text",
+      "type": "otel-event",
       "x": 550,
       "y": 0,
       "width": 200,
       "height": 100,
-      "text": "Panel Host\n\nReceives event via\nevents.on() listener",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
-        ],
-        "otel": {
-          "files": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"]
-        },
-        "event": {
-          "name": "terminal.activity.host_received",
-          "description": "Panel host received activity change event from terminal panel",
-          "attributes": {
-            "event.type": {
-              "type": "string",
-              "description": "Received event type",
-              "display": false
-            },
-            "session.id": {
-              "type": "string",
-              "description": "Terminal session ID"
-            },
-            "is_working": {
-              "type": "boolean",
-              "description": "Working state from event"
-            },
-            "handler.name": {
-              "type": "string",
-              "description": "Handler function name"
-            }
+      "label": "Panel Host",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.activity.host_received",
+        "description": "Panel host received activity change event from terminal panel",
+        "attributes": {
+          "event.type": {
+            "type": "string",
+            "description": "Received event type",
+            "display": false
+          },
+          "session.id": {
+            "type": "string",
+            "description": "Terminal session ID"
+          },
+          "is_working": {
+            "type": "boolean",
+            "description": "Working state from event"
+          },
+          "handler.name": {
+            "type": "string",
+            "description": "Handler function name"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+        ]
       }
     },
     {
       "id": "tipc-client",
-      "type": "text",
+      "type": "otel-event",
       "x": 550,
       "y": 150,
       "width": 200,
       "height": 100,
-      "text": "terminalClient\n.updateActivity()\n\nTIPC invoke to main",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
-        ],
-        "otel": {
-          "files": ["src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"]
-        },
-        "event": {
-          "name": "terminal.activity.tipc_invoked",
-          "description": "TIPC client invoked updateActivity procedure",
-          "attributes": {
-            "procedure.name": {
-              "type": "string",
-              "description": "TIPC procedure: updateActivity"
-            },
-            "session.id": {
-              "type": "string",
-              "description": "Terminal session ID",
-              "display": false
-            },
-            "is_working": {
-              "type": "boolean",
-              "description": "Working state being sent"
-            },
-            "working_message": {
-              "type": "string",
-              "description": "Working message if provided",
-              "display": false
-            }
+      "label": "terminalClient",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.activity.tipc_invoked",
+        "description": "TIPC client invoked updateActivity procedure",
+        "attributes": {
+          "procedure.name": {
+            "type": "string",
+            "description": "TIPC procedure: updateActivity"
+          },
+          "session.id": {
+            "type": "string",
+            "description": "Terminal session ID",
+            "display": false
+          },
+          "is_working": {
+            "type": "boolean",
+            "description": "Working state being sent"
+          },
+          "working_message": {
+            "type": "string",
+            "description": "Working message if provided",
+            "display": false
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
+        ]
       }
     },
     {
       "id": "tipc-router",
-      "type": "text",
+      "type": "otel-event",
       "x": 197,
       "y": 255,
       "width": 200,
       "height": 120,
-      "text": "terminalRouter\n.updateActivity\n\nt.procedure\n.input<UpdateActivityInput>()\n.action()",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/terminal/tipc/terminalRouter.ts"
-        ],
-        "otel": {
-          "files": ["src/main/terminal/tipc/terminalRouter.ts"]
-        },
-        "event": {
-          "name": "terminal.activity.router_handled",
-          "description": "TIPC router handled updateActivity procedure in main process",
-          "attributes": {
-            "procedure.name": {
-              "type": "string",
-              "description": "TIPC procedure: updateActivity",
-              "display": false
-            },
-            "window.id": {
-              "type": "number",
-              "description": "Source window ID from context.sender"
-            },
-            "session.id": {
-              "type": "string",
-              "description": "Terminal session ID"
-            },
-            "is_working": {
-              "type": "boolean",
-              "description": "Working state from input",
-              "display": false
-            }
+      "label": "terminalRouter",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.activity.router_handled",
+        "description": "TIPC router handled updateActivity procedure in main process",
+        "attributes": {
+          "procedure.name": {
+            "type": "string",
+            "description": "TIPC procedure: updateActivity",
+            "display": false
+          },
+          "window.id": {
+            "type": "number",
+            "description": "Source window ID from context.sender"
+          },
+          "session.id": {
+            "type": "string",
+            "description": "Terminal session ID"
+          },
+          "is_working": {
+            "type": "boolean",
+            "description": "Working state from input",
+            "display": false
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/terminal/tipc/terminalRouter.ts"
+        ]
       }
     },
     {
       "id": "agent-started",
-      "type": "text",
+      "type": "otel-event",
       "x": 101,
       "y": 431,
       "width": 180,
       "height": 100,
-      "text": "Agent Started\n\nactivityStore.set()\nSession added",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/terminal/tipc/terminalRouter.ts"
-        ],
-        "otel": {
-          "files": ["src/main/terminal/tipc/terminalRouter.ts"]
-        },
-        "event": {
-          "name": "terminal.activity.agent_started",
-          "description": "Agent started working - session added to store",
-          "attributes": {
-            "session.id": {
-              "type": "string",
-              "description": "Terminal session ID"
-            },
-            "store.size": {
-              "type": "number",
-              "description": "Current number of active sessions"
-            }
+      "label": "Agent Started",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.activity.agent_started",
+        "description": "Agent started working - session added to store",
+        "attributes": {
+          "session.id": {
+            "type": "string",
+            "description": "Terminal session ID"
+          },
+          "store.size": {
+            "type": "number",
+            "description": "Current number of active sessions"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/terminal/tipc/terminalRouter.ts"
+        ]
       }
     },
     {
       "id": "agent-stopped",
-      "type": "text",
+      "type": "otel-event",
       "x": 323,
       "y": 431,
       "width": 180,
       "height": 100,
-      "text": "Agent Stopped\n\nactivityStore.delete()\nSession removed",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/terminal/tipc/terminalRouter.ts"
-        ],
-        "otel": {
-          "files": ["src/main/terminal/tipc/terminalRouter.ts"]
-        },
-        "event": {
-          "name": "terminal.activity.agent_stopped",
-          "description": "Agent stopped working - session removed from store",
-          "attributes": {
-            "session.id": {
-              "type": "string",
-              "description": "Terminal session ID"
-            },
-            "store.size": {
-              "type": "number",
-              "description": "Remaining active sessions"
-            }
+      "label": "Agent Stopped",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.activity.agent_stopped",
+        "description": "Agent stopped working - session removed from store",
+        "attributes": {
+          "session.id": {
+            "type": "string",
+            "description": "Terminal session ID"
+          },
+          "store.size": {
+            "type": "number",
+            "description": "Remaining active sessions"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/terminal/tipc/terminalRouter.ts"
+        ]
       }
     },
     {
       "id": "broadcast",
-      "type": "text",
+      "type": "otel-event",
       "x": 194,
       "y": 585,
       "width": 200,
       "height": 100,
-      "text": "Broadcast\n\nBrowserWindow\n.getAllWindows()\n.forEach(send)",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/terminal/tipc/terminalRouter.ts"
-        ],
-        "otel": {
-          "files": ["src/main/terminal/tipc/terminalRouter.ts"]
-        },
-        "event": {
-          "name": "terminal.activity.broadcast_sent",
-          "description": "Activity state broadcast to all windows",
-          "attributes": {
-            "channel": {
-              "type": "string",
-              "description": "IPC channel: terminal:activity-sync"
-            },
-            "windows.count": {
-              "type": "number",
-              "description": "Number of windows receiving broadcast"
-            },
-            "activities.count": {
-              "type": "number",
-              "description": "Number of active sessions in payload"
-            }
+      "label": "Broadcast",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.activity.broadcast_sent",
+        "description": "Activity state broadcast to all windows",
+        "attributes": {
+          "channel": {
+            "type": "string",
+            "description": "IPC channel: terminal:activity-sync"
+          },
+          "windows.count": {
+            "type": "number",
+            "description": "Number of windows receiving broadcast"
+          },
+          "activities.count": {
+            "type": "number",
+            "description": "Number of active sessions in payload"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/terminal/tipc/terminalRouter.ts"
+        ]
       }
     },
     {
       "id": "window-a",
-      "type": "text",
+      "type": "otel-event",
       "x": 44,
       "y": 743,
       "width": 150,
       "height": 100,
-      "text": "Window A\n\nReceives sync\nUpdates UI indicators",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/renderer/contexts/TerminalContext.tsx"
-        ],
-        "otel": {
-          "files": ["src/renderer/contexts/TerminalContext.tsx"]
-        },
-        "event": {
-          "name": "terminal.activity.sync_received",
-          "description": "Window received activity sync broadcast",
-          "attributes": {
-            "window.id": {
-              "type": "number",
-              "description": "Receiving window ID",
-              "display": false
-            },
-            "activities.count": {
-              "type": "number",
-              "description": "Number of active sessions received"
-            },
-            "ui.updated": {
-              "type": "boolean",
-              "description": "Whether UI was updated"
-            }
+      "label": "Window A",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.activity.sync_received",
+        "description": "Window received activity sync broadcast",
+        "attributes": {
+          "window.id": {
+            "type": "number",
+            "description": "Receiving window ID",
+            "display": false
+          },
+          "activities.count": {
+            "type": "number",
+            "description": "Number of active sessions received"
+          },
+          "ui.updated": {
+            "type": "boolean",
+            "description": "Whether UI was updated"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/renderer/contexts/TerminalContext.tsx"
+        ]
       }
     },
     {
       "id": "window-b",
-      "type": "text",
+      "type": "otel-event",
       "x": 219,
       "y": 743,
       "width": 150,
       "height": 100,
-      "text": "Window B\n\nReceives sync\nUpdates UI indicators",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/renderer/contexts/TerminalContext.tsx"
-        ],
-        "otel": {
-          "files": ["src/renderer/contexts/TerminalContext.tsx"]
-        },
-        "event": {
-          "name": "terminal.activity.sync_received",
-          "description": "Window received activity sync broadcast",
-          "attributes": {
-            "window.id": {
-              "type": "number",
-              "description": "Receiving window ID",
-              "display": false
-            },
-            "activities.count": {
-              "type": "number",
-              "description": "Number of active sessions received"
-            },
-            "ui.updated": {
-              "type": "boolean",
-              "description": "Whether UI was updated"
-            }
+      "label": "Window B",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.activity.sync_received",
+        "description": "Window received activity sync broadcast",
+        "attributes": {
+          "window.id": {
+            "type": "number",
+            "description": "Receiving window ID",
+            "display": false
+          },
+          "activities.count": {
+            "type": "number",
+            "description": "Number of active sessions received"
+          },
+          "ui.updated": {
+            "type": "boolean",
+            "description": "Whether UI was updated"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/renderer/contexts/TerminalContext.tsx"
+        ]
       }
     },
     {
       "id": "window-c",
-      "type": "text",
+      "type": "otel-event",
       "x": 394,
       "y": 743,
       "width": 150,
       "height": 100,
-      "text": "Window C\n\nReceives sync\nUpdates UI indicators",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/renderer/contexts/TerminalContext.tsx"
-        ],
-        "otel": {
-          "files": ["src/renderer/contexts/TerminalContext.tsx"]
-        },
-        "event": {
-          "name": "terminal.activity.sync_received",
-          "description": "Window received activity sync broadcast",
-          "attributes": {
-            "window.id": {
-              "type": "number",
-              "description": "Receiving window ID",
-              "display": false
-            },
-            "activities.count": {
-              "type": "number",
-              "description": "Number of active sessions received"
-            },
-            "ui.updated": {
-              "type": "boolean",
-              "description": "Whether UI was updated"
-            }
+      "label": "Window C",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.activity.sync_received",
+        "description": "Window received activity sync broadcast",
+        "attributes": {
+          "window.id": {
+            "type": "number",
+            "description": "Receiving window ID",
+            "display": false
+          },
+          "activities.count": {
+            "type": "number",
+            "description": "Number of active sessions received"
+          },
+          "ui.updated": {
+            "type": "boolean",
+            "description": "Whether UI was updated"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/renderer/contexts/TerminalContext.tsx"
+        ]
       }
     },
     {

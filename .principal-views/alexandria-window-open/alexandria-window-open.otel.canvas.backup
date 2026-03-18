@@ -1,0 +1,840 @@
+{
+  "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "text": "# Alexandria Window Opening Flow\n\nTelemetry-traced lifecycle from user trigger to ready state",
+      "x": 300,
+      "y": -180,
+      "width": 450,
+      "height": 80,
+      "color": "#8b5cf6",
+      "pv": {
+        "name": "Window Open Flow",
+        "references": [
+          "src/main/window/modernWindowHandlers.ts"
+        ],
+        "status": "draft",
+        "event": {
+          "name": "alexandria.window.open.flow",
+          "attributes": {
+            "flow.name": {
+              "type": "string",
+              "value": "alexandria-window-open"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "trigger",
+      "type": "text",
+      "text": "# User Trigger\n\n**Entry Points:**\n- Feed card click\n- Quick Open menu\n- Workspace list\n- CLI open command\n\n**Options:**\n- `workspaceId` - Named workspace\n- `repositoryPath` - Temp workspace\n- `repositoryId` - PURL identifier",
+      "x": -3,
+      "y": 0,
+      "width": 280,
+      "height": 220,
+      "color": "#22c55e",
+      "pv": {
+        "nodeType": "event",
+        "icon": "Mouse",
+        "name": "User Trigger",
+        "references": [
+          "src/renderer/main-process-api/WindowService.ts"
+        ],
+        "status": "draft",
+        "event": {
+          "name": "alexandria.window.open.requested",
+          "attributes": {
+            "workspace.id": {
+              "type": "string",
+              "description": "Workspace UUID if opening named workspace"
+            },
+            "repository.path": {
+              "type": "string",
+              "description": "Local path if opening single repo"
+            },
+            "repository.id": {
+              "type": "string",
+              "description": "PURL or GitHub ID"
+            },
+            "trigger.source": {
+              "type": "string",
+              "description": "Where the open was triggered from"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "window-service",
+      "type": "text",
+      "text": "# WindowService (Renderer)\n\n```typescript\nWindowService\n  .openAlexandriaWorkspace({\n    workspaceId,\n    repositoryPath,\n    repositoryId\n  })\n```\n\nCalls `window.mainProcess.window.openAlexandriaWorkspace()`",
+      "x": 350,
+      "y": 0,
+      "width": 300,
+      "height": 200,
+      "color": "#06b6d4",
+      "pv": {
+        "nodeType": "event",
+        "icon": "Zap",
+        "name": "Window Service",
+        "references": [
+          "src/renderer/main-process-api/WindowService.ts"
+        ],
+        "status": "draft",
+        "event": {
+          "name": "alexandria.window.ipc.invoke",
+          "attributes": {
+            "ipc.channel": {
+              "type": "string",
+              "value": "window:open-alexandria-workspace"
+            },
+            "workspace.id": {
+              "type": "string"
+            },
+            "has.repository.path": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ipc-handler",
+      "type": "text",
+      "text": "# IPC Handler (Main)\n\n`WindowEvent.OPEN_ALEXANDRIA_WORKSPACE`\n\n**Determines:**\n- Window name (unique ID)\n- Display name for titlebar\n- Metadata for tracking\n\n**Modes:**\n- `alexandria-workspace-{id}`\n- `alexandria-workspace-temp-{path}`",
+      "x": 720,
+      "y": 0,
+      "width": 280,
+      "height": 220,
+      "color": "#ef4444",
+      "pv": {
+        "nodeType": "event",
+        "icon": "Server",
+        "name": "IPC Handler",
+        "references": [
+          "src/main/window/modernWindowHandlers.ts"
+        ],
+        "status": "draft",
+        "event": {
+          "name": "alexandria.window.handler.received",
+          "attributes": {
+            "window.name": {
+              "type": "string",
+              "description": "Unique window identifier"
+            },
+            "window.mode": {
+              "type": "string",
+              "description": "workspace or temp"
+            },
+            "workspace.name": {
+              "type": "string",
+              "description": "Display name for titlebar"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "registry-lookup",
+      "type": "text",
+      "text": "# Registry Lookup\n\n**If workspaceId provided:**\n```typescript\nservice.getWorkspace(workspaceId)\n```\n\n**Fetches:**\n- Workspace name\n- suggestedClonePath\n- Theme settings\n- Member repositories",
+      "x": 720,
+      "y": 290,
+      "width": 280,
+      "height": 180,
+      "color": "#ef4444",
+      "pv": {
+        "nodeType": "event",
+        "icon": "Database",
+        "name": "Registry Lookup",
+        "references": [
+          "src/main/stores/AlexandriaRegistryService.ts"
+        ],
+        "status": "draft",
+        "event": {
+          "name": "alexandria.workspace.lookup",
+          "attributes": {
+            "workspace.id": {
+              "type": "string"
+            },
+            "workspace.found": {
+              "type": "boolean"
+            },
+            "workspace.name": {
+              "type": "string"
+            },
+            "repository.count": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "create-window",
+      "type": "text",
+      "text": "# createSpecialWindow\n\n**Creates BrowserWindow:**\n- Size: 1280x832 (min 1024x720)\n- Features: FS, GitHub, Menu\n- Metadata: primaryType, displayName\n\n**Reuse check:**\n- If window exists → focus & return\n- If destroyed → clean up & create",
+      "x": 350,
+      "y": 280,
+      "width": 300,
+      "height": 200,
+      "color": "#4f46e5",
+      "pv": {
+        "nodeType": "event",
+        "icon": "Box",
+        "name": "Create Window",
+        "references": [
+          "src/main/window/modernWindowManager.ts"
+        ],
+        "status": "implemented",
+        "otel": {
+          "files": ["src/main/window/modernWindowManager.ts"]
+        },
+        "event": {
+          "name": "window.createSpecial",
+          "attributes": {
+            "window.purpose": {
+              "type": "string"
+            },
+            "window.reused": {
+              "type": "boolean"
+            },
+            "window.id": {
+              "type": "number"
+            },
+            "window.type": {
+              "type": "string",
+              "description": "secondary or minimal"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "terminal-register",
+      "type": "text",
+      "text": "# Terminal Registration\n\n```typescript\nterminalManager\n  .setMainWindow(window)\n```\n\nEnables terminal events to be routed to this window",
+      "x": 0,
+      "y": 310,
+      "width": 280,
+      "height": 140,
+      "color": "#818cf8",
+      "pv": {
+        "nodeType": "event",
+        "icon": "Monitor",
+        "name": "Terminal Register",
+        "references": [
+          "src/main/terminal/index.ts"
+        ],
+        "status": "draft",
+        "event": {
+          "name": "terminal.window.registered",
+          "attributes": {
+            "window.id": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "watch-acquire",
+      "type": "text",
+      "text": "# Acquire Repository Watches\n\n**Background task (non-blocking):**\n\n1. Get repositories in workspace\n2. Filter those with valid paths\n3. `acquireWatch(path, referenceId)`\n\n**Reference ID:**\n`alexandria-workspace:{windowId}`\n\n**On window close:**\n→ `releaseWatch()` for all paths",
+      "x": -4,
+      "y": 589,
+      "width": 280,
+      "height": 240,
+      "color": "#0d9488",
+      "pv": {
+        "nodeType": "event",
+        "icon": "Eye",
+        "name": "Watch Acquire",
+        "references": [
+          "src/main/repository-monitoring/ipcHandlers.ts"
+        ],
+        "status": "draft",
+        "event": {
+          "name": "alexandria.watches.acquired",
+          "attributes": {
+            "window.id": {
+              "type": "number"
+            },
+            "watch.reference.id": {
+              "type": "string"
+            },
+            "repositories.total": {
+              "type": "number"
+            },
+            "repositories.watched": {
+              "type": "number"
+            },
+            "repositories.failed": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "load-url",
+      "type": "text",
+      "text": "# Load Window URL\n\n```typescript\nwindow.loadURL(\n  `alexandria-workspace.html\n    ?workspaceId={id}\n    &repositoryPath={path}\n    &repositoryId={purl}`\n)\n```\n\nParams passed via URL query string",
+      "x": 317,
+      "y": 617,
+      "width": 300,
+      "height": 180,
+      "color": "#4f46e5",
+      "pv": {
+        "nodeType": "event",
+        "icon": "Globe",
+        "name": "Load URL",
+        "references": [
+          "src/main/window/modernWindowHandlers.ts"
+        ],
+        "status": "draft",
+        "event": {
+          "name": "window.loadURL",
+          "attributes": {
+            "window.id": {
+              "type": "number"
+            },
+            "url.path": {
+              "type": "string"
+            },
+            "url.has.workspace.id": {
+              "type": "boolean"
+            },
+            "url.has.repository.path": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "app-init",
+      "type": "text",
+      "text": "# AlexandriaWorkspaceApp\n\n**Renderer initialization:**\n\n1. Parse `window.location.hash`\n2. Extract workspaceId/repoPath\n3. Load workspace from service\n4. Initialize panel framework\n5. Set up event listeners\n\n**Ready when:**\n- Workspace loaded\n- Layout rendered\n- Panels mounted",
+      "x": 325,
+      "y": 876,
+      "width": 280,
+      "height": 240,
+      "color": "#22c55e",
+      "pv": {
+        "nodeType": "event",
+        "icon": "Play",
+        "name": "App Init",
+        "references": [
+          "src/renderer/alexandria-workspace/AlexandriaWorkspaceApp.tsx"
+        ],
+        "status": "draft",
+        "event": {
+          "name": "alexandria.app.initialized",
+          "attributes": {
+            "workspace.id": {
+              "type": "string"
+            },
+            "workspace.name": {
+              "type": "string"
+            },
+            "repository.count": {
+              "type": "number"
+            },
+            "layout.panels": {
+              "type": "string",
+              "description": "Comma-separated panel IDs"
+            },
+            "init.duration.ms": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "window-ready",
+      "type": "text",
+      "text": "# Window Ready\n\n**Final state:**\n- Window visible & focused\n- Panels rendering\n- Watches active\n- Terminal available\n\n**Broadcast:**\n`REPOSITORY_WINDOWS_CHANGED`\nto all other windows",
+      "x": 339,
+      "y": 1188,
+      "width": 250,
+      "height": 200,
+      "color": "#22c55e",
+      "pv": {
+        "nodeType": "event",
+        "icon": "Check",
+        "name": "Window Ready",
+        "references": [
+          "src/renderer/alexandria-workspace/AlexandriaWorkspaceApp.tsx"
+        ],
+        "status": "draft",
+        "event": {
+          "name": "alexandria.window.ready",
+          "attributes": {
+            "window.id": {
+              "type": "number"
+            },
+            "window.name": {
+              "type": "string"
+            },
+            "workspace.id": {
+              "type": "string"
+            },
+            "total.duration.ms": {
+              "type": "number"
+            },
+            "watches.active": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "workspace-found",
+      "type": "text",
+      "text": "# Workspace Found\n\nWorkspace exists in registry, proceeding with window creation",
+      "x": 735,
+      "y": 502,
+      "width": 250,
+      "height": 100,
+      "color": "#22c55e",
+      "pv": {
+        "nodeType": "event",
+        "icon": "CheckCircle",
+        "name": "Workspace Found",
+        "references": [
+          "src/main/stores/AlexandriaRegistryService.ts"
+        ],
+        "status": "draft",
+        "event": {
+          "name": "alexandria.workspace.found",
+          "attributes": {
+            "workspace.id": {
+              "type": "string"
+            },
+            "workspace.name": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "workspace-not-found",
+      "type": "text",
+      "text": "# Workspace Not Found\n\nWorkspace ID not in registry, cannot proceed",
+      "x": 1198,
+      "y": 331,
+      "width": 250,
+      "height": 100,
+      "color": "#ef4444",
+      "pv": {
+        "nodeType": "event",
+        "icon": "XCircle",
+        "name": "Workspace Not Found",
+        "references": [
+          "src/main/stores/AlexandriaRegistryService.ts"
+        ],
+        "status": "draft",
+        "event": {
+          "name": "alexandria.workspace.not_found",
+          "attributes": {
+            "workspace.id": {
+              "type": "string"
+            },
+            "error.message": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "temp-mode",
+      "type": "text",
+      "text": "# Temporary Mode\n\nOpening without workspace ID - single repository mode",
+      "x": 1030,
+      "y": 504,
+      "width": 250,
+      "height": 100,
+      "color": "#f59e0b",
+      "pv": {
+        "nodeType": "event",
+        "icon": "Clock",
+        "name": "Temp Mode",
+        "references": [
+          "src/main/window/modernWindowHandlers.ts"
+        ],
+        "status": "draft",
+        "event": {
+          "name": "alexandria.window.temp.mode",
+          "attributes": {
+            "repository.path": {
+              "type": "string"
+            },
+            "repository.id": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "window-creating",
+      "type": "text",
+      "text": "# Creating Window\n\nNew BrowserWindow being created",
+      "x": 872,
+      "y": 699,
+      "width": 200,
+      "height": 80,
+      "color": "#4f46e5",
+      "pv": {
+        "nodeType": "event",
+        "icon": "Plus",
+        "name": "Creating Window",
+        "references": [
+          "src/main/window/modernWindowManager.ts"
+        ],
+        "status": "draft",
+        "event": {
+          "name": "alexandria.window.creating",
+          "attributes": {
+            "window.name": {
+              "type": "string"
+            },
+            "window.type": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "window-reusing",
+      "type": "text",
+      "text": "# Reusing Window\n\nExisting window found, focusing instead of creating",
+      "x": 651,
+      "y": 701,
+      "width": 200,
+      "height": 80,
+      "color": "#06b6d4",
+      "pv": {
+        "nodeType": "event",
+        "icon": "RotateCw",
+        "name": "Reusing Window",
+        "references": [
+          "src/main/window/modernWindowManager.ts"
+        ],
+        "status": "draft",
+        "event": {
+          "name": "alexandria.window.reusing",
+          "attributes": {
+            "window.id": {
+              "type": "number"
+            },
+            "window.name": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "open-failed",
+      "type": "text",
+      "text": "# Open Failed\n\nWindow open failed due to error",
+      "x": 1535,
+      "y": 341,
+      "width": 250,
+      "height": 80,
+      "color": "#ef4444",
+      "pv": {
+        "nodeType": "event",
+        "icon": "AlertTriangle",
+        "name": "Open Failed",
+        "references": [
+          "src/main/window/modernWindowHandlers.ts"
+        ],
+        "status": "draft",
+        "event": {
+          "name": "alexandria.window.open.failed",
+          "attributes": {
+            "error.message": {
+              "type": "string"
+            },
+            "error.code": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "title-to-trigger",
+      "fromNode": "title",
+      "toNode": "trigger",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "uses",
+        "style": "dashed"
+      }
+    },
+    {
+      "id": "trigger-to-service",
+      "fromNode": "trigger",
+      "toNode": "window-service",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "calls",
+      "pv": {
+        "edgeType": "uses",
+        "style": "solid"
+      }
+    },
+    {
+      "id": "service-to-ipc",
+      "fromNode": "window-service",
+      "toNode": "ipc-handler",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "IPC invoke",
+      "pv": {
+        "edgeType": "ipc",
+        "style": "solid",
+        "animation": {
+          "type": "flow",
+          "duration": 1500,
+          "color": "#6366f1"
+        }
+      }
+    },
+    {
+      "id": "ipc-to-registry",
+      "fromNode": "ipc-handler",
+      "toNode": "registry-lookup",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "fetch workspace",
+      "pv": {
+        "edgeType": "uses",
+        "style": "solid"
+      }
+    },
+    {
+      "id": "ipc-to-create",
+      "fromNode": "ipc-handler",
+      "toNode": "create-window",
+      "fromSide": "left",
+      "toSide": "right",
+      "label": "createSpecialWindow",
+      "pv": {
+        "edgeType": "uses",
+        "style": "solid"
+      }
+    },
+    {
+      "id": "create-to-terminal",
+      "fromNode": "create-window",
+      "toNode": "terminal-register",
+      "fromSide": "left",
+      "toSide": "right",
+      "label": "register",
+      "pv": {
+        "edgeType": "uses",
+        "style": "solid"
+      }
+    },
+    {
+      "id": "create-to-watches",
+      "fromNode": "create-window",
+      "toNode": "watch-acquire",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "async",
+      "pv": {
+        "edgeType": "ipc",
+        "style": "dashed"
+      }
+    },
+    {
+      "id": "create-to-load",
+      "fromNode": "create-window",
+      "toNode": "load-url",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "loadURL",
+      "pv": {
+        "edgeType": "uses",
+        "style": "solid"
+      }
+    },
+    {
+      "id": "registry-to-create",
+      "fromNode": "registry-lookup",
+      "toNode": "create-window",
+      "fromSide": "left",
+      "toSide": "right",
+      "label": "workspace data",
+      "pv": {
+        "edgeType": "uses",
+        "style": "dashed"
+      }
+    },
+    {
+      "id": "registry-to-not-found",
+      "fromNode": "registry-lookup",
+      "toNode": "workspace-not-found",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "not found",
+      "pv": {
+        "edgeType": "uses",
+        "style": "dashed"
+      }
+    },
+    {
+      "id": "found-to-creating",
+      "fromNode": "workspace-found",
+      "toNode": "window-creating",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "new window",
+      "pv": {
+        "edgeType": "uses",
+        "style": "solid"
+      }
+    },
+    {
+      "id": "found-to-reusing",
+      "fromNode": "workspace-found",
+      "toNode": "window-reusing",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "existing window",
+      "pv": {
+        "edgeType": "uses",
+        "style": "dashed"
+      }
+    },
+    {
+      "id": "creating-to-create",
+      "fromNode": "window-creating",
+      "toNode": "create-window",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "label": "proceed",
+      "pv": {
+        "edgeType": "uses",
+        "style": "solid"
+      }
+    },
+    {
+      "id": "reusing-to-create",
+      "fromNode": "window-reusing",
+      "toNode": "create-window",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "label": "focus",
+      "pv": {
+        "edgeType": "uses",
+        "style": "solid"
+      }
+    },
+    {
+      "id": "handler-to-temp",
+      "fromNode": "ipc-handler",
+      "toNode": "temp-mode",
+      "fromSide": "right",
+      "toSide": "top",
+      "label": "no workspace ID",
+      "pv": {
+        "edgeType": "uses",
+        "style": "dashed"
+      }
+    },
+    {
+      "id": "edge-app-init-window-ready-1772376603448",
+      "fromNode": "app-init",
+      "toNode": "window-ready",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "ipc-event"
+      }
+    },
+    {
+      "id": "edge-load-url-app-init-1772376603448",
+      "fromNode": "load-url",
+      "toNode": "app-init",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "renders"
+      }
+    },
+    {
+      "id": "edge-registry-lookup-workspace-found-1772376603448",
+      "fromNode": "registry-lookup",
+      "toNode": "workspace-found",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "uses"
+      }
+    },
+    {
+      "id": "edge-temp-mode-window-creating-1772376603448",
+      "fromNode": "temp-mode",
+      "toNode": "window-creating",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "uses"
+      }
+    },
+    {
+      "id": "edge-workspace-not-found-open-failed-1772376689406",
+      "fromNode": "workspace-not-found",
+      "toNode": "open-failed",
+      "fromSide": "right",
+      "toSide": "left",
+      "pv": {
+        "edgeType": "uses"
+      }
+    }
+  ],
+  "pv": {
+    "version": "1.0",
+    "name": "Alexandria Window Opening Flow",
+    "description": "OTEL-traced lifecycle of opening an Alexandria Workspace window - from user trigger through IPC to ready state",
+    "markdown": ".principal-views/alexandria-window-open/alexandria-window-open.md",
+    "scope": "principal-ade-main",
+    "display": {
+      "layout": "manual",
+      "theme": {
+        "primary": "#8b5cf6",
+        "success": "#22c55e",
+        "danger": "#ef4444",
+        "warning": "#eab308",
+        "info": "#06b6d4"
+      }
+    },
+    "nodeTypes": {
+      "event": {
+        "label": "Event",
+        "color": "#3B82F6"
+      },
+      "boundary": {
+        "label": "Boundary",
+        "color": "#64748B"
+      }
+    }
+  }
+}

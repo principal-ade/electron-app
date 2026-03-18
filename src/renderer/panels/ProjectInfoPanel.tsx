@@ -223,7 +223,6 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
           url: url ?? 'null',
         });
 
-        console.info('[ProjectInfoPanel] File City image URL:', url);
         setFileCityImageUrl(url);
 
         // Event: State updated

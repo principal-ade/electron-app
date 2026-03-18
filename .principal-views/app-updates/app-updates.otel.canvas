@@ -85,730 +85,641 @@
     },
     {
       "id": "settings-modal",
-      "type": "text",
+      "type": "otel-event",
       "x": 50,
       "y": 50,
       "width": 220,
       "height": 100,
-      "text": "UpdatesSettings\n(Settings Modal)\nShows version, status,\ndownload progress",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
-        ],
-        "otel": {
-          "files": ["src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"]
-        },
-        "event": {
-          "name": "app_updates.ui.settings_opened",
-          "description": "User opened the Updates settings panel",
-          "attributes": {
-            "current_version": {
-              "type": "string",
-              "description": "Currently installed app version"
-            },
-            "is_dev_mode": {
-              "type": "boolean",
-              "description": "Whether running in development mode"
-            }
+      "label": "UpdatesSettings",
+      "shape": "rectangle",
+      "event": {
+        "name": "app_updates.ui.settings_opened",
+        "description": "User opened the Updates settings panel",
+        "attributes": {
+          "current_version": {
+            "type": "string",
+            "description": "Currently installed app version"
+          },
+          "is_dev_mode": {
+            "type": "boolean",
+            "description": "Whether running in development mode"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
+        ]
       }
     },
     {
       "id": "check-button",
-      "type": "text",
+      "type": "otel-event",
       "x": 50,
       "y": 180,
       "width": 220,
       "height": 80,
-      "text": "Check for Updates\nButton\n(Manual trigger)",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
-        ],
-        "otel": {
-          "files": ["src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"]
-        },
-        "event": {
-          "name": "app_updates.user.check_requested",
-          "description": "User clicked the Check for Updates button",
-          "attributes": {
-            "trigger": {
-              "type": "string",
-              "description": "How the check was triggered: manual, silent, periodic"
-            }
+      "label": "Check for Updates",
+      "shape": "rectangle",
+      "event": {
+        "name": "app_updates.user.check_requested",
+        "description": "User clicked the Check for Updates button",
+        "attributes": {
+          "trigger": {
+            "type": "string",
+            "description": "How the check was triggered: manual, silent, periodic"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
+        ]
       }
     },
     {
       "id": "version-service",
-      "type": "text",
+      "type": "otel-event",
       "x": 320,
       "y": 50,
       "width": 220,
       "height": 100,
-      "text": "AppVersionManagerService\n(Renderer API)\nWraps IPC calls for\nReact components",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/main-process-api/AppVersionManagerService.ts"
-        ],
-        "event": {
-          "name": "app_updates.service.method_called",
-          "description": "AppVersionManagerService method invoked",
-          "attributes": {
-            "method": {
-              "type": "string",
-              "description": "Method name: checkForUpdate, downloadUpdate, installUpdate"
-            }
+      "label": "AppVersionManagerService",
+      "shape": "rectangle",
+      "event": {
+        "name": "app_updates.service.method_called",
+        "description": "AppVersionManagerService method invoked",
+        "attributes": {
+          "method": {
+            "type": "string",
+            "description": "Method name: checkForUpdate, downloadUpdate, installUpdate"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "ipc-bridge",
-      "type": "text",
+      "type": "otel-event",
       "x": 320,
       "y": 179,
       "width": 220,
       "height": 100,
-      "text": "IPC Bridge\n(appVersionManagerApi)\nipcRenderer.send()\nipcRenderer.on()",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/window/main-process-api-implementations/appVersionManagerApi.ts"
-        ],
-        "event": {
-          "name": "app_updates.ipc.message_sent",
-          "description": "IPC message sent from renderer to main",
-          "attributes": {
-            "channel": {
-              "type": "string",
-              "description": "IPC channel name"
-            },
-            "direction": {
-              "type": "string",
-              "description": "Direction: renderer_to_main or main_to_renderer"
-            }
+      "label": "IPC Bridge",
+      "shape": "rectangle",
+      "event": {
+        "name": "app_updates.ipc.message_sent",
+        "description": "IPC message sent from renderer to main",
+        "attributes": {
+          "channel": {
+            "type": "string",
+            "description": "IPC channel name"
+          },
+          "direction": {
+            "type": "string",
+            "description": "Direction: renderer_to_main or main_to_renderer"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "app-version-manager",
-      "type": "text",
+      "type": "otel-event",
       "x": 590,
       "y": 50,
       "width": 220,
       "height": 100,
-      "text": "AppVersionManager\n(Main Process)\nHandles IPC, configures\nautoUpdater",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/AppVersionManager.ts"
-        ],
-        "otel": {
-          "files": ["src/main/AppVersionManager.ts"]
-        },
-        "event": {
-          "name": "app_updates.manager.initialized",
-          "description": "AppVersionManager initialized and ready to handle updates",
-          "attributes": {
-            "auto_download": {
-              "type": "boolean",
-              "description": "Whether auto-download is enabled"
-            },
-            "auto_install": {
-              "type": "boolean",
-              "description": "Whether auto-install is enabled"
-            }
+      "label": "AppVersionManager",
+      "shape": "rectangle",
+      "event": {
+        "name": "app_updates.manager.initialized",
+        "description": "AppVersionManager initialized and ready to handle updates",
+        "attributes": {
+          "auto_download": {
+            "type": "boolean",
+            "description": "Whether auto-download is enabled"
+          },
+          "auto_install": {
+            "type": "boolean",
+            "description": "Whether auto-install is enabled"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/AppVersionManager.ts"
+        ]
       }
     },
     {
       "id": "check-for-updates",
-      "type": "text",
+      "type": "otel-event",
       "x": 590,
       "y": 180,
       "width": 220,
       "height": 80,
-      "text": "checkForUpdates()\nQueries GitHub releases\nfor new versions",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/AppVersionManager.ts"
-        ],
-        "otel": {
-          "files": ["src/main/AppVersionManager.ts"]
-        },
-        "event": {
-          "name": "app_updates.check.started",
-          "description": "Update check initiated",
-          "attributes": {
-            "trigger": {
-              "type": "string",
-              "description": "Trigger type: manual, silent, periodic"
-            },
-            "current_version": {
-              "type": "string",
-              "description": "Current app version"
-            }
+      "label": "checkForUpdates()",
+      "shape": "rectangle",
+      "event": {
+        "name": "app_updates.check.started",
+        "description": "Update check initiated",
+        "attributes": {
+          "trigger": {
+            "type": "string",
+            "description": "Trigger type: manual, silent, periodic"
+          },
+          "current_version": {
+            "type": "string",
+            "description": "Current app version"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/AppVersionManager.ts"
+        ]
       }
     },
     {
       "id": "github-request",
-      "type": "text",
+      "type": "otel-event",
       "x": 907,
       "y": 128,
       "width": 220,
       "height": 80,
-      "text": "GitHub HTTP Request\nGET latest-mac.yml\nTracks request timing",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/AppVersionManager.ts"
-        ],
-        "otel": {
-          "files": ["src/main/AppVersionManager.ts"]
-        },
-        "event": {
-          "name": "app_updates.github.request_completed",
-          "description": "HTTP request to GitHub completed",
-          "attributes": {
-            "duration_ms": {
-              "type": "number",
-              "description": "Request duration in milliseconds"
-            },
-            "result": {
-              "type": "string",
-              "description": "Result: update_available or update_not_available"
-            },
-            "cached": {
-              "type": "boolean",
-              "description": "Whether the response may have been cached (no checking-for-update event fired)"
-            }
+      "label": "GitHub HTTP Request",
+      "shape": "rectangle",
+      "event": {
+        "name": "app_updates.github.request_completed",
+        "description": "HTTP request to GitHub completed",
+        "attributes": {
+          "duration_ms": {
+            "type": "number",
+            "description": "Request duration in milliseconds"
+          },
+          "result": {
+            "type": "string",
+            "description": "Result: update_available or update_not_available"
+          },
+          "cached": {
+            "type": "boolean",
+            "description": "Whether the response may have been cached (no checking-for-update event fired)"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/AppVersionManager.ts"
+        ]
       }
     },
     {
       "id": "auto-updater",
-      "type": "text",
+      "type": "otel-boundary",
       "x": 1229,
       "y": 50,
       "width": 220,
       "height": 100,
-      "text": "electron-updater\n(autoUpdater)\nCore update library\nwith event emitters",
-      "pv": {
-        "nodeType": "boundary",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/main/AppVersionManager.ts"
-        ],
-        "boundary": {
-          "direction": "outbound",
-          "node": {
-            "pv.event.name": "electron-updater.checkForUpdates"
-          }
+      "label": "electron-updater",
+      "shape": "rectangle",
+      "otel": {
+        "status": "draft"
+      },
+      "boundary": {
+        "direction": "outbound",
+        "node": {
+          "pv.event.name": "electron-updater.checkForUpdates"
         }
       }
     },
     {
       "id": "github-releases",
-      "type": "text",
+      "type": "otel-boundary",
       "x": 1499,
       "y": 50,
       "width": 200,
       "height": 100,
-      "text": "GitHub Releases\n(principal-ade/\nlanding-page)\nlatest-mac.yml",
-      "pv": {
-        "nodeType": "boundary",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [],
-        "boundary": {
-          "direction": "outbound",
-          "node": {
-            "pv.event.name": "github.releases.fetch"
-          }
+      "label": "GitHub Releases",
+      "shape": "rectangle",
+      "otel": {
+        "status": "draft"
+      },
+      "boundary": {
+        "direction": "outbound",
+        "node": {
+          "pv.event.name": "github.releases.fetch"
         }
       }
     },
     {
       "id": "update-available",
-      "type": "text",
+      "type": "otel-event",
       "x": 1214,
       "y": 186,
       "width": 220,
       "height": 80,
-      "text": "update-available\nevent\nNew version found",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/AppVersionManager.ts"
-        ],
-        "otel": {
-          "files": ["src/main/AppVersionManager.ts"]
-        },
-        "event": {
-          "name": "app_updates.check.available",
-          "description": "Update available event received",
-          "attributes": {
-            "available_version": {
-              "type": "string",
-              "description": "New version available"
-            },
-            "current_version": {
-              "type": "string",
-              "description": "Current installed version",
-              "display": false
-            },
-            "release_date": {
-              "type": "string",
-              "description": "Release date of new version",
-              "display": false
-            }
+      "label": "update-available",
+      "shape": "rectangle",
+      "event": {
+        "name": "app_updates.check.available",
+        "description": "Update available event received",
+        "attributes": {
+          "available_version": {
+            "type": "string",
+            "description": "New version available"
+          },
+          "current_version": {
+            "type": "string",
+            "description": "Current installed version",
+            "display": false
+          },
+          "release_date": {
+            "type": "string",
+            "description": "Release date of new version",
+            "display": false
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/AppVersionManager.ts"
+        ]
       }
     },
     {
       "id": "update-not-available",
-      "type": "text",
+      "type": "otel-event",
       "x": 1197,
       "y": 282,
       "width": 220,
       "height": 80,
-      "text": "update-not-available\nevent\nAlready on latest",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/AppVersionManager.ts"
-        ],
-        "otel": {
-          "files": ["src/main/AppVersionManager.ts"]
-        },
-        "event": {
-          "name": "app_updates.check.not_available",
-          "description": "No update available - already on latest",
-          "attributes": {
-            "current_version": {
-              "type": "string",
-              "description": "Current installed version"
-            }
+      "label": "update-not-available",
+      "shape": "rectangle",
+      "event": {
+        "name": "app_updates.check.not_available",
+        "description": "No update available - already on latest",
+        "attributes": {
+          "current_version": {
+            "type": "string",
+            "description": "Current installed version"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/AppVersionManager.ts"
+        ]
       }
     },
     {
       "id": "download-button",
-      "type": "text",
+      "type": "otel-event",
       "x": 50,
       "y": 400,
       "width": 220,
       "height": 80,
-      "text": "Download Update\nButton\n(Shows when available)",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
-        ],
-        "otel": {
-          "files": ["src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"]
-        },
-        "event": {
-          "name": "app_updates.user.download_requested",
-          "description": "User clicked Download Update button",
-          "attributes": {
-            "available_version": {
-              "type": "string",
-              "description": "Version being downloaded"
-            }
+      "label": "Download Update",
+      "shape": "rectangle",
+      "event": {
+        "name": "app_updates.user.download_requested",
+        "description": "User clicked Download Update button",
+        "attributes": {
+          "available_version": {
+            "type": "string",
+            "description": "Version being downloaded"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
+        ]
       }
     },
     {
       "id": "download-update",
-      "type": "text",
+      "type": "otel-event",
       "x": 590,
       "y": 400,
       "width": 220,
       "height": 80,
-      "text": "downloadUpdate()\nDownloads installer\nfrom GitHub",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/AppVersionManager.ts"
-        ],
-        "otel": {
-          "files": ["src/main/AppVersionManager.ts"]
-        },
-        "event": {
-          "name": "app_updates.download.started",
-          "description": "Update download initiated",
-          "attributes": {
-            "version": {
-              "type": "string",
-              "description": "Version being downloaded"
-            }
+      "label": "downloadUpdate()",
+      "shape": "rectangle",
+      "event": {
+        "name": "app_updates.download.started",
+        "description": "Update download initiated",
+        "attributes": {
+          "version": {
+            "type": "string",
+            "description": "Version being downloaded"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/AppVersionManager.ts"
+        ]
       }
     },
     {
       "id": "download-progress",
-      "type": "text",
+      "type": "otel-event",
       "x": 1197,
       "y": 402,
       "width": 220,
       "height": 80,
-      "text": "download-progress\nevent\nBytes transferred %",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/AppVersionManager.ts"
-        ],
-        "otel": {
-          "files": ["src/main/AppVersionManager.ts"]
-        },
-        "event": {
-          "name": "app_updates.download.progress",
-          "description": "Download progress update",
-          "attributes": {
-            "percent": {
-              "type": "number",
-              "description": "Download completion percentage"
-            },
-            "transferred": {
-              "type": "number",
-              "description": "Bytes transferred"
-            },
-            "total": {
-              "type": "number",
-              "description": "Total bytes to download"
-            },
-            "bytes_per_second": {
-              "type": "number",
-              "description": "Download speed"
-            }
+      "label": "download-progress",
+      "shape": "rectangle",
+      "event": {
+        "name": "app_updates.download.progress",
+        "description": "Download progress update",
+        "attributes": {
+          "percent": {
+            "type": "number",
+            "description": "Download completion percentage"
+          },
+          "transferred": {
+            "type": "number",
+            "description": "Bytes transferred"
+          },
+          "total": {
+            "type": "number",
+            "description": "Total bytes to download"
+          },
+          "bytes_per_second": {
+            "type": "number",
+            "description": "Download speed"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/AppVersionManager.ts"
+        ]
       }
     },
     {
       "id": "progress-bar",
-      "type": "text",
+      "type": "otel-event",
       "x": 50,
       "y": 500,
       "width": 220,
       "height": 80,
-      "text": "Progress Bar UI\nDownloading... X%\nReal-time updates",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
-        ],
-        "otel": {
-          "files": ["src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"]
-        },
-        "event": {
-          "name": "app_updates.ui.progress_updated",
-          "description": "Progress bar UI updated",
-          "attributes": {
-            "percent": {
-              "type": "number",
-              "description": "Current progress percentage"
-            }
+      "label": "Progress Bar UI",
+      "shape": "rectangle",
+      "event": {
+        "name": "app_updates.ui.progress_updated",
+        "description": "Progress bar UI updated",
+        "attributes": {
+          "percent": {
+            "type": "number",
+            "description": "Current progress percentage"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
+        ]
       }
     },
     {
       "id": "update-downloaded",
-      "type": "text",
+      "type": "otel-event",
       "x": 1197,
       "y": 502,
       "width": 220,
       "height": 80,
-      "text": "update-downloaded\nevent\nReady to install",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/AppVersionManager.ts"
-        ],
-        "otel": {
-          "files": ["src/main/AppVersionManager.ts"]
-        },
-        "event": {
-          "name": "app_updates.download.completed",
-          "description": "Update download completed successfully",
-          "attributes": {
-            "version": {
-              "type": "string",
-              "description": "Downloaded version"
-            },
-            "download_path": {
-              "type": "string",
-              "description": "Path where update was downloaded",
-              "display": false
-            }
+      "label": "update-downloaded",
+      "shape": "rectangle",
+      "event": {
+        "name": "app_updates.download.completed",
+        "description": "Update download completed successfully",
+        "attributes": {
+          "version": {
+            "type": "string",
+            "description": "Downloaded version"
+          },
+          "download_path": {
+            "type": "string",
+            "description": "Path where update was downloaded",
+            "display": false
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/AppVersionManager.ts"
+        ]
       }
     },
     {
       "id": "install-button",
-      "type": "text",
+      "type": "otel-event",
       "x": 50,
       "y": 620,
       "width": 220,
       "height": 80,
-      "text": "Install & Restart\nButton\n(Shows when downloaded)",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
-        ],
-        "otel": {
-          "files": ["src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"]
-        },
-        "event": {
-          "name": "app_updates.user.install_requested",
-          "description": "User clicked Install & Restart button",
-          "attributes": {
-            "version": {
-              "type": "string",
-              "description": "Version to be installed"
-            }
+      "label": "Install & Restart",
+      "shape": "rectangle",
+      "event": {
+        "name": "app_updates.user.install_requested",
+        "description": "User clicked Install & Restart button",
+        "attributes": {
+          "version": {
+            "type": "string",
+            "description": "Version to be installed"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
+        ]
       }
     },
     {
       "id": "quit-and-install",
-      "type": "text",
+      "type": "otel-event",
       "x": 590,
       "y": 620,
       "width": 220,
       "height": 80,
-      "text": "quitAndInstall()\nCloses app, installs\nupdate, relaunches",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/AppVersionManager.ts"
-        ],
-        "otel": {
-          "files": ["src/main/AppVersionManager.ts"]
-        },
-        "event": {
-          "name": "app_updates.install.started",
-          "description": "Update installation initiated",
-          "attributes": {
-            "version": {
-              "type": "string",
-              "description": "Version being installed"
-            }
+      "label": "quitAndInstall()",
+      "shape": "rectangle",
+      "event": {
+        "name": "app_updates.install.started",
+        "description": "Update installation initiated",
+        "attributes": {
+          "version": {
+            "type": "string",
+            "description": "Version being installed"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/AppVersionManager.ts"
+        ]
       }
     },
     {
       "id": "app-restart",
-      "type": "text",
+      "type": "otel-event",
       "x": 1197,
       "y": 618,
       "width": 220,
       "height": 80,
-      "text": "App Restarts\nwith new version\ninstalled",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [],
-        "event": {
-          "name": "app_updates.install.completed",
-          "description": "Update installation completed and app restarted",
-          "attributes": {
-            "new_version": {
-              "type": "string",
-              "description": "Newly installed version"
-            },
-            "previous_version": {
-              "type": "string",
-              "description": "Previous version before update"
-            }
+      "label": "App Restarts",
+      "shape": "rectangle",
+      "event": {
+        "name": "app_updates.install.completed",
+        "description": "Update installation completed and app restarted",
+        "attributes": {
+          "new_version": {
+            "type": "string",
+            "description": "Newly installed version"
+          },
+          "previous_version": {
+            "type": "string",
+            "description": "Previous version before update"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "error-handling",
-      "type": "text",
+      "type": "otel-event",
       "x": 590,
       "y": 750,
       "width": 220,
       "height": 100,
-      "text": "Error Handling\nNetwork, certificate,\nchecksum, timeout\nerrors",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/AppVersionManager.ts",
-          "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
-        ],
-        "otel": {
-          "files": ["src/main/AppVersionManager.ts"]
-        },
-        "event": {
-          "name": "app_updates.error.occurred",
-          "description": "Error occurred during update process",
-          "attributes": {
-            "error_type": {
-              "type": "string",
-              "description": "Error type: network, certificate, checksum, timeout, etc."
-            },
-            "error_message": {
-              "type": "string",
-              "description": "Human-readable error message"
-            },
-            "phase": {
-              "type": "string",
-              "description": "Phase where error occurred: check, download, install"
-            }
+      "label": "Error Handling",
+      "shape": "rectangle",
+      "event": {
+        "name": "app_updates.error.occurred",
+        "description": "Error occurred during update process",
+        "attributes": {
+          "error_type": {
+            "type": "string",
+            "description": "Error type: network, certificate, checksum, timeout, etc."
+          },
+          "error_message": {
+            "type": "string",
+            "description": "Human-readable error message"
+          },
+          "phase": {
+            "type": "string",
+            "description": "Phase where error occurred: check, download, install"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/AppVersionManager.ts"
+        ]
       }
     },
     {
       "id": "periodic-check",
-      "type": "text",
+      "type": "otel-event",
       "x": 590,
       "y": 280,
       "width": 220,
       "height": 80,
-      "text": "Periodic Check\nEvery 60 minutes\n(setInterval)",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/AppVersionManager.ts"
-        ],
-        "otel": {
-          "files": ["src/main/AppVersionManager.ts"]
-        },
-        "event": {
-          "name": "app_updates.check.periodic",
-          "description": "Periodic update check triggered",
-          "attributes": {
-            "interval_ms": {
-              "type": "number",
-              "description": "Check interval in milliseconds"
-            },
-            "timeout_ms": {
-              "type": "number",
-              "description": "Check timeout in milliseconds"
-            }
+      "label": "Periodic Check",
+      "shape": "rectangle",
+      "event": {
+        "name": "app_updates.check.periodic",
+        "description": "Periodic update check triggered",
+        "attributes": {
+          "interval_ms": {
+            "type": "number",
+            "description": "Check interval in milliseconds"
+          },
+          "timeout_ms": {
+            "type": "number",
+            "description": "Check timeout in milliseconds"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/AppVersionManager.ts"
+        ]
       }
     },
     {
       "id": "user-triggered-check",
-      "type": "text",
+      "type": "otel-event",
       "x": 590,
       "y": 380,
       "width": 220,
       "height": 80,
-      "text": "User Triggered Check\nManual or silent\ncheck via TIPC",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/main/AppVersionManager.ts"
-        ],
-        "otel": {
-          "files": ["src/main/AppVersionManager.ts"]
-        },
-        "event": {
-          "name": "app_updates.check.user_triggered",
-          "description": "Manual or silent update check triggered by user action",
-          "attributes": {
-            "trigger": {
-              "type": "string",
-              "description": "Trigger type: manual or silent"
-            }
+      "label": "User Triggered Check",
+      "shape": "rectangle",
+      "event": {
+        "name": "app_updates.check.user_triggered",
+        "description": "Manual or silent update check triggered by user action",
+        "attributes": {
+          "trigger": {
+            "type": "string",
+            "description": "Trigger type: manual or silent"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/AppVersionManager.ts"
+        ]
       }
     },
     {
       "id": "startup-check",
-      "type": "text",
+      "type": "otel-event",
       "x": 320,
       "y": 300,
       "width": 220,
       "height": 80,
-      "text": "Startup Check\nApp.tsx calls\ncheckForUpdateSilently()",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "draft",
-        "references": [
-          "src/renderer/App.tsx"
-        ],
-        "event": {
-          "name": "app_updates.startup.check_triggered",
-          "description": "Silent update check triggered on app startup",
-          "attributes": {
-            "app_version": {
-              "type": "string",
-              "description": "Current app version at startup"
-            }
+      "label": "Startup Check",
+      "shape": "rectangle",
+      "event": {
+        "name": "app_updates.startup.check_triggered",
+        "description": "Silent update check triggered on app startup",
+        "attributes": {
+          "app_version": {
+            "type": "string",
+            "description": "Current app version at startup"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
@@ -833,37 +744,33 @@
     },
     {
       "id": "error-ui",
-      "type": "text",
+      "type": "otel-event",
       "x": 50,
       "y": 750,
       "width": 220,
       "height": 100,
-      "text": "Error UI\nUser-friendly messages\nfor common failures:\nNetwork, SHA512, etc.",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle",
-        "status": "implemented",
-        "references": [
-          "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
-        ],
-        "otel": {
-          "files": ["src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"]
-        },
-        "event": {
-          "name": "app_updates.ui.error_displayed",
-          "description": "Error message displayed to user",
-          "attributes": {
-            "error_type": {
-              "type": "string",
-              "description": "Type of error displayed",
-              "display": false
-            },
-            "user_message": {
-              "type": "string",
-              "description": "User-friendly error message"
-            }
+      "label": "Error UI",
+      "shape": "rectangle",
+      "event": {
+        "name": "app_updates.ui.error_displayed",
+        "description": "Error message displayed to user",
+        "attributes": {
+          "error_type": {
+            "type": "string",
+            "description": "Type of error displayed",
+            "display": false
+          },
+          "user_message": {
+            "type": "string",
+            "description": "User-friendly error message"
           }
         }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
+        ]
       }
     }
   ],
