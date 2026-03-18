@@ -58,8 +58,11 @@ class WebTelemetryProvider {
       // Get app version from window.mainProcess if available
       const appVersion = this.getAppVersion();
 
+      // Use window-type-specific service name for proper scope separation
+      const serviceName = `principal-ade-${windowType}`;
+
       const resource = resourceFromAttributes({
-        [ATTR_SERVICE_NAME]: config.serviceName,
+        [ATTR_SERVICE_NAME]: serviceName,
         [ATTR_SERVICE_VERSION]: appVersion,
         'process.type': 'renderer',
         'window.type': windowType,

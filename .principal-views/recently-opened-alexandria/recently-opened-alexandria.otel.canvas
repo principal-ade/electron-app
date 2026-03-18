@@ -4,7 +4,7 @@
     "version": "1.0.0",
     "description": "Flow for tracking and sorting local projects by last opened timestamp",
     "markdown": ".principal-views/recently-opened-alexandria/recently-opened-alexandria.md",
-    "scope": "principal-ade",
+    "scope": "principal-ade-main",
     "nodeTypes": {
       "ui-component": {
         "label": "UI Component",

@@ -11,13 +11,25 @@ An **instrumentation scope** in OpenTelemetry identifies the boundary where trac
 
 ## Scopes
 
-### Production Scopes
+### Process Scopes
 
 | Scope | Process | Runtime | Description |
 |-------|---------|---------|-------------|
-| `principal-ade` | Electron main | Node.js | Core application logic, IPC handlers, services |
-| `principal-ade-renderer` | Electron renderer | Chromium | React UI, user interactions, panels |
+| `principal-ade-main` | Electron main | Node.js | Core application logic, IPC handlers, services |
 | `principal-ade-daemon` | PTY daemon | Node.js | Persistent terminal sessions, PTY management |
+| `principal-ade-event-processor` | Utility process | Node.js | Agent session event processing |
+
+### Window Scopes (Renderer Processes)
+
+| Scope | Window | Description |
+|-------|--------|-------------|
+| `principal-ade-principal-window` | Principal Window | Main app shell with auth, workspaces, settings |
+| `principal-ade-dev-workspace` | Dev Workspace | Development environment with panels and terminal |
+| `principal-ade-alexandria` | Alexandria | Knowledge base and code exploration workspace |
+| `principal-ade-extension` | Extension Window | Browser extension host |
+| `principal-ade-splash-screen` | Splash Screen | App loading screen |
+| `principal-ade-window-switcher` | Window Switcher | Quick window navigation overlay |
+| `principal-ade-quick-open` | Quick Open | Command palette overlay |
 
 ### Development Scopes
 
@@ -54,7 +66,7 @@ An **instrumentation scope** in OpenTelemetry identifies the boundary where trac
 
 Spans are organized into namespaces within each scope:
 
-### principal-ade (Main Process)
+### principal-ade-main (Main Process)
 - `window.*` - Window lifecycle
 - `project.*` - Project operations
 - `fs.*` - File system operations
@@ -63,17 +75,27 @@ Spans are organized into namespaces within each scope:
 - `terminal.session.*` - Session management (main side)
 - `ipc.handle.*` - IPC request handlers
 
-### principal-ade-renderer (Renderer Process)
-- `terminal.panel.*` - Terminal UI
-- `quality.panel.*` - Quality analysis UI
-- `trace.viewer.*` - Trace visualization
-- `devworkspace.*` - Workspace UI
-- `alexandria.*` - Knowledge base UI
-- `ipc.invoke.*` - IPC requests to main
-
 ### principal-ade-daemon (Daemon Process)
 - `terminal.daemon.*` - Daemon lifecycle
 - `terminal.pty.*` - PTY operations
+
+### principal-ade-event-processor (Event Processor)
+- `event.*` - Event processing
+- `agent.*` - Agent session events
+
+### principal-ade-dev-workspace (Dev Workspace)
+- `devworkspace.*` - Workspace UI
+- `terminal.panel.*` - Terminal panel UI
+- `ipc.invoke.*` - IPC requests to main
+
+### principal-ade-alexandria (Alexandria)
+- `alexandria.*` - Knowledge base UI
+- `quality.panel.*` - Quality analysis UI
+- `ipc.invoke.*` - IPC requests to main
+
+### principal-ade-principal-window (Principal Window)
+- `trace.viewer.*` - Trace visualization
+- `ipc.invoke.*` - IPC requests to main
 
 ## Migration from Old Scopes
 
@@ -81,9 +103,11 @@ The previous architecture defined ~20 logical "scopes" that were actually just n
 
 | Old Scope | New Location |
 |-----------|--------------|
-| `terminal-activity` | `principal-ade` spans |
-| `terminal-session` | `principal-ade` spans |
-| `window-manager` | `principal-ade` `window.*` spans |
-| `quality-panel` | `principal-ade-renderer` spans |
-| `trace-viewer` | `principal-ade-renderer` spans |
+| `terminal-activity` | `principal-ade-main` spans |
+| `terminal-session` | `principal-ade-main` spans |
+| `window-manager` | `principal-ade-main` `window.*` spans |
+| `quality-panel` | `principal-ade-alexandria` spans |
+| `trace-viewer` | `principal-ade-principal-window` spans |
 | `terminal.daemon` | `principal-ade-daemon` spans |
+| `devworkspace` | `principal-ade-dev-workspace` spans |
+| `principal-ade-utility` | `principal-ade-event-processor` spans |

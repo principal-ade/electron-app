@@ -4,7 +4,7 @@
     "version": "1.0.0",
     "description": "HTTP bridge enabling external AI agents (MCP tools) to interact with the Electron app's repository monitoring capabilities",
     "markdown": ".principal-views/principal-mcp-bridge/principal-mcp-bridge.md",
-    "scope": "principal-ade",
+    "scope": "principal-ade-main",
     "nodeTypes": {
       "external-client": {
         "label": "External Client",

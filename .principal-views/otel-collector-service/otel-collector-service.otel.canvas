@@ -4,7 +4,7 @@
     "version": "1.0.0",
     "description": "Lifecycle management, port registration, and trace storage for the OpenTelemetry collector service running in Electron main process",
     "markdown": ".principal-views/otel-collector-service/otel-collector-service.md",
-    "scope": "principal-ade",
+    "scope": "principal-ade-main",
     "nodeTypes": {
       "singleton": {
         "label": "Singleton Service",

@@ -815,7 +815,7 @@
     "name": "Alexandria Window Opening Flow",
     "description": "OTEL-traced lifecycle of opening an Alexandria Workspace window - from user trigger through IPC to ready state",
     "markdown": ".principal-views/alexandria-window-open/alexandria-window-open.md",
-    "scope": "principal-ade",
+    "scope": "principal-ade-main",
     "display": {
       "layout": "manual",
       "theme": {

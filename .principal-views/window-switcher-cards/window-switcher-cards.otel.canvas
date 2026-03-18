@@ -4,7 +4,7 @@
     "version": "1.0.0",
     "description": "Integration of LocalProjectCard from industry-themed-repository-composition-panels into the Window Switcher overlay",
     "markdown": ".principal-views/window-switcher-cards/window-switcher-cards.md",
-    "scope": "principal-ade",
+    "scope": "principal-ade-main",
     "nodeTypes": {
       "renderer": {
         "label": "Renderer",

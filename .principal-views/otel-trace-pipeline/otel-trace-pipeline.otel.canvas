@@ -4,7 +4,7 @@
     "version": "1.0.0",
     "description": "Complete flow of OpenTelemetry traces from application code through OTEL collector to dev workspace window visualization",
     "markdown": ".principal-views/otel-trace-pipeline/otel-trace-pipeline.md",
-    "scope": "principal-ade",
+    "scope": "principal-ade-main",
     "nodeTypes": {
       "external-service": {
         "label": "External Service",

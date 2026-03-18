@@ -19,7 +19,7 @@
         "nodeType": "span-convention",
         "description": "Span covering window creation lifecycle",
         "otel": {
-          "scope": "principal-ade",
+          "scope": "principal-ade-main",
           "spanPattern": "window.create",
           "spanKind": "internal"
         }
@@ -38,7 +38,7 @@
         "nodeType": "span-convention",
         "description": "Span covering window focus operation",
         "otel": {
-          "scope": "principal-ade",
+          "scope": "principal-ade-main",
           "spanPattern": "window.focus",
           "spanKind": "internal"
         }
@@ -57,7 +57,7 @@
         "nodeType": "span-convention",
         "description": "Span covering window close and cleanup",
         "otel": {
-          "scope": "principal-ade",
+          "scope": "principal-ade-main",
           "spanPattern": "window.close",
           "spanKind": "internal"
         }
@@ -76,7 +76,7 @@
         "nodeType": "span-convention",
         "description": "Span covering terminal session creation",
         "otel": {
-          "scope": "principal-ade",
+          "scope": "principal-ade-main",
           "spanPattern": "terminal.session.create",
           "spanKind": "internal"
         }
@@ -95,7 +95,7 @@
         "nodeType": "span-convention",
         "description": "Span covering connection to PTY daemon",
         "otel": {
-          "scope": "principal-ade",
+          "scope": "principal-ade-main",
           "spanPattern": "terminal.session.connect",
           "spanKind": "client"
         }
@@ -114,7 +114,7 @@
         "nodeType": "span-convention",
         "description": "Span covering session destruction",
         "otel": {
-          "scope": "principal-ade",
+          "scope": "principal-ade-main",
           "spanPattern": "terminal.session.destroy",
           "spanKind": "internal"
         }
@@ -190,7 +190,7 @@
         "nodeType": "span-convention",
         "description": "Span covering update check against GitHub",
         "otel": {
-          "scope": "principal-ade",
+          "scope": "principal-ade-main",
           "spanPattern": "app.update.check",
           "spanKind": "client"
         }
@@ -209,7 +209,7 @@
         "nodeType": "span-convention",
         "description": "Span covering update download",
         "otel": {
-          "scope": "principal-ade",
+          "scope": "principal-ade-main",
           "spanPattern": "app.update.download",
           "spanKind": "client"
         }
@@ -228,7 +228,7 @@
         "nodeType": "span-convention",
         "description": "Span covering update installation",
         "otel": {
-          "scope": "principal-ade",
+          "scope": "principal-ade-main",
           "spanPattern": "app.update.install",
           "spanKind": "internal"
         }
@@ -247,7 +247,7 @@
         "nodeType": "span-convention",
         "description": "Span covering IPC handler execution in main process",
         "otel": {
-          "scope": "principal-ade",
+          "scope": "principal-ade-main",
           "spanPattern": "ipc.handle.*",
           "spanKind": "server"
         }
@@ -285,7 +285,7 @@
         "nodeType": "span-convention",
         "description": "Span covering project open operation",
         "otel": {
-          "scope": "principal-ade",
+          "scope": "principal-ade-main",
           "spanPattern": "project.open",
           "spanKind": "internal"
         }
@@ -304,7 +304,7 @@
         "nodeType": "span-convention",
         "description": "Span covering file read operation",
         "otel": {
-          "scope": "principal-ade",
+          "scope": "principal-ade-main",
           "spanPattern": "fs.read",
           "spanKind": "internal"
         }
@@ -323,7 +323,7 @@
         "nodeType": "span-convention",
         "description": "Span covering file write operation",
         "otel": {
-          "scope": "principal-ade",
+          "scope": "principal-ade-main",
           "spanPattern": "fs.write",
           "spanKind": "internal"
         }
@@ -342,7 +342,7 @@
         "nodeType": "span-convention",
         "description": "Span covering file tree construction",
         "otel": {
-          "scope": "principal-ade",
+          "scope": "principal-ade-main",
           "spanPattern": "fs.tree.build",
           "spanKind": "internal"
         }
@@ -399,7 +399,7 @@
         "nodeType": "span-convention",
         "description": "Span covering MCP tool execution",
         "otel": {
-          "scope": "principal-ade",
+          "scope": "principal-ade-main",
           "spanPattern": "mcp.tool.execute",
           "spanKind": "server"
         }

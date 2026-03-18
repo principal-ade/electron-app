@@ -4,7 +4,7 @@
     "version": "1.0.0",
     "description": "Agent session event processing server running in Electron utility process. Receives events from Claude, Cline, OpenCode, and Droid agents via HTTP webhooks and processes them through the AgentEventPipeline.",
     "markdown": ".principal-views/event-processing-server/event-processing-server.md",
-    "scope": "principal-ade",
+    "scope": "principal-ade-main",
     "nodeTypes": {
       "main-process": {
         "label": "Main Process",

@@ -8,7 +8,7 @@ Spans are organized by **instrumentation scope**, which maps to process boundari
 
 | Scope | Process | Runtime |
 |-------|---------|---------|
-| `principal-ade` | Electron main process | Node.js |
+| `principal-ade-main` | Electron main process | Node.js |
 | `principal-ade-renderer` | Electron renderer process | Chromium |
 | `principal-ade-daemon` | PTY daemon process | Node.js |
 

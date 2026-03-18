@@ -175,7 +175,7 @@ export class FileCityImageService {
   async getImageForRepository(repoPath: string): Promise<string | null> {
     await this.ensureInitialized();
 
-    const tracer = getTracer('principal-ade');
+    const tracer = getTracer('principal-ade-main');
     const span = tracer.startSpan('file_city.image.generation', {
       attributes: { 'repo_path': repoPath },
     });

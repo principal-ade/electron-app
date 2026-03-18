@@ -37,7 +37,7 @@ class UtilityProcessTelemetryProvider {
 
     try {
       const resource = resourceFromAttributes({
-        [ATTR_SERVICE_NAME]: 'principal-ade-utility',
+        [ATTR_SERVICE_NAME]: 'principal-ade-event-processor',
         [ATTR_SERVICE_VERSION]: process.env.npm_package_version || '1.0.0',
         'process.type': 'utility',
       });

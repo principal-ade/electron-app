@@ -4,7 +4,7 @@
     "version": "1.0.0",
     "description": "Electron auto-update system using electron-updater with GitHub releases",
     "markdown": ".principal-views/app-updates/app-updates.md",
-    "scope": "principal-ade",
+    "scope": "principal-ade-main",
     "nodeTypes": {
       "ui-component": {
         "label": "UI Component",

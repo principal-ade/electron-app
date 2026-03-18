@@ -4,7 +4,7 @@
     "version": "1.0.0",
     "description": "Flow of terminal/agent working state from terminal panel through TIPC to main process store and cross-window broadcast",
     "markdown": ".principal-views/terminal-activity-tracking/terminal-activity-tracking.md",
-    "scope": "principal-ade",
+    "scope": "principal-ade-main",
     "nodeTypes": {
       "terminal-panel": {
         "label": "Terminal Panel",

@@ -4,7 +4,7 @@
     "version": "1.0.0",
     "description": "Lifecycle management of terminal sessions: creation, destruction, ownership, and port management",
     "markdown": ".principal-views/terminal-session-management/terminal-session-management.md",
-    "scope": "principal-ade",
+    "scope": "principal-ade-main",
     "nodeTypes": {
       "renderer": {
         "label": "Renderer",
@@ -116,6 +116,7 @@
           "src/renderer/tipc/terminalClient.ts"
         ],
         "otel": {
+          "scope": "principal-ade-renderer",
           "files": ["src/renderer/tipc/terminalClient.ts"]
         },
         "event": {
@@ -150,6 +151,7 @@
           "src/main/terminal/tipc/terminalRouter.ts"
         ],
         "otel": {
+          "scope": "principal-ade-main",
           "files": ["src/main/terminal/tipc/terminalRouter.ts"]
         },
         "event": {
@@ -184,6 +186,7 @@
           "src/main/terminal/TerminalSessionManager.ts"
         ],
         "otel": {
+          "scope": "principal-ade-main",
           "files": ["src/main/terminal/tipc/terminalRouter.ts"]
         },
         "event": {
@@ -218,6 +221,7 @@
           "src/main/terminal/TerminalSessionManager.ts"
         ],
         "otel": {
+          "scope": "principal-ade-main",
           "files": ["src/main/terminal/tipc/terminalRouter.ts"]
         },
         "event": {
@@ -257,6 +261,7 @@
           "src/main/terminal/tipc/terminalRouter.ts"
         ],
         "otel": {
+          "scope": "principal-ade-main",
           "files": ["src/main/terminal/tipc/terminalRouter.ts"]
         },
         "event": {
@@ -295,6 +300,10 @@
         "references": [
           "src/terminal-worker/worker-entry.ts"
         ],
+        "otel": {
+          "scope": "principal-ade-daemon",
+          "files": ["src/terminal-worker/worker-entry.ts"]
+        },
         "event": {
           "name": "terminal.worker.session_created",
           "description": "Worker created PTY session",
@@ -326,6 +335,10 @@
         "references": [
           "src/renderer/hooks/useTerminalPort.ts"
         ],
+        "otel": {
+          "scope": "principal-ade-renderer",
+          "files": ["src/renderer/hooks/useTerminalPort.ts"]
+        },
         "event": {
           "name": "terminal.port.renderer_connected",
           "description": "Renderer connected to terminal MessagePort",
@@ -353,6 +366,10 @@
         "references": [
           "src/terminal-worker/worker-entry.ts"
         ],
+        "otel": {
+          "scope": "principal-ade-daemon",
+          "files": ["src/terminal-worker/worker-entry.ts"]
+        },
         "event": {
           "name": "terminal.port.worker_registered",
           "description": "Worker registered terminal MessagePort",
@@ -415,6 +432,7 @@
           "src/renderer/panels/terminal-sessions/TerminalSessionsPanel.tsx"
         ],
         "otel": {
+          "scope": "principal-ade-renderer",
           "files": ["src/renderer/panels/terminal-sessions/TerminalSessionsPanel.tsx"]
         },
         "event": {
@@ -460,6 +478,7 @@
           "src/renderer/panels/terminal-sessions/TerminalSessionsPanel.tsx"
         ],
         "otel": {
+          "scope": "principal-ade-renderer",
           "files": ["src/renderer/panels/terminal-sessions/TerminalSessionsPanel.tsx"]
         },
         "event": {
@@ -490,6 +509,7 @@
           "src/main/terminal/tipc/terminalRouter.ts"
         ],
         "otel": {
+          "scope": "principal-ade-main",
           "files": ["src/main/terminal/tipc/terminalRouter.ts"]
         },
         "event": {
@@ -525,6 +545,7 @@
           "src/renderer/main-process-api/WindowService.ts"
         ],
         "otel": {
+          "scope": "principal-ade-renderer",
           "files": ["src/renderer/panels/terminal-sessions/TerminalSessionsPanel.tsx"]
         },
         "event": {
@@ -558,6 +579,10 @@
         "references": [
           "src/main/terminal/PtyDaemonClient.ts"
         ],
+        "otel": {
+          "scope": "principal-ade-daemon",
+          "files": ["src/pty-daemon/index.ts"]
+        },
         "event": {
           "name": "terminal.daemon.sessions_sent",
           "description": "Daemon sends existing sessions on worker connect",
@@ -585,6 +610,10 @@
         "references": [
           "src/main/terminal/TerminalSessionManager.ts"
         ],
+        "otel": {
+          "scope": "principal-ade-main",
+          "files": ["src/main/terminal/TerminalSessionManager.ts"]
+        },
         "event": {
           "name": "terminal.sessions.restored",
           "description": "Sessions restored from daemon broadcast to renderers",
@@ -612,6 +641,10 @@
         "references": [
           "src/renderer/contexts/TerminalContext.tsx"
         ],
+        "otel": {
+          "scope": "principal-ade-renderer",
+          "files": ["src/renderer/contexts/TerminalContext.tsx"]
+        },
         "event": {
           "name": "terminal.session.auto_reconnect",
           "description": "Auto-reconnecting to restored session",
@@ -657,6 +690,10 @@
         "references": [
           "src/renderer/contexts/TerminalContext.tsx"
         ],
+        "otel": {
+          "scope": "principal-ade-renderer",
+          "files": ["src/renderer/contexts/TerminalContext.tsx"]
+        },
         "event": {
           "name": "terminal.session.reconnect_error",
           "description": "Session reconnection failed",

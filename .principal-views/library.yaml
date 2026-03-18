@@ -2,30 +2,70 @@ version: "1.0.0"
 name: "principal-ade"
 description: "Principal ADE - The future of Agentic Development Environment"
 
+# Instrumentation scopes (process boundaries)
+scopes:
+  # Process scopes
+  principal-ade-main:
+    color: "#4F46E5"
+    description: "Electron main process - Node.js runtime handling IPC, services, and system operations"
+  principal-ade-daemon:
+    color: "#0D9488"
+    description: "Standalone PTY daemon process managing persistent terminal sessions"
+  principal-ade-event-processor:
+    color: "#F59E0B"
+    description: "Event Processing Server - utility process for agent session events"
+  principal-ade-repo-monitor:
+    color: "#14B8A6"
+    description: "Repository Monitoring Server - utility process for file watching and cache building"
+  principal-ade-terminal-worker:
+    color: "#6366F1"
+    description: "Terminal Worker - utility process routing terminal sessions to daemon or managing PTYs directly"
+  principal-ade-cli-bridge:
+    color: "#6366F1"
+    description: "CLI Bridge - utility process for executing CLI commands (git, npm, etc.)"
+
+  # Window scopes (renderer processes)
+  principal-ade-principal-window:
+    color: "#7C3AED"
+    description: "Principal Window - main app shell with auth, workspaces, settings"
+  principal-ade-dev-workspace:
+    color: "#8B5CF6"
+    description: "Dev Workspace - development environment with panels and terminal"
+  principal-ade-alexandria:
+    color: "#A855F7"
+    description: "Alexandria Workspace - knowledge base and code exploration"
+  principal-ade-extension:
+    color: "#C084FC"
+    description: "Extension Window - browser extension host"
+  principal-ade-splash-screen:
+    color: "#D8B4FE"
+    description: "Splash Screen - app loading screen"
+  principal-ade-window-switcher:
+    color: "#E9D5FF"
+    description: "Window Switcher - quick window navigation overlay"
+  principal-ade-quick-open:
+    color: "#F3E8FF"
+    description: "Quick Open - command palette overlay"
+
+  # Specialized scopes
+  file-city-renderer:
+    color: "#22C55E"
+    description: "File City visualization renderer scope"
+
 # Service resource registry
 # Define all services in this repository with their OTEL resource attributes
 resources:
   # ============================================
   # PRODUCTION SCOPES (Process Boundaries)
   # ============================================
-  principal-ade:
-    service.name: "principal-ade"
+  principal-ade-main:
+    service.name: "principal-ade-main"
     service.version: "0.0.410"
     deployment.environment: "development"
     project: "principal-ade"
     description: "Electron main process - Node.js runtime"
     owned-scopes:
-      - "principal-ade"
-
-  principal-ade-renderer:
-    service.name: "principal-ade"
-    service.version: "0.0.410"
-    deployment.environment: "development"
-    project: "principal-ade"
-    description: "Electron renderer process - Chromium/React UI"
-    owned-scopes:
-      - "principal-ade-renderer"
-      - "file-city-renderer"
+      - "principal-ade-main"
 
   principal-ade-daemon:
     service.name: "principal-ade-daemon"
@@ -36,6 +76,77 @@ resources:
     description: "Standalone PTY daemon process"
     owned-scopes:
       - "principal-ade-daemon"
+
+  principal-ade-event-processor:
+    service.name: "principal-ade-event-processor"
+    service.version: "0.0.410"
+    deployment.environment: "development"
+    process.type: "utility"
+    project: "principal-ade"
+    description: "Event Processing Server - utility process"
+    owned-scopes:
+      - "principal-ade-event-processor"
+
+  principal-ade-repo-monitor:
+    service.name: "repository-monitoring-server"
+    service.version: "0.0.410"
+    deployment.environment: "development"
+    process.type: "utility"
+    project: "principal-ade"
+    description: "Repository Monitoring Server - utility process"
+    owned-scopes:
+      - "principal-ade-repo-monitor"
+
+  principal-ade-terminal-worker:
+    service.name: "terminal-worker"
+    service.version: "0.0.410"
+    deployment.environment: "development"
+    process.type: "utility"
+    project: "principal-ade"
+    description: "Terminal Worker - session routing utility process"
+    owned-scopes:
+      - "principal-ade-terminal-worker"
+
+  principal-ade-cli-bridge:
+    service.name: "cli-bridge-universal"
+    service.version: "0.0.410"
+    deployment.environment: "development"
+    process.type: "utility"
+    project: "principal-ade"
+    description: "CLI Bridge - command execution utility process"
+    owned-scopes:
+      - "principal-ade-cli-bridge"
+
+  # ============================================
+  # WINDOW SCOPES (Renderer Processes)
+  # ============================================
+  principal-ade-principal-window:
+    service.name: "principal-ade-principal-window"
+    service.version: "0.0.410"
+    deployment.environment: "development"
+    project: "principal-ade"
+    description: "Principal Window - main app shell"
+    owned-scopes:
+      - "principal-ade-principal-window"
+
+  principal-ade-dev-workspace:
+    service.name: "principal-ade-dev-workspace"
+    service.version: "0.0.410"
+    deployment.environment: "development"
+    project: "principal-ade"
+    description: "Dev Workspace - development environment"
+    owned-scopes:
+      - "principal-ade-dev-workspace"
+      - "file-city-renderer"
+
+  principal-ade-alexandria:
+    service.name: "principal-ade-alexandria"
+    service.version: "0.0.410"
+    deployment.environment: "development"
+    project: "principal-ade"
+    description: "Alexandria Workspace - knowledge base"
+    owned-scopes:
+      - "principal-ade-alexandria"
 
   # ============================================
   # DEVELOPMENT SCOPES

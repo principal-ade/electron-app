@@ -74,7 +74,7 @@ function getCollectorEndpoint(): string {
 export const defaultTelemetryConfig: TelemetryConfig = {
   enabled: true,
   collectorEndpoint: getCollectorEndpoint(),
-  serviceName: 'principal-ade',
+  serviceName: 'principal-ade-main',
   mainProcess: {
     enabled: true,
     instrumentations: {
