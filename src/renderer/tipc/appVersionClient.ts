@@ -11,6 +11,7 @@ import type {
   CheckForUpdateResult,
   DownloadUpdateResult,
   InstallUpdateResult,
+  TestGoodbyeScreenResult,
   VersionInfo,
   AppVersionRouterType,
 } from '../../shared/tipc/appVersionRouterTypes';
@@ -34,6 +35,7 @@ export interface AppVersionClient {
   downloadUpdate: () => Promise<DownloadUpdateResult>;
   installUpdate: () => Promise<InstallUpdateResult>;
   testDownloadUpdate: () => Promise<DownloadUpdateResult>;
+  testGoodbyeScreen: () => Promise<TestGoodbyeScreenResult>;
 }
 
 // =============================================================================
@@ -93,5 +95,6 @@ export type {
   CheckForUpdateResult,
   DownloadUpdateResult,
   InstallUpdateResult,
+  TestGoodbyeScreenResult,
   VersionInfo,
 };

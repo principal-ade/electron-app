@@ -39,6 +39,10 @@ export class AppVersionManagerService {
     appVersionClient.testDownloadUpdate();
   }
 
+  static testGoodbyeScreen(): void {
+    appVersionClient.testGoodbyeScreen();
+  }
+
   // ===========================================================================
   // Event Subscriptions (legacy IPC - TIPC doesn't support push events)
   // ===========================================================================

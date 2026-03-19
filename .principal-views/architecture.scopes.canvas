@@ -133,6 +133,34 @@
       }
     },
     {
+      "id": "principal-ade-splash-screen",
+      "type": "otel-scope",
+      "x": 722,
+      "y": -356,
+      "width": 220,
+      "height": 120,
+      "color": "#06B6D4",
+      "label": "Splash Screen",
+      "description": "Splash Screen - transient overlay shown on app startup, detects post-update state",
+      "otel": {
+        "scope": "principal-ade-splash-screen"
+      }
+    },
+    {
+      "id": "principal-ade-goodbye-screen",
+      "type": "otel-scope",
+      "x": 722,
+      "y": -200,
+      "width": 220,
+      "height": 120,
+      "color": "#F472B6",
+      "label": "Goodbye Screen",
+      "description": "Goodbye Screen - transient overlay shown before update installation, handles graceful shutdown",
+      "otel": {
+        "scope": "principal-ade-goodbye-screen"
+      }
+    },
+    {
       "id": "principal-ade-storybook",
       "type": "otel-scope",
       "x": 1270,
@@ -371,6 +399,26 @@
     {
       "id": "edge-principal-ade-principal-window-principal-ade-main-1773847831770",
       "fromNode": "principal-ade-principal-window",
+      "toNode": "principal-ade-main",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "ipc"
+      }
+    },
+    {
+      "id": "edge-principal-ade-splash-screen-principal-ade-main",
+      "fromNode": "principal-ade-splash-screen",
+      "toNode": "principal-ade-main",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "ipc"
+      }
+    },
+    {
+      "id": "edge-principal-ade-goodbye-screen-principal-ade-main",
+      "fromNode": "principal-ade-goodbye-screen",
       "toNode": "principal-ade-main",
       "fromSide": "bottom",
       "toSide": "top",

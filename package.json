@@ -1,6 +1,6 @@
 {
   "name": "principal-ade",
-  "version": "0.0.491",
+  "version": "0.0.492",
   "description": "Principal ADE  - The future of Agentic Development Environment",
   "type": "module",
   "keywords": [
@@ -203,7 +203,7 @@
     "@opentelemetry/semantic-conventions": "^1.39.0",
     "@principal-ade/agent-manager": "^1.1.0",
     "@principal-ade/code-quality-panels": "^0.2.0",
-    "@principal-ade/dynamic-file-tree": "0.2.26",
+    "@principal-ade/dynamic-file-tree": "0.2.27",
     "@principal-ade/industry-theme": "^0.1.8",
     "@principal-ade/industry-themed-monaco-editor": "^0.1.10",
     "@principal-ade/panel-framework-core": "^0.5.1",
@@ -342,7 +342,6 @@
     "detect-port": "^2.1.0",
     "electron": "^38.1.0",
     "electron-builder": "^26.5.0",
-    "electron-reload": "2.0.0-alpha.1",
     "electronmon": "^2.0.3",
     "eslint": "^9.32.0",
     "eslint-import-resolver-typescript": "^4.1.1",

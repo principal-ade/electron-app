@@ -76,6 +76,15 @@ export const appVersionRouter = {
     await manager.testDownloadUpdate();
     return { started: true };
   }),
+
+  testGoodbyeScreen: t.procedure.action(async () => {
+    if (!hasAppVersionManagerInstance()) {
+      return { started: false };
+    }
+    const manager = getAppVersionManagerInstance();
+    manager.testGoodbyeScreen();
+    return { started: true };
+  }),
 };
 
 export type AppVersionRouter = typeof appVersionRouter;

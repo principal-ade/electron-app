@@ -467,6 +467,25 @@ export const UpdatesSettings: React.FC = () => {
                   >
                     Test Download (No Auto-Install)
                   </button>
+                  <button
+                    style={{
+                      padding: '10px 20px',
+                      backgroundColor: theme.colors.primary,
+                      color: theme.colors.background,
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      marginLeft: '12px',
+                    }}
+                    onClick={() => {
+                      uiSpanRef.current?.addEvent('app_updates.user.test_goodbye_screen');
+                      AppVersionManagerService.testGoodbyeScreen();
+                    }}
+                  >
+                    Test Goodbye Screen
+                  </button>
                 </div>
               ) : (
                 <div>

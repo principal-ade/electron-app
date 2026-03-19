@@ -515,6 +515,17 @@ export default class AppVersionManager {
   }
 
   /**
+   * Test goodbye screen without actually installing an update (dev mode)
+   */
+  testGoodbyeScreen(): void {
+    log.info('[AppUpdater] Test goodbye screen requested');
+    console.log('[AppUpdater] Test mode: showing goodbye screen without update');
+
+    // Show goodbye screen with a fake version
+    goodbyeScreen.show('X.X.X-test');
+  }
+
+  /**
    * Get current version info
    */
   getVersionInfo(): { version: string; isDevMode: boolean; isPackaged: boolean; platform: string; arch: string } {

@@ -37,32 +37,8 @@ log.transports.console.level = 'debug';
 log.info(`[Main] Starting ${app.getName()} v${app.getVersion()}`);
 log.info(`[Main] Log file: ${log.transports.file.getFile().path}`);
 
-// Add electron-reload in development
-if (process.env.NODE_ENV === 'development' && !app.isPackaged) {
-  try {
-    // Only load electron-reload in true development mode
-    // The __dirname issue is because webpack transforms the module system
-    // Use eval to prevent webpack from analyzing this require
-    const electronReloadPath = path.join(
-      __dirname,
-      '../../node_modules/electron-reload',
-    );
-    const electronBinaryPath = path.join(
-      __dirname,
-      '../../node_modules/.bin/electron',
-    );
-
-    // Dynamically require to avoid webpack bundling issues
-    eval(`require('${electronReloadPath}')`)(__dirname, {
-      electron: electronBinaryPath,
-      forceHardReset: true,
-      ignored: /node_modules|\.erb|dist|\.git/,
-    });
-  } catch (e) {
-    console.error('Failed to load electron-reload:', e);
-    console.log('This is expected in production builds');
-  }
-}
+// NOTE: electron-reload was removed - it conflicts with electronmon which is already
+// used in start:main to handle hot reloading. Having both caused infinite process spawning.
 
 // Ensure only one instance of the app runs
 const gotTheLock = app.requestSingleInstanceLock();
@@ -485,6 +461,11 @@ app.on('open-url', (event, url) => {
 app
   .whenReady()
   .then(async () => {
+    // Show splash screen IMMEDIATELY - before any heavy initialization
+    const postUpdateDetector = getPostUpdateDetector();
+    postUpdateDetector.checkForPostUpdate();
+    await splashScreen.show();
+
     // Initialize auth services FIRST before other services
     console.log('[Main] Initializing auth services...');
     const AuthStateManager = require('./services/AuthStateManager').default;
@@ -528,13 +509,6 @@ app
     // Window handlers are now registered in initializeServices() via modernWindowHandlers
 
     // Note: Window switcher shortcuts are registered via per-window keyboard listeners below
-
-    // Check for post-update and show splash screen
-    const postUpdateDetector = getPostUpdateDetector();
-    postUpdateDetector.checkForPostUpdate();
-
-    // Show splash screen before creating main window
-    await splashScreen.show();
 
     createWindow();
 

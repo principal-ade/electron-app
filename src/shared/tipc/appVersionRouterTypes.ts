@@ -48,6 +48,10 @@ export interface InstallUpdateResult {
   started: boolean;
 }
 
+export interface TestGoodbyeScreenResult {
+  started: boolean;
+}
+
 // =============================================================================
 // Router Type Definition
 // =============================================================================
@@ -108,5 +112,12 @@ export type AppVersionRouterType = Record<
       context: ActionContext;
       input?: void;
     }) => Promise<DownloadUpdateResult>;
+  };
+
+  testGoodbyeScreen: {
+    action: (args: {
+      context: ActionContext;
+      input?: void;
+    }) => Promise<TestGoodbyeScreenResult>;
   };
 };
