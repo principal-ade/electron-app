@@ -397,7 +397,7 @@ export class HttpEventServer extends EventEmitter {
       // POST endpoint for agent events
       this.app.post(`/${routePath}`, async (req: Request, res: Response) => {
         const startTime = Date.now();
-        const tracer = getTracer('event-http-server');
+        const tracer = getTracer('principal-ade-event-processor');
         const span = tracer.startSpan(`event.http.${agent}_request`);
 
         try {
@@ -462,7 +462,7 @@ export class HttpEventServer extends EventEmitter {
     provider: SupportedAgent,
     rawData: unknown,
   ): Promise<void> {
-    const tracer = getTracer('event-http-server');
+    const tracer = getTracer('principal-ade-event-processor');
     const span = tracer.startSpan('event.pipeline.processing');
     const startTime = Date.now();
 
@@ -597,7 +597,7 @@ export class HttpEventServer extends EventEmitter {
    * Start the HTTP server
    */
   async start(): Promise<void> {
-    const tracer = getTracer('event-http-server');
+    const tracer = getTracer('principal-ade-event-processor');
     const span = tracer.startSpan('event.server.startup');
 
     return new Promise((resolve, reject) => {

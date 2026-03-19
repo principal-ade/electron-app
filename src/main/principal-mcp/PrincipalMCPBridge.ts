@@ -9,7 +9,7 @@ import { isValidPropertyPath } from '../../shared/theme/themeSchema';
 import { getTracer } from '../telemetry';
 
 // Tracer for Principal MCP Bridge instrumentation
-const tracer = getTracer('principal-mcp-bridge');
+const tracer = getTracer('principal-ade-main');
 
 // Determine which port to use based on environment
 function getDefaultPort(): number {

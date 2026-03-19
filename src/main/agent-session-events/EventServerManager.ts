@@ -110,7 +110,7 @@ export class EventServerManager extends EventEmitter {
     repository: string,
     webContents: Electron.WebContents,
   ): boolean {
-    const tracer = getTracer('event-server-manager');
+    const tracer = getTracer('principal-ade-main');
     const span = tracer.startSpan('event.port.registration');
 
     try {
@@ -231,7 +231,7 @@ export class EventServerManager extends EventEmitter {
       await app.whenReady();
     }
 
-    const tracer = getTracer('event-server-manager');
+    const tracer = getTracer('principal-ade-main');
     const span = tracer.startSpan('event.server.startup');
 
     try {
@@ -404,7 +404,7 @@ export class EventServerManager extends EventEmitter {
    * Handle window broadcast requests from server
    */
   private handleWindowBroadcast(msg: WindowBroadcastMessage): void {
-    const tracer = getTracer('event-server-manager');
+    const tracer = getTracer('principal-ade-main');
     const span = tracer.startSpan('event.window.broadcast');
 
     try {

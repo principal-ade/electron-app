@@ -43,7 +43,7 @@ export class AlexandriaWorkspaceMonitor {
     const windows = BrowserWindow.getAllWindows();
     const activeWindows = windows.filter((w) => !w.isDestroyed());
 
-    const tracer = getTracer('alexandria-recently-opened');
+    const tracer = getTracer('principal-ade-main');
     const span = tracer.startSpan(
       'alexandria.event.repository_updated_broadcast',
     );

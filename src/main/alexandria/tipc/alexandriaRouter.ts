@@ -49,7 +49,7 @@ function broadcastAlexandriaEvent(
 
   // Track broadcast for recently-opened flow
   if (eventType === AlexandriaAPIEvent.REPOSITORY_UPDATED) {
-    const tracer = getTracer('alexandria-recently-opened');
+    const tracer = getTracer('principal-ade-main');
     const span = tracer.startSpan(
       'alexandria.event.repository_updated_broadcast',
     );
@@ -188,7 +188,7 @@ export const alexandriaRouter = {
   alexandria_updateLastOpened: t.procedure
     .input<UpdateLastOpenedInput>()
     .action(async ({ input }) => {
-      const tracer = getTracer('alexandria-recently-opened');
+      const tracer = getTracer('principal-ade-main');
       const span = tracer.startSpan('alexandria.main.ipc_handler_invoked');
       span.setAttribute('repository_name', input.name);
 

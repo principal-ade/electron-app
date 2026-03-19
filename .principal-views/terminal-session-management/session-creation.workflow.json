@@ -12,8 +12,8 @@
       "template": {
         "introduction": "**Creating Terminal Session**\n\nRenderer requested new terminal session. Session manager coordinating with worker.",
         "events": {
-          "terminal.session.router_handled": "[1] Router handling: window={{window.id}}, can_create={{can_create}}",
-          "terminal.session.manager_action": "[2] Manager {{action}}: session=`{{session.id}}`",
+          "terminal.session.router_handled": "[1] Router handling: window={{window.id}}, action={{action}}, can_create={{can_create}}",
+          "terminal.session.manager_action": "[2] Manager {{action}}: session=`{{session.id}}`, count={{sessions.count}}",
           "terminal.session.store_updated": "[3] Store {{operation}}: session=`{{session.id}}`, size={{store.size}}",
           "terminal.sessions.broadcast": "[4] Broadcast: {{sessions.count}} sessions to {{windows.count}} windows"
         },

@@ -107,7 +107,7 @@ class DaemonTelemetryProvider {
   /**
    * Get a tracer for creating spans
    */
-  getTracer(name: string = 'terminal.daemon'): Tracer {
+  getTracer(name: string = 'principal-ade-daemon'): Tracer {
     return trace.getTracer(name);
   }
 
@@ -192,7 +192,7 @@ export const daemonTelemetry = new DaemonTelemetryProvider();
 /**
  * Convenience function to get a tracer
  */
-export function getTracer(name: string = 'terminal.daemon'): Tracer {
+export function getTracer(name: string = 'principal-ade-daemon'): Tracer {
   return trace.getTracer(name);
 }
 

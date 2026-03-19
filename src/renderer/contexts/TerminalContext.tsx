@@ -138,7 +138,7 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
       });
 
     // Subscribe to activity sync broadcasts
-    const activityTracer = getTracer('terminal-activity-sync');
+    const activityTracer = getTracer('principal-ade-dev-workspace');
 
     const unsubscribe = onActivitySync((activities) => {
       const span = activityTracer.startSpan('terminal.activity.sync_handle');

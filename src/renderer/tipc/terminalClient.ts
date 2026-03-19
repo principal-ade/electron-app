@@ -93,8 +93,8 @@ export interface TerminalClient {
   stopDaemon: () => Promise<DaemonControlResult>;
 }
 
-// Tracer for terminal session telemetry
-const tracer = getTracer('terminal-session');
+// Tracer for terminal telemetry (renderer scope)
+const tracer = getTracer('principal-ade-dev-workspace');
 
 // Lazy-initialized TIPC client for terminal operations
 // We use lazy initialization because window.electron is injected by the preload script
@@ -144,12 +144,45 @@ async function createTerminalSessionWithTelemetry(
   }
 }
 
+/**
+ * Wrapped listTerminalSessions with telemetry
+ */
+async function listTerminalSessionsWithTelemetry(): Promise<TerminalSessionInfo[]> {
+  const span = tracer.startSpan('terminal.session.list');
+
+  try {
+    // Event: Renderer requested session list
+    span.addEvent('terminal.session.list_requested', {
+      source: 'show_all',
+    });
+
+    const client = getTerminalClient();
+    const sessions = await client.listTerminalSessions();
+
+    span.addEvent('terminal.session.list_received', {
+      'sessions.count': sessions.length,
+    });
+
+    return sessions;
+  } catch (error) {
+    span.recordException(error instanceof Error ? error : new Error(String(error)));
+    throw error;
+  } finally {
+    span.end();
+  }
+}
+
 // Export a proxy object that lazily accesses the client
 export const terminalClient: TerminalClient = new Proxy({} as TerminalClient, {
   get(_target, prop: keyof TerminalClient) {
     // Intercept createTerminalSession for telemetry
     if (prop === 'createTerminalSession') {
       return createTerminalSessionWithTelemetry;
+    }
+
+    // Intercept listTerminalSessions for telemetry
+    if (prop === 'listTerminalSessions') {
+      return listTerminalSessionsWithTelemetry;
     }
 
     const client = getTerminalClient();

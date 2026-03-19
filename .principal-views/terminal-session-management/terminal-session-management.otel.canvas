@@ -132,6 +132,60 @@
       }
     },
     {
+      "id": "list-requested",
+      "type": "otel-event",
+      "x": -10,
+      "y": 220,
+      "width": 200,
+      "height": 100,
+      "label": "List Requested",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.session.list_requested",
+        "description": "Renderer requested list of all terminal sessions",
+        "attributes": {
+          "source": {
+            "type": "string",
+            "description": "Source of the list request (show_all, restore, etc.)"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented",
+        "scope": "principal-ade-dev-workspace",
+        "files": [
+          "src/renderer/tipc/terminalClient.ts"
+        ]
+      }
+    },
+    {
+      "id": "list-received",
+      "type": "otel-event",
+      "x": -10,
+      "y": 340,
+      "width": 200,
+      "height": 100,
+      "label": "List Received",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.session.list_received",
+        "description": "Renderer received list of terminal sessions",
+        "attributes": {
+          "sessions.count": {
+            "type": "number",
+            "description": "Number of sessions returned"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented",
+        "scope": "principal-ade-dev-workspace",
+        "files": [
+          "src/renderer/tipc/terminalClient.ts"
+        ]
+      }
+    },
+    {
       "id": "tipc-router",
       "type": "otel-event",
       "x": 250,
@@ -142,11 +196,15 @@
       "shape": "rectangle",
       "event": {
         "name": "terminal.session.router_handled",
-        "description": "TIPC router handling session creation",
+        "description": "TIPC router handling session request",
         "attributes": {
           "window.id": {
             "type": "number",
             "description": "Source window ID"
+          },
+          "action": {
+            "type": "string",
+            "description": "Router action (create, list, destroy)"
           },
           "can_create": {
             "type": "boolean",
@@ -182,6 +240,10 @@
           "session.id": {
             "type": "string",
             "description": "Terminal session ID"
+          },
+          "sessions.count": {
+            "type": "number",
+            "description": "Number of sessions (for list action)"
           }
         }
       },
@@ -871,6 +933,28 @@
       "label": "on failure",
       "pv": {
         "edgeType": "reconnect-trigger"
+      }
+    },
+    {
+      "id": "edge-list-requested-router",
+      "fromNode": "list-requested",
+      "toNode": "tipc-router",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "listTerminalSessions()",
+      "pv": {
+        "edgeType": "tipc-invoke"
+      }
+    },
+    {
+      "id": "edge-router-list-received",
+      "fromNode": "tipc-router",
+      "toNode": "list-received",
+      "fromSide": "left",
+      "toSide": "right",
+      "label": "sessions[]",
+      "pv": {
+        "edgeType": "tipc-invoke"
       }
     }
   ]

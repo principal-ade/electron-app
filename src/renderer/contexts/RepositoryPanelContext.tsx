@@ -822,7 +822,7 @@ export const RepositoryPanelProvider: React.FC<
   // Listen for color mode change events from panels (e.g., quality hexagon clicks)
   // The QualityHexagonPanel emits 'quality:colorMode:select' with payload { colorMode }
   useEffect(() => {
-    const tracer = getTracer('quality-panel');
+    const tracer = getTracer('principal-ade-dev-workspace');
 
     // Listen for the event emitted by QualityHexagonPanel
     const unsubColorMode = events.on<{ colorMode: string }>(
@@ -943,7 +943,7 @@ export const RepositoryPanelProvider: React.FC<
 
   // Fetch quality metrics from GitHub Actions artifacts when repository changes
   useEffect(() => {
-    const tracer = getTracer('quality-panel');
+    const tracer = getTracer('principal-ade-dev-workspace');
 
     const fetchQualityMetrics = async () => {
       if (!repositoryPath) {

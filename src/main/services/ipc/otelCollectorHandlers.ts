@@ -70,7 +70,7 @@ export function registerOtelCollectorHandlers(): void {
   ipcMain.handle(
     HANDLERS.REGISTER_TRACE_PORT,
     (event, windowId: string, serviceIdentifier: string): { success: boolean; error?: string } => {
-      const tracer = getTracer('otel-collector-ipc');
+      const tracer = getTracer('principal-ade-main');
       const span = tracer.startSpan('otel.port.registration');
 
       try {
@@ -119,7 +119,7 @@ export function registerOtelCollectorHandlers(): void {
   ipcMain.handle(
     HANDLERS.REGISTER_TRACE_PORT_FOR_SERVICES,
     (event, windowId: string, serviceIdentifiers: string[]): { success: boolean; error?: string } => {
-      const tracer = getTracer('otel-collector-ipc');
+      const tracer = getTracer('principal-ade-main');
       const span = tracer.startSpan('otel.port.registration');
 
       try {
@@ -269,7 +269,7 @@ export function registerOtelCollectorHandlers(): void {
 
   // Get stored traces
   ipcMain.handle(HANDLERS.GET_TRACES, (event, limit?: number) => {
-    const tracer = getTracer('otel-collector-ipc');
+    const tracer = getTracer('principal-ade-main');
     const span = tracer.startSpan('otel.trace.visualization');
 
     try {

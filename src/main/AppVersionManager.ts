@@ -20,7 +20,7 @@ type WindowEventData =
   | { version: string }
   | null;
 
-const tracer = getTracer('app-updates');
+const tracer = getTracer('principal-ade-main');
 
 export default class AppVersionManager {
   private mainWindow: BrowserWindow | null = null;

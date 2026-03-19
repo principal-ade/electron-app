@@ -12,7 +12,7 @@
       "template": {
         "introduction": "**Destroying Terminal Session**\n\nSession being destroyed with full cleanup of ports and stores.",
         "events": {
-          "terminal.session.manager_action": "[1] Manager {{action}}: session=`{{session.id}}`",
+          "terminal.session.manager_action": "[1] Manager {{action}}: session=`{{session.id}}`, count={{sessions.count}}",
           "terminal.session.store_updated": "[2] Store {{operation}}: session=`{{session.id}}`, size={{store.size}}",
           "terminal.sessions.broadcast": "[3] Broadcast: {{sessions.count}} sessions to {{windows.count}} windows"
         },

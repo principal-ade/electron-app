@@ -311,7 +311,7 @@ export const ProjectsPanelProvider: React.FC<
 
   // Fetch all local repositories on mount
   useEffect(() => {
-    const tracer = getTracer('alexandria-recently-opened');
+    const tracer = getTracer('principal-ade-principal-window');
 
     const fetchLocalRepositories = async (_trigger?: string) => {
       const span = tracer.startSpan('alexandria.context.repositories_fetched');
@@ -1370,7 +1370,7 @@ export const ProjectsPanelProvider: React.FC<
 
       // openLocalRepository - accepts AlexandriaEntry as required by LocalProjectsPanelActions
       openLocalRepository: async (entry: AlexandriaEntry) => {
-        const tracer = getTracer('alexandria-recently-opened');
+        const tracer = getTracer('principal-ade-principal-window');
         const span = tracer.startSpan('alexandria.action.open_local_repository');
         span.setAttributes({
           repository_name: entry.name,
@@ -1412,7 +1412,7 @@ export const ProjectsPanelProvider: React.FC<
 
       // openRepository - for GitHub panels (takes string path)
       openRepository: async (localPath: string) => {
-        const tracer = getTracer('alexandria-recently-opened');
+        const tracer = getTracer('principal-ade-principal-window');
         const span = tracer.startSpan('alexandria.action.open_local_repository');
 
         // Find the local repo entry by path

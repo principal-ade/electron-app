@@ -15,7 +15,7 @@
           "terminal.daemon.sessions_sent": "[0] Daemon sent sessions: {{sessions.count}} sessions available",
           "terminal.sessions.restored": "[1] Sessions restored: {{sessions.count}} sessions from daemon",
           "terminal.session.auto_reconnect": "[2] Auto-reconnecting: session=`{{session.id}}`, context={{context}}",
-          "terminal.ownership.changed": "[3] Ownership claimed: session=`{{session.id}}`, owner={{new_owner.window_id}}",
+          "terminal.ownership.changed": "[3] Ownership claimed: session=`{{session.id}}`, owner={{new_owner.window_id}}, previous={{previous_owner.window_id}}",
           "terminal.port.renderer_connected": "[4] Port connected: session=`{{session.id}}`"
         },
         "summary": "**Sessions Reconnected:**\n- Reconnected: {{reconnect.success}} sessions\n- Context: `{{context}}`"
@@ -30,8 +30,8 @@
         "introduction": "**Terminal Sessions Restored (Disconnected)**\n\nSessions loaded from daemon but not auto-reconnected. Tabs appear blank until clicked.",
         "events": {
           "terminal.sessions.restored": "[1] Sessions restored: {{sessions.count}} sessions from daemon",
-          "terminal.panel.session_clicked": "[2] User clicked tab: session=`{{session.id}}`",
-          "terminal.ownership.changed": "[3] Ownership claimed: session=`{{session.id}}`, owner={{new_owner.window_id}}",
+          "terminal.panel.session_clicked": "[2] User clicked tab: session=`{{session.id}}`, is_local={{is_local}}, owner={{owner.window_id}}, current={{current.window_id}}",
+          "terminal.ownership.changed": "[3] Ownership claimed: session=`{{session.id}}`, owner={{new_owner.window_id}}, previous={{previous_owner.window_id}}",
           "terminal.port.renderer_connected": "[4] Port connected: session=`{{session.id}}`"
         },
         "summary": "**Manual Reconnection Required:**\n- Sessions in stale state until user interaction\n- Session: `{{session.id}}`"

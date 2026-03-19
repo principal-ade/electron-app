@@ -381,7 +381,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
   // Listen for terminal:activity-changed events from TabbedTerminalPanel and update activity state
   useEffect(() => {
-    const activityTracer = getTracer('devworkspace-activity');
+    const activityTracer = getTracer('principal-ade-dev-workspace');
 
     const unsubscribe = events.on('terminal:activity-changed', (event) => {
       if (event.type === 'terminal:activity-changed') {
@@ -433,6 +433,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   // Focus tab state - when set, TabbedTerminalPanel will activate the tab and call onFocusTabHandled
   const [focusTabId, setFocusTabId] = useState<string | null>(null);
   const handleFocusTabHandled = useCallback(() => setFocusTabId(null), []);
+
+  // Show all terminals state - when true, shows terminals from other windows
+  const [showAllTerminals, setShowAllTerminals] = useState(false);
 
   // Right panel history - tracks documents opened in the right panel for quick navigation
   const [rightPanelHistory, setRightPanelHistory] = useState<RightPanelHistoryItem[]>([]);
@@ -555,7 +558,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
   // Listen for doc:openInRightPanel events (from Alexandria docs panel context menu)
   useEffect(() => {
-    const tracer = getTracer('devworkspace');
+    const tracer = getTracer('principal-ade-dev-workspace');
     const unsubscribe = events.on('doc:openInRightPanel', async (event) => {
       const doc = event.payload as DocumentSelectedPayload;
 
@@ -673,7 +676,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     const unsubscribers = [
       // Task detail - open task markdown file in markdown tab
       events.on('task:selected', (event) => {
-        const tracer = getTracer('devworkspace');
+        const tracer = getTracer('principal-ade-dev-workspace');
         // Ignore re-emitted events from tabs to prevent loop
         if (event.source === 'tab') return;
 
@@ -789,7 +792,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       }),
       // Skill detail - create tab instead of modal
       events.on('skill:selected', (event) => {
-        const tracer = getTracer('devworkspace');
+        const tracer = getTracer('principal-ade-dev-workspace');
         console.info('[DevWorkspacePanelFramework] ===== SKILL SELECTED EVENT FIRED =====');
         console.info('[DevWorkspacePanelFramework] Event source:', event.source);
         console.info('[DevWorkspacePanelFramework] Event payload:', event.payload);
@@ -909,7 +912,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       }),
       // Trace detail - create tab instead of modal
       events.on('trace:selected', (event) => {
-        const tracer = getTracer('devworkspace');
+        const tracer = getTracer('principal-ade-dev-workspace');
         console.info('[DevWorkspacePanelFramework] ===== TRACE SELECTED EVENT FIRED =====');
         console.info('[DevWorkspacePanelFramework] Event source:', event.source);
         console.info('[DevWorkspacePanelFramework] Event payload:', event.payload);
@@ -1036,7 +1039,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       }),
       // Agent detail - open AGENTS.md file in markdown tab
       events.on('agent:selected', async (event) => {
-        const tracer = getTracer('devworkspace');
+        const tracer = getTracer('principal-ade-dev-workspace');
         // Ignore re-emitted events from tabs to prevent loop
         if (event.source === 'tab') return;
 
@@ -1160,7 +1163,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       }),
       // Doc open in tab - open documentation file in markdown tab
       events.on('doc:openInTab', async (event) => {
-        const tracer = getTracer('devworkspace');
+        const tracer = getTracer('principal-ade-dev-workspace');
         // Ignore re-emitted events from tabs to prevent loop
         if (event.source === 'tab') return;
 
@@ -1275,7 +1278,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       }),
       // File opened - open file in markdown tab (normal click on docs)
       events.on('file:opened', async (event) => {
-        const tracer = getTracer('devworkspace');
+        const tracer = getTracer('principal-ade-dev-workspace');
         // Ignore re-emitted events from tabs to prevent loop
         if (event.source === 'tab') return;
 
@@ -1405,7 +1408,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       }),
       // File open from git changes panel
       events.on('file:open', (event) => {
-        const tracer = getTracer('devworkspace');
+        const tracer = getTracer('principal-ade-dev-workspace');
         // Ignore re-emitted events from tabs to prevent loop
         if (event.source === 'tab') return;
 
@@ -2375,6 +2378,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               requestFocusTabId={focusTabId}
               onFocusTabHandled={handleFocusTabHandled}
               workingStates={workingStates}
+              showAllTerminals={showAllTerminals}
+              onShowAllTerminalsChange={setShowAllTerminals}
             />
           </div>
         ),
@@ -3099,7 +3104,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               context={context}
               actions={actions}
               events={events}
-              tracer={getTracer('terminal-sessions-panel')}
+              tracer={getTracer('principal-ade-dev-workspace')}
             />
           </div>
         ),

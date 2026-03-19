@@ -1,25 +1,25 @@
 {
   "version": "1.0.0",
   "name": "Session List Sync",
-  "description": "Window requesting and receiving terminal session list",
+  "description": "Window requesting and receiving terminal session list. Cross-scope workflow spanning renderer and main process.",
   "canvas": ".principal-views/terminal-session-management/terminal-session-management.otel.canvas",
   "spanPattern": "terminal.session.list",
   "scenarios": [
     {
       "id": "session-list-request",
-      "description": "Window requests list of all terminal sessions and data port",
+      "description": "Window requests list of all terminal sessions",
       "priority": 1,
       "template": {
-        "introduction": "**Fetching Terminal Sessions**\n\nWindow requesting list of sessions and establishing data ports.",
+        "introduction": "**Fetching Terminal Sessions**\n\nWindow requesting list of all terminal sessions.",
         "events": {
-          "terminal.session.router_handled": "[1] Router handling list: window={{window.id}}, can_create={{can_create}}",
-          "terminal.session.manager_action": "[2] Manager {{action}}: session=`{{session.id}}`",
-          "terminal.port.worker_registered": "[3] Worker port registered: session=`{{session.id}}`, window={{window.id}}",
-          "terminal.port.renderer_connected": "[4] Renderer port connected: session=`{{session.id}}`"
+          "terminal.session.list_requested": "[1] Renderer requesting session list (source={{source}})",
+          "terminal.session.router_handled": "[2] Router handling list: window={{window.id}}, action={{action}}, can_create={{can_create}}",
+          "terminal.session.manager_action": "[3] Manager {{action}}: session={{session.id}}, count={{sessions.count}}",
+          "terminal.session.list_received": "[4] Renderer received {{sessions.count}} sessions"
         },
-        "summary": "**Session List Retrieved:**\n- Requesting Window: {{window.id}}"
+        "summary": "**Session List Retrieved:**\n- Requesting Window: {{window.id}}\n- Sessions Found: {{sessions.count}}"
       },
-      "filterDefault": true
+      "filterDefault": false
     }
   ]
 }

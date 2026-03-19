@@ -81,7 +81,7 @@ export class UserPreferencesHandler {
    * Broadcast preferences changed notification to all windows
    */
   private broadcastPreferencesChanged(preferences: UserPreferences): void {
-    const tracer = trace.getTracer('user-preferences');
+    const tracer = trace.getTracer('principal-ade-main');
     const span = tracer.startSpan('user_preferences.broadcast');
 
     try {

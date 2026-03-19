@@ -14,11 +14,8 @@ import { isPtyAvailable } from '../utils/ptyLoader';
 import { getTracer } from '../../telemetry';
 import { getDaemonStatus, isDaemonRunning, stopDaemon, ensureDaemonRunning } from '../daemonSpawner';
 
-// Tracer for terminal activity telemetry
-const tracer = getTracer('terminal-activity');
-
-// Tracer for terminal session management telemetry
-const sessionTracer = getTracer('terminal-session-management');
+// Tracer for terminal telemetry (main process scope)
+const tracer = getTracer('principal-ade-main');
 
 // Get singleton session manager instance
 const sessionManager = getSessionManagerInstance();
@@ -72,7 +69,7 @@ export const terminalRouter = {
   createTerminalSession: t.procedure
     .input<{ cwd?: string; command?: string; context?: string; metadata?: import('../../../shared/tipc/terminalRouterTypes').TerminalSessionMetadata }>()
     .action(async ({ input, context }) => {
-      const span = sessionTracer.startSpan('terminal.session.create');
+      const span = tracer.startSpan('terminal.session.create');
 
       try {
         if (!isPtyAvailable()) {
@@ -162,7 +159,7 @@ export const terminalRouter = {
   destroyTerminalSession: t.procedure
     .input<{ sessionId: string }>()
     .action(async ({ input }) => {
-      const span = sessionTracer.startSpan('terminal.session.destroy');
+      const span = tracer.startSpan('terminal.session.destroy');
       span.setAttribute('session.id', input.sessionId);
 
       try {
@@ -203,28 +200,55 @@ export const terminalRouter = {
       }
     }),
 
-  listTerminalSessions: t.procedure.action(async () => {
-    const sessions = Array.from(sessionManager.getAllSessions().entries()).map(
-      ([id, session]) => {
-        const owner = ownershipManager.getOwner(id);
-        // Convert owner to windowId for backwards compatibility
-        const ownerWindowId =
-          owner && owner.type === 'local' ? parseInt(owner.id, 10) : undefined;
-        return {
-          id,
-          cwd: session.directory,
-          directory: session.directory,
-          context: session.context,
-          agentSessionId: undefined, // TODO: Add agentSessionId to TerminalSession type
-          createdAt: session.createdAt,
-          lastActivity: session.lastActivity,
-          status: 'active' as const,
-          ownedByWindowId: ownerWindowId,
-          metadata: session.metadata,
-        };
-      },
-    );
-    return sessions;
+  listTerminalSessions: t.procedure.action(async ({ context }) => {
+    const span = tracer.startSpan('terminal.session.list');
+
+    try {
+      const window = BrowserWindow.fromWebContents(context.sender);
+      const windowId = window?.id ?? -1;
+
+      // Event: Router handled list request
+      span.addEvent('terminal.session.router_handled', {
+        'window.id': windowId,
+        action: 'list',
+      });
+
+      const sessions = Array.from(sessionManager.getAllSessions().entries()).map(
+        ([id, session]) => {
+          const owner = ownershipManager.getOwner(id);
+          // Convert owner to windowId for backwards compatibility
+          const ownerWindowId =
+            owner && owner.type === 'local' ? parseInt(owner.id, 10) : undefined;
+          return {
+            id,
+            cwd: session.directory,
+            directory: session.directory,
+            context: session.context,
+            agentSessionId: undefined, // TODO: Add agentSessionId to TerminalSession type
+            createdAt: session.createdAt,
+            lastActivity: session.lastActivity,
+            status: 'active' as const,
+            ownedByWindowId: ownerWindowId,
+            metadata: session.metadata,
+          };
+        },
+      );
+
+      // Event: Manager action - list
+      span.addEvent('terminal.session.manager_action', {
+        action: 'list',
+        'sessions.count': sessions.length,
+      });
+
+      span.setStatus({ code: SpanStatusCode.OK });
+      return sessions;
+    } catch (error) {
+      span.recordException(error instanceof Error ? error : new Error(String(error)));
+      span.setStatus({ code: SpanStatusCode.ERROR });
+      throw error;
+    } finally {
+      span.end();
+    }
   }),
 
   resizeTerminal: t.procedure
@@ -323,7 +347,7 @@ export const terminalRouter = {
 
       // Telemetry: Ownership changed
       if (result.success) {
-        const span = sessionTracer.startSpan('terminal.ownership');
+        const span = tracer.startSpan('terminal.ownership');
         span.addEvent('terminal.ownership.changed', {
           'session.id': input.sessionId,
           'new_owner.window_id': window.id,

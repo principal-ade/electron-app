@@ -5,12 +5,17 @@ import webpack from 'webpack';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
 import CopyWebpackPlugin from 'copy-webpack-plugin';
 import chalk from 'chalk';
-import { execSync, spawn } from 'child_process';
+import { execSync, spawn, ChildProcess } from 'child_process';
 import ReactRefreshWebpackPlugin from '@pmmmwh/react-refresh-webpack-plugin';
 import MonacoWebpackPlugin from 'monaco-editor-webpack-plugin';
 import TsconfigPathsPlugins from 'tsconfig-paths-webpack-plugin';
 import webpackPaths from './webpack.paths';
 import checkNodeEnv from '../scripts/check-node-env';
+
+// Track spawned processes to prevent duplicate spawns if setupMiddlewares is called multiple times
+let mainProcessSpawned = false;
+let preloadProcess: ChildProcess | null = null;
+let mainProcess: ChildProcess | null = null;
 
 // When an ESLint server is running, we can't set the NODE_ENV so we'll check if it's
 // at the dev webpack config is not accidentally run in a production environment
@@ -573,8 +578,15 @@ const configuration: webpack.Configuration = {
       ]
     },
     setupMiddlewares(middlewares) {
+      // Prevent duplicate process spawns if setupMiddlewares is called multiple times
+      if (mainProcessSpawned) {
+        console.log('Processes already spawned, skipping...');
+        return middlewares;
+      }
+      mainProcessSpawned = true;
+
       console.log('Starting preload.js builder...');
-      const preloadProcess = spawn('npm', ['run', 'start:preload'], {
+      preloadProcess = spawn('npm', ['run', 'start:preload'], {
         shell: true,
         stdio: 'inherit',
       })
@@ -588,12 +600,12 @@ const configuration: webpack.Configuration = {
           ['--', ...process.env.MAIN_ARGS.matchAll(/"[^"]+"|[^\s"]+/g)].flat(),
         );
       }
-      spawn('npm', args, {
+      mainProcess = spawn('npm', args, {
         shell: true,
         stdio: 'inherit',
       })
         .on('close', (code: number) => {
-          preloadProcess.kill();
+          preloadProcess?.kill();
           process.exit(code!);
         })
         .on('error', (spawnError) => console.error(spawnError));

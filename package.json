@@ -1,6 +1,6 @@
 {
   "name": "principal-ade",
-  "version": "0.0.492",
+  "version": "0.0.493",
   "description": "Principal ADE  - The future of Agentic Development Environment",
   "type": "module",
   "keywords": [
@@ -44,7 +44,7 @@
     "build:mac": "npm run validate:deps && npm run install:libsql && node .erb/scripts/copy-native-deps.js && npm run download:binaries && npm run icons:build:mac && npm run build:dll && concurrently \"npm run build:main\" \"npm run build:renderer\"",
     "build:windows": "npm run validate:deps && npm run install:libsql && npm run download:binaries && npm run icons:build:windows && npm run build:dll && concurrently \"npm run build:main\" \"npm run build:renderer\"",
     "build:linux": "npm run validate:deps && npm run install:libsql && npm run download:binaries && npm run icons:build:linux && npm run build:dll && concurrently \"npm run build:main\" \"npm run build:renderer\"",
-    "build:dll": "cross-env NODE_ENV=development TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.renderer.dev.dll.windows.ts",
+    "build:dll": "cross-env NODE_ENV=development TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings --max-old-space-size=8192\" webpack --config ./.erb/configs/webpack.config.renderer.dev.dll.windows.ts",
     "build:main": "cross-env NODE_ENV=production TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.main.prod.ts && npm run build:pty-daemon",
     "build:pty-daemon": "cross-env NODE_ENV=production TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.pty-daemon.ts",
     "build:pty-daemon:dev": "cross-env NODE_ENV=development TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.pty-daemon.ts",
@@ -72,7 +72,7 @@
     "release": "./release-all-platforms.sh",
     "rebuild": "node scripts/rebuild-native.js",
     "rebuild:direct": "electron-rebuild --version 38.1.0 --parallel --types prod,dev,optional --module-dir release/app",
-    "prestart": "cross-env NODE_ENV=development TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.main.dev.ts",
+    "prestart": "cross-env NODE_ENV=development TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings --max-old-space-size=8192\" webpack --config ./.erb/configs/webpack.config.main.dev.ts",
     "start": "ts-node ./.erb/scripts/check-port-in-use.js && npm run prestart && npm run start:renderer",
     "dev": "node scripts/dev-with-prod-constraints.js",
     "dev:unsafe": "npm run build:dll && npm run start",
@@ -82,9 +82,9 @@
     "dev:renderer": "concurrently -k \"npm run dev:renderer:watch\" \"npm run dev:renderer:serve\" \"npm run start:main\" \"npm run start:preload\"",
     "dev:renderer:watch": "cross-env NODE_ENV=development TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings --max-old-space-size=4096\" webpack --config ./.erb/configs/webpack.config.renderer.dev.nohmr.ts",
     "dev:renderer:serve": "mkdir -p dist/renderer && sleep 5 && cd dist/renderer && npx http-server -p 1212 -c-1",
-    "start:main": "concurrently -k -P \"cross-env NODE_ENV=development TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\\\"-r ts-node/register --no-warnings\\\" webpack --watch --config ./.erb/configs/webpack.config.main.dev.ts\" \"electronmon .erb/dll/main.bundle.dev.js\"",
-    "start:preload": "cross-env NODE_ENV=development TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.preload.dev.ts",
-    "start:renderer": "cross-env NODE_ENV=development TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack serve --config ./.erb/configs/webpack.config.renderer.dev.windows.ts",
+    "start:main": "concurrently -k -P \"cross-env NODE_ENV=development TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\\\"-r ts-node/register --no-warnings --max-old-space-size=8192\\\" webpack --watch --config ./.erb/configs/webpack.config.main.dev.ts\" \"electronmon .erb/dll/main.bundle.dev.js\"",
+    "start:preload": "cross-env NODE_ENV=development TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings --max-old-space-size=8192\" webpack --config ./.erb/configs/webpack.config.preload.dev.ts",
+    "start:renderer": "cross-env NODE_ENV=development TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings --max-old-space-size=8192\" webpack serve --config ./.erb/configs/webpack.config.renderer.dev.windows.ts",
     "test": "jest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
@@ -183,7 +183,7 @@
     "@industry-theme/github-panels": "^0.4.0",
     "@industry-theme/localhost-panels": "^0.2.0",
     "@industry-theme/markdown-panels": "^0.3.0",
-    "@industry-theme/principal-view-panels": "0.12.60",
+    "@industry-theme/principal-view-panels": "0.12.61",
     "@industry-theme/repository-composition-panels": "^0.7.62",
     "@industry-theme/xterm-terminal-panel": "^0.5.5",
     "@modelcontextprotocol/sdk": "1.11.4",
@@ -519,7 +519,7 @@
       ".erb/dll/main.bundle.dev.js"
     ],
     "logLevel": "quiet",
-    "delay": 2000,
+    "delay": 5000,
     "quit": "q"
   },
   "overrides": {

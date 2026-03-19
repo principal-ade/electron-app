@@ -315,7 +315,7 @@ export class AlexandriaRegistryService {
    * @param name - Repository name
    */
   async updateLastOpened(name: string): Promise<void> {
-    const tracer = getTracer('alexandria-recently-opened');
+    const tracer = getTracer('principal-ade-main');
     const span = tracer.startSpan('alexandria.registry.timestamp_updated');
     const timestamp = new Date().toISOString();
 

@@ -6,7 +6,7 @@ import { getTracer } from '../../../../telemetry';
 import type { Span } from '@opentelemetry/api';
 import { SpanStatusCode } from '@opentelemetry/api';
 
-const tracer = getTracer('app-updates');
+const tracer = getTracer('principal-ade-principal-window');
 
 export const UpdatesSettings: React.FC = () => {
   const { theme } = useTheme();

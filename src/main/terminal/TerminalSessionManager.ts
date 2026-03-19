@@ -19,6 +19,10 @@ import { TerminalAPIEvents } from '../../shared/main-process-api-interfaces/Term
 import { ensureDaemonRunning } from './daemonSpawner';
 import { SOCKET_PATH } from '../../shared/pty-daemon/constants';
 import { UserPreferencesHandler } from '../stores/userPreferencesHandler';
+import { getTracer } from '../telemetry';
+
+// Tracer for terminal telemetry (main process scope)
+const tracer = getTracer('principal-ade-main');
 
 // Cached daemon mode setting - loaded once at startup
 let cachedDaemonModeEnabled: boolean | null = null;
@@ -391,6 +395,11 @@ export class TerminalSessionManager {
   private restoreSessionsFromDaemon(daemonSessions: DaemonSessionInfo[]): void {
     console.log(`[Terminal] Restoring ${daemonSessions.length} sessions from daemon`);
 
+    const span = tracer.startSpan('terminal.sessions.restore');
+    span.addEvent('terminal.sessions.restored', {
+      'sessions.count': daemonSessions.length,
+    });
+
     for (const info of daemonSessions) {
       // Check if we already have this session
       if (this.sessions.has(info.id)) {
@@ -437,6 +446,8 @@ export class TerminalSessionManager {
         })),
       });
     }
+
+    span.end();
   }
 
   private sendToWorker(message: MainToWorkerMessage): void {

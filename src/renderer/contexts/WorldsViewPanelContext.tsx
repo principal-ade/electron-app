@@ -743,7 +743,7 @@ export const WorldsViewPanelProvider: React.FC<
 
       // Local repository actions
       openLocalRepository: async (entry: AlexandriaEntry) => {
-        const tracer = getTracer('alexandria-recently-opened');
+        const tracer = getTracer('principal-ade-principal-window');
         const span = tracer.startSpan('alexandria.worlds_view.project_opened');
         span.setAttribute('repository_name', entry.name);
 

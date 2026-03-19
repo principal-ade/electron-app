@@ -199,7 +199,7 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
 
   // Fetch File City image when repository changes
   useEffect(() => {
-    const tracer = getTracer('file-city-renderer');
+    const tracer = getTracer('principal-ade-dev-workspace');
 
     if (repository?.path) {
       const repoPath = repository.path;

@@ -12,8 +12,8 @@
       "template": {
         "introduction": "**Claiming Session Ownership**\n\nWindow claiming ownership of terminal session.",
         "events": {
-          "terminal.session.router_handled": "[1] Router handling ownership: window={{window.id}}, can_create={{can_create}}",
-          "terminal.ownership.changed": "[2] Ownership changed: session=`{{session.id}}`, new_owner={{new_owner.window_id}}",
+          "terminal.session.router_handled": "[1] Router handling ownership: window={{window.id}}, action={{action}}, can_create={{can_create}}",
+          "terminal.ownership.changed": "[2] Ownership changed: session=`{{session.id}}`, new_owner={{new_owner.window_id}}, previous_owner={{previous_owner.window_id}}",
           "terminal.port.worker_registered": "[3] Worker port registered: session=`{{session.id}}`, window={{window.id}}",
           "terminal.port.renderer_connected": "[4] Renderer port connected: session=`{{session.id}}`"
         },

@@ -49,7 +49,7 @@ export async function openDevWorkspaceWindow(
 ): Promise<{ windowId: number } | null> {
   const { alexandriaEntry } = options;
   const windowName = `${DEV_WORKSPACE_PURPOSE}-${alexandriaEntry.path}`;
-  const tracer = getTracer('alexandria-recently-opened');
+  const tracer = getTracer('principal-ade-main');
 
   // Update lastOpenedAt timestamp for the repository (fire-and-forget)
   // This is done centrally here so ALL entry points (quick open, deep links, etc.) update the timestamp

@@ -64,7 +64,7 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
     customFeatures?: Partial<WindowFeatures>,
     metadata?: WindowMetadata,
   ) {
-    const tracer = getTracer('window-manager');
+    const tracer = getTracer('principal-ade-main');
     const constructorSpan = tracer.startSpan('window.constructor', {
       attributes: {
         'window.type': windowType,
@@ -584,7 +584,7 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
 
   private setupWindowBehaviors(): void {
     const windowId = this.window.id;
-    const tracer = getTracer('window-manager');
+    const tracer = getTracer('principal-ade-main');
 
     // Prevent white flash
     this.window.once('ready-to-show', () => {
@@ -702,7 +702,7 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
 export async function createWindow(
   options?: BrowserWindowConstructorOptions,
 ): Promise<ModernApplicationWindow | null> {
-  const tracer = getTracer('window-manager');
+  const tracer = getTracer('principal-ade-main');
   const isMainWindow = !options || Object.keys(options).length === 0;
   const windowType = isMainWindow ? 'main' : 'secondary';
 
@@ -779,7 +779,7 @@ export function createSpecialWindow(
   features?: Partial<WindowFeatures>,
   metadata?: WindowMetadata,
 ): IModernApplicationWindow | null {
-  const tracer = getTracer('window-manager');
+  const tracer = getTracer('principal-ade-main');
   const span = tracer.startSpan('window.createSpecial', {
     attributes: {
       'window.purpose': purpose,

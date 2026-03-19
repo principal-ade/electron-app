@@ -35,7 +35,7 @@ export const TraceViewer: React.FC<TraceViewerProps> = ({
 
   // Handle trace selection with instrumentation
   const handleTraceSelect = (trace: StoredTrace) => {
-    const tracer = getTracer('trace-viewer');
+    const tracer = getTracer('principal-ade-principal-window');
     const span = tracer.startSpan('otel.trace.visualization');
 
     // Count spans in trace
@@ -72,7 +72,7 @@ export const TraceViewer: React.FC<TraceViewerProps> = ({
 
   // Fetch traces
   const fetchTraces = useCallback(async () => {
-    const tracer = getTracer('trace-viewer');
+    const tracer = getTracer('principal-ade-principal-window');
     const span = tracer.startSpan('otel.trace.visualization');
 
     try {

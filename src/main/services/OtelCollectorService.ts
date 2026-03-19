@@ -51,7 +51,7 @@ export class OtelCollectorService {
 
     console.log('[OtelCollectorService] Starting OTEL Collector...');
 
-    const tracer = getTracer('otel-collector-service');
+    const tracer = getTracer('principal-ade-main');
     const span = tracer.startSpan('otel.collector.startup');
 
     try {
@@ -255,7 +255,7 @@ export class OtelCollectorService {
    * Store a received trace
    */
   storeTrace(traceData: OTLPTraceData): void {
-    const tracer = getTracer('otel-collector-service');
+    const tracer = getTracer('principal-ade-main');
     const span = tracer.startSpan('otel.trace.delivery');
 
     try {
