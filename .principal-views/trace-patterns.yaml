@@ -1,0 +1,16 @@
+version: 1.0.0
+patterns:
+  - id: pattern-05a5c588
+    name: click
+    rootSpans:
+      - name: click
+    filterDefault: true
+    createdAt: '2026-03-20T02:53:52.894Z'
+    sampleTraceId: 8dc043292a56575d9ecdd99329edecbf
+  - id: pattern-6c810710
+    name: storyboard-list.panel
+    rootSpans:
+      - name: storyboard-list.panel
+    filterDefault: true
+    createdAt: '2026-03-20T03:27:25.779Z'
+    sampleTraceId: d8d6c6f84521677dd5abd8314ea08f35
