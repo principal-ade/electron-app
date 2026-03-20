@@ -1,7 +1,6 @@
 import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ConfigurablePanelLayout } from '@principal-ade/panels';
-import '@principal-ade/panels/panels.css';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { FileCityImageService } from '../../../main-process-api/FileCityImageService';
 import {

@@ -10,7 +10,6 @@ import {
 import type { Theme } from '@principal-ade/industry-theme';
 import { useTheme } from '@principal-ade/industry-theme';
 import { AnimatedResizableLayout } from '@principal-ade/panels';
-import '@principal-ade/panels/panels.css';
 
 import { AgentSetupStatus } from '../../../../shared/main-process-api-interfaces/AgentConfigAPI';
 

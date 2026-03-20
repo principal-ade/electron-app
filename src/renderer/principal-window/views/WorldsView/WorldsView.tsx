@@ -1,7 +1,6 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ConfigurablePanelLayout } from '@principal-ade/panels';
-import '@principal-ade/panels/panels.css';
 import { UserCollectionsPanel, LocalProjectsPanel } from '@industry-theme/alexandria-panels';
 import { CollectionMapPanel } from '@industry-theme/repository-composition-panels';
 import { Map, FolderOpen, Folder } from 'lucide-react';

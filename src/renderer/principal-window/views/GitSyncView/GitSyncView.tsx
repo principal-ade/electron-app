@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ConfigurablePanelLayout } from '@principal-ade/panels';
-import '@principal-ade/panels/panels.css';
 import { GitHubSocialPanel } from '@industry-theme/git-sync-panels';
 import { UserProfilePanel } from '@industry-theme/alexandria-panels';
 import { Users, User } from 'lucide-react';

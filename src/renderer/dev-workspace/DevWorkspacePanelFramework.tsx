@@ -36,7 +36,7 @@ import {
   AgentHighlightProvider,
   useAgentHighlightProvider,
 } from '../contexts/AgentHighlightContext';
-import { TabbedTerminalPanel, type BaseTab, type TerminalTab, type TerminalWorkingState, type TerminalActivityChangedEvent } from '@industry-theme/xterm-terminal-panel';
+import { TabbedTerminalPanel, type BaseTab, type TerminalTab, type TerminalWorkingState, type TerminalActivityChangedEvent, type TabAssociations, type TerminalPanelActions } from '@industry-theme/xterm-terminal-panel';
 import {
   panels as principalViewPanels,
   TraceDetailsPanel,
@@ -429,6 +429,63 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
   // Tab state for TabbedTerminalPanel (skills only - terminals are managed by the panel from context)
   const [tabs, setTabs] = useState<DevWorkspaceTab[]>([]);
+
+  // Tab associations - map of terminal tab IDs to associated content tabs
+  const [associations, setAssociations] = useState<TabAssociations>({});
+
+  // Store associated tab data separately (since we remove them from the tab list)
+  const [associatedTabData, setAssociatedTabData] = useState<Record<string, DevWorkspaceTab>>({});
+
+  // Handler for when a tab is dropped onto a terminal to create an association
+  const handleTabAssociate = useCallback((terminalTabId: string, associatedTabId: string) => {
+    console.info('[DevWorkspacePanelFramework] Tab association created:', { terminalTabId, associatedTabId });
+
+    // Find the tab data before removing it
+    setTabs(prevTabs => {
+      const tabToAssociate = prevTabs.find(t => t.id === associatedTabId);
+      if (tabToAssociate) {
+        // Store the tab data for rendering
+        setAssociatedTabData(prev => ({
+          ...prev,
+          [associatedTabId]: tabToAssociate,
+        }));
+      }
+      // Remove the associated tab from the tab list
+      return prevTabs.filter(t => t.id !== associatedTabId);
+    });
+
+    // Create the association
+    setAssociations(prev => ({
+      ...prev,
+      [terminalTabId]: {
+        associatedTabId,
+        collapsed: false,
+        ratio: 0.4,
+      },
+    }));
+  }, []);
+
+  // Handler for when an association's collapsed state changes
+  const handleAssociationCollapsedChange = useCallback((tabId: string, collapsed: boolean) => {
+    setAssociations(prev => ({
+      ...prev,
+      [tabId]: {
+        ...prev[tabId],
+        collapsed,
+      },
+    }));
+  }, []);
+
+  // Handler for when an association's split ratio changes
+  const handleAssociationRatioChange = useCallback((tabId: string, ratio: number) => {
+    setAssociations(prev => ({
+      ...prev,
+      [tabId]: {
+        ...prev[tabId],
+        ratio,
+      },
+    }));
+  }, []);
 
   // Focus tab state - when set, TabbedTerminalPanel will activate the tab and call onFocusTabHandled
   const [focusTabId, setFocusTabId] = useState<string | null>(null);
@@ -1931,6 +1988,39 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     return undefined; // Fall back to tab.label for all other tabs
   }, []);
 
+  // Extended terminal actions with tab association support
+  const extendedTerminalActions: TerminalPanelActions = useMemo(() => ({
+    ...terminalActions,
+    onTabAssociate: handleTabAssociate,
+  }), [terminalActions, handleTabAssociate]);
+
+  // Get header config for associated tab (shown when collapsed)
+  const getAssociatedHeader = useCallback((associatedTabId: string) => {
+    const tabData = associatedTabData[associatedTabId];
+
+    if (!tabData) {
+      return { icon: '📄', title: 'Associated Content' };
+    }
+
+    switch (tabData.contentType) {
+      case 'markdown': {
+        const markdownTab = tabData as MarkdownTab;
+        const fileName = markdownTab.filePath.split('/').pop() || 'Document';
+        return { icon: <FileText size={14} />, title: fileName };
+      }
+      case 'canvas-editor':
+      case 'canvas-detail':
+        return { icon: <LayoutDashboard size={14} />, title: tabData.label };
+      case 'file-editor':
+      case 'mdx-editor':
+        return { icon: <Code size={14} />, title: tabData.label };
+      case 'git-diff':
+        return { icon: <GitBranch size={14} />, title: tabData.label };
+      default:
+        return { icon: '📄', title: tabData.label || 'Associated Content' };
+    }
+  }, [associatedTabData]);
+
   // Render custom content for non-terminal tabs
   // NOTE: Uses refs for context/actions/events to avoid recreating this callback
   // when provider values change, which would cause unnecessary re-renders of all tabs
@@ -2345,6 +2435,23 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     [theme, SkillDetailPanelComponent, MarkdownPanelComponent, CanvasEditorPanelComponent, FileEditorPanelComponent, MDXEditorPanelComponent, GitDiffPanelComponent],
   );
 
+  // Render associated content for split pane
+  // Reuses renderTabContent so all supported tab types automatically work
+  const renderAssociatedContent = useCallback((associatedTabId: string, isActive: boolean) => {
+    const tabData = associatedTabData[associatedTabId];
+
+    if (!tabData) {
+      return (
+        <div style={{ padding: '1rem', color: theme.colors.textSecondary }}>
+          Associated content not found: {associatedTabId}
+        </div>
+      );
+    }
+
+    // Reuse renderTabContent - it already handles all tab types
+    return renderTabContent(tabData, isActive, null, terminalPanelWidth);
+  }, [associatedTabData, theme.colors.textSecondary, renderTabContent, terminalPanelWidth]);
+
   // Define all panels using panel framework components
   const allPanels = useMemo(
     () => [
@@ -2364,7 +2471,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           >
             <TabbedTerminalPanel<DevWorkspaceTab>
               context={terminalPanelContext}
-              actions={terminalActions}
+              actions={extendedTerminalActions}
               events={events}
               terminalContext={terminalContext}
               directory={terminalDirectory}
@@ -2380,6 +2487,12 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               workingStates={workingStates}
               showAllTerminals={showAllTerminals}
               onShowAllTerminalsChange={setShowAllTerminals}
+              // Tab association props
+              associations={associations}
+              onAssociationCollapsedChange={handleAssociationCollapsedChange}
+              onAssociationRatioChange={handleAssociationRatioChange}
+              renderAssociatedContent={renderAssociatedContent}
+              getAssociatedHeader={getAssociatedHeader}
             />
           </div>
         ),
@@ -3143,7 +3256,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       terminalContext,
       terminalDirectory,
       terminalPanelContext,
-      terminalActions,
+      extendedTerminalActions,
       theme,
       tabs,
       handleTabsChange,
@@ -3152,6 +3265,11 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       focusTabId,
       handleFocusTabHandled,
       terminalPanelWidth,
+      associations,
+      handleAssociationCollapsedChange,
+      handleAssociationRatioChange,
+      renderAssociatedContent,
+      getAssociatedHeader,
     ],
   );
 
