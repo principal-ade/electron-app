@@ -31,6 +31,11 @@ import {
   PendingRequest,
   ServerToMainMessage,
   StorageResponseMessage,
+  GetTracesResponseMessage,
+  GetRegistrationsResponseMessage,
+  PortRegistration,
+  isGetTracesResponseMessage,
+  isGetRegistrationsResponseMessage,
 } from './types';
 
 /**
@@ -372,6 +377,9 @@ export class HttpEventServer extends EventEmitter {
       });
     });
 
+    // OTEL trace endpoints
+    this.setupOtelTraceRoutes();
+
     // Event name mapping for each agent (explicit for static analysis)
     const eventNames: Record<SupportedAgent, string> = {
       claude: 'event.http.claude_received',
@@ -453,6 +461,155 @@ export class HttpEventServer extends EventEmitter {
         message: 'Unknown endpoint',
       });
     });
+  }
+
+  /**
+   * Setup OTEL trace retrieval routes
+   */
+  private setupOtelTraceRoutes(): void {
+    // GET /otel/traces - List recent traces
+    this.app.get('/otel/traces', async (req: Request, res: Response) => {
+      const tracer = getTracer('principal-ade-event-processor');
+      const span = tracer.startSpan('otel.traces.list_request');
+
+      try {
+        const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+
+        const traces = await this.getTracesFromMain(limit);
+
+        span.addEvent('otel.traces.list_fetched', {
+          'traces.count': traces.length,
+          'traces.limit': limit || 50,
+        });
+
+        span.setStatus({ code: SpanStatusCode.OK });
+
+        res.json({
+          success: true,
+          traces,
+          count: traces.length,
+          timestamp: Date.now(),
+        });
+      } catch (error) {
+        span.setStatus({ code: SpanStatusCode.ERROR, message: (error as Error).message });
+        this.log('error', `Failed to get traces: ${error}`);
+
+        res.status(500).json({
+          success: false,
+          error: (error as Error).message,
+          traces: [],
+        });
+      } finally {
+        span.end();
+      }
+    });
+
+    // GET /otel/traces/:traceId - Get specific trace
+    this.app.get('/otel/traces/:traceId', async (req: Request, res: Response) => {
+      const tracer = getTracer('principal-ade-event-processor');
+      const span = tracer.startSpan('otel.traces.get_request');
+
+      try {
+        const traceId = req.params.traceId as string;
+
+        span.setAttribute('trace.id', traceId);
+
+        const traces = await this.getTracesFromMain(undefined, traceId);
+
+        if (traces.length === 0) {
+          span.setStatus({ code: SpanStatusCode.OK });
+          res.status(404).json({
+            success: false,
+            error: `Trace not found: ${traceId}`,
+          });
+          return;
+        }
+
+        span.addEvent('otel.traces.get_fetched', {
+          'trace.id': traceId,
+        });
+
+        span.setStatus({ code: SpanStatusCode.OK });
+
+        res.json({
+          success: true,
+          trace: traces[0],
+          timestamp: Date.now(),
+        });
+      } catch (error) {
+        span.setStatus({ code: SpanStatusCode.ERROR, message: (error as Error).message });
+        this.log('error', `Failed to get trace: ${error}`);
+
+        res.status(500).json({
+          success: false,
+          error: (error as Error).message,
+        });
+      } finally {
+        span.end();
+      }
+    });
+
+    // GET /otel/registrations - Get active port registrations
+    this.app.get('/otel/registrations', async (_req: Request, res: Response) => {
+      const tracer = getTracer('principal-ade-event-processor');
+      const span = tracer.startSpan('otel.registrations.list_request');
+
+      try {
+        const result = await this.getRegistrationsFromMain();
+
+        span.addEvent('otel.registrations.list_fetched', {
+          'registrations.count': result.registrations.length,
+          'services.count': result.services.length,
+        });
+
+        span.setStatus({ code: SpanStatusCode.OK });
+
+        res.json({
+          success: true,
+          registrations: result.registrations,
+          services: result.services,
+          timestamp: Date.now(),
+        });
+      } catch (error) {
+        span.setStatus({ code: SpanStatusCode.ERROR, message: (error as Error).message });
+        this.log('error', `Failed to get registrations: ${error}`);
+
+        res.status(500).json({
+          success: false,
+          error: (error as Error).message,
+          registrations: [],
+          services: [],
+        });
+      } finally {
+        span.end();
+      }
+    });
+  }
+
+  /**
+   * Request traces from main process
+   */
+  private async getTracesFromMain(
+    limit?: number,
+    traceId?: string,
+  ): Promise<Array<{ traceId: string; data: unknown }>> {
+    return this.makeRequest<Array<{ traceId: string; data: unknown }>>(
+      'GET_TRACES_REQUEST',
+      { limit, traceId },
+    );
+  }
+
+  /**
+   * Request registrations from main process
+   */
+  private async getRegistrationsFromMain(): Promise<{
+    registrations: PortRegistration[];
+    services: string[];
+  }> {
+    return this.makeRequest<{ registrations: PortRegistration[]; services: string[] }>(
+      'GET_REGISTRATIONS_REQUEST',
+      {},
+    );
   }
 
   /**
@@ -586,6 +743,27 @@ export class HttpEventServer extends EventEmitter {
       } else {
         pending.reject(
           new Error(storageMessage.error || 'Storage operation failed'),
+        );
+      }
+    } else if (isGetTracesResponseMessage(message)) {
+      const tracesMessage = message as GetTracesResponseMessage;
+      if (tracesMessage.success) {
+        pending.resolve(tracesMessage.traces ?? []);
+      } else {
+        pending.reject(
+          new Error(tracesMessage.error || 'Failed to get traces'),
+        );
+      }
+    } else if (isGetRegistrationsResponseMessage(message)) {
+      const regMessage = message as GetRegistrationsResponseMessage;
+      if (regMessage.success) {
+        pending.resolve({
+          registrations: regMessage.registrations ?? [],
+          services: regMessage.services ?? [],
+        });
+      } else {
+        pending.reject(
+          new Error(regMessage.error || 'Failed to get registrations'),
         );
       }
     } else {

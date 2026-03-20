@@ -252,6 +252,30 @@ export class OtelCollectorService {
   }
 
   /**
+   * Get all active port registrations
+   * Returns windowId, serviceName, and registeredAt for each registration
+   */
+  getRegistrations(): Array<{ windowId: string; serviceName: string; registeredAt: number }> {
+    if (!this.server) {
+      return [];
+    }
+
+    // Filter out the internal monitor registration
+    return this.server.getRegistrations().filter((reg) => reg.windowId !== '__monitor__');
+  }
+
+  /**
+   * Get all registered service names
+   */
+  getRegisteredServices(): string[] {
+    if (!this.server) {
+      return [];
+    }
+
+    return this.server.getRegisteredServices();
+  }
+
+  /**
    * Store a received trace
    */
   storeTrace(traceData: OTLPTraceData): void {
