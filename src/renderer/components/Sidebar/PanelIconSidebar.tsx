@@ -66,7 +66,7 @@ export interface PanelIconSidebarProps {
  * Default panel icons for left sidebar
  */
 export const LEFT_PANEL_ICONS: PanelIconConfig[] = [
-  { id: 'terminalSessions', Icon: Terminal, label: 'Terminals' },
+  { id: 'terminalSessions', Icon: Terminal, label: 'Term' },
   { id: 'canvasList', Icon: Network, label: 'Stories' },
   { id: 'docs', Icon: BookOpen, label: 'Docs' },
   { id: 'agentsList', Icon: Bot, label: 'Skills' },
