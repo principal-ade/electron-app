@@ -1,0 +1,38 @@
+{
+  "version": "1.0.0",
+  "name": "Update User Preferences",
+  "description": "Update user preferences and broadcast changes to all windows",
+  "canvas": ".principal-views/user-preferences/user-preferences.otel.canvas",
+  "spanPattern": "user_preferences.update",
+  "scenarios": [
+    {
+      "id": "update-success",
+      "description": "Preferences updated and broadcast to all windows successfully",
+      "priority": 1,
+      "template": {
+        "introduction": "**Preferences Updated**\n\nUser preferences were updated and broadcast to all windows.",
+        "events": {
+          "user_preferences.update.started": "1. Update from window {{update.source_window}} for keys: {{update.keys}}",
+          "user_preferences.update.persisted": "2. Saved to {{storage.namespace}}/{{storage.key}}",
+          "user_preferences.broadcast": "3. Broadcast to {{broadcast.window_count}} windows on {{broadcast.channel}} (theme overrides: {{broadcast.has_theme_overrides}})",
+          "user_preferences.update.complete": "4. Complete in {{update.duration_ms}}ms, {{update.windows_notified}} windows notified",
+          "user_preferences.renderer.received": "5. Window {{window.id}} received update for keys: {{preferences.keys_changed}}"
+        },
+        "summary": "**Update Complete**\n- Keys: {{update.keys}}\n- Windows notified: {{update.windows_notified}}"
+      }
+    },
+    {
+      "id": "update-error",
+      "description": "Preference update failed during persist or broadcast",
+      "priority": 2,
+      "template": {
+        "introduction": "**Preferences Update Failed**\n\nAn error occurred while updating preferences.",
+        "events": {
+          "user_preferences.update.started": "1. Update from window {{update.source_window}} for keys: {{update.keys}}",
+          "user_preferences.update.error": "2. **Error:** {{error.type}} during {{error.stage}} - {{error.message}}"
+        },
+        "summary": "**Error**\n- Stage: {{error.stage}}\n- Type: {{error.type}}\n- Message: {{error.message}}"
+      }
+    }
+  ]
+}

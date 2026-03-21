@@ -1,0 +1,351 @@
+{
+  "pv": {
+    "name": "User Preferences",
+    "version": "1.0.0",
+    "description": "User settings persistence and broadcast across Electron windows via IPC",
+    "markdown": ".principal-views/user-preferences/user-preferences.md",
+    "scope": "principal-ade-main",
+    "nodeTypes": {
+      "ipc-handler": {
+        "label": "IPC Handler",
+        "color": "#6366F1"
+      },
+      "storage": {
+        "label": "Storage",
+        "color": "#0D9488"
+      },
+      "broadcast": {
+        "label": "Broadcast",
+        "color": "#F59E0B"
+      },
+      "renderer": {
+        "label": "Renderer",
+        "color": "#EC4899"
+      },
+      "error": {
+        "label": "Error",
+        "color": "#EF4444"
+      }
+    },
+    "edgeTypes": {
+      "ipc-invoke": {
+        "label": "IPC Invoke",
+        "style": "solid",
+        "color": "#6366F1"
+      },
+      "data-flow": {
+        "label": "Data Flow",
+        "style": "solid",
+        "color": "#8B5CF6"
+      },
+      "broadcast": {
+        "label": "Broadcast",
+        "style": "solid",
+        "color": "#F59E0B"
+      },
+      "error-flow": {
+        "label": "Error",
+        "style": "dashed",
+        "color": "#EF4444"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "x": 100,
+      "y": -80,
+      "width": 400,
+      "height": 50,
+      "color": "#64748B",
+      "text": "# User Preferences\n**Settings persistence and cross-window broadcast**"
+    },
+    {
+      "id": "get-preferences",
+      "type": "otel-event",
+      "x": 100,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "color": "#6366F1",
+      "label": "Get Preferences",
+      "event": {
+        "name": "user_preferences.get",
+        "description": "Preferences fetched from store",
+        "attributes": {
+          "preferences.source": {
+            "type": "string",
+            "description": "Source: 'cache' or 'store'"
+          },
+          "preferences.has_defaults": {
+            "type": "boolean",
+            "description": "Whether defaults were applied"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/main/stores/userPreferencesHandler.ts"
+        ]
+      }
+    },
+    {
+      "id": "update-started",
+      "type": "otel-event",
+      "x": 100,
+      "y": 200,
+      "width": 200,
+      "height": 100,
+      "color": "#6366F1",
+      "label": "Update Started",
+      "event": {
+        "name": "user_preferences.update.started",
+        "description": "Preference update initiated from renderer",
+        "attributes": {
+          "update.keys": {
+            "type": "string[]",
+            "description": "Preference keys being updated"
+          },
+          "update.source_window": {
+            "type": "string",
+            "description": "Window ID that initiated update"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/main/stores/userPreferencesHandler.ts"
+        ]
+      }
+    },
+    {
+      "id": "update-persisted",
+      "type": "otel-event",
+      "x": 100,
+      "y": 350,
+      "width": 200,
+      "height": 100,
+      "color": "#0D9488",
+      "label": "Update Persisted",
+      "event": {
+        "name": "user_preferences.update.persisted",
+        "description": "Preferences saved to TypedMultiStoreWrapper",
+        "attributes": {
+          "storage.namespace": {
+            "type": "string",
+            "description": "Storage namespace: USER_PREFERENCES"
+          },
+          "storage.key": {
+            "type": "string",
+            "description": "Storage key: preferences"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/main/stores/userPreferencesHandler.ts"
+        ]
+      }
+    },
+    {
+      "id": "broadcast",
+      "type": "otel-event",
+      "x": 100,
+      "y": 500,
+      "width": 200,
+      "height": 100,
+      "color": "#F59E0B",
+      "label": "Broadcast",
+      "event": {
+        "name": "user_preferences.broadcast",
+        "description": "Preferences broadcast to all renderer windows",
+        "attributes": {
+          "broadcast.window_count": {
+            "type": "integer",
+            "description": "Number of windows receiving broadcast"
+          },
+          "broadcast.channel": {
+            "type": "string",
+            "description": "IPC channel: userPreferences:changed"
+          },
+          "broadcast.has_theme_overrides": {
+            "type": "boolean",
+            "description": "Whether custom theme overrides included"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/stores/userPreferencesHandler.ts"
+        ]
+      }
+    },
+    {
+      "id": "update-complete",
+      "type": "otel-event",
+      "x": 100,
+      "y": 650,
+      "width": 200,
+      "height": 100,
+      "color": "#22C55E",
+      "label": "Update Complete",
+      "event": {
+        "name": "user_preferences.update.complete",
+        "description": "Preference update finished successfully",
+        "attributes": {
+          "update.duration_ms": {
+            "type": "number",
+            "description": "Total update duration in milliseconds"
+          },
+          "update.windows_notified": {
+            "type": "integer",
+            "description": "Number of windows notified"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/main/stores/userPreferencesHandler.ts"
+        ]
+      }
+    },
+    {
+      "id": "update-error",
+      "type": "otel-event",
+      "x": 450,
+      "y": 350,
+      "width": 200,
+      "height": 100,
+      "color": "#EF4444",
+      "label": "Update Error",
+      "event": {
+        "name": "user_preferences.update.error",
+        "description": "Preference update failed",
+        "attributes": {
+          "error.type": {
+            "type": "string",
+            "description": "Error type/class name"
+          },
+          "error.message": {
+            "type": "string",
+            "description": "Error message"
+          },
+          "error.stage": {
+            "type": "string",
+            "description": "Stage where error occurred: 'persist' or 'broadcast'"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/main/stores/userPreferencesHandler.ts"
+        ]
+      }
+    },
+    {
+      "id": "renderer-receive",
+      "type": "otel-event",
+      "x": 100,
+      "y": 800,
+      "width": 200,
+      "height": 100,
+      "color": "#EC4899",
+      "label": "Renderer Received",
+      "event": {
+        "name": "user_preferences.renderer.received",
+        "description": "Renderer window received preference update",
+        "attributes": {
+          "window.id": {
+            "type": "string",
+            "description": "Receiving window ID"
+          },
+          "preferences.keys_changed": {
+            "type": "string[]",
+            "description": "Which preference keys were in the update"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/window/main-process-api-implementations/userPreferencesApi.ts"
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "started-to-persisted",
+      "fromNode": "update-started",
+      "fromSide": "bottom",
+      "toNode": "update-persisted",
+      "toSide": "top",
+      "label": "deepMerge & set",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "persisted-to-broadcast",
+      "fromNode": "update-persisted",
+      "fromSide": "bottom",
+      "toNode": "broadcast",
+      "toSide": "top",
+      "label": "if notifyRenderers",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "broadcast-to-complete",
+      "fromNode": "broadcast",
+      "fromSide": "bottom",
+      "toNode": "update-complete",
+      "toSide": "top",
+      "label": "success",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "persisted-to-error",
+      "fromNode": "update-persisted",
+      "fromSide": "right",
+      "toNode": "update-error",
+      "toSide": "left",
+      "label": "on exception",
+      "pv": {
+        "edgeType": "error-flow"
+      }
+    },
+    {
+      "id": "broadcast-to-error",
+      "fromNode": "broadcast",
+      "fromSide": "right",
+      "toNode": "update-error",
+      "toSide": "bottom",
+      "label": "on exception",
+      "pv": {
+        "edgeType": "error-flow"
+      }
+    },
+    {
+      "id": "complete-to-renderer",
+      "fromNode": "update-complete",
+      "fromSide": "bottom",
+      "toNode": "renderer-receive",
+      "toSide": "top",
+      "label": "IPC send",
+      "pv": {
+        "edgeType": "broadcast"
+      }
+    }
+  ]
+}

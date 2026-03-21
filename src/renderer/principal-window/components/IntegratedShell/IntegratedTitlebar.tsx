@@ -40,8 +40,9 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
   showRightSidebarControl = false,
 }) => {
   const [isMaximized, setIsMaximized] = useState(false);
-  const [showThemeButton, setShowThemeButton] = useState(true);
-  const [showCustomizeButton, setShowCustomizeButton] = useState(true);
+  const [showThemeButton, setShowThemeButton] = useState(false);
+  const [showCustomizeButton, setShowCustomizeButton] = useState(false);
+  const [showPullMailbox, setShowPullMailbox] = useState(false);
   const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string | null>(null);
   const { theme } = useTheme();
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
@@ -83,8 +84,9 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         return;
       }
 
-      setShowThemeButton(preferences.titlebarButtons?.theme ?? true);
-      setShowCustomizeButton(preferences.titlebarButtons?.customize ?? true);
+      setShowThemeButton(preferences.titlebarButtons?.theme ?? false);
+      setShowCustomizeButton(preferences.titlebarButtons?.customize ?? false);
+      setShowPullMailbox(preferences.titlebarButtons?.pullMailbox ?? false);
     };
 
     void UserPreferencesService.getPreferences().then(applyPreferences);
@@ -240,7 +242,7 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
           gap: '8px',
         }}
       >
-        <PullMailbox />
+        {showPullMailbox && <PullMailbox />}
         {showThemeButton && <ThemeDropdown />}
         {showCustomizeButton && <ThemeCustomizationButton />}
         {showSidebarControl && onToggleSidebar && (

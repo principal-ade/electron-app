@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0",
+  "name": "Get User Preferences",
+  "description": "Fetch user preferences from storage",
+  "canvas": ".principal-views/user-preferences/user-preferences.otel.canvas",
+  "spanPattern": "user_preferences.get",
+  "scenarios": [
+    {
+      "id": "get-success",
+      "description": "Preferences fetched from store or cache",
+      "priority": 1,
+      "template": {
+        "introduction": "**Fetching Preferences**\n\nUser preferences retrieved from storage.",
+        "events": {
+          "user_preferences.get": "Preferences loaded from {{preferences.source}} (defaults applied: {{preferences.has_defaults}})"
+        },
+        "summary": "**Preferences Loaded**\n- Source: {{preferences.source}}\n- Defaults applied: {{preferences.has_defaults}}"
+      }
+    }
+  ]
+}

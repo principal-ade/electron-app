@@ -9,7 +9,6 @@ import {
   Columns3,
   Square,
   Link,
-  Building2,
 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { BaseTitlebar } from '../components/Titlebar/BaseTitlebar';
@@ -140,6 +139,7 @@ export interface DevWorkspaceTitlebarProps {
   collapsed?: { left: boolean; right: boolean };
   // Alexandria Workspace
   onOpenAlexandriaWorkspace?: () => void;
+  showWorkspaceButton?: boolean;
   // Panel configuration
   currentLayout?: { left: string; middle: string; right: string };
   onLayoutChange?: (layout: {
@@ -162,9 +162,6 @@ export interface DevWorkspaceTitlebarProps {
   // Sidebar visibility toggle
   sidebarsHidden?: boolean;
   onSidebarsHiddenChange?: (hidden: boolean) => void;
-  // File City image generation
-  onGenerateFileCityImage?: () => void;
-  isGeneratingFileCityImage?: boolean;
 }
 
 export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
@@ -177,6 +174,7 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
   onToggleTerminalImplementation,
   collapsed: _collapsed,
   onOpenAlexandriaWorkspace,
+  showWorkspaceButton = false,
   currentLayout: _currentLayout,
   onLayoutChange,
   onCollapsedChange: _onCollapsedChange,
@@ -189,8 +187,6 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
   lastActiveService,
   sidebarsHidden,
   onSidebarsHiddenChange,
-  onGenerateFileCityImage,
-  isGeneratingFileCityImage,
 }) => {
   const { theme } = useTheme();
   const [copiedPath, setCopiedPath] = useState(false);
@@ -712,7 +708,7 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
             }}
           >
             {/* Open Alexandria Workspace Button */}
-            {onOpenAlexandriaWorkspace && (
+            {onOpenAlexandriaWorkspace && showWorkspaceButton && (
               <button
                 onClick={onOpenAlexandriaWorkspace}
                 title="Open in Alexandria Workspace"
@@ -849,56 +845,6 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
               </button>
             )}
 
-            {/* Generate File City Image Button */}
-            {onGenerateFileCityImage && (
-              <button
-                onClick={onGenerateFileCityImage}
-                disabled={isGeneratingFileCityImage}
-                title="Generate File City visualization image"
-                style={{
-                  // @ts-ignore - WebkitAppRegion is not in CSSProperties
-                  WebkitAppRegion: 'no-drag',
-                  background: isGeneratingFileCityImage
-                    ? theme.colors.primary + '20'
-                    : theme.colors.backgroundTertiary,
-                  border: `1px solid ${
-                    isGeneratingFileCityImage ? theme.colors.primary : theme.colors.border
-                  }`,
-                  color: isGeneratingFileCityImage
-                    ? theme.colors.primary
-                    : theme.colors.textSecondary,
-                  cursor: isGeneratingFileCityImage ? 'wait' : 'pointer',
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  transition: 'all 0.2s',
-                  fontSize: `${theme.fontSizes[1]}px`,
-                  fontWeight: theme.fontWeights.medium,
-                  opacity: isGeneratingFileCityImage ? 0.7 : 1,
-                }}
-                onMouseEnter={(e) => {
-                  if (!isGeneratingFileCityImage) {
-                    e.currentTarget.style.backgroundColor =
-                      theme.colors.backgroundSecondary;
-                    e.currentTarget.style.borderColor = theme.colors.primary;
-                    e.currentTarget.style.color = theme.colors.text;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isGeneratingFileCityImage) {
-                    e.currentTarget.style.backgroundColor =
-                      theme.colors.backgroundTertiary;
-                    e.currentTarget.style.borderColor = theme.colors.border;
-                    e.currentTarget.style.color = theme.colors.textSecondary;
-                  }
-                }}
-              >
-                <Building2 size={14} />
-                <span>{isGeneratingFileCityImage ? 'Generating...' : 'File City'}</span>
-              </button>
-            )}
           </div>
 
         </div>
