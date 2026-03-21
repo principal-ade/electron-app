@@ -301,6 +301,89 @@ export class GitService {
     }
   }
 
+  /**
+   * Get files changed in a specific commit with their change type and line counts
+   * Uses git show --numstat and --name-status to get complete file change info
+   * @param directory - Repository directory
+   * @param commitHash - Git commit hash
+   * @returns Map of file path to change info (status and line counts)
+   */
+  static async getChangedFilesForCommit(
+    directory: string,
+    commitHash: string,
+  ): Promise<Map<string, { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }>> {
+    console.info(`[GitService] Getting changed files for commit: ${directory} (${commitHash})`);
+    try {
+      // Get file changes with status codes and line counts in one call
+      // Format: --numstat gives "additions deletions path"
+      // --name-status gives "status path"
+      const [numstatResult, nameStatusResult] = await Promise.all([
+        window.mainProcess.git.execCommand(directory, [
+          'show',
+          '--numstat',
+          '--format=',
+          commitHash,
+        ]),
+        window.mainProcess.git.execCommand(directory, [
+          'show',
+          '--name-status',
+          '--format=',
+          commitHash,
+        ]),
+      ]);
+
+      // Parse line counts from numstat
+      const lineCounts = new Map<string, { additions: number; deletions: number }>();
+      for (const line of numstatResult.stdout.trim().split('\n').filter(Boolean)) {
+        const parts = line.split('\t');
+        if (parts.length >= 3) {
+          // Binary files show "-" for additions/deletions
+          const additions = parts[0] === '-' ? 0 : parseInt(parts[0], 10) || 0;
+          const deletions = parts[1] === '-' ? 0 : parseInt(parts[1], 10) || 0;
+          const filePath = parts[2];
+          lineCounts.set(filePath, { additions, deletions });
+        }
+      }
+
+      // Parse status codes
+      const changedFiles = new Map<string, { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }>();
+      for (const line of nameStatusResult.stdout.trim().split('\n').filter(Boolean)) {
+        const parts = line.split('\t');
+        if (parts.length < 2) continue;
+
+        const statusCode = parts[0];
+        let filePath = parts[1];
+        let status: 'added' | 'modified' | 'deleted' | 'renamed';
+
+        if (statusCode === 'A') {
+          status = 'added';
+        } else if (statusCode === 'M') {
+          status = 'modified';
+        } else if (statusCode === 'D') {
+          status = 'deleted';
+        } else if (statusCode.startsWith('R')) {
+          // Renamed files have format: R<score>\told_path\tnew_path
+          status = 'renamed';
+          filePath = parts[2] || filePath; // Use new path
+        } else {
+          status = 'modified'; // Default
+        }
+
+        const counts = lineCounts.get(filePath) || { additions: 0, deletions: 0 };
+        changedFiles.set(filePath, {
+          status,
+          additions: counts.additions,
+          deletions: counts.deletions,
+        });
+      }
+
+      return changedFiles;
+    } catch (error) {
+      console.error('[GitService] Failed to get changed files for commit:', error);
+      return new Map();
+    }
+  }
+
   static async fastForwardMerge(
     directory: string,
   ): Promise<{ success: boolean; message: string }> {

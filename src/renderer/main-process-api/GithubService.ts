@@ -263,4 +263,25 @@ export class GithubService {
     );
     return result || [];
   }
+
+  /**
+   * Get changed files for a specific commit (for highlight layers)
+   * Returns file info including status and line counts
+   */
+  static async getChangedFilesForCommit(
+    owner: string,
+    repo: string,
+    sha: string,
+  ): Promise<Map<string, { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }>> {
+    const result = await window.mainProcess.github.getChangedFilesForCommit(
+      owner,
+      repo,
+      sha,
+    );
+    // Convert plain object back to Map
+    return new Map(Object.entries(result || {})) as Map<
+      string,
+      { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }
+    >;
+  }
 }

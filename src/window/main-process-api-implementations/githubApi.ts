@@ -248,4 +248,13 @@ export const githubAPI: GitHubAPI = {
       sha,
     );
   },
+
+  getChangedFilesForCommit: async (owner: string, repo: string, sha: string) => {
+    return ipcRenderer.invoke(
+      GitHubAPIEvent.GET_CHANGED_FILES_FOR_COMMIT,
+      owner,
+      repo,
+      sha,
+    );
+  },
 };

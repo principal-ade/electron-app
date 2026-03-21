@@ -57,6 +57,8 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
     message: string;
     author: string;
     date: string;
+    additions?: number;
+    deletions?: number;
   } | null>(null);
   const [typewriterText, setTypewriterText] = useState('');
   const [playMode, setPlayMode] = useState<PlayMode>('year');
@@ -130,6 +132,16 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
   // State for latest commit (remote repos only)
   const [latestCommit, setLatestCommit] = useState<GitHubCommit | null>(null);
 
+  // State for latest local commit with line counts
+  const [latestLocalCommit, setLatestLocalCommit] = useState<{
+    hash: string;
+    message: string;
+    author: string;
+    date: string;
+    additions: number;
+    deletions: number;
+  } | null>(null);
+
   // Fetch latest commit for remote repos
   useEffect(() => {
     if (isRemoteOnly && githubInfo) {
@@ -140,6 +152,42 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
       setLatestCommit(null);
     }
   }, [isRemoteOnly, githubInfo]);
+
+  // Fetch latest commit for local repos
+  useEffect(() => {
+    if (!isRemoteOnly && repository?.path) {
+      (async () => {
+        try {
+          const commitInfo = await GitService.getLatestCommit(repository.path);
+          if (!commitInfo.hash) {
+            setLatestLocalCommit(null);
+            return;
+          }
+          // Get line counts for the latest commit
+          const changedFilesMap = await GitService.getChangedFilesForCommit(repository.path, commitInfo.hash);
+          let additions = 0;
+          let deletions = 0;
+          for (const info of changedFilesMap.values()) {
+            additions += info.additions;
+            deletions += info.deletions;
+          }
+          setLatestLocalCommit({
+            hash: commitInfo.hash,
+            message: commitInfo.message.split('\n')[0],
+            author: commitInfo.author,
+            date: commitInfo.date.split('T')[0],
+            additions,
+            deletions,
+          });
+        } catch (err) {
+          console.error('[ProjectInfoPanel] Failed to fetch latest local commit:', err);
+          setLatestLocalCommit(null);
+        }
+      })();
+    } else {
+      setLatestLocalCommit(null);
+    }
+  }, [isRemoteOnly, repository?.path]);
 
   // Trigger heat map transition when repository changes
   useEffect(() => {
@@ -305,29 +353,37 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
 
         // Use the first commit of that day
         const commit = commits[0];
+
+        // Get file tree and changed files in parallel
+        const [filePaths, changedFilesMap] = await Promise.all([
+          GithubService.getFileTreeAtCommit(githubInfo.owner, githubInfo.name, commit.sha),
+          GithubService.getChangedFilesForCommit(githubInfo.owner, githubInfo.name, commit.sha),
+        ]);
+
+        // Calculate aggregate line counts
+        const { additions, deletions } = sumLineCounts(changedFilesMap);
+
         setCurrentCommitInfo({
           hash: commit.sha,
           message: commit.commit.message.split('\n')[0],
           author: commit.commit.author.name,
           date: commit.commit.author.date.split('T')[0],
+          additions,
+          deletions,
         });
 
-        // Get file tree at that commit
-        const filePaths = await GithubService.getFileTreeAtCommit(
-          githubInfo.owner,
-          githubInfo.name,
-          commit.sha
-        );
         if (filePaths.length === 0) {
           console.warn('[ProjectInfoPanel] No files found at commit:', commit.sha);
           return;
         }
 
-        // Generate historical File City image
-        const imageUrl = await FileCityImageService.getImageForCommit(
+        // Generate historical File City image with highlight layers
+        const changedFiles = Object.fromEntries(changedFilesMap);
+        const imageUrl = await FileCityImageService.getImageForCommitWithChanges(
           `github:${githubInfo.owner}/${githubInfo.name}`,
           commit.sha,
-          filePaths
+          filePaths,
+          changedFiles
         );
 
         setHistoricalImageUrl(imageUrl);
@@ -343,20 +399,33 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
           return;
         }
 
-        setCurrentCommitInfo(commitInfo);
+        // Get file tree and changed files in parallel
+        const [filePaths, changedFilesMap] = await Promise.all([
+          GitService.getFileTreeAtCommit(repository.path, commitInfo.hash),
+          GitService.getChangedFilesForCommit(repository.path, commitInfo.hash),
+        ]);
 
-        // Get file tree at that commit
-        const filePaths = await GitService.getFileTreeAtCommit(repository.path, commitInfo.hash);
+        // Calculate aggregate line counts
+        const { additions, deletions } = sumLineCounts(changedFilesMap);
+
+        setCurrentCommitInfo({
+          ...commitInfo,
+          additions,
+          deletions,
+        });
+
         if (filePaths.length === 0) {
           console.warn('[ProjectInfoPanel] No files found at commit:', commitInfo.hash);
           return;
         }
 
-        // Generate historical File City image
-        const imageUrl = await FileCityImageService.getImageForCommit(
+        // Generate historical File City image with highlight layers
+        const changedFiles = Object.fromEntries(changedFilesMap);
+        const imageUrl = await FileCityImageService.getImageForCommitWithChanges(
           repository.path,
           commitInfo.hash,
-          filePaths
+          filePaths,
+          changedFiles
         );
 
         setHistoricalImageUrl(imageUrl);
@@ -364,6 +433,17 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
         console.error('[ProjectInfoPanel] Failed to load historical image:', error);
       }
     }
+  };
+
+  // Helper to sum line counts from changed files map
+  const sumLineCounts = (filesMap: Map<string, { status: string; additions: number; deletions: number }>) => {
+    let additions = 0;
+    let deletions = 0;
+    for (const info of filesMap.values()) {
+      additions += info.additions;
+      deletions += info.deletions;
+    }
+    return { additions, deletions };
   };
 
   // Load historical image for a specific date (used by year playback)
@@ -383,25 +463,32 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
         if (commits.length === 0) return null;
 
         const commit = commits[0];
+
+        // Get file tree and changed files in parallel
+        const [filePaths, changedFilesMap] = await Promise.all([
+          GithubService.getFileTreeAtCommit(githubInfo.owner, githubInfo.name, commit.sha),
+          GithubService.getChangedFilesForCommit(githubInfo.owner, githubInfo.name, commit.sha),
+        ]);
+
+        const { additions, deletions } = sumLineCounts(changedFilesMap);
         const commitInfo = {
           hash: commit.sha,
           message: commit.commit.message.split('\n')[0],
           author: commit.commit.author.name,
           date: commit.commit.author.date.split('T')[0],
+          additions,
+          deletions,
         };
         setCurrentCommitInfo(commitInfo);
 
-        const filePaths = await GithubService.getFileTreeAtCommit(
-          githubInfo.owner,
-          githubInfo.name,
-          commit.sha
-        );
         if (filePaths.length === 0) return null;
 
-        const imageUrl = await FileCityImageService.getImageForCommit(
+        const changedFiles = Object.fromEntries(changedFilesMap);
+        const imageUrl = await FileCityImageService.getImageForCommitWithChanges(
           `github:${githubInfo.owner}/${githubInfo.name}`,
           commit.sha,
-          filePaths
+          filePaths,
+          changedFiles
         );
 
         if (playbackRef.current.cancelled) return null;
@@ -418,15 +505,27 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
         const commitInfo = await GitService.getCommitForDate(repository.path, date);
         if (!commitInfo) return null;
 
-        setCurrentCommitInfo(commitInfo);
+        // Get file tree and changed files in parallel
+        const [filePaths, changedFilesMap] = await Promise.all([
+          GitService.getFileTreeAtCommit(repository.path, commitInfo.hash),
+          GitService.getChangedFilesForCommit(repository.path, commitInfo.hash),
+        ]);
 
-        const filePaths = await GitService.getFileTreeAtCommit(repository.path, commitInfo.hash);
+        const { additions, deletions } = sumLineCounts(changedFilesMap);
+        setCurrentCommitInfo({
+          ...commitInfo,
+          additions,
+          deletions,
+        });
+
         if (filePaths.length === 0) return null;
 
-        const imageUrl = await FileCityImageService.getImageForCommit(
+        const changedFiles = Object.fromEntries(changedFilesMap);
+        const imageUrl = await FileCityImageService.getImageForCommitWithChanges(
           repository.path,
           commitInfo.hash,
-          filePaths
+          filePaths,
+          changedFiles
         );
 
         if (playbackRef.current.cancelled) return null;
@@ -447,22 +546,31 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
     commitInfo: { hash: string; message: string; author: string; date: string }
   ): Promise<{ message: string } | null> => {
     setSelectedDate(commitInfo.date);
-    setCurrentCommitInfo(commitInfo);
 
     if (isRemoteOnly && githubInfo) {
       // Remote repository
       try {
-        const filePaths = await GithubService.getFileTreeAtCommit(
-          githubInfo.owner,
-          githubInfo.name,
-          commitInfo.hash
-        );
+        // Get file tree and changed files in parallel
+        const [filePaths, changedFilesMap] = await Promise.all([
+          GithubService.getFileTreeAtCommit(githubInfo.owner, githubInfo.name, commitInfo.hash),
+          GithubService.getChangedFilesForCommit(githubInfo.owner, githubInfo.name, commitInfo.hash),
+        ]);
+
+        const { additions, deletions } = sumLineCounts(changedFilesMap);
+        setCurrentCommitInfo({
+          ...commitInfo,
+          additions,
+          deletions,
+        });
+
         if (filePaths.length === 0) return null;
 
-        const imageUrl = await FileCityImageService.getImageForCommit(
+        const changedFiles = Object.fromEntries(changedFilesMap);
+        const imageUrl = await FileCityImageService.getImageForCommitWithChanges(
           `github:${githubInfo.owner}/${githubInfo.name}`,
           commitInfo.hash,
-          filePaths
+          filePaths,
+          changedFiles
         );
 
         if (playbackRef.current.cancelled) return null;
@@ -476,13 +584,27 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
     } else if (repository?.path) {
       // Local repository
       try {
-        const filePaths = await GitService.getFileTreeAtCommit(repository.path, commitInfo.hash);
+        // Get file tree and changed files in parallel
+        const [filePaths, changedFilesMap] = await Promise.all([
+          GitService.getFileTreeAtCommit(repository.path, commitInfo.hash),
+          GitService.getChangedFilesForCommit(repository.path, commitInfo.hash),
+        ]);
+
+        const { additions, deletions } = sumLineCounts(changedFilesMap);
+        setCurrentCommitInfo({
+          ...commitInfo,
+          additions,
+          deletions,
+        });
+
         if (filePaths.length === 0) return null;
 
-        const imageUrl = await FileCityImageService.getImageForCommit(
+        const changedFiles = Object.fromEntries(changedFilesMap);
+        const imageUrl = await FileCityImageService.getImageForCommitWithChanges(
           repository.path,
           commitInfo.hash,
-          filePaths
+          filePaths,
+          changedFiles
         );
 
         if (playbackRef.current.cancelled) return null;
@@ -747,6 +869,76 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
     }
   }, [repository?.path, extendedActions, isRemoteOnly, githubInfo, latestCommit]);
 
+  // State for dirty repo image with uncommitted changes highlighted
+  const [dirtyImageUrl, setDirtyImageUrl] = useState<string | null>(null);
+
+  // Generate File City image with uncommitted changes highlighted
+  useEffect(() => {
+    if (!repository?.path || isRemoteOnly) {
+      setDirtyImageUrl(null);
+      return;
+    }
+
+    const gitStatus = gitSlice?.data;
+    const stagedFiles = gitStatus?.stagedFiles || [];
+    const modifiedFiles = gitStatus?.modifiedFiles || [];
+    const untrackedFiles = gitStatus?.untrackedFiles || [];
+    const hasDirtyChanges = stagedFiles.length > 0 || modifiedFiles.length > 0 || untrackedFiles.length > 0;
+
+    if (!hasDirtyChanges) {
+      setDirtyImageUrl(null);
+      return;
+    }
+
+    // Generate image with uncommitted changes highlighted
+    (async () => {
+      try {
+        // Get current file tree at HEAD
+        const latestCommitInfo = await GitService.getLatestCommit(repository.path);
+        if (!latestCommitInfo.hash) {
+          setDirtyImageUrl(null);
+          return;
+        }
+
+        const filePaths = await GitService.getFileTreeAtCommit(repository.path, latestCommitInfo.hash);
+
+        // Add untracked files to the file paths (they're not in HEAD but should be shown)
+        const allFilePaths = [...new Set([...filePaths, ...untrackedFiles])];
+
+        // Build changed files map from uncommitted changes
+        const changedFiles: Record<string, { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }> = {};
+
+        // Staged files are typically modified or added
+        for (const file of stagedFiles) {
+          changedFiles[file] = { status: 'modified', additions: 0, deletions: 0 };
+        }
+
+        // Modified (unstaged) files
+        for (const file of modifiedFiles) {
+          changedFiles[file] = { status: 'modified', additions: 0, deletions: 0 };
+        }
+
+        // Untracked files are new/added
+        for (const file of untrackedFiles) {
+          changedFiles[file] = { status: 'added', additions: 0, deletions: 0 };
+        }
+
+        // Generate image with changes - use a special cache key for dirty state
+        const imageUrl = await FileCityImageService.getImageForCommitWithChanges(
+          repository.path,
+          `${latestCommitInfo.hash}-dirty`,
+          allFilePaths,
+          changedFiles
+        );
+
+        setDirtyImageUrl(imageUrl);
+      } catch (error) {
+        console.error('[ProjectInfoPanel] Failed to generate dirty image:', error);
+        setDirtyImageUrl(null);
+      }
+    })();
+  }, [repository?.path, isRemoteOnly, gitSlice?.data?.stagedFiles, gitSlice?.data?.modifiedFiles, gitSlice?.data?.untrackedFiles]);
+
   // Track when card renders with image URL - adds event to the same span
   useEffect(() => {
     if (repository?.path && fileCityImageUrl !== lastRenderedUrlRef.current) {
@@ -1003,23 +1195,24 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
 
         {/* File City Image and Git Status - Side by Side */}
         <div style={{ display: 'flex', gap: spacing.md, marginBottom: spacing.md }}>
-          {/* File City Image - Left (always show placeholder to prevent layout shift) */}
+          {/* File City Image - Right (always show placeholder to prevent layout shift) */}
           <div
             style={{
               flexShrink: 0,
               width: 280,
               height: 280,
-              cursor: (fileCityImageUrl || historicalImageUrl) && !selectedDate ? 'pointer' : 'default',
+              order: 1, // Move to right side
+              cursor: (fileCityImageUrl || historicalImageUrl || dirtyImageUrl) && !selectedDate ? 'pointer' : 'default',
               borderRadius: borderRadius,
               overflow: 'hidden',
-              border: `1px solid ${selectedDate ? theme.colors.primary : theme.colors.border}`,
+              border: `1px solid ${selectedDate ? theme.colors.primary : dirtyImageUrl ? theme.colors.warning : theme.colors.border}`,
               backgroundColor: theme.colors.backgroundSecondary,
             }}
-            onClick={(fileCityImageUrl || historicalImageUrl) && !selectedDate ? handleOpenProject : undefined}
+            onClick={(fileCityImageUrl || historicalImageUrl || dirtyImageUrl) && !selectedDate ? handleOpenProject : undefined}
           >
-            {(historicalImageUrl || fileCityImageUrl) && (
+            {(historicalImageUrl || dirtyImageUrl || fileCityImageUrl) && (
               <img
-                src={(historicalImageUrl || fileCityImageUrl)!}
+                src={(historicalImageUrl || dirtyImageUrl || fileCityImageUrl)!}
                 alt={`${repository.name} visualization`}
                 style={{
                   width: 280,
@@ -1074,12 +1267,21 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
               >
                 <div
                   style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: spacing.sm,
                     fontSize: theme.fontSizes[1],
                     color: theme.colors.textSecondary,
                     marginBottom: spacing.sm,
                   }}
                 >
-                  {currentCommitInfo.date}
+                  <span>{currentCommitInfo.date}</span>
+                  {(currentCommitInfo.additions !== undefined || currentCommitInfo.deletions !== undefined) && (
+                    <span style={{ display: 'flex', gap: spacing.xs, fontFamily: 'monospace' }}>
+                      <span style={{ color: '#22c55e' }}>+{currentCommitInfo.additions ?? 0}</span>
+                      <span style={{ color: '#ef4444' }}>-{currentCommitInfo.deletions ?? 0}</span>
+                    </span>
+                  )}
                 </div>
                 <div
                   style={{
@@ -1397,102 +1599,83 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
                   </div>
                 )}
 
-                {/* Changes Summary - only show if there are changes */}
-                {totalChanges > 0 && (
+                {/* File list - show changed files */}
+                {totalChanges > 0 ? (
                   <div
                     style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(3, 1fr)',
-                      gap: spacing.xs,
                       marginTop: spacing.xs,
+                      maxHeight: 180,
+                      overflowY: 'auto',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 2,
                     }}
                   >
-                    <div
-                      style={{
-                        padding: spacing.xs,
-                        backgroundColor: theme.colors.background,
-                        borderRadius: borderRadius,
-                        textAlign: 'center',
-                      }}
-                    >
+                    {/* Staged files */}
+                    {gitData?.stagedFiles?.map((file) => (
                       <div
+                        key={`staged-${file}`}
                         style={{
-                          fontSize: theme.fontSizes[4],
-                          fontWeight: 600,
-                          color: theme.colors.success,
-                        }}
-                      >
-                        {stagedCount}
-                      </div>
-                      <div
-                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: spacing.xs,
                           fontSize: theme.fontSizes[1],
-                          color: theme.colors.textSecondary,
-                          marginTop: '2px',
+                          fontFamily: theme.fonts.monospace,
+                          padding: '2px 4px',
+                          borderRadius: 2,
+                          backgroundColor: theme.colors.background,
                         }}
                       >
-                        Staged
+                        <span style={{ color: theme.colors.success, fontWeight: 600, width: 14 }}>S</span>
+                        <span style={{ color: theme.colors.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {file.split('/').pop()}
+                        </span>
                       </div>
-                    </div>
-                    <div
-                      style={{
-                        padding: spacing.xs,
-                        backgroundColor: theme.colors.background,
-                        borderRadius: borderRadius,
-                        textAlign: 'center',
-                      }}
-                    >
+                    ))}
+                    {/* Modified files */}
+                    {gitData?.modifiedFiles?.map((file) => (
                       <div
+                        key={`modified-${file}`}
                         style={{
-                          fontSize: theme.fontSizes[4],
-                          fontWeight: 600,
-                          color: theme.colors.warning,
-                        }}
-                      >
-                        {unstagedCount}
-                      </div>
-                      <div
-                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: spacing.xs,
                           fontSize: theme.fontSizes[1],
-                          color: theme.colors.textSecondary,
-                          marginTop: '2px',
+                          fontFamily: theme.fonts.monospace,
+                          padding: '2px 4px',
+                          borderRadius: 2,
+                          backgroundColor: theme.colors.background,
                         }}
                       >
-                        Modified
+                        <span style={{ color: theme.colors.warning, fontWeight: 600, width: 14 }}>M</span>
+                        <span style={{ color: theme.colors.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {file.split('/').pop()}
+                        </span>
                       </div>
-                    </div>
-                    <div
-                      style={{
-                        padding: spacing.xs,
-                        backgroundColor: theme.colors.background,
-                        borderRadius: borderRadius,
-                        textAlign: 'center',
-                      }}
-                    >
+                    ))}
+                    {/* Untracked files */}
+                    {gitData?.untrackedFiles?.map((file) => (
                       <div
+                        key={`untracked-${file}`}
                         style={{
-                          fontSize: theme.fontSizes[4],
-                          fontWeight: 600,
-                          color: theme.colors.info,
-                        }}
-                      >
-                        {untrackedCount}
-                      </div>
-                      <div
-                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: spacing.xs,
                           fontSize: theme.fontSizes[1],
-                          color: theme.colors.textSecondary,
-                          marginTop: '2px',
+                          fontFamily: theme.fonts.monospace,
+                          padding: '2px 4px',
+                          borderRadius: 2,
+                          backgroundColor: theme.colors.background,
                         }}
                       >
-                        Untracked
+                        <span style={{ color: theme.colors.info, fontWeight: 600, width: 14 }}>?</span>
+                        <span style={{ color: theme.colors.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {file.split('/').pop()}
+                        </span>
                       </div>
-                    </div>
+                    ))}
                   </div>
-                )}
-
-                {/* Status message */}
-                {totalChanges === 0 ? (
+                ) : (
                   <div
                     style={{
                       display: 'flex',
@@ -1521,27 +1704,75 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
                       Working tree clean
                     </span>
                   </div>
-                ) : (
+                )}
+
+                {/* Latest Commit - only show when working tree is clean */}
+                {latestLocalCommit && totalChanges === 0 && (
                   <div
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: spacing.xs,
-                      marginTop: spacing.xs,
-                      padding: spacing.xs,
-                      backgroundColor: theme.colors.background,
-                      borderRadius: borderRadius,
+                      marginTop: spacing.md,
+                      paddingTop: spacing.md,
+                      borderTop: `1px solid ${theme.colors.border}`,
                     }}
                   >
-                    <AlertCircle size={12} color={theme.colors.warning} />
-                    <span
+                    <div
                       style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: spacing.xs,
+                        marginBottom: spacing.xs,
+                      }}
+                    >
+                      <FolderGit2 size={14} color={theme.colors.textSecondary} />
+                      <span
+                        style={{
+                          fontSize: theme.fontSizes[1],
+                          color: theme.colors.textSecondary,
+                          fontWeight: 500,
+                        }}
+                      >
+                        Latest Commit
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        fontSize: theme.fontSizes[2],
+                        color: theme.colors.text,
+                        marginBottom: spacing.xs,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {latestLocalCommit.message}
+                    </div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: spacing.sm,
                         fontSize: theme.fontSizes[1],
                         color: theme.colors.textSecondary,
                       }}
                     >
-                      {totalChanges} {totalChanges === 1 ? 'file' : 'files'} with changes
-                    </span>
+                      <span>{latestLocalCommit.date}</span>
+                      <span style={{ display: 'flex', gap: spacing.xs, fontFamily: 'monospace' }}>
+                        <span style={{ color: '#22c55e' }}>+{latestLocalCommit.additions}</span>
+                        <span style={{ color: '#ef4444' }}>-{latestLocalCommit.deletions}</span>
+                      </span>
+                      <code
+                        style={{
+                          fontSize: theme.fontSizes[0],
+                          fontFamily: theme.fonts.monospace,
+                          color: theme.colors.textSecondary,
+                          backgroundColor: theme.colors.background,
+                          padding: '1px 4px',
+                          borderRadius: '2px',
+                        }}
+                      >
+                        {latestLocalCommit.hash.slice(0, 7)}
+                      </code>
+                    </div>
                   </div>
                 )}
               </div>

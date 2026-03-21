@@ -43,6 +43,7 @@ export enum GitHubAPIEvent {
   GET_COMMITS_IN_DATE_RANGE = 'github:get-commits-in-date-range',
   GET_LATEST_COMMIT = 'github:get-latest-commit',
   GET_FILE_TREE_AT_COMMIT = 'github:get-file-tree-at-commit',
+  GET_CHANGED_FILES_FOR_COMMIT = 'github:get-changed-files-for-commit',
 }
 
 // Config fetching types (formerly from ConfigAPI)
@@ -153,6 +154,16 @@ export interface GitHubCommit {
     avatar_url: string;
   };
   html_url: string;
+}
+
+/**
+ * Information about a file changed in a commit
+ * Includes change type and line count statistics
+ */
+export interface ChangedFileInfo {
+  status: 'added' | 'modified' | 'deleted' | 'renamed';
+  additions: number;
+  deletions: number;
 }
 
 export interface CreateIssueRequest {
@@ -508,4 +519,10 @@ export interface GitHubAPI {
     repo: string,
     sha: string,
   ) => Promise<string[]>;
+  /** Get changed files for a specific commit (for highlight layers) */
+  getChangedFilesForCommit: (
+    owner: string,
+    repo: string,
+    sha: string,
+  ) => Promise<Record<string, ChangedFileInfo>>;
 }

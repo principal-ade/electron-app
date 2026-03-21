@@ -45,6 +45,30 @@ export class FileCityImageService {
   }
 
   /**
+   * Get or generate a File City image for a specific commit with changed files highlighted
+   * Shows highlight layers (borders) on files that were added/modified/deleted
+   *
+   * @param repoPath - The path to the repository
+   * @param commitHash - The git commit hash
+   * @param filePaths - Array of file paths at that commit (from git ls-tree)
+   * @param changedFiles - Map of file paths to their change info (status and line counts)
+   * @returns Promise resolving to data URL or null
+   */
+  static async getImageForCommitWithChanges(
+    repoPath: string,
+    commitHash: string,
+    filePaths: string[],
+    changedFiles: Record<string, 'added' | 'modified' | 'deleted' | 'renamed' | { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }>
+  ): Promise<string | null> {
+    return window.mainProcess.fileCityImage.getImageForCommitWithChanges(
+      repoPath,
+      commitHash,
+      filePaths,
+      changedFiles
+    );
+  }
+
+  /**
    * Subscribe to image generation events
    * Called when a new image is generated for any repository
    *

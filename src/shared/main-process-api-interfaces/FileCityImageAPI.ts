@@ -12,6 +12,7 @@ export enum FileCityImageAPIEvent {
   GET_IMAGE = 'file-city:get-image',
   HAS_IMAGE = 'file-city:has-image',
   GET_IMAGE_FOR_COMMIT = 'file-city:get-image-for-commit',
+  GET_IMAGE_FOR_COMMIT_WITH_CHANGES = 'file-city:get-image-for-commit-with-changes',
   IMAGE_GENERATED = 'file-city:image-generated',
 }
 
@@ -38,6 +39,18 @@ export interface FileCityImageAPI {
     repoPath: string,
     commitHash: string,
     filePaths: string[]
+  ) => Promise<string | null>;
+
+  /**
+   * Get or generate a File City image for a specific commit with changed files highlighted
+   * Shows highlight layers (borders) on files that were added/modified/deleted
+   * changedFiles can be either simple status or full info with line counts
+   */
+  getImageForCommitWithChanges: (
+    repoPath: string,
+    commitHash: string,
+    filePaths: string[],
+    changedFiles: Record<string, 'added' | 'modified' | 'deleted' | 'renamed' | { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }>
   ) => Promise<string | null>;
 
   /**

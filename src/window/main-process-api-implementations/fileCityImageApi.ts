@@ -24,6 +24,21 @@ export const fileCityImageAPI: FileCityImageAPI = {
     );
   },
 
+  getImageForCommitWithChanges: async (
+    repoPath: string,
+    commitHash: string,
+    filePaths: string[],
+    changedFiles: Record<string, 'added' | 'modified' | 'deleted' | 'renamed' | { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }>
+  ): Promise<string | null> => {
+    return ipcRenderer.invoke(
+      FileCityImageAPIEvent.GET_IMAGE_FOR_COMMIT_WITH_CHANGES,
+      repoPath,
+      commitHash,
+      filePaths,
+      changedFiles
+    );
+  },
+
   onImageGenerated: (callback: (repoPath: string, imageUrl: string) => void): (() => void) => {
     const handler = (_event: Electron.IpcRendererEvent, repoPath: string, imageUrl: string) => {
       callback(repoPath, imageUrl);

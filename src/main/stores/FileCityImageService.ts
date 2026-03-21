@@ -169,6 +169,76 @@ export class FileCityImageService {
   }
 
   /**
+   * Generate a File City PNG image from a file tree with changed files highlighted
+   */
+  private async generateImageWithChanges(
+    fileTree: FileTree,
+    changedFiles: Map<string, 'added' | 'modified' | 'deleted' | 'renamed'>,
+  ): Promise<Buffer> {
+    if (!fileTree.root || fileTree.allFiles.length === 0) {
+      throw new Error('No files in file tree');
+    }
+
+    // Build city layout using the builder - pass the FileTree directly
+    const builder = new CodeCityBuilderWithGrid();
+
+    const cityData = builder.buildCityFromFileSystem(fileTree, '', {
+      paddingTop: 2,
+      paddingBottom: 2,
+      paddingLeft: 2,
+      paddingRight: 2,
+    });
+
+    // Create canvas and render (using lazy-loaded canvas module)
+    const { createCanvas } = getCanvasModule();
+    const canvas = createCanvas(IMAGE_WIDTH, IMAGE_HEIGHT);
+    const ctx = canvas.getContext('2d') as CompatibleContext;
+
+    // Create draw context with scaling
+    const padding = Math.min(IMAGE_WIDTH, IMAGE_HEIGHT) * 0.05;
+    const drawContext = createDrawContext(ctx, IMAGE_WIDTH, IMAGE_HEIGHT, cityData, padding);
+
+    // Draw districts first (background)
+    drawDistricts(
+      RenderMode.HIGHLIGHT,
+      ctx,
+      cityData.districts,
+      drawContext.worldToCanvas,
+      drawContext.scale,
+      undefined, // highlightedDirectories
+      undefined, // hoveredDirectories
+      undefined, // hoveredDistrict
+      true, // fullSize
+      undefined, // selectedPaths
+      changedFiles, // changedFiles - passed for highlight layer support
+      undefined, // theme
+      undefined, // customColorFn
+      DEFAULT_DIRECTORY_COLOR, // defaultDirectoryColor
+      false // showDirectoryLabels
+    );
+
+    // Draw buildings on top with changed files highlighted
+    drawBuildings(
+      'highlight',
+      ctx,
+      cityData.buildings,
+      drawContext.worldToCanvas,
+      drawContext.scale,
+      undefined, // highlightedPaths
+      undefined, // selectedPaths
+      undefined, // focusDirectory
+      undefined, // hoveredBuilding
+      undefined, // theme
+      undefined, // customColorFn
+      false, // showFileNames
+      true, // fullSize
+      changedFiles // changedFiles - passed to show highlight borders
+    );
+
+    return canvas.toBuffer('image/png');
+  }
+
+  /**
    * Get or generate a File City image for a repository
    * Returns data URL (base64) for the image, or null if the file tree isn't cached
    */
@@ -523,6 +593,94 @@ export class FileCityImageService {
   }
 
   /**
+   * Generate a File City image for a specific commit with changed files highlighted
+   * Uses highlight layers to show which files were added/modified/deleted
+   * Accepts either simple status strings or full info objects with line counts
+   */
+  async getImageForCommitWithChanges(
+    repoPath: string,
+    commitHash: string,
+    filePaths: string[],
+    changedFiles: Record<string, 'added' | 'modified' | 'deleted' | 'renamed' | { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }>
+  ): Promise<string | null> {
+    await this.ensureInitialized();
+
+    const tracer = getTracer('principal-ade-main');
+    const span = tracer.startSpan('file_city.image.historical_with_changes', {
+      attributes: { 'repo_path': repoPath, 'commit_hash': commitHash },
+    });
+
+    try {
+      if (filePaths.length === 0) {
+        span.addEvent('file_city.image.skipped', {
+          'repo_path': repoPath,
+          'reason': 'no_files',
+        });
+        span.setStatus({ code: SpanStatusCode.OK });
+        return null;
+      }
+
+      // Use a different cache key that includes change data hash
+      const changesHash = crypto.createHash('sha256')
+        .update(JSON.stringify(changedFiles))
+        .digest('hex')
+        .slice(0, 8);
+      const cacheKey = this.getCacheKey(repoPath, `${commitHash}-changes-${changesHash}`);
+      const cachedPath = await this.getCachedImagePath(cacheKey);
+
+      if (cachedPath) {
+        console.log('[FileCityImageService] Cache hit for historical with changes:', commitHash);
+        const cachedBuffer = await fs.readFile(cachedPath);
+        span.setStatus({ code: SpanStatusCode.OK });
+        return `data:image/png;base64,${cachedBuffer.toString('base64')}`;
+      }
+
+      // Build file tree from paths
+      const fileTree = this.buildFileTreeFromPaths(filePaths, commitHash);
+
+      // Convert plain object to Map, extracting just status for drawing functions
+      // (line counts are stored but not yet used in visualization)
+      const changedFilesMap = new Map<string, 'added' | 'modified' | 'deleted' | 'renamed'>();
+      for (const [path, info] of Object.entries(changedFiles)) {
+        // Handle both simple status strings and full info objects
+        const status = typeof info === 'string' ? info : info.status;
+        changedFilesMap.set(path, status);
+      }
+
+      console.log('[FileCityImageService] Generating historical image with changes for:', commitHash);
+      span.addEvent('file_city.image.generation_started', {
+        'repo_path': repoPath,
+        'commit_hash': commitHash,
+        'file_count': filePaths.length,
+        'changed_files_count': changedFilesMap.size,
+      });
+
+      const imageBuffer = await this.generateImageWithChanges(fileTree, changedFilesMap);
+
+      // Save to cache
+      const cachePath = this.getCachePath(cacheKey);
+      await fs.writeFile(cachePath, imageBuffer);
+
+      span.addEvent('file_city.image.generation_complete', {
+        'repo_path': repoPath,
+        'commit_hash': commitHash,
+      });
+      span.setStatus({ code: SpanStatusCode.OK });
+
+      return `data:image/png;base64,${imageBuffer.toString('base64')}`;
+    } catch (error) {
+      console.error('[FileCityImageService] Error generating historical image with changes:', error);
+      span.setStatus({
+        code: SpanStatusCode.ERROR,
+        message: error instanceof Error ? error.message : 'Historical image with changes generation failed',
+      });
+      return null;
+    } finally {
+      span.end();
+    }
+  }
+
+  /**
    * Clear cached images for a repository
    */
   async clearCacheForRepository(repoPath: string): Promise<void> {
@@ -556,6 +714,19 @@ export function registerFileCityImageHandlers(): void {
     'file-city:get-image-for-commit',
     async (_event, repoPath: string, commitHash: string, filePaths: string[]) => {
       return service.getImageForCommit(repoPath, commitHash, filePaths);
+    }
+  );
+
+  ipcMain.handle(
+    'file-city:get-image-for-commit-with-changes',
+    async (
+      _event,
+      repoPath: string,
+      commitHash: string,
+      filePaths: string[],
+      changedFiles: Record<string, 'added' | 'modified' | 'deleted' | 'renamed' | { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }>
+    ) => {
+      return service.getImageForCommitWithChanges(repoPath, commitHash, filePaths, changedFiles);
     }
   );
 

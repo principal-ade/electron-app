@@ -1968,6 +1968,15 @@ export class GitHubAdapter {
   private fileTreeCache = new Map<string, string[]>();
 
   /**
+   * Cache for changed files at commits (immutable, indefinite TTL)
+   * Key: `${owner}/${repo}/${sha}`, Value: Map<path, ChangedFileInfo>
+   */
+  private changedFilesCache = new Map<
+    string,
+    Map<string, { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }>
+  >();
+
+  /**
    * Get commit dates aggregated by day for heat map visualization
    */
   async getCommitDatesForHeatMap(
@@ -2154,6 +2163,81 @@ export class GitHubAdapter {
     console.log(`[GitHub] Cached file tree: ${filePaths.length} files`);
 
     return filePaths;
+  }
+
+  /**
+   * Get changed files for a specific commit (for highlight layers)
+   * Returns file info including status and line counts
+   */
+  async getChangedFilesForCommit(
+    owner: string,
+    repo: string,
+    sha: string,
+  ): Promise<Map<string, { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }>> {
+    const cacheKey = `${owner}/${repo}/${sha}`;
+    const cached = this.changedFilesCache.get(cacheKey);
+    if (cached) {
+      console.log(`[GitHub] Returning cached changed files for ${cacheKey}`);
+      return cached;
+    }
+
+    console.log(`[GitHub] Fetching changed files for commit ${sha} in ${owner}/${repo}`);
+
+    // Fetch the full commit info which includes files
+    const endpoint = `/repos/${owner}/${repo}/commits/${sha}`;
+    const result = await this.makeGitHubAPICall(endpoint);
+
+    if (!result.success || !result.data) {
+      console.error(`[GitHub] Failed to fetch commit:`, result.error);
+      return new Map();
+    }
+
+    const commitData = result.data as {
+      files?: Array<{
+        filename: string;
+        status: string;
+        additions: number;
+        deletions: number;
+        previous_filename?: string;
+      }>;
+    };
+
+    const changedFiles = new Map<string, { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }>();
+
+    if (commitData.files) {
+      for (const file of commitData.files) {
+        // Map GitHub status to our types
+        let status: 'added' | 'modified' | 'deleted' | 'renamed';
+        switch (file.status) {
+          case 'added':
+            status = 'added';
+            break;
+          case 'modified':
+          case 'changed':
+            status = 'modified';
+            break;
+          case 'removed':
+            status = 'deleted';
+            break;
+          case 'renamed':
+            status = 'renamed';
+            break;
+          default:
+            status = 'modified'; // Default to modified for unknown statuses
+        }
+        changedFiles.set(file.filename, {
+          status,
+          additions: file.additions || 0,
+          deletions: file.deletions || 0,
+        });
+      }
+    }
+
+    // Cache indefinitely (commits are immutable)
+    this.changedFilesCache.set(cacheKey, changedFiles);
+    console.log(`[GitHub] Cached changed files: ${changedFiles.size} files`);
+
+    return changedFiles;
   }
 }
 
@@ -2985,6 +3069,20 @@ export function registerGitHubIpcHandlers(
         return [];
       }
       return adapter.getFileTreeAtCommit(owner, repo, sha);
+    },
+  );
+
+  ipcMain.handle(
+    GitHubAPIEvent.GET_CHANGED_FILES_FOR_COMMIT,
+    async (event, owner: string, repo: string, sha: string) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for GET_CHANGED_FILES_FOR_COMMIT');
+        return {};
+      }
+      // Convert Map to plain object for IPC serialization
+      const changedFilesMap = await adapter.getChangedFilesForCommit(owner, repo, sha);
+      return Object.fromEntries(changedFilesMap);
     },
   );
 
