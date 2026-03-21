@@ -223,8 +223,6 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     middle: 50,
     right: 25,
   });
-  // Ref to hold pending panel sizes that should be applied after collapse completes
-  const pendingPanelSizesRef = useRef<{ left: number; middle: number; right: number } | null>(null);
   const [resetKey, setResetKey] = useState(0);
   const [hasGitHubFolder, setHasGitHubFolder] = useState(false);
   const [_packages, _setPackages] = useState<PackageLayer[]>([]);
@@ -945,26 +943,16 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     }
   }, [collapsed]);
 
-  // Handle left panel collapse complete - apply pending sizes
+  // Handle left panel collapse complete (no-op, kept for interface compatibility)
   const handleLeftCollapseComplete = useCallback(() => {
-    if (pendingPanelSizesRef.current) {
-      console.info('[DevWorkspaceApp] Left collapse complete, applying pending sizes:', pendingPanelSizesRef.current);
-      setPanelSizes(pendingPanelSizesRef.current);
-      pendingPanelSizesRef.current = null;
-    }
+    // No longer needed - panel library handles sizes directly
   }, []);
 
-  // Handle setting panel sizes - stores as pending if collapse is in progress
+  // Handle setting panel sizes - directly apply (panel library handles 0 sizes)
   const handlePanelSizesChange = useCallback((sizes: { left: number; middle: number; right: number }) => {
-    // If left is being set to 0, it means we want to apply after collapse
-    // Store as pending and let collapse complete callback apply it
-    if (sizes.left === 0 && !collapsed.left) {
-      console.info('[DevWorkspaceApp] Storing pending panel sizes (collapse in progress):', sizes);
-      pendingPanelSizesRef.current = sizes;
-    } else {
-      setPanelSizes(sizes);
-    }
-  }, [collapsed.left]);
+    console.info('[DevWorkspaceApp] Setting panel sizes:', sizes);
+    setPanelSizes(sizes);
+  }, []);
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-transparent flex flex-col">

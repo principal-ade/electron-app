@@ -24,10 +24,6 @@ export interface StorybookSidebarButtonProps {
   currentLayout?: { left: string; middle: string; right: string };
   /** Callback to change panel layout */
   onLayoutChange?: (layout: { left: string; middle: string; right: string }) => void;
-  /** Current collapsed state */
-  collapsed?: { left: boolean; right: boolean };
-  /** Callback to change collapsed state */
-  onCollapsedChange?: (collapsed: { left: boolean; right: boolean }) => void;
   /** Callback to change panel sizes */
   onPanelSizesChange?: (sizes: { left: number; middle: number; right: number }) => void;
   /** Panel event emitter for inter-panel communication */
@@ -55,8 +51,6 @@ export const StorybookSidebarButton: React.FC<StorybookSidebarButtonProps> = ({
   repositoryName,
   currentLayout,
   onLayoutChange,
-  collapsed,
-  onCollapsedChange,
   onPanelSizesChange,
   events,
 }) => {
@@ -214,14 +208,12 @@ export const StorybookSidebarButton: React.FC<StorybookSidebarButtonProps> = ({
         setStorybookSessionId(null);
         setStorybookPort(null);
 
-        // Switch right panel back to file-city
+        // Restore panel sizes and switch right panel back to file-city
+        if (onPanelSizesChange) {
+          onPanelSizesChange({ left: 25, middle: 50, right: 25 });
+        }
         if (currentLayout && onLayoutChange) {
           onLayoutChange({ ...currentLayout, right: 'fileCity' });
-        }
-
-        // Expand left panel back
-        if (collapsed?.left && onCollapsedChange) {
-          onCollapsedChange({ left: false, right: collapsed?.right ?? false });
         }
       } catch (error) {
         console.error('[StorybookSidebarButton] Failed to stop Storybook:', error);
@@ -267,24 +259,14 @@ export const StorybookSidebarButton: React.FC<StorybookSidebarButtonProps> = ({
       // Give the terminal panel a moment to detect the new session
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      // Set panel sizes to 50/50 split between middle and right
+      // Set panel sizes to 50/50 split between middle and right (left goes to 0)
       if (onPanelSizesChange) {
         onPanelSizesChange({ left: 0, middle: 50, right: 50 });
-      }
-
-      // Collapse left panel
-      if (!collapsed?.left && onCollapsedChange) {
-        onCollapsedChange({ left: true, right: collapsed?.right ?? false });
       }
 
       // Switch right panel to localhost browser
       if (currentLayout && onLayoutChange) {
         onLayoutChange({ ...currentLayout, right: 'localhostBrowser' });
-      }
-
-      // Expand right panel if collapsed
-      if (collapsed?.right && onCollapsedChange) {
-        onCollapsedChange({ left: true, right: false });
       }
 
       // Give the panel time to mount
@@ -334,10 +316,6 @@ export const StorybookSidebarButton: React.FC<StorybookSidebarButtonProps> = ({
     if (currentLayout && onLayoutChange) {
       onLayoutChange({ ...currentLayout, right: 'localhostBrowser' });
     }
-    // Expand right panel if collapsed
-    if (collapsed?.right && onCollapsedChange) {
-      onCollapsedChange({ left: collapsed.left, right: false });
-    }
     // Navigate browser to the stored port
     if (events && storybookPort) {
       events.emit({
@@ -347,7 +325,7 @@ export const StorybookSidebarButton: React.FC<StorybookSidebarButtonProps> = ({
         timestamp: Date.now(),
       });
     }
-  }, [currentLayout, onLayoutChange, collapsed, onCollapsedChange, events, storybookPort]);
+  }, [currentLayout, onLayoutChange, events, storybookPort]);
 
   // Don't render if no Storybook packages found
   if (storybookPackages.length === 0) {

@@ -1,5 +1,4 @@
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { flushSync } from 'react-dom';
+import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { SpanStatusCode } from '@opentelemetry/api';
 import { getTracer } from '../telemetry';
@@ -325,19 +324,21 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   const { theme } = useTheme();
   // Counter to force layout remount when sizes are programmatically changed
   const [layoutResetKey, setLayoutResetKey] = useState(0);
-  // Track when we're waiting for a programmatic resize
-  const [pendingSplit, setPendingSplit] = useState(false);
+  // Track previous panelSizes to detect changes
+  const prevPanelSizesRef = useRef(panelSizes);
 
-  // When panelSizes changes to 50/50 and we're waiting for it, trigger remount
+  // When panelSizes changes, trigger remount to apply new sizes
   useEffect(() => {
-    if (pendingSplit && panelSizes?.middle === 50 && panelSizes?.right === 50) {
-      // Use flushSync to batch the state updates synchronously, reducing flicker
-      flushSync(() => {
-        setPendingSplit(false);
-        setLayoutResetKey((k) => k + 1);
-      });
+    const prev = prevPanelSizesRef.current;
+    if (panelSizes && prev && (
+      panelSizes.left !== prev.left ||
+      panelSizes.middle !== prev.middle ||
+      panelSizes.right !== prev.right
+    )) {
+      setLayoutResetKey((k) => k + 1);
     }
-  }, [panelSizes, pendingSplit]);
+    prevPanelSizesRef.current = panelSizes;
+  }, [panelSizes]);
   const { context, actions, events } = useRepositoryPanelProvider();
   const { context: terminalCtx, actions: terminalActions } =
     useTerminalProvider();
@@ -3309,7 +3310,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         }}
       >
         <EditableConfigurablePanelLayout
-          // Key forces remount when sizes are programmatically changed
           key={`layout-${layoutResetKey}`}
           panels={allPanels}
           layout={layout}
@@ -3317,7 +3317,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           isEditMode={false}
           collapsiblePanels={{ left: true, right: true }}
           defaultSizes={panelSizes || { left: 25, middle: 50, right: 25 }}
-          minSizes={{ left: 15, middle: 30, right: 15 }}
+          minSizes={{ left: 0, middle: 30, right: 0 }}
           collapsed={collapsed}
           showCollapseButtons={false}
           theme={theme}
@@ -3394,12 +3394,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           onOpenInWebADE={onOpenInWebADE}
           onOpenGitHubActions={onOpenGitHubActions}
           onSplitPanels={onPanelSizesChange ? () => {
-            // Set 50/50 split between middle and right
+            // Set 50/50 split between middle and right (left goes to 0)
             onPanelSizesChange({ left: 0, middle: 50, right: 50 });
-            // Collapse left panel, expand right
-            onCollapsedChange({ left: true, right: false });
-            // Signal that we're waiting for the size change to propagate
-            setPendingSplit(true);
           } : undefined}
           customButtons={
             <StorybookSidebarButton
@@ -3410,8 +3406,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               repositoryName={context.currentScope?.repository?.name}
               currentLayout={layout as { left: string; middle: string; right: string }}
               onLayoutChange={onLayoutChange}
-              collapsed={collapsed}
-              onCollapsedChange={onCollapsedChange}
               onPanelSizesChange={onPanelSizesChange}
               events={events}
             />
