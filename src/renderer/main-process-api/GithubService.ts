@@ -13,6 +13,7 @@ import type {
   ForkRepositoryOptions,
   InstallSkillOptions,
   InstallSkillResult,
+  GitHubCommit,
 } from '../../shared/main-process-api-interfaces/GitHubAPI';
 import { githubClient } from '../tipc/githubClient';
 
@@ -196,5 +197,70 @@ export class GithubService {
   ): Promise<InstallSkillResult> {
     const result = await window.mainProcess.github.installSkill(options);
     return result;
+  }
+
+  // ============================================================================
+  // Commit Data Methods for ProjectInfoPanel (Remote Repositories)
+  // ============================================================================
+
+  /**
+   * Get commit dates aggregated by day for heat map visualization
+   */
+  static async getCommitDatesForHeatMap(
+    owner: string,
+    repo: string,
+    days?: number,
+  ): Promise<{ date: string; count: number }[]> {
+    const result = await window.mainProcess.github.getCommitDatesForHeatMap(
+      owner,
+      repo,
+      days,
+    );
+    return result || [];
+  }
+
+  /**
+   * Get all commits in a date range (for playback)
+   */
+  static async getCommitsInDateRange(
+    owner: string,
+    repo: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<GitHubCommit[]> {
+    const result = await window.mainProcess.github.getCommitsInDateRange(
+      owner,
+      repo,
+      startDate,
+      endDate,
+    );
+    return result || [];
+  }
+
+  /**
+   * Get the most recent commit
+   */
+  static async getLatestCommit(
+    owner: string,
+    repo: string,
+  ): Promise<GitHubCommit | null> {
+    const result = await window.mainProcess.github.getLatestCommit(owner, repo);
+    return result;
+  }
+
+  /**
+   * Get file tree at a specific commit (for historical File City)
+   */
+  static async getFileTreeAtCommit(
+    owner: string,
+    repo: string,
+    sha: string,
+  ): Promise<string[]> {
+    const result = await window.mainProcess.github.getFileTreeAtCommit(
+      owner,
+      repo,
+      sha,
+    );
+    return result || [];
   }
 }

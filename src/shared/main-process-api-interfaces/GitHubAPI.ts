@@ -38,6 +38,11 @@ export enum GitHubAPIEvent {
   FORK_REPOSITORY = 'github:fork-repository',
   // Skill installation
   INSTALL_SKILL = 'github:install-skill',
+  // Commit data for ProjectInfoPanel
+  GET_COMMIT_DATES_FOR_HEATMAP = 'github:get-commit-dates-for-heatmap',
+  GET_COMMITS_IN_DATE_RANGE = 'github:get-commits-in-date-range',
+  GET_LATEST_COMMIT = 'github:get-latest-commit',
+  GET_FILE_TREE_AT_COMMIT = 'github:get-file-tree-at-commit',
 }
 
 // Config fetching types (formerly from ConfigAPI)
@@ -477,4 +482,30 @@ export interface GitHubAPI {
   ) => Promise<GitHubRepositoryCreated | null>;
   /** Install a skill from GitHub to local directory */
   installSkill: (options: InstallSkillOptions) => Promise<InstallSkillResult>;
+
+  // Commit data methods for ProjectInfoPanel
+  /** Get commit dates aggregated by day for heat map visualization */
+  getCommitDatesForHeatMap: (
+    owner: string,
+    repo: string,
+    days?: number,
+  ) => Promise<{ date: string; count: number }[]>;
+  /** Get all commits in a date range (for playback) */
+  getCommitsInDateRange: (
+    owner: string,
+    repo: string,
+    startDate: string,
+    endDate: string,
+  ) => Promise<GitHubCommit[]>;
+  /** Get the most recent commit */
+  getLatestCommit: (
+    owner: string,
+    repo: string,
+  ) => Promise<GitHubCommit | null>;
+  /** Get file tree at a specific commit (for historical File City) */
+  getFileTreeAtCommit: (
+    owner: string,
+    repo: string,
+    sha: string,
+  ) => Promise<string[]>;
 }

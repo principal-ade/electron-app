@@ -34,6 +34,8 @@ export interface CommitHeatMapProps {
   onPlayPause?: (mode: PlayMode) => void;
   /** Current play mode */
   playMode?: PlayMode;
+  /** Whether transitioning between repos (triggers dissolve effect) */
+  transitioning?: boolean;
 }
 
 // Day labels for the Y axis
@@ -55,10 +57,74 @@ export const CommitHeatMap: React.FC<CommitHeatMapProps> = ({
   isPlaying = false,
   onPlayPause,
   playMode = 'year',
+  transitioning = false,
 }) => {
   const { theme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
+
+  // Dissolve effect state
+  const [dissolvedCells, setDissolvedCells] = useState<Set<string>>(new Set());
+  const [isDissolving, setIsDissolving] = useState(false);
+  const totalCells = weeks * 7;
+
+  // Start dissolve when transitioning begins
+  useEffect(() => {
+    if (transitioning && !isDissolving) {
+      setIsDissolving(true);
+      setDissolvedCells(new Set());
+    }
+  }, [transitioning, isDissolving]);
+
+  // Animate dissolve - clear cells randomly
+  useEffect(() => {
+    if (!isDissolving) return;
+
+    const remainingCells = totalCells - dissolvedCells.size;
+    if (remainingCells <= 0) {
+      // All dissolved, wait for new data
+      return;
+    }
+
+    // Clear 5-8 cells at a time
+    const cellsPerTick = Math.min(6, remainingCells);
+    const delay = 20; // ms
+
+    const timeout = setTimeout(() => {
+      setDissolvedCells(prev => {
+        const next = new Set(prev);
+        const allCellKeys: string[] = [];
+
+        // Generate all possible cell keys
+        for (let w = 0; w < weeks; w++) {
+          for (let d = 0; d < 7; d++) {
+            const key = `${w}-${d}`;
+            if (!next.has(key)) {
+              allCellKeys.push(key);
+            }
+          }
+        }
+
+        // Pick random cells to dissolve
+        for (let i = 0; i < cellsPerTick && allCellKeys.length > 0; i++) {
+          const randomIdx = Math.floor(Math.random() * allCellKeys.length);
+          next.add(allCellKeys.splice(randomIdx, 1)[0]);
+        }
+
+        return next;
+      });
+    }, delay);
+
+    return () => clearTimeout(timeout);
+  }, [isDissolving, dissolvedCells, totalCells, weeks]);
+
+  // Reset dissolve when new data arrives
+  useEffect(() => {
+    if (!transitioning && isDissolving && commits.length > 0) {
+      setIsDissolving(false);
+      setDissolvedCells(new Set());
+    }
+  }, [transitioning, isDissolving, commits.length]);
 
   // Measure container width
   useEffect(() => {
@@ -306,8 +372,8 @@ export const CommitHeatMap: React.FC<CommitHeatMapProps> = ({
 
           {/* Heat map grid */}
           <div style={{ display: 'flex', gap: CELL_GAP, flex: 1 }}>
-            {grid.map((week) => {
-              const weekKey = week.find(d => d !== null)?.date || 'empty';
+            {grid.map((week, weekIndex) => {
+              const weekKey = week.find(d => d !== null)?.date || `empty-${weekIndex}`;
               return (
               <div
                 key={`week-${weekKey}`}
@@ -319,6 +385,12 @@ export const CommitHeatMap: React.FC<CommitHeatMapProps> = ({
               >
                 {week.map((day, dayIndex) => {
                   const isSelected = day && selectedDate === day.date;
+                  const cellKey = `${weekIndex}-${dayIndex}`;
+                  const isDissolved = dissolvedCells.has(cellKey);
+
+                  // When dissolved, show the "0 commits" color (empty state)
+                  const emptyColor = theme.colors.backgroundTertiary;
+
                   return (
                   <div
                     key={day?.date || `empty-${weekKey}-${dayIndex}`}
@@ -327,22 +399,24 @@ export const CommitHeatMap: React.FC<CommitHeatMapProps> = ({
                       width: cellSize,
                       height: cellSize,
                       borderRadius: 2,
-                      backgroundColor: day ? getColor(day.count) : 'transparent',
-                      cursor: day && onDayClick ? 'pointer' : 'default',
-                      transition: 'transform 0.1s ease, box-shadow 0.1s ease',
-                      boxShadow: isSelected
+                      backgroundColor: isDissolved
+                        ? emptyColor
+                        : (day ? getColor(day.count) : emptyColor),
+                      cursor: day && onDayClick && !isDissolving ? 'pointer' : 'default',
+                      transition: 'transform 0.1s ease, box-shadow 0.1s ease, background-color 0.15s ease-out',
+                      boxShadow: isSelected && !isDissolved
                         ? `0 0 0 2px ${theme.colors.background}, 0 0 0 4px ${theme.colors.primary}`
                         : 'none',
                       position: 'relative',
                       zIndex: isSelected ? 1 : 0,
                     }}
                     onClick={() => {
-                      if (day && onDayClick) {
+                      if (day && onDayClick && !isDissolving) {
                         onDayClick(day.date, day.count);
                       }
                     }}
                     onMouseEnter={(e) => {
-                      if (day) {
+                      if (day && !isDissolving) {
                         e.currentTarget.style.transform = 'scale(1.2)';
                         e.currentTarget.style.zIndex = '2';
                       }

@@ -1,0 +1,26 @@
+{
+  "version": "1.0.0",
+  "name": "Commit History Playback",
+  "description": "Animate through historical File City visualizations based on commit history",
+  "canvas": ".principal-views/file-city-images/file-city-images.otel.canvas",
+  "spanPattern": "commit_history.playback",
+  "scenarios": [
+    {
+      "id": "playback-success",
+      "description": "Successfully play through commits with visualizations",
+      "priority": 1,
+      "template": {
+        "introduction": "**Commit History Playback**\n\nAnimating through commits with File City visualizations.",
+        "events": {
+          "commit_history.playback.started": "[1] Playback started for `{{repo_path}}` in mode={{mode}}",
+          "commit_history.commits.fetched": "[2] Fetched {{commit_count}} commits from {{start_date}} to {{end_date}}",
+          "commit_history.commit.loading": "[3] Loading commit {{current}}/{{total}}: {{commit_hash}} - \"{{commit_message}}\"",
+          "commit_history.image.generated": "[4] Historical image generated for {{commit_hash}} ({{file_count}} files)",
+          "commit_history.playback.completed": "[5] Playback completed: {{total}} commits shown (cancelled={{cancelled}})"
+        },
+        "summary": "**Result:** Playback completed\n- Repository: `{{repo_path}}`\n- Mode: {{mode}}\n- Commits played: {{total}}"
+      },
+      "filterDefault": false
+    }
+  ]
+}

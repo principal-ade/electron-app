@@ -10,7 +10,8 @@ import { authService } from '../services/AuthService';
 import {
   GitHubAPIEvent,
   // DELETED: ConfigFetchRequest, ConfigFetchResponse, GitHubConfigRequest - unused after handler removal
-  // DELETED: CreateIssueRequest, CreateIssueResponse, GitHubIssue, GitHubPullRequest, GitHubCommit - unused after adapter method removal
+  // DELETED: CreateIssueRequest, CreateIssueResponse, GitHubIssue, GitHubPullRequest - unused after adapter method removal
+  GitHubCommit,
   GitHubRepository,
   GitHubOrganization,
   RepositoryFetchOptions,
@@ -1945,6 +1946,215 @@ export class GitHubAdapter {
     );
     return null;
   }
+
+  // ============================================================================
+  // Commit Data Methods for ProjectInfoPanel
+  // ============================================================================
+
+  /**
+   * Cache for commit heat map data
+   * Key: `${owner}/${repo}`, Value: { data, timestamp }
+   */
+  private commitHeatMapCache = new Map<
+    string,
+    { data: { date: string; count: number }[]; timestamp: number }
+  >();
+  private readonly HEATMAP_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+  /**
+   * Cache for file trees at commits (immutable, indefinite TTL)
+   * Key: `${owner}/${repo}/${sha}`, Value: string[]
+   */
+  private fileTreeCache = new Map<string, string[]>();
+
+  /**
+   * Get commit dates aggregated by day for heat map visualization
+   */
+  async getCommitDatesForHeatMap(
+    owner: string,
+    repo: string,
+    days: number = 365,
+  ): Promise<{ date: string; count: number }[]> {
+    const cacheKey = `${owner}/${repo}`;
+    const cached = this.commitHeatMapCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < this.HEATMAP_CACHE_TTL) {
+      console.log(`[GitHub] Returning cached heat map data for ${cacheKey}`);
+      return cached.data;
+    }
+
+    console.log(`[GitHub] Fetching commit heat map for ${owner}/${repo} (${days} days)`);
+
+    const sinceDate = new Date();
+    sinceDate.setDate(sinceDate.getDate() - days);
+    const since = sinceDate.toISOString();
+
+    // Aggregate commits by date
+    const commitsByDate = new Map<string, number>();
+    let page = 1;
+    const perPage = 100;
+    let hasMore = true;
+
+    while (hasMore && page <= 50) {
+      // Max 5000 commits
+      const endpoint = `/repos/${owner}/${repo}/commits?since=${since}&per_page=${perPage}&page=${page}`;
+      const result = await this.makeGitHubAPICall(endpoint);
+
+      if (!result.success || !Array.isArray(result.data)) {
+        console.error(`[GitHub] Failed to fetch commits page ${page}:`, result.error);
+        break;
+      }
+
+      const commits = result.data as Array<{
+        commit: { author: { date: string } };
+      }>;
+
+      if (commits.length === 0) {
+        hasMore = false;
+        break;
+      }
+
+      for (const commit of commits) {
+        const date = commit.commit.author.date.split('T')[0]; // YYYY-MM-DD
+        commitsByDate.set(date, (commitsByDate.get(date) || 0) + 1);
+      }
+
+      if (commits.length < perPage) {
+        hasMore = false;
+      } else {
+        page++;
+      }
+    }
+
+    // Convert to array sorted by date
+    const data = Array.from(commitsByDate.entries())
+      .map(([date, count]) => ({ date, count }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    // Cache the result
+    this.commitHeatMapCache.set(cacheKey, { data, timestamp: Date.now() });
+    console.log(`[GitHub] Cached heat map data: ${data.length} days with commits`);
+
+    return data;
+  }
+
+  /**
+   * Get all commits in a date range (for playback)
+   */
+  async getCommitsInDateRange(
+    owner: string,
+    repo: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<GitHubCommit[]> {
+    console.log(
+      `[GitHub] Fetching commits for ${owner}/${repo} from ${startDate} to ${endDate}`,
+    );
+
+    // GitHub API uses ISO 8601 format, add time component
+    const since = `${startDate}T00:00:00Z`;
+    const until = `${endDate}T23:59:59Z`;
+
+    const commits: GitHubCommit[] = [];
+    let page = 1;
+    const perPage = 100;
+    let hasMore = true;
+
+    while (hasMore) {
+      const endpoint = `/repos/${owner}/${repo}/commits?since=${since}&until=${until}&per_page=${perPage}&page=${page}`;
+      const result = await this.makeGitHubAPICall(endpoint);
+
+      if (!result.success || !Array.isArray(result.data)) {
+        console.error(`[GitHub] Failed to fetch commits page ${page}:`, result.error);
+        break;
+      }
+
+      const pageCommits = result.data as GitHubCommit[];
+
+      if (pageCommits.length === 0) {
+        hasMore = false;
+        break;
+      }
+
+      commits.push(...pageCommits);
+
+      if (pageCommits.length < perPage) {
+        hasMore = false;
+      } else {
+        page++;
+      }
+    }
+
+    // GitHub returns newest first, reverse for chronological playback
+    commits.reverse();
+    console.log(`[GitHub] Found ${commits.length} commits in date range`);
+    return commits;
+  }
+
+  /**
+   * Get the most recent commit
+   */
+  async getLatestCommit(
+    owner: string,
+    repo: string,
+  ): Promise<GitHubCommit | null> {
+    console.log(`[GitHub] Fetching latest commit for ${owner}/${repo}`);
+
+    const endpoint = `/repos/${owner}/${repo}/commits?per_page=1`;
+    const result = await this.makeGitHubAPICall(endpoint);
+
+    if (!result.success || !Array.isArray(result.data) || result.data.length === 0) {
+      console.error(`[GitHub] Failed to fetch latest commit:`, result.error);
+      return null;
+    }
+
+    return result.data[0] as GitHubCommit;
+  }
+
+  /**
+   * Get file tree at a specific commit (for historical File City)
+   */
+  async getFileTreeAtCommit(
+    owner: string,
+    repo: string,
+    sha: string,
+  ): Promise<string[]> {
+    const cacheKey = `${owner}/${repo}/${sha}`;
+    const cached = this.fileTreeCache.get(cacheKey);
+    if (cached) {
+      console.log(`[GitHub] Returning cached file tree for ${cacheKey}`);
+      return cached;
+    }
+
+    console.log(`[GitHub] Fetching file tree at commit ${sha} for ${owner}/${repo}`);
+
+    const endpoint = `/repos/${owner}/${repo}/git/trees/${sha}?recursive=1`;
+    const result = await this.makeGitHubAPICall(endpoint);
+
+    if (!result.success || !result.data) {
+      console.error(`[GitHub] Failed to fetch file tree:`, result.error);
+      return [];
+    }
+
+    const treeData = result.data as {
+      tree: Array<{ path: string; type: string }>;
+      truncated?: boolean;
+    };
+
+    if (treeData.truncated) {
+      console.warn(`[GitHub] File tree was truncated for ${sha}`);
+    }
+
+    // Extract only file paths (blobs), not directories (trees)
+    const filePaths = treeData.tree
+      .filter((item) => item.type === 'blob')
+      .map((item) => item.path);
+
+    // Cache indefinitely (commits are immutable)
+    this.fileTreeCache.set(cacheKey, filePaths);
+    console.log(`[GitHub] Cached file tree: ${filePaths.length} files`);
+
+    return filePaths;
+  }
 }
 
 // Register IPC handlers
@@ -2723,6 +2933,58 @@ export function registerGitHubIpcHandlers(
           error: error instanceof Error ? error.message : 'Unknown error',
         };
       }
+    },
+  );
+
+  // ============================================================================
+  // Commit Data Handlers for ProjectInfoPanel
+  // ============================================================================
+
+  ipcMain.handle(
+    GitHubAPIEvent.GET_COMMIT_DATES_FOR_HEATMAP,
+    async (event, owner: string, repo: string, days?: number) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for GET_COMMIT_DATES_FOR_HEATMAP');
+        return [];
+      }
+      return adapter.getCommitDatesForHeatMap(owner, repo, days);
+    },
+  );
+
+  ipcMain.handle(
+    GitHubAPIEvent.GET_COMMITS_IN_DATE_RANGE,
+    async (event, owner: string, repo: string, startDate: string, endDate: string) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for GET_COMMITS_IN_DATE_RANGE');
+        return [];
+      }
+      return adapter.getCommitsInDateRange(owner, repo, startDate, endDate);
+    },
+  );
+
+  ipcMain.handle(
+    GitHubAPIEvent.GET_LATEST_COMMIT,
+    async (event, owner: string, repo: string) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for GET_LATEST_COMMIT');
+        return null;
+      }
+      return adapter.getLatestCommit(owner, repo);
+    },
+  );
+
+  ipcMain.handle(
+    GitHubAPIEvent.GET_FILE_TREE_AT_COMMIT,
+    async (event, owner: string, repo: string, sha: string) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for GET_FILE_TREE_AT_COMMIT');
+        return [];
+      }
+      return adapter.getFileTreeAtCommit(owner, repo, sha);
     },
   );
 

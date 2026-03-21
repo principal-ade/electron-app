@@ -206,4 +206,46 @@ export const githubAPI: GitHubAPI = {
   installSkill: async (options: InstallSkillOptions) => {
     return ipcRenderer.invoke(GitHubAPIEvent.INSTALL_SKILL, options);
   },
+
+  // Commit data methods for ProjectInfoPanel
+  getCommitDatesForHeatMap: async (
+    owner: string,
+    repo: string,
+    days?: number,
+  ) => {
+    return ipcRenderer.invoke(
+      GitHubAPIEvent.GET_COMMIT_DATES_FOR_HEATMAP,
+      owner,
+      repo,
+      days,
+    );
+  },
+
+  getCommitsInDateRange: async (
+    owner: string,
+    repo: string,
+    startDate: string,
+    endDate: string,
+  ) => {
+    return ipcRenderer.invoke(
+      GitHubAPIEvent.GET_COMMITS_IN_DATE_RANGE,
+      owner,
+      repo,
+      startDate,
+      endDate,
+    );
+  },
+
+  getLatestCommit: async (owner: string, repo: string) => {
+    return ipcRenderer.invoke(GitHubAPIEvent.GET_LATEST_COMMIT, owner, repo);
+  },
+
+  getFileTreeAtCommit: async (owner: string, repo: string, sha: string) => {
+    return ipcRenderer.invoke(
+      GitHubAPIEvent.GET_FILE_TREE_AT_COMMIT,
+      owner,
+      repo,
+      sha,
+    );
+  },
 };

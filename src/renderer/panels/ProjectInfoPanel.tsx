@@ -17,11 +17,14 @@ import type {
 import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
 import type { RepositoryPanelActions } from '../contexts/RepositoryPanelContext';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import { FolderGit2, GitBranch, RefreshCw, AlertCircle, Trash2, FolderOpen } from 'lucide-react';
+import { FolderGit2, GitBranch, RefreshCw, AlertCircle, Trash2, FolderOpen, Download } from 'lucide-react';
 import { CommitHeatMap, type PlayMode } from '../components/CommitHeatMap';
 import { useCommitHeatMap } from '../hooks/useCommitHeatMap';
+import { useRemoteCommitHeatMap } from '../hooks/useRemoteCommitHeatMap';
 import { GitService } from '../main-process-api/GitService';
+import { GithubService } from '../main-process-api/GithubService';
 import { FileCityImageService } from '../main-process-api/FileCityImageService';
+import type { GitHubCommit } from '../../shared/main-process-api-interfaces/GitHubAPI';
 
 interface ProjectInfoPanelContext extends PanelContextValue {
   gitStatusWithFiles?: DataSlice<GitStatusWithFiles | null>;
@@ -60,6 +63,10 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
   const [playbackProgress, setPlaybackProgress] = useState<{ current: number; total: number }>({ current: 0, total: 0 });
   const playbackRef = useRef<{ cancelled: boolean }>({ cancelled: false });
 
+  // Track previous repo for heat map transition
+  const previousRepoRef = useRef<string | null>(null);
+  const [isHeatMapTransitioning, setIsHeatMapTransitioning] = useState(false);
+
   // Typewriter effect for commit message
   useEffect(() => {
     if (!currentCommitInfo?.message) {
@@ -89,15 +96,70 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
   // Get repository info from context
   const repository = context.currentScope?.repository;
 
+  // Detect if this is a remote-only repository (from GitHub/Starred views)
+  const isRemoteOnly = React.useMemo(() => {
+    if (!repository) return false;
+    const repo = repository as { path?: string; github?: { owner: string; name: string } };
+    return (!repo.path || repo.path === '') && !!repo.github?.owner;
+  }, [repository]);
+
+  // Get GitHub info for remote repos
+  const githubInfo = React.useMemo(() => {
+    if (!repository) return null;
+    const repo = repository as { github?: { owner: string; name: string } };
+    return repo.github?.owner ? { owner: repo.github.owner, name: repo.github.name } : null;
+  }, [repository]);
+
   // Get git status from context slice
   const gitSlice = context.gitStatusWithFiles;
   const hasGitData = gitSlice !== undefined;
   const isGitLoading = gitSlice?.loading ?? false;
 
-  // Get commit heat map data
-  const { commits: heatMapCommits, loading: heatMapLoading } = useCommitHeatMap(
-    repository?.path ?? null
+  // Get commit heat map data - use appropriate hook based on repo type
+  const localHeatMap = useCommitHeatMap(
+    isRemoteOnly ? null : (repository?.path ?? null)
   );
+  const remoteHeatMap = useRemoteCommitHeatMap(
+    isRemoteOnly ? (githubInfo?.owner ?? null) : null,
+    isRemoteOnly ? (githubInfo?.name ?? null) : null
+  );
+  const heatMapData = isRemoteOnly ? remoteHeatMap : localHeatMap;
+  const heatMapCommits = heatMapData.commits;
+  const heatMapLoading = heatMapData.loading;
+
+  // State for latest commit (remote repos only)
+  const [latestCommit, setLatestCommit] = useState<GitHubCommit | null>(null);
+
+  // Fetch latest commit for remote repos
+  useEffect(() => {
+    if (isRemoteOnly && githubInfo) {
+      GithubService.getLatestCommit(githubInfo.owner, githubInfo.name)
+        .then(setLatestCommit)
+        .catch((err) => console.error('[ProjectInfoPanel] Failed to fetch latest commit:', err));
+    } else {
+      setLatestCommit(null);
+    }
+  }, [isRemoteOnly, githubInfo]);
+
+  // Trigger heat map transition when repository changes
+  useEffect(() => {
+    const currentRepoId = repository?.path ||
+      (githubInfo ? `${githubInfo.owner}/${githubInfo.name}` : null);
+
+    // If repo changed, trigger transition
+    if (previousRepoRef.current && currentRepoId && previousRepoRef.current !== currentRepoId) {
+      setIsHeatMapTransitioning(true);
+    }
+
+    previousRepoRef.current = currentRepoId || null;
+  }, [repository?.path, githubInfo]);
+
+  // Clear transition state when new heat map data arrives
+  useEffect(() => {
+    if (isHeatMapTransitioning && heatMapCommits.length > 0 && !heatMapLoading) {
+      setIsHeatMapTransitioning(false);
+    }
+  }, [isHeatMapTransitioning, heatMapCommits.length, heatMapLoading]);
 
   // Use theme space array or fallback values
   const spacing = {
@@ -188,9 +250,28 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
     }
   };
 
+  // Handle clone request for remote repos
+  const handleClone = () => {
+    if (githubInfo) {
+      events.emit({
+        type: 'github:clone-requested',
+        source: 'project-info-panel',
+        timestamp: Date.now(),
+        payload: {
+          repository: {
+            owner: { login: githubInfo.owner },
+            name: githubInfo.name,
+            full_name: `${githubInfo.owner}/${githubInfo.name}`,
+            html_url: `https://github.com/${githubInfo.owner}/${githubInfo.name}`,
+          },
+        },
+      });
+    }
+  };
+
   // Handle heat map day click - show historical File City image
   const handleDayClick = async (date: string, count: number) => {
-    if (!repository?.path || count === 0) {
+    if (count === 0) {
       // No commits on this day, clear selection
       setSelectedDate(null);
       setHistoricalImageUrl(null);
@@ -208,95 +289,213 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
     setSelectedDate(date);
     setHistoricalImageUrl(null);
 
-    try {
-      // Get commit info for this date
-      const commitInfo = await GitService.getCommitForDate(repository.path, date);
-      if (!commitInfo) {
-        console.warn('[ProjectInfoPanel] No commit found for date:', date);
-        return;
+    if (isRemoteOnly && githubInfo) {
+      // Remote repository - use GitHub API
+      try {
+        const commits = await GithubService.getCommitsInDateRange(
+          githubInfo.owner,
+          githubInfo.name,
+          date,
+          date
+        );
+        if (commits.length === 0) {
+          console.warn('[ProjectInfoPanel] No commit found for date:', date);
+          return;
+        }
+
+        // Use the first commit of that day
+        const commit = commits[0];
+        setCurrentCommitInfo({
+          hash: commit.sha,
+          message: commit.commit.message.split('\n')[0],
+          author: commit.commit.author.name,
+          date: commit.commit.author.date.split('T')[0],
+        });
+
+        // Get file tree at that commit
+        const filePaths = await GithubService.getFileTreeAtCommit(
+          githubInfo.owner,
+          githubInfo.name,
+          commit.sha
+        );
+        if (filePaths.length === 0) {
+          console.warn('[ProjectInfoPanel] No files found at commit:', commit.sha);
+          return;
+        }
+
+        // Generate historical File City image
+        const imageUrl = await FileCityImageService.getImageForCommit(
+          `github:${githubInfo.owner}/${githubInfo.name}`,
+          commit.sha,
+          filePaths
+        );
+
+        setHistoricalImageUrl(imageUrl);
+      } catch (error) {
+        console.error('[ProjectInfoPanel] Failed to load historical image (remote):', error);
       }
+    } else if (repository?.path) {
+      // Local repository - use git commands
+      try {
+        const commitInfo = await GitService.getCommitForDate(repository.path, date);
+        if (!commitInfo) {
+          console.warn('[ProjectInfoPanel] No commit found for date:', date);
+          return;
+        }
 
-      setCurrentCommitInfo(commitInfo);
+        setCurrentCommitInfo(commitInfo);
 
-      // Get file tree at that commit
-      const filePaths = await GitService.getFileTreeAtCommit(repository.path, commitInfo.hash);
-      if (filePaths.length === 0) {
-        console.warn('[ProjectInfoPanel] No files found at commit:', commitInfo.hash);
-        return;
+        // Get file tree at that commit
+        const filePaths = await GitService.getFileTreeAtCommit(repository.path, commitInfo.hash);
+        if (filePaths.length === 0) {
+          console.warn('[ProjectInfoPanel] No files found at commit:', commitInfo.hash);
+          return;
+        }
+
+        // Generate historical File City image
+        const imageUrl = await FileCityImageService.getImageForCommit(
+          repository.path,
+          commitInfo.hash,
+          filePaths
+        );
+
+        setHistoricalImageUrl(imageUrl);
+      } catch (error) {
+        console.error('[ProjectInfoPanel] Failed to load historical image:', error);
       }
-
-      // Generate historical File City image
-      const imageUrl = await FileCityImageService.getImageForCommit(
-        repository.path,
-        commitInfo.hash,
-        filePaths
-      );
-
-      setHistoricalImageUrl(imageUrl);
-    } catch (error) {
-      console.error('[ProjectInfoPanel] Failed to load historical image:', error);
     }
   };
 
   // Load historical image for a specific date (used by year playback)
   // Returns the commit info so playback can calculate timing
   const loadHistoricalImage = async (date: string): Promise<{ message: string } | null> => {
-    if (!repository?.path) return null;
-
     setSelectedDate(date);
 
-    try {
-      const commitInfo = await GitService.getCommitForDate(repository.path, date);
-      if (!commitInfo) return null;
+    if (isRemoteOnly && githubInfo) {
+      // Remote repository
+      try {
+        const commits = await GithubService.getCommitsInDateRange(
+          githubInfo.owner,
+          githubInfo.name,
+          date,
+          date
+        );
+        if (commits.length === 0) return null;
 
-      setCurrentCommitInfo(commitInfo);
+        const commit = commits[0];
+        const commitInfo = {
+          hash: commit.sha,
+          message: commit.commit.message.split('\n')[0],
+          author: commit.commit.author.name,
+          date: commit.commit.author.date.split('T')[0],
+        };
+        setCurrentCommitInfo(commitInfo);
 
-      const filePaths = await GitService.getFileTreeAtCommit(repository.path, commitInfo.hash);
-      if (filePaths.length === 0) return null;
+        const filePaths = await GithubService.getFileTreeAtCommit(
+          githubInfo.owner,
+          githubInfo.name,
+          commit.sha
+        );
+        if (filePaths.length === 0) return null;
 
-      const imageUrl = await FileCityImageService.getImageForCommit(
-        repository.path,
-        commitInfo.hash,
-        filePaths
-      );
+        const imageUrl = await FileCityImageService.getImageForCommit(
+          `github:${githubInfo.owner}/${githubInfo.name}`,
+          commit.sha,
+          filePaths
+        );
 
-      if (playbackRef.current.cancelled) return null;
+        if (playbackRef.current.cancelled) return null;
 
-      setHistoricalImageUrl(imageUrl);
-      return { message: commitInfo.message };
-    } catch (error) {
-      console.error('[ProjectInfoPanel] Failed to load historical image:', error);
-      return null;
+        setHistoricalImageUrl(imageUrl);
+        return { message: commitInfo.message };
+      } catch (error) {
+        console.error('[ProjectInfoPanel] Failed to load historical image (remote):', error);
+        return null;
+      }
+    } else if (repository?.path) {
+      // Local repository
+      try {
+        const commitInfo = await GitService.getCommitForDate(repository.path, date);
+        if (!commitInfo) return null;
+
+        setCurrentCommitInfo(commitInfo);
+
+        const filePaths = await GitService.getFileTreeAtCommit(repository.path, commitInfo.hash);
+        if (filePaths.length === 0) return null;
+
+        const imageUrl = await FileCityImageService.getImageForCommit(
+          repository.path,
+          commitInfo.hash,
+          filePaths
+        );
+
+        if (playbackRef.current.cancelled) return null;
+
+        setHistoricalImageUrl(imageUrl);
+        return { message: commitInfo.message };
+      } catch (error) {
+        console.error('[ProjectInfoPanel] Failed to load historical image:', error);
+        return null;
+      }
     }
+
+    return null;
   };
 
   // Load historical image for a specific commit (used by today/week playback)
   const loadHistoricalImageForCommit = async (
     commitInfo: { hash: string; message: string; author: string; date: string }
   ): Promise<{ message: string } | null> => {
-    if (!repository?.path) return null;
-
     setSelectedDate(commitInfo.date);
     setCurrentCommitInfo(commitInfo);
 
-    try {
-      const filePaths = await GitService.getFileTreeAtCommit(repository.path, commitInfo.hash);
-      if (filePaths.length === 0) return null;
+    if (isRemoteOnly && githubInfo) {
+      // Remote repository
+      try {
+        const filePaths = await GithubService.getFileTreeAtCommit(
+          githubInfo.owner,
+          githubInfo.name,
+          commitInfo.hash
+        );
+        if (filePaths.length === 0) return null;
 
-      const imageUrl = await FileCityImageService.getImageForCommit(
-        repository.path,
-        commitInfo.hash,
-        filePaths
-      );
+        const imageUrl = await FileCityImageService.getImageForCommit(
+          `github:${githubInfo.owner}/${githubInfo.name}`,
+          commitInfo.hash,
+          filePaths
+        );
 
-      if (playbackRef.current.cancelled) return null;
+        if (playbackRef.current.cancelled) return null;
 
-      setHistoricalImageUrl(imageUrl);
-      return { message: commitInfo.message };
-    } catch (error) {
-      console.error('[ProjectInfoPanel] Failed to load historical image for commit:', error);
-      return null;
+        setHistoricalImageUrl(imageUrl);
+        return { message: commitInfo.message };
+      } catch (error) {
+        console.error('[ProjectInfoPanel] Failed to load historical image for commit (remote):', error);
+        return null;
+      }
+    } else if (repository?.path) {
+      // Local repository
+      try {
+        const filePaths = await GitService.getFileTreeAtCommit(repository.path, commitInfo.hash);
+        if (filePaths.length === 0) return null;
+
+        const imageUrl = await FileCityImageService.getImageForCommit(
+          repository.path,
+          commitInfo.hash,
+          filePaths
+        );
+
+        if (playbackRef.current.cancelled) return null;
+
+        setHistoricalImageUrl(imageUrl);
+        return { message: commitInfo.message };
+      } catch (error) {
+        console.error('[ProjectInfoPanel] Failed to load historical image for commit:', error);
+        return null;
+      }
     }
+
+    return null;
   };
 
   // Handle play/pause button
@@ -308,7 +507,9 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
       return;
     }
 
-    if (!repository?.path) return;
+    // Need either local path or remote GitHub info
+    if (!repository?.path && !isRemoteOnly) return;
+    if (isRemoteOnly && !githubInfo) return;
 
     setPlayMode(mode);
     setIsPlaying(true);
@@ -332,12 +533,29 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
         startDate = weekStart.toISOString().split('T')[0];
       }
 
-      // Get all commits in the range
-      const commits = await GitService.getCommitsInDateRange(
-        repository.path,
-        startDate,
-        todayStr
-      );
+      // Get all commits in the range - use appropriate service
+      let commits: { hash: string; message: string; author: string; date: string }[] = [];
+
+      if (isRemoteOnly && githubInfo) {
+        const remoteCommits = await GithubService.getCommitsInDateRange(
+          githubInfo.owner,
+          githubInfo.name,
+          startDate,
+          todayStr
+        );
+        commits = remoteCommits.map((c) => ({
+          hash: c.sha,
+          message: c.commit.message.split('\n')[0],
+          author: c.commit.author.name,
+          date: c.commit.author.date.split('T')[0],
+        }));
+      } else if (repository?.path) {
+        commits = await GitService.getCommitsInDateRange(
+          repository.path,
+          startDate,
+          todayStr
+        );
+      }
 
       if (commits.length === 0) {
         setIsPlaying(false);
@@ -454,6 +672,7 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
     const tracer = getTracer('principal-ade-dev-workspace');
 
     if (repository?.path) {
+      // Local repository - use existing path-based fetch
       const repoPath = repository.path;
 
       // Start span and store in ref
@@ -492,10 +711,41 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
         span.end();
         fileCitySpanRef.current = null;
       });
+    } else if (isRemoteOnly && githubInfo && latestCommit) {
+      // Remote repository - fetch file tree from GitHub and generate image
+      const virtualPath = `github:${githubInfo.owner}/${githubInfo.name}`;
+
+      console.info('[ProjectInfoPanel] Fetching File City image for remote repo:', virtualPath);
+
+      // Get file tree at the latest commit and generate image
+      GithubService.getFileTreeAtCommit(githubInfo.owner, githubInfo.name, latestCommit.sha)
+        .then((filePaths) => {
+          if (filePaths.length === 0) {
+            console.warn('[ProjectInfoPanel] No files found for remote repo');
+            setFileCityImageUrl(null);
+            return;
+          }
+
+          return FileCityImageService.getImageForCommit(
+            virtualPath,
+            latestCommit.sha,
+            filePaths
+          );
+        })
+        .then((url) => {
+          if (url) {
+            console.info('[ProjectInfoPanel] Remote File City image generated:', url);
+            setFileCityImageUrl(url);
+          }
+        })
+        .catch((error) => {
+          console.error('[ProjectInfoPanel] Failed to generate File City image for remote repo:', error);
+          setFileCityImageUrl(null);
+        });
     } else {
       setFileCityImageUrl(null);
     }
-  }, [repository?.path, extendedActions]);
+  }, [repository?.path, extendedActions, isRemoteOnly, githubInfo, latestCommit]);
 
   // Track when card renders with image URL - adds event to the same span
   useEffect(() => {
@@ -643,56 +893,87 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
-          <button
-            onClick={handleOpenProject}
-            style={{
-              padding: `${spacing.xs}px ${spacing.sm}px`,
-              display: 'flex',
-              alignItems: 'center',
-              gap: spacing.xs,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: borderRadius,
-              background: theme.colors.primary,
-              color: theme.colors.background,
-              cursor: 'pointer',
-              transition: 'opacity 0.2s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.opacity = '0.9';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.opacity = '1';
-            }}
-          >
-            <FolderOpen size={14} />
-            Open
-          </button>
-          <button
-            onClick={handleDeleteRequest}
-            style={{
-              padding: `${spacing.xs}px ${spacing.sm}px`,
-              display: 'flex',
-              alignItems: 'center',
-              gap: spacing.xs,
-              border: `1px solid ${theme.colors.error}`,
-              borderRadius: borderRadius,
-              background: 'transparent',
-              color: theme.colors.error,
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.error;
-              e.currentTarget.style.color = theme.colors.background;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = theme.colors.error;
-            }}
-          >
-            <Trash2 size={14} />
-            Delete
-          </button>
+          {isRemoteOnly ? (
+            // Clone button for remote repos
+            <button
+              onClick={handleClone}
+              style={{
+                padding: `${spacing.xs}px ${spacing.sm}px`,
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.xs,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: borderRadius,
+                background: theme.colors.primary,
+                color: theme.colors.background,
+                cursor: 'pointer',
+                transition: 'opacity 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = '0.9';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = '1';
+              }}
+            >
+              <Download size={14} />
+              Clone
+            </button>
+          ) : (
+            // Open and Delete buttons for local repos
+            <>
+              <button
+                onClick={handleOpenProject}
+                style={{
+                  padding: `${spacing.xs}px ${spacing.sm}px`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: borderRadius,
+                  background: theme.colors.primary,
+                  color: theme.colors.background,
+                  cursor: 'pointer',
+                  transition: 'opacity 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.9';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
+              >
+                <FolderOpen size={14} />
+                Open
+              </button>
+              <button
+                onClick={handleDeleteRequest}
+                style={{
+                  padding: `${spacing.xs}px ${spacing.sm}px`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  border: `1px solid ${theme.colors.error}`,
+                  borderRadius: borderRadius,
+                  background: 'transparent',
+                  color: theme.colors.error,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = theme.colors.error;
+                  e.currentTarget.style.color = theme.colors.background;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = theme.colors.error;
+                }}
+              >
+                <Trash2 size={14} />
+                Delete
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -715,35 +996,40 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
               isPlaying={isPlaying}
               onPlayPause={heatMapCommits.length > 0 ? handlePlayPause : undefined}
               playMode={playMode}
+              transitioning={isHeatMapTransitioning}
             />
           </div>
         )}
 
         {/* File City Image and Git Status - Side by Side */}
         <div style={{ display: 'flex', gap: spacing.md, marginBottom: spacing.md }}>
-          {/* File City Image - Left */}
-          {(fileCityImageUrl || historicalImageUrl) && (
-            <div
-              style={{
-                flexShrink: 0,
-                cursor: selectedDate ? 'default' : 'pointer',
-                borderRadius: borderRadius,
-                overflow: 'hidden',
-                border: `1px solid ${selectedDate ? theme.colors.primary : theme.colors.border}`,
-              }}
-              onClick={selectedDate ? undefined : handleOpenProject}
-            >
+          {/* File City Image - Left (always show placeholder to prevent layout shift) */}
+          <div
+            style={{
+              flexShrink: 0,
+              width: 280,
+              height: 280,
+              cursor: (fileCityImageUrl || historicalImageUrl) && !selectedDate ? 'pointer' : 'default',
+              borderRadius: borderRadius,
+              overflow: 'hidden',
+              border: `1px solid ${selectedDate ? theme.colors.primary : theme.colors.border}`,
+              backgroundColor: theme.colors.backgroundSecondary,
+            }}
+            onClick={(fileCityImageUrl || historicalImageUrl) && !selectedDate ? handleOpenProject : undefined}
+          >
+            {(historicalImageUrl || fileCityImageUrl) && (
               <img
-                src={historicalImageUrl || fileCityImageUrl || ''}
+                src={(historicalImageUrl || fileCityImageUrl)!}
                 alt={`${repository.name} visualization`}
                 style={{
                   width: 280,
-                  height: 'auto',
-                    display: 'block',
-                  }}
-                />
-            </div>
-          )}
+                  height: 280,
+                  objectFit: 'cover',
+                  display: 'block',
+                }}
+              />
+            )}
+          </div>
 
           {/* Historical Commit Info - shown during playback */}
           {currentCommitInfo && (
@@ -848,7 +1134,7 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
                     >
                       {Array.from({ length: playbackProgress.total }).map((_, i) => (
                         <div
-                          key={i}
+                          key={i} // eslint-disable-line react/no-array-index-key -- Static progress segments
                           style={{
                             flex: 1,
                             height: 4,
@@ -876,8 +1162,97 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
             </section>
           )}
 
-          {/* Git Status - Right (hidden during playback) */}
-          {hasGitData && !currentCommitInfo && (
+          {/* Latest Commit Info - for remote repos (hidden during playback) */}
+          {isRemoteOnly && latestCommit && !currentCommitInfo && (
+            <section
+              style={{
+                flex: 1,
+                padding: spacing.md,
+                background: theme.colors.backgroundSecondary,
+                borderRadius: borderRadius,
+                border: `1px solid ${theme.colors.border}`,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  marginBottom: spacing.md,
+                }}
+              >
+                <FolderGit2 size={16} color={theme.colors.primary} />
+                <h4
+                  style={{
+                    margin: 0,
+                    fontSize: theme.fontSizes[2],
+                    fontWeight: 600,
+                    color: theme.colors.text,
+                  }}
+                >
+                  Latest Commit
+                </h4>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
+                <div
+                  style={{
+                    fontSize: theme.fontSizes[3],
+                    color: theme.colors.text,
+                    fontWeight: 500,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {latestCommit.commit.message.split('\n')[0]}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
+                  {latestCommit.author?.avatar_url && (
+                    <img
+                      src={latestCommit.author.avatar_url}
+                      alt={latestCommit.commit.author.name}
+                      style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: '50%',
+                      }}
+                    />
+                  )}
+                  <span
+                    style={{
+                      fontSize: theme.fontSizes[2],
+                      color: theme.colors.textSecondary,
+                    }}
+                  >
+                    {latestCommit.commit.author.name}
+                  </span>
+                  <span style={{ color: theme.colors.textSecondary }}>•</span>
+                  <span
+                    style={{
+                      fontSize: theme.fontSizes[2],
+                      color: theme.colors.textSecondary,
+                    }}
+                  >
+                    {new Date(latestCommit.commit.author.date).toLocaleDateString()}
+                  </span>
+                </div>
+                <code
+                  style={{
+                    fontSize: theme.fontSizes[1],
+                    fontFamily: theme.fonts.monospace,
+                    color: theme.colors.primary,
+                    backgroundColor: theme.colors.background,
+                    padding: '2px 6px',
+                    borderRadius: '2px',
+                    alignSelf: 'flex-start',
+                  }}
+                >
+                  {latestCommit.sha.slice(0, 7)}
+                </code>
+              </div>
+            </section>
+          )}
+
+          {/* Git Status - Right (for local repos, hidden during playback) */}
+          {!isRemoteOnly && hasGitData && !currentCommitInfo && (
             <section
               style={{
                 flex: 1,

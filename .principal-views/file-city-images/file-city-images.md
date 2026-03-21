@@ -54,6 +54,48 @@ Renderer Request → IPC → Main Process Service → Cache Check
 - **Dimensions**: 400x400px PNG
 - **Invalidation**: Automatic when file tree SHA changes
 
+## Commit History Playback
+
+The commit history playback feature allows users to animate through historical File City visualizations based on git commit history.
+
+### Playback Modes
+
+- **Today** - Play through all commits made today
+- **This Week** - Play through all commits since Sunday
+- **Full Year** - Play through the year (one commit per day with commits)
+
+### Components
+
+- **CommitHeatMap** (`src/renderer/components/CommitHeatMap.tsx`)
+  - GitHub-style heat map showing commit activity
+  - Play/Pause buttons for each mode
+
+- **GitService** (`src/renderer/main-process-api/GitService.ts`)
+  - `getCommitDatesForHeatMap()` - Get commit counts per day
+  - `getCommitsInDateRange()` - Get all commits in a date range
+  - `getCommitForDate()` - Get commit info for a specific date
+  - `getFileTreeAtCommit()` - Get file paths at a commit using `git ls-tree`
+
+- **FileCityImageService** (`src/main/stores/FileCityImageService.ts`)
+  - `getImageForCommit()` - Generate historical visualization from file paths
+  - `buildFileTreeFromPaths()` - Construct FileTree from path array
+
+### Historical Image Generation
+
+Unlike current images that use cached file trees from repository monitoring, historical images are generated from file paths obtained via `git ls-tree`. This avoids checking out commits while still building accurate visualizations.
+
+```
+Playback Start → Get Commits in Range → For Each Commit:
+                                              ↓
+                                    Get File Paths (git ls-tree)
+                                              ↓
+                                    Build FileTree from Paths
+                                              ↓
+                                    Generate PNG (not cached)
+                                              ↓
+                                    Display with Typewriter Effect
+```
+
 ## Dependencies
 
 - `@principal-ai/file-city-builder` - Treemap layout generation

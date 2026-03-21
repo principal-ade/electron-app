@@ -837,6 +837,43 @@ export const ProjectsPanelProvider: React.FC<
     return unsubscribe;
   }, [events]);
 
+  // Listen for repository-selected events from GitHub panels (GitHubProjectsPanel, GitHubStarredPanel)
+  useEffect(() => {
+    // Handler to convert GitHubRepository to AlexandriaEntry-like object for ProjectInfoPanel
+    const handleGitHubRepoSelected = (event: {
+      payload?: { repository?: { name: string; owner: { login: string }; full_name: string; description?: string | null; html_url: string; private: boolean } };
+    }) => {
+      const repo = event.payload?.repository;
+      if (repo) {
+        console.info('[ProjectsPanelProvider] GitHub repository selected:', repo.full_name);
+        // Create an AlexandriaEntry-like object with github metadata for remote repos
+        const entry = {
+          name: repo.name,
+          path: '', // Empty path indicates remote-only repo
+          remoteUrl: repo.html_url,
+          github: {
+            owner: repo.owner.login,
+            name: repo.name,
+          },
+          description: repo.description,
+          isPrivate: repo.private,
+        } as unknown as AlexandriaEntry;
+        setSelectedRepository(entry);
+      } else {
+        console.info('[ProjectsPanelProvider] GitHub repository deselected');
+        setSelectedRepository(null);
+      }
+    };
+
+    const unsub1 = events.on('industry-theme.github-projects:repository-selected', handleGitHubRepoSelected);
+    const unsub2 = events.on('industry-theme.github-starred:repository-selected', handleGitHubRepoSelected);
+
+    return () => {
+      unsub1();
+      unsub2();
+    };
+  }, [events]);
+
   // Listen for repository:opened events to open dev workspace
   useEffect(() => {
     const unsubscribe = events.on('repository:opened', (event) => {

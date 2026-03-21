@@ -471,6 +471,193 @@
           "src/renderer/panels/ProjectInfoPanel.tsx"
         ]
       }
+    },
+    {
+      "id": "playback-section",
+      "type": "text",
+      "x": 1000,
+      "y": -50,
+      "width": 400,
+      "height": 50,
+      "color": "#64748B",
+      "text": "# Commit History Playback\n**Animate through historical visualizations**"
+    },
+    {
+      "id": "playback-started",
+      "type": "otel-event",
+      "x": 1000,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "label": "Playback Started",
+      "shape": "rectangle",
+      "event": {
+        "name": "commit_history.playback.started",
+        "description": "User started commit history playback",
+        "attributes": {
+          "repo_path": {
+            "type": "string",
+            "description": "Repository path",
+            "required": true
+          },
+          "mode": {
+            "type": "string",
+            "description": "Playback mode (today, week, year)",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "status": "not-implemented",
+        "files": [
+          "src/renderer/panels/ProjectInfoPanel.tsx"
+        ]
+      }
+    },
+    {
+      "id": "commits-fetched",
+      "type": "otel-event",
+      "x": 1000,
+      "y": 200,
+      "width": 200,
+      "height": 100,
+      "label": "Commits Fetched",
+      "shape": "rectangle",
+      "event": {
+        "name": "commit_history.commits.fetched",
+        "description": "Commits fetched for playback range",
+        "attributes": {
+          "commit_count": {
+            "type": "integer",
+            "description": "Number of commits found",
+            "required": true
+          },
+          "start_date": {
+            "type": "string",
+            "description": "Start date of range",
+            "required": true
+          },
+          "end_date": {
+            "type": "string",
+            "description": "End date of range",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "status": "not-implemented",
+        "files": [
+          "src/renderer/panels/ProjectInfoPanel.tsx",
+          "src/renderer/main-process-api/GitService.ts"
+        ]
+      }
+    },
+    {
+      "id": "commit-loading",
+      "type": "otel-event",
+      "x": 1000,
+      "y": 350,
+      "width": 200,
+      "height": 100,
+      "label": "Loading Commit",
+      "shape": "rectangle",
+      "event": {
+        "name": "commit_history.commit.loading",
+        "description": "Loading a specific commit for display",
+        "attributes": {
+          "commit_hash": {
+            "type": "string",
+            "description": "Git commit hash",
+            "required": true
+          },
+          "commit_message": {
+            "type": "string",
+            "description": "Commit message",
+            "required": true
+          },
+          "current": {
+            "type": "integer",
+            "description": "Current index in playback",
+            "required": true
+          },
+          "total": {
+            "type": "integer",
+            "description": "Total commits to play",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "status": "not-implemented",
+        "files": [
+          "src/renderer/panels/ProjectInfoPanel.tsx"
+        ]
+      }
+    },
+    {
+      "id": "historical-image-generated",
+      "type": "otel-event",
+      "x": 1000,
+      "y": 500,
+      "width": 200,
+      "height": 100,
+      "label": "Image Generated",
+      "shape": "rectangle",
+      "event": {
+        "name": "commit_history.image.generated",
+        "description": "Historical File City image generated for commit",
+        "attributes": {
+          "commit_hash": {
+            "type": "string",
+            "description": "Git commit hash",
+            "required": true
+          },
+          "file_count": {
+            "type": "integer",
+            "description": "Number of files in tree at this commit",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "status": "not-implemented",
+        "files": [
+          "src/renderer/panels/ProjectInfoPanel.tsx",
+          "src/main/stores/FileCityImageService.ts"
+        ]
+      }
+    },
+    {
+      "id": "playback-completed",
+      "type": "otel-event",
+      "x": 1000,
+      "y": 650,
+      "width": 200,
+      "height": 100,
+      "label": "Playback Completed",
+      "shape": "rectangle",
+      "event": {
+        "name": "commit_history.playback.completed",
+        "description": "Playback finished (completed or cancelled)",
+        "attributes": {
+          "total": {
+            "type": "integer",
+            "description": "Total commits played",
+            "required": true
+          },
+          "cancelled": {
+            "type": "boolean",
+            "description": "Whether playback was cancelled by user",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "status": "not-implemented",
+        "files": [
+          "src/renderer/panels/ProjectInfoPanel.tsx"
+        ]
+      }
     }
   ],
   "edges": [
@@ -601,6 +788,70 @@
       "label": "re-render",
       "pv": {
         "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "playback-to-commits",
+      "fromNode": "playback-started",
+      "fromSide": "bottom",
+      "toNode": "commits-fetched",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "commits-to-loading",
+      "fromNode": "commits-fetched",
+      "fromSide": "bottom",
+      "toNode": "commit-loading",
+      "toSide": "top",
+      "label": "for each",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "loading-to-image",
+      "fromNode": "commit-loading",
+      "fromSide": "bottom",
+      "toNode": "historical-image-generated",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "image-to-loading",
+      "fromNode": "historical-image-generated",
+      "fromSide": "left",
+      "toNode": "commit-loading",
+      "toSide": "left",
+      "label": "next commit",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "image-to-completed",
+      "fromNode": "historical-image-generated",
+      "fromSide": "bottom",
+      "toNode": "playback-completed",
+      "toSide": "top",
+      "label": "last commit",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "loading-to-generate",
+      "fromNode": "commit-loading",
+      "fromSide": "left",
+      "toNode": "generate-image",
+      "toSide": "right",
+      "label": "IPC",
+      "pv": {
+        "edgeType": "function-call"
       }
     }
   ]
