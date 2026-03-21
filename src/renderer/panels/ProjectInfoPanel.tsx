@@ -18,9 +18,10 @@ import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
 import type { RepositoryPanelActions } from '../contexts/RepositoryPanelContext';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { FolderGit2, GitBranch, RefreshCw, AlertCircle, Trash2, FolderOpen } from 'lucide-react';
-import { LocalProjectCard } from '@industry-theme/repository-composition-panels';
-import { CommitHeatMap } from '../components/CommitHeatMap';
+import { CommitHeatMap, type PlayMode } from '../components/CommitHeatMap';
 import { useCommitHeatMap } from '../hooks/useCommitHeatMap';
+import { GitService } from '../main-process-api/GitService';
+import { FileCityImageService } from '../main-process-api/FileCityImageService';
 
 interface ProjectInfoPanelContext extends PanelContextValue {
   gitStatusWithFiles?: DataSlice<GitStatusWithFiles | null>;
@@ -45,6 +46,42 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [fileCityImageUrl, setFileCityImageUrl] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [historicalImageUrl, setHistoricalImageUrl] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentCommitInfo, setCurrentCommitInfo] = useState<{
+    hash: string;
+    message: string;
+    author: string;
+    date: string;
+  } | null>(null);
+  const [typewriterText, setTypewriterText] = useState('');
+  const [playMode, setPlayMode] = useState<PlayMode>('year');
+  const [playbackProgress, setPlaybackProgress] = useState<{ current: number; total: number }>({ current: 0, total: 0 });
+  const playbackRef = useRef<{ cancelled: boolean }>({ cancelled: false });
+
+  // Typewriter effect for commit message
+  useEffect(() => {
+    if (!currentCommitInfo?.message) {
+      setTypewriterText('');
+      return;
+    }
+
+    const message = currentCommitInfo.message;
+    let index = 0;
+    setTypewriterText('');
+
+    const interval = setInterval(() => {
+      if (index < message.length) {
+        setTypewriterText(message.slice(0, index + 1));
+        index++;
+      } else {
+        clearInterval(interval);
+      }
+    }, 45); // 45ms per character
+
+    return () => clearInterval(interval);
+  }, [currentCommitInfo?.message]);
 
   // Cast actions to include our extended type
   const extendedActions = actions as ProjectInfoPanelActions;
@@ -149,6 +186,214 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
         },
       });
     }
+  };
+
+  // Handle heat map day click - show historical File City image
+  const handleDayClick = async (date: string, count: number) => {
+    if (!repository?.path || count === 0) {
+      // No commits on this day, clear selection
+      setSelectedDate(null);
+      setHistoricalImageUrl(null);
+      return;
+    }
+
+    // If clicking the same date, toggle off
+    if (selectedDate === date) {
+      setSelectedDate(null);
+      setHistoricalImageUrl(null);
+      setCurrentCommitInfo(null);
+      return;
+    }
+
+    setSelectedDate(date);
+    setHistoricalImageUrl(null);
+
+    try {
+      // Get commit info for this date
+      const commitInfo = await GitService.getCommitForDate(repository.path, date);
+      if (!commitInfo) {
+        console.warn('[ProjectInfoPanel] No commit found for date:', date);
+        return;
+      }
+
+      setCurrentCommitInfo(commitInfo);
+
+      // Get file tree at that commit
+      const filePaths = await GitService.getFileTreeAtCommit(repository.path, commitInfo.hash);
+      if (filePaths.length === 0) {
+        console.warn('[ProjectInfoPanel] No files found at commit:', commitInfo.hash);
+        return;
+      }
+
+      // Generate historical File City image
+      const imageUrl = await FileCityImageService.getImageForCommit(
+        repository.path,
+        commitInfo.hash,
+        filePaths
+      );
+
+      setHistoricalImageUrl(imageUrl);
+    } catch (error) {
+      console.error('[ProjectInfoPanel] Failed to load historical image:', error);
+    }
+  };
+
+  // Load historical image for a specific date (used by year playback)
+  // Returns the commit info so playback can calculate timing
+  const loadHistoricalImage = async (date: string): Promise<{ message: string } | null> => {
+    if (!repository?.path) return null;
+
+    setSelectedDate(date);
+
+    try {
+      const commitInfo = await GitService.getCommitForDate(repository.path, date);
+      if (!commitInfo) return null;
+
+      setCurrentCommitInfo(commitInfo);
+
+      const filePaths = await GitService.getFileTreeAtCommit(repository.path, commitInfo.hash);
+      if (filePaths.length === 0) return null;
+
+      const imageUrl = await FileCityImageService.getImageForCommit(
+        repository.path,
+        commitInfo.hash,
+        filePaths
+      );
+
+      if (playbackRef.current.cancelled) return null;
+
+      setHistoricalImageUrl(imageUrl);
+      return { message: commitInfo.message };
+    } catch (error) {
+      console.error('[ProjectInfoPanel] Failed to load historical image:', error);
+      return null;
+    }
+  };
+
+  // Load historical image for a specific commit (used by today/week playback)
+  const loadHistoricalImageForCommit = async (
+    commitInfo: { hash: string; message: string; author: string; date: string }
+  ): Promise<{ message: string } | null> => {
+    if (!repository?.path) return null;
+
+    setSelectedDate(commitInfo.date);
+    setCurrentCommitInfo(commitInfo);
+
+    try {
+      const filePaths = await GitService.getFileTreeAtCommit(repository.path, commitInfo.hash);
+      if (filePaths.length === 0) return null;
+
+      const imageUrl = await FileCityImageService.getImageForCommit(
+        repository.path,
+        commitInfo.hash,
+        filePaths
+      );
+
+      if (playbackRef.current.cancelled) return null;
+
+      setHistoricalImageUrl(imageUrl);
+      return { message: commitInfo.message };
+    } catch (error) {
+      console.error('[ProjectInfoPanel] Failed to load historical image for commit:', error);
+      return null;
+    }
+  };
+
+  // Handle play/pause button
+  const handlePlayPause = async (mode: PlayMode) => {
+    if (isPlaying) {
+      // Stop playback
+      playbackRef.current.cancelled = true;
+      setIsPlaying(false);
+      return;
+    }
+
+    if (!repository?.path) return;
+
+    setPlayMode(mode);
+    setIsPlaying(true);
+    playbackRef.current.cancelled = false;
+
+    const TYPING_SPEED = 45; // ms per character (matches typewriter effect)
+    const BASE_DELAY = 1000; // extra time after typing finishes
+
+    if (mode === 'today' || mode === 'week') {
+      // Get date range based on mode
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+
+      let startDate: string;
+      if (mode === 'today') {
+        startDate = todayStr;
+      } else {
+        // Start of current week (Sunday)
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - today.getDay());
+        startDate = weekStart.toISOString().split('T')[0];
+      }
+
+      // Get all commits in the range
+      const commits = await GitService.getCommitsInDateRange(
+        repository.path,
+        startDate,
+        todayStr
+      );
+
+      if (commits.length === 0) {
+        setIsPlaying(false);
+        setPlaybackProgress({ current: 0, total: 0 });
+        return;
+      }
+
+      setPlaybackProgress({ current: 0, total: commits.length });
+
+      // Play through each commit
+      for (let i = 0; i < commits.length; i++) {
+        if (playbackRef.current.cancelled) break;
+
+        setPlaybackProgress({ current: i + 1, total: commits.length });
+        const result = await loadHistoricalImageForCommit(commits[i]);
+
+        if (playbackRef.current.cancelled) break;
+
+        const messageLength = result?.message?.length || 0;
+        const frameDelay = (messageLength * TYPING_SPEED) + BASE_DELAY;
+
+        await new Promise(resolve => setTimeout(resolve, frameDelay));
+      }
+    } else {
+      // Year mode - one commit per day (original behavior)
+      const datesWithCommits = heatMapCommits
+        .filter(c => c.count > 0)
+        .map(c => c.date)
+        .sort((a, b) => a.localeCompare(b));
+
+      if (datesWithCommits.length === 0) {
+        setIsPlaying(false);
+        setPlaybackProgress({ current: 0, total: 0 });
+        return;
+      }
+
+      setPlaybackProgress({ current: 0, total: datesWithCommits.length });
+
+      for (let i = 0; i < datesWithCommits.length; i++) {
+        if (playbackRef.current.cancelled) break;
+
+        setPlaybackProgress({ current: i + 1, total: datesWithCommits.length });
+        const result = await loadHistoricalImage(datesWithCommits[i]);
+
+        if (playbackRef.current.cancelled) break;
+
+        const messageLength = result?.message?.length || 0;
+        const frameDelay = (messageLength * TYPING_SPEED) + BASE_DELAY;
+
+        await new Promise(resolve => setTimeout(resolve, frameDelay));
+      }
+    }
+
+    // Playback finished
+    setIsPlaying(false);
+    setPlaybackProgress({ current: 0, total: 0 });
   };
 
   // Get GitHub URL from repository
@@ -465,25 +710,174 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
             <CommitHeatMap
               commits={heatMapCommits}
               loading={heatMapLoading}
+              selectedDate={selectedDate}
+              onDayClick={handleDayClick}
+              isPlaying={isPlaying}
+              onPlayPause={heatMapCommits.length > 0 ? handlePlayPause : undefined}
+              playMode={playMode}
             />
           </div>
         )}
 
-        {/* File City Card and Git Status - Side by Side */}
+        {/* File City Image and Git Status - Side by Side */}
         <div style={{ display: 'flex', gap: spacing.md, marginBottom: spacing.md }}>
-          {/* File City Card - Left */}
-          <div style={{ flexShrink: 0 }}>
-            <LocalProjectCard
-              entry={repository as unknown as AlexandriaEntry}
-              customImageUrl={fileCityImageUrl ?? undefined}
-              width={280}
-              height={467}
-              onOpen={() => handleOpenProject()}
-            />
-          </div>
+          {/* File City Image - Left */}
+          {(fileCityImageUrl || historicalImageUrl) && (
+            <div
+              style={{
+                flexShrink: 0,
+                cursor: selectedDate ? 'default' : 'pointer',
+                borderRadius: borderRadius,
+                overflow: 'hidden',
+                border: `1px solid ${selectedDate ? theme.colors.primary : theme.colors.border}`,
+              }}
+              onClick={selectedDate ? undefined : handleOpenProject}
+            >
+              <img
+                src={historicalImageUrl || fileCityImageUrl || ''}
+                alt={`${repository.name} visualization`}
+                style={{
+                  width: 280,
+                  height: 'auto',
+                    display: 'block',
+                  }}
+                />
+            </div>
+          )}
 
-          {/* Git Status - Right */}
-          {hasGitData && (
+          {/* Historical Commit Info - shown during playback */}
+          {currentCommitInfo && (
+            <section
+              style={{
+                flex: 1,
+                padding: spacing.md,
+                background: theme.colors.backgroundSecondary,
+                borderRadius: borderRadius,
+                border: `1px solid ${theme.colors.primary}`,
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  marginBottom: spacing.md,
+                }}
+              >
+                <FolderGit2 size={16} color={theme.colors.primary} />
+                <h4
+                  style={{
+                    margin: 0,
+                    fontSize: theme.fontSizes[2],
+                    fontWeight: 600,
+                    color: theme.colors.text,
+                  }}
+                >
+                  Historical Snapshot
+                </h4>
+              </div>
+              <div
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: theme.fontSizes[1],
+                    color: theme.colors.textSecondary,
+                    marginBottom: spacing.sm,
+                  }}
+                >
+                  {currentCommitInfo.date}
+                </div>
+                <div
+                  style={{
+                    fontSize: theme.fontSizes[4],
+                    color: theme.colors.text,
+                    fontWeight: 600,
+                    marginBottom: spacing.sm,
+                    lineHeight: 1.3,
+                    minHeight: '1.3em',
+                  }}
+                >
+                  {typewriterText}
+                  {typewriterText.length < currentCommitInfo.message.length && (
+                    <span
+                      style={{
+                        opacity: 0.7,
+                        animation: 'blink 0.7s infinite',
+                      }}
+                    >
+                      |
+                    </span>
+                  )}
+                </div>
+                <div
+                  style={{
+                    fontSize: theme.fontSizes[2],
+                    color: theme.colors.textSecondary,
+                  }}
+                >
+                  {currentCommitInfo.author}
+                </div>
+                <div
+                  style={{
+                    fontSize: theme.fontSizes[1],
+                    color: theme.colors.textSecondary,
+                    fontFamily: 'monospace',
+                    marginTop: spacing.sm,
+                  }}
+                >
+                  {currentCommitInfo.hash.slice(0, 7)}
+                </div>
+
+                {/* Progress bar */}
+                {playbackProgress.total > 0 && (
+                  <div style={{ marginTop: spacing.md }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: 2,
+                        marginBottom: spacing.xs,
+                      }}
+                    >
+                      {Array.from({ length: playbackProgress.total }).map((_, i) => (
+                        <div
+                          key={i}
+                          style={{
+                            flex: 1,
+                            height: 4,
+                            borderRadius: 2,
+                            backgroundColor: i < playbackProgress.current
+                              ? theme.colors.primary
+                              : theme.colors.backgroundTertiary,
+                            transition: 'background-color 0.2s ease',
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: theme.fontSizes[0],
+                        color: theme.colors.textSecondary,
+                        textAlign: 'center',
+                      }}
+                    >
+                      {playbackProgress.current} of {playbackProgress.total}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* Git Status - Right (hidden during playback) */}
+          {hasGitData && !currentCommitInfo && (
             <section
               style={{
                 flex: 1,

@@ -1141,7 +1141,6 @@ const SkillBrowserViewContent: React.FC = () => {
                 ? panelState.sizes
                 : { left: 30, right: 70 }
             }
-            minSizes={{ left: 30, right: 30 }}
             collapsed={
               panelState.type === 'two-panel'
                 ? panelState.collapsed

@@ -1522,7 +1522,6 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
             isEditMode={isEditMode}
             onLayoutChange={onLayoutChange}
             defaultSizes={{ left: 25, middle: 50, right: 25 }}
-            minSizes={{ left: 15, middle: 30, right: 20 }}
             collapsed={collapsed}
             collapsiblePanels={{ left: true, right: true }}
             showCollapseButtons={false}

@@ -310,6 +310,219 @@ export class FileCityImageService {
   }
 
   /**
+   * Build a FileTree structure from an array of file paths
+   * Used for generating historical snapshots from git ls-tree output
+   */
+  private buildFileTreeFromPaths(filePaths: string[], commitHash: string): FileTree {
+    // FileInfo interface from @principal-ai/repository-abstraction
+    interface FileInfo {
+      path: string;
+      name: string;
+      extension: string;
+      size: number;
+      lastModified: Date;
+      isDirectory: boolean;
+      relativePath: string;
+    }
+
+    // DirectoryInfo interface
+    interface DirectoryInfo {
+      path: string;
+      name: string;
+      children: (FileInfo | DirectoryInfo)[];
+      fileCount: number;
+      totalSize: number;
+      depth: number;
+      relativePath: string;
+    }
+
+    const allFiles: FileInfo[] = [];
+    const allDirectories: DirectoryInfo[] = [];
+    const directoryMap = new Map<string, DirectoryInfo>();
+
+    // Create root directory
+    const root: DirectoryInfo = {
+      name: '',
+      path: '',
+      relativePath: '',
+      children: [],
+      fileCount: 0,
+      totalSize: 0,
+      depth: 0,
+    };
+    directoryMap.set('', root);
+
+    // Process each file path
+    for (const filePath of filePaths) {
+      const parts = filePath.split('/');
+      const fileName = parts[parts.length - 1];
+      const dirPath = parts.slice(0, -1).join('/');
+
+      // Ensure all parent directories exist
+      let currentPath = '';
+      for (let i = 0; i < parts.length - 1; i++) {
+        const parentPath = currentPath;
+        currentPath = currentPath ? `${currentPath}/${parts[i]}` : parts[i];
+
+        if (!directoryMap.has(currentPath)) {
+          const dir: DirectoryInfo = {
+            name: parts[i],
+            path: currentPath,
+            relativePath: currentPath,
+            children: [],
+            fileCount: 0,
+            totalSize: 0,
+            depth: i + 1,
+          };
+          directoryMap.set(currentPath, dir);
+          allDirectories.push(dir);
+
+          // Add to parent
+          const parent = directoryMap.get(parentPath);
+          if (parent) {
+            parent.children.push(dir);
+          }
+        }
+      }
+
+      // Create file info
+      const extension = fileName.includes('.') ? fileName.split('.').pop() || '' : '';
+      const fileInfo: FileInfo = {
+        name: fileName,
+        path: filePath,
+        relativePath: filePath,
+        extension,
+        size: 100, // Default size
+        lastModified: new Date(),
+        isDirectory: false,
+      };
+      allFiles.push(fileInfo);
+
+      // Add file to parent directory
+      const parentDir = directoryMap.get(dirPath) || root;
+      parentDir.children.push(fileInfo);
+      parentDir.fileCount++;
+      parentDir.totalSize += fileInfo.size;
+    }
+
+    // Update directory stats (propagate counts up)
+    const updateDirStats = (dir: DirectoryInfo): { files: number; size: number } => {
+      let totalFiles = dir.fileCount;
+      let totalSize = dir.totalSize;
+
+      for (const child of dir.children) {
+        if ('children' in child) {
+          const childStats = updateDirStats(child as DirectoryInfo);
+          totalFiles += childStats.files;
+          totalSize += childStats.size;
+        }
+      }
+
+      dir.fileCount = totalFiles;
+      dir.totalSize = totalSize;
+      return { files: totalFiles, size: totalSize };
+    };
+    updateDirStats(root);
+
+    // Calculate max depth
+    const maxDepth = allFiles.length > 0
+      ? Math.max(...allFiles.map(f => f.path.split('/').length))
+      : 0;
+
+    return {
+      sha: commitHash,
+      root,
+      allFiles,
+      allDirectories,
+      stats: {
+        totalFiles: allFiles.length,
+        totalDirectories: allDirectories.length,
+        totalSize: root.totalSize,
+        maxDepth,
+      },
+      metadata: {
+        id: `historical-${commitHash}`,
+        timestamp: new Date(),
+        sourceType: 'git-historical',
+        sourceSha: commitHash,
+        sourceInfo: {},
+      },
+    } as unknown as FileTree;
+  }
+
+  /**
+   * Generate a File City image for a specific commit
+   * Uses git ls-tree output to build the file tree
+   */
+  async getImageForCommit(
+    repoPath: string,
+    commitHash: string,
+    filePaths: string[]
+  ): Promise<string | null> {
+    await this.ensureInitialized();
+
+    const tracer = getTracer('principal-ade-main');
+    const span = tracer.startSpan('file_city.image.historical_generation', {
+      attributes: { 'repo_path': repoPath, 'commit_hash': commitHash },
+    });
+
+    try {
+      if (filePaths.length === 0) {
+        span.addEvent('file_city.image.skipped', {
+          'repo_path': repoPath,
+          'reason': 'no_files',
+        });
+        span.setStatus({ code: SpanStatusCode.OK });
+        return null;
+      }
+
+      // Check cache first
+      const cacheKey = this.getCacheKey(repoPath, commitHash);
+      const cachedPath = await this.getCachedImagePath(cacheKey);
+
+      if (cachedPath) {
+        console.log('[FileCityImageService] Cache hit for historical:', commitHash);
+        const cachedBuffer = await fs.readFile(cachedPath);
+        span.setStatus({ code: SpanStatusCode.OK });
+        return `data:image/png;base64,${cachedBuffer.toString('base64')}`;
+      }
+
+      // Build file tree from paths
+      const fileTree = this.buildFileTreeFromPaths(filePaths, commitHash);
+
+      console.log('[FileCityImageService] Generating historical image for:', commitHash);
+      span.addEvent('file_city.image.generation_started', {
+        'repo_path': repoPath,
+        'commit_hash': commitHash,
+        'file_count': filePaths.length,
+      });
+
+      const imageBuffer = await this.generateImage(fileTree);
+
+      // Save to cache
+      const cachePath = this.getCachePath(cacheKey);
+      await fs.writeFile(cachePath, imageBuffer);
+
+      span.addEvent('file_city.image.generation_complete', {
+        'repo_path': repoPath,
+        'commit_hash': commitHash,
+      });
+      span.setStatus({ code: SpanStatusCode.OK });
+
+      return `data:image/png;base64,${imageBuffer.toString('base64')}`;
+    } catch (error) {
+      console.error('[FileCityImageService] Error generating historical image:', error);
+      span.setStatus({
+        code: SpanStatusCode.ERROR,
+        message: error instanceof Error ? error.message : 'Historical image generation failed',
+      });
+      return null;
+    } finally {
+      span.end();
+    }
+  }
+
+  /**
    * Clear cached images for a repository
    */
   async clearCacheForRepository(repoPath: string): Promise<void> {
@@ -338,6 +551,13 @@ export function registerFileCityImageHandlers(): void {
   ipcMain.handle('file-city:has-image', async (_event, repoPath: string) => {
     return service.hasImageForRepository(repoPath);
   });
+
+  ipcMain.handle(
+    'file-city:get-image-for-commit',
+    async (_event, repoPath: string, commitHash: string, filePaths: string[]) => {
+      return service.getImageForCommit(repoPath, commitHash, filePaths);
+    }
+  );
 
   console.log('[FileCityImageService] IPC handlers registered');
 }

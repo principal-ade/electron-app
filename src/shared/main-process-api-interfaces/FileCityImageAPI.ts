@@ -11,6 +11,7 @@
 export enum FileCityImageAPIEvent {
   GET_IMAGE = 'file-city:get-image',
   HAS_IMAGE = 'file-city:has-image',
+  GET_IMAGE_FOR_COMMIT = 'file-city:get-image-for-commit',
   IMAGE_GENERATED = 'file-city:image-generated',
 }
 
@@ -28,6 +29,16 @@ export interface FileCityImageAPI {
    * Check if a File City image exists for a repository (without generating)
    */
   hasImage: (repoPath: string) => Promise<boolean>;
+
+  /**
+   * Get or generate a File City image for a specific commit
+   * Uses git ls-tree output to build the file tree at that commit
+   */
+  getImageForCommit: (
+    repoPath: string,
+    commitHash: string,
+    filePaths: string[]
+  ) => Promise<string | null>;
 
   /**
    * Subscribe to image generation events

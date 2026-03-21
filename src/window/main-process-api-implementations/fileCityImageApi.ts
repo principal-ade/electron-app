@@ -11,6 +11,19 @@ export const fileCityImageAPI: FileCityImageAPI = {
     return ipcRenderer.invoke(FileCityImageAPIEvent.HAS_IMAGE, repoPath);
   },
 
+  getImageForCommit: async (
+    repoPath: string,
+    commitHash: string,
+    filePaths: string[]
+  ): Promise<string | null> => {
+    return ipcRenderer.invoke(
+      FileCityImageAPIEvent.GET_IMAGE_FOR_COMMIT,
+      repoPath,
+      commitHash,
+      filePaths
+    );
+  },
+
   onImageGenerated: (callback: (repoPath: string, imageUrl: string) => void): (() => void) => {
     const handler = (_event: Electron.IpcRendererEvent, repoPath: string, imageUrl: string) => {
       callback(repoPath, imageUrl);

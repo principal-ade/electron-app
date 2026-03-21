@@ -322,12 +322,12 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   DevWorkspacePanelFrameworkInnerProps
 > = ({ collapsed, onCollapsedChange, layout, onLayoutChange, panelSizes, onPanelSizesChange, onTabsChange, onLeftCollapseComplete, onLeftExpandComplete, onOpenInWebADE, onOpenGitHubActions, sidebarsHidden }) => {
   const { theme } = useTheme();
-  // Counter to force layout remount when sizes are programmatically changed
+
+  // Key to force remount when panel sizes change programmatically
   const [layoutResetKey, setLayoutResetKey] = useState(0);
-  // Track previous panelSizes to detect changes
   const prevPanelSizesRef = useRef(panelSizes);
 
-  // When panelSizes changes, trigger remount to apply new sizes
+  // When panelSizes changes programmatically, increment key to force remount
   useEffect(() => {
     const prev = prevPanelSizesRef.current;
     if (panelSizes && prev && (
@@ -335,10 +335,11 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       panelSizes.middle !== prev.middle ||
       panelSizes.right !== prev.right
     )) {
-      setLayoutResetKey((k) => k + 1);
+      setLayoutResetKey(k => k + 1);
     }
     prevPanelSizesRef.current = panelSizes;
   }, [panelSizes]);
+
   const { context, actions, events } = useRepositoryPanelProvider();
   const { context: terminalCtx, actions: terminalActions } =
     useTerminalProvider();
@@ -3317,7 +3318,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           isEditMode={false}
           collapsiblePanels={{ left: true, right: true }}
           defaultSizes={panelSizes || { left: 25, middle: 50, right: 25 }}
-          minSizes={{ left: 0, middle: 30, right: 0 }}
           collapsed={collapsed}
           showCollapseButtons={false}
           theme={theme}

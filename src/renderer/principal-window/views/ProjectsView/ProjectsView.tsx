@@ -667,7 +667,6 @@ const ProjectsViewContent: React.FC<ProjectsViewContentProps> = ({ mode }) => {
               ? panelState.sizes
               : { left: 25, middle: 50, right: 25 }
           }
-          minSizes={{ left: 15, middle: 30, right: 20 }}
           collapsed={collapsedState}
           style={{ flex: 1, width: '100%', minHeight: 0 }}
           theme={theme}

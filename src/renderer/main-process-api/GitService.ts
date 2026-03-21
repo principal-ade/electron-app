@@ -192,6 +192,115 @@ export class GitService {
     }
   }
 
+  /**
+   * Commit info returned by getCommitForDate
+   */
+  static CommitInfo: {
+    hash: string;
+    message: string;
+    author: string;
+    date: string;
+  };
+
+  /**
+   * Get the last commit info for a specific date
+   * @param directory - Repository directory
+   * @param date - Date in YYYY-MM-DD format
+   * @returns Commit info or null if no commits on that date
+   */
+  static async getCommitForDate(
+    directory: string,
+    date: string,
+  ): Promise<{ hash: string; message: string; author: string; date: string } | null> {
+    console.info(`[GitService] Getting commit for date: ${directory} (${date})`);
+    try {
+      // Get the last commit on the given date with full info
+      // Format: hash|subject|author|date
+      const result = await window.mainProcess.git.execCommand(directory, [
+        'log',
+        '--format="%H|%s|%an|%ad"',
+        '--date=short',
+        '-1',
+        `--since=${date} 00:00:00`,
+        `--until=${date} 23:59:59`,
+      ]);
+
+      const line = result.stdout.trim().replace(/^"|"$/g, '');
+      if (!line) return null;
+
+      const [hash, message, author, commitDate] = line.split('|');
+      return { hash, message, author, date: commitDate };
+    } catch (error) {
+      console.error('[GitService] Failed to get commit for date:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get all commits in a date range
+   * @param directory - Repository directory
+   * @param startDate - Start date in YYYY-MM-DD format
+   * @param endDate - End date in YYYY-MM-DD format
+   * @returns Array of commit info, oldest first
+   */
+  static async getCommitsInDateRange(
+    directory: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<{ hash: string; message: string; author: string; date: string }[]> {
+    console.info(`[GitService] Getting commits in range: ${directory} (${startDate} to ${endDate})`);
+    try {
+      // Get all commits in the date range, oldest first (--reverse)
+      const result = await window.mainProcess.git.execCommand(directory, [
+        'log',
+        '--format="%H|%s|%an|%ad"',
+        '--date=short',
+        '--reverse',
+        `--since=${startDate} 00:00:00`,
+        `--until=${endDate} 23:59:59`,
+      ]);
+
+      const lines = result.stdout.trim().split('\n').filter(Boolean);
+      return lines.map(line => {
+        const cleanLine = line.replace(/^"|"$/g, '');
+        const [hash, message, author, date] = cleanLine.split('|');
+        return { hash, message, author, date };
+      });
+    } catch (error) {
+      console.error('[GitService] Failed to get commits in date range:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get the file tree structure at a specific commit
+   * Uses git ls-tree to get file paths without checking out
+   * @param directory - Repository directory
+   * @param commitHash - Git commit hash
+   * @returns Array of file paths
+   */
+  static async getFileTreeAtCommit(
+    directory: string,
+    commitHash: string,
+  ): Promise<string[]> {
+    console.info(`[GitService] Getting file tree at commit: ${directory} (${commitHash})`);
+    try {
+      // Get all files at the commit using ls-tree
+      const result = await window.mainProcess.git.execCommand(directory, [
+        'ls-tree',
+        '-r',
+        '--name-only',
+        commitHash,
+      ]);
+
+      const files = result.stdout.trim().split('\n').filter(Boolean);
+      return files;
+    } catch (error) {
+      console.error('[GitService] Failed to get file tree at commit:', error);
+      return [];
+    }
+  }
+
   static async fastForwardMerge(
     directory: string,
   ): Promise<{ success: boolean; message: string }> {

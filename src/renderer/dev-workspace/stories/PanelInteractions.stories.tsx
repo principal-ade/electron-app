@@ -528,7 +528,6 @@ const PanelInteractionsStoryInner: React.FC = () => {
                       isEditMode={false}
                       collapsiblePanels={{ left: true, right: true }}
                       defaultSizes={panelSizes}
-                      minSizes={{ left: 15, middle: 30, right: 15 }}
                       collapsed={collapsed}
                       showCollapseButtons={true}
                       onPanelResize={setPanelSizes}

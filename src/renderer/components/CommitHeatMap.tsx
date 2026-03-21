@@ -8,11 +8,14 @@
 
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
+import { Play, Pause } from 'lucide-react';
 
 export interface CommitDay {
   date: string; // ISO date string (YYYY-MM-DD)
   count: number;
 }
+
+export type PlayMode = 'year' | 'week' | 'today';
 
 export interface CommitHeatMapProps {
   /** Array of commit data with date and count */
@@ -21,6 +24,16 @@ export interface CommitHeatMapProps {
   weeks?: number;
   /** Whether the component is loading */
   loading?: boolean;
+  /** Currently selected date (controlled) */
+  selectedDate?: string | null;
+  /** Callback when a day is clicked */
+  onDayClick?: (date: string, count: number) => void;
+  /** Whether playback is active */
+  isPlaying?: boolean;
+  /** Callback when play/pause is clicked with mode */
+  onPlayPause?: (mode: PlayMode) => void;
+  /** Current play mode */
+  playMode?: PlayMode;
 }
 
 // Day labels for the Y axis
@@ -37,6 +50,11 @@ export const CommitHeatMap: React.FC<CommitHeatMapProps> = ({
   commits,
   weeks = 52,
   loading = false,
+  selectedDate = null,
+  onDayClick,
+  isPlaying = false,
+  onPlayPause,
+  playMode = 'year',
 }) => {
   const { theme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -299,7 +317,9 @@ export const CommitHeatMap: React.FC<CommitHeatMapProps> = ({
                   gap: CELL_GAP,
                 }}
               >
-                {week.map((day, dayIndex) => (
+                {week.map((day, dayIndex) => {
+                  const isSelected = day && selectedDate === day.date;
+                  return (
                   <div
                     key={day?.date || `empty-${weekKey}-${dayIndex}`}
                     title={day ? `${day.date}: ${day.count} commit${day.count !== 1 ? 's' : ''}` : ''}
@@ -308,62 +328,174 @@ export const CommitHeatMap: React.FC<CommitHeatMapProps> = ({
                       height: cellSize,
                       borderRadius: 2,
                       backgroundColor: day ? getColor(day.count) : 'transparent',
-                      cursor: day ? 'pointer' : 'default',
-                      transition: 'transform 0.1s ease',
+                      cursor: day && onDayClick ? 'pointer' : 'default',
+                      transition: 'transform 0.1s ease, box-shadow 0.1s ease',
+                      boxShadow: isSelected
+                        ? `0 0 0 2px ${theme.colors.background}, 0 0 0 4px ${theme.colors.primary}`
+                        : 'none',
+                      position: 'relative',
+                      zIndex: isSelected ? 1 : 0,
+                    }}
+                    onClick={() => {
+                      if (day && onDayClick) {
+                        onDayClick(day.date, day.count);
+                      }
                     }}
                     onMouseEnter={(e) => {
                       if (day) {
                         e.currentTarget.style.transform = 'scale(1.2)';
+                        e.currentTarget.style.zIndex = '2';
                       }
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.transform = 'scale(1)';
+                      e.currentTarget.style.zIndex = isSelected ? '1' : '0';
                     }}
                   />
-                ))}
+                  );
+                })}
               </div>
               );
             })}
           </div>
         </div>
 
-        {/* Legend */}
+        {/* Bottom bar with play buttons and legend */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'flex-end',
+            justifyContent: 'space-between',
             marginTop: spacing.sm,
-            gap: spacing.xs,
           }}
         >
-          <span
+          {/* Play buttons */}
+          {onPlayPause && (
+            <div style={{ display: 'flex', gap: spacing.xs }}>
+              {/* Stop button when playing */}
+              {isPlaying ? (
+                <button
+                  onClick={() => onPlayPause(playMode)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: spacing.xs,
+                    padding: `${spacing.xs}px ${spacing.sm}px`,
+                    background: theme.colors.warning,
+                    color: theme.colors.background,
+                    border: 'none',
+                    borderRadius: borderRadius,
+                    cursor: 'pointer',
+                    fontSize: theme.fontSizes[1],
+                  }}
+                >
+                  <Pause size={14} />
+                  Pause
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => onPlayPause('today')}
+                    disabled={loading}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: spacing.xs,
+                      padding: `${spacing.xs}px ${spacing.sm}px`,
+                      background: theme.colors.primary,
+                      color: theme.colors.background,
+                      border: 'none',
+                      borderRadius: borderRadius,
+                      cursor: loading ? 'not-allowed' : 'pointer',
+                      fontSize: theme.fontSizes[1],
+                      opacity: loading ? 0.5 : 1,
+                    }}
+                  >
+                    <Play size={14} />
+                    Today
+                  </button>
+                  <button
+                    onClick={() => onPlayPause('week')}
+                    disabled={loading}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: spacing.xs,
+                      padding: `${spacing.xs}px ${spacing.sm}px`,
+                      background: theme.colors.primary,
+                      color: theme.colors.background,
+                      border: 'none',
+                      borderRadius: borderRadius,
+                      cursor: loading ? 'not-allowed' : 'pointer',
+                      fontSize: theme.fontSizes[1],
+                      opacity: loading ? 0.5 : 1,
+                    }}
+                  >
+                    <Play size={14} />
+                    This Week
+                  </button>
+                  <button
+                    onClick={() => onPlayPause('year')}
+                    disabled={loading}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: spacing.xs,
+                      padding: `${spacing.xs}px ${spacing.sm}px`,
+                      background: theme.colors.backgroundTertiary,
+                      color: theme.colors.text,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: borderRadius,
+                      cursor: loading ? 'not-allowed' : 'pointer',
+                      fontSize: theme.fontSizes[1],
+                      opacity: loading ? 0.5 : 1,
+                    }}
+                  >
+                    <Play size={14} />
+                    Full Year
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+          {!onPlayPause && <div />}
+
+          {/* Legend */}
+          <div
             style={{
-              fontSize: theme.fontSizes[0],
-              color: theme.colors.textSecondary,
+              display: 'flex',
+              alignItems: 'center',
+              gap: spacing.xs,
             }}
           >
-            Less
-          </span>
-          {[0, 1, 2, 3, 4].map((level) => (
-            <div
-              key={level}
+            <span
               style={{
-                width: cellSize,
-                height: cellSize,
-                borderRadius: 2,
-                backgroundColor: getColor(level === 0 ? 0 : (level / 4) * (maxCount || 1)),
+                fontSize: theme.fontSizes[0],
+                color: theme.colors.textSecondary,
               }}
-            />
-          ))}
-          <span
-            style={{
-              fontSize: theme.fontSizes[0],
-              color: theme.colors.textSecondary,
-            }}
-          >
-            More
-          </span>
+            >
+              Less
+            </span>
+            {[0, 1, 2, 3, 4].map((level) => (
+              <div
+                key={level}
+                style={{
+                  width: cellSize,
+                  height: cellSize,
+                  borderRadius: 2,
+                  backgroundColor: getColor(level === 0 ? 0 : (level / 4) * (maxCount || 1)),
+                }}
+              />
+            ))}
+            <span
+              style={{
+                fontSize: theme.fontSizes[0],
+                color: theme.colors.textSecondary,
+              }}
+            >
+              More
+            </span>
+          </div>
         </div>
       </div>
     </div>

@@ -28,6 +28,23 @@ export class FileCityImageService {
   }
 
   /**
+   * Get or generate a File City image for a specific commit
+   * Uses file paths from git ls-tree to build historical visualization
+   *
+   * @param repoPath - The path to the repository
+   * @param commitHash - The git commit hash
+   * @param filePaths - Array of file paths at that commit (from git ls-tree)
+   * @returns Promise resolving to data URL or null
+   */
+  static async getImageForCommit(
+    repoPath: string,
+    commitHash: string,
+    filePaths: string[]
+  ): Promise<string | null> {
+    return window.mainProcess.fileCityImage.getImageForCommit(repoPath, commitHash, filePaths);
+  }
+
+  /**
    * Subscribe to image generation events
    * Called when a new image is generated for any repository
    *

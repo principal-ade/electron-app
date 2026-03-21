@@ -25,7 +25,6 @@ const GitSyncViewContent: React.FC = () => {
     panelType: 'two-panel',
   });
 
-  const minSizes = useMemo(() => ({ left: 280, right: 300 }), []);
   const collapsiblePanels = useMemo(() => ({ left: false, right: false }), []);
 
   const borderColor =
@@ -108,7 +107,6 @@ const GitSyncViewContent: React.FC = () => {
         layout={layout}
         collapsiblePanels={collapsiblePanels}
         defaultSizes={panelState.sizes}
-        minSizes={minSizes}
         collapsed={panelState.collapsed}
         onPanelResize={panelState.handlePanelResize}
         onLeftCollapseComplete={panelState.handleLeftCollapseComplete}
