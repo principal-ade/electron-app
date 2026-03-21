@@ -14,7 +14,7 @@
         "events": {
           "otel.external_service.activity": "[0] External application activity",
           "otel.otlp_endpoint.activity": "[0b] OTLP HTTP endpoint activity",
-          "otel.ipc.handler_invoked": "[1] IPC handler **{{handler.name}}** invoked from window {{window.id}} (source: {{source.url}})",
+          "otel.ipc.handler_invoked": "[1] IPC handler **{{handler.name}}** invoked from window {{window.id}} (source: {{source.url}}, services: {{services.count}}, limit: {{traces.limit}}, fetched: {{traces.fetched}})",
           "otel.messageport.trace_routed": "[2] MessagePort registered for window {{window.id}} (source: {{source.url}}, type: {{message.type}}, registered: {{port.registered}})",
           "otel.preload_bridge.activity": "[3] Preload bridge activity",
           "otel.trace_message_subscriber.activity": "[4] Message subscriber activity",

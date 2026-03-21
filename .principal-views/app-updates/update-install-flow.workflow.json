@@ -12,7 +12,7 @@
       "template": {
         "introduction": "**Installation Successful**\n\nThe update has been installed and the app is restarting.",
         "events": {
-          "app_updates.download.completed": "1. Update downloaded: v{{version}}",
+          "app_updates.download.completed": "1. Update downloaded: v{{version}} (path: {{download_path}})",
           "app_updates.user.install_requested": "2. User clicked \"Install & Restart\" (v{{version}})",
           "app_updates.service.method_called": "3. Service: {{method}}",
           "app_updates.ipc.message_sent": "4. IPC: {{channel}} ({{direction}})",

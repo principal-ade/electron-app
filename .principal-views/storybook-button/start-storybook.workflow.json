@@ -14,13 +14,13 @@
         "events": {
           "storybook.packages.detected": "Detected {{packages_count}} Storybook packages: {{package_names}} (has script: {{has_script}})",
           "storybook.button.clicked": "User clicked Storybook button (action: {{action}}, status: {{current_status}}, package: {{selected_package}})",
-          "storybook.port.found": "Found available port **{{port}}**",
+          "storybook.port.found": "Found available port **{{port}}** (scanned {{start_port}}-{{end_port}})",
           "storybook.command.generated": "Generated command: `{{command}}` (strategy: {{strategy}}, port: {{port}}, cwd: {{cwd}})",
-          "storybook.terminal.created": "Created terminal session `{{session_id}}` (context: {{context}}, cwd: {{cwd}})",
+          "storybook.terminal.created": "Created terminal session `{{session_id}}` (context: {{context}}, cwd: {{cwd}}, command: {{command}})",
           "storybook.session.event_emitted": "Emitted {{event_type}} for session {{session_id}}",
           "storybook.layout.configured": "Configured panel layout (left_collapsed: {{left_collapsed}}, sizes: {{panel_sizes}}, right: {{right_panel}})",
           "storybook.port.ready": "Port {{port}} ready after {{wait_duration_ms}}ms ({{attempts}} attempts)",
-          "storybook.browser.navigated": "Browser navigated to localhost:{{port}}{{path}}",
+          "storybook.browser.navigated": "Browser navigated to {{full_url}} (localhost:{{port}}{{path}})",
           "storybook.status.changed": "Status changed: {{previous_status}} -> **{{new_status}}** (port: {{port}})"
         },
         "summary": "**Storybook Server:**\n- Port: {{port}}\n- Session: `{{session_id}}`\n- Status: {{new_status}}\n\n**Startup Time:** {{wait_duration_ms}}ms"

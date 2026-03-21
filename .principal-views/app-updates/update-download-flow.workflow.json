@@ -12,7 +12,7 @@
       "template": {
         "introduction": "**Download Successful**\n\nThe update has been downloaded and is ready to install.",
         "events": {
-          "app_updates.check.available": "1. Update available: v{{available_version}}",
+          "app_updates.check.available": "1. Update available: v{{available_version}} (from v{{current_version}}, released {{release_date}})",
           "app_updates.user.download_requested": "2. User clicked Download Update (v{{available_version}})",
           "app_updates.service.method_called": "3. Service: {{method}}",
           "app_updates.ipc.message_sent": "4. IPC: {{channel}} ({{direction}})",
@@ -35,7 +35,7 @@
           "app_updates.download.started": "2. Download started for v{{version}}",
           "app_updates.download.progress": "3. Progress: {{percent}}% before failure",
           "app_updates.error.occurred": "4. **Error:** {{error_type}} during {{phase}} - {{error_message}}",
-          "app_updates.ui.error_displayed": "5. Error shown: {{user_message}}"
+          "app_updates.ui.error_displayed": "5. Error shown: {{user_message}} (type: {{error_type}})"
         },
         "summary": "**Download Error**\n- Type: {{error_type}}\n- Phase: download\n- Message: {{error_message}}\n\n**Common fixes:**\n- Check internet connection\n- Verify proxy/firewall settings\n- Try again later"
       }

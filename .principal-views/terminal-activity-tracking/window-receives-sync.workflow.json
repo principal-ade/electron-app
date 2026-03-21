@@ -12,7 +12,7 @@
       "template": {
         "introduction": "**Window Received Activity Sync**\n\nWindow received terminal activity broadcast from main process.",
         "events": {
-          "terminal.activity.sync_received": "[1] Sync received: {{activities.count}} active sessions, UI updated={{ui.updated}}"
+          "terminal.activity.sync_received": "[1] Sync received in window {{window.id}}: {{activities.count}} active sessions, UI updated={{ui.updated}}"
         },
         "summary": "**Sync Summary:**\n- Active Sessions: {{activities.count}}\n- UI Updated: {{ui.updated}}"
       },

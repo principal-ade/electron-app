@@ -14,7 +14,7 @@
         "events": {
           "otel.external_service.activity": "[0] External application activity (instrumented with @opentelemetry/api)",
           "otel.otlp_endpoint.activity": "[0b] OTLP HTTP endpoint activity",
-          "otel.collector.trace_received": "[1] Collector parsed trace data in **{{collector.mode}}** mode ({{resource.spans.count}} resource spans, format: {{trace.format}})",
+          "otel.collector.trace_received": "[1] Collector parsed trace `{{trace.id}}` in **{{collector.mode}}** mode ({{resource.spans.count}} resource spans, format: {{trace.format}})",
           "otel.storage.trace_stored": "[2] Trace `{{trace.id}}` stored in buffer at {{storage.timestamp}} ({{storage.size}}/{{storage.max_size}} traces, {{spans.count}} spans)",
           "otel.preload_bridge.activity": "[3] Preload bridge activity",
           "otel.trace_message_subscriber.activity": "[4] Message subscriber activity",

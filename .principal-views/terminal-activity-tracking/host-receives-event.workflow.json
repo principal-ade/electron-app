@@ -12,8 +12,8 @@
       "template": {
         "introduction": "**Host Processing Activity Event**\n\nPanel host received terminal activity change and is forwarding to main process.",
         "events": {
-          "terminal.activity.host_received": "[1] Host received via **{{handler.name}}**: session `{{session.id}}`, working={{is_working}}",
-          "terminal.activity.tipc_invoked": "[2] TIPC invoked: **{{procedure.name}}**, working={{is_working}}"
+          "terminal.activity.host_received": "[1] Host received via **{{handler.name}}**: session `{{session.id}}`, working={{is_working}}, type={{event.type}}",
+          "terminal.activity.tipc_invoked": "[2] TIPC invoked: **{{procedure.name}}**, session={{session.id}}, working={{is_working}}, message={{working_message}}"
         },
         "summary": "**Host Event Summary:**\n- Session: `{{session.id}}`\n- Working: {{is_working}}"
       },

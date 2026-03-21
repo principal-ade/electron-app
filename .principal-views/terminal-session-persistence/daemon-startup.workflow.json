@@ -14,9 +14,9 @@
         "events": {
           "terminal.daemon.phase": "[1] Daemon {{phase}}: {{reason}} (uptime={{uptime.ms}}ms)",
           "terminal.daemon.server_event": "[2] Server {{event}}: {{clients.count}} clients",
-          "terminal.pty.spawn_attempt": "[3] PTY spawn attempt: shell={{shell.path}}, cwd={{cwd}}",
-          "terminal.pty.spawned": "[4] PTY spawned: pid={{pid}}",
-          "terminal.pty.spawn_failed": "[!] PTY spawn failed: error={{error.message}}"
+          "terminal.pty.spawn_attempt": "[3] PTY spawn attempt: shell={{shell.path}}, cwd={{cwd}}, session={{session.id}}, size={{cols}}x{{rows}}, env={{env.keys}}, process.cwd={{process.cwd}}, execPath={{process.execPath}}",
+          "terminal.pty.spawned": "[4] PTY spawned: pid={{pid}}, session={{session.id}}",
+          "terminal.pty.spawn_failed": "[!] PTY spawn failed: error={{error.message}}, session={{session.id}}, shell={{shell.path}}, cwd={{cwd}}, process.cwd={{process.cwd}}, execPath={{process.execPath}}, PATH={{process.env.PATH}}, SHELL={{process.env.SHELL}}, HOME={{process.env.HOME}}"
         },
         "summary": "**Daemon Ready**"
       }

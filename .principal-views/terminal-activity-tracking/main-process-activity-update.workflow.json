@@ -12,7 +12,7 @@
       "template": {
         "introduction": "**Agent Started Working**\n\nSession `{{session.id}}` from window {{window.id}} has started working.",
         "events": {
-          "terminal.activity.router_handled": "[1] TIPC router handled\n    Window: {{window.id}}, Session: `{{session.id}}`",
+          "terminal.activity.router_handled": "[1] TIPC router handled **{{procedure.name}}**\n    Window: {{window.id}}, Session: `{{session.id}}`, Working: {{is_working}}",
           "terminal.activity.agent_started": "[2] Agent started: `{{session.id}}`\n    Active sessions: {{store.size}}",
           "terminal.activity.broadcast_sent": "[3] Broadcast on **{{channel}}**\n    Windows: {{windows.count}}, Activities: {{activities.count}}"
         },
@@ -27,7 +27,7 @@
       "template": {
         "introduction": "**Agent Stopped Working**\n\nSession `{{session.id}}` from window {{window.id}} has completed work.",
         "events": {
-          "terminal.activity.router_handled": "[1] TIPC router handled\n    Window: {{window.id}}, Session: `{{session.id}}`",
+          "terminal.activity.router_handled": "[1] TIPC router handled **{{procedure.name}}**\n    Window: {{window.id}}, Session: `{{session.id}}`, Working: {{is_working}}",
           "terminal.activity.agent_stopped": "[2] Agent stopped: `{{session.id}}`\n    Remaining sessions: {{store.size}}",
           "terminal.activity.broadcast_sent": "[3] Broadcast on **{{channel}}**\n    Windows: {{windows.count}}, Activities: {{activities.count}}"
         },
