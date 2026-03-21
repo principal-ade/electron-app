@@ -1,0 +1,373 @@
+/**
+ * CommitHeatMap
+ *
+ * Displays a GitHub-style commit activity heat map showing commit frequency
+ * over the past weeks. Each cell represents a day, with color intensity
+ * indicating the number of commits. Automatically scales to fill container width.
+ */
+
+import React, { useMemo, useRef, useState, useEffect } from 'react';
+import { useTheme } from '@principal-ade/industry-theme';
+
+export interface CommitDay {
+  date: string; // ISO date string (YYYY-MM-DD)
+  count: number;
+}
+
+export interface CommitHeatMapProps {
+  /** Array of commit data with date and count */
+  commits: CommitDay[];
+  /** Number of weeks to display (default: 52) */
+  weeks?: number;
+  /** Whether the component is loading */
+  loading?: boolean;
+}
+
+// Day labels for the Y axis
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+// Month labels
+const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const DAY_LABEL_WIDTH = 28;
+const MIN_CELL_SIZE = 8;
+const CELL_GAP = 2;
+
+export const CommitHeatMap: React.FC<CommitHeatMapProps> = ({
+  commits,
+  weeks = 52,
+  loading = false,
+}) => {
+  const { theme } = useTheme();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  // Measure container width
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.offsetWidth);
+      }
+    };
+
+    updateWidth();
+
+    const resizeObserver = new ResizeObserver(updateWidth);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  // Calculate cell size based on container width to fill the full width
+  const cellSize = useMemo(() => {
+    if (containerWidth === 0) return MIN_CELL_SIZE;
+
+    // Account for padding (16px * 2 = 32) and day label width
+    const availableWidth = containerWidth - DAY_LABEL_WIDTH - 32;
+    // Calculate size needed to fill the width exactly
+    const calculatedSize = (availableWidth - (weeks - 1) * CELL_GAP) / weeks;
+
+    return Math.max(MIN_CELL_SIZE, calculatedSize);
+  }, [containerWidth, weeks]);
+
+  // Build a map of date -> count for quick lookup
+  const commitMap = useMemo(() => {
+    const map = new Map<string, number>();
+    commits.forEach(({ date, count }) => {
+      map.set(date, count);
+    });
+    return map;
+  }, [commits]);
+
+  // Calculate the grid data
+  const { grid, monthLabels, maxCount } = useMemo(() => {
+    const today = new Date();
+    const totalDays = weeks * 7;
+
+    // Find the start date (going back `weeks` weeks, aligned to Sunday)
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() - totalDays + 1);
+    // Align to the previous Sunday
+    const dayOfWeek = startDate.getDay();
+    startDate.setDate(startDate.getDate() - dayOfWeek);
+
+    // Build the grid (columns = weeks, rows = days of week)
+    const gridData: (CommitDay | null)[][] = [];
+    const months: { label: string; column: number }[] = [];
+    let currentMonth = -1;
+    let maxCommits = 0;
+
+    for (let week = 0; week < weeks; week++) {
+      const column: (CommitDay | null)[] = [];
+
+      for (let day = 0; day < 7; day++) {
+        const cellDate = new Date(startDate);
+        cellDate.setDate(startDate.getDate() + week * 7 + day);
+
+        // Don't include future dates
+        if (cellDate > today) {
+          column.push(null);
+          continue;
+        }
+
+        const dateStr = cellDate.toISOString().split('T')[0];
+        const count = commitMap.get(dateStr) || 0;
+        maxCommits = Math.max(maxCommits, count);
+
+        // Track month changes for labels
+        const month = cellDate.getMonth();
+        if (month !== currentMonth && day === 0) {
+          currentMonth = month;
+          months.push({ label: MONTH_LABELS[month], column: week });
+        }
+
+        column.push({ date: dateStr, count });
+      }
+
+      gridData.push(column);
+    }
+
+    return { grid: gridData, monthLabels: months, maxCount: maxCommits };
+  }, [weeks, commitMap]);
+
+  // Get color intensity based on commit count
+  const getColor = (count: number): string => {
+    if (count === 0) {
+      return theme.colors.backgroundTertiary;
+    }
+
+    // Use theme primary color with varying opacity
+    const primaryColor = theme.colors.primary;
+
+    // Calculate intensity (0-4 levels like GitHub)
+    const intensity = maxCount > 0
+      ? Math.min(4, Math.ceil((count / maxCount) * 4))
+      : 0;
+
+    // Return color with appropriate opacity
+    const opacities = [0.2, 0.4, 0.6, 0.8, 1.0];
+    const opacity = opacities[intensity];
+
+    // Parse the primary color and apply opacity
+    // Assuming primaryColor is a hex color
+    if (primaryColor.startsWith('#')) {
+      const r = parseInt(primaryColor.slice(1, 3), 16);
+      const g = parseInt(primaryColor.slice(3, 5), 16);
+      const b = parseInt(primaryColor.slice(5, 7), 16);
+      return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+    }
+
+    return primaryColor;
+  };
+
+  // Calculate total commits
+  const totalCommits = useMemo(() => {
+    return commits.reduce((sum, { count }) => sum + count, 0);
+  }, [commits]);
+
+  const spacing = {
+    xs: theme.space?.[1] || 4,
+    sm: theme.space?.[2] || 8,
+    md: theme.space?.[3] || 16,
+  };
+
+  const borderRadius = theme.radii?.[1] || 4;
+
+  // When loading, we still render the full grid structure with empty data
+  // to avoid layout jitter
+
+  // Calculate the position for each month label
+  const getMonthLabelStyle = (column: number, index: number, total: number) => {
+    const position = DAY_LABEL_WIDTH + column * (cellSize + CELL_GAP);
+    // Calculate width until next month or end
+    const nextColumn = index < total - 1 ? monthLabels[index + 1].column : weeks;
+    const width = (nextColumn - column) * (cellSize + CELL_GAP);
+
+    return {
+      position: 'absolute' as const,
+      left: position,
+      width: Math.max(width - 4, 20),
+      fontSize: theme.fontSizes[0],
+      color: theme.colors.textSecondary,
+      whiteSpace: 'nowrap' as const,
+      overflow: 'hidden' as const,
+    };
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        padding: spacing.md,
+        background: theme.colors.backgroundSecondary,
+        borderRadius: borderRadius,
+        border: `1px solid ${theme.colors.border}`,
+        width: '100%',
+        boxSizing: 'border-box',
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: spacing.sm,
+        }}
+      >
+        <h4
+          style={{
+            margin: 0,
+            fontSize: theme.fontSizes[2],
+            fontWeight: 600,
+            color: theme.colors.text,
+          }}
+        >
+          Commit Activity
+        </h4>
+        <span
+          style={{
+            fontSize: theme.fontSizes[1],
+            color: theme.colors.textSecondary,
+          }}
+        >
+          {loading ? '—' : `${totalCommits} commits`} in the last year
+        </span>
+      </div>
+
+      {/* Heat map container */}
+      <div style={{ position: 'relative' }}>
+        {/* Month labels */}
+        <div
+          style={{
+            position: 'relative',
+            height: 16,
+            marginBottom: spacing.xs,
+          }}
+        >
+          {monthLabels.map(({ label, column }) => (
+            <span
+              key={`month-${column}`}
+              style={getMonthLabelStyle(column, monthLabels.findIndex(m => m.column === column), monthLabels.length)}
+            >
+              {label}
+            </span>
+          ))}
+        </div>
+
+        {/* Grid with day labels */}
+        <div style={{ display: 'flex' }}>
+          {/* Day labels */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              width: DAY_LABEL_WIDTH,
+              flexShrink: 0,
+              gap: CELL_GAP,
+            }}
+          >
+            {DAY_LABELS.map((label, index) => (
+              <div
+                key={label}
+                style={{
+                  height: cellSize,
+                  fontSize: theme.fontSizes[0],
+                  color: theme.colors.textSecondary,
+                  display: 'flex',
+                  alignItems: 'center',
+                  visibility: index % 2 === 1 ? 'visible' : 'hidden', // Show Mon, Wed, Fri
+                }}
+              >
+                {label}
+              </div>
+            ))}
+          </div>
+
+          {/* Heat map grid */}
+          <div style={{ display: 'flex', gap: CELL_GAP, flex: 1 }}>
+            {grid.map((week) => {
+              const weekKey = week.find(d => d !== null)?.date || 'empty';
+              return (
+              <div
+                key={`week-${weekKey}`}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: CELL_GAP,
+                }}
+              >
+                {week.map((day, dayIndex) => (
+                  <div
+                    key={day?.date || `empty-${weekKey}-${dayIndex}`}
+                    title={day ? `${day.date}: ${day.count} commit${day.count !== 1 ? 's' : ''}` : ''}
+                    style={{
+                      width: cellSize,
+                      height: cellSize,
+                      borderRadius: 2,
+                      backgroundColor: day ? getColor(day.count) : 'transparent',
+                      cursor: day ? 'pointer' : 'default',
+                      transition: 'transform 0.1s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (day) {
+                        e.currentTarget.style.transform = 'scale(1.2)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)';
+                    }}
+                  />
+                ))}
+              </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Legend */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            marginTop: spacing.sm,
+            gap: spacing.xs,
+          }}
+        >
+          <span
+            style={{
+              fontSize: theme.fontSizes[0],
+              color: theme.colors.textSecondary,
+            }}
+          >
+            Less
+          </span>
+          {[0, 1, 2, 3, 4].map((level) => (
+            <div
+              key={level}
+              style={{
+                width: cellSize,
+                height: cellSize,
+                borderRadius: 2,
+                backgroundColor: getColor(level === 0 ? 0 : (level / 4) * (maxCount || 1)),
+              }}
+            />
+          ))}
+          <span
+            style={{
+              fontSize: theme.fontSizes[0],
+              color: theme.colors.textSecondary,
+            }}
+          >
+            More
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CommitHeatMap;

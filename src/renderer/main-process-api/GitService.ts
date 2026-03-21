@@ -149,6 +149,49 @@ export class GitService {
     return window.mainProcess.git.getCommitHistory(directory, limit);
   }
 
+  /**
+   * Get commit dates for heat map visualization
+   * Returns an array of { date, count } for each day with commits
+   * @param directory - Repository directory
+   * @param days - Number of days to look back (default: 365)
+   */
+  static async getCommitDatesForHeatMap(
+    directory: string,
+    days = 365,
+  ): Promise<{ date: string; count: number }[]> {
+    console.info(
+      `[GitService] Getting commit dates for heat map: ${directory} (days=${days})`,
+    );
+    try {
+      // Get all commit dates in short format for the past N days
+      const result = await window.mainProcess.git.execCommand(directory, [
+        'log',
+        '--date=short',
+        '--format=%ad',
+        `--since=${days} days ago`,
+      ]);
+
+      const dates = result.stdout.trim().split('\n').filter(Boolean);
+
+      // Count commits per date
+      const countMap = new Map<string, number>();
+      for (const date of dates) {
+        countMap.set(date, (countMap.get(date) || 0) + 1);
+      }
+
+      // Convert to array format
+      const commitDates: { date: string; count: number }[] = [];
+      for (const [date, count] of countMap) {
+        commitDates.push({ date, count });
+      }
+
+      return commitDates;
+    } catch (error) {
+      console.error('[GitService] Failed to get commit dates:', error);
+      return [];
+    }
+  }
+
   static async fastForwardMerge(
     directory: string,
   ): Promise<{ success: boolean; message: string }> {

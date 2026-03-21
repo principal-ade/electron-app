@@ -19,6 +19,8 @@ import type { RepositoryPanelActions } from '../contexts/RepositoryPanelContext'
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { FolderGit2, GitBranch, RefreshCw, AlertCircle, Trash2, FolderOpen } from 'lucide-react';
 import { LocalProjectCard } from '@industry-theme/repository-composition-panels';
+import { CommitHeatMap } from '../components/CommitHeatMap';
+import { useCommitHeatMap } from '../hooks/useCommitHeatMap';
 
 interface ProjectInfoPanelContext extends PanelContextValue {
   gitStatusWithFiles?: DataSlice<GitStatusWithFiles | null>;
@@ -54,6 +56,11 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
   const gitSlice = context.gitStatusWithFiles;
   const hasGitData = gitSlice !== undefined;
   const isGitLoading = gitSlice?.loading ?? false;
+
+  // Get commit heat map data
+  const { commits: heatMapCommits, loading: heatMapLoading } = useCommitHeatMap(
+    repository?.path ?? null
+  );
 
   // Use theme space array or fallback values
   const spacing = {
@@ -452,6 +459,16 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
           padding: spacing.md,
         }}
       >
+        {/* Commit Heat Map */}
+        {repository && (
+          <div style={{ marginBottom: spacing.md }}>
+            <CommitHeatMap
+              commits={heatMapCommits}
+              loading={heatMapLoading}
+            />
+          </div>
+        )}
+
         {/* File City Card and Git Status - Side by Side */}
         <div style={{ display: 'flex', gap: spacing.md, marginBottom: spacing.md }}>
           {/* File City Card - Left */}
