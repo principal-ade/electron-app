@@ -263,6 +263,18 @@ const QuickOpenApp: React.FC = () => {
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     console.info('[Quick Open] Key pressed:', e.key);
 
+    // Handle Command+Shift+Number (1-9) to copy path
+    if (e.metaKey && e.shiftKey && e.key >= '1' && e.key <= '9') {
+      e.preventDefault();
+      const itemIndex = parseInt(e.key, 10) - 1; // Convert 1-9 to 0-8
+      console.info('[Quick Open] Cmd+Shift+Number - copying path at index:', itemIndex);
+      const item = filteredItems[itemIndex];
+      if (item?.localPath) {
+        handleContextMenu(e as unknown as React.MouseEvent<HTMLDivElement>, item);
+      }
+      return;
+    }
+
     // Handle Command+Number (1-9) to select items
     if (e.metaKey && e.key >= '1' && e.key <= '9') {
       e.preventDefault();
@@ -676,7 +688,7 @@ const QuickOpenApp: React.FC = () => {
               fontWeight: isCommandHeld ? 600 : 400,
             }}
           >
-            ⌘1-9 Quick Select
+            {isCommandHeld ? '⌘1-9 Select · ⇧ Copy' : '⌘1-9 Quick Select'}
           </span>
           <span
             style={{
