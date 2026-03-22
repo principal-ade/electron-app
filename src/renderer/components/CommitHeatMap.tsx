@@ -486,7 +486,7 @@ export const CommitHeatMap: React.FC<CommitHeatMapProps> = ({
                     }}
                   >
                     <Play size={14} />
-                    Today
+                    Latest
                   </button>
                   <button
                     onClick={() => onPlayPause('week')}
@@ -506,7 +506,7 @@ export const CommitHeatMap: React.FC<CommitHeatMapProps> = ({
                     }}
                   >
                     <Play size={14} />
-                    This Week
+                    Last 7 Active
                   </button>
                   <button
                     onClick={() => onPlayPause('year')}

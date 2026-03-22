@@ -251,10 +251,10 @@ export class GitService {
     console.info(`[GitService] Getting commits in range: ${directory} (${startDate} to ${endDate})`);
     try {
       // Get all commits in the date range, oldest first (--reverse)
+      // Use ISO 8601 format for full timestamp
       const result = await window.mainProcess.git.execCommand(directory, [
         'log',
-        '--format="%H|%s|%an|%ad"',
-        '--date=short',
+        '--format="%H|%s|%an|%aI"',
         '--reverse',
         `--since=${startDate} 00:00:00`,
         `--until=${endDate} 23:59:59`,
