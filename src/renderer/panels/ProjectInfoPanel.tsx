@@ -17,17 +17,20 @@ import type {
 import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
 import type { RepositoryPanelActions } from '../contexts/RepositoryPanelContext';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import { FolderGit2, GitBranch, RefreshCw, AlertCircle, Trash2, FolderOpen, Download } from 'lucide-react';
+import type { StaleRepoInfo } from '../contexts/ProjectsPanelContext';
+import { FolderGit2, GitBranch, RefreshCw, AlertCircle, Trash2, FolderOpen, Download, Layers, HardDrive, Clock } from 'lucide-react';
 import { CommitHeatMap, type PlayMode } from '../components/CommitHeatMap';
 import { useCommitHeatMap } from '../hooks/useCommitHeatMap';
 import { useRemoteCommitHeatMap } from '../hooks/useRemoteCommitHeatMap';
 import { GitService } from '../main-process-api/GitService';
 import { GithubService } from '../main-process-api/GithubService';
 import { FileCityImageService } from '../main-process-api/FileCityImageService';
+import { WindowService } from '../main-process-api/WindowService';
 import type { GitHubCommit } from '../../shared/main-process-api-interfaces/GitHubAPI';
 
 interface ProjectInfoPanelContext extends PanelContextValue {
   gitStatusWithFiles?: DataSlice<GitStatusWithFiles | null>;
+  staleRepos?: StaleRepoInfo[];
 }
 
 interface ProjectInfoPanelActions extends PanelActions {
@@ -111,6 +114,12 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
     const repo = repository as { github?: { owner: string; name: string } };
     return repo.github?.owner ? { owner: repo.github.owner, name: repo.github.name } : null;
   }, [repository]);
+
+  // Find stale repo info for current repository (if it's stale)
+  const staleRepoInfo = React.useMemo(() => {
+    if (!repository || !context.staleRepos) return null;
+    return context.staleRepos.find(sr => sr.entry.name === repository.name) || null;
+  }, [repository, context.staleRepos]);
 
   // Get git status from context slice
   const gitSlice = context.gitStatusWithFiles;
@@ -219,6 +228,14 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
 
   const borderRadius = theme.radii?.[1] || 4;
 
+  // Format bytes to human readable size
+  const formatSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+  };
+
   // Handle refresh
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -231,7 +248,7 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
     }
   };
 
-  // Handle open project
+  // Handle open project (opens in workspace)
   const handleOpenProject = async () => {
     // Type assertion: actions may be RepositoryPanelActions at runtime
     const repoActions = actions as RepositoryPanelActions;
@@ -244,6 +261,17 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
         await repoActions.openLocalRepository(repository as unknown as AlexandriaEntry);
       } catch (error) {
         console.error('Failed to open project:', error);
+      }
+    }
+  };
+
+  // Handle open thread (opens ephemeral session for this repository)
+  const handleOpenThread = async () => {
+    if (repository?.path) {
+      try {
+        await WindowService.openThread(repository.path);
+      } catch (error) {
+        console.error('Failed to open thread:', error);
       }
     }
   };
@@ -1057,6 +1085,41 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
           >
             {repository.name}
           </h3>
+          {/* Stale repo info badges */}
+          {staleRepoInfo && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  padding: `${spacing.xs}px ${spacing.sm}px`,
+                  backgroundColor: theme.colors.backgroundTertiary,
+                  borderRadius: borderRadius,
+                  fontSize: theme.fontSizes[1],
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                <HardDrive size={12} />
+                {formatSize(staleRepoInfo.sizeBytes)}
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  padding: `${spacing.xs}px ${spacing.sm}px`,
+                  backgroundColor: theme.colors.warning + '20',
+                  borderRadius: borderRadius,
+                  fontSize: theme.fontSizes[1],
+                  color: theme.colors.warning,
+                }}
+              >
+                <Clock size={12} />
+                {staleRepoInfo.daysSinceModified} days ago
+              </div>
+            </div>
+          )}
           {githubUrl && (
             <button
               onClick={handleOpenInGitHub}
@@ -1115,7 +1178,33 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
             // Open and Delete buttons for local repos
             <>
               <button
+                onClick={handleOpenThread}
+                title="Open in a new thread (ephemeral session)"
+                style={{
+                  padding: `${spacing.xs}px ${spacing.sm}px`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: borderRadius,
+                  background: theme.colors.backgroundSecondary,
+                  color: theme.colors.text,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                }}
+              >
+                <Layers size={14} />
+                Thread
+              </button>
+              <button
                 onClick={handleOpenProject}
+                title="Open in workspace"
                 style={{
                   padding: `${spacing.xs}px ${spacing.sm}px`,
                   display: 'flex',
