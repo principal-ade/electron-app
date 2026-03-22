@@ -1,0 +1,855 @@
+{
+  "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "text": "# Thread Opening Flow\n\nRepository-first thread lifecycle with expansion support",
+      "x": 300,
+      "y": -180,
+      "width": 450,
+      "height": 80,
+      "color": "#8b5cf6"
+    },
+    {
+      "id": "trigger",
+      "type": "otel-event",
+      "x": 0,
+      "y": 0,
+      "width": 280,
+      "height": 200,
+      "color": "#22c55e",
+      "label": "User Trigger",
+      "icon": "Mouse",
+      "event": {
+        "name": "thread.open.requested",
+        "attributes": {
+          "repository.path": {
+            "type": "string",
+            "description": "Local path to repository"
+          },
+          "repository.id": {
+            "type": "string",
+            "description": "PURL identifier if known"
+          },
+          "thread.id": {
+            "type": "string",
+            "description": "Existing thread to join (for expansion)"
+          },
+          "trigger.source": {
+            "type": "string",
+            "description": "Where the open was triggered from"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft"
+      }
+    },
+    {
+      "id": "thread-service",
+      "type": "otel-event",
+      "x": 350,
+      "y": 0,
+      "width": 280,
+      "height": 180,
+      "color": "#06b6d4",
+      "label": "Thread Service",
+      "icon": "Zap",
+      "event": {
+        "name": "thread.ipc.invoke",
+        "attributes": {
+          "ipc.channel": {
+            "type": "string",
+            "value": "thread:open"
+          },
+          "repository.path": {
+            "type": "string"
+          },
+          "thread.id": {
+            "type": "string"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft"
+      }
+    },
+    {
+      "id": "ipc-handler",
+      "type": "otel-event",
+      "x": 700,
+      "y": 0,
+      "width": 280,
+      "height": 200,
+      "color": "#ef4444",
+      "label": "IPC Handler",
+      "icon": "Server",
+      "event": {
+        "name": "thread.handler.received",
+        "attributes": {
+          "repository.path": {
+            "type": "string"
+          },
+          "thread.id": {
+            "type": "string"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft"
+      }
+    },
+    {
+      "id": "thread-resolution",
+      "type": "otel-event",
+      "x": 700,
+      "y": 270,
+      "width": 280,
+      "height": 200,
+      "color": "#f59e0b",
+      "label": "Thread Resolution",
+      "icon": "GitBranch",
+      "event": {
+        "name": "thread.resolved",
+        "attributes": {
+          "thread.id": {
+            "type": "string",
+            "description": "Resolved thread identifier"
+          },
+          "thread.is_new": {
+            "type": "boolean",
+            "description": "Whether this is a new thread"
+          },
+          "repository.name": {
+            "type": "string",
+            "description": "Anchor repository name"
+          },
+          "window.exists": {
+            "type": "boolean",
+            "description": "Whether window already exists"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft"
+      }
+    },
+    {
+      "id": "new-thread-branch",
+      "type": "otel-event",
+      "x": 400,
+      "y": 300,
+      "width": 220,
+      "height": 140,
+      "color": "#22c55e",
+      "label": "New Thread",
+      "icon": "Plus",
+      "event": {
+        "name": "thread.window.creating",
+        "attributes": {
+          "window.name": {
+            "type": "string"
+          },
+          "window.type": {
+            "type": "string"
+          },
+          "thread.id": {
+            "type": "string"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft"
+      }
+    },
+    {
+      "id": "existing-thread-branch",
+      "type": "otel-event",
+      "x": 1050,
+      "y": 300,
+      "width": 220,
+      "height": 140,
+      "color": "#06b6d4",
+      "label": "Existing Thread",
+      "icon": "RotateCw",
+      "event": {
+        "name": "thread.window.focusing",
+        "attributes": {
+          "window.id": {
+            "type": "number"
+          },
+          "window.name": {
+            "type": "string"
+          },
+          "thread.id": {
+            "type": "string"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft"
+      }
+    },
+    {
+      "id": "create-window",
+      "type": "otel-event",
+      "x": 350,
+      "y": 500,
+      "width": 300,
+      "height": 180,
+      "color": "#4f46e5",
+      "label": "Create Window",
+      "icon": "Box",
+      "event": {
+        "name": "window.createSpecial",
+        "attributes": {
+          "window.purpose": {
+            "type": "string",
+            "value": "thread"
+          },
+          "window.reused": {
+            "type": "boolean"
+          },
+          "window.id": {
+            "type": "number"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/window/modernWindowManager.ts"
+        ]
+      }
+    },
+    {
+      "id": "terminal-register",
+      "type": "otel-event",
+      "x": 30,
+      "y": 520,
+      "width": 250,
+      "height": 120,
+      "color": "#818cf8",
+      "label": "Terminal Register",
+      "icon": "Monitor",
+      "event": {
+        "name": "terminal.window.registered",
+        "attributes": {
+          "window.id": {
+            "type": "number"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft"
+      }
+    },
+    {
+      "id": "watch-acquire",
+      "type": "otel-event",
+      "x": 30,
+      "y": 700,
+      "width": 280,
+      "height": 200,
+      "color": "#0d9488",
+      "label": "Watch Acquisition",
+      "icon": "Eye",
+      "event": {
+        "name": "thread.watches.acquired",
+        "attributes": {
+          "thread.id": {
+            "type": "string"
+          },
+          "repositories.total": {
+            "type": "number"
+          },
+          "repositories.watched": {
+            "type": "number"
+          },
+          "repositories.failed": {
+            "type": "number"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft"
+      }
+    },
+    {
+      "id": "load-url",
+      "type": "otel-event",
+      "x": 350,
+      "y": 740,
+      "width": 280,
+      "height": 160,
+      "color": "#4f46e5",
+      "label": "Load URL",
+      "icon": "Globe",
+      "event": {
+        "name": "window.loadURL",
+        "attributes": {
+          "window.id": {
+            "type": "number"
+          },
+          "url.path": {
+            "type": "string"
+          },
+          "url.has.thread.id": {
+            "type": "boolean"
+          },
+          "url.has.repository.path": {
+            "type": "boolean"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft"
+      }
+    },
+    {
+      "id": "app-init",
+      "type": "otel-event",
+      "x": 350,
+      "y": 960,
+      "width": 280,
+      "height": 180,
+      "color": "#22c55e",
+      "label": "App Initialize",
+      "icon": "Play",
+      "event": {
+        "name": "thread.app.initialized",
+        "attributes": {
+          "thread.id": {
+            "type": "string"
+          },
+          "repository.name": {
+            "type": "string"
+          },
+          "repository.count": {
+            "type": "number"
+          },
+          "init.duration.ms": {
+            "type": "number"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft"
+      }
+    },
+    {
+      "id": "thread-ready",
+      "type": "otel-event",
+      "x": 350,
+      "y": 1200,
+      "width": 280,
+      "height": 160,
+      "color": "#22c55e",
+      "label": "Thread Ready",
+      "icon": "Check",
+      "event": {
+        "name": "thread.ready",
+        "attributes": {
+          "thread.id": {
+            "type": "string"
+          },
+          "window.id": {
+            "type": "number"
+          },
+          "repository.name": {
+            "type": "string",
+            "description": "Anchor repository name"
+          },
+          "repository.count": {
+            "type": "number"
+          },
+          "total.duration.ms": {
+            "type": "number"
+          },
+          "watches.active": {
+            "type": "number"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft"
+      }
+    },
+    {
+      "id": "expansion-title",
+      "type": "text",
+      "text": "## Thread Expansion\n\nAdd/remove repositories from active thread",
+      "x": 1100,
+      "y": 500,
+      "width": 350,
+      "height": 60,
+      "color": "#f59e0b"
+    },
+    {
+      "id": "add-repo-request",
+      "type": "otel-event",
+      "x": 1100,
+      "y": 600,
+      "width": 280,
+      "height": 160,
+      "color": "#f59e0b",
+      "label": "Add Repository",
+      "icon": "FolderPlus",
+      "event": {
+        "name": "thread.repository.add.requested",
+        "attributes": {
+          "thread.id": {
+            "type": "string"
+          },
+          "repository.path": {
+            "type": "string"
+          },
+          "trigger.source": {
+            "type": "string",
+            "description": "drop, button, cli"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft"
+      }
+    },
+    {
+      "id": "validate-repo",
+      "type": "otel-event",
+      "x": 1100,
+      "y": 800,
+      "width": 280,
+      "height": 160,
+      "color": "#f59e0b",
+      "label": "Validate Repository",
+      "icon": "Search",
+      "event": {
+        "name": "thread.repository.validated",
+        "attributes": {
+          "repository.path": {
+            "type": "string"
+          },
+          "repository.name": {
+            "type": "string"
+          },
+          "repository.is_git": {
+            "type": "boolean"
+          },
+          "repository.exists": {
+            "type": "boolean"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft"
+      }
+    },
+    {
+      "id": "repo-added",
+      "type": "otel-event",
+      "x": 1100,
+      "y": 1000,
+      "width": 280,
+      "height": 160,
+      "color": "#22c55e",
+      "label": "Repository Added",
+      "icon": "CheckCircle",
+      "event": {
+        "name": "thread.repository.added",
+        "attributes": {
+          "thread.id": {
+            "type": "string"
+          },
+          "repository.name": {
+            "type": "string"
+          },
+          "thread.repository.count": {
+            "type": "number"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft"
+      }
+    },
+    {
+      "id": "repo-invalid",
+      "type": "otel-event",
+      "x": 1450,
+      "y": 800,
+      "width": 240,
+      "height": 140,
+      "color": "#ef4444",
+      "label": "Invalid Repository",
+      "icon": "XCircle",
+      "event": {
+        "name": "thread.repository.invalid",
+        "attributes": {
+          "repository.path": {
+            "type": "string"
+          },
+          "repository.exists": {
+            "type": "boolean"
+          },
+          "repository.is_git": {
+            "type": "boolean"
+          },
+          "error.reason": {
+            "type": "string"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft"
+      }
+    },
+    {
+      "id": "remove-repo",
+      "type": "otel-event",
+      "x": 1450,
+      "y": 600,
+      "width": 280,
+      "height": 160,
+      "color": "#f97316",
+      "label": "Remove Repository",
+      "icon": "FolderMinus",
+      "event": {
+        "name": "thread.repository.removed",
+        "attributes": {
+          "thread.id": {
+            "type": "string"
+          },
+          "repository.name": {
+            "type": "string"
+          },
+          "thread.repository.count": {
+            "type": "number"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft"
+      }
+    },
+    {
+      "id": "thread-dissolve",
+      "type": "otel-event",
+      "x": 1450,
+      "y": 1000,
+      "width": 240,
+      "height": 140,
+      "color": "#ef4444",
+      "label": "Thread Dissolved",
+      "icon": "Trash2",
+      "event": {
+        "name": "thread.dissolved",
+        "attributes": {
+          "thread.id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "value": "last_repository_removed"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft"
+      }
+    },
+    {
+      "id": "save-collection",
+      "type": "otel-event",
+      "x": 700,
+      "y": 1200,
+      "width": 280,
+      "height": 160,
+      "color": "#8b5cf6",
+      "label": "Save as Collection",
+      "icon": "Save",
+      "event": {
+        "name": "thread.saved",
+        "attributes": {
+          "thread.id": {
+            "type": "string"
+          },
+          "collection.id": {
+            "type": "string"
+          },
+          "collection.name": {
+            "type": "string"
+          },
+          "repository.count": {
+            "type": "number"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "trigger-to-service",
+      "fromNode": "trigger",
+      "toNode": "thread-service",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "calls",
+      "pv": {
+        "edgeType": "uses",
+        "style": "solid"
+      }
+    },
+    {
+      "id": "service-to-ipc",
+      "fromNode": "thread-service",
+      "toNode": "ipc-handler",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "IPC invoke",
+      "pv": {
+        "edgeType": "ipc",
+        "style": "solid",
+        "animation": {
+          "type": "flow",
+          "duration": 1500,
+          "color": "#6366f1"
+        }
+      }
+    },
+    {
+      "id": "ipc-to-resolution",
+      "fromNode": "ipc-handler",
+      "toNode": "thread-resolution",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "resolve thread",
+      "pv": {
+        "edgeType": "uses",
+        "style": "solid"
+      }
+    },
+    {
+      "id": "resolution-to-new",
+      "fromNode": "thread-resolution",
+      "toNode": "new-thread-branch",
+      "fromSide": "left",
+      "toSide": "right",
+      "label": "new thread",
+      "pv": {
+        "edgeType": "uses",
+        "style": "solid"
+      }
+    },
+    {
+      "id": "resolution-to-existing",
+      "fromNode": "thread-resolution",
+      "toNode": "existing-thread-branch",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "existing",
+      "pv": {
+        "edgeType": "uses",
+        "style": "dashed"
+      }
+    },
+    {
+      "id": "new-to-create",
+      "fromNode": "new-thread-branch",
+      "toNode": "create-window",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "create",
+      "pv": {
+        "edgeType": "uses",
+        "style": "solid"
+      }
+    },
+    {
+      "id": "create-to-terminal",
+      "fromNode": "create-window",
+      "toNode": "terminal-register",
+      "fromSide": "left",
+      "toSide": "right",
+      "label": "register",
+      "pv": {
+        "edgeType": "uses",
+        "style": "solid"
+      }
+    },
+    {
+      "id": "create-to-watch",
+      "fromNode": "create-window",
+      "toNode": "watch-acquire",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "async",
+      "pv": {
+        "edgeType": "uses",
+        "style": "dashed"
+      }
+    },
+    {
+      "id": "create-to-load",
+      "fromNode": "create-window",
+      "toNode": "load-url",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "loadURL",
+      "pv": {
+        "edgeType": "uses",
+        "style": "solid"
+      }
+    },
+    {
+      "id": "load-to-init",
+      "fromNode": "load-url",
+      "toNode": "app-init",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "render",
+      "pv": {
+        "edgeType": "renders",
+        "style": "solid"
+      }
+    },
+    {
+      "id": "init-to-ready",
+      "fromNode": "app-init",
+      "toNode": "thread-ready",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "complete",
+      "pv": {
+        "edgeType": "ipc-event",
+        "style": "solid"
+      }
+    },
+    {
+      "id": "existing-to-ready",
+      "fromNode": "existing-thread-branch",
+      "toNode": "thread-ready",
+      "fromSide": "bottom",
+      "toSide": "right",
+      "label": "focus complete",
+      "pv": {
+        "edgeType": "uses",
+        "style": "dashed"
+      }
+    },
+    {
+      "id": "add-to-validate",
+      "fromNode": "add-repo-request",
+      "toNode": "validate-repo",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "validate",
+      "pv": {
+        "edgeType": "uses",
+        "style": "solid"
+      }
+    },
+    {
+      "id": "validate-to-added",
+      "fromNode": "validate-repo",
+      "toNode": "repo-added",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "valid",
+      "pv": {
+        "edgeType": "uses",
+        "style": "solid"
+      }
+    },
+    {
+      "id": "validate-to-invalid",
+      "fromNode": "validate-repo",
+      "toNode": "repo-invalid",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "invalid",
+      "pv": {
+        "edgeType": "uses",
+        "style": "dashed"
+      }
+    },
+    {
+      "id": "remove-to-dissolve",
+      "fromNode": "remove-repo",
+      "toNode": "thread-dissolve",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "if last",
+      "pv": {
+        "edgeType": "uses",
+        "style": "dashed"
+      }
+    },
+    {
+      "id": "ready-to-save",
+      "fromNode": "thread-ready",
+      "toNode": "save-collection",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "optional save",
+      "pv": {
+        "edgeType": "uses",
+        "style": "dashed"
+      }
+    },
+    {
+      "id": "resolution-to-invalid",
+      "fromNode": "thread-resolution",
+      "toNode": "repo-invalid",
+      "fromSide": "right",
+      "toSide": "top",
+      "label": "invalid repo",
+      "pv": {
+        "edgeType": "uses",
+        "style": "dashed"
+      }
+    },
+    {
+      "id": "removed-to-ready",
+      "fromNode": "remove-repo",
+      "toNode": "thread-ready",
+      "fromSide": "left",
+      "toSide": "right",
+      "label": "thread continues",
+      "pv": {
+        "edgeType": "uses",
+        "style": "dashed"
+      }
+    }
+  ],
+  "pv": {
+    "version": "1.0",
+    "name": "Thread Opening Flow",
+    "description": "Repository-first thread lifecycle - start from any repo, expand organically, optionally persist",
+    "markdown": ".principal-views/thread-open/thread-open.md",
+    "scope": "principal-ade-main",
+    "display": {
+      "layout": "manual",
+      "theme": {
+        "primary": "#8b5cf6",
+        "success": "#22c55e",
+        "danger": "#ef4444",
+        "warning": "#f59e0b",
+        "info": "#06b6d4"
+      }
+    },
+    "nodeTypes": {
+      "event": {
+        "label": "Event",
+        "color": "#3B82F6"
+      },
+      "boundary": {
+        "label": "Boundary",
+        "color": "#64748B"
+      }
+    }
+  }
+}

@@ -145,4 +145,67 @@ export class WindowService {
       throw new Error('Failed to open extension window');
     }
   }
+
+  // Thread operations (ephemeral multi-repository sessions)
+
+  /**
+   * Open a thread for a single repository
+   * Creates an ephemeral session that can be expanded with additional repositories
+   * @param repositoryPath - Path to the repository
+   */
+  static async openThread(repositoryPath: string): Promise<void> {
+    return this.openAlexandriaWorkspace({ repositoryPath });
+  }
+
+  /**
+   * Add a repository to the current thread window
+   * @param repositoryPath - Path to the repository to add
+   * @returns Result indicating success or failure
+   */
+  static async addRepositoryToThread(
+    repositoryPath: string,
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      return await window.mainProcess.window.addRepositoryToThread(repositoryPath);
+    } catch (error) {
+      console.error('[WindowService] Failed to add repository to thread:', error);
+      return { success: false, error: 'Failed to add repository to thread' };
+    }
+  }
+
+  /**
+   * Remove a repository from the current thread window
+   * @param repositoryPath - Path to the repository to remove
+   * @returns Result indicating success or failure
+   */
+  static async removeRepositoryFromThread(
+    repositoryPath: string,
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      return await window.mainProcess.window.removeRepositoryFromThread(repositoryPath);
+    } catch (error) {
+      console.error('[WindowService] Failed to remove repository from thread:', error);
+      return { success: false, error: 'Failed to remove repository from thread' };
+    }
+  }
+
+  /**
+   * Listen for thread repository changes
+   * @param callback - Called when repositories are added/removed from the thread
+   * @returns Unsubscribe function
+   */
+  static onThreadRepositoriesChanged(
+    callback: (event: {
+      repositoryPaths: string[];
+      addedPath?: string;
+      removedPath?: string;
+    }) => void,
+  ): () => void {
+    try {
+      return window.mainProcess.window.onThreadRepositoriesChanged(callback);
+    } catch (error) {
+      console.error('[WindowService] Failed to register thread repositories listener:', error);
+      return () => {};
+    }
+  }
 }

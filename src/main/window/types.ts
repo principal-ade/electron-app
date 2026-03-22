@@ -52,6 +52,11 @@ export interface WindowMetadata {
   purpose?: string;
   // Full AlexandriaEntry for rich display in window switcher
   alexandriaEntry?: AlexandriaEntry;
+  // For threads (ephemeral multi-repository sessions)
+  /** Repository paths currently in this thread */
+  threadRepositoryPaths?: string[];
+  /** Indicates this is an ephemeral thread (no workspace backing) */
+  isThread?: boolean;
 }
 
 /**

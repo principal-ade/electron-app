@@ -14,4 +14,9 @@ export enum WindowEvent {
   GET_WINDOW_ID = 'window:get-window-id',
   IS_REPOSITORY_WINDOW_OPEN = 'window:is-repository-window-open',
   REPOSITORY_WINDOWS_CHANGED = 'window:repository-windows-changed',
+
+  // Thread operations (ephemeral multi-repository sessions)
+  ADD_REPOSITORY_TO_THREAD = 'window:add-repository-to-thread',
+  REMOVE_REPOSITORY_FROM_THREAD = 'window:remove-repository-from-thread',
+  THREAD_REPOSITORIES_CHANGED = 'window:thread-repositories-changed',
 }

@@ -72,4 +72,56 @@ export const windowAPI: WindowAPI = {
    */
   openExtensionWindow: (options?: ExtensionWindowOptions) =>
     ipcRenderer.invoke(WindowEvent.OPEN_EXTENSION_WINDOW, options),
+
+  // Thread operations (ephemeral multi-repository sessions)
+
+  /**
+   * Add a repository to the current thread window
+   */
+  addRepositoryToThread: async (repositoryPath: string) => {
+    const windowId = await ipcRenderer.invoke(WindowEvent.GET_WINDOW_ID);
+    if (!windowId) {
+      return { success: false, error: 'Could not get window ID' };
+    }
+    return ipcRenderer.invoke(WindowEvent.ADD_REPOSITORY_TO_THREAD, {
+      windowId,
+      repositoryPath,
+    });
+  },
+
+  /**
+   * Remove a repository from the current thread window
+   */
+  removeRepositoryFromThread: async (repositoryPath: string) => {
+    const windowId = await ipcRenderer.invoke(WindowEvent.GET_WINDOW_ID);
+    if (!windowId) {
+      return { success: false, error: 'Could not get window ID' };
+    }
+    return ipcRenderer.invoke(WindowEvent.REMOVE_REPOSITORY_FROM_THREAD, {
+      windowId,
+      repositoryPath,
+    });
+  },
+
+  /**
+   * Listen for thread repository changes
+   */
+  onThreadRepositoriesChanged: (
+    callback: (event: {
+      repositoryPaths: string[];
+      addedPath?: string;
+      removedPath?: string;
+    }) => void,
+  ) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      data: { repositoryPaths: string[]; addedPath?: string; removedPath?: string },
+    ) => {
+      callback(data);
+    };
+    ipcRenderer.on(WindowEvent.THREAD_REPOSITORIES_CHANGED, handler);
+    return () => {
+      ipcRenderer.removeListener(WindowEvent.THREAD_REPOSITORIES_CHANGED, handler);
+    };
+  },
 };

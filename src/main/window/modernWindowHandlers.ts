@@ -91,8 +91,11 @@ export function registerModernWindowHandlers(): void {
   // Alexandria Workspace Window
   ipcMain.handle(
     WindowEvent.OPEN_ALEXANDRIA_WORKSPACE,
-    async (_event, options: { workspaceId?: string; repositoryPath?: string; repositoryId?: string }) => {
-      const { workspaceId, repositoryPath, repositoryId } = options;
+    async (_event, options: { workspaceId?: string; repositoryPath?: string; repositoryId?: string; additionalRepositoryPaths?: string[] }) => {
+      const { workspaceId, repositoryPath, repositoryId, additionalRepositoryPaths } = options;
+
+      // Thread mode: repositoryPath without workspaceId
+      const isThread = !workspaceId && !!repositoryPath;
 
       // Determine window name and display name
       let windowName: string;
@@ -143,12 +146,24 @@ export function registerModernWindowHandlers(): void {
         return;
       }
 
+      // Collect all repository paths for thread mode
+      const allRepositoryPaths: string[] = [];
+      if (repositoryPath) {
+        allRepositoryPaths.push(repositoryPath);
+      }
+      if (additionalRepositoryPaths) {
+        allRepositoryPaths.push(...additionalRepositoryPaths);
+      }
+
       // Create metadata for workspace window
       const metadata: WindowMetadata = {
         primaryType: PrimaryWindowType.WORKSPACE,
         displayName: workspaceName,
         workspaceId: workspaceId || undefined,
         purpose: windowName,
+        // Thread-specific metadata
+        isThread,
+        threadRepositoryPaths: isThread ? allRepositoryPaths : undefined,
       };
 
       const window = createSpecialWindow(
@@ -232,12 +247,31 @@ export function registerModernWindowHandlers(): void {
             console.log(
               `[modernWindowHandlers] Acquired watches for ${registeredRepoPaths.length}/${reposWithPaths.length} repositories`,
             );
-          } else if (repositoryPath) {
-            // Temp mode - watch only the single repository
-            await monitoringManager.acquireWatch(repositoryPath, watchReferenceId);
-            registeredRepoPaths.push(repositoryPath);
+          } else if (allRepositoryPaths.length > 0) {
+            // Thread mode - watch all repositories in the thread
+            const results = await Promise.allSettled(
+              allRepositoryPaths.map(async (repoPath: string) => {
+                await monitoringManager.acquireWatch(repoPath, watchReferenceId);
+                return repoPath;
+              }),
+            );
+
+            for (const result of results) {
+              if (result.status === 'fulfilled') {
+                registeredRepoPaths.push(result.value);
+                console.log(
+                  `[modernWindowHandlers] Acquired watch for thread repository: ${result.value} (reference: ${watchReferenceId})`,
+                );
+              } else {
+                console.error(
+                  `[modernWindowHandlers] Failed to acquire watch for thread repository:`,
+                  result.reason,
+                );
+              }
+            }
+
             console.log(
-              `[modernWindowHandlers] Acquired watch for single repository: ${repositoryPath} (reference: ${watchReferenceId})`,
+              `[modernWindowHandlers] Thread: acquired watches for ${registeredRepoPaths.length}/${allRepositoryPaths.length} repositories`,
             );
           }
         } catch (error) {
@@ -277,9 +311,126 @@ export function registerModernWindowHandlers(): void {
       if (repositoryId) {
         urlParams.set('repositoryId', repositoryId);
       }
+      // Pass additional repository paths for thread mode
+      if (additionalRepositoryPaths && additionalRepositoryPaths.length > 0) {
+        urlParams.set('additionalRepositoryPaths', additionalRepositoryPaths.join(','));
+      }
 
       const url = `${resolveHtmlPath('alexandria-workspace.html')}?${urlParams.toString()}`;
       window.window.loadURL(url);
+    },
+  );
+
+  // Add repository to an existing thread window
+  ipcMain.handle(
+    WindowEvent.ADD_REPOSITORY_TO_THREAD,
+    async (_event, options: { windowId: number; repositoryPath: string }) => {
+      const { windowId, repositoryPath } = options;
+
+      const { getApplicationWindows } = require('./modernWindowManager');
+      const applicationWindows = getApplicationWindows();
+      const appWindow = applicationWindows.get(windowId);
+
+      if (!appWindow || appWindow.window.isDestroyed()) {
+        return { success: false, error: 'Window not found' };
+      }
+
+      // Check if this is a thread window
+      if (!appWindow.metadata.isThread) {
+        return { success: false, error: 'Window is not a thread' };
+      }
+
+      // Check if repository is already in the thread
+      const currentPaths = appWindow.metadata.threadRepositoryPaths || [];
+      if (currentPaths.includes(repositoryPath)) {
+        return { success: false, error: 'Repository already in thread' };
+      }
+
+      // Update metadata
+      currentPaths.push(repositoryPath);
+      appWindow.metadata.threadRepositoryPaths = currentPaths;
+
+      // Acquire watch for new repository
+      const watchReferenceId = `alexandria-workspace:${windowId}`;
+      try {
+        const monitoringManager = getMonitoringManager();
+        await monitoringManager.acquireWatch(repositoryPath, watchReferenceId);
+        console.log(
+          `[modernWindowHandlers] Added repository to thread: ${repositoryPath} (window: ${windowId})`,
+        );
+      } catch (error) {
+        console.error(
+          `[modernWindowHandlers] Failed to acquire watch for added repository:`,
+          error,
+        );
+        // Still continue - the repository was added to metadata
+      }
+
+      // Notify renderer of change
+      appWindow.window.webContents.send(WindowEvent.THREAD_REPOSITORIES_CHANGED, {
+        repositoryPaths: currentPaths,
+        addedPath: repositoryPath,
+      });
+
+      return { success: true };
+    },
+  );
+
+  // Remove repository from a thread window
+  ipcMain.handle(
+    WindowEvent.REMOVE_REPOSITORY_FROM_THREAD,
+    async (_event, options: { windowId: number; repositoryPath: string }) => {
+      const { windowId, repositoryPath } = options;
+
+      const { getApplicationWindows } = require('./modernWindowManager');
+      const applicationWindows = getApplicationWindows();
+      const appWindow = applicationWindows.get(windowId);
+
+      if (!appWindow || appWindow.window.isDestroyed()) {
+        return { success: false, error: 'Window not found' };
+      }
+
+      if (!appWindow.metadata.isThread) {
+        return { success: false, error: 'Window is not a thread' };
+      }
+
+      const currentPaths = appWindow.metadata.threadRepositoryPaths || [];
+      const index = currentPaths.indexOf(repositoryPath);
+      if (index === -1) {
+        return { success: false, error: 'Repository not in thread' };
+      }
+
+      // Don't allow removing the last repository
+      if (currentPaths.length <= 1) {
+        return { success: false, error: 'Cannot remove last repository from thread' };
+      }
+
+      // Update metadata
+      currentPaths.splice(index, 1);
+      appWindow.metadata.threadRepositoryPaths = currentPaths;
+
+      // Release watch for removed repository
+      const watchReferenceId = `alexandria-workspace:${windowId}`;
+      try {
+        const monitoringManager = getMonitoringManager();
+        await monitoringManager.releaseWatch(repositoryPath, watchReferenceId);
+        console.log(
+          `[modernWindowHandlers] Removed repository from thread: ${repositoryPath} (window: ${windowId})`,
+        );
+      } catch (error) {
+        console.error(
+          `[modernWindowHandlers] Failed to release watch for removed repository:`,
+          error,
+        );
+      }
+
+      // Notify renderer of change
+      appWindow.window.webContents.send(WindowEvent.THREAD_REPOSITORIES_CHANGED, {
+        repositoryPaths: currentPaths,
+        removedPath: repositoryPath,
+      });
+
+      return { success: true };
     },
   );
 

@@ -1,0 +1,116 @@
+{
+  "version": "1.0.0",
+  "name": "Thread Opening",
+  "description": "Workflows for opening and expanding development threads",
+  "canvas": ".principal-views/thread-open/thread-open.otel.canvas",
+  "spanPattern": "thread",
+  "scenarios": [
+    {
+      "id": "start-new-thread",
+      "description": "Starting a new thread from a repository",
+      "priority": 1,
+      "template": {
+        "introduction": "**Thread Opening**\n\nStarting thread from **{{repository.name}}**",
+        "events": {
+          "thread.open.requested": "User triggered thread open from {{trigger.source}} (path: `{{repository.path}}`, repositoryId: `{{repository.id}}`, threadId: `{{thread.id}}`)",
+          "thread.ipc.invoke": "ThreadService invoked IPC channel: {{ipc.channel}} (repositoryPath: `{{repository.path}}`, threadId: `{{thread.id}}`)",
+          "thread.handler.received": "Main process received thread request for `{{repository.path}}` (threadId: `{{thread.id}}`)",
+          "thread.resolved": "Thread resolved: **new thread** (isNew: {{thread.is_new}}, windowExists: {{window.exists}}) anchored to **{{repository.name}}** (threadId: `{{thread.id}}`)",
+          "thread.window.creating": "Creating thread window **{{window.name}}** (type: {{window.type}}, threadId: `{{thread.id}}`)",
+          "window.createSpecial": "Creating BrowserWindow (ID: {{window.id}}, purpose: {{window.purpose}}, reused: {{window.reused}})",
+          "terminal.window.registered": "Terminal manager registered window {{window.id}}",
+          "thread.watches.acquired": "Thread {{thread.id}} acquired watches: {{repositories.watched}}/{{repositories.total}} succeeded, {{repositories.failed}} failed",
+          "window.loadURL": "Window {{window.id}} loading URL: {{url.path}} (hasThreadId: {{url.has.thread.id}}, hasRepoPath: {{url.has.repository.path}})",
+          "thread.app.initialized": "Thread renderer initialized (threadId: `{{thread.id}}`) for **{{repository.name}}** with {{repository.count}} repos in {{init.duration.ms}}ms",
+          "thread.ready": "Thread **{{thread.id}}** (window: {{window.id}}) ready with **{{repository.name}}** ({{repository.count}} repos, {{watches.active}} watches) in {{total.duration.ms}}ms"
+        },
+        "summary": "**Thread Details:**\n- Thread ID: `{{thread.id}}`\n- Anchor: **{{repository.name}}**\n- Path: `{{repository.path}}`\n\n**Performance:**\n- Total duration: {{total.duration.ms}}ms"
+      }
+    },
+    {
+      "id": "focus-existing-thread",
+      "description": "Focusing an existing thread when repository is already open",
+      "priority": 2,
+      "template": {
+        "introduction": "**Thread Opening**\n\nRepository **{{repository.name}}** already open in thread",
+        "events": {
+          "thread.open.requested": "User triggered thread open from {{trigger.source}} (path: `{{repository.path}}`, repositoryId: `{{repository.id}}`, threadId: `{{thread.id}}`)",
+          "thread.ipc.invoke": "ThreadService invoked IPC channel: {{ipc.channel}} (repositoryPath: `{{repository.path}}`, threadId: `{{thread.id}}`)",
+          "thread.handler.received": "Main process received thread request for `{{repository.path}}` (threadId: `{{thread.id}}`)",
+          "thread.resolved": "Thread resolved: **existing thread** (isNew: {{thread.is_new}}, windowExists: {{window.exists}}) for **{{repository.name}}** (threadId: `{{thread.id}}`)",
+          "thread.window.focusing": "Focusing existing window **{{window.name}}** ({{window.id}}, threadId: `{{thread.id}}`)",
+          "thread.ready": "Thread **{{thread.id}}** (window: {{window.id}}) focused with **{{repository.name}}** ({{repository.count}} repos, {{watches.active}} watches) in {{total.duration.ms}}ms"
+        },
+        "summary": "**Result:** Focused existing thread **{{thread.id}}** containing **{{repository.name}}**"
+      }
+    },
+    {
+      "id": "expand-thread-add-repo",
+      "description": "Adding a repository to an existing thread",
+      "priority": 3,
+      "template": {
+        "introduction": "**Thread Expansion**\n\nAdding **{{repository.name}}** to thread **{{thread.id}}**",
+        "events": {
+          "thread.repository.add.requested": "User requested add repository from {{trigger.source}} (path: `{{repository.path}}`, threadId: `{{thread.id}}`)",
+          "thread.repository.validated": "Repository **{{repository.name}}** at `{{repository.path}}` validated (isGitRepo: {{repository.is_git}}, exists: {{repository.exists}})",
+          "thread.repository.added": "Repository **{{repository.name}}** added to thread **{{thread.id}}** (total repos: {{thread.repository.count}})"
+        },
+        "summary": "**Thread Expanded:**\n- Thread: `{{thread.id}}`\n- Added: **{{repository.name}}**\n- Total repos: {{thread.repository.count}}"
+      }
+    },
+    {
+      "id": "remove-repo-from-thread",
+      "description": "Removing a repository from a thread (thread continues)",
+      "priority": 4,
+      "template": {
+        "introduction": "**Thread Contraction**\n\nRemoving **{{repository.name}}** from thread **{{thread.id}}**",
+        "events": {
+          "thread.repository.removed": "Repository **{{repository.name}}** removed from thread **{{thread.id}}** (remaining: {{thread.repository.count}})",
+          "thread.ready": "Thread **{{thread.id}}** (window: {{window.id}}) continues with **{{repository.name}}** ({{repository.count}} repos, {{watches.active}} watches) in {{total.duration.ms}}ms"
+        },
+        "summary": "**Repository Removed:**\n- Thread: `{{thread.id}}`\n- Removed: **{{repository.name}}**\n- Remaining repos: {{thread.repository.count}}"
+      }
+    },
+    {
+      "id": "save-thread-as-collection",
+      "description": "Saving a thread as a persistent collection",
+      "priority": 5,
+      "template": {
+        "introduction": "**Thread Persistence**\n\nSaving thread as **{{collection.name}}**",
+        "events": {
+          "thread.saved": "Thread **{{thread.id}}** saved as collection **{{collection.name}}** (id: `{{collection.id}}`, {{repository.count}} repos)"
+        },
+        "summary": "**Collection Saved:**\n- Name: **{{collection.name}}**\n- ID: `{{collection.id}}`\n- Repositories: {{repository.count}}"
+      }
+    },
+    {
+      "id": "thread-last-repo-removed",
+      "description": "Thread closes when last repository is removed",
+      "priority": 6,
+      "template": {
+        "introduction": "**Thread Dissolution**\n\nLast repository removed from thread **{{thread.id}}**",
+        "events": {
+          "thread.repository.removed": "Last repository **{{repository.name}}** removed from thread **{{thread.id}}** (remaining: {{thread.repository.count}})",
+          "thread.dissolved": "Thread **{{thread.id}}** dissolved (reason: {{reason}})"
+        },
+        "summary": "**Thread Dissolved:**\n- Thread: `{{thread.id}}`\n- Reason: Last repository removed"
+      }
+    },
+    {
+      "id": "invalid-repository-path",
+      "description": "Attempting to open a thread with an invalid path",
+      "priority": 7,
+      "template": {
+        "introduction": "**Thread Opening**\n\nInvalid repository path",
+        "events": {
+          "thread.open.requested": "User triggered thread open from {{trigger.source}} (path: `{{repository.path}}`, repositoryId: `{{repository.id}}`, threadId: `{{thread.id}}`)",
+          "thread.ipc.invoke": "ThreadService invoked IPC channel: {{ipc.channel}} (repositoryPath: `{{repository.path}}`, threadId: `{{thread.id}}`)",
+          "thread.handler.received": "Main process received thread request for `{{repository.path}}` (threadId: `{{thread.id}}`)",
+          "thread.resolved": "Thread resolution failed: invalid repository (isNew: {{thread.is_new}}, windowExists: {{window.exists}}) for **{{repository.name}}** (threadId: `{{thread.id}}`)",
+          "thread.repository.invalid": "Repository at `{{repository.path}}` validation failed: {{error.reason}} (exists: {{repository.exists}}, isGitRepo: {{repository.is_git}})"
+        },
+        "summary": "**Error:** Invalid repository path\n- Path: `{{repository.path}}`\n- Reason: {{error.reason}}"
+      }
+    }
+  ]
+}

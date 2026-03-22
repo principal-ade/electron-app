@@ -25,14 +25,23 @@ export interface DevWorkspaceOptions {
 
 /**
  * Options for opening an Alexandria workspace window
+ *
+ * Two modes:
+ * 1. Workspace mode: Provide workspaceId to open a persisted workspace
+ * 2. Thread mode: Provide repositoryPath (without workspaceId) to start an ephemeral thread
+ *
+ * Thread mode creates a repository-first session that can be expanded with
+ * additional repositories and optionally saved as a workspace later.
  */
 export interface AlexandriaWorkspaceOptions {
-  /** Workspace ID (optional - if not provided, creates temp workspace) */
+  /** Workspace ID (optional - if not provided, creates ephemeral thread) */
   workspaceId?: string;
-  /** Repository path to auto-select (optional) */
+  /** Repository path to open/auto-select (required for thread mode) */
   repositoryPath?: string;
   /** Repository ID (PURL or github.id) for identifying the repo (optional) */
   repositoryId?: string;
+  /** Additional repository paths to include in the thread (thread mode only) */
+  additionalRepositoryPaths?: string[];
 }
 
 /**
@@ -108,4 +117,37 @@ export interface WindowAPI {
   openExtensionWindow(
     options?: ExtensionWindowOptions,
   ): Promise<{ windowId: number } | null>;
+
+  // Thread operations (ephemeral multi-repository sessions)
+
+  /**
+   * Add a repository to the current thread window
+   * @param repositoryPath - Path to the repository to add
+   * @returns Result indicating success or failure
+   */
+  addRepositoryToThread(
+    repositoryPath: string,
+  ): Promise<{ success: boolean; error?: string }>;
+
+  /**
+   * Remove a repository from the current thread window
+   * @param repositoryPath - Path to the repository to remove
+   * @returns Result indicating success or failure
+   */
+  removeRepositoryFromThread(
+    repositoryPath: string,
+  ): Promise<{ success: boolean; error?: string }>;
+
+  /**
+   * Listen for thread repository changes
+   * @param callback - Called when repositories are added/removed from the thread
+   * @returns Unsubscribe function
+   */
+  onThreadRepositoriesChanged(
+    callback: (event: {
+      repositoryPaths: string[];
+      addedPath?: string;
+      removedPath?: string;
+    }) => void,
+  ): () => void;
 }
