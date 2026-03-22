@@ -9,6 +9,10 @@ import {
   Columns3,
   Square,
   Link,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { BaseTitlebar } from '../components/Titlebar/BaseTitlebar';
@@ -136,8 +140,11 @@ export interface DevWorkspaceTitlebarProps {
   // Terminal implementation toggle
   terminalImplementation?: 'xterm' | 'ghostty';
   onToggleTerminalImplementation?: () => void;
-  // Panel controls
-  collapsed?: { left: boolean; right: boolean };
+  // Panel collapse/expand - imperative approach
+  isLeftCollapsed?: boolean;
+  isRightCollapsed?: boolean;
+  onToggleLeftPanel?: () => void;
+  onToggleRightPanel?: () => void;
   // Alexandria Workspace
   onOpenAlexandriaWorkspace?: () => void;
   showWorkspaceButton?: boolean;
@@ -148,9 +155,6 @@ export interface DevWorkspaceTitlebarProps {
     middle: string;
     right: string;
   }) => void;
-  onCollapsedChange?: (collapsed: { left: boolean; right: boolean }) => void;
-  // Panel sizes
-  onPanelSizesChange?: (sizes: { left: number; middle: number; right: number }) => void;
   // Repository path for copy
   repositoryPath?: string;
   // Remote URL and protocol switching
@@ -173,13 +177,14 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
   onShowGitChanges,
   terminalImplementation,
   onToggleTerminalImplementation,
-  collapsed: _collapsed,
+  isLeftCollapsed = false,
+  isRightCollapsed = false,
+  onToggleLeftPanel,
+  onToggleRightPanel,
   onOpenAlexandriaWorkspace,
   showWorkspaceButton = false,
   currentLayout: _currentLayout,
   onLayoutChange,
-  onCollapsedChange: _onCollapsedChange,
-  onPanelSizesChange: _onPanelSizesChange,
   repositoryPath,
   remoteUrl,
   onSwitchRemoteProtocol,
@@ -239,12 +244,51 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
       style={{ display: 'contents' }}
     >
       <BaseTitlebar confirmBeforeClose={true}>
+        {/* Left sidebar collapse button */}
+        {onToggleLeftPanel && (
+          <button
+            onClick={onToggleLeftPanel}
+            title={isLeftCollapsed ? 'Expand left panel' : 'Collapse left panel'}
+            style={{
+              position: 'absolute',
+              left: '80px',
+              // @ts-ignore - WebkitAppRegion is not in CSSProperties
+              WebkitAppRegion: 'no-drag',
+              background: 'transparent',
+              border: 'none',
+              color: theme.colors.textSecondary,
+              cursor: 'pointer',
+              padding: '6px',
+              borderRadius: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
+              e.currentTarget.style.color = theme.colors.text;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = theme.colors.textSecondary;
+            }}
+          >
+            {isLeftCollapsed ? (
+              <PanelLeftOpen size={18} />
+            ) : (
+              <PanelLeftClose size={18} />
+            )}
+          </button>
+        )}
+
         {/* Left: Configuration button */}
         {onLayoutChange && (
           <div
             style={{
               position: 'absolute',
-              left: '80px',
+              left: '115px',
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
@@ -846,6 +890,44 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
               </button>
             )}
 
+            {/* Right sidebar collapse button */}
+            {onToggleRightPanel && (
+              <button
+                onClick={onToggleRightPanel}
+                title={
+                  isRightCollapsed ? 'Expand right panel' : 'Collapse right panel'
+                }
+                style={{
+                  // @ts-ignore - WebkitAppRegion is not in CSSProperties
+                  WebkitAppRegion: 'no-drag',
+                  background: 'transparent',
+                  border: 'none',
+                  color: theme.colors.textSecondary,
+                  cursor: 'pointer',
+                  padding: '6px',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundTertiary;
+                  e.currentTarget.style.color = theme.colors.text;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = theme.colors.textSecondary;
+                }}
+              >
+                {isRightCollapsed ? (
+                  <PanelRightOpen size={18} />
+                ) : (
+                  <PanelRightClose size={18} />
+                )}
+              </button>
+            )}
           </div>
 
         </div>

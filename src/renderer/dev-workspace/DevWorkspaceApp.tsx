@@ -12,7 +12,7 @@ import {
   useAgentCommandPalette,
 } from '@principal-ade/panel-layouts';
 import { PanelEventBus } from '@principal-ade/panel-framework-core';
-import { DevWorkspacePanelFramework } from './DevWorkspacePanelFramework';
+import { DevWorkspacePanelFramework, type PanelControlHandle } from './DevWorkspacePanelFramework';
 import {
   DevWorkspaceTitlebar,
   DEFAULT_PANEL_PRESETS,
@@ -213,6 +213,8 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   const [sidebarsHidden, setSidebarsHidden] = useState(false);
   // Store collapsed state before entering focus mode so we can restore it
   const collapsedBeforeFocusModeRef = useRef<{ left: boolean; right: boolean } | null>(null);
+  // Panel control handle for imperative collapse/expand
+  const panelControlRef = useRef<PanelControlHandle | null>(null);
   const [layout, setLayout] = useState<PanelLayout>({
     left: 'terminalSessions',
     middle: 'terminal',
@@ -948,11 +950,36 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     // No longer needed - panel library handles sizes directly
   }, []);
 
-  // Handle setting panel sizes - directly apply (panel library handles 0 sizes)
+  // Handle setting panel sizes - only for preset changes (e.g., Storybook layout)
   const handlePanelSizesChange = useCallback((sizes: { left: number; middle: number; right: number }) => {
     console.info('[DevWorkspaceApp] Setting panel sizes:', sizes);
     setPanelSizes(sizes);
   }, []);
+
+  // Store panel control handle when ready
+  const handlePanelControlReady = useCallback((control: PanelControlHandle) => {
+    console.info('[DevWorkspaceApp] Panel control ready');
+    panelControlRef.current = control;
+  }, []);
+
+  // Toggle callbacks for titlebar - use imperative methods
+  const handleToggleLeftPanel = useCallback(() => {
+    if (!panelControlRef.current) return;
+    if (collapsed.left) {
+      panelControlRef.current.expandLeft();
+    } else {
+      panelControlRef.current.collapseLeft();
+    }
+  }, [collapsed.left]);
+
+  const handleToggleRightPanel = useCallback(() => {
+    if (!panelControlRef.current) return;
+    if (collapsed.right) {
+      panelControlRef.current.expandRight();
+    } else {
+      panelControlRef.current.collapseRight();
+    }
+  }, [collapsed.right]);
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-transparent flex flex-col">
@@ -966,15 +993,16 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         onToggleTerminalImplementation={
           showTerminalToggle ? handleToggleTerminalImplementation : undefined
         }
-        collapsed={collapsed}
+        isLeftCollapsed={collapsed.left}
+        isRightCollapsed={collapsed.right}
+        onToggleLeftPanel={handleToggleLeftPanel}
+        onToggleRightPanel={handleToggleRightPanel}
         onOpenAlexandriaWorkspace={handleOpenAlexandriaWorkspace}
         showWorkspaceButton={showWorkspaceButton}
         currentLayout={
           layout as { left: string; middle: string; right: string }
         }
         onLayoutChange={(newLayout) => setLayout(newLayout)}
-        onCollapsedChange={setCollapsed}
-        onPanelSizesChange={handlePanelSizesChange}
         repositoryPath={repositoryPath}
         remoteUrl={remoteUrl}
         onSwitchRemoteProtocol={remoteUrl ? handleSwitchRemoteProtocol : undefined}
@@ -995,6 +1023,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           onLayoutChange={setLayout}
           panelSizes={panelSizes}
           onPanelSizesChange={handlePanelSizesChange}
+          onPanelControlReady={handlePanelControlReady}
           events={events}
           onLeftCollapseComplete={handleLeftCollapseComplete}
           onScopeNamesDiscovered={handleScopeNamesDiscovered}

@@ -212,6 +212,18 @@ interface RightPanelHistoryItem {
   openedAt: number;
 }
 
+/**
+ * Imperative handle for controlling panel collapse/expand
+ */
+export interface PanelControlHandle {
+  collapseLeft: () => void;
+  expandLeft: () => void;
+  collapseRight: () => void;
+  expandRight: () => void;
+  setLayout: (sizes: { left: number; middle: number; right: number }) => void;
+  getLayout: () => { left: number; middle: number; right: number } | null;
+}
+
 export interface DevWorkspacePanelFrameworkProps {
   repositoryPath: string;
   repository: Repository;
@@ -219,10 +231,12 @@ export interface DevWorkspacePanelFrameworkProps {
   onCollapsedChange: (collapsed: { left: boolean; right: boolean }) => void;
   layout: PanelLayout;
   onLayoutChange: (layout: PanelLayout) => void;
-  /** Panel sizes */
+  /** Panel sizes - only used for preset changes (e.g., Storybook layout) */
   panelSizes?: { left: number; middle: number; right: number };
-  /** Callback when panel sizes change */
+  /** Callback when panel sizes change (from user drag) */
   onPanelSizesChange?: (sizes: { left: number; middle: number; right: number }) => void;
+  /** Callback to receive panel control methods for imperative collapse/expand */
+  onPanelControlReady?: (control: PanelControlHandle) => void;
   /** Event bus for panel communication */
   events: PanelEventEmitter;
   /** Trace source service name for OTEL routing */
@@ -250,6 +264,7 @@ interface DevWorkspacePanelFrameworkInnerProps {
   onLayoutChange: (layout: PanelLayout) => void;
   panelSizes?: { left: number; middle: number; right: number };
   onPanelSizesChange?: (sizes: { left: number; middle: number; right: number }) => void;
+  onPanelControlReady?: (control: PanelControlHandle) => void;
   onTabsChange?: (tabs: unknown[]) => void;
   onLeftCollapseComplete?: () => void;
   onLeftExpandComplete?: () => void;
@@ -322,44 +337,143 @@ const FileCityWithHighlights: React.FC<{
  */
 const DevWorkspacePanelFrameworkInner: React.FC<
   DevWorkspacePanelFrameworkInnerProps
-> = ({ collapsed, onCollapsedChange, layout, onLayoutChange, panelSizes, onPanelSizesChange, onTabsChange, onLeftCollapseComplete, onLeftExpandComplete, onOpenInWebADE, onOpenGitHubActions, sidebarsHidden }) => {
+> = ({ collapsed, onCollapsedChange, layout, onLayoutChange, panelSizes, onPanelSizesChange, onPanelControlReady, onTabsChange, onLeftCollapseComplete, onLeftExpandComplete, onOpenInWebADE, onOpenGitHubActions, sidebarsHidden }) => {
   const { theme } = useTheme();
 
   // Ref for imperative panel layout control
   const panelLayoutRef = useRef<ConfigurablePanelLayoutHandle>(null);
-  // Track the sizes we're programmatically setting to avoid feedback loops
-  const programmaticSizesRef = useRef<{ left: number; middle: number; right: number } | null>(null);
+  // Track if we're applying a preset layout (setLayout for presets like Storybook)
+  const isApplyingPresetRef = useRef(false);
 
-  // When panelSizes changes programmatically, use the imperative setLayout API
+  // Derive collapsed state from actual layout
+  const [isLeftCollapsed, setIsLeftCollapsed] = useState(collapsed.left);
+  const [isRightCollapsed, setIsRightCollapsed] = useState(collapsed.right);
+
+  // Store callbacks and state in refs to avoid stale closures
+  const onCollapsedChangeRef = useRef(onCollapsedChange);
+  onCollapsedChangeRef.current = onCollapsedChange;
+  const collapsedStateRef = useRef({ left: isLeftCollapsed, right: isRightCollapsed });
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    collapsedStateRef.current = { left: isLeftCollapsed, right: isRightCollapsed };
+  }, [isLeftCollapsed, isRightCollapsed]);
+
+  // Provide panel control methods to parent via callback (only once on mount)
+  useEffect(() => {
+    if (onPanelControlReady && panelLayoutRef.current) {
+      const control: PanelControlHandle = {
+        collapseLeft: () => {
+          panelLayoutRef.current?.collapsePanel('left');
+          setIsLeftCollapsed(true);
+          collapsedStateRef.current.left = true;
+          onCollapsedChangeRef.current({ ...collapsedStateRef.current });
+        },
+        expandLeft: () => {
+          panelLayoutRef.current?.expandPanel('left');
+          // After expand, ensure panel is at least 20% (library may restore to small size)
+          const currentLayout = panelLayoutRef.current?.getLayout();
+          if (currentLayout && currentLayout.left < 20) {
+            panelLayoutRef.current?.setLayout({ left: 25, middle: 50, right: currentLayout.right });
+          }
+          setIsLeftCollapsed(false);
+          collapsedStateRef.current.left = false;
+          onCollapsedChangeRef.current({ ...collapsedStateRef.current });
+        },
+        collapseRight: () => {
+          panelLayoutRef.current?.collapsePanel('right');
+          setIsRightCollapsed(true);
+          collapsedStateRef.current.right = true;
+          onCollapsedChangeRef.current({ ...collapsedStateRef.current });
+        },
+        expandRight: () => {
+          panelLayoutRef.current?.expandPanel('right');
+          // After expand, ensure panel is at least 20% (library may restore to small size)
+          const currentLayout = panelLayoutRef.current?.getLayout();
+          if (currentLayout && currentLayout.right < 20) {
+            panelLayoutRef.current?.setLayout({ left: currentLayout.left, middle: 50, right: 25 });
+          }
+          setIsRightCollapsed(false);
+          collapsedStateRef.current.right = false;
+          onCollapsedChangeRef.current({ ...collapsedStateRef.current });
+        },
+        setLayout: (sizes) => {
+          isApplyingPresetRef.current = true;
+          panelLayoutRef.current?.setLayout(sizes);
+          // Update collapsed state based on sizes
+          const newLeft = sizes.left < 5;
+          const newRight = sizes.right < 5;
+          setIsLeftCollapsed(newLeft);
+          setIsRightCollapsed(newRight);
+          collapsedStateRef.current = { left: newLeft, right: newRight };
+          onCollapsedChangeRef.current({ left: newLeft, right: newRight });
+          setTimeout(() => {
+            isApplyingPresetRef.current = false;
+          }, 500);
+        },
+        getLayout: () => panelLayoutRef.current?.getLayout() ?? null,
+      };
+      onPanelControlReady(control);
+    }
+  }, [onPanelControlReady]);
+
+  // Track if we've done initial setup
+  const hasInitializedRef = useRef(false);
+
+  // When panelSizes prop changes (e.g., from preset like Storybook button), apply it
+  // Skip initial render - let the library use defaultSizes
   useEffect(() => {
     if (panelSizes && panelLayoutRef.current) {
-      // Store the sizes we're setting so we can ignore callbacks with different values
-      programmaticSizesRef.current = panelSizes;
+      if (!hasInitializedRef.current) {
+        hasInitializedRef.current = true;
+        return;
+      }
+      isApplyingPresetRef.current = true;
       panelLayoutRef.current.setLayout(panelSizes);
-      // Clear after a short delay to allow the resize to complete
+      setIsLeftCollapsed(panelSizes.left < 5);
+      setIsRightCollapsed(panelSizes.right < 5);
       setTimeout(() => {
-        programmaticSizesRef.current = null;
+        isApplyingPresetRef.current = false;
       }, 500);
     }
   }, [panelSizes]);
 
-  // Wrapper for onPanelSizesChange that ignores callbacks during programmatic changes
+  // Collapse/expand handlers for sidebar buttons (still supported)
+  const handleLeftCollapse = useCallback(() => {
+    panelLayoutRef.current?.collapsePanel('left');
+    setIsLeftCollapsed(true);
+    onCollapsedChange({ ...collapsed, left: true });
+  }, [collapsed, onCollapsedChange]);
+
+  const handleLeftExpand = useCallback(() => {
+    panelLayoutRef.current?.expandPanel('left');
+    setIsLeftCollapsed(false);
+    onCollapsedChange({ ...collapsed, left: false });
+  }, [collapsed, onCollapsedChange]);
+
+  const handleRightCollapse = useCallback(() => {
+    panelLayoutRef.current?.collapsePanel('right');
+    setIsRightCollapsed(true);
+    onCollapsedChange({ ...collapsed, right: true });
+  }, [collapsed, onCollapsedChange]);
+
+  const handleRightExpand = useCallback(() => {
+    panelLayoutRef.current?.expandPanel('right');
+    setIsRightCollapsed(false);
+    onCollapsedChange({ ...collapsed, right: false });
+  }, [collapsed, onCollapsedChange]);
+
+  // Handle resize from user drag - just update local collapsed state
   const handlePanelResizeInternal = useCallback((sizes: { left: number; middle: number; right: number }) => {
-    // If we're in the middle of a programmatic resize, ignore callbacks that don't match
-    if (programmaticSizesRef.current) {
-      const target = programmaticSizesRef.current;
-      // Check if the callback sizes match what we're trying to set (within tolerance)
-      const matches =
-        Math.abs(sizes.left - target.left) < 1 &&
-        Math.abs(sizes.middle - target.middle) < 1 &&
-        Math.abs(sizes.right - target.right) < 1;
-      if (!matches) {
-        // Ignore this callback - it's from the old state
-        return;
-      }
-    }
-    onPanelSizesChange?.(sizes);
-  }, [onPanelSizesChange]);
+    // Update collapsed state based on resize
+    const newLeftCollapsed = sizes.left < 5;
+    const newRightCollapsed = sizes.right < 5;
+    setIsLeftCollapsed(newLeftCollapsed);
+    setIsRightCollapsed(newRightCollapsed);
+    collapsedStateRef.current = { left: newLeftCollapsed, right: newRightCollapsed };
+    // Update parent collapsed state (but NOT panelSizes - no feedback loop)
+    onCollapsedChangeRef.current({ left: newLeftCollapsed, right: newRightCollapsed });
+  }, []);
 
   const { context, actions, events } = useRepositoryPanelProvider();
   const { context: terminalCtx, actions: terminalActions } =
@@ -715,15 +829,15 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         onLayoutChange({ ...layout, right: 'markdown-viewer' });
 
         // Expand the right panel if it's collapsed
-        if (collapsed.right) {
-          onCollapsedChange({ ...collapsed, right: false });
+        if (isRightCollapsed) {
+          handleRightExpand();
         }
 
         // OTEL: Add layout.changed event
         handleSpan.addEvent('devworkspace.layout.changed', {
           'panel.slot': 'right',
           'panel.new': 'markdown-viewer',
-          'panel.expanded': !collapsed.right || true,
+          'panel.expanded': !isRightCollapsed || true,
         });
 
         handleSpan.setStatus({ code: SpanStatusCode.OK });
@@ -747,7 +861,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     });
 
     return unsubscribe;
-  }, [events, actions, layout, onLayoutChange, collapsed, onCollapsedChange]);
+  }, [events, actions, layout, onLayoutChange, collapsed, onCollapsedChange, isRightCollapsed, handleRightExpand]);
 
   // Listen for detail panel events to show modals
   useEffect(() => {
@@ -3313,11 +3427,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             currentPanelId={typeof layout.left === 'string' ? layout.left : ''}
             onPanelChange={(panelId) => onLayoutChange({ ...layout, left: panelId })}
             theme={theme}
-            collapsed={collapsed.left}
-            onExpand={() => onCollapsedChange({ ...collapsed, left: false })}
-            onCollapse={() => onCollapsedChange({ ...collapsed, left: true })}
+            collapsed={isLeftCollapsed}
+            onExpand={handleLeftExpand}
+            onCollapse={handleLeftCollapse}
             position="left"
-            showCollapseButton
           />
         )}
 
@@ -3406,12 +3519,11 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           currentPanelId={typeof layout.right === 'string' ? layout.right : ''}
           onPanelChange={(panelId) => onLayoutChange({ ...layout, right: panelId })}
           theme={theme}
-          collapsed={collapsed.right}
-          onExpand={() => onCollapsedChange({ ...collapsed, right: false })}
-          onCollapse={() => onCollapsedChange({ ...collapsed, right: true })}
+          collapsed={isRightCollapsed}
+          onExpand={handleRightExpand}
+          onCollapse={handleRightCollapse}
           position="right"
           panelIcons={RIGHT_PANEL_ICONS}
-          showCollapseButton
           onOpenInWebADE={onOpenInWebADE}
           onOpenGitHubActions={onOpenGitHubActions}
           onSplitPanels={onPanelSizesChange ? () => {
@@ -3470,6 +3582,7 @@ export const DevWorkspacePanelFramework: React.FC<
   onLayoutChange,
   panelSizes,
   onPanelSizesChange,
+  onPanelControlReady,
   events,
   traceSourceServiceName: _traceSourceServiceName,
   onScopeNamesDiscovered,
@@ -3524,6 +3637,7 @@ export const DevWorkspacePanelFramework: React.FC<
             onLayoutChange={onLayoutChange}
             panelSizes={panelSizes}
             onPanelSizesChange={onPanelSizesChange}
+            onPanelControlReady={onPanelControlReady}
             onTabsChange={setTabsForProvider}
             onLeftCollapseComplete={onLeftCollapseComplete}
             onLeftExpandComplete={onLeftExpandComplete}
