@@ -136,6 +136,7 @@ const QuickOpenApp: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [copiedMessage, setCopiedMessage] = useState<string | null>(null);
+  const [isCommandHeld, setIsCommandHeld] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const selectedItemRef = useRef<HTMLDivElement>(null);
 
@@ -158,17 +159,37 @@ const QuickOpenApp: React.FC = () => {
     // Focus search input on mount
     searchInputRef.current?.focus();
 
-    // Handle Escape key at window level (other keys handled in input)
+    // Handle Escape key and Command key state at window level
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         quickOpenWindow.electronAPI.closeQuickOpen();
       }
+      // Track Command/Meta key state
+      if (e.key === 'Meta') {
+        setIsCommandHeld(true);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      // Track Command/Meta key release
+      if (e.key === 'Meta') {
+        setIsCommandHeld(false);
+      }
+    };
+
+    // Reset command state if window loses focus
+    const handleBlur = () => {
+      setIsCommandHeld(false);
     };
 
     window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', handleBlur);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleBlur);
       // Clean up IPC listener to prevent memory leak
       removeItemsListener?.();
     };
@@ -241,6 +262,18 @@ const QuickOpenApp: React.FC = () => {
 
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     console.info('[Quick Open] Key pressed:', e.key);
+
+    // Handle Command+Number (1-9) to select items
+    if (e.metaKey && e.key >= '1' && e.key <= '9') {
+      e.preventDefault();
+      const itemIndex = parseInt(e.key, 10) - 1; // Convert 1-9 to 0-8
+      console.info('[Quick Open] Cmd+Number - selecting item at index:', itemIndex);
+      if (filteredItems[itemIndex]) {
+        handleSelectItem(filteredItems[itemIndex]);
+      }
+      return;
+    }
+
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       console.info('[Quick Open] Arrow Down - moving selection down');
@@ -434,6 +467,7 @@ const QuickOpenApp: React.FC = () => {
                   >
                     <div
                       style={{
+                        position: 'relative',
                         width: '64px',
                         height: '64px',
                         borderRadius: '8px',
@@ -475,6 +509,34 @@ const QuickOpenApp: React.FC = () => {
                       >
                         {item.type === 'repository' ? '📦' : '📁'}
                       </span>
+                      {/* Command+Number badge overlay */}
+                      {isCommandHeld && index < 9 && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+                            borderRadius: '8px',
+                          }}
+                        >
+                          <span
+                            style={{
+                              color: theme.colors.primary,
+                              fontSize: '28px',
+                              fontFamily: theme.fonts.body,
+                              fontWeight: 700,
+                            }}
+                          >
+                            {index + 1}
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div
@@ -605,6 +667,16 @@ const QuickOpenApp: React.FC = () => {
             }}
           >
             Enter Select
+          </span>
+          <span
+            style={{
+              fontSize: theme.fontSizes[1],
+              fontFamily: theme.fonts.body,
+              color: isCommandHeld ? theme.colors.primary : theme.colors.textSecondary,
+              fontWeight: isCommandHeld ? 600 : 400,
+            }}
+          >
+            ⌘1-9 Quick Select
           </span>
           <span
             style={{
