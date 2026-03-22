@@ -17,6 +17,7 @@ import {
 import {
   EditableConfigurablePanelLayout,
   type PanelLayout,
+  type ConfigurablePanelLayoutHandle,
 } from '@principal-ade/panel-layouts';
 // CSS is bundled inline in principal-view-panels, no separate import needed
 // Note: file-city-panel CSS is bundled inline, no separate import needed
@@ -323,22 +324,41 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 > = ({ collapsed, onCollapsedChange, layout, onLayoutChange, panelSizes, onPanelSizesChange, onTabsChange, onLeftCollapseComplete, onLeftExpandComplete, onOpenInWebADE, onOpenGitHubActions, sidebarsHidden }) => {
   const { theme } = useTheme();
 
-  // Key to force remount when panel sizes change programmatically
-  const [layoutResetKey, setLayoutResetKey] = useState(0);
-  const prevPanelSizesRef = useRef(panelSizes);
+  // Ref for imperative panel layout control
+  const panelLayoutRef = useRef<ConfigurablePanelLayoutHandle>(null);
+  // Track the sizes we're programmatically setting to avoid feedback loops
+  const programmaticSizesRef = useRef<{ left: number; middle: number; right: number } | null>(null);
 
-  // When panelSizes changes programmatically, increment key to force remount
+  // When panelSizes changes programmatically, use the imperative setLayout API
   useEffect(() => {
-    const prev = prevPanelSizesRef.current;
-    if (panelSizes && prev && (
-      panelSizes.left !== prev.left ||
-      panelSizes.middle !== prev.middle ||
-      panelSizes.right !== prev.right
-    )) {
-      setLayoutResetKey(k => k + 1);
+    if (panelSizes && panelLayoutRef.current) {
+      // Store the sizes we're setting so we can ignore callbacks with different values
+      programmaticSizesRef.current = panelSizes;
+      panelLayoutRef.current.setLayout(panelSizes);
+      // Clear after a short delay to allow the resize to complete
+      setTimeout(() => {
+        programmaticSizesRef.current = null;
+      }, 500);
     }
-    prevPanelSizesRef.current = panelSizes;
   }, [panelSizes]);
+
+  // Wrapper for onPanelSizesChange that ignores callbacks during programmatic changes
+  const handlePanelResizeInternal = useCallback((sizes: { left: number; middle: number; right: number }) => {
+    // If we're in the middle of a programmatic resize, ignore callbacks that don't match
+    if (programmaticSizesRef.current) {
+      const target = programmaticSizesRef.current;
+      // Check if the callback sizes match what we're trying to set (within tolerance)
+      const matches =
+        Math.abs(sizes.left - target.left) < 1 &&
+        Math.abs(sizes.middle - target.middle) < 1 &&
+        Math.abs(sizes.right - target.right) < 1;
+      if (!matches) {
+        // Ignore this callback - it's from the old state
+        return;
+      }
+    }
+    onPanelSizesChange?.(sizes);
+  }, [onPanelSizesChange]);
 
   const { context, actions, events } = useRepositoryPanelProvider();
   const { context: terminalCtx, actions: terminalActions } =
@@ -3311,7 +3331,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         }}
       >
         <EditableConfigurablePanelLayout
-          key={`layout-${layoutResetKey}`}
+          ref={panelLayoutRef}
           panels={allPanels}
           layout={layout}
           onLayoutChange={onLayoutChange}
@@ -3321,7 +3341,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           collapsed={collapsed}
           showCollapseButtons={false}
           theme={theme}
-          onPanelResize={onPanelSizesChange}
+          onPanelResize={handlePanelResizeInternal}
           onLeftCollapseComplete={onLeftCollapseComplete}
           onLeftExpandComplete={onLeftExpandComplete}
         />

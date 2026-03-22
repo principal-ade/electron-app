@@ -313,8 +313,8 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           );
           if (preset) {
             setLayout(preset.layout);
-            if (preset.collapsed) {
-              setCollapsed(preset.collapsed);
+            if (preset.panelSizes) {
+              setPanelSizes(preset.panelSizes);
             }
             return { success: true, message: `Applied preset: ${preset.name}` };
           }
@@ -358,8 +358,8 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           );
           if (storybookPreset) {
             setLayout(storybookPreset.layout);
-            if (storybookPreset.collapsed) {
-              setCollapsed(storybookPreset.collapsed);
+            if (storybookPreset.panelSizes) {
+              setPanelSizes(storybookPreset.panelSizes);
             }
             return { success: true, message: 'Applied Storybook layout' };
           }

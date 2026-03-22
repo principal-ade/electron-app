@@ -28,9 +28,10 @@ export interface PanelPreset {
     middle: string;
     right: string;
   };
-  collapsed?: {
-    left: boolean;
-    right: boolean;
+  panelSizes?: {
+    left: number;
+    middle: number;
+    right: number;
   };
 }
 
@@ -72,7 +73,7 @@ export const DEFAULT_PANEL_PRESETS: PanelPreset[] = [
       middle: 'terminal',
       right: 'localhostBrowserAlt',
     },
-    collapsed: { left: true, right: false },
+    panelSizes: { left: 0, middle: 50, right: 50 },
   },
   {
     id: 'file-editor',
