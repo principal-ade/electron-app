@@ -1,15 +1,13 @@
-import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ConfigurablePanelLayout } from '@principal-ade/panels';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
-import { FileCityImageService } from '../../../main-process-api/FileCityImageService';
 import {
   LocalProjectsPanel,
   GitHubStarredPanel,
   GitHubProjectsPanel,
   UserCollectionsPanel,
 } from '@industry-theme/alexandria-panels';
-import { LocalProjectGridPanelContent } from '@industry-theme/repository-composition-panels';
 import type { GitHubRepository } from '@industry-theme/alexandria-panels';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { FolderGit2, Folder, FolderOpen, Star, Github } from 'lucide-react';
@@ -33,51 +31,6 @@ import { CollectionRepositoriesPanel } from '../../../panels/CollectionRepositor
 import { ProjectInfoPanel } from '../../../panels/ProjectInfoPanel';
 import { StaleRepoReviewModal } from './StaleRepoReviewModal';
 import type { StaleRepoInfo } from '../../../contexts/ProjectsPanelContext';
-
-/**
- * Hook to fetch File City images for entries
- * Returns a function that gets the image URL for a given entry path
- */
-function useFileCityImages(entries: AlexandriaEntry[] | null): (path: string) => string | undefined {
-  const [imageMap, setImageMap] = useState<Map<string, string>>(new Map());
-  const fetchingRef = useRef<Set<string>>(new Set());
-
-  // Listen for image generation events from other windows
-  useEffect(() => {
-    const unsubscribe = FileCityImageService.onImageGenerated((repoPath, imageUrl) => {
-      console.info('[useFileCityImages] Image generated for:', repoPath);
-      setImageMap((prev) => new Map(prev).set(repoPath, imageUrl));
-    });
-    return unsubscribe;
-  }, []);
-
-  useEffect(() => {
-    if (!entries || entries.length === 0) return;
-
-    // Fetch images for entries that don't have one yet
-    entries.forEach(async (entry) => {
-      // Skip if already in map or currently fetching
-      if (imageMap.has(entry.path) || fetchingRef.current.has(entry.path)) {
-        return;
-      }
-
-      fetchingRef.current.add(entry.path);
-
-      try {
-        const imageUrl = await FileCityImageService.getImage(entry.path);
-        if (imageUrl) {
-          setImageMap((prev) => new Map(prev).set(entry.path, imageUrl));
-        }
-      } catch (error) {
-        console.warn('[useFileCityImages] Failed to get image for', entry.path, error);
-      } finally {
-        fetchingRef.current.delete(entry.path);
-      }
-    });
-  }, [entries, imageMap]);
-
-  return useCallback((path: string) => imageMap.get(path), [imageMap]);
-}
 
 /**
  * Empty state shown when user is not authenticated for GitHub panels
@@ -144,20 +97,6 @@ const ProjectsViewContent: React.FC<ProjectsViewContentProps> = ({ mode }) => {
   const { theme } = useTheme();
   const { context, actions, events } = useProjectsPanelProvider();
   const { isAuthenticated } = useAuth();
-
-  // Get repositories for File City images
-  const repositories = context.alexandriaRepositories?.data?.repositories || null;
-
-  // Hook to fetch File City visualization images for project cards
-  const getFileCityImage = useFileCityImages(repositories);
-
-  // State for grid view mode (only applies to local mode)
-  const [isGridView, setIsGridView] = useState(false);
-
-  // Toggle grid view handler
-  const handleToggleGridView = useCallback(() => {
-    setIsGridView((prev) => !prev);
-  }, []);
 
   // State for base default directory
   const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string | null>(null);
@@ -465,7 +404,7 @@ const ProjectsViewContent: React.FC<ProjectsViewContentProps> = ({ mode }) => {
   // Use panel persistence for three-panel layout
   const panelState = usePanelPersistence({
     viewKey: 'projectsView',
-    defaultSizes: { left: 25, middle: 50, right: 25 },
+    defaultSizes: { left: 25, middle: 75, right: 0 },
     collapsed: { left: false, right: true },
     panelType: 'three-panel',
   });
@@ -484,42 +423,6 @@ const ProjectsViewContent: React.FC<ProjectsViewContentProps> = ({ mode }) => {
             actions={overriddenActions}
             events={events}
             defaultShowSearch
-          />
-        ),
-      },
-      {
-        id: 'local-projects-grid',
-        label: 'Local Projects Grid',
-        icon: <Folder size={16} />,
-        content: (
-          <LocalProjectGridPanelContent
-            context={{
-              localProjects: {
-                data: context.alexandriaRepositories?.data?.repositories || null,
-                loading: context.alexandriaRepositories?.loading || false,
-                scope: 'repository',
-                name: 'localProjects',
-                error: null,
-                refresh: async () => context.refresh('repository', 'alexandriaRepositories'),
-              },
-              currentScope: { type: 'workspace' },
-              refresh: context.refresh,
-              getCustomImageUrl: (entry) => getFileCityImage(entry.path),
-            }}
-            actions={{
-              openProject: async (entry) => {
-                await actions.openLocalRepository?.(entry);
-              },
-              selectProject: (entry) => {
-                events.emit({
-                  type: 'industry-theme.local-projects:repository-selected',
-                  source: 'local-projects-grid',
-                  timestamp: Date.now(),
-                  payload: { entry },
-                });
-              },
-            }}
-            events={events}
           />
         ),
       },
@@ -595,7 +498,7 @@ const ProjectsViewContent: React.FC<ProjectsViewContentProps> = ({ mode }) => {
           ]
         : []),
     ],
-    [context, actions, overriddenActions, events, isAuthenticated, getFileCityImage],
+    [context, actions, overriddenActions, events, isAuthenticated],
   );
 
   // Get workspaces from context for create repository button
@@ -603,15 +506,6 @@ const ProjectsViewContent: React.FC<ProjectsViewContentProps> = ({ mode }) => {
 
   // Define layout configuration
   const layout = useMemo(() => {
-    // If grid view is active for local mode, show grid panel in middle
-    if (mode === 'local' && isGridView) {
-      return {
-        left: 'local-projects',
-        middle: 'local-projects-grid',
-        right: 'collection-repositories',
-      };
-    }
-
     // Map mode to panel id
     const leftPanelMap: Record<LeftPanelView, string> = {
       local: 'local-projects',
@@ -624,17 +518,12 @@ const ProjectsViewContent: React.FC<ProjectsViewContentProps> = ({ mode }) => {
       middle: 'project-info',
       right: 'collection-repositories',
     };
-  }, [mode, isGridView]);
+  }, [mode]);
 
-  // Collapsed state - collapse left and right when grid view is active
-  const collapsedState = useMemo(() => {
-    if (mode === 'local' && isGridView) {
-      return { left: true, right: true };
-    }
-    return panelState.type === 'three-panel'
-      ? panelState.collapsed
-      : { left: false, right: false };
-  }, [mode, isGridView, panelState]);
+  // Collapsed state from panel persistence
+  const collapsedState = panelState.type === 'three-panel'
+    ? panelState.collapsed
+    : { left: false, right: false };
 
   return (
     <>
@@ -650,8 +539,6 @@ const ProjectsViewContent: React.FC<ProjectsViewContentProps> = ({ mode }) => {
         <ProjectsViewHeader
           mode={mode}
           onCreateRepository={handleCreateRepository}
-          isGridView={isGridView}
-          onToggleGridView={handleToggleGridView}
           staleRepoCount={staleRepoCount}
           showStaleBadge={showStaleBadge}
           onReviewStaleRepos={handleOpenStaleReviewModal}

@@ -1195,13 +1195,12 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
 
         {/* File City Image and Git Status - Side by Side */}
         <div style={{ display: 'flex', gap: spacing.md, marginBottom: spacing.md }}>
-          {/* File City Image - Right (always show placeholder to prevent layout shift) */}
+          {/* File City Image - Left */}
           <div
             style={{
-              flexShrink: 0,
-              width: 280,
-              height: 280,
-              order: 1, // Move to right side
+              flex: 1,
+              aspectRatio: '1 / 1',
+              order: 0, // Left side
               cursor: (fileCityImageUrl || historicalImageUrl || dirtyImageUrl) && !selectedDate ? 'pointer' : 'default',
               borderRadius: borderRadius,
               overflow: 'hidden',
@@ -1215,8 +1214,8 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
                 src={(historicalImageUrl || dirtyImageUrl || fileCityImageUrl)!}
                 alt={`${repository.name} visualization`}
                 style={{
-                  width: 280,
-                  height: 280,
+                  width: '100%',
+                  height: '100%',
                   objectFit: 'cover',
                   display: 'block',
                 }}
