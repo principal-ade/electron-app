@@ -1,0 +1,44 @@
+{
+  "version": "1.0.0",
+  "name": "Start Storybook",
+  "description": "User clicks the Storybook button to start a Storybook dev server",
+  "canvas": ".principal-views/dev-server-buttons/dev-server-buttons.otel.canvas",
+  "spanPattern": "devserver.storybook.session",
+  "scenarios": [
+    {
+      "id": "successful-start",
+      "description": "User successfully starts Storybook server and browser navigates to it",
+      "priority": 1,
+      "template": {
+        "introduction": "**Storybook Started Successfully**\n\nStarted Storybook on port {{port}} for package **{{selected_package}}**.",
+        "events": {
+          "devserver.storybook.detected": "Detected {{packages_count}} Storybook packages: {{package_names}} (has script: {{has_script}})",
+          "devserver.button.clicked": "[{{server_type}}] User clicked button (action: {{action}}, status: {{current_status}}, package: {{selected_package}})",
+          "devserver.port.found": "[{{server_type}}] Found available port **{{port}}** (scanned {{start_port}}-{{end_port}})",
+          "devserver.storybook.command": "Generated command: `{{command}}` (strategy: {{strategy}}, port range: {{port_range}})",
+          "devserver.terminal.created": "[{{server_type}}] Created terminal session `{{session_id}}` (context: {{context}}, cwd: {{cwd}}, command: {{command}})",
+          "devserver.session.event_emitted": "[{{server_type}}] Emitted {{event_type}} for session {{session_id}}",
+          "devserver.layout.configured": "[{{server_type}}] Configured panel layout (left_collapsed: {{left_collapsed}}, sizes: {{panel_sizes}}, right: {{right_panel}})",
+          "devserver.port.ready": "[{{server_type}}] Port {{port}} ready after {{wait_duration_ms}}ms ({{attempts}} attempts)",
+          "devserver.browser.navigated": "[{{server_type}}] Browser navigated to {{full_url}} (localhost:{{port}}{{path}})",
+          "devserver.status.changed": "[{{server_type}}] Status changed: {{previous_status}} -> **{{new_status}}** (port: {{port}})"
+        },
+        "summary": "**Storybook Server:**\n- Port: {{port}}\n- Session: `{{session_id}}`\n- Status: {{new_status}}\n\n**Startup Time:** {{wait_duration_ms}}ms"
+      }
+    },
+    {
+      "id": "stop-storybook",
+      "description": "User stops a running Storybook server",
+      "priority": 2,
+      "template": {
+        "introduction": "**Storybook Stopped**\n\nStopped Storybook and cleaned up resources.",
+        "events": {
+          "devserver.button.clicked": "[{{server_type}}] User clicked Stop button (action: {{action}})",
+          "devserver.stopped": "[{{server_type}}] Stopped session `{{session_id}}`, released port {{port}}, restored {{restored_panel}} panel",
+          "devserver.status.changed": "[{{server_type}}] Status changed: {{previous_status}} -> **{{new_status}}**"
+        },
+        "summary": "**Cleanup:**\n- Session destroyed: `{{session_id}}`\n- Port released: {{port}}\n- Panel restored: {{restored_panel}}"
+      }
+    }
+  ]
+}

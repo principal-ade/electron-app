@@ -1,9 +1,9 @@
 {
   "pv": {
-    "name": "Storybook Button",
+    "name": "Dev Server Buttons",
     "version": "1.0.0",
-    "description": "Flow of Storybook button interaction from right sidebar: package detection, terminal spawning, port management, and browser navigation in dev workspace",
-    "markdown": ".principal-views/storybook-button/storybook-button.md",
+    "description": "Flow of dev server button interactions from right sidebar: package detection, terminal spawning, port management, and browser navigation. Supports Storybook, Next.js, and extensible to other dev servers.",
+    "markdown": ".principal-views/dev-server-buttons/dev-server-buttons.md",
     "nodeTypes": {
       "ui": {
         "label": "UI Component",
@@ -33,8 +33,16 @@
         "label": "Event",
         "color": "#14B8A6"
       },
-      "boundary": {
-        "label": "Boundary",
+      "storybook": {
+        "label": "Storybook",
+        "color": "#FF4785"
+      },
+      "nextjs": {
+        "label": "Next.js",
+        "color": "#000000"
+      },
+      "shared": {
+        "label": "Shared Infrastructure",
         "color": "#64748B"
       }
     },
@@ -70,33 +78,59 @@
     {
       "id": "title",
       "type": "text",
-      "x": 300,
-      "y": -100,
-      "width": 600,
-      "height": 60,
+      "x": 250,
+      "y": -120,
+      "width": 700,
+      "height": 80,
       "color": "#64748B",
-      "text": "# Storybook Button Flow\n**Package detection, terminal spawning, and browser navigation in dev workspace**"
+      "text": "# Dev Server Buttons\n**Shared infrastructure for launching dev servers (Storybook, Next.js, etc.) with automatic package detection, terminal management, and browser integration**"
     },
+
     {
-      "id": "button-click",
-      "type": "otel-event",
+      "id": "storybook-section-label",
+      "type": "text",
       "x": 50,
       "y": 0,
+      "width": 200,
+      "height": 40,
+      "color": "#FF4785",
+      "text": "### Storybook-Specific"
+    },
+    {
+      "id": "nextjs-section-label",
+      "type": "text",
+      "x": 300,
+      "y": 0,
+      "width": 200,
+      "height": 40,
+      "color": "#000000",
+      "text": "### Next.js-Specific"
+    },
+
+    {
+      "id": "storybook-button-click",
+      "type": "otel-event",
+      "x": 50,
+      "y": 50,
       "width": 200,
       "height": 100,
       "label": "Storybook Button",
       "shape": "rectangle",
       "event": {
-        "name": "storybook.button.clicked",
-        "description": "User clicked the Storybook button in titlebar",
+        "name": "devserver.button.clicked",
+        "description": "User clicked a dev server button in titlebar",
         "attributes": {
+          "server_type": {
+            "type": "string",
+            "description": "Type of server: storybook, nextjs, etc."
+          },
           "current_status": {
             "type": "string",
             "description": "Current button state: idle, starting, running, error"
           },
           "selected_package": {
             "type": "string",
-            "description": "Currently selected Storybook package name"
+            "description": "Currently selected package name"
           },
           "action": {
             "type": "string",
@@ -109,16 +143,16 @@
       }
     },
     {
-      "id": "package-detection",
+      "id": "storybook-detection",
       "type": "otel-event",
       "x": 50,
-      "y": 150,
+      "y": 180,
       "width": 200,
       "height": 120,
-      "label": "StorybookService",
+      "label": "Storybook Detection",
       "shape": "rectangle",
       "event": {
-        "name": "storybook.packages.detected",
+        "name": "devserver.storybook.detected",
         "description": "Storybook packages detected in codebase composition",
         "attributes": {
           "packages_count": {
@@ -140,31 +174,65 @@
       }
     },
     {
-      "id": "port-find",
+      "id": "storybook-command",
       "type": "otel-event",
-      "x": 300,
-      "y": 0,
+      "x": 50,
+      "y": 330,
       "width": 200,
-      "height": 100,
-      "label": "findAvailablePort()",
+      "height": 120,
+      "label": "Storybook Command",
       "shape": "rectangle",
       "event": {
-        "name": "storybook.port.found",
-        "description": "Found available port for Storybook server",
+        "name": "devserver.storybook.command",
+        "description": "Generated Storybook command based on package.json scripts",
         "attributes": {
-          "port": {
-            "type": "number",
-            "description": "Selected port number"
+          "command": {
+            "type": "string",
+            "description": "Full command: npm run storybook -p {port}"
           },
-          "start_port": {
-            "type": "number",
-            "description": "Start of port range scanned",
-            "display": false
+          "strategy": {
+            "type": "string",
+            "description": "Strategy used: npm_script or npx_direct"
           },
-          "end_port": {
-            "type": "number",
-            "description": "End of port range scanned",
-            "display": false
+          "port_range": {
+            "type": "string",
+            "description": "Port range: 6006-6020"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft"
+      }
+    },
+
+    {
+      "id": "nextjs-button-click",
+      "type": "otel-event",
+      "x": 300,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "label": "Next.js Button",
+      "shape": "rectangle",
+      "event": {
+        "name": "devserver.button.clicked",
+        "description": "User clicked a dev server button in titlebar",
+        "attributes": {
+          "server_type": {
+            "type": "string",
+            "description": "Type of server: storybook, nextjs, etc."
+          },
+          "current_status": {
+            "type": "string",
+            "description": "Current button state: idle, starting, running, error"
+          },
+          "selected_package": {
+            "type": "string",
+            "description": "Currently selected package name"
+          },
+          "action": {
+            "type": "string",
+            "description": "Action being taken: start or stop"
           }
         }
       },
@@ -173,33 +241,106 @@
       }
     },
     {
-      "id": "get-command",
+      "id": "nextjs-detection",
       "type": "otel-event",
       "x": 300,
-      "y": 150,
+      "y": 180,
       "width": 200,
       "height": 120,
-      "label": "StorybookService",
+      "label": "Next.js Detection",
       "shape": "rectangle",
       "event": {
-        "name": "storybook.command.generated",
-        "description": "Generated Storybook command based on package.json scripts",
+        "name": "devserver.nextjs.detected",
+        "description": "Next.js packages detected in codebase composition",
+        "attributes": {
+          "packages_count": {
+            "type": "number",
+            "description": "Number of Next.js packages found"
+          },
+          "package_names": {
+            "type": "string[]",
+            "description": "Names of detected packages"
+          },
+          "has_dev_script": {
+            "type": "boolean",
+            "description": "Whether package has dev npm script"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft"
+      }
+    },
+    {
+      "id": "nextjs-command",
+      "type": "otel-event",
+      "x": 300,
+      "y": 330,
+      "width": 200,
+      "height": 120,
+      "label": "Next.js Command",
+      "shape": "rectangle",
+      "event": {
+        "name": "devserver.nextjs.command",
+        "description": "Generated Next.js dev command based on package.json scripts",
         "attributes": {
           "command": {
             "type": "string",
-            "description": "Full command to execute"
+            "description": "Full command: npm run dev -p {port}"
           },
           "strategy": {
             "type": "string",
             "description": "Strategy used: npm_script or npx_direct"
           },
+          "port_range": {
+            "type": "string",
+            "description": "Port range: 3000-3020"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft"
+      }
+    },
+
+    {
+      "id": "shared-section-label",
+      "type": "text",
+      "x": 550,
+      "y": 0,
+      "width": 250,
+      "height": 40,
+      "color": "#64748B",
+      "text": "### Shared Infrastructure"
+    },
+    {
+      "id": "port-find",
+      "type": "otel-event",
+      "x": 550,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "label": "findAvailablePort()",
+      "shape": "rectangle",
+      "event": {
+        "name": "devserver.port.found",
+        "description": "Found available port for dev server",
+        "attributes": {
+          "server_type": {
+            "type": "string",
+            "description": "Type of server requesting port"
+          },
           "port": {
             "type": "number",
-            "description": "Port included in command"
+            "description": "Selected port number"
           },
-          "cwd": {
-            "type": "string",
-            "description": "Working directory for command"
+          "start_port": {
+            "type": "number",
+            "description": "Start of port range scanned"
+          },
+          "end_port": {
+            "type": "number",
+            "description": "End of port range scanned"
           }
         }
       },
@@ -211,22 +352,26 @@
       "id": "terminal-create",
       "type": "otel-event",
       "x": 550,
-      "y": 0,
+      "y": 180,
       "width": 200,
       "height": 120,
       "label": "Terminal Session",
       "shape": "rectangle",
       "event": {
-        "name": "storybook.terminal.created",
-        "description": "Terminal session created for Storybook process",
+        "name": "devserver.terminal.created",
+        "description": "Terminal session created for dev server process",
         "attributes": {
+          "server_type": {
+            "type": "string",
+            "description": "Type of server: storybook, nextjs"
+          },
           "session_id": {
             "type": "string",
             "description": "Terminal session ID"
           },
           "context": {
             "type": "string",
-            "description": "Terminal context identifier"
+            "description": "Terminal context: terminal:{owner}/{repo}:{server_type}"
           },
           "cwd": {
             "type": "string",
@@ -234,8 +379,7 @@
           },
           "command": {
             "type": "string",
-            "description": "Command being executed",
-            "display": false
+            "description": "Command being executed"
           }
         }
       },
@@ -247,13 +391,13 @@
       "id": "session-event",
       "type": "otel-event",
       "x": 550,
-      "y": 170,
+      "y": 330,
       "width": 200,
       "height": 100,
       "label": "Event Emit",
       "shape": "rectangle",
       "event": {
-        "name": "storybook.session.event_emitted",
+        "name": "devserver.session.event_emitted",
         "description": "Terminal session created event emitted to panel framework",
         "attributes": {
           "event_type": {
@@ -263,6 +407,10 @@
           "session_id": {
             "type": "string",
             "description": "Terminal session ID"
+          },
+          "server_type": {
+            "type": "string",
+            "description": "Type of dev server"
           }
         }
       },
@@ -274,15 +422,19 @@
       "id": "panel-layout",
       "type": "otel-event",
       "x": 800,
-      "y": 0,
+      "y": 50,
       "width": 200,
       "height": 120,
       "label": "Panel Layout",
       "shape": "rectangle",
       "event": {
-        "name": "storybook.layout.configured",
-        "description": "Panel layout reconfigured for Storybook development",
+        "name": "devserver.layout.configured",
+        "description": "Panel layout reconfigured for dev server workflow",
         "attributes": {
+          "server_type": {
+            "type": "string",
+            "description": "Type of dev server"
+          },
           "left_collapsed": {
             "type": "boolean",
             "description": "Whether left panel was collapsed"
@@ -305,15 +457,19 @@
       "id": "port-wait",
       "type": "otel-event",
       "x": 800,
-      "y": 170,
+      "y": 200,
       "width": 200,
       "height": 100,
       "label": "waitForPortReady()",
       "shape": "rectangle",
       "event": {
-        "name": "storybook.port.ready",
-        "description": "Storybook server port became responsive",
+        "name": "devserver.port.ready",
+        "description": "Dev server port became responsive",
         "attributes": {
+          "server_type": {
+            "type": "string",
+            "description": "Type of dev server"
+          },
           "port": {
             "type": "number",
             "description": "Port that became ready"
@@ -336,15 +492,19 @@
       "id": "browser-navigate",
       "type": "otel-event",
       "x": 800,
-      "y": 320,
+      "y": 330,
       "width": 200,
       "height": 100,
       "label": "Browser Navigate",
       "shape": "rectangle",
       "event": {
-        "name": "storybook.browser.navigated",
-        "description": "Localhost browser panel navigated to Storybook URL",
+        "name": "devserver.browser.navigated",
+        "description": "Localhost browser panel navigated to dev server URL",
         "attributes": {
+          "server_type": {
+            "type": "string",
+            "description": "Type of dev server"
+          },
           "port": {
             "type": "number",
             "description": "Target port"
@@ -355,8 +515,7 @@
           },
           "full_url": {
             "type": "string",
-            "description": "Complete localhost URL",
-            "display": false
+            "description": "Complete localhost URL"
           }
         }
       },
@@ -367,16 +526,20 @@
     {
       "id": "status-running",
       "type": "otel-event",
-      "x": 550,
-      "y": 320,
+      "x": 800,
+      "y": 460,
       "width": 200,
       "height": 80,
       "label": "Status: Running",
       "shape": "rectangle",
       "event": {
-        "name": "storybook.status.changed",
-        "description": "Storybook button status changed",
+        "name": "devserver.status.changed",
+        "description": "Dev server button status changed",
         "attributes": {
+          "server_type": {
+            "type": "string",
+            "description": "Type of dev server"
+          },
           "previous_status": {
             "type": "string",
             "description": "Previous status"
@@ -398,16 +561,20 @@
     {
       "id": "stop-flow",
       "type": "otel-event",
-      "x": 300,
-      "y": 320,
+      "x": 550,
+      "y": 460,
       "width": 200,
       "height": 100,
-      "label": "Stop Storybook",
+      "label": "Stop Dev Server",
       "shape": "rectangle",
       "event": {
-        "name": "storybook.stopped",
-        "description": "Storybook process stopped and resources cleaned up",
+        "name": "devserver.stopped",
+        "description": "Dev server process stopped and resources cleaned up",
         "attributes": {
+          "server_type": {
+            "type": "string",
+            "description": "Type of dev server stopped"
+          },
           "session_id": {
             "type": "string",
             "description": "Destroyed terminal session ID"
@@ -426,25 +593,26 @@
         "status": "draft"
       }
     },
+
     {
-      "id": "state-note",
+      "id": "server-config-note",
       "type": "text",
       "x": 1050,
       "y": 0,
       "width": 220,
-      "height": 180,
-      "text": "STATE MANAGEMENT\n\nstorybookStatus:\n  idle | starting |\n  running | error\n\nstorybookSessionId:\n  string | null\n\nstorybookPort:\n  number | null\n\nselectedPackage:\n  StorybookPackage | null",
-      "color": "#F59E0B"
+      "height": 200,
+      "text": "SERVER CONFIGURATIONS\n\n**Storybook**\nPort range: 6006-6020\nDetection: @storybook/*\nScript: storybook\n\n**Next.js**\nPort range: 3000-3020\nDetection: next\nScript: dev\n\n**Extensible** to Vite,\nRemix, etc.",
+      "color": "#3B82F6"
     },
     {
-      "id": "package-note",
+      "id": "state-note",
       "type": "text",
       "x": 1050,
-      "y": 210,
+      "y": 220,
       "width": 220,
       "height": 160,
-      "text": "PACKAGE DETECTION\n\nSource: codebase-composition\nPackageLayer[] via IPC\n\nChecks:\n- availableCommands\n- dependencies for\n  @storybook/*",
-      "color": "#3B82F6"
+      "text": "SHARED STATE\n\ndevServerStatus:\n  Map<type, status>\n\ndevServerSessions:\n  Map<type, sessionId>\n\ndevServerPorts:\n  Map<type, port>\n\nselectedPackages:\n  Map<type, package>",
+      "color": "#F59E0B"
     },
     {
       "id": "flow-note",
@@ -453,37 +621,83 @@
       "y": 400,
       "width": 220,
       "height": 180,
-      "text": "FLOW SUMMARY\n\n1. Detect packages (init)\n2. User clicks button\n3. Find available port\n4. Get storybook command\n5. Create terminal session\n6. Configure panel layout\n7. Wait for port ready\n8. Navigate browser\n9. Set status: running",
+      "text": "SHARED FLOW\n\n1. Detect packages (init)\n2. User clicks button\n3. Get server-specific cmd\n4. Find available port\n5. Create terminal session\n6. Configure panel layout\n7. Wait for port ready\n8. Navigate browser\n9. Set status: running",
       "color": "#10B981"
     }
   ],
   "edges": [
     {
-      "id": "e1",
-      "fromNode": "button-click",
-      "toNode": "port-find",
-      "fromSide": "right",
-      "toSide": "left",
-      "label": "onClick (start)",
-      "pv": {
-        "edgeType": "user-action"
-      }
-    },
-    {
-      "id": "e2",
-      "fromNode": "button-click",
-      "toNode": "package-detection",
+      "id": "e-sb-detect",
+      "fromNode": "storybook-button-click",
+      "toNode": "storybook-detection",
       "fromSide": "bottom",
       "toSide": "top",
-      "label": "useEffect (init)",
+      "label": "useEffect",
       "pv": {
         "edgeType": "service-call"
       }
     },
     {
-      "id": "e3",
+      "id": "e-sb-cmd",
+      "fromNode": "storybook-detection",
+      "toNode": "storybook-command",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "packages found",
+      "pv": {
+        "edgeType": "service-call"
+      }
+    },
+    {
+      "id": "e-sb-to-shared",
+      "fromNode": "storybook-command",
+      "toNode": "port-find",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "onClick",
+      "pv": {
+        "edgeType": "user-action"
+      }
+    },
+
+    {
+      "id": "e-nj-detect",
+      "fromNode": "nextjs-button-click",
+      "toNode": "nextjs-detection",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "useEffect",
+      "pv": {
+        "edgeType": "service-call"
+      }
+    },
+    {
+      "id": "e-nj-cmd",
+      "fromNode": "nextjs-detection",
+      "toNode": "nextjs-command",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "packages found",
+      "pv": {
+        "edgeType": "service-call"
+      }
+    },
+    {
+      "id": "e-nj-to-shared",
+      "fromNode": "nextjs-command",
+      "toNode": "port-find",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "onClick",
+      "pv": {
+        "edgeType": "user-action"
+      }
+    },
+
+    {
+      "id": "e-port-terminal",
       "fromNode": "port-find",
-      "toNode": "get-command",
+      "toNode": "terminal-create",
       "fromSide": "bottom",
       "toSide": "top",
       "label": "port found",
@@ -492,18 +706,7 @@
       }
     },
     {
-      "id": "e4",
-      "fromNode": "get-command",
-      "toNode": "terminal-create",
-      "fromSide": "right",
-      "toSide": "left",
-      "label": "command ready",
-      "pv": {
-        "edgeType": "service-call"
-      }
-    },
-    {
-      "id": "e5",
+      "id": "e-terminal-event",
       "fromNode": "terminal-create",
       "toNode": "session-event",
       "fromSide": "bottom",
@@ -514,7 +717,7 @@
       }
     },
     {
-      "id": "e6",
+      "id": "e-event-layout",
       "fromNode": "session-event",
       "toNode": "panel-layout",
       "fromSide": "right",
@@ -525,7 +728,7 @@
       }
     },
     {
-      "id": "e7",
+      "id": "e-layout-wait",
       "fromNode": "panel-layout",
       "toNode": "port-wait",
       "fromSide": "bottom",
@@ -536,7 +739,7 @@
       }
     },
     {
-      "id": "e8",
+      "id": "e-wait-browser",
       "fromNode": "port-wait",
       "toNode": "browser-navigate",
       "fromSide": "bottom",
@@ -547,18 +750,18 @@
       }
     },
     {
-      "id": "e9",
+      "id": "e-browser-status",
       "fromNode": "browser-navigate",
       "toNode": "status-running",
-      "fromSide": "left",
-      "toSide": "right",
+      "fromSide": "bottom",
+      "toSide": "top",
       "label": "navigated",
       "pv": {
         "edgeType": "event-emit"
       }
     },
     {
-      "id": "e10",
+      "id": "e-status-stop",
       "fromNode": "status-running",
       "toNode": "stop-flow",
       "fromSide": "left",
@@ -569,10 +772,10 @@
       }
     },
     {
-      "id": "e11",
+      "id": "e-stop-reset",
       "fromNode": "stop-flow",
-      "toNode": "button-click",
-      "fromSide": "left",
+      "toNode": "port-find",
+      "fromSide": "top",
       "toSide": "bottom",
       "label": "reset to idle",
       "pv": {

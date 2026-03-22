@@ -77,6 +77,7 @@ import { TerminalSessionsPanel } from '../panels/terminal-sessions';
 import type { Repository } from '../../shared/types/repository.types';
 import { PanelIconSidebar, RIGHT_PANEL_ICONS } from '../components/Sidebar/PanelIconSidebar';
 import { StorybookSidebarButton } from '../components/Sidebar/StorybookSidebarButton';
+import { NextjsSidebarButton } from '../components/Sidebar/NextjsSidebarButton';
 import type {
   DocumentSelectedPayload,
   TaskSelectedPayload,
@@ -3418,17 +3419,30 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             onPanelSizesChange({ left: 0, middle: 50, right: 50 });
           } : undefined}
           customButtons={
-            <StorybookSidebarButton
-              theme={theme}
-              packages={context.packages?.data?.packages}
-              repositoryPath={context.currentScope?.repository?.path}
-              repositoryOwner={context.currentScope?.repository?.owner as string | undefined}
-              repositoryName={context.currentScope?.repository?.name}
-              currentLayout={layout as { left: string; middle: string; right: string }}
-              onLayoutChange={onLayoutChange}
-              onPanelSizesChange={onPanelSizesChange}
-              events={events}
-            />
+            <>
+              <StorybookSidebarButton
+                theme={theme}
+                packages={context.packages?.data?.packages}
+                repositoryPath={context.currentScope?.repository?.path}
+                repositoryOwner={context.currentScope?.repository?.owner as string | undefined}
+                repositoryName={context.currentScope?.repository?.name}
+                currentLayout={layout as { left: string; middle: string; right: string }}
+                onLayoutChange={onLayoutChange}
+                onPanelSizesChange={onPanelSizesChange}
+                events={events}
+              />
+              <NextjsSidebarButton
+                theme={theme}
+                packages={context.packages?.data?.packages}
+                repositoryPath={context.currentScope?.repository?.path}
+                repositoryOwner={context.currentScope?.repository?.owner as string | undefined}
+                repositoryName={context.currentScope?.repository?.name}
+                currentLayout={layout as { left: string; middle: string; right: string }}
+                onLayoutChange={onLayoutChange}
+                onPanelSizesChange={onPanelSizesChange}
+                events={events}
+              />
+            </>
           }
         />
       )}
