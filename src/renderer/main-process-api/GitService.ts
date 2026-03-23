@@ -247,14 +247,14 @@ export class GitService {
     directory: string,
     startDate: string,
     endDate: string,
-  ): Promise<{ hash: string; message: string; author: string; date: string }[]> {
+  ): Promise<{ hash: string; message: string; author: string; authorEmail: string; date: string }[]> {
     console.info(`[GitService] Getting commits in range: ${directory} (${startDate} to ${endDate})`);
     try {
       // Get all commits in the date range, oldest first (--reverse)
       // Use ISO 8601 format for full timestamp
       const result = await window.mainProcess.git.execCommand(directory, [
         'log',
-        '--format="%H|%s|%an|%aI"',
+        '--format="%H|%s|%an|%ae|%aI"',
         '--reverse',
         `--since=${startDate} 00:00:00`,
         `--until=${endDate} 23:59:59`,
@@ -263,8 +263,8 @@ export class GitService {
       const lines = result.stdout.trim().split('\n').filter(Boolean);
       return lines.map(line => {
         const cleanLine = line.replace(/^"|"$/g, '');
-        const [hash, message, author, date] = cleanLine.split('|');
-        return { hash, message, author, date };
+        const [hash, message, author, authorEmail, date] = cleanLine.split('|');
+        return { hash, message, author, authorEmail, date };
       });
     } catch (error) {
       console.error('[GitService] Failed to get commits in date range:', error);

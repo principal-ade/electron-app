@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { GitService } from '../main-process-api/GitService';
-import { FileSystemService } from '../main-process-api/FileSystemService';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
 export interface ActivityCommit {
@@ -9,12 +8,8 @@ export interface ActivityCommit {
   hash: string;
   message: string;
   author: string;
+  authorEmail: string;
   date: string; // ISO date string
-}
-
-interface RepoWithMtime {
-  entry: AlexandriaEntry;
-  mtime: number;
 }
 
 /**
@@ -46,37 +41,15 @@ export function useActivityFeed(
     abortRef.current = false;
 
     try {
-      // Get mtime for each repo to find most recently modified
-      const reposWithMtime: RepoWithMtime[] = [];
-
-      await Promise.all(
-        repositories.map(async (entry) => {
-          if (!entry.path) return;
-          try {
-            const dirInfo = await FileSystemService.getDirectoryInfo(entry.path);
-            if (dirInfo) {
-              reposWithMtime.push({
-                entry,
-                mtime: new Date(dirInfo.mtime).getTime(),
-              });
-            }
-          } catch {
-            // Skip repos we can't access
-          }
-        })
-      );
-
-      if (abortRef.current) return;
-
-      // Sort by most recently modified and take top N
-      reposWithMtime.sort((a, b) => b.mtime - a.mtime);
-      const topRepos = reposWithMtime.slice(0, maxRepos);
+      // Repositories are already sorted by lastOpenedAt from the provider
+      // Just take the top N repos with valid paths
+      const topRepos = repositories.filter((entry) => entry.path).slice(0, maxRepos);
 
       // Fetch recent commits from each repo in parallel
       const allCommits: ActivityCommit[] = [];
 
       await Promise.all(
-        topRepos.map(async ({ entry }) => {
+        topRepos.map(async (entry) => {
           if (!entry.path) return;
           try {
             // Get commits from the last 30 days
@@ -102,6 +75,7 @@ export function useActivityFeed(
                 hash: commit.hash,
                 message: commit.message,
                 author: commit.author,
+                authorEmail: commit.authorEmail,
                 date: commit.date,
               });
             }

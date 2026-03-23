@@ -621,8 +621,15 @@ export class FileCityImageService {
       }
 
       // Use a different cache key that includes change data hash
+      // Sort keys to ensure consistent cache keys regardless of insertion order
+      const sortedChangedFiles = Object.keys(changedFiles)
+        .sort()
+        .reduce((acc, key) => {
+          acc[key] = changedFiles[key];
+          return acc;
+        }, {} as typeof changedFiles);
       const changesHash = crypto.createHash('sha256')
-        .update(JSON.stringify(changedFiles))
+        .update(JSON.stringify(sortedChangedFiles))
         .digest('hex')
         .slice(0, 8);
       const cacheKey = this.getCacheKey(repoPath, `${commitHash}-changes-${changesHash}`);

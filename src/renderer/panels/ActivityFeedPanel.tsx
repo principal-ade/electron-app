@@ -20,6 +20,28 @@ import { useActivityFeed, type ActivityCommit } from '../hooks/useActivityFeed';
 import { FileCityImageService } from '../main-process-api/FileCityImageService';
 import { GitService } from '../main-process-api/GitService';
 
+/**
+ * Get avatar URL from an email address
+ * Tries GitHub noreply format first, falls back to Gravatar
+ */
+function getAvatarUrl(email: string, size = 32): string | null {
+  if (!email) return null;
+
+  const lowerEmail = email.trim().toLowerCase();
+
+  // Check for GitHub noreply email format: username@users.noreply.github.com
+  // or the newer format: 12345678+username@users.noreply.github.com
+  const githubMatch = lowerEmail.match(/^(?:\d+\+)?([^@]+)@users\.noreply\.github\.com$/);
+  if (githubMatch) {
+    return `https://github.com/${githubMatch[1]}.png?size=${size}`;
+  }
+
+  // Fallback: use Gravatar with identicon
+  // Note: This requires MD5 hash, using a simple string hash as approximation
+  const hash = Array.from(lowerEmail).reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0).toString(16);
+  return `https://www.gravatar.com/avatar/${hash}?s=${size}&d=identicon`;
+}
+
 interface ActivityFeedPanelContext extends PanelContextValue {
   alexandriaRepositories?: DataSlice<{
     repositories: AlexandriaEntry[];
@@ -49,7 +71,9 @@ interface RepoActivitySummary {
   latestCommitAt: Date;
   commitCount: number;
   githubOwner?: string;
+  githubRepoName?: string;
 }
+
 
 export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
   context,
@@ -74,17 +98,28 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
   const [repoImages, setRepoImages] = useState<Map<string, string>>(new Map());
   // State for expanded cards
   const [expandedRepos, setExpandedRepos] = useState<Set<string>>(new Set());
+  // State for commit author avatars (sha -> avatarUrl)
+  const [commitAvatars, setCommitAvatars] = useState<Map<string, string>>(new Map());
 
-  // Create a map of repo paths to github owners
-  const repoOwnerMap = useMemo(() => {
-    const map = new Map<string, string>();
+  // Create a map of repo paths to github info (owner and repo name)
+  const repoGithubMap = useMemo(() => {
+    const map = new Map<string, { owner: string; name: string }>();
     for (const repo of allRepositories) {
-      if (repo.path && repo.github?.owner) {
-        map.set(repo.path, repo.github.owner);
+      if (repo.path && repo.github?.owner && repo.github?.name) {
+        map.set(repo.path, { owner: repo.github.owner, name: repo.github.name });
       }
     }
     return map;
   }, [allRepositories]);
+
+  // Legacy map for backwards compatibility
+  const repoOwnerMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const [path, info] of repoGithubMap) {
+      map.set(path, info.owner);
+    }
+    return map;
+  }, [repoGithubMap]);
 
   // Aggregate commits by repository
   const repoSummaries = useMemo<RepoActivitySummary[]>(() => {
@@ -189,6 +224,45 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
 
     fetchImages();
   }, [repoSummaries, extendedActions]);
+
+  // Fetch commit author avatars from GitHub API
+  useEffect(() => {
+    if (repoSummaries.length === 0) return;
+
+    const fetchAvatars = async () => {
+      const avatarMap = new Map<string, string>();
+
+      // Group commits by repo for batch fetching
+      await Promise.all(
+        repoSummaries.map(async (summary) => {
+          const githubInfo = repoGithubMap.get(summary.repoPath);
+          if (!githubInfo) return; // Skip non-GitHub repos
+
+          try {
+            // Fetch commits from GitHub API (includes avatar URLs)
+            const githubCommits = await window.mainProcess.github.getRepositoryCommits(
+              githubInfo.owner,
+              githubInfo.name,
+              { perPage: summary.commits.length }
+            );
+
+            // Map GitHub commits by sha for quick lookup
+            for (const ghCommit of githubCommits) {
+              if (ghCommit.author?.avatar_url) {
+                avatarMap.set(ghCommit.sha, ghCommit.author.avatar_url);
+              }
+            }
+          } catch (err) {
+            console.warn(`[ActivityFeedPanel] Failed to fetch avatars for ${summary.repoName}:`, err);
+          }
+        })
+      );
+
+      setCommitAvatars(avatarMap);
+    };
+
+    fetchAvatars();
+  }, [repoSummaries, repoGithubMap]);
 
   // Format relative time
   const formatRelativeTime = (date: Date): string => {
@@ -369,6 +443,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
                       formatRelativeTime={formatRelativeTime}
                       theme={theme}
                       spacing={spacing}
+                      commitAvatars={commitAvatars}
                     />
                   ))}
                 </div>
@@ -403,6 +478,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
                       theme={theme}
                       spacing={spacing}
                       dimmed
+                      commitAvatars={commitAvatars}
                     />
                   ))}
                 </div>
@@ -429,6 +505,7 @@ interface RepoActivityCardProps {
   theme: ReturnType<typeof useTheme>['theme'];
   spacing: { xs: number; sm: number; md: number; lg: number };
   dimmed?: boolean;
+  commitAvatars: Map<string, string>;
 }
 
 const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
@@ -441,6 +518,7 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
   theme,
   spacing,
   dimmed = false,
+  commitAvatars,
 }) => {
   const hasMoreCommits = summary.commits.length > 1;
   const [hoveredCommitIndex, setHoveredCommitIndex] = useState<number | null>(null);
@@ -905,10 +983,26 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: spacing.sm,
+              gap: spacing.xs,
               marginBottom: spacing.xs,
             }}
           >
+            {/* Author avatar */}
+            {displayedCommit && (
+              <img
+                src={commitAvatars.get(displayedCommit.hash) || getAvatarUrl(displayedCommit.authorEmail, 20) || ''}
+                alt={displayedCommit.author}
+                style={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: '50%',
+                  flexShrink: 0,
+                }}
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            )}
             <code
               style={{
                 fontSize: theme.fontSizes[0],
