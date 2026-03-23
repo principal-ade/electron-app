@@ -732,7 +732,7 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             >
               {displayedCommit?.hash.slice(0, 7)}
             </code>
-            {displayedMessage || 'No commits'}
+            {displayedMessage || (isAnimating ? '' : 'No commits')}
             {isAnimating && <span style={{ opacity: 0.5 }}>|</span>}
           </div>
 
