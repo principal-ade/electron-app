@@ -268,8 +268,8 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
       >
         <div
           style={{
-            minWidth: 900,
-            maxWidth: 900,
+            minWidth: 800,
+            maxWidth: 800,
             margin: '0 auto',
           }}
         >
