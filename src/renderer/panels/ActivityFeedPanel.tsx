@@ -395,6 +395,15 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
   dimmed = false,
 }) => {
   const hasMoreCommits = summary.commits.length > 1;
+  const [hoveredCommitIndex, setHoveredCommitIndex] = useState<number | null>(null);
+
+  // Get the commit to display (hovered or most recent)
+  const displayedCommit = hoveredCommitIndex !== null
+    ? summary.commits[hoveredCommitIndex]
+    : summary.commits[0];
+  const displayedTime = hoveredCommitIndex !== null
+    ? new Date(displayedCommit.date)
+    : summary.latestCommitAt;
 
   return (
     <div
@@ -491,10 +500,11 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
               <span
                 style={{
                   fontSize: theme.fontSizes[1],
-                  color: theme.colors.textSecondary,
+                  color: hoveredCommitIndex !== null ? theme.colors.primary : theme.colors.textSecondary,
+                  transition: 'color 0.15s ease',
                 }}
               >
-                {formatRelativeTime(summary.latestCommitAt)}
+                {formatRelativeTime(displayedTime)}
               </span>
             </div>
           </div>
@@ -533,18 +543,23 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                   {/* Dots */}
                   {rowCommits.map((commit, index) => {
                     const globalIndex = rowIndex * 10 + index;
+                    const isHovered = hoveredCommitIndex === globalIndex;
+                    const isFirst = globalIndex === 0;
                     return (
                       <div
                         key={commit.hash}
-                        title={`${commit.hash.slice(0, 7)}: ${commit.message}`}
+                        onMouseEnter={() => setHoveredCommitIndex(globalIndex)}
+                        onMouseLeave={() => setHoveredCommitIndex(null)}
                         style={{
                           width: 14,
                           height: 14,
                           borderRadius: '50%',
-                          backgroundColor: globalIndex === 0 ? theme.colors.primary : theme.colors.textSecondary,
-                          opacity: globalIndex === 0 ? 1 : 0.5,
+                          backgroundColor: isHovered || isFirst ? theme.colors.primary : theme.colors.textSecondary,
+                          opacity: isHovered || isFirst ? 1 : 0.5,
                           zIndex: 1,
                           border: `2px solid ${theme.colors.backgroundSecondary}`,
+                          cursor: 'pointer',
+                          transition: 'opacity 0.15s ease, background-color 0.15s ease',
                         }}
                       />
                     );
@@ -554,12 +569,13 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             })}
           </div>
 
-          {/* Latest commit message */}
+          {/* Commit message (changes on hover) */}
           <div
             style={{
               fontSize: theme.fontSizes[1],
-              color: theme.colors.text,
+              color: hoveredCommitIndex !== null ? theme.colors.primary : theme.colors.text,
               marginBottom: spacing.sm,
+              transition: 'color 0.15s ease',
             }}
           >
             <code
@@ -570,9 +586,9 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                 marginRight: spacing.sm,
               }}
             >
-              {summary.commits[0]?.hash.slice(0, 7)}
+              {displayedCommit?.hash.slice(0, 7)}
             </code>
-            {summary.commits[0]?.message || 'No commits'}
+            {displayedCommit?.message || 'No commits'}
           </div>
 
           {/* Spacer to push expand indicator to bottom */}
