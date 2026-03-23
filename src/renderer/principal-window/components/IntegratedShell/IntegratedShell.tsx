@@ -6,6 +6,7 @@ import { Settings } from '../../views/Settings';
 import { SystemMonitor } from '../../views/SystemMonitor/SystemMonitor';
 import { AuthView } from '../../views/AuthView';
 import { ProjectsView } from '../../views/ProjectsView';
+import { FeedView } from '../../views/FeedView';
 import { WorldsView } from '../../views/WorldsView';
 import { GitSyncView } from '../../views/GitSyncView';
 import { LocalhostProcessesView } from '../../views/LocalhostProcessesView';
@@ -27,6 +28,7 @@ export type NavigationView = InteractiveShellNavigationView;
 
 // Available views for switch command
 const VIEW_OPTIONS = [
+  'feed',
   'local-projects',
   'remote-projects',
   'starred-projects',
@@ -102,7 +104,7 @@ const getViewDefaults = (
 };
 
 export const IntegratedShell: React.FC = () => {
-  const [activeView, setActiveView] = useState<NavigationView>('local-projects');
+  const [activeView, setActiveView] = useState<NavigationView>('feed');
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const { theme, mode } = useTheme();
   const { events } = usePrincipalEvents();
@@ -111,6 +113,7 @@ export const IntegratedShell: React.FC = () => {
   const [viewCollapsedStates, setViewCollapsedStates] = useState<
     Record<string, { left: boolean; right: boolean }>
   >({
+    feed: { left: false, right: false },
     auth: { left: false, right: false },
     monitoring: { left: false, right: false },
     search: { left: false, right: false },
@@ -362,8 +365,9 @@ export const IntegratedShell: React.FC = () => {
           return { success: true };
         }
         case 'reset':
-          setActiveView('local-projects');
+          setActiveView('feed');
           setViewCollapsedStates({
+            feed: { left: false, right: false },
             auth: { left: false, right: false },
             monitoring: { left: false, right: false },
             search: { left: false, right: false },
@@ -423,8 +427,9 @@ export const IntegratedShell: React.FC = () => {
         }
       }),
       events.on('panel:reset-layout', () => {
-        setActiveView('local-projects');
+        setActiveView('feed');
         setViewCollapsedStates({
+          feed: { left: false, right: false },
           auth: { left: false, right: false },
           monitoring: { left: false, right: false },
           search: { left: false, right: false },
@@ -531,6 +536,7 @@ export const IntegratedShell: React.FC = () => {
             }}
           >
             {/* Views will be rendered here based on activeView */}
+            {activeView === 'feed' && <FeedView />}
             {activeView === 'monitoring' && (
               <SystemMonitor sidebarCollapsed={sidebarCollapsed} />
             )}

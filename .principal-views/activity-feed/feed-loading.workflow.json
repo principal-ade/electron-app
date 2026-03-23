@@ -1,0 +1,32 @@
+{
+  "version": "1.0.0",
+  "name": "Activity Feed Loading",
+  "description": "Load cross-repository activity feed with commits and File City images",
+  "canvas": ".principal-views/activity-feed/activity-feed.otel.canvas",
+  "spanPattern": "feed.activity",
+  "scenarios": [
+    {
+      "id": "full-load-success",
+      "description": "Activity feed loads successfully with commits and images",
+      "priority": 1,
+      "template": {
+        "introduction": "**Activity Feed Loading**\n\nLoading recent commits across local repositories.",
+        "events": {
+          "feed.navigation.clicked": "[1] Feed clicked, previous view: {{previous_view}}",
+          "feed.view.activated": "[2] Feed view activated: {{view_name}}",
+          "feed.provider.initialized": "[3] Feed provider initialized: has_repositories={{has_repositories}}",
+          "feed.repositories.fetched": "[4] Fetched {{repository_count}} repositories in {{duration_ms}}ms",
+          "feed.activity.loading_started": "[5] Loading activity: max_repos={{max_repos}}, commits_per_repo={{commits_per_repo}}, limit={{total_limit}}",
+          "feed.repos.mtime_fetched": "[6] Sorted {{repos_checked}} repos by modification time",
+          "feed.commits.fetched": "[7] Fetched commits from `{{repo_path}}`: {{commit_count}} commits ({{start_date}} to {{end_date}})",
+          "feed.activity.loaded": "[8] Activity loaded: {{total_commits}} commits from {{unique_repos}} repos in {{duration_ms}}ms",
+          "feed.images.requested": "[9] Requesting images for {{repo_count}} repos",
+          "feed.images.loaded": "[10] Images loaded: {{images_found}} found, {{images_missing}} missing",
+          "feed.panel.rendered": "[11] Panel rendered: {{commits_displayed}} commits, {{repos_in_grid}} repos"
+        },
+        "summary": "**Result:** Activity feed loaded\n- Total commits: {{total_commits}}\n- Unique repos: {{unique_repos}}\n- Images loaded: {{images_found}}"
+      },
+      "filterDefault": false
+    }
+  ]
+}

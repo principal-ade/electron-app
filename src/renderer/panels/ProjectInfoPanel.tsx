@@ -18,11 +18,10 @@ import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
 import type { RepositoryPanelActions } from '../contexts/RepositoryPanelContext';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { StaleRepoInfo } from '../contexts/ProjectsPanelContext';
-import { FolderGit2, GitBranch, RefreshCw, AlertCircle, Trash2, FolderOpen, Download, Layers, HardDrive, Clock, Activity } from 'lucide-react';
+import { FolderGit2, GitBranch, RefreshCw, AlertCircle, Trash2, FolderOpen, Download, Layers, HardDrive, Clock } from 'lucide-react';
 import { CommitHeatMap, type PlayMode } from '../components/CommitHeatMap';
 import { useCommitHeatMap } from '../hooks/useCommitHeatMap';
 import { useRemoteCommitHeatMap } from '../hooks/useRemoteCommitHeatMap';
-import { useActivityFeed } from '../hooks/useActivityFeed';
 import { GitService } from '../main-process-api/GitService';
 import { GithubService } from '../main-process-api/GithubService';
 import { FileCityImageService } from '../main-process-api/FileCityImageService';
@@ -32,10 +31,6 @@ import type { GitHubCommit } from '../../shared/main-process-api-interfaces/GitH
 interface ProjectInfoPanelContext extends PanelContextValue {
   gitStatusWithFiles?: DataSlice<GitStatusWithFiles | null>;
   staleRepos?: StaleRepoInfo[];
-  alexandriaRepositories?: DataSlice<{
-    repositories: AlexandriaEntry[];
-    loading: boolean;
-  }>;
 }
 
 interface ProjectInfoPanelActions extends PanelActions {
@@ -142,46 +137,6 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
   const heatMapData = isRemoteOnly ? remoteHeatMap : localHeatMap;
   const heatMapCommits = heatMapData.commits;
   const heatMapLoading = heatMapData.loading;
-
-  // Get all local repositories for activity feed (when no repo selected)
-  const allRepositories = context.alexandriaRepositories?.data?.repositories ?? [];
-  const activityFeed = useActivityFeed(allRepositories);
-
-  // State for activity feed repo images
-  const [activityRepoImages, setActivityRepoImages] = useState<Map<string, string>>(new Map());
-  // State for hovered/selected repo in activity feed
-  const [hoveredRepoPath, setHoveredRepoPath] = useState<string | null>(null);
-  const [selectedRepoPath, setSelectedRepoPath] = useState<string | null>(null);
-
-  // Fetch File City images for unique repos in activity feed
-  useEffect(() => {
-    if (repository || activityFeed.commits.length === 0) return;
-
-    // Get unique repo paths from activity feed
-    const uniqueRepoPaths = [...new Set(activityFeed.commits.map(c => c.repoPath))];
-
-    // Fetch images for each repo
-    const fetchImages = async () => {
-      const imageMap = new Map<string, string>();
-
-      await Promise.all(
-        uniqueRepoPaths.map(async (repoPath) => {
-          try {
-            const imageUrl = await extendedActions.getFileCityImage(repoPath);
-            if (imageUrl) {
-              imageMap.set(repoPath, imageUrl);
-            }
-          } catch (err) {
-            console.warn(`[ProjectInfoPanel] Failed to get image for ${repoPath}:`, err);
-          }
-        })
-      );
-
-      setActivityRepoImages(imageMap);
-    };
-
-    fetchImages();
-  }, [repository, activityFeed.commits, extendedActions]);
 
   // State for latest commit (remote repos only)
   const [latestCommit, setLatestCommit] = useState<GitHubCommit | null>(null);
@@ -1049,312 +1004,40 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
     }
   }, [repository?.path, fileCityImageUrl]);
 
-  // Format relative time for activity feed
-  const formatRelativeTime = (dateStr: string): string => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
-
-  // Get unique repos from activity feed for image grid
-  const uniqueActivityRepos = React.useMemo(() => {
-    const seen = new Set<string>();
-    return activityFeed.commits.filter(c => {
-      if (seen.has(c.repoPath)) return false;
-      seen.add(c.repoPath);
-      return true;
-    }).map(c => ({ name: c.repoName, path: c.repoPath }));
-  }, [activityFeed.commits]);
-
-  // No repository selected - show activity feed
+  // No repository selected - show empty state
   if (!repository) {
     return (
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
           height: '100%',
           backgroundColor: theme.colors.background,
+          color: theme.colors.textSecondary,
+          textAlign: 'center',
+          padding: spacing.lg,
         }}
       >
-        {/* Header */}
-        <div
+        <FolderGit2
+          size={64}
+          style={{ marginBottom: spacing.md, opacity: 0.4 }}
+        />
+        <h3
           style={{
-            padding: spacing.md,
-            borderBottom: `1px solid ${theme.colors.border}`,
-            display: 'flex',
-            alignItems: 'center',
-            gap: spacing.sm,
+            margin: 0,
+            marginBottom: spacing.sm,
+            fontSize: theme.fontSizes[3],
+            fontWeight: 600,
+            color: theme.colors.text,
           }}
         >
-          <Activity size={20} color={theme.colors.primary} />
-          <h3
-            style={{
-              margin: 0,
-              fontSize: theme.fontSizes[3],
-              fontWeight: 600,
-              color: theme.colors.text,
-            }}
-          >
-            Recent Activity
-          </h3>
-          {activityFeed.loading && (
-            <span style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary }}>
-              Loading...
-            </span>
-          )}
-        </div>
-
-        {/* Split Content: Activity Feed (left) + Repo Images (right) */}
-        <div
-          style={{
-            flex: 1,
-            overflow: 'hidden',
-            display: 'flex',
-            gap: spacing.md,
-            padding: spacing.md,
-          }}
-        >
-          {/* Activity Feed - Left Side */}
-          <div
-            style={{
-              flex: 1,
-              overflow: 'auto',
-            }}
-          >
-            {activityFeed.commits.length === 0 && !activityFeed.loading ? (
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '100%',
-                  color: theme.colors.textSecondary,
-                  textAlign: 'center',
-                }}
-              >
-                <FolderGit2
-                  size={48}
-                  style={{ marginBottom: spacing.md, opacity: 0.5 }}
-                />
-                <p style={{ margin: 0, fontSize: theme.fontSizes[2] }}>
-                  No recent activity
-                </p>
-                <p style={{ margin: `${spacing.xs}px 0 0`, fontSize: theme.fontSizes[1] }}>
-                  Commits from your local repositories will appear here
-                </p>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
-                {activityFeed.commits
-                  .filter((commit) => !selectedRepoPath || commit.repoPath === selectedRepoPath)
-                  .map((commit) => {
-                    const isDimmed = hoveredRepoPath && commit.repoPath !== hoveredRepoPath;
-                    return (
-                  <div
-                    key={`${commit.repoPath}-${commit.hash}`}
-                    style={{
-                      padding: spacing.sm,
-                      backgroundColor: theme.colors.backgroundSecondary,
-                      borderRadius: theme.radii?.[1] || 4,
-                      border: `1px solid ${theme.colors.border}`,
-                      cursor: 'pointer',
-                      transition: 'border-color 0.15s ease, opacity 0.15s ease',
-                      opacity: isDimmed ? 0.3 : 1,
-                    }}
-                    onMouseEnter={(e) => {
-                      setHoveredRepoPath(commit.repoPath);
-                      e.currentTarget.style.borderColor = theme.colors.primary;
-                    }}
-                    onMouseLeave={(e) => {
-                      setHoveredRepoPath(null);
-                      e.currentTarget.style.borderColor = theme.colors.border;
-                    }}
-                  >
-                    {/* Repo name and time */}
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        marginBottom: spacing.xs,
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: theme.fontSizes[1],
-                          fontWeight: 600,
-                          color: theme.colors.primary,
-                        }}
-                      >
-                        {commit.repoName}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: theme.fontSizes[0],
-                          color: theme.colors.textSecondary,
-                        }}
-                      >
-                        {formatRelativeTime(commit.date)}
-                      </span>
-                    </div>
-                    {/* Commit message */}
-                    <div
-                      style={{
-                        fontSize: theme.fontSizes[2],
-                        color: theme.colors.text,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {commit.message}
-                    </div>
-                    {/* Author and hash */}
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: spacing.sm,
-                        marginTop: spacing.xs,
-                        fontSize: theme.fontSizes[1],
-                        color: theme.colors.textSecondary,
-                      }}
-                    >
-                      <span>{commit.author}</span>
-                      <code
-                        style={{
-                          fontSize: theme.fontSizes[0],
-                          fontFamily: theme.fonts.monospace,
-                          backgroundColor: theme.colors.background,
-                          padding: '1px 4px',
-                          borderRadius: 2,
-                        }}
-                      >
-                        {commit.hash.slice(0, 7)}
-                      </code>
-                    </div>
-                  </div>
-                    );
-                  })}
-              </div>
-            )}
-          </div>
-
-          {/* Repo Images - Right Side */}
-          <div
-            style={{
-              flex: 1,
-              overflow: 'auto',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: spacing.sm,
-            }}
-          >
-            {uniqueActivityRepos.length > 0 ? (
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
-                  gap: spacing.sm,
-                }}
-              >
-                {uniqueActivityRepos.map((repo) => {
-                  const imageUrl = activityRepoImages.get(repo.path);
-                  const isSelected = selectedRepoPath === repo.path;
-                  const isDimmed = hoveredRepoPath && repo.path !== hoveredRepoPath;
-                  return (
-                    <div
-                      key={repo.path}
-                      style={{
-                        aspectRatio: '1 / 1',
-                        borderRadius: theme.radii?.[1] || 4,
-                        border: `2px solid ${isSelected ? theme.colors.primary : theme.colors.border}`,
-                        backgroundColor: theme.colors.backgroundSecondary,
-                        overflow: 'hidden',
-                        cursor: 'pointer',
-                        transition: 'border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        boxShadow: isSelected ? `0 0 0 2px ${theme.colors.primary}40` : 'none',
-                        opacity: isDimmed ? 0.3 : 1,
-                      }}
-                      onMouseEnter={() => {
-                        setHoveredRepoPath(repo.path);
-                      }}
-                      onMouseLeave={() => {
-                        setHoveredRepoPath(null);
-                      }}
-                      onClick={() => {
-                        setSelectedRepoPath(isSelected ? null : repo.path);
-                      }}
-                    >
-                      {imageUrl ? (
-                        <img
-                          src={imageUrl}
-                          alt={repo.name}
-                          style={{
-                            flex: 1,
-                            width: '100%',
-                            objectFit: 'cover',
-                          }}
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            flex: 1,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <FolderGit2 size={24} color={theme.colors.textSecondary} style={{ opacity: 0.5 }} />
-                        </div>
-                      )}
-                      <div
-                        style={{
-                          padding: `${spacing.xs}px`,
-                          fontSize: theme.fontSizes[0],
-                          color: theme.colors.text,
-                          textAlign: 'center',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          backgroundColor: theme.colors.background,
-                          borderTop: `1px solid ${theme.colors.border}`,
-                        }}
-                      >
-                        {repo.name}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: theme.colors.textSecondary,
-                  fontSize: theme.fontSizes[1],
-                }}
-              >
-                {activityFeed.loading ? 'Loading...' : 'No repositories'}
-              </div>
-            )}
-          </div>
-        </div>
+          No Repository Selected
+        </h3>
+        <p style={{ margin: 0, fontSize: theme.fontSizes[2], maxWidth: 300 }}>
+          Select a repository from the list to view its details, git status, and commit history.
+        </p>
       </div>
     );
   }

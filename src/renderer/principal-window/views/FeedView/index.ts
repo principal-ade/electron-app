@@ -1,0 +1,1 @@
+export { FeedView } from './FeedView';

@@ -1,0 +1,788 @@
+{
+  "pv": {
+    "name": "Activity Feed",
+    "version": "1.0.0",
+    "description": "Cross-repository activity feed showing recent commits from all local repositories",
+    "markdown": ".principal-views/activity-feed/activity-feed.md",
+    "nodeTypes": {
+      "ui-component": {
+        "label": "UI Component",
+        "color": "#EC4899"
+      },
+      "context": {
+        "label": "React Context",
+        "color": "#A855F7"
+      },
+      "renderer-service": {
+        "label": "Renderer Service",
+        "color": "#7C3AED"
+      },
+      "main-process": {
+        "label": "Main Process",
+        "color": "#4F46E5"
+      },
+      "hook": {
+        "label": "React Hook",
+        "color": "#F59E0B"
+      },
+      "event": {
+        "label": "Event",
+        "color": "#3B82F6"
+      },
+      "boundary": {
+        "label": "Boundary",
+        "color": "#64748B"
+      }
+    },
+    "edgeTypes": {
+      "user-action": {
+        "label": "User Action",
+        "style": "solid",
+        "color": "#EC4899"
+      },
+      "data-flow": {
+        "label": "Data Flow",
+        "style": "solid",
+        "color": "#3B82F6"
+      },
+      "ipc-invoke": {
+        "label": "IPC Invoke",
+        "style": "solid",
+        "color": "#6366F1"
+      },
+      "state-update": {
+        "label": "State Update",
+        "style": "dashed",
+        "color": "#22C55E"
+      },
+      "event-emit": {
+        "label": "Event Emit",
+        "style": "dashed",
+        "color": "#A855F7"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "x": 400,
+      "y": -100,
+      "width": 500,
+      "height": 60,
+      "color": "#64748B",
+      "text": "# Activity Feed Feature\n**Cross-repository commit activity with File City images**"
+    },
+    {
+      "id": "navigation-sidebar",
+      "type": "otel-event",
+      "x": 50,
+      "y": 0,
+      "width": 200,
+      "height": 100,
+      "label": "NavigationSidebar",
+      "shape": "rectangle",
+      "event": {
+        "name": "feed.navigation.clicked",
+        "description": "User clicked Feed item in navigation sidebar",
+        "attributes": {
+          "previous_view": {
+            "type": "string",
+            "description": "Previous active view before clicking Feed"
+          }
+        }
+      },
+      "otel": {
+        "status": "not-implemented",
+        "files": [
+          "src/renderer/principal-window/components/IntegratedShell/NavigationSidebar.tsx"
+        ]
+      }
+    },
+    {
+      "id": "integrated-shell",
+      "type": "otel-event",
+      "x": 300,
+      "y": 0,
+      "width": 200,
+      "height": 100,
+      "label": "IntegratedShell",
+      "shape": "rectangle",
+      "event": {
+        "name": "feed.view.activated",
+        "description": "FeedView component mounted and active",
+        "attributes": {
+          "view_name": {
+            "type": "string",
+            "description": "View name: feed"
+          }
+        }
+      },
+      "otel": {
+        "status": "not-implemented",
+        "files": [
+          "src/renderer/principal-window/components/IntegratedShell/IntegratedShell.tsx"
+        ]
+      }
+    },
+    {
+      "id": "feed-view",
+      "type": "otel-event",
+      "x": 550,
+      "y": 0,
+      "width": 200,
+      "height": 100,
+      "label": "FeedView",
+      "shape": "rectangle",
+      "event": {
+        "name": "feed.provider.initialized",
+        "description": "FeedPanelProvider initialized with context",
+        "attributes": {
+          "has_repositories": {
+            "type": "boolean",
+            "description": "Whether repositories were loaded"
+          }
+        }
+      },
+      "otel": {
+        "status": "not-implemented",
+        "files": [
+          "src/renderer/principal-window/views/FeedView/FeedView.tsx"
+        ]
+      }
+    },
+    {
+      "id": "section-data-loading",
+      "type": "text",
+      "x": 50,
+      "y": 130,
+      "width": 300,
+      "height": 40,
+      "color": "#64748B",
+      "text": "## Data Loading\n**Repositories and commits**"
+    },
+    {
+      "id": "alexandria-service",
+      "type": "otel-event",
+      "x": 50,
+      "y": 200,
+      "width": 200,
+      "height": 100,
+      "label": "AlexandriaService",
+      "shape": "rectangle",
+      "event": {
+        "name": "feed.repositories.fetched",
+        "description": "Fetched local repositories from Alexandria",
+        "attributes": {
+          "repository_count": {
+            "type": "integer",
+            "description": "Number of repositories returned"
+          },
+          "duration_ms": {
+            "type": "integer",
+            "description": "Time taken to fetch repositories"
+          }
+        }
+      },
+      "otel": {
+        "status": "not-implemented",
+        "files": [
+          "src/renderer/main-process-api/AlexandriaService.ts",
+          "src/renderer/principal-window/views/FeedView/FeedView.tsx"
+        ]
+      }
+    },
+    {
+      "id": "use-activity-feed",
+      "type": "otel-event",
+      "x": 300,
+      "y": 200,
+      "width": 200,
+      "height": 100,
+      "label": "useActivityFeed",
+      "shape": "rectangle",
+      "event": {
+        "name": "feed.activity.loading_started",
+        "description": "Started loading activity feed commits",
+        "attributes": {
+          "max_repos": {
+            "type": "integer",
+            "description": "Maximum repos to fetch from (default: 10)"
+          },
+          "commits_per_repo": {
+            "type": "integer",
+            "description": "Commits per repo to fetch (default: 5)"
+          },
+          "total_limit": {
+            "type": "integer",
+            "description": "Maximum total commits (default: 20)"
+          }
+        }
+      },
+      "otel": {
+        "status": "not-implemented",
+        "files": [
+          "src/renderer/hooks/useActivityFeed.ts"
+        ]
+      }
+    },
+    {
+      "id": "get-directory-info",
+      "type": "otel-event",
+      "x": 550,
+      "y": 200,
+      "width": 200,
+      "height": 100,
+      "label": "FileSystemService",
+      "shape": "rectangle",
+      "event": {
+        "name": "feed.repos.mtime_fetched",
+        "description": "Fetched modification time for repositories to sort by recent activity",
+        "attributes": {
+          "repos_checked": {
+            "type": "integer",
+            "description": "Number of repos checked for mtime"
+          }
+        }
+      },
+      "otel": {
+        "status": "not-implemented",
+        "files": [
+          "src/renderer/main-process-api/FileSystemService.ts",
+          "src/renderer/hooks/useActivityFeed.ts"
+        ]
+      }
+    },
+    {
+      "id": "git-service-commits",
+      "type": "otel-event",
+      "x": 800,
+      "y": 200,
+      "width": 220,
+      "height": 100,
+      "label": "GitService.getCommitsInDateRange",
+      "shape": "rectangle",
+      "event": {
+        "name": "feed.commits.fetched",
+        "description": "Fetched commits for a repository in date range",
+        "attributes": {
+          "repo_path": {
+            "type": "string",
+            "description": "Repository path"
+          },
+          "commit_count": {
+            "type": "integer",
+            "description": "Number of commits found"
+          },
+          "start_date": {
+            "type": "string",
+            "description": "Start date of range"
+          },
+          "end_date": {
+            "type": "string",
+            "description": "End date of range"
+          }
+        }
+      },
+      "otel": {
+        "status": "not-implemented",
+        "files": [
+          "src/renderer/main-process-api/GitService.ts",
+          "src/renderer/hooks/useActivityFeed.ts"
+        ]
+      }
+    },
+    {
+      "id": "activity-feed-loaded",
+      "type": "otel-event",
+      "x": 300,
+      "y": 350,
+      "width": 200,
+      "height": 100,
+      "label": "Activity Feed Loaded",
+      "shape": "rectangle",
+      "event": {
+        "name": "feed.activity.loaded",
+        "description": "Activity feed fully loaded with commits",
+        "attributes": {
+          "total_commits": {
+            "type": "integer",
+            "description": "Total commits in feed"
+          },
+          "unique_repos": {
+            "type": "integer",
+            "description": "Number of unique repositories"
+          },
+          "duration_ms": {
+            "type": "integer",
+            "description": "Total time to load feed"
+          }
+        }
+      },
+      "otel": {
+        "status": "not-implemented",
+        "files": [
+          "src/renderer/hooks/useActivityFeed.ts"
+        ]
+      }
+    },
+    {
+      "id": "section-images",
+      "type": "text",
+      "x": 550,
+      "y": 320,
+      "width": 300,
+      "height": 40,
+      "color": "#64748B",
+      "text": "## File City Images\n**Visual repo representations**"
+    },
+    {
+      "id": "file-city-service",
+      "type": "otel-event",
+      "x": 550,
+      "y": 380,
+      "width": 220,
+      "height": 100,
+      "label": "FileCityImageService",
+      "shape": "rectangle",
+      "event": {
+        "name": "feed.images.requested",
+        "description": "Requested File City images for repos in activity feed",
+        "attributes": {
+          "repo_count": {
+            "type": "integer",
+            "description": "Number of unique repos to fetch images for"
+          }
+        }
+      },
+      "otel": {
+        "status": "not-implemented",
+        "files": [
+          "src/renderer/panels/ActivityFeedPanel.tsx",
+          "src/renderer/main-process-api/FileCityImageService.ts"
+        ]
+      }
+    },
+    {
+      "id": "images-loaded",
+      "type": "otel-event",
+      "x": 800,
+      "y": 380,
+      "width": 200,
+      "height": 100,
+      "label": "Images Loaded",
+      "shape": "rectangle",
+      "event": {
+        "name": "feed.images.loaded",
+        "description": "File City images loaded for repo grid",
+        "attributes": {
+          "images_found": {
+            "type": "integer",
+            "description": "Number of images successfully loaded"
+          },
+          "images_missing": {
+            "type": "integer",
+            "description": "Repos without File City images"
+          }
+        }
+      },
+      "otel": {
+        "status": "not-implemented",
+        "files": [
+          "src/renderer/panels/ActivityFeedPanel.tsx"
+        ]
+      }
+    },
+    {
+      "id": "section-panel",
+      "type": "text",
+      "x": 50,
+      "y": 480,
+      "width": 300,
+      "height": 40,
+      "color": "#64748B",
+      "text": "## Activity Feed Panel\n**UI rendering and interactions**"
+    },
+    {
+      "id": "activity-feed-panel",
+      "type": "otel-event",
+      "x": 50,
+      "y": 540,
+      "width": 200,
+      "height": 100,
+      "label": "ActivityFeedPanel",
+      "shape": "rectangle",
+      "event": {
+        "name": "feed.panel.rendered",
+        "description": "Activity feed panel rendered with commits and images",
+        "attributes": {
+          "commits_displayed": {
+            "type": "integer",
+            "description": "Number of commits shown"
+          },
+          "repos_in_grid": {
+            "type": "integer",
+            "description": "Number of repos in image grid"
+          }
+        }
+      },
+      "otel": {
+        "status": "not-implemented",
+        "files": [
+          "src/renderer/panels/ActivityFeedPanel.tsx"
+        ]
+      }
+    },
+    {
+      "id": "commit-hovered",
+      "type": "otel-event",
+      "x": 300,
+      "y": 540,
+      "width": 200,
+      "height": 100,
+      "label": "Commit Hovered",
+      "shape": "rectangle",
+      "event": {
+        "name": "feed.commit.hovered",
+        "description": "User hovered over a commit item",
+        "attributes": {
+          "repo_name": {
+            "type": "string",
+            "description": "Repository name"
+          },
+          "commit_hash": {
+            "type": "string",
+            "description": "Git commit hash"
+          }
+        }
+      },
+      "otel": {
+        "status": "not-implemented",
+        "files": [
+          "src/renderer/panels/ActivityFeedPanel.tsx"
+        ]
+      }
+    },
+    {
+      "id": "repo-selected",
+      "type": "otel-event",
+      "x": 550,
+      "y": 540,
+      "width": 200,
+      "height": 100,
+      "label": "Repo Selected",
+      "shape": "rectangle",
+      "event": {
+        "name": "feed.repo.selected",
+        "description": "User clicked to filter by repository",
+        "attributes": {
+          "repo_path": {
+            "type": "string",
+            "description": "Selected repository path"
+          },
+          "repo_name": {
+            "type": "string",
+            "description": "Selected repository name"
+          }
+        }
+      },
+      "otel": {
+        "status": "not-implemented",
+        "files": [
+          "src/renderer/panels/ActivityFeedPanel.tsx"
+        ]
+      }
+    },
+    {
+      "id": "commit-clicked",
+      "type": "otel-event",
+      "x": 300,
+      "y": 680,
+      "width": 200,
+      "height": 100,
+      "label": "Commit Clicked",
+      "shape": "rectangle",
+      "event": {
+        "name": "feed.commit.clicked",
+        "description": "User clicked on a commit to navigate to repository",
+        "attributes": {
+          "repo_path": {
+            "type": "string",
+            "description": "Repository path to navigate to"
+          },
+          "commit_hash": {
+            "type": "string",
+            "description": "Commit hash clicked"
+          }
+        }
+      },
+      "otel": {
+        "status": "not-implemented",
+        "files": [
+          "src/renderer/panels/ActivityFeedPanel.tsx"
+        ]
+      }
+    },
+    {
+      "id": "repo-double-clicked",
+      "type": "otel-event",
+      "x": 550,
+      "y": 680,
+      "width": 200,
+      "height": 100,
+      "label": "Repo Double-Clicked",
+      "shape": "rectangle",
+      "event": {
+        "name": "feed.repo.opened",
+        "description": "User double-clicked repo image to open in workspace",
+        "attributes": {
+          "repo_path": {
+            "type": "string",
+            "description": "Repository path to open"
+          },
+          "repo_name": {
+            "type": "string",
+            "description": "Repository name"
+          }
+        }
+      },
+      "otel": {
+        "status": "not-implemented",
+        "files": [
+          "src/renderer/panels/ActivityFeedPanel.tsx"
+        ]
+      }
+    },
+    {
+      "id": "window-service",
+      "type": "otel-event",
+      "x": 800,
+      "y": 680,
+      "width": 200,
+      "height": 100,
+      "label": "WindowService",
+      "shape": "rectangle",
+      "event": {
+        "name": "feed.workspace.opened",
+        "description": "Dev workspace opened for repository",
+        "attributes": {
+          "repo_path": {
+            "type": "string",
+            "description": "Repository path"
+          },
+          "window_id": {
+            "type": "string",
+            "description": "New window ID"
+          }
+        }
+      },
+      "otel": {
+        "status": "not-implemented",
+        "files": [
+          "src/renderer/main-process-api/WindowService.ts",
+          "src/renderer/principal-window/views/FeedView/FeedView.tsx"
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "nav-to-shell",
+      "fromNode": "navigation-sidebar",
+      "fromSide": "right",
+      "toNode": "integrated-shell",
+      "toSide": "left",
+      "label": "view change",
+      "pv": {
+        "edgeType": "user-action"
+      }
+    },
+    {
+      "id": "shell-to-view",
+      "fromNode": "integrated-shell",
+      "fromSide": "right",
+      "toNode": "feed-view",
+      "toSide": "left",
+      "label": "render",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "view-to-alexandria",
+      "fromNode": "feed-view",
+      "fromSide": "bottom",
+      "toNode": "alexandria-service",
+      "toSide": "top",
+      "label": "getRepositories()",
+      "pv": {
+        "edgeType": "ipc-invoke"
+      }
+    },
+    {
+      "id": "alexandria-to-hook",
+      "fromNode": "alexandria-service",
+      "fromSide": "right",
+      "toNode": "use-activity-feed",
+      "toSide": "left",
+      "label": "repositories",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "hook-to-fs",
+      "fromNode": "use-activity-feed",
+      "fromSide": "right",
+      "toNode": "get-directory-info",
+      "toSide": "left",
+      "label": "get mtime",
+      "pv": {
+        "edgeType": "ipc-invoke"
+      }
+    },
+    {
+      "id": "fs-to-git",
+      "fromNode": "get-directory-info",
+      "fromSide": "right",
+      "toNode": "git-service-commits",
+      "toSide": "left",
+      "label": "top repos",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "git-to-loaded",
+      "fromNode": "git-service-commits",
+      "fromSide": "bottom",
+      "toNode": "activity-feed-loaded",
+      "toSide": "right",
+      "label": "commits",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "hook-to-loaded",
+      "fromNode": "use-activity-feed",
+      "fromSide": "bottom",
+      "toNode": "activity-feed-loaded",
+      "toSide": "top",
+      "label": "aggregate",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "loaded-to-images",
+      "fromNode": "activity-feed-loaded",
+      "fromSide": "right",
+      "toNode": "file-city-service",
+      "toSide": "left",
+      "label": "unique repos",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "images-service-to-loaded",
+      "fromNode": "file-city-service",
+      "fromSide": "right",
+      "toNode": "images-loaded",
+      "toSide": "left",
+      "label": "fetch images",
+      "pv": {
+        "edgeType": "ipc-invoke"
+      }
+    },
+    {
+      "id": "loaded-to-panel",
+      "fromNode": "activity-feed-loaded",
+      "fromSide": "bottom",
+      "toNode": "activity-feed-panel",
+      "toSide": "top",
+      "label": "state update",
+      "pv": {
+        "edgeType": "state-update"
+      }
+    },
+    {
+      "id": "images-to-panel",
+      "fromNode": "images-loaded",
+      "fromSide": "bottom",
+      "toNode": "activity-feed-panel",
+      "toSide": "right",
+      "label": "image URLs",
+      "pv": {
+        "edgeType": "state-update"
+      }
+    },
+    {
+      "id": "panel-to-hovered",
+      "fromNode": "activity-feed-panel",
+      "fromSide": "right",
+      "toNode": "commit-hovered",
+      "toSide": "left",
+      "label": "onMouseEnter",
+      "pv": {
+        "edgeType": "user-action"
+      }
+    },
+    {
+      "id": "panel-to-repo-selected",
+      "fromNode": "activity-feed-panel",
+      "fromSide": "right",
+      "toNode": "repo-selected",
+      "toSide": "left",
+      "label": "onClick",
+      "pv": {
+        "edgeType": "user-action"
+      }
+    },
+    {
+      "id": "hovered-to-clicked",
+      "fromNode": "commit-hovered",
+      "fromSide": "bottom",
+      "toNode": "commit-clicked",
+      "toSide": "top",
+      "label": "onClick",
+      "pv": {
+        "edgeType": "user-action"
+      }
+    },
+    {
+      "id": "repo-selected-to-double",
+      "fromNode": "repo-selected",
+      "fromSide": "bottom",
+      "toNode": "repo-double-clicked",
+      "toSide": "top",
+      "label": "onDoubleClick",
+      "pv": {
+        "edgeType": "user-action"
+      }
+    },
+    {
+      "id": "double-to-window",
+      "fromNode": "repo-double-clicked",
+      "fromSide": "right",
+      "toNode": "window-service",
+      "toSide": "left",
+      "label": "openDevWorkspace",
+      "pv": {
+        "edgeType": "ipc-invoke"
+      }
+    },
+    {
+      "id": "clicked-emit",
+      "fromNode": "commit-clicked",
+      "fromSide": "left",
+      "toNode": "feed-view",
+      "toSide": "bottom",
+      "label": "selectRepository",
+      "pv": {
+        "edgeType": "event-emit"
+      }
+    }
+  ]
+}

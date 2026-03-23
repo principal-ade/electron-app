@@ -1,0 +1,62 @@
+{
+  "version": "1.0.0",
+  "name": "Activity Feed Interactions",
+  "description": "User interactions with the activity feed - hovering, selecting, and opening repositories",
+  "canvas": ".principal-views/activity-feed/activity-feed.otel.canvas",
+  "spanPattern": "feed.repo",
+  "scenarios": [
+    {
+      "id": "hover-commit",
+      "description": "User hovers over a commit to highlight related elements",
+      "priority": 1,
+      "template": {
+        "introduction": "**Commit Hover Interaction**\n\nHighlighting related commits and repo image.",
+        "events": {
+          "feed.commit.hovered": "[1] Hovered commit from `{{repo_name}}`: {{commit_hash}}"
+        },
+        "summary": "**Effect:** Other commits dimmed, repo image highlighted"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "filter-by-repo",
+      "description": "User clicks repo image to filter commits",
+      "priority": 2,
+      "template": {
+        "introduction": "**Repository Filter**\n\nFiltering commits by selected repository.",
+        "events": {
+          "feed.repo.selected": "[1] Selected repo: `{{repo_name}}` at {{repo_path}}"
+        },
+        "summary": "**Effect:** Only showing commits from `{{repo_name}}`"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "navigate-to-repo",
+      "description": "User clicks commit to navigate to repository in Projects view",
+      "priority": 3,
+      "template": {
+        "introduction": "**Navigate to Repository**\n\nOpening repository details from commit click.",
+        "events": {
+          "feed.commit.clicked": "[1] Clicked commit {{commit_hash}} from `{{repo_path}}`"
+        },
+        "summary": "**Effect:** Navigating to repository in Projects view"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "open-workspace",
+      "description": "User double-clicks repo to open dev workspace",
+      "priority": 4,
+      "template": {
+        "introduction": "**Open Dev Workspace**\n\nOpening repository in new workspace window.",
+        "events": {
+          "feed.repo.opened": "[1] Opening repo: `{{repo_name}}` at {{repo_path}}",
+          "feed.workspace.opened": "[2] Workspace opened: window_id={{window_id}}, repo={{repo_path}}"
+        },
+        "summary": "**Effect:** New dev workspace window opened for `{{repo_name}}`"
+      },
+      "filterDefault": false
+    }
+  ]
+}

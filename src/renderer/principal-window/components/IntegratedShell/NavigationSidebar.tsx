@@ -11,6 +11,7 @@ import {
   Radio,
   Zap,
   Map,
+  Rss,
 } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuthState';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
@@ -135,6 +136,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
     );
 
   const navItems: NavItem[] = [
+    { id: 'feed', icon: <Rss size={20} />, label: 'Feed' },
     { id: 'local-projects', icon: <Monitor size={20} />, label: 'Local' },
     { id: 'remote-projects', icon: <Github size={20} />, label: 'Github' },
     { id: 'starred-projects', icon: <Star size={20} />, label: 'Starred' },
