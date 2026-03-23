@@ -20,6 +20,7 @@ import { FolderGit2, ChevronDown, ChevronRight, Check, User, Play, Square, Exter
 import { useActivityFeed, type ActivityCommit } from '../hooks/useActivityFeed';
 import { FileCityImageService } from '../main-process-api/FileCityImageService';
 import { GitService } from '../main-process-api/GitService';
+import { HourlyActivityHeatmap, type CommitTimestamp } from '../components/HourlyActivityHeatmap';
 
 /**
  * Get avatar URL from an email address
@@ -149,6 +150,8 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
   const [expandedRepos, setExpandedRepos] = useState<Set<string>>(new Set());
   // State for commit author avatars (sha -> avatarUrl)
   const [commitAvatars, setCommitAvatars] = useState<Map<string, string>>(new Map());
+  // State for time filter from heatmap
+  const [timeFilter, setTimeFilter] = useState<{ start: Date; end: Date } | null>(null);
 
   // Create a map of repo paths to github info (owner and repo name)
   const repoGithubMap = useMemo(() => {
@@ -170,11 +173,21 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
     return map;
   }, [repoGithubMap]);
 
+  // Filter commits by time range if filter is active
+  const filteredCommits = useMemo(() => {
+    if (!timeFilter) return activityFeed.commits;
+
+    return activityFeed.commits.filter((commit) => {
+      const commitDate = new Date(commit.date);
+      return commitDate >= timeFilter.start && commitDate < timeFilter.end;
+    });
+  }, [activityFeed.commits, timeFilter]);
+
   // Aggregate commits by repository
   const repoSummaries = useMemo<RepoActivitySummary[]>(() => {
     const repoMap = new Map<string, RepoActivitySummary>();
 
-    for (const commit of activityFeed.commits) {
+    for (const commit of filteredCommits) {
       let summary = repoMap.get(commit.repoPath);
       if (!summary) {
         summary = {
@@ -200,7 +213,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
     return Array.from(repoMap.values()).sort(
       (a, b) => b.latestCommitAt.getTime() - a.latestCommitAt.getTime()
     );
-  }, [activityFeed.commits, repoOwnerMap]);
+  }, [filteredCommits, repoOwnerMap]);
 
   // Fetch File City images for repos with aggregate change highlights
   useEffect(() => {
@@ -361,6 +374,38 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
 
   const totalRecentCommits = recentRepos.reduce((sum, r) => sum + r.commitCount, 0);
 
+  // Transform commits for HourlyActivityHeatmap (always use all commits, not filtered)
+  const heatmapCommits = useMemo<CommitTimestamp[]>(() => {
+    return activityFeed.commits.map((commit) => ({
+      timestamp: new Date(commit.date),
+      repoId: commit.repoPath,
+    }));
+  }, [activityFeed.commits]);
+
+  // Handle heatmap block click
+  const handleHeatmapBlockClick = useCallback((startTime: Date, endTime: Date, count: number) => {
+    if (count === 0) return; // Don't filter on empty blocks
+
+    // Toggle filter off if clicking the same block
+    if (timeFilter && timeFilter.start.getTime() === startTime.getTime()) {
+      setTimeFilter(null);
+    } else {
+      setTimeFilter({ start: startTime, end: endTime });
+    }
+  }, [timeFilter]);
+
+  // Format time filter for display
+  const formatTimeFilterLabel = (filter: { start: Date; end: Date }): string => {
+    const formatTime = (d: Date) => {
+      const hour = d.getHours();
+      const period = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+      const m = d.getMinutes().toString().padStart(2, '0');
+      return `${displayHour}:${m} ${period}`;
+    };
+    return `${formatTime(filter.start)} - ${formatTime(filter.end)}`;
+  };
+
   return (
     <div
       style={{
@@ -404,30 +449,67 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
           )}
         </div>
 
-        {/* Status indicator */}
-        {!activityFeed.loading && repoSummaries.length > 0 && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: spacing.xs,
-              fontSize: theme.fontSizes[1],
-              color: recentRepos.length === 0 ? theme.colors.success : theme.colors.textSecondary,
-            }}
-          >
-            {recentRepos.length === 0 ? (
-              <>
-                <Check size={14} />
-                <span>All caught up</span>
-              </>
-            ) : (
-              <span>
-                {recentRepos.length} repo{recentRepos.length !== 1 ? 's' : ''} active today
-                {totalRecentCommits > 0 && ` · ${totalRecentCommits} commit${totalRecentCommits !== 1 ? 's' : ''}`}
-              </span>
-            )}
-          </div>
-        )}
+        {/* Status indicator and time filter */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md }}>
+          {/* Time filter indicator */}
+          {timeFilter && (
+            <button
+              onClick={() => setTimeFilter(null)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.xs,
+                padding: `${spacing.xs}px ${spacing.sm}px`,
+                fontSize: theme.fontSizes[1],
+                color: theme.colors.primary,
+                backgroundColor: `${theme.colors.primary}15`,
+                border: `1px solid ${theme.colors.primary}`,
+                borderRadius: theme.radii?.[1] || 4,
+                cursor: 'pointer',
+              }}
+            >
+              <span>{formatTimeFilterLabel(timeFilter)}</span>
+              <X size={12} />
+            </button>
+          )}
+
+          {/* Status indicator */}
+          {!activityFeed.loading && repoSummaries.length > 0 && !timeFilter && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.xs,
+                fontSize: theme.fontSizes[1],
+                color: recentRepos.length === 0 ? theme.colors.success : theme.colors.textSecondary,
+              }}
+            >
+              {recentRepos.length === 0 ? (
+                <>
+                  <Check size={14} />
+                  <span>All caught up</span>
+                </>
+              ) : (
+                <span>
+                  {recentRepos.length} repo{recentRepos.length !== 1 ? 's' : ''} active today
+                  {totalRecentCommits > 0 && ` · ${totalRecentCommits} commit${totalRecentCommits !== 1 ? 's' : ''}`}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Filtered count */}
+          {timeFilter && filteredCommits.length > 0 && (
+            <span
+              style={{
+                fontSize: theme.fontSizes[1],
+                color: theme.colors.textSecondary,
+              }}
+            >
+              {filteredCommits.length} commit{filteredCommits.length !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Content area */}
@@ -729,14 +811,35 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
         </div>
       </div>
 
-        {/* Right column - empty spacer, matches left column width */}
+        {/* Right column - Hourly Activity Heatmap (left-aligned content) */}
         {onSearchChange && (
           <div
             style={{
               flex: 1,
               minWidth: 200,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              overflow: 'hidden',
             }}
-          />
+          >
+            <div
+              style={{
+                width: 300,
+                height: '100%',
+                padding: spacing.md,
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              <HourlyActivityHeatmap
+                commits={heatmapCommits}
+                loading={activityFeed.loading}
+                onBlockClick={handleHeatmapBlockClick}
+                selectedBlock={timeFilter?.start.toISOString() ?? null}
+              />
+            </div>
+          </div>
         )}
       </div>
     </div>

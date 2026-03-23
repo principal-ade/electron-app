@@ -32,9 +32,11 @@ const MIN_CELL_SIZE = 12;
 const CELL_GAP = 2;
 const BLOCKS_PER_HOUR = 6; // 10-minute blocks
 
-// Format hour for display (e.g., "14:00", "09:00")
+// Format hour for display (e.g., "2 PM", "9 AM")
 const formatHour = (hour: number): string => {
-  return `${hour.toString().padStart(2, '0')}:00`;
+  const period = hour >= 12 ? 'PM' : 'AM';
+  const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+  return `${displayHour} ${period}`;
 };
 
 // Get the start of a 10-minute block for a given date
@@ -65,6 +67,23 @@ export const HourlyActivityHeatmap: React.FC<HourlyActivityHeatmapProps> = ({
   const { theme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+  // Current time state - updates every second to handle time boundary crossings
+  const [currentTime, setCurrentTime] = useState(() => new Date());
+
+  // Derived: elapsed minutes within current 10-minute block
+  const elapsedMinutes = currentTime.getMinutes() % 10;
+
+  // Key that changes only when we cross a 10-minute boundary (for grid recalculation)
+  const currentBlockKey = `${currentTime.getFullYear()}-${currentTime.getMonth()}-${currentTime.getDate()}-${currentTime.getHours()}-${Math.floor(currentTime.getMinutes() / 10)}`;
+
+  // Update current time every second
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Measure container dimensions
   useEffect(() => {
@@ -126,8 +145,9 @@ export const HourlyActivityHeatmap: React.FC<HourlyActivityHeatmapProps> = ({
   }, [commits]);
 
   // Generate the grid data (hours as rows, most recent first)
+  // Recalculates when crossing a 10-minute boundary (currentBlockKey changes)
   const hourRows = useMemo(() => {
-    const now = new Date();
+    const now = new Date(); // Fresh date for accurate comparisons
     const rows: Array<{
       hourKey: string;
       hourLabel: string;
@@ -139,6 +159,7 @@ export const HourlyActivityHeatmap: React.FC<HourlyActivityHeatmapProps> = ({
         endTime: Date;
         count: number;
         isFuture: boolean;
+        isCurrent: boolean;
       }>;
     }> = [];
 
@@ -160,6 +181,7 @@ export const HourlyActivityHeatmap: React.FC<HourlyActivityHeatmapProps> = ({
         const blockKey = `${hourKey}-${blockIndex}`;
         const count = blockMap.get(blockKey) || 0;
         const isFuture = startTime > now;
+        const isCurrent = now >= startTime && now < endTime;
 
         blocks.push({
           blockKey,
@@ -168,6 +190,7 @@ export const HourlyActivityHeatmap: React.FC<HourlyActivityHeatmapProps> = ({
           endTime,
           count,
           isFuture,
+          isCurrent,
         });
       }
 
@@ -180,7 +203,8 @@ export const HourlyActivityHeatmap: React.FC<HourlyActivityHeatmapProps> = ({
     }
 
     return rows;
-  }, [maxRows, blockMap]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [maxRows, blockMap, currentBlockKey]);
 
   // Get color intensity based on commit count
   const getColor = (count: number, isFuture: boolean): string => {
@@ -215,9 +239,11 @@ export const HourlyActivityHeatmap: React.FC<HourlyActivityHeatmapProps> = ({
   // Format time for tooltip
   const formatTimeRange = (start: Date, end: Date): string => {
     const formatTime = (d: Date) => {
-      const h = d.getHours().toString().padStart(2, '0');
+      const hour = d.getHours();
+      const period = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
       const m = d.getMinutes().toString().padStart(2, '0');
-      return `${h}:${m}`;
+      return `${displayHour}:${m} ${period}`;
     };
     return `${formatTime(start)} - ${formatTime(end)}`;
   };
@@ -354,6 +380,90 @@ export const HourlyActivityHeatmap: React.FC<HourlyActivityHeatmapProps> = ({
                 {/* Blocks */}
                 {row.blocks.map((block) => {
                   const isSelected = selectedBlock === block.startTime.toISOString();
+
+                  // For current block, render 3x3 mini-grid (9 cells for ~10 minutes)
+                  if (block.isCurrent) {
+                    const miniGap = 1;
+                    const miniCellSize = (cellSize - miniGap * 2) / 3; // 3x3 grid with 2 gaps
+
+                    // Find commits within this block and map to minute indices (0-9)
+                    const commitMinutes = new Set<number>();
+                    commits.forEach(({ timestamp }) => {
+                      const commitDate = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+                      if (commitDate >= block.startTime && commitDate < block.endTime) {
+                        const minuteInBlock = commitDate.getMinutes() % 10;
+                        commitMinutes.add(minuteInBlock);
+                      }
+                    });
+
+                    return (
+                      <div
+                        key={block.blockKey}
+                        title={`${formatTimeRange(block.startTime, block.endTime)}: ${block.count} commit${block.count !== 1 ? 's' : ''} (now)`}
+                        style={{
+                          width: cellSize,
+                          height: cellSize,
+                          borderRadius: 2,
+                          backgroundColor: theme.colors.backgroundTertiary,
+                          cursor: onBlockClick ? 'pointer' : 'default',
+                          position: 'relative',
+                          zIndex: isSelected ? 1 : 0,
+                          boxShadow: isSelected
+                            ? `0 0 0 2px ${theme.colors.background}, 0 0 0 4px ${theme.colors.primary}`
+                            : 'none',
+                          display: 'grid',
+                          gridTemplateColumns: `repeat(3, ${miniCellSize}px)`,
+                          gridTemplateRows: `repeat(3, ${miniCellSize}px)`,
+                          gap: miniGap,
+                          overflow: 'hidden',
+                        }}
+                        onClick={() => {
+                          if (onBlockClick) {
+                            onBlockClick(block.startTime, block.endTime, block.count);
+                          }
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'scale(1.15)';
+                          e.currentTarget.style.zIndex = '2';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'scale(1)';
+                          e.currentTarget.style.zIndex = isSelected ? '1' : '0';
+                        }}
+                      >
+                        {Array.from({ length: 9 }).map((_, i) => {
+                          // Map cell index to minute (fill left-to-right, bottom-to-top)
+                          // Cell layout:  0 1 2    Minute layout:  6 7 8
+                          //               3 4 5                    3 4 5
+                          //               6 7 8                    0 1 2
+                          const row = Math.floor(i / 3);
+                          const col = i % 3;
+                          const minute = (2 - row) * 3 + col;
+
+                          const hasCommit = commitMinutes.has(minute) || (minute === 8 && commitMinutes.has(9));
+                          const isElapsed = minute < elapsedMinutes;
+
+                          return (
+                            <div
+                              key={i}
+                              style={{
+                                width: miniCellSize,
+                                height: miniCellSize,
+                                borderRadius: 1,
+                                backgroundColor: hasCommit
+                                  ? theme.colors.primary
+                                  : isElapsed
+                                    ? theme.colors.textSecondary
+                                    : theme.colors.backgroundTertiary,
+                                opacity: hasCommit ? 1 : isElapsed ? 0.5 : 1,
+                                transition: 'opacity 0.3s ease, background-color 0.3s ease',
+                              }}
+                            />
+                          );
+                        })}
+                      </div>
+                    );
+                  }
 
                   return (
                     <div
