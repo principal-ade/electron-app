@@ -15,7 +15,7 @@ import type {
   DataSlice,
 } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import { FolderGit2, GitCommit, ChevronDown, ChevronRight, Check, User } from 'lucide-react';
+import { FolderGit2, ChevronDown, ChevronRight, Check, User } from 'lucide-react';
 import { useActivityFeed, type ActivityCommit } from '../hooks/useActivityFeed';
 
 interface ActivityFeedPanelContext extends PanelContextValue {
@@ -499,21 +499,29 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             </div>
           </div>
 
-          {/* Commit count */}
+          {/* Commit dots */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: spacing.xs,
-              fontSize: theme.fontSizes[1],
-              color: theme.colors.textSecondary,
+              gap: 4,
               marginBottom: spacing.md,
+              flexWrap: 'wrap',
             }}
           >
-            <GitCommit size={14} />
-            <span>
-              {summary.commitCount} commit{summary.commitCount !== 1 ? 's' : ''}
-            </span>
+            {summary.commits.map((commit, index) => (
+              <div
+                key={commit.hash}
+                title={`${commit.hash.slice(0, 7)}: ${commit.message}`}
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  backgroundColor: index === 0 ? theme.colors.primary : theme.colors.textSecondary,
+                  opacity: index === 0 ? 1 : 0.5,
+                }}
+              />
+            ))}
           </div>
 
           {/* Latest commit message */}
