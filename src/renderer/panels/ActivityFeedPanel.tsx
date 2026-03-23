@@ -398,14 +398,14 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
       <div
         style={{
           display: 'flex',
-          minHeight: 250,
+          minHeight: 300,
         }}
       >
         {/* File City image - left half */}
         <div
           style={{
-            width: 250,
-            height: 250,
+            width: 300,
+            height: 300,
             backgroundColor: theme.colors.background,
             borderRight: `1px solid ${theme.colors.border}`,
             overflow: 'hidden',
