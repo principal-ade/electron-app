@@ -439,13 +439,22 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
       setAnimationCommitIndex(i);
       setTypewriterText('');
 
-      // Generate image for this commit
+      // Generate image for this commit with changed files highlighted
       try {
         const filePaths = await GitService.getFileTreeAtCommit(summary.repoPath, commit.hash);
-        const image = await FileCityImageService.getImageForCommit(
+        const changedFilesMap = await GitService.getChangedFilesForCommit(summary.repoPath, commit.hash);
+
+        // Convert Map to Record for the API
+        const changedFiles: Record<string, { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }> = {};
+        changedFilesMap.forEach((value, key) => {
+          changedFiles[key] = value;
+        });
+
+        const image = await FileCityImageService.getImageForCommitWithChanges(
           summary.repoPath,
           commit.hash,
-          filePaths
+          filePaths,
+          changedFiles
         );
         if (!animationRef.current.cancel) {
           setAnimationImageUrl(image);
