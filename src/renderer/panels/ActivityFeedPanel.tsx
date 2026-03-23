@@ -566,7 +566,7 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                             width: 14,
                             height: 14,
                             borderRadius: '50%',
-                            backgroundColor: (hoveredCommitIndex === null || isHovered) ? theme.colors.primary : theme.colors.textSecondary,
+                            backgroundColor: (hoveredCommitIndex === null ? globalIndex === 0 : isHovered) ? theme.colors.primary : theme.colors.textSecondary,
                             opacity: isFilled ? 1 : 0.3,
                             border: `2px solid ${theme.colors.backgroundSecondary}`,
                             transition: 'opacity 0.15s ease, background-color 0.15s ease',
