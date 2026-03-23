@@ -6,7 +6,7 @@
  * with commit summaries for a repo-centric view.
  */
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type {
   PanelContextValue,
@@ -15,8 +15,10 @@ import type {
   DataSlice,
 } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import { FolderGit2, ChevronDown, ChevronRight, Check, User } from 'lucide-react';
+import { FolderGit2, ChevronDown, ChevronRight, Check, User, Play, Square } from 'lucide-react';
 import { useActivityFeed, type ActivityCommit } from '../hooks/useActivityFeed';
+import { FileCityImageService } from '../main-process-api/FileCityImageService';
+import { GitService } from '../main-process-api/GitService';
 
 interface ActivityFeedPanelContext extends PanelContextValue {
   alexandriaRepositories?: DataSlice<{
@@ -397,13 +399,86 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
   const hasMoreCommits = summary.commits.length > 1;
   const [hoveredCommitIndex, setHoveredCommitIndex] = useState<number | null>(null);
 
-  // Get the commit to display (hovered or most recent)
-  const displayedCommit = hoveredCommitIndex !== null
-    ? summary.commits[hoveredCommitIndex]
-    : summary.commits[0];
-  const displayedTime = hoveredCommitIndex !== null
-    ? new Date(displayedCommit.date)
-    : summary.latestCommitAt;
+  // Animation state
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [animationCommitIndex, setAnimationCommitIndex] = useState<number | null>(null);
+  const [typewriterText, setTypewriterText] = useState<string>('');
+  const [animationImageUrl, setAnimationImageUrl] = useState<string | null>(null);
+  const animationRef = useRef<{ cancel: boolean }>({ cancel: false });
+
+  // Get the commit to display (animation > hovered > most recent)
+  const displayedCommitIndex = animationCommitIndex ?? hoveredCommitIndex ?? 0;
+  const displayedCommit = summary.commits[displayedCommitIndex];
+  const displayedTime = new Date(displayedCommit?.date ?? summary.latestCommitAt);
+  const displayedMessage = isAnimating && typewriterText !== null
+    ? typewriterText
+    : displayedCommit?.message ?? '';
+
+  // Animation logic
+  const startAnimation = useCallback(async () => {
+    if (isAnimating) {
+      // Stop animation
+      animationRef.current.cancel = true;
+      setIsAnimating(false);
+      setAnimationCommitIndex(null);
+      setTypewriterText('');
+      setAnimationImageUrl(null);
+      return;
+    }
+
+    setIsAnimating(true);
+    animationRef.current.cancel = false;
+
+    // Start from oldest commit (highest index) to newest (index 0)
+    const commits = summary.commits;
+
+    for (let i = commits.length - 1; i >= 0; i--) {
+      if (animationRef.current.cancel) break;
+
+      const commit = commits[i];
+      setAnimationCommitIndex(i);
+      setTypewriterText('');
+
+      // Generate image for this commit
+      try {
+        const filePaths = await GitService.getFileTreeAtCommit(summary.repoPath, commit.hash);
+        const image = await FileCityImageService.getImageForCommit(
+          summary.repoPath,
+          commit.hash,
+          filePaths
+        );
+        if (!animationRef.current.cancel) {
+          setAnimationImageUrl(image);
+        }
+      } catch (err) {
+        console.warn('[ActivityFeedPanel] Failed to generate image for commit:', err);
+      }
+
+      // Typewriter effect for commit message
+      const message = commit.message;
+      for (let j = 0; j <= message.length; j++) {
+        if (animationRef.current.cancel) break;
+        setTypewriterText(message.slice(0, j));
+        await new Promise(resolve => setTimeout(resolve, 30)); // 30ms per character
+      }
+
+      if (animationRef.current.cancel) break;
+
+      // Pause at each commit
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    // Animation complete
+    if (!animationRef.current.cancel) {
+      setIsAnimating(false);
+      setAnimationCommitIndex(null);
+      setTypewriterText('');
+      setAnimationImageUrl(null);
+    }
+  }, [isAnimating, summary.commits, summary.repoPath]);
+
+  // Determine which image to show
+  const currentImageUrl = isAnimating && animationImageUrl ? animationImageUrl : imageUrl;
 
   return (
     <div
@@ -543,14 +618,16 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                   {/* Dots with expanded hover targets */}
                   {rowCommits.map((commit, index) => {
                     const globalIndex = rowIndex * 10 + index;
-                    const isDisplayed = hoveredCommitIndex === null ? globalIndex === 0 : hoveredCommitIndex === globalIndex;
-                    // Only most recent filled by default, or up to hovered one when hovering
-                    const isFilled = hoveredCommitIndex === null ? globalIndex === 0 : globalIndex <= hoveredCommitIndex;
+                    // During animation, use animationCommitIndex; otherwise use hover/default logic
+                    const activeIndex = isAnimating ? animationCommitIndex : (hoveredCommitIndex ?? 0);
+                    const isDisplayed = globalIndex === activeIndex;
+                    // Fill from most recent (0) up to active index
+                    const isFilled = activeIndex !== null && globalIndex <= activeIndex;
                     return (
                       <div
                         key={commit.hash}
-                        onMouseEnter={() => setHoveredCommitIndex(globalIndex)}
-                        onMouseLeave={() => setHoveredCommitIndex(null)}
+                        onMouseEnter={() => !isAnimating && setHoveredCommitIndex(globalIndex)}
+                        onMouseLeave={() => !isAnimating && setHoveredCommitIndex(null)}
                         style={{
                           display: 'flex',
                           alignItems: 'center',
@@ -580,13 +657,14 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             })}
           </div>
 
-          {/* Commit message (changes on hover) */}
+          {/* Commit message (changes on hover/animation) */}
           <div
             style={{
               fontSize: theme.fontSizes[1],
-              color: hoveredCommitIndex !== null ? theme.colors.primary : theme.colors.text,
+              color: (isAnimating || hoveredCommitIndex !== null) ? theme.colors.primary : theme.colors.text,
               marginBottom: spacing.sm,
               transition: 'color 0.15s ease',
+              minHeight: '1.5em', // Prevent layout shift during typewriter
             }}
           >
             <code
@@ -599,27 +677,64 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             >
               {displayedCommit?.hash.slice(0, 7)}
             </code>
-            {displayedCommit?.message || 'No commits'}
+            {displayedMessage || 'No commits'}
+            {isAnimating && <span style={{ opacity: 0.5 }}>|</span>}
           </div>
 
-          {/* Spacer to push expand indicator to bottom */}
+          {/* Spacer to push controls to bottom */}
           <div style={{ flex: 1 }} />
 
-          {/* Expand indicator */}
-          {hasMoreCommits && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing.xs,
-                fontSize: theme.fontSizes[1],
-                color: theme.colors.primary,
-              }}
-            >
-              {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              <span>{isExpanded ? 'Show less' : `+${summary.commits.length - 1} more commits`}</span>
-            </div>
-          )}
+          {/* Controls row: animate button and expand indicator */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: spacing.sm,
+            }}
+          >
+            {/* Animate button */}
+            {hasMoreCommits && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  startAnimation();
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  padding: `${spacing.xs}px ${spacing.sm}px`,
+                  fontSize: theme.fontSizes[1],
+                  color: isAnimating ? theme.colors.error : theme.colors.primary,
+                  backgroundColor: 'transparent',
+                  border: `1px solid ${isAnimating ? theme.colors.error : theme.colors.primary}`,
+                  borderRadius: theme.radii?.[1] || 4,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {isAnimating ? <Square size={12} /> : <Play size={12} />}
+                <span>{isAnimating ? 'Stop' : 'Animate'}</span>
+              </button>
+            )}
+
+            {/* Expand indicator */}
+            {hasMoreCommits && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  fontSize: theme.fontSizes[1],
+                  color: theme.colors.primary,
+                }}
+              >
+                {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                <span>{isExpanded ? 'Show less' : `+${summary.commits.length - 1} more`}</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* File City image - right half */}
@@ -638,9 +753,9 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
           }}
           onDoubleClick={onOpen}
         >
-          {imageUrl ? (
+          {currentImageUrl ? (
             <img
-              src={imageUrl}
+              src={currentImageUrl}
               alt={summary.repoName}
               style={{
                 width: '100%',
