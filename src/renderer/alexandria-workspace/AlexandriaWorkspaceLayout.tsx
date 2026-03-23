@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 import {
-  EditableConfigurablePanelLayout,
+  ConfigurablePanelLayout,
   PanelLayout,
   usePanelFocus,
   usePanelKeyboardShortcuts,
@@ -111,7 +111,6 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   const { context: terminalCtx, actions: terminalActions } = useTerminalProvider();
   const { context: highlightCtx } = useAgentHighlightProvider();
 
-  const [isEditMode, _setIsEditMode] = useState(false);
   const [showAllTerminals, setShowAllTerminals] = useState(false);
 
   // Get terminal context and directory from TerminalProvider
@@ -1551,12 +1550,10 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
             overflow: 'hidden',
           }}
         >
-          <EditableConfigurablePanelLayout
+          <ConfigurablePanelLayout
             theme={theme}
             panels={panels}
             layout={layout}
-            isEditMode={isEditMode}
-            onLayoutChange={onLayoutChange}
             defaultSizes={{ left: 25, middle: 50, right: 25 }}
             collapsed={collapsed}
             collapsiblePanels={{ left: true, right: true }}

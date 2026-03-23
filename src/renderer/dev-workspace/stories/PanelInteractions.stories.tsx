@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import React, { useState, useMemo } from 'react';
 import { ThemeProvider, useTheme } from '@principal-ade/industry-theme';
 import {
-  EditableConfigurablePanelLayout,
+  ConfigurablePanelLayout,
   type PanelLayout,
 } from '@principal-ade/panel-layouts';
 import { PanelEventBus, type PanelContextValue, type DataSlice } from '@principal-ade/panel-framework-core';
@@ -270,7 +270,7 @@ const MockTerminalProvider: React.FC<{
 const PanelInteractionsStoryInner: React.FC = () => {
   const { theme } = useTheme();
 
-  const [layout, setLayout] = useState<PanelLayout>({
+  const [layout] = useState<PanelLayout>({
     left: 'gitChanges',
     middle: 'terminal',
     right: 'fileCity',
@@ -299,7 +299,7 @@ const PanelInteractionsStoryInner: React.FC = () => {
     console.info('FileCityPanelComponent:', FileCityPanelComponent);
     console.info('TabbedTerminalPanel:', TabbedTerminalPanel);
     console.info('ThemeProvider:', ThemeProvider);
-    console.info('EditableConfigurablePanelLayout:', EditableConfigurablePanelLayout);
+    console.info('ConfigurablePanelLayout:', ConfigurablePanelLayout);
     console.info('theme:', theme);
   }, [GitChangesPanelComponent, FileCityPanelComponent, theme]);
 
@@ -410,10 +410,10 @@ const PanelInteractionsStoryInner: React.FC = () => {
               ];
 
               // Check if required components are available
-              if (!EditableConfigurablePanelLayout) {
+              if (!ConfigurablePanelLayout) {
                 return (
                   <div style={{ padding: '2rem', color: '#fff' }}>
-                    Error: EditableConfigurablePanelLayout not available
+                    Error: ConfigurablePanelLayout not available
                   </div>
                 );
               }
@@ -521,11 +521,9 @@ const PanelInteractionsStoryInner: React.FC = () => {
 
                   {/* Panel Layout */}
                   <div style={{ flex: 1, overflow: 'hidden' }}>
-                    <EditableConfigurablePanelLayout
+                    <ConfigurablePanelLayout
                       panels={panels}
                       layout={layout}
-                      onLayoutChange={setLayout}
-                      isEditMode={false}
                       collapsiblePanels={{ left: true, right: true }}
                       defaultSizes={panelSizes}
                       collapsed={collapsed}

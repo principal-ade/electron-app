@@ -15,7 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import {
-  EditableConfigurablePanelLayout,
+  ConfigurablePanelLayout,
   type PanelLayout,
   type ConfigurablePanelLayoutHandle,
 } from '@principal-ade/panel-layouts';
@@ -3444,12 +3444,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           overflow: 'hidden',
         }}
       >
-        <EditableConfigurablePanelLayout
+        <ConfigurablePanelLayout
           ref={panelLayoutRef}
           panels={allPanels}
           layout={layout}
-          onLayoutChange={onLayoutChange}
-          isEditMode={false}
           collapsiblePanels={{ left: true, right: true }}
           defaultSizes={panelSizes || { left: 25, middle: 50, right: 25 }}
           collapsed={collapsed}
