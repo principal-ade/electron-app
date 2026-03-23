@@ -1,11 +1,11 @@
 /**
  * FeedView
  *
- * The default view showing cross-repository activity feed.
- * Uses a simplified provider that only includes what the feed needs.
+ * The default view showing cross-repository activity feed with
+ * integrated search for local, GitHub, and starred repositories.
  */
 
-import React, { useMemo, useState, useEffect, createContext, useContext } from 'react';
+import React, { useMemo, useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { PanelEventBus } from '@principal-ade/panel-framework-core';
 import type {
@@ -15,10 +15,12 @@ import type {
   PanelEventEmitter,
 } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import type { GitHubRepository } from '../../../../shared/main-process-api-interfaces/GitHubAPI';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
+import { GithubService } from '../../../main-process-api/GithubService';
 import { FileCityImageService } from '../../../main-process-api/FileCityImageService';
 import { WindowService } from '../../../main-process-api/WindowService';
-import { ActivityFeedPanel } from '../../../panels/ActivityFeedPanel';
+import { ActivityFeedPanel, type SearchResult } from '../../../panels/ActivityFeedPanel';
 
 /**
  * Feed-specific actions
@@ -46,6 +48,11 @@ interface FeedPanelProviderValue {
   context: PanelContextValue<FeedPanelContextType>;
   actions: FeedPanelActions;
   events: PanelEventEmitter;
+  // Search-related state
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  searchResults: SearchResult[];
+  searchLoading: boolean;
 }
 
 const FeedPanelContext = createContext<FeedPanelProviderValue | null>(null);
@@ -64,11 +71,19 @@ const useFeedPanelProvider = (): FeedPanelProviderValue => {
 const FeedPanelProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const events = useMemo(() => new PanelEventBus(), []);
 
-  // State for repositories
+  // State for local repositories
   const [repositories, setRepositories] = useState<AlexandriaEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch repositories on mount
+  // State for GitHub repositories
+  const [userRepositories, setUserRepositories] = useState<GitHubRepository[]>([]);
+  const [starredRepositories, setStarredRepositories] = useState<GitHubRepository[]>([]);
+  const [githubLoading, setGithubLoading] = useState(true);
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Fetch local repositories on mount
   useEffect(() => {
     const fetchRepositories = async () => {
       setLoading(true);
@@ -100,6 +115,81 @@ const FeedPanelProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
     return unsubscribe;
   }, []);
+
+  // Fetch GitHub repositories on mount (fail silently if not authenticated)
+  useEffect(() => {
+    const fetchGitHubData = async () => {
+      setGithubLoading(true);
+      try {
+        const [userRepos, starred] = await Promise.all([
+          GithubService.getUserRepositories({ perPage: 100, sort: 'updated', direction: 'desc' }),
+          GithubService.getUserStarredRepositories({ perPage: 100, sort: 'updated', direction: 'desc' }),
+        ]);
+        setUserRepositories(userRepos);
+        setStarredRepositories(starred);
+      } catch {
+        // User may not be authenticated - fail silently
+      } finally {
+        setGithubLoading(false);
+      }
+    };
+
+    fetchGitHubData();
+  }, []);
+
+  // Compute search results
+  const searchResults = useMemo((): SearchResult[] => {
+    const trimmedQuery = searchQuery.trim().toLowerCase();
+    if (!trimmedQuery) return [];
+
+    const results: SearchResult[] = [];
+
+    // Search local repositories
+    repositories
+      .filter((r) => r.name.toLowerCase().includes(trimmedQuery))
+      .forEach((r) =>
+        results.push({
+          id: `local-${r.name}`,
+          name: r.name,
+          fullName: r.name,
+          description: r.github?.description,
+          source: 'local',
+          entry: r,
+        }),
+      );
+
+    // Search user's GitHub repositories
+    userRepositories
+      .filter((r) => r.name.toLowerCase().includes(trimmedQuery) || r.full_name.toLowerCase().includes(trimmedQuery))
+      .forEach((r) =>
+        results.push({
+          id: `github-${r.id}`,
+          name: r.name,
+          fullName: r.full_name,
+          description: r.description,
+          source: 'github',
+          repository: r,
+        }),
+      );
+
+    // Search starred repositories
+    starredRepositories
+      .filter((r) => r.name.toLowerCase().includes(trimmedQuery) || r.full_name.toLowerCase().includes(trimmedQuery))
+      .forEach((r) =>
+        results.push({
+          id: `starred-${r.id}`,
+          name: r.name,
+          fullName: r.full_name,
+          description: r.description,
+          source: 'starred',
+          repository: r,
+        }),
+      );
+
+    return results;
+  }, [searchQuery, repositories, userRepositories, starredRepositories]);
+
+  const searchLoading = loading || githubLoading;
 
   // Create repositories slice
   const alexandriaRepositoriesSlice = useMemo<DataSlice<{
@@ -185,8 +275,16 @@ const FeedPanelProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   );
 
   const value: FeedPanelProviderValue = useMemo(
-    () => ({ context, actions, events }),
-    [context, actions, events]
+    () => ({
+      context,
+      actions,
+      events,
+      searchQuery,
+      setSearchQuery,
+      searchResults,
+      searchLoading,
+    }),
+    [context, actions, events, searchQuery, searchResults, searchLoading]
   );
 
   return (
@@ -201,7 +299,27 @@ const FeedPanelProvider: React.FC<{ children: React.ReactNode }> = ({ children }
  */
 const FeedViewContent: React.FC = () => {
   const { theme } = useTheme();
-  const { context, actions, events } = useFeedPanelProvider();
+  const {
+    context,
+    actions,
+    events,
+    searchQuery,
+    setSearchQuery,
+    searchResults,
+    searchLoading,
+  } = useFeedPanelProvider();
+
+  // Handle search result selection
+  const handleSelectResult = useCallback(
+    (result: SearchResult) => {
+      if (result.source === 'local' && result.entry) {
+        // Open local repository in dev workspace
+        actions.openLocalRepository?.(result.entry);
+      }
+      // For GitHub/starred, we could add clone functionality later
+    },
+    [actions],
+  );
 
   return (
     <div
@@ -217,6 +335,11 @@ const FeedViewContent: React.FC = () => {
         context={context}
         actions={actions}
         events={events}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchResults={searchResults}
+        onSelectSearchResult={handleSelectResult}
+        searchLoading={searchLoading}
       />
     </div>
   );

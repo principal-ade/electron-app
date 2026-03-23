@@ -49,7 +49,8 @@ interface UsePanelPersistenceOptions {
     | 'gitSyncView'
     | 'projectsView'
     | 'worldsView'
-    | 'skillBrowserView';
+    | 'skillBrowserView'
+    | 'feedView';
   defaultSizes: PanelSizes | TwoPanelSizes;
   collapsed: PanelCollapsed | { left?: boolean }; // Initial collapsed state
   panelType: 'three-panel' | 'two-panel';

@@ -1,0 +1,447 @@
+/**
+ * HourlyActivityHeatmap
+ *
+ * Displays a granular activity heat map showing commit frequency
+ * at 10-minute intervals. Each row represents an hour, with 6 blocks
+ * per row (one per 10-minute window). Most recent at top, scrolling
+ * down goes back in time. Cell size is based on width (squares),
+ * and number of rows is determined by available height.
+ */
+
+import React, { useMemo, useRef, useState, useEffect } from 'react';
+import { useTheme } from '@principal-ade/industry-theme';
+
+export interface CommitTimestamp {
+  timestamp: Date | string;
+  repoId?: string;
+}
+
+export interface HourlyActivityHeatmapProps {
+  /** Array of commit timestamps */
+  commits: CommitTimestamp[];
+  /** Whether the component is loading */
+  loading?: boolean;
+  /** Callback when a block is clicked */
+  onBlockClick?: (startTime: Date, endTime: Date, count: number) => void;
+  /** Selected time block (ISO string of block start) */
+  selectedBlock?: string | null;
+}
+
+const HOUR_LABEL_WIDTH = 48;
+const MIN_CELL_SIZE = 12;
+const CELL_GAP = 2;
+const BLOCKS_PER_HOUR = 6; // 10-minute blocks
+
+// Format hour for display (e.g., "14:00", "09:00")
+const formatHour = (hour: number): string => {
+  return `${hour.toString().padStart(2, '0')}:00`;
+};
+
+// Get the start of a 10-minute block for a given date
+const _getBlockStart = (date: Date): Date => {
+  const blockStart = new Date(date);
+  const minutes = Math.floor(date.getMinutes() / 10) * 10;
+  blockStart.setMinutes(minutes, 0, 0);
+  return blockStart;
+};
+
+// Generate a unique key for an hour row
+const getHourKey = (date: Date): string => {
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}-${date.getHours()}`;
+};
+
+// Generate a unique key for a block
+const getBlockKey = (date: Date): string => {
+  const blockIndex = Math.floor(date.getMinutes() / 10);
+  return `${getHourKey(date)}-${blockIndex}`;
+};
+
+export const HourlyActivityHeatmap: React.FC<HourlyActivityHeatmapProps> = ({
+  commits,
+  loading = false,
+  onBlockClick,
+  selectedBlock = null,
+}) => {
+  const { theme } = useTheme();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+  // Measure container dimensions
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        setDimensions({
+          width: containerRef.current.offsetWidth,
+          height: containerRef.current.offsetHeight,
+        });
+      }
+    };
+
+    updateDimensions();
+
+    const resizeObserver = new ResizeObserver(updateDimensions);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  // Calculate cell size based on width (must be square)
+  const cellSize = useMemo(() => {
+    if (dimensions.width === 0) return MIN_CELL_SIZE;
+
+    // Available width for the 6 blocks
+    const availableWidth = dimensions.width - HOUR_LABEL_WIDTH - (BLOCKS_PER_HOUR - 1) * CELL_GAP;
+    const calculatedSize = availableWidth / BLOCKS_PER_HOUR;
+
+    return Math.max(MIN_CELL_SIZE, Math.floor(calculatedSize));
+  }, [dimensions.width]);
+
+  // Calculate how many hour rows fit
+  const maxRows = useMemo(() => {
+    if (dimensions.height === 0) return 24;
+
+    const headerHeight = 32; // Title area
+    const availableHeight = dimensions.height - headerHeight;
+    const rowHeight = cellSize + CELL_GAP;
+
+    return Math.max(1, Math.floor(availableHeight / rowHeight));
+  }, [dimensions.height, cellSize]);
+
+  // Build a map of block -> count for quick lookup
+  const { blockMap, maxCount } = useMemo(() => {
+    const map = new Map<string, number>();
+    let max = 0;
+
+    commits.forEach(({ timestamp }) => {
+      const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+      const key = getBlockKey(date);
+      const count = (map.get(key) || 0) + 1;
+      map.set(key, count);
+      max = Math.max(max, count);
+    });
+
+    return { blockMap: map, maxCount: max };
+  }, [commits]);
+
+  // Generate the grid data (hours as rows, most recent first)
+  const hourRows = useMemo(() => {
+    const now = new Date();
+    const rows: Array<{
+      hourKey: string;
+      hourLabel: string;
+      date: Date;
+      blocks: Array<{
+        blockKey: string;
+        blockIndex: number;
+        startTime: Date;
+        endTime: Date;
+        count: number;
+        isFuture: boolean;
+      }>;
+    }> = [];
+
+    // Start from current hour and go backwards
+    for (let i = 0; i < maxRows; i++) {
+      const hourDate = new Date(now);
+      hourDate.setHours(now.getHours() - i, 0, 0, 0);
+
+      const hourKey = getHourKey(hourDate);
+      const blocks = [];
+
+      for (let blockIndex = 0; blockIndex < BLOCKS_PER_HOUR; blockIndex++) {
+        const startTime = new Date(hourDate);
+        startTime.setMinutes(blockIndex * 10, 0, 0);
+
+        const endTime = new Date(startTime);
+        endTime.setMinutes(startTime.getMinutes() + 10);
+
+        const blockKey = `${hourKey}-${blockIndex}`;
+        const count = blockMap.get(blockKey) || 0;
+        const isFuture = startTime > now;
+
+        blocks.push({
+          blockKey,
+          blockIndex,
+          startTime,
+          endTime,
+          count,
+          isFuture,
+        });
+      }
+
+      rows.push({
+        hourKey,
+        hourLabel: formatHour(hourDate.getHours()),
+        date: hourDate,
+        blocks,
+      });
+    }
+
+    return rows;
+  }, [maxRows, blockMap]);
+
+  // Get color intensity based on commit count
+  const getColor = (count: number, isFuture: boolean): string => {
+    if (isFuture) {
+      return theme.colors.backgroundSecondary;
+    }
+
+    if (count === 0) {
+      return theme.colors.backgroundTertiary;
+    }
+
+    const primaryColor = theme.colors.primary;
+
+    // Calculate intensity (0-4 levels like GitHub)
+    const intensity = maxCount > 0
+      ? Math.min(4, Math.ceil((count / maxCount) * 4))
+      : 0;
+
+    const opacities = [0.2, 0.4, 0.6, 0.8, 1.0];
+    const opacity = opacities[intensity];
+
+    if (primaryColor.startsWith('#')) {
+      const r = parseInt(primaryColor.slice(1, 3), 16);
+      const g = parseInt(primaryColor.slice(3, 5), 16);
+      const b = parseInt(primaryColor.slice(5, 7), 16);
+      return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+    }
+
+    return primaryColor;
+  };
+
+  // Format time for tooltip
+  const formatTimeRange = (start: Date, end: Date): string => {
+    const formatTime = (d: Date) => {
+      const h = d.getHours().toString().padStart(2, '0');
+      const m = d.getMinutes().toString().padStart(2, '0');
+      return `${h}:${m}`;
+    };
+    return `${formatTime(start)} - ${formatTime(end)}`;
+  };
+
+  // Format date for day separator
+  const formatDate = (date: Date): string => {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) {
+      return 'Today';
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return 'Yesterday';
+    } else {
+      return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    }
+  };
+
+  // Track day changes for separators
+  const getDaySeparator = (currentRow: typeof hourRows[0], prevRow: typeof hourRows[0] | null): string | null => {
+    if (!prevRow) {
+      return formatDate(currentRow.date);
+    }
+    if (currentRow.date.toDateString() !== prevRow.date.toDateString()) {
+      return formatDate(currentRow.date);
+    }
+    return null;
+  };
+
+  const spacing = {
+    xs: theme.space?.[1] || 4,
+    sm: theme.space?.[2] || 8,
+  };
+
+  const _borderRadius = theme.radii?.[1] || 4;
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: spacing.sm,
+          flexShrink: 0,
+        }}
+      >
+        <span
+          style={{
+            fontSize: theme.fontSizes[1],
+            fontWeight: 600,
+            color: theme.colors.textSecondary,
+          }}
+        >
+          Activity
+        </span>
+        {!loading && commits.length > 0 && (
+          <span
+            style={{
+              fontSize: theme.fontSizes[0],
+              color: theme.colors.textTertiary,
+            }}
+          >
+            {commits.length} commits
+          </span>
+        )}
+      </div>
+
+      {/* Grid */}
+      <div
+        style={{
+          flex: 1,
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: CELL_GAP,
+        }}
+      >
+        {hourRows.map((row, rowIndex) => {
+          const prevRow = rowIndex > 0 ? hourRows[rowIndex - 1] : null;
+          const daySeparator = getDaySeparator(row, prevRow);
+
+          return (
+            <React.Fragment key={row.hourKey}>
+              {/* Day separator */}
+              {daySeparator && (
+                <div
+                  style={{
+                    fontSize: theme.fontSizes[0],
+                    color: theme.colors.textTertiary,
+                    paddingTop: rowIndex > 0 ? spacing.xs : 0,
+                    paddingBottom: spacing.xs,
+                    borderTop: rowIndex > 0 ? `1px solid ${theme.colors.border}` : undefined,
+                    marginTop: rowIndex > 0 ? spacing.xs : 0,
+                  }}
+                >
+                  {daySeparator}
+                </div>
+              )}
+
+              {/* Hour row */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: CELL_GAP,
+                }}
+              >
+                {/* Hour label */}
+                <div
+                  style={{
+                    width: HOUR_LABEL_WIDTH,
+                    fontSize: theme.fontSizes[0],
+                    color: theme.colors.textSecondary,
+                    textAlign: 'right',
+                    paddingRight: spacing.xs,
+                    flexShrink: 0,
+                  }}
+                >
+                  {row.hourLabel}
+                </div>
+
+                {/* Blocks */}
+                {row.blocks.map((block) => {
+                  const isSelected = selectedBlock === block.startTime.toISOString();
+
+                  return (
+                    <div
+                      key={block.blockKey}
+                      title={
+                        block.isFuture
+                          ? 'Future'
+                          : `${formatTimeRange(block.startTime, block.endTime)}: ${block.count} commit${block.count !== 1 ? 's' : ''}`
+                      }
+                      style={{
+                        width: cellSize,
+                        height: cellSize,
+                        borderRadius: 2,
+                        backgroundColor: getColor(block.count, block.isFuture),
+                        cursor: block.isFuture || !onBlockClick ? 'default' : 'pointer',
+                        transition: 'transform 0.1s ease, box-shadow 0.1s ease',
+                        boxShadow: isSelected
+                          ? `0 0 0 2px ${theme.colors.background}, 0 0 0 4px ${theme.colors.primary}`
+                          : 'none',
+                        position: 'relative',
+                        zIndex: isSelected ? 1 : 0,
+                        opacity: block.isFuture ? 0.3 : 1,
+                      }}
+                      onClick={() => {
+                        if (!block.isFuture && onBlockClick) {
+                          onBlockClick(block.startTime, block.endTime, block.count);
+                        }
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!block.isFuture) {
+                          e.currentTarget.style.transform = 'scale(1.15)';
+                          e.currentTarget.style.zIndex = '2';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'scale(1)';
+                        e.currentTarget.style.zIndex = isSelected ? '1' : '0';
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            </React.Fragment>
+          );
+        })}
+      </div>
+
+      {/* Legend */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: spacing.xs,
+          marginTop: spacing.sm,
+          flexShrink: 0,
+        }}
+      >
+        <span
+          style={{
+            fontSize: theme.fontSizes[0],
+            color: theme.colors.textTertiary,
+          }}
+        >
+          Less
+        </span>
+        {[0, 1, 2, 3, 4].map((level) => (
+          <div
+            key={level}
+            style={{
+              width: Math.min(cellSize, 10),
+              height: Math.min(cellSize, 10),
+              borderRadius: 2,
+              backgroundColor: getColor(level === 0 ? 0 : (level / 4) * (maxCount || 1), false),
+            }}
+          />
+        ))}
+        <span
+          style={{
+            fontSize: theme.fontSizes[0],
+            color: theme.colors.textTertiary,
+          }}
+        >
+          More
+        </span>
+      </div>
+    </div>
+  );
+};
+
+export default HourlyActivityHeatmap;

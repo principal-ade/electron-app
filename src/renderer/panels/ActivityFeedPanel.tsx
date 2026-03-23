@@ -15,7 +15,8 @@ import type {
   DataSlice,
 } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import { FolderGit2, ChevronDown, ChevronRight, Check, User, Play, Square } from 'lucide-react';
+import type { GitHubRepository } from '../../shared/main-process-api-interfaces/GitHubAPI';
+import { FolderGit2, ChevronDown, ChevronRight, Check, User, Play, Square, ExternalLink, Search, X, Folder, Github, Star } from 'lucide-react';
 import { useActivityFeed, type ActivityCommit } from '../hooks/useActivityFeed';
 import { FileCityImageService } from '../main-process-api/FileCityImageService';
 import { GitService } from '../main-process-api/GitService';
@@ -55,10 +56,31 @@ interface ActivityFeedPanelActions extends PanelActions {
   openLocalRepository?: (entry: AlexandriaEntry) => Promise<void>;
 }
 
+/**
+ * Search result from unified search
+ */
+export type SearchResultSource = 'local' | 'github' | 'starred';
+
+export interface SearchResult {
+  id: string;
+  name: string;
+  fullName: string;
+  description?: string | null;
+  source: SearchResultSource;
+  entry?: AlexandriaEntry;
+  repository?: GitHubRepository;
+}
+
 interface ActivityFeedPanelProps {
   context: ActivityFeedPanelContext;
   actions: PanelActions;
   events: PanelEventEmitter;
+  // Search props (optional for backward compatibility)
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
+  searchResults?: SearchResult[];
+  onSelectSearchResult?: (result: SearchResult) => void;
+  searchLoading?: boolean;
 }
 
 /**
@@ -79,9 +101,36 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
   context,
   actions,
   events: _events,
+  searchQuery = '',
+  onSearchChange,
+  searchResults = [],
+  onSelectSearchResult,
+  searchLoading = false,
 }) => {
   const { theme } = useTheme();
   const extendedActions = actions as ActivityFeedPanelActions;
+  const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
+
+  // Sync local search with external prop
+  useEffect(() => {
+    setLocalSearchQuery(searchQuery);
+  }, [searchQuery]);
+
+  // Debounce search input
+  useEffect(() => {
+    if (!onSearchChange) return;
+    const timer = setTimeout(() => {
+      onSearchChange(localSearchQuery);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [localSearchQuery, onSearchChange]);
+
+  const handleClearSearch = useCallback(() => {
+    setLocalSearchQuery('');
+    onSearchChange?.('');
+  }, [onSearchChange]);
+
+  const isSearching = localSearchQuery.trim().length > 0;
 
   const spacing = {
     xs: theme.space?.[1] || 4,
@@ -321,7 +370,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
         backgroundColor: theme.colors.background,
       }}
     >
-      {/* Header */}
+      {/* Header - spans full width */}
       <div
         style={{
           padding: spacing.md,
@@ -329,6 +378,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          flexShrink: 0,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
@@ -380,22 +430,212 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
         )}
       </div>
 
-      {/* Content */}
+      {/* Content area */}
       <div
         style={{
           flex: 1,
-          overflow: 'auto',
-          padding: spacing.md,
+          display: 'flex',
+          overflow: 'hidden',
         }}
       >
+        {/* Left column - Search (right-aligned content) */}
+        {onSearchChange && (
+          <div
+            style={{
+              flex: 1,
+              minWidth: 200,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-end', // Right-align content within this column
+              overflow: 'hidden',
+            }}
+          >
+            {/* Search input */}
+            <div style={{ width: 300, padding: spacing.md }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.sm,
+                  padding: `${spacing.sm}px ${spacing.md}px`,
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  borderRadius: theme.radii?.[1] || 4,
+                  border: `1px solid ${theme.colors.border}`,
+                }}
+              >
+                <Search size={16} color={theme.colors.textSecondary} />
+                <input
+                  type="text"
+                  value={localSearchQuery}
+                  onChange={(e) => setLocalSearchQuery(e.target.value)}
+                  placeholder="Search repositories..."
+                  style={{
+                    flex: 1,
+                    border: 'none',
+                    outline: 'none',
+                    backgroundColor: 'transparent',
+                    color: theme.colors.text,
+                    fontSize: theme.fontSizes[1],
+                    fontFamily: 'inherit',
+                  }}
+                />
+                {localSearchQuery && (
+                  <button
+                    onClick={handleClearSearch}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: spacing.xs,
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      borderRadius: theme.radii?.[1] || 4,
+                    }}
+                  >
+                    <X size={14} color={theme.colors.textSecondary} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Search results */}
+            <div style={{ width: 300, flex: 1, overflow: 'auto', padding: `0 ${spacing.md}px ${spacing.md}px` }}>
+              {!isSearching ? (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '100%',
+                    color: theme.colors.textSecondary,
+                    textAlign: 'center',
+                    fontSize: theme.fontSizes[1],
+                  }}
+                >
+                  <Search size={32} style={{ marginBottom: spacing.sm, opacity: 0.3 }} />
+                  <span>Search local, GitHub,</span>
+                  <span>and starred repos</span>
+                </div>
+              ) : searchLoading ? (
+                <div
+                  style={{
+                    padding: spacing.lg,
+                    textAlign: 'center',
+                    color: theme.colors.textSecondary,
+                    fontSize: theme.fontSizes[1],
+                  }}
+                >
+                  Searching...
+                </div>
+              ) : searchResults.length === 0 ? (
+                <div
+                  style={{
+                    padding: spacing.md,
+                    textAlign: 'center',
+                    color: theme.colors.textSecondary,
+                    fontSize: theme.fontSizes[1],
+                  }}
+                >
+                  No results for "{localSearchQuery}"
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
+                  <div
+                    style={{
+                      fontSize: theme.fontSizes[0],
+                      color: theme.colors.textSecondary,
+                      marginBottom: spacing.xs,
+                      textAlign: 'right',
+                    }}
+                  >
+                    {searchResults.length} result{searchResults.length !== 1 ? 's' : ''}
+                  </div>
+                  {searchResults.map((result) => {
+                    const SOURCE_CONFIG: Record<SearchResultSource, { icon: React.ElementType; color: string; label: string }> = {
+                      local: { icon: Folder, color: '#3b82f6', label: 'Local' },
+                      github: { icon: Github, color: '#6b7280', label: 'GitHub' },
+                      starred: { icon: Star, color: '#eab308', label: 'Starred' },
+                    };
+                    const config = SOURCE_CONFIG[result.source];
+                    const Icon = config.icon;
+
+                    return (
+                      <button
+                        key={result.id}
+                        onClick={() => onSelectSearchResult?.(result)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: spacing.sm,
+                          width: '100%',
+                          padding: spacing.sm,
+                          backgroundColor: 'transparent',
+                          border: `1px solid ${theme.colors.border}`,
+                          borderRadius: theme.radii?.[1] || 4,
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                          e.currentTarget.style.borderColor = theme.colors.primary;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                          e.currentTarget.style.borderColor = theme.colors.border;
+                        }}
+                      >
+                        {/* Source icon */}
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: 24,
+                            height: 24,
+                            borderRadius: theme.radii?.[1] || 4,
+                            backgroundColor: `${config.color}20`,
+                            flexShrink: 0,
+                          }}
+                        >
+                          <Icon size={12} color={config.color} />
+                        </div>
+
+                        {/* Name */}
+                        <div
+                          style={{
+                            flex: 1,
+                            fontSize: theme.fontSizes[1],
+                            color: theme.colors.text,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {result.name}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Feed column - fixed width, centered */}
         <div
           style={{
-            minWidth: 800,
-            maxWidth: 800,
-            margin: '0 auto',
+            width: 800,
+            flexShrink: 0,
+            overflow: 'auto',
+            padding: spacing.md,
           }}
         >
-        {repoSummaries.length === 0 && !activityFeed.loading ? (
+          <div>
+          {repoSummaries.length === 0 && !activityFeed.loading ? (
           // Empty state
           <div
             style={{
@@ -488,6 +728,17 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
         )}
         </div>
       </div>
+
+        {/* Right column - empty spacer, matches left column width */}
+        {onSearchChange && (
+          <div
+            style={{
+              flex: 1,
+              minWidth: 200,
+            }}
+          />
+        )}
+      </div>
     </div>
   );
 };
@@ -533,6 +784,7 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
 
   // Animation state
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isOpenClicked, setIsOpenClicked] = useState(false);
   const [animationCommitIndex, setAnimationCommitIndex] = useState<number | null>(null);
   const [typewriterText, setTypewriterText] = useState<string>('');
   const [animationImageUrl, setAnimationImageUrl] = useState<string | null>(null);
@@ -1074,8 +1326,10 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                   startAnimation();
                 }}
                 style={{
+                  flex: 1,
                   display: 'flex',
                   alignItems: 'center',
+                  justifyContent: 'center',
                   gap: spacing.xs,
                   padding: `${spacing.xs}px ${spacing.sm}px`,
                   fontSize: theme.fontSizes[1],
@@ -1092,20 +1346,61 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
               </button>
             )}
 
-            {/* Expand indicator */}
+            {/* Open in workspace button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsOpenClicked(true);
+                setTimeout(() => setIsOpenClicked(false), 200);
+                onOpen();
+              }}
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: spacing.xs,
+                padding: `${spacing.xs}px ${spacing.sm}px`,
+                fontSize: theme.fontSizes[1],
+                color: theme.colors.primary,
+                backgroundColor: 'transparent',
+                border: `1px solid ${theme.colors.primary}`,
+                borderRadius: theme.radii?.[1] || 4,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                transform: isOpenClicked ? 'scale(0.92)' : 'scale(1)',
+              }}
+            >
+              <ExternalLink size={12} />
+              <span>Open</span>
+            </button>
+
+            {/* Show details button */}
             {hasMoreCommits && (
-              <div
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleExpand();
+                }}
                 style={{
+                  flex: 1,
                   display: 'flex',
                   alignItems: 'center',
+                  justifyContent: 'center',
                   gap: spacing.xs,
+                  padding: `${spacing.xs}px ${spacing.sm}px`,
                   fontSize: theme.fontSizes[1],
-                  color: theme.colors.primary,
+                  color: theme.colors.textSecondary,
+                  backgroundColor: 'transparent',
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: theme.radii?.[1] || 4,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
                 }}
               >
-                {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                <span>{isExpanded ? 'Show less' : `+${summary.commits.length - 1} more`}</span>
-              </div>
+                {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                <span>{isExpanded ? 'Hide details' : 'Show details'}</span>
+              </button>
             )}
           </div>
         </div>
