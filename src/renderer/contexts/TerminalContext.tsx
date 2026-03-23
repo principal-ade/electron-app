@@ -12,9 +12,20 @@ import { SpanStatusCode } from '@opentelemetry/api';
 import { TerminalService } from '../main-process-api/TerminalService';
 import type { TerminalInfo } from '../../shared/main-process-api-interfaces/TerminalService';
 import type {
-  TerminalPanelActions,
+  TerminalPanelActions as BaseTerminalPanelActions,
   TerminalSessionInfo,
 } from '@industry-theme/xterm-terminal-panel';
+
+/**
+ * Extended terminal actions with command support
+ */
+interface TerminalPanelActions extends BaseTerminalPanelActions {
+  createTerminalSession: (options?: {
+    cwd?: string;
+    context?: string;
+    command?: string;
+  }) => Promise<string>;
+}
 import {
   terminalClient,
   onActivitySync,
@@ -217,6 +228,7 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
       createTerminalSession: async (options?: {
         cwd?: string;
         context?: string;
+        command?: string;
       }) => {
         const cwd = options?.cwd || repositoryPath;
         const sessionContext = options?.context
@@ -232,6 +244,7 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
         console.info('[TerminalProvider] createTerminalSession called with:', {
           optionsCwd: options?.cwd,
           optionsContext: options?.context,
+          optionsCommand: options?.command,
           repositoryPath,
           finalCwd: cwd,
           context: sessionContext,
@@ -249,11 +262,21 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
           })),
         });
         const metadata = repoName ? { repoName } : undefined;
-        const sessionId = await TerminalService.getOrCreate(
-          cwd,
-          sessionContext,
-          metadata,
-        );
+        let sessionId: string;
+        if (options?.command) {
+          sessionId = await TerminalService.createWithCommand(
+            cwd,
+            options.command,
+            sessionContext,
+            metadata,
+          );
+        } else {
+          sessionId = await TerminalService.getOrCreate(
+            cwd,
+            sessionContext,
+            metadata,
+          );
+        }
 
         // Subscribe to this terminal's data channel
         if (!terminalSubscriptionsRef.current.has(sessionId)) {
@@ -391,22 +414,24 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
               portResult,
             );
 
-            // After port is ready, force a refresh to redraw the terminal
-            setTimeout(() => {
-              TerminalService.refresh(sessionId)
-                .then(() => {
-                  console.info(
-                    '[TerminalContext] Refreshed terminal for session:',
-                    sessionId,
-                  );
-                })
-                .catch((err) => {
-                  console.warn(
-                    '[TerminalContext] Failed to refresh terminal:',
-                    err,
-                  );
-                });
-            }, 100);
+            // TODO: This refresh (Ctrl+L) may be needed for reconnection scenarios
+            // but causes visible ^L on initial mount. Need to distinguish between
+            // initial connection vs reconnection before re-enabling.
+            // setTimeout(() => {
+            //   TerminalService.refresh(sessionId)
+            //     .then(() => {
+            //       console.info(
+            //         '[TerminalContext] Refreshed terminal for session:',
+            //         sessionId,
+            //       );
+            //     })
+            //     .catch((err) => {
+            //       console.warn(
+            //         '[TerminalContext] Failed to refresh terminal:',
+            //         err,
+            //       );
+            //     });
+            // }, 100);
           })
           .catch((err) => {
             console.warn('[TerminalContext] Failed during reconnection:', err);

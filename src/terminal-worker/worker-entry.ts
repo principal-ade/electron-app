@@ -450,11 +450,13 @@ function createSessionLegacy(
       setTimeout(() => {
         ptyProcess.write(`${command}\r`);
       }, 500);
-    } else {
-      setTimeout(() => {
-        ptyProcess.write('\r');
-      }, 200);
     }
+    // else {
+    //   // Commented out to test fix for duplicate prompt issue
+    //   setTimeout(() => {
+    //     ptyProcess.write('\r');
+    //   }, 200);
+    // }
   } catch (error) {
     const errorMsg: SessionCreatedMessage = {
       type: 'SESSION_CREATED',

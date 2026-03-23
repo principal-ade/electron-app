@@ -1249,23 +1249,24 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
                 portResult,
               );
 
-              // After port is ready, force a refresh to redraw the terminal
-              // This sends Ctrl+L which redraws the prompt/screen
-              setTimeout(() => {
-                TerminalService.refresh(sessionId)
-                  .then(() => {
-                    console.info(
-                      '[PanelContext] Refreshed terminal for session:',
-                      sessionId,
-                    );
-                  })
-                  .catch((err) => {
-                    console.warn(
-                      '[PanelContext] Failed to refresh terminal:',
-                      err,
-                    );
-                  });
-              }, 100); // Small delay to ensure port is fully connected
+              // TODO: This refresh (Ctrl+L) may be needed for reconnection scenarios
+              // but causes visible ^L on initial mount. Need to distinguish between
+              // initial connection vs reconnection before re-enabling.
+              // setTimeout(() => {
+              //   TerminalService.refresh(sessionId)
+              //     .then(() => {
+              //       console.info(
+              //         '[PanelContext] Refreshed terminal for session:',
+              //         sessionId,
+              //       );
+              //     })
+              //     .catch((err) => {
+              //       console.warn(
+              //         '[PanelContext] Failed to refresh terminal:',
+              //         err,
+              //       );
+              //     });
+              // }, 100);
             })
             .catch((err) => {
               console.warn('[PanelContext] Failed during reconnection:', err);

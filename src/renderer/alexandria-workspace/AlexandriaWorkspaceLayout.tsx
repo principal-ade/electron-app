@@ -9,6 +9,14 @@ import {
   FocusIndicator,
 } from '@principal-ade/panel-layouts';
 import { PanelProvider, usePanelProvider } from '../contexts/PanelContext';
+import {
+  TerminalProvider,
+  useTerminalProvider,
+} from '../contexts/TerminalContext';
+import {
+  AgentHighlightProvider,
+  useAgentHighlightProvider,
+} from '../contexts/AgentHighlightContext';
 import { TabbedTerminalPanel } from '@industry-theme/xterm-terminal-panel';
 import {
   WorkspaceRepositoriesPanel,
@@ -100,9 +108,43 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
 }) => {
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
+  const { context: terminalCtx, actions: terminalActions } = useTerminalProvider();
+  const { context: highlightCtx } = useAgentHighlightProvider();
 
   const [isEditMode, _setIsEditMode] = useState(false);
   const [showAllTerminals, setShowAllTerminals] = useState(false);
+
+  // Get terminal context and directory from TerminalProvider
+  const terminalContext = terminalCtx.terminalContext || 'terminal:default';
+  const terminalDirectory = terminalCtx.repositoryPath || '/';
+
+  // Create merged context for TabbedTerminalPanel (includes terminal sessions from TerminalProvider)
+  const terminalPanelContext = useMemo(
+    () => ({
+      ...context,
+      terminalSessions: terminalCtx.terminalSessions,
+      terminalContext: terminalCtx.terminalContext,
+    }),
+    [context, terminalCtx.terminalSessions, terminalCtx.terminalContext],
+  );
+
+  // Create merged context for File City panel (includes agent highlight layers)
+  const fileCityPanelContext = useMemo(
+    () => ({
+      ...context,
+      agentHighlightLayers: {
+        scope: 'repository' as const,
+        name: 'agentHighlightLayers',
+        data: highlightCtx.highlightLayers,
+        loading: false,
+        error: null,
+        refresh: async () => {
+          // Agent highlight layers are updated reactively from events
+        },
+      },
+    }),
+    [context, highlightCtx.highlightLayers],
+  );
 
   // State for remove from workspace modal
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
@@ -404,15 +446,6 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   )?.component; // Cannot convert - package may not be installed
   const StoryboardListPanelComponent = StoryboardListPanel;
 
-  // Get terminal directory from context
-  const terminalDirectory =
-    context.currentScope.repository?.path ||
-    context.currentScope.workspace?.path ||
-    '/';
-
-  // Create terminal context identifier
-  const terminalContext = `terminal:alexandria:${context.currentScope.workspace?.id || 'default'}`;
-
   // Define panels
   const panels: PanelDefinition[] = useMemo(
     () => [
@@ -480,8 +513,8 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
               <FocusIndicator isFocused={isFocused('middle')} />
             )}
             <TabbedTerminalPanel
-              context={context}
-              actions={actions}
+              context={terminalPanelContext}
+              actions={terminalActions}
               events={events}
               terminalContext={terminalContext}
               directory={terminalDirectory}
@@ -555,7 +588,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
               <FocusIndicator isFocused={isFocused('right')} />
             )}
             <FileCityPanelComponent
-              context={context}
+              context={fileCityPanelContext}
               actions={actions}
               events={events}
             />
@@ -1490,6 +1523,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       enableKeyboardShortcuts,
       terminalContext,
       terminalDirectory,
+      terminalPanelContext,
+      terminalActions,
+      fileCityPanelContext,
       showAllTerminals,
     ],
   );
@@ -1620,12 +1656,15 @@ export const AlexandriaWorkspaceLayout: React.FC<
     );
   }, [selectedRepository]);
 
+  const terminalContext = `alexandria-workspace-${workspace.id}`;
+  const workspacePath = workspace.suggestedClonePath || '/workspace';
+
   return (
     <PanelProvider
       workspace={{
         id: workspace.id,
         name: workspace.name,
-        path: workspace.suggestedClonePath || '/workspace',
+        path: workspacePath,
         suggestedClonePath: workspace.suggestedClonePath,
         description: workspace.description,
         theme: workspace.theme,
@@ -1637,17 +1676,27 @@ export const AlexandriaWorkspaceLayout: React.FC<
       }}
       repository={selectedRepository}
       theme={theme}
-      terminalContext={`alexandria-workspace-${workspace.id}`}
+      terminalContext={terminalContext}
     >
-      <AlexandriaWorkspaceLayoutContent
-        selectedRepository={selectedRepository}
-        onRepositorySelected={handleRepositorySelected}
-        enableKeyboardShortcuts={enableKeyboardShortcuts}
-        collapsed={collapsed}
-        onCollapsedChange={onCollapsedChange}
-        layout={layout}
-        onLayoutChange={onLayoutChange}
-      />
+      <TerminalProvider
+        repositoryPath={selectedRepository?.path || workspacePath}
+        terminalContext={terminalContext}
+        repoName={selectedRepository?.name}
+      >
+        <AgentHighlightProvider
+          repositoryPath={selectedRepository?.path || ''}
+        >
+          <AlexandriaWorkspaceLayoutContent
+            selectedRepository={selectedRepository}
+            onRepositorySelected={handleRepositorySelected}
+            enableKeyboardShortcuts={enableKeyboardShortcuts}
+            collapsed={collapsed}
+            onCollapsedChange={onCollapsedChange}
+            layout={layout}
+            onLayoutChange={onLayoutChange}
+          />
+        </AgentHighlightProvider>
+      </TerminalProvider>
     </PanelProvider>
   );
 };
