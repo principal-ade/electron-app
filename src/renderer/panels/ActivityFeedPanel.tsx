@@ -499,29 +499,59 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             </div>
           </div>
 
-          {/* Commit dots */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-              marginBottom: spacing.md,
-              flexWrap: 'wrap',
-            }}
-          >
-            {summary.commits.map((commit, index) => (
-              <div
-                key={commit.hash}
-                title={`${commit.hash.slice(0, 7)}: ${commit.message}`}
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  backgroundColor: index === 0 ? theme.colors.primary : theme.colors.textSecondary,
-                  opacity: index === 0 ? 1 : 0.5,
-                }}
-              />
-            ))}
+          {/* Commit dots - grouped in rows of 10 with connecting line */}
+          <div style={{ marginBottom: spacing.md }}>
+            {Array.from({ length: Math.ceil(summary.commits.length / 10) }).map((_, rowIndex) => {
+              const rowCommits = summary.commits.slice(rowIndex * 10, (rowIndex + 1) * 10);
+              return (
+                <div
+                  key={rowIndex}
+                  style={{
+                    position: 'relative',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: rowCommits.length > 1 ? 'space-between' : 'flex-start',
+                    marginBottom: rowIndex < Math.ceil(summary.commits.length / 10) - 1 ? spacing.xs : 0,
+                    height: 12,
+                  }}
+                >
+                  {/* Connecting line */}
+                  {rowCommits.length > 1 && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: 4,
+                        right: 4,
+                        top: '50%',
+                        height: 2,
+                        backgroundColor: theme.colors.border,
+                        transform: 'translateY(-50%)',
+                        zIndex: 0,
+                      }}
+                    />
+                  )}
+                  {/* Dots */}
+                  {rowCommits.map((commit, index) => {
+                    const globalIndex = rowIndex * 10 + index;
+                    return (
+                      <div
+                        key={commit.hash}
+                        title={`${commit.hash.slice(0, 7)}: ${commit.message}`}
+                        style={{
+                          width: 10,
+                          height: 10,
+                          borderRadius: '50%',
+                          backgroundColor: globalIndex === 0 ? theme.colors.primary : theme.colors.textSecondary,
+                          opacity: globalIndex === 0 ? 1 : 0.5,
+                          zIndex: 1,
+                          border: `2px solid ${theme.colors.backgroundSecondary}`,
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              );
+            })}
           </div>
 
           {/* Latest commit message */}
