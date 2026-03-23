@@ -543,9 +543,9 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                   {/* Dots with expanded hover targets */}
                   {rowCommits.map((commit, index) => {
                     const globalIndex = rowIndex * 10 + index;
-                    const isHovered = hoveredCommitIndex === globalIndex;
+                    const isDisplayed = hoveredCommitIndex === null ? globalIndex === 0 : hoveredCommitIndex === globalIndex;
                     // Fill all dots by default, or up to hovered one when hovering (simulates going back in time)
-                    const isFilled = hoveredCommitIndex === null || globalIndex <= hoveredCommitIndex;
+                    const isFilled = hoveredCommitIndex === null ? true : globalIndex <= hoveredCommitIndex;
                     return (
                       <div
                         key={commit.hash}
@@ -566,7 +566,7 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                             width: 14,
                             height: 14,
                             borderRadius: '50%',
-                            backgroundColor: (hoveredCommitIndex === null ? globalIndex === 0 : isHovered) ? theme.colors.primary : theme.colors.textSecondary,
+                            backgroundColor: isDisplayed ? theme.colors.primary : theme.colors.textSecondary,
                             opacity: isFilled ? 1 : 0.3,
                             border: `2px solid ${theme.colors.backgroundSecondary}`,
                             transition: 'opacity 0.15s ease, background-color 0.15s ease',
