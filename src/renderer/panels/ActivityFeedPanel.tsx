@@ -519,6 +519,7 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                   style={{
                     position: 'relative',
                     display: 'flex',
+                    flexDirection: 'row-reverse',
                     alignItems: 'center',
                     marginBottom: rowIndex < Math.ceil(summary.commits.length / 10) - 1 ? spacing.xs : 0,
                     height: 24,
