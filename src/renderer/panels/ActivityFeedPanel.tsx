@@ -445,11 +445,20 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
   const hasMoreCommits = summary.commits.length > 1;
   const [hoveredCommitIndex, setHoveredCommitIndex] = useState<number | null>(null);
 
+  // Diff totals state (per-commit)
+  const [diffTotals, setDiffTotals] = useState<{ additions: number; deletions: number } | null>(null);
+
+  // Aggregate diff totals (all commits in card)
+  const [aggregateDiff, setAggregateDiff] = useState<{ additions: number; deletions: number } | null>(null);
+  // Per-commit diffs for computing accumulated totals on hover
+  const [perCommitDiffs, setPerCommitDiffs] = useState<Array<{ additions: number; deletions: number }>>([]);
+
   // Animation state
   const [isAnimating, setIsAnimating] = useState(false);
   const [animationCommitIndex, setAnimationCommitIndex] = useState<number | null>(null);
   const [typewriterText, setTypewriterText] = useState<string>('');
   const [animationImageUrl, setAnimationImageUrl] = useState<string | null>(null);
+  const [animatedAggregate, setAnimatedAggregate] = useState<{ additions: number; deletions: number }>({ additions: 0, deletions: 0 });
   const animationRef = useRef<{ cancel: boolean }>({ cancel: false });
 
   // Get the commit to display (animation > hovered > most recent)
@@ -474,9 +483,12 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
 
     setIsAnimating(true);
     animationRef.current.cancel = false;
+    setAnimatedAggregate({ additions: 0, deletions: 0 });
 
     // Start from oldest commit (highest index) to newest (index 0)
     const commits = summary.commits;
+    let runningAdditions = 0;
+    let runningDeletions = 0;
 
     for (let i = commits.length - 1; i >= 0; i--) {
       if (animationRef.current.cancel) break;
@@ -494,7 +506,14 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
         const changedFiles: Record<string, { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }> = {};
         changedFilesMap.forEach((value, key) => {
           changedFiles[key] = value;
+          runningAdditions += value.additions;
+          runningDeletions += value.deletions;
         });
+
+        // Update animated aggregate with running totals
+        if (!animationRef.current.cancel) {
+          setAnimatedAggregate({ additions: runningAdditions, deletions: runningDeletions });
+        }
 
         const image = await FileCityImageService.getImageForCommitWithChanges(
           summary.repoPath,
@@ -531,6 +550,89 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
       setAnimationImageUrl(null);
     }
   }, [isAnimating, summary.commits, summary.repoPath]);
+
+  // Fetch diff totals when displayed commit changes
+  const displayedCommitHash = displayedCommit?.hash;
+  useEffect(() => {
+    if (!displayedCommitHash) {
+      setDiffTotals(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    GitService.getChangedFilesForCommit(summary.repoPath, displayedCommitHash)
+      .then((changedFilesMap) => {
+        if (cancelled) return;
+
+        let additions = 0;
+        let deletions = 0;
+        changedFilesMap.forEach((value) => {
+          additions += value.additions;
+          deletions += value.deletions;
+        });
+
+        setDiffTotals({ additions, deletions });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.warn('[ActivityFeedPanel] Failed to fetch diff totals:', err);
+        setDiffTotals(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [displayedCommitHash, summary.repoPath]);
+
+  // Compute aggregate diff totals from all commits
+  useEffect(() => {
+    if (summary.commits.length === 0) {
+      setAggregateDiff(null);
+      setPerCommitDiffs([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    Promise.all(
+      summary.commits.map((commit) =>
+        GitService.getChangedFilesForCommit(summary.repoPath, commit.hash)
+      )
+    )
+      .then((results) => {
+        if (cancelled) return;
+
+        let totalAdditions = 0;
+        let totalDeletions = 0;
+        const commitDiffs: Array<{ additions: number; deletions: number }> = [];
+
+        for (const changedFilesMap of results) {
+          let commitAdditions = 0;
+          let commitDeletions = 0;
+          changedFilesMap.forEach((value) => {
+            commitAdditions += value.additions;
+            commitDeletions += value.deletions;
+            totalAdditions += value.additions;
+            totalDeletions += value.deletions;
+          });
+          commitDiffs.push({ additions: commitAdditions, deletions: commitDeletions });
+        }
+
+        setPerCommitDiffs(commitDiffs);
+        setAggregateDiff({ additions: totalAdditions, deletions: totalDeletions });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.warn('[ActivityFeedPanel] Failed to compute aggregate diff:', err);
+        setAggregateDiff(null);
+        setPerCommitDiffs([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [summary.commits, summary.repoPath]);
 
   // Determine which image to show
   const currentImageUrl = isAnimating && animationImageUrl ? animationImageUrl : imageUrl;
@@ -712,14 +814,99 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             })}
           </div>
 
-          {/* Commit message (changes on hover/animation) */}
+          {/* Aggregate diff bars */}
+          {(() => {
+            // Compute displayed aggregate based on state:
+            // - Animating: use animatedAggregate
+            // - Hovering: compute accumulated from oldest to hovered index
+            // - Default: show full aggregate
+            let displayedAggregate: { additions: number; deletions: number } | null = null;
+
+            if (isAnimating) {
+              displayedAggregate = animatedAggregate;
+            } else if (hoveredCommitIndex !== null && perCommitDiffs.length > 0) {
+              // Accumulate from oldest (highest index) to hovered index
+              let additions = 0;
+              let deletions = 0;
+              for (let i = perCommitDiffs.length - 1; i >= hoveredCommitIndex; i--) {
+                additions += perCommitDiffs[i]?.additions ?? 0;
+                deletions += perCommitDiffs[i]?.deletions ?? 0;
+              }
+              displayedAggregate = { additions, deletions };
+            } else {
+              displayedAggregate = aggregateDiff;
+            }
+
+            const total = aggregateDiff ? aggregateDiff.additions + aggregateDiff.deletions : 0;
+
+            if (!displayedAggregate || total === 0) return null;
+
+            return (
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4,
+                  marginBottom: spacing.sm,
+                }}
+              >
+                {/* Additions bar */}
+                {aggregateDiff && aggregateDiff.additions > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+                    <div
+                      style={{
+                        height: 10,
+                        width: `${Math.min(100, (displayedAggregate.additions / total) * 100)}%`,
+                        minWidth: displayedAggregate.additions > 0 ? 6 : 0,
+                        backgroundColor: theme.colors.success,
+                        transition: 'width 0.3s ease',
+                      }}
+                    />
+                    <span
+                      style={{
+                        fontSize: theme.fontSizes[0],
+                        fontFamily: theme.fonts.monospace,
+                        color: theme.colors.success,
+                      }}
+                    >
+                      +{displayedAggregate.additions}
+                    </span>
+                  </div>
+                )}
+                {/* Deletions bar */}
+                {aggregateDiff && aggregateDiff.deletions > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+                    <div
+                      style={{
+                        height: 10,
+                        width: `${Math.min(100, (displayedAggregate.deletions / total) * 100)}%`,
+                        minWidth: displayedAggregate.deletions > 0 ? 6 : 0,
+                        backgroundColor: theme.colors.error,
+                        transition: 'width 0.3s ease',
+                      }}
+                    />
+                    <span
+                      style={{
+                        fontSize: theme.fontSizes[0],
+                        fontFamily: theme.fonts.monospace,
+                        color: theme.colors.error,
+                      }}
+                    >
+                      -{displayedAggregate.deletions}
+                    </span>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Commit hash + per-commit changes */}
           <div
             style={{
-              fontSize: theme.fontSizes[1],
-              color: (isAnimating || hoveredCommitIndex !== null) ? theme.colors.primary : theme.colors.text,
-              marginBottom: spacing.sm,
-              transition: 'color 0.15s ease',
-              minHeight: '1.5em', // Prevent layout shift during typewriter
+              display: 'flex',
+              alignItems: 'center',
+              gap: spacing.sm,
+              marginBottom: spacing.xs,
             }}
           >
             <code
@@ -727,11 +914,48 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                 fontSize: theme.fontSizes[0],
                 fontFamily: theme.fonts.monospace,
                 color: theme.colors.textSecondary,
-                marginRight: spacing.sm,
               }}
             >
               {displayedCommit?.hash.slice(0, 7)}
             </code>
+            {diffTotals && (diffTotals.additions > 0 || diffTotals.deletions > 0) && (
+              <>
+                {diffTotals.additions > 0 && (
+                  <span
+                    style={{
+                      fontSize: theme.fontSizes[0],
+                      fontFamily: theme.fonts.monospace,
+                      color: theme.colors.success,
+                    }}
+                  >
+                    +{diffTotals.additions}
+                  </span>
+                )}
+                {diffTotals.deletions > 0 && (
+                  <span
+                    style={{
+                      fontSize: theme.fontSizes[0],
+                      fontFamily: theme.fonts.monospace,
+                      color: theme.colors.error,
+                    }}
+                  >
+                    -{diffTotals.deletions}
+                  </span>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Commit message (on its own line) */}
+          <div
+            style={{
+              fontSize: theme.fontSizes[1],
+              color: (isAnimating || hoveredCommitIndex !== null) ? theme.colors.primary : theme.colors.text,
+              marginBottom: spacing.sm,
+              transition: 'color 0.15s ease',
+              minHeight: '1.5em',
+            }}
+          >
             {displayedMessage || (isAnimating ? '' : 'No commits')}
             {isAnimating && <span style={{ opacity: 0.5 }}>|</span>}
           </div>
