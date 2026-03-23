@@ -15,7 +15,7 @@ import type {
   DataSlice,
 } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import { FolderGit2, GitCommit, ChevronDown, ChevronRight, Check } from 'lucide-react';
+import { FolderGit2, GitCommit, ChevronDown, ChevronRight, Check, User } from 'lucide-react';
 import { useActivityFeed, type ActivityCommit } from '../hooks/useActivityFeed';
 
 interface ActivityFeedPanelContext extends PanelContextValue {
@@ -443,32 +443,58 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
           }}
           onClick={onToggleExpand}
         >
-          {/* Repo name */}
-          <h4
+          {/* Header with avatar, name, and time */}
+          <div
             style={{
-              margin: 0,
-              marginBottom: spacing.xs,
-              fontSize: theme.fontSizes[3],
-              fontWeight: 600,
-              color: theme.colors.text,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {summary.repoName}
-          </h4>
-
-          {/* Time */}
-          <span
-            style={{
-              fontSize: theme.fontSizes[1],
-              color: theme.colors.textSecondary,
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: spacing.sm,
               marginBottom: spacing.md,
             }}
           >
-            {formatRelativeTime(summary.latestCommitAt)}
-          </span>
+            {/* Avatar */}
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                backgroundColor: theme.colors.background,
+                border: `1px solid ${theme.colors.border}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <User size={20} color={theme.colors.textSecondary} />
+            </div>
+
+            {/* Name and time */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <h4
+                style={{
+                  margin: 0,
+                  marginBottom: spacing.xs,
+                  fontSize: theme.fontSizes[3],
+                  fontWeight: 600,
+                  color: theme.colors.text,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {summary.repoName}
+              </h4>
+              <span
+                style={{
+                  fontSize: theme.fontSizes[1],
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                {formatRelativeTime(summary.latestCommitAt)}
+              </span>
+            </div>
+          </div>
 
           {/* Commit count */}
           <div
