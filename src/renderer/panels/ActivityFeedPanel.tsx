@@ -544,8 +544,8 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                   {rowCommits.map((commit, index) => {
                     const globalIndex = rowIndex * 10 + index;
                     const isDisplayed = hoveredCommitIndex === null ? globalIndex === 0 : hoveredCommitIndex === globalIndex;
-                    // Fill all dots by default, or up to hovered one when hovering (simulates going back in time)
-                    const isFilled = hoveredCommitIndex === null ? true : globalIndex <= hoveredCommitIndex;
+                    // Only most recent filled by default, or up to hovered one when hovering
+                    const isFilled = hoveredCommitIndex === null ? globalIndex === 0 : globalIndex <= hoveredCommitIndex;
                     return (
                       <div
                         key={commit.hash}
