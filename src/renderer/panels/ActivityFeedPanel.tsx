@@ -512,7 +512,7 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                     alignItems: 'center',
                     justifyContent: rowCommits.length > 1 ? 'space-between' : 'flex-start',
                     marginBottom: rowIndex < Math.ceil(summary.commits.length / 10) - 1 ? spacing.xs : 0,
-                    height: 12,
+                    height: 16,
                   }}
                 >
                   {/* Connecting line */}
@@ -520,8 +520,8 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                     <div
                       style={{
                         position: 'absolute',
-                        left: 4,
-                        right: 4,
+                        left: 7,
+                        right: 7,
                         top: '50%',
                         height: 2,
                         backgroundColor: theme.colors.border,
@@ -538,8 +538,8 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                         key={commit.hash}
                         title={`${commit.hash.slice(0, 7)}: ${commit.message}`}
                         style={{
-                          width: 10,
-                          height: 10,
+                          width: 14,
+                          height: 14,
                           borderRadius: '50%',
                           backgroundColor: globalIndex === 0 ? theme.colors.primary : theme.colors.textSecondary,
                           opacity: globalIndex === 0 ? 1 : 0.5,
