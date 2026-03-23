@@ -278,6 +278,16 @@
           "src/window/main-process-api-implementations/userPreferencesApi.ts"
         ]
       }
+    },
+    {
+      "id": "settings-visibility-flags",
+      "type": "text",
+      "x": 450,
+      "y": 50,
+      "width": 280,
+      "height": 180,
+      "color": "#8B5CF6",
+      "text": "## Settings Visibility Flags\n\n**showObservabilitySettings** (default: false)\nControls visibility of Observability tab in Settings\n\n**showExtensionsButton** (default: false)\nControls visibility of Extensions button in Settings\n\nFiles: `Settings.tsx`, `userPreferences.types.ts`"
     }
   ],
   "edges": [
