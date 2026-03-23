@@ -46,6 +46,7 @@ interface RepoActivitySummary {
   commits: ActivityCommit[];
   latestCommitAt: Date;
   commitCount: number;
+  githubOwner?: string;
 }
 
 export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
@@ -72,6 +73,17 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
   // State for expanded cards
   const [expandedRepos, setExpandedRepos] = useState<Set<string>>(new Set());
 
+  // Create a map of repo paths to github owners
+  const repoOwnerMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const repo of allRepositories) {
+      if (repo.path && repo.github?.owner) {
+        map.set(repo.path, repo.github.owner);
+      }
+    }
+    return map;
+  }, [allRepositories]);
+
   // Aggregate commits by repository
   const repoSummaries = useMemo<RepoActivitySummary[]>(() => {
     const repoMap = new Map<string, RepoActivitySummary>();
@@ -85,6 +97,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
           commits: [],
           latestCommitAt: new Date(commit.date),
           commitCount: 0,
+          githubOwner: repoOwnerMap.get(commit.repoPath),
         };
         repoMap.set(commit.repoPath, summary);
       }
@@ -101,7 +114,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
     return Array.from(repoMap.values()).sort(
       (a, b) => b.latestCommitAt.getTime() - a.latestCommitAt.getTime()
     );
-  }, [activityFeed.commits]);
+  }, [activityFeed.commits, repoOwnerMap]);
 
   // Fetch File City images for repos
   useEffect(() => {
@@ -464,9 +477,30 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
+                overflow: 'hidden',
               }}
             >
-              <User size={20} color={theme.colors.textSecondary} />
+              {summary.githubOwner ? (
+                <img
+                  src={`https://github.com/${summary.githubOwner}.png?size=80`}
+                  alt={summary.githubOwner}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                  }}
+                  onError={(e) => {
+                    // Fall back to placeholder on error
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.nextElementSibling?.removeAttribute('style');
+                  }}
+                />
+              ) : null}
+              <User
+                size={20}
+                color={theme.colors.textSecondary}
+                style={summary.githubOwner ? { display: 'none' } : undefined}
+              />
             </div>
 
             {/* Name and time */}
