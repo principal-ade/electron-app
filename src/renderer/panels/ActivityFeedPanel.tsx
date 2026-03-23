@@ -255,8 +255,8 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
       >
         <div
           style={{
-            minWidth: 900,
-            maxWidth: 900,
+            minWidth: 1000,
+            maxWidth: 1000,
             margin: '0 auto',
           }}
         >
@@ -398,14 +398,14 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
       <div
         style={{
           display: 'flex',
-          minHeight: 300,
+          minHeight: 250,
         }}
       >
         {/* File City image - left half */}
         <div
           style={{
-            width: 300,
-            height: 300,
+            width: 250,
+            height: 250,
             backgroundColor: theme.colors.background,
             borderRight: `1px solid ${theme.colors.border}`,
             overflow: 'hidden',
