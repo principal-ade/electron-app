@@ -255,7 +255,8 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
       >
         <div
           style={{
-            maxWidth: 600,
+            minWidth: 800,
+            maxWidth: 800,
             margin: '0 auto',
           }}
         >
@@ -393,57 +394,61 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
         transition: 'opacity 0.15s ease, box-shadow 0.15s ease',
       }}
     >
-      {/* File City image - large and prominent */}
+      {/* Horizontal layout: image left, content right */}
       <div
         style={{
-          width: '100%',
-          height: 400,
-          backgroundColor: theme.colors.background,
-          borderBottom: `1px solid ${theme.colors.border}`,
-          overflow: 'hidden',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
+          minHeight: 400,
         }}
-        onDoubleClick={onOpen}
       >
-        {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={summary.repoName}
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-            }}
-          />
-        ) : (
-          <FolderGit2 size={64} color={theme.colors.textSecondary} style={{ opacity: 0.3 }} />
-        )}
-      </div>
-
-      {/* Summary info */}
-      <div
-        style={{
-          padding: spacing.md,
-          cursor: 'pointer',
-        }}
-        onClick={onToggleExpand}
-      >
-        {/* Repo name and time */}
+        {/* File City image - left half */}
         <div
           style={{
+            width: 400,
+            height: 400,
+            backgroundColor: theme.colors.background,
+            borderRight: `1px solid ${theme.colors.border}`,
+            overflow: 'hidden',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: spacing.xs,
+            justifyContent: 'center',
+            flexShrink: 0,
+            cursor: 'pointer',
           }}
+          onDoubleClick={onOpen}
         >
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={summary.repoName}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+              }}
+            />
+          ) : (
+            <FolderGit2 size={64} color={theme.colors.textSecondary} style={{ opacity: 0.3 }} />
+          )}
+        </div>
+
+        {/* Summary info - right half */}
+        <div
+          style={{
+            flex: 1,
+            padding: spacing.md,
+            display: 'flex',
+            flexDirection: 'column',
+            cursor: 'pointer',
+          }}
+          onClick={onToggleExpand}
+        >
+          {/* Repo name */}
           <h4
             style={{
               margin: 0,
-              fontSize: theme.fontSizes[2],
+              marginBottom: spacing.xs,
+              fontSize: theme.fontSizes[3],
               fontWeight: 600,
               color: theme.colors.text,
               overflow: 'hidden',
@@ -453,64 +458,75 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
           >
             {summary.repoName}
           </h4>
+
+          {/* Time */}
           <span
             style={{
               fontSize: theme.fontSizes[1],
               color: theme.colors.textSecondary,
-              flexShrink: 0,
-              marginLeft: spacing.sm,
+              marginBottom: spacing.md,
             }}
           >
             {formatRelativeTime(summary.latestCommitAt)}
           </span>
-        </div>
 
-        {/* Commit count */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: spacing.xs,
-            fontSize: theme.fontSizes[1],
-            color: theme.colors.textSecondary,
-            marginBottom: spacing.sm,
-          }}
-        >
-          <GitCommit size={14} />
-          <span>
-            {summary.commitCount} commit{summary.commitCount !== 1 ? 's' : ''}
-          </span>
-        </div>
-
-        {/* Preview of latest commit */}
-        <div
-          style={{
-            fontSize: theme.fontSizes[1],
-            color: theme.colors.text,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {summary.commits[0]?.message || 'No commits'}
-        </div>
-
-        {/* Expand indicator */}
-        {hasMoreCommits && (
+          {/* Commit count */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: spacing.xs,
-              marginTop: spacing.xs,
-              fontSize: theme.fontSizes[0],
-              color: theme.colors.primary,
+              fontSize: theme.fontSizes[1],
+              color: theme.colors.textSecondary,
+              marginBottom: spacing.md,
             }}
           >
-            {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-            <span>{isExpanded ? 'Show less' : `+${summary.commits.length - 1} more`}</span>
+            <GitCommit size={14} />
+            <span>
+              {summary.commitCount} commit{summary.commitCount !== 1 ? 's' : ''}
+            </span>
           </div>
-        )}
+
+          {/* Latest commit message */}
+          <div
+            style={{
+              fontSize: theme.fontSizes[1],
+              color: theme.colors.text,
+              marginBottom: spacing.sm,
+            }}
+          >
+            <code
+              style={{
+                fontSize: theme.fontSizes[0],
+                fontFamily: theme.fonts.monospace,
+                color: theme.colors.textSecondary,
+                marginRight: spacing.sm,
+              }}
+            >
+              {summary.commits[0]?.hash.slice(0, 7)}
+            </code>
+            {summary.commits[0]?.message || 'No commits'}
+          </div>
+
+          {/* Spacer to push expand indicator to bottom */}
+          <div style={{ flex: 1 }} />
+
+          {/* Expand indicator */}
+          {hasMoreCommits && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.xs,
+                fontSize: theme.fontSizes[1],
+                color: theme.colors.primary,
+              }}
+            >
+              {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              <span>{isExpanded ? 'Show less' : `+${summary.commits.length - 1} more commits`}</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Expanded commits list */}
