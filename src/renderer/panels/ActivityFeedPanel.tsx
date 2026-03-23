@@ -520,9 +520,8 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                     position: 'relative',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: rowCommits.length > 1 ? 'space-between' : 'flex-start',
                     marginBottom: rowIndex < Math.ceil(summary.commits.length / 10) - 1 ? spacing.xs : 0,
-                    height: 16,
+                    height: 24,
                   }}
                 >
                   {/* Connecting line */}
@@ -530,8 +529,8 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                     <div
                       style={{
                         position: 'absolute',
-                        left: 7,
-                        right: 7,
+                        left: 0,
+                        right: 0,
                         top: '50%',
                         height: 2,
                         backgroundColor: theme.colors.border,
@@ -540,7 +539,7 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                       }}
                     />
                   )}
-                  {/* Dots */}
+                  {/* Dots with expanded hover targets */}
                   {rowCommits.map((commit, index) => {
                     const globalIndex = rowIndex * 10 + index;
                     const isHovered = hoveredCommitIndex === globalIndex;
@@ -551,17 +550,27 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                         onMouseEnter={() => setHoveredCommitIndex(globalIndex)}
                         onMouseLeave={() => setHoveredCommitIndex(null)}
                         style={{
-                          width: 14,
-                          height: 14,
-                          borderRadius: '50%',
-                          backgroundColor: isHovered || isFirst ? theme.colors.primary : theme.colors.textSecondary,
-                          opacity: isHovered || isFirst ? 1 : 0.5,
-                          zIndex: 1,
-                          border: `2px solid ${theme.colors.backgroundSecondary}`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flex: 1,
+                          height: '100%',
                           cursor: 'pointer',
-                          transition: 'opacity 0.15s ease, background-color 0.15s ease',
+                          zIndex: 1,
                         }}
-                      />
+                      >
+                        <div
+                          style={{
+                            width: 14,
+                            height: 14,
+                            borderRadius: '50%',
+                            backgroundColor: isHovered || isFirst ? theme.colors.primary : theme.colors.textSecondary,
+                            opacity: isHovered || isFirst ? 1 : 0.5,
+                            border: `2px solid ${theme.colors.backgroundSecondary}`,
+                            transition: 'opacity 0.15s ease, background-color 0.15s ease',
+                          }}
+                        />
+                      </div>
                     );
                   })}
                 </div>
