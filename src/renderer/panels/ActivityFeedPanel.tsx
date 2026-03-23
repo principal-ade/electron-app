@@ -253,6 +253,12 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
           padding: spacing.md,
         }}
       >
+        <div
+          style={{
+            maxWidth: 600,
+            margin: '0 auto',
+          }}
+        >
         {repoSummaries.length === 0 && !activityFeed.loading ? (
           // Empty state
           <div
@@ -342,6 +348,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
             )}
           </div>
         )}
+        </div>
       </div>
     </div>
   );
@@ -385,131 +392,125 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
         opacity: dimmed ? 0.7 : 1,
         transition: 'opacity 0.15s ease, box-shadow 0.15s ease',
       }}
-      onDoubleClick={onOpen}
     >
-      {/* Card header with image and summary */}
+      {/* File City image - large and prominent */}
       <div
         style={{
+          width: '100%',
+          height: 400,
+          backgroundColor: theme.colors.background,
+          borderBottom: `1px solid ${theme.colors.border}`,
+          overflow: 'hidden',
           display: 'flex',
-          gap: spacing.md,
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+        }}
+        onDoubleClick={onOpen}
+      >
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={summary.repoName}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+            }}
+          />
+        ) : (
+          <FolderGit2 size={64} color={theme.colors.textSecondary} style={{ opacity: 0.3 }} />
+        )}
+      </div>
+
+      {/* Summary info */}
+      <div
+        style={{
           padding: spacing.md,
           cursor: 'pointer',
         }}
         onClick={onToggleExpand}
       >
-        {/* File City image */}
+        {/* Repo name and time */}
         <div
           style={{
-            width: 80,
-            height: 80,
-            borderRadius: theme.radii?.[1] || 4,
-            backgroundColor: theme.colors.background,
-            border: `1px solid ${theme.colors.border}`,
-            overflow: 'hidden',
-            flexShrink: 0,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
+            justifyContent: 'space-between',
+            marginBottom: spacing.xs,
           }}
         >
-          {imageUrl ? (
-            <img
-              src={imageUrl}
-              alt={summary.repoName}
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-              }}
-            />
-          ) : (
-            <FolderGit2 size={32} color={theme.colors.textSecondary} style={{ opacity: 0.5 }} />
-          )}
-        </div>
-
-        {/* Summary info */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {/* Repo name and time */}
-          <div
+          <h4
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: spacing.xs,
-            }}
-          >
-            <h4
-              style={{
-                margin: 0,
-                fontSize: theme.fontSizes[2],
-                fontWeight: 600,
-                color: theme.colors.text,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {summary.repoName}
-            </h4>
-            <span
-              style={{
-                fontSize: theme.fontSizes[1],
-                color: theme.colors.textSecondary,
-                flexShrink: 0,
-                marginLeft: spacing.sm,
-              }}
-            >
-              {formatRelativeTime(summary.latestCommitAt)}
-            </span>
-          </div>
-
-          {/* Commit count */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: spacing.xs,
-              fontSize: theme.fontSizes[1],
-              color: theme.colors.textSecondary,
-              marginBottom: spacing.sm,
-            }}
-          >
-            <GitCommit size={14} />
-            <span>
-              {summary.commitCount} commit{summary.commitCount !== 1 ? 's' : ''}
-            </span>
-          </div>
-
-          {/* Preview of latest commit */}
-          <div
-            style={{
-              fontSize: theme.fontSizes[1],
+              margin: 0,
+              fontSize: theme.fontSizes[2],
+              fontWeight: 600,
               color: theme.colors.text,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
             }}
           >
-            {summary.commits[0]?.message || 'No commits'}
-          </div>
-
-          {/* Expand indicator */}
-          {hasMoreCommits && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing.xs,
-                marginTop: spacing.xs,
-                fontSize: theme.fontSizes[0],
-                color: theme.colors.primary,
-              }}
-            >
-              {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-              <span>{isExpanded ? 'Show less' : `+${summary.commits.length - 1} more`}</span>
-            </div>
-          )}
+            {summary.repoName}
+          </h4>
+          <span
+            style={{
+              fontSize: theme.fontSizes[1],
+              color: theme.colors.textSecondary,
+              flexShrink: 0,
+              marginLeft: spacing.sm,
+            }}
+          >
+            {formatRelativeTime(summary.latestCommitAt)}
+          </span>
         </div>
+
+        {/* Commit count */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: spacing.xs,
+            fontSize: theme.fontSizes[1],
+            color: theme.colors.textSecondary,
+            marginBottom: spacing.sm,
+          }}
+        >
+          <GitCommit size={14} />
+          <span>
+            {summary.commitCount} commit{summary.commitCount !== 1 ? 's' : ''}
+          </span>
+        </div>
+
+        {/* Preview of latest commit */}
+        <div
+          style={{
+            fontSize: theme.fontSizes[1],
+            color: theme.colors.text,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {summary.commits[0]?.message || 'No commits'}
+        </div>
+
+        {/* Expand indicator */}
+        {hasMoreCommits && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: spacing.xs,
+              marginTop: spacing.xs,
+              fontSize: theme.fontSizes[0],
+              color: theme.colors.primary,
+            }}
+          >
+            {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            <span>{isExpanded ? 'Show less' : `+${summary.commits.length - 1} more`}</span>
+          </div>
+        )}
       </div>
 
       {/* Expanded commits list */}
@@ -517,8 +518,7 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
         <div
           style={{
             borderTop: `1px solid ${theme.colors.border}`,
-            padding: spacing.sm,
-            paddingLeft: 80 + spacing.md + spacing.sm, // Align with content after image
+            padding: spacing.md,
             backgroundColor: theme.colors.background,
           }}
         >
