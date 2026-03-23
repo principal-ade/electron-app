@@ -118,7 +118,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
     );
   }, [activityFeed.commits, repoOwnerMap]);
 
-  // Fetch File City images for repos
+  // Fetch File City images for repos with aggregate change highlights
   useEffect(() => {
     if (repoSummaries.length === 0) return;
 
@@ -128,7 +128,53 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
       await Promise.all(
         repoSummaries.map(async (summary) => {
           try {
-            const imageUrl = await extendedActions.getFileCityImage(summary.repoPath);
+            // Get file tree at latest commit
+            const latestCommit = summary.commits[0];
+            if (!latestCommit) {
+              // Fallback to plain image if no commits
+              const imageUrl = await extendedActions.getFileCityImage(summary.repoPath);
+              if (imageUrl) {
+                imageMap.set(summary.repoPath, imageUrl);
+              }
+              return;
+            }
+
+            const filePaths = await GitService.getFileTreeAtCommit(summary.repoPath, latestCommit.hash);
+
+            // Aggregate changed files from all commits
+            const aggregateChanges: Record<string, { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }> = {};
+
+            await Promise.all(
+              summary.commits.map(async (commit) => {
+                try {
+                  const changedFilesMap = await GitService.getChangedFilesForCommit(summary.repoPath, commit.hash);
+                  changedFilesMap.forEach((value, key) => {
+                    // If file already tracked, combine the changes
+                    if (aggregateChanges[key]) {
+                      aggregateChanges[key].additions += value.additions;
+                      aggregateChanges[key].deletions += value.deletions;
+                      // Keep the most "significant" status (added > modified > renamed > deleted)
+                      if (value.status === 'added') {
+                        aggregateChanges[key].status = 'added';
+                      }
+                    } else {
+                      aggregateChanges[key] = { ...value };
+                    }
+                  });
+                } catch (err) {
+                  console.warn(`[ActivityFeedPanel] Failed to get changes for commit ${commit.hash}:`, err);
+                }
+              })
+            );
+
+            // Generate image with aggregate highlights
+            const imageUrl = await FileCityImageService.getImageForCommitWithChanges(
+              summary.repoPath,
+              latestCommit.hash,
+              filePaths,
+              aggregateChanges
+            );
+
             if (imageUrl) {
               imageMap.set(summary.repoPath, imageUrl);
             }
