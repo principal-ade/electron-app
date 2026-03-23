@@ -468,8 +468,8 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             {/* Avatar */}
             <div
               style={{
-                width: 40,
-                height: 40,
+                width: 56,
+                height: 56,
                 borderRadius: '50%',
                 backgroundColor: theme.colors.background,
                 border: `1px solid ${theme.colors.border}`,
@@ -497,7 +497,7 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                 />
               ) : null}
               <User
-                size={20}
+                size={28}
                 color={theme.colors.textSecondary}
                 style={summary.githubOwner ? { display: 'none' } : undefined}
               />
