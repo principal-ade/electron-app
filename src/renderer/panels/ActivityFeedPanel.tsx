@@ -407,45 +407,14 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
         transition: 'opacity 0.15s ease, box-shadow 0.15s ease',
       }}
     >
-      {/* Horizontal layout: image left, content right */}
+      {/* Horizontal layout: content left, image right */}
       <div
         style={{
           display: 'flex',
           minHeight: 300,
         }}
       >
-        {/* File City image - left half */}
-        <div
-          style={{
-            width: 300,
-            height: 300,
-            backgroundColor: theme.colors.background,
-            borderRight: `1px solid ${theme.colors.border}`,
-            overflow: 'hidden',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            cursor: 'pointer',
-          }}
-          onDoubleClick={onOpen}
-        >
-          {imageUrl ? (
-            <img
-              src={imageUrl}
-              alt={summary.repoName}
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-              }}
-            />
-          ) : (
-            <FolderGit2 size={64} color={theme.colors.textSecondary} style={{ opacity: 0.3 }} />
-          )}
-        </div>
-
-        {/* Summary info - right half */}
+        {/* Summary info - left half */}
         <div
           style={{
             flex: 1,
@@ -585,6 +554,37 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
               {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
               <span>{isExpanded ? 'Show less' : `+${summary.commits.length - 1} more commits`}</span>
             </div>
+          )}
+        </div>
+
+        {/* File City image - right half */}
+        <div
+          style={{
+            width: 300,
+            height: 300,
+            backgroundColor: theme.colors.background,
+            borderLeft: `1px solid ${theme.colors.border}`,
+            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            cursor: 'pointer',
+          }}
+          onDoubleClick={onOpen}
+        >
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={summary.repoName}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+              }}
+            />
+          ) : (
+            <FolderGit2 size={64} color={theme.colors.textSecondary} style={{ opacity: 0.3 }} />
           )}
         </div>
       </div>
