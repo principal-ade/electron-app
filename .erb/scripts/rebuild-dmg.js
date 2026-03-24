@@ -42,8 +42,13 @@ async function rebuildDmg(appPath, dmgPath) {
     await execAsync(`ln -s /Applications "${stagingDir}/Applications"`, { shell: true });
     console.log(`  Created Applications symlink`);
 
+    // Calculate required DMG size based on app size (with 50MB buffer)
+    const { stdout: duOutput } = await execAsync(`du -sm "${stagingDir}"`, { shell: true });
+    const appSizeMB = parseInt(duOutput.split("\t")[0], 10);
+    const dmgSize = `${appSizeMB + 50}m`;
+    console.log(`  App size: ${appSizeMB}MB, DMG size: ${dmgSize}`);
+
     // Create a temporary writable DMG
-    const dmgSize = "500m"; // Will be compressed anyway
     await execAsync(
       `hdiutil create -volname "${volName}" -srcfolder "${stagingDir}" -ov -format UDRW -size ${dmgSize} "${tempDmgPath}"`,
       { shell: true, maxBuffer: 50 * 1024 * 1024 }
