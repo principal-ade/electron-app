@@ -308,6 +308,7 @@ const FileCityWithHighlights: React.FC<{
       fileCityColorModes: context.fileCityColorModes,
       gitStatusWithFiles: context.gitStatusWithFiles,
       packages: context.packages,
+      activityHeatmap: context.activityHeatmap,
     };
   }, [context, agentHighlightCtx.highlightLayers]);
 

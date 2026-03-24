@@ -28,6 +28,7 @@ import {
   type RunningServer,
 } from '../main-process-api/LocalhostDetectionService';
 import { TerminalService } from '../main-process-api/TerminalService';
+import { GitService } from '../main-process-api/GitService';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import { FileTreeCore, createFileTreeSource } from '@principal-ai/repository-abstraction';
@@ -49,7 +50,7 @@ import type {
   WorkspacesSlice,
 } from '@industry-theme/alexandria-panels';
 import type { TerminalSessionInfo } from '@industry-theme/xterm-terminal-panel';
-import type { FeedProjectSliceData } from '@industry-theme/file-city-panel';
+import type { FeedProjectSliceData, ActivityHeatmapSliceData } from '@industry-theme/file-city-panel';
 import type { GitHubIssuesSliceData } from '@industry-theme/github-panels';
 
 // Color mode for file city visualization - imported from registry
@@ -210,6 +211,7 @@ interface RepositoryPanelContextValue extends PanelContextValue {
   feedProject: DataSlice<FeedProjectSliceData>;
   githubIssues: DataSlice<GitHubIssuesSliceData>;
   schematics: DataSlice<VersionSnapshot[]>;
+  activityHeatmap: DataSlice<ActivityHeatmapSliceData | null>;
 }
 
 // Provider value that contains context, actions, and events separately
@@ -256,6 +258,10 @@ export const RepositoryPanelProvider: React.FC<
     null,
   );
   const [gitStatusLoading, setGitStatusLoading] = useState(false);
+
+  // Track activity heatmap data (commits per day for last 30 days)
+  const [activityHeatmapData, setActivityHeatmapData] = useState<ActivityHeatmapSliceData | null>(null);
+  const [activityHeatmapLoading, setActivityHeatmapLoading] = useState(false);
 
   // Track selected color mode for file city visualization
   const [fileCityColorMode, setFileCityColorMode] =
@@ -606,6 +612,31 @@ export const RepositoryPanelProvider: React.FC<
     return () => {
       unsubscribe();
     };
+  }, [repositoryPath]);
+
+  // Fetch activity heatmap data (commits per day for last 30 days)
+  useEffect(() => {
+    const fetchActivityHeatmap = async () => {
+      if (!repositoryPath) {
+        setActivityHeatmapData(null);
+        return;
+      }
+
+      setActivityHeatmapLoading(true);
+      try {
+        const commitDates = await GitService.getCommitDatesForHeatMap(repositoryPath, 30);
+        setActivityHeatmapData({
+          days: commitDates.map(d => ({ date: d.date, count: d.count })),
+        });
+      } catch (error) {
+        console.error('[RepositoryPanelProvider] Failed to fetch activity heatmap:', error);
+        setActivityHeatmapData(null);
+      } finally {
+        setActivityHeatmapLoading(false);
+      }
+    };
+
+    fetchActivityHeatmap();
   }, [repositoryPath]);
 
   // Fetch all Alexandria repositories (for Local Projects panel) and subscribe to changes
@@ -2648,6 +2679,33 @@ export const RepositoryPanelProvider: React.FC<
     [schematicsData, schematicsLoading, stableFileTreeData, localRegistry],
   );
 
+  // Activity heatmap slice (for CodeCityPanel)
+  const activityHeatmapSlice = useMemo<DataSlice<ActivityHeatmapSliceData | null>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'activityHeatmap',
+      data: activityHeatmapData,
+      loading: activityHeatmapLoading,
+      error: null,
+      refresh: async () => {
+        if (!repositoryPathRef.current) return;
+
+        setActivityHeatmapLoading(true);
+        try {
+          const commitDates = await GitService.getCommitDatesForHeatMap(repositoryPathRef.current, 30);
+          setActivityHeatmapData({
+            days: commitDates.map(d => ({ date: d.date, count: d.count })),
+          });
+        } catch (error) {
+          console.error('[RepositoryPanelContext] Failed to refresh activity heatmap:', error);
+        } finally {
+          setActivityHeatmapLoading(false);
+        }
+      },
+    }),
+    [activityHeatmapData, activityHeatmapLoading],
+  );
+
   // Empty slices Map for backward compatibility with PanelContextValue interface
   const slices = useMemo<Map<string, DataSlice<unknown>>>(() => new Map(), []);
 
@@ -2755,6 +2813,7 @@ export const RepositoryPanelProvider: React.FC<
       feedProject: feedProjectSlice,
       githubIssues: githubIssuesSlice,
       schematics: schematicsSlice,
+      activityHeatmap: activityHeatmapSlice,
     }),
     [
       repositoryPath,
@@ -2790,6 +2849,7 @@ export const RepositoryPanelProvider: React.FC<
       feedProjectSlice,
       githubIssuesSlice,
       schematicsSlice,
+      activityHeatmapSlice,
     ],
   );
 
