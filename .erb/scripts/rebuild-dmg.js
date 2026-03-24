@@ -42,10 +42,11 @@ async function rebuildDmg(appPath, dmgPath) {
     await execAsync(`ln -s /Applications "${stagingDir}/Applications"`, { shell: true });
     console.log(`  Created Applications symlink`);
 
-    // Calculate required DMG size based on app size (with 50MB buffer)
+    // Calculate required DMG size based on app size (with 10% + 100MB buffer for HFS+ overhead)
     const { stdout: duOutput } = await execAsync(`du -sm "${stagingDir}"`, { shell: true });
     const appSizeMB = parseInt(duOutput.split("\t")[0], 10);
-    const dmgSize = `${appSizeMB + 50}m`;
+    const buffer = Math.max(200, Math.ceil(appSizeMB * 0.1)) + 100;
+    const dmgSize = `${appSizeMB + buffer}m`;
     console.log(`  App size: ${appSizeMB}MB, DMG size: ${dmgSize}`);
 
     // Create a temporary writable DMG
