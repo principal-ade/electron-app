@@ -20,6 +20,7 @@ import { FolderGit2, ChevronDown, ChevronRight, Check, User, Play, Square, Exter
 import { useActivityFeed, type ActivityCommit } from '../hooks/useActivityFeed';
 import { FileCityImageService } from '../main-process-api/FileCityImageService';
 import { GitService } from '../main-process-api/GitService';
+import { GithubService } from '../main-process-api/GithubService';
 import { HourlyActivityHeatmap, type CommitTimestamp } from '../components/HourlyActivityHeatmap';
 
 // Quarter helpers (matching heatmap)
@@ -152,7 +153,7 @@ function formatQuarterDate(date: Date): string | null {
 
 /**
  * Get avatar URL from an email address
- * Tries GitHub noreply format first, falls back to Gravatar
+ * Uses GitHub avatars service for GitHub noreply emails
  */
 function getAvatarUrl(email: string, size = 32): string | null {
   if (!email) return null;
@@ -163,13 +164,11 @@ function getAvatarUrl(email: string, size = 32): string | null {
   // or the newer format: 12345678+username@users.noreply.github.com
   const githubMatch = lowerEmail.match(/^(?:\d+\+)?([^@]+)@users\.noreply\.github\.com$/);
   if (githubMatch) {
-    return `https://github.com/${githubMatch[1]}.png?size=${size}`;
+    return `https://avatars.githubusercontent.com/${githubMatch[1]}?size=${size}`;
   }
 
-  // Fallback: use Gravatar with identicon
-  // Note: This requires MD5 hash, using a simple string hash as approximation
-  const hash = Array.from(lowerEmail).reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0).toString(16);
-  return `https://www.gravatar.com/avatar/${hash}?s=${size}&d=identicon`;
+  // No reliable avatar URL for non-GitHub emails
+  return null;
 }
 
 interface ActivityFeedPanelContext extends PanelContextValue {
@@ -430,22 +429,34 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
     const fetchAvatars = async () => {
       const avatarMap = new Map<string, string>();
 
+      console.log('[ActivityFeedPanel] Fetching avatars for', repoSummaries.length, 'repos');
+      console.log('[ActivityFeedPanel] repoGithubMap size:', repoGithubMap.size, Array.from(repoGithubMap.entries()));
+
       // Group commits by repo for batch fetching
       await Promise.all(
         repoSummaries.map(async (summary) => {
           const githubInfo = repoGithubMap.get(summary.repoPath);
-          if (!githubInfo) return; // Skip non-GitHub repos
+          console.log(`[ActivityFeedPanel] ${summary.repoName} (${summary.repoPath}) -> githubInfo:`, githubInfo);
+
+          if (!githubInfo) {
+            console.log(`[ActivityFeedPanel] Skipping ${summary.repoName} - no GitHub info`);
+            return; // Skip non-GitHub repos
+          }
 
           try {
             // Fetch commits from GitHub API (includes avatar URLs)
-            const githubCommits = await window.mainProcess.github.getRepositoryCommits(
+            console.log(`[ActivityFeedPanel] Fetching commits for ${githubInfo.owner}/${githubInfo.name}`);
+            const githubCommits = await GithubService.getRepositoryCommits(
               githubInfo.owner,
               githubInfo.name,
               { perPage: summary.commits.length }
             );
 
+            console.log(`[ActivityFeedPanel] Got ${githubCommits.length} commits from GitHub API for ${summary.repoName}`);
+
             // Map GitHub commits by sha for quick lookup
             for (const ghCommit of githubCommits) {
+              console.log(`[ActivityFeedPanel] Commit ${ghCommit.sha.slice(0, 7)}: author=`, ghCommit.author);
               if (ghCommit.author?.avatar_url) {
                 avatarMap.set(ghCommit.sha, ghCommit.author.avatar_url);
               }
@@ -456,6 +467,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
         })
       );
 
+      console.log('[ActivityFeedPanel] Final avatarMap size:', avatarMap.size, Array.from(avatarMap.entries()).slice(0, 5));
       setCommitAvatars(avatarMap);
     };
 

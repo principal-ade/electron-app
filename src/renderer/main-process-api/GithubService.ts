@@ -96,7 +96,21 @@ export class GithubService {
     return result;
   }
 
-  // DELETED: getRepositoryCommits - unused (0 calls)
+  /**
+   * Get repository commits with author avatar URLs
+   */
+  static async getRepositoryCommits(
+    owner: string,
+    repo: string,
+    options?: { perPage?: number; page?: number },
+  ): Promise<GitHubCommit[]> {
+    const result = await window.mainProcess.github.getRepositoryCommits(
+      owner,
+      repo,
+      options,
+    );
+    return result || [];
+  }
 
   static async getUserFollowers(username?: string): Promise<GitHubUser[]> {
     const result = await window.mainProcess.github.getUserFollowers(username);

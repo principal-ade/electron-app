@@ -1503,7 +1503,42 @@ export class GitHubAdapter {
 
   // DELETED: getIssues - unused (0 calls)
   // DELETED: getPullRequests - unused (0 calls)
-  // DELETED: getRepositoryCommits - unused (0 calls)
+
+  /**
+   * Get repository commits with author avatar URLs
+   */
+  async getRepositoryCommits(
+    owner: string,
+    repo: string,
+    options?: { perPage?: number; page?: number },
+  ): Promise<GitHubCommit[]> {
+    const perPage = options?.perPage || 30;
+    const page = options?.page || 1;
+    const endpoint = `/repos/${owner}/${repo}/commits?per_page=${perPage}&page=${page}`;
+
+    console.log(`[GitHub] Fetching commits for ${owner}/${repo}`);
+    const apiResult = await this.makeGitHubAPICall(endpoint);
+
+    if (apiResult.success && apiResult.data) {
+      const commits = apiResult.data as GitHubCommit[];
+      console.log(`[GitHub] Successfully fetched ${commits.length} commits for ${owner}/${repo}`);
+      return commits;
+    }
+
+    // Fallback to CLI
+    try {
+      const result = await this.executeCommand(['gh', 'api', endpoint]);
+      if (result.success && result.stdout) {
+        const commits = JSON.parse(result.stdout) as GitHubCommit[];
+        console.log(`[GitHub] Successfully fetched ${commits.length} commits via CLI for ${owner}/${repo}`);
+        return commits;
+      }
+    } catch (error) {
+      console.error('[GitHub] Error getting repository commits:', error);
+    }
+
+    return [];
+  }
 
   /**
    * Get followers for a user (defaults to authenticated user)
@@ -2565,8 +2600,19 @@ export function registerGitHubIpcHandlers(
 
   // DELETED: GET_ISSUES - unused (0 calls in renderer)
   // DELETED: GET_PULL_REQUESTS - unused (0 calls in renderer)
-  // DELETED: GET_REPOSITORY_COMMITS - unused (0 calls in renderer)
   // DELETED: CREATE_ISSUE - unused (0 calls in renderer)
+
+  ipcMain.handle(
+    GitHubAPIEvent.GET_REPOSITORY_COMMITS,
+    async (event, owner: string, repo: string, options?: { perPage?: number; page?: number }) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for GET_REPOSITORY_COMMITS');
+        return [];
+      }
+      return adapter.getRepositoryCommits(owner, repo, options);
+    },
+  );
 
   ipcMain.handle(
     GitHubAPIEvent.GET_USER_REPOSITORIES,
