@@ -919,6 +919,11 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
   // State for dirty repo image with uncommitted changes highlighted
   const [dirtyImageUrl, setDirtyImageUrl] = useState<string | null>(null);
 
+  // Extract git status arrays for stable dependency tracking
+  const gitStagedFiles = gitSlice?.data?.stagedFiles;
+  const gitModifiedFiles = gitSlice?.data?.modifiedFiles;
+  const gitUntrackedFiles = gitSlice?.data?.untrackedFiles;
+
   // Generate File City image with uncommitted changes highlighted
   useEffect(() => {
     if (!repository?.path || isRemoteOnly) {
@@ -926,10 +931,9 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
       return;
     }
 
-    const gitStatus = gitSlice?.data;
-    const stagedFiles = gitStatus?.stagedFiles || [];
-    const modifiedFiles = gitStatus?.modifiedFiles || [];
-    const untrackedFiles = gitStatus?.untrackedFiles || [];
+    const stagedFiles = gitStagedFiles || [];
+    const modifiedFiles = gitModifiedFiles || [];
+    const untrackedFiles = gitUntrackedFiles || [];
     const hasDirtyChanges = stagedFiles.length > 0 || modifiedFiles.length > 0 || untrackedFiles.length > 0;
 
     if (!hasDirtyChanges) {
@@ -984,7 +988,7 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
         setDirtyImageUrl(null);
       }
     })();
-  }, [repository?.path, isRemoteOnly, gitSlice?.data?.stagedFiles, gitSlice?.data?.modifiedFiles, gitSlice?.data?.untrackedFiles]);
+  }, [repository?.path, isRemoteOnly, gitStagedFiles, gitModifiedFiles, gitUntrackedFiles]);
 
   // Track when card renders with image URL - adds event to the same span
   useEffect(() => {
@@ -1325,9 +1329,11 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
             }}
             onClick={(fileCityImageUrl || historicalImageUrl || dirtyImageUrl) && !selectedDate ? handleOpenProject : undefined}
           >
-            {(historicalImageUrl || dirtyImageUrl || fileCityImageUrl) && (
+            {(() => {
+              const imageUrl = historicalImageUrl || dirtyImageUrl || fileCityImageUrl;
+              return imageUrl ? (
               <img
-                src={(historicalImageUrl || dirtyImageUrl || fileCityImageUrl)!}
+                src={imageUrl}
                 alt={`${repository.name} visualization`}
                 style={{
                   width: '100%',
@@ -1336,7 +1342,8 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
                   display: 'block',
                 }}
               />
-            )}
+            ) : null;
+            })()}
           </div>
 
           {/* Historical Commit Info - shown during playback */}

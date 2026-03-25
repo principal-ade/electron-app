@@ -74,32 +74,32 @@ function groupSummariesByQuarter(summaries: RepoActivitySummary[]): QuarterGroup
       const quarter = getQuarter(commitDate);
       const dateKey = `${commitDate.getFullYear()}-${commitDate.getMonth()}-${commitDate.getDate()}-${quarter}`;
 
-      if (!quarterMap.has(dateKey)) {
+      let group = quarterMap.get(dateKey);
+      if (!group) {
         // Create a representative date for this quarter
         const quarterDate = new Date(commitDate);
         quarterDate.setMinutes(0, 0, 0);
-        quarterMap.set(dateKey, {
+        group = {
           quarter,
           date: quarterDate,
           summaryMap: new Map(),
           commitCount: 0,
-        });
+        };
+        quarterMap.set(dateKey, group);
       }
-
-      const group = quarterMap.get(dateKey)!;
       group.commitCount++;
 
       // Add or update the summary for this repo in this quarter
-      if (!group.summaryMap.has(summary.repoPath)) {
-        group.summaryMap.set(summary.repoPath, {
+      let quarterSummary = group.summaryMap.get(summary.repoPath);
+      if (!quarterSummary) {
+        quarterSummary = {
           ...summary,
           commits: [],
           commitCount: 0,
           latestCommitAt: commitDate,
-        });
+        };
+        group.summaryMap.set(summary.repoPath, quarterSummary);
       }
-
-      const quarterSummary = group.summaryMap.get(summary.repoPath)!;
       quarterSummary.commits.push(commit);
       quarterSummary.commitCount++;
       if (commitDate > quarterSummary.latestCommitAt) {
@@ -128,8 +128,9 @@ function groupSummariesByQuarter(summaries: RepoActivitySummary[]): QuarterGroup
   groups.sort((a, b) => b.date.getTime() - a.date.getTime());
 
   // Mark the first one
-  if (groups.length > 0) {
-    groups[0]!.isFirst = true;
+  const firstGroup = groups[0];
+  if (firstGroup) {
+    firstGroup.isFirst = true;
   }
 
   return groups;
@@ -268,7 +269,10 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
   };
 
   // Get all local repositories for activity feed
-  const allRepositories = context.alexandriaRepositories?.data?.repositories ?? [];
+  const allRepositories = useMemo(
+    () => context.alexandriaRepositories?.data?.repositories ?? [],
+    [context.alexandriaRepositories?.data?.repositories]
+  );
   const activityFeed = useActivityFeed(allRepositories, 20, 10, 100); // Get more commits for aggregation
 
   // State for repo images
@@ -1311,9 +1315,10 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
           <div style={{ marginBottom: spacing.md }}>
             {Array.from({ length: Math.ceil(summary.commits.length / 10) }).map((_, rowIndex) => {
               const rowCommits = summary.commits.slice(rowIndex * 10, (rowIndex + 1) * 10);
+              const firstCommit = rowCommits[0];
               return (
                 <div
-                  key={rowIndex}
+                  key={firstCommit?.hash ?? `empty-row-${rowIndex}`}
                   style={{
                     position: 'relative',
                     display: 'flex',

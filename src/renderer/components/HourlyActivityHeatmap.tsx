@@ -493,7 +493,7 @@ export const HourlyActivityHeatmap: React.FC<HourlyActivityHeatmapProps> = ({
 
                           return (
                             <div
-                              key={i}
+                              key={minute}
                               style={{
                                 width: miniCellSize,
                                 height: miniCellSize,

@@ -32,10 +32,10 @@ type CompatibleContext = any;
 let canvasModule: typeof import('canvas') | null = null;
 function getCanvasModule(): typeof import('canvas') {
   if (!canvasModule) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     canvasModule = require('canvas');
   }
-  return canvasModule!;
+  // canvasModule is guaranteed to be set after the above check
+  return canvasModule as typeof import('canvas');
 }
 
 const DEFAULT_DIRECTORY_COLOR = '#111827';
