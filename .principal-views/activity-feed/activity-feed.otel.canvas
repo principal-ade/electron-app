@@ -93,7 +93,7 @@
         }
       },
       "otel": {
-        "status": "not-implemented",
+        "status": "draft",
         "files": [
           "src/renderer/principal-window/components/IntegratedShell/NavigationSidebar.tsx"
         ]
@@ -119,7 +119,7 @@
         }
       },
       "otel": {
-        "status": "not-implemented",
+        "status": "draft",
         "files": [
           "src/renderer/principal-window/components/IntegratedShell/IntegratedShell.tsx"
         ]
@@ -145,9 +145,142 @@
         }
       },
       "otel": {
-        "status": "not-implemented",
+        "status": "draft",
         "files": [
           "src/renderer/principal-window/views/FeedView/FeedView.tsx"
+        ]
+      }
+    },
+    {
+      "id": "section-repo-events",
+      "type": "text",
+      "x": -400,
+      "y": 130,
+      "width": 350,
+      "height": 40,
+      "color": "#64748B",
+      "text": "## Repository Events\n**Commit detection and feed refresh**"
+    },
+    {
+      "id": "repo-monitoring-manager",
+      "type": "otel-event",
+      "x": -400,
+      "y": 200,
+      "width": 220,
+      "height": 100,
+      "label": "RepositoryMonitoringManager",
+      "shape": "rectangle",
+      "event": {
+        "name": "repo.git_state.changed",
+        "description": "Git state changed in a monitored repository (commit, branch change, etc)",
+        "attributes": {
+          "repo_path": {
+            "type": "string",
+            "description": "Repository path where change occurred"
+          },
+          "event_type": {
+            "type": "string",
+            "description": "Type of git event: GIT_STATUS_CHANGED or GIT_STATE_EVENT"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/main/services/RepositoryMonitoringManager.ts"
+        ]
+      }
+    },
+    {
+      "id": "ipc-broadcast",
+      "type": "otel-event",
+      "x": -400,
+      "y": 350,
+      "width": 220,
+      "height": 100,
+      "label": "broadcastToRelevantWindows",
+      "shape": "rectangle",
+      "event": {
+        "name": "repo.event.broadcast",
+        "description": "Git event broadcasted to relevant renderer windows via IPC",
+        "attributes": {
+          "window_count": {
+            "type": "integer",
+            "description": "Number of windows receiving the broadcast"
+          },
+          "event_channel": {
+            "type": "string",
+            "description": "IPC channel used for broadcast"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/main/services/RepositoryMonitoringManager.ts",
+          "src/main/ipc/ipcHandlers.ts"
+        ]
+      }
+    },
+    {
+      "id": "alexandria-on-repo-change",
+      "type": "otel-event",
+      "x": -400,
+      "y": 500,
+      "width": 220,
+      "height": 100,
+      "label": "AlexandriaService.onRepositoryChange",
+      "shape": "rectangle",
+      "event": {
+        "name": "feed.repo_change.received",
+        "description": "FeedView received repository change event via AlexandriaService listener",
+        "attributes": {
+          "repo_path": {
+            "type": "string",
+            "description": "Repository that changed"
+          },
+          "trigger_refresh": {
+            "type": "boolean",
+            "description": "Whether this triggers a feed refresh"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/renderer/main-process-api/AlexandriaService.ts",
+          "src/renderer/principal-window/views/FeedView/FeedView.tsx"
+        ]
+      }
+    },
+    {
+      "id": "feed-refresh-trigger",
+      "type": "otel-event",
+      "x": -150,
+      "y": 500,
+      "width": 180,
+      "height": 100,
+      "label": "Feed Refresh Triggered",
+      "shape": "rectangle",
+      "event": {
+        "name": "feed.refresh.triggered",
+        "description": "Activity feed refresh triggered by repository change event",
+        "attributes": {
+          "reason": {
+            "type": "string",
+            "description": "Reason for refresh: repo_change, manual, initial_load"
+          },
+          "debounce_ms": {
+            "type": "integer",
+            "description": "Debounce delay before refresh"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/renderer/principal-window/views/FeedView/FeedView.tsx",
+          "src/renderer/hooks/useActivityFeed.ts"
         ]
       }
     },
@@ -185,7 +318,7 @@
         }
       },
       "otel": {
-        "status": "not-implemented",
+        "status": "draft",
         "files": [
           "src/renderer/main-process-api/AlexandriaService.ts",
           "src/renderer/principal-window/views/FeedView/FeedView.tsx"
@@ -220,7 +353,7 @@
         }
       },
       "otel": {
-        "status": "not-implemented",
+        "status": "draft",
         "files": [
           "src/renderer/hooks/useActivityFeed.ts"
         ]
@@ -246,7 +379,7 @@
         }
       },
       "otel": {
-        "status": "not-implemented",
+        "status": "draft",
         "files": [
           "src/renderer/main-process-api/FileSystemService.ts",
           "src/renderer/hooks/useActivityFeed.ts"
@@ -285,7 +418,7 @@
         }
       },
       "otel": {
-        "status": "not-implemented",
+        "status": "draft",
         "files": [
           "src/renderer/main-process-api/GitService.ts",
           "src/renderer/hooks/useActivityFeed.ts"
@@ -320,7 +453,7 @@
         }
       },
       "otel": {
-        "status": "not-implemented",
+        "status": "draft",
         "files": [
           "src/renderer/hooks/useActivityFeed.ts"
         ]
@@ -356,7 +489,7 @@
         }
       },
       "otel": {
-        "status": "not-implemented",
+        "status": "draft",
         "files": [
           "src/renderer/panels/ActivityFeedPanel.tsx",
           "src/renderer/main-process-api/FileCityImageService.ts"
@@ -387,7 +520,7 @@
         }
       },
       "otel": {
-        "status": "not-implemented",
+        "status": "draft",
         "files": [
           "src/renderer/panels/ActivityFeedPanel.tsx"
         ]
@@ -427,7 +560,7 @@
         }
       },
       "otel": {
-        "status": "not-implemented",
+        "status": "draft",
         "files": [
           "src/renderer/panels/ActivityFeedPanel.tsx"
         ]
@@ -457,7 +590,7 @@
         }
       },
       "otel": {
-        "status": "not-implemented",
+        "status": "draft",
         "files": [
           "src/renderer/panels/ActivityFeedPanel.tsx"
         ]
@@ -487,7 +620,7 @@
         }
       },
       "otel": {
-        "status": "not-implemented",
+        "status": "draft",
         "files": [
           "src/renderer/panels/ActivityFeedPanel.tsx"
         ]
@@ -517,7 +650,7 @@
         }
       },
       "otel": {
-        "status": "not-implemented",
+        "status": "draft",
         "files": [
           "src/renderer/panels/ActivityFeedPanel.tsx"
         ]
@@ -547,7 +680,7 @@
         }
       },
       "otel": {
-        "status": "not-implemented",
+        "status": "draft",
         "files": [
           "src/renderer/panels/ActivityFeedPanel.tsx"
         ]
@@ -577,7 +710,7 @@
         }
       },
       "otel": {
-        "status": "not-implemented",
+        "status": "draft",
         "files": [
           "src/renderer/main-process-api/WindowService.ts",
           "src/renderer/principal-window/views/FeedView/FeedView.tsx"
@@ -586,6 +719,50 @@
     }
   ],
   "edges": [
+    {
+      "id": "monitoring-to-broadcast",
+      "fromNode": "repo-monitoring-manager",
+      "fromSide": "bottom",
+      "toNode": "ipc-broadcast",
+      "toSide": "top",
+      "label": "emit GIT_STATE_EVENT",
+      "pv": {
+        "edgeType": "event-emit"
+      }
+    },
+    {
+      "id": "broadcast-to-renderer",
+      "fromNode": "ipc-broadcast",
+      "fromSide": "bottom",
+      "toNode": "alexandria-on-repo-change",
+      "toSide": "top",
+      "label": "IPC to renderer",
+      "pv": {
+        "edgeType": "ipc-invoke"
+      }
+    },
+    {
+      "id": "repo-change-to-refresh",
+      "fromNode": "alexandria-on-repo-change",
+      "fromSide": "right",
+      "toNode": "feed-refresh-trigger",
+      "toSide": "left",
+      "label": "trigger refresh",
+      "pv": {
+        "edgeType": "event-emit"
+      }
+    },
+    {
+      "id": "refresh-to-hook",
+      "fromNode": "feed-refresh-trigger",
+      "fromSide": "right",
+      "toNode": "use-activity-feed",
+      "toSide": "left",
+      "label": "reload commits",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
     {
       "id": "nav-to-shell",
       "fromNode": "navigation-sidebar",

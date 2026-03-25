@@ -1,0 +1,29 @@
+{
+  "version": "1.0.0",
+  "name": "Activity Feed Commit Refresh",
+  "description": "Refresh activity feed when a commit occurs in a monitored repository",
+  "canvas": ".principal-views/activity-feed/activity-feed.otel.canvas",
+  "spanPattern": "feed.refresh",
+  "scenarios": [
+    {
+      "id": "commit-triggers-refresh",
+      "description": "A new commit in a monitored repository triggers activity feed refresh",
+      "priority": 1,
+      "template": {
+        "introduction": "**Commit Event Refresh**\n\nA commit occurred in a monitored repository, triggering feed refresh.",
+        "events": {
+          "repo.git_state.changed": "[1] Git state changed in `{{repo_path}}`: event={{event_type}}",
+          "repo.event.broadcast": "[2] Broadcasting to {{window_count}} windows via {{event_channel}}",
+          "feed.repo_change.received": "[3] FeedView received change for `{{repo_path}}`: trigger_refresh={{trigger_refresh}}",
+          "feed.refresh.triggered": "[4] Feed refresh triggered: reason={{reason}}, debounce={{debounce_ms}}ms",
+          "feed.activity.loading_started": "[5] Reloading activity: max_repos={{max_repos}}, commits_per_repo={{commits_per_repo}}, limit={{total_limit}}",
+          "feed.commits.fetched": "[6] Fetched commits from `{{repo_path}}`: {{commit_count}} commits ({{start_date}} to {{end_date}})",
+          "feed.activity.loaded": "[7] Activity reloaded: {{total_commits}} commits from {{unique_repos}} repos in {{duration_ms}}ms",
+          "feed.panel.rendered": "[8] Panel re-rendered: {{commits_displayed}} commits, {{repos_in_grid}} repos"
+        },
+        "summary": "**Result:** Feed refreshed after commit\n- Trigger: {{event_type}} in {{repo_path}}\n- New commit count: {{total_commits}}"
+      },
+      "filterDefault": false
+    }
+  ]
+}
