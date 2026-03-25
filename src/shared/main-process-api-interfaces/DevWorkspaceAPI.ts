@@ -30,6 +30,7 @@ import type { LocalhostDetectionAPI } from './LocalhostDetectionAPI';
 import type { OtelCollectorAPI } from './OtelCollectorAPI';
 import type { GitAPI } from './GitAPI';
 import type { FileCityImageAPI } from './FileCityImageAPI';
+import type { SkillLockAPI } from './SkillLockAPI';
 
 export interface DevWorkspaceMainProcessAPI {
   terminal: TerminalAPI;
@@ -47,6 +48,7 @@ export interface DevWorkspaceMainProcessAPI {
   otelCollector: OtelCollectorAPI;
   git: GitAPI;
   fileCityImage: FileCityImageAPI;
+  skillLock: SkillLockAPI;
 }
 
 // Re-export the individual API types for convenience
@@ -65,3 +67,4 @@ export type { LocalhostDetectionAPI } from './LocalhostDetectionAPI';
 export type { OtelCollectorAPI } from './OtelCollectorAPI';
 export type { GitAPI } from './GitAPI';
 export type { FileCityImageAPI } from './FileCityImageAPI';
+export type { SkillLockAPI } from './SkillLockAPI';

@@ -35,6 +35,7 @@ import { localhostDetectionAPI } from './main-process-api-implementations/localh
 import { otelCollectorApi } from './main-process-api-implementations/otelCollectorApi';
 import { gitAPI } from './main-process-api-implementations/gitApi';
 import { fileCityImageAPI } from './main-process-api-implementations/fileCityImageApi';
+import { skillLockAPI } from './main-process-api-implementations/skillLockApi';
 
 console.info('[Preload-DevWorkspace] API imports successful');
 
@@ -58,6 +59,7 @@ const devWorkspaceAPI: DevWorkspaceMainProcessAPI = {
   otelCollector: otelCollectorApi,
   git: gitAPI,
   fileCityImage: fileCityImageAPI,
+  skillLock: skillLockAPI,
 };
 
 // Expose the mainProcess API
