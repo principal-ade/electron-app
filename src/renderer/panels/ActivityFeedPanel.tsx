@@ -652,7 +652,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
           overflow: 'hidden',
         }}
       >
-        {/* Left column - Search (right-aligned content) */}
+        {/* Left column - Hourly Activity Heatmap (right-aligned content) */}
         {onSearchChange && (
           <div
             style={{
@@ -664,177 +664,21 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
               overflow: 'hidden',
             }}
           >
-            {/* Search input */}
-            <div style={{ width: 300, padding: spacing.md }}>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: spacing.sm,
-                  padding: `${spacing.sm}px ${spacing.md}px`,
-                  backgroundColor: theme.colors.backgroundSecondary,
-                  borderRadius: theme.radii?.[1] || 4,
-                  border: `1px solid ${theme.colors.border}`,
-                }}
-              >
-                <Search size={16} color={theme.colors.textSecondary} />
-                <input
-                  type="text"
-                  value={localSearchQuery}
-                  onChange={(e) => setLocalSearchQuery(e.target.value)}
-                  placeholder="Search repositories..."
-                  style={{
-                    flex: 1,
-                    border: 'none',
-                    outline: 'none',
-                    backgroundColor: 'transparent',
-                    color: theme.colors.text,
-                    fontSize: theme.fontSizes[1],
-                    fontFamily: 'inherit',
-                  }}
-                />
-                {localSearchQuery && (
-                  <button
-                    onClick={handleClearSearch}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: spacing.xs,
-                      backgroundColor: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      borderRadius: theme.radii?.[1] || 4,
-                    }}
-                  >
-                    <X size={14} color={theme.colors.textSecondary} />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Search results */}
-            <div style={{ width: 300, flex: 1, overflow: 'auto', padding: `0 ${spacing.md}px ${spacing.md}px` }}>
-              {!isSearching ? (
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: '100%',
-                    color: theme.colors.textSecondary,
-                    textAlign: 'center',
-                    fontSize: theme.fontSizes[1],
-                  }}
-                >
-                  <Search size={32} style={{ marginBottom: spacing.sm, opacity: 0.3 }} />
-                  <span>Search local, GitHub,</span>
-                  <span>and starred repos</span>
-                </div>
-              ) : searchLoading ? (
-                <div
-                  style={{
-                    padding: spacing.lg,
-                    textAlign: 'center',
-                    color: theme.colors.textSecondary,
-                    fontSize: theme.fontSizes[1],
-                  }}
-                >
-                  Searching...
-                </div>
-              ) : searchResults.length === 0 ? (
-                <div
-                  style={{
-                    padding: spacing.md,
-                    textAlign: 'center',
-                    color: theme.colors.textSecondary,
-                    fontSize: theme.fontSizes[1],
-                  }}
-                >
-                  No results for "{localSearchQuery}"
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
-                  <div
-                    style={{
-                      fontSize: theme.fontSizes[0],
-                      color: theme.colors.textSecondary,
-                      marginBottom: spacing.xs,
-                      textAlign: 'right',
-                    }}
-                  >
-                    {searchResults.length} result{searchResults.length !== 1 ? 's' : ''}
-                  </div>
-                  {searchResults.map((result) => {
-                    const SOURCE_CONFIG: Record<SearchResultSource, { icon: React.ElementType; color: string; label: string }> = {
-                      local: { icon: Folder, color: '#3b82f6', label: 'Local' },
-                      github: { icon: Github, color: '#6b7280', label: 'GitHub' },
-                      starred: { icon: Star, color: '#eab308', label: 'Starred' },
-                    };
-                    const config = SOURCE_CONFIG[result.source];
-                    const Icon = config.icon;
-
-                    return (
-                      <button
-                        key={result.id}
-                        onClick={() => onSelectSearchResult?.(result)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: spacing.sm,
-                          width: '100%',
-                          padding: spacing.sm,
-                          backgroundColor: 'transparent',
-                          border: `1px solid ${theme.colors.border}`,
-                          borderRadius: theme.radii?.[1] || 4,
-                          cursor: 'pointer',
-                          textAlign: 'left',
-                          transition: 'all 0.15s ease',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-                          e.currentTarget.style.borderColor = theme.colors.primary;
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = 'transparent';
-                          e.currentTarget.style.borderColor = theme.colors.border;
-                        }}
-                      >
-                        {/* Source icon */}
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: 24,
-                            height: 24,
-                            borderRadius: theme.radii?.[1] || 4,
-                            backgroundColor: `${config.color}20`,
-                            flexShrink: 0,
-                          }}
-                        >
-                          <Icon size={12} color={config.color} />
-                        </div>
-
-                        {/* Name */}
-                        <div
-                          style={{
-                            flex: 1,
-                            fontSize: theme.fontSizes[1],
-                            color: theme.colors.text,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {result.name}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+            <div
+              style={{
+                width: 300,
+                height: '100%',
+                padding: spacing.md,
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              <HourlyActivityHeatmap
+                commits={heatmapCommits}
+                loading={activityFeed.loading}
+                onBlockClick={handleHeatmapBlockClick}
+                selectedBlock={timeFilter?.start.toISOString() ?? null}
+              />
             </div>
           </div>
         )}
@@ -948,7 +792,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
         </div>
       </div>
 
-        {/* Right column - Hourly Activity Heatmap (left-aligned content) */}
+        {/* Right column - Search (left-aligned content) */}
         {onSearchChange && (
           <div
             style={{
@@ -956,25 +800,181 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
               minWidth: 200,
               display: 'flex',
               flexDirection: 'column',
-              alignItems: 'flex-start',
+              alignItems: 'flex-start', // Left-align content within this column
               overflow: 'hidden',
             }}
           >
-            <div
-              style={{
-                width: 300,
-                height: '100%',
-                padding: spacing.md,
-                display: 'flex',
-                flexDirection: 'column',
-              }}
-            >
-              <HourlyActivityHeatmap
-                commits={heatmapCommits}
-                loading={activityFeed.loading}
-                onBlockClick={handleHeatmapBlockClick}
-                selectedBlock={timeFilter?.start.toISOString() ?? null}
-              />
+            {/* Search input */}
+            <div style={{ width: 300, padding: spacing.md }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.sm,
+                  padding: `${spacing.sm}px ${spacing.md}px`,
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  borderRadius: theme.radii?.[1] || 4,
+                  border: `1px solid ${theme.colors.border}`,
+                }}
+              >
+                <Search size={16} color={theme.colors.textSecondary} />
+                <input
+                  type="text"
+                  value={localSearchQuery}
+                  onChange={(e) => setLocalSearchQuery(e.target.value)}
+                  placeholder="Search repositories..."
+                  style={{
+                    flex: 1,
+                    border: 'none',
+                    outline: 'none',
+                    backgroundColor: 'transparent',
+                    color: theme.colors.text,
+                    fontSize: theme.fontSizes[1],
+                    fontFamily: 'inherit',
+                  }}
+                />
+                {localSearchQuery && (
+                  <button
+                    onClick={handleClearSearch}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: spacing.xs,
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      borderRadius: theme.radii?.[1] || 4,
+                    }}
+                  >
+                    <X size={14} color={theme.colors.textSecondary} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Search results */}
+            <div style={{ width: 300, flex: 1, overflow: 'auto', padding: `0 ${spacing.md}px ${spacing.md}px` }}>
+              {!isSearching ? (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '100%',
+                    color: theme.colors.textSecondary,
+                    textAlign: 'center',
+                    fontSize: theme.fontSizes[1],
+                  }}
+                >
+                  <Search size={32} style={{ marginBottom: spacing.sm, opacity: 0.3 }} />
+                  <span>Search local, GitHub,</span>
+                  <span>and starred repos</span>
+                </div>
+              ) : searchLoading ? (
+                <div
+                  style={{
+                    padding: spacing.lg,
+                    textAlign: 'center',
+                    color: theme.colors.textSecondary,
+                    fontSize: theme.fontSizes[1],
+                  }}
+                >
+                  Searching...
+                </div>
+              ) : searchResults.length === 0 ? (
+                <div
+                  style={{
+                    padding: spacing.md,
+                    textAlign: 'center',
+                    color: theme.colors.textSecondary,
+                    fontSize: theme.fontSizes[1],
+                  }}
+                >
+                  No results for "{localSearchQuery}"
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
+                  <div
+                    style={{
+                      fontSize: theme.fontSizes[0],
+                      color: theme.colors.textSecondary,
+                      marginBottom: spacing.xs,
+                      textAlign: 'left',
+                    }}
+                  >
+                    {searchResults.length} result{searchResults.length !== 1 ? 's' : ''}
+                  </div>
+                  {searchResults.map((result) => {
+                    const SOURCE_CONFIG: Record<SearchResultSource, { icon: React.ElementType; color: string; label: string }> = {
+                      local: { icon: Folder, color: '#3b82f6', label: 'Local' },
+                      github: { icon: Github, color: '#6b7280', label: 'GitHub' },
+                      starred: { icon: Star, color: '#eab308', label: 'Starred' },
+                    };
+                    const config = SOURCE_CONFIG[result.source];
+                    const Icon = config.icon;
+
+                    return (
+                      <button
+                        key={result.id}
+                        onClick={() => onSelectSearchResult?.(result)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: spacing.sm,
+                          width: '100%',
+                          padding: spacing.sm,
+                          backgroundColor: 'transparent',
+                          border: `1px solid ${theme.colors.border}`,
+                          borderRadius: theme.radii?.[1] || 4,
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                          e.currentTarget.style.borderColor = theme.colors.primary;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                          e.currentTarget.style.borderColor = theme.colors.border;
+                        }}
+                      >
+                        {/* Source icon */}
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: 24,
+                            height: 24,
+                            borderRadius: theme.radii?.[1] || 4,
+                            backgroundColor: `${config.color}20`,
+                            flexShrink: 0,
+                          }}
+                        >
+                          <Icon size={12} color={config.color} />
+                        </div>
+
+                        {/* Name */}
+                        <div
+                          style={{
+                            flex: 1,
+                            fontSize: theme.fontSizes[1],
+                            color: theme.colors.text,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {result.name}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         )}
