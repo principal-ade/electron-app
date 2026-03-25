@@ -29,6 +29,7 @@ import {
 } from '../main-process-api/LocalhostDetectionService';
 import { TerminalService } from '../main-process-api/TerminalService';
 import { GitService } from '../main-process-api/GitService';
+import { SkillLockService } from '../main-process-api/SkillLockService';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import { FileTreeCore, createFileTreeSource } from '@principal-ai/repository-abstraction';
@@ -1315,6 +1316,26 @@ export const RepositoryPanelProvider: React.FC<
     };
 
     fetchGlobalSkills();
+
+    // Listen for skill changes from any window (IPC broadcasts from main process)
+    const unsubInstall = SkillLockService.onSkillInstalled((payload) => {
+      console.info('[RepositoryPanelProvider] Skill installed, refreshing global skills:', payload.skillName);
+      fetchGlobalSkills();
+    });
+    const unsubUninstall = SkillLockService.onSkillUninstalled((payload) => {
+      console.info('[RepositoryPanelProvider] Skill uninstalled, refreshing global skills:', payload.skillName);
+      fetchGlobalSkills();
+    });
+    const unsubUpdate = SkillLockService.onSkillUpdated((payload) => {
+      console.info('[RepositoryPanelProvider] Skill updated, refreshing global skills:', payload.skillName);
+      fetchGlobalSkills();
+    });
+
+    return () => {
+      unsubInstall();
+      unsubUninstall();
+      unsubUpdate();
+    };
   }, []);
 
   // Register MessagePort for OTEL traces from all discovered services

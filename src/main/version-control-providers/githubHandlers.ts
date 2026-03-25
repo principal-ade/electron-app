@@ -28,8 +28,9 @@ import {
   GitHubRepositoryWithPermissions,
 } from '../../shared/main-process-api-interfaces/GitHubAPI';
 import { getSkillLockFileService } from '../skills/skillLockFile';
-import { normalizeGitHubSource } from '../../shared/main-process-api-interfaces/SkillLockAPI';
+import { normalizeGitHubSource, SkillLockAPIEvent } from '../../shared/main-process-api-interfaces/SkillLockAPI';
 import { createSkillSymlink } from '../skills/symlinkUtils';
+import { sendToAllWindows } from '../window/modernWindowManager';
 import type { IModernApplicationWindow } from '../window/types';
 
 export interface GitRepositoryInfo {
@@ -3004,6 +3005,15 @@ export function registerGitHubIpcHandlers(
         if (agentSymlinkPath) {
           console.log(`[GitHub] Symlinked to agent directory: ${agentSymlinkPath}`);
         }
+
+        // Broadcast to all windows that a skill was installed
+        sendToAllWindows(SkillLockAPIEvent.SKILL_INSTALLED, {
+          skillName: extractedSkillName,
+          destination,
+          installedPath: agentSymlinkPath || destPath,
+          filesInstalled: installedFiles,
+        });
+        console.log(`[GitHub] Broadcasted skill:installed to all windows`);
 
         return {
           success: true,

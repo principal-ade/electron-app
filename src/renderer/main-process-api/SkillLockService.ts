@@ -12,6 +12,9 @@ import type {
   InstalledSkillInfo,
   SkillUpdateResult,
   SkillLockEntry,
+  SkillInstalledPayload,
+  SkillUninstalledPayload,
+  SkillUpdatedPayload,
 } from '../../shared/main-process-api-interfaces/SkillLockAPI';
 
 export class SkillLockService {
@@ -111,5 +114,29 @@ export class SkillLockService {
   static async getUpdateCount(): Promise<number> {
     const updates = await this.checkUpdates();
     return updates.filter((u) => u.hasUpdate).length;
+  }
+
+  /**
+   * Listen for skill installed events (broadcast from main process to all windows)
+   * @returns Unsubscribe function
+   */
+  static onSkillInstalled(callback: (payload: SkillInstalledPayload) => void): () => void {
+    return window.mainProcess.skillLock.onSkillInstalled(callback);
+  }
+
+  /**
+   * Listen for skill uninstalled events (broadcast from main process to all windows)
+   * @returns Unsubscribe function
+   */
+  static onSkillUninstalled(callback: (payload: SkillUninstalledPayload) => void): () => void {
+    return window.mainProcess.skillLock.onSkillUninstalled(callback);
+  }
+
+  /**
+   * Listen for skill updated events (broadcast from main process to all windows)
+   * @returns Unsubscribe function
+   */
+  static onSkillUpdated(callback: (payload: SkillUpdatedPayload) => void): () => void {
+    return window.mainProcess.skillLock.onSkillUpdated(callback);
   }
 }

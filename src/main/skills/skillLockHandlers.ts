@@ -14,6 +14,7 @@ import {
   SkillUpdateCheckResult,
   SkillUpdateResult,
 } from '../../shared/main-process-api-interfaces/SkillLockAPI';
+import { sendToAllWindows } from '../window/modernWindowManager';
 
 /**
  * Register all skill lock IPC handlers
@@ -58,6 +59,11 @@ export async function registerSkillLockHandlers(): Promise<void> {
     async (_, name: string) => {
       try {
         const removed = await lockService.removeSkill(name);
+        if (removed) {
+          // Broadcast to all windows that a skill was uninstalled
+          sendToAllWindows(SkillLockAPIEvent.SKILL_UNINSTALLED, { skillName: name });
+          console.log(`[SkillLock] Broadcasted skill:uninstalled to all windows for: ${name}`);
+        }
         return { success: removed };
       } catch (error) {
         console.error('[SkillLock] Error removing skill:', error);
@@ -254,6 +260,14 @@ export async function registerSkillLockHandlers(): Promise<void> {
           },
         });
 
+        // Broadcast to all windows that a skill was updated
+        sendToAllWindows(SkillLockAPIEvent.SKILL_UPDATED, {
+          skillName: name,
+          previousHash,
+          newHash: hashResult.sha,
+        });
+        console.log(`[SkillLock] Broadcasted skill:updated to all windows for: ${name}`);
+
         return {
           success: true,
           name,
@@ -323,6 +337,15 @@ export async function registerSkillLockHandlers(): Promise<void> {
               },
             });
 
+            if (updated) {
+              // Broadcast to all windows that a skill was updated
+              sendToAllWindows(SkillLockAPIEvent.SKILL_UPDATED, {
+                skillName: skill.name,
+                previousHash: skill.skillFolderHash,
+                newHash: hashResult.sha,
+              });
+            }
+
             results.push({
               success: updated,
               name: skill.name,
@@ -331,6 +354,10 @@ export async function registerSkillLockHandlers(): Promise<void> {
             });
           }
         }
+      }
+
+      if (results.length > 0) {
+        console.log(`[SkillLock] Broadcasted skill:updated to all windows for ${results.length} skills`);
       }
 
       return results;

@@ -107,6 +107,9 @@
       },
       "otel": {
         "status": "draft"
+      },
+      "pv": {
+        "references": ["src/renderer/principal-window/views/SkillBrowserView/SkillBrowserView.tsx"]
       }
     },
     {
@@ -138,6 +141,9 @@
       },
       "otel": {
         "status": "draft"
+      },
+      "pv": {
+        "references": ["src/renderer/principal-window/views/SkillBrowserView/InstallSkillToolbar.tsx"]
       }
     },
     {
@@ -173,6 +179,9 @@
       },
       "otel": {
         "status": "draft"
+      },
+      "pv": {
+        "references": ["src/renderer/principal-window/views/SkillBrowserView/SkillInstallationModal.tsx"]
       }
     },
     {
@@ -208,6 +217,9 @@
       },
       "otel": {
         "status": "draft"
+      },
+      "pv": {
+        "references": ["src/renderer/main-process-api/GithubService.ts"]
       }
     },
     {
@@ -235,6 +247,9 @@
       },
       "otel": {
         "status": "draft"
+      },
+      "pv": {
+        "references": ["src/renderer/main-process-api/FileSystemService.ts"]
       }
     },
     {
@@ -266,6 +281,9 @@
       },
       "otel": {
         "status": "draft"
+      },
+      "pv": {
+        "references": ["src/renderer/main-process-api/SkillLockService.ts"]
       }
     },
     {
@@ -301,6 +319,9 @@
       },
       "otel": {
         "status": "draft"
+      },
+      "pv": {
+        "references": ["src/main/version-control-providers/githubHandlers.ts"]
       }
     },
     {
@@ -324,6 +345,9 @@
       },
       "otel": {
         "status": "draft"
+      },
+      "pv": {
+        "references": ["src/main/file-system/fileSystemHandlers.ts", "src/main/services/SkillsDetectionService.ts"]
       }
     },
     {
@@ -351,6 +375,9 @@
       },
       "otel": {
         "status": "draft"
+      },
+      "pv": {
+        "references": ["src/main/skills/skillLockHandlers.ts"]
       }
     },
     {
@@ -386,6 +413,9 @@
       },
       "otel": {
         "status": "draft"
+      },
+      "pv": {
+        "references": ["src/main/version-control-providers/githubHandlers.ts"]
       }
     },
     {
@@ -413,6 +443,9 @@
       },
       "otel": {
         "status": "draft"
+      },
+      "pv": {
+        "references": ["src/main/version-control-providers/githubHandlers.ts"]
       }
     },
     {
@@ -440,6 +473,9 @@
       },
       "otel": {
         "status": "draft"
+      },
+      "pv": {
+        "references": ["src/main/version-control-providers/githubHandlers.ts"]
       }
     },
     {
@@ -475,6 +511,9 @@
       },
       "otel": {
         "status": "draft"
+      },
+      "pv": {
+        "references": ["src/main/skills/skillLockHandlers.ts"]
       }
     },
     {
@@ -510,6 +549,9 @@
       },
       "otel": {
         "status": "draft"
+      },
+      "pv": {
+        "references": ["src/main/version-control-providers/githubHandlers.ts"]
       }
     },
     {
@@ -541,6 +583,9 @@
       },
       "otel": {
         "status": "draft"
+      },
+      "pv": {
+        "references": ["src/main/version-control-providers/githubHandlers.ts"]
       }
     },
     {
@@ -572,6 +617,9 @@
       },
       "otel": {
         "status": "draft"
+      },
+      "pv": {
+        "references": ["src/renderer/principal-window/views/SkillBrowserView/SkillBrowserView.tsx"]
       }
     },
     {
@@ -599,6 +647,9 @@
       },
       "otel": {
         "status": "draft"
+      },
+      "pv": {
+        "references": ["src/renderer/principal-window/views/SkillBrowserView/SkillBrowserView.tsx"]
       }
     },
     {
@@ -622,6 +673,9 @@
       },
       "otel": {
         "status": "draft"
+      },
+      "pv": {
+        "references": ["src/renderer/principal-window/views/SkillBrowserView/AgentSetupModal.tsx"]
       }
     },
     {

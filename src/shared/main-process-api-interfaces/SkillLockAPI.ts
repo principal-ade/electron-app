@@ -24,6 +24,12 @@ export enum SkillLockAPIEvent {
   // Update operations
   UPDATE_SKILL = 'skill-lock:update-skill',
   UPDATE_ALL_SKILLS = 'skill-lock:update-all',
+
+  // Broadcast events (main -> renderer, all windows)
+  SKILL_INSTALLED = 'skill:installed',
+  SKILL_UNINSTALLED = 'skill:uninstalled',
+  SKILL_UPDATED = 'skill:updated',
+  SKILLS_CHANGED = 'skill:changed',
 }
 
 /**
@@ -142,6 +148,40 @@ export interface SkillUpdateResult {
 }
 
 /**
+ * Broadcast payload for skill installation events
+ */
+export interface SkillInstalledPayload {
+  skillName: string;
+  destination: string;
+  installedPath: string;
+  filesInstalled?: string[];
+}
+
+/**
+ * Broadcast payload for skill uninstallation events
+ */
+export interface SkillUninstalledPayload {
+  skillName: string;
+}
+
+/**
+ * Broadcast payload for skill update events
+ */
+export interface SkillUpdatedPayload {
+  skillName: string;
+  previousHash?: string;
+  newHash?: string;
+}
+
+/**
+ * Broadcast payload for generic skill changes
+ */
+export interface SkillsChangedPayload {
+  action: 'installed' | 'uninstalled' | 'updated';
+  skillName: string;
+}
+
+/**
  * Installed skill info for UI display
  */
 export interface InstalledSkillInfo {
@@ -183,6 +223,15 @@ export interface SkillLockAPI {
 
   /** Update all skills with available updates */
   updateAllSkills: () => Promise<SkillUpdateResult[]>;
+
+  /** Listen for skill installed events (broadcast from main process) */
+  onSkillInstalled: (callback: (payload: SkillInstalledPayload) => void) => () => void;
+
+  /** Listen for skill uninstalled events (broadcast from main process) */
+  onSkillUninstalled: (callback: (payload: SkillUninstalledPayload) => void) => () => void;
+
+  /** Listen for skill updated events (broadcast from main process) */
+  onSkillUpdated: (callback: (payload: SkillUpdatedPayload) => void) => () => void;
 }
 
 /**
