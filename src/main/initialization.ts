@@ -8,6 +8,7 @@ import { initializeTerminalSettings } from './terminal/sessionManagerSingleton';
 import { githubRouter } from './github/tipc';
 import { appVersionRouter } from './app-version/tipc';
 import { alexandriaRouter } from './alexandria/tipc';
+import { geminiRouter } from './gemini/tipc';
 // import { AgentSessionEventsHttpBridge } from './agent-session-events/AgentSessionEventsHttpBridge';
 import {
   startEventServer,
@@ -310,6 +311,8 @@ export const initializeServices = async () => {
   console.log('[Main Process] TIPC appVersion router registered');
   registerIpcMain(alexandriaRouter);
   console.log('[Main Process] TIPC alexandria router registered');
+  registerIpcMain(geminiRouter);
+  console.log('[Main Process] TIPC gemini router registered');
 
   // Setup basic IPC handlers
   setupAppVersionHandler();

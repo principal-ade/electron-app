@@ -64,6 +64,12 @@ export interface UserPreferences {
   ollamaModel?: string; // Selected Ollama model for summarizing agent work
   ollamaModels?: string[]; // Multiple selected models for testing
 
+  // Gemini AI settings
+  gemini?: {
+    selectedModel?: string; // e.g., 'gemini-2.5-flash-lite'
+    // API key stored separately via SecretsService with repoId: 'app-gemini'
+  };
+
   // Repository view filters (legacy - kept for backward compatibility)
   repoShowLocalOnly?: boolean; // Show only repositories with local clones
   repoHideForkParents?: boolean; // Hide repositories that are parents of forks

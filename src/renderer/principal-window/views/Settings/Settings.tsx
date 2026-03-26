@@ -7,17 +7,20 @@ import {
   Settings as SettingsIcon,
   Activity,
   Puzzle,
+  Sparkles,
 } from 'lucide-react';
 import { GeneralSettings } from './components/GeneralSettings';
 import { AIAssistantsSettings } from './components/AIAssistantsSettings';
 import { UpdatesSettings } from './components/UpdatesSettings';
 import { ObservabilitySettings } from './components/ObservabilitySettings';
+import { GeminiSettings } from './components/GeminiSettings';
 import { WindowService } from '../../../main-process-api/WindowService';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 
 type SettingsCategory =
   | 'general'
   | 'ai-assistants'
+  | 'gemini'
   | 'updates'
   | 'observability';
 
@@ -183,6 +186,46 @@ export const Settings: React.FC = () => {
             </button>
 
             <button
+              onClick={() => setActiveCategory('gemini')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px 16px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor:
+                  activeCategory === 'gemini'
+                    ? theme.colors.primary + '20'
+                    : 'transparent',
+                color:
+                  activeCategory === 'gemini'
+                    ? theme.colors.primary
+                    : theme.colors.text,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                fontSize: '14px',
+                fontWeight: activeCategory === 'gemini' ? 600 : 500,
+                textAlign: 'left',
+                width: '100%',
+              }}
+              onMouseEnter={(e) => {
+                if (activeCategory !== 'gemini') {
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundTertiary;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeCategory !== 'gemini') {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }
+              }}
+            >
+              <Sparkles size={18} />
+              Gemini AI
+            </button>
+
+            <button
               onClick={() => setActiveCategory('updates')}
               style={{
                 display: 'flex',
@@ -344,6 +387,7 @@ export const Settings: React.FC = () => {
         >
           {activeCategory === 'general' && <GeneralSettings />}
           {activeCategory === 'ai-assistants' && <AIAssistantsSettings />}
+          {activeCategory === 'gemini' && <GeminiSettings />}
           {activeCategory === 'updates' && <UpdatesSettings />}
           {activeCategory === 'observability' && <ObservabilitySettings />}
         </div>
