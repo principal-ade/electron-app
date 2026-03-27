@@ -7,6 +7,7 @@ import { SystemMonitor } from '../../views/SystemMonitor/SystemMonitor';
 import { AuthView } from '../../views/AuthView';
 import { ProjectsView } from '../../views/ProjectsView';
 import { FeedView } from '../../views/FeedView';
+import { OnboardingView } from '../../views/OnboardingView';
 import { WorldsView } from '../../views/WorldsView';
 import { GitSyncView } from '../../views/GitSyncView';
 import { LocalhostProcessesView } from '../../views/LocalhostProcessesView';
@@ -30,6 +31,7 @@ export type NavigationView = InteractiveShellNavigationView;
 // Available views for switch command
 const VIEW_OPTIONS = [
   'feed',
+  'onboarding',
   'local-projects',
   'remote-projects',
   'starred-projects',
@@ -116,6 +118,7 @@ export const IntegratedShell: React.FC = () => {
     Record<string, { left: boolean; right: boolean }>
   >({
     feed: { left: false, right: false },
+    onboarding: { left: false, right: false },
     auth: { left: false, right: false },
     monitoring: { left: false, right: false },
     search: { left: false, right: false },
@@ -387,6 +390,7 @@ export const IntegratedShell: React.FC = () => {
           setActiveView('feed');
           setViewCollapsedStates({
             feed: { left: false, right: false },
+            onboarding: { left: false, right: false },
             auth: { left: false, right: false },
             monitoring: { left: false, right: false },
             search: { left: false, right: false },
@@ -449,6 +453,7 @@ export const IntegratedShell: React.FC = () => {
         setActiveView('feed');
         setViewCollapsedStates({
           feed: { left: false, right: false },
+          onboarding: { left: false, right: false },
           auth: { left: false, right: false },
           monitoring: { left: false, right: false },
           search: { left: false, right: false },
@@ -520,6 +525,7 @@ export const IntegratedShell: React.FC = () => {
             handleViewChange('settings');
           }}
           hideUpdateButton={activeView === 'settings'}
+          onNavigateToOnboarding={() => handleViewChange('onboarding')}
         />
 
         {/* Main content area with rounded corners for Slack-style cutout */}
@@ -561,6 +567,9 @@ export const IntegratedShell: React.FC = () => {
           >
             {/* Views will be rendered here based on activeView */}
             {activeView === 'feed' && <FeedView />}
+            {activeView === 'onboarding' && (
+              <OnboardingView onComplete={() => handleViewChange('feed')} />
+            )}
             {activeView === 'monitoring' && (
               <SystemMonitor sidebarCollapsed={sidebarCollapsed} />
             )}

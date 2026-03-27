@@ -10,6 +10,7 @@ import { FileSystemService } from '../../../main-process-api/FileSystemService';
 import type { UserPreferences } from '../../../../shared/types/userPreferences.types';
 import { FolderOpen, MessageCircle } from 'lucide-react';
 import { ShellService } from '../../../main-process-api/ShellService';
+import { OnboardingButton } from '../../../components/Titlebar/OnboardingButton';
 
 declare global {
   interface Window {
@@ -33,6 +34,7 @@ interface IntegratedTitlebarProps {
   showRightSidebarControl?: boolean;
   onUpdateClick?: () => void;
   hideUpdateButton?: boolean;
+  onNavigateToOnboarding?: () => void;
 }
 
 export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
@@ -44,6 +46,7 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
   showRightSidebarControl = false,
   onUpdateClick,
   hideUpdateButton = false,
+  onNavigateToOnboarding,
 }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [showThemeButton, setShowThemeButton] = useState(false);
@@ -251,6 +254,10 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
           gap: '8px',
         }}
       >
+        {/* Onboarding button */}
+        {onNavigateToOnboarding && (
+          <OnboardingButton onClick={onNavigateToOnboarding} />
+        )}
         {/* Community Discord button */}
         <button
           onClick={() => ShellService.openExternal('https://discord.gg/G3qdcC2DXq')}

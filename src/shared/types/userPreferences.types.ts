@@ -22,6 +22,7 @@ export interface WorkspaceLayout {
 // Interactive shell navigation view types
 export type InteractiveShellNavigationView =
   | 'feed'
+  | 'onboarding'
   | 'search'
   | 'settings'
   | 'monitoring'
@@ -34,6 +35,20 @@ export type InteractiveShellNavigationView =
   | 'processes'
   | 'connections'
   | 'skills';
+
+// Onboarding state types
+export interface OnboardingCardState {
+  completed: boolean;
+  completedAt?: number;
+}
+
+export interface OnboardingState {
+  started: boolean;
+  startedAt?: number;
+  cardStates: Record<string, OnboardingCardState>;
+  dismissed: boolean;
+  dismissedAt?: number;
+}
 
 // Repository view right pane modes
 export type RightPaneMode = 'city' | 'terminal' | 'session-detail' | 'document';
@@ -176,6 +191,9 @@ export interface UserPreferences {
   interactiveShell?: {
     activeNavigationView?: InteractiveShellNavigationView;
   };
+
+  // Onboarding state and completion tracking
+  onboarding?: OnboardingState;
 
   // Panel layout preferences (sizes and collapsed state)
   panelLayouts?: {

@@ -8,6 +8,9 @@ export type { TitlebarButtonProps } from './TitlebarButton';
 export { TitlebarUpdateButton } from './TitlebarUpdateButton';
 export type { TitlebarUpdateButtonProps } from './TitlebarUpdateButton';
 
+export { OnboardingButton } from './OnboardingButton';
+export type { default as OnboardingButtonType } from './OnboardingButton';
+
 export { GitSyncStatusIndicator } from './GitSyncStatusIndicator';
 export type { GitSyncStatusIndicatorProps } from './GitSyncStatusIndicator';
 
