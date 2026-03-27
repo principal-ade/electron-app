@@ -17,20 +17,31 @@ import { GeminiSettings } from './components/GeminiSettings';
 import { WindowService } from '../../../main-process-api/WindowService';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 
-type SettingsCategory =
+export type SettingsCategory =
   | 'general'
   | 'ai-assistants'
   | 'gemini'
   | 'updates'
   | 'observability';
 
-export const Settings: React.FC = () => {
+export interface SettingsProps {
+  initialCategory?: SettingsCategory;
+}
+
+export const Settings: React.FC<SettingsProps> = ({ initialCategory }) => {
   const { theme } = useTheme();
   const [activeCategory, setActiveCategory] =
-    useState<SettingsCategory>('general');
+    useState<SettingsCategory>(initialCategory ?? 'general');
   const [updateAvailable] = useState(false); // This will be connected to UpdatesSettings state later if needed
   const [showObservabilitySettings, setShowObservabilitySettings] = useState(false);
   const [showExtensionsButton, setShowExtensionsButton] = useState(false);
+
+  // Update category when initialCategory prop changes
+  useEffect(() => {
+    if (initialCategory) {
+      setActiveCategory(initialCategory);
+    }
+  }, [initialCategory]);
 
   useEffect(() => {
     // Load user preferences for showing buttons

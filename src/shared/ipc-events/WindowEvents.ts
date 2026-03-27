@@ -19,4 +19,7 @@ export enum WindowEvent {
   ADD_REPOSITORY_TO_THREAD = 'window:add-repository-to-thread',
   REMOVE_REPOSITORY_FROM_THREAD = 'window:remove-repository-from-thread',
   THREAD_REPOSITORIES_CHANGED = 'window:thread-repositories-changed',
+
+  // Navigation events (sent to principal window)
+  NAVIGATE_TO_UPDATES = 'window:navigate-to-updates',
 }

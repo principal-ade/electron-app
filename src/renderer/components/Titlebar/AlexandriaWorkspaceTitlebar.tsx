@@ -11,6 +11,7 @@ import { AddRepositoryToWorkspaceModal } from '../../panels/components/AddReposi
 import { CreateRepositoryInWorkspaceModal } from '../../panels/components/CreateRepositoryInWorkspaceModal';
 import { CloneFromGitHubModal } from '../../panels/components/CloneFromGitHubModal';
 import { WorkspaceThemeDropdown } from './WorkspaceThemeDropdown';
+import { TitlebarUpdateButton } from './TitlebarUpdateButton';
 import {
   PanelSelectorDropdown,
   type PanelOption,
@@ -44,6 +45,8 @@ export interface AlexandriaWorkspaceTitlebarProps {
   // Layout controls
   layout?: PanelLayout;
   onLayoutChange?: (layout: PanelLayout) => void;
+  // Update button
+  onUpdateClick?: () => void;
 }
 
 export const AlexandriaWorkspaceTitlebar: React.FC<
@@ -62,6 +65,7 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
   onCollapsedChange,
   layout,
   onLayoutChange,
+  onUpdateClick,
 }) => {
   const { theme } = useTheme();
   const [showAddModal, setShowAddModal] = useState(false);
@@ -123,6 +127,9 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
         WebkitAppRegion: 'drag',
       }}
     >
+      {/* Update button - positioned below macOS traffic lights */}
+      <TitlebarUpdateButton onClick={onUpdateClick} />
+
       {/* Left section: traffic lights spacer + left panel dropdown */}
       <div
         style={{

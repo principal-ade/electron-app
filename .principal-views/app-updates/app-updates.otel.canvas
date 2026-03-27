@@ -772,6 +772,99 @@
           "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
         ]
       }
+    },
+    {
+      "id": "titlebar-update-button",
+      "type": "otel-event",
+      "x": -250,
+      "y": 50,
+      "width": 220,
+      "height": 100,
+      "label": "TitlebarUpdateButton",
+      "shape": "rectangle",
+      "event": {
+        "name": "app_updates.ui.titlebar_button_shown",
+        "description": "Update button shown in titlebar below traffic lights",
+        "attributes": {
+          "is_downloaded": {
+            "type": "boolean",
+            "description": "Whether update is downloaded and ready to install"
+          },
+          "window_type": {
+            "type": "string",
+            "description": "Type of window showing the button"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/renderer/components/Titlebar/TitlebarUpdateButton.tsx"
+        ]
+      }
+    },
+    {
+      "id": "titlebar-button-click",
+      "type": "otel-event",
+      "x": -250,
+      "y": 180,
+      "width": 220,
+      "height": 80,
+      "label": "Button Click",
+      "shape": "rectangle",
+      "event": {
+        "name": "app_updates.user.titlebar_button_clicked",
+        "description": "User clicked the titlebar update button",
+        "attributes": {
+          "source_window": {
+            "type": "string",
+            "description": "Window where button was clicked: principal, dev-workspace, alexandria-workspace"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/renderer/components/Titlebar/TitlebarUpdateButton.tsx"
+        ]
+      }
+    },
+    {
+      "id": "navigate-to-updates-ipc",
+      "type": "otel-event",
+      "x": -250,
+      "y": 300,
+      "width": 220,
+      "height": 80,
+      "label": "Navigate to Updates IPC",
+      "shape": "rectangle",
+      "event": {
+        "name": "app_updates.ipc.navigate_to_updates",
+        "description": "IPC event to focus main window and navigate to updates settings",
+        "attributes": {
+          "from_window_id": {
+            "type": "number",
+            "description": "Window ID that triggered the navigation"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/window/modernWindowHandlers.ts",
+          "src/window/main-process-api-implementations/windowApi.ts"
+        ]
+      }
+    },
+    {
+      "id": "titlebar-button-note",
+      "type": "text",
+      "x": -250,
+      "y": -30,
+      "width": 220,
+      "height": 60,
+      "text": "**Titlebar Button**\nShown below macOS\ntraffic lights when\nupdate is available",
+      "color": "#64748B"
     }
   ],
   "edges": [
@@ -1057,6 +1150,50 @@
       "toNode": "error-handling",
       "toSide": "top",
       "label": "on failure",
+      "pv": {
+        "edgeType": "event-emit"
+      }
+    },
+    {
+      "id": "titlebar-button-to-click",
+      "fromNode": "titlebar-update-button",
+      "fromSide": "bottom",
+      "toNode": "titlebar-button-click",
+      "toSide": "top",
+      "label": "onClick",
+      "pv": {
+        "edgeType": "user-interaction"
+      }
+    },
+    {
+      "id": "titlebar-click-to-ipc",
+      "fromNode": "titlebar-button-click",
+      "fromSide": "bottom",
+      "toNode": "navigate-to-updates-ipc",
+      "toSide": "top",
+      "label": "navigateToUpdates()",
+      "pv": {
+        "edgeType": "ipc-send"
+      }
+    },
+    {
+      "id": "titlebar-ipc-to-settings",
+      "fromNode": "navigate-to-updates-ipc",
+      "fromSide": "right",
+      "toNode": "settings-modal",
+      "toSide": "left",
+      "label": "focus & navigate",
+      "pv": {
+        "edgeType": "ipc-receive"
+      }
+    },
+    {
+      "id": "update-available-to-titlebar",
+      "fromNode": "update-available",
+      "fromSide": "left",
+      "toNode": "titlebar-update-button",
+      "toSide": "right",
+      "label": "shows button",
       "pv": {
         "edgeType": "event-emit"
       }

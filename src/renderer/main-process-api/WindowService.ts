@@ -65,6 +65,46 @@ export class WindowService {
   }
 
   /**
+   * Focus the main window if it exists, otherwise create it
+   * @returns True if successful, false if failed
+   */
+  static async focusOrCreateMainWindow(): Promise<boolean> {
+    try {
+      return await window.mainProcess.window.focusOrCreateMainWindow();
+    } catch (error) {
+      console.error('[WindowService] Failed to focus/create main window:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Focus the main window and navigate to updates settings
+   * @returns True if successful, false if failed
+   */
+  static async navigateToUpdates(): Promise<boolean> {
+    try {
+      return await window.mainProcess.window.navigateToUpdates();
+    } catch (error) {
+      console.error('[WindowService] Failed to navigate to updates:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Listen for navigate to updates events (used by main window)
+   * @param callback - Called when navigation to updates is requested
+   * @returns Unsubscribe function
+   */
+  static onNavigateToUpdates(callback: () => void): () => void {
+    try {
+      return window.mainProcess.window.onNavigateToUpdates(callback);
+    } catch (error) {
+      console.error('[WindowService] Failed to register navigate to updates listener:', error);
+      return () => {};
+    }
+  }
+
+  /**
    * Focus a window by its ID
    * @param windowId - The Electron BrowserWindow ID to focus
    * @returns True if the window was found and focused, false otherwise

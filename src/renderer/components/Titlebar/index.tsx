@@ -5,6 +5,9 @@ export type { BaseTitlebarProps } from './BaseTitlebar';
 export { TitlebarButton } from './TitlebarButton';
 export type { TitlebarButtonProps } from './TitlebarButton';
 
+export { TitlebarUpdateButton } from './TitlebarUpdateButton';
+export type { TitlebarUpdateButtonProps } from './TitlebarUpdateButton';
+
 export { GitSyncStatusIndicator } from './GitSyncStatusIndicator';
 export type { GitSyncStatusIndicatorProps } from './GitSyncStatusIndicator';
 

@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ThemeDropdown } from './ThemeDropdown';
 import { ThemeCustomizationButton } from '../../../components/Titlebar/ThemeCustomizationButton';
+import { TitlebarUpdateButton } from '../../../components/Titlebar/TitlebarUpdateButton';
 import { ViewSidebarControls } from '../ViewSidebarControls/ViewSidebarControls';
 import { PullMailbox } from '../PullMailbox';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
 import type { UserPreferences } from '../../../../shared/types/userPreferences.types';
-import { FolderOpen } from 'lucide-react';
+import { FolderOpen, MessageCircle } from 'lucide-react';
+import { ShellService } from '../../../main-process-api/ShellService';
 
 declare global {
   interface Window {
@@ -29,6 +31,8 @@ interface IntegratedTitlebarProps {
   rightSidebarCollapsed?: boolean;
   onToggleRightSidebar?: () => void;
   showRightSidebarControl?: boolean;
+  onUpdateClick?: () => void;
+  hideUpdateButton?: boolean;
 }
 
 export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
@@ -38,6 +42,8 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
   rightSidebarCollapsed = false,
   onToggleRightSidebar,
   showRightSidebarControl = false,
+  onUpdateClick,
+  hideUpdateButton = false,
 }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [showThemeButton, setShowThemeButton] = useState(false);
@@ -155,6 +161,9 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         zIndex: 100,
       }}
     >
+      {/* Update button - positioned below macOS traffic lights */}
+      <TitlebarUpdateButton onClick={onUpdateClick} hidden={hideUpdateButton} />
+
       {/* Left: Home Folder */}
       <div
         style={{
@@ -242,6 +251,36 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
           gap: '8px',
         }}
       >
+        {/* Community Discord button */}
+        <button
+          onClick={() => ShellService.openExternal('https://discord.gg/G3qdcC2DXq')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '6px 12px',
+            borderRadius: '6px',
+            backgroundColor: '#5865F2',
+            color: '#ffffff',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: theme.fontSizes[1],
+            fontWeight: 500,
+            fontFamily: theme.fonts.body,
+            transition: 'all 0.2s',
+            WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#4752C4';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = '#5865F2';
+          }}
+          title="Join our Discord community"
+        >
+          <MessageCircle size={14} />
+          Community
+        </button>
         {showPullMailbox && <PullMailbox />}
         {showThemeButton && <ThemeDropdown />}
         {showCustomizeButton && <ThemeCustomizationButton />}

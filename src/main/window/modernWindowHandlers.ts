@@ -509,4 +509,15 @@ export function registerModernWindowHandlers(): void {
     }
     return null;
   });
+
+  // Navigate to updates in the main window
+  ipcMain.handle(WindowEvent.NAVIGATE_TO_UPDATES, async () => {
+    const appWindow = await focusOrCreateMainWindow();
+    if (appWindow && appWindow.window && !appWindow.window.isDestroyed()) {
+      // Send event to the main window to navigate to updates
+      appWindow.window.webContents.send(WindowEvent.NAVIGATE_TO_UPDATES);
+      return true;
+    }
+    return false;
+  });
 }

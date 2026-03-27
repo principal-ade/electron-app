@@ -3,6 +3,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import './Titlebar.css';
 import { ThemeDropdown } from './ThemeDropdown';
 import { ThemeCustomizationButton } from './ThemeCustomizationButton';
+import { TitlebarUpdateButton } from './TitlebarUpdateButton';
 
 declare global {
   interface Window {
@@ -27,6 +28,7 @@ export interface BaseTitlebarProps {
   className?: string;
   style?: React.CSSProperties;
   onTitleClick?: () => void;
+  onUpdateClick?: () => void;
 }
 
 export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
@@ -39,6 +41,7 @@ export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
   className = '',
   style,
   onTitleClick,
+  onUpdateClick,
 }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
@@ -80,6 +83,9 @@ export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
         ...style,
       }}
     >
+      {/* Update button - positioned below macOS traffic lights */}
+      <TitlebarUpdateButton onClick={onUpdateClick} />
+
       {/* Left-side content container */}
       <div
         style={{

@@ -19,7 +19,8 @@
       "otel": {
         "spanPattern": "window.create",
         "spanKind": "internal",
-        "scope": "principal-ade-main"
+        "scope": "principal-ade-main",
+        "status": "draft"
       }
     },
     {
@@ -35,7 +36,8 @@
       "otel": {
         "spanPattern": "window.focus",
         "spanKind": "internal",
-        "scope": "principal-ade-main"
+        "scope": "principal-ade-main",
+        "status": "draft"
       }
     },
     {
@@ -51,7 +53,8 @@
       "otel": {
         "spanPattern": "window.close",
         "spanKind": "internal",
-        "scope": "principal-ade-main"
+        "scope": "principal-ade-main",
+        "status": "draft"
       }
     },
     {
@@ -67,7 +70,8 @@
       "otel": {
         "spanPattern": "terminal.session.create",
         "spanKind": "internal",
-        "scope": "principal-ade-main"
+        "scope": "principal-ade-main",
+        "status": "draft"
       }
     },
     {
@@ -83,7 +87,8 @@
       "otel": {
         "spanPattern": "terminal.session.connect",
         "spanKind": "client",
-        "scope": "principal-ade-main"
+        "scope": "principal-ade-main",
+        "status": "draft"
       }
     },
     {
@@ -99,7 +104,8 @@
       "otel": {
         "spanPattern": "terminal.session.destroy",
         "spanKind": "internal",
-        "scope": "principal-ade-main"
+        "scope": "principal-ade-main",
+        "status": "draft"
       }
     },
     {
@@ -115,7 +121,8 @@
       "otel": {
         "spanPattern": "terminal.pty.spawn",
         "spanKind": "internal",
-        "scope": "principal-ade-daemon"
+        "scope": "principal-ade-daemon",
+        "status": "draft"
       }
     },
     {
@@ -131,7 +138,8 @@
       "otel": {
         "spanPattern": "terminal.pty.write",
         "spanKind": "internal",
-        "scope": "principal-ade-daemon"
+        "scope": "principal-ade-daemon",
+        "status": "draft"
       }
     },
     {
@@ -147,7 +155,8 @@
       "otel": {
         "spanPattern": "terminal.pty.resize",
         "spanKind": "internal",
-        "scope": "principal-ade-daemon"
+        "scope": "principal-ade-daemon",
+        "status": "draft"
       }
     },
     {
@@ -163,7 +172,8 @@
       "otel": {
         "spanPattern": "app.update.check",
         "spanKind": "client",
-        "scope": "principal-ade-main"
+        "scope": "principal-ade-main",
+        "status": "draft"
       }
     },
     {
@@ -179,7 +189,8 @@
       "otel": {
         "spanPattern": "app.update.download",
         "spanKind": "client",
-        "scope": "principal-ade-main"
+        "scope": "principal-ade-main",
+        "status": "draft"
       }
     },
     {
@@ -195,7 +206,8 @@
       "otel": {
         "spanPattern": "app.update.install",
         "spanKind": "internal",
-        "scope": "principal-ade-main"
+        "scope": "principal-ade-main",
+        "status": "draft"
       }
     },
     {
@@ -211,7 +223,8 @@
       "otel": {
         "spanPattern": "ipc.handle.*",
         "spanKind": "server",
-        "scope": "principal-ade-main"
+        "scope": "principal-ade-main",
+        "status": "draft"
       }
     },
     {
@@ -227,7 +240,8 @@
       "otel": {
         "spanPattern": "ipc.invoke.*",
         "spanKind": "client",
-        "scope": "principal-ade-renderer"
+        "scope": "principal-ade-renderer",
+        "status": "draft"
       }
     },
     {
@@ -243,7 +257,8 @@
       "otel": {
         "spanPattern": "project.open",
         "spanKind": "internal",
-        "scope": "principal-ade-main"
+        "scope": "principal-ade-main",
+        "status": "draft"
       }
     },
     {
@@ -259,7 +274,8 @@
       "otel": {
         "spanPattern": "fs.read",
         "spanKind": "internal",
-        "scope": "principal-ade-main"
+        "scope": "principal-ade-main",
+        "status": "draft"
       }
     },
     {
@@ -275,7 +291,8 @@
       "otel": {
         "spanPattern": "fs.write",
         "spanKind": "internal",
-        "scope": "principal-ade-main"
+        "scope": "principal-ade-main",
+        "status": "draft"
       }
     },
     {
@@ -291,7 +308,8 @@
       "otel": {
         "spanPattern": "fs.tree.build",
         "spanKind": "internal",
-        "scope": "principal-ade-main"
+        "scope": "principal-ade-main",
+        "status": "draft"
       }
     },
     {
@@ -307,7 +325,8 @@
       "otel": {
         "spanPattern": "terminal.daemon.start",
         "spanKind": "internal",
-        "scope": "principal-ade-daemon"
+        "scope": "principal-ade-daemon",
+        "status": "draft"
       }
     },
     {
@@ -323,7 +342,8 @@
       "otel": {
         "spanPattern": "terminal.daemon.client.connect",
         "spanKind": "server",
-        "scope": "principal-ade-daemon"
+        "scope": "principal-ade-daemon",
+        "status": "draft"
       }
     },
     {
@@ -339,7 +359,8 @@
       "otel": {
         "spanPattern": "mcp.tool.execute",
         "spanKind": "server",
-        "scope": "principal-ade-main"
+        "scope": "principal-ade-main",
+        "status": "draft"
       }
     }
   ],

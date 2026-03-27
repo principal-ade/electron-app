@@ -17,7 +17,8 @@
       "label": "Main Process",
       "description": "Electron main process - Node.js runtime handling IPC, services, and system operations",
       "otel": {
-        "scope": "principal-ade-main"
+        "scope": "principal-ade-main",
+        "status": "implemented"
       }
     },
     {
@@ -31,7 +32,8 @@
       "label": "Principal Window",
       "description": "Principal Window - main app shell with auth, workspaces, settings",
       "otel": {
-        "scope": "principal-ade-principal-window"
+        "scope": "principal-ade-principal-window",
+        "status": "implemented"
       }
     },
     {
@@ -45,7 +47,8 @@
       "label": "Dev Workspace",
       "description": "Dev Workspace - development environment with panels and terminal",
       "otel": {
-        "scope": "principal-ade-dev-workspace"
+        "scope": "principal-ade-dev-workspace",
+        "status": "implemented"
       }
     },
     {
@@ -59,7 +62,8 @@
       "label": "Alexandria",
       "description": "Alexandria Workspace - knowledge base and code exploration",
       "otel": {
-        "scope": "principal-ade-alexandria"
+        "scope": "principal-ade-alexandria",
+        "status": "implemented"
       }
     },
     {
@@ -73,7 +77,8 @@
       "label": "Event Processor",
       "description": "Event Processing Server - utility process for agent session events",
       "otel": {
-        "scope": "principal-ade-event-processor"
+        "scope": "principal-ade-event-processor",
+        "status": "implemented"
       }
     },
     {
@@ -87,7 +92,8 @@
       "label": "Repo Monitor",
       "description": "Repository Monitoring Server - utility process for file watching and cache building",
       "otel": {
-        "scope": "principal-ade-repo-monitor"
+        "scope": "principal-ade-repo-monitor",
+        "status": "implemented"
       }
     },
     {
@@ -101,7 +107,8 @@
       "label": "Terminal Worker",
       "description": "Terminal session router - bridges main process to PTY daemon or manages PTYs directly",
       "otel": {
-        "scope": "principal-ade-terminal-worker"
+        "scope": "principal-ade-terminal-worker",
+        "status": "implemented"
       }
     },
     {
@@ -115,7 +122,8 @@
       "label": "CLI Bridge",
       "description": "CLI command executor - runs git, npm, and other CLI tools in isolated workers",
       "otel": {
-        "scope": "principal-ade-cli-bridge"
+        "scope": "principal-ade-cli-bridge",
+        "status": "implemented"
       }
     },
     {
@@ -129,7 +137,8 @@
       "label": "PTY Daemon",
       "description": "Standalone PTY daemon process managing persistent terminal sessions via Unix socket",
       "otel": {
-        "scope": "principal-ade-daemon"
+        "scope": "principal-ade-daemon",
+        "status": "implemented"
       }
     },
     {
@@ -143,7 +152,8 @@
       "label": "Splash Screen",
       "description": "Splash Screen - transient overlay shown on app startup, detects post-update state",
       "otel": {
-        "scope": "principal-ade-splash-screen"
+        "scope": "principal-ade-splash-screen",
+        "status": "implemented"
       }
     },
     {
@@ -157,7 +167,8 @@
       "label": "Goodbye Screen",
       "description": "Goodbye Screen - transient overlay shown before update installation, handles graceful shutdown",
       "otel": {
-        "scope": "principal-ade-goodbye-screen"
+        "scope": "principal-ade-goodbye-screen",
+        "status": "implemented"
       }
     },
     {
@@ -171,7 +182,8 @@
       "label": "Storybook",
       "description": "Storybook development environment for UI components",
       "otel": {
-        "scope": "principal-ade-storybook"
+        "scope": "principal-ade-storybook",
+        "status": "implemented"
       }
     },
     {
@@ -185,7 +197,8 @@
       "label": "Test Runner",
       "description": "Integration test suite runner",
       "otel": {
-        "scope": "principal-ade-tests"
+        "scope": "principal-ade-tests",
+        "status": "implemented"
       }
     },
     {
@@ -199,7 +212,8 @@
       "label": "GitHub API",
       "description": "External GitHub API - trace context via W3C traceparent headers",
       "otel": {
-        "scope": "external"
+        "scope": "external",
+        "status": "implemented"
       }
     },
     {
@@ -213,7 +227,8 @@
       "label": "Agent Connections",
       "description": "External agent connections via event server",
       "otel": {
-        "scope": "external"
+        "scope": "external",
+        "status": "implemented"
       }
     },
     {
@@ -227,7 +242,8 @@
       "label": "Auth Server",
       "description": "Principal ADE Auth Server - OAuth flow, JWT tokens, room/orbit/presence tokens",
       "otel": {
-        "scope": "external"
+        "scope": "external",
+        "status": "implemented"
       }
     },
     {
@@ -241,7 +257,8 @@
       "label": "Traffic Controller",
       "description": "Repository Traffic Controller - real-time collaboration, git-sync, WebRTC signaling",
       "otel": {
-        "scope": "external"
+        "scope": "external",
+        "status": "implemented"
       }
     },
     {
@@ -255,7 +272,8 @@
       "label": "NPM Registry",
       "description": "NPM Registry - package versions, licenses, vulnerability info",
       "otel": {
-        "scope": "external"
+        "scope": "external",
+        "status": "implemented"
       }
     },
     {

@@ -508,7 +508,7 @@
         }
       },
       "otel": {
-        "status": "not-implemented",
+        "status": "draft",
         "files": [
           "src/renderer/panels/ProjectInfoPanel.tsx"
         ]
@@ -545,7 +545,7 @@
         }
       },
       "otel": {
-        "status": "not-implemented",
+        "status": "draft",
         "files": [
           "src/renderer/panels/ProjectInfoPanel.tsx",
           "src/renderer/main-process-api/GitService.ts"
@@ -588,7 +588,7 @@
         }
       },
       "otel": {
-        "status": "not-implemented",
+        "status": "draft",
         "files": [
           "src/renderer/panels/ProjectInfoPanel.tsx"
         ]
@@ -620,7 +620,7 @@
         }
       },
       "otel": {
-        "status": "not-implemented",
+        "status": "draft",
         "files": [
           "src/renderer/panels/ProjectInfoPanel.tsx",
           "src/main/stores/FileCityImageService.ts"
@@ -653,7 +653,7 @@
         }
       },
       "otel": {
-        "status": "not-implemented",
+        "status": "draft",
         "files": [
           "src/renderer/panels/ProjectInfoPanel.tsx"
         ]

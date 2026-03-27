@@ -57,6 +57,21 @@
         },
         "summary": "**Error**\n- Type: {{error_type}}\n- Message: {{user_message}}"
       }
+    },
+    {
+      "id": "titlebar-button-flow",
+      "description": "User clicks the titlebar update button to navigate to settings",
+      "priority": 5,
+      "template": {
+        "introduction": "**Titlebar Update Button**\n\nUser clicked the update button in the titlebar.",
+        "events": {
+          "app_updates.ui.titlebar_button_shown": "1. Update button shown (downloaded={{is_downloaded}}, window={{window_type}})",
+          "app_updates.user.titlebar_button_clicked": "2. User clicked button (from={{source_window}})",
+          "app_updates.ipc.navigate_to_updates": "3. Navigate to updates IPC (window_id={{from_window_id}})",
+          "app_updates.ui.settings_opened": "4. Settings opened at Updates tab"
+        },
+        "summary": "**Titlebar Button Clicked**\n- Source: {{source_window}}\n- Action: Navigate to Settings > Updates"
+      }
     }
   ]
 }

@@ -31,6 +31,7 @@ import type { OtelCollectorAPI } from './OtelCollectorAPI';
 import type { GitAPI } from './GitAPI';
 import type { FileCityImageAPI } from './FileCityImageAPI';
 import type { SkillLockAPI } from './SkillLockAPI';
+import type { AppVersionManagerAPI } from './AppVersionManagerAPI';
 
 export interface DevWorkspaceMainProcessAPI {
   terminal: TerminalAPI;
@@ -49,6 +50,7 @@ export interface DevWorkspaceMainProcessAPI {
   git: GitAPI;
   fileCityImage: FileCityImageAPI;
   skillLock: SkillLockAPI;
+  appVersionManager: AppVersionManagerAPI;
 }
 
 // Re-export the individual API types for convenience
@@ -68,3 +70,4 @@ export type { OtelCollectorAPI } from './OtelCollectorAPI';
 export type { GitAPI } from './GitAPI';
 export type { FileCityImageAPI } from './FileCityImageAPI';
 export type { SkillLockAPI } from './SkillLockAPI';
+export type { AppVersionManagerAPI } from './AppVersionManagerAPI';

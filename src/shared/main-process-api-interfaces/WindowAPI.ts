@@ -150,4 +150,17 @@ export interface WindowAPI {
       removedPath?: string;
     }) => void,
   ): () => void;
+
+  /**
+   * Focus the main window and navigate to the updates settings
+   * @returns True if successful, false if failed
+   */
+  navigateToUpdates(): Promise<boolean>;
+
+  /**
+   * Listen for navigate to updates events (used by main window)
+   * @param callback - Called when navigation to updates is requested
+   * @returns Unsubscribe function
+   */
+  onNavigateToUpdates(callback: () => void): () => void;
 }

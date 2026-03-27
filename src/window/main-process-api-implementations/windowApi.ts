@@ -124,4 +124,23 @@ export const windowAPI: WindowAPI = {
       ipcRenderer.removeListener(WindowEvent.THREAD_REPOSITORIES_CHANGED, handler);
     };
   },
+
+  /**
+   * Focus the main window and navigate to updates settings
+   */
+  navigateToUpdates: () =>
+    ipcRenderer.invoke(WindowEvent.NAVIGATE_TO_UPDATES),
+
+  /**
+   * Listen for navigate to updates events
+   */
+  onNavigateToUpdates: (callback: () => void) => {
+    const handler = () => {
+      callback();
+    };
+    ipcRenderer.on(WindowEvent.NAVIGATE_TO_UPDATES, handler);
+    return () => {
+      ipcRenderer.removeListener(WindowEvent.NAVIGATE_TO_UPDATES, handler);
+    };
+  },
 };

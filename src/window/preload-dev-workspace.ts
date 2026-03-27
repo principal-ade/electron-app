@@ -36,6 +36,7 @@ import { otelCollectorApi } from './main-process-api-implementations/otelCollect
 import { gitAPI } from './main-process-api-implementations/gitApi';
 import { fileCityImageAPI } from './main-process-api-implementations/fileCityImageApi';
 import { skillLockAPI } from './main-process-api-implementations/skillLockApi';
+import { appVersionManagerApi } from './main-process-api-implementations/appVersionManagerApi';
 
 console.info('[Preload-DevWorkspace] API imports successful');
 
@@ -60,6 +61,7 @@ const devWorkspaceAPI: DevWorkspaceMainProcessAPI = {
   git: gitAPI,
   fileCityImage: fileCityImageAPI,
   skillLock: skillLockAPI,
+  appVersionManager: appVersionManagerApi,
 };
 
 // Expose the mainProcess API

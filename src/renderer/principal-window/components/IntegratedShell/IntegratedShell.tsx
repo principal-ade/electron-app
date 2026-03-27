@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { NavigationSidebar } from './NavigationSidebar';
 import { IntegratedTitlebar } from './IntegratedTitlebar';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Settings } from '../../views/Settings';
+import { Settings, type SettingsCategory } from '../../views/Settings';
 import { SystemMonitor } from '../../views/SystemMonitor/SystemMonitor';
 import { AuthView } from '../../views/AuthView';
 import { ProjectsView } from '../../views/ProjectsView';
@@ -14,6 +14,7 @@ import { ConnectionsView } from '../../views/ConnectionsView';
 import { SkillBrowserView } from '../../views/SkillBrowserView';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { PresenceService } from '../../../main-process-api/PresenceService';
+import { WindowService } from '../../../main-process-api/WindowService';
 import { SecureAuthService } from '../../../services/SecureAuthService';
 import type { InteractiveShellNavigationView } from '../../../../shared/types/userPreferences.types';
 import type { QuickCommand } from '@principal-ade/panel-layouts';
@@ -106,6 +107,7 @@ const getViewDefaults = (
 export const IntegratedShell: React.FC = () => {
   const [activeView, setActiveView] = useState<NavigationView>('feed');
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
+  const [settingsCategory, setSettingsCategory] = useState<SettingsCategory | undefined>(undefined);
   const { theme, mode } = useTheme();
   const { events } = usePrincipalEvents();
 
@@ -178,6 +180,18 @@ export const IntegratedShell: React.FC = () => {
     loadPreferences();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Listen for navigate to updates events from other windows
+  useEffect(() => {
+    const unsubscribe = WindowService.onNavigateToUpdates(() => {
+      setSettingsCategory('updates');
+      setActiveView('settings');
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
   // Auto-connect to presence on startup if enabled
   useEffect(() => {
     const autoConnectPresence = async () => {
@@ -235,6 +249,11 @@ export const IntegratedShell: React.FC = () => {
   // Save navigation view when it changes
   const handleViewChange = useCallback(async (view: NavigationView) => {
     setActiveView(view);
+
+    // Clear settings category when navigating away from settings
+    if (view !== 'settings') {
+      setSettingsCategory(undefined);
+    }
 
     // Only save preference after initial load to avoid race conditions
     if (preferencesLoaded) {
@@ -496,6 +515,11 @@ export const IntegratedShell: React.FC = () => {
           showRightSidebarControl={false}
           rightSidebarCollapsed={rightSidebarCollapsed}
           onToggleRightSidebar={handleToggleRightSidebar}
+          onUpdateClick={() => {
+            setSettingsCategory('updates');
+            handleViewChange('settings');
+          }}
+          hideUpdateButton={activeView === 'settings'}
         />
 
         {/* Main content area with rounded corners for Slack-style cutout */}
@@ -540,7 +564,7 @@ export const IntegratedShell: React.FC = () => {
             {activeView === 'monitoring' && (
               <SystemMonitor sidebarCollapsed={sidebarCollapsed} />
             )}
-            {activeView === 'settings' && <Settings />}
+            {activeView === 'settings' && <Settings initialCategory={settingsCategory} />}
             {activeView === 'auth' && <AuthView />}
             {activeView === 'local-projects' && <ProjectsView mode="local" />}
             {activeView === 'remote-projects' && <ProjectsView mode="remote" />}
