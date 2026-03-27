@@ -183,7 +183,7 @@
     "@industry-theme/github-panels": "^0.4.0",
     "@industry-theme/localhost-panels": "^0.2.4",
     "@industry-theme/markdown-panels": "^0.3.0",
-    "@industry-theme/principal-view-panels": "0.12.72",
+    "@industry-theme/principal-view-panels": "0.12.73",
     "@industry-theme/repository-composition-panels": "^0.7.63",
     "@industry-theme/xterm-terminal-panel": "^0.5.22",
     "@modelcontextprotocol/sdk": "1.11.4",
