@@ -14,13 +14,27 @@ import type {
   DataSlice,
   PanelEventEmitter,
 } from '@principal-ade/panel-framework-core';
+import type { PanelLayout } from '@principal-ade/panel-layouts';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { GitHubRepository } from '../../../../shared/main-process-api-interfaces/GitHubAPI';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 import { GithubService } from '../../../main-process-api/GithubService';
 import { FileCityImageService } from '../../../main-process-api/FileCityImageService';
 import { WindowService } from '../../../main-process-api/WindowService';
-import { ActivityFeedPanel, type SearchResult } from '../../../panels/ActivityFeedPanel';
+import { FeedPanelFramework } from '../../../feed-view/FeedPanelFramework';
+
+// Keep SearchResult type for backwards compatibility
+export type SearchResultSource = 'local' | 'github' | 'starred';
+
+export interface SearchResult {
+  id: string;
+  name: string;
+  fullName: string;
+  description?: string | null;
+  source: SearchResultSource;
+  entry?: AlexandriaEntry;
+  repository?: GitHubRepository;
+}
 
 /**
  * Feed-specific actions
@@ -303,20 +317,28 @@ const FeedViewContent: React.FC = () => {
     context,
     actions,
     events,
-    searchQuery,
-    setSearchQuery,
-    searchResults,
-    searchLoading,
   } = useFeedPanelProvider();
 
-  // Handle search result selection
-  const handleSelectResult = useCallback(
-    (result: SearchResult) => {
-      if (result.source === 'local' && result.entry) {
-        // Open local repository in dev workspace
-        actions.openLocalRepository?.(result.entry);
-      }
-      // For GitHub/starred, we could add clone functionality later
+  // Panel layout state
+  const [layout, setLayout] = useState<PanelLayout>({
+    left: 'heatmap',
+    middle: 'terminal',
+    right: 'activityFeed',
+  });
+
+  // Collapsed state
+  const [collapsed, setCollapsed] = useState({ left: false, right: false });
+
+  // Panel sizes
+  const [panelSizes, setPanelSizes] = useState({ left: 25, middle: 50, right: 25 });
+
+  // Get repositories from context
+  const repositories = context.alexandriaRepositories?.data?.repositories ?? [];
+
+  // Handle opening a repository
+  const handleOpenRepository = useCallback(
+    (entry: AlexandriaEntry) => {
+      actions.openLocalRepository?.(entry);
     },
     [actions],
   );
@@ -331,15 +353,16 @@ const FeedViewContent: React.FC = () => {
         backgroundColor: theme.colors.background,
       }}
     >
-      <ActivityFeedPanel
-        context={context}
-        actions={actions}
+      <FeedPanelFramework
+        repositories={repositories}
+        collapsed={collapsed}
+        onCollapsedChange={setCollapsed}
+        layout={layout}
+        onLayoutChange={setLayout}
+        panelSizes={panelSizes}
+        onPanelSizesChange={setPanelSizes}
         events={events}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        searchResults={searchResults}
-        onSelectSearchResult={handleSelectResult}
-        searchLoading={searchLoading}
+        onOpenRepository={handleOpenRepository}
       />
     </div>
   );

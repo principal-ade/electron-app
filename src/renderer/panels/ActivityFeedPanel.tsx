@@ -802,7 +802,8 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
           >
             <div
               style={{
-                width: 300,
+                width: '100%',
+                maxWidth: 400,
                 height: '100%',
                 padding: spacing.md,
                 display: 'flex',
@@ -946,7 +947,8 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
             {/* Search section (top) */}
             <div
               style={{
-                width: 300,
+                width: '100%',
+                maxWidth: 400,
                 flex: selectionMode || selectedCards.size > 0 ? '0 0 auto' : 1,
                 display: 'flex',
                 flexDirection: 'column',
@@ -1133,7 +1135,8 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
             {(selectionMode || selectedCards.size > 0) && (
               <div
                 style={{
-                  width: 300,
+                  width: '100%',
+                  maxWidth: 400,
                   flex: 1,
                   borderTop: `1px solid ${theme.colors.border}`,
                   overflow: 'hidden',
