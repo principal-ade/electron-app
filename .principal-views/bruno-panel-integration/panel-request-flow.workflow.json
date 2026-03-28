@@ -1,0 +1,23 @@
+{
+  "version": "1.0.0",
+  "name": "Bruno Panel Request Flow",
+  "description": "Renderer-side flow for initiating and displaying HTTP requests",
+  "canvas": ".principal-views/bruno-panel-integration/bruno-panel-integration.otel.canvas",
+  "spanPattern": "bruno.panel.response_displayed",
+  "scenarios": [
+    {
+      "id": "panel-request-response",
+      "description": "User sends request and views response in Bruno panel",
+      "priority": 1,
+      "template": {
+        "introduction": "**Bruno Panel Request**\n\nUser initiated request from Bruno panel",
+        "events": {
+          "bruno.request.initiated": "[1] User initiated {{request.method}} to {{request.url}} (hasBody: {{request.hasBody}}, bodyType: {{request.bodyType}})",
+          "bruno.action.dispatched": "[2] Dispatched {{action.name}} (env: {{environment.name}})",
+          "bruno.panel.response_displayed": "[3] **Displayed** - {{http.status}} ({{response.contentType}}, {{response.time.ms}}ms)"
+        },
+        "summary": "**Panel Summary:**\n- Method: {{request.method}}\n- Status: {{http.status}}\n- Content-Type: {{response.contentType}}"
+      }
+    }
+  ]
+}

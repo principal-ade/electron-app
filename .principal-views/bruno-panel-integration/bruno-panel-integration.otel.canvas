@@ -1,0 +1,512 @@
+{
+  "pv": {
+    "name": "Bruno Panel Integration",
+    "version": "1.0.0",
+    "description": "HTTP request execution flow from Bruno API client panel through IPC to main process using @usebruno/requests",
+    "markdown": ".principal-views/bruno-panel-integration/bruno-panel-integration.md",
+    "scope": "principal-ade-main",
+    "nodeTypes": {
+      "panel": {
+        "label": "Panel",
+        "color": "#8B5CF6"
+      },
+      "renderer": {
+        "label": "Renderer",
+        "color": "#10B981"
+      },
+      "ipc": {
+        "label": "IPC Handler",
+        "color": "#6366F1"
+      },
+      "action": {
+        "label": "Panel Action",
+        "color": "#F59E0B"
+      },
+      "http-client": {
+        "label": "HTTP Client",
+        "color": "#3B82F6"
+      },
+      "external-api": {
+        "label": "External API",
+        "color": "#64748B"
+      }
+    },
+    "edgeTypes": {
+      "user-action": {
+        "label": "User Action",
+        "style": "solid",
+        "color": "#EC4899"
+      },
+      "ipc-invoke": {
+        "label": "IPC Invoke",
+        "style": "solid",
+        "color": "#6366F1"
+      },
+      "method-call": {
+        "label": "Method Call",
+        "style": "solid",
+        "color": "#F59E0B"
+      },
+      "http": {
+        "label": "HTTP",
+        "style": "solid",
+        "color": "#3B82F6"
+      },
+      "data-flow": {
+        "label": "Data Flow",
+        "style": "solid",
+        "color": "#10B981"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "x": 250,
+      "y": -100,
+      "width": 500,
+      "height": 60,
+      "color": "#64748B",
+      "text": "# Bruno Panel Integration\n**HTTP request execution via sendRequest action**"
+    },
+    {
+      "id": "bruno-panel",
+      "type": "otel-event",
+      "x": 50,
+      "y": 0,
+      "width": 200,
+      "height": 100,
+      "label": "Bruno Panel",
+      "shape": "rectangle",
+      "event": {
+        "name": "bruno.request.initiated",
+        "description": "User initiated HTTP request from Bruno panel UI",
+        "attributes": {
+          "request.method": {
+            "type": "string",
+            "description": "HTTP method (GET, POST, PUT, DELETE, etc.)"
+          },
+          "request.url": {
+            "type": "string",
+            "description": "Request URL (may contain {{variables}})"
+          },
+          "request.hasBody": {
+            "type": "boolean",
+            "description": "Whether request includes a body"
+          },
+          "request.bodyType": {
+            "type": "string",
+            "description": "Body type (json, text, xml, formUrlEncoded, multipartForm)"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "packages/bruno-panels/src/components/RequestPanel.tsx"
+        ]
+      }
+    },
+    {
+      "id": "panel-action-dispatch",
+      "type": "otel-event",
+      "x": 300,
+      "y": 0,
+      "width": 200,
+      "height": 100,
+      "label": "Panel Action Dispatch",
+      "shape": "rectangle",
+      "event": {
+        "name": "bruno.action.dispatched",
+        "description": "Panel framework dispatching sendRequest action",
+        "attributes": {
+          "action.name": {
+            "type": "string",
+            "description": "Action name (sendRequest)"
+          },
+          "environment.name": {
+            "type": "string",
+            "description": "Active environment name"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/panels/PanelHost.tsx"
+        ]
+      }
+    },
+    {
+      "id": "ipc-handler",
+      "type": "otel-event",
+      "x": 550,
+      "y": 0,
+      "width": 200,
+      "height": 100,
+      "label": "IPC Handler",
+      "shape": "rectangle",
+      "event": {
+        "name": "bruno.ipc.received",
+        "description": "Main process received sendRequest IPC call",
+        "attributes": {
+          "ipc.method": {
+            "type": "string",
+            "description": "HTTP method from IPC payload"
+          },
+          "ipc.url": {
+            "type": "string",
+            "description": "Request URL from IPC payload"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/ipc-handlers.ts"
+        ]
+      }
+    },
+    {
+      "id": "bruno-action",
+      "type": "otel-event",
+      "x": 550,
+      "y": 150,
+      "width": 200,
+      "height": 120,
+      "label": "sendBrunoRequest",
+      "shape": "rectangle",
+      "event": {
+        "name": "bruno.request.executing",
+        "description": "Executing HTTP request with @usebruno/requests",
+        "attributes": {
+          "request.method": {
+            "type": "string",
+            "description": "HTTP method"
+          },
+          "request.url.interpolated": {
+            "type": "string",
+            "description": "URL after environment variable interpolation"
+          },
+          "request.headers.count": {
+            "type": "number",
+            "description": "Number of enabled headers"
+          },
+          "request.params.count": {
+            "type": "number",
+            "description": "Number of enabled query params"
+          },
+          "request.auth.mode": {
+            "type": "string",
+            "description": "Authentication mode (none, basic, bearer)"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/actions/bruno-actions.ts"
+        ]
+      }
+    },
+    {
+      "id": "http-client",
+      "type": "otel-event",
+      "x": 550,
+      "y": 310,
+      "width": 200,
+      "height": 100,
+      "label": "@usebruno/requests",
+      "shape": "rectangle",
+      "event": {
+        "name": "bruno.http.sent",
+        "description": "HTTP request sent via makeHttpRequest",
+        "attributes": {
+          "http.method": {
+            "type": "string",
+            "description": "HTTP method"
+          },
+          "http.url": {
+            "type": "string",
+            "description": "Final URL with query params"
+          },
+          "http.request.body.size": {
+            "type": "number",
+            "description": "Request body size in bytes"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/actions/bruno-actions.ts"
+        ]
+      }
+    },
+    {
+      "id": "external-api",
+      "type": "otel-boundary",
+      "x": 550,
+      "y": 450,
+      "width": 200,
+      "height": 80,
+      "label": "External API",
+      "shape": "rectangle",
+      "otel": {
+        "status": "draft"
+      },
+      "boundary": {
+        "direction": "outbound",
+        "node": {
+          "pv.event.name": "bruno.http.sent"
+        }
+      }
+    },
+    {
+      "id": "response-received",
+      "type": "otel-event",
+      "x": 300,
+      "y": 310,
+      "width": 200,
+      "height": 100,
+      "label": "Response Received",
+      "shape": "rectangle",
+      "event": {
+        "name": "bruno.response.received",
+        "description": "HTTP response received from external API",
+        "attributes": {
+          "http.status": {
+            "type": "number",
+            "description": "HTTP status code"
+          },
+          "http.statusText": {
+            "type": "string",
+            "description": "HTTP status text"
+          },
+          "response.size": {
+            "type": "number",
+            "description": "Response body size in bytes"
+          },
+          "response.time.ms": {
+            "type": "number",
+            "description": "Response time in milliseconds"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/actions/bruno-actions.ts"
+        ]
+      }
+    },
+    {
+      "id": "response-error",
+      "type": "otel-event",
+      "x": 300,
+      "y": 450,
+      "width": 200,
+      "height": 100,
+      "label": "Request Error",
+      "shape": "rectangle",
+      "event": {
+        "name": "bruno.request.error",
+        "description": "HTTP request failed with error",
+        "attributes": {
+          "error.type": {
+            "type": "string",
+            "description": "Error type (network, timeout, etc.)"
+          },
+          "error.message": {
+            "type": "string",
+            "description": "Error message"
+          },
+          "response.time.ms": {
+            "type": "number",
+            "description": "Time until error in milliseconds"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/actions/bruno-actions.ts"
+        ]
+      }
+    },
+    {
+      "id": "panel-response",
+      "type": "otel-event",
+      "x": 50,
+      "y": 310,
+      "width": 200,
+      "height": 100,
+      "label": "Panel Response Display",
+      "shape": "rectangle",
+      "event": {
+        "name": "bruno.panel.response_displayed",
+        "description": "Bruno panel displaying HTTP response",
+        "attributes": {
+          "http.status": {
+            "type": "number",
+            "description": "HTTP status code"
+          },
+          "response.time.ms": {
+            "type": "number",
+            "description": "Response time in milliseconds"
+          },
+          "response.contentType": {
+            "type": "string",
+            "description": "Response content type"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "packages/bruno-panels/src/components/ResponsePanel.tsx"
+        ]
+      }
+    },
+    {
+      "id": "env-interpolation-note",
+      "type": "text",
+      "x": 800,
+      "y": 0,
+      "width": 250,
+      "height": 180,
+      "text": "ENVIRONMENT INTERPOLATION\n\nBruno supports {{variables}} in:\n- URL\n- Headers\n- Query params\n- Request body\n- Auth tokens\n\nEnvironments are .bru files:\nvars {\n  baseUrl: https://api.example.com\n  apiKey: {{process.env.API_KEY}}\n}",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "auth-modes-note",
+      "type": "text",
+      "x": 800,
+      "y": 200,
+      "width": 250,
+      "height": 140,
+      "text": "AUTHENTICATION MODES\n\n- none: No auth header\n- basic: Base64 user:pass\n- bearer: Bearer token\n\nAuth credentials support\nenvironment variable\ninterpolation.",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "body-types-note",
+      "type": "text",
+      "x": 800,
+      "y": 360,
+      "width": 250,
+      "height": 160,
+      "text": "REQUEST BODY TYPES\n\n- json: application/json\n- text: text/plain\n- xml: application/xml\n- formUrlEncoded\n- multipartForm\n\nContent-Type header set\nautomatically if not provided.",
+      "color": "#8B5CF6"
+    }
+  ],
+  "edges": [
+    {
+      "id": "panel-to-dispatch",
+      "fromNode": "bruno-panel",
+      "fromSide": "right",
+      "toNode": "panel-action-dispatch",
+      "toSide": "left",
+      "label": "sendRequest()",
+      "pv": {
+        "edgeType": "user-action"
+      }
+    },
+    {
+      "id": "dispatch-to-ipc",
+      "fromNode": "panel-action-dispatch",
+      "fromSide": "right",
+      "toNode": "ipc-handler",
+      "toSide": "left",
+      "label": "IPC invoke",
+      "pv": {
+        "edgeType": "ipc-invoke"
+      }
+    },
+    {
+      "id": "ipc-to-action",
+      "fromNode": "ipc-handler",
+      "fromSide": "bottom",
+      "toNode": "bruno-action",
+      "toSide": "top",
+      "label": "sendBrunoRequest()",
+      "pv": {
+        "edgeType": "method-call"
+      }
+    },
+    {
+      "id": "action-to-http",
+      "fromNode": "bruno-action",
+      "fromSide": "bottom",
+      "toNode": "http-client",
+      "toSide": "top",
+      "label": "makeHttpRequest()",
+      "pv": {
+        "edgeType": "method-call"
+      }
+    },
+    {
+      "id": "http-to-external",
+      "fromNode": "http-client",
+      "fromSide": "bottom",
+      "toNode": "external-api",
+      "toSide": "top",
+      "label": "HTTP request",
+      "pv": {
+        "edgeType": "http"
+      }
+    },
+    {
+      "id": "external-to-response",
+      "fromNode": "external-api",
+      "fromSide": "left",
+      "toNode": "response-received",
+      "toSide": "bottom",
+      "label": "HTTP response",
+      "pv": {
+        "edgeType": "http"
+      }
+    },
+    {
+      "id": "http-to-error",
+      "fromNode": "http-client",
+      "fromSide": "left",
+      "toNode": "response-error",
+      "toSide": "right",
+      "label": "on error",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "response-to-panel",
+      "fromNode": "response-received",
+      "fromSide": "left",
+      "toNode": "panel-response",
+      "toSide": "right",
+      "label": "BrunoResponse",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "error-to-panel",
+      "fromNode": "response-error",
+      "fromSide": "left",
+      "toNode": "panel-response",
+      "toSide": "bottom",
+      "label": "error display",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    }
+  ]
+}

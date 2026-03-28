@@ -1,0 +1,39 @@
+{
+  "version": "1.0.0",
+  "name": "Bruno Request Execution",
+  "description": "Main process HTTP request execution via @usebruno/requests",
+  "canvas": ".principal-views/bruno-panel-integration/bruno-panel-integration.otel.canvas",
+  "spanPattern": "bruno.response.received",
+  "scenarios": [
+    {
+      "id": "successful-execution",
+      "description": "Successful HTTP request execution in main process",
+      "priority": 1,
+      "template": {
+        "introduction": "**Bruno Request Execution**\n\nExecuting HTTP request in main process",
+        "events": {
+          "bruno.ipc.received": "[1] IPC received: {{ipc.method}} {{ipc.url}}",
+          "bruno.request.executing": "[2] Executing {{request.method}} to {{request.url.interpolated}} (headers: {{request.headers.count}}, params: {{request.params.count}}, auth: {{request.auth.mode}})",
+          "bruno.http.sent": "[3] HTTP sent: {{http.method}} {{http.url}} (body: {{http.request.body.size}} bytes)",
+          "bruno.response.received": "[4] **Response** - {{http.status}} {{http.statusText}} ({{response.size}} bytes, {{response.time.ms}}ms)"
+        },
+        "summary": "**Execution Summary:**\n- Status: {{http.status}} {{http.statusText}}\n- Size: {{response.size}} bytes\n- Time: {{response.time.ms}}ms"
+      }
+    },
+    {
+      "id": "execution-error",
+      "description": "HTTP request failed with error in main process",
+      "priority": 2,
+      "template": {
+        "introduction": "**Bruno Request Failed**\n\nHTTP request execution failed",
+        "events": {
+          "bruno.ipc.received": "[1] IPC received: {{ipc.method}} {{ipc.url}}",
+          "bruno.request.executing": "[2] Executing {{request.method}} to {{request.url.interpolated}} (headers: {{request.headers.count}}, params: {{request.params.count}}, auth: {{request.auth.mode}})",
+          "bruno.http.sent": "[3] HTTP sent: {{http.method}} {{http.url}} (body: {{http.request.body.size}} bytes)",
+          "bruno.request.error": "[4] **Error**: {{error.type}} - {{error.message}} ({{response.time.ms}}ms)"
+        },
+        "summary": "**Error Details:**\n- Error: {{error.message}}\n- Type: {{error.type}}\n- Time: {{response.time.ms}}ms"
+      }
+    }
+  ]
+}
