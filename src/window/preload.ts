@@ -57,6 +57,7 @@ import { recentReposAPI } from './main-process-api-implementations/recentReposAp
 import { skillLockAPI } from './main-process-api-implementations/skillLockApi';
 import { extensionAPI } from './main-process-api-implementations/extensionApi';
 import { fileCityImageAPI } from './main-process-api-implementations/fileCityImageApi';
+import { brunoAPI } from './main-process-api-implementations/brunoApi';
 // Removed mermaid import - it uses 'debug' which isn't available in preload context
 // import mermaid from 'mermaid';
 
@@ -141,6 +142,7 @@ const mainProcessExposure: MainProcessAPI = {
   skillLock: skillLockAPI,
   extension: extensionAPI,
   fileCityImage: fileCityImageAPI,
+  bruno: brunoAPI,
 };
 
 // Mermaid removed from preload - will be loaded in renderer instead

@@ -70,6 +70,7 @@ import {
   type GitDiffPanelProps,
 } from '@industry-theme/file-editing-panels';
 import { panels as backlogPanels } from '@industry-theme/backlogmd-kanban-panel';
+import { panels as brunoPanels } from '@principal-ade/bruno-panels';
 import { panels as agentPanels, type Skill, type SkillDetailPanelProps } from '@industry-theme/agent-panels';
 import { GitHubIssuesPanel, GitHubIssueDetailPanel } from '@industry-theme/github-panels';
 import { panels as typeInformationPanels } from '../panels/TypeInformationPanel';
@@ -747,6 +748,12 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   // GitHub panels
   const GitHubIssuesPanelComponent = GitHubIssuesPanel;
   const GitHubIssueDetailPanelComponent = GitHubIssueDetailPanel;
+
+  // Bruno API Client panel
+  const BrunoPanelComponent = brunoPanels.find(
+    (p) => p.metadata?.id === 'principal-ade.bruno-panel',
+  )?.component;
+
   const TypeInformationPanelComponent = typeInformationPanels.find(
     (p) => p.metadata?.id === 'principal-ade.type-information',
   )?.component; // Cannot convert - local panel, component not exported
@@ -3338,6 +3345,30 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         ),
       },
       {
+        id: 'bruno',
+        label: 'Bruno API Client',
+        content: BrunoPanelComponent ? (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <BrunoPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
+          <div>Bruno API Client panel not available</div>
+        ),
+      },
+      {
         id: 'terminalSessions',
         label: 'Terminal Sessions',
         content: (
@@ -3388,6 +3419,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       GitHubIssuesPanelComponent,
       GitHubIssueDetailPanelComponent,
       TypeInformationPanelComponent,
+      BrunoPanelComponent,
       context,
       actions,
       events,

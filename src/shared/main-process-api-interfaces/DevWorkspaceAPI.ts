@@ -32,6 +32,7 @@ import type { GitAPI } from './GitAPI';
 import type { FileCityImageAPI } from './FileCityImageAPI';
 import type { SkillLockAPI } from './SkillLockAPI';
 import type { AppVersionManagerAPI } from './AppVersionManagerAPI';
+import type { BrunoAPI } from './BrunoAPI';
 
 export interface DevWorkspaceMainProcessAPI {
   terminal: TerminalAPI;
@@ -51,6 +52,7 @@ export interface DevWorkspaceMainProcessAPI {
   fileCityImage: FileCityImageAPI;
   skillLock: SkillLockAPI;
   appVersionManager: AppVersionManagerAPI;
+  bruno: BrunoAPI;
 }
 
 // Re-export the individual API types for convenience
@@ -71,3 +73,4 @@ export type { GitAPI } from './GitAPI';
 export type { FileCityImageAPI } from './FileCityImageAPI';
 export type { SkillLockAPI } from './SkillLockAPI';
 export type { AppVersionManagerAPI } from './AppVersionManagerAPI';
+export type { BrunoAPI } from './BrunoAPI';

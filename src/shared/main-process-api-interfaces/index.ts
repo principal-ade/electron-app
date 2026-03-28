@@ -46,6 +46,7 @@ import type { SkillLockAPI } from './SkillLockAPI';
 import type { OtelCollectorAPI } from './OtelCollectorAPI';
 import type { ExtensionAPI } from './ExtensionAPI';
 import type { FileCityImageAPI } from './FileCityImageAPI';
+import type { BrunoAPI } from './BrunoAPI';
 
 /**
  * Terminal Bridge API Interface (Remote Terminal Viewer only)
@@ -124,6 +125,7 @@ export interface MainProcessAPI {
   skillLock: SkillLockAPI;
   extension: ExtensionAPI;
   fileCityImage: FileCityImageAPI;
+  bruno: BrunoAPI;
   /** Only available in Remote Terminal Viewer window */
   terminalBridge?: TerminalBridgeAPI;
 }

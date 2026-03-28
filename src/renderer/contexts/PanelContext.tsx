@@ -8,6 +8,7 @@ import React, {
   type ReactNode,
 } from 'react';
 import type { Theme } from '@principal-ade/industry-theme';
+import type { BrunoRequest, BrunoResponse } from '@principal-ade/bruno-panels';
 import { PanelEventBus } from '@principal-ade/panel-framework-core';
 import type {
   PanelContextValue,
@@ -155,6 +156,11 @@ interface ExtendedPanelActions extends PanelActions {
   // File operations for panels (e.g., principal-view-panels, MarkdownPanel)
   // REQUIRED for MarkdownPanel - matches framework signature
   readFile: (path: string) => Promise<string>;
+  // Bruno panel actions
+  sendRequest: (
+    request: BrunoRequest,
+    environment?: Record<string, string>,
+  ) => Promise<BrunoResponse>;
 }
 
 // Extended context interface that panels actually expect
@@ -1606,6 +1612,14 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
           }
 
           return result.content;
+        },
+
+        sendRequest: async (
+          request: BrunoRequest,
+          environment?: Record<string, string>,
+        ): Promise<BrunoResponse> => {
+          console.info('[PanelContext] Sending Bruno request:', request.http?.method, request.http?.url);
+          return window.mainProcess.bruno.sendRequest(request, environment);
         },
       };
     },

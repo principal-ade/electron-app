@@ -90,6 +90,7 @@ const configuration: webpack.Configuration = {
           'glob', // Node.js file globbing library
           'keytar', // Native Node.js module for credential storage
           'jsonwebtoken', // Uses Node.js crypto module
+          '@usebruno/requests', // Bruno HTTP client - uses Node.js tls/net/http2 modules
           '@principal-ai/principal-view-core', // Uses /browser subpath exports, has Node.js code in main export
           '@industry-theme/repository-composition-panels' // Imports @principal-ai/principal-view-core which has Node.js dependencies
         ];

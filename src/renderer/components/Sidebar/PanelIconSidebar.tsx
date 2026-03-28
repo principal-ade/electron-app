@@ -19,6 +19,7 @@ import {
   Play,
   Columns2,
   Terminal,
+  Plug,
 } from 'lucide-react';
 
 /**
@@ -82,6 +83,7 @@ export const RIGHT_PANEL_ICONS: PanelIconConfig[] = [
   { id: 'packageComposition', Icon: Package, label: 'Info' },
   { id: 'codeQuality', Icon: CheckCircle, label: 'Quality' },
   { id: 'kanban', Icon: KanbanSquare, label: 'Backlog' },
+  { id: 'bruno', Icon: Plug, label: 'Bruno' },
 ];
 
 /**

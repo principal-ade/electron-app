@@ -37,6 +37,7 @@ import { gitAPI } from './main-process-api-implementations/gitApi';
 import { fileCityImageAPI } from './main-process-api-implementations/fileCityImageApi';
 import { skillLockAPI } from './main-process-api-implementations/skillLockApi';
 import { appVersionManagerApi } from './main-process-api-implementations/appVersionManagerApi';
+import { brunoAPI } from './main-process-api-implementations/brunoApi';
 
 console.info('[Preload-DevWorkspace] API imports successful');
 
@@ -62,6 +63,7 @@ const devWorkspaceAPI: DevWorkspaceMainProcessAPI = {
   fileCityImage: fileCityImageAPI,
   skillLock: skillLockAPI,
   appVersionManager: appVersionManagerApi,
+  bruno: brunoAPI,
 };
 
 // Expose the mainProcess API

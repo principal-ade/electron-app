@@ -80,6 +80,7 @@ import { registerCollectionsHandlers } from './services/CollectionsService';
 import { ElectronClipboardAdapter } from './system/clipboardHandler';
 import { registerSkillLockHandlers } from './skills/skillLockHandlers';
 import { registerFileCityImageHandlers } from './stores/FileCityImageService';
+import { registerBrunoHandlers } from './bruno/brunoHandlers';
 
 // let agentSessionEventsHttpBridge: AgentSessionEventsHttpBridge | null = null;
 let principalMCPBridgePort: number | null = null;
@@ -199,6 +200,7 @@ const registerAllIpcHandlers = async () => {
   registerWorkspaceHandlers();
   registerAlexandriaDocsHandlers();
   registerApiProxyHandlers();
+  registerBrunoHandlers(); // Register Bruno panel HTTP request handlers
   JWTService.registerHandlers();
 
   // Register execute-command handler for git operations
