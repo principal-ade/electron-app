@@ -52,6 +52,11 @@ export const UpdatesSettings: React.FC = () => {
     });
 
     const handleUpdateAvailable = (info: { version: string }) => {
+      // If update is already downloaded, don't reset the downloaded state
+      if (isDownloadedRef.current) {
+        setIsChecking(false);
+        return;
+      }
       setUpdateAvailable(true);
       setAvailableVersion(info.version);
       setUpdateStatus(`Update available: v${info.version}`);
