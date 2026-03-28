@@ -19,7 +19,7 @@
         },
         "summary": "**Ownership Claimed:**\n- Session: `{{session.id}}`\n- New Owner: Window {{new_owner.window_id}}"
       },
-      "filterDefault": true
+      "filterDefault": false
     }
   ]
 }

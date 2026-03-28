@@ -48,6 +48,8 @@ import type {
 import { createFileTreeSource } from '@principal-ai/repository-abstraction';
 import type { TerminalSessionInfo } from '@industry-theme/xterm-terminal-panel';
 import type { FeedProjectSliceData } from '@industry-theme/file-city-panel';
+import { getTracer } from '../telemetry';
+import { SpanStatusCode } from '@opentelemetry/api';
 import type { GitHubIssuesSliceData } from '@industry-theme/github-panels';
 import { minimatch } from 'minimatch';
 
@@ -1224,6 +1226,17 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
             sessionId,
           );
 
+          // Emit telemetry for reconnection flow
+          const tracer = getTracer('terminal-reconnection');
+          const reconnectSpan = tracer.startSpan('terminal.reconnect.flow', {
+            attributes: {
+              'session.id': sessionId,
+            },
+          });
+          reconnectSpan.addEvent('terminal.reconnect.started', {
+            'session.id': sessionId,
+          });
+
           // First claim ownership, then request data port, then refresh terminal
           // This matches the terminal-testing-app pattern:
           // 1. claimTerminalOwnership - so we're the owner and receive data
@@ -1238,6 +1251,11 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
                 ownershipResult,
               );
 
+              reconnectSpan.addEvent('terminal.reconnect.ownership_claimed', {
+                'session.id': sessionId,
+                'ownership.success': ownershipResult.success,
+              });
+
               // Request the data port regardless of ownership result
               return TerminalService.requestDataPort(sessionId);
             })
@@ -1249,9 +1267,19 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
                 portResult,
               );
 
+              reconnectSpan.addEvent('terminal.reconnect.port_requested', {
+                'session.id': sessionId,
+                'port.success': portResult.success,
+                'port.reason': portResult.reason ?? 'none',
+              });
+
               // TODO: This refresh (Ctrl+L) may be needed for reconnection scenarios
               // but causes visible ^L on initial mount. Need to distinguish between
               // initial connection vs reconnection before re-enabling.
+              //
+              // TELEMETRY NOTE: When this is enabled, add:
+              // reconnectSpan.addEvent('terminal.reconnect.refresh_sent', { 'session.id': sessionId });
+              //
               // setTimeout(() => {
               //   TerminalService.refresh(sessionId)
               //     .then(() => {
@@ -1267,9 +1295,24 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
               //       );
               //     });
               // }, 100);
+
+              // Track that refresh is NOT being sent (this is the suspected issue)
+              reconnectSpan.addEvent('terminal.reconnect.refresh_skipped', {
+                'session.id': sessionId,
+                'reason': 'disabled_causes_visible_ctrl_l',
+              });
+
+              reconnectSpan.setStatus({ code: SpanStatusCode.OK });
+              reconnectSpan.end();
             })
             .catch((err) => {
               console.warn('[PanelContext] Failed during reconnection:', err);
+              reconnectSpan.addEvent('terminal.reconnect.error', {
+                'session.id': sessionId,
+                'error.message': err instanceof Error ? err.message : String(err),
+              });
+              reconnectSpan.setStatus({ code: SpanStatusCode.ERROR, message: 'Reconnection failed' });
+              reconnectSpan.end();
             });
 
           return TerminalService.onDataForSession(sessionId, callback);

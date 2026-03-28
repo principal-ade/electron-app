@@ -9,6 +9,7 @@ import React, {
   type ReactNode,
 } from 'react';
 import { SpanStatusCode } from '@opentelemetry/api';
+import { getTracer } from '../telemetry';
 import { TerminalService } from '../main-process-api/TerminalService';
 import type { TerminalInfo } from '../../shared/main-process-api-interfaces/TerminalService';
 import type {
@@ -32,7 +33,6 @@ import {
   type TerminalActivityState,
   type UpdateActivityInput,
 } from '../tipc/terminalClient';
-import { getTracer } from '../telemetry';
 
 /**
  * Terminal context value
@@ -393,7 +393,18 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
           sessionId,
         );
 
-        // First claim ownership, then request data port, then refresh terminal
+        // Emit telemetry for reconnection flow
+        const tracer = getTracer('terminal-reconnection');
+        const reconnectSpan = tracer.startSpan('terminal.reconnect.flow', {
+          attributes: {
+            'session.id': sessionId,
+          },
+        });
+        reconnectSpan.addEvent('terminal.reconnect.started', {
+          'session.id': sessionId,
+        });
+
+        // First claim ownership, then request data port, then refresh
         TerminalService.claimOwnership(sessionId)
           .then((ownershipResult) => {
             console.info(
@@ -402,6 +413,11 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
               'result:',
               ownershipResult,
             );
+
+            reconnectSpan.addEvent('terminal.reconnect.ownership_claimed', {
+              'session.id': sessionId,
+              'ownership.success': ownershipResult.success,
+            });
 
             // Request the data port regardless of ownership result
             return TerminalService.requestDataPort(sessionId);
@@ -414,27 +430,29 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
               portResult,
             );
 
-            // TODO: This refresh (Ctrl+L) may be needed for reconnection scenarios
-            // but causes visible ^L on initial mount. Need to distinguish between
-            // initial connection vs reconnection before re-enabling.
-            // setTimeout(() => {
-            //   TerminalService.refresh(sessionId)
-            //     .then(() => {
-            //       console.info(
-            //         '[TerminalContext] Refreshed terminal for session:',
-            //         sessionId,
-            //       );
-            //     })
-            //     .catch((err) => {
-            //       console.warn(
-            //         '[TerminalContext] Failed to refresh terminal:',
-            //         err,
-            //       );
-            //     });
-            // }, 100);
+            reconnectSpan.addEvent('terminal.reconnect.port_requested', {
+              'session.id': sessionId,
+              'port.success': portResult.success,
+              'port.reason': portResult.reason ?? 'none',
+            });
+
+            // Scrollback replay is handled by the worker when port is registered
+            // No need for Ctrl+L refresh - it would clear the scrollback we just received
+            reconnectSpan.addEvent('terminal.reconnect.scrollback_expected', {
+              'session.id': sessionId,
+            });
+
+            reconnectSpan.setStatus({ code: SpanStatusCode.OK });
+            reconnectSpan.end();
           })
           .catch((err) => {
             console.warn('[TerminalContext] Failed during reconnection:', err);
+            reconnectSpan.addEvent('terminal.reconnect.error', {
+              'session.id': sessionId,
+              'error.message': err instanceof Error ? err.message : String(err),
+            });
+            reconnectSpan.setStatus({ code: SpanStatusCode.ERROR, message: 'Reconnection failed' });
+            reconnectSpan.end();
           });
 
         return TerminalService.onDataForSession(sessionId, callback);

@@ -137,6 +137,10 @@ interface PtyModule {
   spawn: (shell: string, args: string[], options: PtySpawnOptions) => IPty;
 }
 
+// Scrollback buffer settings for legacy mode
+const SCROLLBACK_MAX_CHUNKS = 10000; // Max number of data chunks to store
+const SCROLLBACK_TRIM_TO = 5000; // Trim to this many chunks when limit is exceeded
+
 // Session state
 interface TerminalSession {
   id: string;
@@ -146,6 +150,7 @@ interface TerminalSession {
   ownerWindowId?: number;
   createdAt: number;
   lastActivity: number;
+  scrollback: string[]; // Stores PTY output for replay on reconnection (legacy mode)
 }
 
 // State
@@ -332,6 +337,7 @@ async function connectToDaemon(_socketPath: string): Promise<void> {
           directory: info.cwd,
           createdAt: new Date(info.createdAt).getTime(),
           lastActivity: new Date(info.lastActivity).getTime(),
+          scrollback: [], // Not used in daemon mode (daemon handles scrollback)
         };
         sessions.set(info.id, session);
         sessionPorts.set(info.id, new Map());
@@ -415,6 +421,7 @@ function createSessionLegacy(
       context,
       createdAt: now,
       lastActivity: now,
+      scrollback: [], // Initialize scrollback buffer
     };
 
     sessions.set(sessionId, session);
@@ -422,6 +429,15 @@ function createSessionLegacy(
 
     ptyProcess.onData((data: string) => {
       session.lastActivity = Date.now();
+
+      // Store output in scrollback buffer for replay on reconnection
+      session.scrollback.push(data);
+
+      // Trim scrollback if it exceeds the limit
+      if (session.scrollback.length > SCROLLBACK_MAX_CHUNKS) {
+        session.scrollback = session.scrollback.slice(-SCROLLBACK_TRIM_TO);
+      }
+
       sendToRenderer(sessionId, data);
     });
 
@@ -501,6 +517,7 @@ async function createSessionDaemon(
       context,
       createdAt: now,
       lastActivity: now,
+      scrollback: [], // Not used in daemon mode (daemon handles scrollback)
     };
     sessions.set(sessionId, session);
     sessionPorts.set(sessionId, new Map());
@@ -687,11 +704,16 @@ function registerPort(
     handleRendererMessage(sessionId, event.data as RendererToWorkerPortMessage);
   });
 
+  console.info(
+    `[TerminalWorker] registerPort called: sessionId=${sessionId}, windowId=${windowId}, isOwner=${isOwner}`,
+  );
+
   if (isOwner) {
     session.ownerWindowId = windowId;
+    console.info(`[TerminalWorker] isOwner=true, checking scrollback...`);
 
-    // In daemon mode, request scrollback
     if (USE_DAEMON_MODE && daemonBridge?.connected) {
+      // Daemon mode: request scrollback from daemon
       daemonBridge.send({
         type: 'attach',
         id: sessionId,
@@ -703,6 +725,24 @@ function registerPort(
         }
       };
       daemonBridge.once('scrollback', scrollbackHandler);
+    } else if (session.scrollback && session.scrollback.length > 0) {
+      // Legacy mode: replay stored scrollback to the renderer
+      const scrollbackData = session.scrollback.join('');
+      console.info(
+        `[TerminalWorker] Replaying scrollback for session ${sessionId}: ${session.scrollback.length} chunks, ${scrollbackData.length} bytes`,
+      );
+
+      if (scrollbackData) {
+        // Small delay to ensure port is ready to receive
+        setTimeout(() => {
+          console.info(`[TerminalWorker] Sending scrollback to renderer for session ${sessionId}`);
+          sendToRenderer(sessionId, scrollbackData);
+        }, 50);
+      }
+    } else {
+      console.info(
+        `[TerminalWorker] No scrollback to replay for session ${sessionId}: scrollback=${session.scrollback?.length ?? 0} chunks`,
+      );
     }
   }
 

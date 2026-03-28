@@ -411,13 +411,33 @@ export const terminalRouter = {
         return { success: false, reason: 'Session not found' };
       }
 
-      // Use createPortForSession WITHOUT claiming ownership
-      // This matches terminal-testing-app pattern where ownership is managed separately
+      // Check if this window is the owner - if so, tell the worker so it can send scrollback
+      const isOwner = ownershipManager.isOwner(input.sessionId, window.id);
+      console.log(`[TIPC] requestTerminalDataPort: isOwner=${isOwner}`);
+
+      // Telemetry for scrollback decision
+      const span = tracer.startSpan('terminal.port.request');
+      span.addEvent('terminal.port.requesting', {
+        'session.id': input.sessionId,
+        'window.id': window.id,
+        'isOwner': isOwner,
+        'scrollback.willSend': isOwner, // Worker sends scrollback when isOwner=true
+      });
+
+      // Create port and pass ownership status to worker
+      // Worker will replay scrollback if this window is the owner (for reconnection)
       const success = sessionManager.createPortForSession(
         input.sessionId,
         window.id,
-        false, // Don't claim ownership - that's done separately via claimTerminalOwnership
+        isOwner, // Pass actual ownership status so worker can send scrollback
       );
+
+      span.addEvent('terminal.port.created', {
+        'session.id': input.sessionId,
+        'success': success,
+      });
+      span.setStatus({ code: success ? SpanStatusCode.OK : SpanStatusCode.ERROR });
+      span.end();
 
       console.log(`[TIPC] requestTerminalDataPort result: success=${success}`);
       return { success, reason: success ? undefined : 'Failed to create port' };
