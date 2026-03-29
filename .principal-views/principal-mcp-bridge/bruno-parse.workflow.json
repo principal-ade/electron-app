@@ -1,0 +1,56 @@
+{
+  "version": "1.0.0",
+  "name": "Bruno Parse",
+  "description": "POST /api/bruno/parse endpoint for parsing .bru content to BrunoRequest JSON",
+  "canvas": ".principal-views/principal-mcp-bridge/principal-mcp-bridge.otel.canvas",
+  "spanPattern": "principal_mcp.bruno_parse",
+  "scenarios": [
+    {
+      "id": "bruno-parse-success",
+      "description": "Successfully parse .bru content to JSON",
+      "priority": 1,
+      "template": {
+        "introduction": "**Bruno Parse Content**\n\nParsing .bru content to BrunoRequest JSON",
+        "events": {
+          "principal_mcp.client.request_initiated": "1. Client ({{client.type}}) sent {{http.method}} request to {{http.url}}",
+          "principal_mcp.server.request_received": "2. Server received {{http.method}} {{http.path}} on port {{server.port}}",
+          "principal_mcp.bruno.parse_requested": "3. Parse requested ({{bruno.content_length}} chars)",
+          "principal_mcp.bruno.service_invoked": "4. BrunoValidationService.{{bruno.operation}}() called",
+          "principal_mcp.bruno.content_parsed": "5. Parsed successfully: success={{bruno.success}}, {{bruno.request_method}} {{bruno.request_url}}"
+        },
+        "summary": "**Parse Result:**\n- Success: {{bruno.success}}\n- Method: {{bruno.request_method}}\n- URL: {{bruno.request_url}}"
+      }
+    },
+    {
+      "id": "bruno-parse-syntax-error",
+      "description": "Parse fails due to syntax error in .bru content",
+      "priority": 2,
+      "template": {
+        "introduction": "**Bruno Parse - Syntax Error**\n\nFailed to parse .bru content",
+        "events": {
+          "principal_mcp.client.request_initiated": "1. Client ({{client.type}}) sent {{http.method}} request to {{http.url}}",
+          "principal_mcp.server.request_received": "2. Server received {{http.method}} {{http.path}} on port {{server.port}}",
+          "principal_mcp.bruno.parse_requested": "3. Parse requested ({{bruno.content_length}} chars)",
+          "principal_mcp.bruno.service_invoked": "4. BrunoValidationService.{{bruno.operation}}() called",
+          "principal_mcp.error.bruno_parse_failed": "5. Parse failed: {{error.type}} at line {{error.line}}, column {{error.column}}: {{error.message}}"
+        },
+        "summary": "**Parse Error:**\n- Type: {{error.type}}\n- Line: {{error.line}}\n- Message: {{error.message}}"
+      }
+    },
+    {
+      "id": "bruno-parse-missing-content",
+      "description": "Parse fails due to missing content",
+      "priority": 3,
+      "template": {
+        "introduction": "**Bruno Parse - Missing Content**",
+        "events": {
+          "principal_mcp.client.request_initiated": "1. Client ({{client.type}}) sent {{http.method}} request to {{http.url}}",
+          "principal_mcp.server.request_received": "2. Server received {{http.method}} {{http.path}} on port {{server.port}}",
+          "principal_mcp.bruno.parse_requested": "3. Parse requested",
+          "principal_mcp.error.bruno_validation_failed": "4. Missing content: {{error.type}} - {{error.message}} (path: {{bruno.file_path}})"
+        },
+        "summary": "**Error:** Content is required but was not provided"
+      }
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "version": "1.0.0",
+  "name": "Bruno Validate File",
+  "description": "POST /api/bruno/validate/file endpoint for validating .bru file by path",
+  "canvas": ".principal-views/principal-mcp-bridge/principal-mcp-bridge.otel.canvas",
+  "spanPattern": "principal_mcp.bruno_validate_file",
+  "scenarios": [
+    {
+      "id": "bruno-validate-file-success",
+      "description": "Successfully validate .bru file by path",
+      "priority": 1,
+      "template": {
+        "introduction": "**Bruno File Validation**\n\nValidating file: `{{bruno.file_path}}`",
+        "events": {
+          "principal_mcp.client.request_initiated": "1. Client ({{client.type}}) sent {{http.method}} request to {{http.url}}",
+          "principal_mcp.server.request_received": "2. Server received {{http.method}} {{http.path}} on port {{server.port}}",
+          "principal_mcp.bruno.file_validation_requested": "3. File validation requested: `{{bruno.file_path}}`",
+          "principal_mcp.bruno.service_invoked": "4. BrunoValidationService.{{bruno.operation}}() called",
+          "principal_mcp.bruno.file_validated": "5. File validated: `{{bruno.file_path}}` valid={{bruno.valid}}, errors={{bruno.error_count}}, warnings={{bruno.warning_count}}"
+        },
+        "summary": "**Validation Result:**\n- File: `{{bruno.file_path}}`\n- Valid: {{bruno.valid}}\n- Errors: {{bruno.error_count}}\n- Warnings: {{bruno.warning_count}}"
+      }
+    },
+    {
+      "id": "bruno-validate-file-not-found",
+      "description": "Validation fails because file does not exist",
+      "priority": 2,
+      "template": {
+        "introduction": "**Bruno File Validation - File Not Found**",
+        "events": {
+          "principal_mcp.client.request_initiated": "1. Client ({{client.type}}) sent {{http.method}} request to {{http.url}}",
+          "principal_mcp.server.request_received": "2. Server received {{http.method}} {{http.path}} on port {{server.port}}",
+          "principal_mcp.bruno.file_validation_requested": "3. File validation requested: `{{bruno.file_path}}`",
+          "principal_mcp.error.bruno_validation_failed": "4. File not found: {{error.type}} - {{error.message}} (path: {{bruno.file_path}})"
+        },
+        "summary": "**Error:** File `{{bruno.file_path}}` not found"
+      }
+    }
+  ]
+}

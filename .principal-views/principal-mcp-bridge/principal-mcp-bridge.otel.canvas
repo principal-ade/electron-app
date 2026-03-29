@@ -935,6 +935,386 @@
       "height": 120,
       "text": "**Update Flow**\n1. ThemeHandler updates prefs\n2. UserPreferencesHandler\n   broadcasts to windows\n3. CustomThemeProvider\n   re-applies theme",
       "color": "#64748B"
+    },
+    {
+      "id": "bruno-section-title",
+      "type": "text",
+      "x": 50,
+      "y": 1120,
+      "width": 500,
+      "height": 40,
+      "color": "#64748B",
+      "text": "## Bruno Validation Routes\n**Routes for validating .bru files and collections**"
+    },
+    {
+      "id": "bruno-validate-route",
+      "type": "otel-event",
+      "x": 300,
+      "y": 1190,
+      "width": 220,
+      "height": 100,
+      "label": "POST /api/bruno/validate",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.bruno.validate_content_requested",
+        "description": "Validate .bru file content endpoint called",
+        "attributes": {
+          "bruno.content_length": {
+            "type": "number",
+            "description": "Length of .bru content in characters"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ]
+      }
+    },
+    {
+      "id": "bruno-validate-file-route",
+      "type": "otel-event",
+      "x": 300,
+      "y": 1310,
+      "width": 220,
+      "height": 100,
+      "label": "POST /api/bruno/validate/file",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.bruno.file_validation_requested",
+        "description": "Validate .bru file by path endpoint called",
+        "attributes": {
+          "bruno.file_path": {
+            "type": "string",
+            "description": "Path to .bru file being validated"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ]
+      }
+    },
+    {
+      "id": "bruno-validate-collection-route",
+      "type": "otel-event",
+      "x": 300,
+      "y": 1430,
+      "width": 220,
+      "height": 100,
+      "label": "POST /api/bruno/validate/collection",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.bruno.collection_validation_requested",
+        "description": "Validate entire Bruno collection endpoint called",
+        "attributes": {
+          "bruno.collection_path": {
+            "type": "string",
+            "description": "Path to Bruno collection directory"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ]
+      }
+    },
+    {
+      "id": "bruno-parse-route",
+      "type": "otel-event",
+      "x": 300,
+      "y": 1550,
+      "width": 220,
+      "height": 100,
+      "label": "POST /api/bruno/parse",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.bruno.parse_requested",
+        "description": "Parse .bru content to JSON endpoint called",
+        "attributes": {
+          "bruno.content_length": {
+            "type": "number",
+            "description": "Length of .bru content in characters"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ]
+      }
+    },
+    {
+      "id": "bruno-validation-service",
+      "type": "otel-event",
+      "x": 570,
+      "y": 1190,
+      "width": 200,
+      "height": 100,
+      "label": "BrunoValidationService",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.bruno.service_invoked",
+        "description": "BrunoValidationService method called",
+        "attributes": {
+          "bruno.operation": {
+            "type": "string",
+            "description": "Operation: validateContent, validateFile, validateCollection, parse"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ]
+      }
+    },
+    {
+      "id": "bruno-content-validated",
+      "type": "otel-event",
+      "x": 840,
+      "y": 1190,
+      "width": 200,
+      "height": 100,
+      "label": "Content Validated",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.bruno.content_validated",
+        "description": "Content validation completed",
+        "attributes": {
+          "bruno.valid": {
+            "type": "boolean",
+            "description": "Whether the content is valid"
+          },
+          "bruno.error_count": {
+            "type": "number",
+            "description": "Number of validation errors"
+          },
+          "bruno.warning_count": {
+            "type": "number",
+            "description": "Number of validation warnings"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ]
+      }
+    },
+    {
+      "id": "bruno-file-validated",
+      "type": "otel-event",
+      "x": 840,
+      "y": 1310,
+      "width": 200,
+      "height": 100,
+      "label": "File Validated",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.bruno.file_validated",
+        "description": "File validation completed",
+        "attributes": {
+          "bruno.file_path": {
+            "type": "string",
+            "description": "Path to validated file"
+          },
+          "bruno.valid": {
+            "type": "boolean",
+            "description": "Whether the file is valid"
+          },
+          "bruno.error_count": {
+            "type": "number",
+            "description": "Number of validation errors"
+          },
+          "bruno.warning_count": {
+            "type": "number",
+            "description": "Number of validation warnings"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ]
+      }
+    },
+    {
+      "id": "bruno-collection-validated",
+      "type": "otel-event",
+      "x": 840,
+      "y": 1430,
+      "width": 200,
+      "height": 100,
+      "label": "Collection Validated",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.bruno.collection_validated",
+        "description": "Collection validation completed",
+        "attributes": {
+          "bruno.collection_path": {
+            "type": "string",
+            "description": "Path to validated collection"
+          },
+          "bruno.valid": {
+            "type": "boolean",
+            "description": "Whether all files are valid"
+          },
+          "bruno.total_files": {
+            "type": "number",
+            "description": "Total number of .bru files"
+          },
+          "bruno.valid_files": {
+            "type": "number",
+            "description": "Number of valid files"
+          },
+          "bruno.invalid_files": {
+            "type": "number",
+            "description": "Number of invalid files"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ]
+      }
+    },
+    {
+      "id": "bruno-content-parsed",
+      "type": "otel-event",
+      "x": 840,
+      "y": 1550,
+      "width": 200,
+      "height": 100,
+      "label": "Content Parsed",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.bruno.content_parsed",
+        "description": "Content successfully parsed to BrunoRequest JSON",
+        "attributes": {
+          "bruno.success": {
+            "type": "boolean",
+            "description": "Whether parsing succeeded"
+          },
+          "bruno.request_method": {
+            "type": "string",
+            "description": "HTTP method from parsed request (if successful)"
+          },
+          "bruno.request_url": {
+            "type": "string",
+            "description": "URL from parsed request (if successful)"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ]
+      }
+    },
+    {
+      "id": "bruno-error-validation-failed",
+      "type": "otel-event",
+      "x": 570,
+      "y": 1680,
+      "width": 200,
+      "height": 80,
+      "label": "Validation Failed",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.error.bruno_validation_failed",
+        "description": "Validation request failed (e.g., missing content, file not found)",
+        "attributes": {
+          "error.type": {
+            "type": "string",
+            "description": "Error type: missing_content, file_not_found, read_error"
+          },
+          "error.message": {
+            "type": "string",
+            "description": "Error message"
+          },
+          "bruno.file_path": {
+            "type": "string",
+            "description": "File path if applicable"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ]
+      }
+    },
+    {
+      "id": "bruno-error-parse-failed",
+      "type": "otel-event",
+      "x": 840,
+      "y": 1680,
+      "width": 200,
+      "height": 80,
+      "label": "Parse Failed",
+      "shape": "rectangle",
+      "event": {
+        "name": "principal_mcp.error.bruno_parse_failed",
+        "description": "Parsing .bru content to JSON failed",
+        "attributes": {
+          "error.type": {
+            "type": "string",
+            "description": "Error type: syntax_error, invalid_structure"
+          },
+          "error.message": {
+            "type": "string",
+            "description": "Error message"
+          },
+          "error.line": {
+            "type": "number",
+            "description": "Line number of error (if available)"
+          },
+          "error.column": {
+            "type": "number",
+            "description": "Column number of error (if available)"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/principal-mcp/PrincipalMCPBridge.ts"
+        ]
+      }
+    },
+    {
+      "id": "bruno-adapters-note",
+      "type": "text",
+      "x": 50,
+      "y": 1190,
+      "width": 200,
+      "height": 140,
+      "text": "**Adapter Pattern**\nIFileAdapter:\n  - ElectronFileAdapter\n  - (future: NodeFileAdapter)\n\nIParserAdapter:\n  - BrunoPanelsParserAdapter\n  - (future: UseBrunoLangAdapter)",
+      "color": "#64748B"
+    },
+    {
+      "id": "bruno-cli-note",
+      "type": "text",
+      "x": 50,
+      "y": 1360,
+      "width": 200,
+      "height": 100,
+      "text": "**Future CLI**\nAdapter pattern enables\nextraction to standalone\nCLI tool with different\nfile/parser adapters",
+      "color": "#64748B"
     }
   ],
   "edges": [
@@ -1297,6 +1677,182 @@
       "toNode": "theme-update-failed",
       "toSide": "top",
       "label": "if error",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "server-to-bruno-validate",
+      "fromNode": "express-server",
+      "fromSide": "bottom",
+      "toNode": "bruno-validate-route",
+      "toSide": "top",
+      "label": "POST /api/bruno/validate",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "server-to-bruno-validate-file",
+      "fromNode": "express-server",
+      "fromSide": "bottom",
+      "toNode": "bruno-validate-file-route",
+      "toSide": "top",
+      "label": "POST /api/bruno/validate/file",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "server-to-bruno-validate-collection",
+      "fromNode": "express-server",
+      "fromSide": "bottom",
+      "toNode": "bruno-validate-collection-route",
+      "toSide": "top",
+      "label": "POST /api/bruno/validate/collection",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "server-to-bruno-parse",
+      "fromNode": "express-server",
+      "fromSide": "bottom",
+      "toNode": "bruno-parse-route",
+      "toSide": "top",
+      "label": "POST /api/bruno/parse",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "bruno-validate-to-service",
+      "fromNode": "bruno-validate-route",
+      "fromSide": "right",
+      "toNode": "bruno-validation-service",
+      "toSide": "left",
+      "label": "validateBruContent",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "bruno-validate-file-to-service",
+      "fromNode": "bruno-validate-file-route",
+      "fromSide": "right",
+      "toNode": "bruno-validation-service",
+      "toSide": "left",
+      "label": "validateBruFile",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "bruno-validate-collection-to-service",
+      "fromNode": "bruno-validate-collection-route",
+      "fromSide": "right",
+      "toNode": "bruno-validation-service",
+      "toSide": "left",
+      "label": "validateCollection",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "bruno-parse-to-service",
+      "fromNode": "bruno-parse-route",
+      "fromSide": "right",
+      "toNode": "bruno-validation-service",
+      "toSide": "left",
+      "label": "parseBruToJson",
+      "pv": {
+        "edgeType": "function-call"
+      }
+    },
+    {
+      "id": "bruno-service-to-content-validated",
+      "fromNode": "bruno-validation-service",
+      "fromSide": "right",
+      "toNode": "bruno-content-validated",
+      "toSide": "left",
+      "label": "content result",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "bruno-service-to-file-validated",
+      "fromNode": "bruno-validation-service",
+      "fromSide": "right",
+      "toNode": "bruno-file-validated",
+      "toSide": "left",
+      "label": "file result",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "bruno-service-to-collection-validated",
+      "fromNode": "bruno-validation-service",
+      "fromSide": "right",
+      "toNode": "bruno-collection-validated",
+      "toSide": "left",
+      "label": "collection result",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "bruno-service-to-content-parsed",
+      "fromNode": "bruno-validation-service",
+      "fromSide": "right",
+      "toNode": "bruno-content-parsed",
+      "toSide": "left",
+      "label": "parse result",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "bruno-validate-to-error",
+      "fromNode": "bruno-validate-route",
+      "fromSide": "bottom",
+      "toNode": "bruno-error-validation-failed",
+      "toSide": "top",
+      "label": "if missing content",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "bruno-validate-file-to-error",
+      "fromNode": "bruno-validate-file-route",
+      "fromSide": "bottom",
+      "toNode": "bruno-error-validation-failed",
+      "toSide": "top",
+      "label": "if file not found",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "bruno-validate-collection-to-error",
+      "fromNode": "bruno-validate-collection-route",
+      "fromSide": "bottom",
+      "toNode": "bruno-error-validation-failed",
+      "toSide": "top",
+      "label": "if path invalid",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "bruno-service-to-parse-error",
+      "fromNode": "bruno-validation-service",
+      "fromSide": "bottom",
+      "toNode": "bruno-error-parse-failed",
+      "toSide": "top",
+      "label": "if parse fails",
       "pv": {
         "edgeType": "data-flow"
       }

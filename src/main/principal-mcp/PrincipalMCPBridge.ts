@@ -7,6 +7,11 @@ import { getManager as getRepositoryMonitoringManager } from '../repository-moni
 import { getThemeHandler } from '../theme/themeHandler';
 import { isValidPropertyPath } from '../../shared/theme/themeSchema';
 import { getTracer } from '../telemetry';
+import { BrunoValidationService } from '../bruno/BrunoValidationService';
+import {
+  ElectronFileAdapter,
+  BrunoLangParserAdapter,
+} from '../bruno/adapters';
 
 // Tracer for Principal MCP Bridge instrumentation
 const tracer = getTracer('principal-ade-main');
@@ -553,6 +558,432 @@ export class PrincipalMCPBridge extends EventEmitter {
           '[Principal MCP Bridge] Failed to update theme:',
           error,
         );
+        res.status(500).json({
+          success: false,
+          error: errorMessage,
+        });
+      } finally {
+        span.end();
+      }
+    });
+
+    // ============================================
+    // BRUNO VALIDATION ROUTES
+    // ============================================
+
+    // Create validation service instance
+    const brunoValidationService = new BrunoValidationService(
+      new ElectronFileAdapter(),
+      new BrunoLangParserAdapter(),
+    );
+
+    // POST /api/bruno/validate - Validate .bru file content
+    this.app.post('/api/bruno/validate', async (req: Request, res: Response) => {
+      const span = tracer.startSpan('principal_mcp.bruno_validate_content');
+
+      try {
+        const { content } = req.body;
+
+        // Event: client request initiated
+        span.addEvent('principal_mcp.client.request_initiated', {
+          'http.method': 'POST',
+          'http.url': '/api/bruno/validate',
+          'client.type': 'mcp',
+        });
+
+        // Event: server received request
+        span.addEvent('principal_mcp.server.request_received', {
+          'http.method': 'POST',
+          'http.path': '/api/bruno/validate',
+          'server.port': this.port,
+        });
+
+        // Validate required fields
+        if (!content) {
+          span.addEvent('principal_mcp.bruno.validate_content_requested', {
+            'bruno.content_length': 0,
+          });
+          span.addEvent('principal_mcp.error.bruno_validation_failed', {
+            'error.type': 'missing_content',
+            'error.message': 'content is required',
+            'bruno.file_path': '',
+          });
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: 'content is required',
+          });
+          res.status(400).json({
+            success: false,
+            error: 'content is required',
+          });
+          return;
+        }
+
+        // Event: validation requested
+        span.addEvent('principal_mcp.bruno.validate_content_requested', {
+          'bruno.content_length': content.length,
+        });
+
+        // Event: service invoked
+        span.addEvent('principal_mcp.bruno.service_invoked', {
+          'bruno.operation': 'validateBruContent',
+        });
+
+        const result = await brunoValidationService.validateBruContent(content);
+
+        // Event: content validated
+        span.addEvent('principal_mcp.bruno.content_validated', {
+          'bruno.valid': result.valid,
+          'bruno.error_count': result.errors.length,
+          'bruno.warning_count': result.warnings.length,
+        });
+
+        span.setStatus({ code: SpanStatusCode.OK });
+        res.json({
+          success: true,
+          ...result,
+        });
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
+
+        span.addEvent('principal_mcp.error.bruno_validation_failed', {
+          'error.type': 'internal_error',
+          'error.message': errorMessage,
+          'bruno.file_path': '',
+        });
+
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: errorMessage,
+        });
+
+        console.error('[Principal MCP Bridge] Bruno validation error:', error);
+        res.status(500).json({
+          success: false,
+          error: errorMessage,
+        });
+      } finally {
+        span.end();
+      }
+    });
+
+    // POST /api/bruno/validate/file - Validate .bru file by path
+    this.app.post(
+      '/api/bruno/validate/file',
+      async (req: Request, res: Response) => {
+        const span = tracer.startSpan('principal_mcp.bruno_validate_file');
+
+        try {
+          const { filePath } = req.body;
+
+          // Event: client request initiated
+          span.addEvent('principal_mcp.client.request_initiated', {
+            'http.method': 'POST',
+            'http.url': '/api/bruno/validate/file',
+            'client.type': 'mcp',
+          });
+
+          // Event: server received request
+          span.addEvent('principal_mcp.server.request_received', {
+            'http.method': 'POST',
+            'http.path': '/api/bruno/validate/file',
+            'server.port': this.port,
+          });
+
+          // Validate required fields
+          if (!filePath) {
+            span.addEvent('principal_mcp.bruno.file_validation_requested', {
+              'bruno.file_path': '',
+            });
+            span.addEvent('principal_mcp.error.bruno_validation_failed', {
+              'error.type': 'missing_file_path',
+              'error.message': 'filePath is required',
+              'bruno.file_path': '',
+            });
+            span.setStatus({
+              code: SpanStatusCode.ERROR,
+              message: 'filePath is required',
+            });
+            res.status(400).json({
+              success: false,
+              error: 'filePath is required',
+            });
+            return;
+          }
+
+          // Event: file validation requested
+          span.addEvent('principal_mcp.bruno.file_validation_requested', {
+            'bruno.file_path': filePath,
+          });
+
+          // Event: service invoked
+          span.addEvent('principal_mcp.bruno.service_invoked', {
+            'bruno.operation': 'validateBruFile',
+          });
+
+          const result = await brunoValidationService.validateBruFile(filePath);
+
+          // Event: file validated
+          span.addEvent('principal_mcp.bruno.file_validated', {
+            'bruno.file_path': filePath,
+            'bruno.valid': result.valid,
+            'bruno.error_count': result.errors.length,
+            'bruno.warning_count': result.warnings.length,
+          });
+
+          span.setStatus({ code: SpanStatusCode.OK });
+          res.json({
+            success: true,
+            filePath,
+            ...result,
+          });
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : 'Unknown error';
+
+          span.addEvent('principal_mcp.error.bruno_validation_failed', {
+            'error.type': 'file_read_error',
+            'error.message': errorMessage,
+            'bruno.file_path': req.body.filePath || '',
+          });
+
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: errorMessage,
+          });
+
+          console.error(
+            '[Principal MCP Bridge] Bruno file validation error:',
+            error,
+          );
+          res.status(500).json({
+            success: false,
+            error: errorMessage,
+          });
+        } finally {
+          span.end();
+        }
+      },
+    );
+
+    // POST /api/bruno/validate/collection - Validate entire collection
+    this.app.post(
+      '/api/bruno/validate/collection',
+      async (req: Request, res: Response) => {
+        const span = tracer.startSpan('principal_mcp.bruno_validate_collection');
+
+        try {
+          const { collectionPath } = req.body;
+
+          // Event: client request initiated
+          span.addEvent('principal_mcp.client.request_initiated', {
+            'http.method': 'POST',
+            'http.url': '/api/bruno/validate/collection',
+            'client.type': 'mcp',
+          });
+
+          // Event: server received request
+          span.addEvent('principal_mcp.server.request_received', {
+            'http.method': 'POST',
+            'http.path': '/api/bruno/validate/collection',
+            'server.port': this.port,
+          });
+
+          // Validate required fields
+          if (!collectionPath) {
+            span.addEvent(
+              'principal_mcp.bruno.collection_validation_requested',
+              {
+                'bruno.collection_path': '',
+              },
+            );
+            span.addEvent('principal_mcp.error.bruno_validation_failed', {
+              'error.type': 'missing_collection_path',
+              'error.message': 'collectionPath is required',
+              'bruno.file_path': '',
+            });
+            span.setStatus({
+              code: SpanStatusCode.ERROR,
+              message: 'collectionPath is required',
+            });
+            res.status(400).json({
+              success: false,
+              error: 'collectionPath is required',
+            });
+            return;
+          }
+
+          // Event: collection validation requested
+          span.addEvent('principal_mcp.bruno.collection_validation_requested', {
+            'bruno.collection_path': collectionPath,
+          });
+
+          // Event: service invoked
+          span.addEvent('principal_mcp.bruno.service_invoked', {
+            'bruno.operation': 'validateCollection',
+          });
+
+          const result =
+            await brunoValidationService.validateCollection(collectionPath);
+
+          // Emit file validated events for each file (for detailed tracing)
+          for (const [filePath, fileResult] of Object.entries(result.results)) {
+            span.addEvent('principal_mcp.bruno.file_validated', {
+              'bruno.file_path': filePath,
+              'bruno.valid': fileResult.valid,
+              'bruno.error_count': fileResult.errors.length,
+              'bruno.warning_count': fileResult.warnings.length,
+            });
+          }
+
+          // Event: collection validated
+          span.addEvent('principal_mcp.bruno.collection_validated', {
+            'bruno.collection_path': collectionPath,
+            'bruno.valid': result.valid,
+            'bruno.total_files': result.totalFiles,
+            'bruno.valid_files': result.validFiles,
+            'bruno.invalid_files': result.invalidFiles,
+          });
+
+          span.setStatus({ code: SpanStatusCode.OK });
+          res.json({
+            success: true,
+            ...result,
+          });
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : 'Unknown error';
+
+          span.addEvent('principal_mcp.error.bruno_validation_failed', {
+            'error.type': 'collection_error',
+            'error.message': errorMessage,
+            'bruno.file_path': req.body.collectionPath || '',
+          });
+
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: errorMessage,
+          });
+
+          console.error(
+            '[Principal MCP Bridge] Bruno collection validation error:',
+            error,
+          );
+          res.status(500).json({
+            success: false,
+            error: errorMessage,
+          });
+        } finally {
+          span.end();
+        }
+      },
+    );
+
+    // POST /api/bruno/parse - Parse .bru content to JSON
+    this.app.post('/api/bruno/parse', async (req: Request, res: Response) => {
+      const span = tracer.startSpan('principal_mcp.bruno_parse');
+
+      try {
+        const { content } = req.body;
+
+        // Event: client request initiated
+        span.addEvent('principal_mcp.client.request_initiated', {
+          'http.method': 'POST',
+          'http.url': '/api/bruno/parse',
+          'client.type': 'mcp',
+        });
+
+        // Event: server received request
+        span.addEvent('principal_mcp.server.request_received', {
+          'http.method': 'POST',
+          'http.path': '/api/bruno/parse',
+          'server.port': this.port,
+        });
+
+        // Validate required fields
+        if (!content) {
+          span.addEvent('principal_mcp.bruno.parse_requested', {
+            'bruno.content_length': 0,
+          });
+          span.addEvent('principal_mcp.error.bruno_validation_failed', {
+            'error.type': 'missing_content',
+            'error.message': 'content is required',
+            'bruno.file_path': '',
+          });
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: 'content is required',
+          });
+          res.status(400).json({
+            success: false,
+            error: 'content is required',
+          });
+          return;
+        }
+
+        // Event: parse requested
+        span.addEvent('principal_mcp.bruno.parse_requested', {
+          'bruno.content_length': content.length,
+        });
+
+        // Event: service invoked
+        span.addEvent('principal_mcp.bruno.service_invoked', {
+          'bruno.operation': 'parseBruToJson',
+        });
+
+        const result = await brunoValidationService.parseBruToJson(content);
+
+        if (result.success && result.request) {
+          // Event: content parsed successfully
+          span.addEvent('principal_mcp.bruno.content_parsed', {
+            'bruno.success': true,
+            'bruno.request_method': result.request.http.method,
+            'bruno.request_url': result.request.http.url,
+          });
+
+          span.setStatus({ code: SpanStatusCode.OK });
+          res.json({
+            success: true,
+            request: result.request,
+          });
+        } else {
+          // Event: parse failed
+          const firstError = result.errors?.[0];
+          span.addEvent('principal_mcp.error.bruno_parse_failed', {
+            'error.type': 'syntax_error',
+            'error.message': firstError?.message || 'Parse failed',
+            'error.line': firstError?.line || 0,
+            'error.column': firstError?.column || 0,
+          });
+
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: firstError?.message || 'Parse failed',
+          });
+
+          res.status(400).json({
+            success: false,
+            errors: result.errors,
+          });
+        }
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
+
+        span.addEvent('principal_mcp.error.bruno_parse_failed', {
+          'error.type': 'internal_error',
+          'error.message': errorMessage,
+          'error.line': 0,
+          'error.column': 0,
+        });
+
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: errorMessage,
+        });
+
+        console.error('[Principal MCP Bridge] Bruno parse error:', error);
         res.status(500).json({
           success: false,
           error: errorMessage,

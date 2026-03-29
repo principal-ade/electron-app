@@ -1,0 +1,41 @@
+{
+  "version": "1.0.0",
+  "name": "Bruno Validate Collection",
+  "description": "POST /api/bruno/validate/collection endpoint for validating entire Bruno collection",
+  "canvas": ".principal-views/principal-mcp-bridge/principal-mcp-bridge.otel.canvas",
+  "spanPattern": "principal_mcp.bruno_validate_collection",
+  "scenarios": [
+    {
+      "id": "bruno-validate-collection-flow",
+      "description": "Validate entire Bruno collection with per-file results",
+      "priority": 1,
+      "template": {
+        "introduction": "**Bruno Collection Validation**\n\nValidating collection: `{{bruno.collection_path}}`",
+        "events": {
+          "principal_mcp.client.request_initiated": "1. Client ({{client.type}}) sent {{http.method}} request to {{http.url}}",
+          "principal_mcp.server.request_received": "2. Server received {{http.method}} {{http.path}} on port {{server.port}}",
+          "principal_mcp.bruno.collection_validation_requested": "3. Collection validation requested: `{{bruno.collection_path}}`",
+          "principal_mcp.bruno.service_invoked": "4. BrunoValidationService.{{bruno.operation}}() called",
+          "principal_mcp.bruno.file_validated": "5. File: `{{bruno.file_path}}` valid={{bruno.valid}}, errors={{bruno.error_count}}, warnings={{bruno.warning_count}}",
+          "principal_mcp.bruno.collection_validated": "6. Collection validated: `{{bruno.collection_path}}` valid={{bruno.valid}}, total={{bruno.total_files}}, valid={{bruno.valid_files}}, invalid={{bruno.invalid_files}}"
+        },
+        "summary": "**Collection Validation Result:**\n- Path: `{{bruno.collection_path}}`\n- All Valid: {{bruno.valid}}\n- Total Files: {{bruno.total_files}}\n- Valid Files: {{bruno.valid_files}}\n- Invalid Files: {{bruno.invalid_files}}"
+      }
+    },
+    {
+      "id": "bruno-validate-collection-path-invalid",
+      "description": "Collection validation fails due to invalid path",
+      "priority": 2,
+      "template": {
+        "introduction": "**Bruno Collection Validation - Invalid Path**",
+        "events": {
+          "principal_mcp.client.request_initiated": "1. Client ({{client.type}}) sent {{http.method}} request to {{http.url}}",
+          "principal_mcp.server.request_received": "2. Server received {{http.method}} {{http.path}} on port {{server.port}}",
+          "principal_mcp.bruno.collection_validation_requested": "3. Collection validation requested: `{{bruno.collection_path}}`",
+          "principal_mcp.error.bruno_validation_failed": "4. Invalid path: {{error.type}} - {{error.message}} (path: {{bruno.file_path}})"
+        },
+        "summary": "**Error:** Collection path `{{bruno.collection_path}}` is invalid or does not exist"
+      }
+    }
+  ]
+}

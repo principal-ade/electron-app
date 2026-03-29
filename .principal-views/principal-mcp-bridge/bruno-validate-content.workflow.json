@@ -1,0 +1,40 @@
+{
+  "version": "1.0.0",
+  "name": "Bruno Validate Content",
+  "description": "POST /api/bruno/validate endpoint for validating .bru file content",
+  "canvas": ".principal-views/principal-mcp-bridge/principal-mcp-bridge.otel.canvas",
+  "spanPattern": "principal_mcp.bruno_validate_content",
+  "scenarios": [
+    {
+      "id": "bruno-validate-content-success",
+      "description": "Successfully validate .bru content",
+      "priority": 1,
+      "template": {
+        "introduction": "**Bruno Content Validation**\n\nValidating .bru file content ({{bruno.content_length}} characters)",
+        "events": {
+          "principal_mcp.client.request_initiated": "1. Client ({{client.type}}) sent {{http.method}} request to {{http.url}}",
+          "principal_mcp.server.request_received": "2. Server received {{http.method}} {{http.path}} on port {{server.port}}",
+          "principal_mcp.bruno.validate_content_requested": "3. Validate content requested ({{bruno.content_length}} chars)",
+          "principal_mcp.bruno.service_invoked": "4. BrunoValidationService.{{bruno.operation}}() called",
+          "principal_mcp.bruno.content_validated": "5. Validation complete: valid={{bruno.valid}}, errors={{bruno.error_count}}, warnings={{bruno.warning_count}}"
+        },
+        "summary": "**Validation Result:**\n- Valid: {{bruno.valid}}\n- Errors: {{bruno.error_count}}\n- Warnings: {{bruno.warning_count}}"
+      }
+    },
+    {
+      "id": "bruno-validate-content-missing",
+      "description": "Validation fails due to missing content",
+      "priority": 2,
+      "template": {
+        "introduction": "**Bruno Content Validation - Missing Content**",
+        "events": {
+          "principal_mcp.client.request_initiated": "1. Client ({{client.type}}) sent {{http.method}} request to {{http.url}}",
+          "principal_mcp.server.request_received": "2. Server received {{http.method}} {{http.path}} on port {{server.port}}",
+          "principal_mcp.bruno.validate_content_requested": "3. Validate content requested",
+          "principal_mcp.error.bruno_validation_failed": "4. Validation failed: {{error.type}} - {{error.message}} (path: {{bruno.file_path}})"
+        },
+        "summary": "**Error:** Content is required but was not provided"
+      }
+    }
+  ]
+}
