@@ -11,7 +11,7 @@ export interface ThemeChangeEvent {
 
 class ThemeServiceClass extends EventEmitter {
   private static instance: ThemeServiceClass;
-  private currentThemeName: string = 'slate';
+  private currentThemeName: string = 'slateNeon';
   private currentColorMode: 'light' | 'dark' = 'dark';
   private currentThemeCache: Theme | null = null;
 

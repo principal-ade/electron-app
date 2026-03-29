@@ -5,6 +5,8 @@ import {
   matrixTheme,
   matrixMinimalTheme,
   slateTheme,
+  slateNeonTheme,
+  slateGoldTheme,
   defaultMarkdownTheme,
   defaultEditorTheme,
   defaultTerminalTheme,
@@ -78,6 +80,8 @@ const transparentTheme: Theme = {
     highlightBg: 'transparent',
     highlightBorder: 'transparent',
     textOnPrimary: 'transparent',
+    textOnSecondary: 'transparent',
+    textOnAccent: 'transparent',
   },
   buttons: {
     primary: {
@@ -205,6 +209,16 @@ export const predefinedThemes: Record<
     description: 'Professional slate gray theme',
     theme: customSlateTheme,
   },
+  slateNeon: {
+    name: 'Slate Neon',
+    description: 'Slate theme with vibrant neon accents',
+    theme: slateNeonTheme,
+  },
+  slateGold: {
+    name: 'Slate Gold',
+    description: 'Slate theme with warm gold accents',
+    theme: slateGoldTheme,
+  },
   defaultMarkdown: {
     name: 'Default Markdown',
     description: 'Standard markdown theme',
@@ -229,10 +243,10 @@ export const getThemeNames = (): string[] => {
 
 // Get theme by name
 export const getThemeByName = (name: string): Theme | undefined => {
-  // If theme doesn't exist, fall back to 'slate' as default
+  // If theme doesn't exist, fall back to 'slateNeon' as default
   if (!predefinedThemes[name]) {
-    console.warn(`Theme '${name}' not found, falling back to 'slate'`);
-    return predefinedThemes['slate']?.theme;
+    console.warn(`Theme '${name}' not found, falling back to 'slateNeon'`);
+    return predefinedThemes['slateNeon']?.theme;
   }
   return predefinedThemes[name]?.theme;
 };

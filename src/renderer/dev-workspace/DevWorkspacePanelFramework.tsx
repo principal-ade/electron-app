@@ -455,8 +455,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       }
       isApplyingPresetRef.current = true;
       panelLayoutRef.current.setLayout(panelSizes);
-      setIsLeftCollapsed(panelSizes.left < 5);
-      setIsRightCollapsed(panelSizes.right < 5);
+      // Don't set collapsed state here - let ConfigurablePanelLayout's
+      // onLeftCollapseComplete/onRightCollapseComplete callbacks handle it
+      // after the animation finishes
       setTimeout(() => {
         isApplyingPresetRef.current = false;
       }, 500);
@@ -484,6 +485,30 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
   const handleRightExpand = useCallback(() => {
     panelLayoutRef.current?.expandPanel('right');
+    setIsRightCollapsed(false);
+    onCollapsedChange({ ...collapsed, right: false });
+  }, [collapsed, onCollapsedChange]);
+
+  // Internal handlers for when ConfigurablePanelLayout completes collapse/expand animations
+  // These update local state and call the parent callback
+  const handleLeftCollapseCompleteInternal = useCallback(() => {
+    setIsLeftCollapsed(true);
+    onCollapsedChange({ ...collapsed, left: true });
+    onLeftCollapseComplete?.();
+  }, [collapsed, onCollapsedChange, onLeftCollapseComplete]);
+
+  const handleLeftExpandCompleteInternal = useCallback(() => {
+    setIsLeftCollapsed(false);
+    onCollapsedChange({ ...collapsed, left: false });
+    onLeftExpandComplete?.();
+  }, [collapsed, onCollapsedChange, onLeftExpandComplete]);
+
+  const handleRightCollapseCompleteInternal = useCallback(() => {
+    setIsRightCollapsed(true);
+    onCollapsedChange({ ...collapsed, right: true });
+  }, [collapsed, onCollapsedChange]);
+
+  const handleRightExpandCompleteInternal = useCallback(() => {
     setIsRightCollapsed(false);
     onCollapsedChange({ ...collapsed, right: false });
   }, [collapsed, onCollapsedChange]);
@@ -3630,8 +3655,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           showCollapseButtons={false}
           theme={theme}
           onPanelResize={handlePanelResizeInternal}
-          onLeftCollapseComplete={onLeftCollapseComplete}
-          onLeftExpandComplete={onLeftExpandComplete}
+          onLeftCollapseComplete={handleLeftCollapseCompleteInternal}
+          onLeftExpandComplete={handleLeftExpandCompleteInternal}
+          onRightCollapseComplete={handleRightCollapseCompleteInternal}
+          onRightExpandComplete={handleRightExpandCompleteInternal}
         />
 
         {/* Detail Panel Modal */}

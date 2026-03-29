@@ -13,6 +13,8 @@ import {
   matrixTheme,
   matrixMinimalTheme,
   slateTheme,
+  slateNeonTheme,
+  slateGoldTheme,
   defaultMarkdownTheme,
   defaultEditorTheme,
   defaultTerminalTheme,
@@ -72,6 +74,18 @@ export const predefinedThemesMeta: Record<string, ThemeMetadata> = {
     displayName: 'Slate',
     description: 'Professional slate gray theme',
     theme: slateTheme,
+  },
+  slateNeon: {
+    name: 'slateNeon',
+    displayName: 'Slate Neon',
+    description: 'Slate theme with vibrant neon accents',
+    theme: slateNeonTheme,
+  },
+  slateGold: {
+    name: 'slateGold',
+    displayName: 'Slate Gold',
+    description: 'Slate theme with warm gold accents',
+    theme: slateGoldTheme,
   },
   defaultMarkdown: {
     name: 'defaultMarkdown',
