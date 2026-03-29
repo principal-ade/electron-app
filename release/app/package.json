@@ -81,6 +81,7 @@
     "@xterm/addon-web-links": "^0.11.0",
     "@xterm/addon-webgl": "^0.18.0",
     "@xterm/xterm": "^5.5.0",
+    "@usebruno/lang": "^0.35.0",
     "@usebruno/requests": "^0.16.0",
     "axios": "^1.9.0",
     "ai": "^4.3.17",
