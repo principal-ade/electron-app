@@ -1,0 +1,19 @@
+meta {
+  name: Validate Content
+  type: http
+  seq: 2
+}
+
+post {
+  url: http://localhost:3054/api/bruno/validate
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "content": "meta {\n  name: Test Request\n  type: http\n}\n\nget {\n  url: https://api.example.com/users\n}"
+  }
+}

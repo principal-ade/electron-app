@@ -1,0 +1,19 @@
+meta {
+  name: Parse Content
+  type: http
+  seq: 5
+}
+
+post {
+  url: http://localhost:3054/api/bruno/parse
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "content": "meta {\n  name: Get Users\n  type: http\n}\n\nget {\n  url: https://api.example.com/users\n}\n\nheaders {\n  Authorization: Bearer {{token}}\n}"
+  }
+}

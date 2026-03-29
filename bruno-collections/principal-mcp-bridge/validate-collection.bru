@@ -1,0 +1,19 @@
+meta {
+  name: Validate Collection
+  type: http
+  seq: 4
+}
+
+post {
+  url: http://localhost:3054/api/bruno/validate/collection
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "collectionPath": "{{collectionPath}}"
+  }
+}

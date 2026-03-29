@@ -1,0 +1,19 @@
+meta {
+  name: Validate File
+  type: http
+  seq: 3
+}
+
+post {
+  url: http://localhost:3054/api/bruno/validate/file
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "filePath": "{{collectionPath}}/health.bru"
+  }
+}
