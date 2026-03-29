@@ -13,6 +13,7 @@ import {
   Activity,
   History,
   X,
+  Send,
 } from 'lucide-react';
 import {
   ConfigurablePanelLayout,
@@ -70,7 +71,7 @@ import {
   type GitDiffPanelProps,
 } from '@industry-theme/file-editing-panels';
 import { panels as backlogPanels } from '@industry-theme/backlogmd-kanban-panel';
-import { panels as brunoPanels } from '@principal-ade/bruno-panels';
+import { panels as brunoPanels, type BrunoRequest } from '@principal-ade/bruno-panels';
 import { panels as agentPanels, type Skill, type SkillDetailPanelProps } from '@industry-theme/agent-panels';
 import { GitHubIssuesPanel, GitHubIssueDetailPanel } from '@industry-theme/github-panels';
 import { panels as typeInformationPanels } from '../panels/TypeInformationPanel';
@@ -200,9 +201,30 @@ interface MultiCanvasTab extends BaseTab {
 }
 
 /**
+ * Tab type for Bruno API request panel
+ */
+interface BrunoRequestTab extends BaseTab {
+  contentType: 'bruno-request';
+  requestId: string;
+  requestName: string;
+  request: BrunoRequest;
+}
+
+/**
+ * Props for the Bruno RequestPanel including optional selected request
+ */
+interface BrunoRequestPanelProps {
+  context: unknown;
+  actions: unknown;
+  events: PanelEventEmitter;
+  selectedRequest?: BrunoRequest;
+  selectedRequestId?: string;
+}
+
+/**
  * Union type of all tab types used in DevWorkspace
  */
-type DevWorkspaceTab = TerminalTab | SkillTab | MarkdownTab | CanvasEditorTab | CanvasTab | FileEditorTab | MDXEditorTab | GitDiffTab | DependencyGraphTab | TraceDetailsTab | MultiCanvasTab;
+type DevWorkspaceTab = TerminalTab | SkillTab | MarkdownTab | CanvasEditorTab | CanvasTab | FileEditorTab | MDXEditorTab | GitDiffTab | DependencyGraphTab | TraceDetailsTab | MultiCanvasTab | BrunoRequestTab;
 
 /**
  * History item for right panel document viewing
@@ -749,10 +771,14 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   const GitHubIssuesPanelComponent = GitHubIssuesPanel;
   const GitHubIssueDetailPanelComponent = GitHubIssueDetailPanel;
 
-  // Bruno API Client panel
-  const BrunoPanelComponent = brunoPanels.find(
-    (p) => p.metadata?.id === 'principal-ade.bruno-panel',
+  // Bruno API panels
+  const BrunoCollectionPanelComponent = brunoPanels.find(
+    (p) => p.metadata?.id === 'principal-ade.bruno-collection',
   )?.component;
+
+  const BrunoRequestPanelComponent = brunoPanels.find(
+    (p) => p.metadata?.id === 'principal-ade.bruno-request',
+  )?.component as React.ComponentType<BrunoRequestPanelProps> | undefined;
 
   const TypeInformationPanelComponent = typeInformationPanels.find(
     (p) => p.metadata?.id === 'principal-ade.type-information',
@@ -1954,6 +1980,54 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           return [...prevTabs, newTab];
         });
       }),
+      // Bruno request selected - create tab for request panel
+      events.on('principal-ade.bruno:request-selected', (event) => {
+        console.info('[DevWorkspacePanelFramework] Bruno request selected:', event);
+
+        // Ignore re-emitted events from tabs to prevent loop
+        if (event.source === 'tab') {
+          return;
+        }
+
+        const payload = event.payload as { requestId: string; request: BrunoRequest };
+        const { requestId, request } = payload;
+
+        if (!request) {
+          console.warn('[DevWorkspacePanelFramework] No request in payload:', payload);
+          return;
+        }
+
+        const requestName = request.meta?.name || requestId.split('/').pop()?.replace('.bru', '') || 'Request';
+
+        setTabs((prevTabs) => {
+          // Check if tab already exists for this request
+          const existingTab = prevTabs.find(
+            (t) => t.contentType === 'bruno-request' && (t as BrunoRequestTab).requestId === requestId
+          );
+
+          if (existingTab) {
+            console.info('[DevWorkspacePanelFramework] Bruno request tab already exists, focusing:', existingTab.id);
+            setFocusTabId(existingTab.id);
+            return prevTabs;
+          }
+
+          // Create new Bruno request tab
+          const tabId = `bruno-request-${requestId.replace(/[^a-zA-Z0-9]/g, '-')}`;
+          const newTab: BrunoRequestTab = {
+            id: tabId,
+            label: requestName,
+            contentType: 'bruno-request',
+            requestId,
+            requestName,
+            request,
+            closable: true,
+          };
+
+          console.info('[DevWorkspacePanelFramework] Creating new Bruno request tab:', newTab);
+          setFocusTabId(newTab.id);
+          return [...prevTabs, newTab];
+        });
+      }),
     ];
 
     return () => {
@@ -2115,6 +2189,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         return <GitBranch size={14} />;
       case 'trace-details':
         return <Activity size={14} />;
+      case 'bruno-request':
+        return <Send size={14} />;
       default:
         return undefined; // Return undefined to fall back to tab.icon
     }
@@ -2561,6 +2637,46 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 actions={actionsRef.current}
                 events={eventsRef.current}
                 selectedTrace={traceDetailsTab.traceData ?? null}
+              />
+            </div>
+          );
+        }
+
+        case 'bruno-request': {
+          // Type assertion for TypeScript
+          const brunoRequestTab = tab as BrunoRequestTab;
+
+          if (!BrunoRequestPanelComponent) {
+            return (
+              <div style={{ padding: '2rem', color: theme.colors.textSecondary }}>
+                Bruno Request panel not available
+              </div>
+            );
+          }
+
+          console.info('[DevWorkspacePanelFramework] Rendering Bruno request tab:', {
+            requestId: brunoRequestTab.requestId,
+            requestName: brunoRequestTab.requestName,
+            isActive,
+          });
+
+          return (
+            <div
+              style={{
+                height: '100%',
+                width: '100%',
+                overflow: 'hidden',
+                position: 'relative',
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              <BrunoRequestPanelComponent
+                context={contextRef.current}
+                actions={actionsRef.current}
+                events={eventsRef.current}
+                selectedRequest={brunoRequestTab.request}
+                selectedRequestId={brunoRequestTab.requestId}
               />
             </div>
           );
@@ -3346,8 +3462,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       },
       {
         id: 'bruno',
-        label: 'Bruno API Client',
-        content: BrunoPanelComponent ? (
+        label: 'Bruno Collection',
+        content: BrunoCollectionPanelComponent ? (
           <div
             style={{
               height: '100%',
@@ -3358,14 +3474,14 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               flexDirection: 'column',
             }}
           >
-            <BrunoPanelComponent
+            <BrunoCollectionPanelComponent
               context={context}
               actions={actions}
               events={events}
             />
           </div>
         ) : (
-          <div>Bruno API Client panel not available</div>
+          <div>Bruno Collection panel not available</div>
         ),
       },
       {
@@ -3419,7 +3535,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       GitHubIssuesPanelComponent,
       GitHubIssueDetailPanelComponent,
       TypeInformationPanelComponent,
-      BrunoPanelComponent,
+      BrunoCollectionPanelComponent,
+      BrunoRequestPanelComponent,
       context,
       actions,
       events,
