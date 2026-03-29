@@ -80,6 +80,7 @@ import type { Repository } from '../../shared/types/repository.types';
 import { PanelIconSidebar, RIGHT_PANEL_ICONS } from '../components/Sidebar/PanelIconSidebar';
 import { StorybookSidebarButton } from '../components/Sidebar/StorybookSidebarButton';
 import { NextjsSidebarButton } from '../components/Sidebar/NextjsSidebarButton';
+import { NotesSidebarButton } from '../components/Sidebar/NotesSidebarButton';
 import type {
   DocumentSelectedPayload,
   TaskSelectedPayload,
@@ -3245,6 +3246,31 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         ),
       },
       {
+        id: 'notes',
+        label: 'Notes',
+        content: MDXEditorPanelComponent ? (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <MDXEditorPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+              filePath={context.currentScope?.repository?.path ? `${context.currentScope.repository.path}/.principal/notes.md` : undefined}
+            />
+          </div>
+        ) : (
+          <div>Notes panel not available</div>
+        ),
+      },
+      {
         id: 'kanban',
         label: 'Kanban',
         content: KanbanPanelComponent ? (
@@ -3701,6 +3727,12 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 onLayoutChange={onLayoutChange}
                 onPanelSizesChange={onPanelSizesChange}
                 events={events}
+              />
+              <NotesSidebarButton
+                theme={theme}
+                repositoryPath={context.currentScope?.repository?.path}
+                currentLayout={layout as { left: string; middle: string; right: string }}
+                onLayoutChange={onLayoutChange}
               />
             </>
           }
