@@ -5,7 +5,7 @@
  */
 
 import { ipcRenderer } from 'electron';
-import type { BrunoRequest, BrunoResponse } from '@principal-ade/bruno-panels';
+import type { BrunoRequest, BrunoResponse, BrunoEnvironment } from '@principal-ade/bruno-panels';
 import {
   BrunoAPIEvent,
   type BrunoAPI,
@@ -21,5 +21,9 @@ export const brunoAPI: BrunoAPI = {
 
   loadBruRequest: (path: string): Promise<BrunoRequest> => {
     return ipcRenderer.invoke(BrunoAPIEvent.LOAD_BRU_REQUEST, path);
+  },
+
+  loadEnvironments: (collectionPath: string): Promise<BrunoEnvironment[]> => {
+    return ipcRenderer.invoke(BrunoAPIEvent.LOAD_ENVIRONMENTS, collectionPath);
   },
 };

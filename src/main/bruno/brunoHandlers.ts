@@ -2,7 +2,7 @@ import { ipcMain } from 'electron';
 import * as fs from 'fs/promises';
 import type { BrunoRequest } from '@principal-ade/bruno-panels';
 import { BrunoAPIEvent } from '../../shared/main-process-api-interfaces/BrunoAPI';
-import { sendBrunoRequest } from './bruno-actions';
+import { sendBrunoRequest, loadEnvironments } from './bruno-actions';
 import { BrunoLangParserAdapter } from './adapters/BrunoLangParserAdapter';
 
 const parserAdapter = new BrunoLangParserAdapter();
@@ -34,6 +34,13 @@ export function registerBrunoHandlers(): void {
       }
 
       return result.request;
+    },
+  );
+
+  ipcMain.handle(
+    BrunoAPIEvent.LOAD_ENVIRONMENTS,
+    async (_event, collectionPath: string) => {
+      return loadEnvironments(collectionPath);
     },
   );
 

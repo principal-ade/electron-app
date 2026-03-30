@@ -4,7 +4,7 @@
  * Provides .bru file parsing and HTTP request execution for Bruno panels.
  */
 
-import type { BrunoRequest, BrunoResponse } from '@principal-ade/bruno-panels';
+import type { BrunoRequest, BrunoResponse, BrunoEnvironment } from '@principal-ade/bruno-panels';
 
 export class BrunoService {
   /**
@@ -30,5 +30,14 @@ export class BrunoService {
       `[BrunoService] Sending request: ${request.http?.method} ${request.http?.url}`,
     );
     return window.mainProcess.bruno.sendRequest(request, environment);
+  }
+
+  /**
+   * Load all environments from environments/*.json files in the collection.
+   * @param collectionPath - Absolute path to the Bruno collection
+   */
+  static async loadEnvironments(collectionPath: string): Promise<BrunoEnvironment[]> {
+    console.info(`[BrunoService] Loading environments from: ${collectionPath}`);
+    return window.mainProcess.bruno.loadEnvironments(collectionPath);
   }
 }

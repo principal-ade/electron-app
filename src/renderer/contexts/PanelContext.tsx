@@ -8,7 +8,6 @@ import React, {
   type ReactNode,
 } from 'react';
 import type { Theme } from '@principal-ade/industry-theme';
-import type { BrunoRequest, BrunoResponse } from '@principal-ade/bruno-panels';
 import { PanelEventBus } from '@principal-ade/panel-framework-core';
 import type {
   PanelContextValue,
@@ -33,7 +32,6 @@ import {
   type RunningServer,
   type ServerScanResult,
 } from '../main-process-api/LocalhostDetectionService';
-import { BrunoService } from '../main-process-api/BrunoService';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type {
   FileTree,
@@ -157,11 +155,6 @@ interface ExtendedPanelActions extends PanelActions {
   // File operations for panels (e.g., principal-view-panels, MarkdownPanel)
   // REQUIRED for MarkdownPanel - matches framework signature
   readFile: (path: string) => Promise<string>;
-  // Bruno panel actions
-  sendRequest: (
-    request: BrunoRequest,
-    environment?: Record<string, string>,
-  ) => Promise<BrunoResponse>;
 }
 
 // Extended context interface that panels actually expect
@@ -1613,22 +1606,6 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
           }
 
           return result.content;
-        },
-
-        sendRequest: async (
-          request: BrunoRequest,
-          environment?: Record<string, string>,
-        ): Promise<BrunoResponse> => {
-          return BrunoService.sendRequest(request, environment);
-        },
-
-        loadBruRequest: async (path: string): Promise<BrunoRequest> => {
-          const repoPath = repository?.path || workspace?.path || '';
-          const absolutePath = path.startsWith('/')
-            ? path
-            : `${repoPath}/${path}`;
-
-          return BrunoService.loadBruRequest(absolutePath);
         },
       };
     },

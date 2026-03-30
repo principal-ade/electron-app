@@ -1,5 +1,7 @@
 import { makeAxiosInstance } from '@usebruno/requests';
-import type { BrunoRequest, BrunoResponse } from '@principal-ade/bruno-panels';
+import type { BrunoRequest, BrunoResponse, BrunoEnvironment } from '@principal-ade/bruno-panels';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 
 /**
  * Interpolate environment variables in a string
@@ -119,10 +121,46 @@ export async function sendBrunoRequest(
       size,
     };
   } catch (error: unknown) {
-    // Network error or other failure
+    // Handle axios errors with more detail
+    if (error && typeof error === 'object' && 'code' in error) {
+      const axiosError = error as { code?: string; message?: string; cause?: Error };
+      const message = axiosError.cause?.message || axiosError.message || axiosError.code || 'Unknown error';
+      throw new Error(`Request failed: ${message}`);
+    }
+
     if (error instanceof Error) {
       throw new Error(`Request failed: ${error.message}`);
     }
     throw error;
+  }
+}
+
+/**
+ * Load all Bruno environments from environments/*.json files
+ */
+export async function loadEnvironments(collectionPath: string): Promise<BrunoEnvironment[]> {
+  const environmentsDir = path.join(collectionPath, 'environments');
+
+  try {
+    const files = await fs.readdir(environmentsDir);
+    const jsonFiles = files.filter(f => f.endsWith('.json'));
+
+    const environments: BrunoEnvironment[] = [];
+
+    for (const file of jsonFiles) {
+      try {
+        const filePath = path.join(environmentsDir, file);
+        const content = await fs.readFile(filePath, 'utf-8');
+        const env = JSON.parse(content) as BrunoEnvironment;
+        environments.push(env);
+      } catch (err) {
+        console.warn('[Bruno] Failed to load environment file:', file, err);
+      }
+    }
+
+    return environments;
+  } catch {
+    // No environments directory or not accessible
+    return [];
   }
 }

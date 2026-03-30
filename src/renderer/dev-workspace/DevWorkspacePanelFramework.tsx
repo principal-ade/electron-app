@@ -14,6 +14,7 @@ import {
   History,
   X,
   Send,
+  Gauge,
 } from 'lucide-react';
 import {
   ConfigurablePanelLayout,
@@ -45,9 +46,10 @@ import {
   StoryboardListPanel,
   TraceListPanel,
   MultiCanvasPanel,
+  DashboardPanel,
   type CanvasEditorPanelProps,
 } from '@industry-theme/principal-view-panels';
-import type { RegisteredTrace } from '@principal-ai/principal-view-core';
+import type { RegisteredTrace, DiscoveredDashboard } from '@principal-ai/principal-view-core';
 import type { WorkflowTemplate } from '@principal-ai/principal-view-core';
 import type { FileInfo } from '@principal-ai/repository-abstraction';
 import { CodeCityPanel, type CodeCityPanelPropsTyped } from '@industry-theme/file-city-panel';
@@ -209,6 +211,19 @@ interface BrunoRequestTab extends BaseTab {
   requestId: string;
   requestName: string;
   request: BrunoRequest;
+  environment?: Record<string, string>;
+  environmentName?: string;
+}
+
+/**
+ * Tab type for observability dashboard panel
+ */
+interface DashboardTab extends BaseTab {
+  contentType: 'dashboard';
+  dashboardId: string;
+  dashboardPath: string;
+  dashboardName: string;
+  dashboard: DiscoveredDashboard;
 }
 
 /**
@@ -220,12 +235,14 @@ interface BrunoRequestPanelProps {
   events: PanelEventEmitter;
   selectedRequest?: BrunoRequest;
   selectedRequestId?: string;
+  selectedEnvironment?: Record<string, string>;
+  selectedEnvironmentName?: string;
 }
 
 /**
  * Union type of all tab types used in DevWorkspace
  */
-type DevWorkspaceTab = TerminalTab | SkillTab | MarkdownTab | CanvasEditorTab | CanvasTab | FileEditorTab | MDXEditorTab | GitDiffTab | DependencyGraphTab | TraceDetailsTab | MultiCanvasTab | BrunoRequestTab;
+type DevWorkspaceTab = TerminalTab | SkillTab | MarkdownTab | CanvasEditorTab | CanvasTab | FileEditorTab | MDXEditorTab | GitDiffTab | DependencyGraphTab | TraceDetailsTab | MultiCanvasTab | BrunoRequestTab | DashboardTab;
 
 /**
  * History item for right panel document viewing
@@ -2006,6 +2023,53 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           return [...prevTabs, newTab];
         });
       }),
+      // Dashboard open - create tab for dashboard panel
+      events.on('custom', (event) => {
+        const payload = event.payload as { action?: string; dashboardId?: string; dashboard?: DiscoveredDashboard };
+
+        // Only handle openDashboard action from storyboard-list-panel
+        if (payload.action !== 'openDashboard' || event.source !== 'storyboard-list-panel') {
+          return;
+        }
+
+        console.info('[DevWorkspacePanelFramework] Received dashboard open event:', event);
+        const { dashboardId, dashboard } = payload;
+
+        if (!dashboardId || !dashboard) {
+          console.warn('[DevWorkspacePanelFramework] No dashboard data in event:', event.payload);
+          return;
+        }
+
+        setTabs((prevTabs) => {
+          // Check if dashboard tab already exists
+          const existingTabIndex = prevTabs.findIndex(
+            (t) => t.contentType === 'dashboard' && (t as DashboardTab).dashboardId === dashboardId
+          );
+
+          if (existingTabIndex !== -1) {
+            // Focus existing tab
+            console.info('[DevWorkspacePanelFramework] Focusing existing dashboard tab');
+            setFocusTabId(prevTabs[existingTabIndex].id);
+            return prevTabs;
+          }
+
+          // Create new dashboard tab
+          const newTab: DashboardTab = {
+            id: `dashboard-${dashboardId}`,
+            label: dashboard.name || dashboardId,
+            contentType: 'dashboard',
+            dashboardId,
+            dashboardPath: dashboard.path,
+            dashboardName: dashboard.name || dashboardId,
+            dashboard,
+            closable: true,
+          };
+
+          console.info('[DevWorkspacePanelFramework] Creating new dashboard tab:', newTab);
+          setFocusTabId(newTab.id);
+          return [...prevTabs, newTab];
+        });
+      }),
       // Bruno request selected - create tab for request panel
       events.on('principal-ade.bruno:request-selected', (event) => {
         console.info('[DevWorkspacePanelFramework] Bruno request selected:', event);
@@ -2015,8 +2079,13 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           return;
         }
 
-        const payload = event.payload as { requestId: string; request: BrunoRequest };
-        const { requestId, request } = payload;
+        const payload = event.payload as {
+          requestId: string;
+          request: BrunoRequest;
+          environment?: Record<string, string>;
+          environmentName?: string;
+        };
+        const { requestId, request, environment, environmentName } = payload;
 
         if (!request) {
           console.warn('[DevWorkspacePanelFramework] No request in payload:', payload);
@@ -2046,6 +2115,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             requestId,
             requestName,
             request,
+            environment,
+            environmentName,
             closable: true,
           };
 
@@ -2217,6 +2288,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         return <Activity size={14} />;
       case 'bruno-request':
         return <Send size={14} />;
+      case 'dashboard':
+        return <Gauge size={14} />;
       default:
         return undefined; // Return undefined to fall back to tab.icon
     }
@@ -2703,6 +2776,40 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 events={eventsRef.current}
                 selectedRequest={brunoRequestTab.request}
                 selectedRequestId={brunoRequestTab.requestId}
+                selectedEnvironment={brunoRequestTab.environment}
+                selectedEnvironmentName={brunoRequestTab.environmentName}
+              />
+            </div>
+          );
+        }
+
+        case 'dashboard': {
+          // Type assertion for TypeScript
+          const dashboardTab = tab as DashboardTab;
+
+          console.info('[DevWorkspacePanelFramework] Rendering dashboard tab:', {
+            dashboardId: dashboardTab.dashboardId,
+            dashboardPath: dashboardTab.dashboardPath,
+            dashboardName: dashboardTab.dashboardName,
+            isActive,
+          });
+
+          return (
+            <div
+              style={{
+                height: '100%',
+                width: '100%',
+                overflow: 'hidden',
+                position: 'relative',
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              <DashboardPanel
+                context={contextRef.current}
+                actions={actionsRef.current}
+                events={eventsRef.current}
+                selectedDashboard={dashboardTab.dashboard as unknown as import('@principal-ai/principal-view-core').DiscoveredCanvas}
               />
             </div>
           );
