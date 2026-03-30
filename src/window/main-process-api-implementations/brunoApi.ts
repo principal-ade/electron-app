@@ -18,4 +18,8 @@ export const brunoAPI: BrunoAPI = {
   ): Promise<BrunoResponse> => {
     return ipcRenderer.invoke(BrunoAPIEvent.SEND_REQUEST, request, environment);
   },
+
+  loadBruRequest: (path: string): Promise<BrunoRequest> => {
+    return ipcRenderer.invoke(BrunoAPIEvent.LOAD_BRU_REQUEST, path);
+  },
 };

@@ -53,6 +53,8 @@ import type {
 import type { TerminalSessionInfo } from '@industry-theme/xterm-terminal-panel';
 import type { FeedProjectSliceData, ActivityHeatmapSliceData } from '@industry-theme/file-city-panel';
 import type { GitHubIssuesSliceData } from '@industry-theme/github-panels';
+import type { BrunoRequest, BrunoResponse } from '@principal-ade/bruno-panels';
+import { BrunoService } from '../main-process-api/BrunoService';
 
 // Color mode for file city visualization - imported from registry
 // The registry's ColorMode type includes all built-in and lens-based modes
@@ -181,6 +183,11 @@ export interface RepositoryPanelActions extends PanelActions {
     scenarioId: string,
     filterDefault: boolean,
   ) => Promise<void>;
+  // Bruno panel actions
+  /** Load and parse a .bru file, returning a BrunoRequest. Parsing happens on the host side. */
+  loadBruRequest?: (path: string) => Promise<BrunoRequest>;
+  /** Send an HTTP request using Bruno request format */
+  sendRequest?: (request: BrunoRequest, environment?: Record<string, string>) => Promise<BrunoResponse>;
 }
 
 // Extended context for repository panels
@@ -1807,6 +1814,21 @@ export const RepositoryPanelProvider: React.FC<
           );
           throw error;
         }
+      },
+
+      loadBruRequest: async (path: string): Promise<BrunoRequest> => {
+        const absolutePath = path.startsWith('/')
+          ? path
+          : `${repositoryPath}/${path}`;
+
+        return BrunoService.loadBruRequest(absolutePath);
+      },
+
+      sendRequest: async (
+        request: BrunoRequest,
+        environment?: Record<string, string>,
+      ): Promise<BrunoResponse> => {
+        return BrunoService.sendRequest(request, environment);
       },
     }),
     [repositoryPath, events, repository?.name],

@@ -33,6 +33,7 @@ import {
   type RunningServer,
   type ServerScanResult,
 } from '../main-process-api/LocalhostDetectionService';
+import { BrunoService } from '../main-process-api/BrunoService';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type {
   FileTree,
@@ -1618,8 +1619,16 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
           request: BrunoRequest,
           environment?: Record<string, string>,
         ): Promise<BrunoResponse> => {
-          console.info('[PanelContext] Sending Bruno request:', request.http?.method, request.http?.url);
-          return window.mainProcess.bruno.sendRequest(request, environment);
+          return BrunoService.sendRequest(request, environment);
+        },
+
+        loadBruRequest: async (path: string): Promise<BrunoRequest> => {
+          const repoPath = repository?.path || workspace?.path || '';
+          const absolutePath = path.startsWith('/')
+            ? path
+            : `${repoPath}/${path}`;
+
+          return BrunoService.loadBruRequest(absolutePath);
         },
       };
     },
