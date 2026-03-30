@@ -469,6 +469,8 @@ export const RepositoryPanelProvider: React.FC<
   };
 
   // Fetch file tree when repository changes and subscribe to cache sync updates
+  // We use refreshRepository() instead of getFileTree() to avoid stale cached data
+  // on window open. The fresh data arrives via CACHE_SYNC event handled below.
   useEffect(() => {
     const fetchFileTree = async () => {
       if (!repositoryPath) {
@@ -478,16 +480,15 @@ export const RepositoryPanelProvider: React.FC<
 
       setFileTreeLoading(true);
       try {
-        const tree =
-          await RepositoryMonitoringService.getFileTree(repositoryPath);
+        await RepositoryMonitoringService.refreshRepository(repositoryPath);
         console.info(
-          '[RepositoryPanelProvider] Fetched file tree for repository:',
+          '[RepositoryPanelProvider] Refreshed file tree for repository:',
           repositoryPath,
         );
-        setFileTreeData(tree);
+        // Note: setFileTreeData is handled by onCacheSync handler below
       } catch (error) {
         console.error(
-          '[RepositoryPanelProvider] Failed to fetch file tree:',
+          '[RepositoryPanelProvider] Failed to refresh file tree:',
           error,
         );
         setFileTreeData(null);
