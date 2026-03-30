@@ -925,6 +925,18 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     setCollapsed((prev) => ({ ...prev, left: false }));
   }, []);
 
+  // Open FileCity 3D visualization as a tab
+  const handleOpenFileCity3D = useCallback(() => {
+    events.emit({
+      type: 'file-city-3d:open',
+      source: 'dev-workspace-titlebar',
+      timestamp: Date.now(),
+      payload: {},
+    });
+    // Expand right panel if collapsed to show the tab
+    setCollapsed((prev) => ({ ...prev, right: false }));
+  }, [events]);
+
   // Handle focus mode toggle - hides sidebars AND collapses panels
   const handleSidebarsHiddenChange = useCallback((hidden: boolean) => {
     if (hidden) {
@@ -989,6 +1001,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         repositoryName={repositoryName}
         selectedSource={selectedSource}
         onShowGitChanges={handleShowGitChanges}
+        onOpenFileCity3D={handleOpenFileCity3D}
         terminalImplementation={terminalImplementation}
         onToggleTerminalImplementation={
           showTerminalToggle ? handleToggleTerminalImplementation : undefined

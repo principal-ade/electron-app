@@ -15,6 +15,7 @@ import {
   X,
   Send,
   Gauge,
+  Building2,
 } from 'lucide-react';
 import {
   ConfigurablePanelLayout,
@@ -60,7 +61,11 @@ import {
   DependencyGraphPanelContent,
   GitChangesPanel,
   PackageCompositionPanel,
+  FileCity3DPanelContent,
+  buildCityDataFromFileTree,
+  estimateLineCounts,
   type PackageLayer,
+  type CityData,
 } from '@industry-theme/repository-composition-panels';
 import { panels as codeQualityPanels } from '@principal-ade/code-quality-panels';
 import { MarkdownPanel, type MarkdownPanelProps } from '@industry-theme/markdown-panels';
@@ -227,6 +232,14 @@ interface DashboardTab extends BaseTab {
 }
 
 /**
+ * Tab type for FileCity 3D visualization panel
+ */
+interface FileCity3DTab extends BaseTab {
+  contentType: 'file-city-3d';
+  cityData: CityData;
+}
+
+/**
  * Props for the Bruno RequestPanel including optional selected request
  */
 interface BrunoRequestPanelProps {
@@ -242,7 +255,7 @@ interface BrunoRequestPanelProps {
 /**
  * Union type of all tab types used in DevWorkspace
  */
-type DevWorkspaceTab = TerminalTab | SkillTab | MarkdownTab | CanvasEditorTab | CanvasTab | FileEditorTab | MDXEditorTab | GitDiffTab | DependencyGraphTab | TraceDetailsTab | MultiCanvasTab | BrunoRequestTab | DashboardTab;
+type DevWorkspaceTab = TerminalTab | SkillTab | MarkdownTab | CanvasEditorTab | CanvasTab | FileEditorTab | MDXEditorTab | GitDiffTab | DependencyGraphTab | TraceDetailsTab | MultiCanvasTab | BrunoRequestTab | DashboardTab | FileCity3DTab;
 
 /**
  * History item for right panel document viewing
@@ -2222,6 +2235,65 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     return unsubscribe;
   }, [events]);
 
+  // Listen for file-city-3d:open events to create a new 3D city visualization tab
+  useEffect(() => {
+    const unsubscribe = events.on('file-city-3d:open', () => {
+      console.info('[DevWorkspacePanelFramework] Received file-city-3d:open event');
+
+      // Get file tree from context
+      const fileTree = context.fileTree?.data;
+      if (!fileTree) {
+        console.warn('[DevWorkspacePanelFramework] No file tree available for FileCity3D');
+        return;
+      }
+
+      // Build city data from file tree
+      const rootPath = fileTree.metadata?.id || '';
+      const rawCityData = buildCityDataFromFileTree(fileTree, rootPath);
+      const cityData = estimateLineCounts(rawCityData);
+
+      console.info('[DevWorkspacePanelFramework] FileCity3D city data:', {
+        buildings: cityData.buildings.length,
+        districts: cityData.districts.length,
+        bounds: cityData.bounds,
+        metadata: cityData.metadata,
+      });
+
+      setTabs((prevTabs) => {
+        // Check if a file-city-3d tab already exists
+        const existingTab = prevTabs.find(
+          (t) => t.contentType === 'file-city-3d'
+        );
+
+        if (existingTab) {
+          // Update existing tab with new city data and focus it
+          console.info('[DevWorkspacePanelFramework] Updating existing FileCity3D tab:', existingTab.id);
+          setFocusTabId(existingTab.id);
+          return prevTabs.map((t) =>
+            t.id === existingTab.id
+              ? { ...t, cityData } as FileCity3DTab
+              : t
+          );
+        }
+
+        // Create new FileCity3D tab
+        const newTab: FileCity3DTab = {
+          id: 'file-city-3d',
+          label: 'File City 3D',
+          contentType: 'file-city-3d',
+          cityData,
+          closable: true,
+        };
+
+        console.info('[DevWorkspacePanelFramework] Creating new FileCity3D tab:', newTab);
+        setFocusTabId(newTab.id);
+        return [...prevTabs, newTab];
+      });
+    });
+
+    return unsubscribe;
+  }, [events, context.fileTree?.data]);
+
   // Listen for terminal session selection from TerminalSessionsPanel
   useEffect(() => {
     const unsubscribe = events.on('principal-ade.terminal-sessions:session-selected', (event) => {
@@ -2290,6 +2362,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         return <Send size={14} />;
       case 'dashboard':
         return <Gauge size={14} />;
+      case 'file-city-3d':
+        return <Building2 size={14} />;
       default:
         return undefined; // Return undefined to fall back to tab.icon
     }
@@ -2810,6 +2884,53 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 actions={actionsRef.current}
                 events={eventsRef.current}
                 selectedDashboard={dashboardTab.dashboard as unknown as import('@principal-ai/principal-view-core').DiscoveredCanvas}
+              />
+            </div>
+          );
+        }
+
+        case 'file-city-3d': {
+          const fileCity3DTab = tab as FileCity3DTab;
+
+          return (
+            <div
+              style={{
+                height: '100%',
+                width: '100%',
+                overflow: 'hidden',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+              }}
+            >
+              <FileCity3DPanelContent
+                cityData={fileCity3DTab.cityData}
+                width="100%"
+                height="100%"
+                showControls={true}
+                animation={{ startFlat: true, autoStartDelay: 300 }}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                }}
+                onBuildingClick={(building) => {
+                  // Strip the root path prefix (e.g., "git-abc123-dirty-xyz/") from the building path
+                  const pathParts = building.path.split('/');
+                  const relativePath = pathParts.slice(1).join('/'); // Remove first segment (root id)
+
+                  // Emit file:open event when a building is clicked
+                  eventsRef.current.emit({
+                    type: 'file:open',
+                    source: 'file-city-3d-tab',
+                    timestamp: Date.now(),
+                    payload: { path: relativePath },
+                  });
+                }}
               />
             </div>
           );
