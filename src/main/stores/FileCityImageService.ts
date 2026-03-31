@@ -791,7 +791,7 @@ export class FileCityImageService {
           // Key includes repo name prefix to match building.path format
           lineCounts[`${repoName}/${file}`] = lineCount;
           processedCount++;
-        } catch (fileError) {
+        } catch (_fileError) {
           // File may have been deleted or be unreadable
           skippedCount++;
         }

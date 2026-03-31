@@ -22,6 +22,8 @@ import type {
   TerminalActivityState,
   DaemonStatusResponse,
   DaemonControlResult,
+  GetTerminalBufferInput,
+  GetTerminalBufferResult,
 } from '../../shared/tipc/terminalRouterTypes';
 
 // Extend Window interface for TypeScript
@@ -91,6 +93,7 @@ export interface TerminalClient {
   getDaemonStatus: () => Promise<DaemonStatusResponse>;
   startDaemon: () => Promise<DaemonControlResult>;
   stopDaemon: () => Promise<DaemonControlResult>;
+  getTerminalBuffer: (input: GetTerminalBufferInput) => Promise<GetTerminalBufferResult>;
 }
 
 // Tracer for terminal telemetry (renderer scope)

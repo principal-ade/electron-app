@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "name": "Ownership Transfer",
-  "description": "Terminal session ownership claim and transfer between windows",
+  "description": "Terminal session ownership claim and transfer between windows, including buffer restoration",
   "canvas": ".principal-views/terminal-session-management/terminal-session-management.otel.canvas",
   "spanPattern": "terminal.ownership",
   "scenarios": [
@@ -18,6 +18,20 @@
           "terminal.port.renderer_connected": "[4] Renderer port connected: session=`{{session.id}}`"
         },
         "summary": "**Ownership Claimed:**\n- Session: `{{session.id}}`\n- New Owner: Window {{new_owner.window_id}}"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "buffer-restoration",
+      "description": "Buffer restored after ownership transfer",
+      "priority": 2,
+      "template": {
+        "introduction": "**Restoring Terminal Buffer**\n\nPulling scrollback buffer after ownership transfer.",
+        "events": {
+          "terminal.buffer.requested": "[1] Buffer requested: session=`{{session.id}}`",
+          "terminal.buffer.retrieved": "[2] Buffer retrieved: session=`{{session.id}}`, size={{buffer.size}}, exists={{buffer.exists}}"
+        },
+        "summary": "**Buffer Restored:**\n- Session: `{{session.id}}`\n- Buffer Size: {{buffer.size}} bytes"
       },
       "filterDefault": false
     }

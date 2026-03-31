@@ -55,6 +55,16 @@ export interface RequestDataPortInput {
   sessionId: string;
 }
 
+export interface GetTerminalBufferInput {
+  sessionId: string;
+}
+
+export interface GetTerminalBufferResult {
+  success: boolean;
+  buffer: string | null;
+  size: number;
+}
+
 // Output types
 export interface TerminalSessionInfo {
   id: string;
@@ -207,6 +217,12 @@ export type TerminalRouterType = Record<
       context: ActionContext;
       input: RequestDataPortInput;
     }) => Promise<{ success: boolean; reason?: string }>;
+  };
+  getTerminalBuffer: {
+    action: (args: {
+      context: ActionContext;
+      input: GetTerminalBufferInput;
+    }) => Promise<GetTerminalBufferResult>;
   };
   updateActivity: {
     action: (args: {

@@ -30,6 +30,8 @@ import type {
   DaemonConnectedMessage,
   DaemonDisconnectedMessage,
   DaemonSessionsMessage,
+  GetScrollbackMessage,
+  ScrollbackResponseMessage,
 } from './types';
 
 // Feature flag for daemon mode (disabled by default due to production issues)
@@ -106,6 +108,12 @@ function isDisconnectDaemonMessage(
   msg: MainToWorkerMessage,
 ): msg is DisconnectDaemonMessage {
   return msg.type === 'DISCONNECT_DAEMON';
+}
+
+function isGetScrollbackMessage(
+  msg: MainToWorkerMessage,
+): msg is GetScrollbackMessage {
+  return msg.type === 'GET_SCROLLBACK';
 }
 
 // MessagePort type for utility process
@@ -778,6 +786,47 @@ function setOwner(sessionId: string, windowId: number): void {
   }
 }
 
+/**
+ * Handle GET_SCROLLBACK request from main process.
+ * Returns the scrollback buffer for a session.
+ */
+function handleGetScrollback(sessionId: string, requestId: string): void {
+  const session = sessions.get(sessionId);
+  let buffer: string | null = null;
+
+  if (session) {
+    if (USE_DAEMON_MODE && daemonBridge?.connected) {
+      // Daemon mode: request scrollback from daemon
+      // For now, daemon mode scrollback is handled via attach message
+      // Return null here - the attach flow handles scrollback replay
+      console.info(
+        `[TerminalWorker] GET_SCROLLBACK for ${sessionId}: daemon mode, returning null (use attach)`,
+      );
+      buffer = null;
+    } else {
+      // Legacy mode: join the scrollback array
+      buffer = session.scrollback.join('');
+      console.info(
+        `[TerminalWorker] GET_SCROLLBACK for ${sessionId}: returning ${buffer.length} bytes from ${session.scrollback.length} chunks`,
+      );
+    }
+  } else {
+    console.warn(
+      `[TerminalWorker] GET_SCROLLBACK for ${sessionId}: session not found`,
+    );
+  }
+
+  const response: ScrollbackResponseMessage = {
+    type: 'SCROLLBACK_RESPONSE',
+    id: `scrollback-response-${requestId}`,
+    timestamp: Date.now(),
+    sessionId,
+    requestId,
+    buffer,
+  };
+  sendToMain(response);
+}
+
 function handleRendererMessage(
   sessionId: string,
   message: RendererToWorkerPortMessage,
@@ -858,6 +907,8 @@ function handleMessage(rawMessage: unknown): void {
     unregisterPort(message.sessionId, message.windowId);
   } else if (isSetOwnerMessage(message)) {
     setOwner(message.sessionId, message.windowId);
+  } else if (isGetScrollbackMessage(message)) {
+    handleGetScrollback(message.sessionId, message.requestId);
   } else if (isShutdownMessage(message)) {
     shutdown();
   }

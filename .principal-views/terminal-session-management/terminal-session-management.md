@@ -227,6 +227,50 @@ useEffect(() => {
 }, [terminalContext]);
 ```
 
+### Buffer Restoration (Ownership Transfer)
+
+When a window takes control of a terminal from another window, the terminal needs to display the previous output history. This is handled via a **pull-based** `getTerminalBuffer()` mechanism.
+
+```mermaid
+sequenceDiagram
+    participant WA as Window A
+    participant WB as Window B
+    participant Main as Main Process
+    participant Worker as Terminal Worker
+    participant PTY as PTY Process
+
+    Note over WA,PTY: Window A owns terminal, user types commands
+    WA->>Worker: PTY data flows
+    Worker->>Worker: scrollback.push(data)
+
+    Note over WA,WB: User clicks "Take Control" in Window B
+
+    WB->>Main: claimTerminalOwnership(sessionId)
+    Main->>WA: terminal:ownershipLost
+    Main-->>WB: { success: true }
+
+    WB->>Main: requestTerminalDataPort(sessionId)
+    Main->>Worker: REGISTER_PORT (isOwner=true)
+    Main-->>WB: terminal:port (MessagePort)
+
+    Note over WB: Terminal mounts, xterm.js ready
+
+    WB->>Main: getTerminalBuffer(sessionId)
+    Main->>Worker: GET_SCROLLBACK
+    Worker->>Worker: buffer = scrollback.join('')
+    Worker-->>Main: SCROLLBACK_RESPONSE (buffer)
+    Main-->>WB: { success: true, buffer }
+
+    WB->>WB: xterm.write(buffer)
+    Note over WB: Terminal shows full history
+```
+
+**Legacy Mode**: Worker joins `session.scrollback[]` array and returns full buffer.
+
+**Daemon Mode**: Currently returns `null` (uses existing push-based `attach` flow). See backlog task for pull-based daemon enhancement.
+
+This pull-based mechanism complements the existing push-based scrollback replay that occurs when `registerPort(isOwner=true)` is called, providing deterministic buffer restoration when xterm.js is ready.
+
 ### Events
 
 | Event | Direction | Description |
@@ -235,6 +279,8 @@ useEffect(() => {
 | `SESSIONS_RESTORED` | Main → Renderer | Broadcast after restoring from daemon |
 | `PORT_READY` | Main → Renderer | MessagePort delivered for data streaming |
 | `OWNERSHIP_LOST` | Main → Renderer | Another window claimed this session |
+| `GET_SCROLLBACK` | Main → Worker | Request scrollback buffer for session |
+| `SCROLLBACK_RESPONSE` | Worker → Main | Returns scrollback buffer data |
 
 ## Related Architecture
 
@@ -250,8 +296,8 @@ useEffect(() => {
 - `src/main/terminal/sessionManagerSingleton.ts` - Singleton access
 
 **Worker:**
-- `src/terminal-worker/index.ts` - Utility process entry
-- `src/terminal-worker/types.ts` - Message types
+- `src/terminal-worker/worker-entry.ts` - Utility process entry, handles GET_SCROLLBACK
+- `src/terminal-worker/types.ts` - Message types (incl. GetScrollbackMessage, ScrollbackResponseMessage)
 
 **Renderer:**
 - `src/renderer/panels/terminal-sessions/TerminalSessionsPanel.tsx` - Sessions panel UI

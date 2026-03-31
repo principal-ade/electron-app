@@ -465,6 +465,18 @@ export const TerminalProvider: React.FC<TerminalProviderProps> = ({
       onTerminalPortReady: (callback) => {
         return TerminalService.onPortReady(callback);
       },
+
+      getTerminalBuffer: async (sessionId: string) => {
+        console.info(
+          '[TerminalActions] getTerminalBuffer called for session:',
+          sessionId,
+        );
+        const result = await terminalClient.getTerminalBuffer({ sessionId });
+        console.info(
+          `[TerminalActions] getTerminalBuffer result: success=${result.success}, size=${result.size}`,
+        );
+        return result.success ? result.buffer : null;
+      },
     }),
     [repositoryPath, terminalContext, repoName],
   );

@@ -443,6 +443,45 @@ export const terminalRouter = {
       return { success, reason: success ? undefined : 'Failed to create port' };
     }),
 
+  getTerminalBuffer: t.procedure
+    .input<{ sessionId: string }>()
+    .action(async ({ input }) => {
+      const span = tracer.startSpan('terminal.buffer.get');
+      span.setAttribute('session.id', input.sessionId);
+
+      try {
+        span.addEvent('terminal.buffer.requested', {
+          'session.id': input.sessionId,
+        });
+
+        const buffer = await sessionManager.getScrollbackBuffer(input.sessionId);
+
+        span.addEvent('terminal.buffer.retrieved', {
+          'session.id': input.sessionId,
+          'buffer.size': buffer?.length ?? 0,
+          'buffer.exists': buffer !== null,
+        });
+
+        span.setStatus({ code: SpanStatusCode.OK });
+        return {
+          success: buffer !== null,
+          buffer,
+          size: buffer?.length ?? 0,
+        };
+      } catch (error) {
+        console.error('[terminalRouter] getTerminalBuffer error:', error);
+        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        span.setStatus({ code: SpanStatusCode.ERROR });
+        return {
+          success: false,
+          buffer: null,
+          size: 0,
+        };
+      } finally {
+        span.end();
+      }
+    }),
+
   // ============================================
   // Terminal Activity Tracking
   // ============================================

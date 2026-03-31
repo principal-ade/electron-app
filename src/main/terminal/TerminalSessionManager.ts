@@ -70,6 +70,7 @@ import type {
   ConnectDaemonMessage,
   DisconnectDaemonMessage,
   DaemonSessionInfo,
+  GetScrollbackMessage,
 } from '../../terminal-worker/types';
 
 /**
@@ -113,6 +114,16 @@ export class TerminalSessionManager {
     { resolve: (sessionId: string) => void; reject: (error: Error) => void }
   > = new Map();
   private workerReadyReject: ((error: Error) => void) | null = null;
+
+  // Pending scrollback buffer requests
+  private pendingScrollbackRequests: Map<
+    string,
+    {
+      resolve: (buffer: string | null) => void;
+      reject: (error: Error) => void;
+      timeout: NodeJS.Timeout;
+    }
+  > = new Map();
 
   // Track MessageChannels - we only keep track of which ports exist, the actual data flows worker<->renderer
   private sessionPorts: Map<string, Map<number, MessageChannelMain>> =
@@ -358,6 +369,17 @@ export class TerminalSessionManager {
         );
         this.restoreSessionsFromDaemon(msg.sessions);
         break;
+
+      case 'SCROLLBACK_RESPONSE': {
+        const { requestId, buffer } = msg;
+        const pending = this.pendingScrollbackRequests.get(requestId);
+        if (pending) {
+          clearTimeout(pending.timeout);
+          this.pendingScrollbackRequests.delete(requestId);
+          pending.resolve(buffer);
+        }
+        break;
+      }
     }
   }
 
@@ -867,6 +889,38 @@ export class TerminalSessionManager {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Get the scrollback buffer for a session.
+   * Used for buffer restoration when switching ownership.
+   */
+  async getScrollbackBuffer(sessionId: string): Promise<string | null> {
+    if (!this.sessions.has(sessionId)) {
+      console.warn(`[Terminal] getScrollbackBuffer: session ${sessionId} not found`);
+      return null;
+    }
+
+    const requestId = `scrollback-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        this.pendingScrollbackRequests.delete(requestId);
+        console.warn(`[Terminal] getScrollbackBuffer: request ${requestId} timed out`);
+        reject(new Error('Scrollback request timed out'));
+      }, 5000);
+
+      this.pendingScrollbackRequests.set(requestId, { resolve, reject, timeout });
+
+      const message: GetScrollbackMessage = {
+        type: 'GET_SCROLLBACK',
+        id: `get-scrollback-${requestId}`,
+        timestamp: Date.now(),
+        sessionId,
+        requestId,
+      };
+      this.sendToWorker(message);
+    });
   }
 
   // =============================================================================

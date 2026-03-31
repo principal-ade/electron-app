@@ -103,8 +103,8 @@
     {
       "id": "renderer",
       "type": "otel-event",
-      "x": -10,
-      "y": 100,
+      "x": -178,
+      "y": 50,
       "width": 200,
       "height": 100,
       "label": "Renderer Process",
@@ -134,8 +134,8 @@
     {
       "id": "list-requested",
       "type": "otel-event",
-      "x": -10,
-      "y": 220,
+      "x": -88,
+      "y": 319,
       "width": 200,
       "height": 100,
       "label": "List Requested",
@@ -161,8 +161,8 @@
     {
       "id": "list-received",
       "type": "otel-event",
-      "x": -10,
-      "y": 340,
+      "x": -92,
+      "y": 431,
       "width": 200,
       "height": 100,
       "label": "List Received",
@@ -188,8 +188,8 @@
     {
       "id": "tipc-router",
       "type": "otel-event",
-      "x": 250,
-      "y": 50,
+      "x": 220,
+      "y": 82,
       "width": 205,
       "height": 100,
       "label": "terminalRouter",
@@ -223,8 +223,8 @@
     {
       "id": "session-manager",
       "type": "otel-event",
-      "x": 252,
-      "y": 350,
+      "x": 303,
+      "y": 507,
       "width": 200,
       "height": 120,
       "label": "TerminalSessionManager",
@@ -258,8 +258,8 @@
     {
       "id": "sessions-store",
       "type": "otel-event",
-      "x": 552,
-      "y": 277,
+      "x": 564,
+      "y": 394,
       "width": 200,
       "height": 120,
       "label": "Session Stores",
@@ -329,8 +329,8 @@
     {
       "id": "worker",
       "type": "otel-event",
-      "x": 537,
-      "y": 436,
+      "x": 541,
+      "y": 704,
       "width": 218,
       "height": 100,
       "label": "Terminal Worker",
@@ -360,8 +360,8 @@
     {
       "id": "port-renderer",
       "type": "otel-event",
-      "x": -286,
-      "y": 579,
+      "x": -381,
+      "y": 840,
       "width": 214,
       "height": 80,
       "label": "Renderer Port",
@@ -387,8 +387,8 @@
     {
       "id": "port-worker",
       "type": "otel-event",
-      "x": 248,
-      "y": 579,
+      "x": 292,
+      "y": 912,
       "width": 206,
       "height": 80,
       "label": "Worker Port",
@@ -448,8 +448,8 @@
     {
       "id": "sessions-panel",
       "type": "otel-event",
-      "x": -278,
-      "y": -20,
+      "x": -482,
+      "y": -32,
       "width": 200,
       "height": 120,
       "label": "TerminalSessionsPanel",
@@ -490,8 +490,8 @@
     {
       "id": "session-selected",
       "type": "otel-event",
-      "x": -278,
-      "y": 320,
+      "x": -482,
+      "y": 308,
       "width": 200,
       "height": 80,
       "label": "Session Selected",
@@ -518,7 +518,7 @@
       "id": "sessions-broadcast",
       "type": "otel-event",
       "x": 553,
-      "y": -10,
+      "y": -22,
       "width": 200,
       "height": 100,
       "label": "Sessions Broadcast",
@@ -548,8 +548,8 @@
     {
       "id": "window-focus",
       "type": "otel-event",
-      "x": -278,
-      "y": 195,
+      "x": -482,
+      "y": 183,
       "width": 200,
       "height": 100,
       "label": "Window Focus",
@@ -579,8 +579,8 @@
     {
       "id": "pty-daemon",
       "type": "otel-event",
-      "x": 537,
-      "y": 560,
+      "x": 541,
+      "y": 895,
       "width": 218,
       "height": 100,
       "label": "PTY Daemon",
@@ -606,8 +606,8 @@
     {
       "id": "sessions-restored-broadcast",
       "type": "otel-event",
-      "x": 250,
-      "y": 200,
+      "x": 440,
+      "y": 273,
       "width": 205,
       "height": 100,
       "label": "Sessions Restored",
@@ -633,8 +633,8 @@
     {
       "id": "auto-reconnect-handler",
       "type": "otel-event",
-      "x": -10,
-      "y": 220,
+      "x": -247,
+      "y": 179,
       "width": 200,
       "height": 120,
       "label": "Auto-Reconnect Handler",
@@ -678,8 +678,8 @@
     {
       "id": "reconnect-error",
       "type": "otel-event",
-      "x": -10,
-      "y": 360,
+      "x": -470,
+      "y": 519,
       "width": 200,
       "height": 100,
       "label": "Reconnect Error",
@@ -705,6 +705,78 @@
           "src/renderer/contexts/TerminalContext.tsx"
         ]
       }
+    },
+    {
+      "id": "buffer-requested",
+      "type": "otel-event",
+      "x": -95,
+      "y": 752,
+      "width": 200,
+      "height": 100,
+      "label": "Buffer Requested",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.buffer.requested",
+        "description": "Renderer requested terminal scrollback buffer for restoration",
+        "attributes": {
+          "session.id": {
+            "type": "string",
+            "description": "Terminal session ID"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/contexts/TerminalContext.tsx"
+        ]
+      }
+    },
+    {
+      "id": "buffer-retrieved",
+      "type": "otel-event",
+      "x": 184,
+      "y": 745,
+      "width": 200,
+      "height": 100,
+      "label": "Buffer Retrieved",
+      "shape": "rectangle",
+      "event": {
+        "name": "terminal.buffer.retrieved",
+        "description": "Scrollback buffer retrieved from worker",
+        "attributes": {
+          "session.id": {
+            "type": "string",
+            "description": "Terminal session ID"
+          },
+          "buffer.size": {
+            "type": "number",
+            "description": "Size of buffer in bytes"
+          },
+          "buffer.exists": {
+            "type": "boolean",
+            "description": "Whether buffer was found"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/terminal/tipc/terminalRouter.ts"
+        ]
+      }
+    },
+    {
+      "id": "buffer-note",
+      "type": "text",
+      "x": 800,
+      "y": 750,
+      "width": 280,
+      "height": 180,
+      "text": "BUFFER RESTORATION\n\nPull-based mechanism:\n1. handleReady() detects reconnection\n2. getTerminalBuffer() TIPC call\n3. Worker returns scrollback[]\n4. xterm.js writes buffer\n5. Terminal shows full history\n\nComplements existing push-based\nscrollback replay on port register.",
+      "color": "#22C55E"
     }
   ],
   "edges": [
@@ -955,6 +1027,50 @@
       "label": "sessions[]",
       "pv": {
         "edgeType": "tipc-invoke"
+      }
+    },
+    {
+      "id": "edge-buffer-requested-router",
+      "fromNode": "buffer-requested",
+      "toNode": "tipc-router",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "getTerminalBuffer()",
+      "pv": {
+        "edgeType": "tipc-invoke"
+      }
+    },
+    {
+      "id": "edge-router-buffer-retrieved",
+      "fromNode": "tipc-router",
+      "toNode": "buffer-retrieved",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "GET_SCROLLBACK",
+      "pv": {
+        "edgeType": "worker-message"
+      }
+    },
+    {
+      "id": "edge-buffer-retrieved-renderer",
+      "fromNode": "buffer-retrieved",
+      "toNode": "port-renderer",
+      "fromSide": "left",
+      "toSide": "bottom",
+      "label": "buffer data",
+      "pv": {
+        "edgeType": "tipc-invoke"
+      }
+    },
+    {
+      "id": "edge-auto-reconnect-buffer",
+      "fromNode": "auto-reconnect-handler",
+      "toNode": "buffer-requested",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "handleReady()",
+      "pv": {
+        "edgeType": "reconnect-trigger"
       }
     }
   ]

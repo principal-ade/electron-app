@@ -81,6 +81,12 @@ export interface DisconnectDaemonMessage extends BaseMessage {
   type: 'DISCONNECT_DAEMON';
 }
 
+export interface GetScrollbackMessage extends BaseMessage {
+  type: 'GET_SCROLLBACK';
+  sessionId: string;
+  requestId: string;
+}
+
 export type MainToWorkerMessage =
   | CreateSessionMessage
   | DestroySessionMessage
@@ -92,7 +98,8 @@ export type MainToWorkerMessage =
   | SetOwnerMessage
   | ShutdownMessage
   | ConnectDaemonMessage
-  | DisconnectDaemonMessage;
+  | DisconnectDaemonMessage
+  | GetScrollbackMessage;
 
 // =============================================================================
 // Worker -> Main Messages
@@ -141,6 +148,13 @@ export interface DaemonSessionsMessage extends BaseMessage {
   sessions: DaemonSessionInfo[];
 }
 
+export interface ScrollbackResponseMessage extends BaseMessage {
+  type: 'SCROLLBACK_RESPONSE';
+  sessionId: string;
+  requestId: string;
+  buffer: string | null;
+}
+
 /**
  * Session info from daemon (matches protocol.ts SessionInfo)
  */
@@ -162,7 +176,8 @@ export type WorkerToMainMessage =
   | WorkerErrorMessage
   | DaemonConnectedMessage
   | DaemonDisconnectedMessage
-  | DaemonSessionsMessage;
+  | DaemonSessionsMessage
+  | ScrollbackResponseMessage;
 
 // =============================================================================
 // Port Messages (sent via MessagePort between worker and renderer)
