@@ -48,4 +48,8 @@ export const fileCityImageAPI: FileCityImageAPI = {
       ipcRenderer.removeListener(FileCityImageAPIEvent.IMAGE_GENERATED, handler);
     };
   },
+
+  countLines: async (repoPath: string): Promise<Record<string, number>> => {
+    return ipcRenderer.invoke(FileCityImageAPIEvent.COUNT_LINES, repoPath);
+  },
 };

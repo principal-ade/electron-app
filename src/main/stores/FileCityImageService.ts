@@ -10,6 +10,7 @@ import { app, ipcMain, BrowserWindow } from 'electron';
 import { FileCityImageAPIEvent } from '../../shared/main-process-api-interfaces/FileCityImageAPI';
 import * as path from 'path';
 import * as fs from 'fs/promises';
+import { execSync } from 'child_process';
 import * as crypto from 'crypto';
 import { CodeCityBuilderWithGrid } from '@principal-ai/file-city-builder';
 import {
@@ -701,6 +702,124 @@ export class FileCityImageService {
       console.error('[FileCityImageService] Error clearing cache:', error);
     }
   }
+
+  /**
+   * Binary file extensions to skip when counting lines
+   */
+  private static readonly BINARY_EXTENSIONS = new Set([
+    'png', 'jpg', 'jpeg', 'gif', 'ico', 'webp', 'svg', 'pdf',
+    'zip', 'tar', 'gz', 'exe', 'dll', 'so', 'dylib',
+    'mp3', 'mp4', 'wav', 'ttf', 'otf', 'woff', 'woff2',
+    'lock', // Skip lock files (huge)
+  ]);
+
+  /**
+   * Check if a file is binary based on extension
+   */
+  private isBinaryFile(filePath: string): boolean {
+    const ext = filePath.split('.').pop()?.toLowerCase() || '';
+    return FileCityImageService.BINARY_EXTENSIONS.has(ext);
+  }
+
+  /**
+   * Count lines in a file content
+   */
+  private countLinesInContent(content: string): number {
+    if (!content) return 0;
+    const newlines = (content.match(/\n/g) || []).length;
+    return content.endsWith('\n') ? newlines : newlines + 1;
+  }
+
+  /**
+   * Count lines in all tracked files in a repository
+   * Returns a map of file paths (with repo prefix) to line counts
+   */
+  async countLinesInRepository(repoPath: string): Promise<Record<string, number>> {
+    const tracer = getTracer('principal-ade-main');
+    const span = tracer.startSpan('file_city.count_lines', {
+      attributes: { 'repo_path': repoPath },
+    });
+    const startTime = Date.now();
+
+    try {
+      const lineCounts: Record<string, number> = {};
+      const repoName = path.basename(repoPath);
+
+      // Use git ls-files to get tracked files only
+      let files: string[];
+      try {
+        const output = execSync('git ls-files', {
+          cwd: repoPath,
+          encoding: 'utf-8',
+          maxBuffer: 10 * 1024 * 1024, // 10MB buffer for large repos
+        });
+        files = output.split('\n').filter(Boolean);
+      } catch (gitError) {
+        console.error('[FileCityImageService] git ls-files failed:', gitError);
+        span.setStatus({ code: SpanStatusCode.ERROR, message: 'git ls-files failed' });
+        return lineCounts;
+      }
+
+      span.addEvent('file_city.count_lines.files_listed', {
+        'repo_path': repoPath,
+        'file_count': files.length,
+      });
+
+      // Count lines for each non-binary file
+      let processedCount = 0;
+      let skippedCount = 0;
+
+      for (const file of files) {
+        if (this.isBinaryFile(file)) {
+          skippedCount++;
+          continue;
+        }
+
+        try {
+          const filePath = path.join(repoPath, file);
+          const stat = await fs.stat(filePath);
+
+          // Skip files larger than 1MB (likely minified/generated)
+          if (stat.size > 1024 * 1024) {
+            skippedCount++;
+            continue;
+          }
+
+          const content = await fs.readFile(filePath, 'utf-8');
+          const lineCount = this.countLinesInContent(content);
+
+          // Key includes repo name prefix to match building.path format
+          lineCounts[`${repoName}/${file}`] = lineCount;
+          processedCount++;
+        } catch (fileError) {
+          // File may have been deleted or be unreadable
+          skippedCount++;
+        }
+      }
+
+      const duration = Date.now() - startTime;
+      console.log(`[FileCityImageService] Counted lines in ${processedCount} files (skipped ${skippedCount}) in ${duration}ms`);
+
+      span.addEvent('file_city.count_lines.complete', {
+        'repo_path': repoPath,
+        'processed_count': processedCount,
+        'skipped_count': skippedCount,
+        'duration_ms': duration,
+      });
+      span.setStatus({ code: SpanStatusCode.OK });
+
+      return lineCounts;
+    } catch (error) {
+      console.error('[FileCityImageService] Error counting lines:', error);
+      span.setStatus({
+        code: SpanStatusCode.ERROR,
+        message: error instanceof Error ? error.message : 'Line counting failed',
+      });
+      return {};
+    } finally {
+      span.end();
+    }
+  }
 }
 
 /**
@@ -734,6 +853,13 @@ export function registerFileCityImageHandlers(): void {
       changedFiles: Record<string, 'added' | 'modified' | 'deleted' | 'renamed' | { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }>
     ) => {
       return service.getImageForCommitWithChanges(repoPath, commitHash, filePaths, changedFiles);
+    }
+  );
+
+  ipcMain.handle(
+    FileCityImageAPIEvent.COUNT_LINES,
+    async (_event, repoPath: string) => {
+      return service.countLinesInRepository(repoPath);
     }
   );
 

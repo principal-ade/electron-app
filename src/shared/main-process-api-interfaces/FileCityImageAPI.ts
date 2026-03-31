@@ -14,6 +14,7 @@ export enum FileCityImageAPIEvent {
   GET_IMAGE_FOR_COMMIT = 'file-city:get-image-for-commit',
   GET_IMAGE_FOR_COMMIT_WITH_CHANGES = 'file-city:get-image-for-commit-with-changes',
   IMAGE_GENERATED = 'file-city:image-generated',
+  COUNT_LINES = 'file-city:count-lines',
 }
 
 /**
@@ -58,4 +59,11 @@ export interface FileCityImageAPI {
    * Called when a new image is generated for a repository
    */
   onImageGenerated: (callback: (repoPath: string, imageUrl: string) => void) => () => void;
+
+  /**
+   * Count lines in all tracked files in a repository
+   * Returns a map of relative file paths to line counts
+   * Skips binary files and uses git ls-files to only count tracked files
+   */
+  countLines: (repoPath: string) => Promise<Record<string, number>>;
 }

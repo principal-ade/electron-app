@@ -64,6 +64,7 @@ import {
   FileCity3DPanelContent,
   buildCityDataFromFileTree,
   estimateLineCounts,
+  enrichWithLineCounts,
   type PackageLayer,
   type CityData,
 } from '@industry-theme/repository-composition-panels';
@@ -2237,7 +2238,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
   // Listen for file-city-3d:open events to create a new 3D city visualization tab
   useEffect(() => {
-    const unsubscribe = events.on('file-city-3d:open', () => {
+    const unsubscribe = events.on('file-city-3d:open', async () => {
       console.info('[DevWorkspacePanelFramework] Received file-city-3d:open event');
 
       // Get file tree from context
@@ -2250,7 +2251,48 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       // Build city data from file tree
       const rootPath = fileTree.metadata?.id || '';
       const rawCityData = buildCityDataFromFileTree(fileTree, rootPath);
-      const cityData = estimateLineCounts(rawCityData);
+
+      // Get actual line counts from main process
+      let cityData: CityData;
+      try {
+        const repoPath = context.repository?.path;
+        if (repoPath && window.mainProcess?.fileCityImage?.countLines) {
+          console.info('[DevWorkspacePanelFramework] Fetching line counts for:', repoPath);
+          const rawLineCounts = await window.mainProcess.fileCityImage.countLines(repoPath);
+          const lineCountsSize = Object.keys(rawLineCounts).length;
+          console.info('[DevWorkspacePanelFramework] Got line counts for', lineCountsSize, 'files');
+
+          // Transform line counts to use the correct rootPath prefix
+          // Main process returns paths like "electron-app/src/file.ts"
+          // Building paths use rootPath like "git-abc123/src/file.ts"
+          const repoName = repoPath.split('/').pop() || '';
+          const lineCounts: Record<string, number> = {};
+          for (const [filePath, count] of Object.entries(rawLineCounts)) {
+            // Only include files with valid line counts
+            if (typeof count !== 'number' || count < 0) continue;
+
+            // Replace the repo name prefix with the rootPath prefix
+            if (filePath.startsWith(repoName + '/')) {
+              const relativePath = filePath.slice(repoName.length + 1);
+              lineCounts[`${rootPath}/${relativePath}`] = count;
+            } else {
+              // Fallback: just prefix with rootPath
+              lineCounts[`${rootPath}/${filePath}`] = count;
+            }
+          }
+
+          // First enrich with actual line counts, then estimate any missing ones (binary files, etc.)
+          const enrichedCityData = enrichWithLineCounts(rawCityData, lineCounts);
+          cityData = estimateLineCounts(enrichedCityData);
+        } else {
+          // Fallback to estimated line counts
+          console.info('[DevWorkspacePanelFramework] Using estimated line counts (no repo path or API)');
+          cityData = estimateLineCounts(rawCityData);
+        }
+      } catch (error) {
+        console.warn('[DevWorkspacePanelFramework] Failed to get line counts, using estimates:', error);
+        cityData = estimateLineCounts(rawCityData);
+      }
 
       console.info('[DevWorkspacePanelFramework] FileCity3D city data:', {
         buildings: cityData.buildings.length,
@@ -2292,7 +2334,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     });
 
     return unsubscribe;
-  }, [events, context.fileTree?.data]);
+  }, [events, context.fileTree?.data, context.repository?.path]);
 
   // Listen for terminal session selection from TerminalSessionsPanel
   useEffect(() => {
@@ -2910,6 +2952,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 width="100%"
                 height="100%"
                 showControls={true}
+                heightScaling="linear"
+                linearScale={0.5}
                 animation={{ startFlat: true, autoStartDelay: 300 }}
                 style={{
                   position: 'absolute',
