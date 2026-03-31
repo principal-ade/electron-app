@@ -16,7 +16,7 @@ import type {
 } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { GitHubRepository } from '../../shared/main-process-api-interfaces/GitHubAPI';
-import { FolderGit2, ChevronDown, ChevronRight, Check, User, Play, Square, ExternalLink, Search, X, Folder, Github, Star, Sparkles, CheckSquare, SquareIcon } from 'lucide-react';
+import { FolderGit2, ChevronDown, ChevronRight, Check, User, Play, Square, ExternalLink, Search, X, Folder, Github, Star, Sparkles, CheckSquare, SquareIcon, type LucideIcon } from 'lucide-react';
 import { useActivityFeed, type ActivityCommit } from '../hooks/useActivityFeed';
 import { FileCityImageService } from '../main-process-api/FileCityImageService';
 import { GitService } from '../main-process-api/GitService';
@@ -1059,7 +1059,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
                         {searchResults.length} result{searchResults.length !== 1 ? 's' : ''}
                       </div>
                       {searchResults.map((result) => {
-                        const SOURCE_CONFIG: Record<SearchResultSource, { icon: React.ElementType; color: string; label: string }> = {
+                        const SOURCE_CONFIG: Record<SearchResultSource, { icon: LucideIcon; color: string; label: string }> = {
                           local: { icon: Folder, color: '#3b82f6', label: 'Local' },
                           github: { icon: Github, color: '#6b7280', label: 'GitHub' },
                           starred: { icon: Star, color: '#eab308', label: 'Starred' },
