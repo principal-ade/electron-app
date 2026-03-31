@@ -16,6 +16,8 @@ import {
   Send,
   Gauge,
   Building2,
+  Image,
+  Film,
 } from 'lucide-react';
 import {
   ConfigurablePanelLayout,
@@ -84,6 +86,7 @@ import { panels as agentPanels, type Skill, type SkillDetailPanelProps } from '@
 import { GitHubIssuesPanel, GitHubIssueDetailPanel } from '@industry-theme/github-panels';
 import { panels as typeInformationPanels } from '../panels/TypeInformationPanel';
 import { TerminalSessionsPanel } from '../panels/terminal-sessions';
+import { MediaViewerPanel } from '../panels/MediaViewerPanel';
 import type { Repository } from '../../shared/types/repository.types';
 import { PanelIconSidebar, RIGHT_PANEL_ICONS } from '../components/Sidebar/PanelIconSidebar';
 import { StorybookSidebarButton } from '../components/Sidebar/StorybookSidebarButton';
@@ -160,6 +163,15 @@ interface CanvasTab extends BaseTab {
  */
 interface FileEditorTab extends BaseTab {
   contentType: 'file-editor';
+  filePath: string;
+  fileName: string;
+}
+
+/**
+ * Tab type for media viewer (images and videos)
+ */
+interface MediaTab extends BaseTab {
+  contentType: 'media';
   filePath: string;
   fileName: string;
 }
@@ -256,7 +268,7 @@ interface BrunoRequestPanelProps {
 /**
  * Union type of all tab types used in DevWorkspace
  */
-type DevWorkspaceTab = TerminalTab | SkillTab | MarkdownTab | CanvasEditorTab | CanvasTab | FileEditorTab | MDXEditorTab | GitDiffTab | DependencyGraphTab | TraceDetailsTab | MultiCanvasTab | BrunoRequestTab | DashboardTab | FileCity3DTab;
+type DevWorkspaceTab = TerminalTab | SkillTab | MarkdownTab | CanvasEditorTab | CanvasTab | FileEditorTab | MediaTab | MDXEditorTab | GitDiffTab | DependencyGraphTab | TraceDetailsTab | MultiCanvasTab | BrunoRequestTab | DashboardTab | FileCity3DTab;
 
 /**
  * History item for right panel document viewing
@@ -1699,16 +1711,30 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
         console.info('[DevWorkspacePanelFramework] Received file:open event:', event);
         const payload = event.payload as FileOpenedPayload;
-        const filePath = payload.path;
+
+        // Resolve relative paths to absolute paths using repository root
+        let filePath = payload.path;
+        if (!filePath.startsWith('/')) {
+          const repoPath = contextRef.current?.currentScope?.repository?.path;
+          if (repoPath) {
+            filePath = `${repoPath}/${filePath}`;
+          }
+        }
+
         const fileName = filePath.split('/').pop() || 'File';
 
-        // Check if file is markdown
+        // Check file type
         const isMarkdown = filePath.endsWith('.md') || filePath.endsWith('.mdx');
+        const isMedia = /\.(png|jpg|jpeg|gif|webp|svg|bmp|ico|mp4|webm|mov|avi|mkv|ogv)$/i.test(filePath);
 
-        // Markdown files always open in markdown viewer, regardless of git status
-        // For other files: use git diff panel for modified files (staged or unstaged), file editor for new/untracked files
-        let contentType: 'markdown' | 'git-diff' | 'file-editor';
-        if (isMarkdown) {
+        // Determine content type based on file extension
+        // - Media files (images/videos) open in media viewer
+        // - Markdown files open in markdown viewer
+        // - Other files: use git diff panel for modified files, file editor for new/untracked files
+        let contentType: 'markdown' | 'git-diff' | 'file-editor' | 'media';
+        if (isMedia) {
+          contentType = 'media';
+        } else if (isMarkdown) {
           contentType = 'markdown';
         } else {
           const isModified = payload.gitStatus === 'unstaged' || payload.gitStatus === 'staged';
@@ -1771,7 +1797,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
             (t) =>
               ((t.contentType === 'file-editor' && (t as FileEditorTab).filePath === filePath) ||
                 (t.contentType === 'markdown' && (t as MarkdownTab).filePath === filePath) ||
-                (t.contentType === 'git-diff' && (t as GitDiffTab).filePath === filePath))
+                (t.contentType === 'git-diff' && (t as GitDiffTab).filePath === filePath) ||
+                (t.contentType === 'media' && (t as MediaTab).filePath === filePath))
           );
 
           if (existingTab) {
@@ -1784,8 +1811,18 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
           // Create new tab
           // Use file path for deterministic ID (sanitize for valid ID)
-          let newTab: FileEditorTab | MarkdownTab | GitDiffTab;
-          if (contentType === 'markdown') {
+          let newTab: FileEditorTab | MarkdownTab | GitDiffTab | MediaTab;
+          if (contentType === 'media') {
+            tabId = `media-${sanitizedPath}`;
+            newTab = {
+              id: tabId,
+              label: fileName,
+              contentType: 'media',
+              filePath: filePath,
+              fileName: fileName,
+              closable: true,
+            };
+          } else if (contentType === 'markdown') {
             tabId = `markdown-${sanitizedPath}`;
             newTab = {
               id: tabId,
@@ -2406,6 +2443,11 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         return <Gauge size={14} />;
       case 'file-city-3d':
         return <Building2 size={14} />;
+      case 'media': {
+        const mediaTab = tab as MediaTab;
+        const isVideo = /\.(mp4|webm|mov|avi|mkv|ogv)$/i.test(mediaTab.fileName);
+        return isVideo ? <Film size={14} /> : <Image size={14} />;
+      }
       default:
         return undefined; // Return undefined to fall back to tab.icon
     }
@@ -2975,6 +3017,27 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                     payload: { path: relativePath },
                   });
                 }}
+              />
+            </div>
+          );
+        }
+
+        case 'media': {
+          const mediaTab = tab as MediaTab;
+          return (
+            <div
+              style={{
+                height: '100%',
+                width: '100%',
+                overflow: 'hidden',
+                position: 'relative',
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              <MediaViewerPanel
+                filePath={mediaTab.filePath}
+                fileName={mediaTab.fileName}
               />
             </div>
           );

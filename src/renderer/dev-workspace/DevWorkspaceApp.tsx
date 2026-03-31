@@ -937,6 +937,12 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     setCollapsed((prev) => ({ ...prev, right: false }));
   }, [events]);
 
+  // Open repository in Finder
+  const handleOpenInFinder = useCallback(() => {
+    if (!repositoryPath) return;
+    window.mainProcess.shell.showItemInFolder(repositoryPath);
+  }, [repositoryPath]);
+
   // Handle focus mode toggle - hides sidebars AND collapses panels
   const handleSidebarsHiddenChange = useCallback((hidden: boolean) => {
     if (hidden) {
@@ -1017,6 +1023,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         }
         onLayoutChange={(newLayout) => setLayout(newLayout)}
         repositoryPath={repositoryPath}
+        onOpenInFinder={repositoryPath ? handleOpenInFinder : undefined}
         remoteUrl={remoteUrl}
         onSwitchRemoteProtocol={remoteUrl ? handleSwitchRemoteProtocol : undefined}
         availableServiceNames={availableServiceNames}

@@ -488,14 +488,45 @@
       }
     },
     {
+      "id": "media-viewer-panel",
+      "type": "otel-event",
+      "x": 1150,
+      "y": 400,
+      "width": 140,
+      "height": 100,
+      "label": "MediaViewerPanel",
+      "shape": "rectangle",
+      "event": {
+        "name": "devworkspace.panel.media.rendered",
+        "description": "Media viewer panel for images (png, jpg, gif, webp, svg, etc.) and videos (mp4, webm, mov, etc.)",
+        "attributes": {
+          "file.path": {
+            "type": "string",
+            "description": "Media file path"
+          },
+          "file.name": {
+            "type": "string",
+            "description": "Media file name"
+          },
+          "media.type": {
+            "type": "string",
+            "description": "Media type (image or video)"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft"
+      }
+    },
+    {
       "id": "key-diff",
       "type": "text",
       "x": 730,
-      "y": 420,
+      "y": 520,
       "width": 400,
-      "height": 80,
+      "height": 100,
       "color": "#64748B",
-      "text": "## Key: Event name determines handler\n\nTab events → Tab handlers → Create/focus tab → TabbedTerminalPanel\nPanel events → Panel handlers → setActiveFile → MarkdownPanel"
+      "text": "## Key: Event name determines handler\n\nTab events → Tab handlers → Create/focus tab → TabbedTerminalPanel\nPanel events → Panel handlers → setActiveFile → MarkdownPanel\n\n**file:open** routes by extension: .md/.mdx → Markdown, images/videos → MediaViewer, others → FileEditor/GitDiff"
     }
   ],
   "edges": [
@@ -627,6 +658,17 @@
       "toNode": "markdown-panel",
       "toSide": "left",
       "label": "render",
+      "pv": {
+        "edgeType": "renders"
+      }
+    },
+    {
+      "id": "render-to-media",
+      "fromNode": "render-tab",
+      "fromSide": "bottom",
+      "toNode": "media-viewer-panel",
+      "toSide": "top",
+      "label": "media files",
       "pv": {
         "edgeType": "renders"
       }

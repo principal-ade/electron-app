@@ -413,7 +413,7 @@ app.on('will-quit', async (event) => {
   }
 });
 
-// Register custom protocol scheme for Monaco Editor files
+// Register custom protocol schemes
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'app-asset',
@@ -421,6 +421,16 @@ protocol.registerSchemesAsPrivileged([
       standard: true,
       supportFetchAPI: true,
       bypassCSP: true,
+    },
+  },
+  {
+    // Protocol for loading local media files (images, videos) in renderer
+    scheme: 'local-media',
+    privileges: {
+      standard: true,
+      supportFetchAPI: true,
+      bypassCSP: true,
+      stream: true, // Required for video streaming
     },
   },
 ]);
@@ -461,6 +471,43 @@ app.on('open-url', (event, url) => {
 app
   .whenReady()
   .then(async () => {
+    // Register local-media protocol handler for loading local files in renderer
+    protocol.handle('local-media', async (request) => {
+      // URL format: local-media://localhost/absolute/path/to/file.png
+      // Using explicit localhost host to prevent path being interpreted as hostname
+      const url = new URL(request.url);
+      const filePath = decodeURIComponent(url.pathname);
+
+      try {
+        const data = await require('fs/promises').readFile(filePath);
+        const mimeTypes: Record<string, string> = {
+          '.png': 'image/png',
+          '.jpg': 'image/jpeg',
+          '.jpeg': 'image/jpeg',
+          '.gif': 'image/gif',
+          '.webp': 'image/webp',
+          '.svg': 'image/svg+xml',
+          '.bmp': 'image/bmp',
+          '.ico': 'image/x-icon',
+          '.mp4': 'video/mp4',
+          '.webm': 'video/webm',
+          '.mov': 'video/quicktime',
+          '.avi': 'video/x-msvideo',
+          '.mkv': 'video/x-matroska',
+          '.ogv': 'video/ogg',
+        };
+        const ext = require('path').extname(filePath).toLowerCase();
+        const mimeType = mimeTypes[ext] || 'application/octet-stream';
+
+        return new Response(data, {
+          headers: { 'Content-Type': mimeType },
+        });
+      } catch (error) {
+        console.error('[Main] local-media protocol error:', error);
+        return new Response('File not found', { status: 404 });
+      }
+    });
+
     // Show splash screen IMMEDIATELY - before any heavy initialization
     const postUpdateDetector = getPostUpdateDetector();
     postUpdateDetector.checkForPostUpdate();

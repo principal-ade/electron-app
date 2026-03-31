@@ -13,7 +13,8 @@
         "introduction": "**Tab Render**\n\nRendering tab content in TabbedTerminalPanel",
         "events": {
           "devworkspace.tab.rendered": "1. Tab content rendered (type: {{tab.contentType}})",
-          "devworkspace.tabbedPanel.render": "2. TabbedTerminalPanel active: `{{tab.active}}`"
+          "devworkspace.tabbedPanel.render": "2. TabbedTerminalPanel active: `{{tab.active}}`",
+          "devworkspace.panel.media.rendered": "3. MediaViewerPanel rendered: `{{file.name}}` at {{file.path}} ({{media.type}})"
         },
         "summary": "**Rendered:** {{tab.contentType}} tab"
       }
