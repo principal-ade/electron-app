@@ -2,13 +2,13 @@ import React, { useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ConfigurablePanelLayout } from '@principal-ade/panels';
 import { GitHubSocialPanel } from '@industry-theme/git-sync-panels';
-import { UserProfilePanel } from '@industry-theme/alexandria-panels';
-import { Users, User } from 'lucide-react';
+import { Users, Activity } from 'lucide-react';
 import {
   GitSyncPanelProvider,
   useGitSyncPanelProvider,
 } from '../../../contexts/GitSyncPanelContext';
 import { usePanelPersistence } from '../../../hooks/usePanelPersistence';
+import { UserFeedPanel } from '../../../panels/UserFeedPanel';
 
 /**
  * Inner content component that uses the panel context
@@ -32,8 +32,8 @@ const GitSyncViewContent: React.FC = () => {
       ? theme.modes.dark.border
       : theme.colors.border;
 
-  // Define panels using git-sync-panels and alexandria-panels components
-  // Always show UserProfilePanel on the right for now
+  // Define panels using git-sync-panels and local components
+  // Show UserFeedPanel on the right when a user is selected
   const panels = useMemo(
     () => [
       {
@@ -49,11 +49,11 @@ const GitSyncViewContent: React.FC = () => {
         ),
       },
       {
-        id: 'user-profile',
-        label: 'Profile',
-        icon: <User size={16} />,
+        id: 'user-feed',
+        label: 'Activity',
+        icon: <Activity size={16} />,
         content: (
-          <UserProfilePanel
+          <UserFeedPanel
             context={context}
             actions={actions}
             events={events}
@@ -64,11 +64,11 @@ const GitSyncViewContent: React.FC = () => {
     [context, actions, events],
   );
 
-  // Define layout configuration - network on left (30%), user profile on right (70%)
+  // Define layout configuration - network on left (30%), user feed on right (70%)
   const layout = useMemo(
     () => ({
       left: 'github-social',
-      right: 'user-profile',
+      right: 'user-feed',
     }),
     [],
   );

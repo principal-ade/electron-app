@@ -1,0 +1,597 @@
+{
+  "pv": {
+    "name": "User Feed Panel",
+    "version": "1.0.0",
+    "description": "Network page user activity feed showing GitHub activity and contributions from external API",
+    "markdown": ".principal-views/user-feed-panel/user-feed-panel.md",
+    "nodeTypes": {
+      "ui-component": {
+        "label": "UI Component",
+        "color": "#EC4899"
+      },
+      "context": {
+        "label": "React Context",
+        "color": "#A855F7"
+      },
+      "renderer-service": {
+        "label": "Renderer Service",
+        "color": "#7C3AED"
+      },
+      "main-process": {
+        "label": "Main Process",
+        "color": "#4F46E5"
+      },
+      "external-api": {
+        "label": "External API",
+        "color": "#059669"
+      },
+      "event": {
+        "label": "Event",
+        "color": "#3B82F6"
+      }
+    },
+    "edgeTypes": {
+      "user-action": {
+        "label": "User Action",
+        "style": "solid",
+        "color": "#EC4899"
+      },
+      "data-flow": {
+        "label": "Data Flow",
+        "style": "solid",
+        "color": "#3B82F6"
+      },
+      "ipc-invoke": {
+        "label": "IPC Invoke",
+        "style": "solid",
+        "color": "#6366F1"
+      },
+      "state-update": {
+        "label": "State Update",
+        "style": "dashed",
+        "color": "#22C55E"
+      },
+      "event-emit": {
+        "label": "Event Emit",
+        "style": "dashed",
+        "color": "#A855F7"
+      },
+      "http-request": {
+        "label": "HTTP Request",
+        "style": "solid",
+        "color": "#059669"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "x": 300,
+      "y": -100,
+      "width": 500,
+      "height": 60,
+      "color": "#64748B",
+      "text": "# User Feed Panel\n**GitHub activity feed for selected users in Network page**"
+    },
+    {
+      "id": "section-user-selection",
+      "type": "text",
+      "x": 0,
+      "y": 0,
+      "width": 300,
+      "height": 40,
+      "color": "#64748B",
+      "text": "## User Selection\n**From GitHubSocialPanel**"
+    },
+    {
+      "id": "github-social-panel",
+      "type": "otel-event",
+      "x": 0,
+      "y": 60,
+      "width": 220,
+      "height": 100,
+      "label": "GitHubSocialPanel",
+      "shape": "rectangle",
+      "event": {
+        "name": "network.user.clicked",
+        "description": "User clicked on a user in the GitHub social panel",
+        "attributes": {
+          "username": {
+            "type": "string",
+            "description": "GitHub username of the selected user"
+          },
+          "source": {
+            "type": "string",
+            "description": "Source list: following, followers, or org_members"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "node_modules/@industry-theme/git-sync-panels/dist/panels/GitHubSocialPanel.d.ts"
+        ]
+      }
+    },
+    {
+      "id": "user-selected-event",
+      "type": "otel-event",
+      "x": 280,
+      "y": 60,
+      "width": 220,
+      "height": 100,
+      "label": "user:selected Event",
+      "shape": "rectangle",
+      "event": {
+        "name": "network.user.selected",
+        "description": "PanelEventBus emits user:selected event",
+        "attributes": {
+          "username": {
+            "type": "string",
+            "description": "GitHub username"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/renderer/contexts/GitSyncPanelContext.tsx"
+        ]
+      }
+    },
+    {
+      "id": "section-data-fetch",
+      "type": "text",
+      "x": 0,
+      "y": 200,
+      "width": 300,
+      "height": 40,
+      "color": "#64748B",
+      "text": "## Data Fetching\n**API call through main process**"
+    },
+    {
+      "id": "fetch-user-activity",
+      "type": "otel-event",
+      "x": 0,
+      "y": 260,
+      "width": 220,
+      "height": 100,
+      "label": "fetchUserActivity",
+      "shape": "rectangle",
+      "event": {
+        "name": "network.activity.fetch_started",
+        "description": "Started fetching user activity from API",
+        "attributes": {
+          "username": {
+            "type": "string",
+            "description": "GitHub username to fetch activity for"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/renderer/contexts/GitSyncPanelContext.tsx"
+        ]
+      }
+    },
+    {
+      "id": "secure-auth-service",
+      "type": "otel-event",
+      "x": 280,
+      "y": 260,
+      "width": 220,
+      "height": 100,
+      "label": "SecureAuthService",
+      "shape": "rectangle",
+      "event": {
+        "name": "network.auth.token_retrieved",
+        "description": "Retrieved GitHub token for API authentication",
+        "attributes": {
+          "authenticated": {
+            "type": "boolean",
+            "description": "Whether user is authenticated"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/renderer/services/SecureAuthService.ts"
+        ]
+      }
+    },
+    {
+      "id": "api-proxy-service",
+      "type": "otel-event",
+      "x": 560,
+      "y": 260,
+      "width": 220,
+      "height": 100,
+      "label": "ApiProxyService.call",
+      "shape": "rectangle",
+      "event": {
+        "name": "network.api.proxy_called",
+        "description": "API call proxied through main process to avoid CORS",
+        "attributes": {
+          "endpoint": {
+            "type": "string",
+            "description": "API endpoint URL"
+          },
+          "method": {
+            "type": "string",
+            "description": "HTTP method"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/renderer/main-process-api/ApiProxyService.ts"
+        ]
+      }
+    },
+    {
+      "id": "main-process-proxy",
+      "type": "otel-event",
+      "x": 560,
+      "y": 400,
+      "width": 220,
+      "height": 100,
+      "label": "Main Process API Proxy",
+      "shape": "rectangle",
+      "event": {
+        "name": "network.api.request_sent",
+        "description": "HTTP request sent from main process",
+        "attributes": {
+          "url": {
+            "type": "string",
+            "description": "Full API URL"
+          },
+          "status": {
+            "type": "integer",
+            "description": "HTTP response status code"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/main/ipc/apiProxyHandler.ts"
+        ]
+      }
+    },
+    {
+      "id": "principal-ade-api",
+      "type": "otel-event",
+      "x": 560,
+      "y": 540,
+      "width": 220,
+      "height": 100,
+      "label": "app.principal-ade.com",
+      "shape": "rectangle",
+      "event": {
+        "name": "network.api.response_received",
+        "description": "Response received from external API",
+        "attributes": {
+          "activity_count": {
+            "type": "integer",
+            "description": "Number of activity events returned"
+          },
+          "contributions_days": {
+            "type": "integer",
+            "description": "Number of days in contribution data"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "github-user-activity-api.md"
+        ]
+      }
+    },
+    {
+      "id": "activity-loaded",
+      "type": "otel-event",
+      "x": 280,
+      "y": 400,
+      "width": 220,
+      "height": 100,
+      "label": "Activity Data Loaded",
+      "shape": "rectangle",
+      "event": {
+        "name": "network.activity.loaded",
+        "description": "User activity data loaded into context state",
+        "attributes": {
+          "username": {
+            "type": "string",
+            "description": "GitHub username"
+          },
+          "activity_count": {
+            "type": "integer",
+            "description": "Number of activity events"
+          },
+          "total_contributions": {
+            "type": "integer",
+            "description": "Sum of contributions over 7 days"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/renderer/contexts/GitSyncPanelContext.tsx"
+        ]
+      }
+    },
+    {
+      "id": "section-panel",
+      "type": "text",
+      "x": 0,
+      "y": 540,
+      "width": 300,
+      "height": 40,
+      "color": "#64748B",
+      "text": "## Panel Rendering\n**UserFeedPanel UI**"
+    },
+    {
+      "id": "user-feed-panel",
+      "type": "otel-event",
+      "x": 0,
+      "y": 600,
+      "width": 220,
+      "height": 100,
+      "label": "UserFeedPanel",
+      "shape": "rectangle",
+      "event": {
+        "name": "network.panel.rendered",
+        "description": "User feed panel rendered with activity data",
+        "attributes": {
+          "has_data": {
+            "type": "boolean",
+            "description": "Whether activity data is available"
+          },
+          "activity_count": {
+            "type": "integer",
+            "description": "Number of activity items displayed"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/renderer/panels/UserFeedPanel.tsx"
+        ]
+      }
+    },
+    {
+      "id": "contribution-graph",
+      "type": "otel-event",
+      "x": 280,
+      "y": 600,
+      "width": 220,
+      "height": 100,
+      "label": "ContributionGraph",
+      "shape": "rectangle",
+      "event": {
+        "name": "network.contributions.displayed",
+        "description": "7-day contribution graph rendered",
+        "attributes": {
+          "total_contributions": {
+            "type": "integer",
+            "description": "Total contributions in 7-day period"
+          },
+          "max_daily": {
+            "type": "integer",
+            "description": "Maximum daily contribution count"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/renderer/panels/UserFeedPanel.tsx"
+        ]
+      }
+    },
+    {
+      "id": "section-interactions",
+      "type": "text",
+      "x": 0,
+      "y": 740,
+      "width": 300,
+      "height": 40,
+      "color": "#64748B",
+      "text": "## User Interactions\n**Activity item clicks**"
+    },
+    {
+      "id": "activity-clicked",
+      "type": "otel-event",
+      "x": 0,
+      "y": 800,
+      "width": 220,
+      "height": 100,
+      "label": "Activity Item Clicked",
+      "shape": "rectangle",
+      "event": {
+        "name": "network.activity.clicked",
+        "description": "User clicked on an activity item to open in GitHub",
+        "attributes": {
+          "activity_type": {
+            "type": "string",
+            "description": "Type: commit, pr_merged, pr_opened, issue_opened"
+          },
+          "repository": {
+            "type": "string",
+            "description": "Repository name (owner/repo)"
+          },
+          "url": {
+            "type": "string",
+            "description": "GitHub URL opened"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/renderer/panels/UserFeedPanel.tsx"
+        ]
+      }
+    },
+    {
+      "id": "open-in-github",
+      "type": "otel-event",
+      "x": 280,
+      "y": 800,
+      "width": 220,
+      "height": 100,
+      "label": "Open in GitHub",
+      "shape": "rectangle",
+      "event": {
+        "name": "network.github.opened",
+        "description": "Opened user profile or activity in GitHub browser",
+        "attributes": {
+          "url": {
+            "type": "string",
+            "description": "GitHub URL opened"
+          },
+          "target": {
+            "type": "string",
+            "description": "Target: profile, pr, issue, commit"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/renderer/panels/UserFeedPanel.tsx"
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "social-to-event",
+      "fromNode": "github-social-panel",
+      "fromSide": "right",
+      "toNode": "user-selected-event",
+      "toSide": "left",
+      "label": "emit user:selected",
+      "pv": {
+        "edgeType": "event-emit"
+      }
+    },
+    {
+      "id": "event-to-fetch",
+      "fromNode": "user-selected-event",
+      "fromSide": "bottom",
+      "toNode": "fetch-user-activity",
+      "toSide": "top",
+      "label": "trigger fetch",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "fetch-to-auth",
+      "fromNode": "fetch-user-activity",
+      "fromSide": "right",
+      "toNode": "secure-auth-service",
+      "toSide": "left",
+      "label": "get token",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "auth-to-proxy",
+      "fromNode": "secure-auth-service",
+      "fromSide": "right",
+      "toNode": "api-proxy-service",
+      "toSide": "left",
+      "label": "call with token",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "proxy-to-main",
+      "fromNode": "api-proxy-service",
+      "fromSide": "bottom",
+      "toNode": "main-process-proxy",
+      "toSide": "top",
+      "label": "IPC invoke",
+      "pv": {
+        "edgeType": "ipc-invoke"
+      }
+    },
+    {
+      "id": "main-to-api",
+      "fromNode": "main-process-proxy",
+      "fromSide": "bottom",
+      "toNode": "principal-ade-api",
+      "toSide": "top",
+      "label": "HTTP GET",
+      "pv": {
+        "edgeType": "http-request"
+      }
+    },
+    {
+      "id": "api-to-loaded",
+      "fromNode": "principal-ade-api",
+      "fromSide": "left",
+      "toNode": "activity-loaded",
+      "toSide": "right",
+      "label": "response data",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "loaded-to-panel",
+      "fromNode": "activity-loaded",
+      "fromSide": "bottom",
+      "toNode": "user-feed-panel",
+      "toSide": "top",
+      "label": "state update",
+      "pv": {
+        "edgeType": "state-update"
+      }
+    },
+    {
+      "id": "loaded-to-graph",
+      "fromNode": "activity-loaded",
+      "fromSide": "bottom",
+      "toNode": "contribution-graph",
+      "toSide": "top",
+      "label": "contributions data",
+      "pv": {
+        "edgeType": "state-update"
+      }
+    },
+    {
+      "id": "panel-to-clicked",
+      "fromNode": "user-feed-panel",
+      "fromSide": "bottom",
+      "toNode": "activity-clicked",
+      "toSide": "top",
+      "label": "onClick",
+      "pv": {
+        "edgeType": "user-action"
+      }
+    },
+    {
+      "id": "clicked-to-github",
+      "fromNode": "activity-clicked",
+      "fromSide": "right",
+      "toNode": "open-in-github",
+      "toSide": "left",
+      "label": "window.open",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    }
+  ]
+}

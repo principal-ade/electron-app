@@ -32,6 +32,7 @@ import type {
 } from '../../shared/main-process-api-interfaces/PresenceAPI';
 import { GithubService } from '../main-process-api/GithubService';
 import { PresenceService } from '../main-process-api/PresenceService';
+import { ApiProxyService } from '../main-process-api/ApiProxyService';
 import { useGitSyncConnection } from '../hooks/useGitSyncConnection';
 import { useAuthState } from '../hooks/useAuthState';
 import { SecureAuthService } from '../services/SecureAuthService';
@@ -43,6 +44,62 @@ interface SocialData {
   organizations: LocalGitHubOrganization[];
   orgMembers: Map<string, LocalGitHubOrgMember[]>;
 }
+
+// Types for user activity API response
+export interface UserActivityResponse {
+  user: {
+    login: string;
+    name: string | null;
+    avatarUrl: string;
+    followersCount: number;
+  };
+  activity: ActivityEvent[];
+  contributions: DailyContribution[];
+}
+
+export interface ActivityEvent {
+  id: string;
+  type: 'commit' | 'pr_merged' | 'pr_opened' | 'issue_opened';
+  timestamp: string;
+  repository: string;
+  repositoryUrl?: string;
+  ownerType?: 'User' | 'Organization';
+  isPrivate?: boolean;
+  title?: string;
+  url?: string;
+  metadata?: {
+    commitCount?: number;
+    additions?: number;
+    deletions?: number;
+    prNumber?: number;
+    issueNumber?: number;
+    isClosed?: boolean;
+    closedBy?: string;
+    reactions?: ReactionCounts;
+  };
+}
+
+export interface DailyContribution {
+  date: string;
+  count: number;
+}
+
+interface ReactionCounts {
+  totalCount: number;
+  counts: Partial<Record<ReactionContent, number>>;
+  viewerReactions: Partial<Record<ReactionContent, number>>;
+  users: Partial<Record<ReactionContent, string[]>>;
+}
+
+type ReactionContent =
+  | 'THUMBS_UP'
+  | 'THUMBS_DOWN'
+  | 'LAUGH'
+  | 'HOORAY'
+  | 'CONFUSED'
+  | 'HEART'
+  | 'ROCKET'
+  | 'EYES';
 
 // Selected user profile data for the UserProfilePanel
 interface SelectedUserProfile {
@@ -66,6 +123,7 @@ export interface GitSyncPanelContextType {
   githubSocial: DataSlice<GitHubSocialSliceData>;
   presence: DataSlice<PresenceSliceData>;
   userProfile: DataSlice<UserProfileSlice>;
+  userActivity: DataSlice<UserActivityResponse | null>;
   currentProjects: DataSlice<unknown>;
 }
 
@@ -156,6 +214,14 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
   const [selectedUserError, setSelectedUserError] = useState<string | null>(
     null,
   );
+
+  // Selected user activity state (for UserFeedPanel)
+  const [selectedUserActivity, setSelectedUserActivity] =
+    useState<UserActivityResponse | null>(null);
+  const [selectedUserActivityLoading, setSelectedUserActivityLoading] =
+    useState(false);
+  const [selectedUserActivityError, setSelectedUserActivityError] =
+    useState<string | null>(null);
 
   // Fetch social data when authenticated
   const fetchSocialData = useCallback(async () => {
@@ -252,6 +318,46 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
     }
   }, []); // No dependencies - doesn't need presence data during fetch
 
+  // Fetch selected user's activity data from principal-ade API
+  const fetchUserActivity = useCallback(async (username: string) => {
+    setSelectedUserActivityLoading(true);
+    setSelectedUserActivityError(null);
+
+    try {
+      // Get the GitHub token for auth
+      const authService = SecureAuthService.getInstance();
+      const authResult = await authService.checkAuth();
+
+      if (!authResult.authenticated || !authResult.token) {
+        throw new Error('Not authenticated with GitHub');
+      }
+
+      // Use ApiProxyService to avoid CORS issues
+      const result = await ApiProxyService.call<UserActivityResponse>({
+        endpoint: `https://app.principal-ade.com/api/github/user/${username}/activity`,
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${authResult.token}`,
+        },
+      });
+
+      if (!result.success || !result.data) {
+        throw new Error(result.error ?? `Failed to fetch user activity: ${result.status}`);
+      }
+
+      setSelectedUserActivity(result.data);
+    } catch (err) {
+      console.error('[GitSyncPanelContext] Failed to load user activity:', err);
+      setSelectedUserActivityError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to load user activity.',
+      );
+    } finally {
+      setSelectedUserActivityLoading(false);
+    }
+  }, []);
+
   // Fetch and subscribe to presence data
   useEffect(() => {
     if (!isConnected) {
@@ -308,11 +414,12 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
       const { username } = event.payload as { username: string };
       if (username) {
         void fetchUserProfile(username);
+        void fetchUserActivity(username);
       }
     });
 
     return unsubscribe;
-  }, [events, fetchUserProfile]);
+  }, [events, fetchUserProfile, fetchUserActivity]);
 
   // Handle visibility toggle
   const handleVisibilityToggle = useCallback(async () => {
@@ -448,6 +555,30 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
     ],
   );
 
+  // Explicit DataSlice: userActivity
+  const userActivitySlice = useMemo<DataSlice<UserActivityResponse | null>>(
+    () => ({
+      scope: 'global' as const,
+      name: 'userActivity',
+      data: selectedUserActivity,
+      loading: selectedUserActivityLoading,
+      error: selectedUserActivityError
+        ? new Error(selectedUserActivityError)
+        : null,
+      refresh: async () => {
+        if (selectedUserActivity?.user?.login) {
+          await fetchUserActivity(selectedUserActivity.user.login);
+        }
+      },
+    }),
+    [
+      selectedUserActivity,
+      selectedUserActivityLoading,
+      selectedUserActivityError,
+      fetchUserActivity,
+    ],
+  );
+
   // Explicit DataSlice: currentProjects
   const currentProjectsSlice = useMemo<DataSlice<unknown>>(
     () => ({
@@ -575,9 +706,10 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
       githubSocial: githubSocialSlice,
       presence: presenceSlice,
       userProfile: userProfileSlice,
+      userActivity: userActivitySlice,
       currentProjects: currentProjectsSlice,
     }),
-    [slices, githubSocialSlice, presenceSlice, userProfileSlice, currentProjectsSlice],
+    [slices, githubSocialSlice, presenceSlice, userProfileSlice, userActivitySlice, currentProjectsSlice],
   );
 
   // Combine into provider value

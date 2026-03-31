@@ -1,0 +1,45 @@
+{
+  "version": "1.0.0",
+  "name": "User Activity Loading",
+  "description": "Load user activity feed from external API when user is selected in Network page",
+  "canvas": ".principal-views/user-feed-panel/user-feed-panel.otel.canvas",
+  "spanPattern": "network.activity",
+  "scenarios": [
+    {
+      "id": "load-activity-success",
+      "description": "User activity loads successfully with contributions and activity events",
+      "priority": 1,
+      "template": {
+        "introduction": "**User Activity Loading**\n\nLoading GitHub activity for selected user from external API.",
+        "events": {
+          "network.user.clicked": "[1] User clicked in social panel: {{username}} from {{source}}",
+          "network.user.selected": "[2] user:selected event emitted: {{username}}",
+          "network.activity.fetch_started": "[3] Fetching activity for {{username}}",
+          "network.auth.token_retrieved": "[4] Auth token retrieved: authenticated={{authenticated}}",
+          "network.api.proxy_called": "[5] API proxy called: {{endpoint}} ({{method}})",
+          "network.api.request_sent": "[6] HTTP request sent to {{url}}, status={{status}}",
+          "network.api.response_received": "[7] Response: {{activity_count}} activities, {{contributions_days}} days of contributions",
+          "network.activity.loaded": "[8] Activity loaded for {{username}}: {{activity_count}} events, {{total_contributions}} contributions",
+          "network.panel.rendered": "[9] Panel rendered: has_data={{has_data}}, {{activity_count}} items",
+          "network.contributions.displayed": "[10] Contribution graph: {{total_contributions}} total, max daily={{max_daily}}"
+        },
+        "summary": "**Result:** User activity loaded\n- User: {{username}}\n- Activity events: {{activity_count}}\n- 7-day contributions: {{total_contributions}}"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "click-activity-item",
+      "description": "User clicks on an activity item to open in GitHub",
+      "priority": 2,
+      "template": {
+        "introduction": "**Activity Item Click**\n\nUser clicked on an activity event to view in GitHub.",
+        "events": {
+          "network.activity.clicked": "[1] Activity clicked: {{activity_type}} on {{repository}} ({{url}})",
+          "network.github.opened": "[2] Opening GitHub: {{url}} (target={{target}})"
+        },
+        "summary": "**Result:** Opened {{activity_type}} in GitHub\n- Repository: {{repository}}"
+      },
+      "filterDefault": false
+    }
+  ]
+}
