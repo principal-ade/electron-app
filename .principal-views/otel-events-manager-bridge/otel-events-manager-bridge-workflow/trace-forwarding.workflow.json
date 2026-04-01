@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
-  "name": "Trace Forwarding",
+  "name": "Trace Forwarding to Events Manager",
   "description": "Forward collected traces to otel-events-manager for persistence",
   "canvas": ".principal-views/otel-events-manager-bridge/otel-events-manager-bridge.otel.canvas",
-  "spanPattern": "otel.trace.delivery",
+  "spanPattern": "otel.events_manager.bridge_status",
   "scenarios": [
     {
       "id": "trace-forwarded",
@@ -12,11 +12,12 @@
       "template": {
         "introduction": "**Trace Forwarding**\n\nCollector received trace and bridge forwards to events manager.",
         "events": {
-          "otel.collector.trace_received": "[1] Collector received trace `{{trace.id}}` ({{resource.spans.count}} resource spans)",
-          "otel.storage.trace_stored": "[2] Trace stored locally ({{storage.size}}/{{storage.max_size}})",
-          "otel.events_manager.trace_forwarded": "[3] Trace forwarded to events manager"
+          "otel.collector.trace_received": "[1] Collector received trace",
+          "otel.events_manager.bridge_status": "[2] Bridge status: enabled={{bridge.enabled}}, connected={{bridge.connected}}, url={{bridge.base_url}}, traces={{trace.forward_count}}, workspaces={{workspaces.synced}}",
+          "events_manager.traces.received": "[3] Events manager received trace `{{trace.id}}` ({{resource.spans.count}} resource spans)",
+          "events_manager.health_check": "[4] Health check passed"
         },
-        "summary": "**Forwarding Summary:**\n- Trace ID: `{{trace.id}}`\n- Local Buffer: {{storage.size}}/{{storage.max_size}}\n- Forwarded: Yes"
+        "summary": "**Bridge Status:**\n- URL: {{bridge.base_url}}\n- Enabled: {{bridge.enabled}}\n- Connected: {{bridge.connected}}\n- Traces Forwarded: {{trace.forward_count}}\n- Workspaces Synced: {{workspaces.synced}}"
       }
     }
   ]

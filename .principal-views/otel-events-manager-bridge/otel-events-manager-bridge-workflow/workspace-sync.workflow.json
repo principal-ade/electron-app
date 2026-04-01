@@ -12,10 +12,11 @@
       "template": {
         "introduction": "**Workspace Sync**\n\nWorkspace changed and FileTree synced to events manager for trace matching.",
         "events": {
-          "otel.events_manager.workspace_sync_start": "[1] Syncing workspace `{{workspace.id}}` ({{scopes.count}} scopes)",
-          "otel.events_manager.workspace_sync_complete": "[2] Sync complete for `{{workspace.id}}` (registered: {{registered.scopes}})"
+          "workspace-changed": "[1] Repository monitoring detected changes in workspace",
+          "otel.events_manager.workspace_sync": "[2] Syncing workspace `{{workspace.id}}` at {{workspace.path}} ({{scopes.count}} scopes)",
+          "events_manager.registry.sync": "[3] Registry sync: action={{action}}, workspace={{workspace.id}}, scopes={{scopes.registered}}"
         },
-        "summary": "**Sync Summary:**\n- Workspace: `{{workspace.id}}`\n- Scopes Discovered: {{scopes.count}}\n- Registered Scopes: {{registered.scopes}}"
+        "summary": "**Sync Summary:**\n- Workspace: `{{workspace.id}}`\n- Path: {{workspace.path}}\n- Scopes: {{scopes.count}}\n- Registered: {{scopes.registered}}"
       }
     }
   ]

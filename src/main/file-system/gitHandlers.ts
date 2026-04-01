@@ -10,6 +10,9 @@ import { GitCredentialHelper } from '../services/GitCredentialHelper';
 // Create a single instance of the git service
 const gitService = new GitRepositoryService();
 
+// Export the service instance for use by other services
+export { gitService };
+
 // Helper function to normalize git URLs (add .git if needed, handle browser URLs)
 function normalizeGitUrl(url: string): string {
   // Remove trailing slashes

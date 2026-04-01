@@ -10,7 +10,6 @@ import { app, ipcMain, BrowserWindow } from 'electron';
 import { FileCityImageAPIEvent } from '../../shared/main-process-api-interfaces/FileCityImageAPI';
 import * as path from 'path';
 import * as fs from 'fs/promises';
-import { execSync } from 'child_process';
 import * as crypto from 'crypto';
 import { CodeCityBuilderWithGrid } from '@principal-ai/file-city-builder';
 import {
@@ -23,6 +22,7 @@ import type { FileTree } from '@principal-ai/repository-abstraction';
 import { getManager } from '../repository-monitoring/ipcHandlers';
 import { getTracer } from '../telemetry';
 import { SpanStatusCode } from '@opentelemetry/api';
+import { gitService } from '../file-system/gitHandlers';
 
 // Type alias to handle canvas version mismatches between packages
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -702,194 +702,6 @@ export class FileCityImageService {
       console.error('[FileCityImageService] Error clearing cache:', error);
     }
   }
-
-  /**
-   * Binary file extensions to skip when counting lines
-   */
-  private static readonly BINARY_EXTENSIONS = new Set([
-    'png', 'jpg', 'jpeg', 'gif', 'ico', 'webp', 'svg', 'pdf',
-    'zip', 'tar', 'gz', 'exe', 'dll', 'so', 'dylib',
-    'mp3', 'mp4', 'wav', 'ttf', 'otf', 'woff', 'woff2',
-    'lock', // Skip lock files (huge)
-  ]);
-
-  /**
-   * Check if a file is binary based on extension
-   */
-  private isBinaryFile(filePath: string): boolean {
-    const ext = filePath.split('.').pop()?.toLowerCase() || '';
-    return FileCityImageService.BINARY_EXTENSIONS.has(ext);
-  }
-
-  /**
-   * Count lines in a file content
-   */
-  private countLinesInContent(content: string): number {
-    if (!content) return 0;
-    const newlines = (content.match(/\n/g) || []).length;
-    return content.endsWith('\n') ? newlines : newlines + 1;
-  }
-
-  /**
-   * Extract owner/repo from a git remote URL
-   * Handles both SSH (git@github.com:owner/repo.git) and HTTPS (https://github.com/owner/repo.git) formats
-   */
-  private parseGitRemoteUrl(remoteUrl: string): { owner: string; repo: string } | null {
-    // SSH format: git@github.com:owner/repo.git
-    const sshMatch = remoteUrl.match(/git@[^:]+:([^/]+)\/([^/]+?)(?:\.git)?$/);
-    if (sshMatch) {
-      return { owner: sshMatch[1], repo: sshMatch[2] };
-    }
-
-    // HTTPS format: https://github.com/owner/repo.git
-    const httpsMatch = remoteUrl.match(/https?:\/\/[^/]+\/([^/]+)\/([^/]+?)(?:\.git)?$/);
-    if (httpsMatch) {
-      return { owner: httpsMatch[1], repo: httpsMatch[2] };
-    }
-
-    return null;
-  }
-
-  /**
-   * Push line counts to the web-ade cache API
-   * Fire and forget - does not block on the response
-   */
-  private pushLineCountsToWebCache(
-    owner: string,
-    repo: string,
-    lineCounts: Record<string, number>
-  ): void {
-    const fileCount = Object.keys(lineCounts).length;
-    if (fileCount === 0) return;
-
-    const url = `https://app.principal-ade.com/api/line-counts/${owner}/${repo}`;
-
-    fetch(url, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        lineCounts,
-        fileCount,
-      }),
-    })
-      .then((response) => {
-        if (response.ok) {
-          console.log(`[FileCityImageService] Pushed line counts to web cache for ${owner}/${repo}`);
-        } else {
-          console.warn(`[FileCityImageService] Failed to push line counts: ${response.status}`);
-        }
-      })
-      .catch((err) => {
-        console.warn('[FileCityImageService] Failed to push line counts to web cache:', err);
-      });
-  }
-
-  /**
-   * Count lines in all tracked files in a repository
-   * Returns a map of file paths (with repo prefix) to line counts
-   */
-  async countLinesInRepository(repoPath: string): Promise<Record<string, number>> {
-    const tracer = getTracer('principal-ade-main');
-    const span = tracer.startSpan('file_city.count_lines', {
-      attributes: { 'repo_path': repoPath },
-    });
-    const startTime = Date.now();
-
-    try {
-      const lineCounts: Record<string, number> = {};
-      const repoName = path.basename(repoPath);
-
-      // Use git ls-files to get tracked files only
-      let files: string[];
-      try {
-        const output = execSync('git ls-files', {
-          cwd: repoPath,
-          encoding: 'utf-8',
-          maxBuffer: 10 * 1024 * 1024, // 10MB buffer for large repos
-        });
-        files = output.split('\n').filter(Boolean);
-      } catch (gitError) {
-        console.error('[FileCityImageService] git ls-files failed:', gitError);
-        span.setStatus({ code: SpanStatusCode.ERROR, message: 'git ls-files failed' });
-        return lineCounts;
-      }
-
-      span.addEvent('file_city.count_lines.files_listed', {
-        'repo_path': repoPath,
-        'file_count': files.length,
-      });
-
-      // Count lines for each non-binary file
-      let processedCount = 0;
-      let skippedCount = 0;
-
-      for (const file of files) {
-        if (this.isBinaryFile(file)) {
-          skippedCount++;
-          continue;
-        }
-
-        try {
-          const filePath = path.join(repoPath, file);
-          const stat = await fs.stat(filePath);
-
-          // Skip files larger than 1MB (likely minified/generated)
-          if (stat.size > 1024 * 1024) {
-            skippedCount++;
-            continue;
-          }
-
-          const content = await fs.readFile(filePath, 'utf-8');
-          const lineCount = this.countLinesInContent(content);
-
-          // Key includes repo name prefix to match building.path format
-          lineCounts[`${repoName}/${file}`] = lineCount;
-          processedCount++;
-        } catch (_fileError) {
-          // File may have been deleted or be unreadable
-          skippedCount++;
-        }
-      }
-
-      const duration = Date.now() - startTime;
-      console.log(`[FileCityImageService] Counted lines in ${processedCount} files (skipped ${skippedCount}) in ${duration}ms`);
-
-      span.addEvent('file_city.count_lines.complete', {
-        'repo_path': repoPath,
-        'processed_count': processedCount,
-        'skipped_count': skippedCount,
-        'duration_ms': duration,
-      });
-      span.setStatus({ code: SpanStatusCode.OK });
-
-      // Push line counts to web-ade cache (fire and forget)
-      try {
-        const remoteUrl = execSync('git remote get-url origin', {
-          cwd: repoPath,
-          encoding: 'utf-8',
-        }).trim();
-        const parsed = this.parseGitRemoteUrl(remoteUrl);
-        if (parsed) {
-          this.pushLineCountsToWebCache(parsed.owner, parsed.repo, lineCounts);
-        }
-      } catch {
-        // No remote configured or git command failed - skip pushing to cache
-      }
-
-      return lineCounts;
-    } catch (error) {
-      console.error('[FileCityImageService] Error counting lines:', error);
-      span.setStatus({
-        code: SpanStatusCode.ERROR,
-        message: error instanceof Error ? error.message : 'Line counting failed',
-      });
-      return {};
-    } finally {
-      span.end();
-    }
-  }
 }
 
 /**
@@ -929,7 +741,7 @@ export function registerFileCityImageHandlers(): void {
   ipcMain.handle(
     FileCityImageAPIEvent.COUNT_LINES,
     async (_event, repoPath: string) => {
-      return service.countLinesInRepository(repoPath);
+      return gitService.countLinesInRepository(repoPath);
     }
   );
 
