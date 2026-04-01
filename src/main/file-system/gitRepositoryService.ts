@@ -5,6 +5,7 @@ import { gitClientFactory } from '../utils/gitClientFactory';
 import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
 import { getTracer } from '../telemetry';
 import { SpanStatusCode } from '@opentelemetry/api';
+import { UnifiedSecureStorage, TOKEN_KEYS } from '../services/UnifiedSecureStorage';
 
 export interface GitCommitHistoryEntry {
   hash: string;
@@ -702,13 +703,23 @@ export class GitRepositoryService {
    * Push line counts to the web-ade cache API
    * Fire and forget - does not block on the response
    */
-  private pushLineCountsToWebCache(
+  private async pushLineCountsToWebCache(
     owner: string,
     repo: string,
     lineCounts: Record<string, number>
-  ): void {
+  ): Promise<void> {
     const fileCount = Object.keys(lineCounts).length;
     if (fileCount === 0) return;
+
+    // Get GitHub token from storage for authentication
+    const storage = UnifiedSecureStorage.getInstance();
+    const tokenData = await storage.getTokenWithMetadata(TOKEN_KEYS.GITHUB_TOKEN);
+    const githubToken = tokenData?.token;
+
+    if (!githubToken) {
+      console.warn('[GitRepositoryService] No GitHub token available, skipping line counts push');
+      return;
+    }
 
     const url = `https://app.principal-ade.com/api/line-counts/${owner}/${repo}`;
 
@@ -716,6 +727,7 @@ export class GitRepositoryService {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${githubToken}`,
       },
       body: JSON.stringify({
         lineCounts,
@@ -817,7 +829,9 @@ export class GitRepositoryService {
       const repoInfo = await this.getRepositoryInfo(repoPath);
       const originRemote = repoInfo?.remotes?.find(r => r.name === 'origin');
       if (originRemote?.owner && originRemote?.repo) {
-        this.pushLineCountsToWebCache(originRemote.owner, originRemote.repo, lineCounts);
+        this.pushLineCountsToWebCache(originRemote.owner, originRemote.repo, lineCounts).catch(err => {
+          console.warn('[GitRepositoryService] Failed to push line counts:', err);
+        });
       }
 
       return lineCounts;
