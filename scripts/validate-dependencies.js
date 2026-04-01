@@ -121,6 +121,15 @@ const builtinModules = new Set([
   'tty', 'url', 'util', 'v8', 'vm', 'wasi', 'worker_threads', 'zlib'
 ]);
 
+// Native modules that must be in release/app/package.json (can't be bundled by webpack)
+// All other dependencies are bundled by webpack and don't need to be in release/app
+const nativeModules = new Set([
+  'node-pty',
+  'keytar',
+  'canvas',
+  'electron-updater',
+]);
+
 console.log('🔍 Scanning source files for imports...\n');
 const usedImports = findImports();
 
@@ -175,7 +184,9 @@ for (const packageName of usedImports) {
   const inRelease = releaseDeps[packageName];
   const inDevDeps = rootPkg.devDependencies?.[packageName];
 
-  if (inRoot && !inRelease) {
+  // Only flag as missing if it's a native module that must be in release/app
+  // All other dependencies are bundled by webpack
+  if (inRoot && !inRelease && nativeModules.has(packageName)) {
     missingInRelease.push({
       name: packageName,
       version: inRoot
@@ -195,11 +206,14 @@ missingInRelease.sort((a, b) => a.name.localeCompare(b.name));
 missingEverywhere.sort();
 onlyInDevDeps.sort((a, b) => a.name.localeCompare(b.name));
 
-// Auto-sync version mismatches between root and release
+// Auto-sync version mismatches between root and release (only for native modules)
 const versionMismatches = [];
 let releasePackageModified = false;
 
 for (const [packageName, rootVersion] of Object.entries(rootDeps)) {
+  // Only sync native modules - everything else is bundled
+  if (!nativeModules.has(packageName)) continue;
+
   const releaseVersion = releaseDeps[packageName];
   if (releaseVersion && rootVersion !== releaseVersion) {
     versionMismatches.push({
@@ -238,17 +252,8 @@ if (releasePackageModified) {
   }
 }
 
-// Also run npm update to get latest patch versions of packages
-// This ensures we're using the same versions as the root package
-console.log('🔄 Updating to latest patch versions in release/app...\n');
-try {
-  execSync('npm update --legacy-peer-deps', {
-    cwd: path.join(__dirname, '..', 'release', 'app'),
-    stdio: 'inherit'
-  });
-} catch (error) {
-  console.error('⚠️  Warning: Failed to update to latest patch versions');
-}
+// Note: release/app/package.json only contains native modules that can't be bundled.
+// All other dependencies are bundled by webpack into dist/.
 
 // Report results
 console.log('='.repeat(70));
@@ -270,8 +275,8 @@ if (versionMismatches.length > 0) {
 
 if (missingInRelease.length > 0) {
   hasErrors = true;
-  console.log('❌ MISSING IN release/app/package.json');
-  console.log('   These packages are in root package.json but missing from release:\n');
+  console.log('❌ NATIVE MODULES MISSING IN release/app/package.json');
+  console.log('   These native modules must be in release/app (cannot be bundled by webpack):\n');
 
   for (const dep of missingInRelease) {
     console.log(`   • ${dep.name} (${dep.version})`);
