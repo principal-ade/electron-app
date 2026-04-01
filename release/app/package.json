@@ -9,6 +9,9 @@
     "url": "https://principle-md.com"
   },
   "main": "dist/main/main.js",
+  "overrides": {
+    "unicorn-magic": "^0.3.0"
+  },
   "dependencies": {
     "@egoist/tipc": "^0.3.2",
     "@octokit/rest": "^22.0.1",
@@ -39,7 +42,6 @@
     "electron-store": "^10.1.0",
     "electron-updater": "^6.3.9",
     "express": "^5.1.0",
-    "globby": "^16.0.0",
     "jsonwebtoken": "^9.0.2",
     "jszip": "^3.10.1",
     "keytar": "^7.9.0",
