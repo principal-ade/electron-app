@@ -1,28 +1,30 @@
 const fs = require('fs');
 const path = require('path');
 
+const nativeModules = ['node-pty', 'keytar', 'canvas'];
+
 exports.default = async function (context) {
-  const { appOutDir, packager } = context;
-  const { productName } = packager.appInfo;
+  const { appOutDir } = context;
 
-  console.log('Before pack: Ensuring node-pty is included...');
+  console.log('Before pack: Ensuring native modules are included...');
 
-  // Copy node-pty from release/app to the app's node_modules
-  const sourceNodePty = path.join(
-    __dirname,
-    '../../release/app/node_modules/node-pty',
-  );
   const targetNodeModules = path.join(appOutDir, 'node_modules');
-  const targetNodePty = path.join(targetNodeModules, 'node-pty');
 
-  if (fs.existsSync(sourceNodePty)) {
-    if (!fs.existsSync(targetNodeModules)) {
-      fs.mkdirSync(targetNodeModules, { recursive: true });
+  if (!fs.existsSync(targetNodeModules)) {
+    fs.mkdirSync(targetNodeModules, { recursive: true });
+  }
+
+  for (const moduleName of nativeModules) {
+    const sourceModule = path.join(
+      __dirname,
+      '../../release/app/node_modules',
+      moduleName,
+    );
+
+    if (fs.existsSync(sourceModule)) {
+      copyFolderRecursiveSync(sourceModule, targetNodeModules);
+      console.log(`✓ Copied ${moduleName} to app`);
     }
-
-    // Copy node-pty
-    copyFolderRecursiveSync(sourceNodePty, targetNodeModules);
-    console.log('✓ Copied node-pty to app');
   }
 };
 

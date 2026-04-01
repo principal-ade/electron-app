@@ -12,7 +12,17 @@ import baseConfig from './webpack.config.main.base';
 import webpackPaths from './webpack.paths';
 import checkNodeEnv from '../scripts/check-node-env';
 import deleteSourceMaps from '../scripts/delete-source-maps';
-import { dependencies as externals } from '../../package.json';
+
+// Only externalize native modules that can't be bundled
+// Everything else gets bundled into the main process
+const nativeModules = [
+  'node-pty',
+  'keytar',
+  'canvas',
+  'electron',
+  // Electron-specific modules that must be external
+  'electron-updater',
+];
 
 checkNodeEnv('production');
 deleteSourceMaps();
@@ -60,7 +70,7 @@ const configuration: webpack.Configuration = {
     ),
   },
 
-  // Override externals - don't externalize dependencies for workers
+  // Only externalize native modules - bundle everything else for smaller node_modules
   externals: [
     ({ request, context, contextInfo, getResolve }, callback) => {
       // For the worker entries, bundle everything except native modules
@@ -85,8 +95,9 @@ const configuration: webpack.Configuration = {
         return callback(); // Bundle everything else
       }
 
-      // For main and preload, externalize node_modules as usual
-      if (Object.keys(externals || {}).includes(request) || ['node-pty', 'keytar', 'canvas'].includes(request)) {
+      // For main and preload, only externalize native modules
+      // This dramatically reduces node_modules size in production builds
+      if (nativeModules.includes(request)) {
         return callback(null, `commonjs ${request}`);
       }
       callback();

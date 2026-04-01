@@ -454,6 +454,13 @@
         ".*\\.svg$",
         ".*\\.ico$",
         ".*\\.icns$"
+      ],
+      "extraResources": [
+        {
+          "from": "resources/bin",
+          "to": "bin",
+          "filter": ["*darwin*"]
+        }
       ]
     },
     "afterPack": ".erb/scripts/after-pack.js",
@@ -477,7 +484,14 @@
       "target": [
         "nsis"
       ],
-      "legalTrademarks": "Copyright © 2025 Principal ADE"
+      "legalTrademarks": "Copyright © 2025 Principal ADE",
+      "extraResources": [
+        {
+          "from": "resources/bin",
+          "to": "bin",
+          "filter": ["*windows*"]
+        }
+      ]
     },
     "nsis": {
       "oneClick": false,
@@ -488,17 +502,17 @@
       "target": [
         "AppImage"
       ],
-      "category": "Development"
+      "category": "Development",
+      "extraResources": [
+        {
+          "from": "resources/bin",
+          "to": "bin",
+          "filter": ["*linux*"]
+        }
+      ]
     },
     "extraResources": [
-      "./assets/**",
-      {
-        "from": "resources/bin",
-        "to": "bin",
-        "filter": [
-          "**/*"
-        ]
-      }
+      "./assets/**"
     ],
     "publish": {
       "provider": "github",

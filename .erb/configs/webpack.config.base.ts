@@ -5,16 +5,13 @@
 import path from 'path';
 import webpack from 'webpack';
 import TsconfigPathsPlugins from 'tsconfig-paths-webpack-plugin';
-import { dependencies as externals } from '../../package.json';
 import webpackPaths from './webpack.paths';
 
+// Only externalize native modules that can't be bundled by webpack
+const nativeModules = ['node-pty', 'keytar', 'canvas', 'electron', 'electron-updater'];
+
 const configuration: webpack.Configuration = {
-  externals: [
-    ...Object.keys(externals || {}).filter(
-      (dep) => dep !== 'mermaid',
-    ),
-    'node-pty',
-  ],
+  externals: nativeModules,
 
   stats: 'errors-only',
 

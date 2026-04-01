@@ -5,7 +5,7 @@ const path = require('path');
 const sourceDir = path.join(__dirname, '../../release/app/node_modules');
 const targetDir = path.join(__dirname, '../../node_modules');
 
-const nativeDeps = ['node-pty'];
+const nativeDeps = ['node-pty', 'keytar', 'canvas'];
 
 console.log('📦 Copying native dependencies for build...');
 
