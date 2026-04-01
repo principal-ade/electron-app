@@ -52,17 +52,7 @@ OS Keychain (macOS) / Credential Manager (Windows)
 
 ## Configuration Components
 
-### 4. ObservabilityConfigModal
-**Location**: `src/renderer/components/observability/ObservabilityConfigModal.tsx`
-**Purpose**: Configure observability settings (Turso database connection)
-**Secure Storage Interactions**:
-- Stores Turso authentication tokens securely
-- Masks/unmasks sensitive configuration values in UI
-**Storage Keys Used**:
-- `tursoAuthToken` (stored encrypted)
-- Database connection credentials
-
-### 5. AgentSetupWizard
+### 4. AgentSetupWizard
 **Location**: `src/renderer/pages/LandingPage/AgentConfigurationView/AgentSetupWizard.tsx`
 **Purpose**: Configure AI agent connections
 **Secure Storage Interactions**:
@@ -72,7 +62,7 @@ OS Keychain (macOS) / Credential Manager (Windows)
 - Agent-specific API keys
 - MCP (Model Context Protocol) server credentials
 
-### 6. DetailedConfigurationView
+### 5. DetailedConfigurationView
 **Location**: `src/renderer/pages/LandingPage/AgentConfigurationView/DetailedConfigurationView.tsx`
 **Purpose**: Advanced agent configuration interface
 **Secure Storage Interactions**:
@@ -84,7 +74,7 @@ OS Keychain (macOS) / Credential Manager (Windows)
 
 ## Repository Secrets Management
 
-### 7. SecretsModal Component
+### 6. SecretsModal Component
 **Location**: `src/renderer/repo-manager/shared/SecretsModal.tsx`
 **Purpose**: Manage repository-specific environment secrets
 **Secure Storage Interactions**:
@@ -102,7 +92,7 @@ OS Keychain (macOS) / Credential Manager (Windows)
 - Confirmation before deletion
 - Auto-cleanup of environment files
 
-### 8. SecretsService (Renderer)
+### 7. SecretsService (Renderer)
 **Location**: `src/renderer/main-process-api/SecretsService.ts`
 **Purpose**: Service layer for secrets management in renderer process
 **Key Methods**:
@@ -291,7 +281,6 @@ The `UnifiedSecureStorage` has been **already implemented** and is currently in 
 - `github_token`: GitHub API authentication
 - `orbit_auth`: Orbit authentication token
 - `git-sync-auth`: Git synchronization credentials
-- `tursoAuthToken`: Turso database authentication
 
 ### Repository-Specific Secrets
 - `repo-{id}`: Repository-specific credentials

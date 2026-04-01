@@ -9,7 +9,6 @@ import type { SupportedAgent } from '@principal-ai/agent-monitoring';
  */
 export interface EventProcessingServerConfig {
   logLevel?: 'debug' | 'info' | 'warn' | 'error';
-  enableObservability?: boolean;
   maxConcurrentEvents?: number;
   requestTimeoutMs?: number;
   statsReportingIntervalMs?: number;
@@ -17,7 +16,6 @@ export interface EventProcessingServerConfig {
 
 export const DEFAULT_CONFIG: Required<EventProcessingServerConfig> = {
   logLevel: 'info',
-  enableObservability: true,
   maxConcurrentEvents: 10,
   requestTimeoutMs: 30_000,
   statsReportingIntervalMs: 60_000,

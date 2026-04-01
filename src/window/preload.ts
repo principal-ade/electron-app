@@ -49,7 +49,6 @@ import { principalAPI } from './main-process-api-implementations/principalApi';
 import { feedbackAPI } from './main-process-api-implementations/feedbackApi';
 import { testDebugAPI } from './main-process-api-implementations/testDebugApi';
 import { documentSearchAPI } from './main-process-api-implementations/documentSearchApi';
-import { observabilityAPI } from './main-process-api-implementations/observabilityApi';
 import { localhostDetectionAPI } from './main-process-api-implementations/localhostDetectionApi';
 import { githubArtifactAPI } from './main-process-api-implementations/githubArtifactApi';
 import { collectionsAPI } from './main-process-api-implementations/collectionsApi';
@@ -135,7 +134,6 @@ const mainProcessExposure: MainProcessAPI = {
   feedback: feedbackAPI,
   testDebug: testDebugAPI,
   documentSearch: documentSearchAPI,
-  observability: observabilityAPI,
   localhostDetection: localhostDetectionAPI,
   githubArtifact: githubArtifactAPI,
   recentRepos: recentReposAPI,

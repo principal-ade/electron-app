@@ -9,8 +9,7 @@ Main Process                    Event Processing Server (Utility Process)
 ├─ EventServerManager           ├─ HttpEventServer
 ├─ Storage API access           ├─ AgentEventPipeline
 ├─ Window/IPC management        ├─ Git repository detection
-├─ Observability SDK            ├─ Path normalization
-└─ UI event broadcasting        └─ HTTP server (port 3043)
+└─ UI event broadcasting        └─ Path normalization & HTTP server (port 3043)
 ```
 
 ## Configuration
@@ -100,7 +99,7 @@ src/event-processing-server/
 1. **Server starts automatically** when app launches (via EventServerManager)
 2. **HTTP server** listens on port 3043 for agent events
 3. **Events are processed** through AgentEventPipeline with git repository info
-4. **Results sent to main** process for storage and observability SDK
+4. **Results sent to main** process for storage
 5. **UI is notified** via IPC events
 
 ## Monitoring

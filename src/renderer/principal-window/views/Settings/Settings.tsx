@@ -5,14 +5,12 @@ import {
   Bot,
   RefreshCw,
   Settings as SettingsIcon,
-  Activity,
   Puzzle,
   Sparkles,
 } from 'lucide-react';
 import { GeneralSettings } from './components/GeneralSettings';
 import { AIAssistantsSettings } from './components/AIAssistantsSettings';
 import { UpdatesSettings } from './components/UpdatesSettings';
-import { ObservabilitySettings } from './components/ObservabilitySettings';
 import { GeminiSettings } from './components/GeminiSettings';
 import { WindowService } from '../../../main-process-api/WindowService';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
@@ -21,8 +19,7 @@ export type SettingsCategory =
   | 'general'
   | 'ai-assistants'
   | 'gemini'
-  | 'updates'
-  | 'observability';
+  | 'updates';
 
 export interface SettingsProps {
   initialCategory?: SettingsCategory;
@@ -33,7 +30,6 @@ export const Settings: React.FC<SettingsProps> = ({ initialCategory }) => {
   const [activeCategory, setActiveCategory] =
     useState<SettingsCategory>(initialCategory ?? 'general');
   const [updateAvailable] = useState(false); // This will be connected to UpdatesSettings state later if needed
-  const [showObservabilitySettings, setShowObservabilitySettings] = useState(false);
   const [showExtensionsButton, setShowExtensionsButton] = useState(false);
 
   // Update category when initialCategory prop changes
@@ -46,7 +42,6 @@ export const Settings: React.FC<SettingsProps> = ({ initialCategory }) => {
   useEffect(() => {
     // Load user preferences for showing buttons
     UserPreferencesService.getPreferences().then((prefs) => {
-      setShowObservabilitySettings(prefs.showObservabilitySettings ?? false);
       setShowExtensionsButton(prefs.showExtensionsButton ?? false);
     });
 
@@ -54,9 +49,6 @@ export const Settings: React.FC<SettingsProps> = ({ initialCategory }) => {
     const handlePreferencesUpdated = (event: Event) => {
       const detail = (event as CustomEvent).detail;
       if (detail) {
-        if ('showObservabilitySettings' in detail) {
-          setShowObservabilitySettings(detail.showObservabilitySettings ?? false);
-        }
         if ('showExtensionsButton' in detail) {
           setShowExtensionsButton(detail.showExtensionsButton ?? false);
         }
@@ -291,48 +283,6 @@ export const Settings: React.FC<SettingsProps> = ({ initialCategory }) => {
               )}
             </button>
 
-            {showObservabilitySettings && (
-              <button
-                onClick={() => setActiveCategory('observability')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '12px 16px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  backgroundColor:
-                    activeCategory === 'observability'
-                      ? theme.colors.primary + '20'
-                      : 'transparent',
-                  color:
-                    activeCategory === 'observability'
-                      ? theme.colors.primary
-                      : theme.colors.text,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  fontSize: '14px',
-                  fontWeight: activeCategory === 'observability' ? 600 : 500,
-                  textAlign: 'left',
-                  width: '100%',
-                }}
-                onMouseEnter={(e) => {
-                  if (activeCategory !== 'observability') {
-                    e.currentTarget.style.backgroundColor =
-                      theme.colors.backgroundTertiary;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (activeCategory !== 'observability') {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                  }
-                }}
-              >
-                <Activity size={18} />
-                Observability
-              </button>
-            )}
-
             {showExtensionsButton && (
               <>
                 {/* Divider */}
@@ -400,7 +350,6 @@ export const Settings: React.FC<SettingsProps> = ({ initialCategory }) => {
           {activeCategory === 'ai-assistants' && <AIAssistantsSettings />}
           {activeCategory === 'gemini' && <GeminiSettings />}
           {activeCategory === 'updates' && <UpdatesSettings />}
-          {activeCategory === 'observability' && <ObservabilitySettings />}
         </div>
       </div>
     </div>

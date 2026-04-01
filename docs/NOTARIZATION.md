@@ -62,9 +62,7 @@ Already added to `package.json`:
 ```json
 "files": [
   "!**/node_modules/**/prebuilds/win32-*/**",
-  "!**/node_modules/**/prebuilds/linux-*/**",
-  "!**/node_modules/@libsql/win32-*/**",
-  "!**/node_modules/@libsql/linux-*/**"
+  "!**/node_modules/**/prebuilds/linux-*/**"
 ]
 ```
 

@@ -35,9 +35,6 @@ import {
 
 // Import centralized event processor for session state updates
 
-// Import observability integration types (will be implemented later)
-// import { ObservabilityIntegration } from '../main/observability/ObservabilityIntegration';
-
 /**
  * Simple LRU-style cache for git repository information
  * Caches by git root to avoid repeated lookups for files in the same repo

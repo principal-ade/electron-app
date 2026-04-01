@@ -21,9 +21,8 @@ const configuration: webpack.Configuration = {
 
   target: 'web',
 
-  // Bundle everything except observability SDK (which uses Node.js modules)
+  // Bundle everything except otel-collector-server (which uses Node.js modules)
   externals: [
-    '@principal-ai/observability-sdk',
     '@principal-ai/otel-collector-server',
     /^@types\/.*$/,  // Exclude all @types packages (TypeScript type definitions)
   ],

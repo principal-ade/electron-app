@@ -62,7 +62,6 @@ import {
   registerDocumentSearchHandlers,
   shutdownDocumentSearch,
 } from './services/ipc/documentSearchHandlers';
-import { registerObservabilityHandlers } from './observability/observabilityHandlers';
 import { registerActIntegrationHandlers } from './services/ipc/act/actIntegrationHandlers';
 import { setupWindowSwitcherHandlers } from './window/windowSwitcher';
 import { setupQuickOpenHandlers } from './window/quickOpen';
@@ -265,7 +264,6 @@ const registerAllIpcHandlers = async () => {
   registerDockerHandlers();
   registerOptimizedDockerHandlers();
   registerDocumentSearchHandlers();
-  registerObservabilityHandlers();
 
   // LLM Models handlers have been removed
   const typedStore = await getTypedStorageManager();

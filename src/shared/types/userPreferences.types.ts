@@ -131,7 +131,6 @@ export interface UserPreferences {
   showProcessesButton?: boolean; // Show/hide the processes button in side nav (default: false)
   showWorldsButton?: boolean; // Show/hide the worlds button in side nav (default: false)
   showGitSyncPanel?: boolean; // Show/hide the git sync panel (default: false)
-  showObservabilitySettings?: boolean; // Show/hide the observability settings tab (default: false)
   showExtensionsButton?: boolean; // Show/hide the extensions button in settings (default: false)
   showTerminalDebugButton?: boolean; // Show/hide the debug button in terminal panels (default: false)
   showTerminalShowAllButton?: boolean; // Show/hide the show all terminals button in terminal panels (default: true)

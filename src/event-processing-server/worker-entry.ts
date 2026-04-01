@@ -207,7 +207,6 @@ async function initialize(): Promise<void> {
 
     server = new HttpEventServer(sendToMain, {
       logLevel: process.env.DEBUG_EVENT_SERVER === 'true' ? 'debug' : 'info',
-      enableObservability: process.env.DISABLE_OBSERVABILITY !== 'true',
       maxConcurrentEvents: parseInt(process.env.MAX_CONCURRENT_EVENTS || '10'),
       requestTimeoutMs: parseInt(process.env.REQUEST_TIMEOUT_MS || '30000'),
       statsReportingIntervalMs: parseInt(

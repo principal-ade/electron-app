@@ -22,7 +22,7 @@ const configuration: webpack.Configuration = {
   target: 'web',
 
   // Bundle everything except native modules and libraries with Node.js dependencies
-  externals: ['keytar', '@principal-ai/observability-sdk', '@a24z/core-library', '@a24z/markdown-search'],
+  externals: ['keytar', '@a24z/core-library', '@a24z/markdown-search'],
 
   stats: 'errors-only',
 
