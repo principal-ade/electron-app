@@ -19,7 +19,7 @@ import { userPreferencesAPI } from './main-process-api-implementations/userPrefe
 // QuickOpenItem type definition (matches the one in quickOpen.ts)
 interface QuickOpenItem {
   id: string;
-  type: 'repository' | 'workspace';
+  type: 'repository' | 'workspace' | 'github';
   name: string;
   description?: string;
   remoteUrl?: string;
@@ -28,6 +28,30 @@ interface QuickOpenItem {
   openWindowId?: number;
   avatarUrl?: string;
   alexandriaEntry?: AlexandriaEntry;
+  // GitHub-specific fields
+  fullName?: string;
+  stars?: number;
+  cloneUrl?: string;
+}
+
+interface GitHubSearchResult {
+  id: number;
+  name: string;
+  full_name: string;
+  description: string | null;
+  owner: {
+    login: string;
+    avatar_url: string;
+  };
+  stargazers_count: number;
+  clone_url: string;
+  html_url: string;
+}
+
+interface CloneResult {
+  success: boolean;
+  path?: string;
+  error?: string;
 }
 
 console.info('[Preload-QuickOpen] API imports successful');
@@ -70,6 +94,14 @@ try {
     closeQuickOpen: () => ipcRenderer.send('quick-open:close'),
     copyToClipboard: (text: string) =>
       ipcRenderer.invoke(ClipboardAPIEvent.WRITE_TEXT, text),
+
+    // GitHub search and clone APIs
+    searchGitHub: (query: string): Promise<GitHubSearchResult[]> =>
+      ipcRenderer.invoke('quick-open:search-github', query),
+    cloneGitHubRepo: (cloneUrl: string, repoName: string): Promise<CloneResult> =>
+      ipcRenderer.invoke('quick-open:clone-github', cloneUrl, repoName),
+    isAuthenticated: (): Promise<boolean> =>
+      ipcRenderer.invoke('quick-open:is-authenticated'),
   });
   console.info('[Preload-QuickOpen] electronAPI exposed');
 } catch (error) {

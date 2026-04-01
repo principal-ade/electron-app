@@ -15,10 +15,27 @@ import {
 } from './types';
 import { openDevWorkspaceWindow } from './devWorkspaceWindowHandlers';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import { gitHubAPICore } from '../version-control-providers/github/apiCore';
+import { authService } from '../services/AuthService';
+import { gitClientFactory } from '../utils/gitClientFactory';
+
+interface GitHubSearchResult {
+  id: number;
+  name: string;
+  full_name: string;
+  description: string | null;
+  owner: {
+    login: string;
+    avatar_url: string;
+  };
+  stargazers_count: number;
+  clone_url: string;
+  html_url: string;
+}
 
 interface QuickOpenItem {
   id: string;
-  type: 'repository' | 'workspace';
+  type: 'repository' | 'workspace' | 'github';
   name: string;
   description?: string;
   remoteUrl?: string;
@@ -31,6 +48,10 @@ interface QuickOpenItem {
   alexandriaEntry?: AlexandriaEntry;
   // Last opened timestamp for sorting and display
   lastOpenedAt?: string;
+  // GitHub-specific fields
+  fullName?: string;
+  stars?: number;
+  cloneUrl?: string;
 }
 
 class QuickOpen {
@@ -431,6 +452,136 @@ export function setupQuickOpenHandlers(): void {
     log.info('[Quick Open] Close requested');
     quickOpen.hide();
   });
+
+  // Check if user is authenticated with GitHub
+  ipcMain.handle('quick-open:is-authenticated', async () => {
+    try {
+      const token = await authService.getValidToken();
+      return !!token;
+    } catch (error) {
+      log.error('[Quick Open] Failed to check auth status:', error);
+      return false;
+    }
+  });
+
+  // Search GitHub repositories
+  ipcMain.handle(
+    'quick-open:search-github',
+    async (_event, query: string): Promise<GitHubSearchResult[]> => {
+      if (!query || query.trim().length < 2) {
+        return [];
+      }
+
+      log.info(`[Quick Open] Searching GitHub for: ${query}`);
+
+      try {
+        const result = await gitHubAPICore.makeGitHubAPICall(
+          `/search/repositories?q=${encodeURIComponent(query)}&sort=stars&order=desc&per_page=10`,
+        );
+
+        if (!result.success || !result.data) {
+          log.error('[Quick Open] GitHub search failed:', result.error);
+          return [];
+        }
+
+        const data = result.data as { items: GitHubSearchResult[] };
+        log.info(`[Quick Open] Found ${data.items?.length || 0} repositories`);
+        return data.items || [];
+      } catch (error) {
+        log.error('[Quick Open] GitHub search error:', error);
+        return [];
+      }
+    },
+  );
+
+  // Clone a GitHub repository
+  ipcMain.handle(
+    'quick-open:clone-github',
+    async (
+      _event,
+      cloneUrl: string,
+      repoName: string,
+    ): Promise<{ success: boolean; path?: string; error?: string }> => {
+      log.info(`[Quick Open] Cloning ${repoName} from ${cloneUrl}`);
+
+      try {
+        // Get user preferences for base directory
+        const {
+          UserPreferencesService,
+        } = require('../stores/UserPreferencesService');
+        const prefsService = UserPreferencesService.getInstance();
+        const preferences = await prefsService.getPreferences();
+        const baseDir = preferences.baseDefaultDirectory;
+
+        if (!baseDir) {
+          return {
+            success: false,
+            error: 'No default directory set. Please set a base directory in preferences.',
+          };
+        }
+
+        const targetPath = path.join(baseDir, repoName);
+
+        // Check if directory already exists
+        const fs = require('fs').promises;
+        try {
+          await fs.access(targetPath);
+          // Directory exists - check if it's the same repo
+          log.info(`[Quick Open] Directory already exists: ${targetPath}`);
+          return {
+            success: false,
+            error: `Directory already exists: ${targetPath}`,
+          };
+        } catch {
+          // Directory doesn't exist, proceed with clone
+        }
+
+        // Clone the repository
+        const parentDir = path.dirname(targetPath);
+        const git = await gitClientFactory.getClient(parentDir);
+
+        // Set up environment for clone
+        const cloneEnv: Record<string, string> = {};
+        if (process.env.PATH) cloneEnv.PATH = process.env.PATH;
+        if (process.env.HOME) cloneEnv.HOME = process.env.HOME;
+        if (process.env.USER) cloneEnv.USER = process.env.USER;
+
+        await git.raw(['clone', cloneUrl, targetPath], {
+          env: cloneEnv,
+          timeout: 120000, // 2 minute timeout
+        });
+
+        log.info(`[Quick Open] Clone successful: ${targetPath}`);
+
+        // Register with Alexandria
+        const {
+          AlexandriaRegistryService,
+        } = require('../stores/AlexandriaRegistryService');
+        const alexandriaService = AlexandriaRegistryService.getInstance();
+        const registeredRepo = await alexandriaService.registerRepository(
+          repoName,
+          targetPath,
+        );
+
+        log.info(`[Quick Open] Registered repository: ${registeredRepo.name}`);
+
+        // Open the dev workspace for the cloned repo
+        if (registeredRepo) {
+          await openDevWorkspaceWindow({
+            alexandriaEntry: registeredRepo,
+          });
+          log.info(`[Quick Open] Opened dev workspace for ${repoName}`);
+        }
+
+        return { success: true, path: targetPath };
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        log.error(`[Quick Open] Clone failed: ${errorMessage}`);
+        return { success: false, error: errorMessage };
+      }
+    },
+  );
 
   log.info('[Quick Open] IPC handlers registered');
 }

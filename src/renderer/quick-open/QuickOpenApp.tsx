@@ -9,7 +9,7 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/type
 
 interface QuickOpenItem {
   id: string;
-  type: 'repository' | 'workspace';
+  type: 'repository' | 'workspace' | 'github';
   name: string;
   description?: string;
   remoteUrl?: string;
@@ -22,7 +22,27 @@ interface QuickOpenItem {
   alexandriaEntry?: AlexandriaEntry;
   // Last opened timestamp for sorting and display
   lastOpenedAt?: string;
+  // GitHub-specific fields
+  fullName?: string; // e.g., "facebook/react"
+  stars?: number;
+  cloneUrl?: string;
 }
+
+interface GitHubSearchResult {
+  id: number;
+  name: string;
+  full_name: string;
+  description: string | null;
+  owner: {
+    login: string;
+    avatar_url: string;
+  };
+  stargazers_count: number;
+  clone_url: string;
+  html_url: string;
+}
+
+type QuickOpenMode = 'local' | 'github';
 
 // Quick Open specific window type - electronAPI is always defined in this context
 interface QuickOpenWindow extends Window {
@@ -37,6 +57,13 @@ interface QuickOpenWindow extends Window {
     selectQuickOpenItem: (item: QuickOpenItem) => void;
     closeQuickOpen: () => void;
     copyToClipboard: (text: string) => Promise<void>;
+    // GitHub search and clone
+    searchGitHub: (query: string) => Promise<GitHubSearchResult[]>;
+    cloneGitHubRepo: (
+      cloneUrl: string,
+      repoName: string,
+    ) => Promise<{ success: boolean; path?: string; error?: string }>;
+    isAuthenticated: () => Promise<boolean>;
   };
 }
 
@@ -140,6 +167,13 @@ const QuickOpenApp: React.FC = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const selectedItemRef = useRef<HTMLDivElement>(null);
 
+  // GitHub search mode state
+  const [mode, setMode] = useState<QuickOpenMode>('local');
+  const [isSearching, setIsSearching] = useState(false);
+  const [isCloning, setIsCloning] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     // Listen for items from main process
     const handleItems = (
@@ -195,21 +229,76 @@ const QuickOpenApp: React.FC = () => {
     };
   }, []);
 
+  // Check authentication status on mount
   useEffect(() => {
-    // Filter items based on search query
-    if (searchQuery.trim() === '') {
-      setFilteredItems(items);
+    quickOpenWindow.electronAPI.isAuthenticated().then(setIsAuthenticated);
+  }, []);
+
+  // Filter local items or search GitHub based on mode
+  useEffect(() => {
+    if (mode === 'local') {
+      // Local mode: filter items based on search query
+      if (searchQuery.trim() === '') {
+        setFilteredItems(items);
+      } else {
+        const query = searchQuery.toLowerCase();
+        const filtered = items.filter(
+          (item) =>
+            item.name.toLowerCase().includes(query) ||
+            item.description?.toLowerCase().includes(query),
+        );
+        setFilteredItems(filtered);
+      }
+      setSelectedIndex(0);
     } else {
-      const query = searchQuery.toLowerCase();
-      const filtered = items.filter(
-        (item) =>
-          item.name.toLowerCase().includes(query) ||
-          item.description?.toLowerCase().includes(query),
-      );
-      setFilteredItems(filtered);
+      // GitHub mode: debounced search
+      if (searchQuery.trim() === '') {
+        setFilteredItems([]);
+        setSelectedIndex(0);
+        return;
+      }
+
+      // Clear previous timeout
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+
+      // Debounce search by 300ms
+      searchTimeoutRef.current = setTimeout(async () => {
+        setIsSearching(true);
+        try {
+          const results = await quickOpenWindow.electronAPI.searchGitHub(
+            searchQuery,
+          );
+          const mappedResults: QuickOpenItem[] = results.map((repo) => ({
+            id: String(repo.id),
+            type: 'github' as const,
+            name: repo.full_name,
+            fullName: repo.full_name,
+            description: repo.description || undefined,
+            avatarUrl: repo.owner.avatar_url,
+            stars: repo.stargazers_count,
+            cloneUrl: repo.clone_url,
+            remoteUrl: repo.html_url,
+            isOpen: false,
+          }));
+          setFilteredItems(mappedResults);
+          setSelectedIndex(0);
+        } catch (error) {
+          console.error('[Quick Open] GitHub search failed:', error);
+          setFilteredItems([]);
+        } finally {
+          setIsSearching(false);
+        }
+      }, 300);
     }
-    setSelectedIndex(0);
-  }, [searchQuery, items]);
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery, items, mode]);
 
   useEffect(() => {
     // Scroll selected item into view
@@ -221,8 +310,47 @@ const QuickOpenApp: React.FC = () => {
     }
   }, [selectedIndex]);
 
-  const handleSelectItem = (item: QuickOpenItem) => {
+  const handleSelectItem = async (item: QuickOpenItem) => {
     console.info('[Quick Open] Selected item:', item);
+
+    // Handle GitHub item - clone first
+    if (item.type === 'github' && item.cloneUrl) {
+      setIsCloning(true);
+      setCopiedMessage('Cloning repository...');
+
+      try {
+        const repoName = item.name.split('/')[1] || item.name;
+        const result = await quickOpenWindow.electronAPI.cloneGitHubRepo(
+          item.cloneUrl,
+          repoName,
+        );
+
+        if (result.success) {
+          setCopiedMessage('Cloned! Opening workspace...');
+          // The main process will handle opening the workspace
+          // after clone completes
+          setTimeout(() => {
+            quickOpenWindow.electronAPI.closeQuickOpen();
+          }, 500);
+        } else {
+          setCopiedMessage(result.error || 'Clone failed');
+          setIsCloning(false);
+          setTimeout(() => {
+            setCopiedMessage(null);
+          }, 3000);
+        }
+      } catch (error) {
+        console.error('[Quick Open] Clone failed:', error);
+        setCopiedMessage('Clone failed');
+        setIsCloning(false);
+        setTimeout(() => {
+          setCopiedMessage(null);
+        }, 3000);
+      }
+      return;
+    }
+
+    // Local item - pass to main process
     quickOpenWindow.electronAPI.selectQuickOpenItem(item);
   };
 
@@ -304,12 +432,10 @@ const QuickOpenApp: React.FC = () => {
       });
     } else if (e.key === 'Tab') {
       e.preventDefault();
-      console.info('[Quick Open] Tab - cycling selection');
-      setSelectedIndex((prev) => {
-        const newIndex = prev < filteredItems.length - 1 ? prev + 1 : 0;
-        console.info('[Quick Open] New index:', newIndex);
-        return newIndex;
-      });
+      console.info('[Quick Open] Tab - toggling mode');
+      setMode((prev) => (prev === 'local' ? 'github' : 'local'));
+      setSearchQuery(''); // Clear search when switching modes
+      setSelectedIndex(0);
     } else if (e.key === 'Enter') {
       e.preventDefault();
       // Check for Cmd+Enter (Mac) or Ctrl+Enter (Windows/Linux) to copy path
@@ -369,6 +495,77 @@ const QuickOpenApp: React.FC = () => {
           flexDirection: 'column',
         }}
       >
+        {/* Mode Toggle Pills */}
+        <div
+          style={{
+            display: 'flex',
+            gap: '8px',
+            padding: '12px 16px',
+            borderBottom: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              setMode('local');
+              setSearchQuery('');
+              setSelectedIndex(0);
+            }}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '16px',
+              border: 'none',
+              background:
+                mode === 'local'
+                  ? theme.colors.primary
+                  : theme.colors.backgroundSecondary,
+              color:
+                mode === 'local'
+                  ? theme.colors.background
+                  : theme.colors.textSecondary,
+              fontSize: theme.fontSizes[2],
+              fontFamily: theme.fonts.body,
+              fontWeight: mode === 'local' ? 600 : 400,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            Local
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode('github');
+              setSearchQuery('');
+              setSelectedIndex(0);
+            }}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '16px',
+              border: 'none',
+              background:
+                mode === 'github'
+                  ? theme.colors.primary
+                  : theme.colors.backgroundSecondary,
+              color:
+                mode === 'github'
+                  ? theme.colors.background
+                  : theme.colors.textSecondary,
+              fontSize: theme.fontSizes[2],
+              fontFamily: theme.fonts.body,
+              fontWeight: mode === 'github' ? 600 : 400,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+              opacity: isAuthenticated ? 1 : 0.5,
+            }}
+            disabled={!isAuthenticated}
+            title={!isAuthenticated ? 'Sign in to search GitHub' : undefined}
+          >
+            GitHub
+          </button>
+        </div>
+
+        {/* Search Input */}
         <div
           style={{
             padding: '16px',
@@ -378,7 +575,11 @@ const QuickOpenApp: React.FC = () => {
           <input
             ref={searchInputRef}
             type="text"
-            placeholder="Search projects and workspaces..."
+            placeholder={
+              mode === 'local'
+                ? 'Search projects and workspaces...'
+                : 'Search GitHub repositories...'
+            }
             value={searchQuery}
             onChange={handleSearchChange}
             onKeyDown={handleInputKeyDown}
@@ -398,8 +599,8 @@ const QuickOpenApp: React.FC = () => {
           />
         </div>
 
-        {/* Copied feedback overlay */}
-        {copiedMessage && (
+        {/* Feedback overlay (copied, cloning, etc.) */}
+        {(copiedMessage || isCloning) && (
           <div
             style={{
               position: 'absolute',
@@ -424,12 +625,39 @@ const QuickOpenApp: React.FC = () => {
                 fontFamily: theme.fonts.body,
                 fontWeight: 600,
                 boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
               }}
             >
-              ✓ {copiedMessage}
+              {isCloning && !copiedMessage?.includes('failed') ? (
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: '16px',
+                    height: '16px',
+                    border: '2px solid currentColor',
+                    borderTopColor: 'transparent',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite',
+                  }}
+                />
+              ) : (
+                '✓'
+              )}{' '}
+              {copiedMessage}
             </div>
           </div>
         )}
+
+        {/* Add keyframe animation for spinner */}
+        <style>
+          {`
+            @keyframes spin {
+              to { transform: rotate(360deg); }
+            }
+          `}
+        </style>
 
         <div
           style={{
@@ -446,7 +674,19 @@ const QuickOpenApp: React.FC = () => {
                 fontFamily: theme.fonts.body,
               }}
             >
-              {items.length === 0 ? 'Loading...' : 'No matching items found'}
+              {mode === 'local' ? (
+                items.length === 0 ? (
+                  'Loading...'
+                ) : (
+                  'No matching items found'
+                )
+              ) : isSearching ? (
+                'Searching GitHub...'
+              ) : searchQuery.trim() === '' ? (
+                'Type to search GitHub repositories'
+              ) : (
+                'No repositories found'
+              )}
             </div>
           ) : (
             filteredItems.map((item, index) => {
@@ -605,7 +845,26 @@ const QuickOpenApp: React.FC = () => {
                             </span>
                           )}
                         </div>
-                        {item.lastOpenedAt && (
+                        {item.type === 'github' && item.stars !== undefined ? (
+                          <span
+                            style={{
+                              color: theme.colors.textSecondary,
+                              fontSize: theme.fontSizes[2],
+                              fontFamily: theme.fonts.body,
+                              fontWeight: 400,
+                              flexShrink: 0,
+                              marginLeft: '12px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                          >
+                            <span style={{ fontSize: '12px' }}>★</span>
+                            {item.stars >= 1000
+                              ? `${(item.stars / 1000).toFixed(1)}k`
+                              : item.stars}
+                          </span>
+                        ) : item.lastOpenedAt ? (
                           <span
                             style={{
                               color: theme.colors.textSecondary,
@@ -618,7 +877,7 @@ const QuickOpenApp: React.FC = () => {
                           >
                             {formatRelativeTime(item.lastOpenedAt)}
                           </span>
-                        )}
+                        ) : null}
                       </div>
                       {item.description && (
                         <div
@@ -657,6 +916,16 @@ const QuickOpenApp: React.FC = () => {
             style={{
               fontSize: theme.fontSizes[1],
               fontFamily: theme.fonts.body,
+              color: theme.colors.primary,
+              fontWeight: 600,
+            }}
+          >
+            Tab Mode
+          </span>
+          <span
+            style={{
+              fontSize: theme.fontSizes[1],
+              fontFamily: theme.fonts.body,
               color: theme.colors.textSecondary,
             }}
           >
@@ -669,36 +938,33 @@ const QuickOpenApp: React.FC = () => {
               color: theme.colors.textSecondary,
             }}
           >
-            Tab Cycle
+            {mode === 'local' ? 'Enter Open' : 'Enter Clone'}
           </span>
-          <span
-            style={{
-              fontSize: theme.fontSizes[1],
-              fontFamily: theme.fonts.body,
-              color: theme.colors.textSecondary,
-            }}
-          >
-            Enter Select
-          </span>
-          <span
-            style={{
-              fontSize: theme.fontSizes[1],
-              fontFamily: theme.fonts.body,
-              color: isCommandHeld ? theme.colors.primary : theme.colors.textSecondary,
-              fontWeight: isCommandHeld ? 600 : 400,
-            }}
-          >
-            {isCommandHeld ? '⌘1-9 Select · ⇧ Copy' : '⌘1-9 Quick Select'}
-          </span>
-          <span
-            style={{
-              fontSize: theme.fontSizes[1],
-              fontFamily: theme.fonts.body,
-              color: theme.colors.textSecondary,
-            }}
-          >
-            ⌘↵ Copy Path
-          </span>
+          {mode === 'local' && (
+            <>
+              <span
+                style={{
+                  fontSize: theme.fontSizes[1],
+                  fontFamily: theme.fonts.body,
+                  color: isCommandHeld
+                    ? theme.colors.primary
+                    : theme.colors.textSecondary,
+                  fontWeight: isCommandHeld ? 600 : 400,
+                }}
+              >
+                {isCommandHeld ? '⌘1-9 Select · ⇧ Copy' : '⌘1-9 Quick Select'}
+              </span>
+              <span
+                style={{
+                  fontSize: theme.fontSizes[1],
+                  fontFamily: theme.fonts.body,
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                ⌘↵ Copy Path
+              </span>
+            </>
+          )}
           <span
             style={{
               fontSize: theme.fontSizes[1],

@@ -4,7 +4,7 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 // QuickOpenItem type for Quick Open API
 interface QuickOpenItem {
   id: string;
-  type: 'repository' | 'workspace';
+  type: 'repository' | 'workspace' | 'github';
   name: string;
   description?: string;
   remoteUrl?: string;
@@ -13,6 +13,25 @@ interface QuickOpenItem {
   openWindowId?: number;
   avatarUrl?: string;
   alexandriaEntry?: AlexandriaEntry;
+  // GitHub-specific fields
+  fullName?: string;
+  stars?: number;
+  cloneUrl?: string;
+}
+
+// GitHub search result type
+interface GitHubSearchResult {
+  id: number;
+  name: string;
+  full_name: string;
+  description: string | null;
+  owner: {
+    login: string;
+    avatar_url: string;
+  };
+  stargazers_count: number;
+  clone_url: string;
+  html_url: string;
 }
 
 declare global {
@@ -50,6 +69,13 @@ declare global {
       selectQuickOpenItem?: (item: QuickOpenItem) => void;
       closeQuickOpen?: () => void;
       copyToClipboard?: (text: string) => void;
+      // GitHub search and clone APIs
+      searchGitHub?: (query: string) => Promise<GitHubSearchResult[]>;
+      cloneGitHubRepo?: (
+        cloneUrl: string,
+        repoName: string,
+      ) => Promise<{ success: boolean; path?: string; error?: string }>;
+      isAuthenticated?: () => Promise<boolean>;
     };
     // Window init data for routing
     windowInitData?: unknown;
