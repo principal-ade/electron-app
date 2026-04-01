@@ -13,17 +13,6 @@ import webpackPaths from './webpack.paths';
 import checkNodeEnv from '../scripts/check-node-env';
 import deleteSourceMaps from '../scripts/delete-source-maps';
 
-// Only externalize native modules that can't be bundled
-// Everything else gets bundled into the main process
-const nativeModules = [
-  'node-pty',
-  'keytar',
-  'canvas',
-  'electron',
-  // Electron-specific modules that must be external
-  'electron-updater',
-];
-
 checkNodeEnv('production');
 deleteSourceMaps();
 
@@ -70,7 +59,8 @@ const configuration: webpack.Configuration = {
     ),
   },
 
-  // Only externalize native modules - bundle everything else for smaller node_modules
+  // Externalize all node_modules for main process (they run in Node.js)
+  // Workers bundle everything except native modules for portability
   externals: [
     ({ request, context, contextInfo, getResolve }, callback) => {
       // For the worker entries, bundle everything except native modules
@@ -95,10 +85,16 @@ const configuration: webpack.Configuration = {
         return callback(); // Bundle everything else
       }
 
-      // For main and preload, only externalize native modules
-      // This dramatically reduces node_modules size in production builds
-      if (nativeModules.includes(request)) {
-        return callback(null, `commonjs ${request}`);
+      // For main and preload, externalize all node_modules
+      // Skip relative imports and built-in modules
+      if (request && !request.startsWith('.') && !request.startsWith('/')) {
+        // Check if it's a node_modules package (not a built-in)
+        const builtins = ['fs', 'path', 'os', 'crypto', 'http', 'https', 'net', 'tls', 'stream', 'events', 'util', 'child_process', 'cluster', 'dgram', 'dns', 'readline', 'repl', 'tty', 'url', 'v8', 'vm', 'zlib', 'assert', 'buffer', 'console', 'constants', 'domain', 'module', 'process', 'punycode', 'querystring', 'string_decoder', 'sys', 'timers', 'perf_hooks', 'async_hooks', 'worker_threads', 'inspector'];
+        const moduleName = request.startsWith('@') ? request.split('/').slice(0, 2).join('/') : request.split('/')[0];
+
+        if (!builtins.includes(moduleName) && !request.startsWith('node:')) {
+          return callback(null, `commonjs ${request}`);
+        }
       }
       callback();
     },

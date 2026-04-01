@@ -10,9 +10,7 @@ import { merge } from 'webpack-merge';
 import checkNodeEnv from '../scripts/check-node-env';
 import baseConfig from './webpack.config.main.base';
 import webpackPaths from './webpack.paths';
-
-// Only externalize native modules that can't be bundled
-const nativeModules = ['node-pty', 'keytar', 'canvas', 'electron', 'electron-updater'];
+import { dependencies as externals } from '../../release/app/package.json';
 
 // When an ESLint server is running, we can't set the NODE_ENV so we'll check if it's
 // at the dev webpack config is not accidentally run in a production environment
@@ -64,10 +62,10 @@ const configuration: webpack.Configuration = {
         return callback(); // Bundle everything else
       }
 
-      // For main and preload, only externalize native modules
-      // Native modules need special handling - check both exact match and sub-paths
-      const isNativeModule = nativeModules.some(mod => request === mod || request?.startsWith(`${mod}/`));
-      if (isNativeModule) {
+      // For main and preload, externalize all release/app dependencies
+      const externalsList = Object.keys(externals || {});
+      const isExternal = externalsList.some(mod => request === mod || request?.startsWith(`${mod}/`));
+      if (isExternal) {
         return callback(null, `commonjs ${request}`);
       }
       callback();

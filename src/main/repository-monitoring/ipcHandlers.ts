@@ -15,6 +15,7 @@ import {
 import { QualityLensService } from '../quality-lenses/QualityLensService';
 import { applicationWindows, PrimaryWindowType } from '../window/types';
 import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
+import { otelEventsManagerBridge } from '../services/OtelEventsManagerBridge';
 
 // Type alias for git state event payload (structure defined in repository-monitoring-server)
 type GitStateEventPayload = { event: { type: string }; [key: string]: unknown };
@@ -235,6 +236,17 @@ export function registerRepositoryMonitoringHandlers(): void {
       try {
         await manager.registerRepository(repoPath);
         console.log(`[RepositoryMonitoring] REGISTER success for: ${repoPath}`);
+
+        // Initial sync to otel-events-manager
+        const fileTree = await manager.getFileTree(repoPath);
+        if (fileTree) {
+          otelEventsManagerBridge.pushWorkspace({
+            id: repoPath,
+            rootPath: repoPath,
+            fileTree,
+          });
+        }
+
         return { success: true };
       } catch (error) {
         console.error(
@@ -255,6 +267,8 @@ export function registerRepositoryMonitoringHandlers(): void {
     async (_event, repoPath: string) => {
       try {
         await manager.unregisterRepository(repoPath);
+        // Notify events manager that workspace is removed
+        otelEventsManagerBridge.removeWorkspace(repoPath);
         return { success: true };
       } catch (error) {
         console.error(
@@ -600,7 +614,7 @@ export function registerRepositoryMonitoringHandlers(): void {
 
   manager.on(
     MonitoringInternalEvent.WORKSPACE_CHANGED,
-    (payload: WorkspaceChangeEventPayload) => {
+    async (payload: WorkspaceChangeEventPayload) => {
       console.log(
         `[RepositoryMonitoring] Forwarding workspace change to renderer for ${payload.repoPath}`,
       );
@@ -608,6 +622,23 @@ export function registerRepositoryMonitoringHandlers(): void {
         RepositoryMonitoringAPIEvent.WORKSPACE_CHANGED,
         payload,
       );
+
+      // Sync workspace to otel-events-manager for trace matching
+      try {
+        const fileTree = await manager.getFileTree(payload.repoPath);
+        if (fileTree) {
+          otelEventsManagerBridge.pushWorkspace({
+            id: payload.repoPath,
+            rootPath: payload.repoPath,
+            fileTree,
+          });
+        }
+      } catch (err) {
+        console.debug(
+          '[RepositoryMonitoring] Failed to sync workspace to events manager:',
+          err instanceof Error ? err.message : String(err),
+        );
+      }
     },
   );
 

@@ -1,0 +1,22 @@
+{
+  "version": "1.0.0",
+  "name": "Workspace Sync",
+  "description": "Sync workspace FileTree to otel-events-manager for trace matching",
+  "canvas": ".principal-views/otel-events-manager-bridge/otel-events-manager-bridge.otel.canvas",
+  "spanPattern": "otel.events_manager.workspace_sync",
+  "scenarios": [
+    {
+      "id": "workspace-synced",
+      "description": "Workspace FileTree synced to events manager after file changes",
+      "priority": 1,
+      "template": {
+        "introduction": "**Workspace Sync**\n\nWorkspace changed and FileTree synced to events manager for trace matching.",
+        "events": {
+          "otel.events_manager.workspace_sync_start": "[1] Syncing workspace `{{workspace.id}}` ({{scopes.count}} scopes)",
+          "otel.events_manager.workspace_sync_complete": "[2] Sync complete for `{{workspace.id}}` (registered: {{registered.scopes}})"
+        },
+        "summary": "**Sync Summary:**\n- Workspace: `{{workspace.id}}`\n- Scopes Discovered: {{scopes.count}}\n- Registered Scopes: {{registered.scopes}}"
+      }
+    }
+  ]
+}

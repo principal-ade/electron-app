@@ -121,13 +121,26 @@ const builtinModules = new Set([
   'tty', 'url', 'util', 'v8', 'vm', 'wasi', 'worker_threads', 'zlib'
 ]);
 
-// Native modules that must be in release/app/package.json (can't be bundled by webpack)
-// All other dependencies are bundled by webpack and don't need to be in release/app
-const nativeModules = new Set([
-  'node-pty',
-  'keytar',
-  'canvas',
-  'electron-updater',
+// Main process dependencies that must be in release/app/package.json
+// These are externalized by webpack and need to be available at runtime
+// Renderer-only dependencies are bundled by webpack and don't need to be here
+const mainProcessPackages = new Set([
+  // Native modules
+  'node-pty', 'keytar', 'canvas',
+  // Electron runtime
+  'electron-updater', 'electron-log', 'electron-store',
+  // Main process imports (from src/main)
+  '@egoist/tipc', '@octokit/rest',
+  '@opentelemetry/api', '@opentelemetry/exporter-trace-otlp-http',
+  '@opentelemetry/resources', '@opentelemetry/sdk-trace-base', '@opentelemetry/semantic-conventions',
+  '@principal-ade/agent-manager', '@principal-ade/bruno-panels', '@principal-ade/industry-theme',
+  '@principal-ai/agent-monitoring', '@principal-ai/alexandria-collections', '@principal-ai/alexandria-core-library',
+  '@principal-ai/codebase-composition', '@principal-ai/control-tower-core',
+  '@principal-ai/file-city-builder', '@principal-ai/file-city-server',
+  '@principal-ai/markdown-search', '@principal-ai/otel-collector-server',
+  '@principal-ai/repository-abstraction', '@principal-ai/repository-monitoring-server',
+  '@usebruno/lang', '@usebruno/requests',
+  'chokidar', 'express', 'globby', 'jsonwebtoken', 'jszip', 'node-fetch', 'simple-git', 'ts-json-schema-generator',
 ]);
 
 console.log('🔍 Scanning source files for imports...\n');
@@ -184,9 +197,9 @@ for (const packageName of usedImports) {
   const inRelease = releaseDeps[packageName];
   const inDevDeps = rootPkg.devDependencies?.[packageName];
 
-  // Only flag as missing if it's a native module that must be in release/app
-  // All other dependencies are bundled by webpack
-  if (inRoot && !inRelease && nativeModules.has(packageName)) {
+  // Only flag as missing if it's a main process package that must be in release/app
+  // Renderer-only dependencies are bundled by webpack
+  if (inRoot && !inRelease && mainProcessPackages.has(packageName)) {
     missingInRelease.push({
       name: packageName,
       version: inRoot
@@ -206,13 +219,13 @@ missingInRelease.sort((a, b) => a.name.localeCompare(b.name));
 missingEverywhere.sort();
 onlyInDevDeps.sort((a, b) => a.name.localeCompare(b.name));
 
-// Auto-sync version mismatches between root and release (only for native modules)
+// Auto-sync version mismatches between root and release (only for main process packages)
 const versionMismatches = [];
 let releasePackageModified = false;
 
 for (const [packageName, rootVersion] of Object.entries(rootDeps)) {
-  // Only sync native modules - everything else is bundled
-  if (!nativeModules.has(packageName)) continue;
+  // Only sync main process packages - renderer deps are bundled
+  if (!mainProcessPackages.has(packageName)) continue;
 
   const releaseVersion = releaseDeps[packageName];
   if (releaseVersion && rootVersion !== releaseVersion) {
@@ -275,8 +288,8 @@ if (versionMismatches.length > 0) {
 
 if (missingInRelease.length > 0) {
   hasErrors = true;
-  console.log('❌ NATIVE MODULES MISSING IN release/app/package.json');
-  console.log('   These native modules must be in release/app (cannot be bundled by webpack):\n');
+  console.log('❌ MAIN PROCESS PACKAGES MISSING IN release/app/package.json');
+  console.log('   These packages are used by the main process and must be in release/app:\n');
 
   for (const dep of missingInRelease) {
     console.log(`   • ${dep.name} (${dep.version})`);

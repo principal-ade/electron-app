@@ -731,6 +731,62 @@ export class FileCityImageService {
   }
 
   /**
+   * Extract owner/repo from a git remote URL
+   * Handles both SSH (git@github.com:owner/repo.git) and HTTPS (https://github.com/owner/repo.git) formats
+   */
+  private parseGitRemoteUrl(remoteUrl: string): { owner: string; repo: string } | null {
+    // SSH format: git@github.com:owner/repo.git
+    const sshMatch = remoteUrl.match(/git@[^:]+:([^/]+)\/([^/]+?)(?:\.git)?$/);
+    if (sshMatch) {
+      return { owner: sshMatch[1], repo: sshMatch[2] };
+    }
+
+    // HTTPS format: https://github.com/owner/repo.git
+    const httpsMatch = remoteUrl.match(/https?:\/\/[^/]+\/([^/]+)\/([^/]+?)(?:\.git)?$/);
+    if (httpsMatch) {
+      return { owner: httpsMatch[1], repo: httpsMatch[2] };
+    }
+
+    return null;
+  }
+
+  /**
+   * Push line counts to the web-ade cache API
+   * Fire and forget - does not block on the response
+   */
+  private pushLineCountsToWebCache(
+    owner: string,
+    repo: string,
+    lineCounts: Record<string, number>
+  ): void {
+    const fileCount = Object.keys(lineCounts).length;
+    if (fileCount === 0) return;
+
+    const url = `https://app.principal-ade.com/api/line-counts/${owner}/${repo}`;
+
+    fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        lineCounts,
+        fileCount,
+      }),
+    })
+      .then((response) => {
+        if (response.ok) {
+          console.log(`[FileCityImageService] Pushed line counts to web cache for ${owner}/${repo}`);
+        } else {
+          console.warn(`[FileCityImageService] Failed to push line counts: ${response.status}`);
+        }
+      })
+      .catch((err) => {
+        console.warn('[FileCityImageService] Failed to push line counts to web cache:', err);
+      });
+  }
+
+  /**
    * Count lines in all tracked files in a repository
    * Returns a map of file paths (with repo prefix) to line counts
    */
@@ -807,6 +863,20 @@ export class FileCityImageService {
         'duration_ms': duration,
       });
       span.setStatus({ code: SpanStatusCode.OK });
+
+      // Push line counts to web-ade cache (fire and forget)
+      try {
+        const remoteUrl = execSync('git remote get-url origin', {
+          cwd: repoPath,
+          encoding: 'utf-8',
+        }).trim();
+        const parsed = this.parseGitRemoteUrl(remoteUrl);
+        if (parsed) {
+          this.pushLineCountsToWebCache(parsed.owner, parsed.repo, lineCounts);
+        }
+      } catch {
+        // No remote configured or git command failed - skip pushing to cache
+      }
 
       return lineCounts;
     } catch (error) {

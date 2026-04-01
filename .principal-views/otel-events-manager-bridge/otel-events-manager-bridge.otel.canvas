@@ -1,0 +1,344 @@
+{
+  "pv": {
+    "name": "OTEL Events Manager Bridge",
+    "version": "1.0.0",
+    "description": "Bridge service for communicating with otel-events-manager: forwards traces for persistence and syncs workspace FileTrees for trace matching",
+    "markdown": ".principal-views/otel-events-manager-bridge/otel-events-manager-bridge.md",
+    "scope": "principal-ade-main",
+    "nodeTypes": {
+      "singleton": {
+        "label": "Singleton Service",
+        "color": "#3B82F6"
+      },
+      "external-service": {
+        "label": "External Service",
+        "color": "#64748B"
+      },
+      "http-endpoint": {
+        "label": "HTTP Endpoint",
+        "color": "#22C55E"
+      },
+      "event-source": {
+        "label": "Event Source",
+        "color": "#8B5CF6"
+      },
+      "boundary": {
+        "label": "Process Boundary",
+        "color": "#94A3B8"
+      }
+    },
+    "edgeTypes": {
+      "http-post": {
+        "label": "HTTP POST",
+        "style": "solid",
+        "color": "#22C55E"
+      },
+      "delegates": {
+        "label": "Delegates",
+        "style": "solid",
+        "color": "#6366F1"
+      },
+      "emits": {
+        "label": "Emits Event",
+        "style": "dashed",
+        "color": "#8B5CF6"
+      },
+      "data-flow": {
+        "label": "Data Flow",
+        "style": "solid",
+        "color": "#3B82F6"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "x": 300,
+      "y": -100,
+      "width": 600,
+      "height": 60,
+      "color": "#64748B",
+      "text": "# OTEL Events Manager Bridge\n**Trace forwarding and workspace sync to otel-events-manager**"
+    },
+    {
+      "id": "process-boundary",
+      "type": "text",
+      "x": -50,
+      "y": -40,
+      "width": 700,
+      "height": 500,
+      "color": "#94A3B8",
+      "text": "### Electron Main Process"
+    },
+    {
+      "id": "events-manager-boundary",
+      "type": "text",
+      "x": 750,
+      "y": -40,
+      "width": 350,
+      "height": 500,
+      "color": "#64748B",
+      "text": "### otel-events-manager\n(localhost:4321)"
+    },
+    {
+      "id": "otel-events-manager-bridge",
+      "type": "otel-event",
+      "x": 250,
+      "y": 100,
+      "width": 280,
+      "height": 160,
+      "label": "OtelEventsManagerBridge",
+      "shape": "rectangle",
+      "event": {
+        "name": "otel.events_manager.bridge_status",
+        "description": "Bridge service status and health monitoring",
+        "attributes": {
+          "bridge.enabled": {
+            "type": "boolean",
+            "description": "Whether the bridge is enabled"
+          },
+          "bridge.connected": {
+            "type": "boolean",
+            "description": "Whether events manager is reachable"
+          },
+          "bridge.base_url": {
+            "type": "string",
+            "description": "Events manager URL (default: http://localhost:4321)"
+          },
+          "trace.forward_count": {
+            "type": "number",
+            "description": "Total traces forwarded this session"
+          },
+          "workspaces.synced": {
+            "type": "number",
+            "description": "Number of synced workspaces"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/services/OtelEventsManagerBridge.ts"
+        ]
+      }
+    },
+    {
+      "id": "otel-collector-service",
+      "type": "otel-event",
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 100,
+      "label": "OtelCollectorService",
+      "shape": "rectangle",
+      "event": {
+        "name": "otel.collector.trace_received",
+        "description": "Trace received by collector"
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/services/OtelCollectorService.ts"
+        ]
+      }
+    },
+    {
+      "id": "repo-monitoring-manager",
+      "type": "otel-event",
+      "x": 0,
+      "y": 300,
+      "width": 200,
+      "height": 100,
+      "label": "RepositoryMonitoringManager",
+      "shape": "rectangle",
+      "event": {
+        "name": "workspace-changed",
+        "description": "Files changed in workspace"
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/repository-monitoring/ipcHandlers.ts"
+        ]
+      }
+    },
+    {
+      "id": "workspace-sync",
+      "type": "otel-event",
+      "x": 250,
+      "y": 300,
+      "width": 280,
+      "height": 140,
+      "label": "Workspace Sync",
+      "shape": "rectangle",
+      "event": {
+        "name": "otel.events_manager.workspace_sync",
+        "description": "Workspace FileTree synced to events manager",
+        "attributes": {
+          "workspace.id": {
+            "type": "string",
+            "description": "Workspace/repository path"
+          },
+          "workspace.path": {
+            "type": "string",
+            "description": "Absolute path to workspace root"
+          },
+          "scopes.count": {
+            "type": "number",
+            "description": "Number of discovered scopes"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/main/services/OtelEventsManagerBridge.ts"
+        ]
+      }
+    },
+    {
+      "id": "traces-endpoint",
+      "type": "otel-event",
+      "x": 800,
+      "y": 50,
+      "width": 250,
+      "height": 120,
+      "label": "POST /v1/traces",
+      "shape": "rectangle",
+      "event": {
+        "name": "events_manager.traces.received",
+        "description": "Trace data received for persistence",
+        "attributes": {
+          "trace.id": {
+            "type": "string",
+            "description": "Trace ID from OTLP data"
+          },
+          "resource.spans.count": {
+            "type": "number",
+            "description": "Number of resource spans"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented"
+      }
+    },
+    {
+      "id": "registry-sync-endpoint",
+      "type": "otel-event",
+      "x": 800,
+      "y": 280,
+      "width": 250,
+      "height": 160,
+      "label": "POST /api/registry/sync",
+      "shape": "rectangle",
+      "event": {
+        "name": "events_manager.registry.sync",
+        "description": "Workspace registry sync for trace matching",
+        "attributes": {
+          "action": {
+            "type": "string",
+            "description": "Sync action: update | remove"
+          },
+          "workspace.id": {
+            "type": "string",
+            "description": "Workspace identifier"
+          },
+          "scopes.registered": {
+            "type": "array",
+            "description": "Successfully registered scope names"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented"
+      }
+    },
+    {
+      "id": "health-endpoint",
+      "type": "otel-event",
+      "x": 800,
+      "y": 200,
+      "width": 250,
+      "height": 60,
+      "label": "GET /health",
+      "shape": "rectangle",
+      "event": {
+        "name": "events_manager.health_check",
+        "description": "Health check endpoint"
+      },
+      "otel": {
+        "status": "implemented"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "collector-to-bridge",
+      "fromNode": "otel-collector-service",
+      "fromSide": "right",
+      "toNode": "otel-events-manager-bridge",
+      "toSide": "left",
+      "label": "forwardTrace()",
+      "pv": {
+        "edgeType": "delegates"
+      }
+    },
+    {
+      "id": "bridge-to-traces",
+      "fromNode": "otel-events-manager-bridge",
+      "fromSide": "right",
+      "toNode": "traces-endpoint",
+      "toSide": "left",
+      "label": "POST OTLP JSON",
+      "pv": {
+        "edgeType": "http-post"
+      }
+    },
+    {
+      "id": "repo-to-sync",
+      "fromNode": "repo-monitoring-manager",
+      "fromSide": "right",
+      "toNode": "workspace-sync",
+      "toSide": "left",
+      "label": "workspace-changed",
+      "pv": {
+        "edgeType": "emits"
+      }
+    },
+    {
+      "id": "sync-to-bridge",
+      "fromNode": "workspace-sync",
+      "fromSide": "top",
+      "toNode": "otel-events-manager-bridge",
+      "toSide": "bottom",
+      "label": "pushWorkspace()",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "bridge-to-registry",
+      "fromNode": "workspace-sync",
+      "fromSide": "right",
+      "toNode": "registry-sync-endpoint",
+      "toSide": "left",
+      "label": "POST sync request",
+      "pv": {
+        "edgeType": "http-post"
+      }
+    },
+    {
+      "id": "bridge-to-health",
+      "fromNode": "otel-events-manager-bridge",
+      "fromSide": "right",
+      "toNode": "health-endpoint",
+      "toSide": "left",
+      "label": "health check",
+      "pv": {
+        "edgeType": "http-post"
+      }
+    }
+  ]
+}

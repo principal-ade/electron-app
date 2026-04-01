@@ -5,21 +5,15 @@
 import path from 'path';
 import webpack from 'webpack';
 import TsconfigPathsPlugins from 'tsconfig-paths-webpack-plugin';
+import { dependencies as externals } from '../../release/app/package.json';
 import webpackPaths from './webpack.paths';
 
-// Only externalize native modules that can't be bundled by webpack
-// This dramatically reduces the production node_modules size
-const nativeModules = [
-  'node-pty',
-  'keytar',
-  'canvas',
-  'electron',
-  'electron-updater',
-];
-
 const configuration: webpack.Configuration = {
-  // Only externalize native modules - bundle everything else
-  externals: nativeModules,
+  // Externalize all dependencies from release/app/package.json
+  // These will be available in node_modules at runtime
+  externals: [
+    ...Object.keys(externals || {}),
+  ],
 
   stats: 'errors-only',
 

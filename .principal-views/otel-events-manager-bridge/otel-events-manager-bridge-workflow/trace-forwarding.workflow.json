@@ -1,0 +1,23 @@
+{
+  "version": "1.0.0",
+  "name": "Trace Forwarding",
+  "description": "Forward collected traces to otel-events-manager for persistence",
+  "canvas": ".principal-views/otel-events-manager-bridge/otel-events-manager-bridge.otel.canvas",
+  "spanPattern": "otel.trace.delivery",
+  "scenarios": [
+    {
+      "id": "trace-forwarded",
+      "description": "Trace received by collector and forwarded to events manager for persistence",
+      "priority": 1,
+      "template": {
+        "introduction": "**Trace Forwarding**\n\nCollector received trace and bridge forwards to events manager.",
+        "events": {
+          "otel.collector.trace_received": "[1] Collector received trace `{{trace.id}}` ({{resource.spans.count}} resource spans)",
+          "otel.storage.trace_stored": "[2] Trace stored locally ({{storage.size}}/{{storage.max_size}})",
+          "otel.events_manager.trace_forwarded": "[3] Trace forwarded to events manager"
+        },
+        "summary": "**Forwarding Summary:**\n- Trace ID: `{{trace.id}}`\n- Local Buffer: {{storage.size}}/{{storage.max_size}}\n- Forwarded: Yes"
+      }
+    }
+  ]
+}

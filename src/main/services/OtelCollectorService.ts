@@ -9,9 +9,7 @@ import path from 'path';
 import os from 'os';
 import { getTracer } from '../telemetry';
 import { SpanStatusCode } from '@opentelemetry/api';
-
-// OTEL Events Manager endpoint for trace persistence
-const OTEL_EVENTS_MANAGER_ENDPOINT = process.env.OTEL_EVENTS_MANAGER_ENDPOINT || 'http://localhost:4321/v1/traces';
+import { otelEventsManagerBridge } from './OtelEventsManagerBridge';
 
 /** OTLP (OpenTelemetry Protocol) trace data payload */
 type OTLPTraceData = OTLPTraceRequest;
@@ -28,7 +26,6 @@ export class OtelCollectorService {
   private traces: StoredTrace[] = [];
   private readonly MAX_TRACES = 50; // Store last 50 traces
   private monitorPort: MessagePortMain | null = null; // Catch-all port for trace monitoring
-  private eventsManagerEnabled: boolean = true; // Forward traces to otel-events-manager
 
   private constructor() {
     // Private constructor for singleton
@@ -99,7 +96,7 @@ export class OtelCollectorService {
       console.log('[OtelCollectorService] OTEL Collector started successfully');
       console.log(`  - OTLP Endpoint: http://localhost:${otlpPort}`);
       console.log(`  - Wrapper Endpoint: http://localhost:${wrapperPort}`);
-      console.log(`  - Events Manager: ${OTEL_EVENTS_MANAGER_ENDPOINT} (persistence)`);
+      console.log(`  - Events Manager: ${otelEventsManagerBridge.getBaseUrl()} (via bridge)`);
     } catch (err) {
       span.setStatus({ code: SpanStatusCode.ERROR, message: err instanceof Error ? err.message : String(err) });
       console.error('[OtelCollectorService] Failed to start:', err);
@@ -281,25 +278,24 @@ export class OtelCollectorService {
   }
 
   /**
-   * Enable or disable forwarding to otel-events-manager
+   * Enable or disable forwarding to otel-events-manager (delegates to bridge)
    */
   setEventsManagerEnabled(enabled: boolean): void {
-    this.eventsManagerEnabled = enabled;
-    console.log(`[OtelCollectorService] Events manager forwarding ${enabled ? 'enabled' : 'disabled'}`);
+    otelEventsManagerBridge.setEnabled(enabled);
   }
 
   /**
-   * Check if events manager forwarding is enabled
+   * Check if events manager forwarding is enabled (delegates to bridge)
    */
   isEventsManagerEnabled(): boolean {
-    return this.eventsManagerEnabled;
+    return otelEventsManagerBridge.isEnabled();
   }
 
   /**
-   * Get the events manager endpoint
+   * Get the events manager endpoint (delegates to bridge)
    */
   getEventsManagerEndpoint(): string {
-    return OTEL_EVENTS_MANAGER_ENDPOINT;
+    return otelEventsManagerBridge.getBaseUrl();
   }
 
   /**
@@ -348,8 +344,8 @@ export class OtelCollectorService {
         'spans.count': totalSpansCount,
       });
 
-      // Forward to otel-events-manager for persistence (fire-and-forget)
-      this.forwardToEventsManager(traceData);
+      // Forward to otel-events-manager for persistence (fire-and-forget, via bridge)
+      otelEventsManagerBridge.forwardTrace(traceData);
 
       span.setStatus({ code: SpanStatusCode.OK });
     } catch (err) {
@@ -397,36 +393,6 @@ export class OtelCollectorService {
       return `trace-${Date.now()}`;
     } catch {
       return `trace-${Date.now()}`;
-    }
-  }
-
-  /**
-   * Forward trace data to otel-events-manager for persistence
-   * Fire-and-forget - does not block trace processing
-   */
-  private async forwardToEventsManager(traceData: OTLPTraceData): Promise<void> {
-    if (!this.eventsManagerEnabled) {
-      return;
-    }
-
-    try {
-      const response = await fetch(OTEL_EVENTS_MANAGER_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(traceData),
-      });
-
-      if (!response.ok) {
-        console.warn(`[OtelCollectorService] Failed to forward trace to events manager: ${response.status}`);
-      }
-    } catch (err) {
-      // Silently fail - events manager might not be running
-      // Only log in development for debugging
-      if (!app.isPackaged) {
-        console.debug('[OtelCollectorService] Events manager not available:', err instanceof Error ? err.message : String(err));
-      }
     }
   }
 
