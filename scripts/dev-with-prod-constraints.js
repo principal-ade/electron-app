@@ -211,9 +211,9 @@ dllBuild.on('exit', (code) => {
     childProcesses.push(rendererProcess);
 
     // Important: Do NOT start start:main here. The renderer dev server
-    // (webpack.config.renderer.dev.standalone.ts) already spawns both
-    // start:preload and start:main. Launching it again causes a second
-    // Electron instance which triggers the single-instance lock and exits.
+    // already spawns both start:preload and start:main. Launching it again
+    // causes a second Electron instance which triggers the single-instance
+    // lock and exits.
 
     rendererProcess.on('error', (err) => {
       console.error('Failed to start renderer process:', err);

@@ -112,7 +112,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 - **Windows**: Download the .exe file
 
 ### Installation
-See the [installation guide](https://github.com/a24z-ai/electron-app/blob/main/README.md) for platform-specific instructions.
+See the [installation guide](https://github.com/principal-ade/electron-app/blob/main/README.md) for platform-specific instructions.
 " \
             release/build/*.dmg \
             release/build/*.AppImage \
@@ -120,7 +120,7 @@ See the [installation guide](https://github.com/a24z-ai/electron-app/blob/main/R
             release/build/latest*.yml
 
         echo -e "${GREEN}✓ GitHub release created successfully!${NC}"
-        echo "View at: https://github.com/a24z-ai/electron-app/releases/tag/v$VERSION"
+        echo "View at: https://github.com/principal-ade/electron-app/releases/tag/v$VERSION"
     else
         echo -e "${YELLOW}GitHub CLI not found. Using electron-builder publish instead...${NC}"
         GH_TOKEN=$GH_TOKEN npm run publish

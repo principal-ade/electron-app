@@ -147,7 +147,7 @@ For panel variants:
 
 ## Repository Manager Implementation
 
-The Repository Manager now uses the `@a24z/panels` library's `ConfigurablePanelLayout` and `PanelConfigurator` components for a fully user-configurable layout system.
+The Repository Manager now uses the `@principal-ade/panels` library's `ConfigurablePanelLayout` and `PanelConfigurator` components for a fully user-configurable layout system.
 
 ### Available Panels
 
@@ -186,7 +186,7 @@ Users can reconfigure the layout via the "Configure Panels" button in the titleb
 
 - **Assigning panels to slots** - Any panel can go in left, middle, or right slot
 - **Creating tab groups** - Multiple panels can be grouped as tabs in a single slot
-- **Creating tile layouts** - Panels can be split side-by-side (not yet implemented but supported by `@a24z/panels`)
+- **Creating tile layouts** - Panels can be split side-by-side (not yet implemented but supported by `@principal-ade/panels`)
 - **Swapping slot contents** - Click two slots to swap their entire configuration
 
 Layout preferences persist per repository.
@@ -226,5 +226,5 @@ Yes. Use `context.hasSlice('packages')` or `context.isSliceLoading('packages')` 
 Define them in the registry without a `render` function. Host views can map the definition to their own UI component but still benefit from synchronized metadata, persistence, and slice declarations. This is the current approach for Repository Manager panels, where the registry defines metadata but `DevelopmentWorkspace` provides the actual component implementations.
 
 **How does the PanelConfigurator work with tabs?**
-The `@a24z/panels@1.0.14` library supports creating `PanelGroup` objects with `type: 'tabs'`. Users can assign multiple panels to a single slot as a tab group. The configurator UI allows dragging panels between slots and automatically creates/updates tab groups. Layout state persists using the `PanelLayout` type from `@a24z/panels`.
+The `@principal-ade/panels` library supports creating `PanelGroup` objects with `type: 'tabs'`. Users can assign multiple panels to a single slot as a tab group. The configurator UI allows dragging panels between slots and automatically creates/updates tab groups. Layout state persists using the `PanelLayout` type from `@principal-ade/panels`.
 

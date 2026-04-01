@@ -143,7 +143,7 @@ try {
     const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
     try {
       // Check if release already exists
-      const checkCmd = `curl -s -H "Authorization: token ${token}" https://api.github.com/repos/a24z-ai/electron-app/releases/tags/v${version}`;
+      const checkCmd = `curl -s -H "Authorization: token ${token}" https://api.github.com/repos/principal-ade/electron-app/releases/tags/v${version}`;
       const releaseCheck = execSync(checkCmd, { encoding: 'utf8' });
 
       if (releaseCheck && JSON.parse(releaseCheck).id) {

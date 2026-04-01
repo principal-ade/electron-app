@@ -260,7 +260,7 @@ const configuration: webpack.Configuration = {
     rules: [
       {
         test: /\.[jt]sx?$/,
-        exclude: /node_modules\/(?!@a24z\/panels)/,
+        exclude: /node_modules/,
         use: {
           loader: 'ts-loader',
           options: {

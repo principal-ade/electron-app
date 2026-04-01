@@ -38,7 +38,7 @@ const configuration: webpack.Configuration = {
     rules: [
       {
         test: /\.[jt]sx?$/,
-        exclude: /node_modules\/(?!(@excalidraw|@a24z\/panels))/,
+        exclude: /node_modules\/(?!@excalidraw)/,
         use: {
           loader: 'ts-loader',
           options: {

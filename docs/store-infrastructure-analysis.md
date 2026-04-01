@@ -301,7 +301,7 @@ interface Task {
   title: string;
   status: TaskStatus;  // 'pending' | 'completed' | 'failed'
   priority?: TaskPriority;
-  // ... (from @a24z/core-library)
+  // ... (from @principal-ai/alexandria-core-library)
 }
 
 interface GetTasksResponse {

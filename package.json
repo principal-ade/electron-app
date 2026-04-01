@@ -19,7 +19,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/a24z-ai/electron-app.git"
+    "url": "git+https://github.com/principal-ade/electron-app.git"
   },
   "license": "GPL-3.0",
   "author": {
@@ -403,7 +403,7 @@
   },
   "build": {
     "productName": "Principal ADE",
-    "appId": "com.a24z.principal-ade",
+    "appId": "com.noetic-labs.principal-ade",
     "copyright": "Copyright © 2025 Principal ADE",
     "asar": true,
     "asarUnpack": [

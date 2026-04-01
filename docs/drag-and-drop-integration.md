@@ -1741,7 +1741,7 @@ const fileTreeConfig: PanelConfig = {
 
 This feature depends on:
 - `@principal-ade/industry-theme` - For terminal component (needs drag support)
-- `@a24z/dynamic-file-tree` - For file tree component (needs drag support)
+- `@principal-ade/dynamic-file-tree` - For file tree component (needs drag support)
 
 See dependency tasks:
 - **Task**: Add drag support to industry-themed-terminal

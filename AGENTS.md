@@ -73,11 +73,6 @@ If the project has a pre-commit hook configured, `alexandria lint` will run auto
 
 For detailed information about hooks, rules, and configuration options, see [docs/HOOKS\_AND\_RULES.md](../docs/HOOKS_AND_RULES.md).
 
-### Repository Views
-
-For projects with GitHub integration, codebase views are automatically published to:
-`https://a24z-ai.github.io/Alexandria/repo/?owner=<owner>&name=<repo>`
-
 ### Additional Documentation
 
 * **GitHub OAuth and PKCE**: For details on how GitHub OAuth and PKCE are configured, see [docs/OAUTH\_AND\_PKCE\_GUIDE.md](docs/OAUTH_AND_PKCE_GUIDE.md).

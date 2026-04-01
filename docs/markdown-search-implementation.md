@@ -1,7 +1,7 @@
 # Markdown Search Implementation
 
 ## Overview
-The markdown search functionality provides full-text search across all documentation in Alexandria repositories. It uses the `@a24z/markdown-search` library (v2.0.6) and runs entirely in the main process with IPC communication to the renderer.
+The markdown search functionality provides full-text search across all documentation in Alexandria repositories. It uses the `@principal-ai/markdown-search` library and runs entirely in the main process with IPC communication to the renderer.
 
 ## Architecture
 
@@ -32,7 +32,7 @@ The markdown search functionality provides full-text search across all documenta
 
 ### Search Capabilities
 - Full-text search across all indexed documents
-- Supports search options from `@a24z/markdown-search`:
+- Supports search options from `@principal-ai/markdown-search`:
   - Query limits
   - Score filtering
   - Tag filtering
@@ -210,7 +210,7 @@ const results = await indexingService.searchDocuments({
 
 ## Dependencies
 
-- `@a24z/markdown-search`: ^2.0.6 - Core search functionality
+- `@principal-ai/markdown-search`: ^2.0.7 - Core search functionality
 - `electron`: IPC communication and app paths
 - Node.js fs/promises: File system operations
 - path: Path manipulation

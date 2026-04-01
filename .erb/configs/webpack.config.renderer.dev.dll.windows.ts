@@ -53,7 +53,82 @@ const configuration: webpack.Configuration = {
           fullySpecified: false,
         },
       },
-      ...require('./webpack.config.renderer.dev.standalone').default.module.rules,
+      // ts-loader for TypeScript files
+      {
+        test: /\.[jt]sx?$/,
+        exclude: /node_modules/,
+        use: {
+          loader: 'ts-loader',
+          options: {
+            transpileOnly: true,
+            compilerOptions: {
+              module: 'esnext',
+              moduleResolution: 'node',
+            },
+          },
+        },
+      },
+      // CSS/SCSS modules
+      {
+        test: /\.s?(c|a)ss$/,
+        use: [
+          'style-loader',
+          {
+            loader: 'css-loader',
+            options: {
+              modules: true,
+              sourceMap: true,
+              importLoaders: 1,
+            },
+          },
+          'sass-loader',
+        ],
+        include: /\.module\.s?(c|a)ss$/,
+      },
+      // CSS/SCSS non-modules
+      {
+        test: /\.s?css$/,
+        use: [
+          'style-loader',
+          'css-loader',
+          {
+            loader: 'postcss-loader',
+            options: {
+              sourceMap: true,
+            },
+          },
+          'sass-loader',
+        ],
+        exclude: /\.module\.s?(c|a)ss$/,
+      },
+      // Fonts
+      {
+        test: /\.(woff|woff2|eot|ttf|otf)$/i,
+        type: 'asset/resource',
+      },
+      // Images
+      {
+        test: /\.(png|jpg|jpeg|gif)$/i,
+        type: 'asset/resource',
+      },
+      // SVG
+      {
+        test: /\.svg$/,
+        use: [
+          {
+            loader: '@svgr/webpack',
+            options: {
+              prettier: false,
+              svgo: false,
+              svgoConfig: {
+                plugins: [{ removeViewBox: false }],
+              },
+              titleProp: true,
+              ref: true,
+            },
+          },
+        ],
+      },
     ],
   },
 
