@@ -63,23 +63,23 @@
     },
     {
       "id": "process-boundary",
-      "type": "text",
+      "type": "group",
       "x": -50,
       "y": -40,
       "width": 700,
       "height": 500,
       "color": "#94A3B8",
-      "text": "### Electron Main Process"
+      "label": "Electron Main Process"
     },
     {
       "id": "events-manager-boundary",
-      "type": "text",
+      "type": "group",
       "x": 750,
       "y": -40,
       "width": 350,
       "height": 500,
       "color": "#64748B",
-      "text": "### otel-events-manager\n(localhost:4321)"
+      "label": "otel-events-manager (localhost:4321)"
     },
     {
       "id": "otel-events-manager-bridge",

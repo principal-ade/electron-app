@@ -24,6 +24,7 @@ import {
   useTerminalProvider,
   useTerminalActivity,
 } from '../contexts/TerminalContext';
+import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import {
   TabbedTerminalPanel,
   type TerminalTab,
@@ -93,11 +94,36 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(collapsed.left);
   const [isRightCollapsed, setIsRightCollapsed] = useState(collapsed.right);
 
+  // Base directory from user preferences
+  const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string | null>(null);
+
   // Time filter state for heatmap selection
   const [selectedBlock, setSelectedBlock] = useState<string | null>(null);
 
   // Activity feed data
   const activityFeed = useActivityFeed(repositories, 20, 10, 100);
+
+  // Load base directory from user preferences
+  useEffect(() => {
+    const loadBaseDirectory = async () => {
+      const preferences = await UserPreferencesService.getPreferences();
+      setBaseDefaultDirectory(preferences.baseDefaultDirectory || null);
+    };
+
+    loadBaseDirectory();
+
+    const unsubscribe = UserPreferencesService.onPreferencesUpdated(
+      (preferences) => {
+        setBaseDefaultDirectory(preferences.baseDefaultDirectory || null);
+      },
+    );
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, []);
 
   // Transform commits for heatmap
   const heatmapCommits = useMemo<CommitTimestamp[]>(() => {
@@ -161,8 +187,8 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     [terminalCtx.terminalSessions, terminalCtx.terminalContext]
   );
 
-  // Terminal directory - use HOME
-  const terminalDirectory = process.env.HOME || '/';
+  // Terminal directory - use baseDefaultDirectory from preferences, fallback to HOME
+  const terminalDirectory = baseDefaultDirectory || process.env.HOME || '/';
 
   // Handle panel resize
   const handlePanelResize = useCallback(

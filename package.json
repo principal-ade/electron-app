@@ -463,6 +463,7 @@
         }
       ]
     },
+    "beforePack": ".erb/scripts/before-pack.js",
     "afterPack": ".erb/scripts/after-pack.js",
     "afterSign": ".erb/scripts/notarize.js",
     "dmg": {

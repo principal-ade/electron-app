@@ -1,10 +1,22 @@
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 const nativeModules = ['node-pty', 'keytar', 'canvas'];
 
 exports.default = async function (context) {
   const { appOutDir } = context;
+
+  // Patch unicorn-magic in release/app before packing
+  console.log('Before pack: Patching unicorn-magic...');
+  try {
+    execSync('node scripts/patch-unicorn-magic.js', {
+      cwd: path.join(__dirname, '../..'),
+      stdio: 'inherit'
+    });
+  } catch (e) {
+    console.warn('Warning: Failed to patch unicorn-magic:', e.message);
+  }
 
   console.log('Before pack: Ensuring native modules are included...');
 
