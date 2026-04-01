@@ -13,9 +13,6 @@
     "src/terminal-worker/worker-entry.ts",
     ".erb/scripts/**/*.{js,ts}",
     ".erb/configs/**/*.ts",
-    "src/renderer/pages/StoreViewer.tsx",
-    "src/renderer/pages/MultiFileEditorWindow.tsx",
-    "src/renderer/pages/CallimachusWindow/index.tsx",
     "src/renderer/principal-window/index.tsx",
     "src/renderer/quick-open/index.tsx",
     "src/renderer/window-switcher/index.tsx",
@@ -30,16 +27,9 @@
   ],
   "ignore": [
     "**/*.test.*",
-    "**/*.spec.*",
-    "**/fixtures/**",
-    "**/mocks/**",
-    ".erb/**",
-    "dist/**",
-    "release/**",
-    "out/**"
+    ".erb/**"
   ],
   "ignoreDependencies": [
-    "node-pty",
     "keytar"
   ],
   "webpack": false,
