@@ -12,6 +12,7 @@ import baseConfig from './webpack.config.main.base';
 import webpackPaths from './webpack.paths';
 import checkNodeEnv from '../scripts/check-node-env';
 import deleteSourceMaps from '../scripts/delete-source-maps';
+import { dependencies as releaseAppDeps } from '../../release/app/package.json';
 
 checkNodeEnv('production');
 deleteSourceMaps();
@@ -59,7 +60,7 @@ const configuration: webpack.Configuration = {
     ),
   },
 
-  // Externalize all node_modules for main process (they run in Node.js)
+  // Only externalize packages in release/app/package.json
   // Workers bundle everything except native modules for portability
   externals: [
     ({ request, context, contextInfo, getResolve }, callback) => {
@@ -85,16 +86,12 @@ const configuration: webpack.Configuration = {
         return callback(); // Bundle everything else
       }
 
-      // For main and preload, externalize all node_modules
-      // Skip relative imports and built-in modules
-      if (request && !request.startsWith('.') && !request.startsWith('/')) {
-        // Check if it's a node_modules package (not a built-in)
-        const builtins = ['fs', 'path', 'os', 'crypto', 'http', 'https', 'net', 'tls', 'stream', 'events', 'util', 'child_process', 'cluster', 'dgram', 'dns', 'readline', 'repl', 'tty', 'url', 'v8', 'vm', 'zlib', 'assert', 'buffer', 'console', 'constants', 'domain', 'module', 'process', 'punycode', 'querystring', 'string_decoder', 'sys', 'timers', 'perf_hooks', 'async_hooks', 'worker_threads', 'inspector'];
-        const moduleName = request.startsWith('@') ? request.split('/').slice(0, 2).join('/') : request.split('/')[0];
-
-        if (!builtins.includes(moduleName) && !request.startsWith('node:')) {
-          return callback(null, `commonjs ${request}`);
-        }
+      // For main and preload, only externalize packages in release/app/package.json
+      // Everything else gets bundled
+      const externalsList = Object.keys(releaseAppDeps || {});
+      const isExternal = externalsList.some(mod => request === mod || request?.startsWith(`${mod}/`));
+      if (isExternal) {
+        return callback(null, `commonjs ${request}`);
       }
       callback();
     },
