@@ -204,7 +204,7 @@
     "@principal-ade/agent-manager": "^1.1.0",
     "@principal-ade/bruno-panels": "^0.1.15",
     "@principal-ade/code-quality-panels": "^0.2.0",
-    "@principal-ade/dynamic-file-tree": "^0.2.36",
+    "@principal-ade/dynamic-file-tree": "^0.2.40",
     "@principal-ade/industry-theme": "^0.1.17",
     "@principal-ade/industry-themed-monaco-editor": "^0.1.10",
     "@principal-ade/panel-framework-core": "^0.5.1",
