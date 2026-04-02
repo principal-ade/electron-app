@@ -18,6 +18,20 @@
         },
         "summary": "**Sync Summary:**\n- Workspace: `{{workspace.id}}`\n- Path: {{workspace.path}}\n- Scopes: {{scopes.count}}\n- Registered: {{scopes.registered}}"
       }
+    },
+    {
+      "id": "manual-workspace-sync",
+      "description": "Workspace FileTree synced via manual trigger (button click or window open)",
+      "priority": 2,
+      "template": {
+        "introduction": "**Manual Workspace Sync**\n\nWorkspace sync manually triggered from DevWorkspace UI.",
+        "events": {
+          "ui.workspace_sync.triggered": "[1] Manual sync triggered: {{trigger}} for workspace `{{workspace.path}}`",
+          "otel.events_manager.workspace_sync": "[2] Syncing workspace `{{workspace.id}}` at {{workspace.path}} ({{scopes.count}} scopes)",
+          "events_manager.registry.sync": "[3] Registry sync: action={{action}}, workspace={{workspace.id}}, scopes={{scopes.registered}}"
+        },
+        "summary": "**Manual Sync Summary:**\n- Trigger: {{trigger}}\n- Workspace: `{{workspace.id}}`\n- Path: {{workspace.path}}\n- Scopes: {{scopes.count}}"
+      }
     }
   ]
 }

@@ -25,6 +25,10 @@
       "boundary": {
         "label": "Process Boundary",
         "color": "#94A3B8"
+      },
+      "ui-component": {
+        "label": "UI Component",
+        "color": "#F59E0B"
       }
     },
     "edgeTypes": {
@@ -47,6 +51,11 @@
         "label": "Data Flow",
         "style": "solid",
         "color": "#3B82F6"
+      },
+      "ipc-call": {
+        "label": "IPC Call",
+        "style": "dashed",
+        "color": "#F59E0B"
       }
     }
   },
@@ -271,6 +280,37 @@
       "otel": {
         "status": "implemented"
       }
+    },
+    {
+      "id": "dev-workspace-sync-button",
+      "type": "otel-event",
+      "x": 0,
+      "y": 150,
+      "width": 200,
+      "height": 120,
+      "label": "DevWorkspace Sync Button",
+      "shape": "rectangle",
+      "event": {
+        "name": "ui.workspace_sync.triggered",
+        "description": "Manual workspace sync triggered from titlebar button or on window open",
+        "attributes": {
+          "trigger": {
+            "type": "string",
+            "description": "Trigger source: button_click | window_open"
+          },
+          "workspace.path": {
+            "type": "string",
+            "description": "Repository path being synced"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/renderer/dev-workspace/DevWorkspaceTitlebar.tsx",
+          "src/renderer/dev-workspace/DevWorkspaceApp.tsx"
+        ]
+      }
     }
   ],
   "edges": [
@@ -338,6 +378,17 @@
       "label": "health check",
       "pv": {
         "edgeType": "http-post"
+      }
+    },
+    {
+      "id": "manual-sync-to-workspace",
+      "fromNode": "dev-workspace-sync-button",
+      "fromSide": "right",
+      "toNode": "workspace-sync",
+      "toSide": "left",
+      "label": "IPC: sync-workspace",
+      "pv": {
+        "edgeType": "ipc-call"
       }
     }
   ]
