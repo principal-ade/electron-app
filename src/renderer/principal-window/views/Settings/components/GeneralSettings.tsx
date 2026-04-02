@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Palette, RefreshCw } from 'lucide-react';
+import { Logo } from '@principal-ai/logo-component';
 import { UserPreferencesService } from '../../../../main-process-api/UserPreferencesService';
 import { AppVersionManagerService } from '../../../../main-process-api/AppVersionManagerService';
 import { ThemeService } from '../../../../services/ThemeService';
@@ -12,7 +13,6 @@ import {
   predefinedThemes,
   getThemeNames,
 } from '../../../../themes/predefinedThemes';
-import AppIcon from '../../../../../../assets/icons/icon-48x48.png';
 
 export const GeneralSettings: React.FC = () => {
   const { theme } = useTheme();
@@ -141,27 +141,12 @@ export const GeneralSettings: React.FC = () => {
               marginBottom: '16px',
             }}
           >
-            <div
-              style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '12px',
-                overflow: 'hidden',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <img
-                src={AppIcon}
-                alt="Principal ADE"
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'contain',
-                }}
-              />
-            </div>
+            <Logo
+              width={48}
+              height={48}
+              color={theme.colors.primary}
+              particleColor={theme.colors.text}
+            />
             <div>
               <p
                 style={{
