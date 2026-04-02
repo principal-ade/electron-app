@@ -167,9 +167,6 @@ export class GitHubArtifactService {
     options: { limit?: number } = {},
   ): Promise<ArtifactInfo[]> {
     const { limit = 10 } = options;
-    console.log(
-      `[GitHubArtifactService] Listing artifacts for ${owner}/${repo}`,
-    );
 
     const octokit = await this.getOctokit();
 
@@ -333,13 +330,8 @@ export class GitHubArtifactService {
         firstArtifact.id,
         firstArtifact.name,
       );
-    } catch (error) {
+    } catch (_error) {
       // If branch doesn't exist or any API error, try to get any artifact
-      console.log(
-        `[GitHubArtifactService] Error during lookup, checking for any artifact:`,
-        error instanceof Error ? error.message : error,
-      );
-
       try {
         const artifacts = await this.listQualityArtifacts(owner, repo, {
           limit: 1,
@@ -362,14 +354,8 @@ export class GitHubArtifactService {
           firstArtifact.id,
           firstArtifact.name,
         );
-      } catch (fallbackError) {
+      } catch (_fallbackError) {
         // No artifacts available for this repo
-        console.log(
-          `[GitHubArtifactService] No quality artifacts available for ${owner}/${repo}:`,
-          fallbackError instanceof Error
-            ? fallbackError.message
-            : fallbackError,
-        );
         return null;
       }
     }

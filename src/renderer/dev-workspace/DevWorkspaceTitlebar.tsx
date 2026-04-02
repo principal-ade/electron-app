@@ -15,6 +15,7 @@ import {
   PanelRightOpen,
   Building2,
   FolderOpen,
+  RefreshCw,
 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { BaseTitlebar } from '../components/Titlebar/BaseTitlebar';
@@ -173,6 +174,9 @@ export interface DevWorkspaceTitlebarProps {
   // Sidebar visibility toggle
   sidebarsHidden?: boolean;
   onSidebarsHiddenChange?: (hidden: boolean) => void;
+  // Workspace sync to otel-events-manager
+  onSyncWorkspace?: () => void;
+  isSyncingWorkspace?: boolean;
 }
 
 export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
@@ -201,6 +205,8 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
   lastActiveService,
   sidebarsHidden,
   onSidebarsHiddenChange,
+  onSyncWorkspace,
+  isSyncingWorkspace = false,
 }) => {
   const { theme } = useTheme();
   const [copiedPath, setCopiedPath] = useState(false);
@@ -516,6 +522,54 @@ export const DevWorkspaceTitlebar: React.FC<DevWorkspaceTitlebarProps> = ({
                     </div>
                   )}
                 </div>
+              )}
+
+              {/* Workspace Sync Button */}
+              {onSyncWorkspace && (
+                <button
+                  onClick={onSyncWorkspace}
+                  disabled={isSyncingWorkspace}
+                  title="Sync workspace to OTEL Events Manager"
+                  style={{
+                    // @ts-ignore - WebkitAppRegion is not in CSSProperties
+                    WebkitAppRegion: 'no-drag',
+                    background: theme.colors.backgroundTertiary,
+                    border: `1px solid ${theme.colors.border}`,
+                    color: theme.colors.textSecondary,
+                    cursor: isSyncingWorkspace ? 'wait' : 'pointer',
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s',
+                    fontSize: `${theme.fontSizes[1]}px`,
+                    fontWeight: theme.fontWeights.medium,
+                    opacity: isSyncingWorkspace ? 0.7 : 1,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSyncingWorkspace) {
+                      e.currentTarget.style.backgroundColor =
+                        theme.colors.backgroundSecondary;
+                      e.currentTarget.style.borderColor = theme.colors.primary;
+                      e.currentTarget.style.color = theme.colors.text;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.backgroundTertiary;
+                    e.currentTarget.style.borderColor = theme.colors.border;
+                    e.currentTarget.style.color = theme.colors.textSecondary;
+                  }}
+                >
+                  <RefreshCw
+                    size={14}
+                    style={{
+                      animation: isSyncingWorkspace ? 'spin 1s linear infinite' : 'none',
+                    }}
+                  />
+                  <span>{isSyncingWorkspace ? 'Syncing...' : 'Sync'}</span>
+                </button>
               )}
             </div>
           </div>

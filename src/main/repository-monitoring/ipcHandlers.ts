@@ -561,6 +561,45 @@ export function registerRepositoryMonitoringHandlers(): void {
     },
   );
 
+  // Manually trigger workspace sync to otel-events-manager
+  ipcMain.handle(
+    'repository-monitoring:sync-workspace',
+    async (_event, repoPath: string) => {
+      console.log(
+        `[RepositoryMonitoring] SYNC_WORKSPACE request for: ${repoPath}`,
+      );
+      try {
+        const fileTree = await manager.getFileTree(repoPath);
+        if (!fileTree) {
+          return {
+            success: false,
+            error: 'Failed to get file tree for workspace',
+          };
+        }
+
+        const result = await otelEventsManagerBridge.pushWorkspace({
+          id: repoPath,
+          rootPath: repoPath,
+          fileTree,
+        });
+
+        console.log(
+          `[RepositoryMonitoring] SYNC_WORKSPACE result: ${result.success ? 'SUCCESS' : 'FAILED'}`,
+        );
+        return result;
+      } catch (error) {
+        console.error(
+          '[RepositoryMonitoring] Error syncing workspace:',
+          error,
+        );
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
+      }
+    },
+  );
+
   // Forward events from manager to renderer windows
   manager.on(MonitoringInternalEvent.METRICS_UPDATED, (data: unknown) => {
     const windows = BrowserWindow.getAllWindows();

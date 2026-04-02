@@ -231,6 +231,7 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   const [availableServiceNames, setAvailableServiceNames] = useState<string[]>([]);
   const [serviceTraceCounts, setServiceTraceCounts] = useState<Map<string, number>>(new Map());
   const [lastActiveService, setLastActiveService] = useState<string | null>(null);
+  const [isSyncingWorkspace, setIsSyncingWorkspace] = useState(false);
 
   // Callback when scope names are discovered from library.yaml by RepositoryPanelContext
   const handleScopeNamesDiscovered = useCallback((scopeNames: string[]) => {
@@ -485,6 +486,30 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     };
 
     checkGitHubFolder();
+  }, [repositoryPath]);
+
+  // Sync workspace to otel-events-manager on window open
+  useEffect(() => {
+    if (!repositoryPath) return;
+
+    const syncWorkspaceOnOpen = async () => {
+      try {
+        console.info('[DevWorkspaceApp] Syncing workspace on window open:', repositoryPath);
+        const result = await RepositoryMonitoringService.syncWorkspace(repositoryPath);
+        if (result.success) {
+          console.info('[DevWorkspaceApp] Initial workspace sync successful');
+        } else {
+          console.warn('[DevWorkspaceApp] Initial workspace sync failed:', result.error);
+        }
+      } catch (error) {
+        console.warn('[DevWorkspaceApp] Failed to sync workspace on open:', error);
+      }
+    };
+
+    // Small delay to let the window fully initialize
+    const timeoutId = setTimeout(syncWorkspaceOnOpen, 500);
+
+    return () => clearTimeout(timeoutId);
   }, [repositoryPath]);
 
   // Fetch packages data for Storybook detection
@@ -853,6 +878,27 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     }
   }, [repositoryPath, githubInfo]);
 
+  // Sync workspace to otel-events-manager
+  const handleSyncWorkspace = useCallback(async () => {
+    if (!repositoryPath || isSyncingWorkspace) return;
+
+    setIsSyncingWorkspace(true);
+    try {
+      console.info('[DevWorkspaceApp] Triggering workspace sync for:', repositoryPath);
+      const result = await RepositoryMonitoringService.syncWorkspace(repositoryPath);
+
+      if (result.success) {
+        console.info('[DevWorkspaceApp] Workspace sync successful');
+      } else {
+        console.error('[DevWorkspaceApp] Workspace sync failed:', result.error);
+      }
+    } catch (error) {
+      console.error('[DevWorkspaceApp] Failed to sync workspace:', error);
+    } finally {
+      setIsSyncingWorkspace(false);
+    }
+  }, [repositoryPath, isSyncingWorkspace]);
+
   // Switch git remote between HTTPS and SSH
   const handleSwitchRemoteProtocol = useCallback(async () => {
     if (!repositoryPath || !remoteUrl) return;
@@ -1031,6 +1077,8 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         lastActiveService={lastActiveService}
         sidebarsHidden={sidebarsHidden}
         onSidebarsHiddenChange={handleSidebarsHiddenChange}
+        onSyncWorkspace={handleSyncWorkspace}
+        isSyncingWorkspace={isSyncingWorkspace}
       />
       <div className="flex-1 overflow-hidden">
         <DevWorkspacePanelFramework

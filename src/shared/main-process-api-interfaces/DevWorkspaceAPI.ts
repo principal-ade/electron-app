@@ -17,7 +17,7 @@
 
 import type { TerminalAPI } from './TerminalService';
 import type { FileSystemAPI } from './FileSystemAPI';
-import type { RepositoryMonitoringAPI } from '@principal-ai/repository-monitoring-server';
+import type { ExtendedRepositoryMonitoringAPI } from './index';
 import type { UserPreferencesAPI } from './UserPreferencesAPI';
 import type { ShellAPI } from './ShellAPI';
 import type { WindowAPI } from './WindowAPI';
@@ -37,7 +37,7 @@ import type { BrunoAPI } from './BrunoAPI';
 export interface DevWorkspaceMainProcessAPI {
   terminal: TerminalAPI;
   fileSystem: FileSystemAPI;
-  repositoryMonitoring: RepositoryMonitoringAPI;
+  repositoryMonitoring: ExtendedRepositoryMonitoringAPI;
   userPreferences: UserPreferencesAPI;
   shell: ShellAPI;
   window: WindowAPI;

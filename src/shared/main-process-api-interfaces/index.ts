@@ -15,6 +15,15 @@ import type { GitAPI } from './GitAPI';
 import type { GitHubAPI } from './GitHubAPI';
 import type { AppVersionManagerAPI } from './AppVersionManagerAPI';
 import type { RepositoryMonitoringAPI } from '@principal-ai/repository-monitoring-server';
+
+// Extended RepositoryMonitoringAPI with app-specific methods
+export interface ExtendedRepositoryMonitoringAPI extends RepositoryMonitoringAPI {
+  syncWorkspace: (repoPath: string) => Promise<{
+    success: boolean;
+    registeredScopes?: string[];
+    error?: string;
+  }>;
+}
 import type { SecretsAPI } from './SecretsAPI';
 import type { LinksAPI } from './LinksAPI';
 import type { ShellAPI } from './ShellAPI';
@@ -93,7 +102,7 @@ export interface MainProcessAPI {
   git: GitAPI;
   github: GitHubAPI;
   store: StoreAPI;
-  repositoryMonitoring: RepositoryMonitoringAPI;
+  repositoryMonitoring: ExtendedRepositoryMonitoringAPI;
   otelCollector: OtelCollectorAPI;
   secrets: SecretsAPI;
   links: LinksAPI;

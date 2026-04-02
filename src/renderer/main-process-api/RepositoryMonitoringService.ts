@@ -407,4 +407,27 @@ export class RepositoryMonitoringService {
       return null;
     }
   }
+
+  /**
+   * Manually trigger workspace sync to otel-events-manager
+   * This pushes the current FileTree state to the events manager for trace matching
+   */
+  static async syncWorkspace(
+    repoPath: string,
+  ): Promise<{ success: boolean; registeredScopes?: string[]; error?: string }> {
+    try {
+      return await window.mainProcess.repositoryMonitoring.syncWorkspace(
+        repoPath,
+      );
+    } catch (error) {
+      console.error(
+        '[RepositoryMonitoring] Error syncing workspace:',
+        error,
+      );
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
 }

@@ -1,15 +1,15 @@
 import { ipcRenderer } from 'electron';
 import {
   RepositoryMonitoringAPIEvent,
-  type RepositoryMonitoringAPI,
   type GitStatusWithFiles,
   type WorkspaceChangeEventPayload,
   type ToolExecutionRequest,
   type RepositoryCacheSyncEvent,
   type BuildArtifactsDetectedPayload,
 } from '@principal-ai/repository-monitoring-server';
+import type { ExtendedRepositoryMonitoringAPI } from '../../shared/main-process-api-interfaces';
 
-export const repositoryMonitoringAPI: RepositoryMonitoringAPI = {
+export const repositoryMonitoringAPI: ExtendedRepositoryMonitoringAPI = {
   getFileTree: async (repoPath: string) => {
     return ipcRenderer.invoke(
       RepositoryMonitoringAPIEvent.GET_FILE_TREE,
@@ -214,5 +214,10 @@ export const repositoryMonitoringAPI: RepositoryMonitoringAPI = {
       RepositoryMonitoringAPIEvent.EXECUTE_TOOL,
       request,
     );
+  },
+
+  // Manually trigger workspace sync to otel-events-manager
+  syncWorkspace: async (repoPath: string) => {
+    return ipcRenderer.invoke('repository-monitoring:sync-workspace', repoPath);
   },
 };
