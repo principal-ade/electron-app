@@ -57,6 +57,7 @@ interface RegistrySyncRequest {
     name?: string;
     sha?: string;
   };
+  fileTree?: FileTree;
   scopeNames: string[];
   timestamp: number;
 }
@@ -216,6 +217,7 @@ export class OtelEventsManagerBridge {
           name: workspace.name || this.deriveWorkspaceName(workspace.rootPath),
           sha: workspace.fileTree?.sha,
         },
+        fileTree: workspace.fileTree,
         scopeNames,
         timestamp: Date.now(),
       };
