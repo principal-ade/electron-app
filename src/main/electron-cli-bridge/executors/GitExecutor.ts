@@ -328,7 +328,7 @@ export class GitExecutor extends BaseExecutor {
             const remote: GitRemote = { name, url };
 
             // Parse GitHub URLs
-            const githubMatch = url.match(/github\.com[:/]([^/]+)\/([^/.]+)/);
+            const githubMatch = url.match(/github\.com[:/]([^/]+)\/(.+?)(?:\.git)?$/);
             if (githubMatch) {
               remote.owner = githubMatch[1];
               remote.repo = githubMatch[2];

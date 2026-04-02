@@ -435,8 +435,6 @@ class AuthService {
 
   private async getStoredAuth(): Promise<AuthResult> {
     try {
-      console.log('[AuthService] Reading from UnifiedSecureStorage...');
-
       // Get GitHub token (primary token for API calls)
       const githubTokenData = await this.storage.getTokenWithMetadata(
         TOKEN_KEYS.GITHUB_TOKEN,
@@ -556,17 +554,6 @@ class AuthService {
           };
         }
       }
-
-      console.log(
-        '[AuthService] Successfully retrieved credentials for:',
-        user.login,
-        {
-          expiresAt: expiresAt ? new Date(expiresAt).toISOString() : 'unknown',
-          hasRefreshToken: !!refreshToken,
-          hasWorkosToken: !!workosTokenData,
-          hasAvatarUrl: !!user.avatarUrl,
-        },
-      );
 
       // Sync token from server to get the latest (handles login from other surfaces)
       let currentGithubToken = githubToken;

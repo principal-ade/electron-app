@@ -328,8 +328,6 @@ export class OAuthServerClient {
     updatedAt: number;
   } | null> {
     try {
-      console.log('[OAuthServerClient] Fetching current token from server...');
-
       const url = new URL(`${this.serverUrl}/api/auth/token/current`);
       url.searchParams.set('github_user_id', String(githubUserId));
 
@@ -372,12 +370,6 @@ export class OAuthServerClient {
         github_login: string;
         updated_at: number;
       };
-
-      console.log('[OAuthServerClient] Current token fetched successfully:', {
-        login: data.github_login,
-        updatedAt: new Date(data.updated_at).toISOString(),
-        tokenPrefix: data.github_token?.substring(0, 4),
-      });
 
       return {
         githubToken: data.github_token,

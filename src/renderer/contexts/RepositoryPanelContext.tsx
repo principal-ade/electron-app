@@ -1166,9 +1166,6 @@ export const RepositoryPanelProvider: React.FC<
             'git.branch': branch,
           });
 
-          console.info(
-            '[RepositoryPanelProvider] No quality artifacts found for this repository',
-          );
           span.setStatus({ code: SpanStatusCode.OK });
           setQualityData(null);
         }
@@ -2011,86 +2008,6 @@ export const RepositoryPanelProvider: React.FC<
     },
     [repositoryPath],
   );
-
-  // DEBUG: Track which dependencies are changing to cause slices recreation
-  const slicesDepsRef = useRef<{
-    repositoryPath: string | null;
-    augmentedFileTreeData: typeof augmentedFileTreeData;
-    fileTreeLoading: boolean;
-    markdownFiles: typeof markdownFiles;
-    packagesData: typeof packagesData;
-    packagesLoading: boolean;
-    stableGitStatusData: typeof stableGitStatusData;
-    gitStatusLoading: boolean;
-    alexandriaRepositories: typeof alexandriaRepositories;
-    alexandriaRepositoriesLoading: boolean;
-    stableQualityData: typeof stableQualityData;
-    qualityLoading: boolean;
-    stableActiveFileData: typeof stableActiveFileData;
-    activeFileLoading: boolean;
-    activeFileError: typeof activeFileError;
-    effectiveColorMode: FileCityColorMode;
-    stableLocalhostServers: typeof stableLocalhostServers;
-    localhostServersLoading: boolean;
-    globalSkillsData: typeof globalSkillsData;
-    globalSkillsLoading: boolean;
-  } | null>(null);
-
-  if (slicesDepsRef.current) {
-    const depsChanged = {
-      repositoryPath: slicesDepsRef.current.repositoryPath !== repositoryPath,
-      augmentedFileTreeData: slicesDepsRef.current.augmentedFileTreeData !== augmentedFileTreeData,
-      fileTreeLoading: slicesDepsRef.current.fileTreeLoading !== fileTreeLoading,
-      markdownFiles: slicesDepsRef.current.markdownFiles !== markdownFiles,
-      packagesData: slicesDepsRef.current.packagesData !== packagesData,
-      packagesLoading: slicesDepsRef.current.packagesLoading !== packagesLoading,
-      stableGitStatusData: slicesDepsRef.current.stableGitStatusData !== stableGitStatusData,
-      gitStatusLoading: slicesDepsRef.current.gitStatusLoading !== gitStatusLoading,
-      alexandriaRepositories: slicesDepsRef.current.alexandriaRepositories !== alexandriaRepositories,
-      alexandriaRepositoriesLoading: slicesDepsRef.current.alexandriaRepositoriesLoading !== alexandriaRepositoriesLoading,
-      stableQualityData: slicesDepsRef.current.stableQualityData !== stableQualityData,
-      qualityLoading: slicesDepsRef.current.qualityLoading !== qualityLoading,
-      stableActiveFileData: slicesDepsRef.current.stableActiveFileData !== stableActiveFileData,
-      activeFileLoading: slicesDepsRef.current.activeFileLoading !== activeFileLoading,
-      activeFileError: slicesDepsRef.current.activeFileError !== activeFileError,
-      effectiveColorMode: slicesDepsRef.current.effectiveColorMode !== effectiveColorMode,
-      stableLocalhostServers: slicesDepsRef.current.stableLocalhostServers !== stableLocalhostServers,
-      localhostServersLoading: slicesDepsRef.current.localhostServersLoading !== localhostServersLoading,
-      globalSkillsData: slicesDepsRef.current.globalSkillsData !== globalSkillsData,
-      globalSkillsLoading: slicesDepsRef.current.globalSkillsLoading !== globalSkillsLoading,
-    };
-
-    const changedDeps = Object.entries(depsChanged)
-      .filter(([, changed]) => changed)
-      .map(([key]) => key);
-
-    if (changedDeps.length > 0) {
-      console.info('[RepositoryPanelContext] Slices recreated due to:', changedDeps);
-    }
-  }
-
-  slicesDepsRef.current = {
-    repositoryPath,
-    augmentedFileTreeData,
-    fileTreeLoading,
-    markdownFiles,
-    packagesData,
-    packagesLoading,
-    stableGitStatusData,
-    gitStatusLoading,
-    alexandriaRepositories,
-    alexandriaRepositoriesLoading,
-    stableQualityData,
-    qualityLoading,
-    stableActiveFileData,
-    activeFileLoading,
-    activeFileError,
-    effectiveColorMode,
-    stableLocalhostServers,
-    localhostServersLoading,
-    globalSkillsData,
-    globalSkillsLoading,
-  };
 
   // Create data slices
   // Create direct slice objects first for type-safe access by new v0.3.0+ panels
