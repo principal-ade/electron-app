@@ -1,0 +1,211 @@
+{
+  "$schema": "https://principal.ai/schemas/dashboard.v1.json",
+  "id": "ade-activity",
+  "name": "ADE Activity Dashboard",
+  "description": "Monitor Principal ADE activity including file tree operations and terminal activity",
+  "owner": "principal-ade",
+
+  "metrics": [
+    {
+      "id": "filetree-requests",
+      "name": "File Tree Requests",
+      "description": "Total file tree requests processed",
+      "type": "counter",
+      "sources": [
+        {
+          "storyboard": "get-file-tree",
+          "workflow": "get-file-tree",
+          "event": "filetree.request.complete"
+        }
+      ],
+      "query": {
+        "derivation": "count",
+        "window": "1h"
+      },
+      "display": {
+        "component": "MetricCard",
+        "showSparkline": true
+      }
+    },
+    {
+      "id": "filetree-cache-hits",
+      "name": "Cache Hits",
+      "description": "File tree cache hits",
+      "type": "counter",
+      "sources": [
+        {
+          "storyboard": "get-file-tree",
+          "workflow": "get-file-tree",
+          "event": "filetree.cache.hit"
+        }
+      ],
+      "query": {
+        "derivation": "count",
+        "window": "1h"
+      },
+      "display": {
+        "component": "MetricCard",
+        "showSparkline": true
+      }
+    },
+    {
+      "id": "filetree-builds",
+      "name": "File Tree Builds",
+      "description": "File trees built from scratch",
+      "type": "counter",
+      "sources": [
+        {
+          "storyboard": "get-file-tree",
+          "workflow": "get-file-tree",
+          "event": "filetree.build.complete"
+        }
+      ],
+      "query": {
+        "derivation": "count",
+        "window": "1h"
+      },
+      "display": {
+        "component": "MetricCard",
+        "showSparkline": true
+      }
+    },
+    {
+      "id": "filetree-build-errors",
+      "name": "Build Errors",
+      "description": "File tree build errors",
+      "type": "counter",
+      "sources": [
+        {
+          "storyboard": "get-file-tree",
+          "workflow": "get-file-tree",
+          "event": "filetree.build.error"
+        }
+      ],
+      "query": {
+        "derivation": "count",
+        "window": "1h"
+      },
+      "display": {
+        "component": "MetricCard",
+        "showSparkline": true
+      }
+    },
+    {
+      "id": "filetree-build-latency",
+      "name": "Build Latency (P95)",
+      "description": "95th percentile file tree build duration",
+      "type": "histogram",
+      "unit": "ms",
+      "sources": [
+        {
+          "storyboard": "get-file-tree",
+          "workflow": "get-file-tree",
+          "event": "filetree.build.complete"
+        }
+      ],
+      "query": {
+        "derivation": "p95",
+        "window": "1h"
+      },
+      "thresholds": {
+        "warning": 500,
+        "critical": 2000
+      },
+      "display": {
+        "component": "MetricCard",
+        "showTrend": true
+      }
+    },
+    {
+      "id": "terminal-activity-events",
+      "name": "Terminal Activity Events",
+      "description": "Terminal activity state changes",
+      "type": "counter",
+      "sources": [
+        {
+          "storyboard": "terminal-activity-tracking",
+          "workflow": "main-process-activity-update"
+        }
+      ],
+      "query": {
+        "derivation": "count",
+        "window": "1h"
+      },
+      "display": {
+        "component": "MetricCard",
+        "showSparkline": true
+      }
+    },
+    {
+      "id": "agent-started-events",
+      "name": "Agent Started",
+      "description": "Agents that started working",
+      "type": "counter",
+      "sources": [
+        {
+          "storyboard": "terminal-activity-tracking",
+          "workflow": "main-process-activity-update",
+          "event": "terminal.activity.agent_started"
+        }
+      ],
+      "query": {
+        "derivation": "count",
+        "window": "1h"
+      },
+      "display": {
+        "component": "MetricCard",
+        "showSparkline": true
+      }
+    },
+    {
+      "id": "agent-stopped-events",
+      "name": "Agent Stopped",
+      "description": "Agents that stopped working",
+      "type": "counter",
+      "sources": [
+        {
+          "storyboard": "terminal-activity-tracking",
+          "workflow": "main-process-activity-update",
+          "event": "terminal.activity.agent_stopped"
+        }
+      ],
+      "query": {
+        "derivation": "count",
+        "window": "1h"
+      },
+      "display": {
+        "component": "MetricCard",
+        "showSparkline": true
+      }
+    }
+  ],
+
+  "layout": {
+    "columns": 12,
+    "rows": [
+      {
+        "title": "File Tree Operations",
+        "panels": [
+          { "id": "filetree-requests", "span": 3, "spanMobile": 6 },
+          { "id": "filetree-cache-hits", "span": 3, "spanMobile": 6 },
+          { "id": "filetree-builds", "span": 3, "spanMobile": 6 },
+          { "id": "filetree-build-errors", "span": 3, "spanMobile": 6 }
+        ]
+      },
+      {
+        "title": "Performance",
+        "panels": [
+          { "id": "filetree-build-latency", "span": 6, "spanMobile": 12 }
+        ]
+      },
+      {
+        "title": "Terminal Activity",
+        "panels": [
+          { "id": "terminal-activity-events", "span": 4, "spanMobile": 12 },
+          { "id": "agent-started-events", "span": 4, "spanMobile": 6 },
+          { "id": "agent-stopped-events", "span": 4, "spanMobile": 6 }
+        ]
+      }
+    ]
+  }
+}
