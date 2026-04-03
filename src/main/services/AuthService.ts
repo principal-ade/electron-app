@@ -21,6 +21,7 @@ import { AuthEvent } from '../../shared/ipc-events/AuthEvents';
 import { GitCredentialHelper } from './GitCredentialHelper';
 import { APP_BRANDING } from '../../shared/config/appBranding';
 import type { AuthUser } from '../../shared/main-process-api-interfaces/AuthenticationAPI';
+import { UserPreferencesHandler } from '../stores/userPreferencesHandler';
 
 // Declare global type for browser open function override
 declare global {
@@ -70,12 +71,42 @@ class AuthService {
     // Note: UnifiedSecureStorage will handle keychain access when needed
   }
 
+  /**
+   * Check if keychain consent has been granted.
+   * Returns true if consent is granted, false otherwise.
+   * Safe to call before UserPreferencesHandler is initialized (returns false).
+   */
+  private async checkKeychainConsent(): Promise<boolean> {
+    try {
+      const userPrefsHandler = UserPreferencesHandler.getInstance();
+      const prefs = await userPrefsHandler.getUserPreferences();
+      return prefs.keychainConsent?.status === 'granted';
+    } catch {
+      // UserPreferencesHandler not yet initialized - consent not granted
+      return false;
+    }
+  }
+
   private setupHandlers() {
     // Check handler - reads from safeStorage
     ipcMain.handle(AuthEvent.CHECK, async () => {
       try {
         console.log('\n========================================');
         console.log('[AuthService] CHECK HANDLER INVOKED');
+
+        // Check keychain consent before attempting to access keychain
+        const hasConsent = await this.checkKeychainConsent();
+        if (!hasConsent) {
+          console.log('[AuthService] Keychain consent not granted - skipping storage access');
+          console.log('========================================\n');
+          return {
+            success: false,
+            authenticated: false,
+            error: 'Keychain consent not granted',
+            requiresConsent: true,
+          };
+        }
+
         console.log(
           '[AuthService] Checking safeStorage for stored credentials...',
         );
@@ -127,6 +158,12 @@ class AuthService {
     // Status handler
     ipcMain.handle(AuthEvent.STATUS, async () => {
       try {
+        // Check keychain consent first
+        const hasConsent = await this.checkKeychainConsent();
+        if (!hasConsent) {
+          return { authenticated: false, requiresConsent: true };
+        }
+
         const auth = await this.getStoredAuth();
         if (auth.success && auth.user) {
           return {
@@ -423,6 +460,66 @@ class AuthService {
         };
       }
     });
+
+    // Get keychain consent status handler
+    ipcMain.handle(AuthEvent.GET_KEYCHAIN_CONSENT, async () => {
+      try {
+        const { UserPreferencesHandler } = require('../stores/userPreferencesHandler');
+        const prefs = await UserPreferencesHandler.getInstance().getUserPreferences();
+        return prefs.keychainConsent || { status: 'pending' };
+      } catch (error) {
+        console.error('[AuthService] Get keychain consent error:', error);
+        return { status: 'pending' };
+      }
+    });
+
+    // Set keychain consent handler
+    ipcMain.handle(
+      AuthEvent.SET_KEYCHAIN_CONSENT,
+      async (_, consent: { status: 'pending' | 'granted' | 'declined' }) => {
+        try {
+          const { UserPreferencesHandler } = require('../stores/userPreferencesHandler');
+          await UserPreferencesHandler.getInstance().updateUserPreferences({
+            keychainConsent: {
+              status: consent.status,
+              decidedAt: Date.now(),
+            },
+          });
+          console.log('[AuthService] Keychain consent updated:', consent.status);
+          return { success: true };
+        } catch (error) {
+          console.error('[AuthService] Set keychain consent error:', error);
+          const errorMessage =
+            error instanceof Error ? error.message : 'Unknown error';
+          return { success: false, error: errorMessage };
+        }
+      },
+    );
+
+    // Initialize keychain auth handler (after consent granted)
+    ipcMain.handle(AuthEvent.INITIALIZE_KEYCHAIN_AUTH, async () => {
+      try {
+        const { UserPreferencesHandler } = require('../stores/userPreferencesHandler');
+        const prefs = await UserPreferencesHandler.getInstance().getUserPreferences();
+
+        if (prefs.keychainConsent?.status !== 'granted') {
+          console.warn(
+            '[AuthService] Initialize keychain auth called without consent',
+          );
+          return { success: false, error: 'Keychain consent not granted' };
+        }
+
+        console.log('[AuthService] Initializing keychain auth after consent...');
+        await this.initializeAuthState();
+        console.log('[AuthService] Keychain auth initialized successfully');
+        return { success: true };
+      } catch (error) {
+        console.error('[AuthService] Initialize keychain auth error:', error);
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
+        return { success: false, error: errorMessage };
+      }
+    });
   }
 
   private cancelAuthentication(): void {
@@ -435,6 +532,13 @@ class AuthService {
 
   private async getStoredAuth(): Promise<AuthResult> {
     try {
+      // Check keychain consent before accessing storage
+      const hasConsent = await this.checkKeychainConsent();
+      if (!hasConsent) {
+        console.log('[AuthService] getStoredAuth: Keychain consent not granted');
+        return { success: false, authenticated: false };
+      }
+
       // Get GitHub token (primary token for API calls)
       const githubTokenData = await this.storage.getTokenWithMetadata(
         TOKEN_KEYS.GITHUB_TOKEN,

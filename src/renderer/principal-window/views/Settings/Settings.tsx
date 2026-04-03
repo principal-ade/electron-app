@@ -7,16 +7,19 @@ import {
   Settings as SettingsIcon,
   Puzzle,
   Sparkles,
+  Shield,
 } from 'lucide-react';
 import { GeneralSettings } from './components/GeneralSettings';
 import { AIAssistantsSettings } from './components/AIAssistantsSettings';
 import { UpdatesSettings } from './components/UpdatesSettings';
 import { GeminiSettings } from './components/GeminiSettings';
+import { SecuritySettings } from './components/SecuritySettings';
 import { WindowService } from '../../../main-process-api/WindowService';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 
 export type SettingsCategory =
   | 'general'
+  | 'security'
   | 'ai-assistants'
   | 'gemini'
   | 'updates';
@@ -146,6 +149,46 @@ export const Settings: React.FC<SettingsProps> = ({ initialCategory }) => {
             >
               <Globe size={18} />
               General
+            </button>
+
+            <button
+              onClick={() => setActiveCategory('security')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px 16px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor:
+                  activeCategory === 'security'
+                    ? theme.colors.primary + '20'
+                    : 'transparent',
+                color:
+                  activeCategory === 'security'
+                    ? theme.colors.primary
+                    : theme.colors.text,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                fontSize: '14px',
+                fontWeight: activeCategory === 'security' ? 600 : 500,
+                textAlign: 'left',
+                width: '100%',
+              }}
+              onMouseEnter={(e) => {
+                if (activeCategory !== 'security') {
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundTertiary;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeCategory !== 'security') {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }
+              }}
+            >
+              <Shield size={18} />
+              Security
             </button>
 
             <button
@@ -347,6 +390,7 @@ export const Settings: React.FC<SettingsProps> = ({ initialCategory }) => {
           }}
         >
           {activeCategory === 'general' && <GeneralSettings />}
+          {activeCategory === 'security' && <SecuritySettings />}
           {activeCategory === 'ai-assistants' && <AIAssistantsSettings />}
           {activeCategory === 'gemini' && <GeminiSettings />}
           {activeCategory === 'updates' && <UpdatesSettings />}

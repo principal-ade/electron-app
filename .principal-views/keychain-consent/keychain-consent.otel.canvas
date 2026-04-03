@@ -1,0 +1,640 @@
+{
+  "pv": {
+    "name": "Keychain Consent",
+    "version": "1.0.0",
+    "description": "First-run keychain consent flow for secure credential storage on macOS",
+    "markdown": ".principal-views/keychain-consent/keychain-consent.md",
+    "scope": "principal-ade-main",
+    "nodeTypes": {
+      "main-process": {
+        "label": "Main Process",
+        "color": "#6366F1"
+      },
+      "renderer": {
+        "label": "Renderer",
+        "color": "#EC4899"
+      },
+      "storage": {
+        "label": "Storage",
+        "color": "#0D9488"
+      },
+      "user-action": {
+        "label": "User Action",
+        "color": "#F59E0B"
+      },
+      "system": {
+        "label": "System",
+        "color": "#8B5CF6"
+      },
+      "error": {
+        "label": "Error",
+        "color": "#EF4444"
+      }
+    },
+    "edgeTypes": {
+      "ipc-invoke": {
+        "label": "IPC Invoke",
+        "style": "solid",
+        "color": "#6366F1"
+      },
+      "data-flow": {
+        "label": "Data Flow",
+        "style": "solid",
+        "color": "#8B5CF6"
+      },
+      "user-action": {
+        "label": "User Action",
+        "style": "solid",
+        "color": "#F59E0B"
+      },
+      "error-flow": {
+        "label": "Error",
+        "style": "dashed",
+        "color": "#EF4444"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "x": 200,
+      "y": -100,
+      "width": 500,
+      "height": 60,
+      "color": "#64748B",
+      "text": "# Keychain Consent Flow\n**First-run macOS Keychain permission with user consent**"
+    },
+    {
+      "id": "app-startup-check",
+      "type": "otel-event",
+      "x": 100,
+      "y": 50,
+      "width": 220,
+      "height": 120,
+      "color": "#6366F1",
+      "label": "App Startup Check",
+      "event": {
+        "name": "keychain_consent.startup.check",
+        "description": "Check consent status during app startup in main.ts",
+        "attributes": {
+          "consent.status": {
+            "type": "string",
+            "description": "Current consent status: 'pending', 'granted', 'declined'"
+          },
+          "consent.decided_at": {
+            "type": "number",
+            "description": "Timestamp when consent was decided (if not pending)"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/main/main.ts"
+        ]
+      }
+    },
+    {
+      "id": "auth-init-skipped",
+      "type": "otel-event",
+      "x": 400,
+      "y": 50,
+      "width": 220,
+      "height": 120,
+      "color": "#F59E0B",
+      "label": "Auth Init Skipped",
+      "event": {
+        "name": "keychain_consent.auth_init.skipped",
+        "description": "Auth initialization skipped because consent not granted",
+        "attributes": {
+          "consent.status": {
+            "type": "string",
+            "description": "Status that caused skip: 'pending' or 'declined'"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/main/main.ts"
+        ]
+      }
+    },
+    {
+      "id": "auth-init-proceed",
+      "type": "otel-event",
+      "x": 400,
+      "y": 220,
+      "width": 220,
+      "height": 120,
+      "color": "#22C55E",
+      "label": "Auth Init Proceed",
+      "event": {
+        "name": "keychain_consent.auth_init.proceed",
+        "description": "Auth initialization proceeds because consent was granted",
+        "attributes": {
+          "consent.granted_at": {
+            "type": "number",
+            "description": "Timestamp when consent was granted"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/main/main.ts"
+        ]
+      }
+    },
+    {
+      "id": "renderer-load-consent",
+      "type": "otel-event",
+      "x": 100,
+      "y": 250,
+      "width": 220,
+      "height": 120,
+      "color": "#EC4899",
+      "label": "Renderer Load Consent",
+      "event": {
+        "name": "keychain_consent.renderer.load",
+        "description": "Renderer loads consent status via IPC on mount",
+        "attributes": {
+          "consent.status": {
+            "type": "string",
+            "description": "Loaded consent status"
+          },
+          "modal.should_show": {
+            "type": "boolean",
+            "description": "Whether consent modal should be shown"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/renderer/hooks/useKeychainConsent.ts"
+        ]
+      }
+    },
+    {
+      "id": "modal-shown",
+      "type": "otel-event",
+      "x": 100,
+      "y": 420,
+      "width": 220,
+      "height": 120,
+      "color": "#EC4899",
+      "label": "Modal Shown",
+      "event": {
+        "name": "keychain_consent.modal.shown",
+        "description": "Consent modal displayed to user",
+        "attributes": {
+          "modal.trigger": {
+            "type": "string",
+            "description": "What triggered modal: 'first_run', 'settings_request'"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/renderer/components/KeychainConsentModal.tsx"
+        ]
+      }
+    },
+    {
+      "id": "user-grants",
+      "type": "otel-event",
+      "x": 100,
+      "y": 590,
+      "width": 220,
+      "height": 120,
+      "color": "#F59E0B",
+      "label": "User Grants Consent",
+      "event": {
+        "name": "keychain_consent.user.granted",
+        "description": "User clicked Allow button",
+        "attributes": {
+          "consent.previous_status": {
+            "type": "string",
+            "description": "Previous status before granting"
+          },
+          "consent.time_to_decide_ms": {
+            "type": "number",
+            "description": "Time from modal shown to decision"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/renderer/hooks/useKeychainConsent.ts"
+        ]
+      }
+    },
+    {
+      "id": "user-declines",
+      "type": "otel-event",
+      "x": 400,
+      "y": 590,
+      "width": 220,
+      "height": 120,
+      "color": "#F59E0B",
+      "label": "User Declines Consent",
+      "event": {
+        "name": "keychain_consent.user.declined",
+        "description": "User clicked Skip for now button",
+        "attributes": {
+          "consent.previous_status": {
+            "type": "string",
+            "description": "Previous status before declining"
+          },
+          "consent.time_to_decide_ms": {
+            "type": "number",
+            "description": "Time from modal shown to decision"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/renderer/hooks/useKeychainConsent.ts"
+        ]
+      }
+    },
+    {
+      "id": "consent-persisted",
+      "type": "otel-event",
+      "x": 100,
+      "y": 760,
+      "width": 220,
+      "height": 120,
+      "color": "#0D9488",
+      "label": "Consent Persisted",
+      "event": {
+        "name": "keychain_consent.persisted",
+        "description": "Consent status saved to user preferences",
+        "attributes": {
+          "consent.status": {
+            "type": "string",
+            "description": "New consent status"
+          },
+          "consent.decided_at": {
+            "type": "number",
+            "description": "Timestamp of decision"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/main/services/AuthService.ts"
+        ]
+      }
+    },
+    {
+      "id": "keychain-init-requested",
+      "type": "otel-event",
+      "x": 100,
+      "y": 930,
+      "width": 220,
+      "height": 120,
+      "color": "#6366F1",
+      "label": "Keychain Init Requested",
+      "event": {
+        "name": "keychain_consent.init.requested",
+        "description": "Request to initialize keychain auth after consent granted",
+        "attributes": {
+          "init.source": {
+            "type": "string",
+            "description": "Source: 'consent_modal' or 'settings'"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/main/services/AuthService.ts"
+        ]
+      }
+    },
+    {
+      "id": "keychain-access-triggered",
+      "type": "otel-event",
+      "x": 100,
+      "y": 1100,
+      "width": 220,
+      "height": 120,
+      "color": "#8B5CF6",
+      "label": "Keychain Access Triggered",
+      "event": {
+        "name": "keychain_consent.keychain.access",
+        "description": "macOS Keychain access triggered (system prompt appears)",
+        "attributes": {
+          "keychain.operation": {
+            "type": "string",
+            "description": "Operation: 'isEncryptionAvailable' or 'initializeAuthState'"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/main/services/UnifiedSecureStorage.ts",
+          "src/main/services/AuthService.ts"
+        ]
+      }
+    },
+    {
+      "id": "keychain-init-success",
+      "type": "otel-event",
+      "x": 100,
+      "y": 1270,
+      "width": 220,
+      "height": 120,
+      "color": "#22C55E",
+      "label": "Keychain Init Success",
+      "event": {
+        "name": "keychain_consent.init.success",
+        "description": "Keychain auth initialized successfully",
+        "attributes": {
+          "init.duration_ms": {
+            "type": "number",
+            "description": "Time to initialize in milliseconds"
+          },
+          "auth.has_stored_credentials": {
+            "type": "boolean",
+            "description": "Whether stored credentials were found"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/main/services/AuthService.ts"
+        ]
+      }
+    },
+    {
+      "id": "keychain-init-error",
+      "type": "otel-event",
+      "x": 400,
+      "y": 1100,
+      "width": 220,
+      "height": 120,
+      "color": "#EF4444",
+      "label": "Keychain Init Error",
+      "event": {
+        "name": "keychain_consent.init.error",
+        "description": "Keychain initialization failed",
+        "attributes": {
+          "error.type": {
+            "type": "string",
+            "description": "Error type: 'timeout', 'permission_denied', 'not_available', 'unknown'"
+          },
+          "error.message": {
+            "type": "string",
+            "description": "Error message"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/main/services/AuthService.ts",
+          "src/main/services/UnifiedSecureStorage.ts"
+        ]
+      }
+    },
+    {
+      "id": "settings-enable",
+      "type": "otel-event",
+      "x": 700,
+      "y": 590,
+      "width": 220,
+      "height": 120,
+      "color": "#EC4899",
+      "label": "Settings Enable Request",
+      "event": {
+        "name": "keychain_consent.settings.enable_requested",
+        "description": "User clicked Enable Secure Storage in Settings",
+        "attributes": {
+          "consent.previous_status": {
+            "type": "string",
+            "description": "Previous status: 'pending' or 'declined'"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/renderer/principal-window/views/Settings/components/SecuritySettings.tsx"
+        ]
+      }
+    },
+    {
+      "id": "legend",
+      "type": "text",
+      "x": 700,
+      "y": 50,
+      "width": 250,
+      "height": 200,
+      "color": "#64748B",
+      "text": "## Flow Legend\n\n**Colors:**\n- Purple: Main Process\n- Pink: Renderer\n- Teal: Storage\n- Orange: User Action\n- Violet: System (macOS)\n- Green: Success\n- Red: Error"
+    },
+    {
+      "id": "auth-view-blocked",
+      "type": "otel-event",
+      "x": 700,
+      "y": 760,
+      "width": 220,
+      "height": 120,
+      "color": "#EC4899",
+      "label": "Auth View Blocked",
+      "event": {
+        "name": "keychain_consent.auth_view.blocked",
+        "description": "Auth view shows consent required message",
+        "attributes": {
+          "consent.status": {
+            "type": "string",
+            "description": "Current consent status blocking auth"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/renderer/principal-window/views/AuthView/AuthView.tsx"
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "startup-to-skipped",
+      "fromNode": "app-startup-check",
+      "fromSide": "right",
+      "toNode": "auth-init-skipped",
+      "toSide": "left",
+      "label": "pending/declined",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "startup-to-proceed",
+      "fromNode": "app-startup-check",
+      "fromSide": "bottom",
+      "toNode": "auth-init-proceed",
+      "toSide": "top",
+      "label": "granted",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "startup-to-renderer",
+      "fromNode": "app-startup-check",
+      "fromSide": "bottom",
+      "toNode": "renderer-load-consent",
+      "toSide": "top",
+      "label": "window created",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "renderer-to-modal",
+      "fromNode": "renderer-load-consent",
+      "fromSide": "bottom",
+      "toNode": "modal-shown",
+      "toSide": "top",
+      "label": "status=pending",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "modal-to-grants",
+      "fromNode": "modal-shown",
+      "fromSide": "bottom",
+      "toNode": "user-grants",
+      "toSide": "top",
+      "label": "click Allow",
+      "pv": {
+        "edgeType": "user-action"
+      }
+    },
+    {
+      "id": "modal-to-declines",
+      "fromNode": "modal-shown",
+      "fromSide": "right",
+      "toNode": "user-declines",
+      "toSide": "top",
+      "label": "click Skip",
+      "pv": {
+        "edgeType": "user-action"
+      }
+    },
+    {
+      "id": "grants-to-persisted",
+      "fromNode": "user-grants",
+      "fromSide": "bottom",
+      "toNode": "consent-persisted",
+      "toSide": "top",
+      "label": "IPC: SET_KEYCHAIN_CONSENT",
+      "pv": {
+        "edgeType": "ipc-invoke"
+      }
+    },
+    {
+      "id": "declines-to-persisted",
+      "fromNode": "user-declines",
+      "fromSide": "bottom",
+      "toNode": "consent-persisted",
+      "toSide": "right",
+      "label": "IPC: SET_KEYCHAIN_CONSENT",
+      "pv": {
+        "edgeType": "ipc-invoke"
+      }
+    },
+    {
+      "id": "persisted-to-init",
+      "fromNode": "consent-persisted",
+      "fromSide": "bottom",
+      "toNode": "keychain-init-requested",
+      "toSide": "top",
+      "label": "if granted",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "init-to-access",
+      "fromNode": "keychain-init-requested",
+      "fromSide": "bottom",
+      "toNode": "keychain-access-triggered",
+      "toSide": "top",
+      "label": "initializeAuthState()",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "access-to-success",
+      "fromNode": "keychain-access-triggered",
+      "fromSide": "bottom",
+      "toNode": "keychain-init-success",
+      "toSide": "top",
+      "label": "user allows",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "access-to-error",
+      "fromNode": "keychain-access-triggered",
+      "fromSide": "right",
+      "toNode": "keychain-init-error",
+      "toSide": "left",
+      "label": "timeout/denied",
+      "pv": {
+        "edgeType": "error-flow"
+      }
+    },
+    {
+      "id": "settings-to-modal",
+      "fromNode": "settings-enable",
+      "fromSide": "left",
+      "toNode": "modal-shown",
+      "toSide": "right",
+      "label": "requestConsent()",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "declines-to-blocked",
+      "fromNode": "user-declines",
+      "fromSide": "right",
+      "toNode": "auth-view-blocked",
+      "toSide": "top",
+      "label": "auth features blocked",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "blocked-to-settings",
+      "fromNode": "auth-view-blocked",
+      "fromSide": "top",
+      "toNode": "settings-enable",
+      "toSide": "bottom",
+      "label": "click Enable",
+      "pv": {
+        "edgeType": "user-action"
+      }
+    }
+  ]
+}

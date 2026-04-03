@@ -113,4 +113,14 @@ export interface AuthenticationAPI {
     error?: string;
     errorType?: string;
   }>;
+
+  // Keychain consent (first-run permission flow)
+  getKeychainConsent(): Promise<{
+    status: 'pending' | 'granted' | 'declined';
+    decidedAt?: number;
+  }>;
+  setKeychainConsent(consent: {
+    status: 'pending' | 'granted' | 'declined';
+  }): Promise<{ success: boolean; error?: string }>;
+  initializeKeychainAuth(): Promise<{ success: boolean; error?: string }>;
 }

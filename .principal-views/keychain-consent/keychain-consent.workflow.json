@@ -1,0 +1,98 @@
+{
+  "version": "1.0.0",
+  "name": "Keychain Consent Flow",
+  "description": "Telemetry scenarios for the keychain consent first-run experience",
+  "canvas": ".principal-views/keychain-consent/keychain-consent.otel.canvas",
+  "spanPattern": "keychain_consent.*",
+  "scenarios": [
+    {
+      "id": "first-run-grant",
+      "description": "New user sees consent modal and clicks Allow",
+      "priority": 1,
+      "template": {
+        "introduction": "**First Run - User Grants Consent**\n\nNew user sees consent modal and clicks Allow to enable secure storage.",
+        "events": {
+          "keychain_consent.startup.check": "1. Startup check (status={{consent.status}})",
+          "keychain_consent.auth_init.skipped": "2. Auth init skipped (consent pending)",
+          "keychain_consent.renderer.load": "3. Renderer loaded (should_show={{modal.should_show}})",
+          "keychain_consent.modal.shown": "4. Modal shown (trigger={{modal.trigger}})",
+          "keychain_consent.user.granted": "5. **User granted consent** (time={{consent.time_to_decide_ms}}ms)",
+          "keychain_consent.persisted": "6. Consent persisted (status={{consent.status}})",
+          "keychain_consent.init.requested": "7. Auth init requested (source={{init.source}})",
+          "keychain_consent.keychain.access": "8. Keychain access (op={{keychain.operation}})",
+          "keychain_consent.init.success": "9. **Init successful** (duration={{init.duration_ms}}ms)"
+        },
+        "summary": "**First Run Grant**\n- Decision: Granted\n- Time to decide: {{consent.time_to_decide_ms}}ms\n- Init duration: {{init.duration_ms}}ms"
+      }
+    },
+    {
+      "id": "first-run-decline",
+      "description": "New user sees consent modal and clicks Skip for now",
+      "priority": 2,
+      "template": {
+        "introduction": "**First Run - User Declines Consent**\n\nNew user sees consent modal and clicks Skip for now.",
+        "events": {
+          "keychain_consent.startup.check": "1. Startup check (status={{consent.status}})",
+          "keychain_consent.auth_init.skipped": "2. Auth init skipped (consent pending)",
+          "keychain_consent.renderer.load": "3. Renderer loaded (should_show={{modal.should_show}})",
+          "keychain_consent.modal.shown": "4. Modal shown (trigger={{modal.trigger}})",
+          "keychain_consent.user.declined": "5. **User declined consent** (time={{consent.time_to_decide_ms}}ms)",
+          "keychain_consent.persisted": "6. Consent persisted (status={{consent.status}})"
+        },
+        "summary": "**First Run Decline**\n- Decision: Declined\n- Time to decide: {{consent.time_to_decide_ms}}ms\n- Auth features disabled"
+      }
+    },
+    {
+      "id": "returning-user-granted",
+      "description": "User who previously granted consent returns to app",
+      "priority": 3,
+      "template": {
+        "introduction": "**Returning User - Consent Previously Granted**\n\nUser who previously granted consent returns to app.",
+        "events": {
+          "keychain_consent.startup.check": "1. Startup check (status={{consent.status}})",
+          "keychain_consent.auth_init.proceed": "2. **Auth init proceeding** (consent granted)",
+          "keychain_consent.renderer.load": "3. Renderer loaded (should_show={{modal.should_show}})"
+        },
+        "summary": "**Returning User (Granted)**\n- Consent: Already granted\n- Modal: Not shown\n- Auth: Initialized normally"
+      }
+    },
+    {
+      "id": "returning-user-declined",
+      "description": "User who previously declined returns and enables via Settings",
+      "priority": 4,
+      "template": {
+        "introduction": "**Returning User - Settings Re-enable**\n\nUser who previously declined enables secure storage via Settings.",
+        "events": {
+          "keychain_consent.startup.check": "1. Startup check (status={{consent.status}})",
+          "keychain_consent.auth_init.skipped": "2. Auth init skipped (consent declined)",
+          "keychain_consent.renderer.load": "3. Renderer loaded (should_show={{modal.should_show}})",
+          "keychain_consent.auth_view.blocked": "4. Auth view blocked (consent required)",
+          "keychain_consent.settings.enable_requested": "5. Settings enable requested",
+          "keychain_consent.modal.shown": "6. Modal shown (trigger={{modal.trigger}})",
+          "keychain_consent.user.granted": "7. **User granted consent** (time={{consent.time_to_decide_ms}}ms)",
+          "keychain_consent.persisted": "8. Consent persisted (status={{consent.status}})",
+          "keychain_consent.init.requested": "9. Auth init requested (source={{init.source}})",
+          "keychain_consent.keychain.access": "10. Keychain access (op={{keychain.operation}})",
+          "keychain_consent.init.success": "11. **Init successful** (duration={{init.duration_ms}}ms)"
+        },
+        "summary": "**Settings Re-enable**\n- Previous: Declined\n- New: Granted\n- Source: Settings page"
+      }
+    },
+    {
+      "id": "keychain-init-error",
+      "description": "User grants consent but keychain initialization fails",
+      "priority": 5,
+      "template": {
+        "introduction": "**Keychain Initialization Error**\n\nUser grants consent but keychain initialization fails.",
+        "events": {
+          "keychain_consent.user.granted": "1. User granted consent",
+          "keychain_consent.persisted": "2. Consent persisted (status={{consent.status}})",
+          "keychain_consent.init.requested": "3. Auth init requested (source={{init.source}})",
+          "keychain_consent.keychain.access": "4. Keychain access (op={{keychain.operation}})",
+          "keychain_consent.init.error": "5. **Init error:** {{error.type}} - {{error.message}}"
+        },
+        "summary": "**Keychain Init Error**\n- Error: {{error.type}}\n- Message: {{error.message}}\n- Auth features unavailable"
+      }
+    }
+  ]
+}

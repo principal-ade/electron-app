@@ -50,6 +50,14 @@ export interface OnboardingState {
   dismissedAt?: number;
 }
 
+// Keychain consent state types
+export type KeychainConsentStatus = 'pending' | 'granted' | 'declined';
+
+export interface KeychainConsentState {
+  status: KeychainConsentStatus;
+  decidedAt?: number;
+}
+
 // Repository view right pane modes
 export type RightPaneMode = 'city' | 'terminal' | 'session-detail' | 'document';
 
@@ -193,6 +201,9 @@ export interface UserPreferences {
 
   // Onboarding state and completion tracking
   onboarding?: OnboardingState;
+
+  // Keychain consent state (for secure credential storage)
+  keychainConsent?: KeychainConsentState;
 
   // Panel layout preferences (sizes and collapsed state)
   panelLayouts?: {

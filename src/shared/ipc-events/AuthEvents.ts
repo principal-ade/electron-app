@@ -22,6 +22,11 @@ export enum AuthEvent {
   CHECK_KEYCHAIN_STATUS = 'cli-auth:check-keychain-status',
   TEST_KEYCHAIN_ACCESS = 'cli-auth:test-keychain-access',
 
+  // Keychain consent events (first-run permission flow)
+  GET_KEYCHAIN_CONSENT = 'cli-auth:get-keychain-consent',
+  SET_KEYCHAIN_CONSENT = 'cli-auth:set-keychain-consent',
+  INITIALIZE_KEYCHAIN_AUTH = 'cli-auth:initialize-keychain-auth',
+
   // Auth state management events
   STATE_GET = 'auth-state:get',
   STATE_SUBSCRIBE = 'auth-state:subscribe',

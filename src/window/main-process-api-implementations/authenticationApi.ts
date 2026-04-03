@@ -160,4 +160,26 @@ export const authenticationAPI: AuthenticationAPI = {
   }> => {
     return ipcRenderer.invoke(AuthEvent.TEST_KEYCHAIN_ACCESS);
   },
+
+  // ===== Keychain Consent (First-Run Permission Flow) =====
+
+  getKeychainConsent: async (): Promise<{
+    status: 'pending' | 'granted' | 'declined';
+    decidedAt?: number;
+  }> => {
+    return ipcRenderer.invoke(AuthEvent.GET_KEYCHAIN_CONSENT);
+  },
+
+  setKeychainConsent: async (consent: {
+    status: 'pending' | 'granted' | 'declined';
+  }): Promise<{ success: boolean; error?: string }> => {
+    return ipcRenderer.invoke(AuthEvent.SET_KEYCHAIN_CONSENT, consent);
+  },
+
+  initializeKeychainAuth: async (): Promise<{
+    success: boolean;
+    error?: string;
+  }> => {
+    return ipcRenderer.invoke(AuthEvent.INITIALIZE_KEYCHAIN_AUTH);
+  },
 };

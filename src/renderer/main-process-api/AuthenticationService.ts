@@ -171,4 +171,33 @@ export class AuthenticationService {
   }> {
     return window.mainProcess.authentication.testKeychainAccess();
   }
+
+  /**
+   * Get keychain consent status
+   */
+  static async getKeychainConsent(): Promise<{
+    status: 'pending' | 'granted' | 'declined';
+    decidedAt?: number;
+  }> {
+    return window.mainProcess.authentication.getKeychainConsent();
+  }
+
+  /**
+   * Set keychain consent status
+   */
+  static async setKeychainConsent(consent: {
+    status: 'pending' | 'granted' | 'declined';
+  }): Promise<{ success: boolean; error?: string }> {
+    return window.mainProcess.authentication.setKeychainConsent(consent);
+  }
+
+  /**
+   * Initialize keychain auth after consent is granted
+   */
+  static async initializeKeychainAuth(): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    return window.mainProcess.authentication.initializeKeychainAuth();
+  }
 }
