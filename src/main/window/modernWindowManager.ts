@@ -472,7 +472,7 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
 
     // Menu
     if (this.features.menu) {
-      this.menuBuilder = new MenuBuilder(this.window, createWindow);
+      this.menuBuilder = new MenuBuilder(this.window, focusOrCreateMainWindow);
       this.menuBuilder.buildMenu();
     }
 
