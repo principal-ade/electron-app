@@ -171,10 +171,10 @@ export interface WorkspaceAPI {
   ): Promise<string>;
 
   /**
-   * Move a repository from a workspace directory to the default clone directory
+   * Move a repository from a workspace directory to the base default directory
    * Used when removing a repository from a workspace to relocate it
    * @returns The new path of the repository after moving
-   * @throws Error if defaultCloneDirectory is not set or if move fails
+   * @throws Error if baseDefaultDirectory is not set or if move fails
    */
   moveRepositoryToDefaultDirectory(repository: AlexandriaEntry): Promise<string>;
 }

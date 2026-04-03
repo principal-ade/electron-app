@@ -28,18 +28,18 @@ export const RemoveFromWorkspaceModal: React.FC<
   const [isInWorkspaceDirectory, setIsInWorkspaceDirectory] = useState<
     boolean | null
   >(null);
-  const [defaultCloneDirectory, setDefaultCloneDirectory] = useState<
+  const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<
     string | null
   >(null);
   const [hasOpenWindow, setHasOpenWindow] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Check if the repository is in the workspace directory and if default clone directory is set
+  // Check if the repository is in the workspace directory and if base default directory is set
   useEffect(() => {
     const checkConditions = async () => {
       if (!isOpen || !entry || !workspace) {
         setIsInWorkspaceDirectory(null);
-        setDefaultCloneDirectory(null);
+        setBaseDefaultDirectory(null);
         setHasOpenWindow(false);
         setLoading(false);
         return;
@@ -56,11 +56,11 @@ export const RemoveFromWorkspaceModal: React.FC<
         ]);
 
         setIsInWorkspaceDirectory(inWorkspaceDir);
-        setDefaultCloneDirectory(prefs.defaultCloneDirectory || null);
+        setBaseDefaultDirectory(prefs.baseDefaultDirectory || null);
         setHasOpenWindow(windowOpen);
 
-        // If in workspace directory, default clone directory is set, and no window is open, default to moving
-        if (inWorkspaceDir && prefs.defaultCloneDirectory && !windowOpen) {
+        // If in workspace directory, base default directory is set, and no window is open, default to moving
+        if (inWorkspaceDir && prefs.baseDefaultDirectory && !windowOpen) {
           setMoveToDefault(true);
         } else {
           setMoveToDefault(false);
@@ -68,7 +68,7 @@ export const RemoveFromWorkspaceModal: React.FC<
       } catch (error) {
         console.error('Error checking removal conditions:', error);
         setIsInWorkspaceDirectory(null);
-        setDefaultCloneDirectory(null);
+        setBaseDefaultDirectory(null);
         setHasOpenWindow(false);
       } finally {
         setLoading(false);
@@ -121,8 +121,8 @@ export const RemoveFromWorkspaceModal: React.FC<
 
   // Show move option only if:
   // 1. Repository is in the workspace's suggestedClonePath
-  // 2. Default clone directory is configured
-  const showMoveOption = isInWorkspaceDirectory === true && defaultCloneDirectory;
+  // 2. Base default directory is configured
+  const showMoveOption = isInWorkspaceDirectory === true && baseDefaultDirectory;
 
   const modalContent = (
     <div
@@ -417,7 +417,7 @@ export const RemoveFromWorkspaceModal: React.FC<
                       wordBreak: 'break-all',
                     }}
                   >
-                    {defaultCloneDirectory}
+                    {baseDefaultDirectory}
                   </div>
                 </div>
               </label>

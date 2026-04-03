@@ -224,11 +224,7 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
         .then(([loadedWorkspaces, defaultWs, preferences]) => {
           setWorkspaces(loadedWorkspaces);
           setDefaultWorkspace(defaultWs);
-          setBaseDefaultDirectory(
-            preferences.baseDefaultDirectory ||
-              preferences.defaultCloneDirectory ||
-              '',
-          );
+          setBaseDefaultDirectory(preferences.baseDefaultDirectory || '');
 
           // Don't auto-select workspace - let user choose or use custom location
           setSelectedWorkspace(null);

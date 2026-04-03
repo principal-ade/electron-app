@@ -559,13 +559,13 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
   async moveRepositoryToDefaultDirectory(
     repository: AlexandriaEntry,
   ): Promise<string> {
-    // Get the default clone directory from user preferences
+    // Get the base default directory from user preferences
     const preferencesHandler = UserPreferencesHandler.getInstance();
     const preferences = await preferencesHandler.getUserPreferences();
 
-    if (!preferences.defaultCloneDirectory) {
+    if (!preferences.baseDefaultDirectory) {
       throw new Error(
-        'No default clone directory configured. Please set a default clone directory in settings.',
+        'No base directory configured. Please set a base directory in settings.',
       );
     }
 
@@ -579,7 +579,7 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
 
     // Get the repository directory name
     const repoName = path.basename(repository.path);
-    const targetPath = path.join(preferences.defaultCloneDirectory, repoName);
+    const targetPath = path.join(preferences.baseDefaultDirectory, repoName);
 
     // Check if target already exists
     if (await fs.pathExists(targetPath)) {
@@ -612,8 +612,8 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
       );
       await monitoringManager.unregisterRepository(oldPath);
 
-      // Step 3: Ensure the default directory exists
-      await fs.ensureDir(preferences.defaultCloneDirectory);
+      // Step 3: Ensure the base directory exists
+      await fs.ensureDir(preferences.baseDefaultDirectory);
 
       // Step 4: Move the repository files
       console.log(

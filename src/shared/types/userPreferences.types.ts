@@ -118,10 +118,8 @@ export interface UserPreferences {
   usePtyDaemon?: boolean;
 
   // Repository management
-  /** Base default directory - the top-level directory for all Principal work */
+  /** Base default directory - the top-level directory for all Principal work (cloning, workspaces, discovery) */
   baseDefaultDirectory?: string;
-  /** Default directory for cloning repositories */
-  defaultCloneDirectory?: string;
   /** Enable git watching for all repositories on startup (default: false) */
   enableGitWatchingOnStartup?: boolean;
 
