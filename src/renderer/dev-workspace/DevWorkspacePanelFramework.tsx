@@ -1,4 +1,15 @@
-import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+/* eslint-disable max-lines */
+// This file contains complex panel orchestration logic that is difficult to split
+// without breaking the tight coupling between panel state, tabs, and terminal context.
+// TODO: Consider extracting panel definitions to separate files in future refactor.
+
+import React, {
+  useMemo,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+} from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { SpanStatusCode } from '@opentelemetry/api';
 import { getTracer } from '../telemetry';
@@ -41,7 +52,15 @@ import {
   AgentHighlightProvider,
   useAgentHighlightProvider,
 } from '../contexts/AgentHighlightContext';
-import { TabbedTerminalPanel, type BaseTab, type TerminalTab, type TerminalWorkingState, type TerminalActivityChangedEvent, type TabAssociations, type TerminalPanelActions } from '@industry-theme/xterm-terminal-panel';
+import {
+  TabbedTerminalPanel,
+  type BaseTab,
+  type TerminalTab,
+  type TerminalWorkingState,
+  type TerminalActivityChangedEvent,
+  type TabAssociations,
+  type TerminalPanelActions,
+} from '@industry-theme/xterm-terminal-panel';
 import {
   panels as principalViewPanels,
   TraceDetailsPanel,
@@ -52,13 +71,22 @@ import {
   DashboardPanel,
   type CanvasEditorPanelProps,
 } from '@industry-theme/principal-view-panels';
-import type { RegisteredTrace, DiscoveredDashboard } from '@principal-ai/principal-view-core';
+import type {
+  RegisteredTrace,
+  DiscoveredDashboard,
+} from '@principal-ai/principal-view-core';
 import type { WorkflowTemplate } from '@principal-ai/principal-view-core';
 import type { FileInfo } from '@principal-ai/repository-abstraction';
-import { CodeCityPanel, type CodeCityPanelPropsTyped } from '@industry-theme/file-city-panel';
+import {
+  CodeCityPanel,
+  type CodeCityPanelPropsTyped,
+} from '@industry-theme/file-city-panel';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import { panels as localhostBrowserPanels } from '@industry-theme/localhost-panels';
-import { EventBusPanel, AgentToolsPanel } from '@industry-theme/agent-driven-ui-panels';
+import {
+  EventBusPanel,
+  AgentToolsPanel,
+} from '@industry-theme/agent-driven-ui-panels';
 import {
   DependencyGraphPanelContent,
   GitChangesPanel,
@@ -71,7 +99,10 @@ import {
   type CityData,
 } from '@industry-theme/repository-composition-panels';
 import { panels as codeQualityPanels } from '@principal-ade/code-quality-panels';
-import { MarkdownPanel, type MarkdownPanelProps } from '@industry-theme/markdown-panels';
+import {
+  MarkdownPanel,
+  type MarkdownPanelProps,
+} from '@industry-theme/markdown-panels';
 import {
   FileEditorPanel,
   GitDiffPanel,
@@ -81,14 +112,27 @@ import {
   type GitDiffPanelProps,
 } from '@industry-theme/file-editing-panels';
 import { panels as backlogPanels } from '@industry-theme/backlogmd-kanban-panel';
-import { panels as brunoPanels, type BrunoRequest } from '@principal-ade/bruno-panels';
-import { panels as agentPanels, type Skill, type SkillDetailPanelProps } from '@industry-theme/agent-panels';
-import { GitHubIssuesPanel, GitHubIssueDetailPanel } from '@industry-theme/github-panels';
+import {
+  panels as brunoPanels,
+  type BrunoRequest,
+} from '@principal-ade/bruno-panels';
+import {
+  panels as agentPanels,
+  type Skill,
+  type SkillDetailPanelProps,
+} from '@industry-theme/agent-panels';
+import {
+  GitHubIssuesPanel,
+  GitHubIssueDetailPanel,
+} from '@industry-theme/github-panels';
 import { panels as typeInformationPanels } from '../panels/TypeInformationPanel';
 import { TerminalSessionsPanel } from '../panels/terminal-sessions';
 import { MediaViewerPanel } from '../panels/MediaViewerPanel';
 import type { Repository } from '../../shared/types/repository.types';
-import { PanelIconSidebar, RIGHT_PANEL_ICONS } from '../components/Sidebar/PanelIconSidebar';
+import {
+  PanelIconSidebar,
+  RIGHT_PANEL_ICONS,
+} from '../components/Sidebar/PanelIconSidebar';
 import { StorybookSidebarButton } from '../components/Sidebar/StorybookSidebarButton';
 import { NextjsSidebarButton } from '../components/Sidebar/NextjsSidebarButton';
 import { NotesSidebarButton } from '../components/Sidebar/NotesSidebarButton';
@@ -268,7 +312,22 @@ interface BrunoRequestPanelProps {
 /**
  * Union type of all tab types used in DevWorkspace
  */
-type DevWorkspaceTab = TerminalTab | SkillTab | MarkdownTab | CanvasEditorTab | CanvasTab | FileEditorTab | MediaTab | MDXEditorTab | GitDiffTab | DependencyGraphTab | TraceDetailsTab | MultiCanvasTab | BrunoRequestTab | DashboardTab | FileCity3DTab;
+type DevWorkspaceTab =
+  | TerminalTab
+  | SkillTab
+  | MarkdownTab
+  | CanvasEditorTab
+  | CanvasTab
+  | FileEditorTab
+  | MediaTab
+  | MDXEditorTab
+  | GitDiffTab
+  | DependencyGraphTab
+  | TraceDetailsTab
+  | MultiCanvasTab
+  | BrunoRequestTab
+  | DashboardTab
+  | FileCity3DTab;
 
 /**
  * History item for right panel document viewing
@@ -301,7 +360,11 @@ export interface DevWorkspacePanelFrameworkProps {
   /** Panel sizes - only used for preset changes (e.g., Storybook layout) */
   panelSizes?: { left: number; middle: number; right: number };
   /** Callback when panel sizes change (from user drag) */
-  onPanelSizesChange?: (sizes: { left: number; middle: number; right: number }) => void;
+  onPanelSizesChange?: (sizes: {
+    left: number;
+    middle: number;
+    right: number;
+  }) => void;
   /** Callback to receive panel control methods for imperative collapse/expand */
   onPanelControlReady?: (control: PanelControlHandle) => void;
   /** Event bus for panel communication */
@@ -311,7 +374,10 @@ export interface DevWorkspacePanelFrameworkProps {
   /** Callback when scope names are discovered from library.yaml */
   onScopeNamesDiscovered?: (scopeNames: string[]) => void;
   /** Callback when service trace counts change */
-  onServiceTraceCountsChange?: (counts: Map<string, number>, lastActiveService: string | null) => void;
+  onServiceTraceCountsChange?: (
+    counts: Map<string, number>,
+    lastActiveService: string | null,
+  ) => void;
   /** Callback when left panel collapse animation completes */
   onLeftCollapseComplete?: () => void;
   /** Callback when left panel expand animation completes */
@@ -320,6 +386,8 @@ export interface DevWorkspacePanelFrameworkProps {
   onOpenInWebADE?: () => void;
   /** Callback to open GitHub Actions */
   onOpenGitHubActions?: () => void;
+  /** Callback to open GitHub repository */
+  onOpenGitHubRepo?: () => void;
   /** Hide the icon sidebars (focus mode) */
   sidebarsHidden?: boolean;
 }
@@ -330,13 +398,18 @@ interface DevWorkspacePanelFrameworkInnerProps {
   layout: PanelLayout;
   onLayoutChange: (layout: PanelLayout) => void;
   panelSizes?: { left: number; middle: number; right: number };
-  onPanelSizesChange?: (sizes: { left: number; middle: number; right: number }) => void;
+  onPanelSizesChange?: (sizes: {
+    left: number;
+    middle: number;
+    right: number;
+  }) => void;
   onPanelControlReady?: (control: PanelControlHandle) => void;
   onTabsChange?: (tabs: unknown[]) => void;
   onLeftCollapseComplete?: () => void;
   onLeftExpandComplete?: () => void;
   onOpenInWebADE?: () => void;
   onOpenGitHubActions?: () => void;
+  onOpenGitHubRepo?: () => void;
   sidebarsHidden?: boolean;
 }
 
@@ -399,13 +472,27 @@ const FileCityWithHighlights: React.FC<{
   );
 };
 
-
 /**
  * Inner component that uses RepositoryPanelProvider and TerminalProvider contexts
  */
 const DevWorkspacePanelFrameworkInner: React.FC<
   DevWorkspacePanelFrameworkInnerProps
-> = ({ collapsed, onCollapsedChange, layout, onLayoutChange, panelSizes, onPanelSizesChange, onPanelControlReady, onTabsChange, onLeftCollapseComplete, onLeftExpandComplete, onOpenInWebADE, onOpenGitHubActions, sidebarsHidden }) => {
+> = ({
+  collapsed,
+  onCollapsedChange,
+  layout,
+  onLayoutChange,
+  panelSizes,
+  onPanelSizesChange,
+  onPanelControlReady,
+  onTabsChange,
+  onLeftCollapseComplete,
+  onLeftExpandComplete,
+  onOpenInWebADE,
+  onOpenGitHubActions,
+  onOpenGitHubRepo,
+  sidebarsHidden,
+}) => {
   const { theme } = useTheme();
 
   // Ref for imperative panel layout control
@@ -420,11 +507,17 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   // Store callbacks and state in refs to avoid stale closures
   const onCollapsedChangeRef = useRef(onCollapsedChange);
   onCollapsedChangeRef.current = onCollapsedChange;
-  const collapsedStateRef = useRef({ left: isLeftCollapsed, right: isRightCollapsed });
+  const collapsedStateRef = useRef({
+    left: isLeftCollapsed,
+    right: isRightCollapsed,
+  });
 
   // Keep ref in sync with state
   useEffect(() => {
-    collapsedStateRef.current = { left: isLeftCollapsed, right: isRightCollapsed };
+    collapsedStateRef.current = {
+      left: isLeftCollapsed,
+      right: isRightCollapsed,
+    };
   }, [isLeftCollapsed, isRightCollapsed]);
 
   // Provide panel control methods to parent via callback (only once on mount)
@@ -442,7 +535,11 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           // After expand, ensure panel is at least 20% (library may restore to small size)
           const currentLayout = panelLayoutRef.current?.getLayout();
           if (currentLayout && currentLayout.left < 20) {
-            panelLayoutRef.current?.setLayout({ left: 25, middle: 50, right: currentLayout.right });
+            panelLayoutRef.current?.setLayout({
+              left: 25,
+              middle: 50,
+              right: currentLayout.right,
+            });
           }
           setIsLeftCollapsed(false);
           collapsedStateRef.current.left = false;
@@ -459,7 +556,11 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           // After expand, ensure panel is at least 20% (library may restore to small size)
           const currentLayout = panelLayoutRef.current?.getLayout();
           if (currentLayout && currentLayout.right < 20) {
-            panelLayoutRef.current?.setLayout({ left: currentLayout.left, middle: 50, right: 25 });
+            panelLayoutRef.current?.setLayout({
+              left: currentLayout.left,
+              middle: 50,
+              right: 25,
+            });
           }
           setIsRightCollapsed(false);
           collapsedStateRef.current.right = false;
@@ -557,16 +658,25 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   }, [collapsed, onCollapsedChange]);
 
   // Handle resize from user drag - just update local collapsed state
-  const handlePanelResizeInternal = useCallback((sizes: { left: number; middle: number; right: number }) => {
-    // Update collapsed state based on resize
-    const newLeftCollapsed = sizes.left < 5;
-    const newRightCollapsed = sizes.right < 5;
-    setIsLeftCollapsed(newLeftCollapsed);
-    setIsRightCollapsed(newRightCollapsed);
-    collapsedStateRef.current = { left: newLeftCollapsed, right: newRightCollapsed };
-    // Update parent collapsed state (but NOT panelSizes - no feedback loop)
-    onCollapsedChangeRef.current({ left: newLeftCollapsed, right: newRightCollapsed });
-  }, []);
+  const handlePanelResizeInternal = useCallback(
+    (sizes: { left: number; middle: number; right: number }) => {
+      // Update collapsed state based on resize
+      const newLeftCollapsed = sizes.left < 5;
+      const newRightCollapsed = sizes.right < 5;
+      setIsLeftCollapsed(newLeftCollapsed);
+      setIsRightCollapsed(newRightCollapsed);
+      collapsedStateRef.current = {
+        left: newLeftCollapsed,
+        right: newRightCollapsed,
+      };
+      // Update parent collapsed state (but NOT panelSizes - no feedback loop)
+      onCollapsedChangeRef.current({
+        left: newLeftCollapsed,
+        right: newRightCollapsed,
+      });
+    },
+    [],
+  );
 
   const { context, actions, events } = useRepositoryPanelProvider();
   const { context: terminalCtx, actions: terminalActions } =
@@ -624,14 +734,14 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           // Event: Host received the activity change from terminal panel
           span.addEvent('terminal.activity.host_received', {
             'session.id': payload.sessionId,
-            'is_working': payload.isWorking,
+            is_working: payload.isWorking,
             'handler.name': 'onTerminalActivityChanged',
           });
 
           // Event: TIPC invoked to update activity in main process
           span.addEvent('terminal.activity.tipc_invoked', {
             'procedure.name': 'updateActivity',
-            'is_working': payload.isWorking,
+            is_working: payload.isWorking,
           });
 
           activityActions.updateActivity({
@@ -663,56 +773,67 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   const [associations, setAssociations] = useState<TabAssociations>({});
 
   // Store associated tab data separately (since we remove them from the tab list)
-  const [associatedTabData, setAssociatedTabData] = useState<Record<string, DevWorkspaceTab>>({});
+  const [associatedTabData, setAssociatedTabData] = useState<
+    Record<string, DevWorkspaceTab>
+  >({});
 
   // Handler for when a tab is dropped onto a terminal to create an association
-  const handleTabAssociate = useCallback((terminalTabId: string, associatedTabId: string) => {
-    // Find the tab data before removing it
-    setTabs(prevTabs => {
-      const tabToAssociate = prevTabs.find(t => t.id === associatedTabId);
-      if (tabToAssociate) {
-        // Store the tab data for rendering
-        setAssociatedTabData(prev => ({
-          ...prev,
-          [associatedTabId]: tabToAssociate,
-        }));
-      }
-      // Remove the associated tab from the tab list
-      return prevTabs.filter(t => t.id !== associatedTabId);
-    });
+  const handleTabAssociate = useCallback(
+    (terminalTabId: string, associatedTabId: string) => {
+      // Find the tab data before removing it
+      setTabs((prevTabs) => {
+        const tabToAssociate = prevTabs.find((t) => t.id === associatedTabId);
+        if (tabToAssociate) {
+          // Store the tab data for rendering
+          setAssociatedTabData((prev) => ({
+            ...prev,
+            [associatedTabId]: tabToAssociate,
+          }));
+        }
+        // Remove the associated tab from the tab list
+        return prevTabs.filter((t) => t.id !== associatedTabId);
+      });
 
-    // Create the association
-    setAssociations(prev => ({
-      ...prev,
-      [terminalTabId]: {
-        associatedTabId,
-        collapsed: false,
-        ratio: 0.4,
-      },
-    }));
-  }, []);
+      // Create the association
+      setAssociations((prev) => ({
+        ...prev,
+        [terminalTabId]: {
+          associatedTabId,
+          collapsed: false,
+          ratio: 0.4,
+        },
+      }));
+    },
+    [],
+  );
 
   // Handler for when an association's collapsed state changes
-  const handleAssociationCollapsedChange = useCallback((tabId: string, collapsed: boolean) => {
-    setAssociations(prev => ({
-      ...prev,
-      [tabId]: {
-        ...prev[tabId],
-        collapsed,
-      },
-    }));
-  }, []);
+  const handleAssociationCollapsedChange = useCallback(
+    (tabId: string, collapsed: boolean) => {
+      setAssociations((prev) => ({
+        ...prev,
+        [tabId]: {
+          ...prev[tabId],
+          collapsed,
+        },
+      }));
+    },
+    [],
+  );
 
   // Handler for when an association's split ratio changes
-  const handleAssociationRatioChange = useCallback((tabId: string, ratio: number) => {
-    setAssociations(prev => ({
-      ...prev,
-      [tabId]: {
-        ...prev[tabId],
-        ratio,
-      },
-    }));
-  }, []);
+  const handleAssociationRatioChange = useCallback(
+    (tabId: string, ratio: number) => {
+      setAssociations((prev) => ({
+        ...prev,
+        [tabId]: {
+          ...prev[tabId],
+          ratio,
+        },
+      }));
+    },
+    [],
+  );
 
   // Focus tab state - when set, TabbedTerminalPanel will activate the tab and call onFocusTabHandled
   const [focusTabId, setFocusTabId] = useState<string | null>(null);
@@ -722,20 +843,25 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   const [showAllTerminals, setShowAllTerminals] = useState(false);
 
   // Right panel history - tracks documents opened in the right panel for quick navigation
-  const [rightPanelHistory, setRightPanelHistory] = useState<RightPanelHistoryItem[]>([]);
+  const [rightPanelHistory, setRightPanelHistory] = useState<
+    RightPanelHistoryItem[]
+  >([]);
   const [showRightPanelHistory, setShowRightPanelHistory] = useState(false);
 
   // Handle clicking on a history item to re-open that file
-  const handleHistoryItemClick = useCallback(async (filePath: string) => {
-    setShowRightPanelHistory(false);
-    await actions.setActiveFile?.(filePath);
-    // Move to front of history
-    const fileName = filePath.split('/').pop() || 'Document';
-    setRightPanelHistory(prev => {
-      const filtered = prev.filter(item => item.filePath !== filePath);
-      return [{ filePath, fileName, openedAt: Date.now() }, ...filtered];
-    });
-  }, [actions]);
+  const handleHistoryItemClick = useCallback(
+    async (filePath: string) => {
+      setShowRightPanelHistory(false);
+      await actions.setActiveFile?.(filePath);
+      // Move to front of history
+      const fileName = filePath.split('/').pop() || 'Document';
+      setRightPanelHistory((prev) => {
+        const filtered = prev.filter((item) => item.filePath !== filePath);
+        return [{ filePath, fileName, openedAt: Date.now() }, ...filtered];
+      });
+    },
+    [actions],
+  );
 
   // Track terminal panel container width using ResizeObserver
   const [terminalPanelWidth, setTerminalPanelWidth] = useState<number>(0);
@@ -758,31 +884,41 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   }, []);
 
   // Stable onTabsChange that prevents infinite loops
-  const handleTabsChange = useCallback((newTabs: DevWorkspaceTab[]) => {
-    setTabs(prevTabs => {
-      // Only keep custom tabs from the update (filter out terminal tabs)
-      // Terminal tabs are managed by TabbedTerminalPanel, we only care about custom tabs
-      const newCustomTabs = newTabs.filter(t => t.contentType !== 'terminal');
-      const prevCustomTabs = prevTabs.filter(t => t.contentType !== 'terminal');
+  const handleTabsChange = useCallback(
+    (newTabs: DevWorkspaceTab[]) => {
+      setTabs((prevTabs) => {
+        // Only keep custom tabs from the update (filter out terminal tabs)
+        // Terminal tabs are managed by TabbedTerminalPanel, we only care about custom tabs
+        const newCustomTabs = newTabs.filter(
+          (t) => t.contentType !== 'terminal',
+        );
+        const prevCustomTabs = prevTabs.filter(
+          (t) => t.contentType !== 'terminal',
+        );
 
-      // Check if custom tabs actually changed
-      const customTabsChanged =
-        newCustomTabs.length !== prevCustomTabs.length ||
-        !newCustomTabs.every(tab => prevCustomTabs.some(prev => prev.id === tab.id));
+        // Check if custom tabs actually changed
+        const customTabsChanged =
+          newCustomTabs.length !== prevCustomTabs.length ||
+          !newCustomTabs.every((tab) =>
+            prevCustomTabs.some((prev) => prev.id === tab.id),
+          );
 
-      if (!customTabsChanged) {
-        return prevTabs; // No change
-      }
+        if (!customTabsChanged) {
+          return prevTabs; // No change
+        }
 
-      // Notify parent of tab changes for RepositoryPanelProvider
-      onTabsChange?.(newCustomTabs);
+        // Notify parent of tab changes for RepositoryPanelProvider
+        onTabsChange?.(newCustomTabs);
 
-      return newCustomTabs; // Only store custom tabs
-    });
-  }, [onTabsChange]);
+        return newCustomTabs; // Only store custom tabs
+      });
+    },
+    [onTabsChange],
+  );
 
   // Direct imports instead of array access to avoid type inference issues
-  const CanvasEditorPanelComponent = CanvasEditorPanel as React.ComponentType<CanvasEditorPanelProps>;
+  const CanvasEditorPanelComponent =
+    CanvasEditorPanel as React.ComponentType<CanvasEditorPanelProps>;
   const TraceViewerPanelComponent = principalViewPanels.find(
     (p) => p.metadata?.id === 'principal-ai.trace-viewer',
   )?.component; // Cannot convert - component not exported
@@ -802,10 +938,14 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   const CodeQualityPanelComponent = codeQualityPanels.find(
     (p) => p.metadata?.id === 'principal-ade.quality-hexagon-panel',
   )?.component; // Cannot convert - package may not be installed
-  const MarkdownPanelComponent = MarkdownPanel as React.ComponentType<MarkdownPanelProps>;
-  const FileEditorPanelComponent = FileEditorPanel as React.ComponentType<FileEditorPanelProps>;
-  const GitDiffPanelComponent = GitDiffPanel as React.ComponentType<GitDiffPanelProps>;
-  const MDXEditorPanelComponent = MDXEditorPanel as React.ComponentType<MDXEditorPanelProps>;
+  const MarkdownPanelComponent =
+    MarkdownPanel as React.ComponentType<MarkdownPanelProps>;
+  const FileEditorPanelComponent =
+    FileEditorPanel as React.ComponentType<FileEditorPanelProps>;
+  const GitDiffPanelComponent =
+    GitDiffPanel as React.ComponentType<GitDiffPanelProps>;
+  const MDXEditorPanelComponent =
+    MDXEditorPanel as React.ComponentType<MDXEditorPanelProps>;
 
   // Backlog.md panels (Kanban, TaskDetail, Milestone)
   const KanbanPanelComponent = backlogPanels[0]?.component; // Cannot convert - component not exported
@@ -897,9 +1037,12 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
         // Add to right panel history (avoid duplicates, move to front if exists)
         const fileName = filePath.split('/').pop() || 'Document';
-        setRightPanelHistory(prev => {
-          const filtered = prev.filter(item => item.filePath !== filePath);
-          return [{ filePath, fileName, openedAt: Date.now() }, ...filtered].slice(0, 20);
+        setRightPanelHistory((prev) => {
+          const filtered = prev.filter((item) => item.filePath !== filePath);
+          return [
+            { filePath, fileName, openedAt: Date.now() },
+            ...filtered,
+          ].slice(0, 20);
         });
 
         // OTEL: Add activeFile.set event
@@ -936,11 +1079,19 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     });
 
     return unsubscribe;
-  }, [events, actions, layout, onLayoutChange, collapsed, onCollapsedChange, isRightCollapsed, handleRightExpand]);
+  }, [
+    events,
+    actions,
+    layout,
+    onLayoutChange,
+    collapsed,
+    onCollapsedChange,
+    isRightCollapsed,
+    handleRightExpand,
+  ]);
 
   // Listen for detail panel events to show modals
   useEffect(() => {
-
     const unsubscribers = [
       // Task detail - open task markdown file in markdown tab
       events.on('task:selected', (event) => {
@@ -997,7 +1148,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         // OTEL: Add loop check event
         handleSpan.addEvent('devworkspace.handler.loopCheck', {
           'event.source': event.source || 'unknown',
-          'skipped': false,
+          skipped: false,
         });
 
         // Track tab info from callback
@@ -1008,7 +1159,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         setTabs((prevTabs) => {
           // Check if tab already exists
           const existingTab = prevTabs.find(
-            (t) => t.contentType === 'markdown' && (t as MarkdownTab).filePath === filePath
+            (t) =>
+              t.contentType === 'markdown' &&
+              (t as MarkdownTab).filePath === filePath,
           );
 
           if (existingTab) {
@@ -1106,7 +1259,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         // OTEL: Add loop check event (not skipped since we're past the check)
         handleSpan.addEvent('devworkspace.handler.loopCheck', {
           'event.source': event.source || 'unknown',
-          'skipped': false,
+          skipped: false,
         });
 
         // Track tab info from callback
@@ -1116,7 +1269,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         setTabs((prevTabs) => {
           // Check if tab already exists for this skill
           const existingTab = prevTabs.find(
-            (t) => t.contentType === 'skill' && (t as SkillTab).skillId === skill.id
+            (t) =>
+              t.contentType === 'skill' && (t as SkillTab).skillId === skill.id,
           );
 
           if (existingTab) {
@@ -1216,7 +1370,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         // OTEL: Add loop check event
         handleSpan.addEvent('devworkspace.handler.loopCheck', {
           'event.source': event.source || 'unknown',
-          'skipped': false,
+          skipped: false,
         });
 
         // Track tab info from callback
@@ -1226,7 +1380,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         setTabs((prevTabs) => {
           // Check if tab already exists for this trace
           const existingTab = prevTabs.find(
-            (t) => t.contentType === 'trace-details' && (t as TraceDetailsTab).traceId === trace.traceId
+            (t) =>
+              t.contentType === 'trace-details' &&
+              (t as TraceDetailsTab).traceId === trace.traceId,
           );
 
           if (existingTab) {
@@ -1240,7 +1396,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           // The trace is already a fully processed RegisteredTrace from TraceOrchestrator
           // Just use it directly - no conversion needed
           const registeredTrace = trace as RegisteredTrace;
-          const traceName = registeredTrace.name || registeredTrace.traceId.substring(0, 8);
+          const traceName =
+            registeredTrace.name || registeredTrace.traceId.substring(0, 8);
 
           tabId = `trace-${registeredTrace.traceId}`;
           const newTab: TraceDetailsTab = {
@@ -1292,7 +1449,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
         // Construct full file path (agent.path is relative like "AGENTS.md" or "packages/foo/AGENTS.md")
         const filePath = `${repoPath}/${agent.path}`;
-        const fileName = agent.name || agent.path.split('/').pop() || 'AGENTS.md';
+        const fileName =
+          agent.name || agent.path.split('/').pop() || 'AGENTS.md';
 
         // OTEL: Start event dispatch span
         const dispatchSpan = tracer.startSpan('devworkspace.event.dispatch', {
@@ -1334,7 +1492,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         // OTEL: Add loop check event
         handleSpan.addEvent('devworkspace.handler.loopCheck', {
           'event.source': event.source || 'unknown',
-          'skipped': false,
+          skipped: false,
         });
 
         // Track tab info from callback
@@ -1345,7 +1503,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         setTabs((prevTabs) => {
           // Check if tab already exists
           const existingTab = prevTabs.find(
-            (t) => t.contentType === 'markdown' && (t as MarkdownTab).filePath === filePath
+            (t) =>
+              t.contentType === 'markdown' &&
+              (t as MarkdownTab).filePath === filePath,
           );
 
           if (existingTab) {
@@ -1444,7 +1604,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         // OTEL: Add loop check event
         handleSpan.addEvent('devworkspace.handler.loopCheck', {
           'event.source': event.source || 'unknown',
-          'skipped': false,
+          skipped: false,
         });
 
         // Track tab info from callback
@@ -1455,7 +1615,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         setTabs((prevTabs) => {
           // Check if tab already exists
           const existingTab = prevTabs.find(
-            (t) => t.contentType === 'markdown' && (t as MarkdownTab).filePath === filePath
+            (t) =>
+              t.contentType === 'markdown' &&
+              (t as MarkdownTab).filePath === filePath,
           );
 
           if (existingTab) {
@@ -1556,7 +1718,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         // OTEL: Add loop check event
         handleSpan.addEvent('devworkspace.handler.loopCheck', {
           'event.source': event.source || 'unknown',
-          'skipped': false,
+          skipped: false,
         });
 
         // Track tab info from callback
@@ -1567,7 +1729,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         setTabs((prevTabs) => {
           // Check if tab already exists
           const existingTab = prevTabs.find(
-            (t) => t.contentType === 'markdown' && (t as MarkdownTab).filePath === filePath
+            (t) =>
+              t.contentType === 'markdown' &&
+              (t as MarkdownTab).filePath === filePath,
           );
 
           if (existingTab) {
@@ -1637,8 +1801,12 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         const fileName = filePath.split('/').pop() || 'File';
 
         // Check file type
-        const isMarkdown = filePath.endsWith('.md') || filePath.endsWith('.mdx');
-        const isMedia = /\.(png|jpg|jpeg|gif|webp|svg|bmp|ico|mp4|webm|mov|avi|mkv|ogv)$/i.test(filePath);
+        const isMarkdown =
+          filePath.endsWith('.md') || filePath.endsWith('.mdx');
+        const isMedia =
+          /\.(png|jpg|jpeg|gif|webp|svg|bmp|ico|mp4|webm|mov|avi|mkv|ogv)$/i.test(
+            filePath,
+          );
 
         // Determine content type based on file extension
         // - Media files (images/videos) open in media viewer
@@ -1650,7 +1818,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         } else if (isMarkdown) {
           contentType = 'markdown';
         } else {
-          const isModified = payload.gitStatus === 'unstaged' || payload.gitStatus === 'staged';
+          const isModified =
+            payload.gitStatus === 'unstaged' || payload.gitStatus === 'staged';
           contentType = isModified ? 'git-diff' : 'file-editor';
         }
 
@@ -1694,7 +1863,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         // OTEL: Add loop check event
         handleSpan.addEvent('devworkspace.handler.loopCheck', {
           'event.source': event.source || 'unknown',
-          'skipped': false,
+          skipped: false,
         });
 
         // Track tab info from callback
@@ -1706,10 +1875,14 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           // Check if tab already exists
           const existingTab = prevTabs.find(
             (t) =>
-              ((t.contentType === 'file-editor' && (t as FileEditorTab).filePath === filePath) ||
-                (t.contentType === 'markdown' && (t as MarkdownTab).filePath === filePath) ||
-                (t.contentType === 'git-diff' && (t as GitDiffTab).filePath === filePath) ||
-                (t.contentType === 'media' && (t as MediaTab).filePath === filePath))
+              (t.contentType === 'file-editor' &&
+                (t as FileEditorTab).filePath === filePath) ||
+              (t.contentType === 'markdown' &&
+                (t as MarkdownTab).filePath === filePath) ||
+              (t.contentType === 'git-diff' &&
+                (t as GitDiffTab).filePath === filePath) ||
+              (t.contentType === 'media' &&
+                (t as MediaTab).filePath === filePath),
           );
 
           if (existingTab) {
@@ -1809,11 +1982,31 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         const payload = event.payload as CanvasOpenPayload;
 
         // Only handle openCanvas action from known panel sources
-        const validSources = ['storyboard-list-panel', 'canvas-list-panel', 'canvas-detail-panel', 'trace-list-panel', 'dashboard-panel'];
-        if (payload.action !== 'openCanvas' || !validSources.includes(event.source)) {
+        const validSources = [
+          'storyboard-list-panel',
+          'canvas-list-panel',
+          'canvas-detail-panel',
+          'trace-list-panel',
+          'dashboard-panel',
+        ];
+        if (
+          payload.action !== 'openCanvas' ||
+          !validSources.includes(event.source)
+        ) {
           return;
         }
-        const { canvasId, canvas, canvasFileInfo, workflowId, workflow, workflowFileInfo, traceId, spanId, scenarioId, trace } = payload;
+        const {
+          canvasId,
+          canvas,
+          canvasFileInfo,
+          workflowId,
+          workflow,
+          workflowFileInfo,
+          traceId,
+          spanId,
+          scenarioId,
+          trace,
+        } = payload;
 
         if (!canvasId || !canvas) {
           return;
@@ -1826,17 +2019,15 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           const hasWorkflow = !!(workflowId && workflow);
 
           // Check if tab already exists for this canvas (either canvas-editor or canvas-detail)
-          const existingTabIndex = prevTabs.findIndex(
-            (t) => {
-              // Look for any existing tab for this canvas
-              if (t.contentType === 'canvas-detail') {
-                return (t as CanvasTab).canvasId === canvasId;
-              } else if (t.contentType === 'canvas-editor') {
-                return (t as CanvasEditorTab).canvasId === canvasId;
-              }
-              return false;
+          const existingTabIndex = prevTabs.findIndex((t) => {
+            // Look for any existing tab for this canvas
+            if (t.contentType === 'canvas-detail') {
+              return (t as CanvasTab).canvasId === canvasId;
+            } else if (t.contentType === 'canvas-editor') {
+              return (t as CanvasEditorTab).canvasId === canvasId;
             }
-          );
+            return false;
+          });
 
           if (existingTabIndex !== -1) {
             // Existing tab found - update it with workflow information (or clear it)
@@ -1885,7 +2076,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           // Create new canvas tab (use canvas-detail type if workflow present for proper rendering)
           const _contentType = hasWorkflow ? 'canvas-detail' : 'canvas-editor';
           const newTab: CanvasEditorTab | CanvasTab = hasWorkflow
-            ? {
+            ? ({
                 id: `canvas-${canvasId}`,
                 label: workflow?.name || workflowId || canvas.name || canvasId,
                 contentType: 'canvas-detail',
@@ -1903,8 +2094,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 selectedScenarioId: scenarioId || null,
                 selectedTrace: trace || null,
                 closable: true,
-              } as CanvasTab
-            : {
+              } as CanvasTab)
+            : ({
                 id: `canvas-${canvasId}`,
                 label: canvas.name || canvasId,
                 contentType: 'canvas-editor',
@@ -1913,7 +2104,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 canvasName: canvas.name || canvasId,
                 canvasFileInfo: canvasFileInfo || null,
                 closable: true,
-              } as CanvasEditorTab;
+              } as CanvasEditorTab);
           // Also request focus for new tabs to ensure consistent activation
           setFocusTabId(newTab.id);
           return [...prevTabs, newTab];
@@ -1924,7 +2115,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         const payload = event.payload as MultiCanvasOpenPayload;
 
         // Only handle openMultiCanvas action from storyboard-list-panel
-        if (payload.action !== 'openMultiCanvas' || event.source !== 'storyboard-list-panel') {
+        if (
+          payload.action !== 'openMultiCanvas' ||
+          event.source !== 'storyboard-list-panel'
+        ) {
           return;
         }
         const { canvases, canvasType } = payload;
@@ -1936,11 +2130,16 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         setTabs((prevTabs) => {
           // Check if multi-canvas tab already exists for this canvas type
           const existingTabIndex = prevTabs.findIndex(
-            (t) => t.contentType === 'multi-canvas' && (t as MultiCanvasTab).canvasType === canvasType
+            (t) =>
+              t.contentType === 'multi-canvas' &&
+              (t as MultiCanvasTab).canvasType === canvasType,
           );
 
           const tabId = `multi-canvas-${canvasType}`;
-          const tabLabel = canvasType === 'otel' ? 'All OTEL Canvases' : 'All Architecture Canvases';
+          const tabLabel =
+            canvasType === 'otel'
+              ? 'All OTEL Canvases'
+              : 'All Architecture Canvases';
 
           if (existingTabIndex !== -1) {
             // Update existing tab with new canvases
@@ -1969,10 +2168,17 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       }),
       // Dashboard open - create tab for dashboard panel
       events.on('custom', (event) => {
-        const payload = event.payload as { action?: string; dashboardId?: string; dashboard?: DiscoveredDashboard };
+        const payload = event.payload as {
+          action?: string;
+          dashboardId?: string;
+          dashboard?: DiscoveredDashboard;
+        };
 
         // Only handle openDashboard action from storyboard-list-panel
-        if (payload.action !== 'openDashboard' || event.source !== 'storyboard-list-panel') {
+        if (
+          payload.action !== 'openDashboard' ||
+          event.source !== 'storyboard-list-panel'
+        ) {
           return;
         }
         const { dashboardId, dashboard } = payload;
@@ -1984,7 +2190,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         setTabs((prevTabs) => {
           // Check if dashboard tab already exists
           const existingTabIndex = prevTabs.findIndex(
-            (t) => t.contentType === 'dashboard' && (t as DashboardTab).dashboardId === dashboardId
+            (t) =>
+              t.contentType === 'dashboard' &&
+              (t as DashboardTab).dashboardId === dashboardId,
           );
 
           if (existingTabIndex !== -1) {
@@ -2010,7 +2218,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       }),
       // Bruno request selected - create tab for request panel
       events.on('principal-ade.bruno:request-selected', (event) => {
-
         // Ignore re-emitted events from tabs to prevent loop
         if (event.source === 'tab') {
           return;
@@ -2028,12 +2235,17 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           return;
         }
 
-        const requestName = request.meta?.name || requestId.split('/').pop()?.replace('.bru', '') || 'Request';
+        const requestName =
+          request.meta?.name ||
+          requestId.split('/').pop()?.replace('.bru', '') ||
+          'Request';
 
         setTabs((prevTabs) => {
           // Check if tab already exists for this request
           const existingTab = prevTabs.find(
-            (t) => t.contentType === 'bruno-request' && (t as BrunoRequestTab).requestId === requestId
+            (t) =>
+              t.contentType === 'bruno-request' &&
+              (t as BrunoRequestTab).requestId === requestId,
           );
 
           if (existingTab) {
@@ -2117,7 +2329,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       setTabs((prevTabs) => {
         // Check if a dependency graph tab already exists
         const existingTab = prevTabs.find(
-          (t) => t.contentType === 'dependency-graph'
+          (t) => t.contentType === 'dependency-graph',
         );
 
         if (existingTab) {
@@ -2125,8 +2337,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           setFocusTabId(existingTab.id);
           return prevTabs.map((t) =>
             t.id === existingTab.id
-              ? { ...t, packages } as DependencyGraphTab
-              : t
+              ? ({ ...t, packages } as DependencyGraphTab)
+              : t,
           );
         }
 
@@ -2149,7 +2361,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   // Listen for file-city-3d:open events to create a new 3D city visualization tab
   useEffect(() => {
     const unsubscribe = events.on('file-city-3d:open', async () => {
-
       // Get file tree from context
       const fileTree = context.fileTree?.data;
       if (!fileTree) {
@@ -2165,7 +2376,8 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       try {
         const repoPath = context.repository?.path;
         if (repoPath && window.mainProcess?.fileCityImage?.countLines) {
-          const rawLineCounts = await window.mainProcess.fileCityImage.countLines(repoPath);
+          const rawLineCounts =
+            await window.mainProcess.fileCityImage.countLines(repoPath);
           const _lineCountsSize = Object.keys(rawLineCounts).length;
 
           // Transform line counts to use the correct rootPath prefix
@@ -2188,7 +2400,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           }
 
           // First enrich with actual line counts, then estimate any missing ones (binary files, etc.)
-          const enrichedCityData = enrichWithLineCounts(rawCityData, lineCounts);
+          const enrichedCityData = enrichWithLineCounts(
+            rawCityData,
+            lineCounts,
+          );
           cityData = estimateLineCounts(enrichedCityData);
         } else {
           // Fallback to estimated line counts
@@ -2201,16 +2416,14 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       setTabs((prevTabs) => {
         // Check if a file-city-3d tab already exists
         const existingTab = prevTabs.find(
-          (t) => t.contentType === 'file-city-3d'
+          (t) => t.contentType === 'file-city-3d',
         );
 
         if (existingTab) {
           // Update existing tab with new city data and focus it
           setFocusTabId(existingTab.id);
           return prevTabs.map((t) =>
-            t.id === existingTab.id
-              ? { ...t, cityData } as FileCity3DTab
-              : t
+            t.id === existingTab.id ? ({ ...t, cityData } as FileCity3DTab) : t,
           );
         }
 
@@ -2232,15 +2445,18 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
   // Listen for terminal session selection from TerminalSessionsPanel
   useEffect(() => {
-    const unsubscribe = events.on('principal-ade.terminal-sessions:session-selected', (event) => {
-      const payload = event.payload as { sessionId: string };
+    const unsubscribe = events.on(
+      'principal-ade.terminal-sessions:session-selected',
+      (event) => {
+        const payload = event.payload as { sessionId: string };
 
-      if (payload?.sessionId) {
-        // Switch to terminal panel in middle and focus the selected session tab
-        onLayoutChange({ ...layout, middle: 'terminal' });
-        setFocusTabId(payload.sessionId);
-      }
-    });
+        if (payload?.sessionId) {
+          // Switch to terminal panel in middle and focus the selected session tab
+          onLayoutChange({ ...layout, middle: 'terminal' });
+          setFocusTabId(payload.sessionId);
+        }
+      },
+    );
 
     return unsubscribe;
   }, [events, layout, onLayoutChange]);
@@ -2301,7 +2517,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         return <Building2 size={14} />;
       case 'media': {
         const mediaTab = tab as MediaTab;
-        const isVideo = /\.(mp4|webm|mov|avi|mkv|ogv)$/i.test(mediaTab.fileName);
+        const isVideo = /\.(mp4|webm|mov|avi|mkv|ogv)$/i.test(
+          mediaTab.fileName,
+        );
         return isVideo ? <Film size={14} /> : <Image size={14} />;
       }
       default:
@@ -2314,52 +2532,65 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     if (tab.contentType === 'canvas-detail') {
       const canvasTab = tab as CanvasTab;
       // Use workflow name, falling back to workflow ID, then canvas name as last resort
-      return canvasTab.narrativeTemplate?.name
-        || canvasTab.selectedNarrativeId
-        || canvasTab.canvasName
-        || undefined;
+      return (
+        canvasTab.narrativeTemplate?.name ||
+        canvasTab.selectedNarrativeId ||
+        canvasTab.canvasName ||
+        undefined
+      );
     }
     return undefined; // Fall back to tab.label for all other tabs
   }, []);
 
   // Extended terminal actions with tab association support
-  const extendedTerminalActions: TerminalPanelActions = useMemo(() => ({
-    ...terminalActions,
-    onTabAssociate: handleTabAssociate,
-  }), [terminalActions, handleTabAssociate]);
+  const extendedTerminalActions: TerminalPanelActions = useMemo(
+    () => ({
+      ...terminalActions,
+      onTabAssociate: handleTabAssociate,
+    }),
+    [terminalActions, handleTabAssociate],
+  );
 
   // Get header config for associated tab (shown when collapsed)
-  const getAssociatedHeader = useCallback((associatedTabId: string) => {
-    const tabData = associatedTabData[associatedTabId];
+  const getAssociatedHeader = useCallback(
+    (associatedTabId: string) => {
+      const tabData = associatedTabData[associatedTabId];
 
-    if (!tabData) {
-      return { icon: '📄', title: 'Associated Content' };
-    }
-
-    switch (tabData.contentType) {
-      case 'markdown': {
-        const markdownTab = tabData as MarkdownTab;
-        const fileName = markdownTab.filePath.split('/').pop() || 'Document';
-        return { icon: <FileText size={14} />, title: fileName };
+      if (!tabData) {
+        return { icon: '📄', title: 'Associated Content' };
       }
-      case 'canvas-editor':
-      case 'canvas-detail':
-        return { icon: <LayoutDashboard size={14} />, title: tabData.label };
-      case 'file-editor':
-      case 'mdx-editor':
-        return { icon: <Code size={14} />, title: tabData.label };
-      case 'git-diff':
-        return { icon: <GitBranch size={14} />, title: tabData.label };
-      default:
-        return { icon: '📄', title: tabData.label || 'Associated Content' };
-    }
-  }, [associatedTabData]);
+
+      switch (tabData.contentType) {
+        case 'markdown': {
+          const markdownTab = tabData as MarkdownTab;
+          const fileName = markdownTab.filePath.split('/').pop() || 'Document';
+          return { icon: <FileText size={14} />, title: fileName };
+        }
+        case 'canvas-editor':
+        case 'canvas-detail':
+          return { icon: <LayoutDashboard size={14} />, title: tabData.label };
+        case 'file-editor':
+        case 'mdx-editor':
+          return { icon: <Code size={14} />, title: tabData.label };
+        case 'git-diff':
+          return { icon: <GitBranch size={14} />, title: tabData.label };
+        default:
+          return { icon: '📄', title: tabData.label || 'Associated Content' };
+      }
+    },
+    [associatedTabData],
+  );
 
   // Render custom content for non-terminal tabs
   // NOTE: Uses refs for context/actions/events to avoid recreating this callback
   // when provider values change, which would cause unnecessary re-renders of all tabs
   const renderTabContent = useCallback(
-    (tab: DevWorkspaceTab, isActive: boolean, sessionId?: string | null, width?: number) => {
+    (
+      tab: DevWorkspaceTab,
+      isActive: boolean,
+      sessionId?: string | null,
+      width?: number,
+    ) => {
       switch (tab.contentType) {
         case 'terminal':
           // Return null to use default terminal rendering
@@ -2371,7 +2602,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
           if (!SkillDetailPanelComponent) {
             return (
-              <div style={{ padding: '2rem', color: theme.colors.textSecondary }}>
+              <div
+                style={{ padding: '2rem', color: theme.colors.textSecondary }}
+              >
                 Skill Detail panel not available
               </div>
             );
@@ -2405,7 +2638,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
           if (!MarkdownPanelComponent) {
             return (
-              <div style={{ padding: '2rem', color: theme.colors.textSecondary }}>
+              <div
+                style={{ padding: '2rem', color: theme.colors.textSecondary }}
+              >
                 Markdown Viewer panel not available
               </div>
             );
@@ -2439,7 +2674,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
           if (!CanvasEditorPanelComponent) {
             return (
-              <div style={{ padding: '2rem', color: theme.colors.textSecondary }}>
+              <div
+                style={{ padding: '2rem', color: theme.colors.textSecondary }}
+              >
                 Canvas Editor panel not available
               </div>
             );
@@ -2476,7 +2713,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           // This replaces WorkflowScenariosPanel with unified canvas+scenarios experience
           if (!CanvasEditorPanelComponent) {
             return (
-              <div style={{ padding: '2rem', color: theme.colors.textSecondary }}>
+              <div
+                style={{ padding: '2rem', color: theme.colors.textSecondary }}
+              >
                 Canvas Editor panel not available
               </div>
             );
@@ -2508,11 +2747,13 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 // Trace integration props - for auto-selecting scenario and template interpolation
                 selectedScenarioId={canvasTab.selectedScenarioId}
                 selectedTrace={canvasTab.selectedTrace}
-                traceMatchInfo={canvasTab.selectedTrace?.scenarioMatches?.map((m) => ({
-                  scenarioId: m.scenarioId,
-                  matchType: (m.matchType || 'full') as 'full' | 'partial',
-                  coveragePercent: m.coveragePercent,
-                }))}
+                traceMatchInfo={canvasTab.selectedTrace?.scenarioMatches?.map(
+                  (m) => ({
+                    scenarioId: m.scenarioId,
+                    matchType: (m.matchType || 'full') as 'full' | 'partial',
+                    coveragePercent: m.coveragePercent,
+                  }),
+                )}
               />
             </div>
           );
@@ -2561,7 +2802,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
           if (!FileEditorPanelComponent) {
             return (
-              <div style={{ padding: '2rem', color: theme.colors.textSecondary }}>
+              <div
+                style={{ padding: '2rem', color: theme.colors.textSecondary }}
+              >
                 File Editor panel not available
               </div>
             );
@@ -2595,7 +2838,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
           if (!MDXEditorPanelComponent) {
             return (
-              <div style={{ padding: '2rem', color: theme.colors.textSecondary }}>
+              <div
+                style={{ padding: '2rem', color: theme.colors.textSecondary }}
+              >
                 MDX Editor panel not available
               </div>
             );
@@ -2629,7 +2874,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
           if (!GitDiffPanelComponent) {
             return (
-              <div style={{ padding: '2rem', color: theme.colors.textSecondary }}>
+              <div
+                style={{ padding: '2rem', color: theme.colors.textSecondary }}
+              >
                 Git Diff panel not available
               </div>
             );
@@ -2710,7 +2957,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
           if (!BrunoRequestPanelComponent) {
             return (
-              <div style={{ padding: '2rem', color: theme.colors.textSecondary }}>
+              <div
+                style={{ padding: '2rem', color: theme.colors.textSecondary }}
+              >
                 Bruno Request panel not available
               </div>
             );
@@ -2759,7 +3008,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 context={contextRef.current}
                 actions={actionsRef.current}
                 events={eventsRef.current}
-                selectedDashboard={dashboardTab.dashboard as unknown as import('@principal-ai/principal-view-core').DiscoveredCanvas}
+                selectedDashboard={
+                  dashboardTab.dashboard as unknown as import('@principal-ai/principal-view-core').DiscoveredCanvas
+                }
               />
             </div>
           );
@@ -2845,25 +3096,41 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         }
       }
     },
-    [theme, SkillDetailPanelComponent, MarkdownPanelComponent, CanvasEditorPanelComponent, FileEditorPanelComponent, MDXEditorPanelComponent, GitDiffPanelComponent],
+    [
+      theme,
+      SkillDetailPanelComponent,
+      MarkdownPanelComponent,
+      CanvasEditorPanelComponent,
+      FileEditorPanelComponent,
+      MDXEditorPanelComponent,
+      GitDiffPanelComponent,
+    ],
   );
 
   // Render associated content for split pane
   // Reuses renderTabContent so all supported tab types automatically work
-  const renderAssociatedContent = useCallback((associatedTabId: string, isActive: boolean) => {
-    const tabData = associatedTabData[associatedTabId];
+  const renderAssociatedContent = useCallback(
+    (associatedTabId: string, isActive: boolean) => {
+      const tabData = associatedTabData[associatedTabId];
 
-    if (!tabData) {
-      return (
-        <div style={{ padding: '1rem', color: theme.colors.textSecondary }}>
-          Associated content not found: {associatedTabId}
-        </div>
-      );
-    }
+      if (!tabData) {
+        return (
+          <div style={{ padding: '1rem', color: theme.colors.textSecondary }}>
+            Associated content not found: {associatedTabId}
+          </div>
+        );
+      }
 
-    // Reuse renderTabContent - it already handles all tab types
-    return renderTabContent(tabData, isActive, null, terminalPanelWidth);
-  }, [associatedTabData, theme.colors.textSecondary, renderTabContent, terminalPanelWidth]);
+      // Reuse renderTabContent - it already handles all tab types
+      return renderTabContent(tabData, isActive, null, terminalPanelWidth);
+    },
+    [
+      associatedTabData,
+      theme.colors.textSecondary,
+      renderTabContent,
+      terminalPanelWidth,
+    ],
+  );
 
   // Define all panels using panel framework components
   const allPanels = useMemo(
@@ -3217,13 +3484,17 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 }}
               >
                 <button
-                  onClick={() => setShowRightPanelHistory(!showRightPanelHistory)}
+                  onClick={() =>
+                    setShowRightPanelHistory(!showRightPanelHistory)
+                  }
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '4px',
                     padding: '4px 8px',
-                    background: showRightPanelHistory ? 'var(--color-bg-tertiary, #2a2a2a)' : 'transparent',
+                    background: showRightPanelHistory
+                      ? 'var(--color-bg-tertiary, #2a2a2a)'
+                      : 'transparent',
                     border: '1px solid var(--color-border, #444)',
                     borderRadius: '4px',
                     color: 'var(--color-text-secondary, #aaa)',
@@ -3261,7 +3532,13 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                         borderBottom: '1px solid var(--color-border, #333)',
                       }}
                     >
-                      <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--color-text-secondary, #aaa)' }}>
+                      <span
+                        style={{
+                          fontSize: '12px',
+                          fontWeight: 500,
+                          color: 'var(--color-text-secondary, #aaa)',
+                        }}
+                      >
                         Recent Documents
                       </span>
                       <button
@@ -3296,14 +3573,27 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                           fontSize: '13px',
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary, #2a2a2a)';
+                          e.currentTarget.style.backgroundColor =
+                            'var(--color-bg-tertiary, #2a2a2a)';
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.backgroundColor = 'transparent';
                         }}
                       >
-                        <FileText size={14} style={{ flexShrink: 0, color: 'var(--color-text-secondary, #888)' }} />
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <FileText
+                          size={14}
+                          style={{
+                            flexShrink: 0,
+                            color: 'var(--color-text-secondary, #888)',
+                          }}
+                        />
+                        <span
+                          style={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           {item.fileName}
                         </span>
                       </button>
@@ -3414,7 +3704,11 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               context={context}
               actions={actions}
               events={events}
-              filePath={context.currentScope?.repository?.path ? `${context.currentScope.repository.path}/.principal/notes.md` : undefined}
+              filePath={
+                context.currentScope?.repository?.path
+                  ? `${context.currentScope.repository.path}/.principal/notes.md`
+                  : undefined
+              }
             />
           </div>
         ) : (
@@ -3739,27 +4033,29 @@ const DevWorkspacePanelFrameworkInner: React.FC<
 
   return (
     <div
-        style={{
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'row',
-          background: theme.colors.background,
-          position: 'relative',
-        }}
-      >
-        {/* Left Panel Icon Sidebar */}
-        {!sidebarsHidden && (
-          <PanelIconSidebar
-            currentPanelId={typeof layout.left === 'string' ? layout.left : ''}
-            onPanelChange={(panelId) => onLayoutChange({ ...layout, left: panelId })}
-            theme={theme}
-            collapsed={isLeftCollapsed}
-            onExpand={handleLeftExpand}
-            onCollapse={handleLeftCollapse}
-            position="left"
-          />
-        )}
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'row',
+        background: theme.colors.background,
+        position: 'relative',
+      }}
+    >
+      {/* Left Panel Icon Sidebar */}
+      {!sidebarsHidden && (
+        <PanelIconSidebar
+          currentPanelId={typeof layout.left === 'string' ? layout.left : ''}
+          onPanelChange={(panelId) =>
+            onLayoutChange({ ...layout, left: panelId })
+          }
+          theme={theme}
+          collapsed={isLeftCollapsed}
+          onExpand={handleLeftExpand}
+          onCollapse={handleLeftCollapse}
+          position="left"
+        />
+      )}
 
       {/* Main panel layout area */}
       <div
@@ -3815,26 +4111,28 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               onClick={(e) => e.stopPropagation()}
             >
               {/* Render appropriate detail panel based on panelId */}
-              {detailModal.panelId === 'githubIssueDetail' && GitHubIssueDetailPanelComponent && (
-                <GitHubIssueDetailPanelComponent
-                  context={context}
-                  actions={actions}
-                  events={events}
-                  // Note: Panel is event-driven. The issue:selected event that opened this modal
-                  // needs to be re-emitted for the panel to display the issue.
-                  // TODO: Add useEffect to re-emit issue:selected with source='modal' after mount
-                />
-              )}
-              {detailModal.panelId === 'mdxEditor' && MDXEditorPanelComponent && (
-                <div style={{ height: '100%' }}>
-                  <MDXEditorPanelComponent
+              {detailModal.panelId === 'githubIssueDetail' &&
+                GitHubIssueDetailPanelComponent && (
+                  <GitHubIssueDetailPanelComponent
                     context={context}
                     actions={actions}
                     events={events}
-                    filePath={detailModal.data.path}
+                    // Note: Panel is event-driven. The issue:selected event that opened this modal
+                    // needs to be re-emitted for the panel to display the issue.
+                    // TODO: Add useEffect to re-emit issue:selected with source='modal' after mount
                   />
-                </div>
-              )}
+                )}
+              {detailModal.panelId === 'mdxEditor' &&
+                MDXEditorPanelComponent && (
+                  <div style={{ height: '100%' }}>
+                    <MDXEditorPanelComponent
+                      context={context}
+                      actions={actions}
+                      events={events}
+                      filePath={detailModal.data.path}
+                    />
+                  </div>
+                )}
             </div>
           </div>
         )}
@@ -3844,7 +4142,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
       {!sidebarsHidden && (
         <PanelIconSidebar
           currentPanelId={typeof layout.right === 'string' ? layout.right : ''}
-          onPanelChange={(panelId) => onLayoutChange({ ...layout, right: panelId })}
+          onPanelChange={(panelId) =>
+            onLayoutChange({ ...layout, right: panelId })
+          }
           theme={theme}
           collapsed={isRightCollapsed}
           onExpand={handleRightExpand}
@@ -3853,19 +4153,28 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           panelIcons={RIGHT_PANEL_ICONS}
           onOpenInWebADE={onOpenInWebADE}
           onOpenGitHubActions={onOpenGitHubActions}
-          onSplitPanels={onPanelSizesChange ? () => {
-            // Set 50/50 split between middle and right (left goes to 0)
-            onPanelSizesChange({ left: 0, middle: 50, right: 50 });
-          } : undefined}
+          onOpenGitHubRepo={onOpenGitHubRepo}
+          onSplitPanels={
+            onPanelSizesChange
+              ? () => {
+                  // Set 50/50 split between middle and right (left goes to 0)
+                  onPanelSizesChange({ left: 0, middle: 50, right: 50 });
+                }
+              : undefined
+          }
           customButtons={
             <>
               <StorybookSidebarButton
                 theme={theme}
                 packages={context.packages?.data?.packages}
                 repositoryPath={context.currentScope?.repository?.path}
-                repositoryOwner={context.currentScope?.repository?.owner as string | undefined}
+                repositoryOwner={
+                  context.currentScope?.repository?.owner as string | undefined
+                }
                 repositoryName={context.currentScope?.repository?.name}
-                currentLayout={layout as { left: string; middle: string; right: string }}
+                currentLayout={
+                  layout as { left: string; middle: string; right: string }
+                }
                 onLayoutChange={onLayoutChange}
                 onPanelSizesChange={onPanelSizesChange}
                 events={events}
@@ -3874,9 +4183,13 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                 theme={theme}
                 packages={context.packages?.data?.packages}
                 repositoryPath={context.currentScope?.repository?.path}
-                repositoryOwner={context.currentScope?.repository?.owner as string | undefined}
+                repositoryOwner={
+                  context.currentScope?.repository?.owner as string | undefined
+                }
                 repositoryName={context.currentScope?.repository?.name}
-                currentLayout={layout as { left: string; middle: string; right: string }}
+                currentLayout={
+                  layout as { left: string; middle: string; right: string }
+                }
                 onLayoutChange={onLayoutChange}
                 onPanelSizesChange={onPanelSizesChange}
                 events={events}
@@ -3884,7 +4197,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               <NotesSidebarButton
                 theme={theme}
                 repositoryPath={context.currentScope?.repository?.path}
-                currentLayout={layout as { left: string; middle: string; right: string }}
+                currentLayout={
+                  layout as { left: string; middle: string; right: string }
+                }
                 onLayoutChange={onLayoutChange}
               />
             </>
@@ -3924,6 +4239,7 @@ export const DevWorkspacePanelFramework: React.FC<
   onLeftExpandComplete,
   onOpenInWebADE,
   onOpenGitHubActions,
+  onOpenGitHubRepo,
   sidebarsHidden,
 }) => {
   // Use the same terminal context format as legacy MultiTerminalPanel
@@ -3976,6 +4292,7 @@ export const DevWorkspacePanelFramework: React.FC<
             onLeftExpandComplete={onLeftExpandComplete}
             onOpenInWebADE={onOpenInWebADE}
             onOpenGitHubActions={onOpenGitHubActions}
+            onOpenGitHubRepo={onOpenGitHubRepo}
             sidebarsHidden={sidebarsHidden}
           />
         </AgentHighlightProvider>
