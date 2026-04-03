@@ -20,6 +20,7 @@ import {
   Columns2,
   Terminal,
   Plug,
+  Github,
 } from 'lucide-react';
 
 /**
@@ -57,6 +58,8 @@ export interface PanelIconSidebarProps {
   onOpenInWebADE?: () => void;
   /** Callback to open GitHub Actions (shown above collapse button) */
   onOpenGitHubActions?: () => void;
+  /** Callback to open GitHub repository (shown above collapse button) */
+  onOpenGitHubRepo?: () => void;
   /** Callback to split middle and right panels 50/50 */
   onSplitPanels?: () => void;
   /** Custom buttons to render after panel icons */
@@ -104,6 +107,7 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
   showCollapseButton = false,
   onOpenInWebADE,
   onOpenGitHubActions,
+  onOpenGitHubRepo,
   onSplitPanels,
   customButtons,
 }) => {
@@ -127,8 +131,10 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
         width: '80px',
         height: '100%',
         backgroundColor: theme.colors.backgroundSecondary,
-        borderLeft: position === 'right' ? `1px solid ${theme.colors.border}` : undefined,
-        borderRight: position === 'left' ? `1px solid ${theme.colors.border}` : undefined,
+        borderLeft:
+          position === 'right' ? `1px solid ${theme.colors.border}` : undefined,
+        borderRight:
+          position === 'left' ? `1px solid ${theme.colors.border}` : undefined,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -220,7 +226,11 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
       {customButtons}
 
       {/* Spacer to push action buttons and collapse button to bottom */}
-      {(showCollapseButton || onOpenInWebADE || onOpenGitHubActions || onSplitPanels) && <div style={{ flex: 1 }} />}
+      {(showCollapseButton ||
+        onOpenInWebADE ||
+        onOpenGitHubActions ||
+        onOpenGitHubRepo ||
+        onSplitPanels) && <div style={{ flex: 1 }} />}
 
       {/* Split panels button */}
       {onSplitPanels && (
@@ -393,6 +403,63 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
         </button>
       )}
 
+      {/* GitHub repository button */}
+      {onOpenGitHubRepo && (
+        <button
+          onClick={onOpenGitHubRepo}
+          title="Open GitHub Repository"
+          aria-label="Open GitHub Repository"
+          style={{
+            width: 'calc(100% - 20px)',
+            height: '64px',
+            margin: '4px 10px',
+            padding: '4px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '4px',
+            border: 'none',
+            background: 'transparent',
+            cursor: 'pointer',
+            color: theme.colors.textSecondary,
+            transition: 'all 0.2s ease',
+          }}
+        >
+          <div
+            style={{
+              width: '36px',
+              height: '36px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '8px',
+              background: 'transparent',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = theme.colors.border;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            <Github size={20} strokeWidth={1.5} />
+          </div>
+          <span
+            style={{
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[0],
+              fontWeight: theme.fontWeights.body,
+              lineHeight: theme.lineHeights.tight,
+              textAlign: 'center',
+            }}
+          >
+            GitHub
+          </span>
+        </button>
+      )}
+
       {/* Collapse button at bottom */}
       {showCollapseButton && (onCollapse || onExpand) && (
         <button
@@ -446,12 +513,10 @@ export const PanelIconSidebar: React.FC<PanelIconSidebarProps> = ({
               ) : (
                 <PanelRightClose size={20} strokeWidth={1.5} />
               )
+            ) : collapsed ? (
+              <PanelLeftOpen size={20} strokeWidth={1.5} />
             ) : (
-              collapsed ? (
-                <PanelLeftOpen size={20} strokeWidth={1.5} />
-              ) : (
-                <PanelLeftClose size={20} strokeWidth={1.5} />
-              )
+              <PanelLeftClose size={20} strokeWidth={1.5} />
             )}
           </div>
         </button>

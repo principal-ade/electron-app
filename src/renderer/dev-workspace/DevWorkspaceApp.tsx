@@ -5,14 +5,23 @@
  * Uses the panel framework layout with minimal API dependencies.
  */
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from 'react';
 import type { PanelLayout, QuickCommand } from '@principal-ade/panel-layouts';
 import {
   AgentCommandPalette,
   useAgentCommandPalette,
 } from '@principal-ade/panel-layouts';
 import { PanelEventBus } from '@principal-ade/panel-framework-core';
-import { DevWorkspacePanelFramework, type PanelControlHandle } from './DevWorkspacePanelFramework';
+import {
+  DevWorkspacePanelFramework,
+  type PanelControlHandle,
+} from './DevWorkspacePanelFramework';
 import {
   DevWorkspaceTitlebar,
   DEFAULT_PANEL_PRESETS,
@@ -212,7 +221,10 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   const [collapsed, setCollapsed] = useState({ left: false, right: false });
   const [sidebarsHidden, setSidebarsHidden] = useState(false);
   // Store collapsed state before entering focus mode so we can restore it
-  const collapsedBeforeFocusModeRef = useRef<{ left: boolean; right: boolean } | null>(null);
+  const collapsedBeforeFocusModeRef = useRef<{
+    left: boolean;
+    right: boolean;
+  } | null>(null);
   // Panel control handle for imperative collapse/expand
   const panelControlRef = useRef<PanelControlHandle | null>(null);
   const [layout, setLayout] = useState<PanelLayout>({
@@ -220,7 +232,11 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     middle: 'terminal',
     right: 'fileCity',
   });
-  const [panelSizes, setPanelSizes] = useState<{ left: number; middle: number; right: number }>({
+  const [panelSizes, setPanelSizes] = useState<{
+    left: number;
+    middle: number;
+    right: number;
+  }>({
     left: 25,
     middle: 50,
     right: 25,
@@ -228,22 +244,34 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   const [resetKey, setResetKey] = useState(0);
   const [hasGitHubFolder, setHasGitHubFolder] = useState(false);
   const [_packages, _setPackages] = useState<PackageLayer[]>([]);
-  const [availableServiceNames, setAvailableServiceNames] = useState<string[]>([]);
-  const [serviceTraceCounts, setServiceTraceCounts] = useState<Map<string, number>>(new Map());
-  const [lastActiveService, setLastActiveService] = useState<string | null>(null);
+  const [availableServiceNames, setAvailableServiceNames] = useState<string[]>(
+    [],
+  );
+  const [serviceTraceCounts, setServiceTraceCounts] = useState<
+    Map<string, number>
+  >(new Map());
+  const [lastActiveService, setLastActiveService] = useState<string | null>(
+    null,
+  );
   const [isSyncingWorkspace, setIsSyncingWorkspace] = useState(false);
 
   // Callback when scope names are discovered from library.yaml by RepositoryPanelContext
   const handleScopeNamesDiscovered = useCallback((scopeNames: string[]) => {
-    console.info('[DevWorkspaceApp] 📝 Scope names discovered from LocalRegistry:', scopeNames);
+    console.info(
+      '[DevWorkspaceApp] 📝 Scope names discovered from LocalRegistry:',
+      scopeNames,
+    );
     setAvailableServiceNames(scopeNames);
   }, []);
 
   // Callback when service trace counts change
-  const handleServiceTraceCountsChange = useCallback((counts: Map<string, number>, lastActive: string | null) => {
-    setServiceTraceCounts(counts);
-    setLastActiveService(lastActive);
-  }, []);
+  const handleServiceTraceCountsChange = useCallback(
+    (counts: Map<string, number>, lastActive: string | null) => {
+      setServiceTraceCounts(counts);
+      setLastActiveService(lastActive);
+    },
+    [],
+  );
 
   // Create repository object from Alexandria entry data
   const repository: Repository = useMemo(
@@ -424,7 +452,10 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
       events.on('panel:switch', (event) => {
         const payload = event.payload as { slot?: string; panel?: string };
         if (payload.slot && payload.panel) {
-          setLayout((prev) => ({ ...prev, [payload.slot as string]: payload.panel }));
+          setLayout((prev) => ({
+            ...prev,
+            [payload.slot as string]: payload.panel,
+          }));
         }
       }),
       events.on('panel:reset-layout', () => {
@@ -494,15 +525,25 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
 
     const syncWorkspaceOnOpen = async () => {
       try {
-        console.info('[DevWorkspaceApp] Syncing workspace on window open:', repositoryPath);
-        const result = await RepositoryMonitoringService.syncWorkspace(repositoryPath);
+        console.info(
+          '[DevWorkspaceApp] Syncing workspace on window open:',
+          repositoryPath,
+        );
+        const result =
+          await RepositoryMonitoringService.syncWorkspace(repositoryPath);
         if (result.success) {
           console.info('[DevWorkspaceApp] Initial workspace sync successful');
         } else {
-          console.warn('[DevWorkspaceApp] Initial workspace sync failed:', result.error);
+          console.warn(
+            '[DevWorkspaceApp] Initial workspace sync failed:',
+            result.error,
+          );
         }
       } catch (error) {
-        console.warn('[DevWorkspaceApp] Failed to sync workspace on open:', error);
+        console.warn(
+          '[DevWorkspaceApp] Failed to sync workspace on open:',
+          error,
+        );
       }
     };
 
@@ -518,12 +559,18 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
 
     const fetchPackages = async () => {
       try {
-        console.info('[DevWorkspaceApp] Fetching packages for:', repositoryPath);
+        console.info(
+          '[DevWorkspaceApp] Fetching packages for:',
+          repositoryPath,
+        );
         const packagesData =
           await RepositoryMonitoringService.getPackages(repositoryPath);
         console.info('[DevWorkspaceApp] Received packages data:', packagesData);
         if (packagesData?.packages) {
-          console.info('[DevWorkspaceApp] Setting packages:', packagesData.packages);
+          console.info(
+            '[DevWorkspaceApp] Setting packages:',
+            packagesData.packages,
+          );
           _setPackages(packagesData.packages);
         } else {
           console.info('[DevWorkspaceApp] No packages in response');
@@ -608,7 +655,9 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
 
         // Emit to the event bus so panels can react to file changes
         if (events) {
-          console.info(`🟡 [BRIDGE] Emitting workspace:changed to PanelEventBus at ${Date.now()}`);
+          console.info(
+            `🟡 [BRIDGE] Emitting workspace:changed to PanelEventBus at ${Date.now()}`,
+          );
           events.emit({
             type: 'workspace:changed',
             source: 'DevWorkspaceApp',
@@ -652,7 +701,10 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           // Delete the task file
           await FileSystemService.deleteFile(task.filePath);
 
-          console.info('[DevWorkspaceApp] Task file deleted successfully:', task.filePath);
+          console.info(
+            '[DevWorkspaceApp] Task file deleted successfully:',
+            task.filePath,
+          );
 
           // Emit success event
           events.emit({
@@ -671,7 +723,10 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
             timestamp: Date.now(),
             payload: {
               taskId,
-              error: error instanceof Error ? error.message : 'Failed to delete task',
+              error:
+                error instanceof Error
+                  ? error.message
+                  : 'Failed to delete task',
             },
           });
         }
@@ -679,7 +734,9 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
 
       // Handle task deleted - switch back to kanban panel
       events.on('task:deleted', () => {
-        console.info('[DevWorkspaceApp] Task deleted, switching back to kanban panel');
+        console.info(
+          '[DevWorkspaceApp] Task deleted, switching back to kanban panel',
+        );
         setLayout((prev) => ({ ...prev, left: 'kanban' }));
         setCollapsed((prev) => ({ ...prev, left: false }));
       }),
@@ -856,6 +913,22 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
     }
   }, [githubInfo]);
 
+  // Open GitHub repository page
+  const handleOpenGitHubRepo = useCallback(async () => {
+    if (!githubInfo) return;
+
+    const repoUrl = `https://github.com/${githubInfo.owner}/${githubInfo.repo}`;
+
+    try {
+      await window.mainProcess.shell.openExternal(repoUrl);
+    } catch (error) {
+      console.error(
+        '[DevWorkspaceApp] Failed to open GitHub Repository:',
+        error,
+      );
+    }
+  }, [githubInfo]);
+
   // Open Alexandria Workspace for this repository
   const handleOpenAlexandriaWorkspace = useCallback(async () => {
     if (!repositoryPath) return;
@@ -884,8 +957,12 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
 
     setIsSyncingWorkspace(true);
     try {
-      console.info('[DevWorkspaceApp] Triggering workspace sync for:', repositoryPath);
-      const result = await RepositoryMonitoringService.syncWorkspace(repositoryPath);
+      console.info(
+        '[DevWorkspaceApp] Triggering workspace sync for:',
+        repositoryPath,
+      );
+      const result =
+        await RepositoryMonitoringService.syncWorkspace(repositoryPath);
 
       if (result.success) {
         console.info('[DevWorkspaceApp] Workspace sync successful');
@@ -905,7 +982,8 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
 
     try {
       // Parse the current URL to determine protocol
-      const isSSH = remoteUrl.startsWith('git@') || remoteUrl.includes('ssh://');
+      const isSSH =
+        remoteUrl.startsWith('git@') || remoteUrl.includes('ssh://');
       const isHTTPS = remoteUrl.startsWith('https://');
 
       if (!isSSH && !isHTTPS) {
@@ -941,27 +1019,48 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           const [, host, path] = httpsMatch;
           newUrl = `git@${host}:${path}`;
         } else {
-          console.warn('[DevWorkspaceApp] Could not parse HTTPS URL:', remoteUrl);
+          console.warn(
+            '[DevWorkspaceApp] Could not parse HTTPS URL:',
+            remoteUrl,
+          );
           return;
         }
       }
 
       // Run git remote set-url origin <newUrl>
-      console.info('[DevWorkspaceApp] Switching remote URL from', remoteUrl, 'to', newUrl);
+      console.info(
+        '[DevWorkspaceApp] Switching remote URL from',
+        remoteUrl,
+        'to',
+        newUrl,
+      );
       const { GitService } = await import('../main-process-api/GitService');
-      const result = await GitService.setRemoteUrl(repositoryPath, 'origin', newUrl);
+      const result = await GitService.setRemoteUrl(
+        repositoryPath,
+        'origin',
+        newUrl,
+      );
 
       if (!result.success) {
-        console.error('[DevWorkspaceApp] Failed to switch remote:', result.message);
+        console.error(
+          '[DevWorkspaceApp] Failed to switch remote:',
+          result.message,
+        );
         return;
       }
 
-      console.info('[DevWorkspaceApp] Remote URL switched successfully to:', newUrl);
+      console.info(
+        '[DevWorkspaceApp] Remote URL switched successfully to:',
+        newUrl,
+      );
 
       // Update local state to reflect the change
       setRemoteUrl(newUrl);
     } catch (error) {
-      console.error('[DevWorkspaceApp] Failed to switch remote protocol:', error);
+      console.error(
+        '[DevWorkspaceApp] Failed to switch remote protocol:',
+        error,
+      );
     }
   }, [repositoryPath, remoteUrl]);
 
@@ -990,24 +1089,27 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   }, [repositoryPath]);
 
   // Handle focus mode toggle - hides sidebars AND collapses panels
-  const handleSidebarsHiddenChange = useCallback((hidden: boolean) => {
-    if (hidden) {
-      // Entering focus mode: store current collapsed state, then collapse both panels
-      collapsedBeforeFocusModeRef.current = { ...collapsed };
-      setSidebarsHidden(true);
-      setCollapsed({ left: true, right: true });
-    } else {
-      // Exiting focus mode: restore previous collapsed state
-      setSidebarsHidden(false);
-      if (collapsedBeforeFocusModeRef.current) {
-        setCollapsed(collapsedBeforeFocusModeRef.current);
-        collapsedBeforeFocusModeRef.current = null;
+  const handleSidebarsHiddenChange = useCallback(
+    (hidden: boolean) => {
+      if (hidden) {
+        // Entering focus mode: store current collapsed state, then collapse both panels
+        collapsedBeforeFocusModeRef.current = { ...collapsed };
+        setSidebarsHidden(true);
+        setCollapsed({ left: true, right: true });
       } else {
-        // Fallback: expand both panels if no previous state
-        setCollapsed({ left: false, right: false });
+        // Exiting focus mode: restore previous collapsed state
+        setSidebarsHidden(false);
+        if (collapsedBeforeFocusModeRef.current) {
+          setCollapsed(collapsedBeforeFocusModeRef.current);
+          collapsedBeforeFocusModeRef.current = null;
+        } else {
+          // Fallback: expand both panels if no previous state
+          setCollapsed({ left: false, right: false });
+        }
       }
-    }
-  }, [collapsed]);
+    },
+    [collapsed],
+  );
 
   // Handle left panel collapse complete (no-op, kept for interface compatibility)
   const handleLeftCollapseComplete = useCallback(() => {
@@ -1015,10 +1117,13 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
   }, []);
 
   // Handle setting panel sizes - only for preset changes (e.g., Storybook layout)
-  const handlePanelSizesChange = useCallback((sizes: { left: number; middle: number; right: number }) => {
-    console.info('[DevWorkspaceApp] Setting panel sizes:', sizes);
-    setPanelSizes(sizes);
-  }, []);
+  const handlePanelSizesChange = useCallback(
+    (sizes: { left: number; middle: number; right: number }) => {
+      console.info('[DevWorkspaceApp] Setting panel sizes:', sizes);
+      setPanelSizes(sizes);
+    },
+    [],
+  );
 
   // Store panel control handle when ready
   const handlePanelControlReady = useCallback((control: PanelControlHandle) => {
@@ -1071,7 +1176,9 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
         repositoryPath={repositoryPath}
         onOpenInFinder={repositoryPath ? handleOpenInFinder : undefined}
         remoteUrl={remoteUrl}
-        onSwitchRemoteProtocol={remoteUrl ? handleSwitchRemoteProtocol : undefined}
+        onSwitchRemoteProtocol={
+          remoteUrl ? handleSwitchRemoteProtocol : undefined
+        }
         availableServiceNames={availableServiceNames}
         serviceTraceCounts={serviceTraceCounts}
         lastActiveService={lastActiveService}
@@ -1097,7 +1204,10 @@ const DevWorkspaceContent: React.FC<DevWorkspaceContentProps> = ({
           onScopeNamesDiscovered={handleScopeNamesDiscovered}
           onServiceTraceCountsChange={handleServiceTraceCountsChange}
           onOpenInWebADE={githubInfo ? handleOpenInWebADE : undefined}
-          onOpenGitHubActions={githubInfo && hasGitHubFolder ? handleOpenGitHubActions : undefined}
+          onOpenGitHubActions={
+            githubInfo && hasGitHubFolder ? handleOpenGitHubActions : undefined
+          }
+          onOpenGitHubRepo={githubInfo ? handleOpenGitHubRepo : undefined}
           sidebarsHidden={sidebarsHidden}
         />
       </div>
