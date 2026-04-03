@@ -66,6 +66,32 @@
       "text": "# Keychain Consent Flow\n**First-run macOS Keychain permission with user consent**"
     },
     {
+      "id": "first-run-detected",
+      "type": "otel-event",
+      "x": -150,
+      "y": 50,
+      "width": 220,
+      "height": 120,
+      "color": "#6366F1",
+      "label": "First Run Detected",
+      "event": {
+        "name": "keychain_consent.first_run.detected",
+        "description": "Detected first run with no prior consent decision",
+        "attributes": {
+          "app.is_first_run": {
+            "type": "boolean",
+            "description": "Whether this is the first app launch"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/main/main.ts"
+        ]
+      }
+    },
+    {
       "id": "app-startup-check",
       "type": "otel-event",
       "x": 100,
@@ -471,6 +497,17 @@
     }
   ],
   "edges": [
+    {
+      "id": "first-run-to-startup",
+      "fromNode": "first-run-detected",
+      "fromSide": "right",
+      "toNode": "app-startup-check",
+      "toSide": "left",
+      "label": "check consent",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
     {
       "id": "startup-to-skipped",
       "fromNode": "app-startup-check",
