@@ -759,7 +759,6 @@ export class GitRepositoryService {
 
     try {
       const lineCounts: Record<string, number> = {};
-      const repoName = path.basename(repoPath);
 
       // Use git ls-files to get tracked files only
       let files: string[];
@@ -804,8 +803,8 @@ export class GitRepositoryService {
           const content = await fs.readFile(filePath, 'utf-8');
           const lineCount = this.countLinesInContent(content);
 
-          // Key includes repo name prefix to match building.path format
-          lineCounts[`${repoName}/${file}`] = lineCount;
+          // Use relative path to match GitHub tree API format (no repo prefix)
+          lineCounts[file] = lineCount;
           processedCount++;
         } catch (_fileError) {
           // File may have been deleted or be unreadable

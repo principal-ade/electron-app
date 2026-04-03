@@ -1803,14 +1803,14 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           data: { path: filePath },
         });
       }),
-      // Canvas open - create tab (from storyboard-list-panel, canvas-list-panel or canvas-detail-panel)
+      // Canvas open - create tab (from storyboard-list-panel, canvas-list-panel, canvas-detail-panel, dashboard-panel)
       events.on('custom', (event) => {
         // Type the canvas payload
         const payload = event.payload as CanvasOpenPayload;
 
-        // Only handle openCanvas action from storyboard-list-panel, canvas-list-panel, canvas-detail-panel, or trace-list-panel
-        if (payload.action !== 'openCanvas' ||
-            (event.source !== 'storyboard-list-panel' && event.source !== 'canvas-list-panel' && event.source !== 'canvas-detail-panel' && event.source !== 'trace-list-panel')) {
+        // Only handle openCanvas action from known panel sources
+        const validSources = ['storyboard-list-panel', 'canvas-list-panel', 'canvas-detail-panel', 'trace-list-panel', 'dashboard-panel'];
+        if (payload.action !== 'openCanvas' || !validSources.includes(event.source)) {
           return;
         }
         const { canvasId, canvas, canvasFileInfo, workflowId, workflow, workflowFileInfo, traceId, spanId, scenarioId, trace } = payload;

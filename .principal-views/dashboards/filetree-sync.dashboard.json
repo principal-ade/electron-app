@@ -1,0 +1,297 @@
+{
+  "$schema": "https://principal.ai/schemas/dashboard.v1.json",
+  "id": "filetree-sync",
+  "name": "FileTree Sync Health",
+  "description": "Monitor file tree synchronization performance from file changes to UI updates",
+  "owner": "desktop-app",
+
+  "metrics": [
+    {
+      "id": "file-change-count",
+      "name": "File Changes",
+      "description": "Total file system changes detected",
+      "type": "counter",
+      "sources": [
+        {
+          "storyboard": "filetree-sync",
+          "workflow": "cache-rebuild-performance",
+          "event": "filetree.file.changed"
+        }
+      ],
+      "query": {
+        "derivation": "count",
+        "window": "1h"
+      },
+      "display": {
+        "component": "MetricCard",
+        "showSparkline": true
+      },
+      "_mockData": {
+        "current": 342,
+        "previous": 289,
+        "trend": "up",
+        "series": [
+          { "date": "2026-04-02T08:00", "value": 45 },
+          { "date": "2026-04-02T09:00", "value": 67 },
+          { "date": "2026-04-02T10:00", "value": 52 },
+          { "date": "2026-04-02T11:00", "value": 89 },
+          { "date": "2026-04-02T12:00", "value": 89 }
+        ]
+      }
+    },
+    {
+      "id": "cache-rebuild-count",
+      "name": "Cache Rebuilds",
+      "description": "Total cache rebuilds triggered",
+      "type": "counter",
+      "sources": [
+        {
+          "storyboard": "filetree-sync",
+          "workflow": "cache-rebuild-performance",
+          "event": "filetree.cache.rebuild"
+        }
+      ],
+      "query": {
+        "derivation": "count",
+        "window": "1h"
+      },
+      "display": {
+        "component": "MetricCard",
+        "showSparkline": true
+      },
+      "_mockData": {
+        "current": 86,
+        "previous": 72,
+        "trend": "up",
+        "series": [
+          { "date": "2026-04-02T08:00", "value": 12 },
+          { "date": "2026-04-02T09:00", "value": 18 },
+          { "date": "2026-04-02T10:00", "value": 15 },
+          { "date": "2026-04-02T11:00", "value": 21 },
+          { "date": "2026-04-02T12:00", "value": 20 }
+        ]
+      }
+    },
+    {
+      "id": "ui-render-count",
+      "name": "UI Renders",
+      "description": "Total file tree UI re-renders",
+      "type": "counter",
+      "sources": [
+        {
+          "storyboard": "filetree-sync",
+          "workflow": "cache-rebuild-performance",
+          "event": "filetree.ui.rendered"
+        }
+      ],
+      "query": {
+        "derivation": "count",
+        "window": "1h"
+      },
+      "display": {
+        "component": "MetricCard",
+        "showSparkline": true
+      },
+      "_mockData": {
+        "current": 86,
+        "previous": 72,
+        "trend": "up",
+        "series": [
+          { "date": "2026-04-02T08:00", "value": 12 },
+          { "date": "2026-04-02T09:00", "value": 18 },
+          { "date": "2026-04-02T10:00", "value": 15 },
+          { "date": "2026-04-02T11:00", "value": 21 },
+          { "date": "2026-04-02T12:00", "value": 20 }
+        ]
+      }
+    },
+    {
+      "id": "cache-rebuild-p95",
+      "name": "Rebuild Latency (P95)",
+      "description": "95th percentile cache rebuild duration",
+      "type": "histogram",
+      "unit": "ms",
+      "sources": [
+        {
+          "storyboard": "filetree-sync",
+          "workflow": "cache-rebuild-performance",
+          "event": "filetree.cache.rebuild"
+        }
+      ],
+      "query": {
+        "derivation": "p95",
+        "window": "1h"
+      },
+      "thresholds": {
+        "warning": 200,
+        "critical": 500
+      },
+      "display": {
+        "component": "MetricCard",
+        "showTrend": true
+      },
+      "_mockData": {
+        "current": 145,
+        "previous": 162,
+        "trend": "down"
+      }
+    },
+    {
+      "id": "ui-render-p95",
+      "name": "Render Latency (P95)",
+      "description": "95th percentile UI render duration",
+      "type": "histogram",
+      "unit": "ms",
+      "sources": [
+        {
+          "storyboard": "filetree-sync",
+          "workflow": "cache-rebuild-performance",
+          "event": "filetree.ui.rendered"
+        }
+      ],
+      "query": {
+        "derivation": "p95",
+        "window": "1h"
+      },
+      "thresholds": {
+        "warning": 50,
+        "critical": 100
+      },
+      "display": {
+        "component": "MetricCard",
+        "showTrend": true
+      },
+      "_mockData": {
+        "current": 28,
+        "previous": 32,
+        "trend": "down"
+      }
+    },
+    {
+      "id": "avg-debounce-batch",
+      "name": "Avg Batch Size",
+      "description": "Average changes batched per debounce window",
+      "type": "gauge",
+      "sources": [
+        {
+          "storyboard": "filetree-sync",
+          "workflow": "cache-rebuild-performance",
+          "event": "filetree.debounce.triggered"
+        }
+      ],
+      "query": {
+        "derivation": "avg",
+        "window": "1h"
+      },
+      "display": {
+        "component": "MetricCard",
+        "showTrend": true
+      },
+      "_mockData": {
+        "current": 3.8,
+        "previous": 4.1,
+        "trend": "down"
+      }
+    },
+    {
+      "id": "changes-by-event-type",
+      "name": "Changes by Event Type",
+      "description": "File changes grouped by event type (add, change, unlink)",
+      "type": "counter",
+      "sources": [
+        {
+          "storyboard": "filetree-sync",
+          "workflow": "cache-rebuild-performance",
+          "event": "filetree.file.changed"
+        }
+      ],
+      "query": {
+        "derivation": "count",
+        "groupBy": ["file.event"],
+        "timeGroup": "hour"
+      },
+      "display": {
+        "component": "StackedBarChart",
+        "size": "large"
+      },
+      "_mockData": {
+        "series": [
+          { "date": "2026-04-02T08:00", "add": 12, "change": 28, "unlink": 5 },
+          { "date": "2026-04-02T09:00", "add": 18, "change": 42, "unlink": 7 },
+          { "date": "2026-04-02T10:00", "add": 8, "change": 38, "unlink": 6 },
+          { "date": "2026-04-02T11:00", "add": 22, "change": 56, "unlink": 11 },
+          { "date": "2026-04-02T12:00", "add": 15, "change": 62, "unlink": 12 }
+        ]
+      }
+    },
+    {
+      "id": "rebuild-latency-trend",
+      "name": "Rebuild Latency Trend",
+      "description": "Cache rebuild duration over time",
+      "type": "histogram",
+      "unit": "ms",
+      "sources": [
+        {
+          "storyboard": "filetree-sync",
+          "workflow": "cache-rebuild-performance",
+          "event": "filetree.cache.rebuild"
+        }
+      ],
+      "query": {
+        "derivation": "avg",
+        "timeGroup": "hour",
+        "window": "24h"
+      },
+      "display": {
+        "component": "LineChart",
+        "size": "large"
+      },
+      "_mockData": {
+        "series": [
+          { "date": "2026-04-01T12:00", "value": 125 },
+          { "date": "2026-04-01T14:00", "value": 142 },
+          { "date": "2026-04-01T16:00", "value": 138 },
+          { "date": "2026-04-01T18:00", "value": 156 },
+          { "date": "2026-04-01T20:00", "value": 131 },
+          { "date": "2026-04-01T22:00", "value": 118 },
+          { "date": "2026-04-02T00:00", "value": 105 },
+          { "date": "2026-04-02T02:00", "value": 98 },
+          { "date": "2026-04-02T04:00", "value": 92 },
+          { "date": "2026-04-02T06:00", "value": 108 },
+          { "date": "2026-04-02T08:00", "value": 128 },
+          { "date": "2026-04-02T10:00", "value": 135 },
+          { "date": "2026-04-02T12:00", "value": 142 }
+        ]
+      }
+    }
+  ],
+
+  "layout": {
+    "columns": 12,
+    "rows": [
+      {
+        "title": "Overview",
+        "panels": [
+          { "id": "file-change-count", "span": 4, "spanMobile": 12 },
+          { "id": "cache-rebuild-count", "span": 4, "spanMobile": 12 },
+          { "id": "ui-render-count", "span": 4, "spanMobile": 12 }
+        ]
+      },
+      {
+        "title": "Performance",
+        "panels": [
+          { "id": "cache-rebuild-p95", "span": 4, "spanMobile": 12 },
+          { "id": "ui-render-p95", "span": 4, "spanMobile": 12 },
+          { "id": "avg-debounce-batch", "span": 4, "spanMobile": 12 }
+        ]
+      },
+      {
+        "title": "Trends",
+        "panels": [
+          { "id": "changes-by-event-type", "span": 6, "spanMobile": 12, "minHeight": 280 },
+          { "id": "rebuild-latency-trend", "span": 6, "spanMobile": 12, "minHeight": 280 }
+        ]
+      }
+    ]
+  }
+}
