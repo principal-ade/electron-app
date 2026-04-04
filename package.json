@@ -1,6 +1,6 @@
 {
   "name": "principal-ade",
-  "version": "0.0.545",
+  "version": "0.0.546",
   "description": "Principal ADE  - The future of Agentic Development Environment",
   "type": "module",
   "keywords": [
@@ -171,7 +171,7 @@
     "@excalidraw/excalidraw": "^0.18.0",
     "@excalidraw/math": "^0.18.0-f0063e113",
     "@industry-theme/agent-driven-ui-panels": "^0.2.0",
-    "@industry-theme/agent-panels": "^0.3.0",
+    "@industry-theme/agent-panels": "^0.3.1",
     "@industry-theme/alexandria-docs-panel": "^0.5.2",
     "@industry-theme/alexandria-panels": "^0.3.3",
     "@industry-theme/backlogmd-kanban-panel": "^1.2.0",
@@ -182,9 +182,9 @@
     "@industry-theme/github-panels": "^0.4.5",
     "@industry-theme/localhost-panels": "^0.2.4",
     "@industry-theme/markdown-panels": "^0.3.0",
-    "@industry-theme/principal-view-panels": "^0.12.93",
+    "@industry-theme/principal-view-panels": "^0.12.94",
     "@industry-theme/repository-composition-panels": "^0.7.79",
-    "@industry-theme/xterm-terminal-panel": "^0.5.28",
+    "@industry-theme/xterm-terminal-panel": "^0.5.29",
     "@modelcontextprotocol/sdk": "1.11.4",
     "@monaco-editor/react": "^4.7.0",
     "@octokit/rest": "^22.0.1",
