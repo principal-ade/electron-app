@@ -18,9 +18,15 @@ import {
   Server,
   Clock,
   Cpu,
+  Wrench,
+  Play,
+  RefreshCw,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react';
 import { RepositoryMonitoringService } from '../../../main-process-api/RepositoryMonitoringService';
 import { OtelCollectorService } from '../../../main-process-api/OtelCollectorService';
+import { CLIBridgeService, type CLIBridgeStatus, type CLIBridgeTestResult } from '../../../main-process-api/CLIBridgeService';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { TraceViewer } from './TraceViewer';
@@ -65,7 +71,13 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
   const [otelStatus, setOtelStatus] = useState<OtelCollectorStatus | null>(null);
   const [otelLoading, setOtelLoading] = useState(true);
   const [isSendingTestTrace, setIsSendingTestTrace] = useState(false);
-  const [activeTab, setActiveTab] = useState<'repository' | 'otel' | 'terminals'>('repository');
+  const [activeTab, setActiveTab] = useState<'repository' | 'otel' | 'terminals' | 'clibridge'>('repository');
+  // CLI Bridge state
+  const [cliBridgeStatus, setCliBridgeStatus] = useState<CLIBridgeStatus | null>(null);
+  const [cliBridgeLoading, setCliBridgeLoading] = useState(true);
+  const [isTestingWorker, setIsTestingWorker] = useState(false);
+  const [isRestartingWorker, setIsRestartingWorker] = useState(false);
+  const [lastTestResult, setLastTestResult] = useState<CLIBridgeTestResult | null>(null);
   const [terminalActivities, setTerminalActivities] = useState<TerminalActivityState[]>([]);
   const [allTerminalSessions, setAllTerminalSessions] = useState<TerminalSessionInfo[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(true);
@@ -158,6 +170,41 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
       }
     };
   }, []);
+
+  // Poll CLI Bridge status when clibridge tab is active
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+
+    const fetchCliBridgeStatus = async () => {
+      try {
+        const status = await CLIBridgeService.getStatus();
+        setCliBridgeStatus(status);
+        setCliBridgeLoading(false);
+      } catch (error) {
+        console.error('Failed to fetch CLI Bridge status:', error);
+        setCliBridgeStatus({
+          initialized: false,
+          workers: [],
+          pendingCalls: 0,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        setCliBridgeLoading(false);
+      }
+    };
+
+    // Initial fetch
+    if (activeTab === 'clibridge') {
+      fetchCliBridgeStatus();
+      // Poll every 2 seconds when tab is active
+      interval = setInterval(fetchCliBridgeStatus, 2000);
+    }
+
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [activeTab]);
 
   // Listen for git status changes from the monitoring server
   useEffect(() => {
@@ -708,6 +755,27 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                     {terminalActivities?.filter(a => a.isWorking).length ?? 0}
                   </span>
                 )}
+              </button>
+              <button
+                onClick={() => setActiveTab('clibridge')}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  borderRadius: '6px',
+                  border: `1px solid ${activeTab === 'clibridge' ? theme.colors.primary : theme.colors.border}`,
+                  backgroundColor: activeTab === 'clibridge' ? `${theme.colors.primary}15` : 'transparent',
+                  color: activeTab === 'clibridge' ? theme.colors.primary : theme.colors.text,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  fontFamily: theme.fonts.body,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <Wrench size={14} />
+                CLI Bridge
               </button>
             </div>
           </div>
@@ -1959,6 +2027,446 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                 )}
               </div>
             )}
+          </section>
+        )}
+
+        {/* CLI Bridge Content */}
+        {activeTab === 'clibridge' && (
+          <section style={{ marginBottom: '32px' }}>
+            <h3
+              style={{
+                fontSize: '14px',
+                fontWeight: 600,
+                color: theme.colors.textSecondary,
+                marginBottom: '16px',
+                fontFamily: theme.fonts.heading,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+              }}
+            >
+              CLI BRIDGE DIAGNOSTICS
+            </h3>
+
+            {/* Status Card */}
+            <div
+              style={{
+                backgroundColor: theme.colors.backgroundSecondary,
+                borderRadius: '12px',
+                padding: '20px',
+                border: `1px solid ${theme.colors.border}`,
+                marginBottom: '16px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    backgroundColor: cliBridgeStatus?.initialized
+                      ? `${theme.colors.success}15`
+                      : cliBridgeStatus?.workers.some(w => w.isRunning)
+                        ? `${theme.colors.warning}15`
+                        : `${theme.colors.error}15`,
+                  }}
+                >
+                  <Wrench
+                    size={22}
+                    style={{
+                      color: cliBridgeStatus?.initialized
+                        ? theme.colors.success
+                        : cliBridgeStatus?.workers.some(w => w.isRunning)
+                          ? theme.colors.warning
+                          : theme.colors.error,
+                    }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <h3
+                    style={{
+                      fontSize: '16px',
+                      fontWeight: 600,
+                      color: theme.colors.text,
+                      margin: 0,
+                      fontFamily: theme.fonts.heading,
+                    }}
+                  >
+                    CLI Bridge Worker
+                  </h3>
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      color: cliBridgeStatus?.initialized
+                        ? theme.colors.success
+                        : cliBridgeStatus?.workers.some(w => w.isRunning)
+                          ? theme.colors.warning
+                          : theme.colors.error,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: '6px',
+                        height: '6px',
+                        borderRadius: '50%',
+                        backgroundColor: cliBridgeStatus?.initialized
+                          ? theme.colors.success
+                          : cliBridgeStatus?.workers.some(w => w.isRunning)
+                            ? theme.colors.warning
+                            : theme.colors.error,
+                      }}
+                    />
+                    {cliBridgeLoading
+                      ? 'Loading...'
+                      : cliBridgeStatus?.initialized
+                        ? 'Initialized'
+                        : cliBridgeStatus?.workers.some(w => w.isRunning)
+                          ? 'Worker Running (init timed out)'
+                          : 'Not Initialized'}
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {/* Initialize Button */}
+                  {!cliBridgeStatus?.initialized && (
+                    <button
+                      onClick={async () => {
+                        setCliBridgeLoading(true);
+                        try {
+                          await CLIBridgeService.initialize();
+                          const status = await CLIBridgeService.getStatus();
+                          setCliBridgeStatus(status);
+                        } catch (error) {
+                          console.error('Failed to initialize CLI Bridge:', error);
+                        } finally {
+                          setCliBridgeLoading(false);
+                        }
+                      }}
+                      disabled={cliBridgeLoading}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '8px 16px',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        borderRadius: '8px',
+                        border: 'none',
+                        cursor: cliBridgeLoading ? 'not-allowed' : 'pointer',
+                        backgroundColor: theme.colors.success,
+                        color: 'white',
+                        transition: 'all 0.2s ease',
+                        opacity: cliBridgeLoading ? 0.6 : 1,
+                      }}
+                    >
+                      {cliBridgeLoading ? (
+                        <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                      ) : (
+                        <Play size={14} />
+                      )}
+                      Initialize
+                    </button>
+                  )}
+
+                  {/* Test Worker Button */}
+                  <button
+                    onClick={async () => {
+                      setIsTestingWorker(true);
+                      setLastTestResult(null);
+                      try {
+                        const result = await CLIBridgeService.testWorker();
+                        setLastTestResult(result);
+                        // Refresh status after test
+                        const status = await CLIBridgeService.getStatus();
+                        setCliBridgeStatus(status);
+                      } catch (error) {
+                        setLastTestResult({
+                          success: false,
+                          duration: 0,
+                          error: error instanceof Error ? error.message : String(error),
+                        });
+                      } finally {
+                        setIsTestingWorker(false);
+                      }
+                    }}
+                    disabled={isTestingWorker}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 16px',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      borderRadius: '8px',
+                      border: `1px solid ${theme.colors.primary}`,
+                      cursor: isTestingWorker ? 'not-allowed' : 'pointer',
+                      backgroundColor: `${theme.colors.primary}15`,
+                      color: theme.colors.primary,
+                      transition: 'all 0.2s ease',
+                      opacity: isTestingWorker ? 0.6 : 1,
+                    }}
+                  >
+                    {isTestingWorker ? (
+                      <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                    ) : (
+                      <Play size={14} />
+                    )}
+                    Test Worker
+                  </button>
+
+                  {/* Restart Worker Button */}
+                  <button
+                    onClick={async () => {
+                      setIsRestartingWorker(true);
+                      try {
+                        await CLIBridgeService.restartWorker();
+                        const status = await CLIBridgeService.getStatus();
+                        setCliBridgeStatus(status);
+                      } catch (error) {
+                        console.error('Failed to restart worker:', error);
+                      } finally {
+                        setIsRestartingWorker(false);
+                      }
+                    }}
+                    disabled={isRestartingWorker}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 16px',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      borderRadius: '8px',
+                      border: `1px solid ${theme.colors.warning}`,
+                      cursor: isRestartingWorker ? 'not-allowed' : 'pointer',
+                      backgroundColor: `${theme.colors.warning}15`,
+                      color: theme.colors.warning,
+                      transition: 'all 0.2s ease',
+                      opacity: isRestartingWorker ? 0.6 : 1,
+                    }}
+                  >
+                    {isRestartingWorker ? (
+                      <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                    ) : (
+                      <RefreshCw size={14} />
+                    )}
+                    Restart Worker
+                  </button>
+                </div>
+              </div>
+
+              {/* Worker Details */}
+              {cliBridgeStatus && cliBridgeStatus.workers.length > 0 && (
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                    gap: '16px',
+                    marginTop: '16px',
+                    paddingTop: '16px',
+                    borderTop: `1px solid ${theme.colors.border}`,
+                  }}
+                >
+                  {cliBridgeStatus.workers.map((worker) => (
+                    <div key={worker.name}>
+                      <div
+                        style={{
+                          fontSize: '11px',
+                          color: theme.colors.textSecondary,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          marginBottom: '4px',
+                        }}
+                      >
+                        {worker.name} Worker
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span
+                          style={{
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            backgroundColor: worker.isRunning
+                              ? theme.colors.success
+                              : theme.colors.error,
+                          }}
+                        />
+                        <span
+                          style={{
+                            fontSize: '14px',
+                            fontWeight: 500,
+                            color: theme.colors.text,
+                          }}
+                        >
+                          {worker.isRunning ? 'Running' : 'Stopped'}
+                        </span>
+                      </div>
+                      {worker.pid && (
+                        <div
+                          style={{
+                            fontSize: '11px',
+                            color: theme.colors.textSecondary,
+                            fontFamily: theme.fonts.monospace,
+                            marginTop: '4px',
+                          }}
+                        >
+                          PID: {worker.pid}
+                        </div>
+                      )}
+                      {worker.startedAt && (
+                        <div
+                          style={{
+                            fontSize: '11px',
+                            color: theme.colors.textSecondary,
+                            marginTop: '2px',
+                          }}
+                        >
+                          Uptime: {Math.floor((Date.now() - worker.startedAt) / 1000)}s
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {/* Pending Calls */}
+                  <div>
+                    <div
+                      style={{
+                        fontSize: '11px',
+                        color: theme.colors.textSecondary,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        marginBottom: '4px',
+                      }}
+                    >
+                      Pending Calls
+                    </div>
+                    <div
+                      style={{
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        color: theme.colors.text,
+                      }}
+                    >
+                      {cliBridgeStatus.pendingCalls}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Error Display */}
+              {cliBridgeStatus?.error && (
+                <div
+                  style={{
+                    marginTop: '16px',
+                    padding: '12px 16px',
+                    backgroundColor: `${theme.colors.error}08`,
+                    borderRadius: '8px',
+                    border: `1px solid ${theme.colors.error}20`,
+                    fontSize: '13px',
+                    color: theme.colors.error,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <XCircle size={16} />
+                  {cliBridgeStatus.error}
+                </div>
+              )}
+            </div>
+
+            {/* Test Result Card */}
+            {lastTestResult && (
+              <div
+                style={{
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  borderRadius: '12px',
+                  padding: '20px',
+                  border: `1px solid ${lastTestResult.success ? theme.colors.success : theme.colors.error}`,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                  {lastTestResult.success ? (
+                    <CheckCircle size={20} style={{ color: theme.colors.success }} />
+                  ) : (
+                    <XCircle size={20} style={{ color: theme.colors.error }} />
+                  )}
+                  <h4
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: lastTestResult.success ? theme.colors.success : theme.colors.error,
+                      margin: 0,
+                    }}
+                  >
+                    Test {lastTestResult.success ? 'Passed' : 'Failed'}
+                  </h4>
+                  <span
+                    style={{
+                      fontSize: '12px',
+                      color: theme.colors.textSecondary,
+                      fontFamily: theme.fonts.monospace,
+                    }}
+                  >
+                    {lastTestResult.duration}ms
+                  </span>
+                </div>
+
+                {lastTestResult.output && (
+                  <div
+                    style={{
+                      padding: '12px',
+                      backgroundColor: theme.colors.background,
+                      borderRadius: '6px',
+                      fontFamily: theme.fonts.monospace,
+                      fontSize: '12px',
+                      color: theme.colors.text,
+                    }}
+                  >
+                    Output: {lastTestResult.output}
+                  </div>
+                )}
+
+                {lastTestResult.error && (
+                  <div
+                    style={{
+                      padding: '12px',
+                      backgroundColor: `${theme.colors.error}08`,
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      color: theme.colors.error,
+                    }}
+                  >
+                    Error: {lastTestResult.error}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Info Box */}
+            <div
+              style={{
+                marginTop: '16px',
+                padding: '16px',
+                backgroundColor: `${theme.colors.info}08`,
+                borderRadius: '8px',
+                border: `1px solid ${theme.colors.info}20`,
+                fontSize: '13px',
+                color: theme.colors.textSecondary,
+              }}
+            >
+              <strong style={{ color: theme.colors.text }}>About CLI Bridge:</strong>
+              <p style={{ margin: '8px 0 0 0' }}>
+                The CLI Bridge runs git commands and other CLI operations in a separate worker process.
+                If you're seeing "Worker universal failed to start within timeout" errors, use this panel to diagnose and restart the worker.
+              </p>
+            </div>
           </section>
         )}
 

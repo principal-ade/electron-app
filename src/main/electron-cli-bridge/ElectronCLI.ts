@@ -258,6 +258,41 @@ export class ElectronCLI {
     await this.bridge.shutdown();
     this.initPromise = null;
   }
+
+  /**
+   * Get status of CLIBridge and its workers (for diagnostics)
+   */
+  getStatus(): {
+    initialized: boolean;
+    workers: Array<{
+      name: string;
+      pid: number | null;
+      isRunning: boolean;
+      startedAt: number | null;
+    }>;
+    pendingCalls: number;
+  } {
+    return this.bridge.getStatus();
+  }
+
+  /**
+   * Test the worker by executing a simple command (for diagnostics)
+   */
+  async testWorker(): Promise<{
+    success: boolean;
+    duration: number;
+    output?: string;
+    error?: string;
+  }> {
+    return this.bridge.testWorker();
+  }
+
+  /**
+   * Restart the universal worker (for diagnostics)
+   */
+  async restartWorker(name: string = 'universal'): Promise<{ success: boolean; error?: string }> {
+    return this.bridge.restartWorker(name);
+  }
 }
 
 // Export a singleton instance for convenience

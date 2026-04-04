@@ -1,0 +1,24 @@
+{
+  "version": "1.0.0",
+  "name": "Diagnostics",
+  "description": "User-initiated diagnostics from System Monitor panel",
+  "canvas": ".principal-views/cli-bridge/cli-bridge.otel.canvas",
+  "spanPattern": "cli_bridge.diagnostics",
+  "scenarios": [
+    {
+      "id": "diagnostics-restart",
+      "description": "User restarted the worker from System Monitor",
+      "priority": 1,
+      "template": {
+        "introduction": "**CLI Bridge Diagnostics**\n\nUser performed diagnostic action from System Monitor panel",
+        "events": {
+          "cli_bridge.diagnostics.action": "[1] Diagnostic action: {{action}}, result={{result.success}}",
+          "cli_bridge.worker.exited": "[2] Worker exited: name={{worker.name}}, code={{exit_code}}, during_startup={{during_startup}}",
+          "cli_bridge.worker.restarted": "[3] Worker restarted: name={{worker.name}}, reason={{restart.reason}}"
+        },
+        "summary": "**Diagnostics Complete:**\n- Action: {{action}}\n- Success: {{result.success}}"
+      },
+      "filterDefault": true
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "version": "1.0.0",
+  "name": "Command Execution",
+  "description": "CLI command execution flow through the worker",
+  "canvas": ".principal-views/cli-bridge/cli-bridge.otel.canvas",
+  "spanPattern": "cli_bridge.execute",
+  "scenarios": [
+    {
+      "id": "command-execution-success",
+      "description": "Successful command execution",
+      "priority": 1,
+      "template": {
+        "introduction": "**Executing CLI Command**\n\nCommand sent to universal worker for execution",
+        "events": {
+          "cli_bridge.execute.started": "[1] Execute started: command={{command}}, call_id={{call.id}}, args={{args.count}}, cwd={{cwd}}",
+          "cli_bridge.worker.execute": "[2] Worker executing: command={{command}}, call_id={{call.id}}",
+          "cli_bridge.execute.completed": "[3] Execute completed: call_id={{call.id}}, success={{success}}, exit_code={{exit_code}}, duration={{duration_ms}}ms"
+        },
+        "summary": "**Command Completed:**\n- Command: `{{command}}`\n- Success: {{success}}\n- Duration: {{duration_ms}}ms"
+      },
+      "filterDefault": true
+    }
+  ]
+}

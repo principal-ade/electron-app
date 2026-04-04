@@ -507,10 +507,10 @@ export function setupQuickOpenHandlers(): void {
       try {
         // Get user preferences for base directory
         const {
-          UserPreferencesService,
-        } = require('../stores/UserPreferencesService');
-        const prefsService = UserPreferencesService.getInstance();
-        const preferences = await prefsService.getPreferences();
+          UserPreferencesHandler,
+        } = require('../stores/userPreferencesHandler');
+        const prefsService = UserPreferencesHandler.getInstance();
+        const preferences = await prefsService.getUserPreferences();
         const baseDir = preferences.baseDefaultDirectory;
 
         if (!baseDir) {

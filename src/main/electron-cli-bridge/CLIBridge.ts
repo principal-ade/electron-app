@@ -20,6 +20,7 @@ import { terminalEnvironment } from '../terminalEnvironment';
 export class CLIBridge extends EventEmitter {
   private workers: Map<string, UtilityProcess> = new Map();
   private pendingCalls: Map<string, PendingCall> = new Map();
+  private workerStartTimes: Map<string, number> = new Map();
   private initialized = false;
   private options: CLIBridgeOptions;
   private callCounter = 0;
@@ -142,7 +143,7 @@ export class CLIBridge extends EventEmitter {
 
       // Set up event handlers
       worker.on('spawn', () => {
-        this.log('info', `Worker ${name} spawned successfully`);
+        this.log('info', `Worker ${name} spawned (pid: ${worker.pid})`);
       });
 
       worker.on('message', (msg: WorkerResponse | { type: 'ready' }) => {
@@ -153,20 +154,23 @@ export class CLIBridge extends EventEmitter {
 
       // Handle stdout/stderr for debugging
       let stderrBuffer = '';
+
       if (worker.stdout) {
         worker.stdout.on('data', (data: Buffer) => {
-          const output = data.toString();
-          this.log('debug', `[${name} stdout] ${output}`);
-          // Check for console.log messages from worker
-          // Removed: worker output logging
+          const output = data.toString().trim();
+          if (output) {
+            this.log('debug', `[${name} stdout] ${output}`);
+          }
         });
       }
 
       if (worker.stderr) {
         worker.stderr.on('data', (data: Buffer) => {
-          const output = data.toString();
-          stderrBuffer += output;
-          this.log('error', `[${name} stderr] ${output}`);
+          const output = data.toString().trim();
+          if (output) {
+            stderrBuffer += output;
+            this.log('error', `[${name} stderr] ${output}`);
+          }
         });
       }
 
@@ -182,6 +186,7 @@ export class CLIBridge extends EventEmitter {
       });
 
       this.workers.set(name, worker);
+      this.workerStartTimes.set(name, Date.now());
 
       // Wait for ready signal
       await this.waitForWorkerReady(name);
@@ -196,19 +201,46 @@ export class CLIBridge extends EventEmitter {
    */
   private waitForWorkerReady(name: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error(`Worker ${name} failed to start within timeout`));
-      }, 5000);
+      let settled = false;
 
-      const handler = (workerName: string, msg: WorkerResponse | { type: 'ready' }) => {
-        if (workerName === name && msg.type === 'ready') {
+      const cleanup = () => {
+        if (!settled) {
+          settled = true;
           clearTimeout(timeout);
-          this.removeListener('worker-message', handler);
+          this.removeListener('worker-message', messageHandler);
+          this.removeListener('worker-exit', exitHandler);
+        }
+      };
+
+      // Safety net timeout - only for truly hung processes (30s)
+      const timeout = setTimeout(() => {
+        if (!settled) {
+          cleanup();
+          this.log('error', `Worker ${name} failed to send ready signal within 30 seconds`);
+          reject(new Error(`Worker ${name} failed to start within timeout (30s safety limit)`));
+        }
+      }, 30000);
+
+      // Listen for ready message
+      const messageHandler = (workerName: string, msg: WorkerResponse | { type: 'ready' }) => {
+        if (workerName === name && msg.type === 'ready') {
+          cleanup();
+          this.log('info', `Worker ${name} ready signal received`);
           resolve();
         }
       };
 
-      this.on('worker-message', handler);
+      // Listen for worker crash/exit during startup
+      const exitHandler = (workerName: string, code: number) => {
+        if (workerName === name && !settled) {
+          cleanup();
+          this.log('error', `Worker ${name} exited with code ${code} during startup`);
+          reject(new Error(`Worker ${name} crashed during startup (exit code: ${code})`));
+        }
+      };
+
+      this.on('worker-message', messageHandler);
+      this.on('worker-exit', exitHandler);
     });
   }
 
@@ -277,7 +309,9 @@ export class CLIBridge extends EventEmitter {
    */
   private handleWorkerExit(name: string, code: number): void {
     this.log('warn', `Worker ${name} exited with code ${code}`);
+    this.emit('worker-exit', name, code);
     this.workers.delete(name);
+    this.workerStartTimes.delete(name);
 
     // Reject all pending calls for this worker
     for (const [id, call] of this.pendingCalls.entries()) {
@@ -392,6 +426,147 @@ export class CLIBridge extends EventEmitter {
     this.pendingCalls.clear();
 
     this.log('info', 'CLIBridge shutdown complete');
+  }
+
+  /**
+   * Get status of CLIBridge and its workers
+   */
+  getStatus(): {
+    initialized: boolean;
+    workers: Array<{
+      name: string;
+      pid: number | null;
+      isRunning: boolean;
+      startedAt: number | null;
+    }>;
+    pendingCalls: number;
+  } {
+    const workers: Array<{
+      name: string;
+      pid: number | null;
+      isRunning: boolean;
+      startedAt: number | null;
+    }> = [];
+
+    for (const [name, worker] of this.workers.entries()) {
+      workers.push({
+        name,
+        pid: worker.pid ?? null,
+        isRunning: worker.pid !== undefined && worker.pid !== null,
+        startedAt: this.workerStartTimes.get(name) ?? null,
+      });
+    }
+
+    return {
+      initialized: this.initialized,
+      workers,
+      pendingCalls: this.pendingCalls.size,
+    };
+  }
+
+  /**
+   * Restart the universal worker
+   */
+  async restartWorker(name: string = 'universal'): Promise<{ success: boolean; error?: string }> {
+    try {
+      this.log('info', `Restarting worker: ${name}`);
+
+      // Kill the existing worker if it exists
+      const existingWorker = this.workers.get(name);
+      if (existingWorker) {
+        existingWorker.kill();
+        this.workers.delete(name);
+        this.workerStartTimes.delete(name);
+      }
+
+      // Spawn a new worker
+      await this.spawnWorker(name, `${name}-worker.cjs`);
+
+      this.log('info', `Worker ${name} restarted successfully`);
+      return { success: true };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.log('error', `Failed to restart worker ${name}: ${errorMessage}`);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  /**
+   * Test the worker by executing a simple command
+   * Works even if initialization timed out, as long as worker is running
+   */
+  async testWorker(): Promise<{
+    success: boolean;
+    duration: number;
+    output?: string;
+    error?: string;
+  }> {
+    const startTime = Date.now();
+
+    try {
+      // Check if we have a running worker
+      const worker = this.workers.get('universal');
+      if (!worker || worker.pid === undefined) {
+        return {
+          success: false,
+          duration: Date.now() - startTime,
+          error: 'No worker process running',
+        };
+      }
+
+      // Bypass the initialized check - send command directly to worker
+      const id = this.generateCallId();
+
+      const result = await new Promise<ExecuteResult>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          this.pendingCalls.delete(id);
+          reject(new Error('Test command timed out after 5 seconds'));
+        }, 5000);
+
+        this.pendingCalls.set(id, {
+          resolve: (result: ExecuteResult) => {
+            clearTimeout(timeout);
+            resolve(result);
+          },
+          reject: (error: Error) => {
+            clearTimeout(timeout);
+            reject(error);
+          },
+          options: {},
+          startTime: Date.now(),
+        });
+
+        // Send test command to worker
+        worker.postMessage({
+          id,
+          type: 'execute' as const,
+          command: 'echo',
+          args: ['CLIBridge test'],
+          options: { timeout: 5000 },
+        });
+      });
+
+      const duration = Date.now() - startTime;
+
+      // If test succeeds, mark as initialized since worker is clearly functional
+      if (result.success) {
+        this.initialized = true;
+      }
+
+      return {
+        success: result.success,
+        duration,
+        output: result.stdout?.trim(),
+        error: result.stderr,
+      };
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      return {
+        success: false,
+        duration,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
   }
 
   /**

@@ -1,0 +1,565 @@
+{
+  "pv": {
+    "name": "CLI Bridge Worker",
+    "version": "1.0.0",
+    "description": "Worker initialization, command execution, and diagnostics for the CLI Bridge system",
+    "markdown": ".principal-views/cli-bridge/cli-bridge.md",
+    "scope": "principal-ade-main",
+    "nodeTypes": {
+      "main-process": {
+        "label": "Main Process",
+        "color": "#3B82F6"
+      },
+      "worker": {
+        "label": "Worker",
+        "color": "#8B5CF6"
+      },
+      "renderer": {
+        "label": "Renderer",
+        "color": "#10B981"
+      },
+      "consumer": {
+        "label": "Consumer",
+        "color": "#F59E0B"
+      }
+    },
+    "edgeTypes": {
+      "spawn": {
+        "label": "Spawn",
+        "style": "solid",
+        "color": "#3B82F6"
+      },
+      "ipc-message": {
+        "label": "IPC Message",
+        "style": "solid",
+        "color": "#8B5CF6"
+      },
+      "event": {
+        "label": "Event",
+        "style": "dashed",
+        "color": "#10B981"
+      },
+      "error": {
+        "label": "Error",
+        "style": "dashed",
+        "color": "#EF4444"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "x": 200,
+      "y": -100,
+      "width": 400,
+      "height": 50,
+      "color": "#64748B",
+      "text": "# CLI Bridge Worker\n**Initialization, Execution, and Diagnostics**"
+    },
+    {
+      "id": "cli-bridge-init",
+      "type": "otel-event",
+      "x": 0,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "label": "CLIBridge.initialize()",
+      "shape": "rectangle",
+      "event": {
+        "name": "cli_bridge.initialize.started",
+        "description": "CLI Bridge initialization started",
+        "attributes": {
+          "worker.name": {
+            "type": "string",
+            "required": true,
+            "description": "Name of worker being spawned (e.g., 'universal')"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/electron-cli-bridge/CLIBridge.ts"
+        ]
+      }
+    },
+    {
+      "id": "worker-spawn",
+      "type": "otel-event",
+      "x": 250,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "label": "Worker Spawned",
+      "shape": "rectangle",
+      "event": {
+        "name": "cli_bridge.worker.spawned",
+        "description": "utilityProcess.fork() completed, worker process started",
+        "attributes": {
+          "worker.name": {
+            "type": "string",
+            "required": true,
+            "description": "Name of the worker"
+          },
+          "worker.pid": {
+            "type": "number",
+            "required": true,
+            "description": "Process ID of the worker"
+          },
+          "worker.script": {
+            "type": "string",
+            "required": true,
+            "description": "Path to worker script"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/electron-cli-bridge/CLIBridge.ts"
+        ]
+      }
+    },
+    {
+      "id": "worker-ready",
+      "type": "otel-event",
+      "x": 500,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "label": "Worker Ready",
+      "shape": "rectangle",
+      "event": {
+        "name": "cli_bridge.worker.ready",
+        "description": "Worker sent ready signal, initialization complete",
+        "attributes": {
+          "worker.name": {
+            "type": "string",
+            "required": true,
+            "description": "Name of the worker"
+          },
+          "startup.duration_ms": {
+            "type": "number",
+            "required": true,
+            "description": "Time from spawn to ready in milliseconds"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/electron-cli-bridge/CLIBridge.ts"
+        ]
+      }
+    },
+    {
+      "id": "worker-internal-ready",
+      "type": "otel-event",
+      "x": 500,
+      "y": 180,
+      "width": 200,
+      "height": 100,
+      "label": "Worker Internal Ready",
+      "shape": "rectangle",
+      "event": {
+        "name": "cli_bridge.worker.internal_ready",
+        "description": "Worker process initialized and sent ready message",
+        "attributes": {
+          "parentPort.available": {
+            "type": "boolean",
+            "required": true,
+            "description": "Whether parentPort was available for IPC"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-worker",
+        "files": [
+          "src/main/electron-cli-bridge/workers/universal-worker.cjs"
+        ]
+      }
+    },
+    {
+      "id": "execute-request",
+      "type": "otel-event",
+      "x": 0,
+      "y": 350,
+      "width": 200,
+      "height": 100,
+      "label": "Execute Request",
+      "shape": "rectangle",
+      "event": {
+        "name": "cli_bridge.execute.started",
+        "description": "Command execution requested",
+        "attributes": {
+          "call.id": {
+            "type": "string",
+            "required": true,
+            "description": "Unique ID for this command call"
+          },
+          "command": {
+            "type": "string",
+            "required": true,
+            "description": "Command being executed"
+          },
+          "args.count": {
+            "type": "number",
+            "required": false,
+            "description": "Number of arguments"
+          },
+          "cwd": {
+            "type": "string",
+            "required": false,
+            "description": "Working directory"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/electron-cli-bridge/CLIBridge.ts"
+        ]
+      }
+    },
+    {
+      "id": "worker-execute",
+      "type": "otel-event",
+      "x": 250,
+      "y": 350,
+      "width": 200,
+      "height": 100,
+      "label": "Worker Execute",
+      "shape": "rectangle",
+      "event": {
+        "name": "cli_bridge.worker.execute",
+        "description": "Worker received and processing command",
+        "attributes": {
+          "call.id": {
+            "type": "string",
+            "required": true,
+            "description": "Command call ID"
+          },
+          "command": {
+            "type": "string",
+            "required": true,
+            "description": "Command being executed"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-worker",
+        "files": [
+          "src/main/electron-cli-bridge/workers/universal-worker.cjs"
+        ]
+      }
+    },
+    {
+      "id": "execute-complete",
+      "type": "otel-event",
+      "x": 500,
+      "y": 350,
+      "width": 200,
+      "height": 100,
+      "label": "Execute Complete",
+      "shape": "rectangle",
+      "event": {
+        "name": "cli_bridge.execute.completed",
+        "description": "Command execution completed",
+        "attributes": {
+          "call.id": {
+            "type": "string",
+            "required": true,
+            "description": "Command call ID"
+          },
+          "success": {
+            "type": "boolean",
+            "required": true,
+            "description": "Whether command succeeded"
+          },
+          "exit_code": {
+            "type": "number",
+            "required": true,
+            "description": "Process exit code"
+          },
+          "duration_ms": {
+            "type": "number",
+            "required": true,
+            "description": "Execution duration in milliseconds"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/electron-cli-bridge/CLIBridge.ts"
+        ]
+      }
+    },
+    {
+      "id": "worker-exit",
+      "type": "otel-event",
+      "x": 250,
+      "y": 500,
+      "width": 200,
+      "height": 100,
+      "label": "Worker Exit",
+      "shape": "rectangle",
+      "color": "#EF4444",
+      "event": {
+        "name": "cli_bridge.worker.exited",
+        "description": "Worker process exited (crash or normal)",
+        "attributes": {
+          "worker.name": {
+            "type": "string",
+            "required": true,
+            "description": "Name of the worker"
+          },
+          "exit_code": {
+            "type": "number",
+            "required": true,
+            "description": "Exit code of the worker process"
+          },
+          "during_startup": {
+            "type": "boolean",
+            "required": false,
+            "description": "Whether exit occurred during initialization"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/electron-cli-bridge/CLIBridge.ts"
+        ]
+      }
+    },
+    {
+      "id": "worker-restart",
+      "type": "otel-event",
+      "x": 500,
+      "y": 500,
+      "width": 200,
+      "height": 100,
+      "label": "Worker Restart",
+      "shape": "rectangle",
+      "color": "#F59E0B",
+      "event": {
+        "name": "cli_bridge.worker.restarted",
+        "description": "Worker was restarted after exit or manual restart",
+        "attributes": {
+          "worker.name": {
+            "type": "string",
+            "required": true,
+            "description": "Name of the worker"
+          },
+          "restart.reason": {
+            "type": "string",
+            "required": true,
+            "description": "Reason for restart (crash, manual, etc.)"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/electron-cli-bridge/CLIBridge.ts"
+        ]
+      }
+    },
+    {
+      "id": "consumers",
+      "type": "text",
+      "x": -250,
+      "y": 350,
+      "width": 200,
+      "height": 150,
+      "color": "#F59E0B",
+      "text": "**Consumers**\n\n- gitClientFactory\n- FastForwardService\n- QualityLensService\n- GitLensAdapter\n- githubHandlers\n- Quick Open (clone)"
+    },
+    {
+      "id": "diagnostics-panel",
+      "type": "otel-event",
+      "x": -250,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "label": "System Monitor Panel",
+      "shape": "rectangle",
+      "event": {
+        "name": "cli_bridge.diagnostics.action",
+        "description": "User performed diagnostic action from System Monitor",
+        "attributes": {
+          "action": {
+            "type": "string",
+            "required": true,
+            "description": "Diagnostic action: initialize, test, restart"
+          },
+          "result.success": {
+            "type": "boolean",
+            "required": true,
+            "description": "Whether action succeeded"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/principal-window/views/SystemMonitor/SystemMonitor.tsx"
+        ]
+      }
+    },
+    {
+      "id": "success-validation",
+      "type": "text",
+      "x": 750,
+      "y": 50,
+      "width": 250,
+      "height": 180,
+      "color": "#D4EDDA",
+      "text": "**Success Validation**\n\nInitialization success:\n- cli_bridge.worker.spawned exists\n- cli_bridge.worker.ready exists\n- startup.duration_ms < 30000\n\nExecution success:\n- cli_bridge.execute.completed\n- success = true\n- exit_code = 0"
+    },
+    {
+      "id": "error-telemetry",
+      "type": "text",
+      "x": 750,
+      "y": 260,
+      "width": 250,
+      "height": 200,
+      "color": "#F8D7DA",
+      "text": "**Error Telemetry**\n\nInitialization failure:\n- cli_bridge.worker.exited with during_startup=true\n- No cli_bridge.worker.ready within 30s\n\nExecution failure:\n- cli_bridge.execute.completed with success=false\n- exit_code != 0\n\nWorker crash:\n- cli_bridge.worker.exited unexpectedly"
+    },
+    {
+      "id": "correlation",
+      "type": "text",
+      "x": 750,
+      "y": 490,
+      "width": 250,
+      "height": 120,
+      "color": "#E6F3FF",
+      "text": "**Correlation**\n\nJoin key: call.id\n\nLinks execute.started → worker.execute → execute.completed\n\nWorker: worker.name\nLinks spawn → ready → exit"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "fromNode": "cli-bridge-init",
+      "toNode": "worker-spawn",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "utilityProcess.fork()",
+      "pv": {
+        "edgeType": "spawn"
+      }
+    },
+    {
+      "id": "e2",
+      "fromNode": "worker-spawn",
+      "toNode": "worker-ready",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "wait for ready",
+      "pv": {
+        "edgeType": "event"
+      }
+    },
+    {
+      "id": "e3",
+      "fromNode": "worker-internal-ready",
+      "toNode": "worker-ready",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "label": "{ type: 'ready' }",
+      "pv": {
+        "edgeType": "ipc-message"
+      }
+    },
+    {
+      "id": "e4",
+      "fromNode": "execute-request",
+      "toNode": "worker-execute",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "postMessage",
+      "pv": {
+        "edgeType": "ipc-message"
+      }
+    },
+    {
+      "id": "e5",
+      "fromNode": "worker-execute",
+      "toNode": "execute-complete",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "{ type: 'complete' }",
+      "pv": {
+        "edgeType": "ipc-message"
+      }
+    },
+    {
+      "id": "e6",
+      "fromNode": "consumers",
+      "toNode": "execute-request",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "execute()",
+      "pv": {
+        "edgeType": "spawn"
+      }
+    },
+    {
+      "id": "e7",
+      "fromNode": "worker-spawn",
+      "toNode": "worker-exit",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "crash during startup",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "e8",
+      "fromNode": "worker-exit",
+      "toNode": "worker-restart",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "auto-restart",
+      "pv": {
+        "edgeType": "event"
+      }
+    },
+    {
+      "id": "e9",
+      "fromNode": "diagnostics-panel",
+      "toNode": "cli-bridge-init",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "initialize()",
+      "pv": {
+        "edgeType": "spawn"
+      }
+    },
+    {
+      "id": "e10",
+      "fromNode": "diagnostics-panel",
+      "toNode": "worker-restart",
+      "fromSide": "bottom",
+      "toSide": "left",
+      "label": "restartWorker()",
+      "pv": {
+        "edgeType": "spawn"
+      }
+    }
+  ]
+}

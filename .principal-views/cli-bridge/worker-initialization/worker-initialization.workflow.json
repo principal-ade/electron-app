@@ -1,0 +1,40 @@
+{
+  "version": "1.0.0",
+  "name": "Worker Initialization",
+  "description": "CLI Bridge worker spawn and ready signal flow",
+  "canvas": ".principal-views/cli-bridge/cli-bridge.otel.canvas",
+  "spanPattern": "cli_bridge.initialize",
+  "scenarios": [
+    {
+      "id": "worker-init-success",
+      "description": "Successful worker initialization with ready signal received",
+      "priority": 1,
+      "template": {
+        "introduction": "**Initializing CLI Bridge Worker**\n\nSpawning universal worker process via utilityProcess.fork()",
+        "events": {
+          "cli_bridge.initialize.started": "[1] Initialize started: worker={{worker.name}}",
+          "cli_bridge.worker.spawned": "[2] Worker spawned: name={{worker.name}}, pid={{worker.pid}}, script={{worker.script}}",
+          "cli_bridge.worker.internal_ready": "[3] Worker internal ready: parentPort={{parentPort.available}}",
+          "cli_bridge.worker.ready": "[4] Worker ready: name={{worker.name}}, startup={{startup.duration_ms}}ms"
+        },
+        "summary": "**Worker Initialized:**\n- Name: `{{worker.name}}`\n- PID: {{worker.pid}}\n- Startup: {{startup.duration_ms}}ms"
+      },
+      "filterDefault": true
+    },
+    {
+      "id": "worker-init-crash",
+      "description": "Worker crashed during initialization",
+      "priority": 2,
+      "template": {
+        "introduction": "**CLI Bridge Worker Crash**\n\nWorker exited unexpectedly during startup",
+        "events": {
+          "cli_bridge.initialize.started": "[1] Initialize started: worker={{worker.name}}",
+          "cli_bridge.worker.spawned": "[2] Worker spawned: name={{worker.name}}, pid={{worker.pid}}, script={{worker.script}}",
+          "cli_bridge.worker.exited": "[3] Worker exited: name={{worker.name}}, code={{exit_code}}, during_startup={{during_startup}}"
+        },
+        "summary": "**Worker Crash:**\n- Name: `{{worker.name}}`\n- Exit code: {{exit_code}}"
+      },
+      "filterDefault": false
+    }
+  ]
+}

@@ -51,6 +51,7 @@ import {
 import { RepositoryRegistrationManager } from '@principal-ai/repository-monitoring-server';
 import { registerApiProxyHandlers } from './services/ApiProxyService';
 import { registerOtelCollectorHandlers } from './services/ipc/otelCollectorHandlers';
+import { registerCLIBridgeHandlers } from './services/ipc/cliBridgeHandlers';
 import { OtelCollectorService } from './services/OtelCollectorService';
 import { JWTService } from './services/JWTService';
 import { registerGitHubIpcHandlers } from './version-control-providers/githubHandlers';
@@ -192,6 +193,7 @@ const registerAllIpcHandlers = async () => {
   registerRepositoryMonitoringHandlers(); // Register repository monitoring handlers
   registerFileCityImageHandlers(); // Register File City image generation handlers
   registerOtelCollectorHandlers(); // Register OTEL collector handlers
+  registerCLIBridgeHandlers(); // Register CLI Bridge diagnostics handlers
   registerActIntegrationHandlers();
   registerSecretHandlers();
   await registerLinksHandlers();
