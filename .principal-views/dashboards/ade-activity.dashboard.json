@@ -13,8 +13,8 @@
       "type": "counter",
       "sources": [
         {
-          "storyboard": "get-file-tree",
-          "workflow": "get-file-tree",
+          "storyboard": "filetree-sync",
+          "workflow": "Cache Rebuild Performance",
           "event": "filetree.request.complete"
         }
       ],
@@ -34,8 +34,8 @@
       "type": "counter",
       "sources": [
         {
-          "storyboard": "get-file-tree",
-          "workflow": "get-file-tree",
+          "storyboard": "filetree-sync",
+          "workflow": "Cache Rebuild Performance",
           "event": "filetree.cache.hit"
         }
       ],
@@ -55,8 +55,8 @@
       "type": "counter",
       "sources": [
         {
-          "storyboard": "get-file-tree",
-          "workflow": "get-file-tree",
+          "storyboard": "filetree-sync",
+          "workflow": "Cache Rebuild Performance",
           "event": "filetree.build.complete"
         }
       ],
@@ -76,8 +76,8 @@
       "type": "counter",
       "sources": [
         {
-          "storyboard": "get-file-tree",
-          "workflow": "get-file-tree",
+          "storyboard": "filetree-sync",
+          "workflow": "Cache Rebuild Performance",
           "event": "filetree.build.error"
         }
       ],
@@ -98,8 +98,8 @@
       "unit": "ms",
       "sources": [
         {
-          "storyboard": "get-file-tree",
-          "workflow": "get-file-tree",
+          "storyboard": "filetree-sync",
+          "workflow": "Cache Rebuild Performance",
           "event": "filetree.build.complete"
         }
       ],
@@ -124,7 +124,7 @@
       "sources": [
         {
           "storyboard": "terminal-activity-tracking",
-          "workflow": "main-process-activity-update"
+          "workflow": "Main Process Activity Update"
         }
       ],
       "query": {
@@ -144,7 +144,7 @@
       "sources": [
         {
           "storyboard": "terminal-activity-tracking",
-          "workflow": "main-process-activity-update",
+          "workflow": "Main Process Activity Update",
           "event": "terminal.activity.agent_started"
         }
       ],
@@ -165,7 +165,7 @@
       "sources": [
         {
           "storyboard": "terminal-activity-tracking",
-          "workflow": "main-process-activity-update",
+          "workflow": "Main Process Activity Update",
           "event": "terminal.activity.agent_stopped"
         }
       ],

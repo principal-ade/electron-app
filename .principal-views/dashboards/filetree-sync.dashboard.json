@@ -14,7 +14,7 @@
       "sources": [
         {
           "storyboard": "filetree-sync",
-          "workflow": "cache-rebuild-performance",
+          "workflow": "Cache Rebuild Performance",
           "event": "filetree.file.changed"
         }
       ],
@@ -47,7 +47,7 @@
       "sources": [
         {
           "storyboard": "filetree-sync",
-          "workflow": "cache-rebuild-performance",
+          "workflow": "Cache Rebuild Performance",
           "event": "filetree.cache.rebuild"
         }
       ],
@@ -80,7 +80,7 @@
       "sources": [
         {
           "storyboard": "filetree-sync",
-          "workflow": "cache-rebuild-performance",
+          "workflow": "Cache Rebuild Performance",
           "event": "filetree.ui.rendered"
         }
       ],
@@ -114,7 +114,7 @@
       "sources": [
         {
           "storyboard": "filetree-sync",
-          "workflow": "cache-rebuild-performance",
+          "workflow": "Cache Rebuild Performance",
           "event": "filetree.cache.rebuild"
         }
       ],
@@ -145,7 +145,7 @@
       "sources": [
         {
           "storyboard": "filetree-sync",
-          "workflow": "cache-rebuild-performance",
+          "workflow": "Cache Rebuild Performance",
           "event": "filetree.ui.rendered"
         }
       ],
@@ -175,7 +175,7 @@
       "sources": [
         {
           "storyboard": "filetree-sync",
-          "workflow": "cache-rebuild-performance",
+          "workflow": "Cache Rebuild Performance",
           "event": "filetree.debounce.triggered"
         }
       ],
@@ -201,7 +201,7 @@
       "sources": [
         {
           "storyboard": "filetree-sync",
-          "workflow": "cache-rebuild-performance",
+          "workflow": "Cache Rebuild Performance",
           "event": "filetree.file.changed"
         }
       ],
@@ -233,7 +233,7 @@
       "sources": [
         {
           "storyboard": "filetree-sync",
-          "workflow": "cache-rebuild-performance",
+          "workflow": "Cache Rebuild Performance",
           "event": "filetree.cache.rebuild"
         }
       ],
