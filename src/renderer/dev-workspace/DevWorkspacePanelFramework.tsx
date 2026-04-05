@@ -449,6 +449,7 @@ const FileCityWithHighlights: React.FC<{
       gitStatusWithFiles: context.gitStatusWithFiles,
       packages: context.packages,
       activityHeatmap: context.activityHeatmap,
+      lineCounts: context.lineCounts,
     };
   }, [context, agentHighlightCtx.highlightLayers]);
 

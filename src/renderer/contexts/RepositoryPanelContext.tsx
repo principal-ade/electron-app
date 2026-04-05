@@ -51,7 +51,7 @@ import type {
   WorkspacesSlice,
 } from '@industry-theme/alexandria-panels';
 import type { TerminalSessionInfo } from '@industry-theme/xterm-terminal-panel';
-import type { FeedProjectSliceData, ActivityHeatmapSliceData } from '@industry-theme/file-city-panel';
+import type { FeedProjectSliceData, ActivityHeatmapSliceData, LineCountsSliceData } from '@industry-theme/file-city-panel';
 import type { GitHubIssuesSliceData } from '@industry-theme/github-panels';
 import type { BrunoRequest, BrunoResponse, BrunoEnvironment } from '@principal-ade/bruno-panels';
 import { BrunoService } from '../main-process-api/BrunoService';
@@ -222,6 +222,7 @@ interface RepositoryPanelContextValue extends PanelContextValue {
   githubIssues: DataSlice<GitHubIssuesSliceData>;
   schematics: DataSlice<VersionSnapshot[]>;
   activityHeatmap: DataSlice<ActivityHeatmapSliceData | null>;
+  lineCounts: DataSlice<LineCountsSliceData | null>;
 }
 
 // Provider value that contains context, actions, and events separately
@@ -272,6 +273,10 @@ export const RepositoryPanelProvider: React.FC<
   // Track activity heatmap data (commits per day for last 30 days)
   const [activityHeatmapData, setActivityHeatmapData] = useState<ActivityHeatmapSliceData | null>(null);
   const [activityHeatmapLoading, setActivityHeatmapLoading] = useState(false);
+
+  // Track line counts data (for File City 3D building heights)
+  const [lineCountsData, setLineCountsData] = useState<LineCountsSliceData | null>(null);
+  const [lineCountsLoading, setLineCountsLoading] = useState(false);
 
   // Track selected color mode for file city visualization
   const [fileCityColorMode, setFileCityColorMode] =
@@ -648,6 +653,46 @@ export const RepositoryPanelProvider: React.FC<
     };
 
     fetchActivityHeatmap();
+  }, [repositoryPath]);
+
+  // Fetch line counts data (for File City 3D building heights)
+  useEffect(() => {
+    const fetchLineCounts = async () => {
+      if (!repositoryPath) {
+        setLineCountsData(null);
+        return;
+      }
+
+      setLineCountsLoading(true);
+      try {
+        const rawLineCounts = await window.mainProcess?.fileCityImage?.countLines(repositoryPath);
+        if (rawLineCounts) {
+          // Transform paths to use relative paths (strip repo name prefix if present)
+          const repoName = repositoryPath.split('/').pop() || '';
+          const lineCounts: Record<string, number> = {};
+          for (const [filePath, count] of Object.entries(rawLineCounts)) {
+            if (typeof count !== 'number' || count < 0) continue;
+            // Strip repo name prefix if present (e.g., "electron-app/src/file.ts" -> "src/file.ts")
+            if (filePath.startsWith(repoName + '/')) {
+              lineCounts[filePath.slice(repoName.length + 1)] = count;
+            } else {
+              lineCounts[filePath] = count;
+            }
+          }
+          setLineCountsData({
+            lineCounts,
+            status: 'available',
+          });
+        }
+      } catch (error) {
+        console.error('[RepositoryPanelProvider] Failed to fetch line counts:', error);
+        setLineCountsData(null);
+      } finally {
+        setLineCountsLoading(false);
+      }
+    };
+
+    fetchLineCounts();
   }, [repositoryPath]);
 
   // Fetch all Alexandria repositories (for Local Projects panel) and subscribe to changes
@@ -2677,6 +2722,48 @@ export const RepositoryPanelProvider: React.FC<
     [activityHeatmapData, activityHeatmapLoading],
   );
 
+  // Line counts slice (for CodeCityPanel building heights)
+  const lineCountsSlice = useMemo<DataSlice<LineCountsSliceData | null>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'lineCounts',
+      data: lineCountsData,
+      loading: lineCountsLoading,
+      error: null,
+      refresh: async () => {
+        if (!repositoryPathRef.current) return;
+
+        setLineCountsLoading(true);
+        try {
+          const rawLineCounts = await window.mainProcess?.fileCityImage?.countLines(repositoryPathRef.current);
+          if (rawLineCounts) {
+            // Transform paths to use relative paths (strip repo name prefix if present)
+            const repoName = repositoryPathRef.current.split('/').pop() || '';
+            const lineCounts: Record<string, number> = {};
+            for (const [filePath, count] of Object.entries(rawLineCounts)) {
+              if (typeof count !== 'number' || count < 0) continue;
+              // Strip repo name prefix if present (e.g., "electron-app/src/file.ts" -> "src/file.ts")
+              if (filePath.startsWith(repoName + '/')) {
+                lineCounts[filePath.slice(repoName.length + 1)] = count;
+              } else {
+                lineCounts[filePath] = count;
+              }
+            }
+            setLineCountsData({
+              lineCounts,
+              status: 'available',
+            });
+          }
+        } catch (error) {
+          console.error('[RepositoryPanelContext] Failed to refresh line counts:', error);
+        } finally {
+          setLineCountsLoading(false);
+        }
+      },
+    }),
+    [lineCountsData, lineCountsLoading],
+  );
+
   // Empty slices Map for backward compatibility with PanelContextValue interface
   const slices = useMemo<Map<string, DataSlice<unknown>>>(() => new Map(), []);
 
@@ -2785,6 +2872,7 @@ export const RepositoryPanelProvider: React.FC<
       githubIssues: githubIssuesSlice,
       schematics: schematicsSlice,
       activityHeatmap: activityHeatmapSlice,
+      lineCounts: lineCountsSlice,
     }),
     [
       repositoryPath,
@@ -2821,6 +2909,7 @@ export const RepositoryPanelProvider: React.FC<
       githubIssuesSlice,
       schematicsSlice,
       activityHeatmapSlice,
+      lineCountsSlice,
     ],
   );
 
