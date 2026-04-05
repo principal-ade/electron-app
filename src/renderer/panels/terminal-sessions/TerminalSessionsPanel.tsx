@@ -15,6 +15,7 @@ import {
   onActivitySync,
   type TerminalActivityState,
 } from '../../tipc/terminalClient';
+import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 
 /**
  * No-op tracer for use in Storybook or when telemetry is not available
@@ -209,13 +210,35 @@ export const TerminalSessionsPanel: React.FC<TerminalSessionsPanelProps> = ({
       });
       span.end();
     } else if (session.ownedByWindowId) {
-      // External session - focus the owning window
-      // Telemetry: Window focused
-      span.addEvent('terminal.panel.window_focused', {
+      // External session - try to focus the owning window
+      span.addEvent('terminal.panel.window_focus_attempt', {
         'target.window_id': session.ownedByWindowId,
         'session.id': session.id,
       });
-      await WindowService.focusWindowById(session.ownedByWindowId);
+      const windowFocused = await WindowService.focusWindowById(session.ownedByWindowId);
+
+      if (windowFocused) {
+        span.addEvent('terminal.panel.window_focused', {
+          'target.window_id': session.ownedByWindowId,
+          'session.id': session.id,
+        });
+      } else {
+        // Window no longer exists - recreate it
+        span.addEvent('terminal.panel.window_recreate', {
+          'session.id': session.id,
+          'previous.window_id': session.ownedByWindowId,
+        });
+        const directory = getSessionDirectory(session);
+        if (directory) {
+          const entry = await AlexandriaService.getRepositoryByPath(directory);
+          if (entry) {
+            await WindowService.openDevWorkspace({ alexandriaEntry: entry });
+          } else {
+            // Fallback: open as a thread if not in Alexandria registry
+            await WindowService.openThread(directory);
+          }
+        }
+      }
       span.end();
     } else {
       span.end();
