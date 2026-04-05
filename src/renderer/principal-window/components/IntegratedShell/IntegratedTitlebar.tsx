@@ -8,8 +8,9 @@ import { PullMailbox } from '../PullMailbox';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
 import type { UserPreferences } from '../../../../shared/types/userPreferences.types';
-import { FolderOpen, MessageCircle } from 'lucide-react';
+import { FolderOpen, MessageCircle, Layers } from 'lucide-react';
 import { ShellService } from '../../../main-process-api/ShellService';
+import { WindowService } from '../../../main-process-api/WindowService';
 import { OnboardingButton } from '../../../components/Titlebar/OnboardingButton';
 
 declare global {
@@ -258,6 +259,36 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         {onNavigateToOnboarding && (
           <OnboardingButton onClick={onNavigateToOnboarding} />
         )}
+        {/* Open Thread button */}
+        <button
+          onClick={() => WindowService.openEmptyThread()}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '6px 12px',
+            borderRadius: '6px',
+            backgroundColor: theme.colors.backgroundSecondary,
+            color: theme.colors.text,
+            border: `1px solid ${theme.colors.border}`,
+            cursor: 'pointer',
+            fontSize: theme.fontSizes[1],
+            fontWeight: 500,
+            fontFamily: theme.fonts.body,
+            transition: 'all 0.2s',
+            WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+          }}
+          title="Open a new thread"
+        >
+          <Layers size={14} />
+          Open Thread
+        </button>
         {/* Community Discord button */}
         <button
           onClick={() => ShellService.openExternal('https://discord.gg/G3qdcC2DXq')}

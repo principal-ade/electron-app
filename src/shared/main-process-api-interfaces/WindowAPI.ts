@@ -42,6 +42,8 @@ export interface AlexandriaWorkspaceOptions {
   repositoryId?: string;
   /** Additional repository paths to include in the thread (thread mode only) */
   additionalRepositoryPaths?: string[];
+  /** Open an empty thread with no initial repositories */
+  openEmptyThread?: boolean;
 }
 
 /**

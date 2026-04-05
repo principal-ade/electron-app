@@ -91,11 +91,11 @@ export function registerModernWindowHandlers(): void {
   // Alexandria Workspace Window
   ipcMain.handle(
     WindowEvent.OPEN_ALEXANDRIA_WORKSPACE,
-    async (_event, options: { workspaceId?: string; repositoryPath?: string; repositoryId?: string; additionalRepositoryPaths?: string[] }) => {
-      const { workspaceId, repositoryPath, repositoryId, additionalRepositoryPaths } = options;
+    async (_event, options: { workspaceId?: string; repositoryPath?: string; repositoryId?: string; additionalRepositoryPaths?: string[]; openEmptyThread?: boolean }) => {
+      const { workspaceId, repositoryPath, repositoryId, additionalRepositoryPaths, openEmptyThread } = options;
 
-      // Thread mode: repositoryPath without workspaceId
-      const isThread = !workspaceId && !!repositoryPath;
+      // Thread mode: repositoryPath without workspaceId, or explicitly opening empty thread
+      const isThread = !workspaceId && (!!repositoryPath || openEmptyThread);
 
       // Determine window name and display name
       let windowName: string;
@@ -139,6 +139,10 @@ export function registerModernWindowHandlers(): void {
         } else {
           workspaceName = 'Repository Workspace';
         }
+      } else if (openEmptyThread) {
+        // Empty thread mode - no initial repositories
+        windowName = `alexandria-thread-${Date.now()}`;
+        workspaceName = 'New Thread';
       } else {
         console.error(
           '[modernWindowHandlers] OPEN_ALEXANDRIA_WORKSPACE called without workspaceId or repository info',
@@ -314,6 +318,10 @@ export function registerModernWindowHandlers(): void {
       // Pass additional repository paths for thread mode
       if (additionalRepositoryPaths && additionalRepositoryPaths.length > 0) {
         urlParams.set('additionalRepositoryPaths', additionalRepositoryPaths.join(','));
+      }
+      // Mark as empty thread if opened without repositories
+      if (openEmptyThread) {
+        urlParams.set('emptyThread', 'true');
       }
 
       const url = `${resolveHtmlPath('alexandria-workspace.html')}?${urlParams.toString()}`;

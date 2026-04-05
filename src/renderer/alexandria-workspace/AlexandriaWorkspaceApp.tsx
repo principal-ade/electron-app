@@ -247,8 +247,9 @@ const AlexandriaWorkspaceContent: React.FC = () => {
     const workspaceId = urlParams.get('workspaceId');
     const repositoryPath = urlParams.get('repositoryPath');
     const _repositoryId = urlParams.get('repositoryId');
+    const isEmptyThread = urlParams.get('emptyThread') === 'true';
 
-    // Load workspace data (either real workspace or temp single-repo mode)
+    // Load workspace data (either real workspace, temp single-repo mode, or empty thread)
     const loadWorkspace = async () => {
       try {
         setLoading(true);
@@ -330,6 +331,21 @@ const AlexandriaWorkspaceContent: React.FC = () => {
             );
             setWorkspaceRepositories([]);
           }
+        } else if (isEmptyThread) {
+          // Empty thread mode - no initial repositories
+          console.info(
+            '[AlexandriaWorkspaceApp] Opening in empty thread mode',
+          );
+
+          // Create a temporary workspace for the empty thread
+          const tempWorkspace: Workspace = {
+            id: `thread-${Date.now()}`,
+            name: 'New Thread',
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          };
+          setWorkspace(tempWorkspace);
+          setWorkspaceRepositories([]);
         } else {
           setError('No workspace ID or repository path provided');
         }

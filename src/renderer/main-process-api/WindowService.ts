@@ -198,6 +198,14 @@ export class WindowService {
   }
 
   /**
+   * Open an empty thread with no initial repositories
+   * Creates an ephemeral session that can have repositories added later
+   */
+  static async openEmptyThread(): Promise<void> {
+    return this.openAlexandriaWorkspace({ openEmptyThread: true });
+  }
+
+  /**
    * Add a repository to the current thread window
    * @param repositoryPath - Path to the repository to add
    * @returns Result indicating success or failure

@@ -601,12 +601,12 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
         splashScreen.close();
       }
 
-      // Skip maximize - window already starts at full size
-      // if (this.features.maximizeOnShow) {
-      //   if (!process.env.START_MINIMIZED) {
-      //     this.window.maximize();
-      //   }
-      // }
+      // Maximize window if feature is enabled
+      if (this.features.maximizeOnShow) {
+        if (!process.env.START_MINIMIZED) {
+          this.window.maximize();
+        }
+      }
     });
 
     // Setup titlebar IPC handlers for this window
