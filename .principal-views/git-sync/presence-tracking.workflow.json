@@ -1,0 +1,37 @@
+{
+  "version": "1.0.0",
+  "name": "Presence Tracking",
+  "description": "Real-time presence tracking and peer notifications",
+  "canvas": ".principal-views/git-sync/git-sync.otel.canvas",
+  "spanPattern": "git_sync.presence.subscribe",
+  "scenarios": [
+    {
+      "id": "presence-subscription",
+      "description": "Subscribing to global presence and receiving updates",
+      "priority": 1,
+      "template": {
+        "introduction": "**Presence Tracking**\n\nSubscribing to real-time presence for collaboration awareness.",
+        "events": {
+          "git_sync.presence.subscribed": "[1] Subscribed to presence: room={{room_id}}",
+          "git_sync.presence.updated": "[2] Presence updated: {{users.count}} users online"
+        },
+        "summary": "**Presence Active:**\n- Online users: {{users.count}}"
+      },
+      "filterDefault": true
+    },
+    {
+      "id": "peer-lifecycle",
+      "description": "Peer joining and leaving the repository room",
+      "priority": 2,
+      "template": {
+        "introduction": "**Peer Activity**\n\nCollaborator activity in the repository room.",
+        "events": {
+          "git_sync.peer.joined": "[1] Peer joined: agent={{peer_agent_id}}, user={{peer_user_id}}, branch={{peer_branch}}",
+          "git_sync.peer.left": "[2] Peer left: agent={{peer_agent_id}}"
+        },
+        "summary": "**Peer Update:**\n- User: {{peer_user_id}}"
+      },
+      "filterDefault": false
+    }
+  ]
+}

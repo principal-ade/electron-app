@@ -1,0 +1,50 @@
+{
+  "version": "1.0.0",
+  "name": "Lock Management",
+  "description": "Turn-based lock acquisition and release for conflict-free collaboration",
+  "canvas": ".principal-views/git-sync/git-sync.otel.canvas",
+  "spanPattern": "git_sync.lock.acquire",
+  "scenarios": [
+    {
+      "id": "lock-acquire-success",
+      "description": "Successfully acquiring an exclusive lock on a resource",
+      "priority": 1,
+      "template": {
+        "introduction": "**Acquiring Edit Lock**\n\nRequesting exclusive lock for turn-based editing.",
+        "events": {
+          "git_sync.lock.acquire_requested": "[1] Lock requested: resource={{resource}}, type={{resource_type}}, exclusive={{exclusive}}, duration={{duration}}ms",
+          "git_sync.lock.acquired": "[2] Lock acquired: lock_id={{lock_id}}, resource={{resource}}, expires={{expires_at}}"
+        },
+        "summary": "**Lock Acquired:**\n- Resource: `{{resource}}`\n- Lock ID: `{{lock_id}}`"
+      },
+      "filterDefault": true
+    },
+    {
+      "id": "lock-acquire-failed",
+      "description": "Lock acquisition failed due to conflict or timeout",
+      "priority": 2,
+      "template": {
+        "introduction": "**Lock Request Failed**\n\nAnother user holds the lock on this resource.",
+        "events": {
+          "git_sync.lock.acquire_requested": "[1] Lock requested: resource={{resource}}, type={{resource_type}}",
+          "git_sync.lock.failed": "[2] Lock failed: resource={{resource}}, error={{error}}, blocking_agent={{blocking_agent}}"
+        },
+        "summary": "**Lock Unavailable:**\n- Resource: `{{resource}}`\n- Blocked by: {{blocking_agent}}"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "lock-release",
+      "description": "Releasing a held lock",
+      "priority": 3,
+      "template": {
+        "introduction": "**Releasing Edit Lock**\n\nReleasing lock to allow other collaborators to edit.",
+        "events": {
+          "git_sync.lock.released": "[1] Lock released: lock_id={{lock_id}}, released_by={{released_by}}"
+        },
+        "summary": "**Lock Released:**\n- Lock ID: `{{lock_id}}`"
+      },
+      "filterDefault": false
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "version": "1.0.0",
+  "name": "Webhook Events",
+  "description": "GitHub webhook events received via traffic controller",
+  "canvas": ".principal-views/git-sync/git-sync.otel.canvas",
+  "spanPattern": "git_sync.webhook.receive",
+  "scenarios": [
+    {
+      "id": "webhook-push-event",
+      "description": "Receiving a GitHub push webhook and triggering fast-forward",
+      "priority": 1,
+      "template": {
+        "introduction": "**GitHub Webhook Received**\n\nProcessing webhook event from traffic controller.",
+        "events": {
+          "git_sync.webhook.received": "[1] Webhook: event={{event_type}}, repo={{repository}}, delivery={{delivery_id}}",
+          "git_sync.fast_forward.triggered": "[2] Fast-forward check: repo={{repository}}, branch={{branch}}"
+        },
+        "summary": "**Webhook Processed:**\n- Event: {{event_type}}\n- Repository: `{{repository}}`"
+      },
+      "filterDefault": true
+    }
+  ]
+}

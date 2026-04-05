@@ -1,0 +1,1056 @@
+{
+  "pv": {
+    "name": "Git Sync",
+    "version": "1.0.0",
+    "description": "Real-time Git synchronization and collaboration via WebSocket connection to traffic controller",
+    "markdown": ".principal-views/git-sync/git-sync.md",
+    "scope": "principal-ade-main",
+    "nodeTypes": {
+      "renderer": {
+        "label": "Renderer",
+        "color": "#10B981"
+      },
+      "connection-manager": {
+        "label": "Connection Manager",
+        "color": "#6366F1"
+      },
+      "websocket-manager": {
+        "label": "WebSocket Manager",
+        "color": "#F59E0B"
+      },
+      "traffic-controller": {
+        "label": "Traffic Controller",
+        "color": "#EF4444"
+      },
+      "auth-server": {
+        "label": "Auth Server",
+        "color": "#8B5CF6"
+      },
+      "context": {
+        "label": "Context",
+        "color": "#3B82F6"
+      }
+    },
+    "edgeTypes": {
+      "ipc-invoke": {
+        "label": "IPC Invoke",
+        "style": "solid",
+        "color": "#6366F1"
+      },
+      "websocket": {
+        "label": "WebSocket",
+        "style": "solid",
+        "color": "#F59E0B"
+      },
+      "http": {
+        "label": "HTTP",
+        "style": "dashed",
+        "color": "#8B5CF6"
+      },
+      "event": {
+        "label": "Event",
+        "style": "dotted",
+        "color": "#10B981"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "x": 300,
+      "y": -120,
+      "width": 500,
+      "height": 60,
+      "color": "#64748B",
+      "text": "# Git Sync Feature\n**Real-time collaboration via WebSocket to Traffic Controller**"
+    },
+    {
+      "id": "auth-init",
+      "type": "otel-event",
+      "x": -200,
+      "y": 0,
+      "width": 220,
+      "height": 100,
+      "label": "Auth Initialize",
+      "shape": "rectangle",
+      "event": {
+        "name": "git_sync.auth.initialize",
+        "description": "GitSyncConnectionManager initializes authentication by checking CLI auth state",
+        "attributes": {
+          "auth.method": {
+            "type": "string",
+            "description": "Authentication method (cli, oauth)"
+          },
+          "auth.success": {
+            "type": "boolean",
+            "description": "Whether initial auth check succeeded"
+          },
+          "user.login": {
+            "type": "string",
+            "description": "GitHub username if authenticated"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/services/git-sync/GitSyncConnectionManager.ts"
+        ]
+      }
+    },
+    {
+      "id": "room-token-request",
+      "type": "otel-event",
+      "x": 100,
+      "y": 0,
+      "width": 220,
+      "height": 100,
+      "label": "Request Room Token",
+      "shape": "rectangle",
+      "event": {
+        "name": "git_sync.auth.room_token_requested",
+        "description": "Request room-specific JWT token from OAuth server",
+        "attributes": {
+          "repository": {
+            "type": "string",
+            "description": "Repository ID (owner/repo)"
+          },
+          "branch": {
+            "type": "string",
+            "description": "Branch name"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "Stable device identifier"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/services/GitSyncWebSocketManager.ts"
+        ]
+      }
+    },
+    {
+      "id": "room-token-received",
+      "type": "otel-event",
+      "x": 400,
+      "y": 0,
+      "width": 220,
+      "height": 100,
+      "label": "Room Token Received",
+      "shape": "rectangle",
+      "event": {
+        "name": "git_sync.auth.room_token_received",
+        "description": "Received JWT room token from OAuth server",
+        "attributes": {
+          "permissions.canRead": {
+            "type": "boolean",
+            "description": "Read permission granted"
+          },
+          "permissions.canWrite": {
+            "type": "boolean",
+            "description": "Write permission granted"
+          },
+          "expires_in": {
+            "type": "number",
+            "description": "Token expiration time in seconds"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/services/GitSyncWebSocketManager.ts"
+        ]
+      }
+    },
+    {
+      "id": "ws-connect",
+      "type": "otel-event",
+      "x": -200,
+      "y": 150,
+      "width": 220,
+      "height": 100,
+      "label": "WebSocket Connect",
+      "shape": "rectangle",
+      "event": {
+        "name": "git_sync.connection.connect",
+        "description": "Establish WebSocket connection to traffic controller",
+        "attributes": {
+          "server_url": {
+            "type": "string",
+            "description": "Traffic controller WebSocket URL"
+          },
+          "connection_id": {
+            "type": "string",
+            "description": "Connection identifier (repoId:branch)"
+          },
+          "window_id": {
+            "type": "number",
+            "description": "Electron window ID"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/services/GitSyncWebSocketManager.ts"
+        ]
+      }
+    },
+    {
+      "id": "ws-authenticated",
+      "type": "otel-event",
+      "x": 100,
+      "y": 150,
+      "width": 220,
+      "height": 100,
+      "label": "WebSocket Authenticated",
+      "shape": "rectangle",
+      "event": {
+        "name": "git_sync.connection.authenticated",
+        "description": "WebSocket connection authenticated with JWT token",
+        "attributes": {
+          "connection_id": {
+            "type": "string",
+            "description": "Connection identifier"
+          },
+          "repo_id": {
+            "type": "string",
+            "description": "Repository identifier"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/services/GitSyncWebSocketManager.ts"
+        ]
+      }
+    },
+    {
+      "id": "room-joined",
+      "type": "otel-event",
+      "x": 400,
+      "y": 150,
+      "width": 220,
+      "height": 100,
+      "label": "Room Joined",
+      "shape": "rectangle",
+      "event": {
+        "name": "git_sync.connection.room_joined",
+        "description": "Successfully joined repository room for presence tracking",
+        "attributes": {
+          "room_id": {
+            "type": "string",
+            "description": "Room identifier (matches repo_id)"
+          },
+          "peers.count": {
+            "type": "number",
+            "description": "Number of peers already in room"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/services/GitSyncWebSocketManager.ts"
+        ]
+      }
+    },
+    {
+      "id": "ws-disconnected",
+      "type": "otel-event",
+      "x": 700,
+      "y": 150,
+      "width": 220,
+      "height": 100,
+      "label": "WebSocket Disconnected",
+      "shape": "rectangle",
+      "event": {
+        "name": "git_sync.connection.disconnected",
+        "description": "WebSocket connection closed",
+        "attributes": {
+          "connection_id": {
+            "type": "string",
+            "description": "Connection identifier"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Disconnection reason"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/services/GitSyncWebSocketManager.ts"
+        ]
+      }
+    },
+    {
+      "id": "ws-reconnecting",
+      "type": "otel-event",
+      "x": 700,
+      "y": 0,
+      "width": 220,
+      "height": 100,
+      "label": "WebSocket Reconnecting",
+      "shape": "rectangle",
+      "event": {
+        "name": "git_sync.connection.reconnecting",
+        "description": "Attempting to reconnect WebSocket with exponential backoff",
+        "attributes": {
+          "connection_id": {
+            "type": "string",
+            "description": "Connection identifier"
+          },
+          "attempt": {
+            "type": "number",
+            "description": "Reconnection attempt number"
+          },
+          "delay_ms": {
+            "type": "number",
+            "description": "Delay before next attempt"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/services/GitSyncWebSocketManager.ts"
+        ]
+      }
+    },
+    {
+      "id": "lock-acquire",
+      "type": "otel-event",
+      "x": -200,
+      "y": 320,
+      "width": 220,
+      "height": 100,
+      "label": "Acquire Lock",
+      "shape": "rectangle",
+      "event": {
+        "name": "git_sync.lock.acquire_requested",
+        "description": "Request to acquire exclusive lock on a resource",
+        "attributes": {
+          "resource": {
+            "type": "string",
+            "description": "Resource path being locked"
+          },
+          "resource_type": {
+            "type": "string",
+            "description": "Type of resource (file, directory)"
+          },
+          "exclusive": {
+            "type": "boolean",
+            "description": "Whether lock is exclusive"
+          },
+          "duration": {
+            "type": "number",
+            "description": "Requested lock duration in ms"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/services/git-sync/GitSyncClient.ts"
+        ]
+      }
+    },
+    {
+      "id": "lock-acquired",
+      "type": "otel-event",
+      "x": 100,
+      "y": 320,
+      "width": 220,
+      "height": 100,
+      "label": "Lock Acquired",
+      "shape": "rectangle",
+      "event": {
+        "name": "git_sync.lock.acquired",
+        "description": "Successfully acquired lock on resource",
+        "attributes": {
+          "lock_id": {
+            "type": "string",
+            "description": "Unique lock identifier"
+          },
+          "resource": {
+            "type": "string",
+            "description": "Locked resource path"
+          },
+          "expires_at": {
+            "type": "number",
+            "description": "Lock expiration timestamp"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/services/git-sync/GitSyncClient.ts"
+        ]
+      }
+    },
+    {
+      "id": "lock-released",
+      "type": "otel-event",
+      "x": 400,
+      "y": 320,
+      "width": 220,
+      "height": 100,
+      "label": "Lock Released",
+      "shape": "rectangle",
+      "event": {
+        "name": "git_sync.lock.released",
+        "description": "Lock released on resource",
+        "attributes": {
+          "lock_id": {
+            "type": "string",
+            "description": "Lock identifier"
+          },
+          "released_by": {
+            "type": "string",
+            "description": "Agent that released the lock"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/services/git-sync/GitSyncClient.ts"
+        ]
+      }
+    },
+    {
+      "id": "lock-failed",
+      "type": "otel-event",
+      "x": 700,
+      "y": 320,
+      "width": 220,
+      "height": 100,
+      "label": "Lock Failed",
+      "shape": "rectangle",
+      "event": {
+        "name": "git_sync.lock.failed",
+        "description": "Failed to acquire lock (conflict or timeout)",
+        "attributes": {
+          "resource": {
+            "type": "string",
+            "description": "Resource that couldn't be locked"
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message"
+          },
+          "blocking_agent": {
+            "type": "string",
+            "description": "Agent currently holding the lock"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/services/git-sync/GitSyncClient.ts"
+        ]
+      }
+    },
+    {
+      "id": "sync-event-file",
+      "type": "otel-event",
+      "x": -200,
+      "y": 480,
+      "width": 220,
+      "height": 100,
+      "label": "File Change Event",
+      "shape": "rectangle",
+      "event": {
+        "name": "git_sync.event.file_change",
+        "description": "File change event received from peer",
+        "attributes": {
+          "agent_id": {
+            "type": "string",
+            "description": "Agent that made the change"
+          },
+          "file_path": {
+            "type": "string",
+            "description": "Path of changed file"
+          },
+          "change_type": {
+            "type": "string",
+            "description": "Type of change (create, modify, delete)"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/services/git-sync/GitSyncClient.ts"
+        ]
+      }
+    },
+    {
+      "id": "sync-event-commit",
+      "type": "otel-event",
+      "x": 100,
+      "y": 480,
+      "width": 220,
+      "height": 100,
+      "label": "Commit Event",
+      "shape": "rectangle",
+      "event": {
+        "name": "git_sync.event.commit",
+        "description": "Commit event received from peer",
+        "attributes": {
+          "agent_id": {
+            "type": "string",
+            "description": "Agent that made the commit"
+          },
+          "commit_sha": {
+            "type": "string",
+            "description": "Commit SHA"
+          },
+          "branch": {
+            "type": "string",
+            "description": "Branch name"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/services/git-sync/GitSyncClient.ts"
+        ]
+      }
+    },
+    {
+      "id": "branch-switch",
+      "type": "otel-event",
+      "x": 400,
+      "y": 480,
+      "width": 220,
+      "height": 100,
+      "label": "Branch Switch",
+      "shape": "rectangle",
+      "event": {
+        "name": "git_sync.branch.switched",
+        "description": "Switched to a different branch",
+        "attributes": {
+          "from_branch": {
+            "type": "string",
+            "description": "Previous branch name"
+          },
+          "to_branch": {
+            "type": "string",
+            "description": "New branch name"
+          },
+          "locks_released": {
+            "type": "number",
+            "description": "Number of locks released"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/services/git-sync/GitSyncClient.ts"
+        ]
+      }
+    },
+    {
+      "id": "merge-safety-check",
+      "type": "otel-event",
+      "x": 700,
+      "y": 480,
+      "width": 220,
+      "height": 100,
+      "label": "Merge Safety Check",
+      "shape": "rectangle",
+      "event": {
+        "name": "git_sync.merge.safety_checked",
+        "description": "Checked if merge is safe (no blocking locks)",
+        "attributes": {
+          "from_branch": {
+            "type": "string",
+            "description": "Source branch"
+          },
+          "to_branch": {
+            "type": "string",
+            "description": "Target branch"
+          },
+          "is_safe": {
+            "type": "boolean",
+            "description": "Whether merge is safe"
+          },
+          "blocking_locks": {
+            "type": "number",
+            "description": "Number of blocking locks"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/services/git-sync/GitSyncClient.ts"
+        ]
+      }
+    },
+    {
+      "id": "peer-joined",
+      "type": "otel-event",
+      "x": -200,
+      "y": 640,
+      "width": 220,
+      "height": 100,
+      "label": "Peer Joined",
+      "shape": "rectangle",
+      "event": {
+        "name": "git_sync.peer.joined",
+        "description": "A peer joined the repository room",
+        "attributes": {
+          "peer_agent_id": {
+            "type": "string",
+            "description": "Agent ID of the peer"
+          },
+          "peer_user_id": {
+            "type": "string",
+            "description": "User ID (GitHub login)"
+          },
+          "peer_branch": {
+            "type": "string",
+            "description": "Branch the peer is on"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/services/GitSyncWebSocketManager.ts"
+        ]
+      }
+    },
+    {
+      "id": "peer-left",
+      "type": "otel-event",
+      "x": 100,
+      "y": 640,
+      "width": 220,
+      "height": 100,
+      "label": "Peer Left",
+      "shape": "rectangle",
+      "event": {
+        "name": "git_sync.peer.left",
+        "description": "A peer left the repository room",
+        "attributes": {
+          "peer_agent_id": {
+            "type": "string",
+            "description": "Agent ID of the peer"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/services/GitSyncWebSocketManager.ts"
+        ]
+      }
+    },
+    {
+      "id": "presence-subscribe",
+      "type": "otel-event",
+      "x": 400,
+      "y": 640,
+      "width": 220,
+      "height": 100,
+      "label": "Subscribe to Presence",
+      "shape": "rectangle",
+      "event": {
+        "name": "git_sync.presence.subscribed",
+        "description": "Subscribed to global presence room",
+        "attributes": {
+          "room_id": {
+            "type": "string",
+            "description": "Presence room ID"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/services/GitSyncWebSocketManager.ts"
+        ]
+      }
+    },
+    {
+      "id": "presence-updated",
+      "type": "otel-event",
+      "x": 700,
+      "y": 640,
+      "width": 220,
+      "height": 100,
+      "label": "Presence Updated",
+      "shape": "rectangle",
+      "event": {
+        "name": "git_sync.presence.updated",
+        "description": "Presence data updated (users joined/left or status changed)",
+        "attributes": {
+          "users.count": {
+            "type": "number",
+            "description": "Total users in presence room"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/services/GitSyncWebSocketManager.ts"
+        ]
+      }
+    },
+    {
+      "id": "webhook-received",
+      "type": "otel-event",
+      "x": -200,
+      "y": 800,
+      "width": 220,
+      "height": 100,
+      "label": "Webhook Event Received",
+      "shape": "rectangle",
+      "event": {
+        "name": "git_sync.webhook.received",
+        "description": "Received GitHub webhook event via traffic controller",
+        "attributes": {
+          "event_type": {
+            "type": "string",
+            "description": "GitHub event type (push, pull_request, etc.)"
+          },
+          "repository": {
+            "type": "string",
+            "description": "Repository that triggered the event"
+          },
+          "delivery_id": {
+            "type": "string",
+            "description": "GitHub delivery ID"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/services/GitSyncWebSocketManager.ts"
+        ]
+      }
+    },
+    {
+      "id": "fast-forward-triggered",
+      "type": "otel-event",
+      "x": 100,
+      "y": 800,
+      "width": 220,
+      "height": 100,
+      "label": "Fast Forward Triggered",
+      "shape": "rectangle",
+      "event": {
+        "name": "git_sync.fast_forward.triggered",
+        "description": "Fast-forward check triggered by webhook event",
+        "attributes": {
+          "repository": {
+            "type": "string",
+            "description": "Repository to fast-forward"
+          },
+          "branch": {
+            "type": "string",
+            "description": "Branch to fast-forward"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/services/FastForwardService.ts"
+        ]
+      }
+    },
+    {
+      "id": "cross-branch-warning",
+      "type": "otel-event",
+      "x": 400,
+      "y": 800,
+      "width": 220,
+      "height": 100,
+      "label": "Cross-Branch Warning",
+      "shape": "rectangle",
+      "event": {
+        "name": "git_sync.warning.cross_branch",
+        "description": "Warning about potential cross-branch conflicts",
+        "attributes": {
+          "warning_type": {
+            "type": "string",
+            "description": "Type of warning (same_file_different_branch, merge_conflict_potential)"
+          },
+          "severity": {
+            "type": "string",
+            "description": "Severity level (info, warning, critical)"
+          },
+          "suggested_action": {
+            "type": "string",
+            "description": "Suggested action to resolve"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/services/git-sync/GitSyncClient.ts"
+        ]
+      }
+    },
+    {
+      "id": "auth-note",
+      "type": "text",
+      "x": 950,
+      "y": 0,
+      "width": 280,
+      "height": 160,
+      "text": "AUTHENTICATION FLOW\n\n1. Check CLI auth state\n2. Get room token from OAuth server\n3. Connect WebSocket to traffic controller\n4. Send authenticate message with JWT\n5. Join repository room\n\nTokens expire after 1 hour (refresh needed)",
+      "color": "#8B5CF6"
+    },
+    {
+      "id": "lock-note",
+      "type": "text",
+      "x": 950,
+      "y": 180,
+      "width": 280,
+      "height": 160,
+      "text": "TURN-BASED LOCKING\n\nConflict-free collaboration:\n- Request exclusive lock\n- 5-minute auto-expiring locks\n- Cross-branch warnings\n- Locks released on branch switch\n\nServer enforces single owner per resource",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "presence-note",
+      "type": "text",
+      "x": 950,
+      "y": 360,
+      "width": 280,
+      "height": 160,
+      "text": "PRESENCE SYSTEM\n\nReal-time collaboration awareness:\n- Global presence room subscription\n- Per-repository peer tracking\n- Status updates (online/away)\n- Open repository tracking\n\nUses Control Tower Core BaseClient",
+      "color": "#10B981"
+    },
+    {
+      "id": "arch-note",
+      "type": "text",
+      "x": 950,
+      "y": 540,
+      "width": 280,
+      "height": 200,
+      "text": "ARCHITECTURE\n\nRenderer Process:\n- GitSyncConnectionManager (singleton)\n- GitSyncClient (proxy to main)\n- GitSyncPanelContext (React state)\n\nMain Process:\n- GitSyncWebSocketManager (singleton)\n- Control Tower Core BaseClient\n- IPC bridge to renderers",
+      "color": "#3B82F6"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "fromNode": "auth-init",
+      "toNode": "room-token-request",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "request token",
+      "pv": {
+        "edgeType": "ipc-invoke"
+      }
+    },
+    {
+      "id": "e2",
+      "fromNode": "room-token-request",
+      "toNode": "room-token-received",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "OAuth server",
+      "pv": {
+        "edgeType": "http"
+      }
+    },
+    {
+      "id": "e3",
+      "fromNode": "room-token-received",
+      "toNode": "ws-connect",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "with JWT",
+      "pv": {
+        "edgeType": "websocket"
+      }
+    },
+    {
+      "id": "e4",
+      "fromNode": "ws-connect",
+      "toNode": "ws-authenticated",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "auth message",
+      "pv": {
+        "edgeType": "websocket"
+      }
+    },
+    {
+      "id": "e5",
+      "fromNode": "ws-authenticated",
+      "toNode": "room-joined",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "joinRoom()",
+      "pv": {
+        "edgeType": "websocket"
+      }
+    },
+    {
+      "id": "e6",
+      "fromNode": "ws-disconnected",
+      "toNode": "ws-reconnecting",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "label": "auto-reconnect",
+      "pv": {
+        "edgeType": "event"
+      }
+    },
+    {
+      "id": "e7",
+      "fromNode": "ws-reconnecting",
+      "toNode": "ws-connect",
+      "fromSide": "left",
+      "toSide": "right",
+      "label": "retry",
+      "pv": {
+        "edgeType": "websocket"
+      }
+    },
+    {
+      "id": "e8",
+      "fromNode": "lock-acquire",
+      "toNode": "lock-acquired",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "success",
+      "pv": {
+        "edgeType": "websocket"
+      }
+    },
+    {
+      "id": "e9",
+      "fromNode": "lock-acquire",
+      "toNode": "lock-failed",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "conflict/timeout",
+      "pv": {
+        "edgeType": "websocket"
+      }
+    },
+    {
+      "id": "e10",
+      "fromNode": "lock-acquired",
+      "toNode": "lock-released",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "release or expire",
+      "pv": {
+        "edgeType": "websocket"
+      }
+    },
+    {
+      "id": "e11",
+      "fromNode": "room-joined",
+      "toNode": "peer-joined",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "peer events",
+      "pv": {
+        "edgeType": "event"
+      }
+    },
+    {
+      "id": "e12",
+      "fromNode": "peer-joined",
+      "toNode": "peer-left",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "lifecycle",
+      "pv": {
+        "edgeType": "event"
+      }
+    },
+    {
+      "id": "e13",
+      "fromNode": "presence-subscribe",
+      "toNode": "presence-updated",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "updates",
+      "pv": {
+        "edgeType": "event"
+      }
+    },
+    {
+      "id": "e14",
+      "fromNode": "webhook-received",
+      "toNode": "fast-forward-triggered",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "push event",
+      "pv": {
+        "edgeType": "event"
+      }
+    },
+    {
+      "id": "e15",
+      "fromNode": "branch-switch",
+      "toNode": "lock-released",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "label": "release all locks",
+      "pv": {
+        "edgeType": "event"
+      }
+    },
+    {
+      "id": "e16",
+      "fromNode": "merge-safety-check",
+      "toNode": "cross-branch-warning",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "if conflicts",
+      "pv": {
+        "edgeType": "event"
+      }
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "version": "1.0.0",
+  "name": "Sync Events",
+  "description": "Real-time sync events for file changes, commits, and branch operations",
+  "canvas": ".principal-views/git-sync/git-sync.otel.canvas",
+  "spanPattern": "git_sync.event.receive",
+  "scenarios": [
+    {
+      "id": "file-change-sync",
+      "description": "Receiving file change events from peers",
+      "priority": 1,
+      "template": {
+        "introduction": "**File Change Detected**\n\nA collaborator made changes to a file.",
+        "events": {
+          "git_sync.event.file_change": "[1] File changed: agent={{agent_id}}, path={{file_path}}, type={{change_type}}"
+        },
+        "summary": "**File Updated:**\n- Path: `{{file_path}}`\n- Change: {{change_type}}"
+      },
+      "filterDefault": true
+    },
+    {
+      "id": "commit-sync",
+      "description": "Receiving commit events from peers",
+      "priority": 2,
+      "template": {
+        "introduction": "**Commit Detected**\n\nA collaborator pushed a commit.",
+        "events": {
+          "git_sync.event.commit": "[1] Commit: agent={{agent_id}}, sha={{commit_sha}}, branch={{branch}}"
+        },
+        "summary": "**New Commit:**\n- SHA: `{{commit_sha}}`\n- Branch: {{branch}}"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "branch-switch",
+      "description": "Switching branches and releasing locks",
+      "priority": 3,
+      "template": {
+        "introduction": "**Branch Switch**\n\nSwitching to a different branch.",
+        "events": {
+          "git_sync.branch.switched": "[1] Branch switched: from={{from_branch}}, to={{to_branch}}, locks_released={{locks_released}}"
+        },
+        "summary": "**Switched to:**\n- Branch: {{to_branch}}\n- Locks released: {{locks_released}}"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "merge-safety",
+      "description": "Checking merge safety before merging branches",
+      "priority": 4,
+      "template": {
+        "introduction": "**Merge Safety Check**\n\nVerifying merge can proceed without conflicts.",
+        "events": {
+          "git_sync.merge.safety_checked": "[1] Merge check: from={{from_branch}}, to={{to_branch}}, safe={{is_safe}}, blocking={{blocking_locks}}",
+          "git_sync.warning.cross_branch": "[2] Warning: type={{warning_type}}, severity={{severity}}, action={{suggested_action}}"
+        },
+        "summary": "**Merge Status:**\n- Safe: {{is_safe}}\n- Blocking locks: {{blocking_locks}}"
+      },
+      "filterDefault": false
+    }
+  ]
+}

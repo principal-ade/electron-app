@@ -1,0 +1,41 @@
+{
+  "version": "1.0.0",
+  "name": "Connection Flow",
+  "description": "Git Sync WebSocket connection establishment from auth to room join",
+  "canvas": ".principal-views/git-sync/git-sync.otel.canvas",
+  "spanPattern": "git_sync.connection.connect",
+  "scenarios": [
+    {
+      "id": "connection-success",
+      "description": "Successful connection to traffic controller with authentication and room join",
+      "priority": 1,
+      "template": {
+        "introduction": "**Connecting to Git Sync**\n\nEstablishing WebSocket connection to traffic controller for real-time collaboration.",
+        "events": {
+          "git_sync.auth.initialize": "[1] Auth initialized: method={{auth.method}}, success={{auth.success}}, user={{user.login}}",
+          "git_sync.auth.room_token_requested": "[2] Requesting room token: repo={{repository}}, branch={{branch}}, device={{device_id}}",
+          "git_sync.auth.room_token_received": "[3] Token received: canRead={{permissions.canRead}}, canWrite={{permissions.canWrite}}, expires={{expires_in}}s",
+          "git_sync.connection.connect": "[4] WebSocket connecting: url={{server_url}}, connection={{connection_id}}, window={{window_id}}",
+          "git_sync.connection.authenticated": "[5] Authenticated: connection={{connection_id}}, repo={{repo_id}}",
+          "git_sync.connection.room_joined": "[6] Joined room: room={{room_id}}, peers={{peers.count}}"
+        },
+        "summary": "**Connected:**\n- Repository: `{{repo_id}}`\n- Peers in room: {{peers.count}}"
+      },
+      "filterDefault": true
+    },
+    {
+      "id": "connection-reconnect",
+      "description": "Connection lost and auto-reconnection triggered",
+      "priority": 2,
+      "template": {
+        "introduction": "**Reconnecting to Git Sync**\n\nConnection lost, attempting automatic reconnection.",
+        "events": {
+          "git_sync.connection.disconnected": "[1] Disconnected: connection={{connection_id}}, reason={{reason}}",
+          "git_sync.connection.reconnecting": "[2] Reconnecting: connection={{connection_id}}, attempt={{attempt}}, delay={{delay_ms}}ms"
+        },
+        "summary": "**Reconnection in progress**\n- Attempt: {{attempt}}\n- Next retry in: {{delay_ms}}ms"
+      },
+      "filterDefault": false
+    }
+  ]
+}
