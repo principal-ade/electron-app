@@ -1,6 +1,4 @@
 import type { CollectionsAPI } from './CollectionsAPI';
-import type { ActRunnerAPI } from './ActRunnerAPI';
-import type { ActWorkflowAPI } from './ActWorkflowAPI';
 import type { AgentConfigAPI } from './AgentConfigAPI';
 import type { AlexandriaAPI } from './AlexandriaAPI';
 import type { AlexandriaDocsAPI } from './AlexandriaDocsAPI';
@@ -85,8 +83,6 @@ export type {
   TokenWithMetadata,
 } from './AuthenticationAPI';
 export interface MainProcessAPI {
-  actRunner: ActRunnerAPI;
-  actWorkflow: ActWorkflowAPI;
   collections: CollectionsAPI;
   agentConfig: AgentConfigAPI;
   alexandria: AlexandriaAPI;

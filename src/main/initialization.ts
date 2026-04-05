@@ -63,7 +63,6 @@ import {
   registerDocumentSearchHandlers,
   shutdownDocumentSearch,
 } from './services/ipc/documentSearchHandlers';
-import { registerActIntegrationHandlers } from './services/ipc/act/actIntegrationHandlers';
 import { setupWindowSwitcherHandlers } from './window/windowSwitcher';
 import { setupQuickOpenHandlers } from './window/quickOpen';
 import { setupGoodbyeScreenHandlers } from './window/goodbyeScreen';
@@ -194,7 +193,6 @@ const registerAllIpcHandlers = async () => {
   registerFileCityImageHandlers(); // Register File City image generation handlers
   registerOtelCollectorHandlers(); // Register OTEL collector handlers
   registerCLIBridgeHandlers(); // Register CLI Bridge diagnostics handlers
-  registerActIntegrationHandlers();
   registerSecretHandlers();
   await registerLinksHandlers();
   registerAlexandriaHandlers();
