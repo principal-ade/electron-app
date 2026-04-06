@@ -1,0 +1,52 @@
+{
+  "version": "1.0.0",
+  "name": "Data Loading",
+  "description": "Loading presence data, file trees, and building city visualizations",
+  "canvas": ".principal-views/activity-cities/activity-cities.otel.canvas",
+  "spanPattern": "activity_cities.presence.fetch",
+  "scenarios": [
+    {
+      "id": "initial-load",
+      "description": "Initial data loading when panel mounts",
+      "priority": 1,
+      "template": {
+        "introduction": "**Loading Activity Cities**\n\nFetching presence data and building city visualizations.",
+        "events": {
+          "activity_cities.presence.subscribed": "[1] Subscribed to presence: subscription={{subscription_id}}",
+          "activity_cities.presence.fetched": "[2] Presence fetched: {{users_count}} users, {{repos_count}} repos",
+          "activity_cities.repos.grouped": "[3] Grouped by repo: {{unique_repos}} unique repos, {{total_users}} users, max {{max_users_per_repo}} users/repo"
+        },
+        "summary": "**Data Loaded:**\n- Users online: {{users_count}}\n- Active repos: {{repos_count}}"
+      },
+      "filterDefault": true
+    },
+    {
+      "id": "tree-fetch-success",
+      "description": "Successfully fetching file tree from GitHub",
+      "priority": 2,
+      "template": {
+        "introduction": "**Fetching File Tree**\n\nRetrieving repository structure from GitHub API.",
+        "events": {
+          "activity_cities.tree.fetch_started": "[1] Fetching tree: {{owner}}/{{repo}}@{{branch}}, cached={{cached}}",
+          "activity_cities.tree.fetch_completed": "[2] Tree received: {{owner}}/{{repo}} - {{file_count}} files, sha={{sha}}, truncated={{truncated}}"
+        },
+        "summary": "**Tree Loaded:**\n- Repository: {{owner}}/{{repo}}\n- Files: {{file_count}}"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "tree-fetch-error",
+      "description": "File tree fetch failed",
+      "priority": 3,
+      "template": {
+        "introduction": "**Tree Fetch Error**\n\nFailed to retrieve repository structure.",
+        "events": {
+          "activity_cities.tree.fetch_started": "[1] Fetching tree: {{owner}}/{{repo}}@{{branch}}",
+          "activity_cities.tree.fetch_failed": "[2] Fetch failed: {{owner}}/{{repo}} - {{error}}, status={{status_code}}"
+        },
+        "summary": "**Error:**\n- Repository: {{owner}}/{{repo}}\n- Error: {{error}}"
+      },
+      "filterDefault": false
+    }
+  ]
+}

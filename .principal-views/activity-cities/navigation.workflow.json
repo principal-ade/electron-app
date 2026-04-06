@@ -1,0 +1,36 @@
+{
+  "version": "1.0.0",
+  "name": "Panel Navigation",
+  "description": "Navigation between Feed and Activity Cities views",
+  "canvas": ".principal-views/activity-cities/activity-cities.otel.canvas",
+  "spanPattern": "activity_cities.navigation",
+  "scenarios": [
+    {
+      "id": "enter-activity-cities",
+      "description": "User navigates from Feed to Activity Cities view",
+      "priority": 1,
+      "template": {
+        "introduction": "**Entering Activity Cities**\n\nUser clicked Live Activity button in Feed header.",
+        "events": {
+          "activity_cities.navigation.enter": "[1] Navigate to Activity Cities from={{from_view}}, trigger={{trigger}}",
+          "activity_cities.panel.mounted": "[2] Panel mounted: view={{view}}, source={{source}}"
+        },
+        "summary": "**Navigation Complete:**\n- Now viewing Activity Cities panel"
+      },
+      "filterDefault": true
+    },
+    {
+      "id": "exit-activity-cities",
+      "description": "User navigates back to Feed view",
+      "priority": 2,
+      "template": {
+        "introduction": "**Leaving Activity Cities**\n\nUser clicked back button to return to Feed.",
+        "events": {
+          "activity_cities.navigation.exit": "[1] Navigate back: to={{to_view}}, repos_displayed={{repos_displayed}}"
+        },
+        "summary": "**Navigation Complete:**\n- Returned to Feed view\n- Displayed {{repos_displayed}} repositories"
+      },
+      "filterDefault": true
+    }
+  ]
+}

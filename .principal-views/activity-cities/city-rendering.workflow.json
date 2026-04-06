@@ -1,0 +1,37 @@
+{
+  "version": "1.0.0",
+  "name": "City Rendering",
+  "description": "Building CityData and rendering 2D File City visualizations",
+  "canvas": ".principal-views/activity-cities/activity-cities.otel.canvas",
+  "spanPattern": "activity_cities.city.build",
+  "scenarios": [
+    {
+      "id": "city-build-render",
+      "description": "Building and rendering a city for a repository",
+      "priority": 1,
+      "template": {
+        "introduction": "**Building City**\n\nTransforming file tree into CityData visualization.",
+        "events": {
+          "activity_cities.city.build_started": "[1] Building city: {{repo_id}}, {{file_count}} files",
+          "activity_cities.city.build_completed": "[2] City built: {{repo_id}} - {{building_count}} buildings, {{directory_count}} dirs, {{build_time_ms}}ms",
+          "activity_cities.city.rendered": "[3] City rendered: {{repo_id}} at {{canvas_width}}x{{canvas_height}} canvas"
+        },
+        "summary": "**City Ready:**\n- Repository: {{repo_id}}\n- Buildings: {{building_count}}\n- Build time: {{build_time_ms}}ms"
+      },
+      "filterDefault": true
+    },
+    {
+      "id": "grid-render",
+      "description": "Rendering the full grid of city cards",
+      "priority": 2,
+      "template": {
+        "introduction": "**Rendering Grid**\n\nDisplaying all active repository cities.",
+        "events": {
+          "activity_cities.grid.rendered": "[1] Grid rendered: {{card_count}} cards, {{loading_count}} loading, {{error_count}} errors"
+        },
+        "summary": "**Grid Complete:**\n- Cards: {{card_count}}\n- Loading: {{loading_count}}\n- Errors: {{error_count}}"
+      },
+      "filterDefault": true
+    }
+  ]
+}

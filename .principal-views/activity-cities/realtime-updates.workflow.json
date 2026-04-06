@@ -1,0 +1,49 @@
+{
+  "version": "1.0.0",
+  "name": "Real-time Updates",
+  "description": "Handling presence updates and cache management",
+  "canvas": ".principal-views/activity-cities/activity-cities.otel.canvas",
+  "spanPattern": "activity_cities.presence.update",
+  "scenarios": [
+    {
+      "id": "presence-update",
+      "description": "Presence data updated in real-time",
+      "priority": 1,
+      "template": {
+        "introduction": "**Presence Update**\n\nUser activity changed, refreshing city grid.",
+        "events": {
+          "activity_cities.presence.updated": "[1] Presence changed: type={{event_type}}, user={{user_id}}, repos_affected={{repos_affected}}",
+          "activity_cities.repos.grouped": "[2] Re-grouped: {{unique_repos}} repos, {{total_users}} users, max {{max_users_per_repo}} users/repo"
+        },
+        "summary": "**Update Applied:**\n- Event: {{event_type}}\n- Repos affected: {{repos_affected}}"
+      },
+      "filterDefault": true
+    },
+    {
+      "id": "cache-hit",
+      "description": "Using cached file tree data",
+      "priority": 2,
+      "template": {
+        "introduction": "**Cache Hit**\n\nUsing cached file tree, skipping GitHub API call.",
+        "events": {
+          "activity_cities.cache.hit": "[1] Cache hit: {{repo_id}}, age={{cache_age_ms}}ms"
+        },
+        "summary": "**Cache Used:**\n- Repository: {{repo_id}}\n- Cache age: {{cache_age_ms}}ms"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "cache-miss",
+      "description": "Cache miss, fetching fresh data",
+      "priority": 3,
+      "template": {
+        "introduction": "**Cache Miss**\n\nNo cached data available, fetching from GitHub.",
+        "events": {
+          "activity_cities.cache.miss": "[1] Cache miss: {{repo_id}}, reason={{reason}}"
+        },
+        "summary": "**Cache Miss:**\n- Repository: {{repo_id}}\n- Reason: {{reason}}"
+      },
+      "filterDefault": false
+    }
+  ]
+}

@@ -1185,7 +1185,8 @@ export class GitSyncWebSocketManager {
   }
 
   /**
-   * Fetch presence data from the stored room state
+   * Fetch presence data from the traffic controller HTTP API
+   * This includes openRepositories which is not available in the WebSocket room state
    */
   async fetchPresenceData(): Promise<{
     success: boolean;
@@ -1200,58 +1201,56 @@ export class GitSyncWebSocketManager {
     error?: string;
   }> {
     try {
-      // Check if we have stored presence room state
-      if (!this.presenceRoomState) {
-        console.warn(
-          '[GitSyncWebSocketManager] No presence room state available',
+      const httpUrl = this.serverUrl
+        .replace('wss://', 'https://')
+        .replace('ws://', 'http://');
+
+      console.log(
+        `[GitSyncWebSocketManager] Fetching presence from: ${httpUrl}/api/presence/users`,
+      );
+
+      const response = await fetch(`${httpUrl}/api/presence/users`, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (!response.ok) {
+        console.error(
+          `[GitSyncWebSocketManager] Presence API returned ${response.status}`,
         );
         return {
-          success: true,
-          data: {
-            users: [],
-            stats: {
-              totalOnline: 0,
-              totalRepositories: 0,
-              activeCollaborations: 0,
-            },
-          },
+          success: false,
+          error: `Server returned ${response.status}: ${response.statusText}`,
         };
       }
 
-      // Convert Map to array
-      const usersArray = Array.from(this.presenceRoomState.users.values());
-
-      // Transform RoomUser objects to UserPresence format expected by the UI
-      const transformedUsers = usersArray.map((user: RoomUser) => {
-        return {
-          userId: user.username, // Use the actual username field from RoomUser
-          status: user.status || 'online',
-          openRepositories:
-            (user.metadata?.openRepositories as unknown[]) || [],
-          activeRepository: user.metadata?.activeRepository as
-            | string
-            | undefined,
-          lastSeen: user.lastActivity,
-          devices: (user.metadata?.devices as unknown[]) || [],
-          statusMessage: user.metadata?.statusMessage as string | undefined,
-          // Preserve any additional metadata
-          ...user.metadata,
+      const data = (await response.json()) as {
+        users?: unknown[];
+        stats?: {
+          totalRepositories?: number;
+          activeCollaborations?: number;
         };
-      });
-
-      const totalOnline = transformedUsers.length;
-
+      };
       console.log(
-        '[GitSyncWebSocketManager] Fetched presence data:',
-        totalOnline,
-        'users',
+        '[GitSyncWebSocketManager] Fetched presence data from API:',
+        JSON.stringify(data, null, 2),
       );
+
+      // The API returns { users: [...], stats: {...} } or similar
+      // Normalize the response
+      const users = Array.isArray(data) ? data : (data.users || []);
+      const totalOnline = users.length;
 
       return {
         success: true,
         data: {
-          users: transformedUsers,
-          stats: { totalOnline, totalRepositories: 0, activeCollaborations: 0 },
+          users,
+          stats: {
+            totalOnline,
+            totalRepositories: data.stats?.totalRepositories || 0,
+            activeCollaborations: data.stats?.activeCollaborations || 0,
+          },
         },
       };
     } catch (error) {

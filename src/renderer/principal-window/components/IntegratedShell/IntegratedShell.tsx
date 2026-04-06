@@ -13,6 +13,7 @@ import { GitSyncView } from '../../views/GitSyncView';
 import { LocalhostProcessesView } from '../../views/LocalhostProcessesView';
 import { ConnectionsView } from '../../views/ConnectionsView';
 import { SkillBrowserView } from '../../views/SkillBrowserView';
+import { ActivityCitiesPanel } from '../../../panels/ActivityCitiesPanel';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { PresenceService } from '../../../main-process-api/PresenceService';
 import { WindowService } from '../../../main-process-api/WindowService';
@@ -42,6 +43,7 @@ const VIEW_OPTIONS = [
   'processes',
   'connections',
   'skills',
+  'activity-cities',
 ];
 
 // Quick commands for the command palette autocomplete
@@ -130,6 +132,7 @@ export const IntegratedShell: React.FC = () => {
     processes: { left: false, right: false },
     connections: { left: false, right: false },
     skills: { left: false, right: false },
+    'activity-cities': { left: false, right: false },
   });
 
   // Get current view's collapsed states
@@ -402,6 +405,7 @@ export const IntegratedShell: React.FC = () => {
             processes: { left: false, right: false },
             connections: { left: false, right: false },
             skills: { left: false, right: false },
+            'activity-cities': { left: false, right: false },
           });
           return { success: true };
         default:
@@ -465,6 +469,7 @@ export const IntegratedShell: React.FC = () => {
           processes: { left: false, right: false },
           connections: { left: false, right: false },
           skills: { left: false, right: false },
+          'activity-cities': { left: false, right: false },
         });
       }),
     ];
@@ -583,6 +588,7 @@ export const IntegratedShell: React.FC = () => {
             {activeView === 'processes' && <LocalhostProcessesView />}
             {activeView === 'connections' && <ConnectionsView />}
             {activeView === 'skills' && <SkillBrowserView />}
+            {activeView === 'activity-cities' && <ActivityCitiesPanel />}
           </div>
         </div>
       </div>

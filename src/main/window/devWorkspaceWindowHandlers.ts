@@ -21,6 +21,34 @@ import { getManager as getMonitoringManager } from '../repository-monitoring/ipc
 import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
 import { getTracer } from '../telemetry';
 import { SpanStatusCode } from '@opentelemetry/api';
+import { presenceWindowBridge } from '../services/PresenceWindowBridge';
+import { GitClientFactory } from '../utils/gitClientFactory';
+
+/**
+ * Parse owner/repo from a GitHub remote URL
+ * Supports: https://github.com/owner/repo.git, git@github.com:owner/repo.git
+ */
+function parseGitHubRemoteUrl(
+  remoteUrl: string | undefined,
+): { owner: string; repo: string } | null {
+  if (!remoteUrl) return null;
+
+  // HTTPS format: https://github.com/owner/repo.git
+  const httpsMatch = remoteUrl.match(
+    /github\.com\/([^/]+)\/([^/.]+)(?:\.git)?/,
+  );
+  if (httpsMatch) {
+    return { owner: httpsMatch[1], repo: httpsMatch[2] };
+  }
+
+  // SSH format: git@github.com:owner/repo.git
+  const sshMatch = remoteUrl.match(/github\.com:([^/]+)\/([^/.]+)(?:\.git)?/);
+  if (sshMatch) {
+    return { owner: sshMatch[1], repo: sshMatch[2] };
+  }
+
+  return null;
+}
 
 const DEV_WORKSPACE_PURPOSE = 'dev-workspace';
 
@@ -219,6 +247,45 @@ export async function openDevWorkspaceWindow(
     );
   }
 
+  // Track repository for presence system
+  const presenceWindowId = `dev-workspace:${appWindow.window.id}`;
+  const githubInfo = parseGitHubRemoteUrl(alexandriaEntry.remoteUrl);
+
+  if (githubInfo) {
+    // Get current branch for presence tracking
+    GitClientFactory.getCurrentBranch(repoPath)
+      .then((branch) => {
+        const branchName = branch || 'main';
+        console.log(
+          `[DevWorkspaceWindow] Tracking presence for ${githubInfo.owner}/${githubInfo.repo}@${branchName}`,
+        );
+        return presenceWindowBridge.trackRepositoryOpened(
+          presenceWindowId,
+          githubInfo.owner,
+          githubInfo.repo,
+          branchName,
+          repoPath,
+        );
+      })
+      .then(() => {
+        // Setup focus tracking
+        presenceWindowBridge.setupWindowFocusTracking(
+          appWindow.window,
+          presenceWindowId,
+        );
+      })
+      .catch((error) => {
+        console.error(
+          '[DevWorkspaceWindow] Failed to track repository for presence:',
+          error,
+        );
+      });
+  } else {
+    console.log(
+      `[DevWorkspaceWindow] No GitHub remote found for ${alexandriaEntry.name}, skipping presence tracking`,
+    );
+  }
+
   // Release watch and broadcast when window closes
   appWindow.window.once('closed', () => {
     broadcastRepositoryWindowsChanged();
@@ -242,6 +309,16 @@ export async function openDevWorkspaceWindow(
         `[DevWorkspaceWindow] Failed to release watch for ${repoPath}:`,
         error,
       );
+    }
+
+    // Track repository closed for presence system
+    if (githubInfo) {
+      presenceWindowBridge.trackRepositoryClosed(presenceWindowId).catch((err) => {
+        console.error(
+          '[DevWorkspaceWindow] Failed to track repository closed:',
+          err,
+        );
+      });
     }
   });
 

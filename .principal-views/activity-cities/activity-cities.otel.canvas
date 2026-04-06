@@ -1,0 +1,827 @@
+{
+  "pv": {
+    "name": "Activity Cities",
+    "version": "1.0.0",
+    "description": "Bloomberg terminal-style activity feed showing interactive 2D File City visualizations for repositories with active users",
+    "markdown": ".principal-views/activity-cities/activity-cities.md",
+    "scope": "principal-ade-renderer",
+    "nodeTypes": {
+      "panel": {
+        "label": "Panel",
+        "color": "#10B981"
+      },
+      "hook": {
+        "label": "Hook",
+        "color": "#6366F1"
+      },
+      "service": {
+        "label": "Service",
+        "color": "#F59E0B"
+      },
+      "api": {
+        "label": "API",
+        "color": "#EF4444"
+      },
+      "component": {
+        "label": "Component",
+        "color": "#8B5CF6"
+      }
+    },
+    "edgeTypes": {
+      "event": {
+        "label": "Event",
+        "style": "dotted",
+        "color": "#10B981"
+      },
+      "data-flow": {
+        "label": "Data Flow",
+        "style": "solid",
+        "color": "#6366F1"
+      },
+      "ipc": {
+        "label": "IPC",
+        "style": "solid",
+        "color": "#F59E0B"
+      },
+      "http": {
+        "label": "HTTP",
+        "style": "dashed",
+        "color": "#EF4444"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "x": 300,
+      "y": -120,
+      "width": 500,
+      "height": 60,
+      "color": "#64748B",
+      "text": "# Activity Cities Panel\n**Real-time 2D File City grid showing active repositories**"
+    },
+    {
+      "id": "panel-mount",
+      "type": "otel-event",
+      "x": -200,
+      "y": 0,
+      "width": 220,
+      "height": 100,
+      "label": "Panel Mount",
+      "shape": "rectangle",
+      "event": {
+        "name": "activity_cities.panel.mounted",
+        "description": "ActivityCitiesPanel component mounted in view",
+        "attributes": {
+          "view": {
+            "type": "string",
+            "description": "Current view identifier (activity-cities)"
+          },
+          "source": {
+            "type": "string",
+            "description": "Navigation source (feed-view, etc.)"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/panels/ActivityCitiesPanel.tsx"
+        ]
+      }
+    },
+    {
+      "id": "view-switch-to",
+      "type": "otel-event",
+      "x": 100,
+      "y": 0,
+      "width": 220,
+      "height": 100,
+      "label": "Navigate to Activity Cities",
+      "shape": "rectangle",
+      "event": {
+        "name": "activity_cities.navigation.enter",
+        "description": "User navigates to Activity Cities view from Feed",
+        "attributes": {
+          "from_view": {
+            "type": "string",
+            "description": "Previous view (feed)"
+          },
+          "trigger": {
+            "type": "string",
+            "description": "What triggered navigation (button_click)"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/principal-window/views/FeedView/FeedView.tsx"
+        ]
+      }
+    },
+    {
+      "id": "view-switch-back",
+      "type": "otel-event",
+      "x": 400,
+      "y": 0,
+      "width": 220,
+      "height": 100,
+      "label": "Navigate Back to Feed",
+      "shape": "rectangle",
+      "event": {
+        "name": "activity_cities.navigation.exit",
+        "description": "User navigates back to Feed view",
+        "attributes": {
+          "to_view": {
+            "type": "string",
+            "description": "Target view (feed)"
+          },
+          "repos_displayed": {
+            "type": "number",
+            "description": "Number of repos that were displayed"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/panels/ActivityCitiesPanel.tsx"
+        ]
+      }
+    },
+    {
+      "id": "presence-subscribe",
+      "type": "otel-event",
+      "x": -200,
+      "y": 150,
+      "width": 220,
+      "height": 100,
+      "label": "Subscribe to Presence",
+      "shape": "rectangle",
+      "event": {
+        "name": "activity_cities.presence.subscribed",
+        "description": "Hook subscribes to presence updates via PresenceService",
+        "attributes": {
+          "subscription_id": {
+            "type": "string",
+            "description": "Unique subscription identifier"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/hooks/useActivityCities.ts"
+        ]
+      }
+    },
+    {
+      "id": "presence-fetch",
+      "type": "otel-event",
+      "x": 100,
+      "y": 150,
+      "width": 220,
+      "height": 100,
+      "label": "Fetch Presence Data",
+      "shape": "rectangle",
+      "event": {
+        "name": "activity_cities.presence.fetched",
+        "description": "Fetched current presence data from PresenceService",
+        "attributes": {
+          "users_count": {
+            "type": "number",
+            "description": "Total number of online users"
+          },
+          "repos_count": {
+            "type": "number",
+            "description": "Number of unique active repositories"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/hooks/useActivityCities.ts"
+        ]
+      }
+    },
+    {
+      "id": "presence-updated",
+      "type": "otel-event",
+      "x": 400,
+      "y": 150,
+      "width": 220,
+      "height": 100,
+      "label": "Presence Updated",
+      "shape": "rectangle",
+      "event": {
+        "name": "activity_cities.presence.updated",
+        "description": "Received presence update event (user joined/left/status changed)",
+        "attributes": {
+          "event_type": {
+            "type": "string",
+            "description": "Type of presence event (user-joined, user-left, status-changed)"
+          },
+          "user_id": {
+            "type": "string",
+            "description": "User affected by the event"
+          },
+          "repos_affected": {
+            "type": "number",
+            "description": "Number of repositories affected"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/hooks/useActivityCities.ts"
+        ]
+      }
+    },
+    {
+      "id": "repos-grouped",
+      "type": "otel-event",
+      "x": -200,
+      "y": 300,
+      "width": 220,
+      "height": 100,
+      "label": "Group Users by Repo",
+      "shape": "rectangle",
+      "event": {
+        "name": "activity_cities.repos.grouped",
+        "description": "Users grouped by their openRepositories field",
+        "attributes": {
+          "total_users": {
+            "type": "number",
+            "description": "Total users with open repositories"
+          },
+          "unique_repos": {
+            "type": "number",
+            "description": "Number of unique repositories"
+          },
+          "max_users_per_repo": {
+            "type": "number",
+            "description": "Maximum users on any single repo"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/hooks/useActivityCities.ts"
+        ]
+      }
+    },
+    {
+      "id": "tree-fetch-start",
+      "type": "otel-event",
+      "x": 100,
+      "y": 300,
+      "width": 220,
+      "height": 100,
+      "label": "Fetch File Tree",
+      "shape": "rectangle",
+      "event": {
+        "name": "activity_cities.tree.fetch_started",
+        "description": "Started fetching file tree from GitHub API",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner"
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name"
+          },
+          "branch": {
+            "type": "string",
+            "description": "Branch name"
+          },
+          "cached": {
+            "type": "boolean",
+            "description": "Whether using cached data"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/hooks/useActivityCities.ts"
+        ]
+      }
+    },
+    {
+      "id": "tree-fetch-complete",
+      "type": "otel-event",
+      "x": 400,
+      "y": 300,
+      "width": 220,
+      "height": 100,
+      "label": "File Tree Received",
+      "shape": "rectangle",
+      "event": {
+        "name": "activity_cities.tree.fetch_completed",
+        "description": "Successfully received file tree from GitHub API",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner"
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name"
+          },
+          "file_count": {
+            "type": "number",
+            "description": "Number of files in tree"
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "Whether tree was truncated by GitHub"
+          },
+          "sha": {
+            "type": "string",
+            "description": "Tree SHA for caching"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/hooks/useActivityCities.ts"
+        ]
+      }
+    },
+    {
+      "id": "tree-fetch-error",
+      "type": "otel-event",
+      "x": 700,
+      "y": 300,
+      "width": 220,
+      "height": 100,
+      "label": "File Tree Error",
+      "shape": "rectangle",
+      "event": {
+        "name": "activity_cities.tree.fetch_failed",
+        "description": "Failed to fetch file tree from GitHub API",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner"
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name"
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message"
+          },
+          "status_code": {
+            "type": "number",
+            "description": "HTTP status code if applicable"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/hooks/useActivityCities.ts"
+        ]
+      }
+    },
+    {
+      "id": "city-build-start",
+      "type": "otel-event",
+      "x": -200,
+      "y": 450,
+      "width": 220,
+      "height": 100,
+      "label": "Build City Data",
+      "shape": "rectangle",
+      "event": {
+        "name": "activity_cities.city.build_started",
+        "description": "Started building CityData from file tree",
+        "attributes": {
+          "repo_id": {
+            "type": "string",
+            "description": "Repository identifier (owner/repo)"
+          },
+          "file_count": {
+            "type": "number",
+            "description": "Number of files to process"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/hooks/useActivityCities.ts"
+        ]
+      }
+    },
+    {
+      "id": "city-build-complete",
+      "type": "otel-event",
+      "x": 100,
+      "y": 450,
+      "width": 220,
+      "height": 100,
+      "label": "City Data Ready",
+      "shape": "rectangle",
+      "event": {
+        "name": "activity_cities.city.build_completed",
+        "description": "Successfully built CityData for rendering",
+        "attributes": {
+          "repo_id": {
+            "type": "string",
+            "description": "Repository identifier"
+          },
+          "building_count": {
+            "type": "number",
+            "description": "Number of buildings (files) in city"
+          },
+          "directory_count": {
+            "type": "number",
+            "description": "Number of directories in city"
+          },
+          "build_time_ms": {
+            "type": "number",
+            "description": "Time to build CityData in milliseconds"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/hooks/useActivityCities.ts"
+        ]
+      }
+    },
+    {
+      "id": "city-render",
+      "type": "otel-event",
+      "x": 400,
+      "y": 450,
+      "width": 220,
+      "height": 100,
+      "label": "Render City",
+      "shape": "rectangle",
+      "event": {
+        "name": "activity_cities.city.rendered",
+        "description": "City rendered in CityCard using ArchitectureMapHighlightLayers",
+        "attributes": {
+          "repo_id": {
+            "type": "string",
+            "description": "Repository identifier"
+          },
+          "canvas_width": {
+            "type": "number",
+            "description": "Canvas width in pixels"
+          },
+          "canvas_height": {
+            "type": "number",
+            "description": "Canvas height in pixels"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/components/ActivityCities/CityCard.tsx"
+        ]
+      }
+    },
+    {
+      "id": "grid-render",
+      "type": "otel-event",
+      "x": 700,
+      "y": 450,
+      "width": 220,
+      "height": 100,
+      "label": "Render City Grid",
+      "shape": "rectangle",
+      "event": {
+        "name": "activity_cities.grid.rendered",
+        "description": "Full grid of CityCards rendered",
+        "attributes": {
+          "card_count": {
+            "type": "number",
+            "description": "Number of cards rendered"
+          },
+          "loading_count": {
+            "type": "number",
+            "description": "Number of cards still loading"
+          },
+          "error_count": {
+            "type": "number",
+            "description": "Number of cards with errors"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/panels/ActivityCitiesPanel.tsx"
+        ]
+      }
+    },
+    {
+      "id": "cache-hit",
+      "type": "otel-event",
+      "x": -200,
+      "y": 600,
+      "width": 220,
+      "height": 100,
+      "label": "Tree Cache Hit",
+      "shape": "rectangle",
+      "event": {
+        "name": "activity_cities.cache.hit",
+        "description": "Used cached file tree data",
+        "attributes": {
+          "repo_id": {
+            "type": "string",
+            "description": "Repository identifier"
+          },
+          "cache_age_ms": {
+            "type": "number",
+            "description": "Age of cached data in milliseconds"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/hooks/useActivityCities.ts"
+        ]
+      }
+    },
+    {
+      "id": "cache-miss",
+      "type": "otel-event",
+      "x": 100,
+      "y": 600,
+      "width": 220,
+      "height": 100,
+      "label": "Tree Cache Miss",
+      "shape": "rectangle",
+      "event": {
+        "name": "activity_cities.cache.miss",
+        "description": "Cache miss, need to fetch from GitHub",
+        "attributes": {
+          "repo_id": {
+            "type": "string",
+            "description": "Repository identifier"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Reason for cache miss (expired, not_found)"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/hooks/useActivityCities.ts"
+        ]
+      }
+    },
+    {
+      "id": "data-flow-note",
+      "type": "text",
+      "x": 950,
+      "y": 0,
+      "width": 280,
+      "height": 180,
+      "text": "DATA FLOW\n\n1. Panel mounts, hook initializes\n2. Subscribe to presence updates\n3. Fetch current presence data\n4. Group users by openRepositories\n5. For each repo, fetch file tree\n6. Build CityData from tree\n7. Render 2D File City grid",
+      "color": "#6366F1"
+    },
+    {
+      "id": "caching-note",
+      "type": "text",
+      "x": 950,
+      "y": 200,
+      "width": 280,
+      "height": 140,
+      "text": "CACHING STRATEGY\n\nFile trees cached by repo:sha\n- 5 minute TTL\n- Avoids repeated GitHub API calls\n- SHA ensures freshness\n- Cleared on unmount",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "components-note",
+      "type": "text",
+      "x": 950,
+      "y": 360,
+      "width": 280,
+      "height": 180,
+      "text": "COMPONENTS\n\nActivityCitiesPanel\n- Main container\n- Uses useActivityCities hook\n\nActivityCitiesHeader\n- Title + online count\n- Back button\n\nCityCard\n- 2D File City (canvas)\n- Repo name + users",
+      "color": "#10B981"
+    },
+    {
+      "id": "tech-note",
+      "type": "text",
+      "x": 950,
+      "y": 560,
+      "width": 280,
+      "height": 140,
+      "text": "TECHNOLOGIES\n\n- ArchitectureMapHighlightLayers\n  (2D canvas-based File City)\n- CodeCityBuilderWithGrid\n  (CityData builder)\n- PresenceService (real-time)\n- GithubService.getTree()",
+      "color": "#8B5CF6"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "fromNode": "view-switch-to",
+      "toNode": "panel-mount",
+      "fromSide": "left",
+      "toSide": "right",
+      "label": "panel:switch event",
+      "pv": {
+        "edgeType": "event"
+      }
+    },
+    {
+      "id": "e2",
+      "fromNode": "panel-mount",
+      "toNode": "presence-subscribe",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "initialize hook",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "e3",
+      "fromNode": "presence-subscribe",
+      "toNode": "presence-fetch",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "initial fetch",
+      "pv": {
+        "edgeType": "ipc"
+      }
+    },
+    {
+      "id": "e4",
+      "fromNode": "presence-fetch",
+      "toNode": "presence-updated",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "subscribe updates",
+      "pv": {
+        "edgeType": "event"
+      }
+    },
+    {
+      "id": "e5",
+      "fromNode": "presence-fetch",
+      "toNode": "repos-grouped",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "process users",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "e6",
+      "fromNode": "repos-grouped",
+      "toNode": "tree-fetch-start",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "for each repo",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "e7",
+      "fromNode": "tree-fetch-start",
+      "toNode": "tree-fetch-complete",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "GitHub API",
+      "pv": {
+        "edgeType": "http"
+      }
+    },
+    {
+      "id": "e8",
+      "fromNode": "tree-fetch-start",
+      "toNode": "tree-fetch-error",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "on error",
+      "pv": {
+        "edgeType": "http"
+      }
+    },
+    {
+      "id": "e9",
+      "fromNode": "tree-fetch-complete",
+      "toNode": "city-build-start",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "transform tree",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "e10",
+      "fromNode": "city-build-start",
+      "toNode": "city-build-complete",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "CodeCityBuilder",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "e11",
+      "fromNode": "city-build-complete",
+      "toNode": "city-render",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "pass to component",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "e12",
+      "fromNode": "city-render",
+      "toNode": "grid-render",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "all cards",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "e13",
+      "fromNode": "view-switch-back",
+      "toNode": "panel-mount",
+      "fromSide": "left",
+      "toSide": "right",
+      "label": "panel:switch feed",
+      "pv": {
+        "edgeType": "event"
+      }
+    },
+    {
+      "id": "e14",
+      "fromNode": "tree-fetch-start",
+      "toNode": "cache-hit",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "check cache",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "e15",
+      "fromNode": "cache-miss",
+      "toNode": "tree-fetch-complete",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "label": "fetch fresh",
+      "pv": {
+        "edgeType": "http"
+      }
+    },
+    {
+      "id": "e16",
+      "fromNode": "presence-updated",
+      "toNode": "repos-grouped",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "re-process",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    }
+  ]
+}

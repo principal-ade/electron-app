@@ -34,7 +34,8 @@ export type InteractiveShellNavigationView =
   | 'network'
   | 'processes'
   | 'connections'
-  | 'skills';
+  | 'skills'
+  | 'activity-cities';
 
 // Onboarding state types
 export interface OnboardingCardState {
