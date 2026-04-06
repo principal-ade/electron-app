@@ -1,9 +1,8 @@
 {
+  "name": "Activity Cities",
+  "markdown": ".principal-views/activity-cities/activity-cities.md",
   "pv": {
-    "name": "Activity Cities",
-    "version": "1.0.0",
     "description": "Bloomberg terminal-style activity feed showing interactive 2D File City visualizations for repositories with active users",
-    "markdown": ".principal-views/activity-cities/activity-cities.md",
     "scope": "principal-ade-renderer",
     "nodeTypes": {
       "panel": {
@@ -654,9 +653,7 @@
       "fromSide": "left",
       "toSide": "right",
       "label": "panel:switch event",
-      "pv": {
-        "edgeType": "event"
-      }
+      "edgeType": "event"
     },
     {
       "id": "e2",
@@ -665,9 +662,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "initialize hook",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "e3",
@@ -676,9 +671,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "initial fetch",
-      "pv": {
-        "edgeType": "ipc"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "e4",
@@ -687,9 +680,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "subscribe updates",
-      "pv": {
-        "edgeType": "event"
-      }
+      "edgeType": "event"
     },
     {
       "id": "e5",
@@ -698,9 +689,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "process users",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "e6",
@@ -709,9 +698,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "for each repo",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "e7",
@@ -720,9 +707,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "GitHub API",
-      "pv": {
-        "edgeType": "http"
-      }
+      "edgeType": "http"
     },
     {
       "id": "e8",
@@ -731,9 +716,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "on error",
-      "pv": {
-        "edgeType": "http"
-      }
+      "edgeType": "http"
     },
     {
       "id": "e9",
@@ -742,9 +725,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "transform tree",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "e10",
@@ -753,9 +734,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "CodeCityBuilder",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "e11",
@@ -764,9 +743,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "pass to component",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "e12",
@@ -775,9 +752,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "all cards",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "e13",
@@ -786,9 +761,7 @@
       "fromSide": "left",
       "toSide": "right",
       "label": "panel:switch feed",
-      "pv": {
-        "edgeType": "event"
-      }
+      "edgeType": "event"
     },
     {
       "id": "e14",
@@ -797,9 +770,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "check cache",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "e15",
@@ -808,9 +779,7 @@
       "fromSide": "top",
       "toSide": "bottom",
       "label": "fetch fresh",
-      "pv": {
-        "edgeType": "http"
-      }
+      "edgeType": "http"
     },
     {
       "id": "e16",
@@ -819,9 +788,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "re-process",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     }
   ]
 }
