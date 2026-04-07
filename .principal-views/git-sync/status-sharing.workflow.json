@@ -1,0 +1,49 @@
+{
+  "version": "1.0.0",
+  "name": "Status Sharing",
+  "description": "Real-time git status sharing between collaborators",
+  "canvas": ".principal-views/git-sync/git-sync.otel.canvas",
+  "spanPattern": "git_sync.status.share",
+  "scenarios": [
+    {
+      "id": "status-change-detected",
+      "description": "Local git status changed and debounced for sharing",
+      "priority": 1,
+      "template": {
+        "introduction": "**Git Status Changed**\n\nLocal working tree changed, preparing to share with collaborators.",
+        "events": {
+          "git_sync.status.local_changed": "[1] Status changed: repo={{repository}}, trigger={{trigger}}, dirty={{is_dirty}}",
+          "git_sync.status.debounced": "[2] Debounced: repo={{repository}}, modified={{modified_count}}, staged={{staged_count}}"
+        },
+        "summary": "**Status Ready:**\n- Repository: {{repository}}\n- Modified files: {{modified_count}}\n- Staged files: {{staged_count}}"
+      },
+      "filterDefault": true
+    },
+    {
+      "id": "status-broadcast",
+      "description": "Sending git status update to traffic controller",
+      "priority": 2,
+      "template": {
+        "introduction": "**Broadcasting Status**\n\nSending git status to collaborators via traffic controller.",
+        "events": {
+          "git_sync.status.update_sent": "[1] Sent: repo={{repository}}, dirty={{is_dirty}}, ahead={{ahead}}, behind={{behind}}, files={{file_count}}"
+        },
+        "summary": "**Status Sent:**\n- Repository: {{repository}}\n- Dirty: {{is_dirty}}\n- Ahead/Behind: {{ahead}}/{{behind}}"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "status-received",
+      "description": "Receiving git status update from a peer",
+      "priority": 3,
+      "template": {
+        "introduction": "**Peer Status Received**\n\nA collaborator's git status was updated.",
+        "events": {
+          "git_sync.status.update_received": "[1] Received: user={{peer_user_id}}, repo={{repository}}, dirty={{is_dirty}}, modified={{modified_files}}, staged={{staged_files}}"
+        },
+        "summary": "**Peer Update:**\n- User: {{peer_user_id}}\n- Repository: {{repository}}\n- Has changes: {{is_dirty}}"
+      },
+      "filterDefault": true
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "version": "1.0.0",
+  "name": "Shared Git Status",
+  "description": "Visualizing peer git status on Activity Cities",
+  "canvas": ".principal-views/activity-cities/activity-cities.otel.canvas",
+  "spanPattern": "activity_cities.status.visualize",
+  "scenarios": [
+    {
+      "id": "status-received",
+      "description": "Git status update received from presence system",
+      "priority": 1,
+      "template": {
+        "introduction": "**Status Update Received**\n\nA collaborator's git status was received via presence.",
+        "events": {
+          "activity_cities.status.received": "[1] Received: user={{peer_user_id}}, repo={{repo_id}}, dirty={{is_dirty}}, modified={{modified_count}}"
+        },
+        "summary": "**Status Received:**\n- User: {{peer_user_id}}\n- Repository: {{repo_id}}\n- Has changes: {{is_dirty}}"
+      },
+      "filterDefault": true
+    },
+    {
+      "id": "status-applied",
+      "description": "Git status applied to repository state",
+      "priority": 2,
+      "template": {
+        "introduction": "**Status Applied**\n\nUpdating repository state with git status.",
+        "events": {
+          "activity_cities.status.applied": "[1] Applied: repo={{repo_id}}, ahead={{ahead}}, behind={{behind}}, modified={{modified_files}}, staged={{staged_files}}"
+        },
+        "summary": "**State Updated:**\n- Repository: {{repo_id}}\n- Ahead/Behind: {{ahead}}/{{behind}}"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "status-visualization",
+      "description": "Rendering git status indicators on city visualization",
+      "priority": 3,
+      "template": {
+        "introduction": "**Rendering Status**\n\nDisplaying git status on city card.",
+        "events": {
+          "activity_cities.status.indicator_rendered": "[1] Indicator: repo={{repo_id}}, type={{indicator_type}}, highlighted={{highlighted_files}}",
+          "activity_cities.status.files_highlighted": "[2] Files highlighted: repo={{repo_id}}, paths={{file_paths}}, color={{highlight_color}}"
+        },
+        "summary": "**Visualization:**\n- Repository: {{repo_id}}\n- Indicator: {{indicator_type}}\n- Files highlighted: {{highlighted_files}}"
+      },
+      "filterDefault": true
+    }
+  ]
+}

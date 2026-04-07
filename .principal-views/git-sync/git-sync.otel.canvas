@@ -818,6 +818,172 @@
       "height": 200,
       "text": "ARCHITECTURE\n\nRenderer Process:\n- GitSyncConnectionManager (singleton)\n- GitSyncClient (proxy to main)\n- GitSyncPanelContext (React state)\n\nMain Process:\n- GitSyncWebSocketManager (singleton)\n- Control Tower Core BaseClient\n- IPC bridge to renderers",
       "color": "#3B82F6"
+    },
+    {
+      "id": "status-local-changed",
+      "type": "otel-event",
+      "x": -200,
+      "y": 960,
+      "width": 220,
+      "height": 100,
+      "label": "Git Status Changed",
+      "shape": "rectangle",
+      "event": {
+        "name": "git_sync.status.local_changed",
+        "description": "Local git status changed (file saved, commit, etc.)",
+        "attributes": {
+          "repository": {
+            "type": "string",
+            "description": "Repository ID (owner/repo)"
+          },
+          "trigger": {
+            "type": "string",
+            "description": "What triggered the change (file_change, commit, checkout)"
+          },
+          "is_dirty": {
+            "type": "boolean",
+            "description": "Whether working tree has uncommitted changes"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/services/git-sync/GitStatusWatcher.ts"
+        ]
+      }
+    },
+    {
+      "id": "status-debounced",
+      "type": "otel-event",
+      "x": 100,
+      "y": 960,
+      "width": 220,
+      "height": 100,
+      "label": "Status Debounced",
+      "shape": "rectangle",
+      "event": {
+        "name": "git_sync.status.debounced",
+        "description": "Git status debounced (1 second) ready to send",
+        "attributes": {
+          "repository": {
+            "type": "string",
+            "description": "Repository ID"
+          },
+          "modified_count": {
+            "type": "number",
+            "description": "Number of modified files"
+          },
+          "staged_count": {
+            "type": "number",
+            "description": "Number of staged files"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/services/git-sync/GitStatusWatcher.ts"
+        ]
+      }
+    },
+    {
+      "id": "status-update-sent",
+      "type": "otel-event",
+      "x": 400,
+      "y": 960,
+      "width": 220,
+      "height": 100,
+      "label": "Status Update Sent",
+      "shape": "rectangle",
+      "event": {
+        "name": "git_sync.status.update_sent",
+        "description": "Git status update sent to traffic controller",
+        "attributes": {
+          "repository": {
+            "type": "string",
+            "description": "Repository ID"
+          },
+          "is_dirty": {
+            "type": "boolean",
+            "description": "Has uncommitted changes"
+          },
+          "ahead": {
+            "type": "number",
+            "description": "Commits ahead of remote"
+          },
+          "behind": {
+            "type": "number",
+            "description": "Commits behind remote"
+          },
+          "file_count": {
+            "type": "number",
+            "description": "Total changed files (modified + staged + untracked)"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/services/GitSyncWebSocketManager.ts"
+        ]
+      }
+    },
+    {
+      "id": "status-update-received",
+      "type": "otel-event",
+      "x": 700,
+      "y": 960,
+      "width": 220,
+      "height": 100,
+      "label": "Status Update Received",
+      "shape": "rectangle",
+      "event": {
+        "name": "git_sync.status.update_received",
+        "description": "Received git status update from peer",
+        "attributes": {
+          "peer_user_id": {
+            "type": "string",
+            "description": "User who sent the update"
+          },
+          "repository": {
+            "type": "string",
+            "description": "Repository ID"
+          },
+          "is_dirty": {
+            "type": "boolean",
+            "description": "Peer has uncommitted changes"
+          },
+          "modified_files": {
+            "type": "array",
+            "description": "List of modified file paths"
+          },
+          "staged_files": {
+            "type": "array",
+            "description": "List of staged file paths"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-main",
+        "files": [
+          "src/main/services/GitSyncWebSocketManager.ts"
+        ]
+      }
+    },
+    {
+      "id": "status-note",
+      "type": "text",
+      "x": 950,
+      "y": 760,
+      "width": 280,
+      "height": 200,
+      "text": "SHARED GIT STATUS\n\nReal-time git status sharing:\n- File watcher triggers on changes\n- 1 second debounce\n- Full file lists sent (not just counts)\n- Broadcast to all presence subscribers\n\nStatus includes:\n- Modified/staged/untracked files\n- Ahead/behind remote counts\n- Current branch",
+      "color": "#EC4899"
     }
   ],
   "edges": [
@@ -964,6 +1130,42 @@
       "toSide": "top",
       "label": "if conflicts",
       "edgeType": "subscription"
+    },
+    {
+      "id": "e17",
+      "fromNode": "status-local-changed",
+      "toNode": "status-debounced",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "1s debounce",
+      "edgeType": "subscription"
+    },
+    {
+      "id": "e18",
+      "fromNode": "status-debounced",
+      "toNode": "status-update-sent",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "IPC to main",
+      "edgeType": "ipc"
+    },
+    {
+      "id": "e19",
+      "fromNode": "status-update-sent",
+      "toNode": "status-update-received",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "broadcast",
+      "edgeType": "websocket"
+    },
+    {
+      "id": "e20",
+      "fromNode": "room-joined",
+      "toNode": "status-local-changed",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "start watcher",
+      "edgeType": "subscription"
     }
   ],
   "name": "Git Sync",
@@ -1006,6 +1208,16 @@
       "label": "HTTP",
       "style": "dashed",
       "color": "#8B5CF6"
+    },
+    "ipc": {
+      "label": "IPC",
+      "style": "solid",
+      "color": "#10B981"
+    },
+    "subscription": {
+      "label": "Event",
+      "style": "dotted",
+      "color": "#6366F1"
     }
   }
 }

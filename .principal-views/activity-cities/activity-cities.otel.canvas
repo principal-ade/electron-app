@@ -603,6 +603,158 @@
       }
     },
     {
+      "id": "status-received",
+      "type": "otel-event",
+      "x": -200,
+      "y": 750,
+      "width": 220,
+      "height": 100,
+      "label": "Git Status Received",
+      "shape": "rectangle",
+      "event": {
+        "name": "activity_cities.status.received",
+        "description": "Received git status update from peer via presence",
+        "attributes": {
+          "peer_user_id": {
+            "type": "string",
+            "description": "User who sent the status"
+          },
+          "repo_id": {
+            "type": "string",
+            "description": "Repository identifier"
+          },
+          "is_dirty": {
+            "type": "boolean",
+            "description": "Has uncommitted changes"
+          },
+          "modified_count": {
+            "type": "number",
+            "description": "Number of modified files"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/hooks/useActivityCities.ts"
+        ]
+      }
+    },
+    {
+      "id": "status-applied",
+      "type": "otel-event",
+      "x": 100,
+      "y": 750,
+      "width": 220,
+      "height": 100,
+      "label": "Status Applied",
+      "shape": "rectangle",
+      "event": {
+        "name": "activity_cities.status.applied",
+        "description": "Git status applied to repository state",
+        "attributes": {
+          "repo_id": {
+            "type": "string",
+            "description": "Repository identifier"
+          },
+          "modified_files": {
+            "type": "array",
+            "description": "List of modified file paths"
+          },
+          "staged_files": {
+            "type": "array",
+            "description": "List of staged file paths"
+          },
+          "ahead": {
+            "type": "number",
+            "description": "Commits ahead of remote"
+          },
+          "behind": {
+            "type": "number",
+            "description": "Commits behind remote"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/hooks/useActivityCities.ts"
+        ]
+      }
+    },
+    {
+      "id": "status-indicator-rendered",
+      "type": "otel-event",
+      "x": 400,
+      "y": 750,
+      "width": 220,
+      "height": 100,
+      "label": "Status Indicator Rendered",
+      "shape": "rectangle",
+      "event": {
+        "name": "activity_cities.status.indicator_rendered",
+        "description": "Dirty/ahead/behind indicator rendered on city card",
+        "attributes": {
+          "repo_id": {
+            "type": "string",
+            "description": "Repository identifier"
+          },
+          "indicator_type": {
+            "type": "string",
+            "description": "Type of indicator (dirty, ahead, behind, clean)"
+          },
+          "highlighted_files": {
+            "type": "number",
+            "description": "Number of files highlighted on city"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/components/ActivityCities/CityCard.tsx"
+        ]
+      }
+    },
+    {
+      "id": "file-highlight-rendered",
+      "type": "otel-event",
+      "x": 700,
+      "y": 750,
+      "width": 220,
+      "height": 100,
+      "label": "Files Highlighted",
+      "shape": "rectangle",
+      "event": {
+        "name": "activity_cities.status.files_highlighted",
+        "description": "Modified files highlighted as buildings on city",
+        "attributes": {
+          "repo_id": {
+            "type": "string",
+            "description": "Repository identifier"
+          },
+          "file_paths": {
+            "type": "array",
+            "description": "Paths of highlighted files"
+          },
+          "highlight_color": {
+            "type": "string",
+            "description": "Color used for highlighting (modified, staged, untracked)"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "scope": "principal-ade-renderer",
+        "files": [
+          "src/renderer/components/ActivityCities/CityCard.tsx"
+        ]
+      }
+    },
+    {
       "id": "data-flow-note",
       "type": "text",
       "x": 950,
@@ -641,6 +793,16 @@
       "height": 140,
       "text": "TECHNOLOGIES\n\n- ArchitectureMapHighlightLayers\n  (2D canvas-based File City)\n- CodeCityBuilderWithGrid\n  (CityData builder)\n- PresenceService (real-time)\n- GithubService.getTree()",
       "color": "#8B5CF6"
+    },
+    {
+      "id": "git-status-note",
+      "type": "text",
+      "x": 950,
+      "y": 720,
+      "width": 280,
+      "height": 180,
+      "text": "SHARED GIT STATUS\n\nVisualize peer's working state:\n- Dirty indicator (uncommitted)\n- Ahead/behind remote badges\n- Modified files highlighted\n\nFull file lists shared:\n- modifiedFiles[]\n- stagedFiles[]\n- untrackedFiles[]\n\n1 second debounce on updates",
+      "color": "#EC4899"
     }
   ],
   "edges": [
@@ -786,6 +948,42 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "re-process",
+      "edgeType": "uses"
+    },
+    {
+      "id": "e17",
+      "fromNode": "presence-updated",
+      "toNode": "status-received",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "status in presence",
+      "edgeType": "subscription"
+    },
+    {
+      "id": "e18",
+      "fromNode": "status-received",
+      "toNode": "status-applied",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "update state",
+      "edgeType": "uses"
+    },
+    {
+      "id": "e19",
+      "fromNode": "status-applied",
+      "toNode": "status-indicator-rendered",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "re-render card",
+      "edgeType": "uses"
+    },
+    {
+      "id": "e20",
+      "fromNode": "status-indicator-rendered",
+      "toNode": "file-highlight-rendered",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "highlight buildings",
       "edgeType": "uses"
     }
   ]
