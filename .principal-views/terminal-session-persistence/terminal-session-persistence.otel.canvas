@@ -1,80 +1,4 @@
 {
-  "pv": {
-    "name": "Terminal Session Persistence",
-    "version": "1.0.0",
-    "description": "External PTY daemon architecture for preserving terminal sessions across app updates",
-    "markdown": ".principal-views/terminal-session-persistence/terminal-session-persistence.md",
-    "scope": "principal-ade-daemon",
-    "nodeTypes": {
-      "electron": {
-        "label": "Electron",
-        "color": "#10B981"
-      },
-      "daemon-client": {
-        "label": "Daemon Client",
-        "color": "#6366F1"
-      },
-      "worker": {
-        "label": "Utility Worker",
-        "color": "#A855F7"
-      },
-      "socket": {
-        "label": "Socket",
-        "color": "#14B8A6"
-      },
-      "daemon": {
-        "label": "PTY Daemon",
-        "color": "#F59E0B"
-      },
-      "pty": {
-        "label": "PTY Process",
-        "color": "#8B5CF6"
-      },
-      "update": {
-        "label": "Update",
-        "color": "#EC4899"
-      },
-      "renderer": {
-        "label": "Renderer",
-        "color": "#3B82F6"
-      },
-      "event": {
-        "label": "Event",
-        "color": "#3B82F6"
-      },
-      "boundary": {
-        "label": "Boundary",
-        "color": "#64748B"
-      }
-    },
-    "edgeTypes": {
-      "socket-ipc": {
-        "label": "Socket IPC",
-        "style": "solid",
-        "color": "#14B8A6"
-      },
-      "method-call": {
-        "label": "Method Call",
-        "style": "solid",
-        "color": "#F59E0B"
-      },
-      "spawn": {
-        "label": "Spawn",
-        "style": "dashed",
-        "color": "#8B5CF6"
-      },
-      "lifecycle": {
-        "label": "Lifecycle",
-        "style": "dotted",
-        "color": "#EC4899"
-      },
-      "port-transfer": {
-        "label": "Port Transfer",
-        "style": "solid",
-        "color": "#3B82F6"
-      }
-    }
-  },
   "nodes": [
     {
       "id": "title",
@@ -880,9 +804,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "delegates to",
-      "pv": {
-        "edgeType": "method-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e2",
@@ -891,9 +813,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "net.connect()",
-      "pv": {
-        "edgeType": "socket-ipc"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "e3",
@@ -902,9 +822,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "JSON messages",
-      "pv": {
-        "edgeType": "socket-ipc"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "e4",
@@ -913,9 +831,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "route messages",
-      "pv": {
-        "edgeType": "method-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e5",
@@ -924,9 +840,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "spawn",
-      "pv": {
-        "edgeType": "spawn"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e6",
@@ -934,9 +848,7 @@
       "toNode": "pty-2",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "spawn"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e7",
@@ -944,9 +856,7 @@
       "toNode": "pty-3",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "spawn"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e8",
@@ -954,9 +864,7 @@
       "toNode": "pty-n",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "spawn"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e9",
@@ -965,9 +873,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "MessagePort",
-      "pv": {
-        "edgeType": "port-transfer"
-      }
+      "edgeType": "worker-message"
     },
     {
       "id": "e10",
@@ -976,9 +882,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "manages",
-      "pv": {
-        "edgeType": "lifecycle"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e11",
@@ -987,9 +891,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "state of",
-      "pv": {
-        "edgeType": "socket-ipc"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "e12",
@@ -998,9 +900,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "save/load metadata",
-      "pv": {
-        "edgeType": "lifecycle"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e13",
@@ -1009,9 +909,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "maintains",
-      "pv": {
-        "edgeType": "method-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e14",
@@ -1020,9 +918,7 @@
       "fromSide": "top",
       "toSide": "bottom",
       "label": "lifecycle",
-      "pv": {
-        "edgeType": "lifecycle"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e15",
@@ -1031,9 +927,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "triggers",
-      "pv": {
-        "edgeType": "lifecycle"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e16",
@@ -1042,9 +936,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "monitors",
-      "pv": {
-        "edgeType": "lifecycle"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e17",
@@ -1053,9 +945,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "MessagePort (direct)",
-      "pv": {
-        "edgeType": "port-transfer"
-      }
+      "edgeType": "worker-message"
     },
     {
       "id": "e18",
@@ -1064,9 +954,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "control only",
-      "pv": {
-        "edgeType": "method-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e19",
@@ -1075,9 +963,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "contains",
-      "pv": {
-        "edgeType": "method-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e20",
@@ -1086,9 +972,7 @@
       "fromSide": "left",
       "toSide": "right",
       "label": "direct socket (data)",
-      "pv": {
-        "edgeType": "socket-ipc"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "e21",
@@ -1097,9 +981,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "attempt",
-      "pv": {
-        "edgeType": "spawn"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e22",
@@ -1108,9 +990,54 @@
       "fromSide": "right",
       "toSide": "bottom",
       "label": "on error",
-      "pv": {
-        "edgeType": "lifecycle"
-      }
+      "edgeType": "uses"
     }
-  ]
+  ],
+  "name": "Terminal Session Persistence",
+  "description": "External PTY daemon architecture for preserving terminal sessions across app updates",
+  "markdown": ".principal-views/terminal-session-persistence/terminal-session-persistence.md",
+  "scope": "principal-ade-daemon",
+  "nodeTypes": {
+    "electron": {
+      "label": "Electron",
+      "color": "#10B981"
+    },
+    "daemon-client": {
+      "label": "Daemon Client",
+      "color": "#6366F1"
+    },
+    "worker": {
+      "label": "Utility Worker",
+      "color": "#A855F7"
+    },
+    "socket": {
+      "label": "Socket",
+      "color": "#14B8A6"
+    },
+    "daemon": {
+      "label": "PTY Daemon",
+      "color": "#F59E0B"
+    },
+    "pty": {
+      "label": "PTY Process",
+      "color": "#8B5CF6"
+    },
+    "update": {
+      "label": "Update",
+      "color": "#EC4899"
+    },
+    "renderer": {
+      "label": "Renderer",
+      "color": "#3B82F6"
+    },
+    "event": {
+      "label": "Event",
+      "color": "#3B82F6"
+    },
+    "boundary": {
+      "label": "Boundary",
+      "color": "#64748B"
+    }
+  },
+  "edgeTypes": {}
 }

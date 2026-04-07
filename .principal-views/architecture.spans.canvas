@@ -1,10 +1,7 @@
 {
-  "pv": {
-    "name": "Span Naming Conventions",
-    "version": "1.0.0",
-    "description": "OpenTelemetry span naming conventions for the Principal ADE application",
-    "markdown": ".principal-views/architecture.spans.md"
-  },
+  "name": "Span Naming Conventions",
+  "description": "OpenTelemetry span naming conventions for the Principal ADE application",
+  "markdown": ".principal-views/architecture.spans.md",
   "nodes": [
     {
       "id": "window-create",
@@ -372,9 +369,7 @@
       "toNode": "ipc-handle",
       "toSide": "top",
       "label": "context propagation",
-      "pv": {
-        "edgeType": "ipc"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "session-connect-to-daemon",
@@ -383,9 +378,7 @@
       "toNode": "daemon-client-connect",
       "toSide": "top",
       "label": "unix socket",
-      "pv": {
-        "edgeType": "worker-message"
-      }
+      "edgeType": "worker-message"
     }
   ]
 }

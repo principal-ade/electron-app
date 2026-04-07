@@ -1,4 +1,17 @@
 {
+  "name": "Agent Client Protocol Architecture",
+  "description": "Visual explanation of how ACP standardizes editor-agent communication using JSON-RPC over stdio pipes",
+  "markdown": ".principal-views/agent-client-protocol.md",
+  "display": {
+    "layout": "manual",
+    "theme": {
+      "primary": "#8b5cf6",
+      "success": "#22c55e",
+      "danger": "#ef4444",
+      "warning": "#f97316",
+      "info": "#06b6d4"
+    }
+  },
   "nodes": [
     {
       "id": "title",
@@ -194,15 +207,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "JSON-RPC",
-      "pv": {
-        "edgeType": "ipc",
-        "style": "solid",
-        "animation": {
-          "type": "flow",
-          "duration": 2000,
-          "color": "#06b6d4"
-        }
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "comm-to-agent",
@@ -211,15 +216,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "stdin/stdout",
-      "pv": {
-        "edgeType": "websocket",
-        "style": "solid",
-        "animation": {
-          "type": "flow",
-          "duration": 2000,
-          "color": "#06b6d4"
-        }
-      }
+      "edgeType": "websocket"
     },
     {
       "id": "problem-to-editor",
@@ -228,10 +225,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "solves",
-      "pv": {
-        "edgeType": "uses",
-        "style": "dashed"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "editor-to-init",
@@ -240,10 +234,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "1. initialize",
-      "pv": {
-        "edgeType": "ipc",
-        "style": "solid"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "init-to-session",
@@ -252,10 +243,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "2. create session",
-      "pv": {
-        "edgeType": "ipc",
-        "style": "solid"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "session-to-prompt",
@@ -264,10 +252,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "3. start turn",
-      "pv": {
-        "edgeType": "ipc",
-        "style": "solid"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "pty-to-editor",
@@ -276,10 +261,7 @@
       "fromSide": "top",
       "toSide": "left",
       "label": "context",
-      "pv": {
-        "edgeType": "uses",
-        "style": "dashed"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "stdio-to-comm",
@@ -288,10 +270,7 @@
       "fromSide": "top",
       "toSide": "bottom",
       "label": "implements",
-      "pv": {
-        "edgeType": "uses",
-        "style": "solid"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "pty-to-stdio",
@@ -300,26 +279,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "vs",
-      "pv": {
-        "edgeType": "uses",
-        "style": "dashed"
-      }
+      "edgeType": "uses"
     }
-  ],
-  "pv": {
-    "version": "1.0",
-    "name": "Agent Client Protocol Architecture",
-    "description": "Visual explanation of how ACP standardizes editor-agent communication using JSON-RPC over stdio pipes",
-    "markdown": ".principal-views/agent-client-protocol.md",
-    "display": {
-      "layout": "manual",
-      "theme": {
-        "primary": "#8b5cf6",
-        "success": "#22c55e",
-        "danger": "#ef4444",
-        "warning": "#f97316",
-        "info": "#06b6d4"
-      }
-    }
-  }
+  ]
 }

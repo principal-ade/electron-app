@@ -1,59 +1,4 @@
 {
-  "pv": {
-    "name": "Git Sync",
-    "version": "1.0.0",
-    "description": "Real-time Git synchronization and collaboration via WebSocket connection to traffic controller",
-    "markdown": ".principal-views/git-sync/git-sync.md",
-    "scope": "principal-ade-main",
-    "nodeTypes": {
-      "renderer": {
-        "label": "Renderer",
-        "color": "#10B981"
-      },
-      "connection-manager": {
-        "label": "Connection Manager",
-        "color": "#6366F1"
-      },
-      "websocket-manager": {
-        "label": "WebSocket Manager",
-        "color": "#F59E0B"
-      },
-      "traffic-controller": {
-        "label": "Traffic Controller",
-        "color": "#EF4444"
-      },
-      "auth-server": {
-        "label": "Auth Server",
-        "color": "#8B5CF6"
-      },
-      "context": {
-        "label": "Context",
-        "color": "#3B82F6"
-      }
-    },
-    "edgeTypes": {
-      "ipc-invoke": {
-        "label": "IPC Invoke",
-        "style": "solid",
-        "color": "#6366F1"
-      },
-      "websocket": {
-        "label": "WebSocket",
-        "style": "solid",
-        "color": "#F59E0B"
-      },
-      "http": {
-        "label": "HTTP",
-        "style": "dashed",
-        "color": "#8B5CF6"
-      },
-      "event": {
-        "label": "Event",
-        "style": "dotted",
-        "color": "#10B981"
-      }
-    }
-  },
   "nodes": [
     {
       "id": "title",
@@ -883,9 +828,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "request token",
-      "pv": {
-        "edgeType": "ipc-invoke"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "e2",
@@ -894,9 +837,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "OAuth server",
-      "pv": {
-        "edgeType": "http"
-      }
+      "edgeType": "http"
     },
     {
       "id": "e3",
@@ -905,9 +846,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "with JWT",
-      "pv": {
-        "edgeType": "websocket"
-      }
+      "edgeType": "websocket"
     },
     {
       "id": "e4",
@@ -916,9 +855,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "auth message",
-      "pv": {
-        "edgeType": "websocket"
-      }
+      "edgeType": "websocket"
     },
     {
       "id": "e5",
@@ -927,9 +864,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "joinRoom()",
-      "pv": {
-        "edgeType": "websocket"
-      }
+      "edgeType": "websocket"
     },
     {
       "id": "e6",
@@ -938,9 +873,7 @@
       "fromSide": "top",
       "toSide": "bottom",
       "label": "auto-reconnect",
-      "pv": {
-        "edgeType": "event"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "e7",
@@ -949,9 +882,7 @@
       "fromSide": "left",
       "toSide": "right",
       "label": "retry",
-      "pv": {
-        "edgeType": "websocket"
-      }
+      "edgeType": "websocket"
     },
     {
       "id": "e8",
@@ -960,9 +891,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "success",
-      "pv": {
-        "edgeType": "websocket"
-      }
+      "edgeType": "websocket"
     },
     {
       "id": "e9",
@@ -971,9 +900,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "conflict/timeout",
-      "pv": {
-        "edgeType": "websocket"
-      }
+      "edgeType": "websocket"
     },
     {
       "id": "e10",
@@ -982,9 +909,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "release or expire",
-      "pv": {
-        "edgeType": "websocket"
-      }
+      "edgeType": "websocket"
     },
     {
       "id": "e11",
@@ -993,9 +918,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "peer events",
-      "pv": {
-        "edgeType": "event"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "e12",
@@ -1004,9 +927,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "lifecycle",
-      "pv": {
-        "edgeType": "event"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "e13",
@@ -1015,9 +936,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "updates",
-      "pv": {
-        "edgeType": "event"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "e14",
@@ -1026,9 +945,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "push event",
-      "pv": {
-        "edgeType": "event"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "e15",
@@ -1037,9 +954,7 @@
       "fromSide": "top",
       "toSide": "bottom",
       "label": "release all locks",
-      "pv": {
-        "edgeType": "event"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "e16",
@@ -1048,9 +963,49 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "if conflicts",
-      "pv": {
-        "edgeType": "event"
-      }
+      "edgeType": "subscription"
     }
-  ]
+  ],
+  "name": "Git Sync",
+  "description": "Real-time Git synchronization and collaboration via WebSocket connection to traffic controller",
+  "markdown": ".principal-views/git-sync/git-sync.md",
+  "scope": "principal-ade-main",
+  "nodeTypes": {
+    "renderer": {
+      "label": "Renderer",
+      "color": "#10B981"
+    },
+    "connection-manager": {
+      "label": "Connection Manager",
+      "color": "#6366F1"
+    },
+    "websocket-manager": {
+      "label": "WebSocket Manager",
+      "color": "#F59E0B"
+    },
+    "traffic-controller": {
+      "label": "Traffic Controller",
+      "color": "#EF4444"
+    },
+    "auth-server": {
+      "label": "Auth Server",
+      "color": "#8B5CF6"
+    },
+    "context": {
+      "label": "Context",
+      "color": "#3B82F6"
+    }
+  },
+  "edgeTypes": {
+    "websocket": {
+      "label": "WebSocket",
+      "style": "solid",
+      "color": "#F59E0B"
+    },
+    "http": {
+      "label": "HTTP",
+      "style": "dashed",
+      "color": "#8B5CF6"
+    }
+  }
 }

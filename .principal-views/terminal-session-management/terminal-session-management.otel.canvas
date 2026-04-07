@@ -1,94 +1,4 @@
 {
-  "pv": {
-    "name": "Terminal Session Management",
-    "version": "1.0.0",
-    "description": "Lifecycle management of terminal sessions: creation, destruction, ownership, and port management",
-    "markdown": ".principal-views/terminal-session-management/terminal-session-management.md",
-    "scope": "principal-ade-main",
-    "nodeTypes": {
-      "renderer": {
-        "label": "Renderer",
-        "color": "#10B981"
-      },
-      "tipc-router": {
-        "label": "TIPC Router",
-        "color": "#6366F1"
-      },
-      "session-manager": {
-        "label": "Session Manager",
-        "color": "#F59E0B"
-      },
-      "ownership-manager": {
-        "label": "Ownership Manager",
-        "color": "#EC4899"
-      },
-      "worker": {
-        "label": "Worker",
-        "color": "#8B5CF6"
-      },
-      "store": {
-        "label": "Store",
-        "color": "#3B82F6"
-      },
-      "port": {
-        "label": "Port",
-        "color": "#14B8A6"
-      },
-      "daemon": {
-        "label": "PTY Daemon",
-        "color": "#EF4444"
-      },
-      "reconnect": {
-        "label": "Reconnect Handler",
-        "color": "#22C55E"
-      },
-      "event": {
-        "label": "Event",
-        "color": "#3B82F6"
-      },
-      "boundary": {
-        "label": "Boundary",
-        "color": "#64748B"
-      }
-    },
-    "edgeTypes": {
-      "tipc-invoke": {
-        "label": "TIPC Invoke",
-        "style": "solid",
-        "color": "#6366F1"
-      },
-      "method-call": {
-        "label": "Method Call",
-        "style": "solid",
-        "color": "#F59E0B"
-      },
-      "worker-message": {
-        "label": "Worker Message",
-        "style": "dashed",
-        "color": "#8B5CF6"
-      },
-      "state-update": {
-        "label": "State Update",
-        "style": "solid",
-        "color": "#3B82F6"
-      },
-      "port-transfer": {
-        "label": "Port Transfer",
-        "style": "dotted",
-        "color": "#14B8A6"
-      },
-      "daemon-message": {
-        "label": "Daemon Message",
-        "style": "dashed",
-        "color": "#EF4444"
-      },
-      "reconnect-trigger": {
-        "label": "Reconnect Trigger",
-        "style": "solid",
-        "color": "#22C55E"
-      }
-    }
-  },
   "nodes": [
     {
       "id": "title",
@@ -787,9 +697,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "TIPC invoke",
-      "pv": {
-        "edgeType": "tipc-invoke"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "e2",
@@ -798,9 +706,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "createSession()",
-      "pv": {
-        "edgeType": "method-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e7",
@@ -809,9 +715,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "port2",
-      "pv": {
-        "edgeType": "port-transfer"
-      }
+      "edgeType": "worker-message"
     },
     {
       "id": "e8",
@@ -820,9 +724,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "port1",
-      "pv": {
-        "edgeType": "port-transfer"
-      }
+      "edgeType": "worker-message"
     },
     {
       "id": "e9",
@@ -831,9 +733,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "PTY data (direct)",
-      "pv": {
-        "edgeType": "port-transfer"
-      }
+      "edgeType": "worker-message"
     },
     {
       "id": "e10",
@@ -842,9 +742,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "on create/destroy",
-      "pv": {
-        "edgeType": "method-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e11",
@@ -853,9 +751,7 @@
       "fromSide": "left",
       "toSide": "right",
       "label": "terminal:sessions-changed",
-      "pv": {
-        "edgeType": "tipc-invoke"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "e12",
@@ -864,9 +760,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "session-selected",
-      "pv": {
-        "edgeType": "method-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e13",
@@ -875,9 +769,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "click external",
-      "pv": {
-        "edgeType": "method-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e14",
@@ -886,9 +778,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "click local",
-      "pv": {
-        "edgeType": "method-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "edge-tipc-router-ownership-manager-1773328982858",
@@ -896,9 +786,7 @@
       "toNode": "ownership-manager",
       "fromSide": "right",
       "toSide": "left",
-      "pv": {
-        "edgeType": "method-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "edge-worker-session-manager-1773328982858",
@@ -906,9 +794,7 @@
       "toNode": "session-manager",
       "fromSide": "top",
       "toSide": "right",
-      "pv": {
-        "edgeType": "worker-message"
-      }
+      "edgeType": "worker-message"
     },
     {
       "id": "edge-session-manager-sessions-store-1773328982858",
@@ -916,9 +802,7 @@
       "toNode": "sessions-store",
       "fromSide": "right",
       "toSide": "left",
-      "pv": {
-        "edgeType": "state-update"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "edge-session-manager-worker-1773328982858",
@@ -926,9 +810,7 @@
       "toNode": "worker",
       "fromSide": "bottom",
       "toSide": "left",
-      "pv": {
-        "edgeType": "worker-message"
-      }
+      "edgeType": "worker-message"
     },
     {
       "id": "edge-worker-daemon",
@@ -937,9 +819,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "connect to daemon",
-      "pv": {
-        "edgeType": "daemon-message"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "edge-daemon-worker",
@@ -948,9 +828,7 @@
       "fromSide": "top",
       "toSide": "bottom",
       "label": "DAEMON_SESSIONS",
-      "pv": {
-        "edgeType": "daemon-message"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "edge-session-manager-restored-broadcast",
@@ -959,9 +837,7 @@
       "fromSide": "top",
       "toSide": "bottom",
       "label": "on daemon restore",
-      "pv": {
-        "edgeType": "method-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "edge-restored-broadcast-auto-reconnect",
@@ -970,9 +846,7 @@
       "fromSide": "left",
       "toSide": "right",
       "label": "SESSIONS_RESTORED",
-      "pv": {
-        "edgeType": "reconnect-trigger"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "edge-auto-reconnect-ownership",
@@ -981,9 +855,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "claimOwnership()",
-      "pv": {
-        "edgeType": "tipc-invoke"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "edge-auto-reconnect-port",
@@ -992,9 +864,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "requestDataPort()",
-      "pv": {
-        "edgeType": "reconnect-trigger"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "edge-auto-reconnect-error",
@@ -1003,9 +873,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "on failure",
-      "pv": {
-        "edgeType": "reconnect-trigger"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "edge-list-requested-router",
@@ -1014,9 +882,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "listTerminalSessions()",
-      "pv": {
-        "edgeType": "tipc-invoke"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "edge-router-list-received",
@@ -1025,9 +891,7 @@
       "fromSide": "left",
       "toSide": "right",
       "label": "sessions[]",
-      "pv": {
-        "edgeType": "tipc-invoke"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "edge-buffer-requested-router",
@@ -1036,9 +900,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "getTerminalBuffer()",
-      "pv": {
-        "edgeType": "tipc-invoke"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "edge-router-buffer-retrieved",
@@ -1047,9 +909,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "GET_SCROLLBACK",
-      "pv": {
-        "edgeType": "worker-message"
-      }
+      "edgeType": "worker-message"
     },
     {
       "id": "edge-buffer-retrieved-renderer",
@@ -1058,9 +918,7 @@
       "fromSide": "left",
       "toSide": "bottom",
       "label": "buffer data",
-      "pv": {
-        "edgeType": "tipc-invoke"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "edge-auto-reconnect-buffer",
@@ -1069,9 +927,64 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "handleReady()",
-      "pv": {
-        "edgeType": "reconnect-trigger"
-      }
+      "edgeType": "subscription"
     }
-  ]
+  ],
+  "name": "Terminal Session Management",
+  "description": "Lifecycle management of terminal sessions: creation, destruction, ownership, and port management",
+  "markdown": ".principal-views/terminal-session-management/terminal-session-management.md",
+  "scope": "principal-ade-main",
+  "nodeTypes": {
+    "renderer": {
+      "label": "Renderer",
+      "color": "#10B981"
+    },
+    "tipc-router": {
+      "label": "TIPC Router",
+      "color": "#6366F1"
+    },
+    "session-manager": {
+      "label": "Session Manager",
+      "color": "#F59E0B"
+    },
+    "ownership-manager": {
+      "label": "Ownership Manager",
+      "color": "#EC4899"
+    },
+    "worker": {
+      "label": "Worker",
+      "color": "#8B5CF6"
+    },
+    "store": {
+      "label": "Store",
+      "color": "#3B82F6"
+    },
+    "port": {
+      "label": "Port",
+      "color": "#14B8A6"
+    },
+    "daemon": {
+      "label": "PTY Daemon",
+      "color": "#EF4444"
+    },
+    "reconnect": {
+      "label": "Reconnect Handler",
+      "color": "#22C55E"
+    },
+    "event": {
+      "label": "Event",
+      "color": "#3B82F6"
+    },
+    "boundary": {
+      "label": "Boundary",
+      "color": "#64748B"
+    }
+  },
+  "edgeTypes": {
+    "worker-message": {
+      "label": "Worker Message",
+      "style": "dashed",
+      "color": "#8B5CF6"
+    }
+  }
 }

@@ -1,71 +1,4 @@
 {
-  "pv": {
-    "name": "Agent MCP Installation",
-    "version": "1.0.0",
-    "description": "Flow for installing and configuring MCP servers for AI agents (Claude, Cline, OpenCode, Droid)",
-    "markdown": ".principal-views/agent-mcp-installation/agent-mcp-installation.md",
-    "nodeTypes": {
-      "ui-component": {
-        "label": "UI Component",
-        "color": "#3B82F6"
-      },
-      "renderer-service": {
-        "label": "Renderer Service",
-        "color": "#8B5CF6"
-      },
-      "ipc-handler": {
-        "label": "IPC Handler",
-        "color": "#22C55E"
-      },
-      "external-library": {
-        "label": "External Library",
-        "color": "#F59E0B"
-      },
-      "config-file": {
-        "label": "Config File",
-        "color": "#EC4899"
-      },
-      "error-state": {
-        "label": "Error State",
-        "color": "#EF4444"
-      },
-      "event": {
-        "label": "Event",
-        "color": "#3B82F6"
-      },
-      "boundary": {
-        "label": "Boundary",
-        "color": "#64748B"
-      }
-    },
-    "edgeTypes": {
-      "user-action": {
-        "label": "User Action",
-        "style": "solid",
-        "color": "#3B82F6"
-      },
-      "ipc-call": {
-        "label": "IPC Call",
-        "style": "solid",
-        "color": "#22C55E"
-      },
-      "function-call": {
-        "label": "Function Call",
-        "style": "solid",
-        "color": "#8B5CF6"
-      },
-      "file-operation": {
-        "label": "File Operation",
-        "style": "dashed",
-        "color": "#EC4899"
-      },
-      "error-flow": {
-        "label": "Error Flow",
-        "style": "dashed",
-        "color": "#EF4444"
-      }
-    }
-  },
   "nodes": [
     {
       "id": "title",
@@ -563,9 +496,7 @@
       "toNode": "renderer-service",
       "toSide": "left",
       "label": "handleMCPToggle()",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "detailed-to-service",
@@ -574,9 +505,7 @@
       "toNode": "renderer-service",
       "toSide": "left",
       "label": "toggle MCP",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "service-to-add-ipc",
@@ -585,9 +514,7 @@
       "toNode": "ipc-add-mcp",
       "toSide": "left",
       "label": "addMCPToAgent()",
-      "pv": {
-        "edgeType": "ipc-call"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "service-to-remove-ipc",
@@ -596,9 +523,7 @@
       "toNode": "ipc-remove-mcp",
       "toSide": "left",
       "label": "removeMCPFromAgent()",
-      "pv": {
-        "edgeType": "ipc-call"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "service-to-status-ipc",
@@ -607,9 +532,7 @@
       "toNode": "ipc-get-status",
       "toSide": "left",
       "label": "getAgentMCPStatus()",
-      "pv": {
-        "edgeType": "ipc-call"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "add-ipc-to-lib",
@@ -618,9 +541,7 @@
       "toNode": "agent-manager-lib",
       "toSide": "left",
       "label": "enableAgentMCP()",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "remove-ipc-to-lib",
@@ -629,9 +550,7 @@
       "toNode": "agent-manager-lib",
       "toSide": "left",
       "label": "disableAgentMCP()",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "status-ipc-to-lib",
@@ -640,9 +559,7 @@
       "toNode": "agent-manager-lib",
       "toSide": "left",
       "label": "getAgentMCPStatus()",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "lib-to-claude",
@@ -651,9 +568,7 @@
       "toNode": "claude-config",
       "toSide": "left",
       "label": "if claude",
-      "pv": {
-        "edgeType": "file-operation"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "lib-to-cline",
@@ -662,9 +577,7 @@
       "toNode": "cline-config",
       "toSide": "left",
       "label": "if cline",
-      "pv": {
-        "edgeType": "file-operation"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "lib-to-opencode",
@@ -673,9 +586,7 @@
       "toNode": "opencode-config",
       "toSide": "left",
       "label": "if opencode",
-      "pv": {
-        "edgeType": "file-operation"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "lib-to-droid",
@@ -684,9 +595,7 @@
       "toNode": "droid-config",
       "toSide": "left",
       "label": "if droid",
-      "pv": {
-        "edgeType": "file-operation"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "lib-to-success",
@@ -695,9 +604,7 @@
       "toNode": "operation-success",
       "toSide": "top",
       "label": "success",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "lib-to-error",
@@ -706,9 +613,7 @@
       "toNode": "operation-error",
       "toSide": "top",
       "label": "catch error",
-      "pv": {
-        "edgeType": "error-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "success-to-service",
@@ -717,9 +622,7 @@
       "toNode": "renderer-service",
       "toSide": "right",
       "label": "return status",
-      "pv": {
-        "edgeType": "ipc-call"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "error-to-service",
@@ -728,9 +631,7 @@
       "toNode": "renderer-service",
       "toSide": "right",
       "label": "return error",
-      "pv": {
-        "edgeType": "error-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "service-to-ui-success",
@@ -739,9 +640,7 @@
       "toNode": "ui-state-updated",
       "toSide": "top",
       "label": "update state",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "service-to-ui-error",
@@ -750,9 +649,45 @@
       "toNode": "ui-error-shown",
       "toSide": "top",
       "label": "show error",
-      "pv": {
-        "edgeType": "error-flow"
-      }
+      "edgeType": "uses"
     }
-  ]
+  ],
+  "name": "Agent MCP Installation",
+  "description": "Flow for installing and configuring MCP servers for AI agents (Claude, Cline, OpenCode, Droid)",
+  "markdown": ".principal-views/agent-mcp-installation/agent-mcp-installation.md",
+  "nodeTypes": {
+    "ui-component": {
+      "label": "UI Component",
+      "color": "#3B82F6"
+    },
+    "renderer-service": {
+      "label": "Renderer Service",
+      "color": "#8B5CF6"
+    },
+    "ipc-handler": {
+      "label": "IPC Handler",
+      "color": "#22C55E"
+    },
+    "external-library": {
+      "label": "External Library",
+      "color": "#F59E0B"
+    },
+    "config-file": {
+      "label": "Config File",
+      "color": "#EC4899"
+    },
+    "error-state": {
+      "label": "Error State",
+      "color": "#EF4444"
+    },
+    "event": {
+      "label": "Event",
+      "color": "#3B82F6"
+    },
+    "boundary": {
+      "label": "Boundary",
+      "color": "#64748B"
+    }
+  },
+  "edgeTypes": {}
 }

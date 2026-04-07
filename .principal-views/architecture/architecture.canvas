@@ -1,60 +1,57 @@
 {
-  "pv": {
-    "name": "Principal ADE - System Architecture",
-    "version": "1.0.0",
-    "markdown": ".principal-views/architecture/architecture.md",
-    "nodeTypes": {
-      "renderer": {
-        "label": "Renderer Process",
-        "color": "#22C55E"
-      },
-      "main": {
-        "label": "Main Process",
-        "color": "#3B82F6"
-      },
-      "worker": {
-        "label": "Worker Process",
-        "color": "#8B5CF6"
-      },
-      "external-api": {
-        "label": "External API",
-        "color": "#EF4444"
-      },
-      "local-tool": {
-        "label": "Local Tool",
-        "color": "#F59E0B"
-      },
-      "storage": {
-        "label": "Storage",
-        "color": "#10B981"
-      }
+  "name": "Principal ADE - System Architecture",
+  "markdown": ".principal-views/architecture/architecture.md",
+  "nodeTypes": {
+    "renderer": {
+      "label": "Renderer Process",
+      "color": "#22C55E"
     },
-    "edgeTypes": {
-      "http": {
-        "label": "HTTP/REST",
-        "style": "solid",
-        "color": "#EF4444"
-      },
-      "ipc": {
-        "label": "IPC",
-        "style": "solid",
-        "color": "#3B82F6"
-      },
-      "spawns": {
-        "label": "Spawns",
-        "style": "solid",
-        "color": "#F59E0B"
-      },
-      "reads-writes": {
-        "label": "Reads/Writes",
-        "style": "solid",
-        "color": "#10B981"
-      },
-      "websocket": {
-        "label": "WebSocket",
-        "style": "dashed",
-        "color": "#8B5CF6"
-      }
+    "main": {
+      "label": "Main Process",
+      "color": "#3B82F6"
+    },
+    "worker": {
+      "label": "Worker Process",
+      "color": "#8B5CF6"
+    },
+    "external-api": {
+      "label": "External API",
+      "color": "#EF4444"
+    },
+    "local-tool": {
+      "label": "Local Tool",
+      "color": "#F59E0B"
+    },
+    "storage": {
+      "label": "Storage",
+      "color": "#10B981"
+    }
+  },
+  "edgeTypes": {
+    "http": {
+      "label": "HTTP/REST",
+      "style": "solid",
+      "color": "#EF4444"
+    },
+    "ipc": {
+      "label": "IPC",
+      "style": "solid",
+      "color": "#3B82F6"
+    },
+    "spawns": {
+      "label": "Spawns",
+      "style": "solid",
+      "color": "#F59E0B"
+    },
+    "reads-writes": {
+      "label": "Reads/Writes",
+      "style": "solid",
+      "color": "#10B981"
+    },
+    "websocket": {
+      "label": "WebSocket",
+      "style": "dashed",
+      "color": "#8B5CF6"
     }
   },
   "nodes": [
@@ -249,9 +246,7 @@
       "toNode": "renderer-processes",
       "toSide": "bottom",
       "label": "IPC",
-      "pv": {
-        "edgeType": "ipc"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "main-to-worker",
@@ -260,9 +255,7 @@
       "toNode": "worker-process",
       "toSide": "top",
       "label": "postMessage",
-      "pv": {
-        "edgeType": "ipc"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "renderer-to-github",
@@ -271,9 +264,7 @@
       "toNode": "github-api",
       "toSide": "bottom",
       "label": "REST API",
-      "pv": {
-        "edgeType": "http"
-      }
+      "edgeType": "http"
     },
     {
       "id": "main-to-github",
@@ -282,9 +273,7 @@
       "toNode": "github-api",
       "toSide": "bottom",
       "label": "REST API",
-      "pv": {
-        "edgeType": "http"
-      }
+      "edgeType": "http"
     },
     {
       "id": "main-to-workos",
@@ -293,9 +282,7 @@
       "toNode": "workos-api",
       "toSide": "right",
       "label": "OAuth + REST",
-      "pv": {
-        "edgeType": "http"
-      }
+      "edgeType": "http"
     },
     {
       "id": "main-to-gitsync",
@@ -304,9 +291,7 @@
       "toNode": "git-sync-server",
       "toSide": "right",
       "label": "WebSocket",
-      "pv": {
-        "edgeType": "websocket"
-      }
+      "edgeType": "websocket"
     },
     {
       "id": "main-to-openrouter",
@@ -315,9 +300,7 @@
       "toNode": "openrouter-api",
       "toSide": "right",
       "label": "REST API",
-      "pv": {
-        "edgeType": "http"
-      }
+      "edgeType": "http"
     },
     {
       "id": "main-to-git",
@@ -326,9 +309,7 @@
       "toNode": "git-cli",
       "toSide": "left",
       "label": "spawn",
-      "pv": {
-        "edgeType": "spawns"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "main-to-docker",
@@ -337,9 +318,7 @@
       "toNode": "docker",
       "toSide": "left",
       "label": "Docker API",
-      "pv": {
-        "edgeType": "spawns"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "main-to-pty",
@@ -348,9 +327,7 @@
       "toNode": "terminal-pty",
       "toSide": "left",
       "label": "node-pty",
-      "pv": {
-        "edgeType": "spawns"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "main-to-fs",
@@ -359,9 +336,7 @@
       "toNode": "file-system",
       "toSide": "left",
       "label": "fs",
-      "pv": {
-        "edgeType": "reads-writes"
-      }
+      "edgeType": "stores-in"
     },
     {
       "id": "worker-to-fs",
@@ -370,9 +345,7 @@
       "toNode": "file-system",
       "toSide": "left",
       "label": "chokidar",
-      "pv": {
-        "edgeType": "reads-writes"
-      }
+      "edgeType": "stores-in"
     },
     {
       "id": "main-to-keychain",
@@ -381,9 +354,7 @@
       "toNode": "os-keychain",
       "toSide": "top",
       "label": "safeStorage",
-      "pv": {
-        "edgeType": "reads-writes"
-      }
+      "edgeType": "stores-in"
     },
     {
       "id": "main-to-storage",
@@ -392,9 +363,7 @@
       "toNode": "app-storage",
       "toSide": "top",
       "label": "read/write",
-      "pv": {
-        "edgeType": "reads-writes"
-      }
+      "edgeType": "stores-in"
     },
     {
       "id": "worker-to-repos",
@@ -403,9 +372,7 @@
       "toNode": "local-repos",
       "toSide": "top",
       "label": "monitor",
-      "pv": {
-        "edgeType": "reads-writes"
-      }
+      "edgeType": "stores-in"
     },
     {
       "id": "main-to-repos",
@@ -414,9 +381,7 @@
       "toNode": "local-repos",
       "toSide": "right",
       "label": "git ops",
-      "pv": {
-        "edgeType": "reads-writes"
-      }
+      "edgeType": "stores-in"
     }
   ]
 }

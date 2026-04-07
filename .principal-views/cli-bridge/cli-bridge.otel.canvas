@@ -1,51 +1,4 @@
 {
-  "pv": {
-    "name": "CLI Bridge Worker",
-    "version": "1.0.0",
-    "description": "Worker initialization, command execution, and diagnostics for the CLI Bridge system",
-    "markdown": ".principal-views/cli-bridge/cli-bridge.md",
-    "scope": "principal-ade-main",
-    "nodeTypes": {
-      "main-process": {
-        "label": "Main Process",
-        "color": "#3B82F6"
-      },
-      "worker": {
-        "label": "Worker",
-        "color": "#8B5CF6"
-      },
-      "renderer": {
-        "label": "Renderer",
-        "color": "#10B981"
-      },
-      "consumer": {
-        "label": "Consumer",
-        "color": "#F59E0B"
-      }
-    },
-    "edgeTypes": {
-      "spawn": {
-        "label": "Spawn",
-        "style": "solid",
-        "color": "#3B82F6"
-      },
-      "ipc-message": {
-        "label": "IPC Message",
-        "style": "solid",
-        "color": "#8B5CF6"
-      },
-      "event": {
-        "label": "Event",
-        "style": "dashed",
-        "color": "#10B981"
-      },
-      "error": {
-        "label": "Error",
-        "style": "dashed",
-        "color": "#EF4444"
-      }
-    }
-  },
   "nodes": [
     {
       "id": "title",
@@ -458,9 +411,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "utilityProcess.fork()",
-      "pv": {
-        "edgeType": "spawn"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e2",
@@ -469,9 +420,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "wait for ready",
-      "pv": {
-        "edgeType": "event"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "e3",
@@ -480,9 +429,7 @@
       "fromSide": "top",
       "toSide": "bottom",
       "label": "{ type: 'ready' }",
-      "pv": {
-        "edgeType": "ipc-message"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "e4",
@@ -491,9 +438,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "postMessage",
-      "pv": {
-        "edgeType": "ipc-message"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "e5",
@@ -502,9 +447,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "{ type: 'complete' }",
-      "pv": {
-        "edgeType": "ipc-message"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "e6",
@@ -513,9 +456,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "execute()",
-      "pv": {
-        "edgeType": "spawn"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e7",
@@ -524,9 +465,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "crash during startup",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e8",
@@ -535,9 +474,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "auto-restart",
-      "pv": {
-        "edgeType": "event"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "e9",
@@ -546,9 +483,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "initialize()",
-      "pv": {
-        "edgeType": "spawn"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e10",
@@ -557,9 +492,30 @@
       "fromSide": "bottom",
       "toSide": "left",
       "label": "restartWorker()",
-      "pv": {
-        "edgeType": "spawn"
-      }
+      "edgeType": "uses"
     }
-  ]
+  ],
+  "name": "CLI Bridge Worker",
+  "description": "Worker initialization, command execution, and diagnostics for the CLI Bridge system",
+  "markdown": ".principal-views/cli-bridge/cli-bridge.md",
+  "scope": "principal-ade-main",
+  "nodeTypes": {
+    "main-process": {
+      "label": "Main Process",
+      "color": "#3B82F6"
+    },
+    "worker": {
+      "label": "Worker",
+      "color": "#8B5CF6"
+    },
+    "renderer": {
+      "label": "Renderer",
+      "color": "#10B981"
+    },
+    "consumer": {
+      "label": "Consumer",
+      "color": "#F59E0B"
+    }
+  },
+  "edgeTypes": {}
 }

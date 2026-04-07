@@ -1,79 +1,4 @@
 {
-  "pv": {
-    "name": "Dev Server Buttons",
-    "version": "1.0.0",
-    "description": "Flow of dev server button interactions from right sidebar: package detection, terminal spawning, port management, and browser navigation. Supports Storybook, Next.js, and extensible to other dev servers.",
-    "markdown": ".principal-views/dev-server-buttons/dev-server-buttons.md",
-    "nodeTypes": {
-      "ui": {
-        "label": "UI Component",
-        "color": "#10B981"
-      },
-      "service": {
-        "label": "Service",
-        "color": "#3B82F6"
-      },
-      "terminal": {
-        "label": "Terminal",
-        "color": "#8B5CF6"
-      },
-      "panel": {
-        "label": "Panel",
-        "color": "#6366F1"
-      },
-      "port": {
-        "label": "Port Detection",
-        "color": "#F59E0B"
-      },
-      "browser": {
-        "label": "Browser",
-        "color": "#EC4899"
-      },
-      "event": {
-        "label": "Event",
-        "color": "#14B8A6"
-      },
-      "storybook": {
-        "label": "Storybook",
-        "color": "#FF4785"
-      },
-      "nextjs": {
-        "label": "Next.js",
-        "color": "#000000"
-      },
-      "shared": {
-        "label": "Shared Infrastructure",
-        "color": "#64748B"
-      }
-    },
-    "edgeTypes": {
-      "user-action": {
-        "label": "User Action",
-        "style": "solid",
-        "color": "#10B981"
-      },
-      "service-call": {
-        "label": "Service Call",
-        "style": "solid",
-        "color": "#3B82F6"
-      },
-      "async-wait": {
-        "label": "Async Wait",
-        "style": "dashed",
-        "color": "#F59E0B"
-      },
-      "event-emit": {
-        "label": "Event Emit",
-        "style": "solid",
-        "color": "#14B8A6"
-      },
-      "ipc": {
-        "label": "IPC",
-        "style": "solid",
-        "color": "#8B5CF6"
-      }
-    }
-  },
   "nodes": [
     {
       "id": "title",
@@ -85,7 +10,6 @@
       "color": "#64748B",
       "text": "# Dev Server Buttons\n**Shared infrastructure for launching dev servers (Storybook, Next.js, etc.) with automatic package detection, terminal management, and browser integration**"
     },
-
     {
       "id": "storybook-section-label",
       "type": "text",
@@ -106,7 +30,6 @@
       "color": "#000000",
       "text": "### Next.js-Specific"
     },
-
     {
       "id": "storybook-button-click",
       "type": "otel-event",
@@ -204,7 +127,6 @@
         "status": "draft"
       }
     },
-
     {
       "id": "nextjs-button-click",
       "type": "otel-event",
@@ -302,7 +224,6 @@
         "status": "draft"
       }
     },
-
     {
       "id": "shared-section-label",
       "type": "text",
@@ -593,7 +514,6 @@
         "status": "draft"
       }
     },
-
     {
       "id": "server-config-note",
       "type": "text",
@@ -633,9 +553,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "useEffect",
-      "pv": {
-        "edgeType": "service-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e-sb-cmd",
@@ -644,9 +562,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "packages found",
-      "pv": {
-        "edgeType": "service-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e-sb-to-shared",
@@ -655,11 +571,8 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "onClick",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "uses"
     },
-
     {
       "id": "e-nj-detect",
       "fromNode": "nextjs-button-click",
@@ -667,9 +580,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "useEffect",
-      "pv": {
-        "edgeType": "service-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e-nj-cmd",
@@ -678,9 +589,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "packages found",
-      "pv": {
-        "edgeType": "service-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e-nj-to-shared",
@@ -689,11 +598,8 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "onClick",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "uses"
     },
-
     {
       "id": "e-port-terminal",
       "fromNode": "port-find",
@@ -701,9 +607,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "port found",
-      "pv": {
-        "edgeType": "service-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e-terminal-event",
@@ -712,9 +616,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "session created",
-      "pv": {
-        "edgeType": "event-emit"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "e-event-layout",
@@ -723,9 +625,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "after 500ms",
-      "pv": {
-        "edgeType": "async-wait"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e-layout-wait",
@@ -734,9 +634,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "layout set",
-      "pv": {
-        "edgeType": "service-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e-wait-browser",
@@ -745,9 +643,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "port ready",
-      "pv": {
-        "edgeType": "async-wait"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e-browser-status",
@@ -756,9 +652,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "navigated",
-      "pv": {
-        "edgeType": "event-emit"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "e-status-stop",
@@ -767,9 +661,7 @@
       "fromSide": "left",
       "toSide": "right",
       "label": "click Stop",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e-stop-reset",
@@ -778,9 +670,59 @@
       "fromSide": "top",
       "toSide": "bottom",
       "label": "reset to idle",
-      "pv": {
-        "edgeType": "service-call"
-      }
+      "edgeType": "uses"
     }
-  ]
+  ],
+  "name": "Dev Server Buttons",
+  "description": "Flow of dev server button interactions from right sidebar: package detection, terminal spawning, port management, and browser navigation. Supports Storybook, Next.js, and extensible to other dev servers.",
+  "markdown": ".principal-views/dev-server-buttons/dev-server-buttons.md",
+  "nodeTypes": {
+    "ui": {
+      "label": "UI Component",
+      "color": "#10B981"
+    },
+    "service": {
+      "label": "Service",
+      "color": "#3B82F6"
+    },
+    "terminal": {
+      "label": "Terminal",
+      "color": "#8B5CF6"
+    },
+    "panel": {
+      "label": "Panel",
+      "color": "#6366F1"
+    },
+    "port": {
+      "label": "Port Detection",
+      "color": "#F59E0B"
+    },
+    "browser": {
+      "label": "Browser",
+      "color": "#EC4899"
+    },
+    "event": {
+      "label": "Event",
+      "color": "#14B8A6"
+    },
+    "storybook": {
+      "label": "Storybook",
+      "color": "#FF4785"
+    },
+    "nextjs": {
+      "label": "Next.js",
+      "color": "#000000"
+    },
+    "shared": {
+      "label": "Shared Infrastructure",
+      "color": "#64748B"
+    }
+  },
+  "edgeTypes": {
+    "ipc": {
+      "label": "IPC",
+      "style": "solid",
+      "color": "#8B5CF6"
+    }
+  }
 }

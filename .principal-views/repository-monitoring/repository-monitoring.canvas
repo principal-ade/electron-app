@@ -1,77 +1,74 @@
 {
-  "pv": {
-    "name": "Repository Monitoring Event Flow",
-    "version": "1.0.0",
-    "markdown": ".principal-views/repository-monitoring/repository-monitoring.md",
-    "nodeTypes": {
-      "renderer-process": {
-        "label": "Renderer Process",
-        "color": "#7C3AED"
-      },
-      "main-process": {
-        "label": "Main Process",
-        "color": "#4F46E5"
-      },
-      "worker-process": {
-        "label": "Worker Process",
-        "color": "#059669"
-      },
-      "react-context": {
-        "label": "React Context",
-        "color": "#EC4899"
-      },
-      "service": {
-        "label": "Service",
-        "color": "#F59E0B"
-      },
-      "api-layer": {
-        "label": "API Layer",
-        "color": "#8B5CF6"
-      },
-      "cache": {
-        "label": "Cache",
-        "color": "#10B981"
-      },
-      "watcher": {
-        "label": "Watcher",
-        "color": "#EF4444"
-      },
-      "event-enum": {
-        "label": "Event Enum",
-        "color": "#6366F1"
-      }
+  "name": "Repository Monitoring Event Flow",
+  "markdown": ".principal-views/repository-monitoring/repository-monitoring.md",
+  "nodeTypes": {
+    "renderer-process": {
+      "label": "Renderer Process",
+      "color": "#7C3AED"
     },
-    "edgeTypes": {
-      "ipc-invoke": {
-        "label": "IPC Invoke",
-        "style": "solid",
-        "color": "#6366F1"
-      },
-      "ipc-event": {
-        "label": "IPC Event",
-        "style": "dashed",
-        "color": "#818CF8"
-      },
-      "post-message": {
-        "label": "PostMessage",
-        "style": "solid",
-        "color": "#059669"
-      },
-      "subscribes": {
-        "label": "Subscribes",
-        "style": "dashed",
-        "color": "#EC4899"
-      },
-      "uses": {
-        "label": "Uses",
-        "style": "dotted",
-        "color": "#64748B"
-      },
-      "emits": {
-        "label": "Emits",
-        "style": "dashed",
-        "color": "#EF4444"
-      }
+    "main-process": {
+      "label": "Main Process",
+      "color": "#4F46E5"
+    },
+    "worker-process": {
+      "label": "Worker Process",
+      "color": "#059669"
+    },
+    "react-context": {
+      "label": "React Context",
+      "color": "#EC4899"
+    },
+    "service": {
+      "label": "Service",
+      "color": "#F59E0B"
+    },
+    "api-layer": {
+      "label": "API Layer",
+      "color": "#8B5CF6"
+    },
+    "cache": {
+      "label": "Cache",
+      "color": "#10B981"
+    },
+    "watcher": {
+      "label": "Watcher",
+      "color": "#EF4444"
+    },
+    "event-enum": {
+      "label": "Event Enum",
+      "color": "#6366F1"
+    }
+  },
+  "edgeTypes": {
+    "ipc-invoke": {
+      "label": "IPC Invoke",
+      "style": "solid",
+      "color": "#6366F1"
+    },
+    "ipc-event": {
+      "label": "IPC Event",
+      "style": "dashed",
+      "color": "#818CF8"
+    },
+    "post-message": {
+      "label": "PostMessage",
+      "style": "solid",
+      "color": "#059669"
+    },
+    "subscribes": {
+      "label": "Subscribes",
+      "style": "dashed",
+      "color": "#EC4899"
+    },
+    "uses": {
+      "label": "Uses",
+      "style": "dotted",
+      "color": "#64748B"
+    },
+    "emits": {
+      "label": "Emits",
+      "style": "dashed",
+      "color": "#EF4444"
     }
   },
   "nodes": [
@@ -331,9 +328,7 @@
       "toNode": "repository-monitoring-service",
       "toSide": "top",
       "label": "uses",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "context-to-service-2",
@@ -342,9 +337,7 @@
       "toNode": "repository-monitoring-service",
       "toSide": "top",
       "label": "uses",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "context-to-service-3",
@@ -353,9 +346,7 @@
       "toNode": "repository-monitoring-service",
       "toSide": "top",
       "label": "uses",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "service-to-api",
@@ -364,9 +355,7 @@
       "toNode": "repository-monitoring-api",
       "toSide": "top",
       "label": "window.mainProcess",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "api-to-enum",
@@ -375,9 +364,7 @@
       "toNode": "monitoring-events-enum",
       "toSide": "top",
       "label": "uses channels",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "api-to-handlers",
@@ -386,9 +373,7 @@
       "toNode": "ipc-handlers",
       "toSide": "left",
       "label": "ipcRenderer.invoke()",
-      "pv": {
-        "edgeType": "ipc-invoke"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "handlers-to-api-events",
@@ -397,9 +382,7 @@
       "toNode": "repository-monitoring-api",
       "toSide": "right",
       "label": "webContents.send()",
-      "pv": {
-        "edgeType": "ipc-event"
-      }
+      "edgeType": "ipc-event"
     },
     {
       "id": "handlers-to-manager",
@@ -408,9 +391,7 @@
       "toNode": "monitoring-manager",
       "toSide": "top",
       "label": "delegates",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "handlers-to-windows",
@@ -419,9 +400,7 @@
       "toNode": "browser-windows",
       "toSide": "left",
       "label": "broadcasts",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "manager-to-worker",
@@ -430,9 +409,7 @@
       "toNode": "worker-process",
       "toSide": "right",
       "label": "postMessage",
-      "pv": {
-        "edgeType": "post-message"
-      }
+      "edgeType": "worker-message"
     },
     {
       "id": "worker-to-manager",
@@ -441,9 +418,7 @@
       "toNode": "monitoring-manager",
       "toSide": "left",
       "label": "parentPort.postMessage",
-      "pv": {
-        "edgeType": "post-message"
-      }
+      "edgeType": "worker-message"
     },
     {
       "id": "worker-uses-git-watcher",
@@ -452,9 +427,7 @@
       "toNode": "git-watcher",
       "toSide": "top",
       "label": "uses",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "worker-uses-filetree",
@@ -463,9 +436,7 @@
       "toNode": "file-tree-builder",
       "toSide": "top",
       "label": "uses",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "worker-uses-packages",
@@ -474,9 +445,7 @@
       "toNode": "package-processor",
       "toSide": "top",
       "label": "uses",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "worker-uses-remote",
@@ -485,9 +454,7 @@
       "toNode": "git-remote-service",
       "toSide": "top",
       "label": "uses",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "git-watcher-emits",
@@ -496,9 +463,7 @@
       "toNode": "cache-registry",
       "toSide": "top",
       "label": "updates",
-      "pv": {
-        "edgeType": "emits"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "filetree-emits",
@@ -507,9 +472,7 @@
       "toNode": "cache-registry",
       "toSide": "top",
       "label": "updates",
-      "pv": {
-        "edgeType": "emits"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "packages-emits",
@@ -518,9 +481,7 @@
       "toNode": "cache-registry",
       "toSide": "top",
       "label": "updates",
-      "pv": {
-        "edgeType": "emits"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "remote-emits",
@@ -529,9 +490,7 @@
       "toNode": "cache-registry",
       "toSide": "top",
       "label": "updates",
-      "pv": {
-        "edgeType": "emits"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "cache-to-slice-git",
@@ -540,9 +499,7 @@
       "toNode": "cache-slice-git",
       "toSide": "top",
       "label": "contains",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "cache-to-slice-filetree",
@@ -551,9 +508,7 @@
       "toNode": "cache-slice-filetree",
       "toSide": "top",
       "label": "contains",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "cache-to-slice-packages",
@@ -562,9 +517,7 @@
       "toNode": "cache-slice-packages",
       "toSide": "top",
       "label": "contains",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "cache-to-slice-remote",
@@ -573,9 +526,7 @@
       "toNode": "cache-slice-remote",
       "toSide": "top",
       "label": "contains",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "cache-emits-sync",
@@ -584,9 +535,7 @@
       "toNode": "worker-process",
       "toSide": "bottom",
       "label": "CACHE_SYNC",
-      "pv": {
-        "edgeType": "emits"
-      }
+      "edgeType": "subscription"
     }
   ]
 }

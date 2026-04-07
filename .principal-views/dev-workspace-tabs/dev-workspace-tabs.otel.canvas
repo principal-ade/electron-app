@@ -1,80 +1,4 @@
 {
-  "pv": {
-    "version": "1.0.0",
-    "name": "DevWorkspace Tab & File Opening Flow",
-    "description": "Event flow through PanelEventBus to tabs or right panel",
-    "markdown": ".principal-views/dev-workspace-tabs/dev-workspace-tabs.md",
-    "scope": "principal-ade-renderer",
-    "nodeTypes": {
-      "trigger": {
-        "label": "Trigger",
-        "color": "#EC4899"
-      },
-      "event-bus": {
-        "label": "Event Bus",
-        "color": "#F59E0B"
-      },
-      "handler": {
-        "label": "Handler",
-        "color": "#6366F1"
-      },
-      "context": {
-        "label": "React Context",
-        "color": "#A855F7"
-      },
-      "tab-manager": {
-        "label": "Tab Manager",
-        "color": "#0EA5E9"
-      },
-      "panel": {
-        "label": "Panel",
-        "color": "#8B5CF6"
-      },
-      "renderer": {
-        "label": "Renderer",
-        "color": "#10B981"
-      },
-      "external": {
-        "label": "External",
-        "color": "#64748B"
-      },
-      "event": {
-        "label": "Event",
-        "color": "#3B82F6"
-      },
-      "boundary": {
-        "label": "Boundary",
-        "color": "#64748B"
-      }
-    },
-    "edgeTypes": {
-      "user-action": {
-        "label": "User Action",
-        "style": "solid",
-        "color": "#EC4899"
-      },
-      "event": {
-        "label": "Event",
-        "style": "dashed",
-        "color": "#F59E0B"
-      },
-      "data-flow": {
-        "label": "Data Flow",
-        "style": "solid",
-        "color": "#3B82F6"
-      },
-      "renders": {
-        "label": "Renders",
-        "style": "solid",
-        "color": "#10B981"
-      },
-      "dispatch": {
-        "label": "Dispatch",
-        "style": "solid",
-        "color": "#6366F1"
-      }
-    }
-  },
   "nodes": [
     {
       "id": "title",
@@ -537,9 +461,7 @@
       "toNode": "event-bus",
       "toSide": "left",
       "label": "emit",
-      "pv": {
-        "edgeType": "event"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "trigger-panel-to-bus",
@@ -548,9 +470,7 @@
       "toNode": "event-bus",
       "toSide": "left",
       "label": "emit",
-      "pv": {
-        "edgeType": "event"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "bus-to-tab-handlers",
@@ -559,9 +479,7 @@
       "toNode": "handler-tab-events",
       "toSide": "left",
       "label": "dispatch",
-      "pv": {
-        "edgeType": "dispatch"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "bus-to-panel-handlers",
@@ -570,9 +488,7 @@
       "toNode": "handler-panel-events",
       "toSide": "left",
       "label": "dispatch",
-      "pv": {
-        "edgeType": "dispatch"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "tab-handler-to-loop",
@@ -581,9 +497,7 @@
       "toNode": "loop-check",
       "toSide": "left",
       "label": "check",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "loop-to-existing",
@@ -592,9 +506,7 @@
       "toNode": "check-existing-tab",
       "toSide": "top",
       "label": "proceed",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "existing-to-create",
@@ -603,9 +515,7 @@
       "toNode": "create-focus-tab",
       "toSide": "left",
       "label": "create/focus",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "create-to-render",
@@ -614,9 +524,7 @@
       "toNode": "render-tab",
       "toSide": "top",
       "label": "render",
-      "pv": {
-        "edgeType": "renders"
-      }
+      "edgeType": "renders"
     },
     {
       "id": "render-to-tabbed",
@@ -625,9 +533,7 @@
       "toNode": "tabbed-terminal-panel",
       "toSide": "left",
       "label": "in",
-      "pv": {
-        "edgeType": "renders"
-      }
+      "edgeType": "renders"
     },
     {
       "id": "panel-handler-to-active",
@@ -636,9 +542,7 @@
       "toNode": "set-active-file",
       "toSide": "left",
       "label": "call",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "active-to-layout",
@@ -647,9 +551,7 @@
       "toNode": "change-layout",
       "toSide": "left",
       "label": "then",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "layout-to-markdown",
@@ -658,9 +560,7 @@
       "toNode": "markdown-panel",
       "toSide": "left",
       "label": "render",
-      "pv": {
-        "edgeType": "renders"
-      }
+      "edgeType": "renders"
     },
     {
       "id": "render-to-media",
@@ -669,9 +569,60 @@
       "toNode": "media-viewer-panel",
       "toSide": "top",
       "label": "media files",
-      "pv": {
-        "edgeType": "renders"
-      }
+      "edgeType": "renders"
     }
-  ]
+  ],
+  "name": "DevWorkspace Tab & File Opening Flow",
+  "description": "Event flow through PanelEventBus to tabs or right panel",
+  "markdown": ".principal-views/dev-workspace-tabs/dev-workspace-tabs.md",
+  "scope": "principal-ade-renderer",
+  "nodeTypes": {
+    "trigger": {
+      "label": "Trigger",
+      "color": "#EC4899"
+    },
+    "event-bus": {
+      "label": "Event Bus",
+      "color": "#F59E0B"
+    },
+    "handler": {
+      "label": "Handler",
+      "color": "#6366F1"
+    },
+    "context": {
+      "label": "React Context",
+      "color": "#A855F7"
+    },
+    "tab-manager": {
+      "label": "Tab Manager",
+      "color": "#0EA5E9"
+    },
+    "panel": {
+      "label": "Panel",
+      "color": "#8B5CF6"
+    },
+    "renderer": {
+      "label": "Renderer",
+      "color": "#10B981"
+    },
+    "external": {
+      "label": "External",
+      "color": "#64748B"
+    },
+    "event": {
+      "label": "Event",
+      "color": "#3B82F6"
+    },
+    "boundary": {
+      "label": "Boundary",
+      "color": "#64748B"
+    }
+  },
+  "edgeTypes": {
+    "renders": {
+      "label": "Renders",
+      "style": "solid",
+      "color": "#10B981"
+    }
+  }
 }

@@ -1,72 +1,4 @@
 {
-  "pv": {
-    "name": "Principal MCP Bridge",
-    "version": "1.0.0",
-    "description": "HTTP bridge enabling external AI agents (MCP tools) to interact with the Electron app's repository monitoring capabilities",
-    "markdown": ".principal-views/principal-mcp-bridge/principal-mcp-bridge.md",
-    "scope": "principal-ade-main",
-    "nodeTypes": {
-      "external-client": {
-        "label": "External Client",
-        "color": "#64748B"
-      },
-      "http-server": {
-        "label": "HTTP Server",
-        "color": "#22C55E"
-      },
-      "middleware": {
-        "label": "Middleware",
-        "color": "#F59E0B"
-      },
-      "route-handler": {
-        "label": "Route Handler",
-        "color": "#3B82F6"
-      },
-      "service": {
-        "label": "Service",
-        "color": "#7C3AED"
-      },
-      "utility-process": {
-        "label": "Utility Process",
-        "color": "#EC4899"
-      },
-      "event": {
-        "label": "Event",
-        "color": "#3B82F6"
-      },
-      "boundary": {
-        "label": "Boundary",
-        "color": "#64748B"
-      }
-    },
-    "edgeTypes": {
-      "http-request": {
-        "label": "HTTP Request",
-        "style": "solid",
-        "color": "#22C55E"
-      },
-      "http-response": {
-        "label": "HTTP Response",
-        "style": "dashed",
-        "color": "#22C55E"
-      },
-      "function-call": {
-        "label": "Function Call",
-        "style": "solid",
-        "color": "#3B82F6"
-      },
-      "ipc-message": {
-        "label": "IPC Message",
-        "style": "solid",
-        "color": "#7C3AED"
-      },
-      "data-flow": {
-        "label": "Data Flow",
-        "style": "solid",
-        "color": "#8B5CF6"
-      }
-    }
-  },
   "nodes": [
     {
       "id": "title",
@@ -1325,9 +1257,7 @@
       "toNode": "express-server",
       "toSide": "left",
       "label": "HTTP POST/GET",
-      "pv": {
-        "edgeType": "http-request"
-      }
+      "edgeType": "http"
     },
     {
       "id": "server-to-cors",
@@ -1336,9 +1266,7 @@
       "toNode": "cors-middleware",
       "toSide": "top",
       "label": "applies middleware",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "server-to-health",
@@ -1347,9 +1275,7 @@
       "toNode": "health-route",
       "toSide": "left",
       "label": "GET /health",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "server-to-resolve",
@@ -1358,9 +1284,7 @@
       "toNode": "resolve-route",
       "toSide": "left",
       "label": "POST /dependencies/resolve",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "cors-to-resolve",
@@ -1369,9 +1293,7 @@
       "toNode": "resolve-route",
       "toSide": "top",
       "label": "applies CORS",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "resolve-to-calling",
@@ -1380,9 +1302,7 @@
       "toNode": "repo-monitoring-calling",
       "toSide": "left",
       "label": "call manager",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "calling-to-result",
@@ -1391,9 +1311,7 @@
       "toNode": "repo-monitoring-result",
       "toSide": "top",
       "label": "awaits",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "result-to-alexandria-found",
@@ -1402,9 +1320,7 @@
       "toNode": "resolution-alexandria-found",
       "toSide": "left",
       "label": "if found",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "result-to-alexandria-not-found",
@@ -1413,9 +1329,7 @@
       "toNode": "resolution-alexandria-not-found",
       "toSide": "left",
       "label": "if not found",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "alexandria-not-found-to-package-found",
@@ -1424,9 +1338,7 @@
       "toNode": "resolution-package-found",
       "toSide": "top",
       "label": "check packages",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "alexandria-not-found-to-package-not-found",
@@ -1435,9 +1347,7 @@
       "toNode": "resolution-package-not-found",
       "toSide": "top",
       "label": "check packages",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "package-not-found-to-suggestions",
@@ -1446,9 +1356,7 @@
       "toNode": "resolution-suggestions",
       "toSide": "top",
       "label": "generate suggestions",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "alexandria-found-to-final",
@@ -1457,9 +1365,7 @@
       "toNode": "repo-monitoring-manager",
       "toSide": "right",
       "label": "complete",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "package-found-to-final",
@@ -1468,9 +1374,7 @@
       "toNode": "repo-monitoring-manager",
       "toSide": "right",
       "label": "complete",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "suggestions-to-final",
@@ -1479,9 +1383,7 @@
       "toNode": "repo-monitoring-manager",
       "toSide": "bottom",
       "label": "complete",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "package-not-found-to-no-suggestions",
@@ -1490,9 +1392,7 @@
       "toNode": "resolution-no-suggestions",
       "toSide": "top",
       "label": "no suggestions",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "no-suggestions-to-final",
@@ -1501,9 +1401,7 @@
       "toNode": "repo-monitoring-manager",
       "toSide": "bottom",
       "label": "complete",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "final-to-worker",
@@ -1512,9 +1410,7 @@
       "toNode": "monitoring-worker",
       "toSide": "top",
       "label": "IPC message",
-      "pv": {
-        "edgeType": "ipc-message"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "final-response",
@@ -1523,9 +1419,7 @@
       "toNode": "resolve-route",
       "toSide": "right",
       "label": "resolution result",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "resolve-to-validation-error",
@@ -1534,9 +1428,7 @@
       "toNode": "error-validation-failed",
       "toSide": "top",
       "label": "if invalid",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "calling-to-resolution-error",
@@ -1545,9 +1437,7 @@
       "toNode": "error-resolution-failed",
       "toSide": "top",
       "label": "if error",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "server-to-theme-schema",
@@ -1556,9 +1446,7 @@
       "toNode": "theme-schema-route",
       "toSide": "top",
       "label": "GET /theme/schema",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "theme-schema-to-retrieved",
@@ -1567,9 +1455,7 @@
       "toNode": "theme-schema-retrieved",
       "toSide": "left",
       "label": "get schema",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "theme-schema-to-not-found",
@@ -1578,9 +1464,7 @@
       "toNode": "theme-not-found-error",
       "toSide": "top",
       "label": "if theme not found",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "theme-schema-to-service",
@@ -1589,9 +1473,7 @@
       "toNode": "theme-service-renderer",
       "toSide": "left",
       "label": "reads predefined themes",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "server-to-theme-update",
@@ -1600,9 +1482,7 @@
       "toNode": "theme-update-route",
       "toSide": "top",
       "label": "POST /theme/update",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "theme-update-to-prefs",
@@ -1611,9 +1491,7 @@
       "toNode": "theme-prefs-update",
       "toSide": "left",
       "label": "update preferences",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "theme-prefs-to-broadcast",
@@ -1622,9 +1500,7 @@
       "toNode": "theme-renderer-broadcast",
       "toSide": "top",
       "label": "broadcast start",
-      "pv": {
-        "edgeType": "ipc-message"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "theme-broadcast-to-notified",
@@ -1633,9 +1509,7 @@
       "toNode": "theme-renderer-notified",
       "toSide": "top",
       "label": "IPC send",
-      "pv": {
-        "edgeType": "ipc-message"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "theme-notified-to-service",
@@ -1644,9 +1518,7 @@
       "toNode": "theme-service-renderer",
       "toSide": "left",
       "label": "CustomEvent",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "theme-service-to-completed",
@@ -1655,9 +1527,7 @@
       "toNode": "theme-update-completed",
       "toSide": "top",
       "label": "re-apply theme",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "theme-prefs-to-completed",
@@ -1666,9 +1536,7 @@
       "toNode": "theme-update-completed",
       "toSide": "left",
       "label": "success response",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "theme-prefs-to-failed",
@@ -1677,9 +1545,7 @@
       "toNode": "theme-update-failed",
       "toSide": "top",
       "label": "if error",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "server-to-bruno-validate",
@@ -1688,9 +1554,7 @@
       "toNode": "bruno-validate-route",
       "toSide": "top",
       "label": "POST /api/bruno/validate",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "server-to-bruno-validate-file",
@@ -1699,9 +1563,7 @@
       "toNode": "bruno-validate-file-route",
       "toSide": "top",
       "label": "POST /api/bruno/validate/file",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "server-to-bruno-validate-collection",
@@ -1710,9 +1572,7 @@
       "toNode": "bruno-validate-collection-route",
       "toSide": "top",
       "label": "POST /api/bruno/validate/collection",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "server-to-bruno-parse",
@@ -1721,9 +1581,7 @@
       "toNode": "bruno-parse-route",
       "toSide": "top",
       "label": "POST /api/bruno/parse",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "bruno-validate-to-service",
@@ -1732,9 +1590,7 @@
       "toNode": "bruno-validation-service",
       "toSide": "left",
       "label": "validateBruContent",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "bruno-validate-file-to-service",
@@ -1743,9 +1599,7 @@
       "toNode": "bruno-validation-service",
       "toSide": "left",
       "label": "validateBruFile",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "bruno-validate-collection-to-service",
@@ -1754,9 +1608,7 @@
       "toNode": "bruno-validation-service",
       "toSide": "left",
       "label": "validateCollection",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "bruno-parse-to-service",
@@ -1765,9 +1617,7 @@
       "toNode": "bruno-validation-service",
       "toSide": "left",
       "label": "parseBruToJson",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "bruno-service-to-content-validated",
@@ -1776,9 +1626,7 @@
       "toNode": "bruno-content-validated",
       "toSide": "left",
       "label": "content result",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "bruno-service-to-file-validated",
@@ -1787,9 +1635,7 @@
       "toNode": "bruno-file-validated",
       "toSide": "left",
       "label": "file result",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "bruno-service-to-collection-validated",
@@ -1798,9 +1644,7 @@
       "toNode": "bruno-collection-validated",
       "toSide": "left",
       "label": "collection result",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "bruno-service-to-content-parsed",
@@ -1809,9 +1653,7 @@
       "toNode": "bruno-content-parsed",
       "toSide": "left",
       "label": "parse result",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "bruno-validate-to-error",
@@ -1820,9 +1662,7 @@
       "toNode": "bruno-error-validation-failed",
       "toSide": "top",
       "label": "if missing content",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "bruno-validate-file-to-error",
@@ -1831,9 +1671,7 @@
       "toNode": "bruno-error-validation-failed",
       "toSide": "top",
       "label": "if file not found",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "bruno-validate-collection-to-error",
@@ -1842,9 +1680,7 @@
       "toNode": "bruno-error-validation-failed",
       "toSide": "top",
       "label": "if path invalid",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "bruno-service-to-parse-error",
@@ -1853,9 +1689,46 @@
       "toNode": "bruno-error-parse-failed",
       "toSide": "top",
       "label": "if parse fails",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     }
-  ]
+  ],
+  "name": "Principal MCP Bridge",
+  "description": "HTTP bridge enabling external AI agents (MCP tools) to interact with the Electron app's repository monitoring capabilities",
+  "markdown": ".principal-views/principal-mcp-bridge/principal-mcp-bridge.md",
+  "scope": "principal-ade-main",
+  "nodeTypes": {
+    "external-client": {
+      "label": "External Client",
+      "color": "#64748B"
+    },
+    "http-server": {
+      "label": "HTTP Server",
+      "color": "#22C55E"
+    },
+    "middleware": {
+      "label": "Middleware",
+      "color": "#F59E0B"
+    },
+    "route-handler": {
+      "label": "Route Handler",
+      "color": "#3B82F6"
+    },
+    "service": {
+      "label": "Service",
+      "color": "#7C3AED"
+    },
+    "utility-process": {
+      "label": "Utility Process",
+      "color": "#EC4899"
+    },
+    "event": {
+      "label": "Event",
+      "color": "#3B82F6"
+    },
+    "boundary": {
+      "label": "Boundary",
+      "color": "#64748B"
+    }
+  },
+  "edgeTypes": {}
 }

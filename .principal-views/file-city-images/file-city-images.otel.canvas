@@ -1,37 +1,4 @@
 {
-  "pv": {
-    "name": "File City Images",
-    "version": "1.0.0",
-    "description": "File City visualization image generation for repository project cards",
-    "markdown": ".principal-views/file-city-images/file-city-images.md",
-    "nodeTypes": {
-      "event": {
-        "label": "Event",
-        "color": "#3B82F6"
-      },
-      "boundary": {
-        "label": "Boundary",
-        "color": "#64748B"
-      }
-    },
-    "edgeTypes": {
-      "function-call": {
-        "label": "Function Call",
-        "style": "solid",
-        "color": "#3B82F6"
-      },
-      "cache-check": {
-        "label": "Cache Check",
-        "style": "dashed",
-        "color": "#8B5CF6"
-      },
-      "data-flow": {
-        "label": "Data Flow",
-        "style": "solid",
-        "color": "#22C55E"
-      }
-    }
-  },
   "nodes": [
     {
       "id": "title",
@@ -667,9 +634,7 @@
       "fromSide": "bottom",
       "toNode": "cache-check",
       "toSide": "top",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "cache-to-hit",
@@ -678,9 +643,7 @@
       "toNode": "cache-hit",
       "toSide": "left",
       "label": "found",
-      "pv": {
-        "edgeType": "cache-check"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "cache-to-filetree",
@@ -689,9 +652,7 @@
       "toNode": "get-filetree",
       "toSide": "top",
       "label": "not found",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "filetree-to-no",
@@ -700,9 +661,7 @@
       "toNode": "no-filetree",
       "toSide": "left",
       "label": "no tree",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "filetree-to-generate",
@@ -711,9 +670,7 @@
       "toNode": "generate-image",
       "toSide": "top",
       "label": "has tree",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "generate-to-save",
@@ -721,9 +678,7 @@
       "fromSide": "bottom",
       "toNode": "save-cache",
       "toSide": "top",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "generate-to-error",
@@ -732,9 +687,7 @@
       "toNode": "generation-error",
       "toSide": "left",
       "label": "error",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "renderer-action-to-request",
@@ -743,9 +696,7 @@
       "toNode": "image-requested",
       "toSide": "right",
       "label": "IPC",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "cache-hit-to-renderer",
@@ -754,9 +705,7 @@
       "toNode": "renderer-url-received",
       "toSide": "left",
       "label": "IPC response",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "save-to-renderer",
@@ -765,9 +714,7 @@
       "toNode": "renderer-url-received",
       "toSide": "left",
       "label": "IPC response",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "renderer-url-to-state",
@@ -775,9 +722,7 @@
       "fromSide": "bottom",
       "toNode": "renderer-state-updated",
       "toSide": "top",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "renderer-state-to-card",
@@ -786,9 +731,7 @@
       "toNode": "renderer-card-rendered",
       "toSide": "top",
       "label": "re-render",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "playback-to-commits",
@@ -796,9 +739,7 @@
       "fromSide": "bottom",
       "toNode": "commits-fetched",
       "toSide": "top",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "commits-to-loading",
@@ -807,9 +748,7 @@
       "toNode": "commit-loading",
       "toSide": "top",
       "label": "for each",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "loading-to-image",
@@ -817,9 +756,7 @@
       "fromSide": "bottom",
       "toNode": "historical-image-generated",
       "toSide": "top",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "image-to-loading",
@@ -828,9 +765,7 @@
       "toNode": "commit-loading",
       "toSide": "left",
       "label": "next commit",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "image-to-completed",
@@ -839,9 +774,7 @@
       "toNode": "playback-completed",
       "toSide": "top",
       "label": "last commit",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "loading-to-generate",
@@ -850,9 +783,21 @@
       "toNode": "generate-image",
       "toSide": "right",
       "label": "IPC",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     }
-  ]
+  ],
+  "name": "File City Images",
+  "description": "File City visualization image generation for repository project cards",
+  "markdown": ".principal-views/file-city-images/file-city-images.md",
+  "nodeTypes": {
+    "event": {
+      "label": "Event",
+      "color": "#3B82F6"
+    },
+    "boundary": {
+      "label": "Boundary",
+      "color": "#64748B"
+    }
+  },
+  "edgeTypes": {}
 }

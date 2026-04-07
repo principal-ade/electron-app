@@ -1,68 +1,4 @@
 {
-  "pv": {
-    "name": "User Feed Panel",
-    "version": "1.0.0",
-    "description": "Network page user activity feed showing GitHub activity and contributions from external API",
-    "markdown": ".principal-views/user-feed-panel/user-feed-panel.md",
-    "nodeTypes": {
-      "ui-component": {
-        "label": "UI Component",
-        "color": "#EC4899"
-      },
-      "context": {
-        "label": "React Context",
-        "color": "#A855F7"
-      },
-      "renderer-service": {
-        "label": "Renderer Service",
-        "color": "#7C3AED"
-      },
-      "main-process": {
-        "label": "Main Process",
-        "color": "#4F46E5"
-      },
-      "external-api": {
-        "label": "External API",
-        "color": "#059669"
-      },
-      "event": {
-        "label": "Event",
-        "color": "#3B82F6"
-      }
-    },
-    "edgeTypes": {
-      "user-action": {
-        "label": "User Action",
-        "style": "solid",
-        "color": "#EC4899"
-      },
-      "data-flow": {
-        "label": "Data Flow",
-        "style": "solid",
-        "color": "#3B82F6"
-      },
-      "ipc-invoke": {
-        "label": "IPC Invoke",
-        "style": "solid",
-        "color": "#6366F1"
-      },
-      "state-update": {
-        "label": "State Update",
-        "style": "dashed",
-        "color": "#22C55E"
-      },
-      "event-emit": {
-        "label": "Event Emit",
-        "style": "dashed",
-        "color": "#A855F7"
-      },
-      "http-request": {
-        "label": "HTTP Request",
-        "style": "solid",
-        "color": "#059669"
-      }
-    }
-  },
   "nodes": [
     {
       "id": "title",
@@ -479,9 +415,7 @@
       "toNode": "user-selected-event",
       "toSide": "left",
       "label": "emit user:selected",
-      "pv": {
-        "edgeType": "event-emit"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "event-to-fetch",
@@ -490,9 +424,7 @@
       "toNode": "fetch-user-activity",
       "toSide": "top",
       "label": "trigger fetch",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "fetch-to-auth",
@@ -501,9 +433,7 @@
       "toNode": "secure-auth-service",
       "toSide": "left",
       "label": "get token",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "auth-to-proxy",
@@ -512,9 +442,7 @@
       "toNode": "api-proxy-service",
       "toSide": "left",
       "label": "call with token",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "proxy-to-main",
@@ -523,9 +451,7 @@
       "toNode": "main-process-proxy",
       "toSide": "top",
       "label": "IPC invoke",
-      "pv": {
-        "edgeType": "ipc-invoke"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "main-to-api",
@@ -534,9 +460,7 @@
       "toNode": "principal-ade-api",
       "toSide": "top",
       "label": "HTTP GET",
-      "pv": {
-        "edgeType": "http-request"
-      }
+      "edgeType": "http"
     },
     {
       "id": "api-to-loaded",
@@ -545,9 +469,7 @@
       "toNode": "activity-loaded",
       "toSide": "right",
       "label": "response data",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "loaded-to-panel",
@@ -556,9 +478,7 @@
       "toNode": "user-feed-panel",
       "toSide": "top",
       "label": "state update",
-      "pv": {
-        "edgeType": "state-update"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "loaded-to-graph",
@@ -567,9 +487,7 @@
       "toNode": "contribution-graph",
       "toSide": "top",
       "label": "contributions data",
-      "pv": {
-        "edgeType": "state-update"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "panel-to-clicked",
@@ -578,9 +496,7 @@
       "toNode": "activity-clicked",
       "toSide": "top",
       "label": "onClick",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "clicked-to-github",
@@ -589,9 +505,37 @@
       "toNode": "open-in-github",
       "toSide": "left",
       "label": "window.open",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     }
-  ]
+  ],
+  "name": "User Feed Panel",
+  "description": "Network page user activity feed showing GitHub activity and contributions from external API",
+  "markdown": ".principal-views/user-feed-panel/user-feed-panel.md",
+  "nodeTypes": {
+    "ui-component": {
+      "label": "UI Component",
+      "color": "#EC4899"
+    },
+    "context": {
+      "label": "React Context",
+      "color": "#A855F7"
+    },
+    "renderer-service": {
+      "label": "Renderer Service",
+      "color": "#7C3AED"
+    },
+    "main-process": {
+      "label": "Main Process",
+      "color": "#4F46E5"
+    },
+    "external-api": {
+      "label": "External API",
+      "color": "#059669"
+    },
+    "event": {
+      "label": "Event",
+      "color": "#3B82F6"
+    }
+  },
+  "edgeTypes": {}
 }

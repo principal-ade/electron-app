@@ -1,77 +1,4 @@
 {
-  "pv": {
-    "name": "App Updates",
-    "version": "1.0.0",
-    "description": "Electron auto-update system using electron-updater with GitHub releases",
-    "markdown": ".principal-views/app-updates/app-updates.md",
-    "scope": "principal-ade-main",
-    "nodeTypes": {
-      "ui-component": {
-        "label": "UI Component",
-        "color": "#3B82F6"
-      },
-      "renderer-service": {
-        "label": "Renderer Service",
-        "color": "#8B5CF6"
-      },
-      "ipc-bridge": {
-        "label": "IPC Bridge",
-        "color": "#F59E0B"
-      },
-      "main-process": {
-        "label": "Main Process",
-        "color": "#22C55E"
-      },
-      "external-service": {
-        "label": "External Service",
-        "color": "#64748B"
-      },
-      "user-action": {
-        "label": "User Action",
-        "color": "#EC4899"
-      },
-      "boundary": {
-        "label": "Boundary",
-        "color": "#94A3B8"
-      },
-      "event": {
-        "label": "Event",
-        "color": "#3B82F6"
-      }
-    },
-    "edgeTypes": {
-      "user-interaction": {
-        "label": "User Interaction",
-        "style": "solid",
-        "color": "#EC4899"
-      },
-      "ipc-send": {
-        "label": "IPC Send",
-        "style": "solid",
-        "color": "#F59E0B"
-      },
-      "ipc-receive": {
-        "label": "IPC Receive",
-        "style": "dashed",
-        "color": "#F59E0B"
-      },
-      "function-call": {
-        "label": "Function Call",
-        "style": "solid",
-        "color": "#3B82F6"
-      },
-      "http-request": {
-        "label": "HTTP Request",
-        "style": "solid",
-        "color": "#22C55E"
-      },
-      "event-emit": {
-        "label": "Event Emit",
-        "style": "dashed",
-        "color": "#8B5CF6"
-      }
-    }
-  },
   "nodes": [
     {
       "id": "title",
@@ -875,9 +802,7 @@
       "toNode": "version-service",
       "toSide": "left",
       "label": "uses service",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "check-button-to-service",
@@ -886,9 +811,7 @@
       "toNode": "version-service",
       "toSide": "left",
       "label": "checkForUpdate()",
-      "pv": {
-        "edgeType": "user-interaction"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "service-to-ipc",
@@ -897,9 +820,7 @@
       "toNode": "ipc-bridge",
       "toSide": "top",
       "label": "ipcRenderer.send()",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "ipc-to-manager",
@@ -908,9 +829,7 @@
       "toNode": "app-version-manager",
       "toSide": "left",
       "label": "IPC message",
-      "pv": {
-        "edgeType": "ipc-send"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "manager-to-check",
@@ -919,9 +838,7 @@
       "toNode": "check-for-updates",
       "toSide": "top",
       "label": "handles IPC",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "manager-to-autoupdater",
@@ -930,9 +847,7 @@
       "toNode": "auto-updater",
       "toSide": "left",
       "label": "configures",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "autoupdater-to-github",
@@ -941,9 +856,7 @@
       "toNode": "github-releases",
       "toSide": "left",
       "label": "HTTPS GET",
-      "pv": {
-        "edgeType": "http-request"
-      }
+      "edgeType": "http"
     },
     {
       "id": "check-to-github-request",
@@ -952,9 +865,7 @@
       "toNode": "github-request",
       "toSide": "left",
       "label": "HTTP request",
-      "pv": {
-        "edgeType": "http-request"
-      }
+      "edgeType": "http"
     },
     {
       "id": "github-request-to-available",
@@ -963,9 +874,7 @@
       "toNode": "update-available",
       "toSide": "left",
       "label": "if newer version",
-      "pv": {
-        "edgeType": "event-emit"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "github-request-to-not-available",
@@ -974,9 +883,7 @@
       "toNode": "update-not-available",
       "toSide": "left",
       "label": "if latest",
-      "pv": {
-        "edgeType": "event-emit"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "available-to-ipc",
@@ -985,9 +892,7 @@
       "toNode": "ipc-bridge",
       "toSide": "right",
       "label": "sendToWindow()",
-      "pv": {
-        "edgeType": "ipc-receive"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "not-available-to-ipc",
@@ -996,9 +901,7 @@
       "toNode": "ipc-bridge",
       "toSide": "right",
       "label": "sendToWindow()",
-      "pv": {
-        "edgeType": "ipc-receive"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "download-button-to-service",
@@ -1007,9 +910,7 @@
       "toNode": "version-service",
       "toSide": "left",
       "label": "downloadUpdate()",
-      "pv": {
-        "edgeType": "user-interaction"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "service-to-download",
@@ -1018,9 +919,7 @@
       "toNode": "download-update",
       "toSide": "top",
       "label": "via IPC",
-      "pv": {
-        "edgeType": "ipc-send"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "download-to-progress",
@@ -1029,9 +928,7 @@
       "toNode": "download-progress",
       "toSide": "left",
       "label": "emits progress",
-      "pv": {
-        "edgeType": "event-emit"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "progress-to-ui",
@@ -1040,9 +937,7 @@
       "toNode": "progress-bar",
       "toSide": "right",
       "label": "via IPC",
-      "pv": {
-        "edgeType": "ipc-receive"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "download-to-downloaded",
@@ -1051,9 +946,7 @@
       "toNode": "update-downloaded",
       "toSide": "top",
       "label": "on complete",
-      "pv": {
-        "edgeType": "event-emit"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "install-button-to-service",
@@ -1062,9 +955,7 @@
       "toNode": "version-service",
       "toSide": "left",
       "label": "installUpdate()",
-      "pv": {
-        "edgeType": "user-interaction"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "service-to-install",
@@ -1073,9 +964,7 @@
       "toNode": "quit-and-install",
       "toSide": "top",
       "label": "via IPC",
-      "pv": {
-        "edgeType": "ipc-send"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "install-to-restart",
@@ -1084,9 +973,7 @@
       "toNode": "app-restart",
       "toSide": "left",
       "label": "quitAndInstall()",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "startup-to-check",
@@ -1095,9 +982,7 @@
       "toNode": "check-for-updates",
       "toSide": "left",
       "label": "silent check",
-      "pv": {
-        "edgeType": "ipc-send"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "periodic-to-check",
@@ -1106,9 +991,7 @@
       "toNode": "check-for-updates",
       "toSide": "bottom",
       "label": "every hour",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "user-triggered-to-check",
@@ -1117,9 +1000,7 @@
       "toNode": "check-for-updates",
       "toSide": "bottom",
       "label": "manual/silent",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "error-to-ui",
@@ -1128,9 +1009,7 @@
       "toNode": "error-ui",
       "toSide": "right",
       "label": "via IPC",
-      "pv": {
-        "edgeType": "ipc-receive"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "download-to-error",
@@ -1139,9 +1018,7 @@
       "toNode": "error-handling",
       "toSide": "top",
       "label": "on failure",
-      "pv": {
-        "edgeType": "event-emit"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "check-to-error",
@@ -1150,9 +1027,7 @@
       "toNode": "error-handling",
       "toSide": "top",
       "label": "on failure",
-      "pv": {
-        "edgeType": "event-emit"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "titlebar-button-to-click",
@@ -1161,9 +1036,7 @@
       "toNode": "titlebar-button-click",
       "toSide": "top",
       "label": "onClick",
-      "pv": {
-        "edgeType": "user-interaction"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "titlebar-click-to-ipc",
@@ -1172,9 +1045,7 @@
       "toNode": "navigate-to-updates-ipc",
       "toSide": "top",
       "label": "navigateToUpdates()",
-      "pv": {
-        "edgeType": "ipc-send"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "titlebar-ipc-to-settings",
@@ -1183,9 +1054,7 @@
       "toNode": "settings-modal",
       "toSide": "left",
       "label": "focus & navigate",
-      "pv": {
-        "edgeType": "ipc-receive"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "update-available-to-titlebar",
@@ -1194,9 +1063,46 @@
       "toNode": "titlebar-update-button",
       "toSide": "right",
       "label": "shows button",
-      "pv": {
-        "edgeType": "event-emit"
-      }
+      "edgeType": "subscription"
     }
-  ]
+  ],
+  "name": "App Updates",
+  "description": "Electron auto-update system using electron-updater with GitHub releases",
+  "markdown": ".principal-views/app-updates/app-updates.md",
+  "scope": "principal-ade-main",
+  "nodeTypes": {
+    "ui-component": {
+      "label": "UI Component",
+      "color": "#3B82F6"
+    },
+    "renderer-service": {
+      "label": "Renderer Service",
+      "color": "#8B5CF6"
+    },
+    "ipc-bridge": {
+      "label": "IPC Bridge",
+      "color": "#F59E0B"
+    },
+    "main-process": {
+      "label": "Main Process",
+      "color": "#22C55E"
+    },
+    "external-service": {
+      "label": "External Service",
+      "color": "#64748B"
+    },
+    "user-action": {
+      "label": "User Action",
+      "color": "#EC4899"
+    },
+    "boundary": {
+      "label": "Boundary",
+      "color": "#94A3B8"
+    },
+    "event": {
+      "label": "Event",
+      "color": "#3B82F6"
+    }
+  },
+  "edgeTypes": {}
 }

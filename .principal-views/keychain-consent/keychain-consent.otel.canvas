@@ -1,59 +1,4 @@
 {
-  "pv": {
-    "name": "Keychain Consent",
-    "version": "1.0.0",
-    "description": "First-run keychain consent flow for secure credential storage on macOS",
-    "markdown": ".principal-views/keychain-consent/keychain-consent.md",
-    "scope": "principal-ade-main",
-    "nodeTypes": {
-      "main-process": {
-        "label": "Main Process",
-        "color": "#6366F1"
-      },
-      "renderer": {
-        "label": "Renderer",
-        "color": "#EC4899"
-      },
-      "storage": {
-        "label": "Storage",
-        "color": "#0D9488"
-      },
-      "user-action": {
-        "label": "User Action",
-        "color": "#F59E0B"
-      },
-      "system": {
-        "label": "System",
-        "color": "#8B5CF6"
-      },
-      "error": {
-        "label": "Error",
-        "color": "#EF4444"
-      }
-    },
-    "edgeTypes": {
-      "ipc-invoke": {
-        "label": "IPC Invoke",
-        "style": "solid",
-        "color": "#6366F1"
-      },
-      "data-flow": {
-        "label": "Data Flow",
-        "style": "solid",
-        "color": "#8B5CF6"
-      },
-      "user-action": {
-        "label": "User Action",
-        "style": "solid",
-        "color": "#F59E0B"
-      },
-      "error-flow": {
-        "label": "Error",
-        "style": "dashed",
-        "color": "#EF4444"
-      }
-    }
-  },
   "nodes": [
     {
       "id": "title",
@@ -504,9 +449,7 @@
       "toNode": "app-startup-check",
       "toSide": "left",
       "label": "check consent",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "startup-to-skipped",
@@ -515,9 +458,7 @@
       "toNode": "auth-init-skipped",
       "toSide": "left",
       "label": "pending/declined",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "startup-to-proceed",
@@ -526,9 +467,7 @@
       "toNode": "auth-init-proceed",
       "toSide": "top",
       "label": "granted",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "startup-to-renderer",
@@ -537,9 +476,7 @@
       "toNode": "renderer-load-consent",
       "toSide": "top",
       "label": "window created",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "renderer-to-modal",
@@ -548,9 +485,7 @@
       "toNode": "modal-shown",
       "toSide": "top",
       "label": "status=pending",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "modal-to-grants",
@@ -559,9 +494,7 @@
       "toNode": "user-grants",
       "toSide": "top",
       "label": "click Allow",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "modal-to-declines",
@@ -570,9 +503,7 @@
       "toNode": "user-declines",
       "toSide": "top",
       "label": "click Skip",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "grants-to-persisted",
@@ -581,9 +512,7 @@
       "toNode": "consent-persisted",
       "toSide": "top",
       "label": "IPC: SET_KEYCHAIN_CONSENT",
-      "pv": {
-        "edgeType": "ipc-invoke"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "declines-to-persisted",
@@ -592,9 +521,7 @@
       "toNode": "consent-persisted",
       "toSide": "right",
       "label": "IPC: SET_KEYCHAIN_CONSENT",
-      "pv": {
-        "edgeType": "ipc-invoke"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "persisted-to-init",
@@ -603,9 +530,7 @@
       "toNode": "keychain-init-requested",
       "toSide": "top",
       "label": "if granted",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "init-to-access",
@@ -614,9 +539,7 @@
       "toNode": "keychain-access-triggered",
       "toSide": "top",
       "label": "initializeAuthState()",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "access-to-success",
@@ -625,9 +548,7 @@
       "toNode": "keychain-init-success",
       "toSide": "top",
       "label": "user allows",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "access-to-error",
@@ -636,9 +557,7 @@
       "toNode": "keychain-init-error",
       "toSide": "left",
       "label": "timeout/denied",
-      "pv": {
-        "edgeType": "error-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "settings-to-modal",
@@ -647,9 +566,7 @@
       "toNode": "modal-shown",
       "toSide": "right",
       "label": "requestConsent()",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "declines-to-blocked",
@@ -658,9 +575,7 @@
       "toNode": "auth-view-blocked",
       "toSide": "top",
       "label": "auth features blocked",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "blocked-to-settings",
@@ -669,9 +584,38 @@
       "toNode": "settings-enable",
       "toSide": "bottom",
       "label": "click Enable",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "uses"
     }
-  ]
+  ],
+  "name": "Keychain Consent",
+  "description": "First-run keychain consent flow for secure credential storage on macOS",
+  "markdown": ".principal-views/keychain-consent/keychain-consent.md",
+  "scope": "principal-ade-main",
+  "nodeTypes": {
+    "main-process": {
+      "label": "Main Process",
+      "color": "#6366F1"
+    },
+    "renderer": {
+      "label": "Renderer",
+      "color": "#EC4899"
+    },
+    "storage": {
+      "label": "Storage",
+      "color": "#0D9488"
+    },
+    "user-action": {
+      "label": "User Action",
+      "color": "#F59E0B"
+    },
+    "system": {
+      "label": "System",
+      "color": "#8B5CF6"
+    },
+    "error": {
+      "label": "Error",
+      "color": "#EF4444"
+    }
+  },
+  "edgeTypes": {}
 }

@@ -1,65 +1,53 @@
 {
-  "pv": {
-    "name": "Activity Feed",
-    "version": "1.0.0",
-    "description": "Cross-repository activity feed showing recent commits from all local repositories",
-    "markdown": ".principal-views/activity-feed/activity-feed.md",
-    "nodeTypes": {
-      "ui-component": {
-        "label": "UI Component",
-        "color": "#EC4899"
-      },
-      "context": {
-        "label": "React Context",
-        "color": "#A855F7"
-      },
-      "renderer-service": {
-        "label": "Renderer Service",
-        "color": "#7C3AED"
-      },
-      "main-process": {
-        "label": "Main Process",
-        "color": "#4F46E5"
-      },
-      "hook": {
-        "label": "React Hook",
-        "color": "#F59E0B"
-      },
-      "event": {
-        "label": "Event",
-        "color": "#3B82F6"
-      },
-      "boundary": {
-        "label": "Boundary",
-        "color": "#64748B"
-      }
+  "name": "Activity Feed",
+  "markdown": ".principal-views/activity-feed/activity-feed.md",
+  "description": "Cross-repository activity feed showing recent commits from all local repositories",
+  "scope": "principal-ade-renderer",
+  "nodeTypes": {
+    "ui-component": {
+      "label": "UI Component",
+      "color": "#EC4899"
     },
-    "edgeTypes": {
-      "user-action": {
-        "label": "User Action",
-        "style": "solid",
-        "color": "#EC4899"
-      },
-      "data-flow": {
-        "label": "Data Flow",
-        "style": "solid",
-        "color": "#3B82F6"
-      },
-      "ipc-invoke": {
-        "label": "IPC Invoke",
-        "style": "solid",
-        "color": "#6366F1"
-      },
-      "state-update": {
-        "label": "State Update",
-        "style": "dashed",
-        "color": "#22C55E"
-      },
-      "event-emit": {
-        "label": "Event Emit",
-        "style": "dashed",
-        "color": "#A855F7"
-      }
+    "context": {
+      "label": "React Context",
+      "color": "#A855F7"
+    },
+    "renderer-service": {
+      "label": "Renderer Service",
+      "color": "#7C3AED"
+    },
+    "main-process": {
+      "label": "Main Process",
+      "color": "#4F46E5"
+    },
+    "hook": {
+      "label": "React Hook",
+      "color": "#F59E0B"
+    },
+    "event": {
+      "label": "Event",
+      "color": "#3B82F6"
+    },
+    "boundary": {
+      "label": "Boundary",
+      "color": "#64748B"
+    }
+  },
+  "edgeTypes": {
+    "uses": {
+      "label": "User Action",
+      "style": "solid",
+      "color": "#EC4899"
+    },
+    "ipc": {
+      "label": "IPC Invoke",
+      "style": "solid",
+      "color": "#6366F1"
+    },
+    "subscription": {
+      "label": "State Update",
+      "style": "dashed",
+      "color": "#22C55E"
     }
   },
   "nodes": [
@@ -726,9 +714,7 @@
       "toNode": "ipc-broadcast",
       "toSide": "top",
       "label": "emit GIT_STATE_EVENT",
-      "pv": {
-        "edgeType": "event-emit"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "broadcast-to-renderer",
@@ -737,9 +723,7 @@
       "toNode": "alexandria-on-repo-change",
       "toSide": "top",
       "label": "IPC to renderer",
-      "pv": {
-        "edgeType": "ipc-invoke"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "repo-change-to-refresh",
@@ -748,9 +732,7 @@
       "toNode": "feed-refresh-trigger",
       "toSide": "left",
       "label": "trigger refresh",
-      "pv": {
-        "edgeType": "event-emit"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "refresh-to-hook",
@@ -759,9 +741,7 @@
       "toNode": "use-activity-feed",
       "toSide": "left",
       "label": "reload commits",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "nav-to-shell",
@@ -770,9 +750,7 @@
       "toNode": "integrated-shell",
       "toSide": "left",
       "label": "view change",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "shell-to-view",
@@ -781,9 +759,7 @@
       "toNode": "feed-view",
       "toSide": "left",
       "label": "render",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "view-to-alexandria",
@@ -792,9 +768,7 @@
       "toNode": "alexandria-service",
       "toSide": "top",
       "label": "getRepositories()",
-      "pv": {
-        "edgeType": "ipc-invoke"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "alexandria-to-hook",
@@ -803,9 +777,7 @@
       "toNode": "use-activity-feed",
       "toSide": "left",
       "label": "repositories",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "hook-to-fs",
@@ -814,9 +786,7 @@
       "toNode": "get-directory-info",
       "toSide": "left",
       "label": "get mtime",
-      "pv": {
-        "edgeType": "ipc-invoke"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "fs-to-git",
@@ -825,9 +795,7 @@
       "toNode": "git-service-commits",
       "toSide": "left",
       "label": "top repos",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "git-to-loaded",
@@ -836,9 +804,7 @@
       "toNode": "activity-feed-loaded",
       "toSide": "right",
       "label": "commits",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "hook-to-loaded",
@@ -847,9 +813,7 @@
       "toNode": "activity-feed-loaded",
       "toSide": "top",
       "label": "aggregate",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "loaded-to-images",
@@ -858,9 +822,7 @@
       "toNode": "file-city-service",
       "toSide": "left",
       "label": "unique repos",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "images-service-to-loaded",
@@ -869,9 +831,7 @@
       "toNode": "images-loaded",
       "toSide": "left",
       "label": "fetch images",
-      "pv": {
-        "edgeType": "ipc-invoke"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "loaded-to-panel",
@@ -880,9 +840,7 @@
       "toNode": "activity-feed-panel",
       "toSide": "top",
       "label": "state update",
-      "pv": {
-        "edgeType": "state-update"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "images-to-panel",
@@ -891,9 +849,7 @@
       "toNode": "activity-feed-panel",
       "toSide": "right",
       "label": "image URLs",
-      "pv": {
-        "edgeType": "state-update"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "panel-to-hovered",
@@ -902,9 +858,7 @@
       "toNode": "commit-hovered",
       "toSide": "left",
       "label": "onMouseEnter",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "panel-to-repo-selected",
@@ -913,9 +867,7 @@
       "toNode": "repo-selected",
       "toSide": "left",
       "label": "onClick",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "hovered-to-clicked",
@@ -924,9 +876,7 @@
       "toNode": "commit-clicked",
       "toSide": "top",
       "label": "onClick",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "repo-selected-to-double",
@@ -935,9 +885,7 @@
       "toNode": "repo-double-clicked",
       "toSide": "top",
       "label": "onDoubleClick",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "double-to-window",
@@ -946,9 +894,7 @@
       "toNode": "window-service",
       "toSide": "left",
       "label": "openDevWorkspace",
-      "pv": {
-        "edgeType": "ipc-invoke"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "clicked-emit",
@@ -957,9 +903,7 @@
       "toNode": "feed-view",
       "toSide": "bottom",
       "label": "selectRepository",
-      "pv": {
-        "edgeType": "event-emit"
-      }
+      "edgeType": "subscription"
     }
   ]
 }

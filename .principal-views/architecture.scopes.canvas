@@ -1,10 +1,7 @@
 {
-  "pv": {
-    "name": "Instrumentation Scopes",
-    "version": "2.0.0",
-    "description": "OpenTelemetry instrumentation scopes representing process boundaries. Traces require context propagation to cross scope boundaries.",
-    "markdown": ".principal-views/architecture.scopes.md"
-  },
+  "name": "Instrumentation Scopes",
+  "description": "OpenTelemetry instrumentation scopes representing process boundaries. Traces require context propagation to cross scope boundaries.",
+  "markdown": ".principal-views/architecture.scopes.md",
   "nodes": [
     {
       "id": "principal-ade-main",
@@ -294,9 +291,7 @@
       "fromSide": "bottom",
       "toNode": "principal-ade-terminal-worker",
       "toSide": "top",
-      "pv": {
-        "edgeType": "worker-message"
-      }
+      "edgeType": "worker-message"
     },
     {
       "id": "terminal-worker-to-daemon",
@@ -305,9 +300,7 @@
       "toNode": "principal-ade-daemon",
       "toSide": "top",
       "label": "Unix socket",
-      "pv": {
-        "edgeType": "worker-message"
-      }
+      "edgeType": "worker-message"
     },
     {
       "id": "main-to-cli-bridge",
@@ -315,9 +308,7 @@
       "fromSide": "bottom",
       "toNode": "principal-ade-cli-bridge",
       "toSide": "top",
-      "pv": {
-        "edgeType": "worker-message"
-      }
+      "edgeType": "worker-message"
     },
     {
       "id": "main-to-github",
@@ -326,9 +317,7 @@
       "toNode": "external-github",
       "toSide": "left",
       "label": "HTTP (traceparent)",
-      "pv": {
-        "edgeType": "http"
-      }
+      "edgeType": "http"
     },
     {
       "id": "main-to-agents",
@@ -337,9 +326,7 @@
       "toNode": "external-agents",
       "toSide": "left",
       "label": "HTTP (traceparent)",
-      "pv": {
-        "edgeType": "http"
-      }
+      "edgeType": "http"
     },
     {
       "id": "main-to-auth-server",
@@ -348,9 +335,7 @@
       "toNode": "external-auth-server",
       "toSide": "left",
       "label": "HTTPS",
-      "pv": {
-        "edgeType": "http"
-      }
+      "edgeType": "http"
     },
     {
       "id": "main-to-traffic-controller",
@@ -359,9 +344,7 @@
       "toNode": "external-traffic-controller",
       "toSide": "left",
       "label": "WebSocket",
-      "pv": {
-        "edgeType": "websocket"
-      }
+      "edgeType": "websocket"
     },
     {
       "id": "main-to-npm-registry",
@@ -370,9 +353,7 @@
       "toNode": "external-npm-registry",
       "toSide": "left",
       "label": "HTTPS",
-      "pv": {
-        "edgeType": "http"
-      }
+      "edgeType": "http"
     },
     {
       "id": "edge-principal-ade-alexandria-principal-ade-main-1773847831768",
@@ -380,9 +361,7 @@
       "toNode": "principal-ade-main",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "ipc"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "edge-principal-ade-event-processor-principal-ade-main-1773847831770",
@@ -390,9 +369,7 @@
       "toNode": "principal-ade-main",
       "fromSide": "top",
       "toSide": "bottom",
-      "pv": {
-        "edgeType": "ipc"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "edge-principal-ade-repo-monitor-principal-ade-main",
@@ -400,9 +377,7 @@
       "toNode": "principal-ade-main",
       "fromSide": "top",
       "toSide": "bottom",
-      "pv": {
-        "edgeType": "worker-message"
-      }
+      "edgeType": "worker-message"
     },
     {
       "id": "edge-principal-ade-dev-workspace-principal-ade-main-1773847831770",
@@ -410,9 +385,7 @@
       "toNode": "principal-ade-main",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "ipc"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "edge-principal-ade-principal-window-principal-ade-main-1773847831770",
@@ -420,9 +393,7 @@
       "toNode": "principal-ade-main",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "ipc"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "edge-principal-ade-splash-screen-principal-ade-main",
@@ -430,9 +401,7 @@
       "toNode": "principal-ade-main",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "ipc"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "edge-principal-ade-goodbye-screen-principal-ade-main",
@@ -440,9 +409,7 @@
       "toNode": "principal-ade-main",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "ipc"
-      }
+      "edgeType": "ipc"
     }
   ]
 }

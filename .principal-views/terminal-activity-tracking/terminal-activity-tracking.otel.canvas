@@ -1,71 +1,4 @@
 {
-  "pv": {
-    "name": "Terminal Activity Tracking",
-    "version": "1.0.0",
-    "description": "Flow of terminal/agent working state from terminal panel through TIPC to main process store and cross-window broadcast",
-    "markdown": ".principal-views/terminal-activity-tracking/terminal-activity-tracking.md",
-    "scope": "principal-ade-main",
-    "nodeTypes": {
-      "terminal-panel": {
-        "label": "Terminal Panel",
-        "color": "#10B981"
-      },
-      "panel-host": {
-        "label": "Panel Host",
-        "color": "#3B82F6"
-      },
-      "tipc-client": {
-        "label": "TIPC Client",
-        "color": "#8B5CF6"
-      },
-      "tipc-router": {
-        "label": "TIPC Router",
-        "color": "#6366F1"
-      },
-      "activity-store": {
-        "label": "Activity Store",
-        "color": "#F59E0B"
-      },
-      "broadcast": {
-        "label": "Broadcast",
-        "color": "#EC4899"
-      },
-      "window": {
-        "label": "Window",
-        "color": "#14B8A6"
-      },
-      "event": {
-        "label": "Event",
-        "color": "#3B82F6"
-      },
-      "boundary": {
-        "label": "Boundary",
-        "color": "#64748B"
-      }
-    },
-    "edgeTypes": {
-      "event-emit": {
-        "label": "Event Emit",
-        "style": "solid",
-        "color": "#10B981"
-      },
-      "tipc-invoke": {
-        "label": "TIPC Invoke",
-        "style": "solid",
-        "color": "#6366F1"
-      },
-      "state-update": {
-        "label": "State Update",
-        "style": "solid",
-        "color": "#F59E0B"
-      },
-      "ipc-broadcast": {
-        "label": "IPC Broadcast",
-        "style": "dashed",
-        "color": "#EC4899"
-      }
-    }
-  },
   "nodes": [
     {
       "id": "title",
@@ -444,9 +377,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "terminal:activity-change",
-      "pv": {
-        "edgeType": "event-emit"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "e3",
@@ -455,9 +386,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "call client",
-      "pv": {
-        "edgeType": "tipc-invoke"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "e4",
@@ -466,9 +395,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "TIPC invoke",
-      "pv": {
-        "edgeType": "tipc-invoke"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "e5b",
@@ -477,9 +404,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "store.delete()",
-      "pv": {
-        "edgeType": "state-update"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e6a",
@@ -488,9 +413,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "broadcast",
-      "pv": {
-        "edgeType": "state-update"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e6b",
@@ -499,9 +422,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "broadcast",
-      "pv": {
-        "edgeType": "state-update"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e7",
@@ -510,9 +431,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "webContents.send()",
-      "pv": {
-        "edgeType": "ipc-broadcast"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "e8",
@@ -521,9 +440,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "webContents.send()",
-      "pv": {
-        "edgeType": "ipc-broadcast"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "e9",
@@ -532,9 +449,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "webContents.send()",
-      "pv": {
-        "edgeType": "ipc-broadcast"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "edge-tipc-router-agent-started-1773079622676",
@@ -542,9 +457,50 @@
       "toNode": "agent-started",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "state-update"
-      }
+      "edgeType": "uses"
     }
-  ]
+  ],
+  "name": "Terminal Activity Tracking",
+  "description": "Flow of terminal/agent working state from terminal panel through TIPC to main process store and cross-window broadcast",
+  "markdown": ".principal-views/terminal-activity-tracking/terminal-activity-tracking.md",
+  "scope": "principal-ade-main",
+  "nodeTypes": {
+    "terminal-panel": {
+      "label": "Terminal Panel",
+      "color": "#10B981"
+    },
+    "panel-host": {
+      "label": "Panel Host",
+      "color": "#3B82F6"
+    },
+    "tipc-client": {
+      "label": "TIPC Client",
+      "color": "#8B5CF6"
+    },
+    "tipc-router": {
+      "label": "TIPC Router",
+      "color": "#6366F1"
+    },
+    "activity-store": {
+      "label": "Activity Store",
+      "color": "#F59E0B"
+    },
+    "broadcast": {
+      "label": "Broadcast",
+      "color": "#EC4899"
+    },
+    "window": {
+      "label": "Window",
+      "color": "#14B8A6"
+    },
+    "event": {
+      "label": "Event",
+      "color": "#3B82F6"
+    },
+    "boundary": {
+      "label": "Boundary",
+      "color": "#64748B"
+    }
+  },
+  "edgeTypes": {}
 }

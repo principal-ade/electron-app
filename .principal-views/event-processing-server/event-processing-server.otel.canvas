@@ -1,89 +1,4 @@
 {
-  "pv": {
-    "name": "Event Processing Server",
-    "version": "1.0.0",
-    "description": "Agent session event processing server running in Electron utility process. Receives events from Claude, Cline, OpenCode, and Droid agents via HTTP webhooks and processes them through the AgentEventPipeline.",
-    "markdown": ".principal-views/event-processing-server/event-processing-server.md",
-    "scope": "principal-ade-main",
-    "nodeTypes": {
-      "main-process": {
-        "label": "Main Process",
-        "color": "#3B82F6"
-      },
-      "utility-process": {
-        "label": "Utility Process",
-        "color": "#8B5CF6"
-      },
-      "http-server": {
-        "label": "HTTP Server",
-        "color": "#22C55E"
-      },
-      "http-endpoint": {
-        "label": "HTTP Endpoint",
-        "color": "#10B981"
-      },
-      "pipeline": {
-        "label": "Pipeline",
-        "color": "#F59E0B"
-      },
-      "adapter": {
-        "label": "Adapter",
-        "color": "#14B8A6"
-      },
-      "cache": {
-        "label": "Cache",
-        "color": "#0D9488"
-      },
-      "external-agent": {
-        "label": "External Agent",
-        "color": "#64748B"
-      },
-      "renderer": {
-        "label": "Renderer",
-        "color": "#EC4899"
-      },
-      "event": {
-        "label": "Event",
-        "color": "#3B82F6"
-      },
-      "boundary": {
-        "label": "Boundary",
-        "color": "#64748B"
-      }
-    },
-    "edgeTypes": {
-      "spawns": {
-        "label": "Spawns",
-        "style": "solid",
-        "color": "#64748B"
-      },
-      "http-post": {
-        "label": "HTTP POST",
-        "style": "solid",
-        "color": "#22C55E"
-      },
-      "ipc": {
-        "label": "IPC",
-        "style": "solid",
-        "color": "#6366F1"
-      },
-      "messageport": {
-        "label": "MessagePort",
-        "style": "solid",
-        "color": "#F59E0B"
-      },
-      "data-flow": {
-        "label": "Data Flow",
-        "style": "solid",
-        "color": "#8B5CF6"
-      },
-      "processes": {
-        "label": "Processes",
-        "style": "solid",
-        "color": "#F59E0B"
-      }
-    }
-  },
   "nodes": [
     {
       "id": "title",
@@ -515,9 +430,7 @@
       "toNode": "http-event-server",
       "toSide": "left",
       "label": "utilityProcess.fork()",
-      "pv": {
-        "edgeType": "spawns"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "server-to-claude-endpoint",
@@ -526,9 +439,7 @@
       "toNode": "claude-endpoint",
       "toSide": "left",
       "label": "routes",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "server-to-cline-endpoint",
@@ -537,9 +448,7 @@
       "toNode": "cline-endpoint",
       "toSide": "left",
       "label": "routes",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "server-to-opencode-endpoint",
@@ -548,9 +457,7 @@
       "toNode": "opencode-endpoint",
       "toSide": "left",
       "label": "routes",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "server-to-droid-endpoint",
@@ -559,9 +466,7 @@
       "toNode": "droid-endpoint",
       "toSide": "left",
       "label": "routes",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "claude-to-endpoint",
@@ -570,9 +475,7 @@
       "toNode": "claude-endpoint",
       "toSide": "right",
       "label": "POST",
-      "pv": {
-        "edgeType": "http-post"
-      }
+      "edgeType": "http"
     },
     {
       "id": "cline-to-endpoint",
@@ -581,9 +484,7 @@
       "toNode": "cline-endpoint",
       "toSide": "right",
       "label": "POST",
-      "pv": {
-        "edgeType": "http-post"
-      }
+      "edgeType": "http"
     },
     {
       "id": "opencode-to-endpoint",
@@ -592,9 +493,7 @@
       "toNode": "opencode-endpoint",
       "toSide": "right",
       "label": "POST",
-      "pv": {
-        "edgeType": "http-post"
-      }
+      "edgeType": "http"
     },
     {
       "id": "droid-to-endpoint",
@@ -603,9 +502,7 @@
       "toNode": "droid-endpoint",
       "toSide": "right",
       "label": "POST",
-      "pv": {
-        "edgeType": "http-post"
-      }
+      "edgeType": "http"
     },
     {
       "id": "server-to-pipeline",
@@ -614,9 +511,7 @@
       "toNode": "agent-event-pipeline",
       "toSide": "top",
       "label": "processRawEvent()",
-      "pv": {
-        "edgeType": "processes"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "pipeline-to-adapter",
@@ -625,9 +520,7 @@
       "toNode": "path-adapter",
       "toSide": "top",
       "label": "normalize paths",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "adapter-to-cache",
@@ -636,9 +529,7 @@
       "toNode": "git-repo-cache",
       "toSide": "top",
       "label": "getRepoInfo()",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "manager-to-renderer",
@@ -647,9 +538,7 @@
       "toNode": "renderer-window",
       "toSide": "top",
       "label": "SESSION_UPDATED",
-      "pv": {
-        "edgeType": "ipc"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "manager-to-port",
@@ -658,9 +547,7 @@
       "toNode": "port-registration",
       "toSide": "top",
       "label": "manages",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "port-to-renderer",
@@ -669,9 +556,64 @@
       "toNode": "renderer-window",
       "toSide": "bottom",
       "label": "MessagePort",
-      "pv": {
-        "edgeType": "messageport"
-      }
+      "edgeType": "worker-message"
     }
-  ]
+  ],
+  "name": "Event Processing Server",
+  "description": "Agent session event processing server running in Electron utility process. Receives events from Claude, Cline, OpenCode, and Droid agents via HTTP webhooks and processes them through the AgentEventPipeline.",
+  "markdown": ".principal-views/event-processing-server/event-processing-server.md",
+  "scope": "principal-ade-main",
+  "nodeTypes": {
+    "main-process": {
+      "label": "Main Process",
+      "color": "#3B82F6"
+    },
+    "utility-process": {
+      "label": "Utility Process",
+      "color": "#8B5CF6"
+    },
+    "http-server": {
+      "label": "HTTP Server",
+      "color": "#22C55E"
+    },
+    "http-endpoint": {
+      "label": "HTTP Endpoint",
+      "color": "#10B981"
+    },
+    "pipeline": {
+      "label": "Pipeline",
+      "color": "#F59E0B"
+    },
+    "adapter": {
+      "label": "Adapter",
+      "color": "#14B8A6"
+    },
+    "cache": {
+      "label": "Cache",
+      "color": "#0D9488"
+    },
+    "external-agent": {
+      "label": "External Agent",
+      "color": "#64748B"
+    },
+    "renderer": {
+      "label": "Renderer",
+      "color": "#EC4899"
+    },
+    "event": {
+      "label": "Event",
+      "color": "#3B82F6"
+    },
+    "boundary": {
+      "label": "Boundary",
+      "color": "#64748B"
+    }
+  },
+  "edgeTypes": {
+    "ipc": {
+      "label": "IPC",
+      "style": "solid",
+      "color": "#6366F1"
+    }
+  }
 }

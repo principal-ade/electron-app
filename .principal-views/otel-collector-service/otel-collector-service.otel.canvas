@@ -1,85 +1,4 @@
 {
-  "pv": {
-    "name": "OTEL Collector Service",
-    "version": "1.0.0",
-    "description": "Lifecycle management, port registration, and trace storage for the OpenTelemetry collector service running in Electron main process",
-    "markdown": ".principal-views/otel-collector-service/otel-collector-service.md",
-    "scope": "principal-ade-main",
-    "nodeTypes": {
-      "singleton": {
-        "label": "Singleton Service",
-        "color": "#3B82F6"
-      },
-      "external-binary": {
-        "label": "External Binary",
-        "color": "#64748B"
-      },
-      "ipc-handler": {
-        "label": "IPC Handler",
-        "color": "#6366F1"
-      },
-      "preload-api": {
-        "label": "Preload API",
-        "color": "#14B8A6"
-      },
-      "storage": {
-        "label": "Storage",
-        "color": "#0D9488"
-      },
-      "messageport": {
-        "label": "MessagePort",
-        "color": "#F59E0B"
-      },
-      "http-endpoint": {
-        "label": "HTTP Endpoint",
-        "color": "#22C55E"
-      },
-      "renderer": {
-        "label": "Renderer Process",
-        "color": "#EC4899"
-      },
-      "event": {
-        "label": "Event",
-        "color": "#3B82F6"
-      },
-      "boundary": {
-        "label": "Boundary",
-        "color": "#64748B"
-      }
-    },
-    "edgeTypes": {
-      "spawns": {
-        "label": "Spawns Process",
-        "style": "solid",
-        "color": "#64748B"
-      },
-      "ipc-invoke": {
-        "label": "IPC Invoke",
-        "style": "solid",
-        "color": "#6366F1"
-      },
-      "ipc-handle": {
-        "label": "IPC Handle",
-        "style": "solid",
-        "color": "#6366F1"
-      },
-      "messageport": {
-        "label": "MessagePort",
-        "style": "solid",
-        "color": "#F59E0B"
-      },
-      "data-flow": {
-        "label": "Data Flow",
-        "style": "solid",
-        "color": "#8B5CF6"
-      },
-      "http-post": {
-        "label": "HTTP POST",
-        "style": "solid",
-        "color": "#22C55E"
-      }
-    }
-  },
   "nodes": [
     {
       "id": "title",
@@ -420,9 +339,7 @@
       "toNode": "otel-collector-binary",
       "toSide": "top",
       "label": "start()",
-      "pv": {
-        "edgeType": "spawns"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "binary-to-endpoint",
@@ -431,9 +348,7 @@
       "toNode": "otlp-endpoint",
       "toSide": "top",
       "label": "exposes",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "service-to-storage",
@@ -442,9 +357,7 @@
       "toNode": "trace-storage",
       "toSide": "left",
       "label": "storeTrace()",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "monitor-to-storage",
@@ -453,9 +366,7 @@
       "toNode": "trace-storage",
       "toSide": "bottom",
       "label": "RAW_OTLP_TRACE",
-      "pv": {
-        "edgeType": "messageport"
-      }
+      "edgeType": "worker-message"
     },
     {
       "id": "binary-to-monitor",
@@ -464,9 +375,7 @@
       "toNode": "monitor-port",
       "toSide": "left",
       "label": "routes traces",
-      "pv": {
-        "edgeType": "messageport"
-      }
+      "edgeType": "worker-message"
     },
     {
       "id": "handlers-to-service",
@@ -475,9 +384,7 @@
       "toNode": "otel-collector-service",
       "toSide": "right",
       "label": "delegates",
-      "pv": {
-        "edgeType": "ipc-handle"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "handlers-to-registration",
@@ -486,9 +393,7 @@
       "toNode": "port-registration",
       "toSide": "top",
       "label": "registerPort",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "preload-to-handlers",
@@ -497,9 +402,7 @@
       "toNode": "ipc-handlers",
       "toSide": "right",
       "label": "ipcRenderer.invoke",
-      "pv": {
-        "edgeType": "ipc-invoke"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "preload-to-storage",
@@ -508,9 +411,7 @@
       "toNode": "port-storage",
       "toSide": "top",
       "label": "manages",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "registration-to-preload",
@@ -519,9 +420,7 @@
       "toNode": "port-storage",
       "toSide": "left",
       "label": "postMessage(port2)",
-      "pv": {
-        "edgeType": "messageport"
-      }
+      "edgeType": "worker-message"
     },
     {
       "id": "preload-to-renderer",
@@ -530,9 +429,7 @@
       "toNode": "renderer-window",
       "toSide": "left",
       "label": "exposes API",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "port-to-renderer",
@@ -541,9 +438,7 @@
       "toNode": "renderer-window",
       "toSide": "bottom",
       "label": "onOtelMessage",
-      "pv": {
-        "edgeType": "messageport"
-      }
+      "edgeType": "worker-message"
     },
     {
       "id": "external-to-endpoint",
@@ -552,9 +447,54 @@
       "toNode": "otlp-endpoint",
       "toSide": "bottom",
       "label": "POST /v1/traces",
-      "pv": {
-        "edgeType": "http-post"
-      }
+      "edgeType": "http"
     }
-  ]
+  ],
+  "name": "OTEL Collector Service",
+  "description": "Lifecycle management, port registration, and trace storage for the OpenTelemetry collector service running in Electron main process",
+  "markdown": ".principal-views/otel-collector-service/otel-collector-service.md",
+  "scope": "principal-ade-main",
+  "nodeTypes": {
+    "singleton": {
+      "label": "Singleton Service",
+      "color": "#3B82F6"
+    },
+    "external-binary": {
+      "label": "External Binary",
+      "color": "#64748B"
+    },
+    "ipc-handler": {
+      "label": "IPC Handler",
+      "color": "#6366F1"
+    },
+    "preload-api": {
+      "label": "Preload API",
+      "color": "#14B8A6"
+    },
+    "storage": {
+      "label": "Storage",
+      "color": "#0D9488"
+    },
+    "messageport": {
+      "label": "MessagePort",
+      "color": "#F59E0B"
+    },
+    "http-endpoint": {
+      "label": "HTTP Endpoint",
+      "color": "#22C55E"
+    },
+    "renderer": {
+      "label": "Renderer Process",
+      "color": "#EC4899"
+    },
+    "event": {
+      "label": "Event",
+      "color": "#3B82F6"
+    },
+    "boundary": {
+      "label": "Boundary",
+      "color": "#64748B"
+    }
+  },
+  "edgeTypes": {}
 }

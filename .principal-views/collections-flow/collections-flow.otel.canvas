@@ -1,80 +1,4 @@
 {
-  "pv": {
-    "name": "Collections Flow: Create and GitHub Sync",
-    "version": "1.0.0",
-    "description": "Complete event flow for creating collections and syncing to GitHub web-ade-collections repository",
-    "markdown": ".principal-views/collections-flow/collections-flow.md",
-    "nodeTypes": {
-      "ui-component": {
-        "label": "UI Component",
-        "color": "#EC4899"
-      },
-      "context": {
-        "label": "React Context",
-        "color": "#A855F7"
-      },
-      "renderer-service": {
-        "label": "Renderer Service",
-        "color": "#7C3AED"
-      },
-      "preload": {
-        "label": "Preload Bridge",
-        "color": "#14B8A6"
-      },
-      "main-process": {
-        "label": "Main Process",
-        "color": "#4F46E5"
-      },
-      "github-api": {
-        "label": "GitHub API",
-        "color": "#22C55E"
-      },
-      "storage": {
-        "label": "GitHub Storage",
-        "color": "#0D9488"
-      },
-      "event": {
-        "label": "Event",
-        "color": "#3B82F6"
-      },
-      "boundary": {
-        "label": "Boundary",
-        "color": "#64748B"
-      }
-    },
-    "edgeTypes": {
-      "user-action": {
-        "label": "User Action",
-        "style": "solid",
-        "color": "#EC4899"
-      },
-      "event-emit": {
-        "label": "Event Emit",
-        "style": "dashed",
-        "color": "#A855F7"
-      },
-      "ipc-invoke": {
-        "label": "IPC Invoke",
-        "style": "solid",
-        "color": "#6366F1"
-      },
-      "ipc-event": {
-        "label": "IPC Event",
-        "style": "solid",
-        "color": "#818CF8"
-      },
-      "api-call": {
-        "label": "API Call",
-        "style": "solid",
-        "color": "#22C55E"
-      },
-      "data-flow": {
-        "label": "Data Flow",
-        "style": "solid",
-        "color": "#3B82F6"
-      }
-    }
-  },
   "nodes": [
     {
       "id": "title",
@@ -618,9 +542,7 @@
       "toNode": "worlds-view-panel-context",
       "toSide": "left",
       "label": "submit form",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "panel-to-modal",
@@ -629,9 +551,7 @@
       "toNode": "create-collection-modal",
       "toSide": "bottom",
       "label": "open modal",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "context-to-renderer-service",
@@ -640,9 +560,7 @@
       "toNode": "renderer-collections-service",
       "toSide": "left",
       "label": "createCollection()",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "renderer-to-preload",
@@ -651,9 +569,7 @@
       "toNode": "preload-bridge",
       "toSide": "left",
       "label": "IPC invoke",
-      "pv": {
-        "edgeType": "ipc-invoke"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "preload-to-main",
@@ -662,9 +578,7 @@
       "toNode": "main-collections-service",
       "toSide": "left",
       "label": "forward call",
-      "pv": {
-        "edgeType": "ipc-invoke"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "main-to-check",
@@ -673,9 +587,7 @@
       "toNode": "check-github-repo",
       "toSide": "top",
       "label": "check repo exists",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "check-to-api",
@@ -684,9 +596,7 @@
       "toNode": "github-api-check",
       "toSide": "left",
       "label": "API request",
-      "pv": {
-        "edgeType": "api-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "check-to-enable",
@@ -695,9 +605,7 @@
       "toNode": "enable-github-sync",
       "toSide": "top",
       "label": "if not exists",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "enable-to-create-api",
@@ -706,9 +614,7 @@
       "toNode": "github-api-create",
       "toSide": "left",
       "label": "create repo",
-      "pv": {
-        "edgeType": "api-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "enable-to-sync",
@@ -717,9 +623,7 @@
       "toNode": "sync-to-github",
       "toSide": "top",
       "label": "proceed to sync",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "sync-to-collections-api",
@@ -728,9 +632,7 @@
       "toNode": "github-api-update-collections",
       "toSide": "left",
       "label": "update file",
-      "pv": {
-        "edgeType": "api-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "sync-to-memberships-api",
@@ -739,9 +641,7 @@
       "toNode": "github-api-update-memberships",
       "toSide": "left",
       "label": "update file",
-      "pv": {
-        "edgeType": "api-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "collections-api-to-storage",
@@ -750,9 +650,7 @@
       "toNode": "github-storage",
       "toSide": "top",
       "label": "persist",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "memberships-api-to-storage",
@@ -761,9 +659,7 @@
       "toNode": "github-storage",
       "toSide": "bottom",
       "label": "persist",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "main-to-context-event",
@@ -772,9 +668,7 @@
       "toNode": "event-emitted",
       "toSide": "right",
       "label": "return success",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "context-emit-event",
@@ -783,9 +677,7 @@
       "toNode": "event-emitted",
       "toSide": "top",
       "label": "emit event",
-      "pv": {
-        "edgeType": "event-emit"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "context-to-refresh",
@@ -794,9 +686,7 @@
       "toNode": "context-refresh",
       "toSide": "top",
       "label": "fetchCollections()",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "refresh-to-ui",
@@ -805,9 +695,7 @@
       "toNode": "ui-update",
       "toSide": "right",
       "label": "state update",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "ui-to-panel",
@@ -816,9 +704,55 @@
       "toNode": "user-collections-panel",
       "toSide": "bottom",
       "label": "re-render",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     }
-  ]
+  ],
+  "name": "Collections Flow: Create and GitHub Sync",
+  "description": "Complete event flow for creating collections and syncing to GitHub web-ade-collections repository",
+  "markdown": ".principal-views/collections-flow/collections-flow.md",
+  "nodeTypes": {
+    "ui-component": {
+      "label": "UI Component",
+      "color": "#EC4899"
+    },
+    "context": {
+      "label": "React Context",
+      "color": "#A855F7"
+    },
+    "renderer-service": {
+      "label": "Renderer Service",
+      "color": "#7C3AED"
+    },
+    "preload": {
+      "label": "Preload Bridge",
+      "color": "#14B8A6"
+    },
+    "main-process": {
+      "label": "Main Process",
+      "color": "#4F46E5"
+    },
+    "github-api": {
+      "label": "GitHub API",
+      "color": "#22C55E"
+    },
+    "storage": {
+      "label": "GitHub Storage",
+      "color": "#0D9488"
+    },
+    "event": {
+      "label": "Event",
+      "color": "#3B82F6"
+    },
+    "boundary": {
+      "label": "Boundary",
+      "color": "#64748B"
+    }
+  },
+  "edgeTypes": {
+    "ipc-event": {
+      "label": "IPC Event",
+      "style": "solid",
+      "color": "#818CF8"
+    }
+  }
 }

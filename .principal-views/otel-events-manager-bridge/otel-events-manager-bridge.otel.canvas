@@ -1,64 +1,4 @@
 {
-  "pv": {
-    "name": "OTEL Events Manager Bridge",
-    "version": "1.0.0",
-    "description": "Bridge service for communicating with otel-events-manager: forwards traces for persistence and syncs workspace FileTrees for trace matching",
-    "markdown": ".principal-views/otel-events-manager-bridge/otel-events-manager-bridge.md",
-    "scope": "principal-ade-main",
-    "nodeTypes": {
-      "singleton": {
-        "label": "Singleton Service",
-        "color": "#3B82F6"
-      },
-      "external-service": {
-        "label": "External Service",
-        "color": "#64748B"
-      },
-      "http-endpoint": {
-        "label": "HTTP Endpoint",
-        "color": "#22C55E"
-      },
-      "event-source": {
-        "label": "Event Source",
-        "color": "#8B5CF6"
-      },
-      "boundary": {
-        "label": "Process Boundary",
-        "color": "#94A3B8"
-      },
-      "ui-component": {
-        "label": "UI Component",
-        "color": "#F59E0B"
-      }
-    },
-    "edgeTypes": {
-      "http-post": {
-        "label": "HTTP POST",
-        "style": "solid",
-        "color": "#22C55E"
-      },
-      "delegates": {
-        "label": "Delegates",
-        "style": "solid",
-        "color": "#6366F1"
-      },
-      "emits": {
-        "label": "Emits Event",
-        "style": "dashed",
-        "color": "#8B5CF6"
-      },
-      "data-flow": {
-        "label": "Data Flow",
-        "style": "solid",
-        "color": "#3B82F6"
-      },
-      "ipc-call": {
-        "label": "IPC Call",
-        "style": "dashed",
-        "color": "#F59E0B"
-      }
-    }
-  },
   "nodes": [
     {
       "id": "title",
@@ -321,9 +261,7 @@
       "toNode": "otel-events-manager-bridge",
       "toSide": "left",
       "label": "forwardTrace()",
-      "pv": {
-        "edgeType": "delegates"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "bridge-to-traces",
@@ -332,9 +270,7 @@
       "toNode": "traces-endpoint",
       "toSide": "left",
       "label": "POST OTLP JSON",
-      "pv": {
-        "edgeType": "http-post"
-      }
+      "edgeType": "http"
     },
     {
       "id": "repo-to-sync",
@@ -343,9 +279,7 @@
       "toNode": "workspace-sync",
       "toSide": "left",
       "label": "workspace-changed",
-      "pv": {
-        "edgeType": "emits"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "sync-to-bridge",
@@ -354,9 +288,7 @@
       "toNode": "otel-events-manager-bridge",
       "toSide": "bottom",
       "label": "pushWorkspace()",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "bridge-to-registry",
@@ -365,9 +297,7 @@
       "toNode": "registry-sync-endpoint",
       "toSide": "left",
       "label": "POST sync request",
-      "pv": {
-        "edgeType": "http-post"
-      }
+      "edgeType": "http"
     },
     {
       "id": "bridge-to-health",
@@ -376,9 +306,7 @@
       "toNode": "health-endpoint",
       "toSide": "left",
       "label": "health check",
-      "pv": {
-        "edgeType": "http-post"
-      }
+      "edgeType": "http"
     },
     {
       "id": "manual-sync-to-workspace",
@@ -387,9 +315,38 @@
       "toNode": "workspace-sync",
       "toSide": "left",
       "label": "IPC: sync-workspace",
-      "pv": {
-        "edgeType": "ipc-call"
-      }
+      "edgeType": "ipc"
     }
-  ]
+  ],
+  "name": "OTEL Events Manager Bridge",
+  "description": "Bridge service for communicating with otel-events-manager: forwards traces for persistence and syncs workspace FileTrees for trace matching",
+  "markdown": ".principal-views/otel-events-manager-bridge/otel-events-manager-bridge.md",
+  "scope": "principal-ade-main",
+  "nodeTypes": {
+    "singleton": {
+      "label": "Singleton Service",
+      "color": "#3B82F6"
+    },
+    "external-service": {
+      "label": "External Service",
+      "color": "#64748B"
+    },
+    "http-endpoint": {
+      "label": "HTTP Endpoint",
+      "color": "#22C55E"
+    },
+    "event-source": {
+      "label": "Event Source",
+      "color": "#8B5CF6"
+    },
+    "boundary": {
+      "label": "Process Boundary",
+      "color": "#94A3B8"
+    },
+    "ui-component": {
+      "label": "UI Component",
+      "color": "#F59E0B"
+    }
+  },
+  "edgeTypes": {}
 }

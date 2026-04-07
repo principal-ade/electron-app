@@ -1,50 +1,47 @@
 {
-  "pv": {
-    "name": "Principal ADE - Window Architecture",
-    "version": "1.0.0",
-    "markdown": ".principal-views/windows/windows.md",
-    "nodeTypes": {
-      "primary-window": {
-        "label": "Primary Window",
-        "color": "#3B82F6"
-      },
-      "workspace-window": {
-        "label": "Workspace Window",
-        "color": "#8B5CF6"
-      },
-      "viewer-window": {
-        "label": "Viewer Window",
-        "color": "#22C55E"
-      },
-      "utility-window": {
-        "label": "Utility Window",
-        "color": "#F59E0B"
-      },
-      "external-window": {
-        "label": "External Window",
-        "color": "#EF4444"
-      },
-      "manager": {
-        "label": "Window Manager",
-        "color": "#64748B"
-      }
+  "name": "Principal ADE - Window Architecture",
+  "markdown": ".principal-views/windows/windows.md",
+  "nodeTypes": {
+    "primary-window": {
+      "label": "Primary Window",
+      "color": "#3B82F6"
     },
-    "edgeTypes": {
-      "creates": {
-        "label": "Creates",
-        "style": "solid",
-        "color": "#3B82F6"
-      },
-      "ipc": {
-        "label": "IPC",
-        "style": "solid",
-        "color": "#8B5CF6"
-      },
-      "manages": {
-        "label": "Manages",
-        "style": "dashed",
-        "color": "#64748B"
-      }
+    "workspace-window": {
+      "label": "Workspace Window",
+      "color": "#8B5CF6"
+    },
+    "viewer-window": {
+      "label": "Viewer Window",
+      "color": "#22C55E"
+    },
+    "utility-window": {
+      "label": "Utility Window",
+      "color": "#F59E0B"
+    },
+    "external-window": {
+      "label": "External Window",
+      "color": "#EF4444"
+    },
+    "manager": {
+      "label": "Window Manager",
+      "color": "#64748B"
+    }
+  },
+  "edgeTypes": {
+    "creates": {
+      "label": "Creates",
+      "style": "solid",
+      "color": "#3B82F6"
+    },
+    "ipc": {
+      "label": "IPC",
+      "style": "solid",
+      "color": "#8B5CF6"
+    },
+    "manages": {
+      "label": "Manages",
+      "style": "dashed",
+      "color": "#64748B"
     }
   },
   "nodes": [
@@ -59,7 +56,9 @@
       "pv": {
         "nodeType": "manager",
         "shape": "rectangle",
-        "references": ["src/main/window/modernWindowManager.ts"]
+        "references": [
+          "src/main/window/modernWindowManager.ts"
+        ]
       }
     },
     {
@@ -73,7 +72,9 @@
       "pv": {
         "nodeType": "primary-window",
         "shape": "rectangle",
-        "references": ["src/main/window/modernWindowManager.ts"]
+        "references": [
+          "src/main/window/modernWindowManager.ts"
+        ]
       }
     },
     {
@@ -87,7 +88,9 @@
       "pv": {
         "nodeType": "primary-window",
         "shape": "rectangle",
-        "references": ["src/main/window/modernWindowHandlers.ts"]
+        "references": [
+          "src/main/window/modernWindowHandlers.ts"
+        ]
       }
     },
     {
@@ -101,7 +104,9 @@
       "pv": {
         "nodeType": "workspace-window",
         "shape": "rectangle",
-        "references": ["src/main/window/devWorkspaceWindowHandlers.ts"]
+        "references": [
+          "src/main/window/devWorkspaceWindowHandlers.ts"
+        ]
       }
     },
     {
@@ -115,7 +120,9 @@
       "pv": {
         "nodeType": "workspace-window",
         "shape": "rectangle",
-        "references": ["src/main/window/modernWindowHandlers.ts"]
+        "references": [
+          "src/main/window/modernWindowHandlers.ts"
+        ]
       }
     },
     {
@@ -129,7 +136,9 @@
       "pv": {
         "nodeType": "external-window",
         "shape": "rectangle",
-        "references": ["src/main/window/extensionWindowHandlers.ts"]
+        "references": [
+          "src/main/window/extensionWindowHandlers.ts"
+        ]
       }
     },
     {
@@ -143,7 +152,9 @@
       "pv": {
         "nodeType": "viewer-window",
         "shape": "rectangle",
-        "references": ["src/main/window/modernWindowHandlers.ts"]
+        "references": [
+          "src/main/window/modernWindowHandlers.ts"
+        ]
       }
     },
     {
@@ -157,10 +168,12 @@
       "pv": {
         "nodeType": "viewer-window",
         "shape": "rectangle",
-        "references": ["src/main/window/modernWindowHandlers.ts"]
+        "references": [
+          "src/main/window/modernWindowHandlers.ts"
+        ]
       }
     },
-        {
+    {
       "id": "window-switcher",
       "type": "text",
       "x": 120,
@@ -171,7 +184,9 @@
       "pv": {
         "nodeType": "utility-window",
         "shape": "rectangle",
-        "references": ["src/main/window/windowSwitcher.ts"]
+        "references": [
+          "src/main/window/windowSwitcher.ts"
+        ]
       }
     },
     {
@@ -185,7 +200,9 @@
       "pv": {
         "nodeType": "utility-window",
         "shape": "rectangle",
-        "references": ["src/main/window/quickOpen.ts"]
+        "references": [
+          "src/main/window/quickOpen.ts"
+        ]
       }
     },
     {
@@ -199,7 +216,9 @@
       "pv": {
         "nodeType": "external-window",
         "shape": "rectangle",
-        "references": ["src/main/window/RemoteTerminalWindow.ts"]
+        "references": [
+          "src/main/window/RemoteTerminalWindow.ts"
+        ]
       }
     }
   ],
@@ -210,9 +229,7 @@
       "fromSide": "bottom",
       "toNode": "main-window",
       "toSide": "top",
-      "pv": {
-        "edgeType": "creates"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "manager-to-repo-maps",
@@ -220,9 +237,7 @@
       "fromSide": "bottom",
       "toNode": "repository-maps-window",
       "toSide": "top",
-      "pv": {
-        "edgeType": "creates"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "manager-to-dev-workspace",
@@ -230,9 +245,7 @@
       "fromSide": "bottom",
       "toNode": "dev-workspace-window",
       "toSide": "top",
-      "pv": {
-        "edgeType": "creates"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "manager-to-alexandria",
@@ -240,9 +253,7 @@
       "fromSide": "bottom",
       "toNode": "alexandria-workspace-window",
       "toSide": "top",
-      "pv": {
-        "edgeType": "creates"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "manager-to-extension",
@@ -250,9 +261,7 @@
       "fromSide": "bottom",
       "toNode": "extension-browser-window",
       "toSide": "top",
-      "pv": {
-        "edgeType": "creates"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "manager-to-markdown",
@@ -260,9 +269,7 @@
       "fromSide": "bottom",
       "toNode": "markdown-viewer-window",
       "toSide": "top",
-      "pv": {
-        "edgeType": "creates"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "manager-to-store",
@@ -270,19 +277,15 @@
       "fromSide": "bottom",
       "toNode": "store-viewer-window",
       "toSide": "top",
-      "pv": {
-        "edgeType": "creates"
-      }
+      "edgeType": "uses"
     },
-        {
+    {
       "id": "manager-to-switcher",
       "fromNode": "window-manager",
       "fromSide": "bottom",
       "toNode": "window-switcher",
       "toSide": "top",
-      "pv": {
-        "edgeType": "manages"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "manager-to-quick-open",
@@ -290,9 +293,7 @@
       "fromSide": "bottom",
       "toNode": "quick-open",
       "toSide": "top",
-      "pv": {
-        "edgeType": "manages"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "manager-to-remote-agent",
@@ -300,9 +301,7 @@
       "fromSide": "bottom",
       "toNode": "remote-agent-window",
       "toSide": "top",
-      "pv": {
-        "edgeType": "creates"
-      }
+      "edgeType": "uses"
     }
   ]
 }

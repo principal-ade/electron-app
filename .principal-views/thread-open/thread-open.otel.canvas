@@ -598,10 +598,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "calls",
-      "pv": {
-        "edgeType": "uses",
-        "style": "solid"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "service-to-ipc",
@@ -610,15 +607,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "IPC invoke",
-      "pv": {
-        "edgeType": "ipc",
-        "style": "solid",
-        "animation": {
-          "type": "flow",
-          "duration": 1500,
-          "color": "#6366f1"
-        }
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "ipc-to-resolution",
@@ -627,10 +616,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "resolve thread",
-      "pv": {
-        "edgeType": "uses",
-        "style": "solid"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "resolution-to-new",
@@ -639,10 +625,7 @@
       "fromSide": "left",
       "toSide": "right",
       "label": "new thread",
-      "pv": {
-        "edgeType": "uses",
-        "style": "solid"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "resolution-to-existing",
@@ -651,10 +634,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "existing",
-      "pv": {
-        "edgeType": "uses",
-        "style": "dashed"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "new-to-create",
@@ -663,10 +643,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "create",
-      "pv": {
-        "edgeType": "uses",
-        "style": "solid"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "create-to-terminal",
@@ -675,10 +652,7 @@
       "fromSide": "left",
       "toSide": "right",
       "label": "register",
-      "pv": {
-        "edgeType": "uses",
-        "style": "solid"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "create-to-watch",
@@ -687,10 +661,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "async",
-      "pv": {
-        "edgeType": "uses",
-        "style": "dashed"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "create-to-load",
@@ -699,10 +670,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "loadURL",
-      "pv": {
-        "edgeType": "uses",
-        "style": "solid"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "load-to-init",
@@ -711,10 +679,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "render",
-      "pv": {
-        "edgeType": "renders",
-        "style": "solid"
-      }
+      "edgeType": "renders"
     },
     {
       "id": "init-to-ready",
@@ -723,10 +688,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "complete",
-      "pv": {
-        "edgeType": "ipc-event",
-        "style": "solid"
-      }
+      "edgeType": "ipc-event"
     },
     {
       "id": "existing-to-ready",
@@ -735,10 +697,7 @@
       "fromSide": "bottom",
       "toSide": "right",
       "label": "focus complete",
-      "pv": {
-        "edgeType": "uses",
-        "style": "dashed"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "add-to-validate",
@@ -747,10 +706,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "validate",
-      "pv": {
-        "edgeType": "uses",
-        "style": "solid"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "validate-to-added",
@@ -759,10 +715,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "valid",
-      "pv": {
-        "edgeType": "uses",
-        "style": "solid"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "validate-to-invalid",
@@ -771,10 +724,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "invalid",
-      "pv": {
-        "edgeType": "uses",
-        "style": "dashed"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "remove-to-dissolve",
@@ -783,10 +733,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "if last",
-      "pv": {
-        "edgeType": "uses",
-        "style": "dashed"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "ready-to-save",
@@ -795,10 +742,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "optional save",
-      "pv": {
-        "edgeType": "uses",
-        "style": "dashed"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "resolution-to-invalid",
@@ -807,10 +751,7 @@
       "fromSide": "right",
       "toSide": "top",
       "label": "invalid repo",
-      "pv": {
-        "edgeType": "uses",
-        "style": "dashed"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "removed-to-ready",
@@ -819,37 +760,43 @@
       "fromSide": "left",
       "toSide": "right",
       "label": "thread continues",
-      "pv": {
-        "edgeType": "uses",
-        "style": "dashed"
-      }
+      "edgeType": "uses"
     }
   ],
-  "pv": {
-    "version": "1.0",
-    "name": "Thread Opening Flow",
-    "description": "Repository-first thread lifecycle - start from any repo, expand organically, optionally persist",
-    "markdown": ".principal-views/thread-open/thread-open.md",
-    "scope": "principal-ade-main",
-    "display": {
-      "layout": "manual",
-      "theme": {
-        "primary": "#8b5cf6",
-        "success": "#22c55e",
-        "danger": "#ef4444",
-        "warning": "#f59e0b",
-        "info": "#06b6d4"
-      }
+  "name": "Thread Opening Flow",
+  "markdown": ".principal-views/thread-open/thread-open.md",
+  "description": "Repository-first thread lifecycle - start from any repo, expand organically, optionally persist",
+  "scope": "principal-ade-main",
+  "nodeTypes": {
+    "event": {
+      "label": "Event",
+      "color": "#3B82F6"
     },
-    "nodeTypes": {
-      "event": {
-        "label": "Event",
-        "color": "#3B82F6"
-      },
-      "boundary": {
-        "label": "Boundary",
-        "color": "#64748B"
-      }
+    "boundary": {
+      "label": "Boundary",
+      "color": "#64748B"
+    }
+  },
+  "edgeTypes": {
+    "uses": {
+      "label": "Uses",
+      "style": "solid",
+      "color": "#3B82F6"
+    },
+    "ipc": {
+      "label": "IPC",
+      "style": "solid",
+      "color": "#6366F1"
+    },
+    "ipc-event": {
+      "label": "IPC Event",
+      "style": "dashed",
+      "color": "#A855F7"
+    },
+    "renders": {
+      "label": "Renders",
+      "style": "solid",
+      "color": "#22C55E"
     }
   }
 }

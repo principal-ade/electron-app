@@ -1,64 +1,4 @@
 {
-  "pv": {
-    "name": "Bruno Panel Integration",
-    "version": "1.0.0",
-    "description": "HTTP request execution flow from Bruno API client panel through IPC to main process using @usebruno/requests",
-    "markdown": ".principal-views/bruno-panel-integration/bruno-panel-integration.md",
-    "scope": "principal-ade-main",
-    "nodeTypes": {
-      "panel": {
-        "label": "Panel",
-        "color": "#8B5CF6"
-      },
-      "renderer": {
-        "label": "Renderer",
-        "color": "#10B981"
-      },
-      "ipc": {
-        "label": "IPC Handler",
-        "color": "#6366F1"
-      },
-      "action": {
-        "label": "Panel Action",
-        "color": "#F59E0B"
-      },
-      "http-client": {
-        "label": "HTTP Client",
-        "color": "#3B82F6"
-      },
-      "external-api": {
-        "label": "External API",
-        "color": "#64748B"
-      }
-    },
-    "edgeTypes": {
-      "user-action": {
-        "label": "User Action",
-        "style": "solid",
-        "color": "#EC4899"
-      },
-      "ipc-invoke": {
-        "label": "IPC Invoke",
-        "style": "solid",
-        "color": "#6366F1"
-      },
-      "method-call": {
-        "label": "Method Call",
-        "style": "solid",
-        "color": "#F59E0B"
-      },
-      "http": {
-        "label": "HTTP",
-        "style": "solid",
-        "color": "#3B82F6"
-      },
-      "data-flow": {
-        "label": "Data Flow",
-        "style": "solid",
-        "color": "#10B981"
-      }
-    }
-  },
   "nodes": [
     {
       "id": "title",
@@ -416,9 +356,7 @@
       "toNode": "panel-action-dispatch",
       "toSide": "left",
       "label": "sendRequest()",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "dispatch-to-ipc",
@@ -427,9 +365,7 @@
       "toNode": "ipc-handler",
       "toSide": "left",
       "label": "IPC invoke",
-      "pv": {
-        "edgeType": "ipc-invoke"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "ipc-to-action",
@@ -438,9 +374,7 @@
       "toNode": "bruno-action",
       "toSide": "top",
       "label": "sendBrunoRequest()",
-      "pv": {
-        "edgeType": "method-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "action-to-http",
@@ -449,9 +383,7 @@
       "toNode": "http-client",
       "toSide": "top",
       "label": "makeHttpRequest()",
-      "pv": {
-        "edgeType": "method-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "http-to-external",
@@ -460,9 +392,7 @@
       "toNode": "external-api",
       "toSide": "top",
       "label": "HTTP request",
-      "pv": {
-        "edgeType": "http"
-      }
+      "edgeType": "http"
     },
     {
       "id": "external-to-response",
@@ -471,9 +401,7 @@
       "toNode": "response-received",
       "toSide": "bottom",
       "label": "HTTP response",
-      "pv": {
-        "edgeType": "http"
-      }
+      "edgeType": "http"
     },
     {
       "id": "http-to-error",
@@ -482,9 +410,7 @@
       "toNode": "response-error",
       "toSide": "right",
       "label": "on error",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "response-to-panel",
@@ -493,9 +419,7 @@
       "toNode": "panel-response",
       "toSide": "right",
       "label": "BrunoResponse",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "error-to-panel",
@@ -504,9 +428,44 @@
       "toNode": "panel-response",
       "toSide": "bottom",
       "label": "error display",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     }
-  ]
+  ],
+  "name": "Bruno Panel Integration",
+  "description": "HTTP request execution flow from Bruno API client panel through IPC to main process using @usebruno/requests",
+  "markdown": ".principal-views/bruno-panel-integration/bruno-panel-integration.md",
+  "scope": "principal-ade-main",
+  "nodeTypes": {
+    "panel": {
+      "label": "Panel",
+      "color": "#8B5CF6"
+    },
+    "renderer": {
+      "label": "Renderer",
+      "color": "#10B981"
+    },
+    "ipc": {
+      "label": "IPC Handler",
+      "color": "#6366F1"
+    },
+    "action": {
+      "label": "Panel Action",
+      "color": "#F59E0B"
+    },
+    "http-client": {
+      "label": "HTTP Client",
+      "color": "#3B82F6"
+    },
+    "external-api": {
+      "label": "External API",
+      "color": "#64748B"
+    }
+  },
+  "edgeTypes": {
+    "http": {
+      "label": "HTTP",
+      "style": "solid",
+      "color": "#3B82F6"
+    }
+  }
 }

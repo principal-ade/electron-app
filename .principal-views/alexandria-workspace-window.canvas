@@ -1,4 +1,17 @@
 {
+  "name": "Alexandria Workspace Window Architecture",
+  "description": "Visual architecture of the Alexandria Workspace window - multi-repository workspace management with panel-based UI and persistent storage",
+  "markdown": ".principal-views/alexandria-workspace-window.md",
+  "display": {
+    "layout": "manual",
+    "theme": {
+      "primary": "#8b5cf6",
+      "success": "#22c55e",
+      "danger": "#ef4444",
+      "warning": "#eab308",
+      "info": "#06b6d4"
+    }
+  },
   "nodes": [
     {
       "id": "title",
@@ -26,7 +39,9 @@
         "icon": "AppWindow",
         "shape": "rectangle",
         "name": "Workspace App",
-        "references": ["src/renderer/alexandria-workspace/AlexandriaWorkspaceApp.tsx"]
+        "references": [
+          "src/renderer/alexandria-workspace/AlexandriaWorkspaceApp.tsx"
+        ]
       }
     },
     {
@@ -42,7 +57,9 @@
         "icon": "Layout",
         "shape": "rectangle",
         "name": "Workspace Layout",
-        "references": ["src/renderer/alexandria-workspace/AlexandriaWorkspaceLayout.tsx"]
+        "references": [
+          "src/renderer/alexandria-workspace/AlexandriaWorkspaceLayout.tsx"
+        ]
       }
     },
     {
@@ -58,7 +75,9 @@
         "icon": "LayoutList",
         "shape": "rectangle",
         "name": "Panel Sidebar",
-        "references": ["src/renderer/components/Sidebar/PanelIconSidebar.tsx"]
+        "references": [
+          "src/renderer/components/Sidebar/PanelIconSidebar.tsx"
+        ]
       }
     },
     {
@@ -74,7 +93,9 @@
         "icon": "Layers",
         "shape": "rectangle",
         "name": "Panel Provider",
-        "references": ["src/renderer/contexts/PanelContext.tsx"]
+        "references": [
+          "src/renderer/contexts/PanelContext.tsx"
+        ]
       }
     },
     {
@@ -90,7 +111,9 @@
         "icon": "Server",
         "shape": "rectangle",
         "name": "Main Process Handler",
-        "references": ["src/main/stores/WorkspaceApiEventHandler.ts"]
+        "references": [
+          "src/main/stores/WorkspaceApiEventHandler.ts"
+        ]
       }
     },
     {
@@ -106,13 +129,15 @@
         "icon": "Database",
         "shape": "hexagon",
         "name": "Registry Service",
-        "references": ["src/main/stores/AlexandriaRegistryService.ts"]
+        "references": [
+          "src/main/stores/AlexandriaRegistryService.ts"
+        ]
       }
     },
     {
       "id": "storage",
       "type": "text",
-      "text": "# Storage Location\n\n**~/.alexandria/**\n\n```\n├── registry.json    # Repositories\n└── workspaces.json  # Workspaces\n```\n\n**Powered by:**\n`@principal-ai/alexandria-core-library`\n`AlexandriaOutpostManager`",
+      "text": "# Storage Location\n\n**~/.alexandria/**\n\n```\n\u251c\u2500\u2500 registry.json    # Repositories\n\u2514\u2500\u2500 workspaces.json  # Workspaces\n```\n\n**Powered by:**\n`@principal-ai/alexandria-core-library`\n`AlexandriaOutpostManager`",
       "x": 720,
       "y": 520,
       "width": 280,
@@ -137,7 +162,9 @@
         "icon": "Plug",
         "shape": "rectangle",
         "name": "Renderer Service",
-        "references": ["src/renderer/main-process-api/WorkspaceService.ts"]
+        "references": [
+          "src/renderer/main-process-api/WorkspaceService.ts"
+        ]
       }
     },
     {
@@ -191,10 +218,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "renders",
-      "pv": {
-        "edgeType": "renders",
-        "style": "solid"
-      }
+      "edgeType": "renders"
     },
     {
       "id": "layout-to-sidebar",
@@ -203,10 +227,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "contains",
-      "pv": {
-        "edgeType": "renders",
-        "style": "solid"
-      }
+      "edgeType": "renders"
     },
     {
       "id": "layout-to-provider",
@@ -215,10 +236,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "uses context",
-      "pv": {
-        "edgeType": "uses",
-        "style": "solid"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "renderer-to-main",
@@ -227,15 +245,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "IPC invoke",
-      "pv": {
-        "edgeType": "ipc",
-        "style": "solid",
-        "animation": {
-          "type": "flow",
-          "duration": 2000,
-          "color": "#06b6d4"
-        }
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "main-to-registry",
@@ -244,10 +254,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "delegates",
-      "pv": {
-        "edgeType": "uses",
-        "style": "solid"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "registry-to-storage",
@@ -256,15 +263,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "persists",
-      "pv": {
-        "edgeType": "stores-in",
-        "style": "solid",
-        "animation": {
-          "type": "flow",
-          "duration": 1500,
-          "color": "#8b5cf6"
-        }
-      }
+      "edgeType": "stores-in"
     },
     {
       "id": "provider-to-renderer",
@@ -273,10 +272,7 @@
       "fromSide": "left",
       "toSide": "right",
       "label": "calls",
-      "pv": {
-        "edgeType": "uses",
-        "style": "dashed"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "layout-to-panels",
@@ -285,10 +281,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "renders",
-      "pv": {
-        "edgeType": "renders",
-        "style": "dashed"
-      }
+      "edgeType": "renders"
     },
     {
       "id": "sidebar-to-events",
@@ -297,10 +290,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "emits",
-      "pv": {
-        "edgeType": "ipc-event",
-        "style": "dashed"
-      }
+      "edgeType": "ipc-event"
     },
     {
       "id": "model-to-registry",
@@ -309,26 +299,7 @@
       "fromSide": "bottom",
       "toSide": "right",
       "label": "stored as",
-      "pv": {
-        "edgeType": "uses",
-        "style": "dashed"
-      }
+      "edgeType": "uses"
     }
-  ],
-  "pv": {
-    "version": "1.0",
-    "name": "Alexandria Workspace Window Architecture",
-    "description": "Visual architecture of the Alexandria Workspace window - multi-repository workspace management with panel-based UI and persistent storage",
-    "markdown": ".principal-views/alexandria-workspace-window.md",
-    "display": {
-      "layout": "manual",
-      "theme": {
-        "primary": "#8b5cf6",
-        "success": "#22c55e",
-        "danger": "#ef4444",
-        "warning": "#eab308",
-        "info": "#06b6d4"
-      }
-    }
-  }
+  ]
 }

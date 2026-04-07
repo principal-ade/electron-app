@@ -1,55 +1,4 @@
 {
-  "pv": {
-    "name": "User Preferences",
-    "version": "1.0.0",
-    "description": "User settings persistence and broadcast across Electron windows via IPC",
-    "markdown": ".principal-views/user-preferences/user-preferences.md",
-    "scope": "principal-ade-main",
-    "nodeTypes": {
-      "ipc-handler": {
-        "label": "IPC Handler",
-        "color": "#6366F1"
-      },
-      "storage": {
-        "label": "Storage",
-        "color": "#0D9488"
-      },
-      "broadcast": {
-        "label": "Broadcast",
-        "color": "#F59E0B"
-      },
-      "renderer": {
-        "label": "Renderer",
-        "color": "#EC4899"
-      },
-      "error": {
-        "label": "Error",
-        "color": "#EF4444"
-      }
-    },
-    "edgeTypes": {
-      "ipc-invoke": {
-        "label": "IPC Invoke",
-        "style": "solid",
-        "color": "#6366F1"
-      },
-      "data-flow": {
-        "label": "Data Flow",
-        "style": "solid",
-        "color": "#8B5CF6"
-      },
-      "broadcast": {
-        "label": "Broadcast",
-        "style": "solid",
-        "color": "#F59E0B"
-      },
-      "error-flow": {
-        "label": "Error",
-        "style": "dashed",
-        "color": "#EF4444"
-      }
-    }
-  },
   "nodes": [
     {
       "id": "title",
@@ -298,9 +247,7 @@
       "toNode": "update-persisted",
       "toSide": "top",
       "label": "deepMerge & set",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "persisted-to-broadcast",
@@ -309,9 +256,7 @@
       "toNode": "broadcast",
       "toSide": "top",
       "label": "if notifyRenderers",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "broadcast-to-complete",
@@ -320,9 +265,7 @@
       "toNode": "update-complete",
       "toSide": "top",
       "label": "success",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "persisted-to-error",
@@ -331,9 +274,7 @@
       "toNode": "update-error",
       "toSide": "left",
       "label": "on exception",
-      "pv": {
-        "edgeType": "error-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "broadcast-to-error",
@@ -342,9 +283,7 @@
       "toNode": "update-error",
       "toSide": "bottom",
       "label": "on exception",
-      "pv": {
-        "edgeType": "error-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "complete-to-renderer",
@@ -353,9 +292,34 @@
       "toNode": "renderer-receive",
       "toSide": "top",
       "label": "IPC send",
-      "pv": {
-        "edgeType": "broadcast"
-      }
+      "edgeType": "subscription"
     }
-  ]
+  ],
+  "name": "User Preferences",
+  "description": "User settings persistence and broadcast across Electron windows via IPC",
+  "markdown": ".principal-views/user-preferences/user-preferences.md",
+  "scope": "principal-ade-main",
+  "nodeTypes": {
+    "ipc-handler": {
+      "label": "IPC Handler",
+      "color": "#6366F1"
+    },
+    "storage": {
+      "label": "Storage",
+      "color": "#0D9488"
+    },
+    "broadcast": {
+      "label": "Broadcast",
+      "color": "#F59E0B"
+    },
+    "renderer": {
+      "label": "Renderer",
+      "color": "#EC4899"
+    },
+    "error": {
+      "label": "Error",
+      "color": "#EF4444"
+    }
+  },
+  "edgeTypes": {}
 }

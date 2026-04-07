@@ -485,10 +485,7 @@
       "toNode": "trigger",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "uses",
-        "style": "dashed"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "trigger-to-service",
@@ -497,10 +494,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "calls",
-      "pv": {
-        "edgeType": "uses",
-        "style": "solid"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "service-to-ipc",
@@ -509,15 +503,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "IPC invoke",
-      "pv": {
-        "edgeType": "ipc",
-        "style": "solid",
-        "animation": {
-          "type": "flow",
-          "duration": 1500,
-          "color": "#6366f1"
-        }
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "ipc-to-registry",
@@ -526,10 +512,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "fetch workspace",
-      "pv": {
-        "edgeType": "uses",
-        "style": "solid"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "ipc-to-create",
@@ -538,10 +521,7 @@
       "fromSide": "left",
       "toSide": "right",
       "label": "createSpecialWindow",
-      "pv": {
-        "edgeType": "uses",
-        "style": "solid"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "create-to-terminal",
@@ -550,10 +530,7 @@
       "fromSide": "left",
       "toSide": "right",
       "label": "register",
-      "pv": {
-        "edgeType": "uses",
-        "style": "solid"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "create-to-watches",
@@ -562,10 +539,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "async",
-      "pv": {
-        "edgeType": "ipc",
-        "style": "dashed"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "create-to-load",
@@ -574,10 +548,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "loadURL",
-      "pv": {
-        "edgeType": "uses",
-        "style": "solid"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "registry-to-create",
@@ -586,10 +557,7 @@
       "fromSide": "left",
       "toSide": "right",
       "label": "workspace data",
-      "pv": {
-        "edgeType": "uses",
-        "style": "dashed"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "registry-to-not-found",
@@ -598,10 +566,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "not found",
-      "pv": {
-        "edgeType": "uses",
-        "style": "dashed"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "found-to-creating",
@@ -610,10 +575,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "new window",
-      "pv": {
-        "edgeType": "uses",
-        "style": "solid"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "found-to-reusing",
@@ -622,10 +584,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "existing window",
-      "pv": {
-        "edgeType": "uses",
-        "style": "dashed"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "creating-to-create",
@@ -634,10 +593,7 @@
       "fromSide": "top",
       "toSide": "bottom",
       "label": "proceed",
-      "pv": {
-        "edgeType": "uses",
-        "style": "solid"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "reusing-to-create",
@@ -646,10 +602,7 @@
       "fromSide": "top",
       "toSide": "bottom",
       "label": "focus",
-      "pv": {
-        "edgeType": "uses",
-        "style": "solid"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "handler-to-temp",
@@ -658,10 +611,7 @@
       "fromSide": "right",
       "toSide": "top",
       "label": "no workspace ID",
-      "pv": {
-        "edgeType": "uses",
-        "style": "dashed"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "edge-app-init-window-ready-1772376603448",
@@ -669,9 +619,7 @@
       "toNode": "window-ready",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "ipc-event"
-      }
+      "edgeType": "ipc-event"
     },
     {
       "id": "edge-load-url-app-init-1772376603448",
@@ -679,9 +627,7 @@
       "toNode": "app-init",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "renders"
-      }
+      "edgeType": "renders"
     },
     {
       "id": "edge-registry-lookup-workspace-found-1772376603448",
@@ -689,9 +635,7 @@
       "toNode": "workspace-found",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "edge-temp-mode-window-creating-1772376603448",
@@ -699,9 +643,7 @@
       "toNode": "window-creating",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "edge-workspace-not-found-open-failed-1772376689406",
@@ -709,36 +651,43 @@
       "toNode": "open-failed",
       "fromSide": "right",
       "toSide": "left",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     }
   ],
-  "pv": {
-    "version": "1.0",
-    "name": "Alexandria Window Opening Flow",
-    "description": "OTEL-traced lifecycle of opening an Alexandria Workspace window - from user trigger through IPC to ready state",
-    "markdown": ".principal-views/alexandria-window-open/alexandria-window-open.md",
-    "scope": "principal-ade-main",
-    "display": {
-      "layout": "manual",
-      "theme": {
-        "primary": "#8b5cf6",
-        "success": "#22c55e",
-        "danger": "#ef4444",
-        "warning": "#eab308",
-        "info": "#06b6d4"
-      }
+  "name": "Alexandria Window Opening Flow",
+  "markdown": ".principal-views/alexandria-window-open/alexandria-window-open.md",
+  "description": "OTEL-traced lifecycle of opening an Alexandria Workspace window - from user trigger through IPC to ready state",
+  "scope": "principal-ade-main",
+  "nodeTypes": {
+    "event": {
+      "label": "Event",
+      "color": "#3B82F6"
     },
-    "nodeTypes": {
-      "event": {
-        "label": "Event",
-        "color": "#3B82F6"
-      },
-      "boundary": {
-        "label": "Boundary",
-        "color": "#64748B"
-      }
+    "boundary": {
+      "label": "Boundary",
+      "color": "#64748B"
+    }
+  },
+  "edgeTypes": {
+    "uses": {
+      "label": "Uses",
+      "style": "solid",
+      "color": "#3B82F6"
+    },
+    "ipc": {
+      "label": "IPC",
+      "style": "solid",
+      "color": "#6366F1"
+    },
+    "ipc-event": {
+      "label": "IPC Event",
+      "style": "dashed",
+      "color": "#A855F7"
+    },
+    "renders": {
+      "label": "Renders",
+      "style": "solid",
+      "color": "#22C55E"
     }
   }
 }

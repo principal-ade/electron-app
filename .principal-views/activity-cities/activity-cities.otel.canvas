@@ -1,52 +1,50 @@
 {
   "name": "Activity Cities",
   "markdown": ".principal-views/activity-cities/activity-cities.md",
-  "pv": {
-    "description": "Bloomberg terminal-style activity feed showing interactive 2D File City visualizations for repositories with active users",
-    "scope": "principal-ade-renderer",
-    "nodeTypes": {
-      "panel": {
-        "label": "Panel",
-        "color": "#10B981"
-      },
-      "hook": {
-        "label": "Hook",
-        "color": "#6366F1"
-      },
-      "service": {
-        "label": "Service",
-        "color": "#F59E0B"
-      },
-      "api": {
-        "label": "API",
-        "color": "#EF4444"
-      },
-      "component": {
-        "label": "Component",
-        "color": "#8B5CF6"
-      }
+  "description": "Bloomberg terminal-style activity feed showing interactive 2D File City visualizations for repositories with active users",
+  "scope": "principal-ade-renderer",
+  "nodeTypes": {
+    "panel": {
+      "label": "Panel",
+      "color": "#10B981"
     },
-    "edgeTypes": {
-      "event": {
-        "label": "Event",
-        "style": "dotted",
-        "color": "#10B981"
-      },
-      "data-flow": {
-        "label": "Data Flow",
-        "style": "solid",
-        "color": "#6366F1"
-      },
-      "ipc": {
-        "label": "IPC",
-        "style": "solid",
-        "color": "#F59E0B"
-      },
-      "http": {
-        "label": "HTTP",
-        "style": "dashed",
-        "color": "#EF4444"
-      }
+    "hook": {
+      "label": "Hook",
+      "color": "#6366F1"
+    },
+    "service": {
+      "label": "Service",
+      "color": "#F59E0B"
+    },
+    "api": {
+      "label": "API",
+      "color": "#EF4444"
+    },
+    "component": {
+      "label": "Component",
+      "color": "#8B5CF6"
+    }
+  },
+  "edgeTypes": {
+    "subscription": {
+      "label": "Subscription",
+      "style": "dotted",
+      "color": "#10B981"
+    },
+    "uses": {
+      "label": "Data Flow",
+      "style": "solid",
+      "color": "#6366F1"
+    },
+    "ipc": {
+      "label": "IPC",
+      "style": "solid",
+      "color": "#F59E0B"
+    },
+    "http": {
+      "label": "HTTP",
+      "style": "dashed",
+      "color": "#EF4444"
     }
   },
   "nodes": [
@@ -653,7 +651,7 @@
       "fromSide": "left",
       "toSide": "right",
       "label": "panel:switch event",
-      "edgeType": "event"
+      "edgeType": "subscription"
     },
     {
       "id": "e2",
@@ -662,7 +660,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "initialize hook",
-      "edgeType": "data-flow"
+      "edgeType": "uses"
     },
     {
       "id": "e3",
@@ -680,7 +678,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "subscribe updates",
-      "edgeType": "event"
+      "edgeType": "subscription"
     },
     {
       "id": "e5",
@@ -689,7 +687,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "process users",
-      "edgeType": "data-flow"
+      "edgeType": "uses"
     },
     {
       "id": "e6",
@@ -698,7 +696,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "for each repo",
-      "edgeType": "data-flow"
+      "edgeType": "uses"
     },
     {
       "id": "e7",
@@ -725,7 +723,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "transform tree",
-      "edgeType": "data-flow"
+      "edgeType": "uses"
     },
     {
       "id": "e10",
@@ -734,7 +732,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "CodeCityBuilder",
-      "edgeType": "data-flow"
+      "edgeType": "uses"
     },
     {
       "id": "e11",
@@ -743,7 +741,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "pass to component",
-      "edgeType": "data-flow"
+      "edgeType": "uses"
     },
     {
       "id": "e12",
@@ -752,7 +750,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "all cards",
-      "edgeType": "data-flow"
+      "edgeType": "uses"
     },
     {
       "id": "e13",
@@ -761,7 +759,7 @@
       "fromSide": "left",
       "toSide": "right",
       "label": "panel:switch feed",
-      "edgeType": "event"
+      "edgeType": "subscription"
     },
     {
       "id": "e14",
@@ -770,7 +768,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "check cache",
-      "edgeType": "data-flow"
+      "edgeType": "uses"
     },
     {
       "id": "e15",
@@ -788,7 +786,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "re-process",
-      "edgeType": "data-flow"
+      "edgeType": "uses"
     }
   ]
 }

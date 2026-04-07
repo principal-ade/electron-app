@@ -1,91 +1,88 @@
 {
-  "pv": {
-    "name": "Cache Sync Architecture",
-    "version": "1.0.0",
-    "description": "Repository cache sync event broadcasting mechanism - flow from worker process through main process to renderer",
-    "markdown": ".principal-views/cache-sync-architecture/cache-sync-architecture.md",
-    "nodeTypes": {
-      "git-watcher-adapter": {
-        "label": "Git Watcher Adapter",
-        "color": "#5EEAD4"
-      },
-      "repo-cache-registry": {
-        "label": "Cache Registry",
-        "color": "#2DD4BF"
-      },
-      "file-tree-builder": {
-        "label": "File Tree Builder",
-        "color": "#99F6E4"
-      },
-      "repo-monitoring-worker": {
-        "label": "Monitoring Worker",
-        "color": "#0D9488"
-      },
-      "repo-monitoring-manager": {
-        "label": "Monitoring Manager",
-        "color": "#14B8A6"
-      },
-      "ipc-handler": {
-        "label": "IPC Handler",
-        "color": "#6366F1"
-      },
-      "preload": {
-        "label": "Preload Script",
-        "color": "#8B5CF6"
-      },
-      "repo-monitoring-service": {
-        "label": "Monitoring Service",
-        "color": "#7C3AED"
-      },
-      "repository-data-cache": {
-        "label": "Data Cache",
-        "color": "#A855F7"
-      },
-      "use-repository-data": {
-        "label": "Hook",
-        "color": "#C084FC"
-      },
-      "panel-system": {
-        "label": "Panel System",
-        "color": "#EC4899"
-      }
+  "name": "Cache Sync Architecture",
+  "description": "Repository cache sync event broadcasting mechanism - flow from worker process through main process to renderer",
+  "markdown": ".principal-views/cache-sync-architecture/cache-sync-architecture.md",
+  "nodeTypes": {
+    "git-watcher-adapter": {
+      "label": "Git Watcher Adapter",
+      "color": "#5EEAD4"
     },
-    "edgeTypes": {
-      "file-watch": {
-        "label": "File Watch",
-        "style": "dashed",
-        "color": "#22C55E"
-      },
-      "uses": {
-        "label": "Uses",
-        "style": "dotted",
-        "color": "#64748B"
-      },
-      "subscription": {
-        "label": "Subscription",
-        "style": "dashed",
-        "color": "#A855F7"
-      },
-      "worker-message": {
-        "label": "Worker Message",
-        "style": "solid",
-        "color": "#0D9488"
-      },
-      "cache-sync": {
-        "label": "Cache Sync",
-        "style": "dashed",
-        "color": "#14B8A6"
-      },
-      "ipc-event": {
-        "label": "IPC Event",
-        "style": "dashed",
-        "color": "#818CF8"
-      },
-      "renders": {
-        "label": "Renders",
-        "style": "solid",
-        "color": "#EC4899"
-      }
+    "repo-cache-registry": {
+      "label": "Cache Registry",
+      "color": "#2DD4BF"
+    },
+    "file-tree-builder": {
+      "label": "File Tree Builder",
+      "color": "#99F6E4"
+    },
+    "repo-monitoring-worker": {
+      "label": "Monitoring Worker",
+      "color": "#0D9488"
+    },
+    "repo-monitoring-manager": {
+      "label": "Monitoring Manager",
+      "color": "#14B8A6"
+    },
+    "ipc-handler": {
+      "label": "IPC Handler",
+      "color": "#6366F1"
+    },
+    "preload": {
+      "label": "Preload Script",
+      "color": "#8B5CF6"
+    },
+    "repo-monitoring-service": {
+      "label": "Monitoring Service",
+      "color": "#7C3AED"
+    },
+    "repository-data-cache": {
+      "label": "Data Cache",
+      "color": "#A855F7"
+    },
+    "use-repository-data": {
+      "label": "Hook",
+      "color": "#C084FC"
+    },
+    "panel-system": {
+      "label": "Panel System",
+      "color": "#EC4899"
+    }
+  },
+  "edgeTypes": {
+    "file-watch": {
+      "label": "File Watch",
+      "style": "dashed",
+      "color": "#22C55E"
+    },
+    "uses": {
+      "label": "Uses",
+      "style": "dotted",
+      "color": "#64748B"
+    },
+    "subscription": {
+      "label": "Subscription",
+      "style": "dashed",
+      "color": "#A855F7"
+    },
+    "worker-message": {
+      "label": "Worker Message",
+      "style": "solid",
+      "color": "#0D9488"
+    },
+    "cache-sync": {
+      "label": "Cache Sync",
+      "style": "dashed",
+      "color": "#14B8A6"
+    },
+    "ipc-event": {
+      "label": "IPC Event",
+      "style": "dashed",
+      "color": "#818CF8"
+    },
+    "renders": {
+      "label": "Renders",
+      "style": "solid",
+      "color": "#EC4899"
     }
   },
   "nodes": [
@@ -321,9 +318,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "WORKSPACE_CHANGED",
-      "pv": {
-        "edgeType": "file-watch"
-      }
+      "edgeType": "file-watch"
     },
     {
       "id": "e2",
@@ -332,9 +327,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "scheduleRebuild()",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e3",
@@ -343,9 +336,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "cacheUpdated event",
-      "pv": {
-        "edgeType": "subscription"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "e4",
@@ -354,9 +345,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "parentPort.postMessage()",
-      "pv": {
-        "edgeType": "worker-message"
-      }
+      "edgeType": "worker-message"
     },
     {
       "id": "e5",
@@ -365,9 +354,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "manager.on('cache-sync')",
-      "pv": {
-        "edgeType": "subscription"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "e6",
@@ -376,9 +363,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "webContents.send() to ALL windows",
-      "pv": {
-        "edgeType": "cache-sync"
-      }
+      "edgeType": "cache-sync"
     },
     {
       "id": "e7",
@@ -387,9 +372,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "ipcRenderer.on()",
-      "pv": {
-        "edgeType": "ipc-event"
-      }
+      "edgeType": "ipc-event"
     },
     {
       "id": "e8",
@@ -398,9 +381,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "onCacheSync(callback)",
-      "pv": {
-        "edgeType": "subscription"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "e9",
@@ -409,9 +390,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "cache.subscribe(repoPath)",
-      "pv": {
-        "edgeType": "subscription"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "e10",
@@ -420,9 +399,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "setData() -> re-render",
-      "pv": {
-        "edgeType": "renders"
-      }
+      "edgeType": "renders"
     }
   ]
 }

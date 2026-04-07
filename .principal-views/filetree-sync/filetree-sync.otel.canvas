@@ -1,103 +1,4 @@
 {
-  "pv": {
-    "name": "FileTree Sync Event Flow",
-    "version": "1.0.0",
-    "description": "Complete event flow from file system changes to UI updates, including cache invalidation, rebuilding, and deduplication",
-    "markdown": ".principal-views/filetree-sync/filetree-sync.md",
-    "nodeTypes": {
-      "file-system": {
-        "label": "File System",
-        "color": "#64748B"
-      },
-      "worker": {
-        "label": "Worker Process",
-        "color": "#0D9488"
-      },
-      "cache": {
-        "label": "Cache",
-        "color": "#14B8A6"
-      },
-      "main-process": {
-        "label": "Main Process",
-        "color": "#4F46E5"
-      },
-      "preload": {
-        "label": "Preload Bridge",
-        "color": "#14B8A6"
-      },
-      "renderer-service": {
-        "label": "Renderer Service",
-        "color": "#7C3AED"
-      },
-      "context": {
-        "label": "React Context",
-        "color": "#A855F7"
-      },
-      "ui-component": {
-        "label": "UI Component",
-        "color": "#EC4899"
-      },
-      "timing": {
-        "label": "Timing/Debounce",
-        "color": "#F59E0B"
-      },
-      "event": {
-        "label": "Event",
-        "color": "#3B82F6"
-      },
-      "boundary": {
-        "label": "Boundary",
-        "color": "#64748B"
-      }
-    },
-    "edgeTypes": {
-      "file-watch": {
-        "label": "File Watch",
-        "style": "dashed",
-        "color": "#22C55E"
-      },
-      "worker-message": {
-        "label": "Worker Message",
-        "style": "solid",
-        "color": "#0D9488"
-      },
-      "ipc-event": {
-        "label": "IPC Event",
-        "style": "solid",
-        "color": "#818CF8"
-      },
-      "ipc-invoke": {
-        "label": "IPC Invoke",
-        "style": "solid",
-        "color": "#6366F1"
-      },
-      "subscription": {
-        "label": "Subscription",
-        "style": "dashed",
-        "color": "#A855F7"
-      },
-      "cache-invalidate": {
-        "label": "Cache Invalidate",
-        "style": "solid",
-        "color": "#EF4444"
-      },
-      "cache-rebuild": {
-        "label": "Cache Rebuild",
-        "style": "solid",
-        "color": "#22C55E"
-      },
-      "data-flow": {
-        "label": "Data Flow",
-        "style": "solid",
-        "color": "#3B82F6"
-      },
-      "trigger": {
-        "label": "Triggers",
-        "style": "solid",
-        "color": "#F59E0B"
-      }
-    }
-  },
   "nodes": [
     {
       "id": "title",
@@ -517,9 +418,7 @@
       "toNode": "git-watcher",
       "toSide": "top",
       "label": "file change",
-      "pv": {
-        "edgeType": "file-watch"
-      }
+      "edgeType": "file-watch"
     },
     {
       "id": "watcher-to-worker",
@@ -528,9 +427,7 @@
       "toNode": "repo-monitoring-worker",
       "toSide": "left",
       "label": "notify",
-      "pv": {
-        "edgeType": "worker-message"
-      }
+      "edgeType": "worker-message"
     },
     {
       "id": "worker-to-workspace-event",
@@ -539,9 +436,7 @@
       "toNode": "workspace-changed-event",
       "toSide": "left",
       "label": "emit immediately",
-      "pv": {
-        "edgeType": "ipc-event"
-      }
+      "edgeType": "ipc-event"
     },
     {
       "id": "worker-to-cache",
@@ -550,9 +445,7 @@
       "toNode": "cache-registry",
       "toSide": "top",
       "label": "invalidate cache",
-      "pv": {
-        "edgeType": "cache-invalidate"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "cache-to-debounce",
@@ -561,9 +454,7 @@
       "toNode": "debounce-timer",
       "toSide": "left",
       "label": "schedule rebuild",
-      "pv": {
-        "edgeType": "trigger"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "debounce-to-rebuild",
@@ -572,9 +463,7 @@
       "toNode": "cache-sync-event",
       "toSide": "top",
       "label": "after 250ms",
-      "pv": {
-        "edgeType": "trigger"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "cache-to-rebuild",
@@ -583,9 +472,7 @@
       "toNode": "cache-rebuild",
       "toSide": "top",
       "label": "rebuild",
-      "pv": {
-        "edgeType": "cache-rebuild"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "rebuild-to-sync-event",
@@ -594,9 +481,7 @@
       "toNode": "cache-sync-event",
       "toSide": "left",
       "label": "emit with fresh data",
-      "pv": {
-        "edgeType": "ipc-event"
-      }
+      "edgeType": "ipc-event"
     },
     {
       "id": "workspace-event-to-preload",
@@ -605,9 +490,7 @@
       "toNode": "preload-bridge",
       "toSide": "top",
       "label": "workspace:changed",
-      "pv": {
-        "edgeType": "ipc-event"
-      }
+      "edgeType": "ipc-event"
     },
     {
       "id": "cache-sync-to-preload",
@@ -616,9 +499,7 @@
       "toNode": "preload-bridge",
       "toSide": "bottom",
       "label": "CACHE_SYNC",
-      "pv": {
-        "edgeType": "ipc-event"
-      }
+      "edgeType": "ipc-event"
     },
     {
       "id": "preload-to-service",
@@ -627,9 +508,7 @@
       "toNode": "repo-monitoring-service",
       "toSide": "left",
       "label": "exposes API",
-      "pv": {
-        "edgeType": "subscription"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "service-to-refresh",
@@ -638,9 +517,7 @@
       "toNode": "refresh-repository",
       "toSide": "top",
       "label": "provides method",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "refresh-to-cache",
@@ -649,9 +526,7 @@
       "toNode": "cache-registry",
       "toSide": "right",
       "label": "IPC invoke",
-      "pv": {
-        "edgeType": "ipc-invoke"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "service-to-context",
@@ -660,9 +535,7 @@
       "toNode": "repository-panel-context",
       "toSide": "top",
       "label": "used by",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "context-to-ui",
@@ -671,9 +544,78 @@
       "toNode": "file-tree-ui",
       "toSide": "left",
       "label": "provides fileTreeData",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     }
-  ]
+  ],
+  "name": "FileTree Sync Event Flow",
+  "description": "Complete event flow from file system changes to UI updates, including cache invalidation, rebuilding, and deduplication",
+  "markdown": ".principal-views/filetree-sync/filetree-sync.md",
+  "nodeTypes": {
+    "file-system": {
+      "label": "File System",
+      "color": "#64748B"
+    },
+    "worker": {
+      "label": "Worker Process",
+      "color": "#0D9488"
+    },
+    "cache": {
+      "label": "Cache",
+      "color": "#14B8A6"
+    },
+    "main-process": {
+      "label": "Main Process",
+      "color": "#4F46E5"
+    },
+    "preload": {
+      "label": "Preload Bridge",
+      "color": "#14B8A6"
+    },
+    "renderer-service": {
+      "label": "Renderer Service",
+      "color": "#7C3AED"
+    },
+    "context": {
+      "label": "React Context",
+      "color": "#A855F7"
+    },
+    "ui-component": {
+      "label": "UI Component",
+      "color": "#EC4899"
+    },
+    "timing": {
+      "label": "Timing/Debounce",
+      "color": "#F59E0B"
+    },
+    "event": {
+      "label": "Event",
+      "color": "#3B82F6"
+    },
+    "boundary": {
+      "label": "Boundary",
+      "color": "#64748B"
+    }
+  },
+  "edgeTypes": {
+    "file-watch": {
+      "label": "File Watch",
+      "style": "dashed",
+      "color": "#22C55E"
+    },
+    "worker-message": {
+      "label": "Worker Message",
+      "style": "solid",
+      "color": "#0D9488"
+    },
+    "ipc-event": {
+      "label": "IPC Event",
+      "style": "solid",
+      "color": "#818CF8"
+    },
+    "subscription": {
+      "label": "Subscription",
+      "style": "dashed",
+      "color": "#A855F7"
+    }
+  }
 }

@@ -1,63 +1,60 @@
 {
-  "pv": {
-    "name": "Local Projects IPC Data Flow",
-    "version": "1.0.0",
-    "markdown": ".principal-views/local-projects-ipc-flow/local-projects-ipc-flow.md",
-    "nodeTypes": {
-      "renderer-component": {
-        "label": "Renderer Component",
-        "color": "#22C55E"
-      },
-      "renderer-service": {
-        "label": "Renderer Service",
-        "color": "#10B981"
-      },
-      "preload": {
-        "label": "Preload Script",
-        "color": "#8B5CF6"
-      },
-      "ipc-channel": {
-        "label": "IPC Channel",
-        "color": "#F59E0B"
-      },
-      "main-handler": {
-        "label": "Main Process Handler",
-        "color": "#3B82F6"
-      },
-      "main-service": {
-        "label": "Main Process Service",
-        "color": "#2563EB"
-      },
-      "external-lib": {
-        "label": "External Library",
-        "color": "#6366F1"
-      },
-      "storage": {
-        "label": "Storage",
-        "color": "#EC4899"
-      }
+  "name": "Local Projects IPC Data Flow",
+  "markdown": ".principal-views/local-projects-ipc-flow/local-projects-ipc-flow.md",
+  "nodeTypes": {
+    "renderer-component": {
+      "label": "Renderer Component",
+      "color": "#22C55E"
     },
-    "edgeTypes": {
-      "calls": {
-        "label": "Calls",
-        "style": "solid",
-        "color": "#64748B"
-      },
-      "ipc-invoke": {
-        "label": "IPC Invoke",
-        "style": "solid",
-        "color": "#F59E0B"
-      },
-      "ipc-event": {
-        "label": "IPC Event",
-        "style": "dashed",
-        "color": "#EF4444"
-      },
-      "uses": {
-        "label": "Uses",
-        "style": "dotted",
-        "color": "#94A3B8"
-      }
+    "renderer-service": {
+      "label": "Renderer Service",
+      "color": "#10B981"
+    },
+    "preload": {
+      "label": "Preload Script",
+      "color": "#8B5CF6"
+    },
+    "ipc-channel": {
+      "label": "IPC Channel",
+      "color": "#F59E0B"
+    },
+    "main-handler": {
+      "label": "Main Process Handler",
+      "color": "#3B82F6"
+    },
+    "main-service": {
+      "label": "Main Process Service",
+      "color": "#2563EB"
+    },
+    "external-lib": {
+      "label": "External Library",
+      "color": "#6366F1"
+    },
+    "storage": {
+      "label": "Storage",
+      "color": "#EC4899"
+    }
+  },
+  "edgeTypes": {
+    "calls": {
+      "label": "Calls",
+      "style": "solid",
+      "color": "#64748B"
+    },
+    "ipc-invoke": {
+      "label": "IPC Invoke",
+      "style": "solid",
+      "color": "#F59E0B"
+    },
+    "ipc-event": {
+      "label": "IPC Event",
+      "style": "dashed",
+      "color": "#EF4444"
+    },
+    "uses": {
+      "label": "Uses",
+      "style": "dotted",
+      "color": "#94A3B8"
     }
   },
   "nodes": [
@@ -250,9 +247,7 @@
       "toNode": "alexandria-service",
       "toSide": "top",
       "label": "getRepositories()",
-      "pv": {
-        "edgeType": "calls"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "service-to-preload",
@@ -261,9 +256,7 @@
       "toNode": "preload-bridge",
       "toSide": "top",
       "label": "window.mainProcess.alexandria.*",
-      "pv": {
-        "edgeType": "calls"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "preload-to-impl",
@@ -272,9 +265,7 @@
       "toNode": "alexandria-api-impl",
       "toSide": "top",
       "label": "exposes",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "impl-to-channels",
@@ -283,9 +274,7 @@
       "toNode": "ipc-channels",
       "toSide": "top",
       "label": "ipcRenderer.invoke()",
-      "pv": {
-        "edgeType": "ipc-invoke"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "channels-to-handler",
@@ -294,9 +283,7 @@
       "toNode": "api-event-handler",
       "toSide": "top",
       "label": "ipcMain.handle()",
-      "pv": {
-        "edgeType": "ipc-invoke"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "handler-to-registry",
@@ -305,9 +292,7 @@
       "toNode": "registry-service",
       "toSide": "top",
       "label": "delegates to",
-      "pv": {
-        "edgeType": "calls"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "registry-to-outpost",
@@ -316,9 +301,7 @@
       "toNode": "outpost-manager",
       "toSide": "top",
       "label": "getAllEntries()",
-      "pv": {
-        "edgeType": "calls"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "registry-to-git",
@@ -327,9 +310,7 @@
       "toNode": "git-client-factory",
       "toSide": "top",
       "label": "getRemotes() [register only]",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "outpost-to-storage",
@@ -338,9 +319,7 @@
       "toNode": "alexandria-storage",
       "toSide": "top",
       "label": "reads/writes",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "git-to-repos",
@@ -349,9 +328,7 @@
       "toNode": "local-repos",
       "toSide": "top",
       "label": "git remote -v",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "handler-to-broadcast",
@@ -360,9 +337,7 @@
       "toNode": "broadcast-events",
       "toSide": "left",
       "label": "on change",
-      "pv": {
-        "edgeType": "calls"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "broadcast-to-channels",
@@ -371,9 +346,7 @@
       "toNode": "ipc-channels",
       "toSide": "right",
       "label": "repository-added/updated/removed",
-      "pv": {
-        "edgeType": "ipc-event"
-      }
+      "edgeType": "ipc-event"
     },
     {
       "id": "channels-to-context",
@@ -382,9 +355,7 @@
       "toNode": "repository-panel-context",
       "toSide": "right",
       "label": "onRepositoryChange()",
-      "pv": {
-        "edgeType": "ipc-event"
-      }
+      "edgeType": "ipc-event"
     }
   ]
 }

@@ -1,92 +1,89 @@
 {
-  "pv": {
-    "name": "Agent Event Flow to Renderer",
-    "version": "1.0.0",
-    "markdown": ".principal-views/agent-event-flow/agent-event-flow.md",
-    "nodeTypes": {
-      "group": {
-        "label": "Process Group",
-        "color": "#64748B"
-      },
-      "utility-process": {
-        "label": "Utility Process",
-        "color": "#EF4444"
-      },
-      "main-process": {
-        "label": "Main Process",
-        "color": "#4F46E5"
-      },
-      "event-manager": {
-        "label": "Event Manager",
-        "color": "#7C3AED"
-      },
-      "cache": {
-        "label": "Session Cache",
-        "color": "#8B5CF6"
-      },
-      "ipc-handler": {
-        "label": "IPC Handler",
-        "color": "#6366F1"
-      },
-      "preload": {
-        "label": "Preload Script",
-        "color": "#14B8A6"
-      },
-      "renderer-api": {
-        "label": "Renderer API",
-        "color": "#10B981"
-      },
-      "service": {
-        "label": "Service Layer",
-        "color": "#22C55E"
-      },
-      "context": {
-        "label": "React Context",
-        "color": "#84CC16"
-      },
-      "component": {
-        "label": "Component",
-        "color": "#EAB308"
-      },
-      "interface": {
-        "label": "Interface",
-        "color": "#64748B"
+  "name": "Agent Event Flow to Renderer",
+  "markdown": ".principal-views/agent-event-flow/agent-event-flow.md",
+  "nodeTypes": {
+    "group": {
+      "label": "Process Group",
+      "color": "#64748B"
+    },
+    "utility-process": {
+      "label": "Utility Process",
+      "color": "#EF4444"
+    },
+    "main-process": {
+      "label": "Main Process",
+      "color": "#4F46E5"
+    },
+    "event-manager": {
+      "label": "Event Manager",
+      "color": "#7C3AED"
+    },
+    "cache": {
+      "label": "Session Cache",
+      "color": "#8B5CF6"
+    },
+    "ipc-handler": {
+      "label": "IPC Handler",
+      "color": "#6366F1"
+    },
+    "preload": {
+      "label": "Preload Script",
+      "color": "#14B8A6"
+    },
+    "renderer-api": {
+      "label": "Renderer API",
+      "color": "#10B981"
+    },
+    "service": {
+      "label": "Service Layer",
+      "color": "#22C55E"
+    },
+    "context": {
+      "label": "React Context",
+      "color": "#84CC16"
+    },
+    "component": {
+      "label": "Component",
+      "color": "#EAB308"
+    },
+    "interface": {
+      "label": "Interface",
+      "color": "#64748B"
+    }
+  },
+  "edgeTypes": {
+    "event-flow": {
+      "label": "Event Flow",
+      "style": "solid",
+      "color": "#7C3AED",
+      "animation": {
+        "type": "flow",
+        "duration": 1500
       }
     },
-    "edgeTypes": {
-      "event-flow": {
-        "label": "Event Flow",
-        "style": "solid",
-        "color": "#7C3AED",
-        "animation": {
-          "type": "flow",
-          "duration": 1500
-        }
-      },
-      "ipc": {
-        "label": "IPC",
-        "style": "solid",
-        "color": "#6366F1"
-      },
-      "broadcast": {
-        "label": "Broadcast",
-        "style": "dashed",
-        "color": "#F59E0B",
-        "animation": {
-          "type": "pulse",
-          "duration": 1000
-        }
-      },
-      "subscribe": {
-        "label": "Subscribe",
-        "style": "dotted",
-        "color": "#22C55E"
-      },
-      "uses": {
-        "label": "Uses",
-        "style": "dotted",
-        "color": "#64748B"
+    "ipc": {
+      "label": "IPC",
+      "style": "solid",
+      "color": "#6366F1"
+    },
+    "broadcast": {
+      "label": "Broadcast",
+      "style": "dashed",
+      "color": "#F59E0B",
+      "animation": {
+        "type": "pulse",
+        "duration": 1000
       }
+    },
+    "subscribe": {
+      "label": "Subscribe",
+      "style": "dotted",
+      "color": "#22C55E"
+    },
+    "uses": {
+      "label": "Uses",
+      "style": "dotted",
+      "color": "#64748B"
     }
   },
   "nodes": [
@@ -178,7 +175,7 @@
       "y": 143,
       "width": 200,
       "height": 80,
-      "text": "webContents.send()\n→ All Windows",
+      "text": "webContents.send()\n\u2192 All Windows",
       "pv": {
         "nodeType": "main-process",
         "shape": "rectangle"
@@ -191,7 +188,7 @@
       "y": 246,
       "width": 200,
       "height": 100,
-      "text": "IPC Events:\n• SESSION_CREATED\n• SESSION_UPDATED\n• PROCESSED_EVENT",
+      "text": "IPC Events:\n\u2022 SESSION_CREATED\n\u2022 SESSION_UPDATED\n\u2022 PROCESSED_EVENT",
       "pv": {
         "nodeType": "interface",
         "shape": "rectangle",
@@ -331,9 +328,7 @@
       "toNode": "event-server-manager",
       "toSide": "top",
       "label": "ProcessedEventMessage",
-      "pv": {
-        "edgeType": "event-flow"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "manager-to-cache",
@@ -342,9 +337,7 @@
       "toNode": "session-cache",
       "toSide": "top",
       "label": "emit('processed-event')",
-      "pv": {
-        "edgeType": "event-flow"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "cache-to-handlers",
@@ -353,9 +346,7 @@
       "toNode": "sdk-handlers",
       "toSide": "top",
       "label": "provides data",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "manager-to-broadcast",
@@ -364,9 +355,7 @@
       "toNode": "broadcast-node",
       "toSide": "left",
       "label": "handleProcessedEvent()",
-      "pv": {
-        "edgeType": "event-flow"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "broadcast-to-events",
@@ -374,9 +363,7 @@
       "fromSide": "bottom",
       "toNode": "event-types",
       "toSide": "top",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "broadcast-to-preload",
@@ -385,9 +372,7 @@
       "toNode": "preload",
       "toSide": "left",
       "label": "IPC Channel",
-      "pv": {
-        "edgeType": "broadcast"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "preload-to-api",
@@ -396,9 +381,7 @@
       "toNode": "renderer-api-impl",
       "toSide": "top",
       "label": "exposes API",
-      "pv": {
-        "edgeType": "ipc"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "api-to-service",
@@ -407,9 +390,7 @@
       "toNode": "sdk-service",
       "toSide": "top",
       "label": "wrapped by",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "service-to-context",
@@ -418,9 +399,7 @@
       "toNode": "agent-highlight-context",
       "toSide": "top",
       "label": "onProcessedEvent()",
-      "pv": {
-        "edgeType": "subscribe"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "context-to-highlight",
@@ -429,9 +408,7 @@
       "toNode": "event-highlight-service",
       "toSide": "left",
       "label": "service.processEvent()",
-      "pv": {
-        "edgeType": "event-flow"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "context-to-view",
@@ -440,9 +417,7 @@
       "toNode": "session-events-view",
       "toSide": "top",
       "label": "provides events",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "highlight-to-codacity",
@@ -451,9 +426,7 @@
       "toNode": "code-city",
       "toSide": "top",
       "label": "emit('highlight-update')",
-      "pv": {
-        "edgeType": "event-flow"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "manager-uses-interface",
@@ -461,9 +434,7 @@
       "fromSide": "left",
       "toNode": "event-interface",
       "toSide": "top",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     }
   ]
 }

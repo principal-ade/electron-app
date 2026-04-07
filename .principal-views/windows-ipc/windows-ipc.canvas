@@ -1,87 +1,84 @@
 {
-  "pv": {
-    "name": "Windows & IPC Architecture",
-    "version": "1.0.0",
-    "markdown": ".principal-views/windows-ipc/windows-ipc.md",
-    "nodeTypes": {
-      "main-process": {
-        "label": "Main Process",
-        "color": "#4F46E5"
-      },
-      "renderer-process": {
-        "label": "Renderer Process",
-        "color": "#7C3AED"
-      },
-      "preload": {
-        "label": "Preload Script",
-        "color": "#8B5CF6"
-      },
-      "principal-window": {
-        "label": "Principal Window",
-        "color": "#2563EB"
-      },
-      "repo-manager": {
-        "label": "Repo Manager",
-        "color": "#3B82F6"
-      },
-      "alexandria-workspace": {
-        "label": "Alexandria Workspace",
-        "color": "#60A5FA"
-      },
-      "dev-workspace": {
-        "label": "Dev Workspace",
-        "color": "#93C5FD"
-      },
-      "file-system-service": {
-        "label": "File System Service",
-        "color": "#6366F1"
-      },
-      "terminal-service": {
-        "label": "Terminal Service",
-        "color": "#818CF8"
-      },
-      "github-adapter": {
-        "label": "GitHub Adapter",
-        "color": "#171515"
-      },
-      "storage-service": {
-        "label": "Storage Service",
-        "color": "#8B5CF6"
-      },
-      "observability-service": {
-        "label": "Observability Service",
-        "color": "#14B8A6"
-      },
-      "panel-context": {
-        "label": "Panel Context",
-        "color": "#C084FC"
-      },
-      "workspace-context": {
-        "label": "Workspace Context",
-        "color": "#E9D5FF"
-      }
+  "name": "Windows & IPC Architecture",
+  "markdown": ".principal-views/windows-ipc/windows-ipc.md",
+  "nodeTypes": {
+    "main-process": {
+      "label": "Main Process",
+      "color": "#4F46E5"
     },
-    "edgeTypes": {
-      "ipc": {
-        "label": "IPC",
-        "style": "solid",
-        "color": "#6366F1"
-      },
-      "ipc-event": {
-        "label": "IPC Event",
-        "style": "dashed",
-        "color": "#818CF8"
-      },
-      "renders": {
-        "label": "Renders",
-        "style": "solid",
-        "color": "#EC4899"
-      },
-      "uses": {
-        "label": "Uses",
-        "style": "dotted",
-        "color": "#64748B"
-      }
+    "renderer-process": {
+      "label": "Renderer Process",
+      "color": "#7C3AED"
+    },
+    "preload": {
+      "label": "Preload Script",
+      "color": "#8B5CF6"
+    },
+    "principal-window": {
+      "label": "Principal Window",
+      "color": "#2563EB"
+    },
+    "repo-manager": {
+      "label": "Repo Manager",
+      "color": "#3B82F6"
+    },
+    "alexandria-workspace": {
+      "label": "Alexandria Workspace",
+      "color": "#60A5FA"
+    },
+    "dev-workspace": {
+      "label": "Dev Workspace",
+      "color": "#93C5FD"
+    },
+    "file-system-service": {
+      "label": "File System Service",
+      "color": "#6366F1"
+    },
+    "terminal-service": {
+      "label": "Terminal Service",
+      "color": "#818CF8"
+    },
+    "github-adapter": {
+      "label": "GitHub Adapter",
+      "color": "#171515"
+    },
+    "storage-service": {
+      "label": "Storage Service",
+      "color": "#8B5CF6"
+    },
+    "observability-service": {
+      "label": "Observability Service",
+      "color": "#14B8A6"
+    },
+    "panel-context": {
+      "label": "Panel Context",
+      "color": "#C084FC"
+    },
+    "workspace-context": {
+      "label": "Workspace Context",
+      "color": "#E9D5FF"
+    }
+  },
+  "edgeTypes": {
+    "ipc": {
+      "label": "IPC",
+      "style": "solid",
+      "color": "#6366F1"
+    },
+    "ipc-event": {
+      "label": "IPC Event",
+      "style": "dashed",
+      "color": "#818CF8"
+    },
+    "renders": {
+      "label": "Renders",
+      "style": "solid",
+      "color": "#EC4899"
+    },
+    "uses": {
+      "label": "Uses",
+      "style": "dotted",
+      "color": "#64748B"
     }
   },
   "nodes": [
@@ -302,9 +299,7 @@
       "toNode": "preload",
       "toSide": "top",
       "label": "window.mainProcess.*",
-      "pv": {
-        "edgeType": "ipc"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "preload-to-main",
@@ -313,9 +308,7 @@
       "toNode": "main-process",
       "toSide": "top",
       "label": "ipcRenderer.invoke()",
-      "pv": {
-        "edgeType": "ipc"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "main-to-preload-events",
@@ -324,9 +317,7 @@
       "toNode": "preload",
       "toSide": "bottom",
       "label": "webContents.send()",
-      "pv": {
-        "edgeType": "ipc-event"
-      }
+      "edgeType": "ipc-event"
     },
     {
       "id": "principal-renders-renderer",
@@ -335,9 +326,7 @@
       "toNode": "renderer-process",
       "toSide": "top",
       "label": "loads",
-      "pv": {
-        "edgeType": "renders"
-      }
+      "edgeType": "renders"
     },
     {
       "id": "repo-renders-renderer",
@@ -346,9 +335,7 @@
       "toNode": "renderer-process",
       "toSide": "top",
       "label": "loads",
-      "pv": {
-        "edgeType": "renders"
-      }
+      "edgeType": "renders"
     },
     {
       "id": "alexandria-renders-renderer",
@@ -357,9 +344,7 @@
       "toNode": "renderer-process",
       "toSide": "top",
       "label": "loads",
-      "pv": {
-        "edgeType": "renders"
-      }
+      "edgeType": "renders"
     },
     {
       "id": "dev-renders-renderer",
@@ -368,9 +353,7 @@
       "toNode": "renderer-process",
       "toSide": "top",
       "label": "loads",
-      "pv": {
-        "edgeType": "renders"
-      }
+      "edgeType": "renders"
     },
     {
       "id": "main-uses-fs-adapter",
@@ -379,9 +362,7 @@
       "toNode": "file-system-adapter",
       "toSide": "top",
       "label": "per-window",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "main-uses-wm-adapter",
@@ -390,9 +371,7 @@
       "toNode": "window-manager-adapter",
       "toSide": "top",
       "label": "per-window",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "main-uses-gh-adapter",
@@ -401,9 +380,7 @@
       "toNode": "github-adapter",
       "toSide": "top",
       "label": "per-window",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "main-uses-terminal",
@@ -412,9 +389,7 @@
       "toNode": "terminal-manager",
       "toSide": "top",
       "label": "per-window",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "main-uses-window-manager",
@@ -423,9 +398,7 @@
       "toNode": "modern-window-manager",
       "toSide": "top",
       "label": "creates windows",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "main-uses-handlers",
@@ -434,9 +407,7 @@
       "toNode": "ipc-handlers",
       "toSide": "left",
       "label": "registers",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "preload-uses-interfaces",
@@ -445,9 +416,7 @@
       "toNode": "api-interfaces",
       "toSide": "right",
       "label": "implements",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "preload-uses-implementations",
@@ -456,9 +425,7 @@
       "toNode": "api-implementations",
       "toSide": "left",
       "label": "exports",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "handlers-use-channels",
@@ -467,9 +434,7 @@
       "toNode": "event-channels",
       "toSide": "left",
       "label": "listens to",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "implementations-use-channels",
@@ -478,9 +443,7 @@
       "toNode": "event-channels",
       "toSide": "left",
       "label": "invokes",
-      "pv": {
-        "edgeType": "uses"
-      }
+      "edgeType": "uses"
     }
   ]
 }

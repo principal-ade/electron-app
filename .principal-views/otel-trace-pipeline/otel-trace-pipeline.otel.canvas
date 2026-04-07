@@ -1,93 +1,4 @@
 {
-  "pv": {
-    "name": "OTEL Trace Pipeline",
-    "version": "1.0.0",
-    "description": "Complete flow of OpenTelemetry traces from application code through OTEL collector to dev workspace window visualization",
-    "markdown": ".principal-views/otel-trace-pipeline/otel-trace-pipeline.md",
-    "scope": "principal-ade-main",
-    "nodeTypes": {
-      "external-service": {
-        "label": "External Service",
-        "color": "#64748B"
-      },
-      "http-endpoint": {
-        "label": "HTTP Endpoint",
-        "color": "#22C55E"
-      },
-      "collector-server": {
-        "label": "OTEL Collector",
-        "color": "#3B82F6"
-      },
-      "storage": {
-        "label": "Storage",
-        "color": "#0D9488"
-      },
-      "ipc-transport": {
-        "label": "IPC Transport",
-        "color": "#14B8A6"
-      },
-      "ipc-handler": {
-        "label": "IPC Handler",
-        "color": "#6366F1"
-      },
-      "preload": {
-        "label": "Preload Bridge",
-        "color": "#14B8A6"
-      },
-      "renderer-service": {
-        "label": "Renderer Service",
-        "color": "#7C3AED"
-      },
-      "ui-component": {
-        "label": "UI Component",
-        "color": "#EC4899"
-      },
-      "event-bus": {
-        "label": "Event Bus",
-        "color": "#F59E0B"
-      },
-      "event": {
-        "label": "Event",
-        "color": "#3B82F6"
-      },
-      "boundary": {
-        "label": "Boundary",
-        "color": "#64748B"
-      }
-    },
-    "edgeTypes": {
-      "http-post": {
-        "label": "HTTP POST",
-        "style": "solid",
-        "color": "#22C55E"
-      },
-      "trace-data": {
-        "label": "Trace Data",
-        "style": "solid",
-        "color": "#3B82F6"
-      },
-      "messageport": {
-        "label": "MessagePort",
-        "style": "solid",
-        "color": "#14B8A6"
-      },
-      "ipc-invoke": {
-        "label": "IPC Invoke",
-        "style": "solid",
-        "color": "#6366F1"
-      },
-      "event-emit": {
-        "label": "Event Emit",
-        "style": "dashed",
-        "color": "#F59E0B"
-      },
-      "data-flow": {
-        "label": "Data Flow",
-        "style": "solid",
-        "color": "#8B5CF6"
-      }
-    }
-  },
   "nodes": [
     {
       "id": "title",
@@ -474,9 +385,7 @@
       "toNode": "otlp-endpoint",
       "toSide": "left",
       "label": "POST /v1/traces",
-      "pv": {
-        "edgeType": "http-post"
-      }
+      "edgeType": "http"
     },
     {
       "id": "endpoint-to-collector",
@@ -485,9 +394,7 @@
       "toNode": "collector-server",
       "toSide": "left",
       "label": "OTLP data",
-      "pv": {
-        "edgeType": "trace-data"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "collector-to-storage",
@@ -496,9 +403,7 @@
       "toNode": "trace-storage",
       "toSide": "top",
       "label": "store trace",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "collector-to-messageport",
@@ -507,9 +412,7 @@
       "toNode": "messageport-system",
       "toSide": "left",
       "label": "route to ports",
-      "pv": {
-        "edgeType": "messageport"
-      }
+      "edgeType": "worker-message"
     },
     {
       "id": "messageport-to-ipc",
@@ -518,9 +421,7 @@
       "toNode": "ipc-handlers",
       "toSide": "top",
       "label": "manages",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "ipc-to-preload",
@@ -529,9 +430,7 @@
       "toNode": "preload-bridge",
       "toSide": "left",
       "label": "sends port2",
-      "pv": {
-        "edgeType": "ipc-invoke"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "preload-to-subscriber",
@@ -540,9 +439,7 @@
       "toNode": "trace-message-subscriber",
       "toSide": "top",
       "label": "port.onmessage",
-      "pv": {
-        "edgeType": "messageport"
-      }
+      "edgeType": "worker-message"
     },
     {
       "id": "preload-to-devworkspace",
@@ -551,9 +448,7 @@
       "toNode": "devworkspace-framework",
       "toSide": "left",
       "label": "exposes API",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "subscriber-to-systemmonitor",
@@ -562,9 +457,7 @@
       "toNode": "system-monitor-viewer",
       "toSide": "left",
       "label": "notifies",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "devworkspace-to-details",
@@ -573,9 +466,7 @@
       "toNode": "trace-details-panel",
       "toSide": "left",
       "label": "creates tab",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "systemmonitor-to-eventbus",
@@ -584,9 +475,7 @@
       "toNode": "event-bus",
       "toSide": "left",
       "label": "user selects trace",
-      "pv": {
-        "edgeType": "event-emit"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "eventbus-to-devworkspace",
@@ -595,9 +484,7 @@
       "toNode": "devworkspace-framework",
       "toSide": "bottom",
       "label": "trace:selected",
-      "pv": {
-        "edgeType": "event-emit"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "storage-to-ipc",
@@ -606,9 +493,62 @@
       "toNode": "ipc-handlers",
       "toSide": "left",
       "label": "getTraces()",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     }
-  ]
+  ],
+  "name": "OTEL Trace Pipeline",
+  "description": "Complete flow of OpenTelemetry traces from application code through OTEL collector to dev workspace window visualization",
+  "markdown": ".principal-views/otel-trace-pipeline/otel-trace-pipeline.md",
+  "scope": "principal-ade-main",
+  "nodeTypes": {
+    "external-service": {
+      "label": "External Service",
+      "color": "#64748B"
+    },
+    "http-endpoint": {
+      "label": "HTTP Endpoint",
+      "color": "#22C55E"
+    },
+    "collector-server": {
+      "label": "OTEL Collector",
+      "color": "#3B82F6"
+    },
+    "storage": {
+      "label": "Storage",
+      "color": "#0D9488"
+    },
+    "ipc-transport": {
+      "label": "IPC Transport",
+      "color": "#14B8A6"
+    },
+    "ipc-handler": {
+      "label": "IPC Handler",
+      "color": "#6366F1"
+    },
+    "preload": {
+      "label": "Preload Bridge",
+      "color": "#14B8A6"
+    },
+    "renderer-service": {
+      "label": "Renderer Service",
+      "color": "#7C3AED"
+    },
+    "ui-component": {
+      "label": "UI Component",
+      "color": "#EC4899"
+    },
+    "event-bus": {
+      "label": "Event Bus",
+      "color": "#F59E0B"
+    },
+    "event": {
+      "label": "Event",
+      "color": "#3B82F6"
+    },
+    "boundary": {
+      "label": "Boundary",
+      "color": "#64748B"
+    }
+  },
+  "edgeTypes": {}
 }

@@ -1,76 +1,4 @@
 {
-  "pv": {
-    "name": "CollectionMapPanel: Repository Positioning & Region Management",
-    "version": "1.0.0",
-    "description": "Telemetry events for dragging repositories, creating regions, and layout management in CollectionMapPanel",
-    "markdown": ".principal-views/collection-map-interactions/collection-map-interactions.md",
-    "nodeTypes": {
-      "ui-component": {
-        "label": "UI Component",
-        "color": "#EC4899"
-      },
-      "callback": {
-        "label": "Callback Handler",
-        "color": "#14B8A6"
-      },
-      "context": {
-        "label": "React Context",
-        "color": "#A855F7"
-      },
-      "service": {
-        "label": "Service Layer",
-        "color": "#4F46E5"
-      },
-      "github-api": {
-        "label": "GitHub API",
-        "color": "#22C55E"
-      },
-      "state": {
-        "label": "State Management",
-        "color": "#F59E0B"
-      },
-      "event": {
-        "label": "Event",
-        "color": "#3B82F6"
-      },
-      "boundary": {
-        "label": "Boundary",
-        "color": "#64748B"
-      }
-    },
-    "edgeTypes": {
-      "user-action": {
-        "label": "User Action",
-        "style": "solid",
-        "color": "#EC4899"
-      },
-      "callback-invoke": {
-        "label": "Callback Invoke",
-        "style": "solid",
-        "color": "#14B8A6"
-      },
-      "state-update": {
-        "label": "State Update",
-        "style": "solid",
-        "color": "#F59E0B"
-      },
-      "api-call": {
-        "label": "API Call",
-        "style": "solid",
-        "color": "#22C55E"
-      },
-      "event-emit": {
-        "label": "Event Emit",
-        "style": "dashed",
-        "color": "#A855F7"
-      },
-      "data-flow": {
-        "label": "Data Flow",
-        "style": "solid",
-        "color": "#3B82F6"
-      }
-    }
-  },
   "nodes": [
     {
       "id": "title",
@@ -738,9 +666,7 @@
       "toNode": "user-drag-drop",
       "toSide": "top",
       "label": "drag in progress",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "drop-to-assigned",
@@ -749,9 +675,7 @@
       "toNode": "callback-repository-assigned",
       "toSide": "left",
       "label": "dropped on region",
-      "pv": {
-        "edgeType": "callback-invoke"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "drop-to-position",
@@ -760,9 +684,7 @@
       "toNode": "callback-position-updated",
       "toSide": "left",
       "label": "position changed",
-      "pv": {
-        "edgeType": "callback-invoke"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "position-to-optimistic",
@@ -771,9 +693,7 @@
       "toNode": "optimistic-update",
       "toSide": "left",
       "label": "update local state",
-      "pv": {
-        "edgeType": "state-update"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "optimistic-to-ui",
@@ -782,9 +702,7 @@
       "toNode": "ui-rerender",
       "toSide": "right",
       "label": "state change",
-      "pv": {
-        "edgeType": "state-update"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "optimistic-to-sync",
@@ -793,9 +711,7 @@
       "toNode": "github-sync-start",
       "toSide": "left",
       "label": "background sync",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "sync-to-remove",
@@ -804,9 +720,7 @@
       "toNode": "collections-service-remove",
       "toSide": "left",
       "label": "step 1",
-      "pv": {
-        "edgeType": "api-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "remove-to-add",
@@ -815,9 +729,7 @@
       "toNode": "collections-service-add",
       "toSide": "top",
       "label": "then",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "add-to-github",
@@ -826,9 +738,7 @@
       "toNode": "github-api-update",
       "toSide": "left",
       "label": "PUT request",
-      "pv": {
-        "edgeType": "api-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "github-to-success",
@@ -837,9 +747,7 @@
       "toNode": "sync-success",
       "toSide": "right",
       "label": "200 OK",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "github-to-error",
@@ -848,9 +756,7 @@
       "toNode": "sync-error",
       "toSide": "right",
       "label": "error",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "error-to-rollback",
@@ -859,9 +765,7 @@
       "toNode": "rollback-fetch",
       "toSide": "right",
       "label": "fetch from GitHub",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "region-to-callback",
@@ -870,9 +774,7 @@
       "toNode": "callback-region-created",
       "toSide": "left",
       "label": "create region",
-      "pv": {
-        "edgeType": "callback-invoke"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "mode-to-callback",
@@ -881,9 +783,45 @@
       "toNode": "callback-switch-mode",
       "toSide": "left",
       "label": "switch mode",
-      "pv": {
-        "edgeType": "callback-invoke"
-      }
+      "edgeType": "uses"
     }
-  ]
+  ],
+  "name": "CollectionMapPanel: Repository Positioning & Region Management",
+  "description": "Telemetry events for dragging repositories, creating regions, and layout management in CollectionMapPanel",
+  "markdown": ".principal-views/collection-map-interactions/collection-map-interactions.md",
+  "nodeTypes": {
+    "ui-component": {
+      "label": "UI Component",
+      "color": "#EC4899"
+    },
+    "callback": {
+      "label": "Callback Handler",
+      "color": "#14B8A6"
+    },
+    "context": {
+      "label": "React Context",
+      "color": "#A855F7"
+    },
+    "service": {
+      "label": "Service Layer",
+      "color": "#4F46E5"
+    },
+    "github-api": {
+      "label": "GitHub API",
+      "color": "#22C55E"
+    },
+    "state": {
+      "label": "State Management",
+      "color": "#F59E0B"
+    },
+    "event": {
+      "label": "Event",
+      "color": "#3B82F6"
+    },
+    "boundary": {
+      "label": "Boundary",
+      "color": "#64748B"
+    }
+  },
+  "edgeTypes": {}
 }

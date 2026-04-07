@@ -1,81 +1,4 @@
 {
-  "pv": {
-    "name": "Recently Opened Alexandria Entries",
-    "version": "1.0.0",
-    "description": "Flow for tracking and sorting local projects by last opened timestamp",
-    "markdown": ".principal-views/recently-opened-alexandria/recently-opened-alexandria.md",
-    "scope": "principal-ade-main",
-    "nodeTypes": {
-      "ui-component": {
-        "label": "UI Component",
-        "color": "#3B82F6"
-      },
-      "context-provider": {
-        "label": "Context Provider",
-        "color": "#8B5CF6"
-      },
-      "renderer-service": {
-        "label": "Renderer Service",
-        "color": "#A855F7"
-      },
-      "ipc-bridge": {
-        "label": "IPC Bridge",
-        "color": "#F59E0B"
-      },
-      "main-process": {
-        "label": "Main Process",
-        "color": "#22C55E"
-      },
-      "external-library": {
-        "label": "External Library",
-        "color": "#64748B"
-      },
-      "user-action": {
-        "label": "User Action",
-        "color": "#EC4899"
-      },
-      "event": {
-        "label": "Event",
-        "color": "#3B82F6"
-      },
-      "boundary": {
-        "label": "Boundary",
-        "color": "#64748B"
-      }
-    },
-    "edgeTypes": {
-      "user-interaction": {
-        "label": "User Interaction",
-        "style": "solid",
-        "color": "#EC4899"
-      },
-      "ipc-send": {
-        "label": "IPC Send",
-        "style": "solid",
-        "color": "#F59E0B"
-      },
-      "ipc-receive": {
-        "label": "IPC Receive",
-        "style": "dashed",
-        "color": "#F59E0B"
-      },
-      "function-call": {
-        "label": "Function Call",
-        "style": "solid",
-        "color": "#3B82F6"
-      },
-      "event-emit": {
-        "label": "Event Emit",
-        "style": "dashed",
-        "color": "#8B5CF6"
-      },
-      "data-flow": {
-        "label": "Data Flow",
-        "style": "solid",
-        "color": "#22C55E"
-      }
-    }
-  },
   "nodes": [
     {
       "id": "title",
@@ -517,9 +440,7 @@
       "toNode": "projects-panel-context",
       "toSide": "left",
       "label": "uses context",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "user-to-context",
@@ -528,9 +449,7 @@
       "toNode": "open-local-repository",
       "toSide": "left",
       "label": "triggers action",
-      "pv": {
-        "edgeType": "user-interaction"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "context-to-sort",
@@ -539,9 +458,7 @@
       "toNode": "sort-logic",
       "toSide": "top",
       "label": "applies sort",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "open-to-window-service",
@@ -550,9 +467,7 @@
       "toNode": "window-service",
       "toSide": "left",
       "label": "openDevWorkspace()",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "registry-to-outpost",
@@ -561,9 +476,7 @@
       "toNode": "outpost-manager",
       "toSide": "left",
       "label": "updateRepository()",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "outpost-to-disk",
@@ -572,9 +485,7 @@
       "toNode": "disk-storage",
       "toSide": "top",
       "label": "persists",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "registry-to-event",
@@ -583,9 +494,7 @@
       "toNode": "repository-change-event",
       "toSide": "top",
       "label": "emits change",
-      "pv": {
-        "edgeType": "event-emit"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "event-to-listener",
@@ -594,9 +503,7 @@
       "toNode": "on-repository-change",
       "toSide": "right",
       "label": "via IPC",
-      "pv": {
-        "edgeType": "ipc-receive"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "listener-to-context",
@@ -605,9 +512,7 @@
       "toNode": "projects-panel-context",
       "toSide": "right",
       "label": "fetchLocalRepositories()",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "context-to-ui",
@@ -616,9 +521,7 @@
       "toNode": "re-sort-display",
       "toSide": "right",
       "label": "state update",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "open-to-window",
@@ -627,9 +530,7 @@
       "toNode": "window-service",
       "toSide": "top",
       "label": "openDevWorkspace()",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "worlds-to-window-service",
@@ -638,9 +539,7 @@
       "toNode": "window-service",
       "toSide": "bottom",
       "label": "openDevWorkspace()",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "window-service-to-handler",
@@ -649,9 +548,7 @@
       "toNode": "dev-workspace-handler",
       "toSide": "left",
       "label": "IPC invoke",
-      "pv": {
-        "edgeType": "ipc-send"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "handler-to-registry-service",
@@ -660,9 +557,50 @@
       "toNode": "registry-service",
       "toSide": "bottom",
       "label": "updateLastOpened()",
-      "pv": {
-        "edgeType": "function-call"
-      }
+      "edgeType": "uses"
     }
-  ]
+  ],
+  "name": "Recently Opened Alexandria Entries",
+  "description": "Flow for tracking and sorting local projects by last opened timestamp",
+  "markdown": ".principal-views/recently-opened-alexandria/recently-opened-alexandria.md",
+  "scope": "principal-ade-main",
+  "nodeTypes": {
+    "ui-component": {
+      "label": "UI Component",
+      "color": "#3B82F6"
+    },
+    "context-provider": {
+      "label": "Context Provider",
+      "color": "#8B5CF6"
+    },
+    "renderer-service": {
+      "label": "Renderer Service",
+      "color": "#A855F7"
+    },
+    "ipc-bridge": {
+      "label": "IPC Bridge",
+      "color": "#F59E0B"
+    },
+    "main-process": {
+      "label": "Main Process",
+      "color": "#22C55E"
+    },
+    "external-library": {
+      "label": "External Library",
+      "color": "#64748B"
+    },
+    "user-action": {
+      "label": "User Action",
+      "color": "#EC4899"
+    },
+    "event": {
+      "label": "Event",
+      "color": "#3B82F6"
+    },
+    "boundary": {
+      "label": "Boundary",
+      "color": "#64748B"
+    }
+  },
+  "edgeTypes": {}
 }

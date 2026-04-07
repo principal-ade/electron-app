@@ -1,85 +1,4 @@
 {
-  "pv": {
-    "name": "Quality Panel Interaction Flow",
-    "version": "1.0.0",
-    "description": "Complete event flow from panel navigation through tool execution to results display, including GitHub artifact fetching and color mode selection",
-    "markdown": ".principal-views/quality-panel-interaction/quality-panel-interaction.md",
-    "scope": "principal-ade-renderer",
-    "nodeTypes": {
-      "ui-component": {
-        "label": "UI Component",
-        "color": "#EC4899"
-      },
-      "panel": {
-        "label": "Panel",
-        "color": "#8B5CF6"
-      },
-      "context": {
-        "label": "React Context",
-        "color": "#A855F7"
-      },
-      "main-process": {
-        "label": "Main Process",
-        "color": "#4F46E5"
-      },
-      "service": {
-        "label": "Service",
-        "color": "#059669"
-      },
-      "executor": {
-        "label": "Executor",
-        "color": "#0D9488"
-      },
-      "external-tool": {
-        "label": "External Tool",
-        "color": "#64748B"
-      },
-      "external-api": {
-        "label": "External API",
-        "color": "#F59E0B"
-      },
-      "event": {
-        "label": "Event",
-        "color": "#3B82F6"
-      },
-      "boundary": {
-        "label": "Boundary",
-        "color": "#64748B"
-      }
-    },
-    "edgeTypes": {
-      "user-action": {
-        "label": "User Action",
-        "style": "solid",
-        "color": "#EC4899"
-      },
-      "ipc-invoke": {
-        "label": "IPC Invoke",
-        "style": "solid",
-        "color": "#6366F1"
-      },
-      "event": {
-        "label": "Event",
-        "style": "dashed",
-        "color": "#A855F7"
-      },
-      "data-flow": {
-        "label": "Data Flow",
-        "style": "solid",
-        "color": "#3B82F6"
-      },
-      "executes": {
-        "label": "Executes",
-        "style": "solid",
-        "color": "#0D9488"
-      },
-      "http": {
-        "label": "HTTP",
-        "style": "solid",
-        "color": "#F59E0B"
-      }
-    }
-  },
   "nodes": [
     {
       "id": "title",
@@ -783,9 +702,7 @@
       "toNode": "panel-framework",
       "toSide": "left",
       "label": "onPanelChange",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "framework-to-panel",
@@ -794,9 +711,7 @@
       "toNode": "quality-panel",
       "toSide": "left",
       "label": "mounts panel",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "panel-to-context",
@@ -805,9 +720,7 @@
       "toNode": "repository-context",
       "toSide": "top",
       "label": "reads qualitySlice",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "panel-to-hexagon",
@@ -816,9 +729,7 @@
       "toNode": "hexagon-click",
       "toSide": "left",
       "label": "user clicks facet",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "hexagon-to-context",
@@ -827,9 +738,7 @@
       "toNode": "repository-context",
       "toSide": "right",
       "label": "quality:colorMode:select",
-      "pv": {
-        "edgeType": "event"
-      }
+      "edgeType": "subscription"
     },
     {
       "id": "context-to-filecity",
@@ -838,9 +747,7 @@
       "toNode": "file-city",
       "toSide": "left",
       "label": "colorMode update",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "run-to-ipc",
@@ -849,9 +756,7 @@
       "toNode": "ipc-handler",
       "toSide": "left",
       "label": "IPC invoke",
-      "pv": {
-        "edgeType": "ipc-invoke"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "ipc-to-service",
@@ -860,9 +765,7 @@
       "toNode": "quality-lens-service",
       "toSide": "left",
       "label": "executeTool()",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "service-to-lens",
@@ -871,9 +774,7 @@
       "toNode": "quality-lens",
       "toSide": "top",
       "label": "find & configure lens",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "service-to-executor",
@@ -882,9 +783,7 @@
       "toNode": "cli-executor",
       "toSide": "left",
       "label": "uses executor",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "lens-to-executor",
@@ -893,9 +792,7 @@
       "toNode": "cli-executor",
       "toSide": "bottom",
       "label": "execute()",
-      "pv": {
-        "edgeType": "executes"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "executor-to-tools",
@@ -904,9 +801,7 @@
       "toNode": "external-tools",
       "toSide": "top",
       "label": "child_process.spawn",
-      "pv": {
-        "edgeType": "executes"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "tools-to-result",
@@ -915,9 +810,7 @@
       "toNode": "tool-result",
       "toSide": "bottom",
       "label": "stdout/stderr",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "executor-to-result",
@@ -926,9 +819,7 @@
       "toNode": "tool-result",
       "toSide": "left",
       "label": "parse output",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "github-to-artifact",
@@ -937,9 +828,7 @@
       "toNode": "artifact-data",
       "toSide": "left",
       "label": "HTTP GET",
-      "pv": {
-        "edgeType": "http"
-      }
+      "edgeType": "http"
     },
     {
       "id": "artifact-to-context",
@@ -948,9 +837,7 @@
       "toNode": "repository-context",
       "toSide": "bottom",
       "label": "setQualityData",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "service-to-error",
@@ -959,9 +846,7 @@
       "toNode": "tool-error",
       "toSide": "top",
       "label": "on error",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "github-to-notfound",
@@ -970,9 +855,7 @@
       "toNode": "artifact-not-found",
       "toSide": "left",
       "label": "404 / empty",
-      "pv": {
-        "edgeType": "http"
-      }
+      "edgeType": "http"
     },
     {
       "id": "step-remote-to-resolved",
@@ -981,9 +864,7 @@
       "toNode": "artifact-step-remote-resolved",
       "toSide": "left",
       "label": "git remote",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "step-resolved-to-github",
@@ -992,9 +873,7 @@
       "toNode": "artifact-step-github-parsed",
       "toSide": "left",
       "label": "parse URL",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "step-github-to-branch",
@@ -1003,9 +882,7 @@
       "toNode": "artifact-step-branch",
       "toSide": "left",
       "label": "next step",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "step-branch-to-resolved",
@@ -1014,9 +891,7 @@
       "toNode": "artifact-step-branch-resolved",
       "toSide": "left",
       "label": "git status",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "step-branch-to-api",
@@ -1025,9 +900,7 @@
       "toNode": "artifact-step-api-calling",
       "toSide": "left",
       "label": "call API",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "step-api-to-complete",
@@ -1036,9 +909,7 @@
       "toNode": "artifact-step-api-complete",
       "toSide": "left",
       "label": "HTTP response",
-      "pv": {
-        "edgeType": "http"
-      }
+      "edgeType": "http"
     },
     {
       "id": "step-api-to-received",
@@ -1047,9 +918,7 @@
       "toNode": "artifact-data",
       "toSide": "bottom",
       "label": "artifact found",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "step-api-to-notfound",
@@ -1058,9 +927,7 @@
       "toNode": "artifact-not-found",
       "toSide": "bottom",
       "label": "not found",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "step-remote-to-skipped",
@@ -1069,9 +936,7 @@
       "toNode": "artifact-skipped",
       "toSide": "bottom",
       "label": "no remote",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "step-github-to-skipped",
@@ -1080,9 +945,60 @@
       "toNode": "artifact-skipped",
       "toSide": "bottom",
       "label": "not GitHub",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     }
-  ]
+  ],
+  "name": "Quality Panel Interaction Flow",
+  "description": "Complete event flow from panel navigation through tool execution to results display, including GitHub artifact fetching and color mode selection",
+  "markdown": ".principal-views/quality-panel-interaction/quality-panel-interaction.md",
+  "scope": "principal-ade-renderer",
+  "nodeTypes": {
+    "ui-component": {
+      "label": "UI Component",
+      "color": "#EC4899"
+    },
+    "panel": {
+      "label": "Panel",
+      "color": "#8B5CF6"
+    },
+    "context": {
+      "label": "React Context",
+      "color": "#A855F7"
+    },
+    "main-process": {
+      "label": "Main Process",
+      "color": "#4F46E5"
+    },
+    "service": {
+      "label": "Service",
+      "color": "#059669"
+    },
+    "executor": {
+      "label": "Executor",
+      "color": "#0D9488"
+    },
+    "external-tool": {
+      "label": "External Tool",
+      "color": "#64748B"
+    },
+    "external-api": {
+      "label": "External API",
+      "color": "#F59E0B"
+    },
+    "event": {
+      "label": "Event",
+      "color": "#3B82F6"
+    },
+    "boundary": {
+      "label": "Boundary",
+      "color": "#64748B"
+    }
+  },
+  "edgeTypes": {
+    "http": {
+      "label": "HTTP",
+      "style": "solid",
+      "color": "#F59E0B"
+    }
+  }
 }

@@ -1,63 +1,4 @@
 {
-  "pv": {
-    "name": "Window Switcher Cards",
-    "version": "1.0.0",
-    "description": "Integration of LocalProjectCard from industry-themed-repository-composition-panels into the Window Switcher overlay",
-    "markdown": ".principal-views/window-switcher-cards/window-switcher-cards.md",
-    "scope": "principal-ade-main",
-    "nodeTypes": {
-      "renderer": {
-        "label": "Renderer",
-        "color": "#10B981"
-      },
-      "main-process": {
-        "label": "Main Process",
-        "color": "#6366F1"
-      },
-      "window-manager": {
-        "label": "Window Manager",
-        "color": "#F59E0B"
-      },
-      "store": {
-        "label": "Store",
-        "color": "#3B82F6"
-      },
-      "component": {
-        "label": "Component",
-        "color": "#EC4899"
-      },
-      "event": {
-        "label": "Event",
-        "color": "#3B82F6"
-      },
-      "boundary": {
-        "label": "Boundary",
-        "color": "#64748B"
-      }
-    },
-    "edgeTypes": {
-      "ipc": {
-        "label": "IPC",
-        "style": "solid",
-        "color": "#6366F1"
-      },
-      "method-call": {
-        "label": "Method Call",
-        "style": "solid",
-        "color": "#F59E0B"
-      },
-      "data-flow": {
-        "label": "Data Flow",
-        "style": "dashed",
-        "color": "#3B82F6"
-      },
-      "import": {
-        "label": "Import",
-        "style": "dotted",
-        "color": "#8B5CF6"
-      }
-    }
-  },
   "nodes": [
     {
       "id": "title",
@@ -375,9 +316,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "alexandriaEntry",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e2",
@@ -386,9 +325,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "store entry",
-      "pv": {
-        "edgeType": "method-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e3",
@@ -397,9 +334,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "stored in",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e4",
@@ -408,9 +343,7 @@
       "fromSide": "left",
       "toSide": "right",
       "label": "iterate windows",
-      "pv": {
-        "edgeType": "method-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e5",
@@ -419,9 +352,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "build list",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e6",
@@ -430,9 +361,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "IPC: update-list",
-      "pv": {
-        "edgeType": "ipc"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "e7",
@@ -441,9 +370,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "render",
-      "pv": {
-        "edgeType": "import"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e8",
@@ -452,9 +379,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "uses",
-      "pv": {
-        "edgeType": "import"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e9",
@@ -463,9 +388,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "renders sprite",
-      "pv": {
-        "edgeType": "method-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e10",
@@ -474,9 +397,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "user action",
-      "pv": {
-        "edgeType": "method-call"
-      }
+      "edgeType": "uses"
     },
     {
       "id": "e11",
@@ -485,9 +406,7 @@
       "fromSide": "left",
       "toSide": "bottom",
       "label": "IPC: select",
-      "pv": {
-        "edgeType": "ipc"
-      }
+      "edgeType": "ipc"
     },
     {
       "id": "e12",
@@ -496,9 +415,48 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "toggle/show",
-      "pv": {
-        "edgeType": "method-call"
-      }
+      "edgeType": "uses"
     }
-  ]
+  ],
+  "name": "Window Switcher Cards",
+  "description": "Integration of LocalProjectCard from industry-themed-repository-composition-panels into the Window Switcher overlay",
+  "markdown": ".principal-views/window-switcher-cards/window-switcher-cards.md",
+  "scope": "principal-ade-main",
+  "nodeTypes": {
+    "renderer": {
+      "label": "Renderer",
+      "color": "#10B981"
+    },
+    "main-process": {
+      "label": "Main Process",
+      "color": "#6366F1"
+    },
+    "window-manager": {
+      "label": "Window Manager",
+      "color": "#F59E0B"
+    },
+    "store": {
+      "label": "Store",
+      "color": "#3B82F6"
+    },
+    "component": {
+      "label": "Component",
+      "color": "#EC4899"
+    },
+    "event": {
+      "label": "Event",
+      "color": "#3B82F6"
+    },
+    "boundary": {
+      "label": "Boundary",
+      "color": "#64748B"
+    }
+  },
+  "edgeTypes": {
+    "ipc": {
+      "label": "IPC",
+      "style": "solid",
+      "color": "#6366F1"
+    }
+  }
 }
