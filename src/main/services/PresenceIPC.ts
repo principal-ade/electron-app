@@ -31,7 +31,7 @@ class PresenceIPC {
         throw new Error(result.error || 'Failed to fetch presence data');
       }
 
-      return result.data as PresenceData;
+      return result.data;
     });
 
     // Handler for presence:get-users-in-repo
@@ -59,11 +59,7 @@ class PresenceIPC {
           );
         }
 
-        return result.data as {
-          repoId: string;
-          users: UserPresence[];
-          totalUsers: number;
-        };
+        return result.data;
       },
     );
 
@@ -82,7 +78,7 @@ class PresenceIPC {
           throw new Error(result.error || 'Failed to fetch user presence');
         }
 
-        return result.data as UserPresence;
+        return result.data ?? null;
       },
     );
 

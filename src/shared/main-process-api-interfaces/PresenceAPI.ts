@@ -1,45 +1,20 @@
 /**
  * PresenceAPI - Type-safe interface for presence operations
- * Manages real-time user presence information from traffic controller
+ * Re-exports types from @principal-ai/control-tower-core for consistency
  */
 
-export interface DeviceInfo {
-  agentId: string;
-  deviceName?: string;
-  platform?: string;
-  connectedAt: number;
-  lastHeartbeat: number;
-}
+import type {
+  DeviceInfo as _DeviceInfo,
+  RepositorySession as _RepositorySession,
+  SerializableUserPresence,
+  PresenceStats as _PresenceStats,
+} from '@principal-ai/control-tower-core';
 
-export interface RepositorySession {
-  repoId: string;
-  branch: string;
-  openedAt: number;
-  lastActivity: number;
-  currentFile?: string;
-  hasUnsavedChanges?: boolean;
-  permissions: {
-    canRead: boolean;
-    canWrite: boolean;
-    canAdmin: boolean;
-  };
-}
-
-export interface UserPresence {
-  userId: string;
-  status: 'online' | 'away' | 'offline';
-  openRepositories: RepositorySession[];
-  activeRepository?: string;
-  lastSeen: number;
-  devices: DeviceInfo[];
-  statusMessage?: string;
-}
-
-export interface PresenceStats {
-  totalOnline: number;
-  totalRepositories: number;
-  activeCollaborations: number;
-}
+// Re-export with aliases for use in this codebase
+export type DeviceInfo = _DeviceInfo;
+export type RepositorySession = _RepositorySession;
+export type UserPresence = SerializableUserPresence;
+export type PresenceStats = _PresenceStats;
 
 export interface PresenceData {
   users: UserPresence[];

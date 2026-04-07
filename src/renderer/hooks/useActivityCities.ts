@@ -231,14 +231,7 @@ export function useActivityCities(): UseActivityCitiesReturn {
    */
   const ensurePresenceConnected = useCallback(async (): Promise<boolean> => {
     try {
-      // Check if already have presence data (means we're connected)
-      const initialData = await PresenceService.getUsers();
-      if (initialData.users.length > 0 || initialData.stats.totalOnline > 0) {
-        return true; // Already connected and have data
-      }
-
-      // Try to connect to presence
-      console.log('[useActivityCities] Connecting to presence...');
+      // Get auth status first
       const authService = SecureAuthService.getInstance();
       const authResult = await authService.checkAuth();
 
@@ -247,11 +240,11 @@ export function useActivityCities(): UseActivityCitiesReturn {
         return false;
       }
 
+      // Try to connect to presence (will return success if already connected)
+      console.log('[useActivityCities] Ensuring presence connection...');
       const result = await PresenceService.connectToPresence(authResult.token);
       if (result.success) {
-        console.log('[useActivityCities] Successfully connected to presence');
-        // Give the WebSocket a moment to receive room state
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        console.log('[useActivityCities] Presence connection ready');
         return true;
       } else {
         console.warn('[useActivityCities] Failed to connect to presence:', result.error);

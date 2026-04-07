@@ -30,17 +30,17 @@ export function useGitSyncConnection(
         // Convert Map to array for easier processing
         const connections = Array.from(connectionsMap.values());
 
-        // Check if we have a connection for this specific repo
+        // Check if we have an authenticated connection for this specific repo
         let isConnected = false;
         if (repositoryPath && branch) {
           isConnected = connections.some(
-            (conn) => conn.repoPath === repositoryPath && conn.status.connected,
+            (conn) => conn.repoPath === repositoryPath && conn.status.connected && conn.status.authenticated,
           );
         }
 
         const finalStatus = {
           isConnected:
-            isConnected || connections.some((conn) => conn.status.connected),
+            isConnected || connections.some((conn) => conn.status.connected && conn.status.authenticated),
           connectionCount: connections.length,
           isAuthenticated: authStatus.isAuthenticated,
         };
