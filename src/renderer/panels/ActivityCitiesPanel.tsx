@@ -13,7 +13,7 @@ import { usePrincipalEvents } from '../principal-window/PrincipalEventContext';
 export const ActivityCitiesPanel: React.FC = () => {
   const { theme } = useTheme();
   const { events: principalEvents } = usePrincipalEvents();
-  const { repositories, onlineCount, loading, error } = useActivityCities();
+  const { repositories, onlineCount, loading, error, isAuthenticated } = useActivityCities();
 
   // Navigate back to Feed view
   const handleBack = useCallback(() => {
@@ -22,6 +22,16 @@ export const ActivityCitiesPanel: React.FC = () => {
       source: 'activity-cities-panel',
       timestamp: Date.now(),
       payload: { view: 'feed' },
+    });
+  }, [principalEvents]);
+
+  // Navigate to Auth view
+  const handleSignIn = useCallback(() => {
+    principalEvents?.emit({
+      type: 'panel:switch',
+      source: 'activity-cities-panel',
+      timestamp: Date.now(),
+      payload: { view: 'auth' },
     });
   }, [principalEvents]);
 
@@ -86,7 +96,44 @@ export const ActivityCitiesPanel: React.FC = () => {
     textAlign: 'center',
   };
 
+  const signInButtonStyle: React.CSSProperties = {
+    marginTop: spacing.md,
+    padding: `${spacing.sm}px ${spacing.md}px`,
+    backgroundColor: theme.colors.primary,
+    color: theme.colors.background,
+    border: 'none',
+    borderRadius: theme.radii?.[1] || 4,
+    fontFamily: theme.fonts.monospace,
+    fontSize: theme.fontSizes[1],
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'opacity 0.15s ease',
+  };
+
   const renderContent = () => {
+    if (!isAuthenticated) {
+      return (
+        <div style={emptyStateStyle}>
+          <div>Sign in to see live activity</div>
+          <div style={{ fontSize: theme.fontSizes[0], opacity: 0.7 }}>
+            Connect your account to see what others are working on in real-time.
+          </div>
+          <button
+            style={signInButtonStyle}
+            onClick={handleSignIn}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '0.8';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '1';
+            }}
+          >
+            Sign In
+          </button>
+        </div>
+      );
+    }
+
     if (loading && repositories.length === 0) {
       return <div style={loadingStyle}>Loading activity...</div>;
     }
@@ -118,6 +165,8 @@ export const ActivityCitiesPanel: React.FC = () => {
             cityData={repo.cityData}
             loading={repo.loading}
             error={repo.error}
+            gitStatus={repo.gitStatus}
+            currentDeviceId={repo.currentDeviceId}
           />
         ))}
       </div>

@@ -69,11 +69,6 @@ export const ActivityCitiesHeader: React.FC<ActivityCitiesHeaderProps> = ({
     gap: spacing.xs,
   };
 
-  const boltStyle: React.CSSProperties = {
-    fontSize: theme.fontSizes[1],
-    color: theme.colors.warning,
-  };
-
   const countStyle: React.CSSProperties = {
     fontFamily: theme.fonts.monospace,
     fontSize: theme.fontSizes[1],
@@ -114,7 +109,6 @@ export const ActivityCitiesHeader: React.FC<ActivityCitiesHeaderProps> = ({
         <div style={titleStyle}>Live Activity</div>
       </div>
       <div style={onlineContainerStyle}>
-        <span style={boltStyle}>&#9889;</span>
         <span style={countStyle}>{onlineCount}</span>
         <span style={labelStyle}>online</span>
       </div>

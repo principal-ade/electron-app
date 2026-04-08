@@ -6,6 +6,7 @@
  */
 
 import { ipcMain } from 'electron';
+import type { SharedGitStatus } from '@principal-ai/control-tower-core';
 import { PresenceEvent } from '../../window/main-process-api-implementations/presenceApi';
 import {
   PresenceData,
@@ -13,6 +14,7 @@ import {
 } from '../../shared/main-process-api-interfaces/PresenceAPI';
 import { gitSyncWebSocketManager } from './GitSyncWebSocketManager';
 import { authService } from './AuthService';
+import { deviceIdService } from './DeviceIdService';
 
 class PresenceIPC {
   constructor() {
@@ -162,6 +164,30 @@ class PresenceIPC {
       },
     );
 
+    // Handler for presence:report-repo-status
+    ipcMain.handle(
+      PresenceEvent.REPORT_REPO_STATUS,
+      async (
+        event,
+        owner: string,
+        repo: string,
+        gitStatus: SharedGitStatus,
+      ): Promise<{ success: boolean; message?: string }> => {
+        console.log('[PresenceIPC] Report repository status:', {
+          owner,
+          repo,
+          isDirty: gitStatus.isDirty,
+          branch: gitStatus.branch,
+        });
+
+        return await gitSyncWebSocketManager.reportRepositoryStatusUpdate(
+          owner,
+          repo,
+          gitStatus,
+        );
+      },
+    );
+
     // Handler for presence:update-status
     ipcMain.handle(
       PresenceEvent.UPDATE_STATUS,
@@ -220,6 +246,11 @@ class PresenceIPC {
         );
       },
     );
+
+    // Handler for getting current device ID
+    ipcMain.handle('presence:get-device-id', async (): Promise<string> => {
+      return await deviceIdService.getDeviceId();
+    });
   }
 }
 

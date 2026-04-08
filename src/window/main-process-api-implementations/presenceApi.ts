@@ -75,4 +75,6 @@ export const presenceAPI: PresenceAPI = {
     ipcRenderer.invoke(PresenceEvent.SET_VISIBILITY, visible),
 
   sendHeartbeat: () => ipcRenderer.invoke(PresenceEvent.SEND_HEARTBEAT),
+
+  getDeviceId: () => ipcRenderer.invoke('presence:get-device-id'),
 };

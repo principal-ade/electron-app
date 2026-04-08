@@ -8,7 +8,11 @@ import type {
   RepositorySession as _RepositorySession,
   SerializableUserPresence,
   PresenceStats as _PresenceStats,
+  SharedGitStatus,
 } from '@principal-ai/control-tower-core';
+
+// Re-export SharedGitStatus for use in this codebase
+export type { SharedGitStatus };
 
 // Re-export with aliases for use in this codebase
 export type DeviceInfo = _DeviceInfo;
@@ -47,6 +51,12 @@ export interface PresenceEventPayloads {
     userId: string;
     status: 'online' | 'away' | 'offline';
     message?: string;
+  };
+  'presence:repo_status_changed': {
+    userId: string;
+    repoId: string;
+    deviceId: string;
+    gitStatus: SharedGitStatus;
   };
 }
 
@@ -147,6 +157,18 @@ export interface PresenceAPI {
   ): Promise<{ success: boolean; message?: string }>;
 
   /**
+   * Report git status update for a repository
+   * @param owner - Repository owner
+   * @param repo - Repository name
+   * @param gitStatus - Git status data to share
+   */
+  reportRepositoryStatus(
+    owner: string,
+    repo: string,
+    gitStatus: SharedGitStatus,
+  ): Promise<{ success: boolean; message?: string }>;
+
+  /**
    * Update user status
    * @param status - User status (online/away)
    * @param message - Optional status message
@@ -168,4 +190,9 @@ export interface PresenceAPI {
    * Send a heartbeat to keep presence alive
    */
   sendHeartbeat(): Promise<{ success: boolean; message?: string }>;
+
+  /**
+   * Get the current device ID
+   */
+  getDeviceId(): Promise<string>;
 }

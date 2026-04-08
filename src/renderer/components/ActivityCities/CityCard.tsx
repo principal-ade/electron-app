@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   ArchitectureMapHighlightLayers,
   type CityData,
 } from '@principal-ai/file-city-react';
+import type { SharedGitStatus } from '@principal-ai/control-tower-core';
 import type { UserPresence } from '../../../shared/main-process-api-interfaces/PresenceAPI';
+import { mergeGitStatusHighlightLayers } from '../../utils/gitStatusHighlightLayers';
 
 export interface CityCardProps {
   owner: string;
@@ -14,6 +16,14 @@ export interface CityCardProps {
   cityData: CityData | null;
   loading: boolean;
   error: string | null;
+  /** Aggregated git status from all users in this repo */
+  gitStatus?: {
+    byUser: Map<string, SharedGitStatus>;
+    anyDirty: boolean;
+    dirtyCount: number;
+  };
+  /** Current device ID for highlighting "this device" */
+  currentDeviceId?: string | null;
 }
 
 /**
@@ -27,8 +37,21 @@ export const CityCard: React.FC<CityCardProps> = ({
   cityData,
   loading,
   error,
+  gitStatus,
+  currentDeviceId,
 }) => {
   const { theme } = useTheme();
+
+  // Check if this repo has any sessions from the current device
+  const hasCurrentDeviceSession = useMemo(() => {
+    if (!currentDeviceId) return false;
+    const repoId = `${owner}/${repo}`;
+    return users.some((user) =>
+      user.openRepositories?.some(
+        (session) => session.repoId === repoId && session.agentId === currentDeviceId
+      )
+    );
+  }, [users, owner, repo, currentDeviceId]);
 
   // Theme spacing helpers (space is number[])
   const spacing = {
@@ -70,7 +93,6 @@ export const CityCard: React.FC<CityCardProps> = ({
     fontSize: theme.fontSizes[1],
     fontWeight: 600,
     color: theme.colors.text,
-    marginBottom: spacing.xs,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
@@ -125,9 +147,66 @@ export const CityCard: React.FC<CityCardProps> = ({
     textAlign: 'center',
   };
 
+  const dirtyBadgeStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+    padding: '2px 8px',
+    backgroundColor: 'rgba(255, 171, 0, 0.9)', // Amber/orange for dirty
+    color: '#000',
+    borderRadius: radii.sm,
+    fontSize: theme.fontSizes[0],
+    fontWeight: 600,
+    zIndex: 10,
+  };
+
+  const deviceBadgeStyle: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 4,
+    padding: '2px 6px',
+    backgroundColor: theme.colors.primary,
+    color: theme.colors.background,
+    borderRadius: radii.sm,
+    fontSize: theme.fontSizes[0],
+    fontWeight: 500,
+    marginLeft: spacing.xs,
+  };
+
+  const gitIndicatorStyle = (isDirty: boolean): React.CSSProperties => ({
+    width: 4,
+    height: 4,
+    borderRadius: '50%',
+    backgroundColor: isDirty ? '#FFAB00' : 'transparent', // Amber for dirty
+    marginLeft: 2,
+  });
+
+  // Helper to get user's git status
+  const getUserGitStatus = (userId: string): SharedGitStatus | undefined => {
+    return gitStatus?.byUser.get(userId);
+  };
+
+  // Generate highlight layers from aggregated git status
+  const highlightLayers = useMemo(() => {
+    if (!gitStatus?.byUser || gitStatus.byUser.size === 0) {
+      return [];
+    }
+    return mergeGitStatusHighlightLayers(gitStatus.byUser);
+  }, [gitStatus?.byUser]);
+
   return (
     <div style={containerStyle}>
       <div style={cityContainerStyle}>
+        {/* Dirty indicator badge */}
+        {gitStatus?.anyDirty && (
+          <div style={dirtyBadgeStyle} title={`${gitStatus.dirtyCount} user(s) with uncommitted changes`}>
+            <span style={{ fontSize: 10 }}>*</span>
+            <span>{gitStatus.dirtyCount} dirty</span>
+          </div>
+        )}
         {loading && <div style={loadingStyle}>Loading...</div>}
         {error && <div style={errorStyle}>{error}</div>}
         {!loading && !error && cityData && (
@@ -141,6 +220,7 @@ export const CityCard: React.FC<CityCardProps> = ({
             showFileNames={false}
             showDirectoryLabels={false}
             showLayerControls={false}
+            highlightLayers={highlightLayers}
           />
         )}
         {!loading && !error && !cityData && (
@@ -148,16 +228,33 @@ export const CityCard: React.FC<CityCardProps> = ({
         )}
       </div>
       <div style={infoStyle}>
-        <div style={repoNameStyle} title={`${owner}/${repo}`}>
-          {owner}/{repo}
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: spacing.xs }}>
+          <div style={repoNameStyle} title={`${owner}/${repo}`}>
+            {owner}/{repo}
+          </div>
+          {hasCurrentDeviceSession && (
+            <div style={deviceBadgeStyle} title="This repository is open on this device">
+              This Device
+            </div>
+          )}
         </div>
         <div style={usersContainerStyle}>
-          {users.map((user) => (
-            <div key={user.userId} style={userBadgeStyle}>
-              <span style={statusDotStyle(user.status)} />
-              <span>{user.userId}</span>
-            </div>
-          ))}
+          {users.map((user) => {
+            const userGitStatus = getUserGitStatus(user.userId);
+            return (
+              <div
+                key={user.userId}
+                style={userBadgeStyle}
+                title={userGitStatus?.isDirty ? `${user.userId} has uncommitted changes` : user.userId}
+              >
+                <span style={statusDotStyle(user.status)} />
+                <span>{user.userId}</span>
+                {userGitStatus?.isDirty && (
+                  <span style={gitIndicatorStyle(true)} title="Has uncommitted changes" />
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

@@ -109,7 +109,7 @@ const getViewDefaults = (
 };
 
 export const IntegratedShell: React.FC = () => {
-  const [activeView, setActiveView] = useState<NavigationView>('feed');
+  const [activeView, setActiveView] = useState<NavigationView>('activity-cities');
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [settingsCategory, setSettingsCategory] = useState<SettingsCategory | undefined>(undefined);
   const { theme, mode } = useTheme();
@@ -390,7 +390,7 @@ export const IntegratedShell: React.FC = () => {
           return { success: true };
         }
         case 'reset':
-          setActiveView('feed');
+          setActiveView('activity-cities');
           setViewCollapsedStates({
             feed: { left: false, right: false },
             onboarding: { left: false, right: false },
@@ -454,7 +454,7 @@ export const IntegratedShell: React.FC = () => {
         }
       }),
       events.on('panel:reset-layout', () => {
-        setActiveView('feed');
+        setActiveView('activity-cities');
         setViewCollapsedStates({
           feed: { left: false, right: false },
           onboarding: { left: false, right: false },

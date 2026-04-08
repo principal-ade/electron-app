@@ -1,3 +1,4 @@
+import type { SharedGitStatus } from '@principal-ai/control-tower-core';
 import {
   PresenceData,
   UserPresence,
@@ -232,6 +233,35 @@ export class PresenceService {
   }
 
   /**
+   * Report git status update for a repository
+   */
+  static async reportRepositoryStatus(
+    owner: string,
+    repo: string,
+    gitStatus: SharedGitStatus,
+  ): Promise<{ success: boolean; message?: string }> {
+    try {
+      return await window.mainProcess.presence.reportRepositoryStatus(
+        owner,
+        repo,
+        gitStatus,
+      );
+    } catch (error) {
+      console.error(
+        '[PresenceService] Failed to report repository status:',
+        error,
+      );
+      return {
+        success: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Failed to report repository status',
+      };
+    }
+  }
+
+  /**
    * Update user status
    */
   static async updateStatus(
@@ -284,6 +314,18 @@ export class PresenceService {
         message:
           error instanceof Error ? error.message : 'Failed to send heartbeat',
       };
+    }
+  }
+
+  /**
+   * Get the current device ID
+   */
+  static async getDeviceId(): Promise<string> {
+    try {
+      return await window.mainProcess.presence.getDeviceId();
+    } catch (error) {
+      console.error('[PresenceService] Failed to get device ID:', error);
+      throw error;
     }
   }
 }

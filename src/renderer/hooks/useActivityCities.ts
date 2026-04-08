@@ -6,6 +6,7 @@ import {
   buildFileSystemTreeFromFileInfoList,
   type GitHubTreeResponse,
 } from '@principal-ai/file-city-builder';
+import type { SharedGitStatus } from '@principal-ai/control-tower-core';
 import { PresenceService } from '../main-process-api/PresenceService';
 import { GithubService } from '../main-process-api/GithubService';
 import { SecureAuthService } from '../services/SecureAuthService';
@@ -20,6 +21,17 @@ export interface ActiveRepository {
   cityData: CityData | null;
   loading: boolean;
   error: string | null;
+  /** Aggregated git status from all users in this repo */
+  gitStatus?: {
+    /** Map of userId to their git status */
+    byUser: Map<string, SharedGitStatus>;
+    /** Whether any user has uncommitted changes */
+    anyDirty: boolean;
+    /** Total number of users with dirty status */
+    dirtyCount: number;
+  };
+  /** Current device ID for highlighting "this device" */
+  currentDeviceId?: string | null;
 }
 
 export interface UseActivityCitiesReturn {
@@ -27,6 +39,7 @@ export interface UseActivityCitiesReturn {
   onlineCount: number;
   loading: boolean;
   error: string | null;
+  isAuthenticated: boolean;
   refresh: () => Promise<void>;
 }
 
@@ -72,9 +85,18 @@ export function useActivityCities(): UseActivityCitiesReturn {
   const [onlineCount, setOnlineCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [currentDeviceId, setCurrentDeviceId] = useState<string | null>(null);
 
   // Track ongoing fetches to avoid duplicates
   const fetchingRepos = useRef(new Set<string>());
+
+  // Fetch current device ID on mount
+  useEffect(() => {
+    PresenceService.getDeviceId()
+      .then(setCurrentDeviceId)
+      .catch((err: unknown) => console.error('[useActivityCities] Failed to get device ID:', err));
+  }, []);
 
   /**
    * Fetch city data for a single repository
@@ -137,10 +159,16 @@ export function useActivityCities(): UseActivityCitiesReturn {
    */
   const processPresenceData = useCallback(
     async (users: UserPresence[]) => {
-      // Group users by repository
+      // Group users by repository, also collect git status
       const repoUsersMap = new Map<
         string,
-        { owner: string; repo: string; branch: string; users: UserPresence[] }
+        {
+          owner: string;
+          repo: string;
+          branch: string;
+          users: UserPresence[];
+          gitStatusByUser: Map<string, SharedGitStatus>;
+        }
       >();
 
       for (const user of users) {
@@ -159,7 +187,7 @@ export function useActivityCities(): UseActivityCitiesReturn {
 
         for (const repoSession of repoSessions) {
           if (!repoSession || typeof repoSession !== 'object') continue;
-          const session = repoSession as { repoId?: string; branch?: string };
+          const session = repoSession as { repoId?: string; branch?: string; gitStatus?: SharedGitStatus };
           const parsed = parseRepoId(session.repoId || '');
           if (!parsed) continue;
 
@@ -168,12 +196,21 @@ export function useActivityCities(): UseActivityCitiesReturn {
 
           if (existing) {
             existing.users.push(user);
+            // Add git status if available
+            if (session.gitStatus) {
+              existing.gitStatusByUser.set(user.userId, session.gitStatus);
+            }
           } else {
+            const gitStatusByUser = new Map<string, SharedGitStatus>();
+            if (session.gitStatus) {
+              gitStatusByUser.set(user.userId, session.gitStatus);
+            }
             repoUsersMap.set(key, {
               owner: parsed.owner,
               repo: parsed.repo,
               branch: session.branch || 'main',
               users: [user],
+              gitStatusByUser,
             });
           }
         }
@@ -181,16 +218,28 @@ export function useActivityCities(): UseActivityCitiesReturn {
 
       // Initialize repositories with loading state
       const initialRepos: ActiveRepository[] = Array.from(repoUsersMap.entries()).map(
-        ([repoId, data]) => ({
-          owner: data.owner,
-          repo: data.repo,
-          repoId,
-          branch: data.branch,
-          users: data.users,
-          cityData: null,
-          loading: true,
-          error: null,
-        }),
+        ([repoId, data]) => {
+          // Aggregate git status
+          const dirtyCount = Array.from(data.gitStatusByUser.values()).filter(s => s.isDirty).length;
+          return {
+            owner: data.owner,
+            repo: data.repo,
+            repoId,
+            branch: data.branch,
+            users: data.users,
+            cityData: null,
+            loading: true,
+            error: null,
+            gitStatus: data.gitStatusByUser.size > 0
+              ? {
+                  byUser: data.gitStatusByUser,
+                  anyDirty: dirtyCount > 0,
+                  dirtyCount,
+                }
+              : undefined,
+            currentDeviceId,
+          };
+        },
       );
 
       setRepositories(initialRepos);
@@ -237,8 +286,11 @@ export function useActivityCities(): UseActivityCitiesReturn {
 
       if (!authResult.authenticated || !authResult.token) {
         console.warn('[useActivityCities] Not authenticated, cannot connect to presence');
+        setIsAuthenticated(false);
         return false;
       }
+
+      setIsAuthenticated(true);
 
       // Try to connect to presence (will return success if already connected)
       console.log('[useActivityCities] Ensuring presence connection...');
@@ -303,6 +355,36 @@ export function useActivityCities(): UseActivityCitiesReturn {
       ) {
         void refresh();
       }
+
+      // Handle git status updates incrementally (no full refresh needed)
+      if (event.type === 'presence:repo_status_changed') {
+        const payload = event.payload as {
+          userId: string;
+          repoId: string;
+          gitStatus: SharedGitStatus;
+        };
+
+        setRepositories((prev) =>
+          prev.map((repo) => {
+            if (repo.repoId !== payload.repoId) return repo;
+
+            // Update the git status for this user
+            const newByUser = new Map(repo.gitStatus?.byUser || new Map());
+            newByUser.set(payload.userId, payload.gitStatus);
+
+            const dirtyCount = Array.from(newByUser.values()).filter(s => s.isDirty).length;
+
+            return {
+              ...repo,
+              gitStatus: {
+                byUser: newByUser,
+                anyDirty: dirtyCount > 0,
+                dirtyCount,
+              },
+            };
+          }),
+        );
+      }
     });
 
     return () => {
@@ -315,6 +397,7 @@ export function useActivityCities(): UseActivityCitiesReturn {
     onlineCount,
     loading,
     error,
+    isAuthenticated,
     refresh,
   };
 }
