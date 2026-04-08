@@ -66,6 +66,26 @@ function convertToSharedGitStatus(status: GitStatusWithFiles): SharedGitStatus {
 }
 
 /**
+ * Parse owner/repo from a git remote URL
+ * Based on GitRemoteService.checkAuthMethods logic
+ */
+function parseOwnerRepoFromUrl(url: string): { owner: string; repo: string } | null {
+  // Try SSH format (git@service:owner/repo.git)
+  let match = /git@[^:]+:([^/]+)\/(.+?)(?:\.git)?$/.exec(url);
+  if (match) {
+    return { owner: match[1], repo: match[2] };
+  }
+
+  // Try HTTPS format (https://service/owner/repo.git)
+  match = /https?:\/\/[^/]+\/([^/]+)\/([^/.]+)(?:\.git)?/.exec(url);
+  if (match) {
+    return { owner: match[1], repo: match[2] };
+  }
+
+  return null;
+}
+
+/**
  * Parse GitHub owner/repo from a local repository path.
  * Attempts to extract from git remote URL or path structure.
  */
@@ -75,8 +95,8 @@ async function parseOwnerRepoFromPath(
 ): Promise<{ owner: string; repo: string } | null> {
   try {
     const remoteInfo = await manager.getGitRemoteInfo(repoPath);
-    if (remoteInfo?.owner && remoteInfo?.repo) {
-      return { owner: remoteInfo.owner, repo: remoteInfo.repo };
+    if (remoteInfo?.remoteUrl) {
+      return parseOwnerRepoFromUrl(remoteInfo.remoteUrl);
     }
   } catch (error) {
     console.debug(
@@ -814,6 +834,35 @@ const REPOS_HEARTBEAT_INTERVAL_MS = 30000;
 let reposHeartbeatTimer: NodeJS.Timeout | null = null;
 
 /**
+ * Get all repository paths that have open windows
+ */
+function getOpenRepositoryPaths(): Set<string> {
+  const repoPaths = new Set<string>();
+
+  for (const appWindow of applicationWindows.values()) {
+    if (appWindow.window.isDestroyed()) {
+      continue;
+    }
+
+    const metadata = appWindow.metadata;
+    if (!metadata?.localPath) {
+      continue;
+    }
+
+    // Include REPOSITORY and DEV_WORKSPACE windows (they have a single repo)
+    // WORKSPACE windows contain multiple repos (handled separately via workspace API)
+    if (
+      metadata.primaryType === PrimaryWindowType.REPOSITORY ||
+      metadata.primaryType === PrimaryWindowType.DEV_WORKSPACE
+    ) {
+      repoPaths.add(metadata.localPath);
+    }
+  }
+
+  return repoPaths;
+}
+
+/**
  * Start the periodic repos heartbeat that syncs open repositories with the presence server.
  * This ensures the server has an accurate view of which repos are open on this device.
  */
@@ -826,24 +875,27 @@ function startReposHeartbeat(manager: RepositoryMonitoringManager): void {
   // Function to gather and send heartbeat
   const sendHeartbeat = async () => {
     try {
-      // Get all watched repositories
-      const watchedRepos = manager.getWatchedRepositories();
-      if (watchedRepos.length === 0) {
-        return; // No repos to report
+      // Get only repos that have open windows
+      const openRepoPaths = getOpenRepositoryPaths();
+
+      if (openRepoPaths.size === 0) {
+        // Send empty heartbeat to clear any stale repos on server
+        await gitSyncWebSocketManager.sendReposHeartbeat([]);
+        return;
       }
 
       // Gather repo entries with git status
       const repos: import('@principal-ai/control-tower-core').RepoHeartbeatEntry[] = [];
 
-      for (const repoPath of watchedRepos) {
+      for (const repoPath of openRepoPaths) {
         try {
           // Get owner/repo from remote
-          const remoteInfo = await manager.getGitRemoteInfo(repoPath);
-          if (!remoteInfo?.owner || !remoteInfo?.repo) {
+          const ownerRepo = await parseOwnerRepoFromPath(repoPath, manager);
+          if (!ownerRepo) {
             continue; // Skip repos without remote info
           }
 
-          const repoId = `${remoteInfo.owner}/${remoteInfo.repo}`;
+          const repoId = `${ownerRepo.owner}/${ownerRepo.repo}`;
 
           // Get git status
           const gitStatus = await manager.getGitStatusWithFiles(repoPath);
