@@ -12,10 +12,12 @@ import {
   type WorkspaceChangeEventPayload,
   type RepositoryCacheSyncEvent,
 } from '@principal-ai/repository-monitoring-server';
+import type { SharedGitStatus } from '@principal-ai/control-tower-core';
 import { QualityLensService } from '../quality-lenses/QualityLensService';
 import { applicationWindows, PrimaryWindowType } from '../window/types';
 import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
 import { otelEventsManagerBridge } from '../services/OtelEventsManagerBridge';
+import { gitSyncWebSocketManager } from '../services/GitSyncWebSocketManager';
 
 // Type alias for git state event payload (structure defined in repository-monitoring-server)
 type GitStateEventPayload = { event: { type: string }; [key: string]: unknown };
@@ -39,6 +41,96 @@ const workspaceRepoPathsCache = new Map<
   { paths: Set<string>; timestamp: number }
 >();
 const WORKSPACE_CACHE_TTL = 5000; // 5 seconds
+
+// Debounce map for git status presence updates
+const gitStatusPresenceDebounceMap = new Map<string, NodeJS.Timeout>();
+const GIT_STATUS_PRESENCE_DEBOUNCE_MS = 1000; // 1 second debounce
+
+/**
+ * Convert GitStatusWithFiles to SharedGitStatus for presence sharing
+ */
+function convertToSharedGitStatus(status: GitStatusWithFiles): SharedGitStatus {
+  return {
+    branch: status.branch,
+    isDirty: status.isDirty,
+    hasStaged: status.hasStaged,
+    hasUntracked: status.hasUntracked,
+    ahead: status.ahead,
+    behind: status.behind,
+    modifiedFiles: status.modifiedFiles,
+    stagedFiles: status.stagedFiles,
+    untrackedFiles: status.untrackedFiles,
+    deletedFiles: status.deletedFiles,
+    lastChangedAt: status.lastChangedAt,
+  };
+}
+
+/**
+ * Parse GitHub owner/repo from a local repository path.
+ * Attempts to extract from git remote URL or path structure.
+ */
+async function parseOwnerRepoFromPath(
+  repoPath: string,
+  manager: RepositoryMonitoringManager,
+): Promise<{ owner: string; repo: string } | null> {
+  try {
+    const remoteInfo = await manager.getGitRemoteInfo(repoPath);
+    if (remoteInfo?.owner && remoteInfo?.repo) {
+      return { owner: remoteInfo.owner, repo: remoteInfo.repo };
+    }
+  } catch (error) {
+    console.debug(
+      '[RepositoryMonitoring] Failed to get remote info for presence update:',
+      error,
+    );
+  }
+  return null;
+}
+
+/**
+ * Send git status update to presence system (debounced)
+ */
+function sendGitStatusToPresence(
+  status: GitStatusWithFiles,
+  manager: RepositoryMonitoringManager,
+): void {
+  const repoPath = status.repoPath;
+
+  // Clear existing debounce timer
+  const existingTimer = gitStatusPresenceDebounceMap.get(repoPath);
+  if (existingTimer) {
+    clearTimeout(existingTimer);
+  }
+
+  // Set new debounced timer
+  const timer = setTimeout(async () => {
+    gitStatusPresenceDebounceMap.delete(repoPath);
+
+    const ownerRepo = await parseOwnerRepoFromPath(repoPath, manager);
+    if (!ownerRepo) {
+      console.debug(
+        '[RepositoryMonitoring] Cannot send git status to presence - no owner/repo for:',
+        repoPath,
+      );
+      return;
+    }
+
+    const sharedStatus = convertToSharedGitStatus(status);
+    const result = await gitSyncWebSocketManager.reportRepositoryStatusUpdate(
+      ownerRepo.owner,
+      ownerRepo.repo,
+      sharedStatus,
+    );
+
+    if (result.success) {
+      console.debug(
+        `[RepositoryMonitoring] Sent git status to presence for ${ownerRepo.owner}/${ownerRepo.repo}`,
+      );
+    }
+  }, GIT_STATUS_PRESENCE_DEBOUNCE_MS);
+
+  gitStatusPresenceDebounceMap.set(repoPath, timer);
+}
 
 /**
  * Check if a window should receive events for a given repository path.
@@ -620,6 +712,9 @@ export function registerRepositoryMonitoringHandlers(): void {
         RepositoryMonitoringAPIEvent.GIT_STATUS_CHANGED,
         data,
       );
+
+      // Also send to presence system (debounced) for sharing with other users
+      sendGitStatusToPresence(data, manager);
     },
   );
 
@@ -709,4 +804,92 @@ export function registerRepositoryMonitoringHandlers(): void {
   );
 
   console.log('[RepositoryMonitoring] IPC handlers registered');
+
+  // Start the repos heartbeat timer
+  startReposHeartbeat(manager);
+}
+
+// Repos heartbeat interval (30 seconds)
+const REPOS_HEARTBEAT_INTERVAL_MS = 30000;
+let reposHeartbeatTimer: NodeJS.Timeout | null = null;
+
+/**
+ * Start the periodic repos heartbeat that syncs open repositories with the presence server.
+ * This ensures the server has an accurate view of which repos are open on this device.
+ */
+function startReposHeartbeat(manager: RepositoryMonitoringManager): void {
+  // Clear any existing timer
+  if (reposHeartbeatTimer) {
+    clearInterval(reposHeartbeatTimer);
+  }
+
+  // Function to gather and send heartbeat
+  const sendHeartbeat = async () => {
+    try {
+      // Get all watched repositories
+      const watchedRepos = manager.getWatchedRepositories();
+      if (watchedRepos.length === 0) {
+        return; // No repos to report
+      }
+
+      // Gather repo entries with git status
+      const repos: import('@principal-ai/control-tower-core').RepoHeartbeatEntry[] = [];
+
+      for (const repoPath of watchedRepos) {
+        try {
+          // Get owner/repo from remote
+          const remoteInfo = await manager.getGitRemoteInfo(repoPath);
+          if (!remoteInfo?.owner || !remoteInfo?.repo) {
+            continue; // Skip repos without remote info
+          }
+
+          const repoId = `${remoteInfo.owner}/${remoteInfo.repo}`;
+
+          // Get git status
+          const gitStatus = await manager.getGitStatusWithFiles(repoPath);
+          const sharedStatus = gitStatus ? convertToSharedGitStatus(gitStatus) : undefined;
+
+          repos.push({
+            repoId,
+            branch: gitStatus?.branch || 'main',
+            gitStatus: sharedStatus,
+          });
+        } catch (error) {
+          console.debug(
+            `[RepositoryMonitoring] Failed to get info for repo ${repoPath}:`,
+            error,
+          );
+        }
+      }
+
+      if (repos.length > 0) {
+        const result = await gitSyncWebSocketManager.sendReposHeartbeat(repos);
+        if (result.success) {
+          console.debug(
+            `[RepositoryMonitoring] Repos heartbeat sent: ${repos.length} repos`,
+          );
+        }
+      }
+    } catch (error) {
+      console.error('[RepositoryMonitoring] Failed to send repos heartbeat:', error);
+    }
+  };
+
+  // Send initial heartbeat after a short delay (allow connections to establish)
+  setTimeout(sendHeartbeat, 5000);
+
+  // Start periodic heartbeat
+  reposHeartbeatTimer = setInterval(sendHeartbeat, REPOS_HEARTBEAT_INTERVAL_MS);
+  console.log('[RepositoryMonitoring] Repos heartbeat started (30s interval)');
+}
+
+/**
+ * Stop the repos heartbeat timer (call on app shutdown)
+ */
+export function stopReposHeartbeat(): void {
+  if (reposHeartbeatTimer) {
+    clearInterval(reposHeartbeatTimer);
+    reposHeartbeatTimer = null;
+    console.log('[RepositoryMonitoring] Repos heartbeat stopped');
+  }
 }

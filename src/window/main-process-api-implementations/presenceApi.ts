@@ -14,6 +14,7 @@ export enum PresenceEvent {
   REPORT_REPO_OPENED = 'presence:report-repo-opened',
   REPORT_REPO_CLOSED = 'presence:report-repo-closed',
   REPORT_ACTIVE_REPO = 'presence:report-active-repo',
+  REPORT_REPO_STATUS = 'presence:report-repo-status',
   UPDATE_STATUS = 'presence:update-status',
   SET_VISIBILITY = 'presence:set-visibility',
   SEND_HEARTBEAT = 'presence:send-heartbeat',
@@ -63,6 +64,9 @@ export const presenceAPI: PresenceAPI = {
 
   reportActiveRepository: (owner, repo) =>
     ipcRenderer.invoke(PresenceEvent.REPORT_ACTIVE_REPO, owner, repo),
+
+  reportRepositoryStatus: (owner, repo, gitStatus) =>
+    ipcRenderer.invoke(PresenceEvent.REPORT_REPO_STATUS, owner, repo, gitStatus),
 
   updateStatus: (status, message) =>
     ipcRenderer.invoke(PresenceEvent.UPDATE_STATUS, status, message),

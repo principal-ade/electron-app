@@ -39,6 +39,10 @@ import {
   type PresenceGetUserResponse,
   type PresenceGetRepoUsersResponse,
   type PresenceActionResponse,
+  type SharedGitStatus,
+  type PresenceRepoStatusUpdateResponse,
+  type RepoHeartbeatEntry,
+  type PresenceReposHeartbeatResponse,
 } from '@principal-ai/control-tower-core';
 
 /**
@@ -1519,6 +1523,56 @@ export class GitSyncWebSocketManager {
   }
 
   /**
+   * Report git status update for a repository via WebSocket
+   * @param owner - Repository owner
+   * @param repo - Repository name
+   * @param gitStatus - Git status data to share
+   */
+  async reportRepositoryStatusUpdate(
+    owner: string,
+    repo: string,
+    gitStatus: SharedGitStatus,
+  ): Promise<{ success: boolean; message?: string }> {
+    try {
+      const client = this.getAuthenticatedClient();
+      if (!client) {
+        return {
+          success: false,
+          message: 'No authenticated connection available',
+        };
+      }
+
+      const repoId = `${owner}/${repo}`;
+      const response = await client.request<PresenceRepoStatusUpdateResponse>(
+        'presence:repo_status_update',
+        { repoId, gitStatus },
+      );
+
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to update repository status');
+      }
+
+      console.log('[GitSyncWebSocketManager] Reported repository status update:', {
+        owner,
+        repo,
+        isDirty: gitStatus.isDirty,
+        branch: gitStatus.branch,
+      });
+      return { success: true, message: 'Repository status updated' };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to report repository status';
+      console.error(
+        '[GitSyncWebSocketManager] Failed to report repository status:',
+        error,
+      );
+      return { success: false, message: errorMessage };
+    }
+  }
+
+  /**
    * Update user status via WebSocket
    */
   async updatePresenceStatus(
@@ -1636,6 +1690,54 @@ export class GitSyncWebSocketManager {
           : 'Failed to verify presence connection';
       console.error(
         '[GitSyncWebSocketManager] Failed to verify presence connection:',
+        error,
+      );
+      return { success: false, message: errorMessage };
+    }
+  }
+
+  /**
+   * Send a heartbeat with all currently open repositories and their git status.
+   * This syncs the server's view of open repos with the client's actual state.
+   *
+   * @param repos - Array of currently open repositories with their git status
+   */
+  async sendReposHeartbeat(
+    repos: RepoHeartbeatEntry[],
+  ): Promise<{ success: boolean; data?: PresenceReposHeartbeatResponse; message?: string }> {
+    try {
+      const client = this.getAuthenticatedClient();
+      if (!client) {
+        return {
+          success: false,
+          message: 'No authenticated connection available',
+        };
+      }
+
+      const response = await client.request<PresenceReposHeartbeatResponse>(
+        'presence:repos_heartbeat',
+        { repos },
+      );
+
+      if (!response.success) {
+        throw new Error('Failed to send repos heartbeat');
+      }
+
+      console.log('[GitSyncWebSocketManager] Sent repos heartbeat:', {
+        repoCount: repos.length,
+        added: response.added,
+        removed: response.removed,
+        updated: response.updated,
+      });
+
+      return { success: true, data: response, message: 'Repos heartbeat sent' };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to send repos heartbeat';
+      console.error(
+        '[GitSyncWebSocketManager] Failed to send repos heartbeat:',
         error,
       );
       return { success: false, message: errorMessage };
