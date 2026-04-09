@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type { PanelLayout, QuickCommand } from '@principal-ade/panel-layouts';
 import {
@@ -68,7 +68,7 @@ import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { AlexandriaWorkspaceTitlebar } from '../components/Titlebar';
-import { AlexandriaWorkspaceLayout } from './AlexandriaWorkspaceLayout';
+import { AlexandriaWorkspaceLayout, type PanelControlHandle } from './AlexandriaWorkspaceLayout';
 import { CustomThemeProvider } from '../providers/CustomThemeProvider';
 import { GlobalFeedbackProvider } from '../GlobalFeedbackProvider';
 import {
@@ -128,6 +128,9 @@ const AlexandriaWorkspaceContent: React.FC = () => {
   const [_repoGitStatuses, _setRepoGitStatuses] = useState<
     Map<string, RepoGitStatus>
   >(new Map());
+
+  // Ref for panel control handle
+  const panelControlRef = useRef<PanelControlHandle | null>(null);
 
   // Switch handlers for panel swapping
   const handleSwitchLeftMiddle = useCallback(() => {
@@ -706,12 +709,22 @@ const AlexandriaWorkspaceContent: React.FC = () => {
           setEnableKeyboardShortcuts(!enableKeyboardShortcuts)
         }
         collapsed={collapsed}
-        onToggleLeftSidebar={() =>
-          setCollapsed((prev) => ({ ...prev, left: !prev.left }))
-        }
-        onToggleRightSidebar={() =>
-          setCollapsed((prev) => ({ ...prev, right: !prev.right }))
-        }
+        onToggleLeftSidebar={() => {
+          if (!panelControlRef.current) return;
+          if (collapsed.left) {
+            panelControlRef.current.expandLeft();
+          } else {
+            panelControlRef.current.collapseLeft();
+          }
+        }}
+        onToggleRightSidebar={() => {
+          if (!panelControlRef.current) return;
+          if (collapsed.right) {
+            panelControlRef.current.expandRight();
+          } else {
+            panelControlRef.current.collapseRight();
+          }
+        }}
         onCollapsedChange={setCollapsed}
         onSwitchLeftMiddlePanels={handleSwitchLeftMiddle}
         onSwitchRightMiddlePanels={handleSwitchRightMiddle}
@@ -730,6 +743,9 @@ const AlexandriaWorkspaceContent: React.FC = () => {
         onLayoutChange={setLayout}
         onRepositorySelected={setSelectedRepository}
         showPanelSidebar={showPanelSidebar}
+        onPanelControlReady={(control) => {
+          panelControlRef.current = control;
+        }}
       />
 
       {/* Agent Command Palette - Cmd+Shift+P to open */}

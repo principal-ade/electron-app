@@ -1,8 +1,9 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 import {
   ConfigurablePanelLayout,
+  ConfigurablePanelLayoutHandle,
   PanelLayout,
   usePanelFocus,
   usePanelKeyboardShortcuts,
@@ -44,6 +45,16 @@ type PanelDefinition = {
   content: React.ReactNode;
 };
 
+/**
+ * Imperative handle for controlling panel collapse/expand
+ */
+export interface PanelControlHandle {
+  collapseLeft: () => void;
+  expandLeft: () => void;
+  collapseRight: () => void;
+  expandRight: () => void;
+}
+
 interface AlexandriaWorkspaceLayoutProps {
   workspace: Workspace;
   repository?: {
@@ -82,6 +93,10 @@ interface AlexandriaWorkspaceLayoutProps {
    * @default true
    */
   showPanelSidebar?: boolean;
+  /**
+   * Callback to receive panel control methods for imperative collapse/expand
+   */
+  onPanelControlReady?: (control: PanelControlHandle) => void;
 }
 
 interface AlexandriaWorkspaceLayoutContentProps {
@@ -95,6 +110,7 @@ interface AlexandriaWorkspaceLayoutContentProps {
   layout: PanelLayout;
   onLayoutChange: (layout: PanelLayout) => void;
   showPanelSidebar: boolean;
+  onPanelControlReady?: (control: PanelControlHandle) => void;
 }
 
 /**
@@ -111,6 +127,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   layout,
   onLayoutChange,
   showPanelSidebar,
+  onPanelControlReady,
 }) => {
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
@@ -118,6 +135,51 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   const { context: highlightCtx } = useAgentHighlightProvider();
 
   const [showAllTerminals, setShowAllTerminals] = useState(false);
+
+  // Ref for imperative panel layout control
+  const panelLayoutRef = useRef<ConfigurablePanelLayoutHandle>(null);
+
+  // Refs to track current state
+  const collapsedStateRef = useRef(collapsed);
+  const onCollapsedChangeRef = useRef(onCollapsedChange);
+
+  // Update refs when props change
+  useEffect(() => {
+    collapsedStateRef.current = collapsed;
+  }, [collapsed]);
+
+  useEffect(() => {
+    onCollapsedChangeRef.current = onCollapsedChange;
+  }, [onCollapsedChange]);
+
+  // Provide panel control methods to parent via callback (only once on mount)
+  useEffect(() => {
+    if (onPanelControlReady && panelLayoutRef.current) {
+      const control: PanelControlHandle = {
+        collapseLeft: () => {
+          panelLayoutRef.current?.collapsePanel('left');
+          collapsedStateRef.current = { ...collapsedStateRef.current, left: true };
+          onCollapsedChangeRef.current(collapsedStateRef.current);
+        },
+        expandLeft: () => {
+          panelLayoutRef.current?.expandPanel('left');
+          collapsedStateRef.current = { ...collapsedStateRef.current, left: false };
+          onCollapsedChangeRef.current(collapsedStateRef.current);
+        },
+        collapseRight: () => {
+          panelLayoutRef.current?.collapsePanel('right');
+          collapsedStateRef.current = { ...collapsedStateRef.current, right: true };
+          onCollapsedChangeRef.current(collapsedStateRef.current);
+        },
+        expandRight: () => {
+          panelLayoutRef.current?.expandPanel('right');
+          collapsedStateRef.current = { ...collapsedStateRef.current, right: false };
+          onCollapsedChangeRef.current(collapsedStateRef.current);
+        },
+      };
+      onPanelControlReady(control);
+    }
+  }, [onPanelControlReady]);
 
   // Get terminal context and directory from TerminalProvider
   const terminalContext = terminalCtx.terminalContext || 'terminal:default';
@@ -272,8 +334,12 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
 
           // Open File City in right panel
           onLayoutChange({ ...layout, right: 'file-city' });
-          // Expand right panel if collapsed
-          onCollapsedChange({ ...collapsed, right: false });
+          // Expand right panel if collapsed using imperative method
+          if (collapsed.right && panelLayoutRef.current) {
+            panelLayoutRef.current.expandPanel('right');
+            collapsedStateRef.current = { ...collapsedStateRef.current, right: false };
+            onCollapsedChangeRef.current(collapsedStateRef.current);
+          }
         }
       }
     });
@@ -1527,6 +1593,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
           }}
         >
           <ConfigurablePanelLayout
+            ref={panelLayoutRef}
             theme={theme}
             panels={panels}
             layout={layout}
@@ -1586,6 +1653,7 @@ export const AlexandriaWorkspaceLayout: React.FC<
   onLayoutChange: externalOnLayoutChange,
   onRepositorySelected: externalOnRepositorySelected,
   showPanelSidebar = true,
+  onPanelControlReady,
 }) => {
   const { theme } = useTheme();
 
@@ -1671,6 +1739,7 @@ export const AlexandriaWorkspaceLayout: React.FC<
             layout={layout}
             onLayoutChange={onLayoutChange}
             showPanelSidebar={showPanelSidebar}
+            onPanelControlReady={onPanelControlReady}
           />
         </AgentHighlightProvider>
       </TerminalProvider>
