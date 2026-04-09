@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { GitBranch } from 'lucide-react';
+import { GitBranch, ArrowUp, ArrowDown } from 'lucide-react';
 import {
   ArchitectureMapHighlightLayers,
   type CityData,
@@ -141,6 +141,40 @@ export const CityCard: React.FC<CityCardProps> = ({
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
+  };
+
+  const branchStatusContainerStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  };
+
+  const branchBadgeStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 2,
+    padding: '2px 4px',
+    backgroundColor: theme.colors.background,
+    borderRadius: radii.sm,
+    fontSize: theme.fontSizes[0],
+    fontFamily: theme.fonts.monospace,
+    fontWeight: 500,
+  };
+
+  const aheadBadgeStyle: React.CSSProperties = {
+    ...branchBadgeStyle,
+    color: '#10b981', // Green
+  };
+
+  const behindBadgeStyle: React.CSSProperties = {
+    ...branchBadgeStyle,
+    color: '#f59e0b', // Orange
+  };
+
+  const divergedBadgeStyle: React.CSSProperties = {
+    ...branchBadgeStyle,
+    color: '#ef4444', // Red
   };
 
   const usersContainerStyle: React.CSSProperties = {
@@ -286,6 +320,30 @@ export const CityCard: React.FC<CityCardProps> = ({
     return gitStatus?.byUser.get(userId);
   };
 
+  // Calculate aggregate ahead/behind for all users
+  const aggregateAheadBehind = useMemo(() => {
+    if (!gitStatus?.byUser || gitStatus.byUser.size === 0) {
+      return null;
+    }
+
+    let maxAhead = 0;
+    let maxBehind = 0;
+
+    for (const [, status] of gitStatus.byUser.entries()) {
+      // Only consider users on main branch
+      if (status.branch === 'main' || status.branch === 'master') {
+        maxAhead = Math.max(maxAhead, status.ahead || 0);
+        maxBehind = Math.max(maxBehind, status.behind || 0);
+      }
+    }
+
+    if (maxAhead === 0 && maxBehind === 0) {
+      return null;
+    }
+
+    return { ahead: maxAhead, behind: maxBehind };
+  }, [gitStatus?.byUser]);
+
   // Generate highlight layers from aggregated git status and file suffixes
   const highlightLayers = useMemo(() => {
     const layers = [];
@@ -338,8 +396,48 @@ export const CityCard: React.FC<CityCardProps> = ({
             <div style={repoNameStyle} title={repo}>
               {repo}
             </div>
-            <div style={ownerNameStyle} title={owner}>
-              {owner}
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+              <div style={ownerNameStyle} title={owner}>
+                {owner}
+              </div>
+              {/* Ahead/Behind indicators */}
+              {aggregateAheadBehind && (
+                <div style={branchStatusContainerStyle}>
+                  {aggregateAheadBehind.ahead > 0 && aggregateAheadBehind.behind > 0 ? (
+                    // Diverged state
+                    <div
+                      style={divergedBadgeStyle}
+                      title={`Diverged: ${aggregateAheadBehind.ahead} ahead, ${aggregateAheadBehind.behind} behind remote`}
+                    >
+                      <ArrowUp size={10} />
+                      {aggregateAheadBehind.ahead}
+                      <ArrowDown size={10} />
+                      {aggregateAheadBehind.behind}
+                    </div>
+                  ) : (
+                    <>
+                      {aggregateAheadBehind.ahead > 0 && (
+                        <div
+                          style={aheadBadgeStyle}
+                          title={`${aggregateAheadBehind.ahead} commit${aggregateAheadBehind.ahead > 1 ? 's' : ''} ahead of remote`}
+                        >
+                          <ArrowUp size={10} />
+                          {aggregateAheadBehind.ahead}
+                        </div>
+                      )}
+                      {aggregateAheadBehind.behind > 0 && (
+                        <div
+                          style={behindBadgeStyle}
+                          title={`${aggregateAheadBehind.behind} commit${aggregateAheadBehind.behind > 1 ? 's' : ''} behind remote`}
+                        >
+                          <ArrowDown size={10} />
+                          {aggregateAheadBehind.behind}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

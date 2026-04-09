@@ -140,16 +140,15 @@ export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = (
   const repositories = useMemo(() => {
     // Try recentRepositories slice first
     const recentRepos = context.recentRepositories?.data?.repositories;
-    if (recentRepos) return recentRepos;
+    if (recentRepos && recentRepos.length > 0) return recentRepos;
 
-    // Fallback to workspaceRepositories
-    const workspaceRepos = context.workspaceRepositories?.data
-      ?.repositories;
-    if (workspaceRepos) return workspaceRepos;
+    // Try workspaceRepositories (only if not empty)
+    const workspaceRepos = context.workspaceRepositories?.data?.repositories;
+    if (workspaceRepos && workspaceRepos.length > 0) return workspaceRepos;
 
-    // Fallback to alexandriaRepositories
+    // Fallback to all alexandriaRepositories
     const allRepos = context.alexandriaRepositories?.data?.repositories;
-    if (allRepos) return allRepos;
+    if (allRepos && allRepos.length > 0) return allRepos;
 
     return [];
   }, [context]);

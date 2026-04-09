@@ -72,21 +72,54 @@
       }
     },
     {
-      "id": "save-thread-as-collection",
-      "description": "Saving a thread as a persistent collection",
+      "id": "save-thread-on-close",
+      "description": "Saving an ephemeral thread as a workspace before closing",
       "priority": 5,
       "template": {
-        "introduction": "**Thread Persistence**\n\nSaving thread as **{{collection.name}}**",
+        "introduction": "**Thread Save on Close**\n\nUser closing thread **{{thread.id}}** with {{repository.count}} repositories",
         "events": {
-          "thread.saved": "Thread **{{thread.id}}** saved as collection **{{collection.name}}** (id: `{{collection.id}}`, {{repository.count}} repos)"
+          "thread.close.requested": "User requested close for thread **{{thread.id}}** (source: {{trigger.source}}, repositories: {{repository.count}})",
+          "thread.save.modal.shown": "SaveThreadModal displayed (thread: `{{thread.id}}`, repositories: {{repository.count}})",
+          "thread.save.confirmed": "User confirmed save with workspace name: **{{workspace.name}}** (thread: `{{thread.id}}`, description: \"{{workspace.description}}\", repositories: {{repository.count}})",
+          "thread.converted.to.workspace": "Thread **{{thread.id}}** converted to workspace **{{workspace.name}}** (workspaceId: `{{workspace.id}}`, description: \"{{workspace.description}}\", total repositories: {{repository.count}}, successfully added: {{repositories.added}})",
+          "thread.window.closed": "Thread window closed successfully (threadId: `{{thread.id}}`, workspaceId: `{{workspace.id}}`, saved as workspace: {{saved.as.workspace}})"
         },
-        "summary": "**Collection Saved:**\n- Name: **{{collection.name}}**\n- ID: `{{collection.id}}`\n- Repositories: {{repository.count}}"
+        "summary": "**Thread Saved:**\n- Thread: `{{thread.id}}`\n- Workspace: **{{workspace.name}}**\n- Workspace ID: `{{workspace.id}}`\n- Repositories: {{repository.count}}"
+      }
+    },
+    {
+      "id": "discard-thread-on-close",
+      "description": "Discarding an ephemeral thread without saving",
+      "priority": 6,
+      "template": {
+        "introduction": "**Thread Discard**\n\nUser discarding thread **{{thread.id}}** without saving",
+        "events": {
+          "thread.close.requested": "User requested close for thread **{{thread.id}}** (source: {{trigger.source}}, repositories: {{repository.count}})",
+          "thread.save.modal.shown": "SaveThreadModal displayed (thread: `{{thread.id}}`, repositories: {{repository.count}})",
+          "thread.discarded": "User chose to discard thread **{{thread.id}}** ({{repository.count}} repositories lost)",
+          "thread.window.closed": "Thread window closed (threadId: `{{thread.id}}`, saved as workspace: {{saved.as.workspace}})"
+        },
+        "summary": "**Thread Discarded:**\n- Thread: `{{thread.id}}`\n- Repositories: {{repository.count}} (not saved)"
+      }
+    },
+    {
+      "id": "cancel-thread-close",
+      "description": "Canceling thread close and keeping it open",
+      "priority": 7,
+      "template": {
+        "introduction": "**Thread Close Cancelled**\n\nUser cancelled close for thread **{{thread.id}}**",
+        "events": {
+          "thread.close.requested": "User requested close for thread **{{thread.id}}** (source: {{trigger.source}}, repositories: {{repository.count}})",
+          "thread.save.modal.shown": "SaveThreadModal displayed (thread: `{{thread.id}}`, repositories: {{repository.count}})",
+          "thread.save.cancelled": "User cancelled save modal, thread remains open (threadId: `{{thread.id}}`)"
+        },
+        "summary": "**Close Cancelled:**\n- Thread: `{{thread.id}}` (still open)\n- Repositories: {{repository.count}}"
       }
     },
     {
       "id": "thread-last-repo-removed",
       "description": "Thread closes when last repository is removed",
-      "priority": 6,
+      "priority": 8,
       "template": {
         "introduction": "**Thread Dissolution**\n\nLast repository removed from thread **{{thread.id}}**",
         "events": {
@@ -99,7 +132,7 @@
     {
       "id": "invalid-repository-path",
       "description": "Attempting to open a thread with an invalid path",
-      "priority": 7,
+      "priority": 9,
       "template": {
         "introduction": "**Thread Opening**\n\nInvalid repository path",
         "events": {

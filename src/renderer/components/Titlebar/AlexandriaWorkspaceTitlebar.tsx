@@ -47,6 +47,8 @@ export interface AlexandriaWorkspaceTitlebarProps {
   onLayoutChange?: (layout: PanelLayout) => void;
   // Update button
   onUpdateClick?: () => void;
+  // Thread indicator
+  isEphemeralThread?: boolean;
 }
 
 export const AlexandriaWorkspaceTitlebar: React.FC<
@@ -66,6 +68,7 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
   layout,
   onLayoutChange,
   onUpdateClick,
+  isEphemeralThread = false,
 }) => {
   const { theme } = useTheme();
   const [showAddModal, setShowAddModal] = useState(false);
@@ -205,17 +208,44 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
           WebkitAppRegion: 'no-drag',
         }}
       >
-        {/* Workspace name */}
-        <span
+        {/* Workspace name with thread badge */}
+        <div
           style={{
-            fontSize: `${theme.fontSizes[2]}px`,
-            fontWeight: theme.fontWeights.semibold,
-            color: theme.colors.text,
-            fontFamily: theme.fonts.body,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
           }}
         >
-          {workspace.name}
-        </span>
+          <span
+            style={{
+              fontSize: `${theme.fontSizes[2]}px`,
+              fontWeight: theme.fontWeights.semibold,
+              color: theme.colors.text,
+              fontFamily: theme.fonts.body,
+            }}
+          >
+            {workspace.name}
+          </span>
+          {isEphemeralThread && (
+            <span
+              style={{
+                fontSize: `${theme.fontSizes[0]}px`,
+                fontWeight: theme.fontWeights.medium,
+                color: theme.colors.warning || '#f59e0b',
+                fontFamily: theme.fonts.body,
+                padding: '2px 8px',
+                backgroundColor: `${theme.colors.warning || '#f59e0b'}20`,
+                border: `1px solid ${theme.colors.warning || '#f59e0b'}40`,
+                borderRadius: '4px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+              }}
+              title="Ephemeral thread - will be lost on close unless saved"
+            >
+              Thread
+            </span>
+          )}
+        </div>
 
         {/* Selected repository or description */}
         {selectedRepository ? (

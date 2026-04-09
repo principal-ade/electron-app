@@ -75,6 +75,7 @@ import {
   AlexandriaWorkspaceEventProvider,
   useAlexandriaWorkspaceEvents,
 } from './AlexandriaWorkspaceEventContext';
+import { SaveThreadModal } from '../components/SaveThreadModal';
 
 /**
  * Alexandria Workspace Window Content
@@ -107,6 +108,12 @@ const AlexandriaWorkspaceContent: React.FC = () => {
     middle: 'terminal',
     right: 'file-city',
   });
+  const [showSaveThreadModal, setShowSaveThreadModal] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+
+  // Check if this is an ephemeral thread (not a persistent workspace)
+  const isEphemeralThread =
+    workspace?.id.startsWith('temp-') || workspace?.id.startsWith('thread-');
 
   // Track the currently selected repository
   const [selectedRepository, setSelectedRepository] = useState<
@@ -543,6 +550,72 @@ const AlexandriaWorkspaceContent: React.FC = () => {
     return () => unsubscribe();
   }, [workspaceRepositories]);
 
+  // Handle window close for ephemeral threads
+  useEffect(() => {
+    if (!isEphemeralThread || workspaceRepositories.length === 0) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Only prevent close if we're not already in the process of closing/saving
+      if (!isClosing) {
+        e.preventDefault();
+        e.returnValue = ''; // Chrome requires returnValue to be set
+        setShowSaveThreadModal(true);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isEphemeralThread, workspaceRepositories.length, isClosing]);
+
+  // Convert thread to persistent workspace
+  const handleSaveThread = useCallback(
+    async (workspaceName: string, description?: string) => {
+      try {
+        // Create new workspace
+        const newWorkspace = await WorkspaceService.createWorkspace({
+          name: workspaceName,
+          description,
+        });
+
+        // Add all repositories to the new workspace
+        for (const repo of workspaceRepositories) {
+          await WorkspaceService.addRepositoryToWorkspace(
+            repo,
+            newWorkspace.id,
+          );
+        }
+
+        console.info(
+          '[AlexandriaWorkspaceApp] Thread saved as workspace:',
+          newWorkspace.id,
+        );
+
+        // Mark as closing so beforeunload doesn't interfere
+        setIsClosing(true);
+        setShowSaveThreadModal(false);
+
+        // Close the window
+        window.close();
+      } catch (err) {
+        console.error('[AlexandriaWorkspaceApp] Failed to save thread:', err);
+        throw err;
+      }
+    },
+    [workspaceRepositories],
+  );
+
+  // Discard thread and close
+  const handleDiscardThread = useCallback(() => {
+    setIsClosing(true);
+    setShowSaveThreadModal(false);
+    window.close();
+  }, []);
+
+  // Cancel close operation
+  const handleCancelClose = useCallback(() => {
+    setShowSaveThreadModal(false);
+  }, []);
+
   if (loading) {
     return (
       <div
@@ -644,6 +717,7 @@ const AlexandriaWorkspaceContent: React.FC = () => {
         onSwitchRightMiddlePanels={handleSwitchRightMiddle}
         layout={layout}
         onLayoutChange={setLayout}
+        isEphemeralThread={isEphemeralThread}
       />
 
       {/* Main Content - Panel Layout */}
@@ -664,6 +738,15 @@ const AlexandriaWorkspaceContent: React.FC = () => {
         config={{
           placeholder: 'What would you like to do?',
         }}
+      />
+
+      {/* Save Thread Modal */}
+      <SaveThreadModal
+        isOpen={showSaveThreadModal}
+        repositories={workspaceRepositories}
+        onSave={handleSaveThread}
+        onDiscard={handleDiscardThread}
+        onCancel={handleCancelClose}
       />
     </div>
   );

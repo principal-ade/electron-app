@@ -3,10 +3,20 @@
     {
       "id": "title",
       "type": "text",
-      "text": "# Thread Opening Flow\n\nRepository-first thread lifecycle with expansion support",
+      "text": "# Thread Opening Flow\n\nRepository-first thread lifecycle with expansion support and save-on-close",
       "x": 300,
       "y": -180,
-      "width": 450,
+      "width": 550,
+      "height": 80,
+      "color": "#8b5cf6"
+    },
+    {
+      "id": "close-flow-title",
+      "type": "text",
+      "text": "## Thread Close & Save Flow\n\nEphemeral threads can be saved as persistent workspaces",
+      "x": 700,
+      "y": 1060,
+      "width": 400,
       "height": 80,
       "color": "#8b5cf6"
     },
@@ -559,25 +569,51 @@
       }
     },
     {
-      "id": "save-collection",
+      "id": "close-requested",
       "type": "otel-event",
       "x": 700,
       "y": 1200,
       "width": 280,
       "height": 160,
-      "color": "#8b5cf6",
-      "label": "Save as Collection",
-      "icon": "Save",
+      "color": "#f59e0b",
+      "label": "Close Requested",
+      "icon": "X",
       "event": {
-        "name": "thread.saved",
+        "name": "thread.close.requested",
         "attributes": {
           "thread.id": {
             "type": "string"
           },
-          "collection.id": {
-            "type": "string"
+          "repository.count": {
+            "type": "number"
           },
-          "collection.name": {
+          "trigger.source": {
+            "type": "string",
+            "description": "beforeunload, user action"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/renderer/alexandria-workspace/AlexandriaWorkspaceApp.tsx"
+        ]
+      }
+    },
+    {
+      "id": "save-modal-shown",
+      "type": "otel-event",
+      "x": 700,
+      "y": 1420,
+      "width": 280,
+      "height": 160,
+      "color": "#8b5cf6",
+      "label": "Save Modal Shown",
+      "icon": "AlertCircle",
+      "event": {
+        "name": "thread.save.modal.shown",
+        "attributes": {
+          "thread.id": {
             "type": "string"
           },
           "repository.count": {
@@ -586,7 +622,170 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "implemented",
+        "files": [
+          "src/renderer/components/SaveThreadModal.tsx"
+        ]
+      }
+    },
+    {
+      "id": "save-confirmed",
+      "type": "otel-event",
+      "x": 400,
+      "y": 1640,
+      "width": 280,
+      "height": 180,
+      "color": "#22c55e",
+      "label": "Save Confirmed",
+      "icon": "Check",
+      "event": {
+        "name": "thread.save.confirmed",
+        "attributes": {
+          "thread.id": {
+            "type": "string"
+          },
+          "workspace.name": {
+            "type": "string"
+          },
+          "workspace.description": {
+            "type": "string"
+          },
+          "repository.count": {
+            "type": "number"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/renderer/alexandria-workspace/AlexandriaWorkspaceApp.tsx"
+        ]
+      }
+    },
+    {
+      "id": "thread-discarded",
+      "type": "otel-event",
+      "x": 1000,
+      "y": 1640,
+      "width": 280,
+      "height": 160,
+      "color": "#ef4444",
+      "label": "Thread Discarded",
+      "icon": "Trash2",
+      "event": {
+        "name": "thread.discarded",
+        "attributes": {
+          "thread.id": {
+            "type": "string"
+          },
+          "repository.count": {
+            "type": "number",
+            "description": "Lost repositories"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/renderer/alexandria-workspace/AlexandriaWorkspaceApp.tsx"
+        ]
+      }
+    },
+    {
+      "id": "save-cancelled",
+      "type": "otel-event",
+      "x": 1330,
+      "y": 1640,
+      "width": 260,
+      "height": 140,
+      "color": "#6b7280",
+      "label": "Save Cancelled",
+      "icon": "XCircle",
+      "event": {
+        "name": "thread.save.cancelled",
+        "attributes": {
+          "thread.id": {
+            "type": "string"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/renderer/alexandria-workspace/AlexandriaWorkspaceApp.tsx"
+        ]
+      }
+    },
+    {
+      "id": "workspace-created",
+      "type": "otel-event",
+      "x": 400,
+      "y": 1880,
+      "width": 280,
+      "height": 200,
+      "color": "#22c55e",
+      "label": "Workspace Created",
+      "icon": "Folder",
+      "event": {
+        "name": "thread.converted.to.workspace",
+        "attributes": {
+          "thread.id": {
+            "type": "string"
+          },
+          "workspace.id": {
+            "type": "string"
+          },
+          "workspace.name": {
+            "type": "string"
+          },
+          "workspace.description": {
+            "type": "string"
+          },
+          "repository.count": {
+            "type": "number"
+          },
+          "repositories.added": {
+            "type": "number",
+            "description": "Successfully added to workspace"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/renderer/alexandria-workspace/AlexandriaWorkspaceApp.tsx"
+        ]
+      }
+    },
+    {
+      "id": "window-closed",
+      "type": "otel-event",
+      "x": 700,
+      "y": 2140,
+      "width": 280,
+      "height": 140,
+      "color": "#6b7280",
+      "label": "Window Closed",
+      "icon": "X",
+      "event": {
+        "name": "thread.window.closed",
+        "attributes": {
+          "thread.id": {
+            "type": "string"
+          },
+          "saved.as.workspace": {
+            "type": "boolean"
+          },
+          "workspace.id": {
+            "type": "string"
+          }
+        }
+      },
+      "otel": {
+        "status": "implemented",
+        "files": [
+          "src/renderer/alexandria-workspace/AlexandriaWorkspaceApp.tsx"
+        ]
       }
     }
   ],
@@ -736,12 +935,75 @@
       "edgeType": "uses"
     },
     {
-      "id": "ready-to-save",
+      "id": "ready-to-close",
       "fromNode": "thread-ready",
-      "toNode": "save-collection",
+      "toNode": "close-requested",
       "fromSide": "right",
       "toSide": "left",
-      "label": "optional save",
+      "label": "user closes window",
+      "edgeType": "uses"
+    },
+    {
+      "id": "close-to-modal",
+      "fromNode": "close-requested",
+      "toNode": "save-modal-shown",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "if has repos",
+      "edgeType": "uses"
+    },
+    {
+      "id": "modal-to-save",
+      "fromNode": "save-modal-shown",
+      "toNode": "save-confirmed",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "user clicks save",
+      "edgeType": "uses"
+    },
+    {
+      "id": "modal-to-discard",
+      "fromNode": "save-modal-shown",
+      "toNode": "thread-discarded",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "user clicks discard",
+      "edgeType": "uses"
+    },
+    {
+      "id": "modal-to-cancel",
+      "fromNode": "save-modal-shown",
+      "toNode": "save-cancelled",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "user clicks cancel",
+      "edgeType": "uses"
+    },
+    {
+      "id": "save-to-workspace",
+      "fromNode": "save-confirmed",
+      "toNode": "workspace-created",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "create workspace",
+      "edgeType": "uses"
+    },
+    {
+      "id": "workspace-to-close",
+      "fromNode": "workspace-created",
+      "toNode": "window-closed",
+      "fromSide": "bottom",
+      "toSide": "left",
+      "label": "close window",
+      "edgeType": "uses"
+    },
+    {
+      "id": "discard-to-close",
+      "fromNode": "thread-discarded",
+      "toNode": "window-closed",
+      "fromSide": "bottom",
+      "toSide": "right",
+      "label": "close window",
       "edgeType": "uses"
     },
     {
@@ -765,7 +1027,7 @@
   ],
   "name": "Thread Opening Flow",
   "markdown": ".principal-views/thread-open/thread-open.md",
-  "description": "Repository-first thread lifecycle - start from any repo, expand organically, optionally persist",
+  "description": "Repository-first thread lifecycle - start from any repo, expand organically, save as workspace on close",
   "scope": "principal-ade-main",
   "nodeTypes": {
     "event": {
