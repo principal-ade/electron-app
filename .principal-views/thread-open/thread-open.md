@@ -115,16 +115,40 @@ Thread is ready when:
 3. **UI update** - Remove from list
 4. **Thread dissolution** - If last repo removed, close thread
 
-## Saving Threads as Collections
+## Saving Threads as Workspaces
 
-Threads are ephemeral by default. To persist:
+Threads are ephemeral by default - they exist only while the window is open. When closing a thread with repositories, users are prompted to save:
 
-1. **User action** - "Save thread as collection"
-2. **Name prompt** - User provides a name
-3. **Persistence** - Store repository paths and thread metadata
-4. **Future access** - Appears in "Recent" and "Collections"
+### Save-on-Close Flow
 
-Collections are just saved thread configurations, not a separate concept.
+1. **Close initiated** - User closes thread window (⌘W, close button, or beforeunload)
+2. **Save modal appears** - If thread has repositories and is ephemeral
+3. **User decision** - Three options:
+   - **Save Workspace** - Convert thread to persistent workspace
+   - **Discard** - Close without saving, repositories are lost from thread
+   - **Cancel** - Keep thread open, continue working
+
+### Workspace Conversion
+
+When saving:
+1. **Name prompt** - User provides workspace name (required)
+2. **Description** - Optional description field
+3. **Workspace creation** - New workspace created in database
+4. **Repository migration** - All thread repositories added to workspace
+5. **Window close** - Thread closes, workspace accessible from Alexandria
+
+### Thread vs Workspace
+
+- **Threads**: Ephemeral, identified by `temp-` or `thread-` prefix, not saved to database
+- **Workspaces**: Persistent, saved to database with UUID, accessible from workspace browser
+- Same window component serves both, only persistence differs
+
+### Visual Indicators
+
+Ephemeral threads display a visual badge in the titlebar:
+- **"THREAD" badge** - Orange badge indicating ephemeral status
+- **Tooltip** - "Ephemeral thread - will be lost on close unless saved"
+- **Purpose** - Reminds users that work will be lost if not saved
 
 ## Error Scenarios
 
@@ -160,7 +184,13 @@ If user removes all repositories from a thread:
 | `thread.ready` | Both | End-to-end completion |
 | `thread.repository.added` | Both | Expansion event |
 | `thread.repository.removed` | Both | Contraction event |
-| `thread.saved` | Main | Persisted as collection |
+| `thread.close.requested` | Renderer | Thread close initiated |
+| `thread.save.modal.shown` | Renderer | Save modal displayed |
+| `thread.save.confirmed` | Renderer | User chose to save |
+| `thread.discarded` | Renderer | User chose to discard |
+| `thread.save.cancelled` | Renderer | User cancelled close |
+| `thread.converted.to.workspace` | Main | Thread saved as workspace |
+| `thread.window.closed` | Both | Window closed successfully |
 
 ## Migration from Workspaces
 
