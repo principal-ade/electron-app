@@ -74,6 +74,25 @@ class JWTAuthAdapter implements IAuthAdapter {
   }
 }
 
+/**
+ * Payload for presence:repo_opened broadcast events
+ */
+interface PresenceRepoOpenedPayload {
+  userId: string;
+  repoId: string;
+  branch: string;
+  openedAt: number;
+}
+
+/**
+ * Payload for presence:repo_closed broadcast events
+ */
+interface PresenceRepoClosedPayload {
+  userId: string;
+  repoId: string;
+  closedAt: number;
+}
+
 interface ConnectionInfo {
   connectionId: string;
   repoId: string;
@@ -1105,6 +1124,58 @@ export class GitSyncWebSocketManager {
       });
     });
 
+    // Listen for presence:repo_opened broadcasts from server
+    client.on('presence:repo_opened', async (data: unknown) => {
+      const payload = data as PresenceRepoOpenedPayload;
+      console.log('[GitSyncWebSocketManager] 📡 presence:repo_opened broadcast received:', payload);
+
+      // Broadcast the event to renderer for real-time UI updates
+      this.broadcastPresenceEvent({
+        type: 'presence:repo_opened',
+        payload,
+      });
+
+      // Also fetch and broadcast updated presence data
+      try {
+        const result = await this.fetchPresenceData();
+        if (result.success && result.data) {
+          this.broadcastToRenderers(GitSyncEvent.ON_MESSAGE, connectionId, {
+            type: 'presence_updated',
+            users: result.data.users,
+            stats: result.data.stats,
+          });
+        }
+      } catch (error) {
+        console.error('[GitSyncWebSocketManager] Failed to refresh presence after repo_opened:', error);
+      }
+    });
+
+    // Listen for presence:repo_closed broadcasts from server
+    client.on('presence:repo_closed', async (data: unknown) => {
+      const payload = data as PresenceRepoClosedPayload;
+      console.log('[GitSyncWebSocketManager] 📡 presence:repo_closed broadcast received:', payload);
+
+      // Broadcast the event to renderer for real-time UI updates
+      this.broadcastPresenceEvent({
+        type: 'presence:repo_closed',
+        payload,
+      });
+
+      // Also fetch and broadcast updated presence data
+      try {
+        const result = await this.fetchPresenceData();
+        if (result.success && result.data) {
+          this.broadcastToRenderers(GitSyncEvent.ON_MESSAGE, connectionId, {
+            type: 'presence_updated',
+            users: result.data.users,
+            stats: result.data.stats,
+          });
+        }
+      } catch (error) {
+        console.error('[GitSyncWebSocketManager] Failed to refresh presence after repo_closed:', error);
+      }
+    });
+
     // Event received - handles broadcasts from server (including webhook events)
     // The server sends event_broadcast messages which trigger this handler
     client.on('event_received', (data: { event: { type: string; data?: Record<string, unknown> } }) => {
@@ -1403,6 +1474,9 @@ export class GitSyncWebSocketManager {
         };
       }
 
+      // Ensure we're in the global presence room before sending repo_open
+      await this.subscribeToPresence();
+
       const repoId = `${owner}/${repo}`;
       const response = await client.request<PresenceActionResponse>(
         'presence:repo_open',
@@ -1448,6 +1522,9 @@ export class GitSyncWebSocketManager {
           message: 'No authenticated connection available',
         };
       }
+
+      // Ensure we're in the global presence room before sending repo_close
+      await this.subscribeToPresence();
 
       const repoId = `${owner}/${repo}`;
       const response = await client.request<PresenceActionResponse>(
