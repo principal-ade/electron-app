@@ -136,6 +136,14 @@ function sendGitStatusToPresence(
     }
 
     const sharedStatus = convertToSharedGitStatus(status);
+    console.log(`[RepositoryMonitoring] Sending git status to presence for ${ownerRepo.owner}/${ownerRepo.repo}:`, {
+      isDirty: sharedStatus.isDirty,
+      branch: sharedStatus.branch,
+      modifiedFiles: sharedStatus.modifiedFiles?.length || 0,
+      stagedFiles: sharedStatus.stagedFiles?.length || 0,
+      sharedStatus,
+    });
+
     const result = await gitSyncWebSocketManager.reportRepositoryStatusUpdate(
       ownerRepo.owner,
       ownerRepo.repo,
@@ -143,8 +151,14 @@ function sendGitStatusToPresence(
     );
 
     if (result.success) {
-      console.debug(
-        `[RepositoryMonitoring] Sent git status to presence for ${ownerRepo.owner}/${ownerRepo.repo}`,
+      console.log(
+        `[RepositoryMonitoring] Successfully sent git status to presence for ${ownerRepo.owner}/${ownerRepo.repo}`,
+        result,
+      );
+    } else {
+      console.error(
+        `[RepositoryMonitoring] Failed to send git status to presence for ${ownerRepo.owner}/${ownerRepo.repo}`,
+        result,
       );
     }
   }, GIT_STATUS_PRESENCE_DEBOUNCE_MS);
@@ -915,11 +929,15 @@ function startReposHeartbeat(manager: RepositoryMonitoringManager): void {
       }
 
       if (repos.length > 0) {
+        console.log('[RepositoryMonitoring] Sending repos heartbeat:', JSON.stringify(repos, null, 2));
         const result = await gitSyncWebSocketManager.sendReposHeartbeat(repos);
         if (result.success) {
-          console.debug(
-            `[RepositoryMonitoring] Repos heartbeat sent: ${repos.length} repos`,
+          console.log(
+            `[RepositoryMonitoring] Repos heartbeat sent successfully: ${repos.length} repos`,
+            result,
           );
+        } else {
+          console.error('[RepositoryMonitoring] Repos heartbeat failed:', result);
         }
       }
     } catch (error) {

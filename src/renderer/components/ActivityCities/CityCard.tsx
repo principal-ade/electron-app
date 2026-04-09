@@ -194,6 +194,7 @@ export const CityCard: React.FC<CityCardProps> = ({
     if (!gitStatus?.byUser || gitStatus.byUser.size === 0) {
       return [];
     }
+
     return mergeGitStatusHighlightLayers(gitStatus.byUser);
   }, [gitStatus?.byUser]);
 

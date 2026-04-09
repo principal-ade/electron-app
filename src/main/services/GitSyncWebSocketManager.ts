@@ -77,7 +77,7 @@ class JWTAuthAdapter implements IAuthAdapter {
 /**
  * Payload for presence:repo_opened broadcast events
  */
-interface PresenceRepoOpenedPayload {
+interface PresenceRepoOpenedPayload extends Record<string, unknown> {
   userId: string;
   repoId: string;
   branch: string;
@@ -87,7 +87,7 @@ interface PresenceRepoOpenedPayload {
 /**
  * Payload for presence:repo_closed broadcast events
  */
-interface PresenceRepoClosedPayload {
+interface PresenceRepoClosedPayload extends Record<string, unknown> {
   userId: string;
   repoId: string;
   closedAt: number;
@@ -170,7 +170,7 @@ export class GitSyncWebSocketManager {
   private presenceRoomState: { users: Map<string, RoomUser> } | null = null;
 
   // Hardcoded defaults
-  private readonly DEFAULT_DEV_SERVER = 'ws://localhost:3001';
+  private readonly DEFAULT_DEV_SERVER = 'ws://localhost:4001';
   private readonly DEFAULT_DEV_AUTH = 'http://localhost:3000';
   private readonly DEFAULT_PROD_SERVER =
     'wss://repository-traffic-controller-production.rj36caac972nm.us-east-1.cs.amazonlightsail.com';
@@ -1462,7 +1462,7 @@ export class GitSyncWebSocketManager {
     owner: string,
     repo: string,
     branch: string,
-    _localPath?: string,
+    localPath?: string,
     _token?: string,
   ): Promise<{ success: boolean; message?: string }> {
     try {
@@ -1492,6 +1492,46 @@ export class GitSyncWebSocketManager {
         repo,
         branch,
       });
+
+      // Immediately send git status so it appears on the map without waiting for heartbeat
+      if (localPath) {
+        console.log('[GitSyncWebSocketManager] Fetching initial git status for:', localPath);
+        try {
+          const { getManager } = await import('../repository-monitoring/ipcHandlers');
+
+          // Get git status from repository monitoring
+          const manager = getManager();
+          const gitStatusWithFiles = await manager.getGitStatusWithFiles(localPath);
+
+          if (gitStatusWithFiles) {
+            // Convert to SharedGitStatus format
+            const sharedStatus = {
+              branch: gitStatusWithFiles.branch,
+              isDirty: gitStatusWithFiles.isDirty,
+              hasStaged: gitStatusWithFiles.hasStaged,
+              hasUntracked: gitStatusWithFiles.hasUntracked,
+              ahead: gitStatusWithFiles.ahead,
+              behind: gitStatusWithFiles.behind,
+              modifiedFiles: gitStatusWithFiles.modifiedFiles || [],
+              stagedFiles: gitStatusWithFiles.stagedFiles || [],
+              untrackedFiles: gitStatusWithFiles.untrackedFiles || [],
+              deletedFiles: gitStatusWithFiles.deletedFiles || [],
+              lastChangedAt: gitStatusWithFiles.lastChangedAt,
+            };
+
+            // Send git status immediately
+            await this.reportRepositoryStatusUpdate(owner, repo, sharedStatus);
+            console.log('[GitSyncWebSocketManager] Initial git status sent for:', repoId);
+          }
+        } catch (statusError) {
+          // Don't fail the repo_open if git status fetch fails
+          console.warn(
+            '[GitSyncWebSocketManager] Failed to fetch/send initial git status:',
+            statusError,
+          );
+        }
+      }
+
       return { success: true, message: 'Repository opened reported' };
     } catch (error) {
       const errorMessage =

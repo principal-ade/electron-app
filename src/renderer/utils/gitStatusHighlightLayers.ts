@@ -126,7 +126,7 @@ export function mergeGitStatusHighlightLayers(
     deleted: new Set<string>(),
   };
 
-  for (const status of gitStatusByUser.values()) {
+  for (const [, status] of gitStatusByUser.entries()) {
     status.stagedFiles?.forEach((f) => aggregated.staged.add(f));
     status.modifiedFiles?.forEach((f) => aggregated.modified.add(f));
     status.untrackedFiles?.forEach((f) => aggregated.untracked.add(f));

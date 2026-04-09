@@ -74,7 +74,9 @@ function buildCityDataFromGitHubTree(
 
   const files = getFilesFromGitHubTree(blobsOnly);
   const fileSystemTree = buildFileSystemTreeFromFileInfoList(files, treeResponse.sha);
-  return cityBuilder.buildCityFromFileSystem(fileSystemTree, rootPath);
+  const cityData = cityBuilder.buildCityFromFileSystem(fileSystemTree, rootPath);
+
+  return cityData;
 }
 
 /**
@@ -126,6 +128,7 @@ export function useActivityCities(): UseActivityCitiesReturn {
         const treeResult = await GithubService.getTree(owner, repo, branch);
 
         if (!treeResult?.success || !treeResult.data) {
+          console.warn(`[useActivityCities] Failed to get tree for ${owner}/${repo}:`, treeResult?.error);
           return {
             cityData: null,
             error: treeResult?.error || 'Failed to fetch file tree',
@@ -134,7 +137,7 @@ export function useActivityCities(): UseActivityCitiesReturn {
 
         const cityData = buildCityDataFromGitHubTree(
           treeResult.data as GitHubTreeResponse,
-          `${owner}/${repo}`,
+          '', // Empty rootPath so building paths match git status paths
         );
 
         // Cache the result
@@ -293,10 +296,8 @@ export function useActivityCities(): UseActivityCitiesReturn {
       setIsAuthenticated(true);
 
       // Try to connect to presence (will return success if already connected)
-      console.log('[useActivityCities] Ensuring presence connection...');
       const result = await PresenceService.connectToPresence(authResult.token);
       if (result.success) {
-        console.log('[useActivityCities] Presence connection ready');
         return true;
       } else {
         console.warn('[useActivityCities] Failed to connect to presence:', result.error);
@@ -320,16 +321,6 @@ export function useActivityCities(): UseActivityCitiesReturn {
       await ensurePresenceConnected();
 
       const presenceData = await PresenceService.getUsers();
-      console.log('[useActivityCities] Presence data:', JSON.stringify({
-        totalOnline: presenceData.stats.totalOnline,
-        userCount: presenceData.users.length,
-        users: presenceData.users.map((u) => ({
-          userId: u.userId,
-          status: u.status,
-          openRepositories: u.openRepositories,
-          openReposType: Array.isArray(u.openRepositories) ? 'array' : typeof u.openRepositories,
-        })),
-      }, null, 2));
       setOnlineCount(presenceData.stats.totalOnline);
       await processPresenceData(presenceData.users);
     } catch (err) {
