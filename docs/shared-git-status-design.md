@@ -281,6 +281,36 @@ PresenceReposHeartbeatResponse {
 | Staged files | Green highlight | Buildings in city visualization |
 | Deleted files | Red highlight | Buildings in city visualization |
 | Repo from current device | Blue "This Device" badge | Next to repo name |
+| No git changes (clean state) | File extension colors | Buildings in city visualization |
+
+**File Extension Colors (Clean State)**
+
+When there are no git changes for a file, buildings display colors based on their file extension/suffix. This follows the file-city color configuration system defined in `@principal-ai/file-city-builder/src/config/files.json`.
+
+**Dimming Behavior:**
+- When **no git changes** are present: File extension colors display at **full opacity** (100%)
+- When **git changes exist**: File extension colors are **dimmed to 20% opacity** to help users focus on the git status indicators
+- Git status indicators display at **full opacity** (100%) to maximize visibility and contrast
+
+Examples of file extension colors:
+- `.ts` → TypeScript blue (#007ACC)
+- `.tsx` → TypeScript blue with React cyan border
+- `.js` → JavaScript yellow (#f1e05a)
+- `.jsx` → React cyan with JavaScript border
+- `.json` → Yellow/orange (#ffd93d)
+- `.py` → Python blue (#3572A5) with yellow border
+- `.rs` → Rust orange (#dea584) with red border
+- `.md` → Markdown blue (#083fa1)
+- `.css` → Purple (#563d7c) with white border
+
+The complete color palette is maintained in the file-city package and includes support for:
+- Primary colors (fill)
+- Secondary colors (borders, glows)
+- Icons for special file types
+- Compound extensions (e.g., `.test.ts`, `.stories.tsx`)
+- Special filenames (e.g., `package.json`, `README.md`)
+
+See `/Users/griever/Developer/web-ade/file-city/packages/builder/src/config/files.json` for the complete configuration.
 
 ## ✅ Architecture Diagram (As Implemented)
 

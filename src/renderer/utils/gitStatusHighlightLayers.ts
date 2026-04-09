@@ -18,7 +18,7 @@ export const GIT_STATUS_COLORS = {
 
 /** Layer configuration */
 const LAYER_CONFIG = {
-  opacity: 0.7,
+  opacity: 1.0, // Full opacity for git status to make changes stand out
   basePriority: 30,
 } as const;
 

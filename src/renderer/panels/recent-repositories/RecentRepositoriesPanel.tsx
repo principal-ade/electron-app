@@ -2,7 +2,12 @@ import React, { useMemo, useCallback, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Folder, Search, X } from 'lucide-react';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import type { PanelComponentProps } from '@principal-ade/panel-layouts';
+import type {
+  PanelContextValue,
+  PanelActions,
+  PanelEventEmitter,
+  DataSlice,
+} from '@principal-ade/panel-framework-core';
 
 // Panel event prefix
 const PANEL_ID = 'electron-app.recent-repositories';
@@ -84,7 +89,7 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
       >
         {repository.path}
       </div>
-      {repository.description && (
+      {'description' in repository && typeof (repository as { description?: string }).description === 'string' && (
         <div
           style={{
             marginTop: '4px',
@@ -96,12 +101,24 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
             whiteSpace: 'nowrap',
           }}
         >
-          {repository.description}
+          {(repository as { description: string }).description}
         </div>
       )}
     </div>
   );
 };
+
+interface RecentRepositoriesPanelContext extends PanelContextValue {
+  recentRepositories?: DataSlice<{ repositories: AlexandriaEntry[] }>;
+  workspaceRepositories?: DataSlice<{ repositories: AlexandriaEntry[] }>;
+  alexandriaRepositories?: DataSlice<{ repositories: AlexandriaEntry[] }>;
+}
+
+interface RecentRepositoriesPanelProps {
+  context: RecentRepositoriesPanelContext;
+  actions?: PanelActions;
+  events: PanelEventEmitter;
+}
 
 /**
  * RecentRepositoriesPanel - Recent repositories panel with search
@@ -111,7 +128,7 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
  * - Search/filter repositories by name, path, or description
  * - Simple, clean layout focused on quick access
  */
-export const RecentRepositoriesPanel: React.FC<PanelComponentProps> = ({
+export const RecentRepositoriesPanel: React.FC<RecentRepositoriesPanelProps> = ({
   context,
   events,
 }) => {
@@ -156,7 +173,10 @@ export const RecentRepositoriesPanel: React.FC<PanelComponentProps> = ({
       filtered = repositories.filter((repo: AlexandriaEntry) => {
         const name = repo.name.toLowerCase();
         const path = repo.path.toLowerCase();
-        const description = repo.description?.toLowerCase() || '';
+        // Description may exist on some entries but not in the type definition
+        const description = ('description' in repo && typeof (repo as { description?: string }).description === 'string')
+          ? (repo as { description: string }).description.toLowerCase()
+          : '';
         return (
           name.includes(query) || path.includes(query) || description.includes(query)
         );

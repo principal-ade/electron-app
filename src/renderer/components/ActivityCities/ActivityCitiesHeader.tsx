@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ArrowLeft } from 'lucide-react';
+import { PresenceService } from '../../main-process-api/PresenceService';
 
 export interface ActivityCitiesHeaderProps {
   onlineCount: number;
@@ -16,6 +17,15 @@ export const ActivityCitiesHeader: React.FC<ActivityCitiesHeaderProps> = ({
   onBack,
 }) => {
   const { theme } = useTheme();
+  const [isVisible, setIsVisible] = useState(true);
+
+  const handleVisibilityToggle = async () => {
+    const newVisibility = !isVisible;
+    const result = await PresenceService.setVisibility(newVisibility);
+    if (result.success) {
+      setIsVisible(newVisibility);
+    }
+  };
 
   // Theme spacing helpers (space is number[])
   const spacing = {
@@ -63,6 +73,39 @@ export const ActivityCitiesHeader: React.FC<ActivityCitiesHeaderProps> = ({
     textTransform: 'uppercase',
   };
 
+  const rightSectionStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: spacing.md,
+  };
+
+  const statusIndicatorStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: spacing.xs,
+    padding: '4px 8px',
+    backgroundColor: theme.colors.backgroundSecondary,
+    borderRadius: theme.radii?.[1] || 4,
+    border: `1px solid ${theme.colors.border}`,
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  };
+
+  const statusDotStyle: React.CSSProperties = {
+    width: 6,
+    height: 6,
+    borderRadius: '50%',
+    backgroundColor: isVisible ? theme.colors.success : theme.colors.textSecondary,
+    transition: 'background-color 0.2s ease',
+  };
+
+  const statusTextStyle: React.CSSProperties = {
+    fontFamily: theme.fonts.monospace,
+    fontSize: theme.fontSizes[0],
+    color: theme.colors.text,
+    fontWeight: 500,
+  };
+
   const onlineContainerStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
@@ -108,9 +151,27 @@ export const ActivityCitiesHeader: React.FC<ActivityCitiesHeaderProps> = ({
         )}
         <div style={titleStyle}>Live Activity</div>
       </div>
-      <div style={onlineContainerStyle}>
-        <span style={countStyle}>{onlineCount}</span>
-        <span style={labelStyle}>online</span>
+      <div style={rightSectionStyle}>
+        <div
+          style={statusIndicatorStyle}
+          onClick={handleVisibilityToggle}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = theme.colors.background;
+            e.currentTarget.style.borderColor = theme.colors.primary;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+            e.currentTarget.style.borderColor = theme.colors.border;
+          }}
+          title={isVisible ? 'Click to go invisible (hide from others)' : 'Click to appear online (visible to others)'}
+        >
+          <div style={statusDotStyle} />
+          <span style={statusTextStyle}>{isVisible ? "You're Online" : "You're Invisible"}</span>
+        </div>
+        <div style={onlineContainerStyle}>
+          <span style={countStyle}>{onlineCount}</span>
+          <span style={labelStyle}>online</span>
+        </div>
       </div>
     </div>
   );

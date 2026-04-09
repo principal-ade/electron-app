@@ -1,8 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
+import { GitBranch } from 'lucide-react';
 import {
   ArchitectureMapHighlightLayers,
   type CityData,
+  createFileColorHighlightLayers,
 } from '@principal-ai/file-city-react';
 import type { SharedGitStatus } from '@principal-ai/control-tower-core';
 import type { UserPresence } from '../../../shared/main-process-api-interfaces/PresenceAPI';
@@ -41,6 +43,8 @@ export const CityCard: React.FC<CityCardProps> = ({
   currentDeviceId,
 }) => {
   const { theme } = useTheme();
+  const [showSuffixColors, setShowSuffixColors] = useState(true);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   // Check if this repo has any sessions from the current device
   const hasCurrentDeviceSession = useMemo(() => {
@@ -83,9 +87,41 @@ export const CityCard: React.FC<CityCardProps> = ({
     position: 'relative',
   };
 
+  const headerStyle: React.CSSProperties = {
+    padding: spacing.sm,
+    borderBottom: `1px solid ${theme.colors.border}`,
+    backgroundColor: theme.colors.backgroundSecondary,
+    display: 'flex',
+    alignItems: 'center',
+    gap: spacing.sm,
+  };
+
   const infoStyle: React.CSSProperties = {
     padding: spacing.sm,
     borderTop: `1px solid ${theme.colors.border}`,
+  };
+
+  const repoHeaderStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flex: 1,
+    overflow: 'hidden',
+  };
+
+  const avatarStyle: React.CSSProperties = {
+    width: 32,
+    height: 32,
+    borderRadius: '50%',
+    border: `2px solid ${theme.colors.border}`,
+  };
+
+  const repoInfoStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 2,
+    flex: 1,
+    overflow: 'hidden',
   };
 
   const repoNameStyle: React.CSSProperties = {
@@ -93,6 +129,15 @@ export const CityCard: React.FC<CityCardProps> = ({
     fontSize: theme.fontSizes[1],
     fontWeight: 600,
     color: theme.colors.text,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  };
+
+  const ownerNameStyle: React.CSSProperties = {
+    fontFamily: theme.fonts.monospace,
+    fontSize: theme.fontSizes[0],
+    color: theme.colors.textSecondary,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
@@ -113,6 +158,59 @@ export const CityCard: React.FC<CityCardProps> = ({
     borderRadius: radii.sm,
     fontSize: theme.fontSizes[0],
     color: theme.colors.textSecondary,
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  };
+
+  const fileListModalStyle: React.CSSProperties = {
+    position: 'absolute',
+    bottom: '100%',
+    left: 0,
+    marginBottom: spacing.xs,
+    backgroundColor: theme.colors.background,
+    border: `1px solid ${theme.colors.border}`,
+    borderRadius: radii.sm,
+    padding: spacing.sm,
+    minWidth: 250,
+    maxWidth: 400,
+    maxHeight: 300,
+    overflowY: 'auto',
+    zIndex: 100,
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+  };
+
+  const fileListHeaderStyle: React.CSSProperties = {
+    fontFamily: theme.fonts.monospace,
+    fontSize: theme.fontSizes[0],
+    fontWeight: 600,
+    color: theme.colors.text,
+    marginBottom: spacing.xs,
+    paddingBottom: spacing.xs,
+    borderBottom: `1px solid ${theme.colors.border}`,
+  };
+
+  const fileGroupStyle: React.CSSProperties = {
+    marginBottom: spacing.xs,
+  };
+
+  const fileGroupLabelStyle: React.CSSProperties = {
+    fontFamily: theme.fonts.monospace,
+    fontSize: theme.fontSizes[0],
+    fontWeight: 600,
+    color: theme.colors.textSecondary,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+  };
+
+  const fileItemStyle: React.CSSProperties = {
+    fontFamily: theme.fonts.monospace,
+    fontSize: theme.fontSizes[0],
+    color: theme.colors.text,
+    padding: '2px 0',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
   };
 
   const statusDotStyle = (status: 'online' | 'away' | 'offline'): React.CSSProperties => ({
@@ -148,19 +246,18 @@ export const CityCard: React.FC<CityCardProps> = ({
   };
 
   const dirtyBadgeStyle: React.CSSProperties = {
-    position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
     display: 'flex',
     alignItems: 'center',
     gap: 4,
-    padding: '2px 8px',
+    padding: '4px 8px',
     backgroundColor: 'rgba(255, 171, 0, 0.9)', // Amber/orange for dirty
     color: '#000',
     borderRadius: radii.sm,
     fontSize: theme.fontSizes[0],
     fontWeight: 600,
-    zIndex: 10,
+    cursor: 'pointer',
+    transition: 'opacity 0.2s ease',
+    opacity: showSuffixColors ? 1 : 0.6,
   };
 
   const deviceBadgeStyle: React.CSSProperties = {
@@ -189,25 +286,83 @@ export const CityCard: React.FC<CityCardProps> = ({
     return gitStatus?.byUser.get(userId);
   };
 
-  // Generate highlight layers from aggregated git status
+  // Generate highlight layers from aggregated git status and file suffixes
   const highlightLayers = useMemo(() => {
-    if (!gitStatus?.byUser || gitStatus.byUser.size === 0) {
-      return [];
+    const layers = [];
+    const hasGitChanges = gitStatus?.byUser && gitStatus.byUser.size > 0;
+
+    // 1. First, add file suffix color layers (higher priority: 100+)
+    // Higher priority = drawn first = appears underneath
+    // These show the default colors for all files based on their extensions
+    if (showSuffixColors && cityData?.buildings) {
+      const fileSuffixLayers = createFileColorHighlightLayers(cityData.buildings);
+
+      // Dim suffix layers when git changes are present to help focus on git status
+      // Also boost their priority so they render underneath git layers
+      const adjustedSuffixLayers = hasGitChanges
+        ? fileSuffixLayers.map(layer => ({
+            ...layer,
+            opacity: (layer.opacity ?? 1.0) * 0.2, // Reduce opacity to 20% when git changes present
+            priority: layer.priority + 100, // Boost priority to render underneath git layers
+          }))
+        : fileSuffixLayers.map(layer => ({
+            ...layer,
+            priority: layer.priority + 100, // Always boost priority for consistent layering
+          }));
+
+      layers.push(...adjustedSuffixLayers);
     }
 
-    return mergeGitStatusHighlightLayers(gitStatus.byUser);
-  }, [gitStatus?.byUser]);
+    // 2. Then, add git status layers (lower priority: 30+)
+    // Lower priority = drawn later = appears on top
+    // These override the file suffix colors for files with git changes
+    if (hasGitChanges) {
+      const gitStatusLayers = mergeGitStatusHighlightLayers(gitStatus.byUser);
+      layers.push(...gitStatusLayers);
+    }
+
+    return layers;
+  }, [showSuffixColors, cityData?.buildings, gitStatus?.byUser]);
 
   return (
     <div style={containerStyle}>
-      <div style={cityContainerStyle}>
-        {/* Dirty indicator badge */}
+      {/* Header with repo info */}
+      <div style={headerStyle}>
+        <div style={repoHeaderStyle}>
+          <img
+            src={`https://github.com/${owner}.png`}
+            alt={owner}
+            style={avatarStyle}
+          />
+          <div style={repoInfoStyle}>
+            <div style={repoNameStyle} title={repo}>
+              {repo}
+            </div>
+            <div style={ownerNameStyle} title={owner}>
+              {owner}
+            </div>
+          </div>
+        </div>
+        {/* Changes badge - also toggles suffix colors */}
         {gitStatus?.anyDirty && (
-          <div style={dirtyBadgeStyle} title={`${gitStatus.dirtyCount} user(s) with uncommitted changes`}>
-            <span style={{ fontSize: 10 }}>*</span>
-            <span>{gitStatus.dirtyCount} dirty</span>
+          <div
+            style={dirtyBadgeStyle}
+            onClick={() => setShowSuffixColors(!showSuffixColors)}
+            title={`${gitStatus.dirtyCount} user(s) with uncommitted changes\nClick to ${showSuffixColors ? 'hide' : 'show'} file extension colors`}
+          >
+            <GitBranch size={14} />
+            <span>changes</span>
           </div>
         )}
+        {hasCurrentDeviceSession && (
+          <div style={deviceBadgeStyle} title="This repository is open on this device">
+            This Device
+          </div>
+        )}
+      </div>
+
+      {/* City visualization */}
+      <div style={cityContainerStyle}>
         {loading && <div style={loadingStyle}>Loading...</div>}
         {error && <div style={errorStyle}>{error}</div>}
         {!loading && !error && cityData && (
@@ -228,30 +383,112 @@ export const CityCard: React.FC<CityCardProps> = ({
           <div style={loadingStyle}>No data available</div>
         )}
       </div>
+
+      {/* Users section at bottom */}
       <div style={infoStyle}>
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: spacing.xs }}>
-          <div style={repoNameStyle} title={`${owner}/${repo}`}>
-            {owner}/{repo}
-          </div>
-          {hasCurrentDeviceSession && (
-            <div style={deviceBadgeStyle} title="This repository is open on this device">
-              This Device
-            </div>
-          )}
-        </div>
-        <div style={usersContainerStyle}>
+        <div style={{ ...usersContainerStyle, position: 'relative' }}>
           {users.map((user) => {
             const userGitStatus = getUserGitStatus(user.userId);
+            const isSelected = selectedUserId === user.userId;
+            const hasDirtyFiles = userGitStatus?.isDirty;
+
             return (
-              <div
-                key={user.userId}
-                style={userBadgeStyle}
-                title={userGitStatus?.isDirty ? `${user.userId} has uncommitted changes` : user.userId}
-              >
-                <span style={statusDotStyle(user.status)} />
-                <span>{user.userId}</span>
-                {userGitStatus?.isDirty && (
-                  <span style={gitIndicatorStyle(true)} title="Has uncommitted changes" />
+              <div key={user.userId} style={{ position: 'relative' }}>
+                <div
+                  style={{
+                    ...userBadgeStyle,
+                    ...(hasDirtyFiles && {
+                      backgroundColor: isSelected ? theme.colors.primary : theme.colors.background,
+                      color: isSelected ? theme.colors.background : theme.colors.textSecondary,
+                    }),
+                  }}
+                  onClick={() => {
+                    if (hasDirtyFiles) {
+                      setSelectedUserId(isSelected ? null : user.userId);
+                    }
+                  }}
+                  onMouseEnter={(e) => {
+                    if (hasDirtyFiles) {
+                      e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (hasDirtyFiles) {
+                      e.currentTarget.style.backgroundColor = isSelected
+                        ? theme.colors.primary
+                        : theme.colors.background;
+                    }
+                  }}
+                  title={
+                    hasDirtyFiles
+                      ? `${user.userId} has uncommitted changes - click to view files`
+                      : user.userId
+                  }
+                >
+                  <span style={statusDotStyle(user.status)} />
+                  <span>{user.userId}</span>
+                  {hasDirtyFiles && (
+                    <span style={gitIndicatorStyle(true)} title="Has uncommitted changes" />
+                  )}
+                </div>
+
+                {/* File list modal */}
+                {isSelected && userGitStatus && (
+                  <div style={fileListModalStyle}>
+                    <div style={fileListHeaderStyle}>{user.userId}'s Changes</div>
+
+                    {userGitStatus.stagedFiles && userGitStatus.stagedFiles.length > 0 && (
+                      <div style={fileGroupStyle}>
+                        <div style={{ ...fileGroupLabelStyle, color: '#22c55e' }}>
+                          Staged ({userGitStatus.stagedFiles.length})
+                        </div>
+                        {userGitStatus.stagedFiles.map((file) => (
+                          <div key={file} style={fileItemStyle} title={file}>
+                            {file}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {userGitStatus.modifiedFiles && userGitStatus.modifiedFiles.length > 0 && (
+                      <div style={fileGroupStyle}>
+                        <div style={{ ...fileGroupLabelStyle, color: '#f59e0b' }}>
+                          Modified ({userGitStatus.modifiedFiles.length})
+                        </div>
+                        {userGitStatus.modifiedFiles.map((file) => (
+                          <div key={file} style={fileItemStyle} title={file}>
+                            {file}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {userGitStatus.untrackedFiles && userGitStatus.untrackedFiles.length > 0 && (
+                      <div style={fileGroupStyle}>
+                        <div style={{ ...fileGroupLabelStyle, color: '#3b82f6' }}>
+                          Untracked ({userGitStatus.untrackedFiles.length})
+                        </div>
+                        {userGitStatus.untrackedFiles.map((file) => (
+                          <div key={file} style={fileItemStyle} title={file}>
+                            {file}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {userGitStatus.deletedFiles && userGitStatus.deletedFiles.length > 0 && (
+                      <div style={fileGroupStyle}>
+                        <div style={{ ...fileGroupLabelStyle, color: '#ef4444' }}>
+                          Deleted ({userGitStatus.deletedFiles.length})
+                        </div>
+                        {userGitStatus.deletedFiles.map((file) => (
+                          <div key={file} style={fileItemStyle} title={file}>
+                            {file}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             );
