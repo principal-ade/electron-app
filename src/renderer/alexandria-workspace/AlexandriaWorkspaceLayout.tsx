@@ -269,12 +269,17 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
             selectedRepo,
           );
           onRepositorySelected(selectedRepo);
+
+          // Open File City in right panel
+          onLayoutChange({ ...layout, right: 'file-city' });
+          // Expand right panel if collapsed
+          onCollapsedChange({ ...collapsed, right: false });
         }
       }
     });
 
     return unsubscribe;
-  }, [events, onRepositorySelected, selectedRepository]);
+  }, [events, onRepositorySelected, selectedRepository, layout, onLayoutChange, collapsed, onCollapsedChange]);
 
   // Listen for repository:opened events (for explicitly opening windows)
   useEffect(() => {
