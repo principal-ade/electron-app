@@ -433,3 +433,345 @@ Test script available at `scripts/test-git-status-presence.ts` for manual testin
 Events for git status sharing have been added to:
 - `docs/presence-tracking.otel.canvas` - Git status sharing events
 - Should be added to telemetry instrumentation in future work
+
+## ✅ Real-Time Repository Tracking (April 2026)
+
+### Problem Identified
+
+When opening a new repository window, the live activity view did not immediately show the new repository. Users had to navigate away from the view and come back, or wait for the 30-second heartbeat to sync.
+
+### Root Causes Discovered
+
+1. **Race Condition**: Desktop app called `reportRepositoryOpened()` before ensuring the client was in the `__global_presence__` room
+   - `setTimeout(() => subscribeToPresence(), 100)` ran asynchronously
+   - `reportRepositoryOpened()` might send `presence:repo_open` before room join completed
+   - Server required client to be in room to process presence messages
+   - Result: Request timed out waiting for response
+
+2. **Missing Event Listeners**: Desktop app didn't listen for `presence:repo_opened` broadcasts
+   - Server successfully handled test script requests and broadcasted events
+   - But desktop app had no listener for `presence:repo_opened` events
+   - BaseClient emits unrecognized message types as custom events
+   - Result: Events received but ignored
+
+3. **Wrong IPC Channel**: Events broadcasted on incorrect channel
+   - Events sent via `GitSyncEvent.ON_MESSAGE`
+   - But UI hooks listened on `'presence:event'` channel
+   - Result: Renderer never received the events
+
+### Solution Implemented (control-tower-core v0.6.2)
+
+#### 1. Added Dedicated Presence Hooks
+
+Extended `PresenceExtension` interface with repository lifecycle hooks:
+
+```typescript
+interface PresenceExtension {
+  // Existing hooks...
+
+  /**
+   * Called when a user opens a repository
+   */
+  onRepoOpened?(
+    userId: string,
+    repoId: string,
+    branch: string,
+    deviceId: string,
+  ): Promise<void> | void;
+
+  /**
+   * Called when a user closes a repository
+   */
+  onRepoClosed?(
+    userId: string,
+    repoId: string,
+    deviceId: string,
+  ): Promise<void> | void;
+}
+```
+
+#### 2. Updated DefaultPresenceManager
+
+Added handlers for `presence:repo_open` and `presence:repo_close` messages:
+
+```typescript
+case "presence:repo_open": {
+  const { repoId, branch } = message.payload;
+
+  // Call onRepoOpened hooks for all extensions
+  for (const ext of this.extensions) {
+    await ext.onRepoOpened?.(userId, repoId, branch, deviceId);
+  }
+
+  // Broadcast repo opened event
+  if (this.config.broadcastPresenceUpdates && this.server) {
+    await experimental?.broadcastAuthenticated({
+      type: "presence:repo_opened",
+      payload: {
+        userId,
+        repoId,
+        branch,
+        openedAt: Date.now(),
+      },
+    });
+  }
+
+  const response = { success: true };
+  await sendResponse({ type: "presence:repo_open", payload: response });
+  return true;
+}
+```
+
+#### 3. Implemented Hooks in RepositoryPresenceExtension
+
+```typescript
+async onRepoOpened(userId: string, repoId: string, branch: string, deviceId: string): Promise<void> {
+  const agentId = deviceId;
+  const sessions = this.repoSessions.get(userId) || [];
+  const existingSession = sessions.find(s => s.repoId === repoId && s.agentId === agentId);
+
+  if (existingSession) {
+    existingSession.lastActivity = Date.now();
+    if (branch) {
+      existingSession.branch = branch;
+    }
+    return;
+  }
+
+  const clientType = this.agentClientTypes.get(agentId);
+  sessions.push({
+    repoId,
+    branch: branch || 'main',
+    openedAt: Date.now(),
+    lastActivity: Date.now(),
+    permissions: { canRead: true, canWrite: true, canAdmin: false },
+    agentId,
+    clientType
+  });
+  this.repoSessions.set(userId, sessions);
+
+  let repoUsers = this.repositoryUsers.get(repoId);
+  if (!repoUsers) {
+    repoUsers = new Set();
+    this.repositoryUsers.set(repoId, repoUsers);
+  }
+  repoUsers.add(userId);
+}
+```
+
+### Solution Implemented (Desktop App)
+
+#### 1. Fixed Race Condition
+
+Updated `reportRepositoryOpened()` to ensure room membership:
+
+```typescript
+async reportRepositoryOpened(owner: string, repo: string, branch: string): Promise<{ success: boolean; message?: string }> {
+  try {
+    const client = this.getAuthenticatedClient();
+    if (!client) {
+      return { success: false, message: 'No authenticated connection available' };
+    }
+
+    // Ensure we're in the global presence room before sending repo_open
+    await this.subscribeToPresence();
+
+    const repoId = `${owner}/${repo}`;
+    const response = await client.request<PresenceActionResponse>(
+      'presence:repo_open',
+      { repoId, branch },
+    );
+
+    // ... handle response
+  }
+}
+```
+
+#### 2. Added Broadcast Event Listeners
+
+Listen for server broadcasts and forward to renderer:
+
+```typescript
+// Listen for presence:repo_opened broadcasts from server
+client.on('presence:repo_opened', async (data: unknown) => {
+  const payload = data as PresenceRepoOpenedPayload;
+  console.log('[GitSyncWebSocketManager] 📡 presence:repo_opened broadcast received:', payload);
+
+  // Broadcast the event to renderer for real-time UI updates
+  this.broadcastPresenceEvent({
+    type: 'presence:repo_opened',
+    payload,
+  });
+
+  // Also fetch and broadcast updated presence data
+  try {
+    const result = await this.fetchPresenceData();
+    if (result.success && result.data) {
+      this.broadcastToRenderers(GitSyncEvent.ON_MESSAGE, connectionId, {
+        type: 'presence_updated',
+        users: result.data.users,
+        stats: result.data.stats,
+      });
+    }
+  } catch (error) {
+    console.error('[GitSyncWebSocketManager] Failed to refresh presence after repo_opened:', error);
+  }
+});
+```
+
+#### 3. Added Semantic Types
+
+Created clear, self-documenting types for event payloads:
+
+```typescript
+/**
+ * Payload for presence:repo_opened broadcast events
+ */
+interface PresenceRepoOpenedPayload extends Record<string, unknown> {
+  userId: string;
+  repoId: string;
+  branch: string;
+  openedAt: number;
+}
+
+/**
+ * Payload for presence:repo_closed broadcast events
+ */
+interface PresenceRepoClosedPayload extends Record<string, unknown> {
+  userId: string;
+  repoId: string;
+  closedAt: number;
+}
+```
+
+### New Event Flow (Real-Time Repository Tracking)
+
+```
+User opens repository window
+      │
+      ▼
+DevWorkspaceWindow.created
+      │
+      ▼
+presenceWindowBridge.trackRepositoryOpened()
+      │
+      ▼
+gitSyncWebSocketManager.reportRepositoryOpened()
+      │
+      ├─ await subscribeToPresence()  ← Ensures room membership
+      │
+      ├─ client.request('presence:repo_open')
+      │       │
+      │       ▼
+      │   Traffic Controller receives message
+      │       │
+      │       ├─ Calls onRepoOpened hooks
+      │       │
+      │       ├─ Broadcasts presence:repo_opened to all clients
+      │       │
+      │       └─ Sends response { success: true }
+      │
+      └─ Receives response (no timeout!)
+
+Traffic Controller broadcasts presence:repo_opened
+      │
+      ▼
+All connected clients receive event
+      │
+      ├─ Main process: client.on('presence:repo_opened')
+      │       │
+      │       ├─ broadcastPresenceEvent() → IPC 'presence:event'
+      │       │
+      │       └─ fetchPresenceData() → broadcastToRenderers()
+      │
+      └─ Renderer: PresenceService.onPresenceEvent()
+              │
+              ▼
+          useActivityCities hook receives event
+              │
+              ├─ Checks event.type === 'presence:repo_opened'
+              │
+              └─ Calls refresh() → Updates UI immediately!
+```
+
+### WebSocket Messages Added
+
+```typescript
+// Client → Server: Report repository opened
+'presence:repo_open': {
+  repoId: string;   // e.g., "principal-ai/repository-traffic-controller"
+  branch: string;   // e.g., "main"
+}
+
+// Server → Client: Response
+{
+  success: boolean;
+}
+
+// Server → All Clients: Broadcast (via BaseClient event system)
+'presence:repo_opened': {
+  userId: string;
+  repoId: string;
+  branch: string;
+  openedAt: number;  // Unix timestamp
+}
+
+// Client → Server: Report repository closed
+'presence:repo_close': {
+  repoId: string;
+}
+
+// Server → All Clients: Broadcast
+'presence:repo_closed': {
+  userId: string;
+  repoId: string;
+  closedAt: number;
+}
+```
+
+### Files Modified
+
+#### control-tower-core (v0.6.2)
+
+1. ✅ **`src/abstractions/PresenceExtension.ts`**
+   - Added `onRepoOpened()` and `onRepoClosed()` hooks
+
+2. ✅ **`src/abstractions/DefaultPresenceManager.ts`**
+   - Added `presence:repo_open` message handler
+   - Added `presence:repo_close` message handler
+   - Broadcasts `presence:repo_opened` and `presence:repo_closed` events
+
+#### repository-traffic-controller (deployed)
+
+1. ✅ **`lib/presence/RepositoryPresenceExtension.ts`**
+   - Implemented `onRepoOpened()` hook
+   - Implemented `onRepoClosed()` hook
+   - Removed old `handleMessage` cases (now handled by DefaultPresenceManager)
+
+#### electron-app
+
+1. ✅ **`src/main/services/GitSyncWebSocketManager.ts`**
+   - Fixed race condition: Added `await subscribeToPresence()` before sending requests
+   - Added event listeners for `presence:repo_opened` and `presence:repo_closed`
+   - Added semantic types: `PresenceRepoOpenedPayload`, `PresenceRepoClosedPayload`
+   - Broadcasts events on correct IPC channel via `broadcastPresenceEvent()`
+
+2. ✅ **`test-presence.cjs`**
+   - Created test script to verify `presence:repo_open` functionality
+   - Tests full flow: connect → authenticate → join room → send message
+   - Uses JWT with room secret for authentication
+
+### Testing
+
+Manual testing verified:
+- ✅ Opening a repository window immediately shows in live activity view
+- ✅ No need to navigate away and come back
+- ✅ Updates appear within milliseconds instead of waiting for 30s heartbeat
+- ✅ Test script successfully validates server-side functionality
+- ✅ Events properly flow from main process to renderer via IPC
+
+### Result
+
+**Before**: Users had to wait up to 30 seconds for heartbeat sync, or navigate away and back to see new repository windows.
+
+**After**: Repository windows appear **instantly** in live activity view via real-time event broadcasts! 🎉
