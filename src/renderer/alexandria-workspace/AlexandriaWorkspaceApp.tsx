@@ -100,7 +100,8 @@ const AlexandriaWorkspaceContent: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [enableKeyboardShortcuts, setEnableKeyboardShortcuts] = useState(false);
-  const [collapsed, setCollapsed] = useState({ left: false, right: false });
+  const [collapsed, setCollapsed] = useState({ left: false, right: true });
+  const [showPanelSidebar] = useState(false);
   const [layout, setLayout] = useState<PanelLayout>({
     left: 'workspace-repos',
     middle: 'terminal',
@@ -654,6 +655,7 @@ const AlexandriaWorkspaceContent: React.FC = () => {
         layout={layout}
         onLayoutChange={setLayout}
         onRepositorySelected={setSelectedRepository}
+        showPanelSidebar={showPanelSidebar}
       />
 
       {/* Agent Command Palette - Cmd+Shift+P to open */}

@@ -19,12 +19,11 @@ import {
 } from '../contexts/AgentHighlightContext';
 import { TabbedTerminalPanel } from '@industry-theme/xterm-terminal-panel';
 import {
-  WorkspaceRepositoriesPanel,
   LocalProjectsPanel,
 } from '@industry-theme/alexandria-panels';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import { FeedCodeCityPanel } from '@industry-theme/file-city-panel';
-import { localhostProcessesPanels } from '../panels';
+import { localhostProcessesPanels, RecentRepositoriesPanel } from '../panels';
 import { EventBusPanel, AgentToolsPanel } from '@industry-theme/agent-driven-ui-panels';
 import { MarkdownPanel } from '@industry-theme/markdown-panels';
 import { StoryboardListPanel, CanvasEditorPanel } from '@industry-theme/principal-view-panels';
@@ -78,6 +77,11 @@ interface AlexandriaWorkspaceLayoutProps {
   onRepositorySelected?: (
     repository: { name: string; path: string } | undefined,
   ) => void;
+  /**
+   * Show the panel icon sidebar
+   * @default true
+   */
+  showPanelSidebar?: boolean;
 }
 
 interface AlexandriaWorkspaceLayoutContentProps {
@@ -90,6 +94,7 @@ interface AlexandriaWorkspaceLayoutContentProps {
   onCollapsedChange: (collapsed: { left: boolean; right: boolean }) => void;
   layout: PanelLayout;
   onLayoutChange: (layout: PanelLayout) => void;
+  showPanelSidebar: boolean;
 }
 
 /**
@@ -105,6 +110,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   onCollapsedChange,
   layout,
   onLayoutChange,
+  showPanelSidebar,
 }) => {
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
@@ -189,40 +195,6 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       }
     },
     [entryToRemove, workspaceForRemoval, context],
-  );
-
-  // Override actions to intercept removeRepositoryFromWorkspace
-  const overriddenActions = useMemo(
-    () => ({
-      ...actions,
-      removeRepositoryFromWorkspace: async (
-        repositoryId: string,
-        workspaceId: string,
-      ) => {
-        // Find the entry from workspace repositories slice
-        const repositories = context.workspaceRepositories?.data?.repositories || [];
-        const entry = repositories.find((r: AlexandriaEntry) => r.name === repositoryId);
-
-        // Get workspace info from context
-        const workspace = context.workspace?.data?.workspace;
-
-        if (entry && workspace) {
-          setEntryToRemove(entry);
-          setWorkspaceForRemoval(workspace);
-          setIsRemoveModalOpen(true);
-        } else {
-          // Fallback to direct removal if we can't find the entry/workspace
-          console.warn(
-            '[AlexandriaWorkspaceLayout] Could not find entry or workspace for removal modal, proceeding with direct removal',
-          );
-          await actions.removeRepositoryFromWorkspace?.(
-            repositoryId,
-            workspaceId,
-          );
-        }
-      },
-    }),
-    [actions, context],
   );
 
   // Panel focus management for keyboard shortcuts
@@ -410,7 +382,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
 
   // Get panel components - using direct imports instead of array access
   // to avoid type inference issues with mixed desktop/web panels
-  const WorkspacePanelComponent = WorkspaceRepositoriesPanel;
+  const WorkspacePanelComponent = RecentRepositoriesPanel;
   const LocalProjectsPanelComponent = LocalProjectsPanel;
   const DocsPanelComponent = docsPanels[0]?.component; // Cannot convert - component not exported
   const FileCityPanelComponent = FeedCodeCityPanel;
@@ -467,7 +439,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
             )}
             <WorkspacePanelComponent
               context={context}
-              actions={overriddenActions}
+              actions={actions}
               events={events}
             />
           </div>
@@ -1494,7 +1466,6 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
       theme,
       context,
       actions,
-      overriddenActions,
       events,
       WorkspacePanelComponent,
       LocalProjectsPanelComponent,
@@ -1562,15 +1533,17 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
         </div>
 
         {/* Panel Icon Sidebar */}
-        <PanelIconSidebar
-          currentPanelId={typeof layout.left === 'string' ? layout.left : ''}
-          onPanelChange={(panelId) => onLayoutChange({ ...layout, left: panelId })}
-          theme={theme}
-          collapsed={collapsed.left}
-          onExpand={() => onCollapsedChange({ ...collapsed, left: false })}
-          onCollapse={() => onCollapsedChange({ ...collapsed, left: true })}
-          position="right"
-        />
+        {showPanelSidebar && (
+          <PanelIconSidebar
+            currentPanelId={typeof layout.left === 'string' ? layout.left : ''}
+            onPanelChange={(panelId) => onLayoutChange({ ...layout, left: panelId })}
+            theme={theme}
+            collapsed={collapsed.left}
+            onExpand={() => onCollapsedChange({ ...collapsed, left: false })}
+            onCollapse={() => onCollapsedChange({ ...collapsed, left: true })}
+            position="right"
+          />
+        )}
       </div>
 
       {/* Remove from Workspace Modal */}
@@ -1607,6 +1580,7 @@ export const AlexandriaWorkspaceLayout: React.FC<
   layout: externalLayout,
   onLayoutChange: externalOnLayoutChange,
   onRepositorySelected: externalOnRepositorySelected,
+  showPanelSidebar = true,
 }) => {
   const { theme } = useTheme();
 
@@ -1691,6 +1665,7 @@ export const AlexandriaWorkspaceLayout: React.FC<
             onCollapsedChange={onCollapsedChange}
             layout={layout}
             onLayoutChange={onLayoutChange}
+            showPanelSidebar={showPanelSidebar}
           />
         </AgentHighlightProvider>
       </TerminalProvider>
