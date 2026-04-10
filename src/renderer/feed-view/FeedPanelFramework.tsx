@@ -127,11 +127,17 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
 
   // Transform commits for heatmap
   const heatmapCommits = useMemo<CommitTimestamp[]>(() => {
-    return activityFeed.commits.map((commit) => ({
+    const transformed = activityFeed.commits.map((commit) => ({
       timestamp: new Date(commit.date),
       repoId: commit.repoPath,
     }));
-  }, [activityFeed.commits]);
+    console.info('[FeedPanelFramework] Heatmap data:', {
+      commitCount: activityFeed.commits.length,
+      transformedCount: transformed.length,
+      repositories: repositories.length,
+    });
+    return transformed;
+  }, [activityFeed.commits, repositories.length]);
 
   // Listen for time filter events to update selected block
   useEffect(() => {

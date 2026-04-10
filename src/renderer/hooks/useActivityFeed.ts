@@ -89,7 +89,13 @@ export function useActivityFeed(
 
       // Sort all commits by date descending and limit
       allCommits.sort((a, b) => b.date.localeCompare(a.date));
-      setCommits(allCommits.slice(0, totalLimit));
+      const limitedCommits = allCommits.slice(0, totalLimit);
+      console.info('[useActivityFeed] Loaded commits:', {
+        totalCommits: allCommits.length,
+        limitedCommits: limitedCommits.length,
+        repositories: repositories.length,
+      });
+      setCommits(limitedCommits);
     } catch (err) {
       console.error('[useActivityFeed] Error loading activity feed:', err);
       setError(err instanceof Error ? err.message : 'Failed to load activity feed');

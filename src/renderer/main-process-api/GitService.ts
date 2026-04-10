@@ -267,7 +267,15 @@ export class GitService {
         return { hash, message, author, authorEmail, date };
       });
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
       console.error('[GitService] Failed to get commits in date range:', error);
+
+      // Check if it's a worker timeout error
+      if (errorMsg.includes('Worker') && errorMsg.includes('timeout')) {
+        console.error('[GitService] ⚠️  CLI Bridge worker not responding!');
+        console.error('[GitService] 💡 Try: Open System Monitor → CLI Bridge → Test Worker or Restart Worker');
+      }
+
       return [];
     }
   }

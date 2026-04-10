@@ -49,10 +49,31 @@ export class CLIBridge extends EventEmitter {
     }
 
     // Spawn the universal worker
-    await this.spawnWorker('universal', 'universal-worker.cjs');
+    try {
+      await this.spawnWorker('universal', 'universal-worker.cjs');
+      this.initialized = true;
+      this.log('info', 'CLIBridge initialized successfully');
+    } catch (error) {
+      this.log('error', `Worker spawn failed: ${error}`);
 
-    this.initialized = true;
-    this.log('info', 'CLIBridge initialized successfully');
+      // WORKAROUND: If spawn times out but worker is running, test if it's responsive
+      this.log('info', 'Attempting automatic recovery via testWorker()...');
+      try {
+        const testResult = await this.testWorker();
+        if (testResult.success) {
+          this.log('info', 'Worker is responsive despite timeout! Marking as initialized.');
+          this.initialized = true;
+          return;
+        } else {
+          this.log('error', `Worker test failed: ${testResult.error}`);
+        }
+      } catch (testError) {
+        this.log('error', `Worker test threw error: ${testError}`);
+      }
+
+      // Re-throw original error if recovery failed
+      throw error;
+    }
   }
 
   /**
@@ -110,12 +131,23 @@ export class CLIBridge extends EventEmitter {
 
       // Verify the worker file exists
       if (!fs.existsSync(workerPath)) {
-        throw new Error(
+        const errorMessage =
           `Worker script not found at: ${workerPath}\n` +
-            `isPackaged: ${app.isPackaged}\n` +
-            `__dirname: ${__dirname}\n` +
-            `app.getAppPath(): ${app.getAppPath()}`,
-        );
+          `isPackaged: ${app.isPackaged}\n` +
+          `__dirname: ${__dirname}\n` +
+          `app.getAppPath(): ${app.getAppPath()}`;
+        this.log('error', errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      // Log worker file details for debugging
+      try {
+        const stats = fs.statSync(workerPath);
+        this.log('info', `Worker file found: ${workerPath}`);
+        this.log('info', `  Size: ${stats.size} bytes`);
+        this.log('info', `  Modified: ${stats.mtime.toISOString()}`);
+      } catch (e) {
+        this.log('warn', `Could not read worker file stats: ${e}`);
       }
 
       this.log('info', `Spawning ${name} worker from: ${workerPath}`);
@@ -217,6 +249,9 @@ export class CLIBridge extends EventEmitter {
         if (!settled) {
           cleanup();
           this.log('error', `Worker ${name} failed to send ready signal within 30 seconds`);
+          this.log('error', `  Worker PID: ${this.workers.get(name)?.pid || 'unknown'}`);
+          this.log('error', `  Worker process exists: ${this.workers.has(name)}`);
+          this.log('error', `  WORKAROUND: You can use testWorker() to verify if the worker is actually responsive`);
           reject(new Error(`Worker ${name} failed to start within timeout (30s safety limit)`));
         }
       }, 30000);
@@ -309,14 +344,19 @@ export class CLIBridge extends EventEmitter {
    */
   private handleWorkerExit(name: string, code: number): void {
     this.log('warn', `Worker ${name} exited with code ${code}`);
+    this.log('warn', `  Pending calls being rejected: ${this.pendingCalls.size}`);
     this.emit('worker-exit', name, code);
     this.workers.delete(name);
     this.workerStartTimes.delete(name);
 
     // Reject all pending calls for this worker
+    const pendingCount = this.pendingCalls.size;
     for (const [id, call] of this.pendingCalls.entries()) {
-      call.reject(new Error(`Worker ${name} exited unexpectedly`));
+      call.reject(new Error(`Worker ${name} exited unexpectedly (exit code: ${code})`));
       this.pendingCalls.delete(id);
+    }
+    if (pendingCount > 0) {
+      this.log('warn', `Rejected ${pendingCount} pending calls due to worker exit`);
     }
 
     // Attempt to restart the worker if bridge is still initialized
@@ -324,9 +364,11 @@ export class CLIBridge extends EventEmitter {
       this.log('info', `Attempting to restart worker ${name}`);
       setTimeout(() => {
         if (name === 'universal') {
-          this.spawnWorker('universal', 'universal-worker.js').catch(
+          this.spawnWorker('universal', 'universal-worker.cjs').catch(
             (error) => {
               this.log('error', `Failed to restart worker ${name}: ${error}`);
+              // If restart fails, mark as uninitialized so next command will try again
+              this.initialized = false;
             },
           );
         }
@@ -349,6 +391,14 @@ export class CLIBridge extends EventEmitter {
     const worker = this.selectWorker(command);
     if (!worker) {
       throw new Error('No worker available for command execution');
+    }
+
+    // Check if worker process is actually running
+    if (!worker.pid) {
+      this.log('error', 'Worker process is not running (no PID)');
+      this.log('error', 'Marking bridge as uninitialized to trigger re-initialization');
+      this.initialized = false;
+      throw new Error('Worker process is not running. Try restarting the worker.');
     }
 
     const id = this.generateCallId();

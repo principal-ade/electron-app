@@ -113,6 +113,10 @@ const FeedPanelProvider: React.FC<{ children: React.ReactNode }> = ({ children }
           const bTime = b.lastOpenedAt || b.registeredAt;
           return new Date(bTime).getTime() - new Date(aTime).getTime();
         });
+        console.info('[FeedPanelProvider] Fetched repositories:', {
+          count: sorted.length,
+          repos: sorted.map(r => ({ name: r.name, path: r.path })),
+        });
         setRepositories(sorted);
       } catch (error) {
         console.error('[FeedPanelProvider] Failed to fetch repositories:', error);
