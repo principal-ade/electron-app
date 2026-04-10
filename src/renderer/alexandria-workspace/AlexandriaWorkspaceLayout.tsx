@@ -23,7 +23,7 @@ import {
   LocalProjectsPanel,
 } from '@industry-theme/alexandria-panels';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
-import { FeedCodeCityPanel } from '@industry-theme/file-city-panel';
+import { CodeCityPanel } from '@industry-theme/file-city-panel';
 import { localhostProcessesPanels, RecentRepositoriesPanel } from '../panels';
 import { EventBusPanel, AgentToolsPanel } from '@industry-theme/agent-driven-ui-panels';
 import { MarkdownPanel } from '@industry-theme/markdown-panels';
@@ -208,6 +208,36 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
         refresh: async () => {
           // Agent highlight layers are updated reactively from events
         },
+      },
+      // Explicit properties for typed panel contexts (CodeCityPanelContext)
+      // Note: PanelProvider doesn't have all repository-specific slices,
+      // so we provide defaults for CodeCityPanel compatibility
+      fileTree: context.fileTree,
+      fileCityColorModes: {
+        scope: 'repository' as const,
+        name: 'fileCityColorModes',
+        data: { selectedColorMode: 'fileTypes' as const },
+        loading: false,
+        error: null,
+        refresh: async () => {},
+      },
+      gitStatusWithFiles: context.gitStatusWithFiles,
+      packages: context.packages,
+      activityHeatmap: {
+        scope: 'repository' as const,
+        name: 'activityHeatmap',
+        data: null,
+        loading: false,
+        error: null,
+        refresh: async () => {},
+      },
+      lineCounts: {
+        scope: 'repository' as const,
+        name: 'lineCounts',
+        data: null,
+        loading: false,
+        error: null,
+        refresh: async () => {},
       },
     }),
     [context, highlightCtx.highlightLayers],
@@ -456,7 +486,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
   const WorkspacePanelComponent = RecentRepositoriesPanel;
   const LocalProjectsPanelComponent = LocalProjectsPanel;
   const DocsPanelComponent = docsPanels[0]?.component; // Cannot convert - component not exported
-  const FileCityPanelComponent = FeedCodeCityPanel;
+  const FileCityPanelComponent = CodeCityPanel;
   const LocalhostPanelComponent = localhostProcessesPanels[0]?.component; // Cannot convert - local panel
   const EventBusPanelComponent = EventBusPanel;
   const AgentToolsPanelComponent = AgentToolsPanel;
