@@ -613,50 +613,76 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   const handleLeftCollapse = useCallback(() => {
     panelLayoutRef.current?.collapsePanel('left');
     setIsLeftCollapsed(true);
-    onCollapsedChange({ ...collapsed, left: true });
-  }, [collapsed, onCollapsedChange]);
+    collapsedStateRef.current.left = true;
+    onCollapsedChangeRef.current({ ...collapsedStateRef.current });
+  }, []);
 
   const handleLeftExpand = useCallback(() => {
     panelLayoutRef.current?.expandPanel('left');
+    // After expand, ensure panel is at least 20% (library may restore to small size)
+    const currentLayout = panelLayoutRef.current?.getLayout();
+    if (currentLayout && currentLayout.left < 20) {
+      panelLayoutRef.current?.setLayout({
+        left: 25,
+        middle: 50,
+        right: currentLayout.right,
+      });
+    }
     setIsLeftCollapsed(false);
-    onCollapsedChange({ ...collapsed, left: false });
-  }, [collapsed, onCollapsedChange]);
+    collapsedStateRef.current.left = false;
+    onCollapsedChangeRef.current({ ...collapsedStateRef.current });
+  }, []);
 
   const handleRightCollapse = useCallback(() => {
     panelLayoutRef.current?.collapsePanel('right');
     setIsRightCollapsed(true);
-    onCollapsedChange({ ...collapsed, right: true });
-  }, [collapsed, onCollapsedChange]);
+    collapsedStateRef.current.right = true;
+    onCollapsedChangeRef.current({ ...collapsedStateRef.current });
+  }, []);
 
   const handleRightExpand = useCallback(() => {
     panelLayoutRef.current?.expandPanel('right');
+    // After expand, ensure panel is at least 20% (library may restore to small size)
+    const currentLayout = panelLayoutRef.current?.getLayout();
+    if (currentLayout && currentLayout.right < 20) {
+      panelLayoutRef.current?.setLayout({
+        left: currentLayout.left,
+        middle: 50,
+        right: 25,
+      });
+    }
     setIsRightCollapsed(false);
-    onCollapsedChange({ ...collapsed, right: false });
-  }, [collapsed, onCollapsedChange]);
+    collapsedStateRef.current.right = false;
+    onCollapsedChangeRef.current({ ...collapsedStateRef.current });
+  }, []);
 
   // Internal handlers for when ConfigurablePanelLayout completes collapse/expand animations
   // These update local state and call the parent callback
   const handleLeftCollapseCompleteInternal = useCallback(() => {
     setIsLeftCollapsed(true);
-    onCollapsedChange({ ...collapsed, left: true });
+    collapsedStateRef.current.left = true;
+    onCollapsedChangeRef.current({ ...collapsedStateRef.current });
     onLeftCollapseComplete?.();
-  }, [collapsed, onCollapsedChange, onLeftCollapseComplete]);
+  }, [onLeftCollapseComplete]);
 
   const handleLeftExpandCompleteInternal = useCallback(() => {
     setIsLeftCollapsed(false);
-    onCollapsedChange({ ...collapsed, left: false });
+    collapsedStateRef.current.left = false;
+    onCollapsedChangeRef.current({ ...collapsedStateRef.current });
     onLeftExpandComplete?.();
-  }, [collapsed, onCollapsedChange, onLeftExpandComplete]);
+  }, [onLeftExpandComplete]);
 
   const handleRightCollapseCompleteInternal = useCallback(() => {
     setIsRightCollapsed(true);
-    onCollapsedChange({ ...collapsed, right: true });
-  }, [collapsed, onCollapsedChange]);
+    collapsedStateRef.current.right = true;
+    onCollapsedChangeRef.current({ ...collapsedStateRef.current });
+  }, []);
 
   const handleRightExpandCompleteInternal = useCallback(() => {
     setIsRightCollapsed(false);
-    onCollapsedChange({ ...collapsed, right: false });
-  }, [collapsed, onCollapsedChange]);
+    collapsedStateRef.current.right = false;
+    onCollapsedChangeRef.current({ ...collapsedStateRef.current });
+  }, []);
 
   // Handle resize from user drag - just update local collapsed state
   const handlePanelResizeInternal = useCallback(

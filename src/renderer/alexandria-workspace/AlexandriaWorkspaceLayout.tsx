@@ -163,6 +163,15 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
         },
         expandLeft: () => {
           panelLayoutRef.current?.expandPanel('left');
+          // After expand, ensure panel is at least 20% (library may restore to small size)
+          const currentLayout = panelLayoutRef.current?.getLayout();
+          if (currentLayout && currentLayout.left < 20) {
+            panelLayoutRef.current?.setLayout({
+              left: 25,
+              middle: 50,
+              right: currentLayout.right,
+            });
+          }
           collapsedStateRef.current = { ...collapsedStateRef.current, left: false };
           onCollapsedChangeRef.current(collapsedStateRef.current);
         },
@@ -173,6 +182,15 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
         },
         expandRight: () => {
           panelLayoutRef.current?.expandPanel('right');
+          // After expand, ensure panel is at least 20% (library may restore to small size)
+          const currentLayout = panelLayoutRef.current?.getLayout();
+          if (currentLayout && currentLayout.right < 20) {
+            panelLayoutRef.current?.setLayout({
+              left: currentLayout.left,
+              middle: 50,
+              right: 25,
+            });
+          }
           collapsedStateRef.current = { ...collapsedStateRef.current, right: false };
           onCollapsedChangeRef.current(collapsedStateRef.current);
         },
@@ -296,19 +314,70 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
     panelType: 'three-panel',
   });
 
-  // Collapse/expand handlers
+  // Collapse/expand handlers for sidebar and keyboard shortcuts
+  const handleLeftExpand = useCallback(() => {
+    panelLayoutRef.current?.expandPanel('left');
+    // After expand, ensure panel is at least 20% (library may restore to small size)
+    const currentLayout = panelLayoutRef.current?.getLayout();
+    if (currentLayout && currentLayout.left < 20) {
+      panelLayoutRef.current?.setLayout({
+        left: 25,
+        middle: 50,
+        right: currentLayout.right,
+      });
+    }
+    collapsedStateRef.current = { ...collapsedStateRef.current, left: false };
+    onCollapsedChangeRef.current(collapsedStateRef.current);
+  }, []);
+
+  const handleLeftCollapse = useCallback(() => {
+    panelLayoutRef.current?.collapsePanel('left');
+    collapsedStateRef.current = { ...collapsedStateRef.current, left: true };
+    onCollapsedChangeRef.current(collapsedStateRef.current);
+  }, []);
+
+  const handleRightExpand = useCallback(() => {
+    panelLayoutRef.current?.expandPanel('right');
+    // After expand, ensure panel is at least 20% (library may restore to small size)
+    const currentLayout = panelLayoutRef.current?.getLayout();
+    if (currentLayout && currentLayout.right < 20) {
+      panelLayoutRef.current?.setLayout({
+        left: currentLayout.left,
+        middle: 50,
+        right: 25,
+      });
+    }
+    collapsedStateRef.current = { ...collapsedStateRef.current, right: false };
+    onCollapsedChangeRef.current(collapsedStateRef.current);
+  }, []);
+
+  const handleRightCollapse = useCallback(() => {
+    panelLayoutRef.current?.collapsePanel('right');
+    collapsedStateRef.current = { ...collapsedStateRef.current, right: true };
+    onCollapsedChangeRef.current(collapsedStateRef.current);
+  }, []);
+
+  // Legacy handlers for keyboard shortcuts (converted to use imperative methods)
   const handleExpand = useCallback(
     async (panel: 'left' | 'right') => {
-      onCollapsedChange({ ...collapsed, [panel]: false });
+      if (panel === 'left') {
+        handleLeftExpand();
+      } else {
+        handleRightExpand();
+      }
     },
-    [collapsed, onCollapsedChange],
+    [handleLeftExpand, handleRightExpand],
   );
 
   const handleCollapse = useCallback(
     async (panel: 'left' | 'right') => {
-      onCollapsedChange({ ...collapsed, [panel]: true });
+      if (panel === 'left') {
+        handleLeftCollapse();
+      } else {
+        handleRightCollapse();
+      }
     },
-    [collapsed, onCollapsedChange],
+    [handleLeftCollapse, handleRightCollapse],
   );
 
   // Keyboard shortcuts (Alt+1, Alt+2, Alt+3)
@@ -1641,8 +1710,8 @@ const AlexandriaWorkspaceLayoutContent: React.FC<
             onPanelChange={(panelId) => onLayoutChange({ ...layout, left: panelId })}
             theme={theme}
             collapsed={collapsed.left}
-            onExpand={() => onCollapsedChange({ ...collapsed, left: false })}
-            onCollapse={() => onCollapsedChange({ ...collapsed, left: true })}
+            onExpand={handleLeftExpand}
+            onCollapse={handleLeftCollapse}
             position="right"
           />
         )}
