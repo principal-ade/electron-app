@@ -9,10 +9,8 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import { FolderGit2, ChevronDown, ChevronRight, User, ExternalLink } from 'lucide-react';
+import { FolderGit2, User, ExternalLink } from 'lucide-react';
 import { useActivityFeed, type ActivityCommit } from '../hooks/useActivityFeed';
-import { FileCityImageService } from '../main-process-api/FileCityImageService';
-import { GitService } from '../main-process-api/GitService';
 
 export interface ActivityFeedCardPanelProps {
   /** List of repositories to show activity for */
@@ -62,12 +60,6 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
 
   // Time filter state from heatmap events
   const [timeFilter, setTimeFilter] = useState<{ start: Date; end: Date } | null>(null);
-
-  // Expanded cards state
-  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
-
-  // Repo images state
-  const [repoImages, setRepoImages] = useState<Map<string, string>>(new Map());
 
   const spacing = {
     xs: 4,
@@ -125,93 +117,96 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
     });
   }, [activityFeed.commits, timeFilter]);
 
-  // Aggregate commits by repository
-  const repoSummaries = useMemo<RepoActivitySummary[]>(() => {
-    const repoMap = new Map<string, RepoActivitySummary>();
+  // Helper to get hour bucket for a date
+  const getHourBucket = useCallback((date: Date): string => {
+    const rounded = new Date(date);
+    rounded.setMinutes(0, 0, 0);
+    return rounded.toISOString();
+  }, []);
+
+  // Helper to format hour bucket for display
+  const formatHourBucket = useCallback((hourKey: string): string => {
+    const date = new Date(hourKey);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffHours < 1) return 'Last hour';
+    if (diffHours === 1) return '1 hour ago';
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      hour12: true
+    });
+  }, []);
+
+  // Group commits by hour, then by repository
+  const hourlyGroups = useMemo(() => {
+    // First, group by hour
+    const hourMap = new Map<string, ActivityCommit[]>();
 
     for (const commit of filteredCommits) {
-      let summary = repoMap.get(commit.repoPath);
-      if (!summary) {
-        summary = {
-          repoPath: commit.repoPath,
-          repoName: commit.repoName,
-          commits: [],
-          latestCommitAt: new Date(commit.date),
-          commitCount: 0,
-          githubOwner: repoOwnerMap.get(commit.repoPath),
-          entry: repoEntryMap.get(commit.repoPath),
-        };
-        repoMap.set(commit.repoPath, summary);
-      }
-      summary.commits.push(commit);
-      summary.commitCount++;
-
-      const commitDate = new Date(commit.date);
-      if (commitDate > summary.latestCommitAt) {
-        summary.latestCommitAt = commitDate;
-      }
+      const hourKey = getHourBucket(new Date(commit.date));
+      const commits = hourMap.get(hourKey) || [];
+      commits.push(commit);
+      hourMap.set(hourKey, commits);
     }
 
-    // Sort by latest commit (most recent first)
-    return Array.from(repoMap.values()).sort(
-      (a, b) => b.latestCommitAt.getTime() - a.latestCommitAt.getTime()
+    // Sort hours (newest first)
+    const sortedHours = Array.from(hourMap.entries()).sort(
+      (a, b) => b[0].localeCompare(a[0])
     );
-  }, [filteredCommits, repoOwnerMap, repoEntryMap]);
 
-  // Fetch File City images for repos
-  useEffect(() => {
-    if (repoSummaries.length === 0) return;
+    // For each hour, group commits by repository
+    return sortedHours.map(([hourKey, commits]) => {
+      const repoMap = new Map<string, RepoActivitySummary>();
 
-    const fetchImages = async () => {
-      const imageMap = new Map<string, string>();
+      for (const commit of commits) {
+        let summary = repoMap.get(commit.repoPath);
+        if (!summary) {
+          summary = {
+            repoPath: commit.repoPath,
+            repoName: commit.repoName,
+            commits: [],
+            latestCommitAt: new Date(commit.date),
+            commitCount: 0,
+            githubOwner: repoOwnerMap.get(commit.repoPath),
+            entry: repoEntryMap.get(commit.repoPath),
+          };
+          repoMap.set(commit.repoPath, summary);
+        }
+        summary.commits.push(commit);
+        summary.commitCount++;
 
-      await Promise.all(
-        repoSummaries.map(async (summary) => {
-          try {
-            const latestCommit = summary.commits[0];
-            if (!latestCommit) return;
+        const commitDate = new Date(commit.date);
+        if (commitDate > summary.latestCommitAt) {
+          summary.latestCommitAt = commitDate;
+        }
+      }
 
-            const filePaths = await GitService.getFileTreeAtCommit(summary.repoPath, latestCommit.hash);
-            const changedFilesMap = await GitService.getChangedFilesForCommit(summary.repoPath, latestCommit.hash);
-
-            const changedFiles: Record<string, { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }> = {};
-            changedFilesMap.forEach((value, key) => {
-              changedFiles[key] = value;
-            });
-
-            const imageUrl = await FileCityImageService.getImageForCommitWithChanges(
-              summary.repoPath,
-              latestCommit.hash,
-              filePaths,
-              changedFiles
-            );
-
-            if (imageUrl) {
-              imageMap.set(summary.repoPath, imageUrl);
-            }
-          } catch (err) {
-            console.warn(`[ActivityFeedCardPanel] Failed to get image for ${summary.repoPath}:`, err);
-          }
-        })
+      // Sort repos within hour by latest commit
+      const repoSummaries = Array.from(repoMap.values()).sort(
+        (a, b) => b.latestCommitAt.getTime() - a.latestCommitAt.getTime()
       );
 
-      setRepoImages(imageMap);
-    };
-
-    fetchImages();
-  }, [repoSummaries]);
-
-  // Toggle card expansion
-  const toggleExpanded = useCallback((repoPath: string) => {
-    setExpandedCards((prev) => {
-      const next = new Set(prev);
-      if (next.has(repoPath)) {
-        next.delete(repoPath);
-      } else {
-        next.add(repoPath);
-      }
-      return next;
+      return {
+        hourKey,
+        hourLabel: formatHourBucket(hourKey),
+        repos: repoSummaries,
+      };
     });
+  }, [filteredCommits, repoOwnerMap, repoEntryMap, getHourBucket, formatHourBucket]);
+
+  // Handle commit click - placeholder for future behavior
+  const handleCommitClick = useCallback((commit: ActivityCommit) => {
+    console.log('[ActivityFeedCardPanel] Commit clicked:', commit);
+    // TODO: Implement commit expansion/details behavior
   }, []);
 
   // Handle opening a repository
@@ -284,7 +279,7 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
           padding: spacing.md,
         }}
       >
-        {repoSummaries.length === 0 && !activityFeed.loading ? (
+        {hourlyGroups.length === 0 && !activityFeed.loading ? (
           <div
             style={{
               display: 'flex',
@@ -300,18 +295,37 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
             <p style={{ margin: 0, fontSize: theme.fontSizes[2] }}>No recent activity</p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
-            {repoSummaries.map((summary) => (
-              <CompactRepoCard
-                key={summary.repoPath}
-                summary={summary}
-                imageUrl={repoImages.get(summary.repoPath)}
-                isExpanded={expandedCards.has(summary.repoPath)}
-                onToggleExpand={() => toggleExpanded(summary.repoPath)}
-                onOpen={() => handleOpenRepo(summary)}
-                theme={theme}
-                spacing={spacing}
-              />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.lg }}>
+            {hourlyGroups.map((group) => (
+              <div key={group.hourKey}>
+                {/* Time section header */}
+                <div
+                  style={{
+                    fontSize: theme.fontSizes[1],
+                    fontWeight: 600,
+                    color: theme.colors.textSecondary,
+                    marginBottom: spacing.sm,
+                    paddingBottom: spacing.xs,
+                    borderBottom: `1px solid ${theme.colors.border}`,
+                  }}
+                >
+                  {group.hourLabel}
+                </div>
+
+                {/* Repo cards for this hour */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
+                  {group.repos.map((summary) => (
+                    <CompactRepoCard
+                      key={summary.repoPath}
+                      summary={summary}
+                      onCommitClick={handleCommitClick}
+                      onOpen={() => handleOpenRepo(summary)}
+                      theme={theme}
+                      spacing={spacing}
+                    />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         )}
@@ -325,9 +339,7 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
  */
 interface CompactRepoCardProps {
   summary: RepoActivitySummary;
-  imageUrl?: string;
-  isExpanded: boolean;
-  onToggleExpand: () => void;
+  onCommitClick: (commit: ActivityCommit) => void;
   onOpen: () => void;
   theme: ReturnType<typeof useTheme>['theme'];
   spacing: { xs: number; sm: number; md: number; lg: number };
@@ -335,9 +347,7 @@ interface CompactRepoCardProps {
 
 const CompactRepoCard: React.FC<CompactRepoCardProps> = ({
   summary,
-  imageUrl,
-  isExpanded,
-  onToggleExpand,
+  onCommitClick,
   onOpen,
   theme,
   spacing,
@@ -372,23 +382,23 @@ const CompactRepoCard: React.FC<CompactRepoCardProps> = ({
 
   return (
     <div
-      draggable
-      onDragStart={handleDragStart}
       style={{
         backgroundColor: theme.colors.backgroundSecondary,
         borderRadius: theme.radii?.[2] || 8,
         border: `1px solid ${theme.colors.border}`,
         overflow: 'hidden',
-        cursor: 'grab',
       }}
     >
       {/* Header: Avatar + Name + Stats */}
       <div
+        draggable
+        onDragStart={handleDragStart}
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: spacing.sm,
           padding: spacing.sm,
+          cursor: 'grab',
         }}
       >
         {/* Avatar */}
@@ -467,74 +477,32 @@ const CompactRepoCard: React.FC<CompactRepoCardProps> = ({
         </button>
       </div>
 
-      {/* File City Image */}
-      <div
-        style={{
-          width: '100%',
-          aspectRatio: '16 / 9',
-          backgroundColor: theme.colors.background,
-          borderTop: `1px solid ${theme.colors.border}`,
-          borderBottom: `1px solid ${theme.colors.border}`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          overflow: 'hidden',
-          cursor: 'pointer',
-        }}
-        onClick={onOpen}
-      >
-        {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={summary.repoName}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-        ) : (
-          <FolderGit2 size={32} color={theme.colors.textSecondary} style={{ opacity: 0.3 }} />
-        )}
-      </div>
-
-      {/* Expand/Collapse button */}
+      {/* Commits list */}
       {summary.commits.length > 0 && (
-        <button
-          onClick={onToggleExpand}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: spacing.xs,
-            width: '100%',
-            padding: `${spacing.xs}px ${spacing.sm}px`,
-            backgroundColor: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: theme.fontSizes[0],
-            color: theme.colors.textSecondary,
-            textAlign: 'left',
-          }}
-        >
-          {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-          <span>{isExpanded ? 'Hide commits' : 'Show commits'}</span>
-        </button>
-      )}
-
-      {/* Expanded commits list */}
-      {isExpanded && summary.commits.length > 0 && (
         <div
           style={{
             borderTop: `1px solid ${theme.colors.border}`,
-            padding: spacing.sm,
             backgroundColor: theme.colors.background,
           }}
         >
           {summary.commits.map((commit, index) => (
             <div
               key={commit.hash}
+              onClick={() => onCommitClick(commit)}
               style={{
                 display: 'flex',
                 alignItems: 'flex-start',
-                gap: spacing.xs,
-                padding: `${spacing.xs}px 0`,
+                gap: spacing.sm,
+                padding: spacing.sm,
                 borderTop: index > 0 ? `1px solid ${theme.colors.border}` : 'none',
+                cursor: 'pointer',
+                transition: 'background-color 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
               }}
             >
               <code
