@@ -6,8 +6,8 @@
  *
  * Layout:
  * - Left: HeatmapPanel (hourly activity heatmap)
- * - Middle: TabbedTerminalPanel (terminal in HOME directory)
- * - Right: ActivityFeedCardPanel (compact repo cards)
+ * - Middle: ActivityFeedCardPanel (rich repo cards with File City)
+ * - Right: TabbedTerminalPanel (terminal in HOME directory)
  */
 
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
@@ -260,6 +260,27 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
         ),
       },
       {
+        id: 'activityFeed',
+        label: 'Feed',
+        content: (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <ActivityFeedCardPanel
+              repositories={repositories}
+              events={events}
+              onOpenRepository={onOpenRepository}
+            />
+          </div>
+        ),
+      },
+      {
         id: 'terminal',
         label: 'Terminal',
         content: (
@@ -280,27 +301,6 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
               directory={terminalDirectory}
               defaultScrollLocked={false}
               workingStates={workingStates}
-            />
-          </div>
-        ),
-      },
-      {
-        id: 'activityFeed',
-        label: 'Feed',
-        content: (
-          <div
-            style={{
-              height: '100%',
-              width: '100%',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <ActivityFeedCardPanel
-              repositories={repositories}
-              events={events}
-              onOpenRepository={onOpenRepository}
             />
           </div>
         ),

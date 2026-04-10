@@ -329,8 +329,8 @@ const FeedViewContent: React.FC = () => {
   // Panel layout state
   const [layout, setLayout] = useState<PanelLayout>({
     left: 'heatmap',
-    middle: 'terminal',
-    right: 'activityFeed',
+    middle: 'activityFeed',
+    right: 'terminal',
   });
 
   // Collapsed state

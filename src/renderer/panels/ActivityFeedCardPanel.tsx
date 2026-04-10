@@ -9,8 +9,9 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import { FolderGit2, User, ExternalLink } from 'lucide-react';
+import { FolderGit2 } from 'lucide-react';
 import { useActivityFeed, type ActivityCommit } from '../hooks/useActivityFeed';
+import { RepoActivityCard, type RepoActivitySummary } from './RepoActivityCard';
 
 export interface ActivityFeedCardPanelProps {
   /** List of repositories to show activity for */
@@ -21,35 +22,6 @@ export interface ActivityFeedCardPanelProps {
   onOpenRepository?: (entry: AlexandriaEntry) => void;
 }
 
-/**
- * Aggregated repository activity summary
- */
-interface RepoActivitySummary {
-  repoPath: string;
-  repoName: string;
-  commits: ActivityCommit[];
-  latestCommitAt: Date;
-  commitCount: number;
-  githubOwner?: string;
-  entry?: AlexandriaEntry;
-}
-
-/**
- * Format relative time for display
- */
-function formatRelativeTime(date: Date): string {
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffMins < 1) return 'just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
 
 export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
   repositories,
@@ -146,6 +118,21 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
     });
   }, []);
 
+  // Expanded card state
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+
+  const toggleCardExpanded = useCallback((repoPath: string) => {
+    setExpandedCards((prev) => {
+      const next = new Set(prev);
+      if (next.has(repoPath)) {
+        next.delete(repoPath);
+      } else {
+        next.add(repoPath);
+      }
+      return next;
+    });
+  }, []);
+
   // Group commits by hour, then by repository
   const hourlyGroups = useMemo(() => {
     // First, group by hour
@@ -170,6 +157,7 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
       for (const commit of commits) {
         let summary = repoMap.get(commit.repoPath);
         if (!summary) {
+          const entry = repoEntryMap.get(commit.repoPath);
           summary = {
             repoPath: commit.repoPath,
             repoName: commit.repoName,
@@ -177,7 +165,7 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
             latestCommitAt: new Date(commit.date),
             commitCount: 0,
             githubOwner: repoOwnerMap.get(commit.repoPath),
-            entry: repoEntryMap.get(commit.repoPath),
+            githubRepo: entry?.github?.name,
           };
           repoMap.set(commit.repoPath, summary);
         }
@@ -203,20 +191,15 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
     });
   }, [filteredCommits, repoOwnerMap, repoEntryMap, getHourBucket, formatHourBucket]);
 
-  // Handle commit click - placeholder for future behavior
-  const handleCommitClick = useCallback((commit: ActivityCommit) => {
-    console.log('[ActivityFeedCardPanel] Commit clicked:', commit);
-    // TODO: Implement commit expansion/details behavior
-  }, []);
-
   // Handle opening a repository
   const handleOpenRepo = useCallback(
-    (summary: RepoActivitySummary) => {
-      if (summary.entry && onOpenRepository) {
-        onOpenRepository(summary.entry);
+    (repoPath: string) => {
+      const entry = repoEntryMap.get(repoPath);
+      if (entry && onOpenRepository) {
+        onOpenRepository(entry);
       }
     },
-    [onOpenRepository]
+    [repoEntryMap, onOpenRepository]
   );
 
   return (
@@ -313,15 +296,14 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
                 </div>
 
                 {/* Repo cards for this hour */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
                   {group.repos.map((summary) => (
-                    <CompactRepoCard
+                    <RepoActivityCard
                       key={summary.repoPath}
                       summary={summary}
-                      onCommitClick={handleCommitClick}
-                      onOpen={() => handleOpenRepo(summary)}
-                      theme={theme}
-                      spacing={spacing}
+                      isExpanded={expandedCards.has(summary.repoPath)}
+                      onToggleExpand={() => toggleCardExpanded(summary.repoPath)}
+                      onOpen={() => handleOpenRepo(summary.repoPath)}
                     />
                   ))}
                 </div>
@@ -330,207 +312,6 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
           </div>
         )}
       </div>
-    </div>
-  );
-};
-
-/**
- * Compact repository activity card
- */
-interface CompactRepoCardProps {
-  summary: RepoActivitySummary;
-  onCommitClick: (commit: ActivityCommit) => void;
-  onOpen: () => void;
-  theme: ReturnType<typeof useTheme>['theme'];
-  spacing: { xs: number; sm: number; md: number; lg: number };
-}
-
-const CompactRepoCard: React.FC<CompactRepoCardProps> = ({
-  summary,
-  onCommitClick,
-  onOpen,
-  theme,
-  spacing,
-}) => {
-  // Handle drag start - prepare repo info for dropping into terminal
-  const handleDragStart = useCallback(
-    (e: React.DragEvent) => {
-      // Format repo info and commits for pasting
-      const lines: string[] = [
-        `Repository: ${summary.repoName}`,
-        `Path: ${summary.repoPath}`,
-        `Recent commits (${summary.commitCount}):`,
-      ];
-
-      // Add commit details
-      for (const commit of summary.commits.slice(0, 5)) {
-        lines.push(`  - ${commit.hash.slice(0, 7)}: ${commit.message}`);
-      }
-
-      if (summary.commits.length > 5) {
-        lines.push(`  ... and ${summary.commits.length - 5} more`);
-      }
-
-      const text = lines.join('\n');
-
-      // Set as plain text so terminal will paste it
-      e.dataTransfer.setData('text/plain', text);
-      e.dataTransfer.effectAllowed = 'copy';
-    },
-    [summary]
-  );
-
-  return (
-    <div
-      style={{
-        backgroundColor: theme.colors.backgroundSecondary,
-        borderRadius: theme.radii?.[2] || 8,
-        border: `1px solid ${theme.colors.border}`,
-        overflow: 'hidden',
-      }}
-    >
-      {/* Header: Avatar + Name + Stats */}
-      <div
-        draggable
-        onDragStart={handleDragStart}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: spacing.sm,
-          padding: spacing.sm,
-          cursor: 'grab',
-        }}
-      >
-        {/* Avatar */}
-        <div
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: '50%',
-            backgroundColor: theme.colors.background,
-            border: `1px solid ${theme.colors.border}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            overflow: 'hidden',
-          }}
-        >
-          {summary.githubOwner ? (
-            <img
-              src={`https://github.com/${summary.githubOwner}.png?size=64`}
-              alt={summary.githubOwner}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
-            />
-          ) : (
-            <User size={16} color={theme.colors.textSecondary} />
-          )}
-        </div>
-
-        {/* Name and stats */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              fontSize: theme.fontSizes[1],
-              fontWeight: 600,
-              color: theme.colors.text,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {summary.repoName}
-          </div>
-          <div
-            style={{
-              fontSize: theme.fontSizes[0],
-              color: theme.colors.textSecondary,
-            }}
-          >
-            {summary.commitCount} commit{summary.commitCount !== 1 ? 's' : ''} · {formatRelativeTime(summary.latestCommitAt)}
-          </div>
-        </div>
-
-        {/* Open button */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpen();
-          }}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: spacing.xs,
-            backgroundColor: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            borderRadius: theme.radii?.[1] || 4,
-            color: theme.colors.textSecondary,
-          }}
-          title="Open in workspace"
-        >
-          <ExternalLink size={14} />
-        </button>
-      </div>
-
-      {/* Commits list */}
-      {summary.commits.length > 0 && (
-        <div
-          style={{
-            borderTop: `1px solid ${theme.colors.border}`,
-            backgroundColor: theme.colors.background,
-          }}
-        >
-          {summary.commits.map((commit, index) => (
-            <div
-              key={commit.hash}
-              onClick={() => onCommitClick(commit)}
-              style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: spacing.sm,
-                padding: spacing.sm,
-                borderTop: index > 0 ? `1px solid ${theme.colors.border}` : 'none',
-                cursor: 'pointer',
-                transition: 'background-color 0.15s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }}
-            >
-              <code
-                style={{
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: theme.fonts?.monospace || 'monospace',
-                  color: theme.colors.textSecondary,
-                  flexShrink: 0,
-                }}
-              >
-                {commit.hash.slice(0, 7)}
-              </code>
-              <span
-                style={{
-                  fontSize: theme.fontSizes[0],
-                  color: theme.colors.text,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  flex: 1,
-                }}
-              >
-                {commit.message}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 };
