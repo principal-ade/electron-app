@@ -94,8 +94,7 @@ export class CLIBridge extends EventEmitter {
         );
       } else {
         // Development: running from source
-        // In development, __dirname will be in dist/main after TypeScript compilation
-        // The worker .cjs file is in src/main/electron-cli-bridge/workers
+        // ALWAYS prefer the source file to avoid stale compiled versions
         const srcWorkerPath = path.join(
           app.getAppPath(),
           'src',
@@ -105,7 +104,7 @@ export class CLIBridge extends EventEmitter {
           scriptName,
         );
 
-        // Also check if it's in the dist folder (for compiled development builds)
+        // Fallback to dist folder (for compiled development builds)
         const distWorkerPath = path.join(
           __dirname,
           'src',
@@ -115,21 +114,39 @@ export class CLIBridge extends EventEmitter {
           scriptName,
         );
 
-        if (fs.existsSync(srcWorkerPath)) {
-          workerPath = srcWorkerPath;
-        } else if (fs.existsSync(distWorkerPath)) {
-          workerPath = distWorkerPath;
-        } else {
+        // Check source first, then dist
+        const pathsToTry = [srcWorkerPath, distWorkerPath];
+        let foundPath: string | null = null;
+
+        for (const tryPath of pathsToTry) {
+          if (fs.existsSync(tryPath)) {
+            foundPath = tryPath;
+            this.log('info', `Development mode: found worker at ${tryPath}`);
+
+            // Log file stats to help debug stale file issues
+            try {
+              const stats = fs.statSync(tryPath);
+              this.log('info', `  Size: ${stats.size} bytes, Modified: ${stats.mtime.toISOString()}`);
+            } catch (_e) {
+              // Ignore stat errors
+            }
+            break;
+          } else {
+            this.log('debug', `Worker not found at ${tryPath}, trying next location...`);
+          }
+        }
+
+        if (!foundPath) {
           throw new Error(
             `Worker script not found in development. Tried:\n` +
-              `  - ${srcWorkerPath}\n` +
-              `  - ${distWorkerPath}`,
+              pathsToTry.map(p => `  - ${p}`).join('\n'),
           );
         }
-        this.log('info', `Development mode: found worker at ${workerPath}`);
+
+        workerPath = foundPath;
       }
 
-      // Verify the worker file exists
+      // Final verification (should always pass since we checked in the loop above)
       if (!fs.existsSync(workerPath)) {
         const errorMessage =
           `Worker script not found at: ${workerPath}\n` +
@@ -138,16 +155,6 @@ export class CLIBridge extends EventEmitter {
           `app.getAppPath(): ${app.getAppPath()}`;
         this.log('error', errorMessage);
         throw new Error(errorMessage);
-      }
-
-      // Log worker file details for debugging
-      try {
-        const stats = fs.statSync(workerPath);
-        this.log('info', `Worker file found: ${workerPath}`);
-        this.log('info', `  Size: ${stats.size} bytes`);
-        this.log('info', `  Modified: ${stats.mtime.toISOString()}`);
-      } catch (e) {
-        this.log('warn', `Could not read worker file stats: ${e}`);
       }
 
       this.log('info', `Spawning ${name} worker from: ${workerPath}`);
