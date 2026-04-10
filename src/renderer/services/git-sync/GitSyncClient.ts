@@ -125,19 +125,13 @@ interface PeerInfo {
   branch: string;
 }
 
-interface AuthSuccessMessage extends BaseGitSyncMessage {
-  type: 'auth_success';
-  agentId: string;
-  userId: string;
-  branch: string;
-  peers?: PeerInfo[];
-}
-
-interface AuthResponseMessage extends BaseGitSyncMessage {
-  type: 'auth_response';
-  success: boolean;
-  error?: string;
-  peers?: PeerInfo[];
+interface AuthResultMessage extends BaseGitSyncMessage {
+  type: 'auth_result';
+  payload?: {
+    success?: boolean;
+    userId?: string;
+    error?: string;
+  };
 }
 
 interface RegisterResponseMessage extends BaseGitSyncMessage {
@@ -152,8 +146,7 @@ export type GitSyncMessage =
   | LockReleasedMessage
   | MergeSafetyResponseMessage
   | BranchSwitchedMessage
-  | AuthSuccessMessage
-  | AuthResponseMessage
+  | AuthResultMessage
   | RegisterResponseMessage
   | (BaseGitSyncMessage & { [key: string]: unknown }); // Fallback for unknown message types
 
@@ -330,16 +323,17 @@ export class GitSyncClient extends EventEmitter {
         throw new Error('No room token available');
       }
 
-      // Use room token JWT for authentication
-      this.send({
-        type: 'auth',
-        token: this.roomToken.access_token, // JWT room token from OAuth server
-        repoId: this.extractRepoId(this.config.repoUrl),
-        agentId: this.config.agentId,
-        userId: this.config.userId,
-        branch: this.config.branch,
-        watchingBranches: ['main', 'master', this.config.branch],
-      });
+      // Use Control Tower Core authentication format
+      const message = {
+        id: this.generateRequestId(),
+        type: 'authenticate',
+        payload: {
+          token: this.roomToken.access_token, // JWT room token from OAuth server
+        },
+        timestamp: Date.now(),
+      };
+
+      this.ws?.send(JSON.stringify(message));
     } catch (error) {
       this.emit('error', error);
     }
@@ -602,42 +596,21 @@ export class GitSyncClient extends EventEmitter {
    */
   private handleMessage(message: GitSyncMessage): void {
     switch (message.type) {
-      case 'auth_response':
-        // Type guard to narrow to AuthResponseMessage
-        if (message.type === 'auth_response') {
-          const authMsg = message as AuthResponseMessage;
-          if (authMsg.success) {
+      case 'auth_result':
+        // Control Tower Core v0.6.0+ uses auth_result
+        if (message.type === 'auth_result') {
+          const authMsg = message as BaseGitSyncMessage & {
+            payload?: { success?: boolean; userId?: string; error?: string };
+          };
+          if (authMsg.payload?.success) {
             this.status.authenticated = true;
-
-            // Handle initial peers list if provided
-            if (authMsg.peers && Array.isArray(authMsg.peers)) {
-              this.status.peers = authMsg.peers;
-            }
-
             this.emit('authenticated');
           } else {
             this.emit(
               'error',
-              new Error(authMsg.error || 'Authentication failed'),
+              new Error(authMsg.payload?.error || 'Authentication failed'),
             );
           }
-        }
-        break;
-
-      case 'auth_success':
-        // Type guard to narrow to AuthSuccessMessage
-        if (message.type === 'auth_success') {
-          const authMsg = message as AuthSuccessMessage;
-          this.status.authenticated = true;
-
-          // Handle initial peers list if provided
-          if (authMsg.peers && Array.isArray(authMsg.peers)) {
-            this.status.peers = authMsg.peers;
-          }
-
-          // Control Tower Core automatically assigns you to a room based on JWT repoId
-          // No separate registration needed
-          this.emit('authenticated');
         }
         break;
 
