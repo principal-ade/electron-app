@@ -124,9 +124,10 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
   }, [activityFeed.refresh]);
 
   // Debounced refresh for git status changes
+  // Longer delay (2000ms) to give git time to finalize commits and make them queryable
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debouncedRefresh = useCallback(() => {
-    console.info('[FeedPanelFramework] debouncedRefresh called, setting 500ms timeout');
+    console.info('[FeedPanelFramework] debouncedRefresh called, setting 2000ms timeout');
     if (refreshTimeoutRef.current) {
       console.info('[FeedPanelFramework] Clearing previous timeout');
       clearTimeout(refreshTimeoutRef.current);
@@ -139,7 +140,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
         return newCount;
       });
       refreshFnRef.current();
-    }, 500);
+    }, 2000); // Increased to 2000ms to ensure git has finalized the commit
   }, []); // No dependencies - uses ref
 
   // Store Alexandria paths in ref to avoid recreating subscription

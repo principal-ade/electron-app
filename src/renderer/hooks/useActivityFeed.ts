@@ -71,6 +71,11 @@ export function useActivityFeed(
               endDate
             );
 
+            console.info(`[useActivityFeed] Fetched ${repoCommits.length} commits from ${entry.name}`, {
+              firstCommit: repoCommits[0]?.message,
+              lastCommit: repoCommits[repoCommits.length - 1]?.message,
+            });
+
             // Take only the most recent N commits per repo
             // Note: getCommitsInDateRange returns oldest first, so we reverse
             const recentCommits = repoCommits.reverse().slice(0, commitsPerRepo);
@@ -101,6 +106,9 @@ export function useActivityFeed(
         totalCommits: allCommits.length,
         limitedCommits: limitedCommits.length,
         repositories: repositories.length,
+        mostRecentCommit: limitedCommits[0]?.message,
+        mostRecentCommitDate: limitedCommits[0]?.date,
+        mostRecentCommitRepo: limitedCommits[0]?.repoName,
       });
       setCommits(limitedCommits);
     } catch (err) {
