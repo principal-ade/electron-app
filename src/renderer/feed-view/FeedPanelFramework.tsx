@@ -12,7 +12,7 @@
 
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { GitCommit } from 'lucide-react';
+import { GitCommit, Users } from 'lucide-react';
 import {
   ConfigurablePanelLayout,
   type PanelLayout,
@@ -37,6 +37,7 @@ import {
 import { HeatmapPanel } from '../panels/HeatmapPanel';
 import { ActivityFeedCardPanel } from '../panels/ActivityFeedCardPanel';
 import { ReviewCommitPanel } from '../panels/ReviewCommitPanel';
+import { LiveActivityTabContent } from '../components/LiveActivityTabContent';
 import { useActivityFeed } from '../hooks/useActivityFeed';
 import type { CommitTimestamp } from '../components/HourlyActivityHeatmap';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
@@ -52,9 +53,16 @@ export interface CommitReviewTab extends BaseTab {
 }
 
 /**
+ * Live activity tab - displays real-time presence and repository activity
+ */
+export interface LiveActivityTab extends BaseTab {
+  contentType: 'live-activity';
+}
+
+/**
  * Union type of all supported tab types in FeedView
  */
-export type FeedTab = TerminalTab | CommitReviewTab;
+export type FeedTab = TerminalTab | CommitReviewTab | LiveActivityTab;
 
 export interface FeedPanelFrameworkProps {
   /** List of repositories */
@@ -267,6 +275,38 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     };
   }, [events, tabs]);
 
+  // Listen for live activity events to open live activity tab
+  useEffect(() => {
+    const handleLiveActivity = (event: { type: string }) => {
+      if (event.type === 'live-activity:open') {
+        const tabId = 'live-activity';
+
+        // Check if tab already exists
+        const existingTab = tabs.find(tab => tab.id === tabId);
+        if (existingTab) {
+          setActiveTabId(tabId);
+          return;
+        }
+
+        // Create new live activity tab
+        const newTab: LiveActivityTab = {
+          id: tabId,
+          label: 'Live Activity',
+          contentType: 'live-activity',
+          closable: true,
+        };
+
+        setTabs(prevTabs => [...prevTabs, newTab]);
+        setActiveTabId(tabId);
+      }
+    };
+
+    events.on('live-activity:open', handleLiveActivity);
+    return () => {
+      events.off('live-activity:open', handleLiveActivity);
+    };
+  }, [events, tabs]);
+
   // Convert terminal activities to workingStates record
   const workingStates = useMemo(() => {
     const states: Record<string, TerminalWorkingState> = {};
@@ -315,6 +355,8 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     switch (tab.contentType) {
       case 'commit-review':
         return <GitCommit size={14} />;
+      case 'live-activity':
+        return <Users size={14} />;
       default:
         return null;
     }
@@ -332,6 +374,9 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
               commit={reviewTab.commit}
             />
           );
+        }
+        case 'live-activity': {
+          return <LiveActivityTabContent />;
         }
         default:
           return null;

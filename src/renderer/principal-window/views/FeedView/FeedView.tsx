@@ -9,7 +9,6 @@ import React, { useMemo, useState, useEffect, useCallback, createContext, useCon
 import { useTheme } from '@principal-ade/industry-theme';
 import { PanelEventBus } from '@principal-ade/panel-framework-core';
 import { Users } from 'lucide-react';
-import { usePrincipalEvents } from '../../PrincipalEventContext';
 import type {
   PanelContextValue,
   PanelActions,
@@ -319,7 +318,6 @@ const FeedPanelProvider: React.FC<{ children: React.ReactNode }> = ({ children }
  */
 const FeedViewContent: React.FC = () => {
   const { theme } = useTheme();
-  const { events: principalEvents } = usePrincipalEvents();
   const {
     context,
     actions,
@@ -350,15 +348,15 @@ const FeedViewContent: React.FC = () => {
     [actions],
   );
 
-  // Navigate to Activity Cities view
+  // Open Live Activity tab
   const handleNavigateToActivityCities = useCallback(() => {
-    principalEvents?.emit({
-      type: 'panel:switch',
+    events.emit({
+      type: 'live-activity:open',
       source: 'feed-view',
       timestamp: Date.now(),
-      payload: { view: 'activity-cities' },
+      payload: null,
     });
-  }, [principalEvents]);
+  }, [events]);
 
   // Theme spacing helpers
   const spacing = {
