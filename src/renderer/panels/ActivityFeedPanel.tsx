@@ -732,7 +732,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
                 gap: spacing.md,
               }}
             >
-              {/* Popular Projects Title */}
+              {/* Recent Projects Title */}
               <h3
                 style={{
                   margin: 0,
@@ -741,7 +741,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
                   color: theme.colors.text,
                 }}
               >
-                Popular Projects
+                Recent Projects
               </h3>
 
               {/* Repository List */}

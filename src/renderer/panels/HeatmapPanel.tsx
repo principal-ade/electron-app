@@ -152,7 +152,7 @@ export const HeatmapPanel: React.FC<HeatmapPanelProps> = ({
           color: theme.colors.text,
         }}
       >
-        Popular Projects
+        Recent Projects
       </h3>
 
       {/* Repository List */}
