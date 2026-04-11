@@ -60,6 +60,13 @@ class JWTAuthAdapter implements IAuthAdapter {
     return this.token;
   }
 
+  /**
+   * Update the token (used for token refresh)
+   */
+  setToken(newToken: string): void {
+    this.token = newToken;
+  }
+
   async validateToken(token: string): Promise<TokenPayload> {
     // Decode JWT without verification (server will verify)
     const payload = jwt.decode(token) as TokenPayload;
@@ -103,6 +110,8 @@ interface ConnectionInfo {
   status: GitSyncStatus;
   token: string; // GitHub token for re-authentication
   hasJoinedRoom: boolean; // Track if we've already joined the room (prevent re-join on reconnect)
+  jwtToken: string; // JWT token for WebSocket auth
+  jwtTokenExpiresAt: number; // Unix timestamp when JWT token expires
 }
 
 interface RoomTokenInfo {
@@ -241,9 +250,10 @@ export class GitSyncWebSocketManager {
 
   /**
    * Get an authenticated BaseClient for presence operations
+   * Automatically refreshes JWT token if expired or expiring soon
    * Returns null if no authenticated connection is available
    */
-  private getAuthenticatedClient(): BaseClient | null {
+  private async getAuthenticatedClient(): Promise<BaseClient | null> {
     // Find an authenticated connection
     const activeConnection = Array.from(this.connections.values()).find(
       (conn) =>
@@ -255,6 +265,9 @@ export class GitSyncWebSocketManager {
       console.warn('[GitSyncWebSocketManager] No authenticated connection available for presence');
       return null;
     }
+
+    // Refresh JWT token if needed before using the connection
+    await this.refreshJWTTokenIfNeeded(activeConnection);
 
     return activeConnection.client;
   }
@@ -329,6 +342,8 @@ export class GitSyncWebSocketManager {
         client,
         token: config.token,
         hasJoinedRoom: false,
+        jwtToken: roomToken.access_token,
+        jwtTokenExpiresAt: Date.now() + roomToken.expiresIn * 1000,
         status: {
           connected: false,
           authenticated: false,
@@ -608,6 +623,78 @@ export class GitSyncWebSocketManager {
         '[GitSyncWebSocketManager] Failed to get presence token:',
         error,
       );
+      throw error;
+    }
+  }
+
+  /**
+   * Refresh the JWT token for a connection if it's expired or expiring soon
+   * @param connectionInfo The connection to refresh the token for
+   * @returns Promise that resolves when token is refreshed
+   */
+  private async refreshJWTTokenIfNeeded(
+    connectionInfo: ConnectionInfo,
+  ): Promise<void> {
+    const now = Date.now();
+    const fiveMinutes = 5 * 60 * 1000;
+    const isExpired = connectionInfo.jwtTokenExpiresAt <= now;
+    const isExpiringSoon = connectionInfo.jwtTokenExpiresAt <= now + fiveMinutes;
+
+    if (!isExpired && !isExpiringSoon) {
+      // Token is still valid, no refresh needed
+      return;
+    }
+
+    console.log('[GitSyncWebSocketManager] JWT token expired or expiring soon, refreshing...', {
+      connectionId: connectionInfo.connectionId,
+      expiresAt: new Date(connectionInfo.jwtTokenExpiresAt).toISOString(),
+      isExpired,
+      isExpiringSoon,
+    });
+
+    try {
+      // Get a fresh GitHub token from AuthService (will auto-refresh if needed)
+      const { authService } = await import('./AuthService');
+      const freshGithubToken = await authService.getValidToken();
+
+      if (!freshGithubToken) {
+        throw new Error('No valid GitHub token available');
+      }
+
+      // Get a fresh JWT token from the auth server
+      let newTokenInfo: RoomTokenInfo;
+      if (connectionInfo.connectionId === '__presence_only__') {
+        // Presence connection
+        newTokenInfo = await this.getPresenceToken(freshGithubToken);
+      } else {
+        // Repository connection
+        newTokenInfo = await this.getRoomToken({
+          repoId: connectionInfo.repoId,
+          repoPath: connectionInfo.repoPath,
+          branch: connectionInfo.branch,
+          token: freshGithubToken,
+        });
+      }
+
+      // Update the connection info with the new JWT token and expiry
+      connectionInfo.jwtToken = newTokenInfo.access_token;
+      connectionInfo.jwtTokenExpiresAt = Date.now() + newTokenInfo.expiresIn * 1000;
+      connectionInfo.token = freshGithubToken;
+
+      // Update the auth adapter with the new token
+      // Access the auth adapter from the BaseClient's internal structure
+      const clientWithAuth = connectionInfo.client as unknown as { auth?: JWTAuthAdapter };
+      const authAdapter = clientWithAuth.auth;
+      if (authAdapter && 'setToken' in authAdapter) {
+        authAdapter.setToken(newTokenInfo.access_token);
+      }
+
+      console.log('[GitSyncWebSocketManager] JWT token refreshed successfully', {
+        connectionId: connectionInfo.connectionId,
+        newExpiresAt: new Date(connectionInfo.jwtTokenExpiresAt).toISOString(),
+      });
+    } catch (error) {
+      console.error('[GitSyncWebSocketManager] Failed to refresh JWT token:', error);
       throw error;
     }
   }
@@ -942,6 +1029,8 @@ export class GitSyncWebSocketManager {
         client,
         token, // Store GitHub token for re-authentication
         hasJoinedRoom: false,
+        jwtToken: presenceToken.access_token,
+        jwtTokenExpiresAt: Date.now() + presenceToken.expiresIn * 1000,
         status: {
           connected: false,
           authenticated: false,
@@ -1313,7 +1402,7 @@ export class GitSyncWebSocketManager {
     error?: string;
   }> {
     try {
-      const client = this.getAuthenticatedClient();
+      const client = await this.getAuthenticatedClient();
       if (!client) {
         return {
           success: false,
@@ -1368,7 +1457,7 @@ export class GitSyncWebSocketManager {
     error?: string;
   }> {
     try {
-      const client = this.getAuthenticatedClient();
+      const client = await this.getAuthenticatedClient();
       if (!client) {
         return {
           success: false,
@@ -1415,7 +1504,7 @@ export class GitSyncWebSocketManager {
     error?: string;
   }> {
     try {
-      const client = this.getAuthenticatedClient();
+      const client = await this.getAuthenticatedClient();
       if (!client) {
         return {
           success: false,
@@ -1466,7 +1555,7 @@ export class GitSyncWebSocketManager {
     _token?: string,
   ): Promise<{ success: boolean; message?: string }> {
     try {
-      const client = this.getAuthenticatedClient();
+      const client = await this.getAuthenticatedClient();
       if (!client) {
         return {
           success: false,
@@ -1555,7 +1644,7 @@ export class GitSyncWebSocketManager {
     _token?: string,
   ): Promise<{ success: boolean; message?: string }> {
     try {
-      const client = this.getAuthenticatedClient();
+      const client = await this.getAuthenticatedClient();
       if (!client) {
         return {
           success: false,
@@ -1603,7 +1692,7 @@ export class GitSyncWebSocketManager {
     _token?: string,
   ): Promise<{ success: boolean; message?: string }> {
     try {
-      const client = this.getAuthenticatedClient();
+      const client = await this.getAuthenticatedClient();
       if (!client) {
         return {
           success: false,
@@ -1651,7 +1740,7 @@ export class GitSyncWebSocketManager {
     gitStatus: SharedGitStatus,
   ): Promise<{ success: boolean; message?: string }> {
     try {
-      const client = this.getAuthenticatedClient();
+      const client = await this.getAuthenticatedClient();
       if (!client) {
         return {
           success: false,
@@ -1698,7 +1787,7 @@ export class GitSyncWebSocketManager {
     _token?: string,
   ): Promise<{ success: boolean; message?: string }> {
     try {
-      const client = this.getAuthenticatedClient();
+      const client = await this.getAuthenticatedClient();
       if (!client) {
         return {
           success: false,
@@ -1742,7 +1831,7 @@ export class GitSyncWebSocketManager {
     _token?: string,
   ): Promise<{ success: boolean; message?: string }> {
     try {
-      const client = this.getAuthenticatedClient();
+      const client = await this.getAuthenticatedClient();
       if (!client) {
         return {
           success: false,
@@ -1790,7 +1879,7 @@ export class GitSyncWebSocketManager {
     try {
       // With WebSocket-based presence, the connection itself maintains presence
       // via the built-in ping/pong mechanism. Just verify we have a connection.
-      const client = this.getAuthenticatedClient();
+      const client = await this.getAuthenticatedClient();
       if (!client) {
         return {
           success: false,
@@ -1823,7 +1912,7 @@ export class GitSyncWebSocketManager {
     repos: RepoHeartbeatEntry[],
   ): Promise<{ success: boolean; data?: PresenceReposHeartbeatResponse; message?: string }> {
     try {
-      const client = this.getAuthenticatedClient();
+      const client = await this.getAuthenticatedClient();
       if (!client) {
         return {
           success: false,
