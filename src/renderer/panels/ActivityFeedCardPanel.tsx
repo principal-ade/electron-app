@@ -73,6 +73,18 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
     };
   }, [events]);
 
+  // Listen for activity refresh events (triggered by git commits)
+  useEffect(() => {
+    const handleRefreshRequest = () => {
+      activityFeed.refresh();
+    };
+
+    events.on('feed:activity-refresh-requested', handleRefreshRequest);
+    return () => {
+      events.off('feed:activity-refresh-requested', handleRefreshRequest);
+    };
+  }, [events, activityFeed]);
+
   // Create repo github owner map
   const repoOwnerMap = useMemo(() => {
     const map = new Map<string, string>();

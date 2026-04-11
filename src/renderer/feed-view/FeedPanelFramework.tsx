@@ -176,6 +176,13 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
         // Only refresh if this repo is in Alexandria registry
         if (isAlexandria) {
           debouncedRefresh();
+          // Emit event to notify all panels that activity should refresh
+          events.emit({
+            type: 'feed:activity-refresh-requested',
+            source: 'feed-panel-framework',
+            timestamp: Date.now(),
+            payload: { repoPath: repoPathStr },
+          });
         }
       }
     );
@@ -184,7 +191,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
       unsubscribe();
       // Don't clear timeout here - let it complete
     };
-  }, [debouncedRefresh]); // Only debouncedRefresh, which is now stable
+  }, [debouncedRefresh, events]); // Only debouncedRefresh and events
 
   // Load base directory from user preferences
   useEffect(() => {
