@@ -151,10 +151,13 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
   // Longer delay (2000ms) to give git time to finalize commits and make them queryable
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debouncedRefresh = useCallback(() => {
+    console.info('[FeedPanelFramework] debouncedRefresh called, scheduling refresh in 2000ms');
     if (refreshTimeoutRef.current) {
+      console.info('[FeedPanelFramework] Clearing existing refresh timeout');
       clearTimeout(refreshTimeoutRef.current);
     }
     refreshTimeoutRef.current = setTimeout(() => {
+      console.info('[FeedPanelFramework] Executing debounced refresh');
       refreshFnRef.current();
     }, 2000); // Increased to 2000ms to ensure git has finalized the commit
   }, []); // No dependencies - uses ref
@@ -175,6 +178,10 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
 
         // Only refresh if this repo is in Alexandria registry
         if (isAlexandria) {
+          console.info('[FeedPanelFramework] Git status changed for Alexandria repo:', {
+            repoPath: repoPathStr,
+            event: status.event,
+          });
           debouncedRefresh();
           // Emit event to notify all panels that activity should refresh
           events.emit({
@@ -183,6 +190,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
             timestamp: Date.now(),
             payload: { repoPath: repoPathStr },
           });
+          console.info('[FeedPanelFramework] Emitted feed:activity-refresh-requested event');
         }
       }
     );

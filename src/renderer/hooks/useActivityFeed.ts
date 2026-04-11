@@ -31,6 +31,11 @@ export function useActivityFeed(
   const abortRef = useRef(false);
 
   const loadActivityFeed = useCallback(async () => {
+    console.info('[useActivityFeed] Starting loadActivityFeed:', {
+      repoCount: repositories.length,
+      timestamp: new Date().toISOString(),
+    });
+
     if (repositories.length === 0) {
       setCommits([]);
       return;
@@ -44,6 +49,10 @@ export function useActivityFeed(
       // Repositories are already sorted by lastOpenedAt from the provider
       // Just take the top N repos with valid paths
       const topRepos = repositories.filter((entry) => entry.path).slice(0, maxRepos);
+
+      console.info('[useActivityFeed] Fetching commits from repos:', {
+        topRepos: topRepos.map(r => r.name),
+      });
 
       // Fetch recent commits from each repo in parallel
       const allCommits: ActivityCommit[] = [];
@@ -90,6 +99,14 @@ export function useActivityFeed(
       // Sort all commits by date descending and limit
       allCommits.sort((a, b) => b.date.localeCompare(a.date));
       const limitedCommits = allCommits.slice(0, totalLimit);
+      console.info('[useActivityFeed] Loaded commits:', {
+        totalCommits: limitedCommits.length,
+        firstCommit: limitedCommits[0] ? {
+          repo: limitedCommits[0].repoName,
+          hash: limitedCommits[0].hash.substring(0, 7),
+          date: limitedCommits[0].date,
+        } : null,
+      });
       setCommits(limitedCommits);
     } catch (err) {
       console.error('[useActivityFeed] Error loading activity feed:', err);
@@ -110,6 +127,7 @@ export function useActivityFeed(
   }, [loadActivityFeed]);
 
   const refresh = useCallback(() => {
+    console.info('[useActivityFeed] Refresh called');
     return loadActivityFeed();
   }, [loadActivityFeed]);
 

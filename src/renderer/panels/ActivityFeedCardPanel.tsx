@@ -75,10 +75,12 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
 
   // Listen for activity refresh events (triggered by git commits)
   useEffect(() => {
-    const handleRefreshRequest = () => {
+    const handleRefreshRequest = (event: { type: string; payload: { repoPath: string } }) => {
+      console.info('[ActivityFeedCardPanel] Received refresh request:', event.payload);
       activityFeed.refresh();
     };
 
+    console.info('[ActivityFeedCardPanel] Subscribing to feed:activity-refresh-requested');
     events.on('feed:activity-refresh-requested', handleRefreshRequest);
     return () => {
       events.off('feed:activity-refresh-requested', handleRefreshRequest);
