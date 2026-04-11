@@ -25,6 +25,7 @@ import {
   useTerminalActivity,
 } from '../contexts/TerminalContext';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
+import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import {
   TabbedTerminalPanel,
   type TerminalTab,
@@ -102,6 +103,48 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
 
   // Activity feed data
   const activityFeed = useActivityFeed(repositories, 20, 10, 100);
+
+  // Create a set of Alexandria repository paths for efficient lookup
+  const alexandriaRepoPaths = useMemo(
+    () => new Set(repositories.filter(r => r.path).map(r => String(r.path))),
+    [repositories]
+  );
+
+  // Debounced refresh for git status changes
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debouncedRefresh = useCallback(() => {
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+    }
+    refreshTimeoutRef.current = setTimeout(() => {
+      console.info('[FeedPanelFramework] Debounced refresh triggered');
+      activityFeed.refresh();
+    }, 500);
+  }, [activityFeed]);
+
+  // Subscribe to git status changes across all repositories
+  useEffect(() => {
+    const unsubscribe = RepositoryMonitoringService.onGitStatusChanged(
+      (status) => {
+        // Only refresh if this repo is in Alexandria registry
+        if (alexandriaRepoPaths.has(String(status.repoPath))) {
+          console.info('[FeedPanelFramework] Git status changed, refreshing feed:', {
+            repo: status.repoPath,
+            branch: status.branch,
+            isDirty: status.isDirty,
+          });
+          debouncedRefresh();
+        }
+      }
+    );
+
+    return () => {
+      unsubscribe();
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+    };
+  }, [alexandriaRepoPaths, debouncedRefresh]);
 
   // Load base directory from user preferences
   useEffect(() => {
