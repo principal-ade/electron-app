@@ -180,7 +180,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
         if (isAlexandria) {
           console.info('[FeedPanelFramework] Git status changed for Alexandria repo:', {
             repoPath: repoPathStr,
-            event: status.event,
+            hash: status.hash,
           });
           debouncedRefresh();
           // Emit event to notify all panels that activity should refresh
