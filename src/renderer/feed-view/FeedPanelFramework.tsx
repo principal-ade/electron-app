@@ -252,6 +252,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
           >
             <HeatmapPanel
               commits={heatmapCommits}
+              repositories={repositories}
               loading={activityFeed.loading}
               events={events}
               selectedBlock={selectedBlock}

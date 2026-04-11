@@ -9,7 +9,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import { FolderGit2 } from 'lucide-react';
+import { FolderGit2, X } from 'lucide-react';
 import { useActivityFeed, type ActivityCommit } from '../hooks/useActivityFeed';
 import { RepoActivityCard, type RepoActivitySummary } from './RepoActivityCard';
 
@@ -32,6 +32,8 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
 
   // Time filter state from heatmap events
   const [timeFilter, setTimeFilter] = useState<{ start: Date; end: Date } | null>(null);
+  // Repository filter state
+  const [repoFilter, setRepoFilter] = useState<string | null>(null);
 
   const spacing = {
     xs: 4,
@@ -57,6 +59,20 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
     };
   }, [events]);
 
+  // Listen for repository filter events from repository list
+  useEffect(() => {
+    const handleRepoFilter = (event: { type: string; payload: { repoId: string } | null }) => {
+      if (event.type === 'feed:repository-filter-changed') {
+        setRepoFilter(event.payload?.repoId ?? null);
+      }
+    };
+
+    events.on('feed:repository-filter-changed', handleRepoFilter);
+    return () => {
+      events.off('feed:repository-filter-changed', handleRepoFilter);
+    };
+  }, [events]);
+
   // Create repo github owner map
   const repoOwnerMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -79,15 +95,25 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
     return map;
   }, [repositories]);
 
-  // Filter commits by time range if filter is active
+  // Filter commits by time range and repository if filters are active
   const filteredCommits = useMemo(() => {
-    if (!timeFilter) return activityFeed.commits;
+    let commits = activityFeed.commits;
 
-    return activityFeed.commits.filter((commit) => {
-      const commitDate = new Date(commit.date);
-      return commitDate >= timeFilter.start && commitDate < timeFilter.end;
-    });
-  }, [activityFeed.commits, timeFilter]);
+    // Apply time filter
+    if (timeFilter) {
+      commits = commits.filter((commit) => {
+        const commitDate = new Date(commit.date);
+        return commitDate >= timeFilter.start && commitDate < timeFilter.end;
+      });
+    }
+
+    // Apply repository filter
+    if (repoFilter) {
+      commits = commits.filter((commit) => commit.repoPath === repoFilter);
+    }
+
+    return commits;
+  }, [activityFeed.commits, timeFilter, repoFilter]);
 
   // Helper to get hour bucket for a date
   const getHourBucket = useCallback((date: Date): string => {
@@ -251,6 +277,35 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
           >
             Filtered by time
           </div>
+        )}
+        {repoFilter && (
+          <button
+            onClick={() => {
+              setRepoFilter(null);
+              events.emit({
+                type: 'feed:repository-filter-changed',
+                source: 'activity-feed-card-panel',
+                timestamp: Date.now(),
+                payload: null,
+              });
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: spacing.xs,
+              marginTop: spacing.xs,
+              padding: `${spacing.xs}px ${spacing.sm}px`,
+              fontSize: theme.fontSizes[0],
+              color: theme.colors.primary,
+              backgroundColor: `${theme.colors.primary}15`,
+              border: `1px solid ${theme.colors.primary}`,
+              borderRadius: theme.radii?.[1] || 4,
+              cursor: 'pointer',
+            }}
+          >
+            <span>Filtered by: {repoFilter.split('/').pop()}</span>
+            <X size={12} />
+          </button>
         )}
       </div>
 

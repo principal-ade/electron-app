@@ -21,7 +21,6 @@ import { useActivityFeed, type ActivityCommit } from '../hooks/useActivityFeed';
 import { FileCityImageService } from '../main-process-api/FileCityImageService';
 import { GitService } from '../main-process-api/GitService';
 import { GithubService } from '../main-process-api/GithubService';
-import { HourlyActivityHeatmap, type CommitTimestamp } from '../components/HourlyActivityHeatmap';
 import { AISummaryPanel } from '../components/AISummaryPanel';
 
 // Quarter helpers (matching heatmap)
@@ -281,8 +280,6 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
   const [expandedRepos, setExpandedRepos] = useState<Set<string>>(new Set());
   // State for commit author avatars (sha -> avatarUrl)
   const [commitAvatars, setCommitAvatars] = useState<Map<string, string>>(new Map());
-  // State for time filter from heatmap
-  const [timeFilter, setTimeFilter] = useState<{ start: Date; end: Date } | null>(null);
 
   // State for AI selection mode
   const [selectionMode, setSelectionMode] = useState(false);
@@ -327,21 +324,11 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
     return map;
   }, [repoGithubMap]);
 
-  // Filter commits by time range if filter is active
-  const filteredCommits = useMemo(() => {
-    if (!timeFilter) return activityFeed.commits;
-
-    return activityFeed.commits.filter((commit) => {
-      const commitDate = new Date(commit.date);
-      return commitDate >= timeFilter.start && commitDate < timeFilter.end;
-    });
-  }, [activityFeed.commits, timeFilter]);
-
   // Aggregate commits by repository
   const repoSummaries = useMemo<RepoActivitySummary[]>(() => {
     const repoMap = new Map<string, RepoActivitySummary>();
 
-    for (const commit of filteredCommits) {
+    for (const commit of activityFeed.commits) {
       let summary = repoMap.get(commit.repoPath);
       if (!summary) {
         summary = {
@@ -367,7 +354,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
     return Array.from(repoMap.values()).sort(
       (a, b) => b.latestCommitAt.getTime() - a.latestCommitAt.getTime()
     );
-  }, [filteredCommits, repoOwnerMap]);
+  }, [activityFeed.commits, repoOwnerMap]);
 
   // Group summaries by quarter
   const quarterGroups = useMemo(() => {
@@ -574,38 +561,6 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
   );
   const totalRecentCommits = recentRepos.reduce((sum, r) => sum + r.commitCount, 0);
 
-  // Transform commits for HourlyActivityHeatmap (always use all commits, not filtered)
-  const heatmapCommits = useMemo<CommitTimestamp[]>(() => {
-    return activityFeed.commits.map((commit) => ({
-      timestamp: new Date(commit.date),
-      repoId: commit.repoPath,
-    }));
-  }, [activityFeed.commits]);
-
-  // Handle heatmap block click
-  const handleHeatmapBlockClick = useCallback((startTime: Date, endTime: Date, count: number) => {
-    if (count === 0) return; // Don't filter on empty blocks
-
-    // Toggle filter off if clicking the same block
-    if (timeFilter && timeFilter.start.getTime() === startTime.getTime()) {
-      setTimeFilter(null);
-    } else {
-      setTimeFilter({ start: startTime, end: endTime });
-    }
-  }, [timeFilter]);
-
-  // Format time filter for display
-  const formatTimeFilterLabel = (filter: { start: Date; end: Date }): string => {
-    const formatTime = (d: Date) => {
-      const hour = d.getHours();
-      const period = hour >= 12 ? 'PM' : 'AM';
-      const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-      const m = d.getMinutes().toString().padStart(2, '0');
-      return `${displayHour}:${m} ${period}`;
-    };
-    return `${formatTime(filter.start)} - ${formatTime(filter.end)}`;
-  };
-
   return (
     <div
       style={{
@@ -719,30 +674,8 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
             </button>
           )}
 
-          {/* Time filter indicator */}
-          {timeFilter && (
-            <button
-              onClick={() => setTimeFilter(null)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing.xs,
-                padding: `${spacing.xs}px ${spacing.sm}px`,
-                fontSize: theme.fontSizes[1],
-                color: theme.colors.primary,
-                backgroundColor: `${theme.colors.primary}15`,
-                border: `1px solid ${theme.colors.primary}`,
-                borderRadius: theme.radii?.[1] || 4,
-                cursor: 'pointer',
-              }}
-            >
-              <span>{formatTimeFilterLabel(timeFilter)}</span>
-              <X size={12} />
-            </button>
-          )}
-
           {/* Status indicator */}
-          {!activityFeed.loading && repoSummaries.length > 0 && !timeFilter && (
+          {!activityFeed.loading && repoSummaries.length > 0 && (
             <div
               style={{
                 display: 'flex',
@@ -765,18 +698,6 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
               )}
             </div>
           )}
-
-          {/* Filtered count */}
-          {timeFilter && filteredCommits.length > 0 && (
-            <span
-              style={{
-                fontSize: theme.fontSizes[1],
-                color: theme.colors.textSecondary,
-              }}
-            >
-              {filteredCommits.length} commit{filteredCommits.length !== 1 ? 's' : ''}
-            </span>
-          )}
         </div>
       </div>
 
@@ -788,7 +709,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
           overflow: 'hidden',
         }}
       >
-        {/* Left column - Hourly Activity Heatmap (right-aligned content) */}
+        {/* Left column - Repository List */}
         {onSearchChange && (
           <div
             style={{
@@ -808,14 +729,163 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
                 padding: spacing.md,
                 display: 'flex',
                 flexDirection: 'column',
+                gap: spacing.md,
               }}
             >
-              <HourlyActivityHeatmap
-                commits={heatmapCommits}
-                loading={activityFeed.loading}
-                onBlockClick={handleHeatmapBlockClick}
-                selectedBlock={timeFilter?.start.toISOString() ?? null}
-              />
+              {/* Popular Projects Title */}
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: theme.fontSizes[2],
+                  fontWeight: 600,
+                  color: theme.colors.text,
+                }}
+              >
+                Popular Projects
+              </h3>
+
+              {/* Repository List */}
+              <div
+                style={{
+                  flex: 1,
+                  overflow: 'auto',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: spacing.sm,
+                }}
+              >
+                {activityFeed.loading ? (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '100%',
+                      color: theme.colors.textSecondary,
+                      fontSize: theme.fontSizes[1],
+                    }}
+                  >
+                    Loading repositories...
+                  </div>
+                ) : repoSummaries.length === 0 ? (
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '100%',
+                      color: theme.colors.textSecondary,
+                      fontSize: theme.fontSizes[1],
+                      textAlign: 'center',
+                    }}
+                  >
+                    <FolderGit2 size={32} style={{ marginBottom: spacing.sm, opacity: 0.3 }} />
+                    <span>No repositories</span>
+                  </div>
+                ) : (
+                  repoSummaries.map((summary) => (
+                    <button
+                      key={summary.repoPath}
+                      onClick={() => handleRepoOpen(summary.repoPath)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: spacing.sm,
+                        width: '100%',
+                        padding: spacing.sm,
+                        backgroundColor: 'transparent',
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: theme.radii?.[1] || 4,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        transition: 'all 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                        e.currentTarget.style.borderColor = theme.colors.primary;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.borderColor = theme.colors.border;
+                      }}
+                    >
+                      {/* Avatar */}
+                      <div
+                        style={{
+                          width: 56,
+                          height: 56,
+                          borderRadius: '50%',
+                          backgroundColor: theme.colors.background,
+                          border: `1px solid ${theme.colors.border}`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {summary.githubOwner ? (
+                          <img
+                            src={`https://github.com/${summary.githubOwner}.png?size=80`}
+                            alt={summary.githubOwner}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                            }}
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        ) : null}
+                        {!summary.githubOwner && (
+                          <User size={28} color={theme.colors.textSecondary} />
+                        )}
+                      </div>
+
+                      {/* Text content */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontSize: theme.fontSizes[1],
+                            fontWeight: 600,
+                            color: theme.colors.text,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            marginBottom: 2,
+                          }}
+                        >
+                          {summary.repoName}
+                        </div>
+                        {summary.githubOwner && (
+                          <div
+                            style={{
+                              fontSize: theme.fontSizes[0],
+                              color: theme.colors.textSecondary,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              marginBottom: 4,
+                            }}
+                          >
+                            {summary.githubOwner}
+                          </div>
+                        )}
+                        <div
+                          style={{
+                            fontSize: theme.fontSizes[0],
+                            color: theme.colors.textTertiary,
+                          }}
+                        >
+                          {summary.commitCount} commit{summary.commitCount !== 1 ? 's' : ''}
+                        </div>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -1687,21 +1757,44 @@ const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             }}
           >
             {/* Author avatar */}
-            {displayedCommit && (
-              <img
-                src={commitAvatars.get(displayedCommit.hash) || getAvatarUrl(displayedCommit.authorEmail, 20) || ''}
-                alt={displayedCommit.author}
-                style={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: '50%',
-                  flexShrink: 0,
-                }}
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
-            )}
+            {displayedCommit && (() => {
+              const avatarUrl =
+                commitAvatars.get(displayedCommit.hash) ||
+                getAvatarUrl(displayedCommit.authorEmail, 20) ||
+                (summary.githubOwner ? `https://github.com/${summary.githubOwner}.png?size=40` : null);
+
+              return avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={displayedCommit.author}
+                  style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: '50%',
+                    flexShrink: 0,
+                  }}
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: '50%',
+                    backgroundColor: theme.colors.backgroundSecondary,
+                    border: `1px solid ${theme.colors.border}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <User size={12} color={theme.colors.textSecondary} />
+                </div>
+              );
+            })()}
             <code
               style={{
                 fontSize: theme.fontSizes[0],

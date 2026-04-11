@@ -14,6 +14,7 @@ import { LocalhostProcessesView } from '../../views/LocalhostProcessesView';
 import { ConnectionsView } from '../../views/ConnectionsView';
 import { SkillBrowserView } from '../../views/SkillBrowserView';
 import { ActivityCitiesPanel } from '../../../panels/ActivityCitiesPanel';
+import { OnlineUsersPanel } from '../../../panels/OnlineUsersPanel';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { PresenceService } from '../../../main-process-api/PresenceService';
 import { WindowService } from '../../../main-process-api/WindowService';
@@ -44,6 +45,7 @@ const VIEW_OPTIONS = [
   'connections',
   'skills',
   'activity-cities',
+  'online-users',
 ];
 
 // Quick commands for the command palette autocomplete
@@ -133,6 +135,7 @@ export const IntegratedShell: React.FC = () => {
     connections: { left: false, right: false },
     skills: { left: false, right: false },
     'activity-cities': { left: false, right: false },
+    'online-users': { left: false, right: false },
   });
 
   // Get current view's collapsed states
@@ -406,6 +409,7 @@ export const IntegratedShell: React.FC = () => {
             connections: { left: false, right: false },
             skills: { left: false, right: false },
             'activity-cities': { left: false, right: false },
+            'online-users': { left: false, right: false },
           });
           return { success: true };
         default:
@@ -470,6 +474,7 @@ export const IntegratedShell: React.FC = () => {
           connections: { left: false, right: false },
           skills: { left: false, right: false },
           'activity-cities': { left: false, right: false },
+          'online-users': { left: false, right: false },
         });
       }),
     ];
@@ -589,6 +594,7 @@ export const IntegratedShell: React.FC = () => {
             {activeView === 'connections' && <ConnectionsView />}
             {activeView === 'skills' && <SkillBrowserView />}
             {activeView === 'activity-cities' && <ActivityCitiesPanel />}
+            {activeView === 'online-users' && <OnlineUsersPanel />}
           </div>
         </div>
       </div>
