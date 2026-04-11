@@ -229,11 +229,6 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
       timestamp: new Date(commit.date),
       repoId: commit.repoPath,
     }));
-    console.info('[FeedPanelFramework] Heatmap data:', {
-      commitCount: activityFeed.commits.length,
-      transformedCount: transformed.length,
-      repositories: repositories.length,
-    });
     return transformed;
   }, [activityFeed.commits, repositories.length]);
 

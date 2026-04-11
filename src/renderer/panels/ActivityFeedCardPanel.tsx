@@ -80,7 +80,6 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
       activityFeed.refresh();
     };
 
-    console.info('[ActivityFeedCardPanel] Subscribing to feed:activity-refresh-requested');
     events.on('feed:activity-refresh-requested', handleRefreshRequest);
     return () => {
       events.off('feed:activity-refresh-requested', handleRefreshRequest);

@@ -99,14 +99,6 @@ export function useActivityFeed(
       // Sort all commits by date descending and limit
       allCommits.sort((a, b) => b.date.localeCompare(a.date));
       const limitedCommits = allCommits.slice(0, totalLimit);
-      console.info('[useActivityFeed] Loaded commits:', {
-        totalCommits: limitedCommits.length,
-        firstCommit: limitedCommits[0] ? {
-          repo: limitedCommits[0].repoName,
-          hash: limitedCommits[0].hash.substring(0, 7),
-          date: limitedCommits[0].date,
-        } : null,
-      });
       setCommits(limitedCommits);
     } catch (err) {
       console.error('[useActivityFeed] Error loading activity feed:', err);
