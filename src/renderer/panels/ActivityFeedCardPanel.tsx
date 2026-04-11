@@ -271,16 +271,6 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
         >
           Activity
         </h3>
-        {activityFeed.loading && (
-          <span
-            style={{
-              fontSize: theme.fontSizes[0],
-              color: theme.colors.textSecondary,
-            }}
-          >
-            Loading...
-          </span>
-        )}
         {timeFilter && (
           <div
             style={{

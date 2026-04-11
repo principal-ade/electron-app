@@ -592,16 +592,6 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
           >
             Activity Feed
           </h3>
-          {activityFeed.loading && (
-            <span
-              style={{
-                fontSize: theme.fontSizes[1],
-                color: theme.colors.textSecondary,
-              }}
-            >
-              Loading...
-            </span>
-          )}
         </div>
 
         {/* Status indicator and time filter */}
@@ -754,20 +744,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
                   gap: spacing.sm,
                 }}
               >
-                {activityFeed.loading ? (
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      height: '100%',
-                      color: theme.colors.textSecondary,
-                      fontSize: theme.fontSizes[1],
-                    }}
-                  >
-                    Loading repositories...
-                  </div>
-                ) : repoSummaries.length === 0 ? (
+                {repoSummaries.length === 0 ? (
                   <div
                     style={{
                       display: 'flex',
