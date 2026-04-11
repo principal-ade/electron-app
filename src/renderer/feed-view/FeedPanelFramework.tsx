@@ -117,6 +117,12 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     [repositories]
   );
 
+  // Store refresh function in ref to avoid recreating callback
+  const refreshFnRef = useRef(activityFeed.refresh);
+  useEffect(() => {
+    refreshFnRef.current = activityFeed.refresh;
+  }, [activityFeed.refresh]);
+
   // Debounced refresh for git status changes
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debouncedRefresh = useCallback(() => {
@@ -132,28 +138,32 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
         console.info('[FeedPanelFramework] Refresh count:', prev, '→', newCount);
         return newCount;
       });
-      activityFeed.refresh();
+      refreshFnRef.current();
     }, 500);
-  }, [activityFeed]);
+  }, []); // No dependencies - uses ref
+
+  // Store Alexandria paths in ref to avoid recreating subscription
+  const alexandriaRepoPathsRef = useRef(alexandriaRepoPaths);
+  useEffect(() => {
+    alexandriaRepoPathsRef.current = alexandriaRepoPaths;
+  }, [alexandriaRepoPaths]);
 
   // Subscribe to git status changes across all repositories (passive - no watch acquisition)
   // We only receive events for repositories that are already being watched by other windows
   useEffect(() => {
-    console.info('[FeedPanelFramework] Setting up git status subscription', {
-      alexandriaRepoCount: alexandriaRepoPaths.size,
-    });
+    console.info('[FeedPanelFramework] Setting up git status subscription (one-time setup)');
 
     const unsubscribe = RepositoryMonitoringService.onGitStatusChanged(
       (status) => {
         const repoPathStr = String(status.repoPath);
-        const isAlexandria = alexandriaRepoPaths.has(repoPathStr);
+        const isAlexandria = alexandriaRepoPathsRef.current.has(repoPathStr);
 
         console.info('[FeedPanelFramework] Git status event received:', {
           repo: repoPathStr,
           branch: status.branch,
           isDirty: status.isDirty,
           isAlexandria,
-          alexandriaPaths: Array.from(alexandriaRepoPaths).slice(0, 3),
+          alexandriaRepoCount: alexandriaRepoPathsRef.current.size,
         });
 
         // Only refresh if this repo is in Alexandria registry
@@ -173,11 +183,9 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     return () => {
       console.info('[FeedPanelFramework] Cleaning up git status subscription');
       unsubscribe();
-      if (refreshTimeoutRef.current) {
-        clearTimeout(refreshTimeoutRef.current);
-      }
+      // Don't clear timeout here - let it complete
     };
-  }, [alexandriaRepoPaths, debouncedRefresh]);
+  }, [debouncedRefresh]); // Only debouncedRefresh, which is now stable
 
   // Load base directory from user preferences
   useEffect(() => {
