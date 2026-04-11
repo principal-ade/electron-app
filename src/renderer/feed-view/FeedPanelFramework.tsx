@@ -101,13 +101,6 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
   // Time filter state for heatmap selection
   const [selectedBlock, setSelectedBlock] = useState<string | null>(null);
 
-  // Debug state for git status events
-  const [lastGitEvent, setLastGitEvent] = useState<{
-    repo: string;
-    timestamp: number;
-  } | null>(null);
-  const [refreshCount, setRefreshCount] = useState(0);
-
   // Activity feed data
   const activityFeed = useActivityFeed(repositories, 20, 10, 100);
 
@@ -127,18 +120,10 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
   // Longer delay (2000ms) to give git time to finalize commits and make them queryable
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debouncedRefresh = useCallback(() => {
-    console.info('[FeedPanelFramework] debouncedRefresh called, setting 2000ms timeout');
     if (refreshTimeoutRef.current) {
-      console.info('[FeedPanelFramework] Clearing previous timeout');
       clearTimeout(refreshTimeoutRef.current);
     }
     refreshTimeoutRef.current = setTimeout(() => {
-      console.info('[FeedPanelFramework] Timeout fired! Calling activityFeed.refresh()');
-      setRefreshCount(prev => {
-        const newCount = prev + 1;
-        console.info('[FeedPanelFramework] Refresh count:', prev, '→', newCount);
-        return newCount;
-      });
       refreshFnRef.current();
     }, 2000); // Increased to 2000ms to ensure git has finalized the commit
   }, []); // No dependencies - uses ref
@@ -152,37 +137,19 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
   // Subscribe to git status changes across all repositories (passive - no watch acquisition)
   // We only receive events for repositories that are already being watched by other windows
   useEffect(() => {
-    console.info('[FeedPanelFramework] Setting up git status subscription (one-time setup)');
-
     const unsubscribe = RepositoryMonitoringService.onGitStatusChanged(
       (status) => {
         const repoPathStr = String(status.repoPath);
         const isAlexandria = alexandriaRepoPathsRef.current.has(repoPathStr);
 
-        console.info('[FeedPanelFramework] Git status event received:', {
-          repo: repoPathStr,
-          branch: status.branch,
-          isDirty: status.isDirty,
-          isAlexandria,
-          alexandriaRepoCount: alexandriaRepoPathsRef.current.size,
-        });
-
         // Only refresh if this repo is in Alexandria registry
         if (isAlexandria) {
-          console.info('[FeedPanelFramework] ✅ Repo is in Alexandria, triggering refresh');
-          setLastGitEvent({
-            repo: repoPathStr,
-            timestamp: Date.now(),
-          });
           debouncedRefresh();
-        } else {
-          console.warn('[FeedPanelFramework] ❌ Repo NOT in Alexandria set, skipping refresh');
         }
       }
     );
 
     return () => {
-      console.info('[FeedPanelFramework] Cleaning up git status subscription');
       unsubscribe();
       // Don't clear timeout here - let it complete
     };
@@ -418,30 +385,6 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
         backgroundColor: theme.colors.background,
       }}
     >
-      {/* Debug banner for git status events */}
-      {(lastGitEvent || refreshCount > 0) && (
-        <div
-          style={{
-            padding: '4px 8px',
-            backgroundColor: theme.colors.accent,
-            color: theme.colors.background,
-            fontSize: '11px',
-            fontFamily: theme.fonts.monospace,
-            display: 'flex',
-            gap: '12px',
-            flexShrink: 0,
-          }}
-        >
-          <span>🔄 Git Status Events Active</span>
-          {lastGitEvent && (
-            <span>
-              Last: {lastGitEvent.repo.split('/').pop()} @{' '}
-              {new Date(lastGitEvent.timestamp).toLocaleTimeString()}
-            </span>
-          )}
-          <span>Refreshes: {refreshCount}</span>
-        </div>
-      )}
       <ConfigurablePanelLayout
         ref={panelLayoutRef}
         panels={allPanels}
