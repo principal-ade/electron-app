@@ -101,6 +101,13 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
   // Time filter state for heatmap selection
   const [selectedBlock, setSelectedBlock] = useState<string | null>(null);
 
+  // Debug state for git status events
+  const [lastGitEvent, setLastGitEvent] = useState<{
+    repo: string;
+    timestamp: number;
+  } | null>(null);
+  const [refreshCount, setRefreshCount] = useState(0);
+
   // Activity feed data
   const activityFeed = useActivityFeed(repositories, 20, 10, 100);
 
@@ -118,20 +125,35 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     }
     refreshTimeoutRef.current = setTimeout(() => {
       console.info('[FeedPanelFramework] Debounced refresh triggered');
+      setRefreshCount(prev => prev + 1);
       activityFeed.refresh();
     }, 500);
   }, [activityFeed]);
 
-  // Subscribe to git status changes across all repositories
+  // Subscribe to git status changes across all repositories (passive - no watch acquisition)
+  // We only receive events for repositories that are already being watched by other windows
   useEffect(() => {
+    console.info('[FeedPanelFramework] Setting up git status subscription', {
+      alexandriaRepoCount: alexandriaRepoPaths.size,
+    });
+
     const unsubscribe = RepositoryMonitoringService.onGitStatusChanged(
       (status) => {
+        const repoPathStr = String(status.repoPath);
+        const isAlexandria = alexandriaRepoPaths.has(repoPathStr);
+
+        console.info('[FeedPanelFramework] Git status event received:', {
+          repo: repoPathStr,
+          branch: status.branch,
+          isDirty: status.isDirty,
+          isAlexandria,
+        });
+
         // Only refresh if this repo is in Alexandria registry
-        if (alexandriaRepoPaths.has(String(status.repoPath))) {
-          console.info('[FeedPanelFramework] Git status changed, refreshing feed:', {
-            repo: status.repoPath,
-            branch: status.branch,
-            isDirty: status.isDirty,
+        if (isAlexandria) {
+          setLastGitEvent({
+            repo: repoPathStr,
+            timestamp: Date.now(),
           });
           debouncedRefresh();
         }
@@ -139,6 +161,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     );
 
     return () => {
+      console.info('[FeedPanelFramework] Cleaning up git status subscription');
       unsubscribe();
       if (refreshTimeoutRef.current) {
         clearTimeout(refreshTimeoutRef.current);
@@ -376,6 +399,30 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
         backgroundColor: theme.colors.background,
       }}
     >
+      {/* Debug banner for git status events */}
+      {(lastGitEvent || refreshCount > 0) && (
+        <div
+          style={{
+            padding: '4px 8px',
+            backgroundColor: theme.colors.accent,
+            color: theme.colors.background,
+            fontSize: '11px',
+            fontFamily: theme.fonts.monospace,
+            display: 'flex',
+            gap: '12px',
+            flexShrink: 0,
+          }}
+        >
+          <span>🔄 Git Status Events Active</span>
+          {lastGitEvent && (
+            <span>
+              Last: {lastGitEvent.repo.split('/').pop()} @{' '}
+              {new Date(lastGitEvent.timestamp).toLocaleTimeString()}
+            </span>
+          )}
+          <span>Refreshes: {refreshCount}</span>
+        </div>
+      )}
       <ConfigurablePanelLayout
         ref={panelLayoutRef}
         panels={allPanels}
