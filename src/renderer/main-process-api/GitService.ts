@@ -248,7 +248,6 @@ export class GitService {
     startDate: string,
     endDate: string,
   ): Promise<{ hash: string; message: string; author: string; authorEmail: string; date: string }[]> {
-    console.info(`[GitService] Getting commits in range: ${directory} (${startDate} to ${endDate})`);
     try {
       // Get all commits in the date range, oldest first (--reverse)
       // Use ISO 8601 format for full timestamp
@@ -342,7 +341,6 @@ export class GitService {
     directory: string,
     commitHash: string,
   ): Promise<Map<string, { status: 'added' | 'modified' | 'deleted' | 'renamed'; additions: number; deletions: number }>> {
-    console.info(`[GitService] Getting changed files for commit: ${directory} (${commitHash})`);
     try {
       // Get file changes with status codes and line counts in one call
       // Format: --numstat gives "additions deletions path"
