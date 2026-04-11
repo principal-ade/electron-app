@@ -16,8 +16,10 @@ import {
   Play,
   Square,
   Sparkles,
+  FileCode,
 } from 'lucide-react';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
+import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { GitService } from '../main-process-api/GitService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import {
@@ -46,6 +48,7 @@ interface RepoActivityCardProps {
   onToggleExpand: () => void;
   onOpen: () => void;
   dimmed?: boolean;
+  events?: PanelEventEmitter;
 }
 
 /**
@@ -72,6 +75,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
   onToggleExpand,
   onOpen,
   dimmed = false,
+  events,
 }) => {
   const { theme } = useTheme();
   const hasMoreCommits = summary.commits.length > 1;
@@ -857,7 +861,43 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                 }}
               >
                 {isAnimating ? <Square size={12} /> : <Play size={12} />}
-                <span>{isAnimating ? 'Stop' : 'Review'}</span>
+                <span>{isAnimating ? 'Stop' : 'Animate'}</span>
+              </button>
+            )}
+
+            {/* Review Diff button */}
+            {displayedCommitIndex !== null && events && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const commit = summary.commits[displayedCommitIndex];
+                  events.emit({
+                    type: 'commit:review-selected',
+                    source: 'repo-activity-card',
+                    timestamp: Date.now(),
+                    payload: {
+                      repoPath: summary.repoPath,
+                      repoName: summary.repoName,
+                      commit,
+                    },
+                  });
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  padding: `${spacing.xs}px ${spacing.sm}px`,
+                  fontSize: theme.fontSizes[1],
+                  color: theme.colors.primary,
+                  backgroundColor: 'transparent',
+                  border: `1px solid ${theme.colors.primary}`,
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <FileCode size={12} />
+                <span>Review</span>
               </button>
             )}
 

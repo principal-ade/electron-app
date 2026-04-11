@@ -12,6 +12,7 @@
 
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
+import { GitCommit } from 'lucide-react';
 import {
   ConfigurablePanelLayout,
   type PanelLayout,
@@ -31,11 +32,29 @@ import {
   type TerminalTab,
   type TerminalWorkingState,
   type TerminalPanelActions,
+  type BaseTab,
 } from '@industry-theme/xterm-terminal-panel';
 import { HeatmapPanel } from '../panels/HeatmapPanel';
 import { ActivityFeedCardPanel } from '../panels/ActivityFeedCardPanel';
+import { ReviewCommitPanel } from '../panels/ReviewCommitPanel';
 import { useActivityFeed } from '../hooks/useActivityFeed';
 import type { CommitTimestamp } from '../components/HourlyActivityHeatmap';
+import type { ActivityCommit } from '../hooks/useActivityFeed';
+
+/**
+ * Commit review tab - displays diff for a specific commit
+ */
+export interface CommitReviewTab extends BaseTab {
+  contentType: 'commit-review';
+  repoPath: string;
+  repoName: string;
+  commit: ActivityCommit;
+}
+
+/**
+ * Union type of all supported tab types in FeedView
+ */
+export type FeedTab = TerminalTab | CommitReviewTab;
 
 export interface FeedPanelFrameworkProps {
   /** List of repositories */
@@ -100,6 +119,10 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
 
   // Time filter state for heatmap selection
   const [selectedBlock, setSelectedBlock] = useState<string | null>(null);
+
+  // Tab management
+  const [tabs, setTabs] = useState<FeedTab[]>([]);
+  const [activeTabId, setActiveTabId] = useState<string | null>(null);
 
   // Activity feed data
   const activityFeed = useActivityFeed(repositories, 20, 10, 100);
@@ -205,6 +228,45 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     };
   }, [events]);
 
+  // Listen for commit review events to open review tabs
+  useEffect(() => {
+    const handleCommitReview = (event: {
+      type: string;
+      payload: { repoPath: string; repoName: string; commit: ActivityCommit }
+    }) => {
+      if (event.type === 'commit:review-selected') {
+        const { repoPath, repoName, commit } = event.payload;
+        const tabId = `commit-review-${repoPath}-${commit.hash}`;
+
+        // Check if tab already exists
+        const existingTab = tabs.find(tab => tab.id === tabId);
+        if (existingTab) {
+          setActiveTabId(tabId);
+          return;
+        }
+
+        // Create new commit review tab
+        const newTab: CommitReviewTab = {
+          id: tabId,
+          label: `${commit.hash.substring(0, 7)} - ${repoName}`,
+          contentType: 'commit-review',
+          closable: true,
+          repoPath,
+          repoName,
+          commit,
+        };
+
+        setTabs(prevTabs => [...prevTabs, newTab]);
+        setActiveTabId(tabId);
+      }
+    };
+
+    events.on('commit:review-selected', handleCommitReview);
+    return () => {
+      events.off('commit:review-selected', handleCommitReview);
+    };
+  }, [events, tabs]);
+
   // Convert terminal activities to workingStates record
   const workingStates = useMemo(() => {
     const states: Record<string, TerminalWorkingState> = {};
@@ -247,6 +309,36 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
 
   // Terminal directory - use baseDefaultDirectory from preferences, fallback to HOME
   const terminalDirectory = baseDefaultDirectory || process.env.HOME || '/';
+
+  // Tab rendering callbacks
+  const renderTabIcon = useCallback((tab: FeedTab) => {
+    switch (tab.contentType) {
+      case 'commit-review':
+        return <GitCommit size={14} />;
+      default:
+        return null;
+    }
+  }, []);
+
+  const renderTabContent = useCallback(
+    (tab: FeedTab, _isActive: boolean) => {
+      switch (tab.contentType) {
+        case 'commit-review': {
+          const reviewTab = tab as CommitReviewTab;
+          return (
+            <ReviewCommitPanel
+              repoPath={reviewTab.repoPath}
+              repoName={reviewTab.repoName}
+              commit={reviewTab.commit}
+            />
+          );
+        }
+        default:
+          return null;
+      }
+    },
+    []
+  );
 
   // Handle panel resize
   const handlePanelResize = useCallback(
@@ -346,7 +438,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
               flexDirection: 'column',
             }}
           >
-            <TabbedTerminalPanel<TerminalTab>
+            <TabbedTerminalPanel<FeedTab>
               context={terminalPanelContext}
               actions={terminalActions as TerminalPanelActions}
               events={events}
@@ -354,6 +446,12 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
               directory={terminalDirectory}
               defaultScrollLocked={false}
               workingStates={workingStates}
+              initialTabs={tabs}
+              onTabsChange={setTabs}
+              activeTabId={activeTabId}
+              onActiveTabChange={setActiveTabId}
+              renderTabContent={renderTabContent}
+              renderTabIcon={renderTabIcon}
             />
           </div>
         ),
@@ -371,6 +469,10 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
       workingStates,
       repositories,
       onOpenRepository,
+      tabs,
+      activeTabId,
+      renderTabContent,
+      renderTabIcon,
     ]
   );
 

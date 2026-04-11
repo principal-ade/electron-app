@@ -316,6 +316,28 @@ export class GitService {
    * @param commitHash - Git commit hash
    * @returns Map of file path to change info (status and line counts)
    */
+  /**
+   * Get the full diff text for a commit
+   */
+  static async getCommitDiff(
+    directory: string,
+    commitHash: string,
+  ): Promise<string> {
+    console.info(`[GitService] Getting commit diff: ${directory} (${commitHash})`);
+    try {
+      const result = await window.mainProcess.git.execCommand(directory, [
+        'show',
+        '--format=',
+        '--no-color',
+        commitHash,
+      ]);
+      return result.stdout;
+    } catch (error) {
+      console.error('[GitService] Failed to get commit diff:', error);
+      return '';
+    }
+  }
+
   static async getChangedFilesForCommit(
     directory: string,
     commitHash: string,

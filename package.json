@@ -199,6 +199,7 @@
     "@opentelemetry/sdk-trace-base": "^2.5.0",
     "@opentelemetry/sdk-trace-web": "^2.5.0",
     "@opentelemetry/semantic-conventions": "^1.39.0",
+    "@pierre/diffs": "^1.1.13",
     "@principal-ade/agent-manager": "^1.1.0",
     "@principal-ade/bruno-panels": "^0.1.15",
     "@principal-ade/code-quality-panels": "^0.2.0",
