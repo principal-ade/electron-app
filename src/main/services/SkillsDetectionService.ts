@@ -137,7 +137,11 @@ export class SkillsDetectionService {
       const dirPath = preset.path.replace('{HOME}', this.homeDir);
       const skills = await this.findSkillsInDirectory(dirPath);
 
-      if (skills.length > 0) {
+      // Always include Claude directory if it exists, even if empty
+      const isClaudeDirectory = preset.id === 'claude-specific';
+      const directoryExists = fs.existsSync(dirPath);
+
+      if (skills.length > 0 || (isClaudeDirectory && directoryExists)) {
         detectedDirs.push({
           ...preset,
           path: dirPath,
