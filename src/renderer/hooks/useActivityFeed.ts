@@ -31,6 +31,13 @@ export function useActivityFeed(
   const abortRef = useRef(false);
 
   const loadActivityFeed = useCallback(async () => {
+    console.info('[useActivityFeed] loadActivityFeed started', {
+      repositoryCount: repositories.length,
+      maxRepos,
+      commitsPerRepo,
+      totalLimit,
+    });
+
     if (repositories.length === 0) {
       setCommits([]);
       return;
@@ -115,6 +122,7 @@ export function useActivityFeed(
   }, [loadActivityFeed]);
 
   const refresh = useCallback(() => {
+    console.info('[useActivityFeed] refresh() called - triggering loadActivityFeed');
     return loadActivityFeed();
   }, [loadActivityFeed]);
 

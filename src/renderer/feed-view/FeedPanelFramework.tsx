@@ -120,12 +120,18 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
   // Debounced refresh for git status changes
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debouncedRefresh = useCallback(() => {
+    console.info('[FeedPanelFramework] debouncedRefresh called, setting 500ms timeout');
     if (refreshTimeoutRef.current) {
+      console.info('[FeedPanelFramework] Clearing previous timeout');
       clearTimeout(refreshTimeoutRef.current);
     }
     refreshTimeoutRef.current = setTimeout(() => {
-      console.info('[FeedPanelFramework] Debounced refresh triggered');
-      setRefreshCount(prev => prev + 1);
+      console.info('[FeedPanelFramework] Timeout fired! Calling activityFeed.refresh()');
+      setRefreshCount(prev => {
+        const newCount = prev + 1;
+        console.info('[FeedPanelFramework] Refresh count:', prev, '→', newCount);
+        return newCount;
+      });
       activityFeed.refresh();
     }, 500);
   }, [activityFeed]);
@@ -147,15 +153,19 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
           branch: status.branch,
           isDirty: status.isDirty,
           isAlexandria,
+          alexandriaPaths: Array.from(alexandriaRepoPaths).slice(0, 3),
         });
 
         // Only refresh if this repo is in Alexandria registry
         if (isAlexandria) {
+          console.info('[FeedPanelFramework] ✅ Repo is in Alexandria, triggering refresh');
           setLastGitEvent({
             repo: repoPathStr,
             timestamp: Date.now(),
           });
           debouncedRefresh();
+        } else {
+          console.warn('[FeedPanelFramework] ❌ Repo NOT in Alexandria set, skipping refresh');
         }
       }
     );
