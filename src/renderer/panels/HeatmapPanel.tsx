@@ -17,8 +17,6 @@ export interface HeatmapPanelProps {
   commits: CommitTimestamp[];
   /** Repository data with GitHub information */
   repositories?: AlexandriaEntry[];
-  /** Whether commit data is loading */
-  loading?: boolean;
   /** Event emitter for panel communication */
   events: PanelEventEmitter;
   /** Currently selected time block (not used in repository list) */
@@ -36,7 +34,6 @@ interface RepoSummary {
 export const HeatmapPanel: React.FC<HeatmapPanelProps> = ({
   commits,
   repositories = [],
-  loading = false,
   events,
   selectedBlock: _selectedBlock = null,
 }) => {
@@ -165,20 +162,7 @@ export const HeatmapPanel: React.FC<HeatmapPanelProps> = ({
           gap: spacing.sm,
         }}
       >
-        {loading ? (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '100%',
-              color: theme.colors.textSecondary,
-              fontSize: theme.fontSizes[1],
-            }}
-          >
-            Loading repositories...
-          </div>
-        ) : repoSummaries.length === 0 ? (
+        {repoSummaries.length === 0 ? (
           <div
             style={{
               display: 'flex',
