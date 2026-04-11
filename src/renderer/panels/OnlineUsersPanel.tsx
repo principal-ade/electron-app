@@ -77,7 +77,7 @@ export const OnlineUsersPanel: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(true);
-  const [currentTime, setCurrentTime] = useState(Date.now());
+  const [_currentTime, setCurrentTime] = useState(Date.now());
 
   // Update current time every 30 seconds to refresh "time ago" displays
   useEffect(() => {
@@ -143,7 +143,7 @@ export const OnlineUsersPanel: React.FC = () => {
 
     // Subscribe to presence events
     const unsubscribe = PresenceService.onPresenceEvent((event) => {
-      console.log('[OnlineUsersPanel] Presence event:', event.type);
+      console.info('[OnlineUsersPanel] Presence event:', event.type);
 
       // Refresh on user online/offline events
       if (
@@ -346,10 +346,13 @@ export const OnlineUsersPanel: React.FC = () => {
               <div key={user.userId} style={userItemStyle}>
                 {/* Avatar */}
                 <div style={avatarStyle}>
-                  {user.avatarUrl ? (
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                  {(user as any).avatarUrl ? (
                     <img
-                      src={user.avatarUrl}
-                      alt={user.login}
+                      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+                      src={(user as any).avatarUrl}
+                      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+                      alt={(user as any).login || user.userId}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   ) : (
@@ -379,7 +382,8 @@ export const OnlineUsersPanel: React.FC = () => {
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {user.name || user.login}
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                    {(user as any).name || (user as any).login || user.userId}
                   </div>
                   <div
                     style={{
