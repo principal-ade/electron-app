@@ -9,6 +9,10 @@ import { tipc } from '@egoist/tipc/main';
 import type {
   GetCommitQueueInput,
   GetActivityHeatmapInput,
+  WatchUserInput,
+  UnwatchUserInput,
+  WatchRepoInput,
+  UnwatchRepoInput,
 } from '../../../shared/tipc/webAdeRouterTypes';
 import { WebAdeService } from '../../services/WebAdeService';
 
@@ -44,5 +48,33 @@ export const webAdeRouter = {
     .input<GetActivityHeatmapInput>()
     .action(async ({ input }) => {
       return webAdeService.getActivityHeatmap(input);
+    }),
+
+  // ===========================================================================
+  // Watch/Unwatch Operations
+  // ===========================================================================
+
+  watchUser: t.procedure
+    .input<WatchUserInput>()
+    .action(async ({ input }) => {
+      return webAdeService.watchUser(input.login);
+    }),
+
+  unwatchUser: t.procedure
+    .input<UnwatchUserInput>()
+    .action(async ({ input }) => {
+      return webAdeService.unwatchUser(input.login);
+    }),
+
+  watchRepo: t.procedure
+    .input<WatchRepoInput>()
+    .action(async ({ input }) => {
+      return webAdeService.watchRepo(input.owner, input.repo);
+    }),
+
+  unwatchRepo: t.procedure
+    .input<UnwatchRepoInput>()
+    .action(async ({ input }) => {
+      return webAdeService.unwatchRepo(input.owner, input.repo);
     }),
 };

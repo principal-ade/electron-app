@@ -21,6 +21,24 @@ export interface GetActivityHeatmapInput {
   repoIds?: string[];
 }
 
+export interface WatchUserInput {
+  login: string;
+}
+
+export interface UnwatchUserInput {
+  login: string;
+}
+
+export interface WatchRepoInput {
+  owner: string;
+  repo: string;
+}
+
+export interface UnwatchRepoInput {
+  owner: string;
+  repo: string;
+}
+
 // =============================================================================
 // Response Types
 // =============================================================================
@@ -64,6 +82,26 @@ export interface WatchedRepo {
 
 export interface FeedWatches {
   watchedUsers: WatchedUser[];
+  watchedRepos: WatchedRepo[];
+}
+
+export interface WatchUserResponse {
+  success: boolean;
+  watchedUsers: WatchedUser[];
+}
+
+export interface UnwatchUserResponse {
+  success: boolean;
+  watchedUsers: WatchedUser[];
+}
+
+export interface WatchRepoResponse {
+  success: boolean;
+  watchedRepos: WatchedRepo[];
+}
+
+export interface UnwatchRepoResponse {
+  success: boolean;
   watchedRepos: WatchedRepo[];
 }
 
@@ -133,5 +171,29 @@ export type WebAdeRouterType = Record<
       context: ActionContext;
       input: GetActivityHeatmapInput;
     }) => Promise<ActivityHeatmapResponse>;
+  };
+  watchUser: {
+    action: (args: {
+      context: ActionContext;
+      input: WatchUserInput;
+    }) => Promise<WatchUserResponse>;
+  };
+  unwatchUser: {
+    action: (args: {
+      context: ActionContext;
+      input: UnwatchUserInput;
+    }) => Promise<UnwatchUserResponse>;
+  };
+  watchRepo: {
+    action: (args: {
+      context: ActionContext;
+      input: WatchRepoInput;
+    }) => Promise<WatchRepoResponse>;
+  };
+  unwatchRepo: {
+    action: (args: {
+      context: ActionContext;
+      input: UnwatchRepoInput;
+    }) => Promise<UnwatchRepoResponse>;
   };
 };

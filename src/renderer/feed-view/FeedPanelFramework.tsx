@@ -35,6 +35,7 @@ import {
   type BaseTab,
 } from '@industry-theme/xterm-terminal-panel';
 import { HeatmapPanel } from '../panels/HeatmapPanel';
+import { WatchedItemsPanel } from '../panels/WatchedItemsPanel';
 import { ActivityFeedCardPanel } from '../panels/ActivityFeedCardPanel';
 import { ReviewCommitPanel } from '../panels/ReviewCommitPanel';
 import { LiveActivityTabContent } from '../components/LiveActivityTabContent';
@@ -434,7 +435,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     () => [
       {
         id: 'heatmap',
-        label: 'Activity',
+        label: feedMode === 'watched-activity' ? 'Watched' : 'Activity',
         content: (
           <div
             style={{
@@ -445,12 +446,16 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
               flexDirection: 'column',
             }}
           >
-            <HeatmapPanel
-              commits={heatmapCommits}
-              repositories={repositories}
-              events={events}
-              selectedBlock={selectedBlock}
-            />
+            {feedMode === 'watched-activity' ? (
+              <WatchedItemsPanel events={events} />
+            ) : (
+              <HeatmapPanel
+                commits={heatmapCommits}
+                repositories={repositories}
+                events={events}
+                selectedBlock={selectedBlock}
+              />
+            )}
           </div>
         ),
       },

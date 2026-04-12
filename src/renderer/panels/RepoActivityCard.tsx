@@ -176,49 +176,51 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
         Array<{ filename: string; status: string; additions: number; deletions: number }>
       >();
 
-      // Fetch changed files for each commit
-      await Promise.all(
-        summary.commits.map(async (commit) => {
-          if (cancelled) return;
+      // Fetch changed files for each commit (only for local repos)
+      if (summary.repoPath) {
+        await Promise.all(
+          summary.commits.map(async (commit) => {
+            if (cancelled) return;
 
-          try {
-            const changedFiles = await GitService.getChangedFilesForCommit(
-              summary.repoPath,
-              commit.hash
-            );
+            try {
+              const changedFiles = await GitService.getChangedFilesForCommit(
+                summary.repoPath,
+                commit.hash
+              );
 
-            let totalAdditions = 0;
-            let totalDeletions = 0;
-            const filesArray: Array<{
-              filename: string;
-              status: string;
-              additions: number;
-              deletions: number;
-            }> = [];
+              let totalAdditions = 0;
+              let totalDeletions = 0;
+              const filesArray: Array<{
+                filename: string;
+                status: string;
+                additions: number;
+                deletions: number;
+              }> = [];
 
-            changedFiles.forEach((fileInfo, filename) => {
-              totalAdditions += fileInfo.additions;
-              totalDeletions += fileInfo.deletions;
-              filesArray.push({
-                filename,
-                status: fileInfo.status,
-                additions: fileInfo.additions,
-                deletions: fileInfo.deletions,
+              changedFiles.forEach((fileInfo, filename) => {
+                totalAdditions += fileInfo.additions;
+                totalDeletions += fileInfo.deletions;
+                filesArray.push({
+                  filename,
+                  status: fileInfo.status,
+                  additions: fileInfo.additions,
+                  deletions: fileInfo.deletions,
+                });
               });
-            });
 
-            statsMap.set(commit.hash, {
-              additions: totalAdditions,
-              deletions: totalDeletions,
-              filesChanged: changedFiles.size,
-            });
+              statsMap.set(commit.hash, {
+                additions: totalAdditions,
+                deletions: totalDeletions,
+                filesChanged: changedFiles.size,
+              });
 
-            filesMap.set(commit.hash, filesArray);
-          } catch (err) {
-            console.warn(`[RepoActivityCard] Failed to fetch stats for ${commit.hash}:`, err);
-          }
-        })
-      );
+              filesMap.set(commit.hash, filesArray);
+            } catch (err) {
+              console.warn(`[RepoActivityCard] Failed to fetch stats for ${commit.hash}:`, err);
+            }
+          })
+        );
+      }
 
       if (!cancelled) {
         setCommitStats(statsMap);

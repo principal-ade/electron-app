@@ -12,6 +12,10 @@ import type {
   FeedWatches,
   ActivityHeatmapResponse,
   GetActivityHeatmapInput,
+  WatchUserResponse,
+  UnwatchUserResponse,
+  WatchRepoResponse,
+  UnwatchRepoResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
@@ -60,8 +64,6 @@ export class WebAdeService {
    * Returns watched activity cards grouped by repo + hour
    */
   async getCommitQueue(limit: number): Promise<CommitActivityCard[]> {
-    console.log('[WebADE] Fetching commit queue with limit:', limit);
-
     const token = await this.getToken();
     if (!token) {
       throw new Error('Not authenticated - no GitHub token available');
@@ -87,17 +89,17 @@ export class WebAdeService {
         throw new Error(`Failed to fetch commit queue: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json() as { result?: { data?: { json?: CommitActivityCard[] } } };
+      const data = await response.json() as { result?: { data?: { cards: CommitActivityCard[], hasMore: boolean } } };
 
-      // tRPC response format: { result: { data: { json: actualData } } }
-      const cards = data?.result?.data?.json;
+      // tRPC response format: { result: { data: { cards, hasMore } } }
+      const result = data?.result?.data;
+      const cards = result?.cards;
 
       if (!Array.isArray(cards)) {
         console.warn('[WebADE] Unexpected response format:', data);
         return [];
       }
 
-      console.log('[WebADE] Fetched', cards.length, 'commit activity cards');
       return cards;
     } catch (error) {
       console.error('[WebADE] Failed to fetch commit queue:', error);
@@ -109,8 +111,6 @@ export class WebAdeService {
    * Fetch watched items (users and repos) from web-ade API
    */
   async getWatches(): Promise<FeedWatches> {
-    console.log('[WebADE] Fetching watched items');
-
     const token = await this.getToken();
     if (!token) {
       throw new Error('Not authenticated - no GitHub token available');
@@ -131,18 +131,13 @@ export class WebAdeService {
         throw new Error(`Failed to fetch watches: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json() as { result?: { data?: { json?: FeedWatches } } };
-      const watches = data?.result?.data?.json;
+      const data = await response.json() as { result?: { data?: FeedWatches } };
+      const watches = data?.result?.data;
 
-      if (!watches || typeof watches !== 'object') {
+      if (!watches || !('watchedUsers' in watches) || !('watchedRepos' in watches)) {
         console.warn('[WebADE] Unexpected response format:', data);
         return { watchedUsers: [], watchedRepos: [] };
       }
-
-      console.log('[WebADE] Fetched watches:', {
-        users: watches.watchedUsers?.length || 0,
-        repos: watches.watchedRepos?.length || 0,
-      });
 
       return watches;
     } catch (error) {
@@ -156,8 +151,6 @@ export class WebAdeService {
    * Returns commits, authors, and repos for a time range
    */
   async getActivityHeatmap(options: GetActivityHeatmapInput): Promise<ActivityHeatmapResponse> {
-    console.log('[WebADE] Fetching activity heatmap with options:', options);
-
     const token = await this.getToken();
     if (!token) {
       throw new Error('Not authenticated - no GitHub token available');
@@ -180,10 +173,10 @@ export class WebAdeService {
         throw new Error(`Failed to fetch activity heatmap: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json() as { result?: { data?: { json?: ActivityHeatmapResponse } } };
-      const heatmap = data?.result?.data?.json;
+      const data = await response.json() as { result?: { data?: ActivityHeatmapResponse } };
+      const heatmap = data?.result?.data;
 
-      if (!heatmap || typeof heatmap !== 'object') {
+      if (!heatmap || !('commits' in heatmap)) {
         console.warn('[WebADE] Unexpected response format:', data);
         return {
           commits: [],
@@ -196,15 +189,173 @@ export class WebAdeService {
         };
       }
 
-      console.log('[WebADE] Fetched activity heatmap:', {
-        commits: heatmap.commits?.length || 0,
-        authors: heatmap.authors?.length || 0,
-        repos: heatmap.repos?.length || 0,
-      });
-
       return heatmap;
     } catch (error) {
       console.error('[WebADE] Failed to fetch activity heatmap:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Watch a GitHub user
+   * Adds user to watched list for activity feed
+   */
+  async watchUser(login: string): Promise<WatchUserResponse> {
+    const token = await this.getToken();
+    if (!token) {
+      throw new Error('Not authenticated - no GitHub token available');
+    }
+
+    const url = `${this.baseUrl}/trpc/feed.watchUser`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ login }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to watch user: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json() as { result?: { data?: FeedWatches } };
+      const watches = data?.result?.data;
+
+      if (!watches || !('watchedUsers' in watches)) {
+        console.warn('[WebADE] Unexpected response format:', data);
+        return { success: false, watchedUsers: [] };
+      }
+
+      return { success: true, watchedUsers: watches.watchedUsers };
+    } catch (error) {
+      console.error('[WebADE] Failed to watch user:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Unwatch a GitHub user
+   * Removes user from watched list
+   */
+  async unwatchUser(login: string): Promise<UnwatchUserResponse> {
+    const token = await this.getToken();
+    if (!token) {
+      throw new Error('Not authenticated - no GitHub token available');
+    }
+
+    const url = `${this.baseUrl}/trpc/feed.unwatchUser`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ login }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to unwatch user: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json() as { result?: { data?: FeedWatches } };
+      const watches = data?.result?.data;
+
+      if (!watches || !('watchedUsers' in watches)) {
+        console.warn('[WebADE] Unexpected response format:', data);
+        return { success: false, watchedUsers: [] };
+      }
+
+      return { success: true, watchedUsers: watches.watchedUsers };
+    } catch (error) {
+      console.error('[WebADE] Failed to unwatch user:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Watch a GitHub repository
+   * Adds repo to watched list for activity feed
+   */
+  async watchRepo(owner: string, repo: string): Promise<WatchRepoResponse> {
+    const token = await this.getToken();
+    if (!token) {
+      throw new Error('Not authenticated - no GitHub token available');
+    }
+
+    const url = `${this.baseUrl}/trpc/feed.watchRepo`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ owner, repo }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to watch repo: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json() as { result?: { data?: FeedWatches } };
+      const watches = data?.result?.data;
+
+      if (!watches || !('watchedRepos' in watches)) {
+        console.warn('[WebADE] Unexpected response format:', data);
+        return { success: false, watchedRepos: [] };
+      }
+
+      return { success: true, watchedRepos: watches.watchedRepos };
+    } catch (error) {
+      console.error('[WebADE] Failed to watch repo:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Unwatch a GitHub repository
+   * Removes repo from watched list
+   */
+  async unwatchRepo(owner: string, repo: string): Promise<UnwatchRepoResponse> {
+    const token = await this.getToken();
+    if (!token) {
+      throw new Error('Not authenticated - no GitHub token available');
+    }
+
+    const url = `${this.baseUrl}/trpc/feed.unwatchRepo`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ owner, repo }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to unwatch repo: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json() as { result?: { data?: FeedWatches } };
+      const watches = data?.result?.data;
+
+      if (!watches || !('watchedRepos' in watches)) {
+        console.warn('[WebADE] Unexpected response format:', data);
+        return { success: false, watchedRepos: [] };
+      }
+
+      return { success: true, watchedRepos: watches.watchedRepos };
+    } catch (error) {
+      console.error('[WebADE] Failed to unwatch repo:', error);
       throw error;
     }
   }

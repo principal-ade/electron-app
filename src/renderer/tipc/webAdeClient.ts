@@ -13,6 +13,14 @@ import type {
   CommitActivityCard,
   FeedWatches,
   ActivityHeatmapResponse,
+  WatchUserInput,
+  UnwatchUserInput,
+  WatchRepoInput,
+  UnwatchRepoInput,
+  WatchUserResponse,
+  UnwatchUserResponse,
+  WatchRepoResponse,
+  UnwatchRepoResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 // =============================================================================
@@ -31,6 +39,12 @@ export interface WebAdeClient {
   getCommitQueue: (input: GetCommitQueueInput) => Promise<CommitActivityCard[]>;
   getWatches: () => Promise<FeedWatches>;
   getActivityHeatmap: (input: GetActivityHeatmapInput) => Promise<ActivityHeatmapResponse>;
+
+  // Watch/Unwatch Operations
+  watchUser: (input: WatchUserInput) => Promise<WatchUserResponse>;
+  unwatchUser: (input: UnwatchUserInput) => Promise<UnwatchUserResponse>;
+  watchRepo: (input: WatchRepoInput) => Promise<WatchRepoResponse>;
+  unwatchRepo: (input: UnwatchRepoInput) => Promise<UnwatchRepoResponse>;
 }
 
 // =============================================================================
