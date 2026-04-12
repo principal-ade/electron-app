@@ -796,6 +796,12 @@ const DevWorkspacePanelFrameworkInner: React.FC<
   // Tab state for TabbedTerminalPanel (skills only - terminals are managed by the panel from context)
   const [tabs, setTabs] = useState<DevWorkspaceTab[]>([]);
 
+  // Sync tabs to parent whenever they change (for RepositoryPanelProvider)
+  useEffect(() => {
+    const customTabs = tabs.filter((t) => t.contentType !== 'terminal');
+    onTabsChange?.(customTabs);
+  }, [tabs, onTabsChange]);
+
   // Tab associations - map of terminal tab IDs to associated content tabs
   const [associations, setAssociations] = useState<TabAssociations>({});
 
@@ -934,13 +940,10 @@ const DevWorkspacePanelFrameworkInner: React.FC<
           return prevTabs; // No change
         }
 
-        // Notify parent of tab changes for RepositoryPanelProvider
-        onTabsChange?.(newCustomTabs);
-
         return newCustomTabs; // Only store custom tabs
       });
     },
-    [onTabsChange],
+    [],
   );
 
   // Direct imports instead of array access to avoid type inference issues
