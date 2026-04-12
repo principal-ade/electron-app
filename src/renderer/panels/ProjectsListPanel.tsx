@@ -1,8 +1,8 @@
 /**
- * HeatmapPanel
+ * ProjectsListPanel
  *
- * Panel showing a list of popular repositories sorted by recent activity.
- * Used in the FeedView panel layout (renamed from heatmap to repository list).
+ * Panel showing a list of repositories sorted by recent activity.
+ * Used in the FeedView panel layout.
  */
 
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
@@ -10,9 +10,13 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { FolderGit2, User } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import type { CommitTimestamp } from '../components/HourlyActivityHeatmap';
 
-export interface HeatmapPanelProps {
+export interface CommitTimestamp {
+  timestamp: Date | string;
+  repoId?: string;
+}
+
+export interface ProjectsListPanelProps {
   /** Commit timestamps to aggregate by repository */
   commits: CommitTimestamp[];
   /** Repository data with GitHub information */
@@ -31,7 +35,7 @@ interface RepoSummary {
   githubOwner?: string;
 }
 
-export const HeatmapPanel: React.FC<HeatmapPanelProps> = ({
+export const ProjectsListPanel: React.FC<ProjectsListPanelProps> = ({
   commits,
   repositories = [],
   events,
@@ -291,4 +295,4 @@ export const HeatmapPanel: React.FC<HeatmapPanelProps> = ({
   );
 };
 
-export default HeatmapPanel;
+export default ProjectsListPanel;

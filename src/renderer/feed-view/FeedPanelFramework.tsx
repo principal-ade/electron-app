@@ -5,7 +5,7 @@
  * similar to DevWorkspacePanelFramework but simplified for the feed context.
  *
  * Layout:
- * - Left: HeatmapPanel (hourly activity heatmap)
+ * - Left: ProjectsListPanel (repository list with filtering)
  * - Middle: ActivityFeedCardPanel (rich repo cards with File City)
  * - Right: TabbedTerminalPanel (terminal in HOME directory)
  */
@@ -34,13 +34,13 @@ import {
   type TerminalPanelActions,
   type BaseTab,
 } from '@industry-theme/xterm-terminal-panel';
-import { HeatmapPanel } from '../panels/HeatmapPanel';
+import { ProjectsListPanel } from '../panels/ProjectsListPanel';
 import { WatchedItemsPanel } from '../panels/WatchedItemsPanel';
 import { ActivityFeedCardPanel } from '../panels/ActivityFeedCardPanel';
 import { ReviewCommitPanel } from '../panels/ReviewCommitPanel';
 import { LiveActivityTabContent } from '../components/LiveActivityTabContent';
 import { useActivityFeed } from '../hooks/useActivityFeed';
-import type { CommitTimestamp } from '../components/HourlyActivityHeatmap';
+import type { CommitTimestamp } from '../panels/ProjectsListPanel';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
 
 /**
@@ -449,7 +449,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
             {feedMode === 'watched-activity' ? (
               <WatchedItemsPanel events={events} />
             ) : (
-              <HeatmapPanel
+              <ProjectsListPanel
                 commits={heatmapCommits}
                 repositories={repositories}
                 events={events}

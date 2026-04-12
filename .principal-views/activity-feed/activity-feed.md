@@ -9,7 +9,7 @@ The Activity Feed is the default view in the Principal application, showing comm
 When the user opens Principal or clicks the "Feed" navigation item, they see a segmented control to toggle between two feed modes:
 
 ### My Activity Mode (Local)
-- **Left Panel**: Repository list with activity heatmap
+- **Left Panel**: Repository list with filtering
 - **Middle Panel**: Commit activity cards with File City images
 - **Right Panel**: Terminal
 
@@ -78,7 +78,7 @@ Proxies web-ade API requests through main process via TIPC:
 
 ### Watched Activity Mode
 1. **Mode Toggle**: User clicks "Watched" in segmented control
-2. **Panel Switch**: Left panel switches from HeatmapPanel to WatchedItemsPanel
+2. **Panel Switch**: Left panel switches from ProjectsListPanel to WatchedItemsPanel
 3. **Watch Management**:
    - User enters username or owner/repo → WatchedItemsPanel → WebAdeService (renderer)
    - TIPC call to webAdeRouter → WebAdeService (main) → Web-ADE API
@@ -93,7 +93,7 @@ Proxies web-ade API requests through main process via TIPC:
 ### Feed Mode Toggle
 | Interaction | Result |
 |------------|--------|
-| Click "My Activity" | Switches to local commits, shows HeatmapPanel on left |
+| Click "My Activity" | Switches to local commits, shows ProjectsListPanel on left |
 | Click "Watched" | Switches to remote commits, shows WatchedItemsPanel on left |
 
 ### My Activity Mode
@@ -101,7 +101,7 @@ Proxies web-ade API requests through main process via TIPC:
 |------------|--------|
 | Hover commit card | Animates to show latest commit message |
 | Click commit in card | Opens commit details overlay |
-| Click repo in heatmap | Filters feed to show only that repository |
+| Click repo in list | Filters feed to show only that repository |
 | Click repo card | Opens repository in dev workspace |
 
 ### Watched Activity Mode
@@ -123,7 +123,7 @@ Proxies web-ade API requests through main process via TIPC:
 ### Components
 - `src/renderer/components/SegmentedControl.tsx` - Mode toggle UI component
 - `src/renderer/panels/ActivityFeedCardPanel.tsx` - Activity cards panel (both modes)
-- `src/renderer/panels/HeatmapPanel.tsx` - Repository heatmap (my-activity mode)
+- `src/renderer/panels/ProjectsListPanel.tsx` - Repository list (my-activity mode)
 - `src/renderer/panels/WatchedItemsPanel.tsx` - Watch management (watched-activity mode)
 - `src/renderer/panels/RepoActivityCard.tsx` - Individual repo activity card
 
