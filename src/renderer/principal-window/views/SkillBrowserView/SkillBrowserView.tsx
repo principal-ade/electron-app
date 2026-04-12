@@ -21,6 +21,7 @@ import { RecentSkillsPanel, type RecentRepo } from './RecentSkillsPanel';
 import { RecentReposService } from '../../../main-process-api/RecentReposService';
 import { AgentSetupModal } from './AgentSetupModal';
 import { SkillInstallationModal } from './SkillInstallationModal';
+import { SkillEditorModal } from './SkillEditorModal';
 
 // Extract panel components from agent-panels package
 const SkillDetailPanelComponent = agentPanels.find(
@@ -80,6 +81,15 @@ const SkillBrowserViewContent: React.FC = () => {
 
   // State for skill installation modal
   const [showInstallModal, setShowInstallModal] = useState(false);
+
+  // State for skill editor modal
+  const [showEditorModal, setShowEditorModal] = useState(false);
+  const [_canEditSelectedSkill, _setCanEditSelectedSkill] = useState(false);
+  const [selectedSkillSource, setSelectedSkillSource] = useState<{
+    owner: string;
+    repo: string;
+    branch: string;
+  } | null>(null);
 
   // Check if sync is configured on mount
   useEffect(() => {
@@ -702,6 +712,44 @@ const SkillBrowserViewContent: React.FC = () => {
     loadMetadata();
   }, [selectedSkill, isSkillInstalled, getInstalledSkillMetadata]);
 
+  // Check edit permission and load skill source when selected skill changes
+  useEffect(() => {
+    if (!selectedSkill || !isSkillInstalled(selectedSkill)) {
+      _setCanEditSelectedSkill(false);
+      setSelectedSkillSource(null);
+      return;
+    }
+
+    const loadSkillEditInfo = async () => {
+      const folderName = getSkillFolderName(selectedSkill);
+      try {
+        // Check permission
+        const permissionResult = await SkillLockService.checkEditPermission(folderName);
+        _setCanEditSelectedSkill(permissionResult.canEdit);
+
+        // Load skill source from lock file
+        const skillEntry = await SkillLockService.getSkillEntry(folderName);
+        if (skillEntry) {
+          // Parse source format: "owner/repo"
+          const [owner, repo] = skillEntry.source.split('/');
+          setSelectedSkillSource({
+            owner: owner || '',
+            repo: repo || '',
+            branch: skillEntry.branch || 'main',
+          });
+        } else {
+          setSelectedSkillSource(null);
+        }
+      } catch (error) {
+        console.error('[SkillBrowserView] Failed to load skill edit info:', error);
+        _setCanEditSelectedSkill(false);
+        setSelectedSkillSource(null);
+      }
+    };
+
+    loadSkillEditInfo();
+  }, [selectedSkill, isSkillInstalled, getSkillFolderName]);
+
   /**
    * Install skill to selected destination
    */
@@ -1210,6 +1258,16 @@ const SkillBrowserViewContent: React.FC = () => {
           installedDirectories={getSkillInstalledDirectories(selectedSkill)}
           onInstall={handleInstallSkillToDirectories}
           onUninstall={handleUninstallSkillFromDirectories}
+        />
+      )}
+
+      {/* Skill Editor Modal */}
+      {selectedSkill && selectedSkillSource && (
+        <SkillEditorModal
+          isOpen={showEditorModal}
+          onClose={() => setShowEditorModal(false)}
+          skillName={getSkillFolderName(selectedSkill)}
+          skillSource={selectedSkillSource}
         />
       )}
     </div>

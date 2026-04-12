@@ -490,6 +490,154 @@ export async function getLicenseTemplates(core: GitHubAPICore): Promise<GitHubLi
 }
 
 // =============================================================================
+// File Contents API
+// =============================================================================
+
+/**
+ * Get file content with SHA (needed for updates)
+ * GET /repos/{owner}/{repo}/contents/{path}?ref={branch}
+ */
+export async function getFileContentWithSha(
+  core: GitHubAPICore,
+  owner: string,
+  repo: string,
+  filePath: string,
+  branch: string,
+): Promise<{ content: string; sha: string } | null> {
+  console.log(`[GitHub] Getting file content with SHA: ${owner}/${repo}/${filePath} @ ${branch}`);
+
+  const endpoint = `/repos/${owner}/${repo}/contents/${filePath}?ref=${branch}`;
+  const apiResult = await core.makeGitHubAPICall(endpoint);
+
+  if (apiResult.success && apiResult.data) {
+    const data = apiResult.data as {
+      content?: string;
+      sha?: string;
+      encoding?: string;
+    };
+
+    if (data.content && data.sha) {
+      // GitHub returns base64-encoded content
+      const content = data.encoding === 'base64'
+        ? Buffer.from(data.content, 'base64').toString('utf-8')
+        : data.content;
+
+      console.log(`[GitHub] Successfully fetched file content (SHA: ${data.sha.substring(0, 7)})`);
+      return { content, sha: data.sha };
+    }
+  }
+
+  // Fallback to CLI
+  try {
+    const result = await core.executeCommand(['gh', 'api', endpoint]);
+    if (result.success && result.stdout) {
+      const data = JSON.parse(result.stdout) as {
+        content?: string;
+        sha?: string;
+        encoding?: string;
+      };
+
+      if (data.content && data.sha) {
+        const content = data.encoding === 'base64'
+          ? Buffer.from(data.content, 'base64').toString('utf-8')
+          : data.content;
+
+        console.log(`[GitHub] Successfully fetched file content via CLI (SHA: ${data.sha.substring(0, 7)})`);
+        return { content, sha: data.sha };
+      }
+    }
+  } catch (error) {
+    console.error('[GitHub] Error getting file content:', error);
+  }
+
+  console.warn(`[GitHub] Failed to fetch file content for ${filePath}`);
+  return null;
+}
+
+/**
+ * Commit file changes via GitHub API
+ * PUT /repos/{owner}/{repo}/contents/{path}
+ */
+export async function commitFile(
+  core: GitHubAPICore,
+  owner: string,
+  repo: string,
+  filePath: string,
+  content: string,
+  message: string,
+  branch: string,
+  sha?: string,
+): Promise<{ success: boolean; commit?: { sha: string }; error?: string }> {
+  console.log(`[GitHub] Committing file: ${owner}/${repo}/${filePath} @ ${branch}`);
+
+  // Encode content as base64
+  const base64Content = Buffer.from(content, 'utf-8').toString('base64');
+
+  const endpoint = `/repos/${owner}/${repo}/contents/${filePath}`;
+  const body: {
+    message: string;
+    content: string;
+    branch: string;
+    sha?: string;
+  } = {
+    message,
+    content: base64Content,
+    branch,
+  };
+
+  // SHA is required for updates (optional for new files)
+  if (sha) {
+    body.sha = sha;
+  }
+
+  const apiResult = await core.makeGitHubAPICall(endpoint, {
+    method: 'PUT',
+    body,
+  });
+
+  if (apiResult.success && apiResult.data) {
+    const data = apiResult.data as {
+      commit?: { sha: string };
+    };
+
+    console.log(`[GitHub] Successfully committed file (commit SHA: ${data.commit?.sha?.substring(0, 7)})`);
+    return {
+      success: true,
+      commit: data.commit,
+    };
+  }
+
+  // Handle specific error cases
+  if (apiResult.status === 409) {
+    return {
+      success: false,
+      error: 'File was modified remotely. Please refresh and try again.',
+    };
+  }
+
+  if (apiResult.status === 403) {
+    return {
+      success: false,
+      error: 'Permission denied. You do not have push access to this repository.',
+    };
+  }
+
+  if (apiResult.status === 404) {
+    return {
+      success: false,
+      error: 'File or repository not found.',
+    };
+  }
+
+  // Generic error
+  console.error(`[GitHub] Failed to commit file: ${apiResult.error}`);
+  return {
+    success: false,
+    error: apiResult.error || 'Failed to commit file',
+  };
+}
+
+// =============================================================================
 // Cache Operations
 // =============================================================================
 

@@ -123,6 +123,10 @@ export interface WebhookNotification {
   actor?: string; // Who triggered it
   // For push events that have pending pulls
   pendingPullId?: string;
+  // For skill update notifications
+  type?: string; // Type of notification (e.g., 'skill_update')
+  skillName?: string; // Name of skill (for skill_update notifications)
+  message?: string; // Custom message
 }
 
 /**

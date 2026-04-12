@@ -1,0 +1,817 @@
+{
+  "name": "Skill Editing with GitHub API Commits",
+  "markdown": ".principal-views/skill-editing/skill-editing.md",
+  "description": "Telemetry map for skill editing feature - tracks permission checks, file editing, GitHub API commits, and webhook-based update notifications",
+  "edgeTypes": {
+    "sequential-flow": {
+      "label": "Sequential Flow",
+      "style": "solid",
+      "color": "#666",
+      "directed": true
+    }
+  },
+  "nodes": [
+    {
+      "id": "permission-check",
+      "type": "otel-event",
+      "x": 50,
+      "y": 100,
+      "width": 200,
+      "height": 100,
+      "color": "#E0F2FF",
+      "label": "Permission Check",
+      "icon": "Shield",
+      "shape": "roundedRect",
+      "description": "Check if user has push permission to skill repository",
+      "event": {
+        "name": "skill.permission.checked",
+        "attributes": {
+          "skill.name": {
+            "type": "string",
+            "required": true,
+            "description": "Folder name of the skill"
+          },
+          "repository.owner": {
+            "type": "string",
+            "required": true,
+            "description": "GitHub repository owner"
+          },
+          "repository.name": {
+            "type": "string",
+            "required": true,
+            "description": "GitHub repository name"
+          },
+          "has.permission": {
+            "type": "boolean",
+            "required": true,
+            "description": "Whether user has push permission"
+          },
+          "cache.hit": {
+            "type": "boolean",
+            "required": false,
+            "description": "Whether permission was from cache"
+          },
+          "duration.ms": {
+            "type": "number",
+            "required": false,
+            "description": "Time taken to check permission"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "kind": "event",
+        "category": "validation",
+        "scope": "principal-ade-main"
+      }
+    },
+    {
+      "id": "editor-opened",
+      "type": "otel-event",
+      "x": 300,
+      "y": 100,
+      "width": 200,
+      "height": 100,
+      "color": "#FFE4B5",
+      "label": "Editor Opened",
+      "icon": "Edit",
+      "shape": "roundedRect",
+      "description": "User opens skill editor modal",
+      "event": {
+        "name": "skill.editor.opened",
+        "attributes": {
+          "skill.name": {
+            "type": "string",
+            "required": true,
+            "description": "Folder name of the skill"
+          },
+          "repository.owner": {
+            "type": "string",
+            "required": true,
+            "description": "GitHub repository owner"
+          },
+          "repository.name": {
+            "type": "string",
+            "required": true,
+            "description": "GitHub repository name"
+          },
+          "repository.branch": {
+            "type": "string",
+            "required": true,
+            "description": "Git branch being edited"
+          },
+          "file.count": {
+            "type": "number",
+            "required": true,
+            "description": "Number of files in skill"
+          },
+          "session.id": {
+            "type": "string",
+            "required": true,
+            "description": "Unique session ID for this editing session"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "kind": "event",
+        "category": "processing",
+        "scope": "principal-ade-principal-window"
+      }
+    },
+    {
+      "id": "file-loaded",
+      "type": "otel-event",
+      "x": 550,
+      "y": 100,
+      "width": 200,
+      "height": 100,
+      "color": "#E0FFE0",
+      "label": "File Loaded",
+      "icon": "FileText",
+      "shape": "roundedRect",
+      "description": "User selects and loads a file in the editor",
+      "event": {
+        "name": "skill.file.loaded",
+        "attributes": {
+          "skill.name": {
+            "type": "string",
+            "required": true,
+            "description": "Folder name of the skill"
+          },
+          "file.path": {
+            "type": "string",
+            "required": true,
+            "description": "Relative path to file within skill"
+          },
+          "file.size.bytes": {
+            "type": "number",
+            "required": true,
+            "description": "Size of file in bytes"
+          },
+          "file.extension": {
+            "type": "string",
+            "required": true,
+            "description": "File extension (md, ts, js, etc.)"
+          },
+          "editor.type": {
+            "type": "string",
+            "required": true,
+            "description": "Editor panel used (MDXEditorPanel or FileEditorPanel)"
+          },
+          "session.id": {
+            "type": "string",
+            "required": true,
+            "description": "Editing session ID"
+          },
+          "duration.ms": {
+            "type": "number",
+            "required": false,
+            "description": "Time to load file"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "kind": "event",
+        "category": "processing",
+        "scope": "principal-ade-main"
+      }
+    },
+    {
+      "id": "file-edited",
+      "type": "otel-event",
+      "x": 800,
+      "y": 100,
+      "width": 200,
+      "height": 100,
+      "color": "#FFF4E0",
+      "label": "File Edited",
+      "icon": "Pencil",
+      "shape": "roundedRect",
+      "description": "User makes changes to file content",
+      "event": {
+        "name": "skill.file.edited",
+        "attributes": {
+          "skill.name": {
+            "type": "string",
+            "required": true,
+            "description": "Folder name of the skill"
+          },
+          "file.path": {
+            "type": "string",
+            "required": true,
+            "description": "Relative path to file within skill"
+          },
+          "is.dirty": {
+            "type": "boolean",
+            "required": true,
+            "description": "Whether file has unsaved changes"
+          },
+          "content.length": {
+            "type": "number",
+            "required": false,
+            "description": "Length of new content"
+          },
+          "session.id": {
+            "type": "string",
+            "required": true,
+            "description": "Editing session ID"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "kind": "event",
+        "category": "processing",
+        "scope": "principal-ade-principal-window"
+      }
+    },
+    {
+      "id": "commit-started",
+      "type": "otel-event",
+      "x": 50,
+      "y": 250,
+      "width": 200,
+      "height": 100,
+      "color": "#E0E7FF",
+      "label": "Commit Started",
+      "icon": "GitCommit",
+      "shape": "roundedRect",
+      "description": "User clicks commit button to save changes",
+      "event": {
+        "name": "skill.commit.started",
+        "attributes": {
+          "skill.name": {
+            "type": "string",
+            "required": true,
+            "description": "Folder name of the skill"
+          },
+          "file.path": {
+            "type": "string",
+            "required": true,
+            "description": "Relative path to file within skill"
+          },
+          "commit.message": {
+            "type": "string",
+            "required": true,
+            "description": "User-provided commit message"
+          },
+          "commit_message_length": {
+            "type": "number",
+            "required": false,
+            "description": "Length of commit message"
+          },
+          "session.id": {
+            "type": "string",
+            "required": true,
+            "description": "Editing session ID"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "kind": "event",
+        "category": "processing",
+        "scope": "principal-ade-principal-window"
+      }
+    },
+    {
+      "id": "github-api-request",
+      "type": "otel-event",
+      "x": 300,
+      "y": 250,
+      "width": 200,
+      "height": 100,
+      "color": "#FFE0F0",
+      "label": "GitHub API Request",
+      "icon": "Send",
+      "shape": "roundedRect",
+      "description": "Commit file via GitHub Contents API",
+      "event": {
+        "name": "github.api.commit.request",
+        "attributes": {
+          "repository.owner": {
+            "type": "string",
+            "required": true,
+            "description": "GitHub repository owner"
+          },
+          "repository.name": {
+            "type": "string",
+            "required": true,
+            "description": "GitHub repository name"
+          },
+          "repository.branch": {
+            "type": "string",
+            "required": true,
+            "description": "Git branch"
+          },
+          "file.path": {
+            "type": "string",
+            "required": true,
+            "description": "Full path in repository"
+          },
+          "http.method": {
+            "type": "string",
+            "required": true,
+            "description": "HTTP method (PUT)"
+          },
+          "file.sha": {
+            "type": "string",
+            "required": false,
+            "description": "Current file SHA (for updates)"
+          },
+          "session.id": {
+            "type": "string",
+            "required": true,
+            "description": "Editing session ID"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "kind": "event",
+        "category": "integration",
+        "scope": "principal-ade-main"
+      }
+    },
+    {
+      "id": "github-api-response",
+      "type": "otel-event",
+      "x": 550,
+      "y": 250,
+      "width": 200,
+      "height": 100,
+      "color": "#D4EDDA",
+      "label": "GitHub API Response",
+      "icon": "CheckCircle",
+      "shape": "roundedRect",
+      "description": "Response from GitHub after commit",
+      "event": {
+        "name": "github.api.commit.response",
+        "attributes": {
+          "success": {
+            "type": "boolean",
+            "required": true,
+            "description": "Whether commit succeeded"
+          },
+          "http.status_code": {
+            "type": "number",
+            "required": true,
+            "description": "HTTP status code (200, 201, 409, etc.)"
+          },
+          "commit.sha": {
+            "type": "string",
+            "required": false,
+            "description": "SHA of created commit"
+          },
+          "error.message": {
+            "type": "string",
+            "required": false,
+            "description": "Error message if failed"
+          },
+          "error.type": {
+            "type": "string",
+            "required": false,
+            "description": "Type of error (conflict, permission, network)"
+          },
+          "duration.ms": {
+            "type": "number",
+            "required": false,
+            "description": "API request duration"
+          },
+          "session.id": {
+            "type": "string",
+            "required": true,
+            "description": "Editing session ID"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "kind": "event",
+        "category": "integration",
+        "scope": "principal-ade-main"
+      }
+    },
+    {
+      "id": "local-file-updated",
+      "type": "otel-event",
+      "x": 800,
+      "y": 250,
+      "width": 200,
+      "height": 100,
+      "color": "#D4EDDA",
+      "label": "Local File Updated",
+      "icon": "Save",
+      "shape": "roundedRect",
+      "description": "Write committed content to local file",
+      "event": {
+        "name": "skill.file.updated",
+        "attributes": {
+          "skill.name": {
+            "type": "string",
+            "required": true,
+            "description": "Folder name of the skill"
+          },
+          "file.path": {
+            "type": "string",
+            "required": true,
+            "description": "Relative path to file within skill"
+          },
+          "file.size.bytes": {
+            "type": "number",
+            "required": true,
+            "description": "Size of updated file"
+          },
+          "local.path": {
+            "type": "string",
+            "required": true,
+            "description": "Absolute path on filesystem"
+          },
+          "session.id": {
+            "type": "string",
+            "required": true,
+            "description": "Editing session ID"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "kind": "event",
+        "category": "processing",
+        "scope": "principal-ade-main"
+      }
+    },
+    {
+      "id": "lock-file-updated",
+      "type": "otel-event",
+      "x": 1050,
+      "y": 250,
+      "width": 200,
+      "height": 100,
+      "color": "#D4EDDA",
+      "label": "Lock File Updated",
+      "icon": "Database",
+      "shape": "roundedRect",
+      "description": "Update skill lock file with new commit SHA",
+      "event": {
+        "name": "skill.lock.updated",
+        "attributes": {
+          "skill.name": {
+            "type": "string",
+            "required": true,
+            "description": "Folder name of the skill"
+          },
+          "old.commit.sha": {
+            "type": "string",
+            "required": false,
+            "description": "Previous lastEditCommitSha"
+          },
+          "new.commit.sha": {
+            "type": "string",
+            "required": true,
+            "description": "New lastEditCommitSha from GitHub"
+          },
+          "updated.at": {
+            "type": "string",
+            "required": true,
+            "description": "ISO timestamp of update"
+          },
+          "session.id": {
+            "type": "string",
+            "required": true,
+            "description": "Editing session ID"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "kind": "event",
+        "category": "processing",
+        "scope": "principal-ade-main"
+      }
+    },
+    {
+      "id": "webhook-received",
+      "type": "otel-event",
+      "x": 50,
+      "y": 450,
+      "width": 200,
+      "height": 100,
+      "color": "#E0F2FF",
+      "label": "Webhook Received",
+      "icon": "Radio",
+      "shape": "roundedRect",
+      "description": "GitHub push webhook arrives for skill repository",
+      "event": {
+        "name": "webhook.github.push.received",
+        "attributes": {
+          "webhook.event": {
+            "type": "string",
+            "required": true,
+            "description": "Event type (push)"
+          },
+          "webhook.delivery.id": {
+            "type": "string",
+            "required": true,
+            "description": "GitHub webhook delivery ID"
+          },
+          "repository.full_name": {
+            "type": "string",
+            "required": true,
+            "description": "Repository in owner/repo format"
+          },
+          "repository.branch": {
+            "type": "string",
+            "required": true,
+            "description": "Branch that was pushed to"
+          },
+          "pusher.name": {
+            "type": "string",
+            "required": true,
+            "description": "User who pushed"
+          },
+          "commit.count": {
+            "type": "number",
+            "required": true,
+            "description": "Number of commits in push"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "kind": "event",
+        "category": "integration",
+        "scope": "principal-ade-main"
+      }
+    },
+    {
+      "id": "skill-update-check",
+      "type": "otel-event",
+      "x": 300,
+      "y": 450,
+      "width": 200,
+      "height": 100,
+      "color": "#FFF4E0",
+      "label": "Skill Update Check",
+      "icon": "Search",
+      "shape": "roundedRect",
+      "description": "Check if webhook affects any installed skills",
+      "event": {
+        "name": "skill.update.checked",
+        "attributes": {
+          "repository.full_name": {
+            "type": "string",
+            "required": true,
+            "description": "Repository from webhook"
+          },
+          "repository.branch": {
+            "type": "string",
+            "required": true,
+            "description": "Branch from webhook"
+          },
+          "affected.skill.count": {
+            "type": "number",
+            "required": true,
+            "description": "Number of installed skills from this repo"
+          },
+          "webhook.delivery.id": {
+            "type": "string",
+            "required": true,
+            "description": "GitHub webhook delivery ID"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "kind": "event",
+        "category": "processing",
+        "scope": "principal-ade-main"
+      }
+    },
+    {
+      "id": "update-notification-created",
+      "type": "otel-event",
+      "x": 550,
+      "y": 450,
+      "width": 200,
+      "height": 100,
+      "color": "#FFE4B5",
+      "label": "Update Notification",
+      "icon": "Bell",
+      "shape": "roundedRect",
+      "description": "Create notification for skill with available update",
+      "event": {
+        "name": "skill.update.notification.created",
+        "attributes": {
+          "skill.name": {
+            "type": "string",
+            "required": true,
+            "description": "Folder name of the skill"
+          },
+          "repository.full_name": {
+            "type": "string",
+            "required": true,
+            "description": "Repository in owner/repo format"
+          },
+          "repository.branch": {
+            "type": "string",
+            "required": true,
+            "description": "Branch with updates"
+          },
+          "notification.id": {
+            "type": "string",
+            "required": true,
+            "description": "Unique notification ID"
+          },
+          "notification.type": {
+            "type": "string",
+            "required": true,
+            "description": "Type (skill_update)"
+          },
+          "webhook.delivery.id": {
+            "type": "string",
+            "required": true,
+            "description": "GitHub webhook delivery ID"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "kind": "event",
+        "category": "processing",
+        "scope": "principal-ade-main"
+      }
+    },
+    {
+      "id": "validation-success",
+      "type": "text",
+      "x": 1050,
+      "y": 450,
+      "width": 250,
+      "height": 150,
+      "color": "#D4EDDA",
+      "text": "## Success Validation\n\n✅ Check all events exist:\n- skill.commit.started\n- github.api.commit.response (success=true)\n- skill.file.updated\n- skill.lock.updated\n\n✅ Correlation:\n- All have same session.id\n- All have same skill.name\n- commit.sha matches across events\n- Timestamps within 5s window"
+    },
+    {
+      "id": "error-permission-denied",
+      "type": "text",
+      "x": 50,
+      "y": 600,
+      "width": 200,
+      "height": 100,
+      "color": "#F8D7DA",
+      "text": "## Permission Denied\n\n❌ skill.permission.checked\n- has.permission = false\n\n→ Edit button hidden\n→ No editor opened"
+    },
+    {
+      "id": "error-github-conflict",
+      "type": "text",
+      "x": 300,
+      "y": 600,
+      "width": 200,
+      "height": 100,
+      "color": "#F8D7DA",
+      "text": "## Concurrent Edit\n\n❌ github.api.commit.response\n- success = false\n- http.status_code = 409\n- error.type = conflict\n\n→ Show error to user\n→ Suggest refresh"
+    },
+    {
+      "id": "error-network",
+      "type": "text",
+      "x": 550,
+      "y": 600,
+      "width": 200,
+      "height": 100,
+      "color": "#F8D7DA",
+      "text": "## Network Error\n\n❌ github.api.commit.response\n- success = false\n- http.status_code = 0\n- error.type = network\n\n→ Show retry option\n→ Content saved locally"
+    },
+    {
+      "id": "validation-queries",
+      "type": "text",
+      "x": 800,
+      "y": 600,
+      "width": 250,
+      "height": 150,
+      "color": "#E0E7FF",
+      "text": "## Validation Queries\n\n```sql\n-- Successful edits in last hour\nSELECT skill.name, commit.sha\nFROM events\nWHERE event.name = 'github.api.commit.response'\n  AND success = true\n  AND timestamp > now() - 1h\n\n-- Failed commits by type\nSELECT error.type, count(*)\nFROM events\nWHERE event.name = 'github.api.commit.response'\n  AND success = false\nGROUP BY error.type\n```"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge1",
+      "fromNode": "permission-check",
+      "toNode": "editor-opened",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "has permission",
+      "edgeType": "ipc"
+    },
+    {
+      "id": "edge2",
+      "fromNode": "editor-opened",
+      "toNode": "file-loaded",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "select file",
+      "edgeType": "ipc"
+    },
+    {
+      "id": "edge3",
+      "fromNode": "file-loaded",
+      "toNode": "file-edited",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "user edits",
+      "edgeType": "sequential-flow"
+    },
+    {
+      "id": "edge4",
+      "fromNode": "file-edited",
+      "toNode": "commit-started",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "click commit",
+      "edgeType": "ipc"
+    },
+    {
+      "id": "edge5",
+      "fromNode": "commit-started",
+      "toNode": "github-api-request",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "PUT /contents",
+      "edgeType": "ipc"
+    },
+    {
+      "id": "edge6",
+      "fromNode": "github-api-request",
+      "toNode": "github-api-response",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "response",
+      "edgeType": "http"
+    },
+    {
+      "id": "edge7",
+      "fromNode": "github-api-response",
+      "toNode": "local-file-updated",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "success",
+      "edgeType": "sequential-flow"
+    },
+    {
+      "id": "edge8",
+      "fromNode": "local-file-updated",
+      "toNode": "lock-file-updated",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "update metadata",
+      "edgeType": "sequential-flow"
+    },
+    {
+      "id": "edge9",
+      "fromNode": "webhook-received",
+      "toNode": "skill-update-check",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "check locks",
+      "edgeType": "sequential-flow"
+    },
+    {
+      "id": "edge10",
+      "fromNode": "skill-update-check",
+      "toNode": "update-notification-created",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "if affected > 0",
+      "edgeType": "sequential-flow"
+    },
+    {
+      "id": "edge11",
+      "fromNode": "permission-check",
+      "toNode": "error-permission-denied",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "no permission",
+      "edgeType": "sequential-flow"
+    },
+    {
+      "id": "edge12",
+      "fromNode": "github-api-response",
+      "toNode": "error-github-conflict",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "409 conflict",
+      "edgeType": "sequential-flow"
+    },
+    {
+      "id": "edge13",
+      "fromNode": "github-api-response",
+      "toNode": "error-network",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "network error",
+      "edgeType": "sequential-flow"
+    }
+  ]
+}

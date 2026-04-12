@@ -51,6 +51,9 @@ scopes:
   file-city-renderer:
     color: "#22C55E"
     description: "File City visualization renderer scope"
+  principal-ade-renderer:
+    color: "#EC4899"
+    description: "Shared renderer code - reusable components, hooks, and libraries used across windows"
 
 # Service resource registry
 # Define all services in this repository with their OTEL resource attributes

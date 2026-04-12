@@ -3043,6 +3043,8 @@ export function registerGitHubIpcHandlers(
             skillFolderHash: skillTreeSha || '',
             // Track canonical path for global installs
             canonicalPath: isGlobalInstall ? canonicalPath : undefined,
+            // Track branch for editing
+            branch,
           },
         });
         console.log(`[GitHub] Added skill to lock file: ${extractedSkillName}`);

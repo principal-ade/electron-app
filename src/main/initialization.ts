@@ -79,6 +79,7 @@ import { registerGitHubArtifactHandlers } from './services/ipc/githubArtifactHan
 import { registerCollectionsHandlers } from './services/CollectionsService';
 import { ElectronClipboardAdapter } from './system/clipboardHandler';
 import { registerSkillLockHandlers } from './skills/skillLockHandlers';
+import { registerSkillEditingHandlers } from './skills/skillEditingHandlers';
 import { registerFileCityImageHandlers } from './stores/FileCityImageService';
 import { registerBrunoHandlers } from './bruno/brunoHandlers';
 
@@ -256,6 +257,7 @@ const registerAllIpcHandlers = async () => {
 
   registerGitHubIpcHandlers(applicationWindows);
   await registerSkillLockHandlers(); // Register skill lock file handlers
+  await registerSkillEditingHandlers(); // Register skill editing handlers
   registerGitHandlers();
   registerSSHSetupHandlers();
   registerAgentSessionSDKHandlers(); // SDK-based handlers replace old session handlers

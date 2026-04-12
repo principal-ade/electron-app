@@ -10,6 +10,9 @@ import type {
   SkillInstalledPayload,
   SkillUninstalledPayload,
   SkillUpdatedPayload,
+  SkillEditPermissionResult,
+  SkillCommitOptions,
+  SkillCommitResult,
 } from '../../shared/main-process-api-interfaces/SkillLockAPI';
 import { SkillLockAPIEvent } from '../../shared/main-process-api-interfaces/SkillLockAPI';
 
@@ -87,5 +90,25 @@ export const skillLockAPI: SkillLockAPI = {
     return () => {
       ipcRenderer.removeListener(SkillLockAPIEvent.SKILL_UPDATED, handler);
     };
+  },
+
+  // Skill editing methods
+  checkEditPermission: async (skillName: string): Promise<SkillEditPermissionResult> => {
+    return ipcRenderer.invoke(SkillLockAPIEvent.CHECK_SKILL_EDIT_PERMISSION, skillName);
+  },
+
+  getSkillFiles: async (skillName: string): Promise<string[]> => {
+    return ipcRenderer.invoke(SkillLockAPIEvent.GET_SKILL_FILES, skillName);
+  },
+
+  getSkillFileContent: async (
+    skillName: string,
+    filePath: string
+  ): Promise<{ content: string; isLocal: boolean }> => {
+    return ipcRenderer.invoke(SkillLockAPIEvent.GET_SKILL_FILE_CONTENT, skillName, filePath);
+  },
+
+  commitSkillFile: async (options: SkillCommitOptions): Promise<SkillCommitResult> => {
+    return ipcRenderer.invoke(SkillLockAPIEvent.COMMIT_SKILL_FILE, options);
   },
 };

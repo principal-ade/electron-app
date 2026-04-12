@@ -25,6 +25,12 @@ export enum SkillLockAPIEvent {
   UPDATE_SKILL = 'skill-lock:update-skill',
   UPDATE_ALL_SKILLS = 'skill-lock:update-all',
 
+  // Skill editing
+  CHECK_SKILL_EDIT_PERMISSION = 'skill-lock:check-edit-permission',
+  GET_SKILL_FILES = 'skill-lock:get-files',
+  GET_SKILL_FILE_CONTENT = 'skill-lock:get-file-content',
+  COMMIT_SKILL_FILE = 'skill-lock:commit-file',
+
   // Broadcast events (main -> renderer, all windows)
   SKILL_INSTALLED = 'skill:installed',
   SKILL_UNINSTALLED = 'skill:uninstalled',
@@ -72,6 +78,18 @@ export interface SkillLockEntry {
    * Agent directories contain symlinks to this path.
    */
   canonicalPath?: string;
+
+  /**
+   * Branch name from which the skill was installed.
+   * Used for commits back to source repo.
+   */
+  branch?: string;
+
+  /**
+   * Last commit SHA when skill was edited locally.
+   * Tracks local modifications committed back to GitHub.
+   */
+  lastEditCommitSha?: string;
 }
 
 /**
@@ -194,6 +212,35 @@ export interface InstalledSkillInfo {
   installedAt: string;
   updatedAt: string;
   canonicalPath?: string;
+  branch?: string;
+  lastEditCommitSha?: string;
+}
+
+/**
+ * Result of checking skill edit permission
+ */
+export interface SkillEditPermissionResult {
+  canEdit: boolean;
+  reason?: string;
+}
+
+/**
+ * Options for committing a skill file
+ */
+export interface SkillCommitOptions {
+  skillName: string;
+  filePath: string; // Relative to skill folder
+  content: string;
+  message: string;
+}
+
+/**
+ * Result of committing a skill file
+ */
+export interface SkillCommitResult {
+  success: boolean;
+  commitSha?: string;
+  error?: string;
 }
 
 /**
@@ -223,6 +270,18 @@ export interface SkillLockAPI {
 
   /** Update all skills with available updates */
   updateAllSkills: () => Promise<SkillUpdateResult[]>;
+
+  /** Check if user can edit a skill */
+  checkEditPermission: (skillName: string) => Promise<SkillEditPermissionResult>;
+
+  /** Get list of files in a skill folder */
+  getSkillFiles: (skillName: string) => Promise<string[]>;
+
+  /** Get content of a skill file */
+  getSkillFileContent: (skillName: string, filePath: string) => Promise<{ content: string; isLocal: boolean }>;
+
+  /** Commit a skill file to GitHub */
+  commitSkillFile: (options: SkillCommitOptions) => Promise<SkillCommitResult>;
 
   /** Listen for skill installed events (broadcast from main process) */
   onSkillInstalled: (callback: (payload: SkillInstalledPayload) => void) => () => void;

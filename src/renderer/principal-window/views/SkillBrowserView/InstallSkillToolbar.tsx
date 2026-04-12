@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Download, Check, RefreshCw } from 'lucide-react';
+import { Download, Check, RefreshCw, Pencil } from 'lucide-react';
 
 interface DetectedDirectory {
   id: string;
@@ -27,6 +27,8 @@ interface InstallSkillToolbarProps {
   };
   onOpenInstallModal: () => void;
   detectedDirectories?: DetectedDirectory[];
+  canEdit?: boolean;
+  onEdit?: () => void;
 }
 
 export type SkillDestination =
@@ -113,6 +115,8 @@ export const InstallSkillToolbar: React.FC<InstallSkillToolbarProps> = ({
   installedMetadata,
   onOpenInstallModal,
   detectedDirectories = [],
+  canEdit = false,
+  onEdit,
 }) => {
   const { theme } = useTheme();
 
@@ -181,8 +185,39 @@ export const InstallSkillToolbar: React.FC<InstallSkillToolbarProps> = ({
         )}
       </div>
 
-      {/* Install Button */}
-      <div style={{ position: 'relative' }}>
+      {/* Buttons */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* Edit Button */}
+        {canEdit && isInstalled && onEdit && (
+          <button
+            onClick={onEdit}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              backgroundColor: theme.colors.backgroundSecondary,
+              color: theme.colors.text,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              border: `1px solid ${theme.colors.border}`,
+              fontSize: theme.fontSizes[1],
+              fontWeight: theme.fontWeights.medium,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+            }}
+          >
+            <Pencil size={16} />
+            <span>Edit</span>
+          </button>
+        )}
+
+        {/* Install Button */}
         <button
           onClick={onOpenInstallModal}
           style={{

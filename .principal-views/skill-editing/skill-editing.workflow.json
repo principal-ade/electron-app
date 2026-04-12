@@ -1,0 +1,43 @@
+{
+  "version": "1.0.0",
+  "name": "Skill Editing and Commit",
+  "description": "Workflow for editing skill files and committing changes to GitHub via API. This is a cross-scope workflow spanning principal-ade-main and principal-ade-principal-window processes.",
+  "canvas": ".principal-views/skill-editing/skill-editing.otel.canvas",
+  "spanPattern": "skill.editing",
+  "scenarios": [
+    {
+      "id": "successful-edit-and-commit",
+      "description": "User successfully edits a skill file and commits to GitHub",
+      "priority": 1,
+      "template": {
+        "introduction": "**Skill File Editing**\n\nEditing **{{file.path}}** in skill **{{skill.name}}**",
+        "events": {
+          "skill.permission.checked": "Checked permission for **{{skill.name}}** ({{repository.owner}}/{{repository.name}}) - **{{has.permission}}** (cache hit: {{cache.hit}}, {{duration.ms}}ms)",
+          "skill.editor.opened": "Opened editor for **{{skill.name}}** ({{repository.owner}}/{{repository.name}}, {{file.count}} files, branch: {{repository.branch}}, session: {{session.id}})",
+          "skill.file.loaded": "Loaded **{{file.path}}** in skill **{{skill.name}}** ({{file.size.bytes}} bytes, extension: {{file.extension}}, editor: {{editor.type}}, {{duration.ms}}ms, session: {{session.id}})",
+          "skill.file.edited": "Modified **{{file.path}}** in skill **{{skill.name}}** (dirty: {{is.dirty}}, content length: {{content.length}} chars, session: {{session.id}})",
+          "skill.commit.started": "Commit \"{{commit.message}}\" started for **{{file.path}}** in skill **{{skill.name}}** (message length: {{commit_message_length}} chars, session: {{session.id}})",
+          "github.api.commit.request": "Committing to {{repository.owner}}/{{repository.name}}:{{repository.branch}} at **{{file.path}}** ({{http.method}}, file SHA: {{file.sha}}, session: {{session.id}})",
+          "github.api.commit.response": "GitHub responded: status {{http.status_code}} (success: **{{success}}**, commit SHA: {{commit.sha}}, error: {{error.type}} - {{error.message}}, {{duration.ms}}ms, session: {{session.id}})",
+          "skill.file.updated": "Updated local file **{{file.path}}** at {{local.path}} ({{file.size.bytes}} bytes, skill: {{skill.name}}, session: {{session.id}})",
+          "skill.lock.updated": "Updated lock for **{{skill.name}}** (old SHA: {{old.commit.sha}}, new SHA: {{new.commit.sha}}, at: {{updated.at}}, session: {{session.id}})"
+        },
+        "summary": "**Commit Complete:**\n- Skill: **{{skill.name}}**\n- File: {{file.path}}\n- Commit SHA: {{new.commit.sha}}\n- Session: {{session.id}}"
+      }
+    },
+    {
+      "id": "webhook-skill-update",
+      "description": "Webhook notification for skill update",
+      "priority": 2,
+      "template": {
+        "introduction": "**Skill Update Available**\n\nUpstream changes detected for installed skill",
+        "events": {
+          "webhook.github.push.received": "Webhook received (event: {{webhook.event}}, delivery: {{webhook.delivery.id}}) from {{repository.full_name}}:{{repository.branch}} (pusher: {{pusher.name}}, commits: {{commit.count}})",
+          "skill.update.checked": "Checked for affected skills (repository: {{repository.full_name}}, branch: {{repository.branch}}, found: **{{affected.skill.count}}** skills, delivery: {{webhook.delivery.id}})",
+          "skill.update.notification.created": "Created update notification for **{{skill.name}}** (repo: {{repository.full_name}}, branch: {{repository.branch}}, type: {{notification.type}}, ID: {{notification.id}}, delivery: {{webhook.delivery.id}})"
+        },
+        "summary": "**Update Available:**\n- Skill: **{{skill.name}}**\n- Repository: {{repository.full_name}}\n- Branch: {{repository.branch}}"
+      }
+    }
+  ]
+}

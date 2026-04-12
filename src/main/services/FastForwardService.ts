@@ -13,6 +13,7 @@ import { BrowserWindow } from 'electron';
 import { EventEmitter } from 'events';
 import { electronCLI } from '../electron-cli-bridge';
 import { getManager } from '../repository-monitoring/ipcHandlers';
+import { getSkillLockFileService } from '../skills/skillLockFile';
 import {
   FastForwardEvent,
   PendingPull,
@@ -150,6 +151,11 @@ class FastForwardService extends EventEmitter {
       FastForwardEvent.ON_WEBHOOK_NOTIFICATION,
       notification,
     );
+
+    // Check for skill updates on push events
+    if (data.event === 'push') {
+      await this.checkSkillUpdatesForWebhook(data);
+    }
 
     // Only process push events for fast-forward functionality
     if (data.event !== 'push') {
@@ -299,6 +305,63 @@ class FastForwardService extends EventEmitter {
         return `${baseUrl}/releases`;
       default:
         return baseUrl;
+    }
+  }
+
+  /**
+   * Check if webhook push event affects any installed skills
+   */
+  private async checkSkillUpdatesForWebhook(
+    data: WebhookEventData,
+  ): Promise<void> {
+    try {
+      const lockService = getSkillLockFileService();
+      const lockFile = await lockService.readLockFile();
+
+      // Find skills from this repository
+      const affectedSkills = Object.entries(lockFile.skills)
+        .filter(([_, skill]) => skill.source === data.repository)
+        .map(([name, skill]) => ({ name, skill }));
+
+      if (affectedSkills.length === 0) return;
+
+      console.log(
+        `[FastForwardService] Webhook affects ${affectedSkills.length} installed skill(s)`,
+      );
+
+      // Create skill update notification for each
+      for (const { name } of affectedSkills) {
+        const notification: WebhookNotification = {
+          id: `skill_update_${Date.now()}_${name}_${Math.random().toString(36).substr(2, 9)}`,
+          event: 'push',
+          repository: data.repository,
+          branch: data.branch,
+          timestamp: Date.now(),
+          read: false,
+          type: 'skill_update',
+          skillName: name,
+          title: `Update available for skill: ${name}`,
+          description: data.commitMessage || `New commits on ${data.repository}`,
+          url: this.getEventUrl(data),
+          actor: data.pusher,
+          message: `Update available for skill: ${name}`,
+        };
+
+        this.mailbox.addNotification(notification);
+        this.broadcastToRenderers(
+          FastForwardEvent.ON_WEBHOOK_NOTIFICATION,
+          notification,
+        );
+
+        console.log(
+          `[FastForwardService] Created skill update notification for: ${name}`,
+        );
+      }
+    } catch (error) {
+      console.error(
+        '[FastForwardService] Error checking skill updates:',
+        error,
+      );
     }
   }
 

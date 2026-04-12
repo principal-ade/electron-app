@@ -15,6 +15,9 @@ import type {
   SkillInstalledPayload,
   SkillUninstalledPayload,
   SkillUpdatedPayload,
+  SkillEditPermissionResult,
+  SkillCommitOptions,
+  SkillCommitResult,
 } from '../../shared/main-process-api-interfaces/SkillLockAPI';
 
 export class SkillLockService {
@@ -138,5 +141,40 @@ export class SkillLockService {
    */
   static onSkillUpdated(callback: (payload: SkillUpdatedPayload) => void): () => void {
     return window.mainProcess.skillLock.onSkillUpdated(callback);
+  }
+
+  // ============================================================================
+  // Skill Editing Methods
+  // ============================================================================
+
+  /**
+   * Check if user can edit a skill (has push permission)
+   */
+  static async checkEditPermission(skillName: string): Promise<SkillEditPermissionResult> {
+    return window.mainProcess.skillLock.checkEditPermission(skillName);
+  }
+
+  /**
+   * Get list of files in a skill folder
+   */
+  static async getSkillFiles(skillName: string): Promise<string[]> {
+    return window.mainProcess.skillLock.getSkillFiles(skillName);
+  }
+
+  /**
+   * Get content of a skill file
+   */
+  static async getSkillFileContent(
+    skillName: string,
+    filePath: string
+  ): Promise<{ content: string; isLocal: boolean }> {
+    return window.mainProcess.skillLock.getSkillFileContent(skillName, filePath);
+  }
+
+  /**
+   * Commit a skill file to GitHub
+   */
+  static async commitSkillFile(options: SkillCommitOptions): Promise<SkillCommitResult> {
+    return window.mainProcess.skillLock.commitSkillFile(options);
   }
 }
