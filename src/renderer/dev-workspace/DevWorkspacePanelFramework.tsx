@@ -712,9 +712,7 @@ const DevWorkspacePanelFrameworkInner: React.FC<
     useTerminalActivity();
 
   // Unified modal state for detail panels
-  type DetailModal =
-    | { panelId: 'githubIssueDetail'; data: unknown }
-    | { panelId: 'mdxEditor'; data: { path: string } };
+  type DetailModal = { panelId: 'githubIssueDetail'; data: unknown };
 
   const [detailModal, setDetailModal] = useState<DetailModal | null>(null);
 
@@ -1988,22 +1986,46 @@ const DevWorkspacePanelFrameworkInner: React.FC<
         handleSpan.setStatus({ code: SpanStatusCode.OK });
         handleSpan.end();
       }),
-      // Open file in MDX editor - create modal
+      // Open file in MDX editor - create tab
       events.on('file:openInMdxEditor', async (event) => {
-        // Ignore re-emitted events from modal to prevent loop
-        if (event.source === 'modal') return;
+        // Ignore re-emitted events from tabs to prevent loop
+        if (event.source === 'tab') return;
 
         const payload = event.payload as MDXEditorPayload;
-        const filePath = payload?.filePath;
+        const filePath = payload?.filePath || payload?.path;
 
         if (!filePath) {
           return;
         }
 
-        // Open MDX editor modal
-        setDetailModal({
-          panelId: 'mdxEditor',
-          data: { path: filePath },
+        const fileName = filePath.split('/').pop() || 'Document';
+        const sanitizedPath = filePath.replace(/[^a-zA-Z0-9-_]/g, '_');
+
+        setTabs((prevTabs) => {
+          // Check if tab already exists
+          const existingTab = prevTabs.find(
+            (t) =>
+              t.contentType === 'mdx-editor' &&
+              (t as MDXEditorTab).filePath === filePath,
+          );
+
+          if (existingTab) {
+            setFocusTabId(existingTab.id);
+            return prevTabs;
+          }
+
+          // Create new MDX editor tab
+          const tabId = `mdx-editor-${sanitizedPath}`;
+          const newTab: MDXEditorTab = {
+            id: tabId,
+            label: fileName,
+            contentType: 'mdx-editor',
+            filePath: filePath,
+            fileName: fileName,
+            closable: true,
+          };
+          setFocusTabId(newTab.id);
+          return [...prevTabs, newTab];
         });
       }),
       // Canvas open - create tab (from storyboard-list-panel, canvas-list-panel, canvas-detail-panel, dashboard-panel)
@@ -2322,15 +2344,9 @@ const DevWorkspacePanelFrameworkInner: React.FC<
               issue: detailModal.data,
             },
           });
-        } else if (detailModal.panelId === 'mdxEditor') {
-          // Set the active file via actions
-          if (actions.setActiveFile) {
-            actions.setActiveFile(detailModal.data.path);
-          }
         }
       }, 0);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- actions intentionally omitted to avoid re-running effect
   }, [detailModal, events]);
 
   // Listen for deselection events to close the modal (from panel's X button)
@@ -4151,17 +4167,6 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                     // needs to be re-emitted for the panel to display the issue.
                     // TODO: Add useEffect to re-emit issue:selected with source='modal' after mount
                   />
-                )}
-              {detailModal.panelId === 'mdxEditor' &&
-                MDXEditorPanelComponent && (
-                  <div style={{ height: '100%' }}>
-                    <MDXEditorPanelComponent
-                      context={context}
-                      actions={actions}
-                      events={events}
-                      filePath={detailModal.data.path}
-                    />
-                  </div>
                 )}
             </div>
           </div>

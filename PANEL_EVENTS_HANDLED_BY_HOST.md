@@ -113,18 +113,20 @@ The host responds to the following panel events:
 
 ---
 
-### 7. `file:openInMdxEditor` (Modal)
+### 7. `file:openInMdxEditor` (Tab)
 **Lines:** 691-710
-**Action:** Opens MDX editor modal
+**Action:** Creates MDX editor tab
 **Payload:**
 ```typescript
 {
   filePath?: string;
+  path?: string;
 }
 ```
 **Behavior:**
-- Ignores events re-emitted from modal (prevents loops)
-- Opens `mdxEditor` panel in modal with file path
+- Ignores events re-emitted from tabs (prevents loops)
+- Creates `MDXEditorTab` if doesn't exist
+- Focuses existing tab if already open
 
 ---
 
