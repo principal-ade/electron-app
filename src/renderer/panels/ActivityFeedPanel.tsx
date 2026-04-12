@@ -18,10 +18,12 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/type
 import type { GitHubRepository } from '../../shared/main-process-api-interfaces/GitHubAPI';
 import { FolderGit2, ChevronDown, ChevronRight, Check, User, Play, Square, ExternalLink, Search, X, Folder, Github, Star, Sparkles, CheckSquare, SquareIcon, type LucideIcon } from 'lucide-react';
 import { useActivityFeed, type ActivityCommit } from '../hooks/useActivityFeed';
+import { useWatchedActivityFeed, type WatchedRepoGroup } from '../hooks/useWatchedActivityFeed';
 import { FileCityImageService } from '../main-process-api/FileCityImageService';
 import { GitService } from '../main-process-api/GitService';
 import { GithubService } from '../main-process-api/GithubService';
 import { AISummaryPanel } from '../components/AISummaryPanel';
+import type { FeedMode } from '../principal-window/views/FeedView/FeedView';
 
 // Quarter helpers (matching heatmap)
 type DayQuarter = 'Night' | 'Morning' | 'Afternoon' | 'Evening';
@@ -209,6 +211,8 @@ interface ActivityFeedPanelProps {
   searchResults?: SearchResult[];
   onSelectSearchResult?: (result: SearchResult) => void;
   searchLoading?: boolean;
+  // Feed mode prop
+  feedMode?: FeedMode;
 }
 
 /**
@@ -234,6 +238,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
   searchResults = [],
   onSelectSearchResult,
   searchLoading = false,
+  feedMode = 'my-activity', // Default to my-activity
 }) => {
   const { theme } = useTheme();
   const extendedActions = actions as ActivityFeedPanelActions;
@@ -273,6 +278,12 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
     [context.alexandriaRepositories?.data?.repositories]
   );
   const activityFeed = useActivityFeed(allRepositories, 20, 10, 100); // Get more commits for aggregation
+
+  // Get watched activity feed from web-ade
+  const watchedActivityFeed = useWatchedActivityFeed(
+    feedMode === 'watched-activity',
+    100 // maxCards
+  );
 
   // State for repo images
   const [repoImages, setRepoImages] = useState<Map<string, string>>(new Map());
@@ -356,10 +367,36 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
     );
   }, [activityFeed.commits, repoOwnerMap]);
 
+  // Transform watched activity data to match RepoActivitySummary format
+  const watchedRepoSummaries = useMemo<RepoActivitySummary[]>(() => {
+    return watchedActivityFeed.repoGroups.map((group: WatchedRepoGroup) => ({
+      repoPath: group.repoPath, // Empty for watched repos
+      repoName: group.repoName,
+      commits: group.commits.map((commit) => ({
+        repoName: commit.repoName,
+        repoPath: commit.repoPath,
+        hash: commit.hash,
+        message: commit.message,
+        author: commit.author,
+        authorEmail: commit.authorEmail,
+        date: commit.date,
+      })),
+      latestCommitAt: group.latestCommitAt,
+      commitCount: group.commitCount,
+      githubOwner: group.githubOwner,
+      githubRepoName: group.githubRepoName,
+    }));
+  }, [watchedActivityFeed.repoGroups]);
+
+  // Determine which summaries to display based on feed mode
+  const displayedRepoSummaries = useMemo(() => {
+    return feedMode === 'watched-activity' ? watchedRepoSummaries : repoSummaries;
+  }, [feedMode, watchedRepoSummaries, repoSummaries]);
+
   // Group summaries by quarter
   const quarterGroups = useMemo(() => {
-    return groupSummariesByQuarter(repoSummaries);
-  }, [repoSummaries]);
+    return groupSummariesByQuarter(displayedRepoSummaries);
+  }, [displayedRepoSummaries]);
 
   // Select all visible cards
   const selectAllCards = useCallback(() => {
@@ -556,7 +593,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
   // Check if we're within last 24 hours scope
   const now = new Date();
   const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  const recentRepos = repoSummaries.filter(
+  const recentRepos = displayedRepoSummaries.filter(
     (s) => s.latestCommitAt >= twentyFourHoursAgo
   );
   const totalRecentCommits = recentRepos.reduce((sum, r) => sum + r.commitCount, 0);
@@ -590,7 +627,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
               color: theme.colors.text,
             }}
           >
-            Activity Feed
+            {feedMode === 'watched-activity' ? 'Watched Activity' : 'Activity Feed'}
           </h3>
         </div>
 
@@ -665,7 +702,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
           )}
 
           {/* Status indicator */}
-          {!activityFeed.loading && repoSummaries.length > 0 && (
+          {!activityFeed.loading && !watchedActivityFeed.loading && displayedRepoSummaries.length > 0 && (
             <div
               style={{
                 display: 'flex',
@@ -744,7 +781,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
                   gap: spacing.sm,
                 }}
               >
-                {repoSummaries.length === 0 ? (
+                {displayedRepoSummaries.length === 0 ? (
                   <div
                     style={{
                       display: 'flex',
@@ -761,7 +798,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
                     <span>No repositories</span>
                   </div>
                 ) : (
-                  repoSummaries.map((summary) => (
+                  displayedRepoSummaries.map((summary) => (
                     <button
                       key={summary.repoPath}
                       onClick={() => handleRepoOpen(summary.repoPath)}
@@ -877,7 +914,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
           }}
         >
           <div>
-          {quarterGroups.length === 0 && !activityFeed.loading ? (
+          {quarterGroups.length === 0 && !activityFeed.loading && !watchedActivityFeed.loading ? (
           // Empty state
           <div
             style={{
@@ -891,10 +928,30 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
             }}
           >
             <FolderGit2 size={48} style={{ marginBottom: spacing.md, opacity: 0.5 }} />
-            <p style={{ margin: 0, fontSize: theme.fontSizes[2] }}>No recent activity</p>
-            <p style={{ margin: `${spacing.xs}px 0 0`, fontSize: theme.fontSizes[1] }}>
-              Commits from your local repositories will appear here
-            </p>
+            {feedMode === 'watched-activity' ? (
+              !watchedActivityFeed.authenticated ? (
+                <>
+                  <p style={{ margin: 0, fontSize: theme.fontSizes[2] }}>Sign in required</p>
+                  <p style={{ margin: `${spacing.xs}px 0 0`, fontSize: theme.fontSizes[1] }}>
+                    Sign in to view watched activity from web-ade
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p style={{ margin: 0, fontSize: theme.fontSizes[2] }}>No watched activity</p>
+                  <p style={{ margin: `${spacing.xs}px 0 0`, fontSize: theme.fontSizes[1] }}>
+                    Visit app.principal-ade.com to watch repositories and users
+                  </p>
+                </>
+              )
+            ) : (
+              <>
+                <p style={{ margin: 0, fontSize: theme.fontSizes[2] }}>No recent activity</p>
+                <p style={{ margin: `${spacing.xs}px 0 0`, fontSize: theme.fontSizes[1] }}>
+                  Commits from your local repositories will appear here
+                </p>
+              </>
+            )}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>

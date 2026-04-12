@@ -42,15 +42,23 @@ An **instrumentation scope** in OpenTelemetry identifies the boundary where trac
 
 | Boundary | Protocol | Context Propagation |
 |----------|----------|---------------------|
+| Web-ADE API | HTTPS | Bearer token (GitHub OAuth) |
 | GitHub API | HTTPS | W3C `traceparent` header |
 | Agent connections | HTTP | W3C `traceparent` header |
+| Auth Server | HTTPS | OAuth flow, JWT tokens |
+| Traffic Controller | WebSocket | Real-time collaboration |
+| NPM Registry | HTTPS | Package metadata |
 
 ## Context Propagation
 
-### Renderer → Main Process
-- **Mechanism**: IPC invoke/send
+### Renderer → Main Process (TIPC)
+- **Mechanism**: Type-safe IPC via `@egoist/tipc`
+- **Pattern**: Renderer TIPC client → Main TIPC router → Backend service
 - **Context**: `traceparent` in IPC message metadata
 - **Spans**: `ipc.invoke.*` (client) → `ipc.handle.*` (server)
+- **Examples**:
+  - `githubClient` → `githubRouter` → `GitHubAdapter`
+  - `webAdeClient` → `webAdeRouter` → `WebAdeService`
 
 ### Main Process → Daemon
 - **Mechanism**: Unix socket messages
@@ -74,6 +82,8 @@ Spans are organized into namespaces within each scope:
 - `mcp.*` - Model Context Protocol
 - `terminal.session.*` - Session management (main side)
 - `ipc.handle.*` - IPC request handlers
+- `webade.*` - Web-ADE API integration (watched activity feed)
+- `github.*` - GitHub API integration
 
 ### principal-ade-daemon (Daemon Process)
 - `terminal.daemon.*` - Daemon lifecycle
@@ -111,3 +121,52 @@ The previous architecture defined ~20 logical "scopes" that were actually just n
 | `terminal.daemon` | `principal-ade-daemon` spans |
 | `devworkspace` | `principal-ade-dev-workspace` spans |
 | `principal-ade-utility` | `principal-ade-event-processor` spans |
+
+## Web-ADE Integration Architecture
+
+The Web-ADE integration enables the activity feed to display watched directory activities from the Principal Web-ADE platform.
+
+### Architecture Flow
+
+```
+ActivityFeedPanel (renderer)
+  ↓
+useWatchedActivityFeed hook
+  ↓
+WebAdeService (renderer/main-process-api)
+  ↓
+webAdeClient (renderer/tipc)
+  ↓ [IPC - TIPC]
+webAdeRouter (main/web-ade/tipc)
+  ↓
+WebAdeService (main/services)
+  ↓ [HTTPS - Bearer token]
+Web-ADE API (external)
+```
+
+### Components
+
+**Shared Types**:
+- `src/shared/tipc/webAdeRouterTypes.ts` - TypeScript interfaces for TIPC communication
+
+**Main Process**:
+- `src/main/services/WebAdeService.ts` - HTTP client for web-ade API
+- `src/main/web-ade/tipc/webAdeRouter.ts` - TIPC router exposing methods to renderer
+
+**Renderer Process**:
+- `src/renderer/tipc/webAdeClient.ts` - TIPC client (type-safe IPC wrapper)
+- `src/renderer/main-process-api/WebAdeService.ts` - High-level service wrapper
+- `src/renderer/hooks/useWatchedActivityFeed.ts` - React hook for watched activity data
+- `src/renderer/components/SegmentedControl.tsx` - UI toggle component
+- `src/renderer/panels/ActivityFeedPanel.tsx` - Main activity feed UI
+
+### API Endpoints
+
+The integration uses web-ade tRPC endpoints:
+- `GET /api/trpc/feed.getCommitQueue` - Fetch watched commit activity
+- `GET /api/trpc/feed.getWatches` - Fetch user's watched repos/users
+- `GET /api/trpc/feed.getActivityHeatmap` - Fetch activity heatmap data
+
+### Authentication
+
+Reuses existing GitHub OAuth token from the app's GitHub integration. Token is stored securely and passed as Bearer token in HTTPS requests to web-ade API.

@@ -9,6 +9,7 @@ import React, { useMemo, useState, useEffect, useCallback, createContext, useCon
 import { useTheme } from '@principal-ade/industry-theme';
 import { PanelEventBus } from '@principal-ade/panel-framework-core';
 import { Users } from 'lucide-react';
+import { SegmentedControl } from '../../../components/SegmentedControl';
 import type {
   PanelContextValue,
   PanelActions,
@@ -313,6 +314,9 @@ const FeedPanelProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   );
 };
 
+// Feed mode type
+export type FeedMode = 'my-activity' | 'watched-activity';
+
 /**
  * FeedViewContent - inner content that uses the provider
  */
@@ -323,6 +327,9 @@ const FeedViewContent: React.FC = () => {
     actions,
     events,
   } = useFeedPanelProvider();
+
+  // Feed mode state
+  const [feedMode, setFeedMode] = useState<FeedMode>('my-activity');
 
   // Panel layout state
   const [layout, setLayout] = useState<PanelLayout>({
@@ -374,18 +381,30 @@ const FeedViewContent: React.FC = () => {
         backgroundColor: theme.colors.background,
       }}
     >
-      {/* Header with Live Activity button */}
+      {/* Header with Feed Mode Toggle and Live Activity button */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'flex-end',
+          justifyContent: 'space-between',
           padding: `${spacing.xs}px ${spacing.sm}px`,
           borderBottom: `1px solid ${theme.colors.border}`,
           backgroundColor: theme.colors.background,
           flexShrink: 0,
         }}
       >
+        {/* Feed mode toggle */}
+        <SegmentedControl
+          options={[
+            { value: 'my-activity', label: 'My Activity' },
+            { value: 'watched-activity', label: 'Watched' },
+          ]}
+          value={feedMode}
+          onChange={(value) => setFeedMode(value as FeedMode)}
+          theme={theme}
+        />
+
+        {/* Live Activity button */}
         <button
           onClick={handleNavigateToActivityCities}
           style={{
@@ -428,6 +447,7 @@ const FeedViewContent: React.FC = () => {
           onPanelSizesChange={setPanelSizes}
           events={events}
           onOpenRepository={handleOpenRepository}
+          feedMode={feedMode}
         />
       </div>
     </div>

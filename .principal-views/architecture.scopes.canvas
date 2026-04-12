@@ -214,6 +214,21 @@
       }
     },
     {
+      "id": "external-web-ade",
+      "type": "otel-scope",
+      "x": 818,
+      "y": -108,
+      "width": 300,
+      "height": 100,
+      "color": "#64748B",
+      "label": "Web-ADE API",
+      "description": "Principal Web-ADE API - watched directory activity feed, tRPC endpoints",
+      "otel": {
+        "scope": "external",
+        "status": "implemented"
+      }
+    },
+    {
       "id": "external-agents",
       "type": "otel-scope",
       "x": 818,
@@ -309,6 +324,15 @@
       "toNode": "principal-ade-cli-bridge",
       "toSide": "top",
       "edgeType": "worker-message"
+    },
+    {
+      "id": "main-to-web-ade",
+      "fromNode": "principal-ade-main",
+      "fromSide": "right",
+      "toNode": "external-web-ade",
+      "toSide": "left",
+      "label": "HTTPS (Bearer token)",
+      "edgeType": "http"
     },
     {
       "id": "main-to-github",

@@ -6,6 +6,7 @@ import { initializeStorage } from './stores/initialization';
 import { terminalRouter } from './terminal/tipc';
 import { initializeTerminalSettings } from './terminal/sessionManagerSingleton';
 import { githubRouter } from './github/tipc';
+import { webAdeRouter } from './web-ade/tipc/webAdeRouter';
 import { appVersionRouter } from './app-version/tipc';
 import { alexandriaRouter } from './alexandria/tipc';
 import { geminiRouter } from './gemini/tipc';
@@ -307,6 +308,8 @@ export const initializeServices = async () => {
   console.log('[Main Process] TIPC terminal router registered');
   registerIpcMain(githubRouter);
   console.log('[Main Process] TIPC github router registered');
+  registerIpcMain(webAdeRouter);
+  console.log('[Main Process] TIPC webAde router registered');
   registerIpcMain(appVersionRouter);
   console.log('[Main Process] TIPC appVersion router registered');
   registerIpcMain(alexandriaRouter);

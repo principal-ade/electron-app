@@ -11,7 +11,9 @@ import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { FolderGit2, X } from 'lucide-react';
 import { useActivityFeed, type ActivityCommit } from '../hooks/useActivityFeed';
+import { useWatchedActivityFeed } from '../hooks/useWatchedActivityFeed';
 import { RepoActivityCard, type RepoActivitySummary } from './RepoActivityCard';
+import type { FeedMode } from '../principal-window/views/FeedView/FeedView';
 
 export interface ActivityFeedCardPanelProps {
   /** List of repositories to show activity for */
@@ -20,6 +22,8 @@ export interface ActivityFeedCardPanelProps {
   events: PanelEventEmitter;
   /** Callback to open a repository in dev workspace */
   onOpenRepository?: (entry: AlexandriaEntry) => void;
+  /** Feed mode */
+  feedMode?: FeedMode;
 }
 
 
@@ -27,6 +31,7 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
   repositories,
   events,
   onOpenRepository,
+  feedMode = 'my-activity',
 }) => {
   const { theme } = useTheme();
 
@@ -44,6 +49,12 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
 
   // Get activity feed commits
   const activityFeed = useActivityFeed(repositories, 20, 10, 100);
+
+  // Get watched activity feed
+  const watchedActivityFeed = useWatchedActivityFeed(
+    feedMode === 'watched-activity',
+    100
+  );
 
   // Listen for time filter events from heatmap
   useEffect(() => {
@@ -171,8 +182,55 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
     });
   }, []);
 
-  // Group commits by hour, then by repository
-  const hourlyGroups = useMemo(() => {
+  // Transform watched activity groups to hourly format
+  const watchedHourlyGroups = useMemo(() => {
+    if (feedMode !== 'watched-activity') return [];
+
+    // Convert watched repo groups to hourly format
+    const hourMap = new Map<string, RepoActivitySummary[]>();
+
+    for (const group of watchedActivityFeed.repoGroups) {
+      // Group commits by hour within this repo
+      for (const commit of group.commits) {
+        const hourKey = getHourBucket(new Date(commit.date));
+
+        // Transform to RepoActivitySummary format
+        const summary: RepoActivitySummary = {
+          repoPath: '', // No local path for watched repos
+          repoName: group.repoName,
+          commits: group.commits.filter(c => getHourBucket(new Date(c.date)) === hourKey),
+          latestCommitAt: group.latestCommitAt,
+          commitCount: group.commits.filter(c => getHourBucket(new Date(c.date)) === hourKey).length,
+          githubOwner: group.githubOwner,
+          githubRepo: group.githubRepoName,
+        };
+
+        if (!hourMap.has(hourKey)) {
+          hourMap.set(hourKey, []);
+        }
+
+        // Only add if not already present
+        const existing = hourMap.get(hourKey)!;
+        if (!existing.some(s => s.repoName === summary.repoName && s.githubOwner === summary.githubOwner)) {
+          existing.push(summary);
+        }
+      }
+    }
+
+    // Sort hours (newest first)
+    const sortedHours = Array.from(hourMap.entries()).sort(
+      (a, b) => b[0].localeCompare(a[0])
+    );
+
+    return sortedHours.map(([hourKey, repos]) => ({
+      hourKey,
+      hourLabel: formatHourBucket(hourKey),
+      repos: repos.sort((a, b) => b.latestCommitAt.getTime() - a.latestCommitAt.getTime()),
+    }));
+  }, [feedMode, watchedActivityFeed.repoGroups, getHourBucket, formatHourBucket]);
+
+  // Group commits by hour, then by repository (for my activity)
+  const myActivityHourlyGroups = useMemo(() => {
     // First, group by hour
     const hourMap = new Map<string, ActivityCommit[]>();
 
@@ -228,6 +286,9 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
       };
     });
   }, [filteredCommits, repoOwnerMap, repoEntryMap, getHourBucket, formatHourBucket]);
+
+  // Use the appropriate hourly groups based on feed mode
+  const hourlyGroups = feedMode === 'watched-activity' ? watchedHourlyGroups : myActivityHourlyGroups;
 
   // Handle opening a repository
   const handleOpenRepo = useCallback(
@@ -332,7 +393,25 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
             }}
           >
             <FolderGit2 size={48} style={{ marginBottom: spacing.md, opacity: 0.5 }} />
-            <p style={{ margin: 0, fontSize: theme.fontSizes[2] }}>No recent activity</p>
+            {feedMode === 'watched-activity' ? (
+              !watchedActivityFeed.authenticated ? (
+                <>
+                  <p style={{ margin: 0, fontSize: theme.fontSizes[2] }}>Sign in required</p>
+                  <p style={{ margin: `${spacing.xs}px 0 0`, fontSize: theme.fontSizes[1] }}>
+                    Sign in to view watched activity from web-ade
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p style={{ margin: 0, fontSize: theme.fontSizes[2] }}>No watched activity</p>
+                  <p style={{ margin: `${spacing.xs}px 0 0`, fontSize: theme.fontSizes[1] }}>
+                    Visit app.principal-ade.com to watch repositories and users
+                  </p>
+                </>
+              )
+            ) : (
+              <p style={{ margin: 0, fontSize: theme.fontSizes[2] }}>No recent activity</p>
+            )}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.lg }}>

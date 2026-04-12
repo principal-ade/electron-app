@@ -83,6 +83,8 @@ export interface FeedPanelFrameworkProps {
   events: PanelEventEmitter;
   /** Callback to open a repository */
   onOpenRepository?: (entry: AlexandriaEntry) => void;
+  /** Feed mode */
+  feedMode?: 'my-activity' | 'watched-activity';
 }
 
 interface FeedPanelFrameworkInnerProps {
@@ -95,6 +97,7 @@ interface FeedPanelFrameworkInnerProps {
   onPanelSizesChange?: (sizes: { left: number; middle: number; right: number }) => void;
   events: PanelEventEmitter;
   onOpenRepository?: (entry: AlexandriaEntry) => void;
+  feedMode?: 'my-activity' | 'watched-activity';
 }
 
 /**
@@ -110,6 +113,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
   onPanelSizesChange,
   events,
   onOpenRepository,
+  feedMode = 'my-activity',
 }) => {
   const { theme } = useTheme();
   const panelLayoutRef = useRef<ConfigurablePanelLayoutHandle>(null);
@@ -467,6 +471,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
               repositories={repositories}
               events={events}
               onOpenRepository={onOpenRepository}
+              feedMode={feedMode}
             />
           </div>
         ),
@@ -519,6 +524,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
       activeTabId,
       renderTabContent,
       renderTabIcon,
+      feedMode,
     ]
   );
 
@@ -561,6 +567,7 @@ export const FeedPanelFramework: React.FC<FeedPanelFrameworkProps> = ({
   onPanelSizesChange,
   events,
   onOpenRepository,
+  feedMode,
 }) => {
   return (
     <TerminalProvider
@@ -578,6 +585,7 @@ export const FeedPanelFramework: React.FC<FeedPanelFrameworkProps> = ({
         onPanelSizesChange={onPanelSizesChange}
         events={events}
         onOpenRepository={onOpenRepository}
+        feedMode={feedMode}
       />
     </TerminalProvider>
   );
