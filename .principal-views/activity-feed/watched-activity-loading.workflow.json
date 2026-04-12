@@ -1,0 +1,29 @@
+{
+  "version": "1.0.0",
+  "name": "Watched Activity Feed Loading",
+  "description": "Load activity feed from watched GitHub users and repositories via web-ade API",
+  "canvas": ".principal-views/activity-feed/activity-feed.otel.canvas",
+  "spanPattern": "feed.watched_activity",
+  "scenarios": [
+    {
+      "id": "watched-feed-load-success",
+      "description": "Watched activity feed loads successfully with commits from web-ade",
+      "priority": 1,
+      "template": {
+        "introduction": "**Watched Activity Feed Loading**\n\nLoading commits from watched GitHub users and repositories.",
+        "events": {
+          "feed.mode.changed": "[1] Feed mode changed: {{mode}} (previous: {{previous_mode}})",
+          "feed.watched_panel.rendered": "[2] Watched items panel rendered: {{watched_users_count}} users, {{watched_repos_count}} repos",
+          "feed.watched_activity.loading_started": "[3] Loading watched activity: max_cards={{max_cards}}",
+          "feed.webade.request_sent": "[4] Web-ADE request sent: method={{method}}, endpoint={{endpoint}}",
+          "feed.webade.tipc_invoked": "[5] TIPC invoked: procedure={{procedure}}, route={{route}}, input={{input}}",
+          "feed.webade.api_called": "[6] Web-ADE API called: {{method}} {{endpoint}} ({{url}}), authenticated={{authenticated}}",
+          "feed.watched_activity.loaded": "[7] Watched activity loaded: {{total_commits}} commits from {{unique_repos}} repos in {{duration_ms}}ms",
+          "feed.cards.rendered": "[8] Activity cards rendered: mode={{feed_mode}}, {{card_count}} cards"
+        },
+        "summary": "**Result:** Watched activity feed loaded\n- Total commits: {{total_commits}}\n- Unique repos: {{unique_repos}}\n- Source: web-ade API"
+      },
+      "filterDefault": false
+    }
+  ]
+}

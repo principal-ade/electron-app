@@ -1,0 +1,46 @@
+{
+  "version": "1.0.0",
+  "name": "Feed Mode Toggle",
+  "description": "Toggle between local activity (my-activity) and watched activity (watched-activity) modes",
+  "canvas": ".principal-views/activity-feed/activity-feed.otel.canvas",
+  "spanPattern": "feed.mode",
+  "scenarios": [
+    {
+      "id": "switch-to-watched-activity",
+      "description": "User switches from my-activity to watched-activity mode",
+      "priority": 1,
+      "template": {
+        "introduction": "**Switch to Watched Activity**\n\nSwitching feed mode to show commits from watched GitHub sources.",
+        "events": {
+          "feed.mode.changed": "[1] Feed mode changed: {{mode}} (previous: {{previous_mode}})",
+          "feed.watched_panel.rendered": "[2] Watched items panel rendered: {{watched_users_count}} users, {{watched_repos_count}} repos",
+          "feed.watched_activity.loading_started": "[3] Loading watched activity: max_cards={{max_cards}}",
+          "feed.webade.request_sent": "[4] Web-ADE request sent: method={{method}}, endpoint={{endpoint}}",
+          "feed.webade.tipc_invoked": "[5] TIPC invoked: procedure={{procedure}}, route={{route}}, input={{input}}",
+          "feed.webade.api_called": "[6] Web-ADE API called: {{method}} {{endpoint}} ({{url}}), authenticated={{authenticated}}",
+          "feed.watched_activity.loaded": "[7] Watched activity loaded: {{total_commits}} commits from {{unique_repos}} repos in {{duration_ms}}ms",
+          "feed.cards.rendered": "[8] Activity cards rendered: mode={{feed_mode}}, {{card_count}} cards"
+        },
+        "summary": "**Result:** Switched to watched activity mode\n- Showing commits from {{unique_repos}} watched repos\n- Total commits displayed: {{total_commits}}"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "switch-to-my-activity",
+      "description": "User switches from watched-activity to my-activity mode",
+      "priority": 2,
+      "template": {
+        "introduction": "**Switch to My Activity**\n\nSwitching feed mode to show commits from local repositories.",
+        "events": {
+          "feed.mode.changed": "[1] Feed mode changed: {{mode}} (previous: {{previous_mode}})",
+          "feed.activity.loading_started": "[2] Loading local activity: max_repos={{max_repos}}, commits_per_repo={{commits_per_repo}}, limit={{total_limit}}",
+          "feed.commits.fetched": "[3] Fetched commits from `{{repo_path}}`: {{commit_count}} commits ({{start_date}} to {{end_date}})",
+          "feed.activity.loaded": "[4] Local activity loaded: {{total_commits}} commits from {{unique_repos}} repos in {{duration_ms}}ms",
+          "feed.panel.rendered": "[5] Activity panel rendered: {{commits_displayed}} commits, {{repos_in_grid}} repos"
+        },
+        "summary": "**Result:** Switched to my activity mode\n- Showing {{commits_displayed}} commits from {{unique_repos}} local repos"
+      },
+      "filterDefault": false
+    }
+  ]
+}

@@ -751,6 +751,10 @@
           "mode": {
             "type": "string",
             "description": "Selected mode: my-activity or watched-activity"
+          },
+          "previous_mode": {
+            "type": "string",
+            "description": "Previous mode before toggle"
           }
         }
       },
@@ -868,6 +872,10 @@
           "method": {
             "type": "string",
             "description": "API method: watchUser, watchRepo, getCommitQueue, etc"
+          },
+          "endpoint": {
+            "type": "string",
+            "description": "TIPC endpoint path"
           }
         }
       },
@@ -896,6 +904,14 @@
           "procedure": {
             "type": "string",
             "description": "TIPC procedure invoked"
+          },
+          "route": {
+            "type": "string",
+            "description": "Router procedure name"
+          },
+          "input": {
+            "type": "string",
+            "description": "Serialized input data"
           }
         }
       },
@@ -927,6 +943,14 @@
           "method": {
             "type": "string",
             "description": "HTTP method: GET or POST"
+          },
+          "url": {
+            "type": "string",
+            "description": "Full API URL"
+          },
+          "authenticated": {
+            "type": "boolean",
+            "description": "Whether request includes auth token"
           }
         }
       },
@@ -1007,6 +1031,10 @@
           "unique_repos": {
             "type": "integer",
             "description": "Number of unique repositories"
+          },
+          "duration_ms": {
+            "type": "integer",
+            "description": "Time taken to load and transform"
           }
         }
       },
@@ -1355,6 +1383,24 @@
       "toNode": "activity-feed-card-panel",
       "toSide": "top",
       "label": "state update",
+      "edgeType": "subscription"
+    },
+    {
+      "id": "toggle-to-local-activity",
+      "fromNode": "feed-mode-toggle",
+      "fromSide": "left",
+      "toNode": "use-activity-feed",
+      "toSide": "right",
+      "label": "my-activity mode",
+      "edgeType": "subscription"
+    },
+    {
+      "id": "local-loaded-to-panel",
+      "fromNode": "activity-feed-loaded",
+      "fromSide": "right",
+      "toNode": "activity-feed-panel",
+      "toSide": "left",
+      "label": "local commits",
       "edgeType": "subscription"
     }
   ]

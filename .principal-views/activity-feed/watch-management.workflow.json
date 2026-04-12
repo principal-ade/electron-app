@@ -1,0 +1,47 @@
+{
+  "version": "1.0.0",
+  "name": "Watch Management",
+  "description": "Add and remove GitHub users and repositories from watch list",
+  "canvas": ".principal-views/activity-feed/activity-feed.otel.canvas",
+  "spanPattern": "feed.watch",
+  "scenarios": [
+    {
+      "id": "watch-user-success",
+      "description": "User successfully adds a GitHub user to watch list",
+      "priority": 1,
+      "template": {
+        "introduction": "**Watch GitHub User**\n\nAdding a GitHub user to the watch list.",
+        "events": {
+          "feed.user.watched": "[1] Watching user: {{github_login}}",
+          "feed.webade.request_sent": "[2] Web-ADE request sent: method={{method}}, endpoint={{endpoint}}",
+          "feed.webade.tipc_invoked": "[3] TIPC invoked: procedure={{procedure}}, route={{route}}, input={{input}}",
+          "feed.webade.api_called": "[4] Web-ADE API called: {{method}} {{endpoint}} ({{url}}), authenticated={{authenticated}}",
+          "feed.watched_activity.loading_started": "[5] Refreshing watched activity: max_cards={{max_cards}}",
+          "feed.watched_activity.loaded": "[6] Activity refreshed: {{total_commits}} commits from {{unique_repos}} repos in {{duration_ms}}ms",
+          "feed.cards.rendered": "[7] Activity cards re-rendered: mode={{feed_mode}}, {{card_count}} cards"
+        },
+        "summary": "**Result:** User `{{github_login}}` added to watch list\n- Feed refreshed with new commits"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "watch-repo-success",
+      "description": "User successfully adds a GitHub repository to watch list",
+      "priority": 2,
+      "template": {
+        "introduction": "**Watch GitHub Repository**\n\nAdding a GitHub repository to the watch list.",
+        "events": {
+          "feed.repo.watched": "[1] Watching repo: {{repo_owner}}/{{repo_name}}",
+          "feed.webade.request_sent": "[2] Web-ADE request sent: method={{method}}, endpoint={{endpoint}}",
+          "feed.webade.tipc_invoked": "[3] TIPC invoked: procedure={{procedure}}, route={{route}}, input={{input}}",
+          "feed.webade.api_called": "[4] Web-ADE API called: {{method}} {{endpoint}} ({{url}}), authenticated={{authenticated}}",
+          "feed.watched_activity.loading_started": "[5] Refreshing watched activity: max_cards={{max_cards}}",
+          "feed.watched_activity.loaded": "[6] Activity refreshed: {{total_commits}} commits from {{unique_repos}} repos in {{duration_ms}}ms",
+          "feed.cards.rendered": "[7] Activity cards re-rendered: mode={{feed_mode}}, {{card_count}} cards"
+        },
+        "summary": "**Result:** Repository `{{repo_owner}}/{{repo_name}}` added to watch list\n- Feed refreshed with new commits"
+      },
+      "filterDefault": false
+    }
+  ]
+}
