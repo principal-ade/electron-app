@@ -26,6 +26,15 @@ export interface CityCardProps {
   };
   /** Current device ID for highlighting "this device" */
   currentDeviceId?: string | null;
+  /** Timestamp information for this repository */
+  timestamps?: {
+    /** Earliest time any session was opened for this repo (Unix timestamp in ms) */
+    earliestOpenedAt?: number;
+    /** Most recent activity across all sessions (Unix timestamp in ms) */
+    mostRecentActivity?: number;
+    /** Most recent git status change across all users (Unix timestamp in ms) */
+    mostRecentGitChange?: number;
+  };
 }
 
 /**
@@ -41,6 +50,7 @@ export const CityCard: React.FC<CityCardProps> = ({
   error,
   gitStatus,
   currentDeviceId,
+  timestamps,
 }) => {
   const { theme } = useTheme();
   const [showSuffixColors, setShowSuffixColors] = useState(true);
@@ -315,9 +325,61 @@ export const CityCard: React.FC<CityCardProps> = ({
     marginLeft: 2,
   });
 
+  const timestampsContainerStyle: React.CSSProperties = {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    padding: `${spacing.xs}px 0`,
+    borderBottom: `1px solid ${theme.colors.border}`,
+    marginBottom: spacing.xs,
+  };
+
+  const timestampItemStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 2,
+    fontSize: theme.fontSizes[0],
+  };
+
+  const timestampLabelStyle: React.CSSProperties = {
+    fontFamily: theme.fonts.monospace,
+    color: theme.colors.textSecondary,
+    textTransform: 'uppercase',
+    fontSize: '9px',
+    letterSpacing: '0.05em',
+  };
+
+  const timestampValueStyle: React.CSSProperties = {
+    fontFamily: theme.fonts.monospace,
+    color: theme.colors.text,
+    fontWeight: 500,
+  };
+
   // Helper to get user's git status
   const getUserGitStatus = (userId: string): SharedGitStatus | undefined => {
     return gitStatus?.byUser.get(userId);
+  };
+
+  // Helper to format relative time
+  const formatRelativeTime = (timestamp: number): string => {
+    const now = Date.now();
+    const diff = now - timestamp;
+
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${days}d ago`;
+    if (hours > 0) return `${hours}h ago`;
+    if (minutes > 0) return `${minutes}m ago`;
+    if (seconds > 0) return `${seconds}s ago`;
+    return 'just now';
+  };
+
+  // Helper to format absolute time
+  const formatAbsoluteTime = (timestamp: number): string => {
+    return new Date(timestamp).toLocaleString();
   };
 
   // Calculate aggregate ahead/behind for all users
@@ -484,6 +546,30 @@ export const CityCard: React.FC<CityCardProps> = ({
 
       {/* Users section at bottom */}
       <div style={infoStyle}>
+        {/* Timestamps section */}
+        {timestamps && (timestamps.earliestOpenedAt || timestamps.mostRecentActivity || timestamps.mostRecentGitChange) && (
+          <div style={timestampsContainerStyle}>
+            {timestamps.earliestOpenedAt && (
+              <div style={timestampItemStyle} title={`Opened: ${formatAbsoluteTime(timestamps.earliestOpenedAt)}`}>
+                <div style={timestampLabelStyle}>Opened</div>
+                <div style={timestampValueStyle}>{formatRelativeTime(timestamps.earliestOpenedAt)}</div>
+              </div>
+            )}
+            {timestamps.mostRecentGitChange && (
+              <div style={timestampItemStyle} title={`Last Git Change: ${formatAbsoluteTime(timestamps.mostRecentGitChange)}`}>
+                <div style={timestampLabelStyle}>Git Change</div>
+                <div style={timestampValueStyle}>{formatRelativeTime(timestamps.mostRecentGitChange)}</div>
+              </div>
+            )}
+            {timestamps.mostRecentActivity && (
+              <div style={timestampItemStyle} title={`Last Activity: ${formatAbsoluteTime(timestamps.mostRecentActivity)}`}>
+                <div style={timestampLabelStyle}>Activity</div>
+                <div style={timestampValueStyle}>{formatRelativeTime(timestamps.mostRecentActivity)}</div>
+              </div>
+            )}
+          </div>
+        )}
+
         <div style={{ ...usersContainerStyle, position: 'relative' }}>
           {users.map((user) => {
             const userGitStatus = getUserGitStatus(user.userId);

@@ -167,6 +167,7 @@ export const ActivityCitiesPanel: React.FC = () => {
             error={repo.error}
             gitStatus={repo.gitStatus}
             currentDeviceId={repo.currentDeviceId}
+            timestamps={repo.timestamps}
           />
         ))}
       </div>

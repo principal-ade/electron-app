@@ -127,6 +127,15 @@ Proxies web-ade API requests through main process via TIPC:
 - `src/renderer/panels/WatchedItemsPanel.tsx` - Watch management (watched-activity mode)
 - `src/renderer/panels/RepoActivityCard.tsx` - Individual repo activity card
 
+### Live Activity / File City Cards
+The `CityCard` component displays 2D File City visualizations for repositories with active presence.
+
+**Important:** `CityCard` is rendered in TWO locations - both must be kept in sync:
+- `src/renderer/panels/ActivityCitiesPanel.tsx` - Dedicated activity cities panel
+- `src/renderer/components/LiveActivityTabContent.tsx` - Live activity tab in the feed view
+
+When adding new props to `CityCard`, ensure both locations pass the prop.
+
 ### Hooks
 - `src/renderer/hooks/useActivityFeed.ts` - Local commit aggregation
 - `src/renderer/hooks/useWatchedActivityFeed.ts` - Watched commit aggregation

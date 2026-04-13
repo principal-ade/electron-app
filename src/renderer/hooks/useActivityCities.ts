@@ -32,6 +32,15 @@ export interface ActiveRepository {
   };
   /** Current device ID for highlighting "this device" */
   currentDeviceId?: string | null;
+  /** Timestamp information for this repository */
+  timestamps?: {
+    /** Earliest time any session was opened for this repo (Unix timestamp in ms) */
+    earliestOpenedAt?: number;
+    /** Most recent activity across all sessions (Unix timestamp in ms) */
+    mostRecentActivity?: number;
+    /** Most recent git status change across all users (Unix timestamp in ms) */
+    mostRecentGitChange?: number;
+  };
 }
 
 export interface UseActivityCitiesReturn {
@@ -162,7 +171,7 @@ export function useActivityCities(): UseActivityCitiesReturn {
    */
   const processPresenceData = useCallback(
     async (users: UserPresence[]) => {
-      // Group users by repository, also collect git status
+      // Group users by repository, also collect git status and timestamps
       const repoUsersMap = new Map<
         string,
         {
@@ -171,6 +180,8 @@ export function useActivityCities(): UseActivityCitiesReturn {
           branch: string;
           users: UserPresence[];
           gitStatusByUser: Map<string, SharedGitStatus>;
+          openedAtTimes: number[];
+          lastActivityTimes: number[];
         }
       >();
 
@@ -190,7 +201,14 @@ export function useActivityCities(): UseActivityCitiesReturn {
 
         for (const repoSession of repoSessions) {
           if (!repoSession || typeof repoSession !== 'object') continue;
-          const session = repoSession as { repoId?: string; branch?: string; gitStatus?: SharedGitStatus };
+
+          const session = repoSession as {
+            repoId?: string;
+            branch?: string;
+            gitStatus?: SharedGitStatus;
+            openedAt?: number;
+            lastActivity?: number;
+          };
           const parsed = parseRepoId(session.repoId || '');
           if (!parsed) continue;
 
@@ -203,6 +221,13 @@ export function useActivityCities(): UseActivityCitiesReturn {
             if (session.gitStatus) {
               existing.gitStatusByUser.set(user.userId, session.gitStatus);
             }
+            // Track timestamps
+            if (session.openedAt) {
+              existing.openedAtTimes.push(session.openedAt);
+            }
+            if (session.lastActivity) {
+              existing.lastActivityTimes.push(session.lastActivity);
+            }
           } else {
             const gitStatusByUser = new Map<string, SharedGitStatus>();
             if (session.gitStatus) {
@@ -214,6 +239,8 @@ export function useActivityCities(): UseActivityCitiesReturn {
               branch: session.branch || 'main',
               users: [user],
               gitStatusByUser,
+              openedAtTimes: session.openedAt ? [session.openedAt] : [],
+              lastActivityTimes: session.lastActivity ? [session.lastActivity] : [],
             });
           }
         }
@@ -224,6 +251,25 @@ export function useActivityCities(): UseActivityCitiesReturn {
         ([repoId, data]) => {
           // Aggregate git status
           const dirtyCount = Array.from(data.gitStatusByUser.values()).filter(s => s.isDirty).length;
+
+          // Aggregate timestamps
+          const earliestOpenedAt = data.openedAtTimes.length > 0
+            ? Math.min(...data.openedAtTimes)
+            : undefined;
+          const mostRecentActivity = data.lastActivityTimes.length > 0
+            ? Math.max(...data.lastActivityTimes)
+            : undefined;
+
+          // Find most recent git change timestamp across all users
+          // Convert ISO strings to Unix timestamps for consistency
+          const gitChangeTimes = Array.from(data.gitStatusByUser.values())
+            .map(s => s.lastChangedAt)
+            .filter((t): t is string => t !== undefined && t !== null)
+            .map(isoString => new Date(isoString).getTime());
+          const mostRecentGitChange = gitChangeTimes.length > 0
+            ? Math.max(...gitChangeTimes)
+            : undefined;
+
           return {
             owner: data.owner,
             repo: data.repo,
@@ -241,6 +287,13 @@ export function useActivityCities(): UseActivityCitiesReturn {
                 }
               : undefined,
             currentDeviceId,
+            timestamps: (earliestOpenedAt || mostRecentActivity || mostRecentGitChange)
+              ? {
+                  earliestOpenedAt,
+                  mostRecentActivity,
+                  mostRecentGitChange,
+                }
+              : undefined,
           };
         },
       );
@@ -272,10 +325,10 @@ export function useActivityCities(): UseActivityCitiesReturn {
             };
           }
           return repo;
-        }),
+        })
       );
     },
-    [fetchCityDataForRepo],
+    [fetchCityDataForRepo, currentDeviceId],
   );
 
   /**
@@ -331,9 +384,13 @@ export function useActivityCities(): UseActivityCitiesReturn {
     }
   }, [processPresenceData, ensurePresenceConnected]);
 
+  // Store refresh in a ref to avoid effect re-runs
+  const refreshRef = useRef(refresh);
+  refreshRef.current = refresh;
+
   // Initial fetch and subscribe to presence updates
   useEffect(() => {
-    void refresh();
+    void refreshRef.current();
 
     // Subscribe to presence events for real-time updates
     const unsubscribe = PresenceService.onPresenceEvent((event) => {
@@ -344,7 +401,7 @@ export function useActivityCities(): UseActivityCitiesReturn {
         event.type === 'presence:repo_opened' ||
         event.type === 'presence:repo_closed'
       ) {
-        void refresh();
+        void refreshRef.current();
       }
 
       // Handle git status updates incrementally (no full refresh needed)
@@ -365,7 +422,8 @@ export function useActivityCities(): UseActivityCitiesReturn {
 
             const dirtyCount = Array.from(newByUser.values()).filter(s => s.isDirty).length;
 
-            return {
+            // Update timestamp based on new git status
+            const updatedRepo = {
               ...repo,
               gitStatus: {
                 byUser: newByUser,
@@ -373,6 +431,24 @@ export function useActivityCities(): UseActivityCitiesReturn {
                 dirtyCount,
               },
             };
+
+            // Also update mostRecentGitChange if needed
+            if (payload.gitStatus.lastChangedAt && updatedRepo.timestamps) {
+              const gitChangeTimes = Array.from(newByUser.values())
+                .map(s => s.lastChangedAt)
+                .filter((t): t is string => t !== undefined && t !== null)
+                .map(isoString => new Date(isoString).getTime());
+              const mostRecentGitChange = gitChangeTimes.length > 0
+                ? Math.max(...gitChangeTimes)
+                : undefined;
+
+              updatedRepo.timestamps = {
+                ...updatedRepo.timestamps,
+                mostRecentGitChange,
+              };
+            }
+
+            return updatedRepo;
           }),
         );
       }
@@ -381,7 +457,7 @@ export function useActivityCities(): UseActivityCitiesReturn {
     return () => {
       unsubscribe();
     };
-  }, [refresh]);
+  }, []); // Empty deps - only run once on mount
 
   return {
     repositories,
