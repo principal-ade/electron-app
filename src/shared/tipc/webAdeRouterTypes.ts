@@ -39,6 +39,12 @@ export interface UnwatchRepoInput {
   repo: string;
 }
 
+export interface GetTreeInput {
+  owner: string;
+  repo: string;
+  ref?: string;
+}
+
 // =============================================================================
 // Response Types
 // =============================================================================
@@ -135,6 +141,22 @@ export interface ActivityHeatmapResponse {
   };
 }
 
+export interface TreeEntry {
+  path: string;
+  mode: string;
+  type: 'blob' | 'tree' | 'commit';
+  sha: string;
+  size?: number;
+  url?: string;
+}
+
+export interface GetTreeResponse {
+  sha: string;
+  url: string;
+  tree: TreeEntry[];
+  truncated: boolean;
+}
+
 // =============================================================================
 // Router Type Definition
 // =============================================================================
@@ -195,5 +217,11 @@ export type WebAdeRouterType = Record<
       context: ActionContext;
       input: UnwatchRepoInput;
     }) => Promise<UnwatchRepoResponse>;
+  };
+  getGithubTree: {
+    action: (args: {
+      context: ActionContext;
+      input: GetTreeInput;
+    }) => Promise<GetTreeResponse>;
   };
 };

@@ -16,6 +16,8 @@ import type {
   UnwatchUserResponse,
   WatchRepoResponse,
   UnwatchRepoResponse,
+  GetTreeInput,
+  GetTreeResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
@@ -356,6 +358,53 @@ export class WebAdeService {
       return { success: true, watchedRepos: watches.watchedRepos };
     } catch (error) {
       console.error('[WebADE] Failed to unwatch repo:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get repository file tree from GitHub via web-ade's cached endpoint
+   * Uses web-ade's multi-layer caching (memory → Redis → S3 → GitHub)
+   */
+  async getGithubTree(input: GetTreeInput): Promise<GetTreeResponse> {
+    const token = await this.getToken();
+    if (!token) {
+      throw new Error('Not authenticated - no GitHub token available');
+    }
+
+    // Encode input for tRPC URL format
+    // Note: GitHub router doesn't use the { json: {...} } wrapper like feed endpoints
+    const params = encodeURIComponent(JSON.stringify({
+      owner: input.owner,
+      repo: input.repo,
+      ref: input.ref || 'HEAD'
+    }));
+    const url = `${this.baseUrl}/trpc/github.getTree?input=${params}`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch tree: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json() as { result?: { data?: GetTreeResponse } };
+      const tree = data?.result?.data;
+
+      if (!tree || !tree.tree) {
+        console.warn('[WebADE] Unexpected response format:', data);
+        throw new Error('Invalid tree response from web-ade');
+      }
+
+      return tree;
+    } catch (error) {
+      console.error('[WebADE] Failed to fetch tree:', error);
       throw error;
     }
   }

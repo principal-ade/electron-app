@@ -9,6 +9,7 @@ export interface ActivityCommit {
   message: string;
   author: string;
   authorEmail: string;
+  authorAvatarUrl?: string;
   date: string; // ISO date string
 }
 

@@ -397,7 +397,7 @@ const FeedViewContent: React.FC = () => {
         <SegmentedControl
           options={[
             { value: 'my-activity', label: 'My Activity' },
-            { value: 'watched-activity', label: 'Watched' },
+            { value: 'watched-activity', label: 'Watching' },
           ]}
           value={feedMode}
           onChange={(value) => setFeedMode(value as FeedMode)}

@@ -13,6 +13,7 @@ import type {
   UnwatchUserInput,
   WatchRepoInput,
   UnwatchRepoInput,
+  GetTreeInput,
 } from '../../../shared/tipc/webAdeRouterTypes';
 import { WebAdeService } from '../../services/WebAdeService';
 
@@ -76,5 +77,15 @@ export const webAdeRouter = {
     .input<UnwatchRepoInput>()
     .action(async ({ input }) => {
       return webAdeService.unwatchRepo(input.owner, input.repo);
+    }),
+
+  // ===========================================================================
+  // GitHub Tree API (via web-ade's cached endpoint)
+  // ===========================================================================
+
+  getGithubTree: t.procedure
+    .input<GetTreeInput>()
+    .action(async ({ input }) => {
+      return webAdeService.getGithubTree(input);
     }),
 };

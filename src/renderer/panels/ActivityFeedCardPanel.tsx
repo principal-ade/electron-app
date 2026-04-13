@@ -84,17 +84,21 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
     };
   }, [events]);
 
-  // Listen for activity refresh events (triggered by git commits)
+  // Listen for activity refresh events (triggered by git commits or watch list changes)
   useEffect(() => {
     const handleRefreshRequest = () => {
-      activityFeed.refresh();
+      if (feedMode === 'watched-activity') {
+        watchedActivityFeed.refresh();
+      } else {
+        activityFeed.refresh();
+      }
     };
 
     events.on('feed:activity-refresh-requested', handleRefreshRequest);
     return () => {
       events.off('feed:activity-refresh-requested', handleRefreshRequest);
     };
-  }, [events, activityFeed]);
+  }, [events, activityFeed, watchedActivityFeed, feedMode]);
 
   // Create repo github owner map
   const repoOwnerMap = useMemo(() => {
@@ -202,7 +206,7 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
           latestCommitAt: group.latestCommitAt,
           commitCount: group.commits.filter(c => getHourBucket(new Date(c.date)) === hourKey).length,
           githubOwner: group.githubOwner,
-          githubRepo: group.githubRepoName,
+          githubRepoName: group.githubRepoName,
         };
 
         if (!hourMap.has(hourKey)) {
@@ -261,7 +265,7 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
             latestCommitAt: new Date(commit.date),
             commitCount: 0,
             githubOwner: repoOwnerMap.get(commit.repoPath),
-            githubRepo: entry?.github?.name,
+            githubRepoName: entry?.github?.name,
           };
           repoMap.set(commit.repoPath, summary);
         }

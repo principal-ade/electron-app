@@ -14,6 +14,7 @@ import type {
   UnwatchUserResponse,
   WatchRepoResponse,
   UnwatchRepoResponse,
+  GetTreeResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
@@ -93,5 +94,16 @@ export class WebAdeService {
    */
   static async unwatchRepo(owner: string, repo: string): Promise<UnwatchRepoResponse> {
     return webAdeClient.unwatchRepo({ owner, repo });
+  }
+
+  /**
+   * Get repository file tree from GitHub via web-ade's cached endpoint
+   * Uses web-ade's multi-layer caching (memory → Redis → S3 → GitHub)
+   * @param owner - Repository owner
+   * @param repo - Repository name
+   * @param ref - Git ref (branch, tag, or commit SHA) - defaults to 'HEAD'
+   */
+  static async getGithubTree(owner: string, repo: string, ref = 'HEAD'): Promise<GetTreeResponse> {
+    return webAdeClient.getGithubTree({ owner, repo, ref });
   }
 }

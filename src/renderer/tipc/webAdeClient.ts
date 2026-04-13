@@ -21,6 +21,8 @@ import type {
   UnwatchUserResponse,
   WatchRepoResponse,
   UnwatchRepoResponse,
+  GetTreeInput,
+  GetTreeResponse,
 } from '../../shared/tipc/webAdeRouterTypes';
 
 // =============================================================================
@@ -45,6 +47,9 @@ export interface WebAdeClient {
   unwatchUser: (input: UnwatchUserInput) => Promise<UnwatchUserResponse>;
   watchRepo: (input: WatchRepoInput) => Promise<WatchRepoResponse>;
   unwatchRepo: (input: UnwatchRepoInput) => Promise<UnwatchRepoResponse>;
+
+  // GitHub Tree API (via web-ade)
+  getGithubTree: (input: GetTreeInput) => Promise<GetTreeResponse>;
 }
 
 // =============================================================================
@@ -108,4 +113,7 @@ export type {
   HeatmapCommit,
   HeatmapAuthor,
   HeatmapRepo,
+  GetTreeInput,
+  GetTreeResponse,
+  TreeEntry,
 } from '../../shared/tipc/webAdeRouterTypes';

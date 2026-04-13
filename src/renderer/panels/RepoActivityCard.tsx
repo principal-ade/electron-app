@@ -22,12 +22,14 @@ import type { ActivityCommit } from '../hooks/useActivityFeed';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { GitService } from '../main-process-api/GitService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
+import { WebAdeService } from '../main-process-api/WebAdeService';
 import {
   ArchitectureMapHighlightLayers,
   MultiVersionCityBuilder,
   type CityData,
   type HighlightLayer,
 } from '@principal-ai/file-city-react';
+import type { FileTree } from '@principal-ai/repository-abstraction';
 
 /**
  * Repository activity summary for the card
@@ -39,7 +41,7 @@ export interface RepoActivitySummary {
   latestCommitAt: Date;
   commitCount: number;
   githubOwner?: string;
-  githubRepo?: string;
+  githubRepoName?: string;
 }
 
 interface RepoActivityCardProps {
@@ -66,6 +68,132 @@ function formatRelativeTime(date: Date): string {
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays < 7) return `${diffDays}d ago`;
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+/**
+ * Build FileTree from GitHub tree API response
+ */
+function buildFileTreeFromGitHub(
+  tree: Array<{ path: string; type: string; size?: number }>,
+  owner: string,
+  repo: string,
+  sha: string
+): FileTree {
+  const allFiles = tree
+    .filter((item) => item.type === 'blob')
+    .map((item) => {
+      const pathParts = item.path.split('/');
+      const fileName = pathParts[pathParts.length - 1] ?? item.path;
+      const extension = fileName.includes('.') ? (fileName.split('.').pop() ?? '') : '';
+
+      return {
+        path: item.path,
+        name: fileName,
+        extension,
+        size: item.size || 0,
+        lastModified: new Date(),
+        isDirectory: false,
+        relativePath: item.path,
+      };
+    });
+
+  // Build directory structure
+  const dirMap = new Map<string, {
+    path: string;
+    name: string;
+    children: unknown[];
+    fileCount: number;
+    totalSize: number;
+    depth: number;
+    relativePath: string;
+  }>();
+
+  tree
+    .filter((item) => item.type === 'tree')
+    .forEach((item) => {
+      const pathParts = item.path.split('/');
+      const dirName = pathParts[pathParts.length - 1] ?? item.path;
+
+      dirMap.set(item.path, {
+        path: item.path,
+        name: dirName,
+        children: [],
+        fileCount: 0,
+        totalSize: 0,
+        depth: pathParts.length,
+        relativePath: item.path,
+      });
+    });
+
+  // Create implicit parent directories
+  allFiles.forEach((file) => {
+    const pathParts = file.relativePath.split('/');
+    let currentPath = '';
+
+    for (let i = 0; i < pathParts.length - 1; i++) {
+      const part = pathParts[i];
+      if (!part) continue;
+      currentPath = currentPath ? `${currentPath}/${part}` : part;
+
+      if (!dirMap.has(currentPath)) {
+        dirMap.set(currentPath, {
+          path: currentPath,
+          name: part,
+          children: [],
+          fileCount: 0,
+          totalSize: 0,
+          depth: i + 1,
+          relativePath: currentPath,
+        });
+      }
+    }
+  });
+
+  const allDirectories = Array.from(dirMap.values());
+  let maxDepth = 0;
+  let totalSize = 0;
+
+  allFiles.forEach((file) => {
+    totalSize += file.size;
+  });
+
+  allDirectories.forEach((dir) => {
+    maxDepth = Math.max(maxDepth, dir.depth);
+  });
+
+  const rootDir = {
+    path: '',
+    name: repo,
+    children: [],
+    fileCount: allFiles.length,
+    totalSize,
+    depth: 0,
+    relativePath: '',
+  };
+
+  return {
+    sha,
+    root: rootDir,
+    allFiles,
+    allDirectories,
+    stats: {
+      totalFiles: allFiles.length,
+      totalDirectories: allDirectories.length,
+      totalSize,
+      maxDepth,
+    },
+    metadata: {
+      id: `github:${owner}/${repo}:${sha}`,
+      timestamp: new Date(),
+      sourceType: 'github',
+      sourceSha: sha,
+      sourceInfo: {
+        owner,
+        name: repo,
+        provider: 'github',
+      },
+    },
+  } as FileTree;
 }
 
 
@@ -136,8 +264,29 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
     const buildCity = async () => {
       setCityLoading(true);
       try {
-        // Get the file tree from RepositoryMonitoringService
-        const fileTree = await RepositoryMonitoringService.getFileTree(summary.repoPath);
+        let fileTree: FileTree | null = null;
+
+        // Check if this is a local repo or a watched GitHub repo
+        if (summary.repoPath) {
+          // Local repository - use RepositoryMonitoringService
+          fileTree = await RepositoryMonitoringService.getFileTree(summary.repoPath);
+        } else if (summary.githubOwner && summary.githubRepoName) {
+          // Watched GitHub repository - use web-ade's getGithubTree
+          const treeData = await WebAdeService.getGithubTree(
+            summary.githubOwner,
+            summary.githubRepoName
+          );
+
+          if (cancelled) return;
+
+          // Build FileTree from the response
+          fileTree = buildFileTreeFromGitHub(
+            treeData.tree,
+            summary.githubOwner,
+            summary.githubRepoName,
+            treeData.sha
+          );
+        }
 
         if (cancelled) return;
 
@@ -145,6 +294,8 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
           const versionMap = new Map([['main', fileTree]]);
           const { unionCity } = MultiVersionCityBuilder.build(versionMap);
           setCityData(unionCity);
+        } else {
+          console.warn(`[RepoActivityCard] No fileTree available for ${summary.repoName}`);
         }
       } catch (err) {
         console.warn(`[RepoActivityCard] Failed to build city for ${summary.repoName}:`, err);
@@ -160,7 +311,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [summary.repoPath, summary.repoName]);
+  }, [summary.repoPath, summary.repoName, summary.githubOwner, summary.githubRepoName]);
 
   // Fetch stats for all commits
   useEffect(() => {
@@ -604,7 +755,23 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                             zIndex: 1,
                           }}
                         >
-                          {commit.authorEmail ? (
+                          {commit.authorAvatarUrl ? (
+                            <img
+                              src={commit.authorAvatarUrl}
+                              alt={commit.author}
+                              style={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: '50%',
+                                border: isDisplayed
+                                  ? `2px solid ${theme.colors.primary}`
+                                  : `2px solid ${theme.colors.surface}`,
+                                objectFit: 'cover',
+                                transition: 'border-color 0.15s ease',
+                                boxSizing: 'content-box',
+                              }}
+                            />
+                          ) : commit.authorEmail ? (
                             <div
                               style={{
                                 width: 36,
