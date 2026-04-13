@@ -26,6 +26,8 @@ export type {
   InstallSkillResult,
   SSHKeysResponse,
   TokenInfo,
+  SearchUsersResponse,
+  SearchReposResponse,
 } from '../main-process-api-interfaces/GitHubAPI';
 
 // =============================================================================
@@ -109,6 +111,16 @@ export interface GetUserFollowersInput {
 
 export interface GetUserFollowingInput {
   username?: string;
+}
+
+export interface SearchUsersInput {
+  query: string;
+  perPage?: number;
+}
+
+export interface SearchReposInput {
+  query: string;
+  perPage?: number;
 }
 
 export interface InstallSkillInput {

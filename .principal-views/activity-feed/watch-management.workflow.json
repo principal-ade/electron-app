@@ -6,9 +6,53 @@
   "spanPattern": "feed.watch",
   "scenarios": [
     {
-      "id": "watch-user-success",
-      "description": "User successfully adds a GitHub user to watch list",
+      "id": "search-and-watch-user",
+      "description": "User searches for and adds a GitHub user via debounced search",
       "priority": 1,
+      "template": {
+        "introduction": "**Search and Watch User**\n\nUser types in search box, waits for results, and clicks to watch.",
+        "events": {
+          "feed.search.query_changed": "[1] Search query typed: query={{query}}, tab={{tab}}",
+          "feed.search.debounce_started": "[2] Debounce timer started: delay={{delay_ms}}ms",
+          "feed.github.search_users_sent": "[3] GitHub search users request sent via TIPC: query={{query}}, perPage={{per_page}}",
+          "feed.github.search_users_received": "[4] GitHub search results received: {{user_count}} users found",
+          "feed.search.results_rendered": "[5] Search results rendered: {{result_count}} {{result_type}} displayed",
+          "feed.search.result_clicked": "[6] User clicked search result: {{result_type}}={{identifier}}",
+          "feed.user.watched": "[7] Watching user: {{github_login}}",
+          "feed.webade.request_sent": "[8] Web-ADE request sent: method={{method}}, endpoint={{endpoint}}",
+          "feed.watched_activity.loading_started": "[9] Refreshing watched activity: max_cards={{max_cards}}",
+          "feed.watched_activity.loaded": "[10] Activity refreshed: {{total_commits}} commits from {{unique_repos}} repos in {{duration_ms}}ms"
+        },
+        "summary": "**Result:** User discovered via search and added to watch list\n- 300ms debounce delay\n- Search cleared after adding"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "search-and-watch-repo",
+      "description": "User searches for and adds a GitHub repository via debounced search",
+      "priority": 2,
+      "template": {
+        "introduction": "**Search and Watch Repository**\n\nUser types in search box, waits for results, and clicks to watch.",
+        "events": {
+          "feed.search.query_changed": "[1] Search query typed: query={{query}}, tab={{tab}}",
+          "feed.search.debounce_started": "[2] Debounce timer started: delay={{delay_ms}}ms",
+          "feed.github.search_repos_sent": "[3] GitHub search repos request sent via TIPC: query={{query}}, perPage={{per_page}}",
+          "feed.github.search_repos_received": "[4] GitHub search results received: {{repo_count}} repos found",
+          "feed.search.results_rendered": "[5] Search results rendered: {{result_count}} {{result_type}} displayed with metadata",
+          "feed.search.result_clicked": "[6] User clicked search result: {{result_type}}={{identifier}}",
+          "feed.repo.watched": "[7] Watching repo: {{repo_owner}}/{{repo_name}}",
+          "feed.webade.request_sent": "[8] Web-ADE request sent: method={{method}}, endpoint={{endpoint}}",
+          "feed.watched_activity.loading_started": "[9] Refreshing watched activity: max_cards={{max_cards}}",
+          "feed.watched_activity.loaded": "[10] Activity refreshed: {{total_commits}} commits from {{unique_repos}} repos in {{duration_ms}}ms"
+        },
+        "summary": "**Result:** Repository discovered via search and added to watch list\n- 300ms debounce delay\n- Shows language, stars, description\n- Search cleared after adding"
+      },
+      "filterDefault": false
+    },
+    {
+      "id": "watch-user-success",
+      "description": "User successfully adds a GitHub user to watch list (legacy direct input)",
+      "priority": 3,
       "template": {
         "introduction": "**Watch GitHub User**\n\nAdding a GitHub user to the watch list.",
         "events": {
@@ -26,8 +70,8 @@
     },
     {
       "id": "watch-repo-success",
-      "description": "User successfully adds a GitHub repository to watch list",
-      "priority": 2,
+      "description": "User successfully adds a GitHub repository to watch list (legacy direct input)",
+      "priority": 4,
       "template": {
         "introduction": "**Watch GitHub Repository**\n\nAdding a GitHub repository to the watch list.",
         "events": {

@@ -353,6 +353,17 @@ export interface InstallSkillResult {
   error?: string;
 }
 
+// Search types
+export interface SearchUsersResponse {
+  users: GitHubUser[];
+  totalCount: number;
+}
+
+export interface SearchReposResponse {
+  repos: GitHubRepository[];
+  totalCount: number;
+}
+
 export interface GitHubAPI {
   detectRepository: (path: string) => Promise<{
     isGitRepository: boolean;
@@ -464,6 +475,16 @@ export interface GitHubAPI {
   getOrgMembers: (org: string) => Promise<GitHubOrgMember[]>;
   /** Get a specific user's profile */
   getUser: (username: string) => Promise<GitHubUser | null>;
+  /** Search for GitHub users (only available via TIPC githubClient in renderer, not in window context) */
+  searchUsers?: (
+    query: string,
+    options?: { perPage?: number },
+  ) => Promise<SearchUsersResponse>;
+  /** Search for GitHub repositories (only available via TIPC githubClient in renderer, not in window context) */
+  searchRepos?: (
+    query: string,
+    options?: { perPage?: number },
+  ) => Promise<SearchReposResponse>;
   /** Get a specific user's public organizations */
   getUserOrganizationsForUser: (
     username: string,

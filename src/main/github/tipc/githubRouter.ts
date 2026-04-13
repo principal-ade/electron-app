@@ -21,6 +21,8 @@ import type {
   GetOrgMembersInput,
   GetUserFollowersInput,
   GetUserFollowingInput,
+  SearchUsersInput,
+  SearchReposInput,
 } from '../../../shared/tipc/githubRouterTypes';
 
 // Import the existing GitHubAdapter - we'll reuse its methods
@@ -92,6 +94,18 @@ export const githubRouter = {
     .input<GetUserInput>()
     .action(async ({ input }) => {
       return githubAdapter.getUser(input.username);
+    }),
+
+  searchUsers: t.procedure
+    .input<SearchUsersInput>()
+    .action(async ({ input }) => {
+      return githubAdapter.searchUsers(input.query, { perPage: input.perPage });
+    }),
+
+  searchRepos: t.procedure
+    .input<SearchReposInput>()
+    .action(async ({ input }) => {
+      return githubAdapter.searchRepos(input.query, { perPage: input.perPage });
     }),
 
   getUserOrganizationsForUser: t.procedure

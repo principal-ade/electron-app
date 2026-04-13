@@ -21,6 +21,8 @@ import type {
   GetOrgMembersInput,
   GetUserFollowersInput,
   GetUserFollowingInput,
+  SearchUsersInput,
+  SearchReposInput,
   GithubRouterType,
   GitHubUser,
   GitHubOrganization,
@@ -31,6 +33,8 @@ import type {
   GitHubRepositoryCreated,
   TokenInfo,
   SSHKeysResponse,
+  SearchUsersResponse,
+  SearchReposResponse,
   TreeResponse,
   FileContentResponse,
 } from '../../shared/tipc/githubRouterTypes';
@@ -66,6 +70,8 @@ export interface GithubClient {
 
   // User Profile (for other users)
   getUser: (input: GetUserInput) => Promise<GitHubUser | null>;
+  searchUsers: (input: SearchUsersInput) => Promise<SearchUsersResponse>;
+  searchRepos: (input: SearchReposInput) => Promise<SearchReposResponse>;
   getUserOrganizationsForUser: (
     input: GetUserOrgsForUserInput,
   ) => Promise<GitHubOrganization[]>;
@@ -157,6 +163,8 @@ export type {
   GetOrgMembersInput,
   GetUserFollowersInput,
   GetUserFollowingInput,
+  SearchUsersInput,
+  SearchReposInput,
   GitHubUser,
   GitHubOrganization,
   GitHubRepository,
@@ -166,6 +174,8 @@ export type {
   GitHubRepositoryCreated,
   TokenInfo,
   SSHKeysResponse,
+  SearchUsersResponse,
+  SearchReposResponse,
   TreeResponse,
   FileContentResponse,
 };

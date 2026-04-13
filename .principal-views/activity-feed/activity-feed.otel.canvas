@@ -799,6 +799,244 @@
       }
     },
     {
+      "id": "search-query-changed",
+      "type": "otel-event",
+      "x": 850,
+      "y": 150,
+      "width": 200,
+      "height": 100,
+      "label": "Search Query Changed",
+      "shape": "rectangle",
+      "event": {
+        "name": "feed.search.query_changed",
+        "description": "User typed in search box, query changed",
+        "attributes": {
+          "query": {
+            "type": "string",
+            "description": "Search query text"
+          },
+          "tab": {
+            "type": "string",
+            "description": "Active tab: users or repos"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/renderer/panels/WatchedItemsPanel.tsx"
+        ],
+        "scope": "principal-ade-principal-window"
+      }
+    },
+    {
+      "id": "search-debounce-started",
+      "type": "otel-event",
+      "x": 850,
+      "y": 280,
+      "width": 200,
+      "height": 100,
+      "label": "Search Debounce Started",
+      "shape": "rectangle",
+      "event": {
+        "name": "feed.search.debounce_started",
+        "description": "300ms debounce timer started before search",
+        "attributes": {
+          "delay_ms": {
+            "type": "integer",
+            "description": "Debounce delay in milliseconds (300)"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/renderer/panels/WatchedItemsPanel.tsx"
+        ],
+        "scope": "principal-ade-principal-window"
+      }
+    },
+    {
+      "id": "github-search-users-sent",
+      "type": "otel-event",
+      "x": 850,
+      "y": 410,
+      "width": 220,
+      "height": 100,
+      "label": "GitHub Search Users Sent",
+      "shape": "rectangle",
+      "event": {
+        "name": "feed.github.search_users_sent",
+        "description": "GitHub search users API request sent via TIPC",
+        "attributes": {
+          "query": {
+            "type": "string",
+            "description": "Search query"
+          },
+          "per_page": {
+            "type": "integer",
+            "description": "Results per page"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/renderer/main-process-api/GithubService.ts",
+          "src/renderer/tipc/githubClient.ts"
+        ],
+        "scope": "principal-ade-principal-window"
+      }
+    },
+    {
+      "id": "github-search-users-received",
+      "type": "otel-event",
+      "x": 850,
+      "y": 540,
+      "width": 220,
+      "height": 100,
+      "label": "GitHub Search Users Received",
+      "shape": "rectangle",
+      "event": {
+        "name": "feed.github.search_users_received",
+        "description": "GitHub search users results received",
+        "attributes": {
+          "user_count": {
+            "type": "integer",
+            "description": "Number of users found"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/renderer/panels/WatchedItemsPanel.tsx"
+        ],
+        "scope": "principal-ade-principal-window"
+      }
+    },
+    {
+      "id": "github-search-repos-sent",
+      "type": "otel-event",
+      "x": 600,
+      "y": 410,
+      "width": 220,
+      "height": 100,
+      "label": "GitHub Search Repos Sent",
+      "shape": "rectangle",
+      "event": {
+        "name": "feed.github.search_repos_sent",
+        "description": "GitHub search repos API request sent via TIPC",
+        "attributes": {
+          "query": {
+            "type": "string",
+            "description": "Search query"
+          },
+          "per_page": {
+            "type": "integer",
+            "description": "Results per page"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/renderer/main-process-api/GithubService.ts",
+          "src/renderer/tipc/githubClient.ts"
+        ],
+        "scope": "principal-ade-principal-window"
+      }
+    },
+    {
+      "id": "github-search-repos-received",
+      "type": "otel-event",
+      "x": 600,
+      "y": 540,
+      "width": 220,
+      "height": 100,
+      "label": "GitHub Search Repos Received",
+      "shape": "rectangle",
+      "event": {
+        "name": "feed.github.search_repos_received",
+        "description": "GitHub search repos results received",
+        "attributes": {
+          "repo_count": {
+            "type": "integer",
+            "description": "Number of repos found"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/renderer/panels/WatchedItemsPanel.tsx"
+        ],
+        "scope": "principal-ade-principal-window"
+      }
+    },
+    {
+      "id": "search-results-rendered",
+      "type": "otel-event",
+      "x": 600,
+      "y": 670,
+      "width": 220,
+      "height": 100,
+      "label": "Search Results Rendered",
+      "shape": "rectangle",
+      "event": {
+        "name": "feed.search.results_rendered",
+        "description": "Search results displayed in UI with avatars and metadata",
+        "attributes": {
+          "result_count": {
+            "type": "integer",
+            "description": "Number of results displayed"
+          },
+          "result_type": {
+            "type": "string",
+            "description": "Type of results: users or repos"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/renderer/panels/WatchedItemsPanel.tsx"
+        ],
+        "scope": "principal-ade-principal-window"
+      }
+    },
+    {
+      "id": "search-result-clicked",
+      "type": "otel-event",
+      "x": 850,
+      "y": 670,
+      "width": 200,
+      "height": 100,
+      "label": "Search Result Clicked",
+      "shape": "rectangle",
+      "event": {
+        "name": "feed.search.result_clicked",
+        "description": "User clicked on a search result to watch",
+        "attributes": {
+          "result_type": {
+            "type": "string",
+            "description": "Type: user or repo"
+          },
+          "identifier": {
+            "type": "string",
+            "description": "User login or repo full_name"
+          }
+        }
+      },
+      "otel": {
+        "status": "draft",
+        "files": [
+          "src/renderer/panels/WatchedItemsPanel.tsx"
+        ],
+        "scope": "principal-ade-principal-window"
+      }
+    },
+    {
       "id": "watch-user-action",
       "type": "otel-event",
       "x": 1350,
@@ -1402,6 +1640,105 @@
       "toSide": "left",
       "label": "local commits",
       "edgeType": "subscription"
+    },
+    {
+      "id": "panel-to-search-query",
+      "fromNode": "watched-items-panel",
+      "fromSide": "left",
+      "toNode": "search-query-changed",
+      "toSide": "right",
+      "label": "user types",
+      "edgeType": "uses"
+    },
+    {
+      "id": "query-to-debounce",
+      "fromNode": "search-query-changed",
+      "fromSide": "bottom",
+      "toNode": "search-debounce-started",
+      "toSide": "top",
+      "label": "start timer",
+      "edgeType": "uses"
+    },
+    {
+      "id": "debounce-to-search-users",
+      "fromNode": "search-debounce-started",
+      "fromSide": "bottom",
+      "toNode": "github-search-users-sent",
+      "toSide": "top",
+      "label": "search users",
+      "edgeType": "uses"
+    },
+    {
+      "id": "debounce-to-search-repos",
+      "fromNode": "search-debounce-started",
+      "fromSide": "left",
+      "toNode": "github-search-repos-sent",
+      "toSide": "right",
+      "label": "search repos",
+      "edgeType": "uses"
+    },
+    {
+      "id": "search-users-sent-to-received",
+      "fromNode": "github-search-users-sent",
+      "fromSide": "bottom",
+      "toNode": "github-search-users-received",
+      "toSide": "top",
+      "label": "TIPC response",
+      "edgeType": "ipc"
+    },
+    {
+      "id": "search-repos-sent-to-received",
+      "fromNode": "github-search-repos-sent",
+      "fromSide": "bottom",
+      "toNode": "github-search-repos-received",
+      "toSide": "top",
+      "label": "TIPC response",
+      "edgeType": "ipc"
+    },
+    {
+      "id": "search-users-to-results",
+      "fromNode": "github-search-users-received",
+      "fromSide": "bottom",
+      "toNode": "search-results-rendered",
+      "toSide": "right",
+      "label": "display users",
+      "edgeType": "subscription"
+    },
+    {
+      "id": "search-repos-to-results",
+      "fromNode": "github-search-repos-received",
+      "fromSide": "bottom",
+      "toNode": "search-results-rendered",
+      "toSide": "top",
+      "label": "display repos",
+      "edgeType": "subscription"
+    },
+    {
+      "id": "results-to-clicked",
+      "fromNode": "search-results-rendered",
+      "fromSide": "right",
+      "toNode": "search-result-clicked",
+      "toSide": "left",
+      "label": "user clicks",
+      "edgeType": "uses"
+    },
+    {
+      "id": "clicked-to-watch-user",
+      "fromNode": "search-result-clicked",
+      "fromSide": "right",
+      "toNode": "watch-user-action",
+      "toSide": "bottom",
+      "label": "watch user",
+      "edgeType": "uses"
+    },
+    {
+      "id": "clicked-to-watch-repo",
+      "fromNode": "search-result-clicked",
+      "fromSide": "bottom",
+      "toNode": "watch-repo-action",
+      "toSide": "left",
+      "label": "watch repo",
+      "edgeType": "uses"
     }
   ]
 }

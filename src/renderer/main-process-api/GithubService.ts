@@ -132,6 +132,30 @@ export class GithubService {
     return result;
   }
 
+  /**
+   * Search for GitHub users
+   */
+  static async searchUsers(
+    query: string,
+    options?: { perPage?: number },
+  ): Promise<{ users: GitHubUser[]; totalCount: number }> {
+    // TIPC migration: using type-safe githubClient
+    const result = await githubClient.searchUsers({ query, perPage: options?.perPage });
+    return result;
+  }
+
+  /**
+   * Search for GitHub repositories
+   */
+  static async searchRepos(
+    query: string,
+    options?: { perPage?: number },
+  ): Promise<{ repos: GitHubRepository[]; totalCount: number }> {
+    // TIPC migration: using type-safe githubClient
+    const result = await githubClient.searchRepos({ query, perPage: options?.perPage });
+    return result;
+  }
+
   static async getUserOrganizationsForUser(
     username: string,
   ): Promise<GitHubOrganization[]> {

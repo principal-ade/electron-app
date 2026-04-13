@@ -5,12 +5,14 @@
  * Displays current watches and provides GitHub search to add new ones.
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { User, FolderGit2, X, Plus, Loader2 } from 'lucide-react';
+import { User, FolderGit2, X, Plus, Loader2, Search } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { WebAdeService } from '../main-process-api/WebAdeService';
+import { GithubService } from '../main-process-api/GithubService';
 import type { WatchedUser, WatchedRepo } from '../../shared/tipc/webAdeRouterTypes';
+import type { GitHubUser, GitHubRepository } from '../../shared/main-process-api-interfaces/GitHubAPI';
 
 export interface WatchedItemsPanelProps {
   /** Event emitter for panel communication */
@@ -33,10 +35,14 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
   const [watchedUsers, setWatchedUsers] = useState<WatchedUser[]>([]);
   const [watchedRepos, setWatchedRepos] = useState<WatchedRepo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [inputValue, setInputValue] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [addTab, setAddTab] = useState<AddTab>('repos');
   const [operationInProgress, setOperationInProgress] = useState<string | null>(null);
-  const [inputError, setInputError] = useState<string | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [userResults, setUserResults] = useState<GitHubUser[]>([]);
+  const [repoResults, setRepoResults] = useState<GitHubRepository[]>([]);
+  const [hasSearched, setHasSearched] = useState(false);
 
   // Load watched items on mount
   const loadWatches = useCallback(async () => {
@@ -55,6 +61,57 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
   useEffect(() => {
     loadWatches();
   }, [loadWatches]);
+
+  // Debounced search effect (300ms delay like mobile app)
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setUserResults([]);
+      setRepoResults([]);
+      setHasSearched(false);
+      setSearchError(null);
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      setIsSearching(true);
+      setSearchError(null);
+
+      try {
+        // Search both users and repos in parallel
+        const [usersResponse, reposResponse] = await Promise.allSettled([
+          addTab === 'users' ? GithubService.searchUsers(searchQuery, { perPage: 15 }) : Promise.resolve({ users: [], totalCount: 0 }),
+          addTab === 'repos' ? GithubService.searchRepos(searchQuery, { perPage: 15 }) : Promise.resolve({ repos: [], totalCount: 0 }),
+        ]);
+
+        if (usersResponse.status === 'fulfilled') {
+          setUserResults(usersResponse.value.users);
+        } else {
+          setUserResults([]);
+          if (addTab === 'users') {
+            setSearchError('Failed to search users');
+          }
+        }
+
+        if (reposResponse.status === 'fulfilled') {
+          setRepoResults(reposResponse.value.repos);
+        } else {
+          setRepoResults([]);
+          if (addTab === 'repos') {
+            setSearchError('Failed to search repositories');
+          }
+        }
+
+        setHasSearched(true);
+      } catch (error) {
+        console.error('[WatchedItemsPanel] Search failed:', error);
+        setSearchError('Search failed. Please try again.');
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, addTab]);
 
   // Watch user
   const handleWatchUser = useCallback(
@@ -106,31 +163,49 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
     [events]
   );
 
-  // Handle adding item from input
-  const handleAddItem = useCallback(async () => {
-    const trimmed = inputValue.trim();
-    if (!trimmed) {
-      setInputError('Please enter a value');
-      return;
-    }
+  // Check if user is already watched
+  const isUserWatched = useCallback(
+    (login: string) => {
+      return watchedUsers.some((u) => u.login === login);
+    },
+    [watchedUsers]
+  );
 
-    setInputError(null);
+  // Check if repo is already watched
+  const isRepoWatched = useCallback(
+    (owner: string, repo: string) => {
+      return watchedRepos.some((r) => r.owner === owner && r.repo === repo);
+    },
+    [watchedRepos]
+  );
 
-    if (addTab === 'users') {
-      // Add user - just the username
-      await handleWatchUser(trimmed);
-      setInputValue('');
-    } else {
-      // Add repo - expect "owner/repo" format
-      const parts = trimmed.split('/');
-      if (parts.length !== 2 || !parts[0] || !parts[1]) {
-        setInputError('Repository format should be: owner/repo');
+  // Handle adding user from search results
+  const handleAddUser = useCallback(
+    async (user: GitHubUser) => {
+      if (isUserWatched(user.login)) {
         return;
       }
-      await handleWatchRepo(parts[0], parts[1]);
-      setInputValue('');
-    }
-  }, [inputValue, addTab, handleWatchUser, handleWatchRepo]);
+      await handleWatchUser(user.login);
+      // Clear search after adding
+      setSearchQuery('');
+    },
+    [handleWatchUser, isUserWatched]
+  );
+
+  // Handle adding repo from search results
+  const handleAddRepo = useCallback(
+    async (repo: GitHubRepository) => {
+      const owner = repo.owner.login;
+      const name = repo.name;
+      if (isRepoWatched(owner, name)) {
+        return;
+      }
+      await handleWatchRepo(owner, name);
+      // Clear search after adding
+      setSearchQuery('');
+    },
+    [handleWatchRepo, isRepoWatched]
+  );
 
   // Unwatch user
   const handleUnwatchUser = useCallback(
@@ -182,35 +257,6 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
     [events]
   );
 
-  // Check if user is already watched
-  const isUserWatched = useCallback(
-    (login: string) => {
-      return watchedUsers.some((u) => u.login === login);
-    },
-    [watchedUsers]
-  );
-
-  // Check if repo is already watched
-  const isRepoWatched = useCallback(
-    (owner: string, repo: string) => {
-      return watchedRepos.some((r) => r.owner === owner && r.repo === repo);
-    },
-    [watchedRepos]
-  );
-
-  // Validate input
-  const inputIsValid = useMemo(() => {
-    const trimmed = inputValue.trim();
-    if (!trimmed) return false;
-
-    if (addTab === 'users') {
-      return !isUserWatched(trimmed);
-    } else {
-      const parts = trimmed.split('/');
-      return parts.length === 2 && parts[0] && parts[1] && !isRepoWatched(parts[0], parts[1]);
-    }
-  }, [inputValue, addTab, isUserWatched, isRepoWatched]);
-
   return (
     <div
       style={{
@@ -242,7 +288,7 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
         </h3>
       </div>
 
-      {/* Add Item Section */}
+      {/* Search Section */}
       <div
         style={{
           padding: spacing.md,
@@ -250,7 +296,7 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
           flexShrink: 0,
         }}
       >
-        {/* Add Tabs */}
+        {/* Search Tabs */}
         <div
           style={{
             display: 'flex',
@@ -261,8 +307,7 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
           <button
             onClick={() => {
               setAddTab('repos');
-              setInputValue('');
-              setInputError(null);
+              setSearchQuery('');
             }}
             style={{
               flex: 1,
@@ -283,8 +328,7 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
           <button
             onClick={() => {
               setAddTab('users');
-              setInputValue('');
-              setInputError(null);
+              setSearchQuery('');
             }}
             style={{
               flex: 1,
@@ -304,93 +348,309 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
           </button>
         </div>
 
-        {/* Add Input */}
+        {/* Search Input */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
           <div
             style={{
+              position: 'relative',
               display: 'flex',
-              gap: spacing.sm,
+              alignItems: 'center',
             }}
           >
+            <Search
+              size={16}
+              style={{
+                position: 'absolute',
+                left: spacing.sm,
+                color: theme.colors.textSecondary,
+              }}
+            />
             <input
               type="text"
-              placeholder={addTab === 'users' ? 'Enter username' : 'Enter owner/repo'}
-              value={inputValue}
-              onChange={(e) => {
-                setInputValue(e.target.value);
-                setInputError(null);
-              }}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter' && inputIsValid) {
-                  handleAddItem();
-                }
-              }}
+              placeholder={addTab === 'users' ? 'Search users...' : 'Search repositories...'}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               style={{
                 flex: 1,
-                padding: `${spacing.sm}px`,
+                padding: `${spacing.sm}px ${spacing.sm}px ${spacing.sm}px ${spacing.lg + spacing.md}px`,
                 fontSize: theme.fontSizes[1],
                 color: theme.colors.text,
                 backgroundColor: theme.colors.background,
-                border: `1px solid ${inputError ? theme.colors.error : theme.colors.border}`,
+                border: `1px solid ${searchError ? theme.colors.error : theme.colors.border}`,
                 borderRadius: theme.radii?.[1] || 4,
                 outline: 'none',
               }}
             />
-            <button
-              onClick={handleAddItem}
-              disabled={!inputIsValid || operationInProgress !== null}
-              style={{
-                padding: `${spacing.sm}px ${spacing.md}px`,
-                fontSize: theme.fontSizes[1],
-                fontWeight: 600,
-                color: inputIsValid ? theme.colors.background : theme.colors.textSecondary,
-                backgroundColor: inputIsValid ? theme.colors.primary : theme.colors.border,
-                border: 'none',
-                borderRadius: theme.radii?.[1] || 4,
-                cursor: inputIsValid ? 'pointer' : 'not-allowed',
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing.xs,
-              }}
-            >
-              {operationInProgress !== null ? (
-                <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
-              ) : (
-                <Plus size={14} />
-              )}
-              Add
-            </button>
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                style={{
+                  position: 'absolute',
+                  right: spacing.sm,
+                  padding: spacing.xs,
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
-          {inputError && (
+          {searchError && (
             <div
               style={{
                 fontSize: theme.fontSizes[0],
                 color: theme.colors.error,
               }}
             >
-              {inputError}
+              {searchError}
             </div>
           )}
-          <div
-            style={{
-              fontSize: theme.fontSizes[0],
-              color: theme.colors.textSecondary,
-            }}
-          >
-            {addTab === 'users' ? 'Enter a GitHub username' : 'Format: owner/repository'}
-          </div>
         </div>
       </div>
 
-      {/* Content - Scrollable list */}
-      <div
-        style={{
-          flex: 1,
-          overflow: 'auto',
-          padding: spacing.md,
-        }}
-      >
-        {loading ? (
+      {/* Search Results or Watched Items */}
+      {searchQuery.trim() && hasSearched ? (
+        // Search Results Section
+        <div
+          style={{
+            flex: 1,
+            overflow: 'auto',
+            padding: spacing.md,
+          }}
+        >
+          {isSearching ? (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%',
+                color: theme.colors.textSecondary,
+                gap: spacing.sm,
+              }}
+            >
+              <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
+              Searching...
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
+              {addTab === 'users' ? (
+                userResults.length === 0 ? (
+                  <div
+                    style={{
+                      padding: spacing.md,
+                      fontSize: theme.fontSizes[1],
+                      color: theme.colors.textSecondary,
+                      textAlign: 'center',
+                    }}
+                  >
+                    No users found
+                  </div>
+                ) : (
+                  userResults.map((user) => {
+                    const alreadyWatched = isUserWatched(user.login);
+                    const isAdding = operationInProgress === `user:${user.login}`;
+                    return (
+                      <div
+                        key={user.login}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: spacing.sm,
+                          backgroundColor: theme.colors.backgroundSecondary,
+                          border: `1px solid ${theme.colors.border}`,
+                          borderRadius: theme.radii?.[1] || 4,
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
+                          {user.avatar_url ? (
+                            <img
+                              src={user.avatar_url}
+                              alt={user.login}
+                              style={{
+                                width: 32,
+                                height: 32,
+                                borderRadius: '50%',
+                              }}
+                            />
+                          ) : (
+                            <User size={32} />
+                          )}
+                          <div>
+                            <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.text }}>
+                              {user.login}
+                            </div>
+                            {user.name && (
+                              <div
+                                style={{
+                                  fontSize: theme.fontSizes[0],
+                                  color: theme.colors.textSecondary,
+                                }}
+                              >
+                                {user.name}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleAddUser(user)}
+                          disabled={alreadyWatched || isAdding}
+                          style={{
+                            padding: `${spacing.xs}px ${spacing.sm}px`,
+                            fontSize: theme.fontSizes[0],
+                            fontWeight: 600,
+                            color: alreadyWatched
+                              ? theme.colors.textSecondary
+                              : theme.colors.background,
+                            backgroundColor: alreadyWatched
+                              ? theme.colors.border
+                              : theme.colors.primary,
+                            border: 'none',
+                            borderRadius: theme.radii?.[1] || 4,
+                            cursor: alreadyWatched ? 'not-allowed' : 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: spacing.xs,
+                          }}
+                        >
+                          {isAdding ? (
+                            <>
+                              <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
+                              Adding...
+                            </>
+                          ) : alreadyWatched ? (
+                            'Watching'
+                          ) : (
+                            <>
+                              <Plus size={12} />
+                              Watch
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })
+                )
+              ) : (
+                repoResults.length === 0 ? (
+                  <div
+                    style={{
+                      padding: spacing.md,
+                      fontSize: theme.fontSizes[1],
+                      color: theme.colors.textSecondary,
+                      textAlign: 'center',
+                    }}
+                  >
+                    No repositories found
+                  </div>
+                ) : (
+                  repoResults.map((repo) => {
+                    const alreadyWatched = isRepoWatched(repo.owner.login, repo.name);
+                    const isAdding = operationInProgress === `repo:${repo.owner.login}/${repo.name}`;
+                    return (
+                      <div
+                        key={repo.full_name}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: spacing.sm,
+                          backgroundColor: theme.colors.backgroundSecondary,
+                          border: `1px solid ${theme.colors.border}`,
+                          borderRadius: theme.radii?.[1] || 4,
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
+                          <FolderGit2 size={20} style={{ flexShrink: 0 }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.text }}>
+                              {repo.owner.login}/{repo.name}
+                            </div>
+                            {repo.description && (
+                              <div
+                                style={{
+                                  fontSize: theme.fontSizes[0],
+                                  color: theme.colors.textSecondary,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {repo.description}
+                              </div>
+                            )}
+                            <div
+                              style={{
+                                fontSize: theme.fontSizes[0],
+                                color: theme.colors.textSecondary,
+                                marginTop: 2,
+                              }}
+                            >
+                              {repo.language && `${repo.language} • `}
+                              {repo.stargazers_count !== undefined && `⭐ ${repo.stargazers_count.toLocaleString()}`}
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleAddRepo(repo)}
+                          disabled={alreadyWatched || isAdding}
+                          style={{
+                            padding: `${spacing.xs}px ${spacing.sm}px`,
+                            fontSize: theme.fontSizes[0],
+                            fontWeight: 600,
+                            color: alreadyWatched
+                              ? theme.colors.textSecondary
+                              : theme.colors.background,
+                            backgroundColor: alreadyWatched
+                              ? theme.colors.border
+                              : theme.colors.primary,
+                            border: 'none',
+                            borderRadius: theme.radii?.[1] || 4,
+                            cursor: alreadyWatched ? 'not-allowed' : 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: spacing.xs,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {isAdding ? (
+                            <>
+                              <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
+                              Adding...
+                            </>
+                          ) : alreadyWatched ? (
+                            'Watching'
+                          ) : (
+                            <>
+                              <Plus size={12} />
+                              Watch
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })
+                )
+              )}
+            </div>
+          )}
+        </div>
+      ) : (
+        // Watched Items List
+        <div
+          style={{
+            flex: 1,
+            overflow: 'auto',
+            padding: spacing.md,
+          }}
+        >
+          {loading ? (
           <div
             style={{
               display: 'flex',
@@ -554,6 +814,7 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
           </div>
         )}
       </div>
+      )}
 
       {/* Add CSS for spinning animation */}
       <style>

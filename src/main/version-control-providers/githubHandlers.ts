@@ -26,6 +26,8 @@ import {
   ForkRepositoryOptions,
   GitHubOrgMember,
   GitHubRepositoryWithPermissions,
+  SearchUsersResponse,
+  SearchReposResponse,
 } from '../../shared/main-process-api-interfaces/GitHubAPI';
 import { getSkillLockFileService } from '../skills/skillLockFile';
 import { normalizeGitHubSource, SkillLockAPIEvent } from '../../shared/main-process-api-interfaces/SkillLockAPI';
@@ -1638,6 +1640,54 @@ export class GitHubAdapter {
     }
 
     return null;
+  }
+
+  /**
+   * Search for GitHub users
+   */
+  async searchUsers(query: string, options?: { perPage?: number }): Promise<SearchUsersResponse> {
+    const queryParams = new URLSearchParams();
+    queryParams.set('q', query);
+    if (options?.perPage) {
+      queryParams.set('per_page', String(options.perPage));
+    }
+
+    const endpoint = `/search/users?${queryParams.toString()}`;
+    const apiResult = await this.makeGitHubAPICall(endpoint);
+
+    if (apiResult.success && apiResult.data) {
+      const data = apiResult.data as { total_count: number; items: GitHubUser[] };
+      return {
+        users: data.items || [],
+        totalCount: data.total_count || 0,
+      };
+    }
+
+    return { users: [], totalCount: 0 };
+  }
+
+  /**
+   * Search for GitHub repositories
+   */
+  async searchRepos(query: string, options?: { perPage?: number }): Promise<SearchReposResponse> {
+    const queryParams = new URLSearchParams();
+    queryParams.set('q', query);
+    if (options?.perPage) {
+      queryParams.set('per_page', String(options.perPage));
+    }
+
+    const endpoint = `/search/repositories?${queryParams.toString()}`;
+    const apiResult = await this.makeGitHubAPICall(endpoint);
+
+    if (apiResult.success && apiResult.data) {
+      const data = apiResult.data as { total_count: number; items: GitHubRepository[] };
+      return {
+        repos: data.items || [],
+        totalCount: data.total_count || 0,
+      };
+    }
+
+    return { repos: [], totalCount: 0 };
   }
 
   /**
