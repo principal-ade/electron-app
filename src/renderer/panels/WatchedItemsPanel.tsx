@@ -19,7 +19,7 @@ export interface WatchedItemsPanelProps {
   events: PanelEventEmitter;
 }
 
-type AddTab = 'users' | 'repos';
+type ResultTab = 'users' | 'repos';
 
 export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) => {
   const { theme } = useTheme();
@@ -36,7 +36,7 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
   const [watchedRepos, setWatchedRepos] = useState<WatchedRepo[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [addTab, setAddTab] = useState<AddTab>('repos');
+  const [resultTab, setResultTab] = useState<ResultTab>('repos');
   const [operationInProgress, setOperationInProgress] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -79,26 +79,27 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
       try {
         // Search both users and repos in parallel
         const [usersResponse, reposResponse] = await Promise.allSettled([
-          addTab === 'users' ? GithubService.searchUsers(searchQuery, { perPage: 15 }) : Promise.resolve({ users: [], totalCount: 0 }),
-          addTab === 'repos' ? GithubService.searchRepos(searchQuery, { perPage: 15 }) : Promise.resolve({ repos: [], totalCount: 0 }),
+          GithubService.searchUsers(searchQuery, { perPage: 15 }),
+          GithubService.searchRepos(searchQuery, { perPage: 15 }),
         ]);
 
+        let hasError = false;
         if (usersResponse.status === 'fulfilled') {
           setUserResults(usersResponse.value.users);
         } else {
           setUserResults([]);
-          if (addTab === 'users') {
-            setSearchError('Failed to search users');
-          }
+          hasError = true;
         }
 
         if (reposResponse.status === 'fulfilled') {
           setRepoResults(reposResponse.value.repos);
         } else {
           setRepoResults([]);
-          if (addTab === 'repos') {
-            setSearchError('Failed to search repositories');
-          }
+          hasError = true;
+        }
+
+        if (hasError) {
+          setSearchError('Search encountered errors. Some results may be missing.');
         }
 
         setHasSearched(true);
@@ -111,7 +112,7 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [searchQuery, addTab]);
+  }, [searchQuery]);
 
   // Watch user
   const handleWatchUser = useCallback(
@@ -268,86 +269,13 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
         overflow: 'hidden',
       }}
     >
-      {/* Header */}
-      <div
-        style={{
-          padding: spacing.md,
-          borderBottom: `1px solid ${theme.colors.border}`,
-          flexShrink: 0,
-        }}
-      >
-        <h3
-          style={{
-            margin: 0,
-            fontSize: theme.fontSizes[2],
-            fontWeight: 600,
-            color: theme.colors.text,
-          }}
-        >
-          Watched Items
-        </h3>
-      </div>
-
       {/* Search Section */}
       <div
         style={{
-          padding: spacing.md,
           borderBottom: `1px solid ${theme.colors.border}`,
           flexShrink: 0,
         }}
       >
-        {/* Search Tabs */}
-        <div
-          style={{
-            display: 'flex',
-            gap: spacing.xs,
-            marginBottom: spacing.sm,
-          }}
-        >
-          <button
-            onClick={() => {
-              setAddTab('repos');
-              setSearchQuery('');
-            }}
-            style={{
-              flex: 1,
-              padding: `${spacing.xs}px ${spacing.sm}px`,
-              fontSize: theme.fontSizes[1],
-              fontWeight: addTab === 'repos' ? 600 : 400,
-              color: addTab === 'repos' ? theme.colors.primary : theme.colors.textSecondary,
-              backgroundColor:
-                addTab === 'repos' ? `${theme.colors.primary}15` : 'transparent',
-              border: `1px solid ${addTab === 'repos' ? theme.colors.primary : theme.colors.border}`,
-              borderRadius: theme.radii?.[1] || 4,
-              cursor: 'pointer',
-            }}
-          >
-            <FolderGit2 size={14} style={{ marginRight: spacing.xs, verticalAlign: 'middle' }} />
-            Repositories
-          </button>
-          <button
-            onClick={() => {
-              setAddTab('users');
-              setSearchQuery('');
-            }}
-            style={{
-              flex: 1,
-              padding: `${spacing.xs}px ${spacing.sm}px`,
-              fontSize: theme.fontSizes[1],
-              fontWeight: addTab === 'users' ? 600 : 400,
-              color: addTab === 'users' ? theme.colors.primary : theme.colors.textSecondary,
-              backgroundColor:
-                addTab === 'users' ? `${theme.colors.primary}15` : 'transparent',
-              border: `1px solid ${addTab === 'users' ? theme.colors.primary : theme.colors.border}`,
-              borderRadius: theme.radii?.[1] || 4,
-              cursor: 'pointer',
-            }}
-          >
-            <User size={14} style={{ marginRight: spacing.xs, verticalAlign: 'middle' }} />
-            Users
-          </button>
-        </div>
-
         {/* Search Input */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
           <div
@@ -367,7 +295,7 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
             />
             <input
               type="text"
-              placeholder={addTab === 'users' ? 'Search users...' : 'Search repositories...'}
+              placeholder="Search users and repositories..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
@@ -376,8 +304,7 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
                 fontSize: theme.fontSizes[1],
                 color: theme.colors.text,
                 backgroundColor: theme.colors.background,
-                border: `1px solid ${searchError ? theme.colors.error : theme.colors.border}`,
-                borderRadius: theme.radii?.[1] || 4,
+                border: 'none',
                 outline: 'none',
               }}
             />
@@ -419,8 +346,9 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
         <div
           style={{
             flex: 1,
-            overflow: 'auto',
-            padding: spacing.md,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
           }}
         >
           {isSearching ? (
@@ -438,207 +366,267 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
               Searching...
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
-              {addTab === 'users' ? (
-                userResults.length === 0 ? (
-                  <div
-                    style={{
-                      padding: spacing.md,
-                      fontSize: theme.fontSizes[1],
-                      color: theme.colors.textSecondary,
-                      textAlign: 'center',
-                    }}
-                  >
-                    No users found
-                  </div>
-                ) : (
-                  userResults.map((user) => {
-                    const alreadyWatched = isUserWatched(user.login);
-                    const isAdding = operationInProgress === `user:${user.login}`;
-                    return (
+            <>
+              {/* Result Tabs */}
+              <div
+                style={{
+                  display: 'flex',
+                  gap: spacing.xs,
+                  padding: spacing.md,
+                  paddingBottom: spacing.sm,
+                  borderBottom: `1px solid ${theme.colors.border}`,
+                  flexShrink: 0,
+                }}
+              >
+                <button
+                  onClick={() => setResultTab('repos')}
+                  style={{
+                    flex: 1,
+                    padding: `${spacing.xs}px ${spacing.sm}px`,
+                    fontSize: theme.fontSizes[1],
+                    fontWeight: resultTab === 'repos' ? 600 : 400,
+                    color: resultTab === 'repos' ? theme.colors.primary : theme.colors.textSecondary,
+                    backgroundColor:
+                      resultTab === 'repos' ? `${theme.colors.primary}15` : 'transparent',
+                    border: `1px solid ${resultTab === 'repos' ? theme.colors.primary : theme.colors.border}`,
+                    borderRadius: theme.radii?.[1] || 4,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <FolderGit2 size={14} style={{ marginRight: spacing.xs, verticalAlign: 'middle' }} />
+                  Repositories ({repoResults.length})
+                </button>
+                <button
+                  onClick={() => setResultTab('users')}
+                  style={{
+                    flex: 1,
+                    padding: `${spacing.xs}px ${spacing.sm}px`,
+                    fontSize: theme.fontSizes[1],
+                    fontWeight: resultTab === 'users' ? 600 : 400,
+                    color: resultTab === 'users' ? theme.colors.primary : theme.colors.textSecondary,
+                    backgroundColor:
+                      resultTab === 'users' ? `${theme.colors.primary}15` : 'transparent',
+                    border: `1px solid ${resultTab === 'users' ? theme.colors.primary : theme.colors.border}`,
+                    borderRadius: theme.radii?.[1] || 4,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <User size={14} style={{ marginRight: spacing.xs, verticalAlign: 'middle' }} />
+                  Users ({userResults.length})
+                </button>
+              </div>
+
+              {/* Results List */}
+              <div
+                style={{
+                  flex: 1,
+                  overflow: 'auto',
+                  padding: spacing.md,
+                }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
+                  {resultTab === 'users' ? (
+                    userResults.length === 0 ? (
                       <div
-                        key={user.login}
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: spacing.sm,
-                          backgroundColor: theme.colors.backgroundSecondary,
-                          border: `1px solid ${theme.colors.border}`,
-                          borderRadius: theme.radii?.[1] || 4,
+                          padding: spacing.md,
+                          fontSize: theme.fontSizes[1],
+                          color: theme.colors.textSecondary,
+                          textAlign: 'center',
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
-                          {user.avatar_url ? (
-                            <img
-                              src={user.avatar_url}
-                              alt={user.login}
-                              style={{
-                                width: 32,
-                                height: 32,
-                                borderRadius: '50%',
-                              }}
-                            />
-                          ) : (
-                            <User size={32} />
-                          )}
-                          <div>
-                            <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.text }}>
-                              {user.login}
-                            </div>
-                            {user.name && (
-                              <div
-                                style={{
-                                  fontSize: theme.fontSizes[0],
-                                  color: theme.colors.textSecondary,
-                                }}
-                              >
-                                {user.name}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => handleAddUser(user)}
-                          disabled={alreadyWatched || isAdding}
-                          style={{
-                            padding: `${spacing.xs}px ${spacing.sm}px`,
-                            fontSize: theme.fontSizes[0],
-                            fontWeight: 600,
-                            color: alreadyWatched
-                              ? theme.colors.textSecondary
-                              : theme.colors.background,
-                            backgroundColor: alreadyWatched
-                              ? theme.colors.border
-                              : theme.colors.primary,
-                            border: 'none',
-                            borderRadius: theme.radii?.[1] || 4,
-                            cursor: alreadyWatched ? 'not-allowed' : 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: spacing.xs,
-                          }}
-                        >
-                          {isAdding ? (
-                            <>
-                              <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
-                              Adding...
-                            </>
-                          ) : alreadyWatched ? (
-                            'Watching'
-                          ) : (
-                            <>
-                              <Plus size={12} />
-                              Watch
-                            </>
-                          )}
-                        </button>
+                        No users found
                       </div>
-                    );
-                  })
-                )
-              ) : (
-                repoResults.length === 0 ? (
-                  <div
-                    style={{
-                      padding: spacing.md,
-                      fontSize: theme.fontSizes[1],
-                      color: theme.colors.textSecondary,
-                      textAlign: 'center',
-                    }}
-                  >
-                    No repositories found
-                  </div>
-                ) : (
-                  repoResults.map((repo) => {
-                    const alreadyWatched = isRepoWatched(repo.owner.login, repo.name);
-                    const isAdding = operationInProgress === `repo:${repo.owner.login}/${repo.name}`;
-                    return (
-                      <div
-                        key={repo.full_name}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: spacing.sm,
-                          backgroundColor: theme.colors.backgroundSecondary,
-                          border: `1px solid ${theme.colors.border}`,
-                          borderRadius: theme.radii?.[1] || 4,
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
-                          <FolderGit2 size={20} style={{ flexShrink: 0 }} />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.text }}>
-                              {repo.owner.login}/{repo.name}
-                            </div>
-                            {repo.description && (
-                              <div
-                                style={{
-                                  fontSize: theme.fontSizes[0],
-                                  color: theme.colors.textSecondary,
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                }}
-                              >
-                                {repo.description}
+                    ) : (
+                      userResults.map((user) => {
+                        const alreadyWatched = isUserWatched(user.login);
+                        const isAdding = operationInProgress === `user:${user.login}`;
+                        return (
+                          <div
+                            key={user.login}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: spacing.sm,
+                              backgroundColor: theme.colors.backgroundSecondary,
+                              border: `1px solid ${theme.colors.border}`,
+                              borderRadius: theme.radii?.[1] || 4,
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
+                              {user.avatar_url ? (
+                                <img
+                                  src={user.avatar_url}
+                                  alt={user.login}
+                                  style={{
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: '50%',
+                                  }}
+                                />
+                              ) : (
+                                <User size={32} />
+                              )}
+                              <div>
+                                <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.text }}>
+                                  {user.login}
+                                </div>
+                                {user.name && (
+                                  <div
+                                    style={{
+                                      fontSize: theme.fontSizes[0],
+                                      color: theme.colors.textSecondary,
+                                    }}
+                                  >
+                                    {user.name}
+                                  </div>
+                                )}
                               </div>
-                            )}
-                            <div
+                            </div>
+                            <button
+                              onClick={() => handleAddUser(user)}
+                              disabled={alreadyWatched || isAdding}
                               style={{
+                                padding: `${spacing.xs}px ${spacing.sm}px`,
                                 fontSize: theme.fontSizes[0],
-                                color: theme.colors.textSecondary,
-                                marginTop: 2,
+                                fontWeight: 600,
+                                color: alreadyWatched
+                                  ? theme.colors.textSecondary
+                                  : theme.colors.background,
+                                backgroundColor: alreadyWatched
+                                  ? theme.colors.border
+                                  : theme.colors.primary,
+                                border: 'none',
+                                borderRadius: theme.radii?.[1] || 4,
+                                cursor: alreadyWatched ? 'not-allowed' : 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: spacing.xs,
                               }}
                             >
-                              {repo.language && `${repo.language} • `}
-                              {repo.stargazers_count !== undefined && `⭐ ${repo.stargazers_count.toLocaleString()}`}
-                            </div>
+                              {isAdding ? (
+                                <>
+                                  <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
+                                  Adding...
+                                </>
+                              ) : alreadyWatched ? (
+                                'Watching'
+                              ) : (
+                                <>
+                                  <Plus size={12} />
+                                  Watch
+                                </>
+                              )}
+                            </button>
                           </div>
-                        </div>
-                        <button
-                          onClick={() => handleAddRepo(repo)}
-                          disabled={alreadyWatched || isAdding}
-                          style={{
-                            padding: `${spacing.xs}px ${spacing.sm}px`,
-                            fontSize: theme.fontSizes[0],
-                            fontWeight: 600,
-                            color: alreadyWatched
-                              ? theme.colors.textSecondary
-                              : theme.colors.background,
-                            backgroundColor: alreadyWatched
-                              ? theme.colors.border
-                              : theme.colors.primary,
-                            border: 'none',
-                            borderRadius: theme.radii?.[1] || 4,
-                            cursor: alreadyWatched ? 'not-allowed' : 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: spacing.xs,
-                            flexShrink: 0,
-                          }}
-                        >
-                          {isAdding ? (
-                            <>
-                              <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
-                              Adding...
-                            </>
-                          ) : alreadyWatched ? (
-                            'Watching'
-                          ) : (
-                            <>
-                              <Plus size={12} />
-                              Watch
-                            </>
-                          )}
-                        </button>
+                        );
+                      })
+                    )
+                  ) : (
+                    repoResults.length === 0 ? (
+                      <div
+                        style={{
+                          padding: spacing.md,
+                          fontSize: theme.fontSizes[1],
+                          color: theme.colors.textSecondary,
+                          textAlign: 'center',
+                        }}
+                      >
+                        No repositories found
                       </div>
-                    );
-                  })
-                )
-              )}
-            </div>
+                    ) : (
+                      repoResults.map((repo) => {
+                        const alreadyWatched = isRepoWatched(repo.owner.login, repo.name);
+                        const isAdding = operationInProgress === `repo:${repo.owner.login}/${repo.name}`;
+                        return (
+                          <div
+                            key={repo.full_name}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: spacing.sm,
+                              backgroundColor: theme.colors.backgroundSecondary,
+                              border: `1px solid ${theme.colors.border}`,
+                              borderRadius: theme.radii?.[1] || 4,
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
+                              <FolderGit2 size={20} style={{ flexShrink: 0 }} />
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.text }}>
+                                  {repo.owner.login}/{repo.name}
+                                </div>
+                                {repo.description && (
+                                  <div
+                                    style={{
+                                      fontSize: theme.fontSizes[0],
+                                      color: theme.colors.textSecondary,
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap',
+                                    }}
+                                  >
+                                    {repo.description}
+                                  </div>
+                                )}
+                                <div
+                                  style={{
+                                    fontSize: theme.fontSizes[0],
+                                    color: theme.colors.textSecondary,
+                                    marginTop: 2,
+                                  }}
+                                >
+                                  {repo.language && `${repo.language} • `}
+                                  {repo.stargazers_count !== undefined && `⭐ ${repo.stargazers_count.toLocaleString()}`}
+                                </div>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleAddRepo(repo)}
+                              disabled={alreadyWatched || isAdding}
+                              style={{
+                                padding: `${spacing.xs}px ${spacing.sm}px`,
+                                fontSize: theme.fontSizes[0],
+                                fontWeight: 600,
+                                color: alreadyWatched
+                                  ? theme.colors.textSecondary
+                                  : theme.colors.background,
+                                backgroundColor: alreadyWatched
+                                  ? theme.colors.border
+                                  : theme.colors.primary,
+                                border: 'none',
+                                borderRadius: theme.radii?.[1] || 4,
+                                cursor: alreadyWatched ? 'not-allowed' : 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: spacing.xs,
+                                flexShrink: 0,
+                              }}
+                            >
+                              {isAdding ? (
+                                <>
+                                  <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
+                                  Adding...
+                                </>
+                              ) : alreadyWatched ? (
+                                'Watching'
+                              ) : (
+                                <>
+                                  <Plus size={12} />
+                                  Watch
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        );
+                      })
+                    )
+                  )}
+                </div>
+              </div>
+            </>
           )}
         </div>
       ) : (
@@ -651,169 +639,267 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
           }}
         >
           {loading ? (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '100%',
-              color: theme.colors.textSecondary,
-            }}
-          >
-            <Loader2 size={24} style={{ animation: 'spin 1s linear infinite' }} />
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.lg }}>
-            {/* Watched Repositories Section */}
-            <div>
-              <div
-                style={{
-                  fontSize: theme.fontSizes[1],
-                  fontWeight: 600,
-                  color: theme.colors.textSecondary,
-                  marginBottom: spacing.sm,
-                }}
-              >
-                Watched Repositories ({watchedRepos.length})
-              </div>
-
-              {watchedRepos.length === 0 ? (
-                <div
-                  style={{
-                    padding: spacing.md,
-                    fontSize: theme.fontSizes[1],
-                    color: theme.colors.textSecondary,
-                    textAlign: 'center',
-                  }}
-                >
-                  No watched repositories
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
-                  {watchedRepos.map((repo) => (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%',
+                color: theme.colors.textSecondary,
+              }}
+            >
+              <Loader2 size={24} style={{ animation: 'spin 1s linear infinite' }} />
+            </div>
+          ) : watchedRepos.length === 0 && watchedUsers.length === 0 ? (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%',
+                color: theme.colors.textSecondary,
+                fontSize: theme.fontSizes[1],
+                textAlign: 'center',
+              }}
+            >
+              <User size={32} style={{ marginBottom: spacing.sm, opacity: 0.3 }} />
+              <span>No watched items</span>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
+              {/* Watched Users */}
+              {watchedUsers.map((user) => {
+                const isInProgress = operationInProgress === `user:${user.login}`;
+                return (
+                  <div
+                    key={`user:${user.login}`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: spacing.sm,
+                      width: '100%',
+                      padding: spacing.sm,
+                      backgroundColor: 'transparent',
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: theme.radii?.[1] || 4,
+                      cursor: 'default',
+                      transition: 'all 0.15s ease',
+                      position: 'relative',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    {/* Avatar */}
                     <div
-                      key={`${repo.owner}/${repo.repo}`}
                       style={{
+                        width: 72,
+                        height: 72,
+                        borderRadius: '50%',
+                        backgroundColor: theme.colors.background,
+                        border: `1px solid ${theme.colors.border}`,
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: spacing.sm,
-                        backgroundColor: theme.colors.backgroundSecondary,
-                        border: `1px solid ${theme.colors.border}`,
-                        borderRadius: theme.radii?.[1] || 4,
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        overflow: 'hidden',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
-                        <FolderGit2 size={20} />
-                        <span style={{ fontSize: theme.fontSizes[1], color: theme.colors.text }}>
-                          {repo.owner}/{repo.repo}
-                        </span>
-                      </div>
-                      <button
-                        onClick={() => handleUnwatchRepo(repo.owner, repo.repo)}
-                        disabled={operationInProgress === `repo:${repo.owner}/${repo.repo}`}
+                      <img
+                        src={`https://github.com/${user.login}.png?size=120`}
+                        alt={user.login}
                         style={{
-                          padding: `${spacing.xs}px ${spacing.sm}px`,
-                          fontSize: theme.fontSizes[0],
-                          color: theme.colors.textSecondary,
-                          backgroundColor: 'transparent',
-                          border: `1px solid ${theme.colors.border}`,
-                          borderRadius: theme.radii?.[1] || 4,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: spacing.xs,
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                        }}
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    </div>
+
+                    {/* Text content */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: theme.fontSizes[1],
+                          fontWeight: 600,
+                          color: theme.colors.text,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          marginBottom: 2,
                         }}
                       >
-                        {operationInProgress === `repo:${repo.owner}/${repo.repo}` ? (
-                          <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
-                        ) : (
-                          <X size={12} />
-                        )}
-                        Unwatch
-                      </button>
+                        {user.login}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: theme.fontSizes[0],
+                          color: theme.colors.textSecondary,
+                        }}
+                      >
+                        User
+                      </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
 
-            {/* Watched Users Section */}
-            <div>
-              <div
-                style={{
-                  fontSize: theme.fontSizes[1],
-                  fontWeight: 600,
-                  color: theme.colors.textSecondary,
-                  marginBottom: spacing.sm,
-                }}
-              >
-                Watched Users ({watchedUsers.length})
-              </div>
-
-              {watchedUsers.length === 0 ? (
-                <div
-                  style={{
-                    padding: spacing.md,
-                    fontSize: theme.fontSizes[1],
-                    color: theme.colors.textSecondary,
-                    textAlign: 'center',
-                  }}
-                >
-                  No watched users
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
-                  {watchedUsers.map((user) => (
-                    <div
-                      key={user.login}
+                    {/* Unwatch button */}
+                    <button
+                      onClick={() => handleUnwatchUser(user.login)}
+                      disabled={isInProgress}
                       style={{
+                        padding: `${spacing.xs}px ${spacing.sm}px`,
+                        fontSize: theme.fontSizes[0],
+                        color: theme.colors.textSecondary,
+                        backgroundColor: 'transparent',
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: theme.radii?.[1] || 4,
+                        cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: spacing.sm,
-                        backgroundColor: theme.colors.backgroundSecondary,
-                        border: `1px solid ${theme.colors.border}`,
-                        borderRadius: theme.radii?.[1] || 4,
+                        gap: spacing.xs,
+                        flexShrink: 0,
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
-                        <User size={20} />
-                        <span style={{ fontSize: theme.fontSizes[1], color: theme.colors.text }}>
-                          {user.login}
-                        </span>
-                      </div>
-                      <button
-                        onClick={() => handleUnwatchUser(user.login)}
-                        disabled={operationInProgress === `user:${user.login}`}
+                      {isInProgress ? (
+                        <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
+                      ) : (
+                        <X size={12} />
+                      )}
+                      Unwatch
+                    </button>
+                  </div>
+                );
+              })}
+
+              {/* Watched Repositories */}
+              {watchedRepos.map((repo) => {
+                const isInProgress = operationInProgress === `repo:${repo.owner}/${repo.repo}`;
+                return (
+                  <div
+                    key={`repo:${repo.owner}/${repo.repo}`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: spacing.sm,
+                      width: '100%',
+                      padding: spacing.sm,
+                      backgroundColor: 'transparent',
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: theme.radii?.[1] || 4,
+                      cursor: 'default',
+                      transition: 'all 0.15s ease',
+                      position: 'relative',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    {/* Avatar */}
+                    <div
+                      style={{
+                        width: 72,
+                        height: 72,
+                        borderRadius: '50%',
+                        backgroundColor: theme.colors.background,
+                        border: `1px solid ${theme.colors.border}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <img
+                        src={`https://github.com/${repo.owner}.png?size=120`}
+                        alt={repo.owner}
                         style={{
-                          padding: `${spacing.xs}px ${spacing.sm}px`,
-                          fontSize: theme.fontSizes[0],
-                          color: theme.colors.textSecondary,
-                          backgroundColor: 'transparent',
-                          border: `1px solid ${theme.colors.border}`,
-                          borderRadius: theme.radii?.[1] || 4,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: spacing.xs,
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                        }}
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    </div>
+
+                    {/* Text content */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: theme.fontSizes[1],
+                          fontWeight: 600,
+                          color: theme.colors.text,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          marginBottom: 2,
                         }}
                       >
-                        {operationInProgress === `user:${user.login}` ? (
-                          <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
-                        ) : (
-                          <X size={12} />
-                        )}
-                        Unwatch
-                      </button>
+                        {repo.repo}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: theme.fontSizes[0],
+                          color: theme.colors.textSecondary,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          marginBottom: 4,
+                        }}
+                      >
+                        {repo.owner}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: theme.fontSizes[0],
+                          color: theme.colors.textTertiary,
+                        }}
+                      >
+                        Repository
+                      </div>
                     </div>
-                  ))}
-                </div>
-              )}
+
+                    {/* Unwatch button */}
+                    <button
+                      onClick={() => handleUnwatchRepo(repo.owner, repo.repo)}
+                      disabled={isInProgress}
+                      style={{
+                        padding: `${spacing.xs}px ${spacing.sm}px`,
+                        fontSize: theme.fontSizes[0],
+                        color: theme.colors.textSecondary,
+                        backgroundColor: 'transparent',
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: theme.radii?.[1] || 4,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: spacing.xs,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {isInProgress ? (
+                        <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
+                      ) : (
+                        <X size={12} />
+                      )}
+                      Unwatch
+                    </button>
+                  </div>
+                );
+              })}
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
       )}
 
       {/* Add CSS for spinning animation */}
