@@ -42,7 +42,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-principal-window"
       }
     },
     {
@@ -81,7 +82,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-principal-window"
       }
     },
     {
@@ -120,7 +122,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-principal-window"
       }
     },
     {
@@ -171,7 +174,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-principal-window"
       }
     },
     {
@@ -210,7 +214,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-principal-window"
       }
     },
     {
@@ -249,7 +254,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-principal-window"
       }
     },
     {
@@ -284,7 +290,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -315,7 +322,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -362,7 +370,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -405,7 +414,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -440,7 +450,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -483,7 +494,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -510,7 +522,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-principal-window"
       }
     },
     {
@@ -549,7 +562,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-principal-window"
       }
     },
     {
@@ -588,7 +602,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-principal-window"
       }
     },
     {
@@ -623,7 +638,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-principal-window"
       }
     },
     {
@@ -654,7 +670,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-principal-window"
       }
     }
   ],

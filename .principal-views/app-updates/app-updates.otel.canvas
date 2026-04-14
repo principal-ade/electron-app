@@ -37,7 +37,8 @@
         "status": "implemented",
         "files": [
           "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
-        ]
+        ],
+        "scope": "principal-ade-principal-window"
       }
     },
     {
@@ -63,7 +64,8 @@
         "status": "implemented",
         "files": [
           "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
-        ]
+        ],
+        "scope": "principal-ade-principal-window"
       }
     },
     {
@@ -86,7 +88,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-principal-window"
       }
     },
     {
@@ -113,7 +116,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-principal-window"
       }
     },
     {
@@ -143,7 +147,8 @@
         "status": "implemented",
         "files": [
           "src/main/AppVersionManager.ts"
-        ]
+        ],
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -173,7 +178,8 @@
         "status": "implemented",
         "files": [
           "src/main/AppVersionManager.ts"
-        ]
+        ],
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -207,7 +213,8 @@
         "status": "implemented",
         "files": [
           "src/main/AppVersionManager.ts"
-        ]
+        ],
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -281,7 +288,8 @@
         "status": "implemented",
         "files": [
           "src/main/AppVersionManager.ts"
-        ]
+        ],
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -307,7 +315,8 @@
         "status": "implemented",
         "files": [
           "src/main/AppVersionManager.ts"
-        ]
+        ],
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -333,7 +342,8 @@
         "status": "implemented",
         "files": [
           "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
-        ]
+        ],
+        "scope": "principal-ade-principal-window"
       }
     },
     {
@@ -359,7 +369,8 @@
         "status": "implemented",
         "files": [
           "src/main/AppVersionManager.ts"
-        ]
+        ],
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -397,7 +408,8 @@
         "status": "implemented",
         "files": [
           "src/main/AppVersionManager.ts"
-        ]
+        ],
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -423,7 +435,8 @@
         "status": "implemented",
         "files": [
           "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
-        ]
+        ],
+        "scope": "principal-ade-principal-window"
       }
     },
     {
@@ -454,7 +467,8 @@
         "status": "implemented",
         "files": [
           "src/main/AppVersionManager.ts"
-        ]
+        ],
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -480,7 +494,8 @@
         "status": "implemented",
         "files": [
           "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
-        ]
+        ],
+        "scope": "principal-ade-principal-window"
       }
     },
     {
@@ -506,7 +521,8 @@
         "status": "implemented",
         "files": [
           "src/main/AppVersionManager.ts"
-        ]
+        ],
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -533,7 +549,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -567,7 +584,8 @@
         "status": "implemented",
         "files": [
           "src/main/AppVersionManager.ts"
-        ]
+        ],
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -597,7 +615,8 @@
         "status": "implemented",
         "files": [
           "src/main/AppVersionManager.ts"
-        ]
+        ],
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -623,7 +642,8 @@
         "status": "implemented",
         "files": [
           "src/main/AppVersionManager.ts"
-        ]
+        ],
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -646,7 +666,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -697,7 +718,8 @@
         "status": "implemented",
         "files": [
           "src/renderer/principal-window/views/Settings/components/UpdatesSettings.tsx"
-        ]
+        ],
+        "scope": "principal-ade-principal-window"
       }
     },
     {
@@ -727,7 +749,8 @@
         "status": "implemented",
         "files": [
           "src/renderer/components/Titlebar/TitlebarUpdateButton.tsx"
-        ]
+        ],
+        "scope": "principal-ade-renderer"
       }
     },
     {
@@ -753,7 +776,8 @@
         "status": "implemented",
         "files": [
           "src/renderer/components/Titlebar/TitlebarUpdateButton.tsx"
-        ]
+        ],
+        "scope": "principal-ade-renderer"
       }
     },
     {
@@ -780,7 +804,8 @@
         "files": [
           "src/main/window/modernWindowHandlers.ts",
           "src/window/main-process-api-implementations/windowApi.ts"
-        ]
+        ],
+        "scope": "principal-ade-principal-window"
       }
     },
     {

@@ -131,7 +131,7 @@
       },
       "otel": {
         "status": "draft",
-        "scope": "principal-ade-worker",
+        "scope": "principal-ade-cli-bridge",
         "files": [
           "src/main/electron-cli-bridge/workers/universal-worker.cjs"
         ]
@@ -207,7 +207,7 @@
       },
       "otel": {
         "status": "draft",
-        "scope": "principal-ade-worker",
+        "scope": "principal-ade-cli-bridge",
         "files": [
           "src/main/electron-cli-bridge/workers/universal-worker.cjs"
         ]
