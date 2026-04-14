@@ -84,7 +84,7 @@ const SkillBrowserViewContent: React.FC = () => {
 
   // State for skill editor modal
   const [showEditorModal, setShowEditorModal] = useState(false);
-  const [_canEditSelectedSkill, _setCanEditSelectedSkill] = useState(false);
+  const [canEditSelectedSkill, setCanEditSelectedSkill] = useState(false);
   const [selectedSkillSource, setSelectedSkillSource] = useState<{
     owner: string;
     repo: string;
@@ -350,6 +350,39 @@ const SkillBrowserViewContent: React.FC = () => {
 
     return unsubscribe;
   }, [events, loadInstalledSkills]);
+
+  // Listen for skill edit events
+  useEffect(() => {
+    const unsubscribe = events.on('skill:edit', (_event) => {
+      if (!selectedSkill) return;
+
+      console.info('[SkillBrowserView] Skill edit requested:', {
+        skillName: selectedSkill.name,
+        canEdit: canEditSelectedSkill,
+        hasSource: !!selectedSkillSource,
+      });
+
+      // Check if we can edit via GitHub
+      if (canEditSelectedSkill && selectedSkillSource) {
+        // Has permission - open GitHub editor modal
+        console.info('[SkillBrowserView] Opening GitHub editor modal');
+        setShowEditorModal(true);
+      } else {
+        // No permission or no source - open local MDX editor
+        console.info('[SkillBrowserView] Opening local MDX editor');
+        events.emit({
+          type: 'file:openInMdxEditor',
+          source: 'SkillBrowserView',
+          timestamp: Date.now(),
+          payload: {
+            filePath: selectedSkill.path,
+          },
+        });
+      }
+    });
+
+    return unsubscribe;
+  }, [events, selectedSkill, canEditSelectedSkill, selectedSkillSource]);
 
   // Switch file tree when view mode changes
   useEffect(() => {
@@ -715,7 +748,7 @@ const SkillBrowserViewContent: React.FC = () => {
   // Check edit permission and load skill source when selected skill changes
   useEffect(() => {
     if (!selectedSkill || !isSkillInstalled(selectedSkill)) {
-      _setCanEditSelectedSkill(false);
+      setCanEditSelectedSkill(false);
       setSelectedSkillSource(null);
       return;
     }
@@ -725,7 +758,7 @@ const SkillBrowserViewContent: React.FC = () => {
       try {
         // Check permission
         const permissionResult = await SkillLockService.checkEditPermission(folderName);
-        _setCanEditSelectedSkill(permissionResult.canEdit);
+        setCanEditSelectedSkill(permissionResult.canEdit);
 
         // Load skill source from lock file
         const skillEntry = await SkillLockService.getSkillEntry(folderName);
@@ -742,7 +775,7 @@ const SkillBrowserViewContent: React.FC = () => {
         }
       } catch (error) {
         console.error('[SkillBrowserView] Failed to load skill edit info:', error);
-        _setCanEditSelectedSkill(false);
+        setCanEditSelectedSkill(false);
         setSelectedSkillSource(null);
       }
     };
