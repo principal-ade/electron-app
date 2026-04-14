@@ -38,7 +38,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -69,7 +70,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -110,7 +112,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -137,7 +140,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -165,6 +169,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ]
@@ -207,6 +212,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ]
@@ -249,6 +255,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ]
@@ -275,6 +282,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ]
@@ -317,6 +325,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ]
@@ -343,6 +352,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ]
@@ -381,6 +391,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ]
@@ -407,6 +418,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ]
@@ -441,6 +453,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ]
@@ -475,6 +488,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ]
@@ -513,6 +527,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ]
@@ -579,6 +594,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ]
@@ -613,6 +629,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ]
@@ -643,6 +660,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ]
@@ -677,6 +695,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ]
@@ -707,6 +726,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ]
@@ -741,6 +761,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/stores/userPreferencesHandler.ts"
         ]
@@ -771,6 +792,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/stores/userPreferencesHandler.ts"
         ]
@@ -813,6 +835,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ]
@@ -843,6 +866,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ]
@@ -899,6 +923,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ]
@@ -925,6 +950,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ]
@@ -951,6 +977,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ]
@@ -977,6 +1004,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ]
@@ -1003,6 +1031,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ]
@@ -1037,6 +1066,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ]
@@ -1075,6 +1105,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ]
@@ -1117,6 +1148,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ]
@@ -1151,6 +1183,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ]
@@ -1185,6 +1218,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ]
@@ -1223,6 +1257,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/principal-mcp/PrincipalMCPBridge.ts"
         ]

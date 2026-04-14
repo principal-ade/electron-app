@@ -55,6 +55,14 @@ scopes:
     color: "#EC4899"
     description: "Shared renderer code - reusable components, hooks, and libraries used across windows"
 
+  # External system scopes
+  external-file-system:
+    color: "#64748B"
+    description: "External OS file system - events from the operating system file watcher"
+  external-otel-events-manager:
+    color: "#64748B"
+    description: "External OTEL Events Manager service - HTTP endpoints for trace persistence"
+
 # Service resource registry
 # Define all services in this repository with their OTEL resource attributes
 resources:

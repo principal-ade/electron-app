@@ -31,6 +31,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/main.ts"
         ]
@@ -61,6 +62,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/main.ts"
         ]
@@ -87,6 +89,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/main.ts"
         ]
@@ -113,6 +116,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/main.ts"
         ]
@@ -143,6 +147,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-principal-window",
         "files": [
           "src/renderer/hooks/useKeychainConsent.ts"
         ]
@@ -169,6 +174,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-principal-window",
         "files": [
           "src/renderer/components/KeychainConsentModal.tsx"
         ]
@@ -199,6 +205,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-principal-window",
         "files": [
           "src/renderer/hooks/useKeychainConsent.ts"
         ]
@@ -229,6 +236,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-principal-window",
         "files": [
           "src/renderer/hooks/useKeychainConsent.ts"
         ]
@@ -259,6 +267,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/services/AuthService.ts"
         ]
@@ -285,6 +294,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/services/AuthService.ts"
         ]
@@ -311,6 +321,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/services/UnifiedSecureStorage.ts",
           "src/main/services/AuthService.ts"
@@ -342,6 +353,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/services/AuthService.ts"
         ]
@@ -372,6 +384,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/services/AuthService.ts",
           "src/main/services/UnifiedSecureStorage.ts"
@@ -399,6 +412,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-principal-window",
         "files": [
           "src/renderer/principal-window/views/Settings/components/SecuritySettings.tsx"
         ]
@@ -435,6 +449,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-principal-window",
         "files": [
           "src/renderer/principal-window/views/AuthView/AuthView.tsx"
         ]

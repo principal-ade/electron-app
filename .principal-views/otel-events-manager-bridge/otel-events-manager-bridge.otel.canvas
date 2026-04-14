@@ -67,6 +67,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/services/OtelEventsManagerBridge.ts"
         ]
@@ -87,6 +88,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/services/OtelCollectorService.ts"
         ]
@@ -107,6 +109,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/repository-monitoring/ipcHandlers.ts"
         ]
@@ -141,6 +144,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/services/OtelEventsManagerBridge.ts"
         ]
@@ -170,7 +174,8 @@
         }
       },
       "otel": {
-        "status": "implemented"
+        "status": "implemented",
+        "scope": "external-otel-events-manager"
       }
     },
     {
@@ -201,7 +206,8 @@
         }
       },
       "otel": {
-        "status": "implemented"
+        "status": "implemented",
+        "scope": "external-otel-events-manager"
       }
     },
     {
@@ -218,7 +224,8 @@
         "description": "Health check endpoint"
       },
       "otel": {
-        "status": "implemented"
+        "status": "implemented",
+        "scope": "external-otel-events-manager"
       }
     },
     {
@@ -246,6 +253,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-dev-workspace",
         "files": [
           "src/renderer/dev-workspace/DevWorkspaceTitlebar.tsx",
           "src/renderer/dev-workspace/DevWorkspaceApp.tsx"

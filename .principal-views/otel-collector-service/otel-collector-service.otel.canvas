@@ -43,6 +43,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/services/OtelCollectorService.ts"
         ]
@@ -62,7 +63,8 @@
         "description": "Native OTEL collector binary spawned"
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-renderer"
       }
     },
     {
@@ -79,7 +81,8 @@
         "description": "HTTP endpoint received trace data"
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-renderer"
       }
     },
     {
@@ -119,6 +122,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/services/OtelCollectorService.ts"
         ]
@@ -157,6 +161,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/services/OtelCollectorService.ts"
         ]
@@ -199,6 +204,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/services/ipc/otelCollectorHandlers.ts"
         ]
@@ -237,6 +243,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/services/ipc/otelCollectorHandlers.ts"
         ]
@@ -266,7 +273,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-renderer"
       }
     },
     {
@@ -293,7 +301,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-renderer"
       }
     },
     {
@@ -310,7 +319,8 @@
         "description": "Renderer window displaying trace data"
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-renderer"
       }
     },
     {
@@ -327,7 +337,8 @@
         "description": "External application sent OTLP trace"
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-renderer"
       }
     }
   ],

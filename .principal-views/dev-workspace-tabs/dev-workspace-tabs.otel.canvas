@@ -35,6 +35,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-dev-workspace",
         "files": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ]
@@ -65,6 +66,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-dev-workspace",
         "files": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ]
@@ -99,6 +101,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-dev-workspace",
         "files": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ]
@@ -139,6 +142,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-dev-workspace",
         "files": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ]
@@ -175,6 +179,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-dev-workspace",
         "files": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ]
@@ -205,6 +210,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-dev-workspace",
         "files": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ]
@@ -235,6 +241,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-dev-workspace",
         "files": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ]
@@ -265,6 +272,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-dev-workspace",
         "files": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ]
@@ -290,7 +298,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-dev-workspace"
       }
     },
     {
@@ -322,6 +331,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-dev-workspace",
         "files": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ]
@@ -356,6 +366,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-dev-workspace",
         "files": [
           "src/renderer/dev-workspace/DevWorkspacePanelFramework.tsx"
         ]
@@ -381,7 +392,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-dev-workspace"
       }
     },
     {
@@ -408,7 +420,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-dev-workspace"
       }
     },
     {
@@ -439,7 +452,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-dev-workspace"
       }
     },
     {

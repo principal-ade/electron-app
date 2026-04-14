@@ -24,7 +24,8 @@
         "description": "Application Code activity"
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-renderer"
       }
     },
     {
@@ -41,7 +42,8 @@
         "description": "OTLP HTTP Endpoint activity"
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-renderer"
       }
     },
     {
@@ -78,6 +80,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/services/OtelCollectorService.ts"
         ]
@@ -120,6 +123,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/services/OtelCollectorService.ts"
         ]
@@ -158,6 +162,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/services/ipc/otelCollectorHandlers.ts"
         ]
@@ -209,6 +214,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/services/ipc/otelCollectorHandlers.ts"
         ]
@@ -228,7 +234,8 @@
         "description": "Preload Bridge activity"
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-renderer"
       }
     },
     {
@@ -245,7 +252,8 @@
         "description": "Message Subscriber activity"
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-renderer"
       }
     },
     {
@@ -281,6 +289,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-principal-window",
         "files": [
           "src/renderer/principal-window/views/SystemMonitor/TraceViewer.tsx"
         ]
@@ -316,6 +325,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-principal-window",
         "files": [
           "src/renderer/principal-window/views/SystemMonitor/TraceViewer.tsx"
         ]
@@ -354,6 +364,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-principal-window",
         "files": [
           "src/renderer/principal-window/views/SystemMonitor/TraceViewer.tsx"
         ]
@@ -373,7 +384,8 @@
         "description": "Panel Event Bus activity"
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-renderer"
       }
     }
   ],

@@ -32,6 +32,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/stores/FileCityImageService.ts"
         ]
@@ -69,6 +70,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/stores/FileCityImageService.ts"
         ]
@@ -101,6 +103,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/stores/FileCityImageService.ts"
         ]
@@ -141,6 +144,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/stores/FileCityImageService.ts"
         ]
@@ -173,6 +177,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/stores/FileCityImageService.ts"
         ]
@@ -213,6 +218,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/stores/FileCityImageService.ts"
         ]
@@ -253,6 +259,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/stores/FileCityImageService.ts"
         ]
@@ -294,6 +301,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/stores/FileCityImageService.ts"
         ]
@@ -331,6 +339,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-principal-window",
         "files": [
           "src/renderer/panels/ProjectInfoPanel.tsx"
         ]
@@ -367,6 +376,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-principal-window",
         "files": [
           "src/renderer/panels/ProjectInfoPanel.tsx"
         ]
@@ -398,6 +408,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-principal-window",
         "files": [
           "src/renderer/panels/ProjectInfoPanel.tsx"
         ]
@@ -434,6 +445,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-principal-window",
         "files": [
           "src/renderer/panels/ProjectInfoPanel.tsx"
         ]
@@ -476,6 +488,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-principal-window",
         "files": [
           "src/renderer/panels/ProjectInfoPanel.tsx"
         ]
@@ -513,6 +526,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-principal-window",
         "files": [
           "src/renderer/panels/ProjectInfoPanel.tsx",
           "src/renderer/main-process-api/GitService.ts"
@@ -556,6 +570,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-principal-window",
         "files": [
           "src/renderer/panels/ProjectInfoPanel.tsx"
         ]
@@ -588,6 +603,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-principal-window",
         "files": [
           "src/renderer/panels/ProjectInfoPanel.tsx",
           "src/main/stores/FileCityImageService.ts"
@@ -621,6 +637,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-principal-window",
         "files": [
           "src/renderer/panels/ProjectInfoPanel.tsx"
         ]
