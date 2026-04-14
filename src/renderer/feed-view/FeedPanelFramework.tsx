@@ -12,13 +12,13 @@
 
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { GitCommit, Users, Activity } from 'lucide-react';
+import { GitCommit, Users, Activity, FolderGit2 } from 'lucide-react';
 import {
   ConfigurablePanelLayout,
   type PanelLayout,
   type ConfigurablePanelLayoutHandle,
 } from '@principal-ade/panel-layouts';
-import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
+import type { PanelEventEmitter, RepositoryMetadata, PanelEvent } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import {
   TerminalProvider,
@@ -27,6 +27,8 @@ import {
 } from '../contexts/TerminalContext';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
+import { FileCityImageService } from '../main-process-api/FileCityImageService';
+import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
 import {
   TabbedTerminalPanel,
   type TerminalTab,
@@ -38,6 +40,7 @@ import { ProjectsListPanel } from '../panels/ProjectsListPanel';
 import { WatchedItemsPanel } from '../panels/WatchedItemsPanel';
 import { ActivityFeedCardPanel } from '../panels/ActivityFeedCardPanel';
 import { ReviewCommitPanel } from '../panels/ReviewCommitPanel';
+import { ProjectInfoPanel } from '../panels/ProjectInfoPanel';
 import { LiveActivityTabContent } from '../components/LiveActivityTabContent';
 import { useActivityFeed } from '../hooks/useActivityFeed';
 import type { CommitTimestamp } from '../panels/ProjectsListPanel';
@@ -68,9 +71,17 @@ export interface ActivityFeedTab extends BaseTab {
 }
 
 /**
+ * Project info tab - displays repository details with heatmap and file city
+ */
+export interface ProjectInfoTab extends BaseTab {
+  contentType: 'project-info';
+  repository: AlexandriaEntry;
+}
+
+/**
  * Union type of all supported tab types in FeedView
  */
-export type FeedTab = TerminalTab | CommitReviewTab | LiveActivityTab | ActivityFeedTab;
+export type FeedTab = TerminalTab | CommitReviewTab | LiveActivityTab | ActivityFeedTab | ProjectInfoTab;
 
 export interface FeedPanelFrameworkProps {
   /** List of repositories */
@@ -326,6 +337,43 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     };
   }, [events, tabs]);
 
+  // Listen for repository selection events to open project info tab
+  useEffect(() => {
+    const handleRepositorySelected = (event: {
+      type: string;
+      payload: { repository: AlexandriaEntry }
+    }) => {
+      if (event.type === 'feed:repository-selected') {
+        const { repository } = event.payload;
+        const tabId = `project-info-${repository.name}`;
+
+        // Check if tab already exists
+        const existingTab = tabs.find(tab => tab.id === tabId);
+        if (existingTab) {
+          setActiveTabId(tabId);
+          return;
+        }
+
+        // Create new project info tab
+        const newTab: ProjectInfoTab = {
+          id: tabId,
+          label: repository.name,
+          contentType: 'project-info',
+          closable: true,
+          repository,
+        };
+
+        setTabs(prevTabs => [...prevTabs, newTab]);
+        setActiveTabId(tabId);
+      }
+    };
+
+    events.on('feed:repository-selected', handleRepositorySelected);
+    return () => {
+      events.off('feed:repository-selected', handleRepositorySelected);
+    };
+  }, [events, tabs]);
+
   // Convert terminal activities to workingStates record
   const workingStates = useMemo(() => {
     const states: Record<string, TerminalWorkingState> = {};
@@ -378,6 +426,8 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
         return <Users size={14} />;
       case 'activity-feed':
         return <Activity size={14} />;
+      case 'project-info':
+        return <FolderGit2 size={14} />;
       default:
         return null;
     }
@@ -408,6 +458,85 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
               feedMode={feedMode}
             />
           );
+        }
+        case 'project-info': {
+          const projectTab = tab as ProjectInfoTab;
+          // Wrapper component that fetches git status
+          const ProjectInfoTabContent = () => {
+            const [gitStatus, setGitStatus] = React.useState<GitStatusWithFiles | null>(null);
+            const [gitLoading, setGitLoading] = React.useState(true);
+            const repoPath = projectTab.repository.path;
+
+            React.useEffect(() => {
+              if (repoPath) {
+                setGitLoading(true);
+                RepositoryMonitoringService.getGitStatusWithFiles(repoPath)
+                  .then(setGitStatus)
+                  .catch((err) => {
+                    console.error('[ProjectInfoTab] Failed to fetch git status:', err);
+                    setGitStatus(null);
+                  })
+                  .finally(() => setGitLoading(false));
+              } else {
+                setGitLoading(false);
+              }
+            }, [repoPath]);
+
+            // Create context with git status slice
+            // AlexandriaEntry is compatible with RepositoryMetadata (has name, path, and index signature allows extras)
+            const projectContext = {
+              currentScope: { type: 'repository' as const, repository: projectTab.repository as unknown as RepositoryMetadata },
+              slices: new Map(),
+              adapters: {},
+              getSlice: () => undefined,
+              getWorkspaceSlice: () => undefined,
+              getRepositorySlice: () => undefined,
+              hasSlice: () => false,
+              isSliceLoading: () => false,
+              refresh: async () => {
+                if (repoPath) {
+                  setGitLoading(true);
+                  const status = await RepositoryMonitoringService.getGitStatusWithFiles(repoPath);
+                  setGitStatus(status);
+                  setGitLoading(false);
+                }
+              },
+              gitStatusWithFiles: {
+                scope: 'repository' as const,
+                name: 'gitStatusWithFiles',
+                data: gitStatus,
+                loading: gitLoading,
+                error: null,
+                refresh: async () => {
+                  if (repoPath) {
+                    const status = await RepositoryMonitoringService.getGitStatusWithFiles(repoPath);
+                    setGitStatus(status);
+                  }
+                },
+              },
+            };
+
+            // Create minimal actions with getFileCityImage
+            const projectActions = {
+              openFile: () => {},
+              openGitDiff: () => {},
+              navigateToPanel: () => {},
+              notifyPanels: (event: PanelEvent) => events.emit(event),
+              getFileCityImage: async (repoPath: string) => {
+                return FileCityImageService.getImage(repoPath);
+              },
+            };
+
+            return (
+              <ProjectInfoPanel
+                context={projectContext}
+                actions={projectActions}
+                events={events}
+              />
+            );
+          };
+
+          return <ProjectInfoTabContent />;
         }
         default:
           return null;

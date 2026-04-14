@@ -1293,13 +1293,15 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
       <div
         style={{
           flex: 1,
-          overflow: 'auto',
+          overflow: 'hidden',
           padding: spacing.md,
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
         {/* Commit Heat Map */}
         {repository && (
-          <div style={{ marginBottom: spacing.md }}>
+          <div style={{ marginBottom: spacing.md, flexShrink: 0 }}>
             <CommitHeatMap
               commits={heatMapCommits}
               loading={heatMapLoading}
@@ -1314,12 +1316,13 @@ export const ProjectInfoPanel: React.FC<ProjectInfoPanelProps> = ({
         )}
 
         {/* File City Image and Git Status - Side by Side */}
-        <div style={{ display: 'flex', gap: spacing.md, marginBottom: spacing.md }}>
+        <div style={{ display: 'flex', gap: spacing.md, flex: 1, minHeight: 0 }}>
           {/* File City Image - Left */}
           <div
             style={{
-              flex: 1,
+              height: '100%',
               aspectRatio: '1 / 1',
+              flexShrink: 0,
               order: 0, // Left side
               cursor: (fileCityImageUrl || historicalImageUrl || dirtyImageUrl) && !selectedDate ? 'pointer' : 'default',
               borderRadius: borderRadius,

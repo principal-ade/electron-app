@@ -544,28 +544,46 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
                             key={repo.full_name}
                             style={{
                               display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
+                              gap: spacing.sm,
                               padding: spacing.sm,
                               backgroundColor: theme.colors.backgroundSecondary,
                               border: `1px solid ${theme.colors.border}`,
                               borderRadius: theme.radii?.[1] || 4,
                             }}
                           >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
-                              <FolderGit2 size={20} style={{ flexShrink: 0 }} />
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.text }}>
-                                  {repo.owner.login}/{repo.name}
+                            <div style={{ display: 'flex', gap: spacing.sm, flex: 1, minWidth: 0 }}>
+                              {repo.owner.avatar_url ? (
+                                <img
+                                  src={repo.owner.avatar_url}
+                                  alt={repo.owner.login}
+                                  style={{
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: '50%',
+                                    flexShrink: 0,
+                                  }}
+                                />
+                              ) : (
+                                <User size={32} style={{ flexShrink: 0 }} />
+                              )}
+                              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                <div style={{ fontSize: theme.fontSizes[1], fontWeight: 600, color: theme.colors.text }}>
+                                  {repo.name}
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: theme.fontSizes[0],
+                                    color: theme.colors.textSecondary,
+                                  }}
+                                >
+                                  {repo.owner.login}
                                 </div>
                                 {repo.description && (
                                   <div
                                     style={{
                                       fontSize: theme.fontSizes[0],
                                       color: theme.colors.textSecondary,
-                                      overflow: 'hidden',
-                                      textOverflow: 'ellipsis',
-                                      whiteSpace: 'nowrap',
+                                      marginTop: spacing.xs,
                                     }}
                                   >
                                     {repo.description}
@@ -575,7 +593,7 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
                                   style={{
                                     fontSize: theme.fontSizes[0],
                                     color: theme.colors.textSecondary,
-                                    marginTop: 2,
+                                    marginTop: spacing.xs,
                                   }}
                                 >
                                   {repo.language && `${repo.language} • `}
