@@ -334,15 +334,15 @@ const FeedViewContent: React.FC = () => {
   // Panel layout state
   const [layout, setLayout] = useState<PanelLayout>({
     left: 'heatmap',
-    middle: 'activityFeed',
-    right: 'terminal',
+    middle: 'terminal',
+    right: 'placeholder',
   });
 
   // Collapsed state
   const [collapsed, setCollapsed] = useState({ left: false, right: false });
 
   // Panel sizes
-  const [panelSizes, setPanelSizes] = useState({ left: 25, middle: 50, right: 25 });
+  const [panelSizes, setPanelSizes] = useState({ left: 25, middle: 75, right: 0 });
 
   // Get repositories from context
   const repositories = context.alexandriaRepositories?.data?.repositories ?? [];

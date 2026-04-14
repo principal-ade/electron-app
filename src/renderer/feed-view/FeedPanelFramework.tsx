@@ -6,13 +6,13 @@
  *
  * Layout:
  * - Left: ProjectsListPanel (repository list with filtering)
- * - Middle: ActivityFeedCardPanel (rich repo cards with File City)
- * - Right: TabbedTerminalPanel (terminal in HOME directory)
+ * - Middle: TabbedTerminalPanel (terminal in HOME directory)
+ * - Right: DetailsTabbedPanel (activity feed, profiles, etc.)
  */
 
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { GitCommit, Users } from 'lucide-react';
+import { GitCommit, Users, Activity } from 'lucide-react';
 import {
   ConfigurablePanelLayout,
   type PanelLayout,
@@ -61,9 +61,16 @@ export interface LiveActivityTab extends BaseTab {
 }
 
 /**
+ * Activity feed tab - displays the main activity feed with repository cards
+ */
+export interface ActivityFeedTab extends BaseTab {
+  contentType: 'activity-feed';
+}
+
+/**
  * Union type of all supported tab types in FeedView
  */
-export type FeedTab = TerminalTab | CommitReviewTab | LiveActivityTab;
+export type FeedTab = TerminalTab | CommitReviewTab | LiveActivityTab | ActivityFeedTab;
 
 export interface FeedPanelFrameworkProps {
   /** List of repositories */
@@ -125,7 +132,6 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
 
   // Local collapsed state tracking
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(collapsed.left);
-  const [isRightCollapsed, setIsRightCollapsed] = useState(collapsed.right);
 
   // Base directory from user preferences
   const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string | null>(null);
@@ -133,9 +139,15 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
   // Time filter state for heatmap selection
   const [selectedBlock, setSelectedBlock] = useState<string | null>(null);
 
-  // Tab management
-  const [tabs, setTabs] = useState<FeedTab[]>([]);
-  const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  // Tab management - Initialize with activity feed tab
+  const [tabs, setTabs] = useState<FeedTab[]>([
+    {
+      id: 'activity-feed',
+      contentType: 'activity-feed',
+      label: 'Recent Activity',
+    } as ActivityFeedTab,
+  ]);
+  const [activeTabId, setActiveTabId] = useState<string | null>('activity-feed');
 
   // Activity feed data
   const activityFeed = useActivityFeed(repositories, 20, 10, 100);
@@ -364,6 +376,8 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
         return <GitCommit size={14} />;
       case 'live-activity':
         return <Users size={14} />;
+      case 'activity-feed':
+        return <Activity size={14} />;
       default:
         return null;
     }
@@ -385,32 +399,37 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
         case 'live-activity': {
           return <LiveActivityTabContent />;
         }
+        case 'activity-feed': {
+          return (
+            <ActivityFeedCardPanel
+              repositories={repositories}
+              events={events}
+              onOpenRepository={onOpenRepository}
+              feedMode={feedMode}
+            />
+          );
+        }
         default:
           return null;
       }
     },
-    []
+    [repositories, events, onOpenRepository, feedMode]
   );
 
   // Handle panel resize
   const handlePanelResize = useCallback(
     (sizes: { left: number; middle: number; right: number }) => {
-      // Detect collapse via resize
+      // Detect collapse via resize (only left panel now)
       const leftCollapsed = sizes.left < 5;
-      const rightCollapsed = sizes.right < 5;
 
       if (leftCollapsed !== isLeftCollapsed) {
         setIsLeftCollapsed(leftCollapsed);
-        onCollapsedChange({ left: leftCollapsed, right: isRightCollapsed });
-      }
-      if (rightCollapsed !== isRightCollapsed) {
-        setIsRightCollapsed(rightCollapsed);
-        onCollapsedChange({ left: isLeftCollapsed, right: rightCollapsed });
+        onCollapsedChange({ left: leftCollapsed, right: false });
       }
 
       onPanelSizesChange?.(sizes);
     },
-    [isLeftCollapsed, isRightCollapsed, onCollapsedChange, onPanelSizesChange]
+    [isLeftCollapsed, onCollapsedChange, onPanelSizesChange]
   );
 
   // Listen for terminal activity events
@@ -430,7 +449,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     };
   }, [events, activityActions]);
 
-  // Define all panels
+  // Define all panels (must have 3 to position terminal in middle)
   const allPanels = useMemo(
     () => [
       {
@@ -456,28 +475,6 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
                 selectedBlock={selectedBlock}
               />
             )}
-          </div>
-        ),
-      },
-      {
-        id: 'activityFeed',
-        label: 'Feed',
-        content: (
-          <div
-            style={{
-              height: '100%',
-              width: '100%',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <ActivityFeedCardPanel
-              repositories={repositories}
-              events={events}
-              onOpenRepository={onOpenRepository}
-              feedMode={feedMode}
-            />
           </div>
         ),
       },
@@ -512,6 +509,22 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
           </div>
         ),
       },
+      {
+        id: 'placeholder',
+        label: 'Details',
+        content: (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              backgroundColor: theme.colors.background,
+            }}
+          />
+        ),
+      },
     ],
     [
       heatmapCommits,
@@ -530,6 +543,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
       renderTabContent,
       renderTabIcon,
       feedMode,
+      theme,
     ]
   );
 
@@ -549,8 +563,8 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
         panels={allPanels}
         layout={layout}
         collapsiblePanels={{ left: true, right: true }}
-        defaultSizes={panelSizes || { left: 25, middle: 50, right: 25 }}
-        collapsed={collapsed}
+        defaultSizes={panelSizes || { left: 25, middle: 75, right: 0 }}
+        collapsed={{ left: collapsed.left, right: true }}
         showCollapseButtons={false}
         theme={theme}
         onPanelResize={handlePanelResize}
