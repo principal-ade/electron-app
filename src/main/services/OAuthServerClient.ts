@@ -81,7 +81,7 @@ export class OAuthServerClient {
       .digest('base64url');
   }
 
-  async authenticate(): Promise<AuthResult> {
+  async authenticate(deviceId?: string): Promise<AuthResult> {
     try {
       // 1. Start auth flow with server
       const providerName = getAuthProviderName();
@@ -92,16 +92,23 @@ export class OAuthServerClient {
         `[OAuthServerClient] Using endpoint: ${this.endpoints.start}`,
       );
 
+      const requestBody: Record<string, string | boolean> = {
+        code_challenge: this.codeChallenge,
+        state: this.state,
+        force_reauth: this.forceReauth,
+      };
+
+      // Add device ID if provided
+      if (deviceId) {
+        requestBody.device_id = deviceId;
+      }
+
       const startResponse = await fetch(this.endpoints.start, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          code_challenge: this.codeChallenge,
-          state: this.state,
-          force_reauth: this.forceReauth,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!startResponse.ok) {
@@ -233,23 +240,39 @@ export class OAuthServerClient {
   /**
    * Refresh an expired access token using a refresh token
    * @param refreshToken The refresh token to use for refreshing
+   * @param deviceId Optional device ID for device-specific session tracking
+   * @param githubUserId Optional GitHub user ID for device-specific token management
    * @returns New auth result with fresh tokens
    */
-  async refreshAccessToken(refreshToken: string): Promise<AuthResult> {
+  async refreshAccessToken(
+    refreshToken: string,
+    deviceId?: string,
+    githubUserId?: number,
+  ): Promise<AuthResult> {
     try {
       console.log('[OAuthServerClient] Refreshing access token...');
       console.log(
         `[OAuthServerClient] Using refresh endpoint: ${this.endpoints.refresh}`,
       );
 
+      const requestBody: Record<string, string> = {
+        refresh_token: refreshToken,
+      };
+
+      // Add device-specific parameters if available
+      if (deviceId) {
+        requestBody.device_id = deviceId;
+      }
+      if (githubUserId) {
+        requestBody.github_user_id = String(githubUserId);
+      }
+
       const response = await fetch(this.endpoints.refresh, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          refresh_token: refreshToken,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -317,11 +340,13 @@ export class OAuthServerClient {
    *
    * @param githubToken The local GitHub token to use for authentication
    * @param githubUserId The user's GitHub ID
+   * @param deviceId Optional device ID for device-specific session tracking
    * @returns The current token data from the server, or null if not available
    */
   async fetchCurrentToken(
     githubToken: string,
     githubUserId: number,
+    deviceId?: string,
   ): Promise<{
     githubToken: string;
     githubLogin: string;
@@ -330,6 +355,11 @@ export class OAuthServerClient {
     try {
       const url = new URL(`${this.serverUrl}/api/auth/token/current`);
       url.searchParams.set('github_user_id', String(githubUserId));
+
+      // Add device ID if provided
+      if (deviceId) {
+        url.searchParams.set('device_id', deviceId);
+      }
 
       const response = await fetch(url.toString(), {
         method: 'GET',

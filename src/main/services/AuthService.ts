@@ -9,6 +9,7 @@
 import { ipcMain, shell } from 'electron';
 import Store from 'electron-store';
 import { OAuthServerClient } from './OAuthServerClient';
+import { deviceIdService } from './DeviceIdService';
 import AuthStateManager from './AuthStateManager';
 import {
   UnifiedSecureStorage,
@@ -222,13 +223,16 @@ class AuthService {
           forceReauth: options.forceNew || false,
         });
 
+        // Get device ID for device-specific session tracking
+        const deviceId = await deviceIdService.getDeviceId();
+
         // Override the open function to use Electron's shell
         const originalOpen = global.open;
         global.open = (url: string) => shell.openExternal(url);
 
         try {
           console.log('[AuthService] Starting OAuth flow...');
-          const result = await authClient.authenticate();
+          const result = await authClient.authenticate(deviceId);
 
           // For initial authentication, token and user should always be present
           if (!result.token) {
@@ -595,8 +599,14 @@ class AuthService {
               APP_BRANDING.AUTH_SERVER_URL.PRODUCTION,
           });
 
-          const refreshedAuth =
-            await authClient.refreshAccessToken(refreshToken);
+          // Get device ID for device-specific session tracking
+          const deviceId = await deviceIdService.getDeviceId();
+
+          const refreshedAuth = await authClient.refreshAccessToken(
+            refreshToken,
+            deviceId,
+            user.id,
+          );
 
           // ✅ CRITICAL: Only update WorkOS token, preserve GitHub token
           console.log('[AuthService] Token refresh response received:', {
@@ -668,9 +678,14 @@ class AuthService {
               process.env.AUTH_SERVER_URL ||
               APP_BRANDING.AUTH_SERVER_URL.PRODUCTION,
           });
+
+          // Get device ID for device-specific session tracking
+          const deviceId = await deviceIdService.getDeviceId();
+
           const serverToken = await authClient.fetchCurrentToken(
             githubToken,
             user.id,
+            deviceId,
           );
 
           if (serverToken && serverToken.githubToken !== githubToken) {
