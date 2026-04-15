@@ -835,15 +835,41 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                     gap: spacing.xs,
                   }}
                 >
-                  <span
+                  <button
+                    onClick={() => {
+                      if (events) {
+                        events.emit({
+                          type: 'user:profile-selected',
+                          source: 'repo-activity-card',
+                          timestamp: Date.now(),
+                          payload: {
+                            username: displayedCommit.author,
+                            email: displayedCommit.authorEmail,
+                          },
+                        });
+                      }
+                    }}
                     style={{
                       fontSize: theme.fontSizes[2],
                       color: theme.colors.text,
                       fontWeight: 500,
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                      textDecorationStyle: 'dotted',
+                      textDecorationColor: theme.colors.textSecondary,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = theme.colors.primary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = theme.colors.text;
                     }}
                   >
                     {displayedCommit.author}
-                  </span>
+                  </button>
                 </div>
                 {/* Per-commit stats */}
                 {(() => {

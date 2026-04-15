@@ -42,10 +42,47 @@ import { ActivityFeedCardPanel } from '../panels/ActivityFeedCardPanel';
 import { ReviewCommitPanel } from '../panels/ReviewCommitPanel';
 import { ProjectInfoPanel } from '../panels/ProjectInfoPanel';
 import { LiveActivityTabContent } from '../components/LiveActivityTabContent';
-import { UserProfilePanel } from '../panels/UserProfilePanel';
+import { UserProfilePanel, type UserProfileData } from '../panels/UserProfilePanel';
 import { useActivityFeed } from '../hooks/useActivityFeed';
 import type { CommitTimestamp } from '../panels/ProjectsListPanel';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
+import { GithubService } from '../main-process-api/GithubService';
+import { ApiProxyService } from '../main-process-api/ApiProxyService';
+import { SecureAuthService } from '../services/SecureAuthService';
+
+/**
+ * User activity response from Principal ADE API
+ */
+interface UserActivityResponse {
+  user: {
+    login: string;
+    name: string | null;
+    avatarUrl: string;
+    followersCount: number;
+  };
+  activity: Array<{
+    id: string;
+    type: 'commit' | 'pr_merged' | 'pr_opened' | 'issue_opened';
+    timestamp: string;
+    repository: string;
+    metadata?: {
+      commitCount?: number;
+      additions?: number;
+      deletions?: number;
+    };
+  }>;
+  contributions: Array<{
+    date: string;
+    count: number;
+  }>;
+  contributedRepos?: Array<{
+    nameWithOwner: string;
+    owner: string;
+    name: string;
+    commitCount: number;
+    lastContributedAt: string;
+  }>;
+}
 
 /**
  * Commit review tab - displays diff for a specific commit
@@ -260,7 +297,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
       repoId: commit.repoPath,
     }));
     return transformed;
-  }, [activityFeed.commits, repositories.length]);
+  }, [activityFeed.commits]);
 
   // Listen for time filter events to update selected block
   useEffect(() => {
@@ -588,42 +625,118 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
           const userTab = tab as UserProfileTab;
           // Wrapper component for user profile
           const UserProfileTabContent = () => {
-            // TODO: Fetch real user data from git commits
-            // For now, create mock data based on username/email
-            const mockUserData = React.useMemo(() => {
-              const activityData = new Map<string, number>();
-              const today = new Date();
+            const [userData, setUserData] = React.useState<UserProfileData | undefined>(undefined);
+            const [loading, setLoading] = React.useState(true);
+            const [error, setError] = React.useState<string | undefined>(undefined);
 
-              // Generate mock activity for the past year
-              for (let i = 0; i < 365; i++) {
-                const date = new Date(today);
-                date.setDate(date.getDate() - i);
-                const dateKey = date.toISOString().split('T')[0];
+            React.useEffect(() => {
+              let cancelled = false;
 
-                // Random activity
-                if (Math.random() < 0.6) {
-                  activityData.set(dateKey, Math.floor(Math.random() * 20) + 1);
+              const fetchUserData = async () => {
+                setLoading(true);
+                setError(undefined);
+
+                try {
+                  // Fetch GitHub user profile and activity data in parallel
+                  const [githubUser, activityResult] = await Promise.all([
+                    GithubService.getUser(userTab.username),
+                    (async () => {
+                      try {
+                        const authService = SecureAuthService.getInstance();
+                        const authResult = await authService.checkAuth();
+
+                        if (!authResult.authenticated || !authResult.token) {
+                          return null;
+                        }
+
+                        return await ApiProxyService.call<UserActivityResponse>({
+                          endpoint: `https://app.principal-ade.com/api/github/user/${userTab.username}/activity?contributionDays=365&activityDays=1`,
+                          method: 'GET',
+                          headers: {
+                            Authorization: `Bearer ${authResult.token}`,
+                          },
+                        });
+                      } catch (err) {
+                        console.error('Failed to fetch user activity:', err);
+                        return null;
+                      }
+                    })(),
+                  ]);
+
+                  if (cancelled) return;
+
+                  if (!githubUser) {
+                    setError('User not found');
+                    setLoading(false);
+                    return;
+                  }
+
+                  // Extract activity data from API proxy result
+                  const activityResponse = activityResult?.data;
+
+                  // Transform contributions to activity data Map
+                  const activityData = new Map<string, number>();
+                  if (activityResponse?.contributions) {
+                    activityResponse.contributions.forEach((contrib: { date: string; count: number }) => {
+                      activityData.set(contrib.date, contrib.count);
+                    });
+                  }
+
+                  // Calculate total commits from activity data
+                  let totalCommits = 0;
+                  activityData.forEach((count) => {
+                    totalCommits += count;
+                  });
+
+                  // Cast to access fields not in GitHubUser type but present in API response
+                  const githubUserExtended = githubUser as typeof githubUser & {
+                    twitter_username?: string | null;
+                    blog?: string | null;
+                  };
+
+                  const profileData: UserProfileData = {
+                    username: githubUser.login,
+                    name: githubUser.name || undefined,
+                    email: githubUser.email || userTab.email,
+                    avatarUrl: githubUser.avatar_url,
+                    bio: githubUser.bio || undefined,
+                    location: githubUser.location || undefined,
+                    company: githubUser.company || undefined,
+                    twitterHandle: githubUserExtended.twitter_username || undefined,
+                    websiteUrl: githubUserExtended.blog || undefined,
+                    activityData,
+                    totalCommits,
+                    totalRepos: githubUser.public_repos || 0,
+                    followers: githubUser.followers || 0,
+                    following: githubUser.following || 0,
+                    joinedDate: githubUser.created_at || new Date().toISOString(),
+                  };
+
+                  setUserData(profileData);
+                } catch (err) {
+                  if (!cancelled) {
+                    console.error('Failed to fetch user profile:', err);
+                    setError(err instanceof Error ? err.message : 'Failed to load user profile');
+                  }
+                } finally {
+                  if (!cancelled) {
+                    setLoading(false);
+                  }
                 }
-              }
-
-              return {
-                username: userTab.username,
-                name: userTab.username,
-                email: userTab.email,
-                activityData,
-                totalCommits: 847,
-                totalRepos: 12,
-                followers: 42,
-                following: 38,
-                joinedDate: '2020-01-15T00:00:00Z',
               };
-            }, []);
+
+              fetchUserData();
+
+              return () => {
+                cancelled = true;
+              };
+            }, []); // userTab is from outer scope and stable for this component instance
 
             const mockContext = {
               currentScope: { type: 'workspace' as const },
               slices: new Map(),
               adapters: {},
-              isSliceLoading: () => false,
+              isSliceLoading: () => loading,
               refresh: async () => {},
             };
 
@@ -639,7 +752,9 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
                 context={mockContext}
                 actions={mockActions}
                 events={events}
-                userData={mockUserData}
+                userData={userData}
+                loading={loading}
+                error={error}
               />
             );
           };
@@ -765,7 +880,6 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     ],
     [
       heatmapCommits,
-      activityFeed.loading,
       events,
       selectedBlock,
       terminalPanelContext,
@@ -774,10 +888,9 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
       terminalDirectory,
       workingStates,
       repositories,
-      onOpenRepository,
       tabs,
       activeTabId,
-      renderTabContent,
+      renderTabContent, // includes onOpenRepository
       renderTabIcon,
       feedMode,
       theme,

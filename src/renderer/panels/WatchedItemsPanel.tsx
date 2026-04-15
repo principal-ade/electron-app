@@ -692,6 +692,15 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
                 return (
                   <div
                     key={`user:${user.login}`}
+                    onClick={() => {
+                      // Emit event to open user profile tab
+                      events.emit({
+                        type: 'user:profile-selected',
+                        source: 'watched-items-panel',
+                        timestamp: Date.now(),
+                        payload: { username: user.login },
+                      });
+                    }}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -701,7 +710,7 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
                       backgroundColor: 'transparent',
                       border: `1px solid ${theme.colors.border}`,
                       borderRadius: theme.radii?.[1] || 4,
-                      cursor: 'default',
+                      cursor: 'pointer',
                       transition: 'all 0.15s ease',
                       position: 'relative',
                     }}
@@ -768,7 +777,10 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
 
                     {/* Unwatch button */}
                     <button
-                      onClick={() => handleUnwatchUser(user.login)}
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent card click
+                        handleUnwatchUser(user.login);
+                      }}
                       disabled={isInProgress}
                       style={{
                         padding: `${spacing.xs}px ${spacing.sm}px`,

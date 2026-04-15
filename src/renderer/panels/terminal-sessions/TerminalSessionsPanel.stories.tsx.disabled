@@ -1,3 +1,13 @@
+/**
+ * NOTE: This story is currently disabled in .storybook/main.ts
+ *
+ * TODO: Fix architecture issue - TerminalSessionsPanel imports AlexandriaService,
+ * which imports telemetry, which imports electron. This breaks Storybook's browser
+ * environment. Need to refactor to use dependency injection for services.
+ *
+ * Tracking: Need to decouple UI components from Electron-specific dependencies
+ */
+
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import React, { useState } from 'react';
 import { ThemeProvider } from '@principal-ade/industry-theme';
