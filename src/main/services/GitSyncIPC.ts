@@ -156,8 +156,6 @@ class GitSyncIPC {
     ipcMain.handle(
       PresenceEvent.CONNECT,
       async (event, token: string): Promise<GitSyncConnectionResult> => {
-        console.log('[GitSyncIPC] Connect to presence requested');
-
         // Get the window ID from the event sender
         const window = BrowserWindow.fromWebContents(event.sender);
         const windowId = window?.id ?? -1;

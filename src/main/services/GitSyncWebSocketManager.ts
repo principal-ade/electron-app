@@ -915,8 +915,6 @@ export class GitSyncWebSocketManager {
     if (existing) {
       const state = existing.client.getConnectionState();
       if (state === 'connected') {
-        console.log('[GitSyncWebSocketManager] Already connected to presence');
-
         // Make sure we're subscribed to the global presence room
         await this.subscribeToPresence();
 
@@ -1410,16 +1408,9 @@ export class GitSyncWebSocketManager {
         };
       }
 
-      console.log('[GitSyncWebSocketManager] Fetching presence via WebSocket');
-
       const response = await client.request<PresenceGetUsersResponse>(
         'presence:get_users',
         {},
-      );
-
-      console.log(
-        '[GitSyncWebSocketManager] Fetched presence data via WebSocket:',
-        JSON.stringify(response, null, 2),
       );
 
       return {

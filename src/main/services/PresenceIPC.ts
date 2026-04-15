@@ -25,8 +25,6 @@ class PresenceIPC {
   private setupHandlers() {
     // Handler for presence:get-users
     ipcMain.handle(PresenceEvent.GET_USERS, async (): Promise<PresenceData> => {
-      console.log('[PresenceIPC] Get users requested');
-
       const result = await gitSyncWebSocketManager.fetchPresenceData();
 
       if (!result.success || !result.data) {
