@@ -49,7 +49,7 @@ export const ProjectsListPanel: React.FC<ProjectsListPanelProps> = ({
     md: theme.space?.[3] || 16,
   };
 
-  // Handle repository click - filter feed by repository and open project info tab
+  // Handle repository click - filter feed by repository
   const handleRepoClick = useCallback(
     (repoId: string) => {
       // Toggle filter off if clicking the same repo
@@ -63,21 +63,8 @@ export const ProjectsListPanel: React.FC<ProjectsListPanelProps> = ({
         timestamp: Date.now(),
         payload: newSelectedRepoId ? { repoId: newSelectedRepoId } : null,
       });
-
-      // Find the full repository entry and emit repository-selected event
-      if (!isDeselecting) {
-        const repository = repositories.find(r => r.path === repoId);
-        if (repository) {
-          events.emit({
-            type: 'feed:repository-selected',
-            source: 'projects-list-panel',
-            timestamp: Date.now(),
-            payload: { repository },
-          });
-        }
-      }
     },
-    [events, selectedRepoId, repositories]
+    [events, selectedRepoId]
   );
 
   // Listen for repository filter changes from other panels (like clear button)

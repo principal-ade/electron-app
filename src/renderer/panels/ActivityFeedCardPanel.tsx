@@ -346,33 +346,69 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
           </div>
         )}
         {repoFilter && (
-          <button
-            onClick={() => {
-              setRepoFilter(null);
-              events.emit({
-                type: 'feed:repository-filter-changed',
-                source: 'activity-feed-card-panel',
-                timestamp: Date.now(),
-                payload: null,
-              });
-            }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: spacing.xs,
-              marginTop: spacing.xs,
-              padding: `${spacing.xs}px ${spacing.sm}px`,
-              fontSize: theme.fontSizes[0],
-              color: theme.colors.primary,
-              backgroundColor: `${theme.colors.primary}15`,
-              border: `1px solid ${theme.colors.primary}`,
-              borderRadius: theme.radii?.[1] || 4,
-              cursor: 'pointer',
-            }}
-          >
-            <span>Filtered by: {repoFilter.split('/').pop()}</span>
-            <X size={12} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs }}>
+            <button
+              onClick={() => {
+                setRepoFilter(null);
+                events.emit({
+                  type: 'feed:repository-filter-changed',
+                  source: 'activity-feed-card-panel',
+                  timestamp: Date.now(),
+                  payload: null,
+                });
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.xs,
+                padding: `${spacing.xs}px ${spacing.sm}px`,
+                fontSize: theme.fontSizes[0],
+                color: theme.colors.primary,
+                backgroundColor: `${theme.colors.primary}15`,
+                border: `1px solid ${theme.colors.primary}`,
+                borderRadius: theme.radii?.[1] || 4,
+                cursor: 'pointer',
+              }}
+            >
+              <span>Filtered by: {repoFilter.split('/').pop()}</span>
+              <X size={12} />
+            </button>
+            <button
+              onClick={() => {
+                const entry = repoEntryMap.get(repoFilter);
+                if (entry) {
+                  events.emit({
+                    type: 'feed:repository-selected',
+                    source: 'activity-feed-card-panel',
+                    timestamp: Date.now(),
+                    payload: { repository: entry },
+                  });
+                }
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.xs,
+                padding: `${spacing.xs}px ${spacing.sm}px`,
+                fontSize: theme.fontSizes[0],
+                color: theme.colors.textOnPrimary,
+                backgroundColor: theme.colors.primary,
+                border: `1px solid ${theme.colors.primary}`,
+                borderRadius: theme.radii?.[1] || 4,
+                cursor: 'pointer',
+                transition: 'opacity 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = '0.85';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = '1';
+              }}
+            >
+              <FolderGit2 size={12} />
+              <span>View Profile</span>
+            </button>
+          </div>
         )}
       </div>
 
