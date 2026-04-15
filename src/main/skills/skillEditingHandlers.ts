@@ -4,7 +4,7 @@
  * Handles permission checking, file operations, and GitHub commits for skill editing.
  */
 
-import { ipcMain, app, BrowserWindow } from 'electron';
+import { ipcMain, app } from 'electron';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { getSkillLockFileService } from './skillLockFile';
@@ -21,17 +21,10 @@ import {
 } from '../../shared/main-process-api-interfaces/SkillLockAPI';
 
 /**
- * Helper to get GitHubAdapter from event sender
+ * Global GitHubAdapter instance for skill editing operations
+ * Skill editing doesn't need per-window context - owner/repo comes from skill lock file
  */
-function getAdapterFromSender(eventSender: Electron.WebContents): GitHubAdapter | null {
-  const senderWindow = BrowserWindow.fromWebContents(eventSender);
-  if (!senderWindow) return null;
-
-  // Try to get adapter from window's user data
-  const appWindows = require('../window/modernWindowManager').appWindows;
-  const appWindow = appWindows.get(senderWindow.id);
-  return appWindow?.githubAdapter || null;
-}
+const globalAdapter = new GitHubAdapter();
 
 /**
  * Recursively read directory and return file paths
@@ -77,18 +70,11 @@ export async function registerSkillEditingHandlers(): Promise<void> {
   // CHECK_SKILL_EDIT_PERMISSION - Check if user can edit skill
   ipcMain.handle(
     SkillLockAPIEvent.CHECK_SKILL_EDIT_PERMISSION,
-    async (event, skillName: string): Promise<SkillEditPermissionResult> => {
+    async (_event, skillName: string): Promise<SkillEditPermissionResult> => {
       try {
-        const adapter = getAdapterFromSender(event.sender);
-        if (!adapter) {
-          return {
-            canEdit: false,
-            reason: 'GitHub adapter not available',
-          };
-        }
-
-        // Initialize or get permission service with this adapter
-        const permissionService = initializeSkillPermissionService(adapter);
+        // Use global adapter - skill editing doesn't need window context
+        // Owner/repo information comes from the skill lock file
+        const permissionService = initializeSkillPermissionService(globalAdapter);
         return await permissionService.checkSkillEditPermission(skillName);
       } catch (error) {
         console.error('[SkillEditing] Error checking edit permission:', error);
@@ -171,20 +157,14 @@ export async function registerSkillEditingHandlers(): Promise<void> {
   // COMMIT_SKILL_FILE - Commit file changes to GitHub
   ipcMain.handle(
     SkillLockAPIEvent.COMMIT_SKILL_FILE,
-    async (event, options: SkillCommitOptions): Promise<SkillCommitResult> => {
+    async (_event, options: SkillCommitOptions): Promise<SkillCommitResult> => {
       const { skillName, filePath, content, message } = options;
 
       try {
         console.log(`[SkillEditing] Committing file: ${skillName}/${filePath}`);
 
-        // Get GitHub adapter
-        const adapter = getAdapterFromSender(event.sender);
-        if (!adapter) {
-          return {
-            success: false,
-            error: 'GitHub adapter not available',
-          };
-        }
+        // Note: We use GitHubAPICore directly for commits, not the adapter
+        // The adapter is only needed for permission checking
 
         // 1. Get skill from lock file
         const skill = await lockService.getSkill(skillName);
