@@ -666,16 +666,18 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
             };
 
             return (
-              <RepositoryProfilePanel
-                context={projectContext}
-                actions={projectActions}
-                events={events}
-                repositoryData={repositoryData}
-                loading={loading}
-                error={error}
-                onOpenRepository={handleOpenRepository}
-                onDeleteRepository={handleDeleteRepository}
-              />
+              <div style={{ height: '100%', overflow: 'hidden' }}>
+                <RepositoryProfilePanel
+                  context={projectContext}
+                  actions={projectActions}
+                  events={events}
+                  repositoryData={repositoryData}
+                  loading={loading}
+                  error={error}
+                  onOpenRepository={handleOpenRepository}
+                  onDeleteRepository={handleDeleteRepository}
+                />
+              </div>
             );
           };
 

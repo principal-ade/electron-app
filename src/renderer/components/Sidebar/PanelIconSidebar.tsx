@@ -71,6 +71,7 @@ export interface PanelIconSidebarProps {
  */
 export const LEFT_PANEL_ICONS: PanelIconConfig[] = [
   { id: 'terminalSessions', Icon: Terminal, label: 'Term' },
+  { id: 'packageComposition', Icon: Package, label: 'Info' },
   { id: 'canvasList', Icon: Network, label: 'Stories' },
   { id: 'docs', Icon: BookOpen, label: 'Docs' },
   { id: 'agentsList', Icon: Bot, label: 'Skills' },
@@ -83,7 +84,6 @@ export const LEFT_PANEL_ICONS: PanelIconConfig[] = [
  */
 export const RIGHT_PANEL_ICONS: PanelIconConfig[] = [
   { id: 'fileCity', Icon: Building2, label: 'File City' },
-  { id: 'packageComposition', Icon: Package, label: 'Info' },
   { id: 'codeQuality', Icon: CheckCircle, label: 'Quality' },
   { id: 'kanban', Icon: KanbanSquare, label: 'Backlog' },
   { id: 'bruno', Icon: Plug, label: 'Bruno' },

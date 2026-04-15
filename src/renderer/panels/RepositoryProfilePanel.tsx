@@ -6,7 +6,7 @@
  * Modeled after UserProfilePanel for visual consistency.
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type {
   PanelContextValue,
@@ -23,6 +23,14 @@ import {
   FolderOpen,
   Trash2,
 } from 'lucide-react';
+import { FileCity3D } from '@principal-ai/file-city-react';
+import {
+  buildCityDataFromFileTree,
+  estimateLineCounts,
+  enrichWithLineCounts,
+  type CityData,
+} from '@industry-theme/repository-composition-panels';
+import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 
 export interface RepositoryProfileData {
   name: string;
@@ -233,6 +241,84 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
   const borderRadius = theme.radii?.[1] || 4;
 
+  // State for 3D city data
+  const [cityData, setCityData] = useState<CityData | null>(null);
+  const [cityDataLoading, setCityDataLoading] = useState(false);
+
+  // Build city data from file tree when repository changes
+  useEffect(() => {
+    let cancelled = false;
+
+    const buildCityData = async () => {
+      const repoPath = repositoryData?.localPath;
+      if (!repoPath) {
+        setCityData(null);
+        return;
+      }
+
+      setCityDataLoading(true);
+
+      try {
+        // Get file tree from repository monitoring service
+        const fileTree = await RepositoryMonitoringService.getFileTree(repoPath);
+        if (!fileTree || cancelled) {
+          setCityDataLoading(false);
+          return;
+        }
+
+        // Build city data from file tree
+        const rootPath = fileTree.metadata?.id || '';
+        const rawCityData = buildCityDataFromFileTree(fileTree, rootPath);
+
+        // Get actual line counts from main process
+        let finalCityData: CityData;
+        try {
+          if (window.mainProcess?.fileCityImage?.countLines) {
+            const rawLineCounts = await window.mainProcess.fileCityImage.countLines(repoPath);
+
+            // Transform line counts to use the correct rootPath prefix
+            const repoName = repoPath.split('/').pop() || '';
+            const lineCounts: Record<string, number> = {};
+            for (const [filePath, count] of Object.entries(rawLineCounts)) {
+              if (typeof count !== 'number' || count < 0) continue;
+
+              if (filePath.startsWith(repoName + '/')) {
+                const relativePath = filePath.slice(repoName.length + 1);
+                lineCounts[`${rootPath}/${relativePath}`] = count;
+              } else {
+                lineCounts[`${rootPath}/${filePath}`] = count;
+              }
+            }
+
+            const enrichedCityData = enrichWithLineCounts(rawCityData, lineCounts);
+            finalCityData = estimateLineCounts(enrichedCityData);
+          } else {
+            finalCityData = estimateLineCounts(rawCityData);
+          }
+        } catch (_error) {
+          finalCityData = estimateLineCounts(rawCityData);
+        }
+
+        if (!cancelled) {
+          setCityData(finalCityData);
+          setCityDataLoading(false);
+        }
+      } catch (error) {
+        console.error('[RepositoryProfilePanel] Failed to build city data:', error);
+        if (!cancelled) {
+          setCityData(null);
+          setCityDataLoading(false);
+        }
+      }
+    };
+
+    buildCityData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [repositoryData?.localPath]);
+
   // Handle open in browser
   const handleOpenUrl = (url: string) => {
     window.open(url, '_blank');
@@ -358,23 +444,25 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
         display: 'flex',
         flexDirection: 'column',
         backgroundColor: theme.colors.background,
-        overflow: 'auto',
+        overflow: 'hidden',
       }}
     >
-      {/* Banner with Activity Heatmap */}
-      <div
-        style={{
-          position: 'relative',
-          height: 170,
-          overflow: 'hidden',
-          flexShrink: 0,
-        }}
-      >
-        <ActivityHeatmap activityData={repositoryData.activityData} theme={theme} bannerHeight={170} />
-      </div>
+      {/* Top Section - Scrollable Profile Info */}
+      <div style={{ flex: '0 1 auto', overflow: 'auto' }}>
+        {/* Banner with Activity Heatmap */}
+        <div
+          style={{
+            position: 'relative',
+            height: 170,
+            overflow: 'hidden',
+            flexShrink: 0,
+          }}
+        >
+          <ActivityHeatmap activityData={repositoryData.activityData} theme={theme} bannerHeight={170} />
+        </div>
 
-      {/* Profile Content */}
-      <div style={{ padding: spacing.md, marginTop: -60, position: 'relative', flexShrink: 0 }}>
+        {/* Profile Content */}
+        <div style={{ padding: spacing.md, marginTop: -60, position: 'relative' }}>
         {/* Avatar Section - positioned to overlap banner */}
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: spacing.md, marginBottom: spacing.md }}>
           {/* Owner Avatar */}
@@ -697,52 +785,73 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
             </div>
           )}
         </div>
+        </div>
+      </div>
 
-        {/* File City Image and Latest Commit Info - Side by Side */}
-        {(repositoryData.fileCityImageUrl || repositoryData.totalCommits > 0) && (
-          <div style={{ display: 'flex', gap: spacing.md, marginTop: spacing.lg }}>
-            {/* File City Image - Left */}
-            {repositoryData.fileCityImageUrl && (
+      {/* Bottom Section - File City 3D and Stats (fills remaining height) */}
+      <div style={{ flex: 1, display: 'flex', gap: spacing.md, padding: spacing.md, overflow: 'hidden' }}>
+        {/* File City 3D - Left */}
+        <div
+          style={{
+            flex: 1,
+            minWidth: 0,
+            height: '100%',
+            borderRadius: theme.radii?.[2] || 8,
+            overflow: 'hidden',
+            border: `1px solid ${theme.colors.border}`,
+            backgroundColor: theme.colors.backgroundSecondary,
+            position: 'relative',
+          }}
+        >
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+            {cityData ? (
+              <FileCity3D
+                cityData={cityData}
+                width="100%"
+                height="100%"
+                showControls={true}
+                heightScaling="linear"
+                linearScale={0.5}
+                animation={{ startFlat: true, autoStartDelay: null }}
+                isLoading={cityDataLoading}
+                loadingMessage="Building 3D city..."
+                backgroundColor={theme.colors.backgroundSecondary}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                }}
+              />
+            ) : (
               <div
                 style={{
-                  flex: '1 1 50%',
-                  minWidth: 0,
-                  borderRadius: theme.radii?.[2] || 8,
-                  overflow: 'hidden',
-                  border: `1px solid ${theme.colors.border}`,
-                  backgroundColor: theme.colors.backgroundSecondary,
-                  aspectRatio: '1 / 1',
+                  width: '100%',
+                  height: '100%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  color: theme.colors.textSecondary,
                 }}
               >
-                <img
-                  src={repositoryData.fileCityImageUrl}
-                  alt={`File City visualization for ${repositoryData.name}`}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    display: 'block',
-                  }}
-                />
+                {cityDataLoading ? 'Loading 3D city...' : 'No city data available'}
               </div>
             )}
+          </div>
+        </div>
 
-            {/* Latest Commit Info - Right */}
-            <section
-              style={{
-                flex: '1 1 50%',
-                minWidth: 0,
-                padding: spacing.md,
-                background: theme.colors.backgroundSecondary,
-                borderRadius: theme.radii?.[2] || 8,
-                border: `1px solid ${theme.colors.border}`,
-                display: 'flex',
-                flexDirection: 'column',
-              }}
-            >
+          {/* Latest Commit Info - Right */}
+          <section
+            style={{
+              flex: 1,
+              minWidth: 0,
+              padding: spacing.md,
+              background: theme.colors.backgroundSecondary,
+              borderRadius: theme.radii?.[2] || 8,
+              border: `1px solid ${theme.colors.border}`,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'auto',
+            }}
+          >
               <div
                 style={{
                   display: 'flex',
@@ -866,8 +975,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                 </div>
               </div>
             </section>
-          </div>
-        )}
       </div>
 
       {/* Add keyframe animation for loading spinner */}
