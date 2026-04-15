@@ -264,6 +264,19 @@ export const RepositoryPanelProvider: React.FC<
   const [rootFileTreeData, setRootFileTreeData] = useState<FileTree | null>(null);
   const [rootFileTreeLoading, setRootFileTreeLoading] = useState(false);
 
+  // Use a ref to always have the latest rootFileTreeData in actions
+  const rootFileTreeDataRef = useRef<FileTree | null>(null);
+  rootFileTreeDataRef.current = rootFileTreeData;
+
+  // Debug log when rootFileTreeData changes
+  useEffect(() => {
+    console.info('[RepositoryPanelProvider] rootFileTreeData updated:', {
+      hasData: !!rootFileTreeData,
+      metadataId: rootFileTreeData?.metadata?.id,
+      fileCount: rootFileTreeData?.allFiles?.length,
+    });
+  }, [rootFileTreeData]);
+
   // Track packages data for the current repository
   const [packagesData, setPackagesData] = useState<PackagesSliceData | null>(
     null,
@@ -626,45 +639,80 @@ export const RepositoryPanelProvider: React.FC<
     };
   }, [repositoryPath]);
 
-  // Load and watch .claude/plans directory for Claude plans
+  // Load and watch global .claude/plans directory for Claude plans
   useEffect(() => {
-    if (!repositoryPath) {
-      setRootFileTreeData(null);
-      return;
-    }
-
-    const plansDir = `${repositoryPath}/.claude/plans`;
+    let plansDir: string;
 
     // Function to load plans file tree
     const loadPlansFileTree = async () => {
       setRootFileTreeLoading(true);
       try {
+        // Get user's home directory
+        const homePath = await FileSystemService.getHomePath();
+        plansDir = `${homePath}/.claude/plans`;
+
         // Step 1: Read ONLY the .claude/plans directory (fast, no recursion)
         const entries = await FileSystemService.readDirectory(plansDir);
 
-        // Step 2: Filter for plan files and build full paths
-        const planFiles = entries
-          .filter((entry) => entry.endsWith('.md') || entry.endsWith('.MD'))
-          .map((entry) => `.claude/plans/${entry}`);
+        // Step 2: Filter for plan files
+        const planFileNames = entries
+          .filter((entry) => entry.endsWith('.md') || entry.endsWith('.MD'));
 
-        // Step 3: Build FileTree from paths only (no filesystem access)
+        // Step 3: Fetch file stats for each plan file to get modification times
+        const planFilesWithStats = await Promise.all(
+          planFileNames.map(async (fileName) => {
+            const absolutePath = `${plansDir}/${fileName}`;
+            const stats = await FileSystemService.getFileStats(absolutePath);
+            return {
+              path: `.claude/plans/${fileName}`,
+              size: stats?.size || 0,
+              lastModified: stats?.lastModified || new Date(),
+            };
+          })
+        );
+
+        // Step 4: Build FileTree with file metadata
         const builder = new PathsFileTreeBuilder();
-        const fileTree = builder.build({
-          files: planFiles,
-          rootPath: repositoryPath,
+        const builtTree = builder.build({
+          files: planFilesWithStats.map(f => f.path),
+          rootPath: homePath,
         });
 
+        // Step 5: Augment FileTree with file stats (mtime, size)
+        const enrichedFileTree = {
+          ...builtTree,
+          allFiles: builtTree.allFiles.map((file, index) => {
+            const statsEntry = planFilesWithStats[index];
+            return {
+              ...file,
+              size: statsEntry?.size || file.size || 0,
+              lastModified: statsEntry?.lastModified || file.lastModified || new Date(),
+            };
+          }),
+        };
+
+        // Step 6: Set metadata.id to home directory for path resolution
+        const fileTree: FileTree = {
+          ...enrichedFileTree,
+          metadata: {
+            ...enrichedFileTree.metadata,
+            id: homePath, // Home directory is the base path
+          },
+        };
+
         console.info(
-          '[RepositoryPanelProvider] Loaded plans file tree:',
-          repositoryPath,
-          planFiles.length,
+          '[RepositoryPanelProvider] Loaded global plans file tree:',
+          plansDir,
+          planFilesWithStats.length,
           'plans',
+          'metadata.id:',
+          fileTree.metadata?.id,
         );
 
         setRootFileTreeData(fileTree);
       } catch (error) {
         console.error(
-          '[RepositoryPanelProvider] Failed to load plans:',
+          '[RepositoryPanelProvider] Failed to load global plans:',
           error,
         );
         setRootFileTreeData(null);
@@ -673,30 +721,32 @@ export const RepositoryPanelProvider: React.FC<
       }
     };
 
-    // Initial load
-    loadPlansFileTree();
-
     // Setup file watcher for the plans directory
     const setupWatcher = async () => {
       try {
+        const homePath = await FileSystemService.getHomePath();
+        plansDir = `${homePath}/.claude/plans`;
+
         await FileSystemService.watchDirectory({
           directoryPath: plansDir,
           fileTypes: ['.md', '.MD'],
           isSubdirectory: false,
         });
-        console.info('[RepositoryPanelProvider] Started watching plans directory:', plansDir);
+        console.info('[RepositoryPanelProvider] Started watching global plans directory:', plansDir);
       } catch (error) {
-        console.error('[RepositoryPanelProvider] Failed to setup plans watcher:', error);
+        console.error('[RepositoryPanelProvider] Failed to setup global plans watcher:', error);
       }
     };
 
+    // Initial load
+    loadPlansFileTree();
     setupWatcher();
 
     // Subscribe to directory change events
     const unsubscribe = FileSystemService.onDirectoryChange((event) => {
       if (event.path && event.path.includes('.claude/plans/')) {
         console.info(
-          `[RepositoryPanelProvider] Plans directory ${event.type}:`,
+          `[RepositoryPanelProvider] Global plans directory ${event.type}:`,
           event.path,
         );
         // Reload plans when directory changes
@@ -706,11 +756,13 @@ export const RepositoryPanelProvider: React.FC<
 
     return () => {
       unsubscribe();
-      FileSystemService.stopWatchingDirectory(plansDir).catch((error) => {
-        console.error('[RepositoryPanelProvider] Failed to stop watching plans directory:', error);
-      });
+      if (plansDir) {
+        FileSystemService.stopWatchingDirectory(plansDir).catch((error) => {
+          console.error('[RepositoryPanelProvider] Failed to stop watching global plans directory:', error);
+        });
+      }
     };
-  }, [repositoryPath]);
+  }, []); // Run once on mount, watch global directory
 
   // Fetch packages when repository changes and subscribe to cache sync updates
   useEffect(() => {
@@ -1735,13 +1787,60 @@ export const RepositoryPanelProvider: React.FC<
       // File system actions - readFile supports both absolute and relative paths
       readFile: async (filePath: string) => {
         try {
-          // Resolve relative paths against the repository path
-          const absolutePath = filePath.startsWith('/')
-            ? filePath
-            : `${repositoryPath}/${filePath}`;
+          // Use ref to get the latest rootFileTreeData value
+          const currentRootFileTree = rootFileTreeDataRef.current;
+
+          console.info('[RepositoryPanelProvider] readFile called with:', {
+            filePath,
+            includesClaude: filePath.includes('.claude/plans/'),
+            rootFileTreeMetadataId: currentRootFileTree?.metadata?.id,
+            repositoryPath,
+          });
+
+          let absolutePath: string;
+
+          // Check if this is a plan file from the global .claude/plans directory
+          if (filePath.includes('.claude/plans/')) {
+            const basePath = currentRootFileTree?.metadata?.id;
+            console.info('[RepositoryPanelProvider] Plan file detected. basePath:', basePath);
+
+            if (basePath) {
+              // If path is already absolute but wrong (uses repositoryPath instead of home)
+              // Fix it by extracting the relative part and re-resolving
+              if (repositoryPath && filePath.startsWith(repositoryPath + '/')) {
+                // Extract relative path: /repo/.claude/plans/file.md -> .claude/plans/file.md
+                const relativePath = filePath.substring(repositoryPath.length + 1);
+                absolutePath = `${basePath}/${relativePath}`;
+                console.info('[RepositoryPanelProvider] Fixed wrong absolute path:', {
+                  original: filePath,
+                  relativePath,
+                  corrected: absolutePath,
+                });
+              } else if (filePath.startsWith('/')) {
+                // Already absolute and might be correct
+                absolutePath = filePath;
+              } else {
+                // Relative path
+                absolutePath = `${basePath}/${filePath}`;
+              }
+              console.info('[RepositoryPanelProvider] Reading plan file from home dir:', absolutePath);
+            } else {
+              console.warn('[RepositoryPanelProvider] rootFileTree metadata.id not available, using fallback');
+              absolutePath = filePath.startsWith('/')
+                ? filePath
+                : `${repositoryPath}/${filePath}`;
+            }
+          } else {
+            // Regular repository file - resolve against repository path
+            absolutePath = filePath.startsWith('/')
+              ? filePath
+              : `${repositoryPath}/${filePath}`;
+            console.info('[RepositoryPanelProvider] Reading repository file:', absolutePath);
+          }
+
           const result = await FileSystemService.readFile(absolutePath);
           if (!result) {
-            throw new Error(`File not found: ${filePath}`);
+            throw new Error(`File not found: ${absolutePath}`);
           }
           return result.content;
         } catch (error) {
@@ -1812,10 +1911,41 @@ export const RepositoryPanelProvider: React.FC<
 
       openFile: async (filePath: string): Promise<void> => {
         try {
-          // Make absolute path if needed
-          const absolutePath = filePath.startsWith('/')
-            ? filePath
-            : `${repositoryPath}/${filePath}`;
+          // Use ref to get the latest rootFileTreeData value
+          const currentRootFileTree = rootFileTreeDataRef.current;
+
+          let absolutePath: string;
+
+          // Check if this is a plan file from the global .claude/plans directory
+          if (filePath.includes('.claude/plans/')) {
+            const basePath = currentRootFileTree?.metadata?.id;
+            if (basePath) {
+              // If path is already absolute but wrong (uses repositoryPath instead of home)
+              if (repositoryPath && filePath.startsWith(repositoryPath + '/')) {
+                const relativePath = filePath.substring(repositoryPath.length + 1);
+                absolutePath = `${basePath}/${relativePath}`;
+                console.info('[RepositoryPanelProvider] Fixed wrong absolute path for openFile:', {
+                  original: filePath,
+                  corrected: absolutePath,
+                });
+              } else if (filePath.startsWith('/')) {
+                absolutePath = filePath;
+              } else {
+                absolutePath = `${basePath}/${filePath}`;
+              }
+              console.info('[RepositoryPanelProvider] Opening plan file from home dir:', absolutePath);
+            } else {
+              console.warn('[RepositoryPanelProvider] rootFileTree metadata.id not available for openFile, using fallback');
+              absolutePath = filePath.startsWith('/')
+                ? filePath
+                : `${repositoryPath}/${filePath}`;
+            }
+          } else {
+            // Regular repository file
+            absolutePath = filePath.startsWith('/')
+              ? filePath
+              : `${repositoryPath}/${filePath}`;
+          }
 
           console.info('[RepositoryPanelProvider] Opening file:', absolutePath);
 
@@ -2238,7 +2368,7 @@ export const RepositoryPanelProvider: React.FC<
         },
       };
     },
-    [repositoryPath],
+    [repositoryPath], // rootFileTreeData removed - we use ref instead
   );
 
   // Create data slices
@@ -2291,33 +2421,64 @@ export const RepositoryPanelProvider: React.FC<
       loading: rootFileTreeLoading,
       error: null,
       refresh: async () => {
-        if (repositoryPath) {
-          setRootFileTreeLoading(true);
-          try {
-            const plansDir = `${repositoryPath}/.claude/plans`;
-            const entries = await FileSystemService.readDirectory(plansDir);
-            const planFiles = entries
-              .filter((entry) => entry.endsWith('.md') || entry.endsWith('.MD'))
-              .map((entry) => `.claude/plans/${entry}`);
+        setRootFileTreeLoading(true);
+        try {
+          const homePath = await FileSystemService.getHomePath();
+          const plansDir = `${homePath}/.claude/plans`;
+          const entries = await FileSystemService.readDirectory(plansDir);
 
-            const builder = new PathsFileTreeBuilder();
-            const fileTree = builder.build({
-              files: planFiles,
-              rootPath: repositoryPath,
-            });
+          const planFileNames = entries
+            .filter((entry) => entry.endsWith('.md') || entry.endsWith('.MD'));
 
-            setRootFileTreeData(fileTree);
-            console.info('[RepositoryPanelProvider] Refreshed plans file tree');
-          } catch (error) {
-            console.error('[RepositoryPanelProvider] Failed to refresh plans:', error);
-            setRootFileTreeData(null);
-          } finally {
-            setRootFileTreeLoading(false);
-          }
+          const planFilesWithStats = await Promise.all(
+            planFileNames.map(async (fileName) => {
+              const absolutePath = `${plansDir}/${fileName}`;
+              const stats = await FileSystemService.getFileStats(absolutePath);
+              return {
+                path: `.claude/plans/${fileName}`,
+                size: stats?.size || 0,
+                lastModified: stats?.lastModified || new Date(),
+              };
+            })
+          );
+
+          const builder = new PathsFileTreeBuilder();
+          const builtTree = builder.build({
+            files: planFilesWithStats.map(f => f.path),
+            rootPath: homePath,
+          });
+
+          const enrichedFileTree = {
+            ...builtTree,
+            allFiles: builtTree.allFiles.map((file, index) => {
+              const statsEntry = planFilesWithStats[index];
+              return {
+                ...file,
+                size: statsEntry?.size || file.size || 0,
+                lastModified: statsEntry?.lastModified || file.lastModified || new Date(),
+              };
+            }),
+          };
+
+          const fileTree: FileTree = {
+            ...enrichedFileTree,
+            metadata: {
+              ...enrichedFileTree.metadata,
+              id: homePath,
+            },
+          };
+
+          setRootFileTreeData(fileTree);
+          console.info('[RepositoryPanelProvider] Refreshed global plans file tree');
+        } catch (error) {
+          console.error('[RepositoryPanelProvider] Failed to refresh global plans:', error);
+          setRootFileTreeData(null);
+        } finally {
+          setRootFileTreeLoading(false);
         }
       },
     }),
-    [rootFileTreeData, rootFileTreeLoading, repositoryPath],
+    [rootFileTreeData, rootFileTreeLoading],
   );
 
   const activeFileSlice: DataSlice<ActiveFileSlice> = useMemo(
