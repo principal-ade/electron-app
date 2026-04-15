@@ -62,6 +62,15 @@ scopes:
   external-otel-events-manager:
     color: "#64748B"
     description: "External OTEL Events Manager service - HTTP endpoints for trace persistence"
+  external-quality-tools:
+    color: "#64748B"
+    description: "External quality CLI tools - eslint, jest, tsc, knip, etc."
+  external-github-api:
+    color: "#64748B"
+    description: "External GitHub API - file downloads and repository operations"
+  external-principal-api:
+    color: "#64748B"
+    description: "External Principal ADE API - app.principal-ade.com services"
 
 # Service resource registry
 # Define all services in this repository with their OTEL resource attributes

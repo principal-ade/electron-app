@@ -52,7 +52,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-principal-window"
       }
     },
     {
@@ -81,7 +82,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-renderer"
       }
     },
     {
@@ -106,7 +108,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -141,7 +144,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -169,7 +173,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -197,7 +202,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -227,6 +233,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/window/modernWindowManager.ts"
         ]
@@ -251,7 +258,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -282,7 +290,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -313,7 +322,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -344,7 +354,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-dev-workspace"
       }
     },
     {
@@ -382,7 +393,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-dev-workspace"
       }
     },
     {
@@ -421,7 +433,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-dev-workspace"
       }
     },
     {
@@ -452,7 +465,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -480,7 +494,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -511,7 +526,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -539,7 +555,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -565,7 +582,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -595,6 +613,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-alexandria",
         "files": [
           "src/renderer/alexandria-workspace/AlexandriaWorkspaceApp.tsx"
         ]
@@ -623,6 +642,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-alexandria",
         "files": [
           "src/renderer/components/SaveThreadModal.tsx"
         ]
@@ -657,6 +677,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-alexandria",
         "files": [
           "src/renderer/alexandria-workspace/AlexandriaWorkspaceApp.tsx"
         ]
@@ -686,6 +707,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-alexandria",
         "files": [
           "src/renderer/alexandria-workspace/AlexandriaWorkspaceApp.tsx"
         ]
@@ -711,6 +733,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-alexandria",
         "files": [
           "src/renderer/alexandria-workspace/AlexandriaWorkspaceApp.tsx"
         ]
@@ -752,6 +775,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-alexandria",
         "files": [
           "src/renderer/alexandria-workspace/AlexandriaWorkspaceApp.tsx"
         ]
@@ -783,6 +807,7 @@
       },
       "otel": {
         "status": "implemented",
+        "scope": "principal-ade-alexandria",
         "files": [
           "src/renderer/alexandria-workspace/AlexandriaWorkspaceApp.tsx"
         ]

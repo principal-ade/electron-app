@@ -45,6 +45,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-principal-window",
         "files": [
           "node_modules/@industry-theme/git-sync-panels/dist/panels/GitHubSocialPanel.d.ts"
         ]
@@ -71,6 +72,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-renderer",
         "files": [
           "src/renderer/contexts/GitSyncPanelContext.tsx"
         ]
@@ -107,6 +109,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-renderer",
         "files": [
           "src/renderer/contexts/GitSyncPanelContext.tsx"
         ]
@@ -133,6 +136,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-renderer",
         "files": [
           "src/renderer/services/SecureAuthService.ts"
         ]
@@ -163,6 +167,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-renderer",
         "files": [
           "src/renderer/main-process-api/ApiProxyService.ts"
         ]
@@ -193,6 +198,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-main",
         "files": [
           "src/main/ipc/apiProxyHandler.ts"
         ]
@@ -223,6 +229,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "external-principal-api",
         "files": [
           "github-user-activity-api.md"
         ]
@@ -257,6 +264,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-renderer",
         "files": [
           "src/renderer/contexts/GitSyncPanelContext.tsx"
         ]
@@ -297,6 +305,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-principal-window",
         "files": [
           "src/renderer/panels/UserFeedPanel.tsx"
         ]
@@ -327,6 +336,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-principal-window",
         "files": [
           "src/renderer/panels/UserFeedPanel.tsx"
         ]
@@ -371,6 +381,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-principal-window",
         "files": [
           "src/renderer/panels/UserFeedPanel.tsx"
         ]
@@ -401,6 +412,7 @@
       },
       "otel": {
         "status": "draft",
+        "scope": "principal-ade-principal-window",
         "files": [
           "src/renderer/panels/UserFeedPanel.tsx"
         ]

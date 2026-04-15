@@ -34,7 +34,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-quick-open"
       }
     },
     {
@@ -65,7 +66,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -92,7 +94,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -119,7 +122,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -146,7 +150,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -173,7 +178,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -200,7 +206,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-window-switcher"
       }
     },
     {
@@ -261,7 +268,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-window-switcher"
       }
     },
     {
@@ -304,7 +312,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     }
   ],

@@ -34,7 +34,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-dev-workspace"
       }
     },
     {
@@ -57,7 +58,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-dev-workspace"
       }
     },
     {
@@ -84,7 +86,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-dev-workspace"
       }
     },
     {
@@ -115,7 +118,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-renderer"
       }
     },
     {
@@ -142,7 +146,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-dev-workspace"
       }
     },
     {
@@ -165,7 +170,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "file-city-renderer"
       }
     },
     {
@@ -192,7 +198,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-dev-workspace"
       }
     },
     {
@@ -219,7 +226,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -250,7 +258,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -277,7 +286,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -304,7 +314,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-cli-bridge"
       }
     },
     {
@@ -335,7 +346,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "external-quality-tools"
       }
     },
     {
@@ -370,7 +382,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -416,7 +429,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -443,7 +457,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -474,7 +489,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -497,7 +513,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -524,7 +541,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -555,7 +573,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -578,7 +597,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -609,7 +629,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -632,7 +653,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -663,7 +685,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     },
     {
@@ -690,7 +713,8 @@
         }
       },
       "otel": {
-        "status": "draft"
+        "status": "draft",
+        "scope": "principal-ade-main"
       }
     }
   ],
