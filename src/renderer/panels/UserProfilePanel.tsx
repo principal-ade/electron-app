@@ -339,7 +339,6 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
         style={{
           position: 'relative',
           height: 170,
-          backgroundColor: theme.colors.backgroundSecondary,
           overflow: 'hidden',
         }}
       >

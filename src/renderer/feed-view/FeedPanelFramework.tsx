@@ -28,7 +28,6 @@ import {
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { FileCityImageService } from '../main-process-api/FileCityImageService';
-import type { GitStatusWithFiles } from '@principal-ai/repository-abstraction';
 import {
   TabbedTerminalPanel,
   type TerminalTab,
@@ -40,10 +39,11 @@ import { ProjectsListPanel } from '../panels/ProjectsListPanel';
 import { WatchedItemsPanel } from '../panels/WatchedItemsPanel';
 import { ActivityFeedCardPanel } from '../panels/ActivityFeedCardPanel';
 import { ReviewCommitPanel } from '../panels/ReviewCommitPanel';
-import { ProjectInfoPanel } from '../panels/ProjectInfoPanel';
+import { RepositoryProfilePanel, type RepositoryProfileData } from '../panels/RepositoryProfilePanel';
 import { LiveActivityTabContent } from '../components/LiveActivityTabContent';
 import { UserProfilePanel, type UserProfileData } from '../panels/UserProfilePanel';
 import { useActivityFeed } from '../hooks/useActivityFeed';
+import { useCommitHeatMap } from '../hooks/useCommitHeatMap';
 import type { CommitTimestamp } from '../panels/ProjectsListPanel';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
 import { GithubService } from '../main-process-api/GithubService';
@@ -548,78 +548,138 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
         }
         case 'project-info': {
           const projectTab = tab as ProjectInfoTab;
-          // Wrapper component that fetches git status
-          const ProjectInfoTabContent = () => {
-            const [gitStatus, setGitStatus] = React.useState<GitStatusWithFiles | null>(null);
-            const [gitLoading, setGitLoading] = React.useState(true);
-            const repoPath = projectTab.repository.path;
+          // Wrapper component for repository profile
+          const RepositoryProfileTabContent = () => {
+            const [repositoryData, setRepositoryData] = React.useState<RepositoryProfileData | undefined>(undefined);
+            const [loading, setLoading] = React.useState(true);
+            const [error, setError] = React.useState<string | undefined>(undefined);
+
+            // Use commit heatmap hook to get activity data
+            const heatMapData = useCommitHeatMap(projectTab.repository.path ?? null);
 
             React.useEffect(() => {
-              if (repoPath) {
-                setGitLoading(true);
-                RepositoryMonitoringService.getGitStatusWithFiles(repoPath)
-                  .then(setGitStatus)
-                  .catch((err) => {
-                    console.error('[ProjectInfoTab] Failed to fetch git status:', err);
-                    setGitStatus(null);
-                  })
-                  .finally(() => setGitLoading(false));
-              } else {
-                setGitLoading(false);
-              }
-            }, [repoPath]);
+              let cancelled = false;
 
-            // Create context with git status slice
-            // AlexandriaEntry is compatible with RepositoryMetadata (has name, path, and index signature allows extras)
+              const fetchRepositoryData = async () => {
+                setLoading(true);
+                setError(undefined);
+
+                try {
+                  const repo = projectTab.repository;
+
+                  // Get File City image
+                  const fileCityImageUrl = repo.path
+                    ? await FileCityImageService.getImage(repo.path)
+                    : null;
+
+                  if (cancelled) return;
+
+                  // Transform activity data
+                  const activityData = new Map<string, number>();
+                  heatMapData.commits.forEach((commit) => {
+                    activityData.set(commit.date, commit.count);
+                  });
+
+                  // Calculate total commits
+                  let totalCommits = 0;
+                  activityData.forEach((count) => {
+                    totalCommits += count;
+                  });
+
+                  const profileData: RepositoryProfileData = {
+                    name: repo.name,
+                    fullName: repo.github?.owner ? `${repo.github.owner}/${repo.github.name || repo.name}` : repo.name,
+                    owner: repo.github?.owner || 'local',
+                    ownerAvatarUrl: repo.github?.owner ? `https://github.com/${repo.github.owner}.png` : undefined,
+                    description: repo.github?.description || undefined,
+                    language: undefined, // Not available in AlexandriaEntry
+                    stars: 0, // Not available for local repos
+                    forks: 0, // Not available for local repos
+                    watchers: 0, // Not available for local repos
+                    openIssues: 0, // Not available for local repos
+                    size: 0, // Could be calculated but not essential
+                    activityData,
+                    totalCommits: totalCommits || 0,
+                    defaultBranch: 'main', // Could fetch from git but using default
+                    createdAt: repo.registeredAt || new Date().toISOString(),
+                    updatedAt: repo.lastOpenedAt || new Date().toISOString(),
+                    htmlUrl: repo.github?.owner && repo.github?.name
+                      ? `https://github.com/${repo.github.owner}/${repo.github.name}`
+                      : undefined,
+                    isPrivate: false,
+                    isLocal: true,
+                    localPath: repo.path || undefined,
+                    fileCityImageUrl: fileCityImageUrl || undefined,
+                  };
+
+                  setRepositoryData(profileData);
+                  setLoading(false);
+                } catch (err) {
+                  if (!cancelled) {
+                    console.error('[RepositoryProfileTab] Failed to fetch repository data:', err);
+                    setError('Failed to load repository profile');
+                    setLoading(false);
+                  }
+                }
+              };
+
+              fetchRepositoryData();
+
+              return () => {
+                cancelled = true;
+              };
+            }, [heatMapData.commits]);
+
+            // Handle open repository
+            const handleOpenRepository = React.useCallback(() => {
+              if (onOpenRepository) {
+                onOpenRepository(projectTab.repository);
+              }
+            }, []);
+
+            // Handle delete repository
+            const handleDeleteRepository = React.useCallback(() => {
+              events.emit({
+                type: 'project-info:delete-requested',
+                source: 'repository-profile-panel',
+                timestamp: Date.now(),
+                payload: {
+                  repository: projectTab.repository,
+                },
+              });
+            }, []);
+
+            // Create minimal context and actions
             const projectContext = {
               currentScope: { type: 'repository' as const, repository: projectTab.repository as unknown as RepositoryMetadata },
               slices: new Map(),
               adapters: {},
               isSliceLoading: () => false,
-              refresh: async () => {
-                if (repoPath) {
-                  setGitLoading(true);
-                  const status = await RepositoryMonitoringService.getGitStatusWithFiles(repoPath);
-                  setGitStatus(status);
-                  setGitLoading(false);
-                }
-              },
-              gitStatusWithFiles: {
-                scope: 'repository' as const,
-                name: 'gitStatusWithFiles',
-                data: gitStatus,
-                loading: gitLoading,
-                error: null,
-                refresh: async () => {
-                  if (repoPath) {
-                    const status = await RepositoryMonitoringService.getGitStatusWithFiles(repoPath);
-                    setGitStatus(status);
-                  }
-                },
-              },
+              refresh: async () => {},
             };
 
-            // Create minimal actions with getFileCityImage
             const projectActions = {
               openFile: () => {},
               openGitDiff: () => {},
               navigateToPanel: () => {},
               notifyPanels: (event: PanelEvent) => events.emit(event),
-              getFileCityImage: async (repoPath: string) => {
-                return FileCityImageService.getImage(repoPath);
-              },
             };
 
             return (
-              <ProjectInfoPanel
+              <RepositoryProfilePanel
                 context={projectContext}
                 actions={projectActions}
                 events={events}
+                repositoryData={repositoryData}
+                loading={loading}
+                error={error}
+                onOpenRepository={handleOpenRepository}
+                onDeleteRepository={handleDeleteRepository}
               />
             );
           };
 
-          return <ProjectInfoTabContent />;
+          return <RepositoryProfileTabContent />;
         }
         case 'user-profile': {
           const userTab = tab as UserProfileTab;
