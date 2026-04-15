@@ -2890,38 +2890,6 @@ export const RepositoryPanelProvider: React.FC<
   );
 
   // Memoize callback functions to prevent recreation
-  // Legacy slice getter methods - kept for PanelContextValue interface compatibility
-  const getSlice = useCallback(
-    <T = unknown,>(_name: string): DataSlice<T> | undefined => {
-      // No-op: Moving away from dynamic Map-based slices
-      // Panels should access typed properties directly (context.fileTree)
-      return undefined;
-    },
-    [],
-  );
-
-  const getWorkspaceSlice = useCallback(() => undefined, []); // No workspace slices in repository context
-
-  const getRepositorySlice = useCallback(
-    <T = unknown,>(_name: string): DataSlice<T> | undefined => {
-      // No-op: Moving away from dynamic Map-based slices
-      // Panels should access typed properties directly (context.fileTree)
-      return undefined;
-    },
-    [],
-  );
-
-  // Legacy helper methods - kept for PanelContextValue interface compatibility
-  // No-op stubs: actions handle their own refreshing, React handles reactivity
-  const hasSlice = useCallback(
-    (_name: string, _scope?: 'workspace' | 'repository'): boolean => {
-      // No-op: Moving away from dynamic slice checking
-      // Panels should access typed properties directly (context.fileTree)
-      return false;
-    },
-    [],
-  );
-
   const isSliceLoading = useCallback(
     (_name: string, _scope?: 'workspace' | 'repository'): boolean => {
       // No-op: Moving away from dynamic slice checking
@@ -2953,10 +2921,6 @@ export const RepositoryPanelProvider: React.FC<
       currentScope,
       slices,
       adapters,
-      getSlice,
-      getWorkspaceSlice,
-      getRepositorySlice,
-      hasSlice,
       isSliceLoading,
       refresh,
 
@@ -2994,10 +2958,6 @@ export const RepositoryPanelProvider: React.FC<
       currentScope,
       slices,
       adapters,
-      getSlice,
-      getWorkspaceSlice,
-      getRepositorySlice,
-      hasSlice,
       isSliceLoading,
       refresh,
       activeFileSlice,

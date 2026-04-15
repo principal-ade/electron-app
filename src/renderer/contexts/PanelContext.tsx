@@ -1646,13 +1646,6 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       },
       slices,
       adapters,
-      // Legacy helper methods - now no-ops since we migrated to explicit slices
-      // Actions handle refreshing, React handles reactivity
-      // Panels should use explicit slice properties (context.workspace, context.markdown, etc.)
-      getSlice: () => undefined,
-      getWorkspaceSlice: () => undefined,
-      getRepositorySlice: () => undefined,
-      hasSlice: () => false,
       isSliceLoading: () => false,
       refresh: async () => {
         // No-op: Actions handle refreshing, React handles reactivity

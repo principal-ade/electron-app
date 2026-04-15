@@ -100,18 +100,6 @@ export const LocalhostProcessesView: React.FC = () => {
         },
       },
       slices,
-      getSlice: <T,>(name: string): DataSlice<T> | undefined => {
-        return slices.get(name) as DataSlice<T> | undefined;
-      },
-      getWorkspaceSlice: <T,>(name: string): DataSlice<T> | undefined => {
-        return slices.get(name) as DataSlice<T> | undefined;
-      },
-      getRepositorySlice: <T,>(): DataSlice<T> | undefined => {
-        return undefined;
-      },
-      hasSlice: (name: string): boolean => {
-        return slices.has(name);
-      },
       isSliceLoading: (name: string): boolean => {
         const slice = slices.get(name);
         return slice?.loading ?? false;
@@ -119,6 +107,8 @@ export const LocalhostProcessesView: React.FC = () => {
       refresh: async (): Promise<void> => {
         await fetchServers();
       },
+      // Typed slice property for direct access
+      localhostServers: localhostServersSlice,
     };
   }, [servers, loading, error, fetchServers]);
 

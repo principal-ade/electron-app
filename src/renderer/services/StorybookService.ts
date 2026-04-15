@@ -35,7 +35,7 @@ export interface StorybookPackage {
  * @returns Array of packages that have Storybook configured
  *
  * @example
- * const packagesSlice = context.getSlice('packages');
+ * const packagesSlice = context.packages;
  * const storybookPackages = findStorybookPackages(packagesSlice.data.packages, repoPath);
  * if (storybookPackages.length > 0) {
  *   console.info(`Found ${storybookPackages.length} packages with Storybook`);

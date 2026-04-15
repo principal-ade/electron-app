@@ -691,13 +691,6 @@ export const GitSyncPanelProvider: React.FC<GitSyncPanelProviderProps> = ({
       },
       slices,
       adapters: {},
-      // Legacy helper methods - now no-ops since we migrated to explicit slices
-      // Actions handle refreshing, React handles reactivity
-      // Panels should use explicit slice properties (context.githubSocial, context.userProfile, etc.)
-      getSlice: () => undefined,
-      getWorkspaceSlice: () => undefined,
-      getRepositorySlice: () => undefined,
-      hasSlice: () => false,
       isSliceLoading: () => false,
       refresh: async () => {
         // No-op: Actions handle refreshing, React handles reactivity

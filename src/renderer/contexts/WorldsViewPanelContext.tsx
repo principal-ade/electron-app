@@ -865,29 +865,6 @@ export const WorldsViewPanelProvider: React.FC<
       },
       slices,
       adapters: {},
-      // Legacy slice getter methods - kept for PanelContextValue interface compatibility
-      getSlice: <T = unknown,>(_name: string): DataSlice<T> | undefined => {
-        // No-op: Moving away from dynamic Map-based slices
-        // Panels should access typed properties directly (context.userCollections)
-        return undefined;
-      },
-      getWorkspaceSlice: <T = unknown,>(
-        _name: string,
-      ): DataSlice<T> | undefined => {
-        return undefined; // No workspace scope in this context
-      },
-      getRepositorySlice: <T = unknown,>(
-        _name: string,
-      ): DataSlice<T> | undefined => {
-        return undefined; // No repository scope in this context
-      },
-      // Legacy helper methods - kept for PanelContextValue interface compatibility
-      // No-op stubs: actions handle their own refreshing, React handles reactivity
-      hasSlice: (_name: string, _scope?: 'workspace' | 'repository'): boolean => {
-        // No-op: Moving away from dynamic slice checking
-        // Panels should access typed properties directly (context.userCollections)
-        return false;
-      },
       isSliceLoading: (
         _name: string,
         _scope?: 'workspace' | 'repository',

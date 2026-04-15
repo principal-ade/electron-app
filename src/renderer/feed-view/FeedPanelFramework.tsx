@@ -12,7 +12,7 @@
 
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { GitCommit, Users, Activity, FolderGit2 } from 'lucide-react';
+import { GitCommit, Users, Activity, FolderGit2, User } from 'lucide-react';
 import {
   ConfigurablePanelLayout,
   type PanelLayout,
@@ -42,6 +42,7 @@ import { ActivityFeedCardPanel } from '../panels/ActivityFeedCardPanel';
 import { ReviewCommitPanel } from '../panels/ReviewCommitPanel';
 import { ProjectInfoPanel } from '../panels/ProjectInfoPanel';
 import { LiveActivityTabContent } from '../components/LiveActivityTabContent';
+import { UserProfilePanel } from '../panels/UserProfilePanel';
 import { useActivityFeed } from '../hooks/useActivityFeed';
 import type { CommitTimestamp } from '../panels/ProjectsListPanel';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
@@ -79,9 +80,18 @@ export interface ProjectInfoTab extends BaseTab {
 }
 
 /**
+ * User profile tab - displays user activity and profile information
+ */
+export interface UserProfileTab extends BaseTab {
+  contentType: 'user-profile';
+  username: string;
+  email?: string;
+}
+
+/**
  * Union type of all supported tab types in FeedView
  */
-export type FeedTab = TerminalTab | CommitReviewTab | LiveActivityTab | ActivityFeedTab | ProjectInfoTab;
+export type FeedTab = TerminalTab | CommitReviewTab | LiveActivityTab | ActivityFeedTab | ProjectInfoTab | UserProfileTab;
 
 export interface FeedPanelFrameworkProps {
   /** List of repositories */
@@ -374,6 +384,44 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     };
   }, [events, tabs]);
 
+  // Listen for user profile selection events to open user profile tab
+  useEffect(() => {
+    const handleUserSelected = (event: {
+      type: string;
+      payload: { username: string; email?: string }
+    }) => {
+      if (event.type === 'user:profile-selected') {
+        const { username, email } = event.payload;
+        const tabId = `user-profile-${username}`;
+
+        // Check if tab already exists
+        const existingTab = tabs.find(tab => tab.id === tabId);
+        if (existingTab) {
+          setActiveTabId(tabId);
+          return;
+        }
+
+        // Create new user profile tab
+        const newTab: UserProfileTab = {
+          id: tabId,
+          label: `@${username}`,
+          contentType: 'user-profile',
+          closable: true,
+          username,
+          email,
+        };
+
+        setTabs(prevTabs => [...prevTabs, newTab]);
+        setActiveTabId(tabId);
+      }
+    };
+
+    events.on('user:profile-selected', handleUserSelected);
+    return () => {
+      events.off('user:profile-selected', handleUserSelected);
+    };
+  }, [events, tabs]);
+
   // Convert terminal activities to workingStates record
   const workingStates = useMemo(() => {
     const states: Record<string, TerminalWorkingState> = {};
@@ -428,6 +476,8 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
         return <Activity size={14} />;
       case 'project-info':
         return <FolderGit2 size={14} />;
+      case 'user-profile':
+        return <User size={14} />;
       default:
         return null;
     }
@@ -488,10 +538,6 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
               currentScope: { type: 'repository' as const, repository: projectTab.repository as unknown as RepositoryMetadata },
               slices: new Map(),
               adapters: {},
-              getSlice: () => undefined,
-              getWorkspaceSlice: () => undefined,
-              getRepositorySlice: () => undefined,
-              hasSlice: () => false,
               isSliceLoading: () => false,
               refresh: async () => {
                 if (repoPath) {
@@ -537,6 +583,68 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
           };
 
           return <ProjectInfoTabContent />;
+        }
+        case 'user-profile': {
+          const userTab = tab as UserProfileTab;
+          // Wrapper component for user profile
+          const UserProfileTabContent = () => {
+            // TODO: Fetch real user data from git commits
+            // For now, create mock data based on username/email
+            const mockUserData = React.useMemo(() => {
+              const activityData = new Map<string, number>();
+              const today = new Date();
+
+              // Generate mock activity for the past year
+              for (let i = 0; i < 365; i++) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                const dateKey = date.toISOString().split('T')[0];
+
+                // Random activity
+                if (Math.random() < 0.6) {
+                  activityData.set(dateKey, Math.floor(Math.random() * 20) + 1);
+                }
+              }
+
+              return {
+                username: userTab.username,
+                name: userTab.username,
+                email: userTab.email,
+                activityData,
+                totalCommits: 847,
+                totalRepos: 12,
+                followers: 42,
+                following: 38,
+                joinedDate: '2020-01-15T00:00:00Z',
+              };
+            }, []);
+
+            const mockContext = {
+              currentScope: { type: 'workspace' as const },
+              slices: new Map(),
+              adapters: {},
+              isSliceLoading: () => false,
+              refresh: async () => {},
+            };
+
+            const mockActions = {
+              openFile: () => {},
+              openGitDiff: () => {},
+              navigateToPanel: () => {},
+              notifyPanels: (event: PanelEvent<unknown>) => events.emit(event),
+            };
+
+            return (
+              <UserProfilePanel
+                context={mockContext}
+                actions={mockActions}
+                events={events}
+                userData={mockUserData}
+              />
+            );
+          };
+
+          return <UserProfileTabContent />;
         }
         default:
           return null;

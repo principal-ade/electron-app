@@ -46,76 +46,11 @@ class MockEventEmitter implements PanelEventEmitter {
   }
 }
 
-// Mock types data generator
-const createMockTypes = (count: number = 20) => {
-  const kinds: Array<'interface' | 'type' | 'class' | 'enum' | 'function'> = [
-    'interface',
-    'type',
-    'class',
-    'enum',
-    'function',
-  ];
-
-  const typeNames = [
-    'UserProfile',
-    'ApiResponse',
-    'Repository',
-    'GitStatus',
-    'PanelContextValue',
-    'ThemeColors',
-    'ValidationError',
-    'formatDate',
-    'ComponentProps',
-    'ServiceConfig',
-    'HttpClient',
-    'DatabaseConnection',
-    'AuthToken',
-    'ErrorHandler',
-    'Logger',
-    'RouteConfig',
-    'Middleware',
-    'RequestHandler',
-    'ResponseData',
-    'QueryParams',
-    'FileMetadata',
-    'CacheEntry',
-    'EventEmitter',
-    'StreamProcessor',
-    'DataTransformer',
-  ];
-
-  const files = [
-    'src/types/user.ts',
-    'src/types/api.ts',
-    'src/types/repository.ts',
-    'src/types/git.ts',
-    'src/types/panel.ts',
-    'src/types/theme.ts',
-    'src/utils/errors.ts',
-    'src/utils/date.ts',
-    'src/components/Button.tsx',
-    'src/services/api-client.ts',
-    'src/services/auth.ts',
-    'src/config/routes.ts',
-    'src/middleware/logger.ts',
-    'src/models/user.ts',
-    'src/lib/cache.ts',
-  ];
-
-  return Array.from({ length: Math.min(count, typeNames.length) }, (_, i) => ({
-    name: typeNames[i],
-    kind: kinds[i % kinds.length],
-    filePath: files[i % files.length],
-  }));
-};
-
 // Mock context provider component
 const MockTypeInformationPanel: React.FC<{
   hasRepository?: boolean;
   typeCount?: number;
-}> = ({ hasRepository = true, typeCount = 20 }) => {
-  const [mockTypes] = useState(createMockTypes(typeCount));
-
+}> = ({ hasRepository = true }) => {
   const mockContext: PanelContextValue = {
     currentScope: hasRepository
       ? {
@@ -126,13 +61,6 @@ const MockTypeInformationPanel: React.FC<{
           },
         }
       : undefined,
-    getSlice: () => ({
-      data: mockTypes,
-      loading: false,
-      error: undefined,
-      refresh: async () => {},
-    }),
-    hasSlice: () => true,
     isSliceLoading: () => false,
     refresh: async () => {},
     clearSlice: () => {},
@@ -226,13 +154,6 @@ export const LoadingState = {
             name: 'loading-project',
           },
         },
-        getSlice: () => ({
-          data: undefined,
-          loading: true,
-          error: undefined,
-          refresh: async () => {},
-        }),
-        hasSlice: () => true,
         isSliceLoading: () => true,
         refresh: async () => {},
         clearSlice: () => {},

@@ -212,49 +212,8 @@ export const SkillBrowserPanelProvider: React.FC<
     [githubAdapter, localSkillsAdapter],
   );
 
-  // Create data slices
-  const slices = useMemo<Map<string, DataSlice>>(
-    () =>
-      new Map([
-        [
-          'fileTree',
-          {
-            scope: 'repository' as const,
-            name: 'fileTree',
-            data: fileTreeData,
-            loading: fileTreeLoading,
-            error: null,
-            refresh: async () => {
-              // Refresh is handled by skills:refresh event from SkillsListPanel
-              // This is here for API compatibility but not actively used
-              console.info('[SkillBrowserPanelProvider] fileTree refresh called (no-op)');
-            },
-          },
-        ],
-        [
-          'globalSkills',
-          {
-            scope: 'workspace' as const,
-            name: 'globalSkills',
-            data: { skills: globalSkillsData },
-            loading: globalSkillsLoading,
-            error: null,
-            refresh: async () => {
-              setGlobalSkillsLoading(true);
-              try {
-                const skills = await FileSystemService.getGlobalSkills();
-                setGlobalSkillsData(skills);
-              } catch (error) {
-                console.error('[SkillBrowserPanelProvider] Failed to refresh global skills:', error);
-              } finally {
-                setGlobalSkillsLoading(false);
-              }
-            },
-          },
-        ],
-      ]),
-    [fileTreeData, fileTreeLoading, globalSkillsData, globalSkillsLoading],
-  );
+  // Create empty slices Map for backward compatibility
+  const slices = useMemo<Map<string, DataSlice>>(() => new Map(), []);
 
   // Create actions
   const actions = useMemo(
@@ -339,36 +298,21 @@ export const SkillBrowserPanelProvider: React.FC<
       },
       slices,
       adapters,
-      getSlice: <T = unknown,>(name: string): DataSlice<T> | undefined => {
-        return slices.get(name) as DataSlice<T> | undefined;
+      isSliceLoading: (_name: string, _scope?: 'workspace' | 'repository'): boolean => {
+        // Use typed slice properties directly (context.fileTree.loading, context.globalSkills.loading)
+        return false;
       },
-      getWorkspaceSlice: <T = unknown,>(name: string): DataSlice<T> | undefined => {
-        const slice = slices.get(name);
-        return slice?.scope === 'workspace' ? (slice as DataSlice<T>) : undefined;
-      },
-      getRepositorySlice: () => undefined,
-      hasSlice: (name: string, scope?: 'workspace' | 'repository'): boolean => {
-        const slice = slices.get(name);
-        if (!slice) return false;
-        return scope ? slice.scope === scope : true;
-      },
-      isSliceLoading: (name: string, scope?: 'workspace' | 'repository'): boolean => {
-        const slice = slices.get(name);
-        if (!slice) return false;
-        if (scope && slice.scope !== scope) return false;
-        return slice.loading;
-      },
-      refresh: async (scope?: 'workspace' | 'repository', sliceName?: string): Promise<void> => {
-        const slicesToRefresh = Array.from(slices.values()).filter((slice) => {
-          if (scope && slice.scope !== scope) return false;
-          if (sliceName && slice.name !== sliceName) return false;
-          return true;
-        });
-
-        await Promise.all(slicesToRefresh.map((slice) => slice.refresh()));
+      refresh: async (_scope?: 'workspace' | 'repository', sliceName?: string): Promise<void> => {
+        // Refresh specific slices based on name
+        if (!sliceName || sliceName === 'globalSkills') {
+          await globalSkillsSlice.refresh();
+        }
+        if (!sliceName || sliceName === 'fileTree') {
+          await fileTreeSlice.refresh();
+        }
       },
     }),
-    [slices, adapters, globalSkillsLoading, fileTreeLoading, githubRepoInfo, fileTreeSlice, globalSkillsSlice],
+    [slices, adapters, githubRepoInfo, fileTreeSlice, globalSkillsSlice, globalSkillsLoading, fileTreeLoading],
   );
 
   // Provider value

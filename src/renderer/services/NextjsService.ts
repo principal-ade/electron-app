@@ -33,7 +33,7 @@ export interface NextjsPackage {
  * @returns Array of packages that have Next.js configured
  *
  * @example
- * const packagesSlice = context.getSlice('packages');
+ * const packagesSlice = context.packages;
  * const nextjsPackages = findNextjsPackages(packagesSlice.data.packages, repoPath);
  * if (nextjsPackages.length > 0) {
  *   console.info(`Found ${nextjsPackages.length} packages with Next.js`);
