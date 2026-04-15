@@ -564,7 +564,7 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
               "style-src 'self' 'unsafe-inline';",
               "img-src 'self' data: blob: https:;",
               "font-src 'self' data:;",
-              "connect-src 'self' data: ws: wss: http://localhost:* https://localhost:* https://principle-md.com https://registry.npmjs.org https://api.github.com https://raw.githubusercontent.com https://openrouter.ai;",
+              "connect-src 'self' data: ws: wss: http://localhost:* https://localhost:* https://principle-md.com https://registry.npmjs.org https://api.github.com https://raw.githubusercontent.com https://openrouter.ai https://cdn.jsdelivr.net;",
               "worker-src 'self' blob:;",
               "media-src 'self';",
               "object-src 'none';",
