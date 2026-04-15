@@ -32,7 +32,7 @@ import { GitService } from '../main-process-api/GitService';
 import { SkillLockService } from '../main-process-api/SkillLockService';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { FileTree } from '@principal-ai/repository-abstraction';
-import { FileTreeCore, createFileTreeSource } from '@principal-ai/repository-abstraction';
+import { FileTreeCore, createFileTreeSource, PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
 import type { PackagesSliceData } from '@principal-ai/codebase-composition';
 import type { GitStatusWithFiles } from '@principal-ai/repository-monitoring-server';
 import { minimatch } from 'minimatch';
@@ -202,6 +202,7 @@ interface RepositoryPanelContextValue extends PanelContextValue {
   // Explicit typed slice properties - no more dynamic Map lookups!
   activeFile: DataSlice<ActiveFileSlice>;
   fileTree: DataSlice<FileTree>;
+  rootFileTree: DataSlice<FileTree>;
   openTabs: DataSlice<unknown[]>;
   markdown: DataSlice<unknown>;
   packages: DataSlice<PackagesSliceData | null>;
@@ -258,6 +259,10 @@ export const RepositoryPanelProvider: React.FC<
   // Track file tree for the current repository
   const [fileTreeData, setFileTreeData] = useState<FileTree | null>(null);
   const [fileTreeLoading, setFileTreeLoading] = useState(false);
+
+  // Track root file tree for .claude/plans directory
+  const [rootFileTreeData, setRootFileTreeData] = useState<FileTree | null>(null);
+  const [rootFileTreeLoading, setRootFileTreeLoading] = useState(false);
 
   // Track packages data for the current repository
   const [packagesData, setPackagesData] = useState<PackagesSliceData | null>(
@@ -618,6 +623,92 @@ export const RepositoryPanelProvider: React.FC<
 
     return () => {
       unsubscribe();
+    };
+  }, [repositoryPath]);
+
+  // Load and watch .claude/plans directory for Claude plans
+  useEffect(() => {
+    if (!repositoryPath) {
+      setRootFileTreeData(null);
+      return;
+    }
+
+    const plansDir = `${repositoryPath}/.claude/plans`;
+
+    // Function to load plans file tree
+    const loadPlansFileTree = async () => {
+      setRootFileTreeLoading(true);
+      try {
+        // Step 1: Read ONLY the .claude/plans directory (fast, no recursion)
+        const entries = await FileSystemService.readDirectory(plansDir);
+
+        // Step 2: Filter for plan files and build full paths
+        const planFiles = entries
+          .filter((entry) => entry.endsWith('.md') || entry.endsWith('.MD'))
+          .map((entry) => `.claude/plans/${entry}`);
+
+        // Step 3: Build FileTree from paths only (no filesystem access)
+        const builder = new PathsFileTreeBuilder();
+        const fileTree = builder.build({
+          files: planFiles,
+          rootPath: repositoryPath,
+        });
+
+        console.info(
+          '[RepositoryPanelProvider] Loaded plans file tree:',
+          repositoryPath,
+          planFiles.length,
+          'plans',
+        );
+
+        setRootFileTreeData(fileTree);
+      } catch (error) {
+        console.error(
+          '[RepositoryPanelProvider] Failed to load plans:',
+          error,
+        );
+        setRootFileTreeData(null);
+      } finally {
+        setRootFileTreeLoading(false);
+      }
+    };
+
+    // Initial load
+    loadPlansFileTree();
+
+    // Setup file watcher for the plans directory
+    const setupWatcher = async () => {
+      try {
+        await FileSystemService.watchDirectory({
+          directoryPath: plansDir,
+          fileTypes: ['.md', '.MD'],
+          isSubdirectory: false,
+        });
+        console.info('[RepositoryPanelProvider] Started watching plans directory:', plansDir);
+      } catch (error) {
+        console.error('[RepositoryPanelProvider] Failed to setup plans watcher:', error);
+      }
+    };
+
+    setupWatcher();
+
+    // Subscribe to directory change events
+    const unsubscribe = FileSystemService.onDirectoryChange((event) => {
+      if (event.path && event.path.includes('.claude/plans/')) {
+        console.info(
+          `[RepositoryPanelProvider] Plans directory ${event.type}:`,
+          event.path,
+        );
+        // Reload plans when directory changes
+        loadPlansFileTree();
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      FileSystemService.stopWatchingDirectory(plansDir).catch((error) => {
+        console.error('[RepositoryPanelProvider] Failed to stop watching plans directory:', error);
+      });
     };
   }, [repositoryPath]);
 
@@ -2192,6 +2283,43 @@ export const RepositoryPanelProvider: React.FC<
     [augmentedFileTreeData, fileTreeLoading, repositoryPath],
   );
 
+  const rootFileTreeSlice: DataSlice<FileTree> = useMemo(
+    () => ({
+      scope: 'global' as const,
+      name: 'rootFileTree',
+      data: rootFileTreeData,
+      loading: rootFileTreeLoading,
+      error: null,
+      refresh: async () => {
+        if (repositoryPath) {
+          setRootFileTreeLoading(true);
+          try {
+            const plansDir = `${repositoryPath}/.claude/plans`;
+            const entries = await FileSystemService.readDirectory(plansDir);
+            const planFiles = entries
+              .filter((entry) => entry.endsWith('.md') || entry.endsWith('.MD'))
+              .map((entry) => `.claude/plans/${entry}`);
+
+            const builder = new PathsFileTreeBuilder();
+            const fileTree = builder.build({
+              files: planFiles,
+              rootPath: repositoryPath,
+            });
+
+            setRootFileTreeData(fileTree);
+            console.info('[RepositoryPanelProvider] Refreshed plans file tree');
+          } catch (error) {
+            console.error('[RepositoryPanelProvider] Failed to refresh plans:', error);
+            setRootFileTreeData(null);
+          } finally {
+            setRootFileTreeLoading(false);
+          }
+        }
+      },
+    }),
+    [rootFileTreeData, rootFileTreeLoading, repositoryPath],
+  );
+
   const activeFileSlice: DataSlice<ActiveFileSlice> = useMemo(
     () => ({
       scope: 'repository' as const,
@@ -2927,6 +3055,7 @@ export const RepositoryPanelProvider: React.FC<
       // Explicit typed slice properties - no more dynamic Map lookups!
       activeFile: activeFileSlice,
       fileTree: fileTreeSlice,
+      rootFileTree: rootFileTreeSlice,
       openTabs: openTabsSlice,
       markdown: markdownSlice,
       packages: packagesSlice,
@@ -2962,6 +3091,7 @@ export const RepositoryPanelProvider: React.FC<
       refresh,
       activeFileSlice,
       fileTreeSlice,
+      rootFileTreeSlice,
       openTabsSlice,
       markdownSlice,
       packagesSlice,

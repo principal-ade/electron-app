@@ -44,6 +44,29 @@ export class FileSystemService {
     return window.mainProcess.fileSystem.stopWatchingFile(filePath);
   }
 
+  static async watchDirectory(options: {
+    directoryPath: string;
+    fileTypes?: string[];
+    isSubdirectory?: boolean;
+  }) {
+    console.info(`[FileSystemService] Watching directory: ${options.directoryPath}`);
+    return window.mainProcess.fileSystem.watchDirectory(options);
+  }
+
+  static onDirectoryChange(
+    callback: (event: {
+      type: 'add' | 'unlink' | 'addDir' | 'unlinkDir';
+      path: string;
+      stats?: unknown;
+    }) => void,
+  ) {
+    return window.mainProcess.fileSystem.onDirectoryChange(callback);
+  }
+
+  static async stopWatchingDirectory(directoryPath: string) {
+    return window.mainProcess.fileSystem.stopWatchingDirectory(directoryPath);
+  }
+
   static async selectFile() {
     return window.mainProcess.fileSystem.selectFile();
   }

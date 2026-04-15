@@ -117,6 +117,28 @@ export const fileSystemAPI: FileSystemAPI = {
       ipcRenderer.removeListener('file-change', subscription);
     };
   },
+  onDirectoryChange: (
+    callback: (event: {
+      type: 'add' | 'unlink' | 'addDir' | 'unlinkDir';
+      path: string;
+      stats?: unknown;
+    }) => void,
+  ) => {
+    const subscription = (
+      _event: IpcRendererEvent,
+      data: {
+        type: 'add' | 'unlink' | 'addDir' | 'unlinkDir';
+        path: string;
+        stats?: unknown;
+      },
+    ) => {
+      callback(data);
+    };
+    ipcRenderer.on('directory-change', subscription);
+    return () => {
+      ipcRenderer.removeListener('directory-change', subscription);
+    };
+  },
   onFileOpened: (
     callback: (data: { content: string; filePath: string }) => void,
   ) => {

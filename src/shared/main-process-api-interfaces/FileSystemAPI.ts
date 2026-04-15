@@ -289,6 +289,11 @@ export interface FileSystemAPI {
   watchFile: (filePath: string) => Promise<boolean>;
   watchFiles: (options: { filePaths: string[] }) => Promise<boolean>;
   onFileChange: (callback: (event: FileChangeEvent) => void) => () => void;
+  onDirectoryChange: (callback: (event: {
+    type: 'add' | 'unlink' | 'addDir' | 'unlinkDir';
+    path: string;
+    stats?: unknown;
+  }) => void) => () => void;
   selectDirectory: (options?: {
     title?: string;
     buttonLabel?: string;
