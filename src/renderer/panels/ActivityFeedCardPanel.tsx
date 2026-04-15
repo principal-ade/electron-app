@@ -481,6 +481,7 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
                       onToggleExpand={() => toggleCardExpanded(summary.repoPath)}
                       onOpen={() => handleOpenRepo(summary.repoPath)}
                       events={events}
+                      entry={repoEntryMap.get(summary.repoPath)}
                     />
                   ))}
                 </div>

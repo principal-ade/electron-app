@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { GitService } from '../main-process-api/GitService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { WebAdeService } from '../main-process-api/WebAdeService';
@@ -51,6 +52,7 @@ interface RepoActivityCardProps {
   onOpen: () => void;
   dimmed?: boolean;
   events?: PanelEventEmitter;
+  entry?: AlexandriaEntry;
 }
 
 /**
@@ -204,6 +206,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
   onOpen,
   dimmed = false,
   events,
+  entry,
 }) => {
   const { theme } = useTheme();
   const hasMoreCommits = summary.commits.length > 1;
@@ -556,6 +559,20 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
     };
   }, []);
 
+  // Handler to open repository profile
+  const handleOpenProfile = useCallback(() => {
+    if (entry && events) {
+      events.emit({
+        type: 'feed:repository-selected',
+        source: 'repo-activity-card',
+        timestamp: Date.now(),
+        payload: {
+          repository: entry,
+        },
+      });
+    }
+  }, [entry, events]);
+
   return (
     <div
       style={{
@@ -639,6 +656,10 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
           >
             {/* Avatar */}
             <div
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenProfile();
+              }}
               style={{
                 width: 56,
                 height: 56,
@@ -650,6 +671,20 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                 justifyContent: 'center',
                 flexShrink: 0,
                 overflow: 'hidden',
+                cursor: entry && events ? 'pointer' : 'default',
+                transition: 'transform 0.15s ease, border-color 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                if (entry && events) {
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                  e.currentTarget.style.borderColor = theme.colors.primary;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (entry && events) {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.borderColor = theme.colors.border;
+                }
               }}
             >
               {avatarLoaded && summary.githubOwner ? (
@@ -673,7 +708,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
               <h4
                 onClick={(e) => {
                   e.stopPropagation();
-                  onOpen();
+                  handleOpenProfile();
                 }}
                 style={{
                   margin: 0,
@@ -684,7 +719,18 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
-                  cursor: 'pointer',
+                  cursor: entry && events ? 'pointer' : 'default',
+                  transition: 'color 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  if (entry && events) {
+                    e.currentTarget.style.color = theme.colors.primary;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (entry && events) {
+                    e.currentTarget.style.color = theme.colors.text;
+                  }
                 }}
               >
                 {summary.repoName}
@@ -1061,21 +1107,25 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             )}
 
             {/* Review Diff button */}
-            {displayedCommitIndex !== null && events && (
+            {summary.commits.length > 0 && events && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  const commit = summary.commits[displayedCommitIndex];
-                  events.emit({
-                    type: 'commit:review-selected',
-                    source: 'repo-activity-card',
-                    timestamp: Date.now(),
-                    payload: {
-                      repoPath: summary.repoPath,
-                      repoName: summary.repoName,
-                      commit,
-                    },
-                  });
+                  // Use selected commit or default to most recent (index 0)
+                  const commitIndex = displayedCommitIndex !== null ? displayedCommitIndex : 0;
+                  const commit = summary.commits[commitIndex];
+                  if (commit) {
+                    events.emit({
+                      type: 'commit:review-selected',
+                      source: 'repo-activity-card',
+                      timestamp: Date.now(),
+                      payload: {
+                        repoPath: summary.repoPath,
+                        repoName: summary.repoName,
+                        commit,
+                      },
+                    });
+                  }
                 }}
                 style={{
                   display: 'flex',
