@@ -8,8 +8,6 @@
 import React, { useMemo, useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { PanelEventBus } from '@principal-ade/panel-framework-core';
-import { Users } from 'lucide-react';
-import { SegmentedControl } from '../../../components/SegmentedControl';
 import type {
   PanelContextValue,
   PanelActions,
@@ -311,7 +309,7 @@ const FeedPanelProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 };
 
 // Feed mode type
-export type FeedMode = 'my-activity' | 'watched-activity';
+export type FeedMode = 'my-activity' | 'watched-activity' | 'organizations' | 'coworkers';
 
 /**
  * FeedViewContent - inner content that uses the provider
@@ -351,22 +349,6 @@ const FeedViewContent: React.FC = () => {
     [actions],
   );
 
-  // Open Live Activity tab
-  const handleNavigateToActivityCities = useCallback(() => {
-    events.emit({
-      type: 'live-activity:open',
-      source: 'feed-view',
-      timestamp: Date.now(),
-      payload: null,
-    });
-  }, [events]);
-
-  // Theme spacing helpers
-  const spacing = {
-    xs: theme.space?.[1] || 4,
-    sm: theme.space?.[2] || 8,
-  };
-
   return (
     <div
       style={{
@@ -377,75 +359,19 @@ const FeedViewContent: React.FC = () => {
         backgroundColor: theme.colors.background,
       }}
     >
-      {/* Header with Feed Mode Toggle and Live Activity button */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: `${spacing.xs}px ${spacing.sm}px`,
-          borderBottom: `1px solid ${theme.colors.border}`,
-          backgroundColor: theme.colors.background,
-          flexShrink: 0,
-        }}
-      >
-        {/* Feed mode toggle */}
-        <SegmentedControl
-          options={[
-            { value: 'my-activity', label: 'My Activity' },
-            { value: 'watched-activity', label: 'Watching' },
-          ]}
-          value={feedMode}
-          onChange={(value) => setFeedMode(value as FeedMode)}
-          theme={theme}
-        />
-
-        {/* Live Activity button */}
-        <button
-          onClick={handleNavigateToActivityCities}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: spacing.xs,
-            padding: `${spacing.xs}px ${spacing.sm}px`,
-            backgroundColor: 'transparent',
-            border: `1px solid ${theme.colors.border}`,
-            borderRadius: theme.radii?.[1] || 4,
-            color: theme.colors.textSecondary,
-            fontSize: theme.fontSizes[0],
-            fontFamily: theme.fonts.monospace,
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-            e.currentTarget.style.color = theme.colors.text;
-            e.currentTarget.style.borderColor = theme.colors.primary;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.color = theme.colors.textSecondary;
-            e.currentTarget.style.borderColor = theme.colors.border;
-          }}
-        >
-          <Users size={14} />
-          <span>Live Activity</span>
-        </button>
-      </div>
-      <div style={{ flex: 1, overflow: 'hidden' }}>
-        <FeedPanelFramework
-          repositories={repositories}
-          collapsed={collapsed}
-          onCollapsedChange={setCollapsed}
-          layout={layout}
-          onLayoutChange={setLayout}
-          panelSizes={panelSizes}
-          onPanelSizesChange={setPanelSizes}
-          events={events}
-          onOpenRepository={handleOpenRepository}
-          feedMode={feedMode}
-        />
-      </div>
+      <FeedPanelFramework
+        repositories={repositories}
+        collapsed={collapsed}
+        onCollapsedChange={setCollapsed}
+        layout={layout}
+        onLayoutChange={setLayout}
+        panelSizes={panelSizes}
+        onPanelSizesChange={setPanelSizes}
+        events={events}
+        onOpenRepository={handleOpenRepository}
+        feedMode={feedMode}
+        onFeedModeChange={setFeedMode}
+      />
     </div>
   );
 };
