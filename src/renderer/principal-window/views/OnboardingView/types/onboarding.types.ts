@@ -42,6 +42,8 @@ export interface OnboardingState {
   dismissed: boolean;
   /** Timestamp when dismissed */
   dismissedAt?: number;
+  /** Whether base directory has been configured */
+  baseDirectoryConfigured?: boolean;
 }
 
 /**
@@ -51,4 +53,5 @@ export const DEFAULT_ONBOARDING_STATE: OnboardingState = {
   started: false,
   cardStates: {},
   dismissed: false,
+  baseDirectoryConfigured: false,
 };

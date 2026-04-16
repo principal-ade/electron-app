@@ -117,6 +117,27 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ onComplete }) =>
     onComplete?.();
   }, [onboardingState, onComplete]);
 
+  // Handle base directory configuration
+  const handleBaseDirectoryConfigured = useCallback(
+    async (_directory: string) => {
+      const newState: OnboardingState = {
+        ...onboardingState,
+        baseDirectoryConfigured: true,
+      };
+
+      setOnboardingState(newState);
+
+      try {
+        await UserPreferencesService.updatePreferences({
+          onboarding: newState,
+        });
+      } catch (error) {
+        console.error('[OnboardingView] Failed to save base directory state:', error);
+      }
+    },
+    [onboardingState],
+  );
+
   // Reset onboarding
   const handleReset = useCallback(async () => {
     const newState: OnboardingState = {
@@ -124,6 +145,7 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ onComplete }) =>
       startedAt: Date.now(),
       cardStates: {},
       dismissed: false,
+      baseDirectoryConfigured: false,
     };
 
     // Prevent external updates from overwriting our reset
@@ -172,6 +194,7 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ onComplete }) =>
         onMarkCompleted={handleMarkCompleted}
         onDismiss={handleDismiss}
         onReset={handleReset}
+        onBaseDirectoryConfigured={handleBaseDirectoryConfigured}
       />
     </div>
   );

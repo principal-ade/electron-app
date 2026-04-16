@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { GraduationCap, Terminal, Sparkles, MessageSquare, Check, RotateCcw } from 'lucide-react';
+import { GraduationCap, Terminal, Sparkles, MessageSquare, Check, RotateCcw, FolderOpen } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 
 interface WelcomePanelProps {
@@ -9,6 +9,8 @@ interface WelcomePanelProps {
   onDismiss: () => void;
   onReset: () => void;
   hasTerminal?: boolean;
+  onStepClick?: (stepId: string) => void;
+  baseDirectoryConfigured?: boolean;
 }
 
 interface OnboardingStep {
@@ -26,6 +28,8 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
   onDismiss,
   onReset,
   hasTerminal = false,
+  onStepClick,
+  baseDirectoryConfigured = false,
 }) => {
   const { theme } = useTheme();
   const [showResetModal, setShowResetModal] = useState(false);
@@ -39,6 +43,14 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
   const hasCompletedCard = completedCount > 0;
 
   const steps: OnboardingStep[] = [
+    {
+      id: 'base-directory',
+      title: 'Set base directory',
+      description: 'Choose where Principal will organize your projects',
+      icon: <FolderOpen size={18} />,
+      isComplete: baseDirectoryConfigured,
+      isCurrent: false, // Tab handles active state
+    },
     {
       id: 'terminal',
       title: 'Start a terminal',
@@ -196,6 +208,7 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
         {steps.map((step, index) => (
           <div
             key={step.id}
+            onClick={() => onStepClick?.(step.id)}
             style={{
               backgroundColor: step.isCurrent
                 ? theme.colors.primary + '10'
@@ -211,6 +224,7 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
               }`,
               opacity: step.isComplete && !step.isCurrent ? 0.7 : 1,
               transition: 'all 0.2s ease',
+              cursor: onStepClick ? 'pointer' : 'default',
             }}
           >
             <div

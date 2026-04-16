@@ -25,13 +25,28 @@ import {
 import {
   TabbedTerminalPanel,
   type TerminalTab,
+  type BaseTab,
   type TerminalWorkingState,
   type TerminalPanelActions,
 } from '@industry-theme/xterm-terminal-panel';
 import { WelcomePanel } from './components/WelcomePanel';
 import { OnboardingCardPanel } from './components/OnboardingCardPanel';
+import { BaseDirectorySetupPanel } from './components/BaseDirectorySetupPanel';
 import { ONBOARDING_CARDS } from './data/onboardingCards';
 import type { OnboardingState } from './types/onboarding.types';
+import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
+
+/**
+ * Tab type for base directory setup
+ */
+interface BaseDirectorySetupTab extends BaseTab {
+  contentType: 'base-directory-setup';
+}
+
+/**
+ * Union type for all onboarding tabs
+ */
+type OnboardingTab = TerminalTab | BaseDirectorySetupTab;
 
 export interface OnboardingPanelFrameworkProps {
   /** Current onboarding state */
@@ -42,6 +57,8 @@ export interface OnboardingPanelFrameworkProps {
   onDismiss: () => void;
   /** Callback when user resets onboarding */
   onReset: () => void;
+  /** Callback when base directory is configured */
+  onBaseDirectoryConfigured?: (directory: string) => void;
   /** Collapsed state for left/right panels */
   collapsed?: { left: boolean; right: boolean };
   /** Callback when collapsed state changes */
@@ -53,6 +70,7 @@ interface OnboardingPanelFrameworkInnerProps {
   onMarkCompleted: (cardId: string) => void;
   onDismiss: () => void;
   onReset: () => void;
+  onBaseDirectoryConfigured?: (directory: string) => void;
   collapsed: { left: boolean; right: boolean };
   onCollapsedChange: (collapsed: { left: boolean; right: boolean }) => void;
 }
@@ -65,6 +83,7 @@ const OnboardingPanelFrameworkInner: React.FC<OnboardingPanelFrameworkInnerProps
   onMarkCompleted,
   onDismiss,
   onReset,
+  onBaseDirectoryConfigured,
   collapsed,
   onCollapsedChange,
 }) => {
@@ -84,6 +103,11 @@ const OnboardingPanelFrameworkInner: React.FC<OnboardingPanelFrameworkInnerProps
 
   // Panel sizes
   const [panelSizes] = useState({ left: 25, middle: 50, right: 25 });
+
+  // Tab state
+  const [tabs, setTabs] = useState<OnboardingTab[]>([]);
+  const [focusTabId, setFocusTabId] = useState<string | null>(null);
+  const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string | null>(null);
 
   // Layout configuration
   const layout: PanelLayout = useMemo(
@@ -164,6 +188,85 @@ const OnboardingPanelFrameworkInner: React.FC<OnboardingPanelFrameworkInnerProps
     [isLeftCollapsed, isRightCollapsed, onCollapsedChange],
   );
 
+  // Tab management handlers
+  const handleStepClick = useCallback(
+    (stepId: string) => {
+      if (stepId === 'base-directory') {
+        // Check if tab already exists
+        const existingTab = tabs.find((t) => t.contentType === 'base-directory-setup');
+
+        if (existingTab) {
+          setFocusTabId(existingTab.id);
+        } else {
+          // Create new setup tab
+          const newTab: BaseDirectorySetupTab = {
+            id: 'base-directory-setup-tab',
+            label: 'Base Directory Setup',
+            contentType: 'base-directory-setup',
+            closable: true,
+          };
+          setTabs((prev) => [...prev, newTab]);
+          setFocusTabId(newTab.id);
+        }
+      }
+    },
+    [tabs],
+  );
+
+  const handleDirectorySelected = useCallback(
+    async (directory: string) => {
+      // Save to preferences
+      await UserPreferencesService.updatePreferences({
+        baseDefaultDirectory: directory,
+      });
+
+      // Notify parent
+      onBaseDirectoryConfigured?.(directory);
+
+      // Close the setup tab
+      setTabs((prev) => prev.filter((t) => t.contentType !== 'base-directory-setup'));
+    },
+    [onBaseDirectoryConfigured],
+  );
+
+  const handleSkipBaseDirectory = useCallback(() => {
+    // Just close the tab without saving
+    setTabs((prev) => prev.filter((t) => t.contentType !== 'base-directory-setup'));
+  }, []);
+
+  const handleTabsChange = useCallback((newTabs: OnboardingTab[]) => {
+    setTabs(newTabs);
+  }, []);
+
+  const handleFocusTabHandled = useCallback(() => {
+    setFocusTabId(null);
+  }, []);
+
+  // Render custom content for non-terminal tabs
+  const renderTabContent = useCallback(
+    (tab: OnboardingTab, _isActive: boolean) => {
+      switch (tab.contentType) {
+        case 'terminal':
+          return null; // Use default terminal rendering
+
+        case 'base-directory-setup':
+          return (
+            <div style={{ height: '100%', width: '100%', overflow: 'hidden' }}>
+              <BaseDirectorySetupPanel
+                onDirectorySelected={handleDirectorySelected}
+                onSkip={handleSkipBaseDirectory}
+                currentDirectory={baseDefaultDirectory}
+              />
+            </div>
+          );
+
+        default:
+          return null;
+      }
+    },
+    [baseDefaultDirectory, handleDirectorySelected, handleSkipBaseDirectory],
+  );
+
   // Listen for terminal activity events
   useEffect(() => {
     const handleActivityChanged = (event: {
@@ -183,6 +286,22 @@ const OnboardingPanelFrameworkInner: React.FC<OnboardingPanelFrameworkInnerProps
       events.off('terminal:activity-changed', handleActivityChanged);
     };
   }, [events, activityActions]);
+
+  // Load base directory from preferences
+  useEffect(() => {
+    const loadBaseDirectory = async () => {
+      const preferences = await UserPreferencesService.getPreferences();
+      setBaseDefaultDirectory(preferences.baseDefaultDirectory || null);
+    };
+
+    loadBaseDirectory();
+
+    const unsubscribe = UserPreferencesService.onPreferencesUpdated((preferences) => {
+      setBaseDefaultDirectory(preferences.baseDefaultDirectory || null);
+    });
+
+    return unsubscribe;
+  }, []);
 
   // Define all panels - not memoized to ensure fresh renders on state changes
   const allPanels = [
@@ -205,6 +324,8 @@ const OnboardingPanelFrameworkInner: React.FC<OnboardingPanelFrameworkInnerProps
             onDismiss={onDismiss}
             onReset={onReset}
             hasTerminal={hasTerminal}
+            onStepClick={handleStepClick}
+            baseDirectoryConfigured={onboardingState.baseDirectoryConfigured}
           />
         </div>
       ),
@@ -222,7 +343,7 @@ const OnboardingPanelFrameworkInner: React.FC<OnboardingPanelFrameworkInnerProps
             flexDirection: 'column',
           }}
         >
-          <TabbedTerminalPanel<TerminalTab>
+          <TabbedTerminalPanel<OnboardingTab>
             context={terminalPanelContext}
             actions={terminalActions as TerminalPanelActions}
             events={events}
@@ -230,6 +351,11 @@ const OnboardingPanelFrameworkInner: React.FC<OnboardingPanelFrameworkInnerProps
             directory={terminalDirectory}
             defaultScrollLocked={false}
             workingStates={workingStates}
+            initialTabs={tabs}
+            onTabsChange={handleTabsChange}
+            renderTabContent={renderTabContent}
+            requestFocusTabId={focusTabId}
+            onFocusTabHandled={handleFocusTabHandled}
           />
         </div>
       ),
@@ -290,6 +416,7 @@ export const OnboardingPanelFramework: React.FC<OnboardingPanelFrameworkProps> =
   onMarkCompleted,
   onDismiss,
   onReset,
+  onBaseDirectoryConfigured,
   collapsed = { left: false, right: false },
   onCollapsedChange = () => {},
 }) => {
@@ -304,6 +431,7 @@ export const OnboardingPanelFramework: React.FC<OnboardingPanelFrameworkProps> =
         onMarkCompleted={onMarkCompleted}
         onDismiss={onDismiss}
         onReset={onReset}
+        onBaseDirectoryConfigured={onBaseDirectoryConfigured}
         collapsed={collapsed}
         onCollapsedChange={onCollapsedChange}
       />
