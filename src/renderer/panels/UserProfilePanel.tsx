@@ -5,7 +5,7 @@
  * Features a Facebook-style layout with an avatar overlapping an activity heatmap banner.
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type {
   PanelContextValue,
@@ -21,6 +21,16 @@ import {
   Calendar,
 } from 'lucide-react';
 
+/**
+ * User identifier in context
+ */
+export interface UserIdentifier {
+  username: string; // GitHub username
+}
+
+/**
+ * User profile data
+ */
 export interface UserProfileData {
   username: string;
   name?: string;
@@ -39,13 +49,57 @@ export interface UserProfileData {
   joinedDate: string; // ISO date string
 }
 
+/**
+ * Context for UserProfilePanel
+ */
+export interface UserProfilePanelContext extends PanelContextValue {
+  // Override currentScope to add user
+  currentScope: PanelContextValue['currentScope'] & {
+    user?: UserIdentifier; // The user to display
+  };
+
+  // GitHub sync state (optional)
+  githubSyncState?: {
+    authenticatedUser?: string; // Current authenticated GitHub user
+    following: string[]; // Users we're following
+    followers: string[]; // Users following us
+  };
+}
+
+/**
+ * Actions for UserProfilePanel
+ */
+export interface UserProfilePanelActions extends PanelActions {
+  /**
+   * Get GitHub user profile
+   */
+  getUserProfile: (username: string) => Promise<UserProfileData>;
+
+  /**
+   * Get user activity/contribution data
+   */
+  getUserActivity: (username: string) => Promise<Map<string, number>>;
+
+  /**
+   * Get user's repositories (optional)
+   */
+  getUserRepositories?: (username: string) => Promise<unknown[]>;
+
+  /**
+   * Follow a GitHub user (optional)
+   */
+  followUser?: (username: string) => Promise<void>;
+
+  /**
+   * Unfollow a GitHub user (optional)
+   */
+  unfollowUser?: (username: string) => Promise<void>;
+}
+
 interface UserProfilePanelProps {
-  context: PanelContextValue;
-  actions: PanelActions;
+  context: UserProfilePanelContext;
+  actions: UserProfilePanelActions;
   events: PanelEventEmitter;
-  userData?: UserProfileData;
-  loading?: boolean;
-  error?: string;
 }
 
 /**
@@ -186,14 +240,17 @@ function getInitials(name?: string, username?: string): string {
 }
 
 export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
-  context: _context,
-  actions: _actions,
-  events: _events,
-  userData,
-  loading = false,
-  error,
+  context,
+  actions,
+  events,
 }) => {
   const { theme } = useTheme();
+  const user = context.currentScope?.user;
+
+  // Panel manages its own profile data state
+  const [userData, setUserData] = useState<UserProfileData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const spacing = useMemo(
     () => ({
@@ -206,9 +263,63 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
     [],
   );
 
-  // Handle open in browser
-  const handleOpenUrl = (url: string) => {
-    window.open(url, '_blank');
+  // Fetch profile when user changes
+  useEffect(() => {
+    if (!user) {
+      setUserData(null);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchProfile = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        // Fetch profile and activity in parallel
+        const [profile, activity] = await Promise.all([
+          actions.getUserProfile(user.username),
+          actions.getUserActivity(user.username),
+        ]);
+
+        if (!cancelled) {
+          // Merge activity data into profile
+          const profileWithActivity: UserProfileData = {
+            ...profile,
+            activityData: activity,
+          };
+          setUserData(profileWithActivity);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Failed to fetch user profile:', err);
+          setError(err instanceof Error ? err.message : 'Failed to load profile');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, actions]);
+
+  // Handle open in browser - emit event instead
+  const handleOpenUrl = (url: string, type: 'website' | 'twitter' | 'github' | 'email') => {
+    events.emit({
+      type: 'user-profile:open-link',
+      source: 'UserProfilePanel',
+      timestamp: Date.now(),
+      payload: { url, type },
+    });
   };
 
   // Empty state - no user selected
@@ -556,7 +667,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
             >
               <LinkIcon size={16} color={theme.colors.textSecondary} />
               <button
-                onClick={() => userData.websiteUrl && handleOpenUrl(userData.websiteUrl)}
+                onClick={() => userData.websiteUrl && handleOpenUrl(userData.websiteUrl, 'website')}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -584,7 +695,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
             >
               <Twitter size={16} color={theme.colors.textSecondary} />
               <button
-                onClick={() => handleOpenUrl(`https://twitter.com/${userData.twitterHandle}`)}
+                onClick={() => handleOpenUrl(`https://twitter.com/${userData.twitterHandle}`, 'twitter')}
                 style={{
                   background: 'none',
                   border: 'none',

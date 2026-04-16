@@ -2,13 +2,15 @@ import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import React from 'react';
 import { ThemeProvider } from '@principal-ade/industry-theme';
 import type {
-  PanelContextValue,
-  PanelActions,
   PanelEventEmitter,
   PanelEvent,
 } from '@principal-ade/panel-framework-core';
-import { UserProfilePanel } from './UserProfilePanel';
-import type { UserProfileData } from './UserProfilePanel';
+import {
+  UserProfilePanel,
+  type UserProfileData,
+  type UserProfilePanelContext,
+  type UserProfilePanelActions,
+} from './UserProfilePanel';
 
 // Mock event emitter for stories
 type EventHandler = (event: PanelEvent<unknown>) => void;
@@ -106,22 +108,37 @@ const createMockUserProfile = (
 // Mock panel wrapper component
 const MockUserProfilePanel: React.FC<{
   userData?: UserProfileData;
-  loading?: boolean;
-  error?: string;
-}> = ({ userData, loading = false, error }) => {
-  const mockContext: PanelContextValue = {
+  username?: string;
+}> = ({ userData, username = 'octocat' }) => {
+  const mockContext: UserProfilePanelContext = {
     currentScope: {
-      type: 'global',
+      type: 'workspace' as const,
+      user: username ? { username } : undefined,
     },
-    isSliceLoading: () => loading,
     refresh: async () => {},
-    clearSlice: () => {},
-  } as unknown as PanelContextValue;
+  };
 
-  const mockActions: PanelActions = {
+  const mockActions: UserProfilePanelActions = {
+    getUserProfile: async (user: string) => {
+      // Simulate async delay
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      if (!userData) {
+        throw new globalThis.Error('User not found');
+      }
+
+      return {
+        ...userData,
+        username: user,
+      };
+    },
+    getUserActivity: async () => {
+      // Simulate async delay
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      return userData?.activityData || new Map<string, number>();
+    },
     openFile: async () => {},
-    openRepository: async () => {},
-  } as unknown as PanelActions;
+  };
 
   const mockEvents = new MockEventEmitter();
 
@@ -130,9 +147,6 @@ const MockUserProfilePanel: React.FC<{
       context={mockContext}
       actions={mockActions}
       events={mockEvents}
-      userData={userData}
-      loading={loading}
-      error={error}
     />
   );
 };
@@ -140,8 +154,7 @@ const MockUserProfilePanel: React.FC<{
 // Wrapper with theme provider
 const UserProfilePanelStory: React.FC<{
   userData?: UserProfileData;
-  loading?: boolean;
-  error?: string;
+  username?: string;
 }> = (props) => {
   return (
     <ThemeProvider>
@@ -254,22 +267,104 @@ export const NoAvatar = {
   ),
 } as unknown as Story;
 
-// Loading state
-export const Loading = {
-  render: () => <UserProfilePanelStory loading={true} />,
-} as unknown as Story;
+// Loading state - panel will show loading while fetching
+export const Loading: Story = {
+  render: () => {
+    const mockContext: UserProfilePanelContext = {
+      currentScope: {
+        type: 'workspace' as const,
+        user: { username: 'octocat' },
+      },
+      refresh: async () => {},
+    };
+
+    const mockActions: UserProfilePanelActions = {
+      getUserProfile: async () => {
+        // Simulate slow loading
+        await new Promise((resolve) => setTimeout(resolve, 10000));
+        return createMockUserProfile();
+      },
+      getUserActivity: async () => {
+        await new Promise((resolve) => setTimeout(resolve, 10000));
+        return new Map<string, number>();
+      },
+      openFile: async () => {},
+    };
+
+    const mockEvents = new MockEventEmitter();
+
+    return (
+      <ThemeProvider>
+        <UserProfilePanel context={mockContext} actions={mockActions} events={mockEvents} />
+      </ThemeProvider>
+    );
+  },
+};
 
 // Error state
-export const Error = {
-  render: () => (
-    <UserProfilePanelStory error="Failed to load user profile. Please try again." />
-  ),
-} as unknown as Story;
+export const Error: Story = {
+  render: () => {
+    const mockContext: UserProfilePanelContext = {
+      currentScope: {
+        type: 'workspace' as const,
+        user: { username: 'nonexistentuser' },
+      },
+      refresh: async () => {},
+    };
+
+    const mockActions: UserProfilePanelActions = {
+      getUserProfile: async () => {
+        // Simulate error
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        throw new globalThis.Error('Failed to load user profile. Please try again.');
+      },
+      getUserActivity: async () => {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        return new Map<string, number>();
+      },
+      openFile: async () => {},
+    };
+
+    const mockEvents = new MockEventEmitter();
+
+    return (
+      <ThemeProvider>
+        <UserProfilePanel context={mockContext} actions={mockActions} events={mockEvents} />
+      </ThemeProvider>
+    );
+  },
+};
 
 // Empty state - no user selected
-export const Empty = {
-  render: () => <UserProfilePanelStory />,
-} as unknown as Story;
+export const Empty: Story = {
+  render: () => {
+    const mockContext: UserProfilePanelContext = {
+      currentScope: {
+        type: 'workspace' as const,
+        user: undefined, // No user selected
+      },
+      refresh: async () => {},
+    };
+
+    const mockActions: UserProfilePanelActions = {
+      getUserProfile: async () => {
+        return createMockUserProfile();
+      },
+      getUserActivity: async () => {
+        return new Map<string, number>();
+      },
+      openFile: async () => {},
+    };
+
+    const mockEvents = new MockEventEmitter();
+
+    return (
+      <ThemeProvider>
+        <UserProfilePanel context={mockContext} actions={mockActions} events={mockEvents} />
+      </ThemeProvider>
+    );
+  },
+};
 
 // Profile with all optional fields filled
 export const CompleteProfile = {

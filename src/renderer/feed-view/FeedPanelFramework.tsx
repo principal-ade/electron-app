@@ -18,7 +18,7 @@ import {
   type PanelLayout,
   type ConfigurablePanelLayoutHandle,
 } from '@principal-ade/panel-layouts';
-import type { PanelEventEmitter, RepositoryMetadata, PanelEvent } from '@principal-ade/panel-framework-core';
+import type { PanelEventEmitter, RepositoryMetadata } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import {
   TerminalProvider,
@@ -40,7 +40,11 @@ import { ActivityFeedCardPanel } from '../panels/ActivityFeedCardPanel';
 import { ReviewCommitPanel } from '../panels/ReviewCommitPanel';
 import { RepositoryProfilePanel, type RepositoryProfileData } from '../panels/RepositoryProfilePanel';
 import { LiveActivityTabContent } from '../components/LiveActivityTabContent';
-import { UserProfilePanel, type UserProfileData } from '../panels/UserProfilePanel';
+import {
+  UserProfilePanel,
+  type UserProfilePanelContext,
+  type UserProfilePanelActions,
+} from '../panels/UserProfilePanel';
 import { useActivityFeed } from '../hooks/useActivityFeed';
 import { useCommitHeatMap } from '../hooks/useCommitHeatMap';
 import type { CommitTimestamp } from '../panels/ProjectsListPanel';
@@ -459,6 +463,20 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     };
   }, [events, tabs]);
 
+  // Handle user profile panel events
+  useEffect(() => {
+    const handleOpenLink = (event: { type: string; payload: { url: string; type: string } }) => {
+      if (event.type === 'user-profile:open-link') {
+        window.open(event.payload.url, '_blank');
+      }
+    };
+
+    events.on('user-profile:open-link', handleOpenLink);
+    return () => {
+      events.off('user-profile:open-link', handleOpenLink);
+    };
+  }, [events]);
+
   // Convert terminal activities to workingStates record
   const workingStates = useMemo(() => {
     const states: Record<string, TerminalWorkingState> = {};
@@ -690,143 +708,96 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
         }
         case 'user-profile': {
           const userTab = tab as UserProfileTab;
-          // Wrapper component for user profile
-          const UserProfileTabContent = () => {
-            const [userData, setUserData] = React.useState<UserProfileData | undefined>(undefined);
-            const [loading, setLoading] = React.useState(true);
-            const [error, setError] = React.useState<string | undefined>(undefined);
 
-            React.useEffect(() => {
-              let cancelled = false;
-
-              const fetchUserData = async () => {
-                setLoading(true);
-                setError(undefined);
-
-                try {
-                  // Fetch GitHub user profile and activity data in parallel
-                  const [githubUser, activityResult] = await Promise.all([
-                    GithubService.getUser(userTab.username),
-                    (async () => {
-                      try {
-                        const authService = SecureAuthService.getInstance();
-                        const authResult = await authService.checkAuth();
-
-                        if (!authResult.authenticated || !authResult.token) {
-                          return null;
-                        }
-
-                        return await ApiProxyService.call<UserActivityResponse>({
-                          endpoint: `https://app.principal-ade.com/api/github/user/${userTab.username}/activity?contributionDays=365&activityDays=1`,
-                          method: 'GET',
-                          headers: {
-                            Authorization: `Bearer ${authResult.token}`,
-                          },
-                        });
-                      } catch (err) {
-                        console.error('Failed to fetch user activity:', err);
-                        return null;
-                      }
-                    })(),
-                  ]);
-
-                  if (cancelled) return;
-
-                  if (!githubUser) {
-                    setError('User not found');
-                    setLoading(false);
-                    return;
-                  }
-
-                  // Extract activity data from API proxy result
-                  const activityResponse = activityResult?.data;
-
-                  // Transform contributions to activity data Map
-                  const activityData = new Map<string, number>();
-                  if (activityResponse?.contributions) {
-                    activityResponse.contributions.forEach((contrib: { date: string; count: number }) => {
-                      activityData.set(contrib.date, contrib.count);
-                    });
-                  }
-
-                  // Calculate total commits from activity data
-                  let totalCommits = 0;
-                  activityData.forEach((count) => {
-                    totalCommits += count;
-                  });
-
-                  // Cast to access fields not in GitHubUser type but present in API response
-                  const githubUserExtended = githubUser as typeof githubUser & {
-                    twitter_username?: string | null;
-                    blog?: string | null;
-                  };
-
-                  const profileData: UserProfileData = {
-                    username: githubUser.login,
-                    name: githubUser.name || undefined,
-                    email: githubUser.email || userTab.email,
-                    avatarUrl: githubUser.avatar_url,
-                    bio: githubUser.bio || undefined,
-                    location: githubUser.location || undefined,
-                    company: githubUser.company || undefined,
-                    twitterHandle: githubUserExtended.twitter_username || undefined,
-                    websiteUrl: githubUserExtended.blog || undefined,
-                    activityData,
-                    totalCommits,
-                    totalRepos: githubUser.public_repos || 0,
-                    followers: githubUser.followers || 0,
-                    following: githubUser.following || 0,
-                    joinedDate: githubUser.created_at || new Date().toISOString(),
-                  };
-
-                  setUserData(profileData);
-                } catch (err) {
-                  if (!cancelled) {
-                    console.error('Failed to fetch user profile:', err);
-                    setError(err instanceof Error ? err.message : 'Failed to load user profile');
-                  }
-                } finally {
-                  if (!cancelled) {
-                    setLoading(false);
-                  }
-                }
-              };
-
-              fetchUserData();
-
-              return () => {
-                cancelled = true;
-              };
-            }, []); // userTab is from outer scope and stable for this component instance
-
-            const mockContext = {
-              currentScope: { type: 'workspace' as const },
-              slices: new Map(),
-              adapters: {},
-              isSliceLoading: () => loading,
-              refresh: async () => {},
-            };
-
-            const mockActions = {
-              openFile: () => {},
-              openGitDiff: () => {},
-              navigateToPanel: () => {},
-              notifyPanels: (event: PanelEvent<unknown>) => events.emit(event),
-            };
-
-            return (
-              <UserProfilePanel
-                context={mockContext}
-                actions={mockActions}
-                events={events}
-                userData={userData}
-                loading={loading}
-                error={error}
-              />
-            );
+          // Context for the panel - provides user identifier
+          const userContext: UserProfilePanelContext = {
+            currentScope: {
+              type: 'workspace' as const,
+              user: {
+                username: userTab.username,
+              },
+            },
+            refresh: async () => {},
           };
 
-          return <UserProfileTabContent />;
+          // Actions implementation - provides capabilities
+          const userActions: UserProfilePanelActions = {
+            getUserProfile: async (username: string) => {
+              const githubUser = await GithubService.getUser(username);
+
+              if (!githubUser) {
+                throw new Error('User not found');
+              }
+
+              // Cast to access fields not in GitHubUser type but present in API response
+              const githubUserExtended = githubUser as typeof githubUser & {
+                twitter_username?: string | null;
+                blog?: string | null;
+              };
+
+              return {
+                username: githubUser.login,
+                name: githubUser.name || undefined,
+                email: githubUser.email || userTab.email,
+                avatarUrl: githubUser.avatar_url,
+                bio: githubUser.bio || undefined,
+                location: githubUser.location || undefined,
+                company: githubUser.company || undefined,
+                twitterHandle: githubUserExtended.twitter_username || undefined,
+                websiteUrl: githubUserExtended.blog || undefined,
+                activityData: new Map(), // Fetched separately
+                totalCommits: 0, // Calculated from activity data
+                totalRepos: githubUser.public_repos || 0,
+                followers: githubUser.followers || 0,
+                following: githubUser.following || 0,
+                joinedDate: githubUser.created_at || new Date().toISOString(),
+              };
+            },
+
+            getUserActivity: async (username: string) => {
+              try {
+                const authService = SecureAuthService.getInstance();
+                const authResult = await authService.checkAuth();
+
+                if (!authResult.authenticated || !authResult.token) {
+                  return new Map<string, number>();
+                }
+
+                const activityResult = await ApiProxyService.call<UserActivityResponse>({
+                  endpoint: `https://app.principal-ade.com/api/github/user/${username}/activity?contributionDays=365&activityDays=1`,
+                  method: 'GET',
+                  headers: {
+                    Authorization: `Bearer ${authResult.token}`,
+                  },
+                });
+
+                // Extract activity data from API proxy result
+                const activityResponse = activityResult?.data;
+
+                // Transform contributions to activity data Map
+                const activityData = new Map<string, number>();
+                if (activityResponse?.contributions) {
+                  activityResponse.contributions.forEach((contrib: { date: string; count: number }) => {
+                    activityData.set(contrib.date, contrib.count);
+                  });
+                }
+
+                return activityData;
+              } catch (err) {
+                console.error('Failed to fetch user activity:', err);
+                return new Map<string, number>();
+              }
+            },
+
+            // Base panel actions
+            openFile: async () => {},
+          };
+
+          return (
+            <div style={{ height: '100%', width: '100%', overflow: 'hidden' }}>
+              <UserProfilePanel context={userContext} actions={userActions} events={events} />
+            </div>
+          );
         }
         default:
           return null;
