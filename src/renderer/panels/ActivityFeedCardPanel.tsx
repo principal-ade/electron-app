@@ -14,6 +14,7 @@ import { useActivityFeed, type ActivityCommit } from '../hooks/useActivityFeed';
 import { useWatchedActivityFeed } from '../hooks/useWatchedActivityFeed';
 import { RepoActivityCard, type RepoActivitySummary } from './RepoActivityCard';
 import type { FeedMode } from '../principal-window/views/FeedView/FeedView';
+import { GithubService } from '../main-process-api/GithubService';
 
 export interface ActivityFeedCardPanelProps {
   /** List of repositories to show activity for */
@@ -111,6 +112,34 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
     return map;
   }, [repositories]);
 
+  // Create owner org type map (check if owner is an organization)
+  const [ownerIsOrgMap, setOwnerIsOrgMap] = React.useState<Map<string, boolean>>(new Map());
+
+  React.useEffect(() => {
+    const uniqueOwners = Array.from(new Set(Array.from(repoOwnerMap.values())));
+    if (uniqueOwners.length === 0) return;
+
+    const fetchOwnerTypes = async () => {
+      const newMap = new Map<string, boolean>();
+
+      await Promise.all(
+        uniqueOwners.map(async (owner) => {
+          try {
+            const user = await GithubService.getUser(owner);
+            newMap.set(owner, user?.type === 'Organization');
+          } catch (error) {
+            console.warn(`Failed to get owner type for ${owner}:`, error);
+            newMap.set(owner, false);
+          }
+        })
+      );
+
+      setOwnerIsOrgMap(newMap);
+    };
+
+    fetchOwnerTypes();
+  }, [repoOwnerMap]);
+
   // Create repo entry map
   const repoEntryMap = useMemo(() => {
     const map = new Map<string, AlexandriaEntry>();
@@ -207,6 +236,7 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
           commitCount: group.commits.filter(c => getHourBucket(new Date(c.date)) === hourKey).length,
           githubOwner: group.githubOwner,
           githubRepoName: group.githubRepoName,
+          isOwnerOrg: group.isOwnerOrg,
         };
 
         if (!hourMap.has(hourKey)) {
@@ -258,14 +288,16 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
         let summary = repoMap.get(commit.repoPath);
         if (!summary) {
           const entry = repoEntryMap.get(commit.repoPath);
+          const githubOwner = repoOwnerMap.get(commit.repoPath);
           summary = {
             repoPath: commit.repoPath,
             repoName: commit.repoName,
             commits: [],
             latestCommitAt: new Date(commit.date),
             commitCount: 0,
-            githubOwner: repoOwnerMap.get(commit.repoPath),
+            githubOwner,
             githubRepoName: entry?.github?.name,
+            isOwnerOrg: githubOwner ? ownerIsOrgMap.get(githubOwner) : undefined,
           };
           repoMap.set(commit.repoPath, summary);
         }
@@ -289,7 +321,7 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
         repos: repoSummaries,
       };
     });
-  }, [filteredCommits, repoOwnerMap, repoEntryMap, getHourBucket, formatHourBucket]);
+  }, [filteredCommits, repoOwnerMap, repoEntryMap, ownerIsOrgMap, getHourBucket, formatHourBucket]);
 
   // Use the appropriate hourly groups based on feed mode
   const hourlyGroups = feedMode === 'watched-activity' ? watchedHourlyGroups : myActivityHourlyGroups;

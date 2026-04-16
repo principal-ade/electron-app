@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { WebAdeService } from '../main-process-api/WebAdeService';
+import { GithubService } from '../main-process-api/GithubService';
 import type { CommitActivityCard } from '../../shared/tipc/webAdeRouterTypes';
 
 /**
@@ -37,6 +38,7 @@ export interface WatchedRepoGroup {
   commitCount: number;
   githubOwner: string;
   githubRepoName: string;
+  isOwnerOrg?: boolean; // Whether the owner is an organization
 }
 
 /**
@@ -128,6 +130,31 @@ export function useWatchedActivityFeed(
             group.latestCommitAt = commitDate;
           }
         }
+      }
+
+      // Detect owner types (user vs org) for all unique owners
+      const uniqueOwners = Array.from(new Set(groups.map(g => g.githubOwner)));
+      const ownerTypeMap = new Map<string, boolean>(); // owner -> isOrg
+
+      // Fetch owner types in parallel
+      await Promise.all(
+        uniqueOwners.map(async (owner) => {
+          try {
+            const user = await GithubService.getUser(owner);
+            // GitHub API returns type 'Organization' or 'User'
+            const isOrg = user?.type === 'Organization';
+            ownerTypeMap.set(owner, isOrg);
+          } catch (error) {
+            console.warn(`[useWatchedActivityFeed] Failed to get owner type for ${owner}:`, error);
+            // Default to false (user) on error
+            ownerTypeMap.set(owner, false);
+          }
+        })
+      );
+
+      // Update groups with owner type information
+      for (const group of groups) {
+        group.isOwnerOrg = ownerTypeMap.get(group.githubOwner) || false;
       }
 
       // Sort groups by latest commit (most recent first)

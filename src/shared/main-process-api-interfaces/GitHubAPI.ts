@@ -247,6 +247,7 @@ export interface GitHubUser {
   following: number;
   created_at: string;
   updated_at: string;
+  type?: 'User' | 'Organization'; // GitHub API returns this field
   private_repos?: number;
   total_private_repos?: number;
   owned_private_repos?: number;

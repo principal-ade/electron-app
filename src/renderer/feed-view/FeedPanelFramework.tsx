@@ -12,7 +12,7 @@
 
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { GitCommit, Users, Activity, FolderGit2, User } from 'lucide-react';
+import { GitCommit, Users, Activity, FolderGit2, User, Building2 } from 'lucide-react';
 import {
   ConfigurablePanelLayout,
   type PanelLayout,
@@ -45,6 +45,11 @@ import {
   type UserProfilePanelContext,
   type UserProfilePanelActions,
 } from '../panels/UserProfilePanel';
+import {
+  OrgProfilePanel,
+  type OrgProfilePanelContext,
+  type OrgProfilePanelActions,
+} from '../panels/OrgProfilePanel';
 import { useActivityFeed } from '../hooks/useActivityFeed';
 import { useCommitHeatMap } from '../hooks/useCommitHeatMap';
 import type { CommitTimestamp } from '../panels/ProjectsListPanel';
@@ -130,9 +135,17 @@ export interface UserProfileTab extends BaseTab {
 }
 
 /**
+ * Organization profile tab - displays org activity and profile information
+ */
+export interface OrgProfileTab extends BaseTab {
+  contentType: 'org-profile';
+  orgName: string;
+}
+
+/**
  * Union type of all supported tab types in FeedView
  */
-export type FeedTab = TerminalTab | CommitReviewTab | LiveActivityTab | ActivityFeedTab | ProjectInfoTab | UserProfileTab;
+export type FeedTab = TerminalTab | CommitReviewTab | LiveActivityTab | ActivityFeedTab | ProjectInfoTab | UserProfileTab | OrgProfileTab;
 
 export interface FeedPanelFrameworkProps {
   /** List of repositories */
@@ -463,6 +476,54 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     };
   }, [events, tabs]);
 
+  // Listen for owner selection events from repo cards (could be user or org)
+  useEffect(() => {
+    const handleOwnerSelected = (event: {
+      type: string;
+      payload: { owner: string; isOrg: boolean }
+    }) => {
+      if (event.type === 'feed:owner-selected') {
+        const { owner, isOrg } = event.payload;
+        const tabId = isOrg ? `org-profile-${owner}` : `user-profile-${owner}`;
+
+        // Check if tab already exists
+        const existingTab = tabs.find(tab => tab.id === tabId);
+        if (existingTab) {
+          setActiveTabId(tabId);
+          return;
+        }
+
+        // Create appropriate profile tab based on owner type
+        if (isOrg) {
+          const newTab: OrgProfileTab = {
+            id: tabId,
+            label: `@${owner}`,
+            contentType: 'org-profile',
+            closable: true,
+            orgName: owner,
+          };
+          setTabs(prevTabs => [...prevTabs, newTab]);
+          setActiveTabId(tabId);
+        } else {
+          const newTab: UserProfileTab = {
+            id: tabId,
+            label: `@${owner}`,
+            contentType: 'user-profile',
+            closable: true,
+            username: owner,
+          };
+          setTabs(prevTabs => [...prevTabs, newTab]);
+          setActiveTabId(tabId);
+        }
+      }
+    };
+
+    events.on('feed:owner-selected', handleOwnerSelected);
+    return () => {
+      events.off('feed:owner-selected', handleOwnerSelected);
+    };
+  }, [events, tabs]);
+
   // Handle user profile panel events
   useEffect(() => {
     const handleOpenLink = (event: { type: string; payload: { url: string; type: string } }) => {
@@ -474,6 +535,20 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     events.on('user-profile:open-link', handleOpenLink);
     return () => {
       events.off('user-profile:open-link', handleOpenLink);
+    };
+  }, [events]);
+
+  // Handle org profile panel events
+  useEffect(() => {
+    const handleOpenLink = (event: { type: string; payload: { url: string; type: string } }) => {
+      if (event.type === 'org-profile:open-link') {
+        window.open(event.payload.url, '_blank');
+      }
+    };
+
+    events.on('org-profile:open-link', handleOpenLink);
+    return () => {
+      events.off('org-profile:open-link', handleOpenLink);
     };
   }, [events]);
 
@@ -533,6 +608,8 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
         return <FolderGit2 size={14} />;
       case 'user-profile':
         return <User size={14} />;
+      case 'org-profile':
+        return <Building2 size={14} />;
       default:
         return null;
     }
@@ -796,6 +873,108 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
           return (
             <div style={{ height: '100%', width: '100%', overflow: 'hidden' }}>
               <UserProfilePanel context={userContext} actions={userActions} events={events} />
+            </div>
+          );
+        }
+        case 'org-profile': {
+          const orgTab = tab as OrgProfileTab;
+
+          // Context for the panel - provides org identifier
+          const orgContext: OrgProfilePanelContext = {
+            currentScope: {
+              type: 'workspace' as const,
+              org: {
+                orgName: orgTab.orgName,
+              },
+            },
+            refresh: async () => {},
+          };
+
+          // Actions implementation - provides capabilities
+          const orgActions: OrgProfilePanelActions = {
+            getOrgProfile: async (orgName: string) => {
+              // GitHub API treats orgs similarly to users for basic info
+              const githubOrg = await GithubService.getUser(orgName);
+
+              if (!githubOrg) {
+                throw new Error('Organization not found');
+              }
+
+              // Cast to access fields not in GitHubUser type but present in API response
+              const githubOrgExtended = githubOrg as typeof githubOrg & {
+                twitter_username?: string | null;
+                blog?: string | null;
+              };
+
+              // Fetch org members to get the count
+              let memberCount = 0;
+              try {
+                const members = await GithubService.getOrgMembers(orgName);
+                memberCount = members.length;
+              } catch (error) {
+                console.warn(`Failed to fetch org members for ${orgName}:`, error);
+                // Default to 0 on error
+              }
+
+              return {
+                orgName: githubOrg.login,
+                name: githubOrg.name || undefined,
+                email: githubOrg.email || undefined,
+                avatarUrl: githubOrg.avatar_url,
+                description: githubOrg.bio || undefined,
+                location: githubOrg.location || undefined,
+                twitterHandle: githubOrgExtended.twitter_username || undefined,
+                websiteUrl: githubOrgExtended.blog || undefined,
+                activityData: new Map(), // Fetched separately
+                totalCommits: 0, // Calculated from activity data
+                publicRepos: githubOrg.public_repos || 0,
+                members: memberCount,
+                createdDate: githubOrg.created_at || new Date().toISOString(),
+              };
+            },
+
+            getOrgActivity: async (orgName: string) => {
+              try {
+                const authService = SecureAuthService.getInstance();
+                const authResult = await authService.checkAuth();
+
+                if (!authResult.authenticated || !authResult.token) {
+                  return new Map<string, number>();
+                }
+
+                const activityResult = await ApiProxyService.call<UserActivityResponse>({
+                  endpoint: `https://app.principal-ade.com/api/github/org/${orgName}/activity?contributionDays=365&activityDays=1`,
+                  method: 'GET',
+                  headers: {
+                    Authorization: `Bearer ${authResult.token}`,
+                  },
+                });
+
+                // Extract activity data from API proxy result
+                const activityResponse = activityResult?.data;
+
+                // Transform contributions to activity data Map
+                const activityData = new Map<string, number>();
+                if (activityResponse?.contributions) {
+                  activityResponse.contributions.forEach((contrib: { date: string; count: number }) => {
+                    activityData.set(contrib.date, contrib.count);
+                  });
+                }
+
+                return activityData;
+              } catch (err) {
+                console.error('Failed to fetch org activity:', err);
+                return new Map<string, number>();
+              }
+            },
+
+            // Base panel actions
+            openFile: async () => {},
+          };
+
+          return (
+            <div style={{ height: '100%', width: '100%', overflow: 'hidden' }}>
+              <OrgProfilePanel context={orgContext} actions={orgActions} events={events} />
             </div>
           );
         }

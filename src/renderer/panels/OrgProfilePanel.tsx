@@ -558,16 +558,29 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
               {orgData.name}
             </h2>
           )}
-          <div
+          <button
+            onClick={() => handleOpenUrl(`https://github.com/${orgData.orgName}`, 'github')}
             style={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
               fontSize: theme.fontSizes[2],
               fontFamily: theme.fonts?.body,
               color: theme.colors.textSecondary,
               marginTop: spacing.xs,
+              cursor: 'pointer',
+              textDecoration: 'none',
+              transition: 'color 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = theme.colors.primary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = theme.colors.textSecondary;
             }}
           >
             @{orgData.orgName}
-          </div>
+          </button>
         </div>
 
         {/* Description */}

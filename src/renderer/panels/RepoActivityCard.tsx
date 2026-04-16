@@ -43,6 +43,7 @@ export interface RepoActivitySummary {
   commitCount: number;
   githubOwner?: string;
   githubRepoName?: string;
+  isOwnerOrg?: boolean; // Whether the owner is an organization
 }
 
 interface RepoActivityCardProps {
@@ -573,6 +574,21 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
     }
   }, [entry, events]);
 
+  // Handler to open owner profile (user or organization)
+  const handleOpenOwnerProfile = useCallback(() => {
+    if (summary.githubOwner && events) {
+      events.emit({
+        type: 'feed:owner-selected',
+        source: 'repo-activity-card',
+        timestamp: Date.now(),
+        payload: {
+          owner: summary.githubOwner,
+          isOrg: summary.isOwnerOrg || false,
+        },
+      });
+    }
+  }, [summary.githubOwner, summary.isOwnerOrg, events]);
+
   return (
     <div
       style={{
@@ -658,7 +674,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             <div
               onClick={(e) => {
                 e.stopPropagation();
-                handleOpenProfile();
+                handleOpenOwnerProfile();
               }}
               style={{
                 width: 56,
@@ -671,17 +687,17 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                 justifyContent: 'center',
                 flexShrink: 0,
                 overflow: 'hidden',
-                cursor: entry && events ? 'pointer' : 'default',
+                cursor: summary.githubOwner && events ? 'pointer' : 'default',
                 transition: 'transform 0.15s ease, border-color 0.15s ease',
               }}
               onMouseEnter={(e) => {
-                if (entry && events) {
+                if (summary.githubOwner && events) {
                   e.currentTarget.style.transform = 'scale(1.05)';
                   e.currentTarget.style.borderColor = theme.colors.primary;
                 }
               }}
               onMouseLeave={(e) => {
-                if (entry && events) {
+                if (summary.githubOwner && events) {
                   e.currentTarget.style.transform = 'scale(1)';
                   e.currentTarget.style.borderColor = theme.colors.border;
                 }
