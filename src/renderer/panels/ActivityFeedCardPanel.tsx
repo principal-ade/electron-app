@@ -9,7 +9,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
-import { FolderGit2, X } from 'lucide-react';
+import { FolderGit2 } from 'lucide-react';
 import { useActivityFeed, type ActivityCommit } from '../hooks/useActivityFeed';
 import { useWatchedActivityFeed } from '../hooks/useWatchedActivityFeed';
 import { RepoActivityCard, type RepoActivitySummary } from './RepoActivityCard';
@@ -316,102 +316,6 @@ export const ActivityFeedCardPanel: React.FC<ActivityFeedCardPanelProps> = ({
         overflow: 'hidden',
       }}
     >
-      {/* Header */}
-      <div
-        style={{
-          padding: spacing.md,
-          borderBottom: `1px solid ${theme.colors.border}`,
-          flexShrink: 0,
-        }}
-      >
-        <h3
-          style={{
-            margin: 0,
-            fontSize: theme.fontSizes[2],
-            fontWeight: 600,
-            color: theme.colors.text,
-          }}
-        >
-          Activity
-        </h3>
-        {timeFilter && (
-          <div
-            style={{
-              marginTop: spacing.xs,
-              fontSize: theme.fontSizes[0],
-              color: theme.colors.primary,
-            }}
-          >
-            Filtered by time
-          </div>
-        )}
-        {repoFilter && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs }}>
-            <button
-              onClick={() => {
-                setRepoFilter(null);
-                events.emit({
-                  type: 'feed:repository-filter-changed',
-                  source: 'activity-feed-card-panel',
-                  timestamp: Date.now(),
-                  payload: null,
-                });
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing.xs,
-                padding: `${spacing.xs}px ${spacing.sm}px`,
-                fontSize: theme.fontSizes[0],
-                color: theme.colors.primary,
-                backgroundColor: `${theme.colors.primary}15`,
-                border: `1px solid ${theme.colors.primary}`,
-                borderRadius: theme.radii?.[1] || 4,
-                cursor: 'pointer',
-              }}
-            >
-              <span>Filtered by: {repoFilter.split('/').pop()}</span>
-              <X size={12} />
-            </button>
-            <button
-              onClick={() => {
-                const entry = repoEntryMap.get(repoFilter);
-                if (entry) {
-                  events.emit({
-                    type: 'feed:repository-selected',
-                    source: 'activity-feed-card-panel',
-                    timestamp: Date.now(),
-                    payload: { repository: entry },
-                  });
-                }
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing.xs,
-                padding: `${spacing.xs}px ${spacing.sm}px`,
-                fontSize: theme.fontSizes[0],
-                color: theme.colors.textOnPrimary,
-                backgroundColor: theme.colors.primary,
-                border: `1px solid ${theme.colors.primary}`,
-                borderRadius: theme.radii?.[1] || 4,
-                cursor: 'pointer',
-                transition: 'opacity 0.15s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.opacity = '0.85';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = '1';
-              }}
-            >
-              <FolderGit2 size={12} />
-              <span>View Profile</span>
-            </button>
-          </div>
-        )}
-      </div>
-
       {/* Cards list */}
       <div
         style={{

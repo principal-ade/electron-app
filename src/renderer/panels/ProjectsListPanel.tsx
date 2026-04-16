@@ -5,7 +5,7 @@
  * Used in the FeedView panel layout.
  */
 
-import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { FolderGit2, User } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
@@ -27,6 +27,10 @@ export interface ProjectsListPanelProps {
   selectedBlock?: string | null;
 }
 
+interface RepoSummaryWithEntry extends RepoSummary {
+  entry?: AlexandriaEntry;
+}
+
 interface RepoSummary {
   repoId: string;
   repoName: string;
@@ -42,44 +46,24 @@ export const ProjectsListPanel: React.FC<ProjectsListPanelProps> = ({
   selectedBlock: _selectedBlock = null,
 }) => {
   const { theme } = useTheme();
-  const [selectedRepoId, setSelectedRepoId] = useState<string | null>(null);
 
   const spacing = {
     sm: theme.space?.[2] || 8,
     md: theme.space?.[3] || 16,
   };
 
-  // Handle repository click - filter feed by repository
+  // Handle repository click - open profile
   const handleRepoClick = useCallback(
-    (repoId: string) => {
-      // Toggle filter off if clicking the same repo
-      const isDeselecting = selectedRepoId === repoId;
-      const newSelectedRepoId = isDeselecting ? null : repoId;
-      setSelectedRepoId(newSelectedRepoId);
-
+    (entry: AlexandriaEntry) => {
       events.emit({
-        type: 'feed:repository-filter-changed',
-        source: 'heatmap-panel',
+        type: 'feed:repository-selected',
+        source: 'projects-list-panel',
         timestamp: Date.now(),
-        payload: newSelectedRepoId ? { repoId: newSelectedRepoId } : null,
+        payload: { repository: entry },
       });
     },
-    [events, selectedRepoId]
+    [events]
   );
-
-  // Listen for repository filter changes from other panels (like clear button)
-  useEffect(() => {
-    const handleRepoFilterChanged = (event: { type: string; payload: { repoId: string } | null }) => {
-      if (event.type === 'feed:repository-filter-changed') {
-        setSelectedRepoId(event.payload?.repoId ?? null);
-      }
-    };
-
-    events.on('feed:repository-filter-changed', handleRepoFilterChanged);
-    return () => {
-      events.off('feed:repository-filter-changed', handleRepoFilterChanged);
-    };
-  }, [events]);
 
   // Create a map of repo paths to github owner info
   const repoGithubMap = useMemo(() => {
@@ -93,8 +77,8 @@ export const ProjectsListPanel: React.FC<ProjectsListPanelProps> = ({
   }, [repositories]);
 
   // Aggregate commits by repository
-  const repoSummaries = useMemo<RepoSummary[]>(() => {
-    const repoMap = new Map<string, RepoSummary>();
+  const repoSummaries = useMemo<RepoSummaryWithEntry[]>(() => {
+    const repoMap = new Map<string, RepoSummaryWithEntry>();
 
     for (const commit of commits) {
       // Skip commits without repoId
@@ -110,12 +94,14 @@ export const ProjectsListPanel: React.FC<ProjectsListPanelProps> = ({
         // Extract repo name from path (last part after /)
         const repoName = repoId.split('/').pop() || repoId;
         const githubInfo = repoGithubMap.get(repoId);
+        const entry = repositories.find(r => r.path === repoId);
         summary = {
           repoId,
           repoName,
           commitCount: 0,
           lastCommitTime: timestamp,
           githubOwner: githubInfo?.owner,
+          entry,
         };
         repoMap.set(repoId, summary);
       }
@@ -129,7 +115,7 @@ export const ProjectsListPanel: React.FC<ProjectsListPanelProps> = ({
     return Array.from(repoMap.values()).sort(
       (a, b) => b.lastCommitTime.getTime() - a.lastCommitTime.getTime()
     );
-  }, [commits, repoGithubMap]);
+  }, [commits, repoGithubMap, repositories]);
 
   return (
     <div
@@ -184,31 +170,31 @@ export const ProjectsListPanel: React.FC<ProjectsListPanelProps> = ({
           </div>
         ) : (
           repoSummaries.map((summary) => {
-            const isSelected = selectedRepoId === summary.repoId;
             return (
               <div
                 key={summary.repoId}
-                onClick={() => handleRepoClick(summary.repoId)}
+                onClick={() => summary.entry && handleRepoClick(summary.entry)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: spacing.sm,
                   width: '100%',
                   padding: spacing.sm,
-                  backgroundColor: isSelected ? `${theme.colors.primary}15` : 'transparent',
-                  border: `1px solid ${isSelected ? theme.colors.primary : theme.colors.border}`,
+                  backgroundColor: 'transparent',
+                  border: `1px solid ${theme.colors.border}`,
                   borderRadius: theme.radii?.[1] || 4,
-                  cursor: 'pointer',
+                  cursor: summary.entry ? 'pointer' : 'default',
                   transition: 'all 0.15s ease',
+                  opacity: summary.entry ? 1 : 0.5,
                 }}
                 onMouseEnter={(e) => {
-                  if (!isSelected) {
+                  if (summary.entry) {
                     e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
                     e.currentTarget.style.borderColor = theme.colors.primary;
                   }
                 }}
                 onMouseLeave={(e) => {
-                  if (!isSelected) {
+                  if (summary.entry) {
                     e.currentTarget.style.backgroundColor = 'transparent';
                     e.currentTarget.style.borderColor = theme.colors.border;
                   }
