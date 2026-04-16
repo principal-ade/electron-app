@@ -1,7 +1,7 @@
 /**
- * UserProfilePanel
+ * OrgProfilePanel
  *
- * Displays a user's profile with GitHub-style activity and information.
+ * Displays an organization's profile with GitHub-style activity and information.
  * Features a Facebook-style layout with an avatar overlapping an activity heatmap banner.
  */
 
@@ -13,92 +13,78 @@ import type {
   PanelEventEmitter,
 } from '@principal-ade/panel-framework-core';
 import {
-  User,
-  MapPin,
   Building2,
+  MapPin,
   Link as LinkIcon,
   Twitter,
-  Calendar,
+  Mail,
+  Users,
 } from 'lucide-react';
 
 /**
- * User identifier in context
+ * Organization identifier in context
  */
-export interface UserIdentifier {
-  username: string; // GitHub username
+export interface OrgIdentifier {
+  orgName: string; // GitHub organization name
 }
 
 /**
- * User profile data
+ * Organization profile data
  */
-export interface UserProfileData {
-  username: string;
-  name?: string;
+export interface OrgProfileData {
+  orgName: string;
+  name?: string; // Display name
   email?: string;
   avatarUrl?: string;
-  bio?: string;
+  description?: string;
   location?: string;
-  company?: string;
   twitterHandle?: string;
   websiteUrl?: string;
   activityData: Map<string, number>; // date -> commit count
   totalCommits: number;
-  totalRepos: number;
-  followers: number;
-  following: number;
-  joinedDate: string; // ISO date string
+  publicRepos: number;
+  members: number;
+  createdDate: string; // ISO date string
 }
 
 /**
- * Context for UserProfilePanel
+ * Context for OrgProfilePanel
  */
-export interface UserProfilePanelContext extends PanelContextValue {
-  // Override currentScope to add user
+export interface OrgProfilePanelContext extends PanelContextValue {
+  // Override currentScope to add org
   currentScope: PanelContextValue['currentScope'] & {
-    user?: UserIdentifier; // The user to display
-  };
-
-  // GitHub sync state (optional)
-  githubSyncState?: {
-    authenticatedUser?: string; // Current authenticated GitHub user
-    following: string[]; // Users we're following
-    followers: string[]; // Users following us
+    org?: OrgIdentifier; // The organization to display
   };
 }
 
 /**
- * Actions for UserProfilePanel
+ * Actions for OrgProfilePanel
  */
-export interface UserProfilePanelActions extends PanelActions {
+export interface OrgProfilePanelActions extends PanelActions {
   /**
-   * Get GitHub user profile
+   * Get GitHub organization profile
    */
-  getUserProfile: (username: string) => Promise<UserProfileData>;
+  getOrgProfile: (orgName: string) => Promise<OrgProfileData>;
 
   /**
-   * Get user activity/contribution data
+   * Get organization activity/contribution data
    */
-  getUserActivity: (username: string) => Promise<Map<string, number>>;
+  getOrgActivity: (orgName: string) => Promise<Map<string, number>>;
 
   /**
-   * Get user's repositories (optional)
+   * Get organization's repositories (optional)
    */
-  getUserRepositories?: (username: string) => Promise<unknown[]>;
+  getOrgRepositories?: (orgName: string) => Promise<unknown[]>;
 
   /**
-   * Follow a GitHub user (optional)
+   * Get organization's members (optional)
    */
-  followUser?: (username: string) => Promise<void>;
-
-  /**
-   * Unfollow a GitHub user (optional)
-   */
-  unfollowUser?: (username: string) => Promise<void>;
+  getOrgMembers?: (orgName: string) => Promise<unknown[]>;
 }
 
-interface UserProfilePanelProps {
-  context: UserProfilePanelContext;
-  actions: UserProfilePanelActions;
+interface OrgProfilePanelProps {
+  context: OrgProfilePanelContext;
+  actions: OrgProfilePanelActions;
   events: PanelEventEmitter;
 }
 
@@ -222,33 +208,33 @@ function formatNumber(num: number): string {
 /**
  * Format date to readable string
  */
-function formatJoinDate(isoDate: string): string {
+function formatCreatedDate(isoDate: string): string {
   const date = new Date(isoDate);
   return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 }
 
 /**
- * Get initials from name or username
+ * Get initials from name or org name
  */
-function getInitials(name?: string, username?: string): string {
-  const displayName = name || username || '?';
-  const parts = displayName.split(' ');
+function getInitials(name?: string, orgName?: string): string {
+  const displayName = name || orgName || '?';
+  const parts = displayName.split(/[\s-_]/);
   if (parts.length >= 2) {
     return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
   }
   return displayName.slice(0, 2).toUpperCase();
 }
 
-export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
+export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
   context,
   actions,
   events,
 }) => {
   const { theme } = useTheme();
-  const user = context.currentScope?.user;
+  const org = context.currentScope?.org;
 
   // Panel manages its own profile data state
-  const [userData, setUserData] = useState<UserProfileData | null>(null);
+  const [orgData, setOrgData] = useState<OrgProfileData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -263,10 +249,10 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
     [],
   );
 
-  // Fetch profile when user changes
+  // Fetch profile when org changes
   useEffect(() => {
-    if (!user) {
-      setUserData(null);
+    if (!org) {
+      setOrgData(null);
       setError(null);
       setLoading(false);
       return;
@@ -281,21 +267,21 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
       try {
         // Fetch profile and activity in parallel
         const [profile, activity] = await Promise.all([
-          actions.getUserProfile(user.username),
-          actions.getUserActivity(user.username),
+          actions.getOrgProfile(org.orgName),
+          actions.getOrgActivity(org.orgName),
         ]);
 
         if (!cancelled) {
           // Merge activity data into profile
-          const profileWithActivity: UserProfileData = {
+          const profileWithActivity: OrgProfileData = {
             ...profile,
             activityData: activity,
           };
-          setUserData(profileWithActivity);
+          setOrgData(profileWithActivity);
         }
       } catch (err) {
         if (!cancelled) {
-          console.error('Failed to fetch user profile:', err);
+          console.error('Failed to fetch org profile:', err);
           setError(err instanceof Error ? err.message : 'Failed to load profile');
         }
       } finally {
@@ -310,20 +296,20 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [user, actions]);
+  }, [org, actions]);
 
   // Handle open in browser - emit event instead
   const handleOpenUrl = (url: string, type: 'website' | 'twitter' | 'github' | 'email') => {
     events.emit({
-      type: 'user-profile:open-link',
-      source: 'UserProfilePanel',
+      type: 'org-profile:open-link',
+      source: 'OrgProfilePanel',
       timestamp: Date.now(),
       payload: { url, type },
     });
   };
 
-  // Empty state - no user selected
-  if (!userData && !loading && !error) {
+  // Empty state - no org selected
+  if (!orgData && !loading && !error) {
     return (
       <div
         style={{
@@ -338,20 +324,20 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
           backgroundColor: theme.colors.background,
         }}
       >
-        <User size={48} style={{ marginBottom: spacing.md, opacity: 0.5 }} />
+        <Building2 size={48} style={{ marginBottom: spacing.md, opacity: 0.5 }} />
         <p style={{
           margin: 0,
           fontSize: theme.fontSizes[2],
           fontFamily: theme.fonts?.body
         }}>
-          No user selected
+          No organization selected
         </p>
         <p style={{
           margin: `${spacing.xs}px 0 0`,
           fontSize: theme.fontSizes[1],
           fontFamily: theme.fonts?.body
         }}>
-          Select a user to view their profile
+          Select an organization to view its profile
         </p>
       </div>
     );
@@ -387,7 +373,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
           fontSize: theme.fontSizes[2],
           fontFamily: theme.fonts?.body
         }}>
-          Loading profile...
+          Loading organization...
         </p>
       </div>
     );
@@ -415,7 +401,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
           fontWeight: theme.fontWeights?.medium ?? 500,
           fontFamily: theme.fonts?.body
         }}>
-          Failed to load profile
+          Failed to load organization
         </p>
         <p
           style={{
@@ -431,9 +417,9 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
     );
   }
 
-  if (!userData) return null;
+  if (!orgData) return null;
 
-  const initials = getInitials(userData.name, userData.username);
+  const initials = getInitials(orgData.name, orgData.orgName);
 
   return (
     <div
@@ -453,7 +439,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
           overflow: 'hidden',
         }}
       >
-        <ActivityHeatmap activityData={userData.activityData} theme={theme} bannerHeight={170} />
+        <ActivityHeatmap activityData={orgData.activityData} theme={theme} bannerHeight={170} />
       </div>
 
       {/* Profile Content */}
@@ -465,7 +451,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
             style={{
               width: 120,
               height: 120,
-              borderRadius: '50%',
+              borderRadius: 16,
               backgroundColor: theme.colors.backgroundSecondary,
               border: `4px solid ${theme.colors.background}`,
               overflow: 'hidden',
@@ -473,10 +459,10 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
               boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
             }}
           >
-            {userData.avatarUrl ? (
+            {orgData.avatarUrl ? (
               <img
-                src={userData.avatarUrl}
-                alt={userData.username}
+                src={orgData.avatarUrl}
+                alt={orgData.orgName}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
             ) : (
@@ -509,24 +495,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                   fontFamily: theme.fonts?.body,
                   color: theme.colors.text
                 }}>
-                  {formatNumber(userData.totalCommits)}
-                </div>
-                <div style={{
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.textSecondary
-                }}>
-                  commits
-                </div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{
-                  fontSize: theme.fontSizes[3],
-                  fontWeight: theme.fontWeights?.semibold ?? 600,
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.text
-                }}>
-                  {formatNumber(userData.totalRepos)}
+                  {formatNumber(orgData.publicRepos)}
                 </div>
                 <div style={{
                   fontSize: theme.fontSizes[0],
@@ -543,14 +512,14 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                   fontFamily: theme.fonts?.body,
                   color: theme.colors.text
                 }}>
-                  {formatNumber(userData.followers)}
+                  {formatNumber(orgData.members)}
                 </div>
                 <div style={{
                   fontSize: theme.fontSizes[0],
                   fontFamily: theme.fonts?.body,
                   color: theme.colors.textSecondary
                 }}>
-                  followers
+                  members
                 </div>
               </div>
               <div style={{ textAlign: 'center' }}>
@@ -560,23 +529,23 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                   fontFamily: theme.fonts?.body,
                   color: theme.colors.text
                 }}>
-                  {formatNumber(userData.following)}
+                  {formatNumber(orgData.totalCommits)}
                 </div>
                 <div style={{
                   fontSize: theme.fontSizes[0],
                   fontFamily: theme.fonts?.body,
                   color: theme.colors.textSecondary
                 }}>
-                  following
+                  commits
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Name and Username */}
+        {/* Name and Organization Name */}
         <div style={{ marginBottom: spacing.md }}>
-          {userData.name && (
+          {orgData.name && (
             <h2
               style={{
                 margin: 0,
@@ -586,7 +555,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                 color: theme.colors.text,
               }}
             >
-              {userData.name}
+              {orgData.name}
             </h2>
           )}
           <div
@@ -597,12 +566,12 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
               marginTop: spacing.xs,
             }}
           >
-            @{userData.username}
+            @{orgData.orgName}
           </div>
         </div>
 
-        {/* Bio */}
-        {userData.bio && (
+        {/* Description */}
+        {orgData.description && (
           <p
             style={{
               margin: `0 0 ${spacing.md}px`,
@@ -612,7 +581,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
               color: theme.colors.text,
             }}
           >
-            {userData.bio}
+            {orgData.description}
           </p>
         )}
 
@@ -625,22 +594,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
             marginBottom: spacing.md,
           }}
         >
-          {userData.company && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing.sm,
-                fontSize: theme.fontSizes[1],
-                fontFamily: theme.fonts?.body,
-                color: theme.colors.textSecondary,
-              }}
-            >
-              <Building2 size={16} />
-              <span>{userData.company}</span>
-            </div>
-          )}
-          {userData.location && (
+          {orgData.location && (
             <div
               style={{
                 display: 'flex',
@@ -652,10 +606,38 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
               }}
             >
               <MapPin size={16} />
-              <span>{userData.location}</span>
+              <span>{orgData.location}</span>
             </div>
           )}
-          {userData.websiteUrl && (
+          {orgData.email && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.sm,
+                fontSize: theme.fontSizes[1],
+                fontFamily: theme.fonts?.body,
+              }}
+            >
+              <Mail size={16} color={theme.colors.textSecondary} />
+              <button
+                onClick={() => orgData.email && handleOpenUrl(`mailto:${orgData.email}`, 'email')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  color: theme.colors.primary,
+                  cursor: 'pointer',
+                  textDecoration: 'none',
+                  fontSize: 'inherit',
+                  fontFamily: 'inherit',
+                }}
+              >
+                {orgData.email}
+              </button>
+            </div>
+          )}
+          {orgData.websiteUrl && (
             <div
               style={{
                 display: 'flex',
@@ -667,7 +649,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
             >
               <LinkIcon size={16} color={theme.colors.textSecondary} />
               <button
-                onClick={() => userData.websiteUrl && handleOpenUrl(userData.websiteUrl, 'website')}
+                onClick={() => orgData.websiteUrl && handleOpenUrl(orgData.websiteUrl, 'website')}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -679,11 +661,11 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                   fontFamily: 'inherit',
                 }}
               >
-                {userData.websiteUrl && new URL(userData.websiteUrl).hostname}
+                {orgData.websiteUrl && new URL(orgData.websiteUrl).hostname}
               </button>
             </div>
           )}
-          {userData.twitterHandle && (
+          {orgData.twitterHandle && (
             <div
               style={{
                 display: 'flex',
@@ -695,7 +677,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
             >
               <Twitter size={16} color={theme.colors.textSecondary} />
               <button
-                onClick={() => handleOpenUrl(`https://twitter.com/${userData.twitterHandle}`, 'twitter')}
+                onClick={() => handleOpenUrl(`https://twitter.com/${orgData.twitterHandle}`, 'twitter')}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -707,7 +689,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                   fontFamily: 'inherit',
                 }}
               >
-                @{userData.twitterHandle}
+                @{orgData.twitterHandle}
               </button>
             </div>
           )}
@@ -721,8 +703,8 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
               color: theme.colors.textSecondary,
             }}
           >
-            <Calendar size={16} />
-            <span>Joined {formatJoinDate(userData.joinedDate)}</span>
+            <Users size={16} />
+            <span>Created {formatCreatedDate(orgData.createdDate)}</span>
           </div>
         </div>
       </div>
@@ -742,4 +724,4 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
   );
 };
 
-export default UserProfilePanel;
+export default OrgProfilePanel;
