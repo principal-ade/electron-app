@@ -2,13 +2,16 @@ import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import React from 'react';
 import { ThemeProvider } from '@principal-ade/industry-theme';
 import type {
-  PanelContextValue,
-  PanelActions,
   PanelEventEmitter,
   PanelEvent,
 } from '@principal-ade/panel-framework-core';
+import { PathsFileTreeBuilder, type FileTree } from '@principal-ai/repository-abstraction';
 import { RepositoryProfilePanel } from './RepositoryProfilePanel';
-import type { RepositoryProfileData } from './RepositoryProfilePanel';
+import type {
+  RepositoryProfileData,
+  RepositoryProfilePanelActions,
+  RepositoryProfilePanelContext,
+} from './RepositoryProfilePanel';
 
 // Mock event emitter for stories
 type EventHandler = (event: PanelEvent<unknown>) => void;
@@ -78,6 +81,42 @@ const generateMockActivityData = (intensity: 'low' | 'medium' | 'high' = 'medium
   return activityMap;
 };
 
+// Generate mock file tree using PathsFileTreeBuilder
+const createMockFileTree = (repoName: string): FileTree => {
+  // Create a realistic TypeScript project structure
+  const files = [
+    `${repoName}/src/index.ts`,
+    `${repoName}/src/app.ts`,
+    `${repoName}/src/components/Button.tsx`,
+    `${repoName}/src/components/Input.tsx`,
+    `${repoName}/src/components/Modal.tsx`,
+    `${repoName}/src/utils/helpers.ts`,
+    `${repoName}/src/utils/validation.ts`,
+    `${repoName}/src/hooks/useData.ts`,
+    `${repoName}/src/hooks/useAuth.ts`,
+    `${repoName}/src/styles/globals.css`,
+    `${repoName}/src/styles/components.css`,
+    `${repoName}/tests/app.test.ts`,
+    `${repoName}/tests/components/Button.test.tsx`,
+    `${repoName}/tests/utils/helpers.test.ts`,
+    `${repoName}/docs/README.md`,
+    `${repoName}/docs/CONTRIBUTING.md`,
+    `${repoName}/package.json`,
+    `${repoName}/tsconfig.json`,
+    `${repoName}/README.md`,
+    `${repoName}/.gitignore`,
+  ];
+
+  const builder = new PathsFileTreeBuilder();
+  const fileTree = builder.build({
+    files,
+    rootPath: repoName,
+  });
+
+  // Return the FileTree object with all metadata
+  return fileTree;
+};
+
 // Generate mock repository profile data
 const createMockRepositoryProfile = (
   overrides: Partial<RepositoryProfileData> = {}
@@ -101,46 +140,114 @@ const createMockRepositoryProfile = (
     updatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
     htmlUrl: 'https://github.com/octocat/awesome-project',
     isPrivate: false,
-    fileCityImageUrl: 'https://placehold.co/800x600/1a1a1a/3b82f6?text=File+City+Visualization',
+    github: {
+      owner: 'octocat',
+      name: 'awesome-project',
+    },
   };
 
   return { ...defaultProfile, ...overrides };
 };
 
+// Create mock actions
+const createMockActions = (
+  options: {
+    localFileTree?: FileTree | null;
+    remoteFileTree?: FileTree | null;
+    lineCounts?: Record<string, number>;
+    simulateDelay?: number;
+    simulateError?: boolean;
+  } = {}
+): RepositoryProfilePanelActions => {
+  const {
+    localFileTree,
+    remoteFileTree,
+    lineCounts = {},
+    simulateDelay = 500,
+    simulateError = false,
+  } = options;
+
+  return {
+    openFile: async () => {},
+    getLocalFileTree: async (repoPath: string) => {
+      console.info('[Mock Action] getLocalFileTree:', repoPath);
+      if (simulateDelay) {
+        await new Promise(resolve => setTimeout(resolve, simulateDelay));
+      }
+      if (simulateError) {
+        return Promise.reject({ message: 'Failed to load local file tree', name: 'Error' });
+      }
+      return localFileTree ?? createMockFileTree(repoPath.split('/').pop() || 'repo');
+    },
+    getRemoteFileTree: async (owner: string, name: string) => {
+      console.info('[Mock Action] getRemoteFileTree:', owner, name);
+      if (simulateDelay) {
+        await new Promise(resolve => setTimeout(resolve, simulateDelay));
+      }
+      return remoteFileTree ?? createMockFileTree(name);
+    },
+    getLineCounts: async (repoPath: string) => {
+      console.info('[Mock Action] getLineCounts:', repoPath);
+      if (simulateDelay) {
+        await new Promise(resolve => setTimeout(resolve, simulateDelay / 2));
+      }
+      return lineCounts;
+    },
+  };
+};
+
 // Mock panel wrapper component
 const MockRepositoryProfilePanel: React.FC<{
   repositoryData?: RepositoryProfileData;
-  loading?: boolean;
-  error?: string;
-  onOpenRepository?: () => void;
-  onDeleteRepository?: () => void;
-}> = ({ repositoryData, loading = false, error, onOpenRepository, onDeleteRepository }) => {
-  const mockContext: PanelContextValue = {
-    currentScope: {
-      type: 'global',
-    },
-    isSliceLoading: () => loading,
+  actions?: RepositoryProfilePanelActions;
+}> = ({ repositoryData, actions: customActions }) => {
+  const mockContext: RepositoryProfilePanelContext = {
+    currentScope: repositoryData
+      ? {
+          type: 'repository',
+          repository: repositoryData,
+        }
+      : {
+          type: 'global',
+        },
+    isSliceLoading: () => false,
     refresh: async () => {},
     clearSlice: () => {},
-  } as unknown as PanelContextValue;
+  } as unknown as RepositoryProfilePanelContext;
 
-  const mockActions: PanelActions = {
-    openFile: async () => {},
-    openRepository: async () => {},
-  } as unknown as PanelActions;
+  const mockActions = customActions || createMockActions({
+    localFileTree: repositoryData?.localPath ? createMockFileTree(repositoryData.name) : null,
+    remoteFileTree: repositoryData?.github ? createMockFileTree(repositoryData.name) : null,
+    lineCounts: {
+      [`${repositoryData?.name}/src/index.ts`]: 45,
+      [`${repositoryData?.name}/src/app.ts`]: 128,
+      [`${repositoryData?.name}/src/components/Button.tsx`]: 32,
+      [`${repositoryData?.name}/src/components/Input.tsx`]: 56,
+      [`${repositoryData?.name}/tests/app.test.ts`]: 89,
+    },
+  });
 
   const mockEvents = new MockEventEmitter();
+
+  // Listen to events
+  React.useEffect(() => {
+    const unsubscribers = [
+      mockEvents.on('repository-profile:open-requested', (event) => {
+        console.info('[Mock Event Handler] Open repository requested:', event.payload);
+      }),
+      mockEvents.on('repository-profile:delete-requested', (event) => {
+        console.info('[Mock Event Handler] Delete repository requested:', event.payload);
+      }),
+    ];
+
+    return () => unsubscribers.forEach(unsub => unsub());
+  }, [mockEvents]);
 
   return (
     <RepositoryProfilePanel
       context={mockContext}
       actions={mockActions}
       events={mockEvents}
-      repositoryData={repositoryData}
-      loading={loading}
-      error={error}
-      onOpenRepository={onOpenRepository}
-      onDeleteRepository={onDeleteRepository}
     />
   );
 };
@@ -148,10 +255,7 @@ const MockRepositoryProfilePanel: React.FC<{
 // Wrapper with theme provider
 const RepositoryProfilePanelStory: React.FC<{
   repositoryData?: RepositoryProfileData;
-  loading?: boolean;
-  error?: string;
-  onOpenRepository?: () => void;
-  onDeleteRepository?: () => void;
+  actions?: RepositoryProfilePanelActions;
 }> = (props) => {
   return (
     <ThemeProvider>
@@ -186,6 +290,7 @@ const meta: Meta<typeof RepositoryProfilePanel> = {
 };
 
 export default meta;
+// @ts-ignore - Storybook typing quirk with complex component props
 type Story = StoryObj<typeof meta>;
 
 // Default story with complete profile
@@ -193,7 +298,7 @@ export const Default = {
   render: () => <RepositoryProfilePanelStory repositoryData={createMockRepositoryProfile()} />,
 } as unknown as Story;
 
-// Local repository with Open and Delete buttons
+// Local repository (has local path and GitHub)
 export const LocalRepository = {
   render: () => (
     <RepositoryProfilePanelStory
@@ -209,9 +314,67 @@ export const LocalRepository = {
         stars: 23,
         forks: 4,
         totalCommits: 342,
+        github: {
+          owner: 'johndoe',
+          name: 'my-local-project',
+        },
       })}
-      onOpenRepository={() => console.info('[Story] Open repository clicked')}
-      onDeleteRepository={() => console.info('[Story] Delete repository clicked')}
+    />
+  ),
+} as unknown as Story;
+
+// Remote-only repository (no local path)
+export const RemoteOnly = {
+  render: () => (
+    <RepositoryProfilePanelStory
+      repositoryData={createMockRepositoryProfile({
+        name: 'remote-framework',
+        fullName: 'bigtech/remote-framework',
+        owner: 'bigtech',
+        description: 'A framework I want to explore. Not cloned locally yet.',
+        language: 'JavaScript',
+        isLocal: false,
+        localPath: undefined,
+        activityData: generateMockActivityData('high'),
+        stars: 12456,
+        forks: 2134,
+        totalCommits: 15234,
+        github: {
+          owner: 'bigtech',
+          name: 'remote-framework',
+        },
+      })}
+      actions={createMockActions({
+        localFileTree: null, // No local file tree
+        remoteFileTree: createMockFileTree('remote-framework'),
+      })}
+    />
+  ),
+} as unknown as Story;
+
+// Local-only repository (no GitHub info)
+export const LocalOnly = {
+  render: () => (
+    <RepositoryProfilePanelStory
+      repositoryData={createMockRepositoryProfile({
+        name: 'private-project',
+        fullName: 'me/private-project',
+        owner: 'me',
+        description: 'A private local project, not on GitHub.',
+        language: 'Python',
+        isLocal: true,
+        localPath: '/Users/me/private-project',
+        activityData: generateMockActivityData('medium'),
+        stars: 0,
+        forks: 0,
+        totalCommits: 156,
+        htmlUrl: undefined,
+        github: undefined,
+      })}
+      actions={createMockActions({
+        localFileTree: createMockFileTree('private-project'),
+        remoteFileTree: null, // No remote file tree
+      })}
     />
   ),
 } as unknown as Story;
@@ -232,6 +395,10 @@ export const HighActivity = {
         watchers: 3421,
         totalCommits: 15234,
         size: 45678,
+        github: {
+          owner: 'framework-org',
+          name: 'super-framework',
+        },
       })}
     />
   ),
@@ -256,29 +423,11 @@ export const MinimalRepository = {
         size: 234,
         openIssues: 2,
         createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days ago
+        github: {
+          owner: 'newdev',
+          name: 'starter-kit',
+        },
       })}
-    />
-  ),
-} as unknown as Story;
-
-// Local repository without callbacks (buttons disabled)
-export const LocalRepositoryNoCallbacks = {
-  render: () => (
-    <RepositoryProfilePanelStory
-      repositoryData={createMockRepositoryProfile({
-        name: 'test-project',
-        fullName: 'dev/test-project',
-        owner: 'dev',
-        description: 'A test project with disabled actions.',
-        language: 'JavaScript',
-        isLocal: true,
-        localPath: '/Users/dev/test-project',
-        activityData: generateMockActivityData('medium'),
-        stars: 0,
-        forks: 0,
-        totalCommits: 156,
-      })}
-      // No callbacks provided - buttons will be disabled
     />
   ),
 } as unknown as Story;
@@ -298,6 +447,10 @@ export const PrivateRepository = {
         stars: 0,
         watchers: 12,
         htmlUrl: undefined,
+        github: {
+          owner: 'acme-corp',
+          name: 'company-secrets',
+        },
       })}
     />
   ),
@@ -320,66 +473,36 @@ export const LargeMonorepo = {
         totalCommits: 45678,
         size: 2048000, // 2GB
         openIssues: 567,
+        github: {
+          owner: 'bigtech',
+          name: 'monorepo',
+        },
       })}
     />
   ),
 } as unknown as Story;
 
-// Repository with long description
-export const LongDescription = {
+// Loading state (slow file tree fetching)
+export const SlowLoading = {
   render: () => (
     <RepositoryProfilePanelStory
-      repositoryData={createMockRepositoryProfile({
-        description: 'This is a comprehensive library for building modern web applications. It includes support for React, Vue, Angular, and Svelte. Features include state management, routing, form validation, API integration, authentication, internationalization, and much more. Built with performance and developer experience in mind.',
-        activityData: generateMockActivityData('medium'),
+      repositoryData={createMockRepositoryProfile()}
+      actions={createMockActions({
+        simulateDelay: 3000, // 3 second delay
       })}
     />
   ),
 } as unknown as Story;
 
-// Repository without owner avatar
-export const NoOwnerAvatar = {
-  render: () => (
-    <RepositoryProfilePanelStory
-      repositoryData={createMockRepositoryProfile({
-        ownerAvatarUrl: undefined,
-        name: 'cool-library',
-        fullName: 'johndoe/cool-library',
-        owner: 'johndoe',
-      })}
-    />
-  ),
-} as unknown as Story;
-
-// With File City Image and Latest Commit
-export const WithFileCityImage = {
-  render: () => (
-    <RepositoryProfilePanelStory
-      repositoryData={createMockRepositoryProfile({
-        name: 'web-framework',
-        fullName: 'acme/web-framework',
-        owner: 'acme',
-        description: 'A modern web framework with built-in File City visualization.',
-        language: 'TypeScript',
-        stars: 5432,
-        totalCommits: 2847,
-        openIssues: 67,
-        fileCityImageUrl: 'https://placehold.co/800x600/1a1a1a/3b82f6?text=File+City+Visualization',
-        updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
-      })}
-    />
-  ),
-} as unknown as Story;
-
-// Loading state
-export const Loading = {
-  render: () => <RepositoryProfilePanelStory loading={true} />,
-} as unknown as Story;
-
-// Error state
+// Error state (failed to load file trees)
 export const Error = {
   render: () => (
-    <RepositoryProfilePanelStory error="Failed to load repository profile. Please try again." />
+    <RepositoryProfilePanelStory
+      repositoryData={createMockRepositoryProfile()}
+      actions={createMockActions({
+        simulateError: true,
+      })}
+    />
   ),
 } as unknown as Story;
 
@@ -407,8 +530,13 @@ export const CompleteProfile = {
         size: 34567,
         openIssues: 89,
         htmlUrl: 'https://github.com/principal-ade/desktop-app',
-        fileCityImageUrl: 'https://placehold.co/800x600/1a1a1a/3b82f6?text=File+City+Visualization',
+        isLocal: true,
+        localPath: '/Users/dev/principal-ade/desktop-app',
         updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
+        github: {
+          owner: 'principal-ade',
+          name: 'desktop-app',
+        },
       })}
     />
   ),
@@ -427,6 +555,10 @@ export const RustProject = {
         activityData: generateMockActivityData('medium'),
         stars: 8765,
         forks: 543,
+        github: {
+          owner: 'rustacean',
+          name: 'blazing-fast-cli',
+        },
       })}
     />
   ),
@@ -445,6 +577,10 @@ export const GoProject = {
         activityData: generateMockActivityData('high'),
         stars: 12456,
         forks: 2134,
+        github: {
+          owner: 'gopher-inc',
+          name: 'cloud-orchestrator',
+        },
       })}
     />
   ),

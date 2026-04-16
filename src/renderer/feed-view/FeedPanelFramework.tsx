@@ -27,7 +27,6 @@ import {
 } from '../contexts/TerminalContext';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
-import { FileCityImageService } from '../main-process-api/FileCityImageService';
 import {
   TabbedTerminalPanel,
   type TerminalTab,
@@ -48,6 +47,7 @@ import type { CommitTimestamp } from '../panels/ProjectsListPanel';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
 import { GithubService } from '../main-process-api/GithubService';
 import { ApiProxyService } from '../main-process-api/ApiProxyService';
+import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
 import { SecureAuthService } from '../services/SecureAuthService';
 
 /**
@@ -552,7 +552,6 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
           const RepositoryProfileTabContent = () => {
             const [repositoryData, setRepositoryData] = React.useState<RepositoryProfileData | undefined>(undefined);
             const [loading, setLoading] = React.useState(true);
-            const [error, setError] = React.useState<string | undefined>(undefined);
 
             // Use commit heatmap hook to get activity data
             const heatMapData = useCommitHeatMap(projectTab.repository.path ?? null);
@@ -562,15 +561,9 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
 
               const fetchRepositoryData = async () => {
                 setLoading(true);
-                setError(undefined);
 
                 try {
                   const repo = projectTab.repository;
-
-                  // Get File City image
-                  const fileCityImageUrl = repo.path
-                    ? await FileCityImageService.getImage(repo.path)
-                    : null;
 
                   if (cancelled) return;
 
@@ -609,7 +602,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
                     isPrivate: false,
                     isLocal: true,
                     localPath: repo.path || undefined,
-                    fileCityImageUrl: fileCityImageUrl || undefined,
+                    github: repo.github,
                   };
 
                   setRepositoryData(profileData);
@@ -617,7 +610,6 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
                 } catch (err) {
                   if (!cancelled) {
                     console.error('[RepositoryProfileTab] Failed to fetch repository data:', err);
-                    setError('Failed to load repository profile');
                     setLoading(false);
                   }
                 }
@@ -630,39 +622,57 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
               };
             }, [heatMapData.commits]);
 
-            // Handle open repository
-            const handleOpenRepository = React.useCallback(() => {
-              if (onOpenRepository) {
-                onOpenRepository(projectTab.repository);
-              }
-            }, []);
-
-            // Handle delete repository
-            const handleDeleteRepository = React.useCallback(() => {
-              events.emit({
-                type: 'project-info:delete-requested',
-                source: 'repository-profile-panel',
-                timestamp: Date.now(),
-                payload: {
-                  repository: projectTab.repository,
-                },
-              });
-            }, []);
-
             // Create minimal context and actions
             const projectContext = {
-              currentScope: { type: 'repository' as const, repository: projectTab.repository as unknown as RepositoryMetadata },
+              currentScope: {
+                type: 'repository' as const,
+                repository: (repositoryData || projectTab.repository) as unknown as RepositoryMetadata
+              },
               slices: new Map(),
               adapters: {},
-              isSliceLoading: () => false,
+              isSliceLoading: () => loading,
               refresh: async () => {},
+              clearSlice: () => {},
             };
 
             const projectActions = {
-              openFile: () => {},
-              openGitDiff: () => {},
-              navigateToPanel: () => {},
-              notifyPanels: (event: PanelEvent) => events.emit(event),
+              openFile: async () => {},
+              openRepository: async () => {},
+              getLocalFileTree: (repoPath: string) => {
+                return RepositoryMonitoringService.getFileTree(repoPath);
+              },
+              getRemoteFileTree: async (owner: string, name: string) => {
+                try {
+                  // Get latest commit
+                  const latestCommit = await GithubService.getLatestCommit(owner, name);
+                  if (!latestCommit) {
+                    console.warn('[FeedPanelFramework] No commits found for', owner, name);
+                    return null;
+                  }
+
+                  // Get file tree at that commit
+                  const filePaths = await GithubService.getFileTreeAtCommit(owner, name, latestCommit.sha);
+
+                  // Build file tree from paths
+                  const builder = new PathsFileTreeBuilder();
+                  const fileTree = builder.build({
+                    files: filePaths,
+                    rootPath: name,
+                  });
+
+                  return fileTree;
+                } catch (error) {
+                  console.error('[FeedPanelFramework] Failed to fetch remote file tree:', error);
+                  return null;
+                }
+              },
+              getLineCounts: async (repoPath: string) => {
+                // Use main process to get line counts
+                if (window.mainProcess?.fileCityImage?.countLines) {
+                  return await window.mainProcess.fileCityImage.countLines(repoPath);
+                }
+                return {};
+              },
             };
 
             return (
@@ -671,11 +681,6 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
                   context={projectContext}
                   actions={projectActions}
                   events={events}
-                  repositoryData={repositoryData}
-                  loading={loading}
-                  error={error}
-                  onOpenRepository={handleOpenRepository}
-                  onDeleteRepository={handleDeleteRepository}
                 />
               </div>
             );

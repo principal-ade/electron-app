@@ -30,7 +30,7 @@ import {
   enrichWithLineCounts,
   type CityData,
 } from '@industry-theme/repository-composition-panels';
-import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
+import type { FileTree } from '@principal-ai/repository-abstraction';
 
 export interface RepositoryProfileData {
   name: string;
@@ -53,18 +53,46 @@ export interface RepositoryProfileData {
   isPrivate: boolean;
   isLocal?: boolean; // Whether this is a local repository
   localPath?: string; // Local file system path
-  fileCityImageUrl?: string;
+  github?: {
+    owner: string;
+    name: string;
+  };
+}
+
+/**
+ * Extended context for RepositoryProfilePanel
+ * Only contains repository metadata - file trees are fetched via actions
+ */
+export interface RepositoryProfilePanelContext extends PanelContextValue {
+  // Repository metadata is provided through currentScope
+  // File trees are NOT in context - they're fetched by the panel using actions
+}
+
+/**
+ * Extended actions for RepositoryProfilePanel
+ */
+export interface RepositoryProfilePanelActions extends PanelActions {
+  /**
+   * Get local file tree from working directory
+   */
+  getLocalFileTree: (repoPath: string) => Promise<FileTree | null>;
+
+  /**
+   * Get remote file tree from GitHub default branch
+   */
+  getRemoteFileTree: (owner: string, name: string) => Promise<FileTree | null>;
+
+  /**
+   * Get line counts for files in a local repository
+   * Returns empty object for remote repositories
+   */
+  getLineCounts: (repoPath: string) => Promise<Record<string, number>>;
 }
 
 interface RepositoryProfilePanelProps {
-  context: PanelContextValue;
-  actions: PanelActions;
+  context: RepositoryProfilePanelContext;
+  actions: RepositoryProfilePanelActions;
   events: PanelEventEmitter;
-  repositoryData?: RepositoryProfileData;
-  loading?: boolean;
-  error?: string;
-  onOpenRepository?: () => void;
-  onDeleteRepository?: () => void;
 }
 
 /**
@@ -217,14 +245,9 @@ function getInitials(repoName: string): string {
 }
 
 export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
-  context: _context,
-  actions: _actions,
-  events: _events,
-  repositoryData,
-  loading = false,
-  error,
-  onOpenRepository,
-  onDeleteRepository,
+  context,
+  actions,
+  events,
 }) => {
   const { theme } = useTheme();
 
@@ -241,17 +264,88 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
   const borderRadius = theme.radii?.[1] || 4;
 
-  // State for 3D city data
+  // Read repository from context
+  const repositoryData = context.currentScope?.repository as RepositoryProfileData | undefined;
+
+  // State for file trees (fetched via actions)
+  const [localFileTree, setLocalFileTree] = useState<FileTree | null>(null);
+  const [remoteFileTree, setRemoteFileTree] = useState<FileTree | null>(null);
+  const [fileTreesError, setFileTreesError] = useState<string | null>(null);
+
+  // State for 3D city data (derived from file trees)
   const [cityData, setCityData] = useState<CityData | null>(null);
   const [cityDataLoading, setCityDataLoading] = useState(false);
 
-  // Build city data from file tree when repository changes
+  // Fetch file trees when repository changes
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchFileTrees = async () => {
+      if (!repositoryData) {
+        setLocalFileTree(null);
+        setRemoteFileTree(null);
+        setFileTreesError(null);
+        return;
+      }
+
+      setFileTreesError(null);
+
+      try {
+        const promises: Promise<void>[] = [];
+
+        // Fetch local file tree if repository has a local path
+        if (repositoryData.localPath) {
+          promises.push(
+            actions.getLocalFileTree(repositoryData.localPath)
+              .then(tree => {
+                if (!cancelled) setLocalFileTree(tree);
+              })
+              .catch(error => {
+                console.error('[RepositoryProfilePanel] Failed to fetch local file tree:', error);
+                if (!cancelled) setFileTreesError(error.message);
+              })
+          );
+        }
+
+        // Fetch remote file tree if repository has GitHub info
+        if (repositoryData.github) {
+          promises.push(
+            actions.getRemoteFileTree(repositoryData.github.owner, repositoryData.github.name)
+              .then(tree => {
+                if (!cancelled) setRemoteFileTree(tree);
+              })
+              .catch(error => {
+                console.error('[RepositoryProfilePanel] Failed to fetch remote file tree:', error);
+                // Don't set error for remote failures - it's less critical
+              })
+          );
+        }
+
+        await Promise.all(promises);
+      } catch (error) {
+        console.error('[RepositoryProfilePanel] Failed to fetch file trees:', error);
+        if (!cancelled) {
+          setFileTreesError(error instanceof Error ? error.message : String(error));
+        }
+      }
+    };
+
+    fetchFileTrees();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [repositoryData?.localPath, repositoryData?.github, actions]);
+
+  // Build city data from file trees
   useEffect(() => {
     let cancelled = false;
 
     const buildCityData = async () => {
-      const repoPath = repositoryData?.localPath;
-      if (!repoPath) {
+      // Use local file tree if available, otherwise use remote
+      const fileTree = localFileTree || remoteFileTree;
+      if (!fileTree) {
         setCityData(null);
         return;
       }
@@ -259,25 +353,18 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
       setCityDataLoading(true);
 
       try {
-        // Get file tree from repository monitoring service
-        const fileTree = await RepositoryMonitoringService.getFileTree(repoPath);
-        if (!fileTree || cancelled) {
-          setCityDataLoading(false);
-          return;
-        }
-
         // Build city data from file tree
         const rootPath = fileTree.metadata?.id || '';
         const rawCityData = buildCityDataFromFileTree(fileTree, rootPath);
 
-        // Get actual line counts from main process
+        // Get actual line counts if this is a local repository
         let finalCityData: CityData;
-        try {
-          if (window.mainProcess?.fileCityImage?.countLines) {
-            const rawLineCounts = await window.mainProcess.fileCityImage.countLines(repoPath);
+        if (repositoryData?.localPath) {
+          try {
+            const rawLineCounts = await actions.getLineCounts(repositoryData.localPath);
 
             // Transform line counts to use the correct rootPath prefix
-            const repoName = repoPath.split('/').pop() || '';
+            const repoName = repositoryData.localPath.split('/').pop() || '';
             const lineCounts: Record<string, number> = {};
             for (const [filePath, count] of Object.entries(rawLineCounts)) {
               if (typeof count !== 'number' || count < 0) continue;
@@ -292,10 +379,12 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
 
             const enrichedCityData = enrichWithLineCounts(rawCityData, lineCounts);
             finalCityData = estimateLineCounts(enrichedCityData);
-          } else {
+          } catch (error) {
+            console.error('[RepositoryProfilePanel] Failed to get line counts:', error);
             finalCityData = estimateLineCounts(rawCityData);
           }
-        } catch (_error) {
+        } else {
+          // Remote repository - use estimated line counts
           finalCityData = estimateLineCounts(rawCityData);
         }
 
@@ -317,15 +406,39 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [repositoryData?.localPath]);
+  }, [localFileTree, remoteFileTree, repositoryData?.localPath, actions]);
 
   // Handle open in browser
   const handleOpenUrl = (url: string) => {
     window.open(url, '_blank');
   };
 
+  // Handle open repository
+  const handleOpenRepository = () => {
+    if (repositoryData) {
+      events.emit({
+        type: 'repository-profile:open-requested',
+        source: 'repository-profile-panel',
+        timestamp: Date.now(),
+        payload: { repository: repositoryData },
+      });
+    }
+  };
+
+  // Handle delete repository
+  const handleDeleteRepository = () => {
+    if (repositoryData) {
+      events.emit({
+        type: 'repository-profile:delete-requested',
+        source: 'repository-profile-panel',
+        timestamp: Date.now(),
+        payload: { repository: repositoryData },
+      });
+    }
+  };
+
   // Empty state - no repository selected
-  if (!repositoryData && !loading && !error) {
+  if (!repositoryData) {
     return (
       <div
         style={{
@@ -359,44 +472,8 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     );
   }
 
-  // Loading state
-  if (loading) {
-    return (
-      <div
-        style={{
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: spacing.lg,
-          color: theme.colors.textSecondary,
-          backgroundColor: theme.colors.background,
-        }}
-      >
-        <div
-          style={{
-            width: 40,
-            height: 40,
-            border: `3px solid ${theme.colors.border}`,
-            borderTopColor: theme.colors.primary,
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-          }}
-        />
-        <p style={{
-          margin: `${spacing.md}px 0 0`,
-          fontSize: theme.fontSizes[2],
-          fontFamily: theme.fonts?.body
-        }}>
-          Loading repository...
-        </p>
-      </div>
-    );
-  }
-
   // Error state
-  if (error) {
+  if (fileTreesError) {
     return (
       <div
         style={{
@@ -427,13 +504,11 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
             fontFamily: theme.fonts?.body,
           }}
         >
-          {error}
+          {fileTreesError}
         </p>
       </div>
     );
   }
-
-  if (!repositoryData) return null;
 
   const initials = getInitials(repositoryData.name);
 
@@ -458,7 +533,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
             flexShrink: 0,
           }}
         >
-          <ActivityHeatmap activityData={repositoryData.activityData} theme={theme} bannerHeight={170} />
+          <ActivityHeatmap activityData={repositoryData.activityData || new Map()} theme={theme} bannerHeight={170} />
         </div>
 
         {/* Profile Content */}
@@ -581,8 +656,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
             {repositoryData.isLocal && (
               <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
                 <button
-                  onClick={onOpenRepository}
-                  disabled={!onOpenRepository}
+                  onClick={handleOpenRepository}
                   title="Open in workspace"
                   style={{
                     padding: `${spacing.xs}px ${spacing.sm}px`,
@@ -593,29 +667,23 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                     borderRadius: borderRadius,
                     background: theme.colors.primary,
                     color: theme.colors.background,
-                    cursor: onOpenRepository ? 'pointer' : 'not-allowed',
+                    cursor: 'pointer',
                     transition: 'opacity 0.2s ease',
-                    opacity: onOpenRepository ? 1 : 0.5,
                     fontSize: theme.fontSizes[1],
                     fontFamily: theme.fonts?.body,
                   }}
                   onMouseEnter={(e) => {
-                    if (onOpenRepository) {
-                      e.currentTarget.style.opacity = '0.9';
-                    }
+                    e.currentTarget.style.opacity = '0.9';
                   }}
                   onMouseLeave={(e) => {
-                    if (onOpenRepository) {
-                      e.currentTarget.style.opacity = '1';
-                    }
+                    e.currentTarget.style.opacity = '1';
                   }}
                 >
                   <FolderOpen size={14} />
                   Open
                 </button>
                 <button
-                  onClick={onDeleteRepository}
-                  disabled={!onDeleteRepository}
+                  onClick={handleDeleteRepository}
                   title="Delete repository"
                   style={{
                     padding: `${spacing.xs}px ${spacing.sm}px`,
@@ -626,23 +694,18 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                     borderRadius: borderRadius,
                     background: 'transparent',
                     color: theme.colors.error,
-                    cursor: onDeleteRepository ? 'pointer' : 'not-allowed',
+                    cursor: 'pointer',
                     transition: 'all 0.2s ease',
-                    opacity: onDeleteRepository ? 1 : 0.5,
                     fontSize: theme.fontSizes[1],
                     fontFamily: theme.fonts?.body,
                   }}
                   onMouseEnter={(e) => {
-                    if (onDeleteRepository) {
-                      e.currentTarget.style.backgroundColor = theme.colors.error;
-                      e.currentTarget.style.color = theme.colors.background;
-                    }
+                    e.currentTarget.style.backgroundColor = theme.colors.error;
+                    e.currentTarget.style.color = theme.colors.background;
                   }}
                   onMouseLeave={(e) => {
-                    if (onDeleteRepository) {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.color = theme.colors.error;
-                    }
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = theme.colors.error;
                   }}
                 >
                   <Trash2 size={14} />
