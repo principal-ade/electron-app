@@ -186,6 +186,7 @@ export interface GitHubRepository {
   owner: {
     login: string;
     avatar_url: string;
+    type?: 'User' | 'Organization';
   };
   private: boolean;
   html_url: string;

@@ -185,6 +185,443 @@ interface FeedPanelFrameworkInnerProps {
 }
 
 /**
+ * Wrapper component for repository profile tab content
+ * Extracted to prevent remounting when switching tabs
+ */
+const RepositoryProfileTabContent: React.FC<{
+  repository: AlexandriaEntry;
+  events: PanelEventEmitter;
+}> = ({ repository, events }) => {
+  const [repositoryData, setRepositoryData] = React.useState<RepositoryProfileData | undefined>(undefined);
+  const [loading, setLoading] = React.useState(true);
+
+  // Use commit heatmap hook to get activity data
+  const heatMapData = useCommitHeatMap(repository.path ?? null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    const fetchRepositoryData = async () => {
+      setLoading(true);
+
+      try {
+        const repo = repository;
+
+        if (cancelled) return;
+
+        // Transform activity data
+        const activityData = new Map<string, number>();
+        heatMapData.commits.forEach((commit) => {
+          activityData.set(commit.date, commit.count);
+        });
+
+        // Calculate total commits
+        let totalCommits = 0;
+        activityData.forEach((count) => {
+          totalCommits += count;
+        });
+
+        // Fetch full repository data from GitHub API if available
+        let ownerType: 'User' | 'Organization' | undefined = undefined;
+        let githubCreatedAt: string | undefined = undefined;
+        let githubUpdatedAt: string | undefined = undefined;
+
+        if (repo.github?.owner && repo.github?.name) {
+          try {
+            const githubRepo = await GithubService.getRepository(repo.github.owner, repo.github.name);
+            console.log('[RepositoryProfileTab] Fetched GitHub repository:', githubRepo);
+            console.log('[RepositoryProfileTab] Owner type:', githubRepo?.owner.type);
+            console.log('[RepositoryProfileTab] Created at:', githubRepo?.created_at);
+            ownerType = githubRepo?.owner.type;
+            githubCreatedAt = githubRepo?.created_at;
+            githubUpdatedAt = githubRepo?.updated_at;
+          } catch (err) {
+            console.warn('[RepositoryProfileTab] Failed to fetch GitHub repository:', err);
+          }
+        }
+
+        const profileData: RepositoryProfileData = {
+          name: repo.name,
+          fullName: repo.github?.owner ? `${repo.github.owner}/${repo.github.name || repo.name}` : repo.name,
+          owner: repo.github?.owner || 'local',
+          ownerAvatarUrl: repo.github?.owner ? `https://github.com/${repo.github.owner}.png` : undefined,
+          ownerType,
+          description: repo.github?.description || undefined,
+          language: undefined, // Not available in AlexandriaEntry
+          stars: 0, // Not available for local repos
+          forks: 0, // Not available for local repos
+          watchers: 0, // Not available for local repos
+          openIssues: 0, // Not available for local repos
+          size: 0, // Could be calculated but not essential
+          activityData,
+          totalCommits: totalCommits || 0,
+          defaultBranch: 'main', // Could fetch from git but using default
+          createdAt: githubCreatedAt || repo.registeredAt || new Date().toISOString(),
+          updatedAt: githubUpdatedAt || repo.lastOpenedAt || new Date().toISOString(),
+          htmlUrl: repo.github?.owner && repo.github?.name
+            ? `https://github.com/${repo.github.owner}/${repo.github.name}`
+            : undefined,
+          isPrivate: false,
+          isLocal: true,
+          localPath: repo.path || undefined,
+          github: repo.github,
+        };
+
+        console.log('[RepositoryProfileTab] Final profile data with ownerType:', profileData.ownerType);
+
+        setRepositoryData(profileData);
+        setLoading(false);
+      } catch (err) {
+        if (!cancelled) {
+          console.error('[RepositoryProfileTab] Failed to fetch repository data:', err);
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchRepositoryData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [heatMapData.commits, repository]);
+
+  // Create minimal context and actions
+  // Memoize to prevent unnecessary re-renders and re-fetching
+  const projectContext = React.useMemo(() => ({
+    currentScope: {
+      type: 'repository' as const,
+      repository: (repositoryData || repository) as unknown as RepositoryMetadata
+    },
+    slices: new Map(),
+    adapters: {},
+    isSliceLoading: () => loading,
+    refresh: async () => {},
+    clearSlice: () => {},
+  }), [repositoryData, repository, loading]);
+
+  const projectActions = React.useMemo(() => ({
+    openFile: async () => {},
+    openRepository: async () => {},
+    getLocalFileTree: (repoPath: string) => {
+      return RepositoryMonitoringService.getFileTree(repoPath);
+    },
+    getRemoteFileTree: async (owner: string, name: string) => {
+      try {
+        // Get latest commit
+        const latestCommit = await GithubService.getLatestCommit(owner, name);
+        if (!latestCommit) {
+          console.warn('[FeedPanelFramework] No commits found for', owner, name);
+          return null;
+        }
+
+        // Get file tree at that commit
+        const filePaths = await GithubService.getFileTreeAtCommit(owner, name, latestCommit.sha);
+
+        // Build file tree from paths
+        const builder = new PathsFileTreeBuilder();
+        const fileTree = builder.build({
+          files: filePaths,
+          rootPath: name,
+        });
+
+        return fileTree;
+      } catch (error) {
+        console.error('[FeedPanelFramework] Failed to fetch remote file tree:', error);
+        return null;
+      }
+    },
+    getLineCounts: async (repoPath: string) => {
+      // Use main process to get line counts
+      if (window.mainProcess?.fileCityImage?.countLines) {
+        return await window.mainProcess.fileCityImage.countLines(repoPath);
+      }
+      return {};
+    },
+  }), []);
+
+  return (
+    <div style={{ height: '100%', overflow: 'hidden' }}>
+      <RepositoryProfilePanel
+        context={projectContext}
+        actions={projectActions}
+        events={events}
+      />
+    </div>
+  );
+};
+
+/**
+ * Wrapper component for user profile tab content
+ * Extracted to prevent remounting when switching tabs
+ */
+const UserProfileTabContent: React.FC<{
+  username: string;
+  email?: string;
+  events: PanelEventEmitter;
+}> = ({ username, email, events }) => {
+  // Memoize context to prevent unnecessary re-renders
+  const userContext: UserProfilePanelContext = React.useMemo(() => ({
+    currentScope: {
+      type: 'workspace' as const,
+      user: {
+        username,
+      },
+    },
+    refresh: async () => {},
+  }), [username]);
+
+  // Memoize actions to prevent re-fetching on every render
+  const userActions: UserProfilePanelActions = React.useMemo(() => ({
+    getUserProfile: async (username: string) => {
+      const githubUser = await GithubService.getUser(username);
+
+      if (!githubUser) {
+        throw new Error('User not found');
+      }
+
+      const githubUserExtended = githubUser as typeof githubUser & {
+        twitter_username?: string | null;
+        blog?: string | null;
+      };
+
+      return {
+        username: githubUser.login,
+        name: githubUser.name || undefined,
+        email: githubUser.email || email,
+        avatarUrl: githubUser.avatar_url,
+        bio: githubUser.bio || undefined,
+        location: githubUser.location || undefined,
+        company: githubUser.company || undefined,
+        twitterHandle: githubUserExtended.twitter_username || undefined,
+        websiteUrl: githubUserExtended.blog || undefined,
+        activityData: new Map(),
+        totalCommits: 0,
+        totalRepos: githubUser.public_repos || 0,
+        followers: githubUser.followers || 0,
+        following: githubUser.following || 0,
+        joinedDate: githubUser.created_at || new Date().toISOString(),
+      };
+    },
+
+    getUserActivity: async (username: string) => {
+      try {
+        const authService = SecureAuthService.getInstance();
+        const authResult = await authService.checkAuth();
+
+        if (!authResult.authenticated || !authResult.token) {
+          return new Map<string, number>();
+        }
+
+        const activityResult = await ApiProxyService.call<UserActivityResponse>({
+          endpoint: `https://app.principal-ade.com/api/github/user/${username}/activity?contributionDays=365&activityDays=1`,
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${authResult.token}`,
+          },
+        });
+
+        const activityResponse = activityResult?.data;
+        const activityData = new Map<string, number>();
+        if (activityResponse?.contributions) {
+          activityResponse.contributions.forEach((contrib: { date: string; count: number }) => {
+            activityData.set(contrib.date, contrib.count);
+          });
+        }
+
+        return activityData;
+      } catch (err) {
+        console.error('Failed to fetch user activity:', err);
+        return new Map<string, number>();
+      }
+    },
+
+    getUserRepositories: async (username: string) => {
+      try {
+        const result = await GithubService.searchRepos(
+          `user:${username} sort:updated`,
+          { perPage: 50 }
+        );
+
+        return result.repos.map((repo) => ({
+          repoName: repo.name,
+          githubOwner: repo.owner.login,
+          githubRepoName: repo.name,
+          description: repo.description ?? undefined,
+          language: repo.language ?? undefined,
+          stars: repo.stargazers_count,
+          createdAt: repo.created_at,
+          isOwnerOrg: false,
+          topContributors: [],
+        }));
+      } catch (err) {
+        console.error('Failed to fetch user repositories:', err);
+        return [];
+      }
+    },
+
+    getRepositoryFileTree: async (owner: string, repoName: string) => {
+      try {
+        const treeResponse = await WebAdeService.getGithubTree(owner, repoName, 'HEAD');
+        const files = treeResponse.tree
+          .filter((entry) => entry.type === 'blob')
+          .map((entry) => entry.path);
+
+        const builder = new PathsFileTreeBuilder();
+        return builder.build({ files, rootPath: repoName });
+      } catch (err) {
+        console.error(`Failed to fetch file tree for ${owner}/${repoName}:`, err);
+        return null;
+      }
+    },
+
+    openFile: async () => {},
+  }), [email]);
+
+  return (
+    <div style={{ height: '100%', width: '100%', overflow: 'hidden' }}>
+      <UserProfilePanel context={userContext} actions={userActions} events={events} />
+    </div>
+  );
+};
+
+/**
+ * Wrapper component for org profile tab content
+ * Extracted to prevent remounting when switching tabs
+ */
+const OrgProfileTabContent: React.FC<{
+  orgName: string;
+  events: PanelEventEmitter;
+}> = ({ orgName, events }) => {
+  // Memoize context to prevent unnecessary re-renders
+  const orgContext: OrgProfilePanelContext = React.useMemo(() => ({
+    currentScope: {
+      type: 'workspace' as const,
+      org: {
+        orgName,
+      },
+    },
+    refresh: async () => {},
+  }), [orgName]);
+
+  // Memoize actions to prevent re-fetching on every render
+  const orgActions: OrgProfilePanelActions = React.useMemo(() => ({
+    getOrgProfile: async (orgName: string) => {
+      const githubOrg = await GithubService.getUser(orgName);
+
+      if (!githubOrg) {
+        throw new Error('Organization not found');
+      }
+
+      const githubOrgExtended = githubOrg as typeof githubOrg & {
+        twitter_username?: string | null;
+        blog?: string | null;
+      };
+
+      let memberCount = 0;
+      try {
+        const members = await GithubService.getOrgMembers(orgName);
+        memberCount = members.length;
+      } catch (error) {
+        console.warn(`Failed to fetch org members for ${orgName}:`, error);
+      }
+
+      return {
+        orgName: githubOrg.login,
+        name: githubOrg.name || undefined,
+        email: githubOrg.email || undefined,
+        avatarUrl: githubOrg.avatar_url,
+        description: githubOrg.bio || undefined,
+        location: githubOrg.location || undefined,
+        twitterHandle: githubOrgExtended.twitter_username || undefined,
+        websiteUrl: githubOrgExtended.blog || undefined,
+        activityData: new Map(),
+        totalCommits: 0,
+        publicRepos: githubOrg.public_repos || 0,
+        members: memberCount,
+        createdDate: githubOrg.created_at || new Date().toISOString(),
+      };
+    },
+
+    getOrgActivity: async (orgName: string) => {
+      try {
+        const authService = SecureAuthService.getInstance();
+        const authResult = await authService.checkAuth();
+
+        if (!authResult.authenticated || !authResult.token) {
+          return new Map<string, number>();
+        }
+
+        const activityResult = await ApiProxyService.call<UserActivityResponse>({
+          endpoint: `https://app.principal-ade.com/api/github/org/${orgName}/activity?contributionDays=365&activityDays=1`,
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${authResult.token}`,
+          },
+        });
+
+        const activityResponse = activityResult?.data;
+        const activityData = new Map<string, number>();
+        if (activityResponse?.contributions) {
+          activityResponse.contributions.forEach((contrib: { date: string; count: number }) => {
+            activityData.set(contrib.date, contrib.count);
+          });
+        }
+
+        return activityData;
+      } catch (err) {
+        console.error('Failed to fetch org activity:', err);
+        return new Map<string, number>();
+      }
+    },
+
+    getOrgRepositories: async (orgName: string) => {
+      try {
+        const repos = await GithubService.getOrgRepositories(orgName, { perPage: 50 });
+
+        return repos.map((repo) => ({
+          repoName: repo.name,
+          githubOwner: repo.owner.login,
+          githubRepoName: repo.name,
+          description: repo.description ?? undefined,
+          language: repo.language ?? undefined,
+          stars: repo.stargazers_count,
+          createdAt: repo.created_at,
+          isOwnerOrg: true,
+          topContributors: [],
+        }));
+      } catch (err) {
+        console.error('Failed to fetch org repositories:', err);
+        return [];
+      }
+    },
+
+    getRepositoryFileTree: async (owner: string, repoName: string) => {
+      try {
+        const treeResponse = await WebAdeService.getGithubTree(owner, repoName, 'HEAD');
+        const files = treeResponse.tree
+          .filter((entry) => entry.type === 'blob')
+          .map((entry) => entry.path);
+
+        const builder = new PathsFileTreeBuilder();
+        return builder.build({ files, rootPath: repoName });
+      } catch (err) {
+        console.error(`Failed to fetch file tree for ${owner}/${repoName}:`, err);
+        return null;
+      }
+    },
+
+    openFile: async () => {},
+  }), []);
+
+  return (
+    <div style={{ height: '100%', width: '100%', overflow: 'hidden' }}>
+      <OrgProfilePanel context={orgContext} actions={orgActions} events={events} />
+    </div>
+  );
+};
+
+/**
  * Inner component that uses TerminalProvider context
  */
 const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
@@ -211,6 +648,21 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
 
   // Base directory from user preferences
   const [baseDefaultDirectory, setBaseDefaultDirectory] = useState<string | null>(null);
+
+  // Use refs for provider values to avoid recreating renderTabContent callback
+  // This prevents unnecessary remounts when switching windows
+  const eventsRef = React.useRef(events);
+  const repositoriesRef = React.useRef(repositories);
+  const onOpenRepositoryRef = React.useRef(onOpenRepository);
+  const feedModeRef = React.useRef(feedMode);
+
+  // Update refs on every render (refs don't trigger re-renders)
+  React.useEffect(() => {
+    eventsRef.current = events;
+    repositoriesRef.current = repositories;
+    onOpenRepositoryRef.current = onOpenRepository;
+    feedModeRef.current = feedMode;
+  });
 
   // Time filter state for heatmap selection
   const [selectedBlock, setSelectedBlock] = useState<string | null>(null);
@@ -635,442 +1087,52 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
         case 'activity-feed': {
           return (
             <ActivityFeedCardPanel
-              repositories={repositories}
-              events={events}
-              onOpenRepository={onOpenRepository}
-              feedMode={feedMode}
+              repositories={repositoriesRef.current}
+              events={eventsRef.current}
+              onOpenRepository={onOpenRepositoryRef.current}
+              feedMode={feedModeRef.current}
             />
           );
         }
         case 'project-info': {
           const projectTab = tab as ProjectInfoTab;
-          // Wrapper component for repository profile
-          const RepositoryProfileTabContent = () => {
-            const [repositoryData, setRepositoryData] = React.useState<RepositoryProfileData | undefined>(undefined);
-            const [loading, setLoading] = React.useState(true);
-
-            // Use commit heatmap hook to get activity data
-            const heatMapData = useCommitHeatMap(projectTab.repository.path ?? null);
-
-            React.useEffect(() => {
-              let cancelled = false;
-
-              const fetchRepositoryData = async () => {
-                setLoading(true);
-
-                try {
-                  const repo = projectTab.repository;
-
-                  if (cancelled) return;
-
-                  // Transform activity data
-                  const activityData = new Map<string, number>();
-                  heatMapData.commits.forEach((commit) => {
-                    activityData.set(commit.date, commit.count);
-                  });
-
-                  // Calculate total commits
-                  let totalCommits = 0;
-                  activityData.forEach((count) => {
-                    totalCommits += count;
-                  });
-
-                  const profileData: RepositoryProfileData = {
-                    name: repo.name,
-                    fullName: repo.github?.owner ? `${repo.github.owner}/${repo.github.name || repo.name}` : repo.name,
-                    owner: repo.github?.owner || 'local',
-                    ownerAvatarUrl: repo.github?.owner ? `https://github.com/${repo.github.owner}.png` : undefined,
-                    description: repo.github?.description || undefined,
-                    language: undefined, // Not available in AlexandriaEntry
-                    stars: 0, // Not available for local repos
-                    forks: 0, // Not available for local repos
-                    watchers: 0, // Not available for local repos
-                    openIssues: 0, // Not available for local repos
-                    size: 0, // Could be calculated but not essential
-                    activityData,
-                    totalCommits: totalCommits || 0,
-                    defaultBranch: 'main', // Could fetch from git but using default
-                    createdAt: repo.registeredAt || new Date().toISOString(),
-                    updatedAt: repo.lastOpenedAt || new Date().toISOString(),
-                    htmlUrl: repo.github?.owner && repo.github?.name
-                      ? `https://github.com/${repo.github.owner}/${repo.github.name}`
-                      : undefined,
-                    isPrivate: false,
-                    isLocal: true,
-                    localPath: repo.path || undefined,
-                    github: repo.github,
-                  };
-
-                  setRepositoryData(profileData);
-                  setLoading(false);
-                } catch (err) {
-                  if (!cancelled) {
-                    console.error('[RepositoryProfileTab] Failed to fetch repository data:', err);
-                    setLoading(false);
-                  }
-                }
-              };
-
-              fetchRepositoryData();
-
-              return () => {
-                cancelled = true;
-              };
-            }, [heatMapData.commits]);
-
-            // Create minimal context and actions
-            const projectContext = {
-              currentScope: {
-                type: 'repository' as const,
-                repository: (repositoryData || projectTab.repository) as unknown as RepositoryMetadata
-              },
-              slices: new Map(),
-              adapters: {},
-              isSliceLoading: () => loading,
-              refresh: async () => {},
-              clearSlice: () => {},
-            };
-
-            const projectActions = {
-              openFile: async () => {},
-              openRepository: async () => {},
-              getLocalFileTree: (repoPath: string) => {
-                return RepositoryMonitoringService.getFileTree(repoPath);
-              },
-              getRemoteFileTree: async (owner: string, name: string) => {
-                try {
-                  // Get latest commit
-                  const latestCommit = await GithubService.getLatestCommit(owner, name);
-                  if (!latestCommit) {
-                    console.warn('[FeedPanelFramework] No commits found for', owner, name);
-                    return null;
-                  }
-
-                  // Get file tree at that commit
-                  const filePaths = await GithubService.getFileTreeAtCommit(owner, name, latestCommit.sha);
-
-                  // Build file tree from paths
-                  const builder = new PathsFileTreeBuilder();
-                  const fileTree = builder.build({
-                    files: filePaths,
-                    rootPath: name,
-                  });
-
-                  return fileTree;
-                } catch (error) {
-                  console.error('[FeedPanelFramework] Failed to fetch remote file tree:', error);
-                  return null;
-                }
-              },
-              getLineCounts: async (repoPath: string) => {
-                // Use main process to get line counts
-                if (window.mainProcess?.fileCityImage?.countLines) {
-                  return await window.mainProcess.fileCityImage.countLines(repoPath);
-                }
-                return {};
-              },
-            };
-
-            return (
-              <div style={{ height: '100%', overflow: 'hidden' }}>
-                <RepositoryProfilePanel
-                  context={projectContext}
-                  actions={projectActions}
-                  events={events}
-                />
-              </div>
-            );
-          };
-
-          return <RepositoryProfileTabContent />;
+          return (
+            <RepositoryProfileTabContent
+              key={projectTab.repository.path || tab.id}
+              repository={projectTab.repository}
+              events={eventsRef.current}
+            />
+          );
         }
         case 'user-profile': {
           const userTab = tab as UserProfileTab;
-
-          // Context for the panel - provides user identifier
-          const userContext: UserProfilePanelContext = {
-            currentScope: {
-              type: 'workspace' as const,
-              user: {
-                username: userTab.username,
-              },
-            },
-            refresh: async () => {},
-          };
-
-          // Actions implementation - provides capabilities
-          const userActions: UserProfilePanelActions = {
-            getUserProfile: async (username: string) => {
-              const githubUser = await GithubService.getUser(username);
-
-              if (!githubUser) {
-                throw new Error('User not found');
-              }
-
-              // Cast to access fields not in GitHubUser type but present in API response
-              const githubUserExtended = githubUser as typeof githubUser & {
-                twitter_username?: string | null;
-                blog?: string | null;
-              };
-
-              return {
-                username: githubUser.login,
-                name: githubUser.name || undefined,
-                email: githubUser.email || userTab.email,
-                avatarUrl: githubUser.avatar_url,
-                bio: githubUser.bio || undefined,
-                location: githubUser.location || undefined,
-                company: githubUser.company || undefined,
-                twitterHandle: githubUserExtended.twitter_username || undefined,
-                websiteUrl: githubUserExtended.blog || undefined,
-                activityData: new Map(), // Fetched separately
-                totalCommits: 0, // Calculated from activity data
-                totalRepos: githubUser.public_repos || 0,
-                followers: githubUser.followers || 0,
-                following: githubUser.following || 0,
-                joinedDate: githubUser.created_at || new Date().toISOString(),
-              };
-            },
-
-            getUserActivity: async (username: string) => {
-              try {
-                const authService = SecureAuthService.getInstance();
-                const authResult = await authService.checkAuth();
-
-                if (!authResult.authenticated || !authResult.token) {
-                  return new Map<string, number>();
-                }
-
-                const activityResult = await ApiProxyService.call<UserActivityResponse>({
-                  endpoint: `https://app.principal-ade.com/api/github/user/${username}/activity?contributionDays=365&activityDays=1`,
-                  method: 'GET',
-                  headers: {
-                    Authorization: `Bearer ${authResult.token}`,
-                  },
-                });
-
-                // Extract activity data from API proxy result
-                const activityResponse = activityResult?.data;
-
-                // Transform contributions to activity data Map
-                const activityData = new Map<string, number>();
-                if (activityResponse?.contributions) {
-                  activityResponse.contributions.forEach((contrib: { date: string; count: number }) => {
-                    activityData.set(contrib.date, contrib.count);
-                  });
-                }
-
-                return activityData;
-              } catch (err) {
-                console.error('Failed to fetch user activity:', err);
-                return new Map<string, number>();
-              }
-            },
-
-            getUserRepositories: async (username: string) => {
-              try {
-                // Use search API to find repositories for the user
-                const result = await GithubService.searchRepos(
-                  `user:${username} sort:updated`,
-                  { perPage: 50 }
-                );
-
-                // Transform GitHubRepository to RepoCardData
-                return result.repos.map((repo) => ({
-                  repoName: repo.name,
-                  githubOwner: repo.owner.login,
-                  githubRepoName: repo.name,
-                  description: repo.description ?? undefined,
-                  language: repo.language ?? undefined,
-                  stars: repo.stargazers_count,
-                  createdAt: repo.created_at,
-                  isOwnerOrg: false, // User repos
-                  topContributors: [], // Will be populated later if needed
-                }));
-              } catch (err) {
-                console.error('Failed to fetch user repositories:', err);
-                return [];
-              }
-            },
-
-            getRepositoryFileTree: async (owner: string, repoName: string) => {
-              try {
-                // Fetch tree from web-ade's cached endpoint
-                const treeResponse = await WebAdeService.getGithubTree(owner, repoName, 'HEAD');
-
-                // Extract file paths from tree entries (only blobs)
-                const files = treeResponse.tree
-                  .filter((entry) => entry.type === 'blob')
-                  .map((entry) => entry.path);
-
-                // Build FileTree using PathsFileTreeBuilder
-                const builder = new PathsFileTreeBuilder();
-                return builder.build({ files, rootPath: repoName });
-              } catch (err) {
-                console.error(`Failed to fetch file tree for ${owner}/${repoName}:`, err);
-                return null;
-              }
-            },
-
-            // Base panel actions
-            openFile: async () => {},
-          };
-
           return (
-            <div style={{ height: '100%', width: '100%', overflow: 'hidden' }}>
-              <UserProfilePanel context={userContext} actions={userActions} events={events} />
-            </div>
+            <UserProfileTabContent
+              key={userTab.username}
+              username={userTab.username}
+              email={userTab.email}
+              events={eventsRef.current}
+            />
           );
         }
         case 'org-profile': {
           const orgTab = tab as OrgProfileTab;
-
-          // Context for the panel - provides org identifier
-          const orgContext: OrgProfilePanelContext = {
-            currentScope: {
-              type: 'workspace' as const,
-              org: {
-                orgName: orgTab.orgName,
-              },
-            },
-            refresh: async () => {},
-          };
-
-          // Actions implementation - provides capabilities
-          const orgActions: OrgProfilePanelActions = {
-            getOrgProfile: async (orgName: string) => {
-              // GitHub API treats orgs similarly to users for basic info
-              const githubOrg = await GithubService.getUser(orgName);
-
-              if (!githubOrg) {
-                throw new Error('Organization not found');
-              }
-
-              // Cast to access fields not in GitHubUser type but present in API response
-              const githubOrgExtended = githubOrg as typeof githubOrg & {
-                twitter_username?: string | null;
-                blog?: string | null;
-              };
-
-              // Fetch org members to get the count
-              let memberCount = 0;
-              try {
-                const members = await GithubService.getOrgMembers(orgName);
-                memberCount = members.length;
-              } catch (error) {
-                console.warn(`Failed to fetch org members for ${orgName}:`, error);
-                // Default to 0 on error
-              }
-
-              return {
-                orgName: githubOrg.login,
-                name: githubOrg.name || undefined,
-                email: githubOrg.email || undefined,
-                avatarUrl: githubOrg.avatar_url,
-                description: githubOrg.bio || undefined,
-                location: githubOrg.location || undefined,
-                twitterHandle: githubOrgExtended.twitter_username || undefined,
-                websiteUrl: githubOrgExtended.blog || undefined,
-                activityData: new Map(), // Fetched separately
-                totalCommits: 0, // Calculated from activity data
-                publicRepos: githubOrg.public_repos || 0,
-                members: memberCount,
-                createdDate: githubOrg.created_at || new Date().toISOString(),
-              };
-            },
-
-            getOrgActivity: async (orgName: string) => {
-              try {
-                const authService = SecureAuthService.getInstance();
-                const authResult = await authService.checkAuth();
-
-                if (!authResult.authenticated || !authResult.token) {
-                  return new Map<string, number>();
-                }
-
-                const activityResult = await ApiProxyService.call<UserActivityResponse>({
-                  endpoint: `https://app.principal-ade.com/api/github/org/${orgName}/activity?contributionDays=365&activityDays=1`,
-                  method: 'GET',
-                  headers: {
-                    Authorization: `Bearer ${authResult.token}`,
-                  },
-                });
-
-                // Extract activity data from API proxy result
-                const activityResponse = activityResult?.data;
-
-                // Transform contributions to activity data Map
-                const activityData = new Map<string, number>();
-                if (activityResponse?.contributions) {
-                  activityResponse.contributions.forEach((contrib: { date: string; count: number }) => {
-                    activityData.set(contrib.date, contrib.count);
-                  });
-                }
-
-                return activityData;
-              } catch (err) {
-                console.error('Failed to fetch org activity:', err);
-                return new Map<string, number>();
-              }
-            },
-
-            getOrgRepositories: async (orgName: string) => {
-              try {
-                // Use getOrgRepositories to fetch org repos
-                const repos = await GithubService.getOrgRepositories(orgName, { perPage: 50 });
-
-                // Transform GitHubRepository to RepoCardData
-                return repos.map((repo) => ({
-                  repoName: repo.name,
-                  githubOwner: repo.owner.login,
-                  githubRepoName: repo.name,
-                  description: repo.description ?? undefined,
-                  language: repo.language ?? undefined,
-                  stars: repo.stargazers_count,
-                  createdAt: repo.created_at,
-                  isOwnerOrg: true, // Org repos
-                  topContributors: [], // Will be populated later if needed
-                }));
-              } catch (err) {
-                console.error('Failed to fetch org repositories:', err);
-                return [];
-              }
-            },
-
-            getRepositoryFileTree: async (owner: string, repoName: string) => {
-              try {
-                // Fetch tree from web-ade's cached endpoint
-                const treeResponse = await WebAdeService.getGithubTree(owner, repoName, 'HEAD');
-
-                // Extract file paths from tree entries (only blobs)
-                const files = treeResponse.tree
-                  .filter((entry) => entry.type === 'blob')
-                  .map((entry) => entry.path);
-
-                // Build FileTree using PathsFileTreeBuilder
-                const builder = new PathsFileTreeBuilder();
-                return builder.build({ files, rootPath: repoName });
-              } catch (err) {
-                console.error(`Failed to fetch file tree for ${owner}/${repoName}:`, err);
-                return null;
-              }
-            },
-
-            // Base panel actions
-            openFile: async () => {},
-          };
-
           return (
-            <div style={{ height: '100%', width: '100%', overflow: 'hidden' }}>
-              <OrgProfilePanel context={orgContext} actions={orgActions} events={events} />
-            </div>
+            <OrgProfileTabContent
+              key={orgTab.orgName}
+              orgName={orgTab.orgName}
+              events={eventsRef.current}
+            />
           );
         }
         default:
           return null;
       }
     },
-    [repositories, events, onOpenRepository, feedMode]
+    // NOTE: renderTabContent intentionally uses refs for repositories/events/onOpenRepository/feedMode
+    // to avoid recreating this callback when those values change, which would cause unnecessary re-renders
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
   );
 
   // Handle panel resize

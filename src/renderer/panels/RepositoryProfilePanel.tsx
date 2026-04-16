@@ -33,6 +33,7 @@ export interface RepositoryProfileData {
   fullName: string; // e.g., "owner/repo"
   owner: string;
   ownerAvatarUrl?: string;
+  ownerType?: 'User' | 'Organization'; // Type of owner
   description?: string;
   language?: string;
   stars: number;
@@ -114,19 +115,25 @@ const ActivityHeatmap: React.FC<{
   const weeks = useMemo(() => {
     const today = new Date();
     const daysToShow = 365; // Full year
-    const days: Array<{ date: string; count: number; dayOfWeek: number }> = [];
+    const days: Array<{ date: string; count: number; dayOfWeek: number; dateObj: Date; monthLabel?: string }> = [];
 
     for (let i = daysToShow - 1; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
       const dateKey = date.toISOString().split('T')[0];
       const count = activityData.get(dateKey) || 0;
-      days.push({ date: dateKey, count, dayOfWeek: date.getDay() });
+
+      // Add month label if this is the first day of the month
+      const monthLabel = date.getDate() === 1
+        ? ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'][date.getMonth()]
+        : undefined;
+
+      days.push({ date: dateKey, count, dayOfWeek: date.getDay(), dateObj: date, monthLabel });
     }
 
     // Group into weeks
-    const weekGroups: Array<Array<{ date: string; count: number; dayOfWeek: number }>> = [];
-    let currentWeek: Array<{ date: string; count: number; dayOfWeek: number }> = [];
+    const weekGroups: Array<Array<{ date: string; count: number; dayOfWeek: number; dateObj: Date; monthLabel?: string }>> = [];
+    let currentWeek: Array<{ date: string; count: number; dayOfWeek: number; dateObj: Date; monthLabel?: string }> = [];
 
     days.forEach((day) => {
       if (day.dayOfWeek === 0 && currentWeek.length > 0) {
@@ -174,8 +181,8 @@ const ActivityHeatmap: React.FC<{
         alignItems: 'center',
       }}
     >
-      {weeks.map((week) => (
-        <div key={week[0]?.date ?? `week-${week.length}`} style={{ display: 'flex', flexDirection: 'column', gap, flexShrink: 0 }}>
+      {weeks.map((week, weekIndex) => (
+        <div key={week[0]?.date ?? `week-${weekIndex}`} style={{ display: 'flex', flexDirection: 'column', gap, flexShrink: 0 }}>
           {week.map((day) => (
             <div
               key={day.date}
@@ -186,9 +193,28 @@ const ActivityHeatmap: React.FC<{
                 backgroundColor: getColor(day.count),
                 transition: 'all 0.2s ease',
                 flexShrink: 0,
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
               title={`${day.date}: ${day.count} commits`}
-            />
+            >
+              {day.monthLabel && (
+                <span
+                  style={{
+                    fontSize: Math.max(8, Math.floor(squareSize * 0.6)),
+                    fontFamily: theme.fonts?.body,
+                    fontWeight: theme.fontWeights?.bold || 700,
+                    color: theme.colors.background,
+                    textShadow: `0 0 2px ${theme.colors.text}`,
+                    pointerEvents: 'none',
+                  }}
+                >
+                  {day.monthLabel}
+                </span>
+              )}
+            </div>
           ))}
         </div>
       ))}
@@ -460,6 +486,23 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
     }
   };
 
+  // Handle owner avatar click to open profile
+  const handleOwnerClick = () => {
+    if (repositoryData && repositoryData.owner !== 'local') {
+      const isOrg = repositoryData.ownerType === 'Organization';
+      console.log('[RepositoryProfilePanel] Owner clicked:', repositoryData.owner, 'isOrg:', isOrg);
+      events.emit({
+        type: 'feed:owner-selected',
+        source: 'repository-profile-panel',
+        timestamp: Date.now(),
+        payload: {
+          owner: repositoryData.owner,
+          isOrg,
+        },
+      });
+    }
+  };
+
   // Empty state - no repository selected
   if (!repositoryData) {
     return (
@@ -556,7 +599,11 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
             flexShrink: 0,
           }}
         >
-          <ActivityHeatmap activityData={repositoryData.activityData || new Map()} theme={theme} bannerHeight={170} />
+          <ActivityHeatmap
+            activityData={repositoryData.activityData || new Map()}
+            theme={theme}
+            bannerHeight={170}
+          />
         </div>
 
         {/* Profile Content */}
@@ -565,15 +612,31 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: spacing.md, marginBottom: spacing.md }}>
           {/* Owner Avatar */}
           <div
+            onClick={handleOwnerClick}
+            title={repositoryData.owner !== 'local' ? `View ${repositoryData.owner}'s profile` : undefined}
             style={{
               width: 120,
               height: 120,
-              borderRadius: '50%',
+              borderRadius: repositoryData.ownerType === 'Organization' ? '12px' : '50%',
               backgroundColor: theme.colors.backgroundSecondary,
               border: `4px solid ${theme.colors.background}`,
               overflow: 'hidden',
               flexShrink: 0,
               boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+              cursor: repositoryData.owner !== 'local' ? 'pointer' : 'default',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              if (repositoryData.owner !== 'local') {
+                e.currentTarget.style.transform = 'scale(1.05)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (repositoryData.owner !== 'local') {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.15)';
+              }
             }}
           >
             {repositoryData.ownerAvatarUrl ? (
