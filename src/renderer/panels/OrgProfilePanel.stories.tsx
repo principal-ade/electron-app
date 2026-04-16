@@ -11,6 +11,28 @@ import {
   type OrgProfilePanelContext,
   type OrgProfilePanelActions,
 } from './OrgProfilePanel';
+import type { RepoCardData, Contributor } from './RepoCard';
+import { PathsFileTreeBuilder, type FileTree } from '@principal-ai/repository-abstraction';
+
+// Create mock file tree using PathsFileTreeBuilder
+const createMockFileTree = (repoName: string): FileTree => {
+  const files = [
+    `${repoName}/src/index.ts`,
+    `${repoName}/src/app.ts`,
+    `${repoName}/src/components/Button.tsx`,
+    `${repoName}/src/components/Input.tsx`,
+    `${repoName}/src/utils/helpers.ts`,
+    `${repoName}/src/hooks/useData.ts`,
+    `${repoName}/src/styles/globals.css`,
+    `${repoName}/tests/app.test.ts`,
+    `${repoName}/package.json`,
+    `${repoName}/tsconfig.json`,
+    `${repoName}/README.md`,
+  ];
+
+  const builder = new PathsFileTreeBuilder();
+  return builder.build({ files, rootPath: repoName });
+};
 
 // Mock event emitter for stories
 type EventHandler = (event: PanelEvent<unknown>) => void;
@@ -80,6 +102,126 @@ const generateMockActivityData = (intensity: 'low' | 'medium' | 'high' = 'medium
   return activityMap;
 };
 
+// Generate mock contributors
+const createMockContributors = (count: number = 5): Contributor[] => {
+  const contributors: Contributor[] = [
+    {
+      username: 'alice',
+      avatarUrl: 'https://i.pravatar.cc/80?img=1',
+      contributions: 342,
+    },
+    {
+      username: 'bob',
+      avatarUrl: 'https://i.pravatar.cc/80?img=2',
+      contributions: 234,
+    },
+    {
+      username: 'charlie',
+      avatarUrl: 'https://i.pravatar.cc/80?img=3',
+      contributions: 189,
+    },
+    {
+      username: 'diana',
+      avatarUrl: 'https://i.pravatar.cc/80?img=4',
+      contributions: 156,
+    },
+    {
+      username: 'eve',
+      avatarUrl: 'https://i.pravatar.cc/80?img=5',
+      contributions: 98,
+    },
+  ];
+
+  return contributors.slice(0, count);
+};
+
+// Generate mock repositories for organization
+const createMockOrgRepositories = (orgName: string, count: number = 9): RepoCardData[] => {
+  const repoData = [
+    {
+      name: 'core-framework',
+      description: 'The core framework powering all our services',
+      language: 'TypeScript',
+      stars: 15234,
+      yearsAgo: 5,
+    },
+    {
+      name: 'cli-tools',
+      description: 'Command-line tools for developers',
+      language: 'Rust',
+      stars: 8967,
+      yearsAgo: 3,
+    },
+    {
+      name: 'web-platform',
+      description: 'Modern web platform for building scalable applications',
+      language: 'JavaScript',
+      stars: 22890,
+      yearsAgo: 6,
+    },
+    {
+      name: 'data-analytics',
+      description: 'Analytics and data processing pipeline',
+      language: 'Python',
+      stars: 5423,
+      yearsAgo: 2,
+    },
+    {
+      name: 'microservices',
+      description: 'Microservices architecture and deployment',
+      language: 'Go',
+      stars: 12789,
+      yearsAgo: 4,
+    },
+    {
+      name: 'design-system',
+      description: 'Comprehensive design system and UI components',
+      language: 'TypeScript',
+      stars: 18567,
+      yearsAgo: 3,
+    },
+    {
+      name: 'mobile-sdk',
+      description: 'Cross-platform mobile SDK',
+      language: 'Kotlin',
+      stars: 7345,
+      yearsAgo: 2,
+    },
+    {
+      name: 'ml-platform',
+      description: 'Machine learning platform and tools',
+      language: 'Python',
+      stars: 24345,
+      yearsAgo: 5,
+    },
+    {
+      name: 'infrastructure',
+      description: 'Infrastructure as code and DevOps tools',
+      language: 'Go',
+      stars: 9123,
+      yearsAgo: 3,
+    },
+  ];
+
+  return repoData.slice(0, count).map((repo) => {
+    const createdDate = new Date();
+    createdDate.setFullYear(createdDate.getFullYear() - Math.floor(repo.yearsAgo));
+    createdDate.setMonth(createdDate.getMonth() - Math.floor((repo.yearsAgo % 1) * 12));
+
+    return {
+      repoName: repo.name,
+      githubOwner: orgName,
+      githubRepoName: repo.name,
+      description: repo.description,
+      language: repo.language,
+      stars: repo.stars,
+      createdAt: createdDate.toISOString(),
+      topContributors: createMockContributors(5), // Organizations typically have full teams
+      isOwnerOrg: true,
+    };
+  });
+};
+
 // Generate mock organization profile data
 const createMockOrgProfile = (
   overrides: Partial<OrgProfileData> = {}
@@ -134,6 +276,16 @@ const MockOrgProfilePanel: React.FC<{
       // Simulate async delay
       await new Promise((resolve) => setTimeout(resolve, 150));
       return orgData?.activityData || new Map<string, number>();
+    },
+    getOrgRepositories: async (org: string) => {
+      // Simulate async delay
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      return createMockOrgRepositories(org, 9);
+    },
+    getRepositoryFileTree: async (owner: string, repoName: string) => {
+      // Simulate async delay
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      return createMockFileTree(repoName);
     },
     openFile: async () => {},
   };

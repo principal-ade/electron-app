@@ -58,6 +58,7 @@ import { GithubService } from '../main-process-api/GithubService';
 import { ApiProxyService } from '../main-process-api/ApiProxyService';
 import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
 import { SecureAuthService } from '../services/SecureAuthService';
+import { WebAdeService } from '../main-process-api/WebAdeService';
 
 /**
  * User activity response from Principal ADE API
@@ -866,6 +867,51 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
               }
             },
 
+            getUserRepositories: async (username: string) => {
+              try {
+                // Use search API to find repositories for the user
+                const result = await GithubService.searchRepos(
+                  `user:${username} sort:updated`,
+                  { perPage: 50 }
+                );
+
+                // Transform GitHubRepository to RepoCardData
+                return result.repos.map((repo) => ({
+                  repoName: repo.name,
+                  githubOwner: repo.owner.login,
+                  githubRepoName: repo.name,
+                  description: repo.description ?? undefined,
+                  language: repo.language ?? undefined,
+                  stars: repo.stargazers_count,
+                  createdAt: repo.created_at,
+                  isOwnerOrg: false, // User repos
+                  topContributors: [], // Will be populated later if needed
+                }));
+              } catch (err) {
+                console.error('Failed to fetch user repositories:', err);
+                return [];
+              }
+            },
+
+            getRepositoryFileTree: async (owner: string, repoName: string) => {
+              try {
+                // Fetch tree from web-ade's cached endpoint
+                const treeResponse = await WebAdeService.getGithubTree(owner, repoName, 'HEAD');
+
+                // Extract file paths from tree entries (only blobs)
+                const files = treeResponse.tree
+                  .filter((entry) => entry.type === 'blob')
+                  .map((entry) => entry.path);
+
+                // Build FileTree using PathsFileTreeBuilder
+                const builder = new PathsFileTreeBuilder();
+                return builder.build({ files, rootPath: repoName });
+              } catch (err) {
+                console.error(`Failed to fetch file tree for ${owner}/${repoName}:`, err);
+                return null;
+              }
+            },
+
             // Base panel actions
             openFile: async () => {},
           };
@@ -965,6 +1011,48 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
               } catch (err) {
                 console.error('Failed to fetch org activity:', err);
                 return new Map<string, number>();
+              }
+            },
+
+            getOrgRepositories: async (orgName: string) => {
+              try {
+                // Use getOrgRepositories to fetch org repos
+                const repos = await GithubService.getOrgRepositories(orgName, { perPage: 50 });
+
+                // Transform GitHubRepository to RepoCardData
+                return repos.map((repo) => ({
+                  repoName: repo.name,
+                  githubOwner: repo.owner.login,
+                  githubRepoName: repo.name,
+                  description: repo.description ?? undefined,
+                  language: repo.language ?? undefined,
+                  stars: repo.stargazers_count,
+                  createdAt: repo.created_at,
+                  isOwnerOrg: true, // Org repos
+                  topContributors: [], // Will be populated later if needed
+                }));
+              } catch (err) {
+                console.error('Failed to fetch org repositories:', err);
+                return [];
+              }
+            },
+
+            getRepositoryFileTree: async (owner: string, repoName: string) => {
+              try {
+                // Fetch tree from web-ade's cached endpoint
+                const treeResponse = await WebAdeService.getGithubTree(owner, repoName, 'HEAD');
+
+                // Extract file paths from tree entries (only blobs)
+                const files = treeResponse.tree
+                  .filter((entry) => entry.type === 'blob')
+                  .map((entry) => entry.path);
+
+                // Build FileTree using PathsFileTreeBuilder
+                const builder = new PathsFileTreeBuilder();
+                return builder.build({ files, rootPath: repoName });
+              } catch (err) {
+                console.error(`Failed to fetch file tree for ${owner}/${repoName}:`, err);
+                return null;
               }
             },
 

@@ -14,12 +14,11 @@ import type {
 } from '@principal-ade/panel-framework-core';
 import {
   User,
-  MapPin,
-  Building2,
-  Link as LinkIcon,
   Twitter,
-  Calendar,
+  Github,
 } from 'lucide-react';
+import { RepoCard, type RepoCardData } from './RepoCard';
+import type { FileTree } from '@principal-ai/repository-abstraction';
 
 /**
  * User identifier in context
@@ -83,7 +82,12 @@ export interface UserProfilePanelActions extends PanelActions {
   /**
    * Get user's repositories (optional)
    */
-  getUserRepositories?: (username: string) => Promise<unknown[]>;
+  getUserRepositories?: (username: string) => Promise<RepoCardData[]>;
+
+  /**
+   * Get file tree for a repository (optional)
+   */
+  getRepositoryFileTree?: (owner: string, repoName: string) => Promise<FileTree | null>;
 
   /**
    * Follow a GitHub user (optional)
@@ -220,14 +224,6 @@ function formatNumber(num: number): string {
 }
 
 /**
- * Format date to readable string
- */
-function formatJoinDate(isoDate: string): string {
-  const date = new Date(isoDate);
-  return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-}
-
-/**
  * Get initials from name or username
  */
 function getInitials(name?: string, username?: string): string {
@@ -251,6 +247,13 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
   const [userData, setUserData] = useState<UserProfileData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Repositories state
+  const [repositories, setRepositories] = useState<RepoCardData[]>([]);
+  const [_repositoriesLoading, setRepositoriesLoading] = useState(false);
+
+  // File trees for repositories (lazy loaded)
+  const [fileTrees, setFileTrees] = useState<Map<string, FileTree | null>>(new Map());
 
   const spacing = useMemo(
     () => ({
@@ -311,6 +314,84 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
       cancelled = true;
     };
   }, [user, actions]);
+
+  // Fetch repositories when user changes
+  useEffect(() => {
+    if (!user || !actions.getUserRepositories) {
+      setRepositories([]);
+      setRepositoriesLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchRepositories = async () => {
+      setRepositoriesLoading(true);
+
+      try {
+        if (!actions.getUserRepositories) {
+          console.warn('getUserRepositories action not available');
+          setRepositories([]);
+          return;
+        }
+
+        const repos = await actions.getUserRepositories(user.username);
+
+        if (!cancelled) {
+          // Take top 9 repositories (or however many are returned)
+          setRepositories(repos.slice(0, 9));
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Failed to fetch user repositories:', err);
+          setRepositories([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setRepositoriesLoading(false);
+        }
+      }
+    };
+
+    fetchRepositories();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, actions]);
+
+  // Lazy fetch file trees for repositories
+  useEffect(() => {
+    if (repositories.length === 0 || !actions.getRepositoryFileTree) {
+      return;
+    }
+
+    const fetchFileTrees = async () => {
+      const newFileTrees = new Map<string, FileTree | null>();
+
+      // Fetch file trees in parallel
+      await Promise.all(
+        repositories.map(async (repo) => {
+          const key = `${repo.githubOwner}/${repo.repoName}`;
+
+          try {
+            const fileTree = await actions.getRepositoryFileTree!(
+              repo.githubOwner!,
+              repo.repoName
+            );
+            newFileTrees.set(key, fileTree);
+          } catch (err) {
+            console.warn(`Failed to fetch file tree for ${key}:`, err);
+            newFileTrees.set(key, null);
+          }
+        })
+      );
+
+      setFileTrees(newFileTrees);
+    };
+
+    fetchFileTrees();
+  }, [repositories, actions]);
 
   // Handle open in browser - emit event instead
   const handleOpenUrl = (url: string, type: 'website' | 'twitter' | 'github' | 'email') => {
@@ -442,22 +523,22 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
         display: 'flex',
         flexDirection: 'column',
         backgroundColor: theme.colors.background,
-        overflow: 'auto',
       }}
     >
-      {/* Banner with Activity Heatmap */}
+      {/* Banner with Activity Heatmap - Fixed at top */}
       <div
         style={{
           position: 'relative',
           height: 170,
           overflow: 'hidden',
+          flexShrink: 0,
         }}
       >
         <ActivityHeatmap activityData={userData.activityData} theme={theme} bannerHeight={170} />
       </div>
 
-      {/* Profile Content */}
-      <div style={{ padding: spacing.md, marginTop: -60, position: 'relative' }}>
+      {/* Profile Header - Fixed, no scroll */}
+      <div style={{ padding: spacing.md, marginTop: -60, position: 'relative', flexShrink: 0 }}>
         {/* Avatar Section - positioned to overlap banner */}
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: spacing.md, marginBottom: spacing.md }}>
           {/* Avatar */}
@@ -591,13 +672,71 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
           )}
           <div
             style={{
-              fontSize: theme.fontSizes[2],
-              fontFamily: theme.fonts?.body,
-              color: theme.colors.textSecondary,
+              display: 'flex',
+              alignItems: 'center',
+              gap: spacing.sm,
               marginTop: spacing.xs,
+              flexWrap: 'wrap',
             }}
           >
-            @{userData.username}
+            {/* GitHub handle */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+              <Github size={14} color={theme.colors.textSecondary} />
+              <button
+                onClick={() => handleOpenUrl(`https://github.com/${userData.username}`, 'github')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  fontSize: theme.fontSizes[2],
+                  fontFamily: theme.fonts?.body,
+                  color: theme.colors.textSecondary,
+                  cursor: 'pointer',
+                  textDecoration: 'none',
+                  transition: 'color 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = theme.colors.primary;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = theme.colors.textSecondary;
+                }}
+              >
+                {userData.username}
+              </button>
+            </div>
+
+            {/* Twitter handle inline */}
+            {userData.twitterHandle && (
+              <>
+                <span style={{ color: theme.colors.textSecondary, fontSize: theme.fontSizes[2] }}>•</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+                  <Twitter size={14} color={theme.colors.textSecondary} />
+                  <button
+                    onClick={() => handleOpenUrl(`https://twitter.com/${userData.twitterHandle}`, 'twitter')}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      fontSize: theme.fontSizes[2],
+                      fontFamily: theme.fonts?.body,
+                      color: theme.colors.textSecondary,
+                      cursor: 'pointer',
+                      textDecoration: 'none',
+                      transition: 'color 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = theme.colors.primary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = theme.colors.textSecondary;
+                    }}
+                  >
+                    {userData.twitterHandle}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -615,117 +754,62 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
             {userData.bio}
           </p>
         )}
+      </div>
 
-        {/* Details Grid */}
+      {/* Repositories Grid - Scrollable section */}
+      {repositories.length > 0 && (
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: spacing.sm,
-            marginBottom: spacing.md,
+            flex: 1,
+            overflow: 'auto',
+            padding: `0 ${spacing.md}px ${spacing.md}px`,
           }}
         >
-          {userData.company && (
-            <div
+          <div style={{ marginTop: spacing.md }}>
+            <h3
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing.sm,
-                fontSize: theme.fontSizes[1],
-                fontFamily: theme.fonts?.body,
-                color: theme.colors.textSecondary,
+                margin: 0,
+                marginBottom: spacing.md,
+                fontSize: theme.fontSizes[3],
+                fontWeight: theme.fontWeights?.semibold ?? 600,
+                fontFamily: theme.fonts?.heading ?? theme.fonts?.body,
+                color: theme.colors.text,
               }}
             >
-              <Building2 size={16} />
-              <span>{userData.company}</span>
-            </div>
-          )}
-          {userData.location && (
+              Popular repositories
+            </h3>
             <div
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing.sm,
-                fontSize: theme.fontSizes[1],
-                fontFamily: theme.fonts?.body,
-                color: theme.colors.textSecondary,
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(450px, 1fr))',
+                gap: spacing.md,
               }}
             >
-              <MapPin size={16} />
-              <span>{userData.location}</span>
+              {repositories.map((repo) => {
+                const fileTreeKey = `${repo.githubOwner}/${repo.repoName}`;
+                const fileTree = fileTrees.get(fileTreeKey);
+
+                return (
+                  <RepoCard
+                    key={repo.repoName}
+                    repo={repo}
+                    fileTree={fileTree}
+                    onClick={() => {
+                      // Emit event to open repository profile
+                      events.emit({
+                        type: 'user-profile:repository-selected',
+                        source: 'UserProfilePanel',
+                        timestamp: Date.now(),
+                        payload: { repository: repo },
+                      });
+                    }}
+                  />
+                );
+              })}
             </div>
-          )}
-          {userData.websiteUrl && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing.sm,
-                fontSize: theme.fontSizes[1],
-                fontFamily: theme.fonts?.body,
-              }}
-            >
-              <LinkIcon size={16} color={theme.colors.textSecondary} />
-              <button
-                onClick={() => userData.websiteUrl && handleOpenUrl(userData.websiteUrl, 'website')}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: 0,
-                  color: theme.colors.primary,
-                  cursor: 'pointer',
-                  textDecoration: 'none',
-                  fontSize: 'inherit',
-                  fontFamily: 'inherit',
-                }}
-              >
-                {userData.websiteUrl && new URL(userData.websiteUrl).hostname}
-              </button>
-            </div>
-          )}
-          {userData.twitterHandle && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing.sm,
-                fontSize: theme.fontSizes[1],
-                fontFamily: theme.fonts?.body,
-              }}
-            >
-              <Twitter size={16} color={theme.colors.textSecondary} />
-              <button
-                onClick={() => handleOpenUrl(`https://twitter.com/${userData.twitterHandle}`, 'twitter')}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: 0,
-                  color: theme.colors.primary,
-                  cursor: 'pointer',
-                  textDecoration: 'none',
-                  fontSize: 'inherit',
-                  fontFamily: 'inherit',
-                }}
-              >
-                @{userData.twitterHandle}
-              </button>
-            </div>
-          )}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: spacing.sm,
-              fontSize: theme.fontSizes[1],
-              fontFamily: theme.fonts?.body,
-              color: theme.colors.textSecondary,
-            }}
-          >
-            <Calendar size={16} />
-            <span>Joined {formatJoinDate(userData.joinedDate)}</span>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Add keyframe animation for loading spinner */}
       <style>{`
