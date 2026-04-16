@@ -15,10 +15,6 @@ import type {
 } from '@principal-ade/panel-framework-core';
 import {
   FolderGit2,
-  Code,
-  Calendar,
-  HardDrive,
-  ExternalLink,
   GitCommit,
   FolderOpen,
   Trash2,
@@ -46,6 +42,7 @@ export interface RepositoryProfileData {
   size: number; // in KB
   activityData: Map<string, number>; // date -> commit count
   totalCommits: number;
+  contributors?: number; // Number of contributors
   defaultBranch: string;
   createdAt: string; // ISO date string
   updatedAt: string; // ISO date string
@@ -213,24 +210,25 @@ function formatNumber(num: number): string {
 }
 
 /**
- * Format size in bytes to human-readable
+ * Calculate repository age in human-readable format
  */
-function formatSize(sizeInKB: number): string {
-  if (sizeInKB >= 1024 * 1024) {
-    return `${(sizeInKB / (1024 * 1024)).toFixed(1)} GB`;
-  }
-  if (sizeInKB >= 1024) {
-    return `${(sizeInKB / 1024).toFixed(1)} MB`;
-  }
-  return `${sizeInKB} KB`;
-}
+function getRepositoryAge(createdAt: string): string {
+  const created = new Date(createdAt);
+  const now = new Date();
+  const diffMs = now.getTime() - created.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-/**
- * Format date to readable string
- */
-function formatDate(isoDate: string): string {
-  const date = new Date(isoDate);
-  return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  if (diffDays < 30) {
+    return `${diffDays} day${diffDays !== 1 ? 's' : ''}`;
+  }
+
+  const diffMonths = Math.floor(diffDays / 30);
+  if (diffMonths < 12) {
+    return `${diffMonths} month${diffMonths !== 1 ? 's' : ''}`;
+  }
+
+  const diffYears = Math.floor(diffMonths / 12);
+  return `${diffYears} year${diffYears !== 1 ? 's' : ''}`;
 }
 
 /**
@@ -242,6 +240,31 @@ function getInitials(repoName: string): string {
     return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
   }
   return repoName.slice(0, 2).toUpperCase();
+}
+
+/**
+ * Shorten path by replacing home directory with ~/
+ * Works cross-platform by detecting common home directory patterns
+ */
+function shortenPath(fullPath: string): string {
+  // Try to detect and replace home directory with ~/
+  // Common patterns: /Users/username (macOS), /home/username (Linux), C:\Users\username (Windows)
+
+  // macOS and Linux
+  const unixHomeMatch = fullPath.match(/^(\/Users\/[^/]+|\/home\/[^/]+)(\/.*)?$/);
+  if (unixHomeMatch) {
+    const rest = unixHomeMatch[2] || '';
+    return `~${rest}`;
+  }
+
+  // Windows
+  const windowsHomeMatch = fullPath.match(/^([A-Z]:\\Users\\[^\\]+)(\\.*)?$/i);
+  if (windowsHomeMatch) {
+    const rest = windowsHomeMatch[2] || '';
+    return `~${rest}`;
+  }
+
+  return fullPath;
 }
 
 export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
@@ -285,10 +308,13 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
         setLocalFileTree(null);
         setRemoteFileTree(null);
         setFileTreesError(null);
+        setCityData(null);
+        setCityDataLoading(false);
         return;
       }
 
       setFileTreesError(null);
+      setCityDataLoading(true);
 
       try {
         const promises: Promise<void>[] = [];
@@ -326,6 +352,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
         console.error('[RepositoryProfilePanel] Failed to fetch file trees:', error);
         if (!cancelled) {
           setFileTreesError(error instanceof Error ? error.message : String(error));
+          setCityDataLoading(false);
         }
       }
     };
@@ -347,10 +374,11 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
       const fileTree = localFileTree || remoteFileTree;
       if (!fileTree) {
         setCityData(null);
+        // Don't set loading to false here - let the file tree fetch handle it
         return;
       }
 
-      setCityDataLoading(true);
+      // Loading state is already set by file tree fetch effect
 
       try {
         // Build city data from file tree
@@ -407,11 +435,6 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
       cancelled = true;
     };
   }, [localFileTree, remoteFileTree, repositoryData?.localPath, actions]);
-
-  // Handle open in browser
-  const handleOpenUrl = (url: string) => {
-    window.open(url, '_blank');
-  };
 
   // Handle open repository
   const handleOpenRepository = () => {
@@ -582,41 +605,26 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
           {/* Stats and Action Buttons - aligned with bottom of avatar */}
           <div style={{ flex: 1, paddingBottom: spacing.xs, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', gap: spacing.lg, flexWrap: 'wrap' }}>
-              <div>
-                <div style={{
-                  fontSize: theme.fontSizes[3],
-                  fontWeight: theme.fontWeights?.semibold ?? 600,
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.text
-                }}>
-                  {formatNumber(repositoryData.stars)}
+              {repositoryData.contributors !== undefined && (
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{
+                    fontSize: theme.fontSizes[3],
+                    fontWeight: theme.fontWeights?.semibold ?? 600,
+                    fontFamily: theme.fonts?.body,
+                    color: theme.colors.text
+                  }}>
+                    {formatNumber(repositoryData.contributors)}
+                  </div>
+                  <div style={{
+                    fontSize: theme.fontSizes[0],
+                    fontFamily: theme.fonts?.body,
+                    color: theme.colors.textSecondary
+                  }}>
+                    devs
+                  </div>
                 </div>
-                <div style={{
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.textSecondary
-                }}>
-                  stars
-                </div>
-              </div>
-              <div>
-                <div style={{
-                  fontSize: theme.fontSizes[3],
-                  fontWeight: theme.fontWeights?.semibold ?? 600,
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.text
-                }}>
-                  {formatNumber(repositoryData.forks)}
-                </div>
-                <div style={{
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: theme.fonts?.body,
-                  color: theme.colors.textSecondary
-                }}>
-                  forks
-                </div>
-              </div>
-              <div>
+              )}
+              <div style={{ textAlign: 'center' }}>
                 <div style={{
                   fontSize: theme.fontSizes[3],
                   fontWeight: theme.fontWeights?.semibold ?? 600,
@@ -633,21 +641,21 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   commits
                 </div>
               </div>
-              <div>
+              <div style={{ textAlign: 'center' }}>
                 <div style={{
                   fontSize: theme.fontSizes[3],
                   fontWeight: theme.fontWeights?.semibold ?? 600,
                   fontFamily: theme.fonts?.body,
                   color: theme.colors.text
                 }}>
-                  {formatNumber(repositoryData.watchers)}
+                  {getRepositoryAge(repositoryData.createdAt)}
                 </div>
                 <div style={{
                   fontSize: theme.fontSizes[0],
                   fontFamily: theme.fonts?.body,
                   color: theme.colors.textSecondary
                 }}>
-                  watchers
+                  old
                 </div>
               </div>
             </div>
@@ -716,7 +724,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
           </div>
         </div>
 
-        {/* Repository Name and Full Name */}
+        {/* Repository Name and Local Path */}
         <div style={{ marginBottom: spacing.md }}>
           <h2
             style={{
@@ -729,16 +737,18 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
           >
             {repositoryData.name}
           </h2>
-          <div
-            style={{
-              fontSize: theme.fontSizes[2],
-              fontFamily: theme.fonts?.body,
-              color: theme.colors.textSecondary,
-              marginTop: spacing.xs,
-            }}
-          >
-            {repositoryData.fullName}
-          </div>
+          {repositoryData.localPath && (
+            <div
+              style={{
+                fontSize: theme.fontSizes[2],
+                fontFamily: theme.fonts?.body,
+                color: theme.colors.textSecondary,
+                marginTop: spacing.xs,
+              }}
+            >
+              {shortenPath(repositoryData.localPath)}
+            </div>
+          )}
         </div>
 
         {/* Description */}
@@ -755,153 +765,12 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
             {repositoryData.description}
           </p>
         )}
-
-        {/* Details Grid */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: spacing.sm,
-            marginBottom: spacing.md,
-          }}
-        >
-          {repositoryData.language && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing.sm,
-                fontSize: theme.fontSizes[1],
-                fontFamily: theme.fonts?.body,
-                color: theme.colors.textSecondary,
-              }}
-            >
-              <Code size={16} />
-              <span>{repositoryData.language}</span>
-            </div>
-          )}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: spacing.sm,
-              fontSize: theme.fontSizes[1],
-              fontFamily: theme.fonts?.body,
-              color: theme.colors.textSecondary,
-            }}
-          >
-            <HardDrive size={16} />
-            <span>{formatSize(repositoryData.size)}</span>
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: spacing.sm,
-              fontSize: theme.fontSizes[1],
-              fontFamily: theme.fonts?.body,
-              color: theme.colors.textSecondary,
-            }}
-          >
-            <GitCommit size={16} />
-            <span>{repositoryData.defaultBranch}</span>
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: spacing.sm,
-              fontSize: theme.fontSizes[1],
-              fontFamily: theme.fonts?.body,
-              color: theme.colors.textSecondary,
-            }}
-          >
-            <Calendar size={16} />
-            <span>Created {formatDate(repositoryData.createdAt)}</span>
-          </div>
-          {repositoryData.htmlUrl && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing.sm,
-                fontSize: theme.fontSizes[1],
-                fontFamily: theme.fonts?.body,
-              }}
-            >
-              <ExternalLink size={16} color={theme.colors.textSecondary} />
-              <button
-                onClick={() => repositoryData.htmlUrl && handleOpenUrl(repositoryData.htmlUrl)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: 0,
-                  color: theme.colors.primary,
-                  cursor: 'pointer',
-                  textDecoration: 'none',
-                  fontSize: 'inherit',
-                  fontFamily: 'inherit',
-                }}
-              >
-                View on GitHub
-              </button>
-            </div>
-          )}
-        </div>
         </div>
       </div>
 
-      {/* Bottom Section - File City 3D and Stats (fills remaining height) */}
+      {/* Bottom Section - Stats and File City 3D (fills remaining height) */}
       <div style={{ flex: 1, display: 'flex', gap: spacing.md, padding: spacing.md, overflow: 'hidden' }}>
-        {/* File City 3D - Left */}
-        <div
-          style={{
-            flex: 1,
-            minWidth: 0,
-            height: '100%',
-            borderRadius: theme.radii?.[2] || 8,
-            overflow: 'hidden',
-            border: `1px solid ${theme.colors.border}`,
-            backgroundColor: theme.colors.backgroundSecondary,
-            position: 'relative',
-          }}
-        >
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-            {cityData ? (
-              <FileCity3D
-                cityData={cityData}
-                width="100%"
-                height="100%"
-                showControls={true}
-                heightScaling="linear"
-                linearScale={0.5}
-                animation={{ startFlat: true, autoStartDelay: null }}
-                isLoading={cityDataLoading}
-                loadingMessage="Building 3D city..."
-                backgroundColor={theme.colors.backgroundSecondary}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: theme.colors.textSecondary,
-                }}
-              >
-                {cityDataLoading ? 'Loading 3D city...' : 'No city data available'}
-              </div>
-            )}
-          </div>
-        </div>
-
-          {/* Latest Commit Info - Right */}
+          {/* Repository Stats - Left */}
           <section
             style={{
               flex: 1,
@@ -1038,6 +907,49 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                 </div>
               </div>
             </section>
+
+        {/* File City 3D - Right */}
+        <div
+          style={{
+            flex: 1,
+            minWidth: 0,
+            height: '100%',
+            borderRadius: theme.radii?.[2] || 8,
+            overflow: 'hidden',
+            border: `1px solid ${theme.colors.border}`,
+            backgroundColor: theme.colors.backgroundSecondary,
+          }}
+        >
+          {cityData && !cityDataLoading ? (
+            <FileCity3D
+              cityData={cityData}
+              width="100%"
+              height="100%"
+              showControls={true}
+              heightScaling="linear"
+              linearScale={0.5}
+              animation={{ startFlat: true, autoStartDelay: null }}
+              backgroundColor={theme.colors.backgroundSecondary}
+              style={{
+                width: '100%',
+                height: '100%',
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: theme.colors.textSecondary,
+              }}
+            >
+              {cityDataLoading ? 'Loading 3D city...' : 'No city data available'}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Add keyframe animation for loading spinner */}

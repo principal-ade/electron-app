@@ -135,6 +135,7 @@ const createMockRepositoryProfile = (
     size: 5432, // KB
     activityData: generateMockActivityData('medium'),
     totalCommits: 892,
+    contributors: 24,
     defaultBranch: 'main',
     createdAt: '2021-03-15T10:30:00Z',
     updatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
@@ -314,6 +315,7 @@ export const LocalRepository = {
         stars: 23,
         forks: 4,
         totalCommits: 342,
+        contributors: 3,
         github: {
           owner: 'johndoe',
           name: 'my-local-project',
@@ -394,6 +396,7 @@ export const HighActivity = {
         forks: 12847,
         watchers: 3421,
         totalCommits: 15234,
+        contributors: 487,
         size: 45678,
         github: {
           owner: 'framework-org',
@@ -527,6 +530,7 @@ export const CompleteProfile = {
         forks: 456,
         watchers: 234,
         totalCommits: 5678,
+        contributors: 12,
         size: 34567,
         openIssues: 89,
         htmlUrl: 'https://github.com/principal-ade/desktop-app',
