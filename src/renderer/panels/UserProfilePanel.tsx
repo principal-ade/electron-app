@@ -246,8 +246,6 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
 
   // Panel manages its own profile data state
   const [userData, setUserData] = useState<UserProfileData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   // Repositories state
   const [repositories, setRepositories] = useState<RepoCardData[]>([]);
@@ -271,17 +269,12 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
   useEffect(() => {
     if (!user) {
       setUserData(null);
-      setError(null);
-      setLoading(false);
       return;
     }
 
     let cancelled = false;
 
     const fetchProfile = async () => {
-      setLoading(true);
-      setError(null);
-
       try {
         // Fetch profile and activity in parallel
         const [profile, activity] = await Promise.all([
@@ -300,11 +293,6 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
       } catch (err) {
         if (!cancelled) {
           console.error('Failed to fetch user profile:', err);
-          setError(err instanceof Error ? err.message : 'Failed to load profile');
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
         }
       }
     };
@@ -405,7 +393,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
   };
 
   // Empty state - no user selected
-  if (!userData && !loading && !error) {
+  if (!user) {
     return (
       <div
         style={{
@@ -439,83 +427,26 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
     );
   }
 
-  // Loading state
-  if (loading) {
-    return (
-      <div
-        style={{
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: spacing.lg,
-          color: theme.colors.textSecondary,
-          backgroundColor: theme.colors.background,
-        }}
-      >
-        <div
-          style={{
-            width: 40,
-            height: 40,
-            border: `3px solid ${theme.colors.border}`,
-            borderTopColor: theme.colors.primary,
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-          }}
-        />
-        <p style={{
-          margin: `${spacing.md}px 0 0`,
-          fontSize: theme.fontSizes[2],
-          fontFamily: theme.fonts?.body
-        }}>
-          Loading profile...
-        </p>
-      </div>
-    );
-  }
+  // Create a display object that uses userData if available, or empty values as fallback
+  const displayData: UserProfileData = userData || {
+    username: user.username,
+    name: undefined,
+    email: undefined,
+    avatarUrl: undefined,
+    bio: undefined,
+    location: undefined,
+    company: undefined,
+    twitterHandle: undefined,
+    websiteUrl: undefined,
+    activityData: new Map(),
+    totalCommits: 0,
+    totalRepos: 0,
+    followers: 0,
+    following: 0,
+    joinedDate: new Date().toISOString(),
+  };
 
-  // Error state
-  if (error) {
-    return (
-      <div
-        style={{
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: spacing.lg,
-          color: theme.colors.error,
-          textAlign: 'center',
-          backgroundColor: theme.colors.background,
-        }}
-      >
-        <p style={{
-          margin: 0,
-          fontSize: theme.fontSizes[2],
-          fontWeight: theme.fontWeights?.medium ?? 500,
-          fontFamily: theme.fonts?.body
-        }}>
-          Failed to load profile
-        </p>
-        <p
-          style={{
-            margin: `${spacing.xs}px 0 0`,
-            fontSize: theme.fontSizes[1],
-            color: theme.colors.textSecondary,
-            fontFamily: theme.fonts?.body,
-          }}
-        >
-          {error}
-        </p>
-      </div>
-    );
-  }
-
-  if (!userData) return null;
-
-  const initials = getInitials(userData.name, userData.username);
+  const initials = getInitials(displayData.name, displayData.username);
 
   return (
     <div
@@ -535,7 +466,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
           flexShrink: 0,
         }}
       >
-        <ActivityHeatmap activityData={userData.activityData} theme={theme} bannerHeight={170} />
+        <ActivityHeatmap activityData={displayData.activityData} theme={theme} bannerHeight={170} />
       </div>
 
       {/* Profile Header - Fixed, no scroll */}
@@ -555,10 +486,10 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
               boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
             }}
           >
-            {userData.avatarUrl ? (
+            {displayData.avatarUrl ? (
               <img
-                src={userData.avatarUrl}
-                alt={userData.username}
+                src={displayData.avatarUrl}
+                alt={displayData.username}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
             ) : (
@@ -591,7 +522,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                   fontFamily: theme.fonts?.body,
                   color: theme.colors.text
                 }}>
-                  {formatNumber(userData.totalCommits)}
+                  {formatNumber(displayData.totalCommits)}
                 </div>
                 <div style={{
                   fontSize: theme.fontSizes[0],
@@ -608,7 +539,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                   fontFamily: theme.fonts?.body,
                   color: theme.colors.text
                 }}>
-                  {formatNumber(userData.totalRepos)}
+                  {formatNumber(displayData.totalRepos)}
                 </div>
                 <div style={{
                   fontSize: theme.fontSizes[0],
@@ -625,7 +556,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                   fontFamily: theme.fonts?.body,
                   color: theme.colors.text
                 }}>
-                  {formatNumber(userData.followers)}
+                  {formatNumber(displayData.followers)}
                 </div>
                 <div style={{
                   fontSize: theme.fontSizes[0],
@@ -642,7 +573,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                   fontFamily: theme.fonts?.body,
                   color: theme.colors.text
                 }}>
-                  {formatNumber(userData.following)}
+                  {formatNumber(displayData.following)}
                 </div>
                 <div style={{
                   fontSize: theme.fontSizes[0],
@@ -658,7 +589,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
 
         {/* Name and Username */}
         <div style={{ marginBottom: spacing.md }}>
-          {userData.name && (
+          {displayData.name && (
             <h2
               style={{
                 margin: 0,
@@ -668,7 +599,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                 color: theme.colors.text,
               }}
             >
-              {userData.name}
+              {displayData.name}
             </h2>
           )}
           <div
@@ -684,7 +615,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
               <Github size={14} color={theme.colors.textSecondary} />
               <button
-                onClick={() => handleOpenUrl(`https://github.com/${userData.username}`, 'github')}
+                onClick={() => handleOpenUrl(`https://github.com/${displayData.username}`, 'github')}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -703,18 +634,18 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                   e.currentTarget.style.color = theme.colors.textSecondary;
                 }}
               >
-                {userData.username}
+                {displayData.username}
               </button>
             </div>
 
             {/* Twitter handle inline */}
-            {userData.twitterHandle && (
+            {displayData.twitterHandle && (
               <>
                 <span style={{ color: theme.colors.textSecondary, fontSize: theme.fontSizes[2] }}>•</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
                   <Twitter size={14} color={theme.colors.textSecondary} />
                   <button
-                    onClick={() => handleOpenUrl(`https://twitter.com/${userData.twitterHandle}`, 'twitter')}
+                    onClick={() => handleOpenUrl(`https://twitter.com/${displayData.twitterHandle}`, 'twitter')}
                     style={{
                       background: 'none',
                       border: 'none',
@@ -733,7 +664,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                       e.currentTarget.style.color = theme.colors.textSecondary;
                     }}
                   >
-                    {userData.twitterHandle}
+                    {displayData.twitterHandle}
                   </button>
                 </div>
               </>
@@ -742,7 +673,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
         </div>
 
         {/* Bio */}
-        {userData.bio && (
+        {displayData.bio && (
           <p
             style={{
               margin: `0 0 ${spacing.md}px`,
@@ -752,7 +683,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
               color: theme.colors.text,
             }}
           >
-            {userData.bio}
+            {displayData.bio}
           </p>
         )}
       </div>

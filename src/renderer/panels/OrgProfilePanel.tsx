@@ -232,8 +232,6 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
 
   // Panel manages its own profile data state
   const [orgData, setOrgData] = useState<OrgProfileData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   // Repositories state
   const [repositories, setRepositories] = useState<RepoCardData[]>([]);
@@ -257,17 +255,12 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
   useEffect(() => {
     if (!org) {
       setOrgData(null);
-      setError(null);
-      setLoading(false);
       return;
     }
 
     let cancelled = false;
 
     const fetchProfile = async () => {
-      setLoading(true);
-      setError(null);
-
       try {
         // Fetch profile and activity in parallel
         const [profile, activity] = await Promise.all([
@@ -286,11 +279,6 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
       } catch (err) {
         if (!cancelled) {
           console.error('Failed to fetch org profile:', err);
-          setError(err instanceof Error ? err.message : 'Failed to load profile');
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
         }
       }
     };
@@ -391,7 +379,7 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
   };
 
   // Empty state - no org selected
-  if (!orgData && !loading && !error) {
+  if (!org) {
     return (
       <div
         style={{
@@ -425,83 +413,24 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
     );
   }
 
-  // Loading state
-  if (loading) {
-    return (
-      <div
-        style={{
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: spacing.lg,
-          color: theme.colors.textSecondary,
-          backgroundColor: theme.colors.background,
-        }}
-      >
-        <div
-          style={{
-            width: 40,
-            height: 40,
-            border: `3px solid ${theme.colors.border}`,
-            borderTopColor: theme.colors.primary,
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-          }}
-        />
-        <p style={{
-          margin: `${spacing.md}px 0 0`,
-          fontSize: theme.fontSizes[2],
-          fontFamily: theme.fonts?.body
-        }}>
-          Loading organization...
-        </p>
-      </div>
-    );
-  }
+  // Create a display object that uses orgData if available, or empty values as fallback
+  const displayData: OrgProfileData = orgData || {
+    orgName: org.orgName,
+    name: undefined,
+    email: undefined,
+    avatarUrl: undefined,
+    description: undefined,
+    location: undefined,
+    twitterHandle: undefined,
+    websiteUrl: undefined,
+    activityData: new Map(),
+    totalCommits: 0,
+    publicRepos: 0,
+    members: 0,
+    createdDate: new Date().toISOString(),
+  };
 
-  // Error state
-  if (error) {
-    return (
-      <div
-        style={{
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: spacing.lg,
-          color: theme.colors.error,
-          textAlign: 'center',
-          backgroundColor: theme.colors.background,
-        }}
-      >
-        <p style={{
-          margin: 0,
-          fontSize: theme.fontSizes[2],
-          fontWeight: theme.fontWeights?.medium ?? 500,
-          fontFamily: theme.fonts?.body
-        }}>
-          Failed to load organization
-        </p>
-        <p
-          style={{
-            margin: `${spacing.xs}px 0 0`,
-            fontSize: theme.fontSizes[1],
-            color: theme.colors.textSecondary,
-            fontFamily: theme.fonts?.body,
-          }}
-        >
-          {error}
-        </p>
-      </div>
-    );
-  }
-
-  if (!orgData) return null;
-
-  const initials = getInitials(orgData.name, orgData.orgName);
+  const initials = getInitials(displayData.name, displayData.orgName);
 
   return (
     <div
@@ -521,7 +450,7 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
           flexShrink: 0,
         }}
       >
-        <ActivityHeatmap activityData={orgData.activityData} theme={theme} bannerHeight={170} />
+        <ActivityHeatmap activityData={displayData.activityData} theme={theme} bannerHeight={170} />
       </div>
 
       {/* Profile Header - Fixed, no scroll */}
@@ -541,10 +470,10 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
               boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
             }}
           >
-            {orgData.avatarUrl ? (
+            {displayData.avatarUrl ? (
               <img
-                src={orgData.avatarUrl}
-                alt={orgData.orgName}
+                src={displayData.avatarUrl}
+                alt={displayData.orgName}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
             ) : (
@@ -577,7 +506,7 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
                   fontFamily: theme.fonts?.body,
                   color: theme.colors.text
                 }}>
-                  {formatNumber(orgData.publicRepos)}
+                  {formatNumber(displayData.publicRepos)}
                 </div>
                 <div style={{
                   fontSize: theme.fontSizes[0],
@@ -594,7 +523,7 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
                   fontFamily: theme.fonts?.body,
                   color: theme.colors.text
                 }}>
-                  {formatNumber(orgData.members)}
+                  {formatNumber(displayData.members)}
                 </div>
                 <div style={{
                   fontSize: theme.fontSizes[0],
@@ -611,7 +540,7 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
                   fontFamily: theme.fonts?.body,
                   color: theme.colors.text
                 }}>
-                  {formatNumber(orgData.totalCommits)}
+                  {formatNumber(displayData.totalCommits)}
                 </div>
                 <div style={{
                   fontSize: theme.fontSizes[0],
@@ -627,7 +556,7 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
 
         {/* Name and Organization Name */}
         <div style={{ marginBottom: spacing.md }}>
-          {orgData.name && (
+          {displayData.name && (
             <h2
               style={{
                 margin: 0,
@@ -637,7 +566,7 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
                 color: theme.colors.text,
               }}
             >
-              {orgData.name}
+              {displayData.name}
             </h2>
           )}
           <div
@@ -653,7 +582,7 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
               <Github size={14} color={theme.colors.textSecondary} />
               <button
-                onClick={() => handleOpenUrl(`https://github.com/${orgData.orgName}`, 'github')}
+                onClick={() => handleOpenUrl(`https://github.com/${displayData.orgName}`, 'github')}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -672,18 +601,18 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
                   e.currentTarget.style.color = theme.colors.textSecondary;
                 }}
               >
-                {orgData.orgName}
+                {displayData.orgName}
               </button>
             </div>
 
             {/* Twitter handle inline */}
-            {orgData.twitterHandle && (
+            {displayData.twitterHandle && (
               <>
                 <span style={{ color: theme.colors.textSecondary, fontSize: theme.fontSizes[2] }}>•</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
                   <Twitter size={14} color={theme.colors.textSecondary} />
                   <button
-                    onClick={() => handleOpenUrl(`https://twitter.com/${orgData.twitterHandle}`, 'twitter')}
+                    onClick={() => handleOpenUrl(`https://twitter.com/${displayData.twitterHandle}`, 'twitter')}
                     style={{
                       background: 'none',
                       border: 'none',
@@ -702,7 +631,7 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
                       e.currentTarget.style.color = theme.colors.textSecondary;
                     }}
                   >
-                    {orgData.twitterHandle}
+                    {displayData.twitterHandle}
                   </button>
                 </div>
               </>
@@ -711,7 +640,7 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
         </div>
 
         {/* Description */}
-        {orgData.description && (
+        {displayData.description && (
           <p
             style={{
               margin: `0 0 ${spacing.md}px`,
@@ -721,7 +650,7 @@ export const OrgProfilePanel: React.FC<OrgProfilePanelProps> = ({
               color: theme.colors.text,
             }}
           >
-            {orgData.description}
+            {displayData.description}
           </p>
         )}
       </div>
