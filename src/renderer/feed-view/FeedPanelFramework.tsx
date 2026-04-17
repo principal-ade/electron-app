@@ -275,8 +275,10 @@ const RepositoryProfileTabContent: React.FC<{
 
         console.log('[RepositoryProfileTab] Final profile data with ownerType:', profileData.ownerType);
 
-        setRepositoryData(profileData);
-        setLoading(false);
+        if (!cancelled) {
+          setRepositoryData(profileData);
+          setLoading(false);
+        }
       } catch (err) {
         if (!cancelled) {
           console.error('[RepositoryProfileTab] Failed to fetch repository data:', err);
@@ -291,8 +293,6 @@ const RepositoryProfileTabContent: React.FC<{
       cancelled = true;
     };
   }, [heatMapData.commits, repository]);
-
-  console.log('[RepositoryProfileTab] heatMapData.commits length:', heatMapData.commits.length, 'repositoryData has activity?', !!repositoryData?.activityData?.size);
 
   // Create minimal context and actions
   // Memoize to prevent unnecessary re-renders and re-fetching
