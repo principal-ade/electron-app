@@ -16,6 +16,7 @@ import {
   getFileColorMapping,
 } from '@principal-ai/file-city-react';
 import type { FileTree } from '@principal-ai/repository-abstraction';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
 /**
  * Contributor information
@@ -40,6 +41,7 @@ export interface RepoCardData {
   isOwnerOrg?: boolean;
   createdAt?: string; // ISO date string
   topContributors?: Contributor[]; // Top contributors (max 5)
+  alexandriaEntry?: AlexandriaEntry; // Full Alexandria entry if repo exists locally
 }
 
 interface RepoCardProps {

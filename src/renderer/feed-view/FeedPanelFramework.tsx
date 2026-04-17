@@ -292,6 +292,8 @@ const RepositoryProfileTabContent: React.FC<{
     };
   }, [heatMapData.commits, repository]);
 
+  console.log('[RepositoryProfileTab] heatMapData.commits length:', heatMapData.commits.length, 'repositoryData has activity?', !!repositoryData?.activityData?.size);
+
   // Create minimal context and actions
   // Memoize to prevent unnecessary re-renders and re-fetching
   const projectContext = React.useMemo(() => ({
@@ -365,7 +367,8 @@ const UserProfileTabContent: React.FC<{
   username: string;
   email?: string;
   events: PanelEventEmitter;
-}> = ({ username, email, events }) => {
+  repositories: AlexandriaEntry[];
+}> = ({ username, email, events, repositories }) => {
   // Memoize context to prevent unnecessary re-renders
   const userContext: UserProfilePanelContext = React.useMemo(() => ({
     currentScope: {
@@ -449,17 +452,27 @@ const UserProfileTabContent: React.FC<{
           { perPage: 50 }
         );
 
-        return result.repos.map((repo) => ({
-          repoName: repo.name,
-          githubOwner: repo.owner.login,
-          githubRepoName: repo.name,
-          description: repo.description ?? undefined,
-          language: repo.language ?? undefined,
-          stars: repo.stargazers_count,
-          createdAt: repo.created_at,
-          isOwnerOrg: false,
-          topContributors: [],
-        }));
+        return result.repos.map((repo) => {
+          // Try to find matching local Alexandria entry
+          const alexandriaEntry = repositories.find(
+            entry => entry.github?.owner === repo.owner.login &&
+                     entry.github?.name === repo.name
+          );
+
+          return {
+            repoName: repo.name,
+            repoPath: alexandriaEntry?.path,
+            githubOwner: repo.owner.login,
+            githubRepoName: repo.name,
+            description: repo.description ?? undefined,
+            language: repo.language ?? undefined,
+            stars: repo.stargazers_count,
+            createdAt: repo.created_at,
+            isOwnerOrg: false,
+            topContributors: [],
+            alexandriaEntry,
+          };
+        });
       } catch (err) {
         console.error('Failed to fetch user repositories:', err);
         return [];
@@ -482,7 +495,7 @@ const UserProfileTabContent: React.FC<{
     },
 
     openFile: async () => {},
-  }), [email]);
+  }), [email, repositories]);
 
   return (
     <div style={{ height: '100%', width: '100%', overflow: 'hidden' }}>
@@ -498,7 +511,8 @@ const UserProfileTabContent: React.FC<{
 const OrgProfileTabContent: React.FC<{
   orgName: string;
   events: PanelEventEmitter;
-}> = ({ orgName, events }) => {
+  repositories: AlexandriaEntry[];
+}> = ({ orgName, events, repositories }) => {
   // Memoize context to prevent unnecessary re-renders
   const orgContext: OrgProfilePanelContext = React.useMemo(() => ({
     currentScope: {
@@ -585,17 +599,27 @@ const OrgProfileTabContent: React.FC<{
       try {
         const repos = await GithubService.getOrgRepositories(orgName, { perPage: 50 });
 
-        return repos.map((repo) => ({
-          repoName: repo.name,
-          githubOwner: repo.owner.login,
-          githubRepoName: repo.name,
-          description: repo.description ?? undefined,
-          language: repo.language ?? undefined,
-          stars: repo.stargazers_count,
-          createdAt: repo.created_at,
-          isOwnerOrg: true,
-          topContributors: [],
-        }));
+        return repos.map((repo) => {
+          // Try to find matching local Alexandria entry
+          const alexandriaEntry = repositories.find(
+            entry => entry.github?.owner === repo.owner.login &&
+                     entry.github?.name === repo.name
+          );
+
+          return {
+            repoName: repo.name,
+            repoPath: alexandriaEntry?.path,
+            githubOwner: repo.owner.login,
+            githubRepoName: repo.name,
+            description: repo.description ?? undefined,
+            language: repo.language ?? undefined,
+            stars: repo.stargazers_count,
+            createdAt: repo.created_at,
+            isOwnerOrg: true,
+            topContributors: [],
+            alexandriaEntry,
+          };
+        });
       } catch (err) {
         console.error('Failed to fetch org repositories:', err);
         return [];
@@ -618,7 +642,7 @@ const OrgProfileTabContent: React.FC<{
     },
 
     openFile: async () => {},
-  }), []);
+  }), [repositories]);
 
   return (
     <div style={{ height: '100%', width: '100%', overflow: 'hidden' }}>
@@ -1119,6 +1143,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
               username={userTab.username}
               email={userTab.email}
               events={eventsRef.current}
+              repositories={repositories}
             />
           );
         }
@@ -1129,6 +1154,7 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
               key={orgTab.orgName}
               orgName={orgTab.orgName}
               events={eventsRef.current}
+              repositories={repositories}
             />
           );
         }

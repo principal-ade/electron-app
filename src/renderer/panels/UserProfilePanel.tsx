@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { RepoCard, type RepoCardData } from './RepoCard';
 import type { FileTree } from '@principal-ai/repository-abstraction';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
 /**
  * User identifier in context
@@ -795,12 +796,32 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
                     repo={repo}
                     fileTree={fileTree}
                     onClick={() => {
+                      // Use full AlexandriaEntry if available, otherwise create minimal one
+                      const repositoryEntry: AlexandriaEntry = repo.alexandriaEntry || ({
+                        path: repo.repoPath || '',
+                        name: repo.repoName,
+                        remoteUrl: `https://github.com/${repo.githubOwner}/${repo.githubRepoName}.git`,
+                        registeredAt: repo.createdAt || new Date().toISOString(),
+                        hasViews: false,
+                        viewCount: 0,
+                        views: [],
+                        github: {
+                          id: `${repo.githubOwner}/${repo.githubRepoName}`,
+                          owner: repo.githubOwner || '',
+                          name: repo.githubRepoName || repo.repoName,
+                          stars: repo.stars || 0,
+                          description: repo.description,
+                          primaryLanguage: repo.language,
+                          lastUpdated: new Date().toISOString(),
+                        },
+                      } as unknown as AlexandriaEntry);
+
                       // Emit event to open repository profile
                       events.emit({
-                        type: 'user-profile:repository-selected',
+                        type: 'feed:repository-selected',
                         source: 'UserProfilePanel',
                         timestamp: Date.now(),
-                        payload: { repository: repo },
+                        payload: { repository: repositoryEntry },
                       });
                     }}
                   />
