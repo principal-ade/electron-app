@@ -1,7 +1,7 @@
 /**
- * ProjectsListPanel
+ * ProjectsList
  *
- * Panel showing a list of repositories sorted by recent activity.
+ * Component showing a list of repositories sorted by recent activity.
  * Used in the FeedView panel layout.
  */
 
@@ -16,7 +16,7 @@ export interface CommitTimestamp {
   repoId?: string;
 }
 
-export interface ProjectsListPanelProps {
+export interface ProjectsListProps {
   /** Commit timestamps to aggregate by repository */
   commits: CommitTimestamp[];
   /** Repository data with GitHub information */
@@ -39,7 +39,7 @@ interface RepoSummary {
   githubOwner?: string;
 }
 
-export const ProjectsListPanel: React.FC<ProjectsListPanelProps> = ({
+export const ProjectsList: React.FC<ProjectsListProps> = ({
   commits,
   repositories = [],
   events,
@@ -281,4 +281,4 @@ export const ProjectsListPanel: React.FC<ProjectsListPanelProps> = ({
   );
 };
 
-export default ProjectsListPanel;
+export default ProjectsList;

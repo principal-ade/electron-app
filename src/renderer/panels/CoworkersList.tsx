@@ -1,32 +1,44 @@
 /**
- * OrganizationsListPanel
+ * CoworkersList
  *
- * Displays a list of all organizations the user is a member of.
- * Clicking on an organization opens its profile.
+ * Displays a list of all organization members (coworkers) from the user's organizations.
+ * Shows which organizations each person belongs to.
+ * Clicking on a coworker opens their profile.
  */
 
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Building2 } from 'lucide-react';
+import { Users, Search } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { useOrganizationsAndCoworkers } from '../hooks/useOrganizationsAndCoworkers';
 
-export interface OrganizationsListPanelProps {
+export interface CoworkersListProps {
   events: PanelEventEmitter;
 }
 
-export const OrganizationsListPanel: React.FC<OrganizationsListPanelProps> = ({ events }) => {
+export const CoworkersList: React.FC<CoworkersListProps> = ({ events }) => {
   const { theme } = useTheme();
-  const { organizations, loading, error } = useOrganizationsAndCoworkers();
+  const { coworkers, loading, error } = useOrganizationsAndCoworkers();
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const handleOrgClick = (orgLogin: string) => {
+  const handleCoworkerClick = (username: string) => {
     events.emit({
-      type: 'feed:owner-selected',
-      source: 'organizations-list-panel',
+      type: 'user:profile-selected',
+      source: 'coworkers-list-panel',
       timestamp: Date.now(),
-      payload: { owner: orgLogin, isOrg: true },
+      payload: { username },
     });
   };
+
+  const filteredCoworkers = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return coworkers;
+    }
+    const query = searchQuery.toLowerCase();
+    return coworkers.filter((coworker) =>
+      coworker.login.toLowerCase().includes(query)
+    );
+  }, [coworkers, searchQuery]);
 
   const spacing = {
     xs: theme.space?.[1] || 4,
@@ -49,7 +61,7 @@ export const OrganizationsListPanel: React.FC<OrganizationsListPanelProps> = ({ 
           fontSize: theme.fontSizes[1],
         }}
       >
-        Loading organizations...
+        Loading coworkers...
       </div>
     );
   }
@@ -70,12 +82,12 @@ export const OrganizationsListPanel: React.FC<OrganizationsListPanelProps> = ({ 
           textAlign: 'center',
         }}
       >
-        Failed to load organizations: {error}
+        Failed to load coworkers: {error}
       </div>
     );
   }
 
-  if (organizations.length === 0) {
+  if (coworkers.length === 0) {
     return (
       <div
         style={{
@@ -92,8 +104,11 @@ export const OrganizationsListPanel: React.FC<OrganizationsListPanelProps> = ({ 
           textAlign: 'center',
         }}
       >
-        <Building2 size={48} style={{ marginBottom: spacing.md, opacity: 0.3 }} />
-        <div>No organizations found</div>
+        <Users size={48} style={{ marginBottom: spacing.md, opacity: 0.3 }} />
+        <div>No coworkers found</div>
+        <div style={{ fontSize: theme.fontSizes[0], marginTop: spacing.xs }}>
+          Join an organization to see your coworkers
+        </div>
       </div>
     );
   }
@@ -120,17 +135,56 @@ export const OrganizationsListPanel: React.FC<OrganizationsListPanelProps> = ({ 
         <h2
           style={{
             margin: 0,
+            marginBottom: spacing.sm,
             fontSize: theme.fontSizes[2],
             fontFamily: theme.fonts.monospace,
             fontWeight: 600,
             color: theme.colors.text,
           }}
         >
-          Organizations ({organizations.length})
+          Coworkers ({filteredCoworkers.length})
         </h2>
+
+        {/* Search Input */}
+        <div style={{ position: 'relative' }}>
+          <Search
+            size={14}
+            style={{
+              position: 'absolute',
+              left: spacing.sm,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: theme.colors.textSecondary,
+              pointerEvents: 'none',
+            }}
+          />
+          <input
+            type="text"
+            placeholder="Search coworkers..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              width: '100%',
+              padding: `${spacing.xs}px ${spacing.sm}px ${spacing.xs}px ${spacing.md + spacing.sm}px`,
+              backgroundColor: theme.colors.backgroundSecondary,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: theme.radii?.[1] || 4,
+              color: theme.colors.text,
+              fontSize: theme.fontSizes[0],
+              fontFamily: theme.fonts.monospace,
+              outline: 'none',
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = theme.colors.primary;
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = theme.colors.border;
+            }}
+          />
+        </div>
       </div>
 
-      {/* Organizations List */}
+      {/* Coworkers List */}
       <div
         style={{
           flex: 1,
@@ -138,10 +192,10 @@ export const OrganizationsListPanel: React.FC<OrganizationsListPanelProps> = ({ 
           padding: spacing.sm,
         }}
       >
-        {organizations.map((org) => (
+        {filteredCoworkers.map((coworker) => (
           <button
-            key={org.id}
-            onClick={() => handleOrgClick(org.login)}
+            key={coworker.id}
+            onClick={() => handleCoworkerClick(coworker.login)}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -167,12 +221,12 @@ export const OrganizationsListPanel: React.FC<OrganizationsListPanelProps> = ({ 
           >
             {/* Avatar */}
             <img
-              src={org.avatar_url}
-              alt={org.login}
+              src={coworker.avatar_url}
+              alt={coworker.login}
               style={{
                 width: 40,
                 height: 40,
-                borderRadius: theme.radii?.[1] || 4,
+                borderRadius: '50%',
                 flexShrink: 0,
               }}
             />
@@ -191,9 +245,9 @@ export const OrganizationsListPanel: React.FC<OrganizationsListPanelProps> = ({ 
                   whiteSpace: 'nowrap',
                 }}
               >
-                {org.login}
+                {coworker.login}
               </div>
-              {org.description && (
+              {coworker.organizations.length > 0 && (
                 <div
                   style={{
                     fontFamily: theme.fonts.monospace,
@@ -204,19 +258,28 @@ export const OrganizationsListPanel: React.FC<OrganizationsListPanelProps> = ({ 
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {org.description}
+                  {coworker.organizations.join(', ')}
                 </div>
               )}
             </div>
 
-            {/* Icon */}
-            <Building2
-              size={16}
-              style={{
-                color: theme.colors.textSecondary,
-                flexShrink: 0,
-              }}
-            />
+            {/* Badge for number of shared orgs */}
+            {coworker.organizations.length > 1 && (
+              <div
+                style={{
+                  padding: `2px ${spacing.xs}px`,
+                  backgroundColor: theme.colors.primary,
+                  borderRadius: theme.radii?.[1] || 4,
+                  color: theme.colors.background,
+                  fontSize: theme.fontSizes[0],
+                  fontFamily: theme.fonts.monospace,
+                  fontWeight: 600,
+                  flexShrink: 0,
+                }}
+              >
+                {coworker.organizations.length}
+              </div>
+            )}
           </button>
         ))}
       </div>

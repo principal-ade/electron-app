@@ -5,15 +5,14 @@
  * similar to DevWorkspacePanelFramework but simplified for the feed context.
  *
  * Layout:
- * - Left: ProjectsListPanel (repository list with filtering)
+ * - Left: FeedLeftPanel (feed mode selector and activity lists)
  * - Middle: TabbedTerminalPanel (terminal in HOME directory)
- * - Right: DetailsTabbedPanel (activity feed, profiles, etc.)
+ * - Right: Placeholder panel (collapsed by default)
  */
 
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { GitCommit, Users, Activity, FolderGit2, User, Building2 } from 'lucide-react';
-import { SegmentedControl } from '../components/SegmentedControl';
 import {
   ConfigurablePanelLayout,
   type PanelLayout,
@@ -35,14 +34,11 @@ import {
   type TerminalPanelActions,
   type BaseTab,
 } from '@industry-theme/xterm-terminal-panel';
-import { ProjectsListPanel } from '../panels/ProjectsListPanel';
-import { WatchedItemsPanel } from '../panels/WatchedItemsPanel';
+import { FeedLeftPanel } from '../panels/FeedLeftPanel';
 import { ActivityFeedCardPanel } from '../panels/ActivityFeedCardPanel';
 import { ReviewCommitPanel } from '../panels/ReviewCommitPanel';
 import { RepositoryProfilePanel, type RepositoryProfileData } from '../panels/RepositoryProfilePanel';
 import { LiveActivityTabContent } from '../components/LiveActivityTabContent';
-import { OrganizationsListPanel } from '../panels/OrganizationsListPanel';
-import { CoworkersListPanel } from '../panels/CoworkersListPanel';
 import {
   UserProfilePanel,
   type UserProfilePanelContext,
@@ -55,7 +51,7 @@ import {
 } from '../panels/OrgProfilePanel';
 import { useActivityFeed } from '../hooks/useActivityFeed';
 import { useCommitHeatMap } from '../hooks/useCommitHeatMap';
-import type { CommitTimestamp } from '../panels/ProjectsListPanel';
+import type { CommitTimestamp } from '../panels/ProjectsList';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
 import { GithubService } from '../main-process-api/GithubService';
 import { ApiProxyService } from '../main-process-api/ApiProxyService';
@@ -1201,22 +1197,6 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
     };
   }, [events, activityActions]);
 
-  // Open Live Activity tab
-  const handleNavigateToActivityCities = useCallback(() => {
-    events.emit({
-      type: 'live-activity:open',
-      source: 'feed-panel-framework',
-      timestamp: Date.now(),
-      payload: null,
-    });
-  }, [events]);
-
-  // Theme spacing helpers
-  const spacing = {
-    xs: theme.space?.[1] || 4,
-    sm: theme.space?.[2] || 8,
-  };
-
   // Define all panels (must have 3 to position terminal in middle)
   const allPanels = useMemo(
     () => [
@@ -1226,92 +1206,14 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
                feedMode === 'organizations' ? 'Organizations' :
                feedMode === 'coworkers' ? 'Coworkers' : 'Activity',
         content: (
-          <div
-            style={{
-              height: '100%',
-              width: '100%',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            {/* Header with controls */}
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: spacing.xs,
-                padding: spacing.sm,
-                borderBottom: `1px solid ${theme.colors.border}`,
-                backgroundColor: theme.colors.background,
-                flexShrink: 0,
-              }}
-            >
-              {/* Feed mode toggle */}
-              <SegmentedControl
-                options={[
-                  { value: 'my-activity', label: 'My Activity' },
-                  { value: 'watched-activity', label: 'Watching' },
-                  { value: 'organizations', label: 'Organizations' },
-                  { value: 'coworkers', label: 'Coworkers' },
-                ]}
-                value={feedMode}
-                onChange={(value) => onFeedModeChange?.(value as 'my-activity' | 'watched-activity' | 'organizations' | 'coworkers')}
-                theme={theme}
-              />
-
-              {/* Live Activity button */}
-              <button
-                onClick={handleNavigateToActivityCities}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: spacing.xs,
-                  padding: `${spacing.xs}px ${spacing.sm}px`,
-                  backgroundColor: 'transparent',
-                  border: `1px solid ${theme.colors.border}`,
-                  borderRadius: theme.radii?.[1] || 4,
-                  color: theme.colors.textSecondary,
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: theme.fonts.monospace,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-                  e.currentTarget.style.color = theme.colors.text;
-                  e.currentTarget.style.borderColor = theme.colors.primary;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = theme.colors.textSecondary;
-                  e.currentTarget.style.borderColor = theme.colors.border;
-                }}
-              >
-                <Users size={14} />
-                <span>Live Activity</span>
-              </button>
-            </div>
-
-            {/* Panel content */}
-            <div style={{ flex: 1, overflow: 'hidden' }}>
-              {feedMode === 'watched-activity' ? (
-                <WatchedItemsPanel events={events} />
-              ) : feedMode === 'organizations' ? (
-                <OrganizationsListPanel events={events} />
-              ) : feedMode === 'coworkers' ? (
-                <CoworkersListPanel events={events} />
-              ) : (
-                <ProjectsListPanel
-                  commits={heatmapCommits}
-                  repositories={repositories}
-                  events={events}
-                  selectedBlock={selectedBlock}
-                />
-              )}
-            </div>
-          </div>
+          <FeedLeftPanel
+            repositories={repositories}
+            events={events}
+            feedMode={feedMode}
+            onFeedModeChange={onFeedModeChange || (() => {})}
+            commits={heatmapCommits}
+            selectedBlock={selectedBlock}
+          />
         ),
       },
       {
@@ -1378,8 +1280,6 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
       renderTabIcon,
       feedMode,
       onFeedModeChange,
-      handleNavigateToActivityCities,
-      spacing,
       theme,
     ]
   );

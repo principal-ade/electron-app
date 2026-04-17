@@ -1,7 +1,7 @@
 /**
- * WatchedItemsPanel
+ * WatchedItemsList
  *
- * Panel for managing watched GitHub users and repositories.
+ * Component for managing watched GitHub users and repositories.
  * Displays current watches and provides GitHub search to add new ones.
  */
 
@@ -14,14 +14,14 @@ import { GithubService } from '../main-process-api/GithubService';
 import type { WatchedUser, WatchedRepo } from '../../shared/tipc/webAdeRouterTypes';
 import type { GitHubUser, GitHubRepository } from '../../shared/main-process-api-interfaces/GitHubAPI';
 
-export interface WatchedItemsPanelProps {
+export interface WatchedItemsListProps {
   /** Event emitter for panel communication */
   events: PanelEventEmitter;
 }
 
 type ResultTab = 'users' | 'repos';
 
-export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) => {
+export const WatchedItemsList: React.FC<WatchedItemsListProps> = ({ events }) => {
   const { theme } = useTheme();
 
   const spacing = {
@@ -52,7 +52,7 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
       setWatchedUsers(watches.watchedUsers || []);
       setWatchedRepos(watches.watchedRepos || []);
     } catch (error) {
-      console.error('[WatchedItemsPanel] Failed to load watches:', error);
+      console.error('[WatchedItemsList] Failed to load watches:', error);
     } finally {
       setLoading(false);
     }
@@ -104,7 +104,7 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
 
         setHasSearched(true);
       } catch (error) {
-        console.error('[WatchedItemsPanel] Search failed:', error);
+        console.error('[WatchedItemsList] Search failed:', error);
         setSearchError('Search failed. Please try again.');
       } finally {
         setIsSearching(false);
@@ -131,7 +131,7 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
           });
         }
       } catch (error) {
-        console.error('[WatchedItemsPanel] Failed to watch user:', error);
+        console.error('[WatchedItemsList] Failed to watch user:', error);
       } finally {
         setOperationInProgress(null);
       }
@@ -156,7 +156,7 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
           });
         }
       } catch (error) {
-        console.error('[WatchedItemsPanel] Failed to watch repo:', error);
+        console.error('[WatchedItemsList] Failed to watch repo:', error);
       } finally {
         setOperationInProgress(null);
       }
@@ -225,7 +225,7 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
           });
         }
       } catch (error) {
-        console.error('[WatchedItemsPanel] Failed to unwatch user:', error);
+        console.error('[WatchedItemsList] Failed to unwatch user:', error);
       } finally {
         setOperationInProgress(null);
       }
@@ -250,7 +250,7 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
           });
         }
       } catch (error) {
-        console.error('[WatchedItemsPanel] Failed to unwatch repo:', error);
+        console.error('[WatchedItemsList] Failed to unwatch repo:', error);
       } finally {
         setOperationInProgress(null);
       }
@@ -949,4 +949,4 @@ export const WatchedItemsPanel: React.FC<WatchedItemsPanelProps> = ({ events }) 
   );
 };
 
-export default WatchedItemsPanel;
+export default WatchedItemsList;
