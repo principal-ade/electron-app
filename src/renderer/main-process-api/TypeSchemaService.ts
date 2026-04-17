@@ -37,6 +37,15 @@ export class TypeSchemaService {
     error?: string;
   }> {
     try {
+      if (!window.mainProcess || !window.mainProcess.typeSchema) {
+        console.error('[TypeSchemaService] window.mainProcess.typeSchema is not available');
+        console.error('[TypeSchemaService] window.mainProcess:', window.mainProcess);
+        return {
+          success: false,
+          error: 'TypeSchema API is not available. Try restarting the application.',
+        };
+      }
+
       return await window.mainProcess.typeSchema.extractTypes(
         filePath,
         tsConfigPath,
@@ -86,6 +95,14 @@ export class TypeSchemaService {
     error?: string;
   }> {
     try {
+      if (!window.mainProcess || !window.mainProcess.typeSchema) {
+        console.error('[TypeSchemaService] window.mainProcess.typeSchema is not available');
+        return {
+          success: false,
+          error: 'TypeSchema API is not available. Try restarting the application.',
+        };
+      }
+
       return await window.mainProcess.typeSchema.generateDeclarations(
         filePath,
         tsConfigPath,

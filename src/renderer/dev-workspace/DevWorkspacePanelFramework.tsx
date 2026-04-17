@@ -136,6 +136,7 @@ import {
 import { StorybookSidebarButton } from '../components/Sidebar/StorybookSidebarButton';
 import { NextjsSidebarButton } from '../components/Sidebar/NextjsSidebarButton';
 import { NotesSidebarButton } from '../components/Sidebar/NotesSidebarButton';
+import { TypeInformationSidebarButton } from '../components/Sidebar/TypeInformationSidebarButton';
 import type {
   DocumentSelectedPayload,
   TaskSelectedPayload,
@@ -4236,6 +4237,16 @@ const DevWorkspacePanelFrameworkInner: React.FC<
                   layout as { left: string; middle: string; right: string }
                 }
                 onLayoutChange={onLayoutChange}
+              />
+              <TypeInformationSidebarButton
+                theme={theme}
+                packages={context.packages?.data?.packages}
+                repositoryPath={context.currentScope?.repository?.path}
+                currentLayout={
+                  layout as { left: string; middle: string; right: string }
+                }
+                onLayoutChange={onLayoutChange}
+                events={events}
               />
             </>
           }

@@ -1118,7 +1118,8 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
         case 'activity-feed': {
           return (
             <ActivityFeedCardPanel
-              repositories={repositoriesRef.current}
+              key={`activity-feed-${repositories.length}`}
+              repositories={repositories}
               events={eventsRef.current}
               onOpenRepository={onOpenRepositoryRef.current}
               feedMode={feedModeRef.current}
@@ -1162,10 +1163,9 @@ const FeedPanelFrameworkInner: React.FC<FeedPanelFrameworkInnerProps> = ({
           return null;
       }
     },
-    // NOTE: renderTabContent intentionally uses refs for repositories/events/onOpenRepository/feedMode
-    // to avoid recreating this callback when those values change, which would cause unnecessary re-renders
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    // NOTE: renderTabContent uses refs for events/onOpenRepository/feedMode to avoid recreating
+    // this callback unnecessarily, but includes repositories to ensure activity feed updates properly
+    [repositories]
   );
 
   // Handle panel resize
