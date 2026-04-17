@@ -112,6 +112,26 @@ export class GithubService {
     return result || [];
   }
 
+  /**
+   * Get repository contributors from GitHub
+   * Returns a list of contributors with their commit counts
+   */
+  static async getRepositoryContributors(
+    owner: string,
+    repo: string,
+  ): Promise<Array<{ login: string; contributions: number; avatar_url: string }>> {
+    try {
+      const result = await window.mainProcess.github.getRepositoryContributors(
+        owner,
+        repo,
+      );
+      return result || [];
+    } catch (error) {
+      console.error('[GithubService] Failed to fetch contributors:', error);
+      return [];
+    }
+  }
+
   static async getUserFollowers(username?: string): Promise<GitHubUser[]> {
     const result = await window.mainProcess.github.getUserFollowers(username);
     return result || [];

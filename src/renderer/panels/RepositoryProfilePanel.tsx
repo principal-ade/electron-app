@@ -18,6 +18,7 @@ import {
   GitCommit,
   FolderOpen,
   Trash2,
+  Users,
 } from 'lucide-react';
 import { FileCity3D } from '@principal-ai/file-city-react';
 import {
@@ -27,6 +28,9 @@ import {
   type CityData,
 } from '@industry-theme/repository-composition-panels';
 import type { FileTree } from '@principal-ai/repository-abstraction';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import { GitService } from '../main-process-api/GitService';
+import { GithubService } from '../main-process-api/GithubService';
 
 export interface RepositoryProfileData {
   name: string;
@@ -85,6 +89,11 @@ export interface RepositoryProfilePanelActions extends PanelActions {
    * Returns empty object for remote repositories
    */
   getLineCounts: (repoPath: string) => Promise<Record<string, number>>;
+
+  /**
+   * Open repository in dev workspace
+   */
+  openRepository: (entry: AlexandriaEntry) => Promise<void>;
 }
 
 interface RepositoryProfilePanelProps {
@@ -325,6 +334,11 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   const [cityData, setCityData] = useState<CityData | null>(null);
   const [cityDataLoading, setCityDataLoading] = useState(false);
 
+  // State for contributors list
+  const [showContributors, setShowContributors] = useState(false);
+  const [contributors, setContributors] = useState<Array<{ name: string; commits: number }>>([]);
+  const [contributorsLoading, setContributorsLoading] = useState(false);
+
   // Fetch file trees when repository changes
   useEffect(() => {
     let cancelled = false;
@@ -336,6 +350,9 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
         setFileTreesError(null);
         setCityData(null);
         setCityDataLoading(false);
+        // Reset contributors
+        setShowContributors(false);
+        setContributors([]);
         return;
       }
 
@@ -463,14 +480,30 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
   }, [localFileTree, remoteFileTree, repositoryData?.localPath, actions]);
 
   // Handle open repository
-  const handleOpenRepository = () => {
-    if (repositoryData) {
-      events.emit({
-        type: 'repository-profile:open-requested',
-        source: 'repository-profile-panel',
-        timestamp: Date.now(),
-        payload: { repository: repositoryData },
-      });
+  const handleOpenRepository = async () => {
+    if (repositoryData && repositoryData.localPath) {
+      // Convert RepositoryProfileData to AlexandriaEntry format
+      const repositoryEntry = {
+        name: repositoryData.name,
+        path: repositoryData.localPath,
+        remoteUrl: repositoryData.htmlUrl || '',
+        registeredAt: repositoryData.createdAt,
+        hasViews: false,
+        viewCount: 0,
+        views: [],
+        github: repositoryData.github ? {
+          id: `${repositoryData.github.owner}/${repositoryData.github.name}`,
+          owner: repositoryData.github.owner,
+          name: repositoryData.github.name,
+          stars: repositoryData.stars || 0,
+          description: repositoryData.description,
+          primaryLanguage: repositoryData.language,
+          lastUpdated: repositoryData.updatedAt,
+        } : undefined,
+      } as unknown as AlexandriaEntry;
+
+      // Call the action to open the repository
+      await actions.openRepository(repositoryEntry);
     }
   };
 
@@ -500,6 +533,50 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
           isOrg,
         },
       });
+    }
+  };
+
+  // Handle contributors stat click
+  const handleContributorsClick = async () => {
+    // Check if we have either local path or GitHub info
+    if (!repositoryData?.localPath && !repositoryData?.github) return;
+
+    if (showContributors) {
+      // Toggle off
+      setShowContributors(false);
+      return;
+    }
+
+    // Fetch contributors if not already loaded
+    if (contributors.length === 0) {
+      setContributorsLoading(true);
+      try {
+        let contributorsList: Array<{ name: string; commits: number }> = [];
+
+        if (repositoryData.localPath) {
+          // Local repository - use git
+          contributorsList = await GitService.getContributors(repositoryData.localPath);
+        } else if (repositoryData.github?.owner && repositoryData.github?.name) {
+          // Remote repository - use GitHub API
+          const githubContributors = await GithubService.getRepositoryContributors(
+            repositoryData.github.owner,
+            repositoryData.github.name
+          );
+          contributorsList = githubContributors.map(c => ({
+            name: c.login,
+            commits: c.contributions,
+          }));
+        }
+
+        setContributors(contributorsList);
+        setShowContributors(true);
+      } catch (error) {
+        console.warn('[RepositoryProfilePanel] Failed to fetch contributors:', error);
+      } finally {
+        setContributorsLoading(false);
+      }
+    } else {
+      setShowContributors(true);
     }
   };
 
@@ -669,7 +746,17 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
           <div style={{ flex: 1, paddingBottom: spacing.xs, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', gap: spacing.lg, flexWrap: 'wrap' }}>
               {repositoryData.contributors !== undefined && (
-                <div style={{ textAlign: 'center' }}>
+                <div
+                  style={{ textAlign: 'center', cursor: 'pointer', transition: 'opacity 0.2s ease' }}
+                  onClick={handleContributorsClick}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.opacity = '0.7';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.opacity = '1';
+                  }}
+                  title="Click to view contributors"
+                >
                   <div style={{
                     fontSize: theme.fontSizes[3],
                     fontWeight: theme.fontWeights?.semibold ?? 600,
@@ -855,7 +942,11 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   marginBottom: spacing.md,
                 }}
               >
-                <GitCommit size={16} color={theme.colors.primary} />
+                {showContributors ? (
+                  <Users size={16} color={theme.colors.primary} />
+                ) : (
+                  <GitCommit size={16} color={theme.colors.primary} />
+                )}
                 <h4
                   style={{
                     margin: 0,
@@ -865,9 +956,75 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                     fontFamily: theme.fonts?.body,
                   }}
                 >
-                  Repository Stats
+                  {showContributors ? 'Contributors' : 'Repository Stats'}
                 </h4>
+                {showContributors && (
+                  <button
+                    onClick={() => setShowContributors(false)}
+                    style={{
+                      marginLeft: 'auto',
+                      padding: `${spacing.xs}px ${spacing.sm}px`,
+                      fontSize: theme.fontSizes[0],
+                      fontFamily: theme.fonts?.body,
+                      color: theme.colors.textSecondary,
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      transition: 'color 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = theme.colors.text;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = theme.colors.textSecondary;
+                    }}
+                  >
+                    Back to Stats
+                  </button>
+                )}
               </div>
+
+              {contributorsLoading ? (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: spacing.lg,
+                  color: theme.colors.textSecondary,
+                }}>
+                  Loading contributors...
+                </div>
+              ) : showContributors ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm, flex: 1, overflow: 'auto' }}>
+                  {contributors.map((contributor, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: spacing.sm,
+                        backgroundColor: theme.colors.background,
+                        borderRadius: theme.radii?.[1] || 4,
+                        fontSize: theme.fontSizes[1],
+                        fontFamily: theme.fonts?.body,
+                      }}
+                    >
+                      <span style={{ color: theme.colors.text, flex: 1 }}>
+                        {contributor.name}
+                      </span>
+                      <span style={{
+                        color: theme.colors.textSecondary,
+                        fontSize: theme.fontSizes[0],
+                        minWidth: '60px',
+                        textAlign: 'right',
+                      }}>
+                        {formatNumber(contributor.commits)} commit{contributor.commits !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
                 {/* Total Commits */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
@@ -969,6 +1126,7 @@ export const RepositoryProfilePanel: React.FC<RepositoryProfilePanelProps> = ({
                   </div>
                 </div>
               </div>
+              )}
             </section>
 
         {/* File City 3D - Right */}

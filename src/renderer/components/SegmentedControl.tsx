@@ -29,10 +29,6 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
   onChange,
   theme,
 }) => {
-  if (options.length !== 2) {
-    console.warn('SegmentedControl: Currently only supports exactly 2 options');
-  }
-
   const spacing = {
     xs: theme.space?.[1] || 4,
     sm: theme.space?.[2] || 8,
@@ -41,7 +37,7 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
   return (
     <div
       style={{
-        display: 'inline-flex',
+        display: 'flex',
         backgroundColor: theme.colors.backgroundSecondary,
         border: `1px solid ${theme.colors.border}`,
         borderRadius: theme.radii?.[1] || 4,
@@ -57,6 +53,7 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
             key={option.value}
             onClick={() => onChange(option.value)}
             style={{
+              flex: 1,
               padding: `${spacing.xs}px ${spacing.sm}px`,
               fontSize: theme.fontSizes[1],
               fontWeight: 500,

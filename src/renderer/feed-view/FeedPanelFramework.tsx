@@ -54,10 +54,12 @@ import { useCommitHeatMap } from '../hooks/useCommitHeatMap';
 import type { CommitTimestamp } from '../panels/ProjectsList';
 import type { ActivityCommit } from '../hooks/useActivityFeed';
 import { GithubService } from '../main-process-api/GithubService';
+import { GitService } from '../main-process-api/GitService';
 import { ApiProxyService } from '../main-process-api/ApiProxyService';
 import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
 import { SecureAuthService } from '../services/SecureAuthService';
 import { WebAdeService } from '../main-process-api/WebAdeService';
+import { WindowService } from '../main-process-api/WindowService';
 
 /**
  * User activity response from Principal ADE API
@@ -231,14 +233,38 @@ const RepositoryProfileTabContent: React.FC<{
         if (repo.github?.owner && repo.github?.name) {
           try {
             const githubRepo = await GithubService.getRepository(repo.github.owner, repo.github.name);
-            console.log('[RepositoryProfileTab] Fetched GitHub repository:', githubRepo);
-            console.log('[RepositoryProfileTab] Owner type:', githubRepo?.owner.type);
-            console.log('[RepositoryProfileTab] Created at:', githubRepo?.created_at);
+            console.info('[RepositoryProfileTab] Fetched GitHub repository:', githubRepo);
+            console.info('[RepositoryProfileTab] Owner type:', githubRepo?.owner.type);
+            console.info('[RepositoryProfileTab] Created at:', githubRepo?.created_at);
             ownerType = githubRepo?.owner.type;
             githubCreatedAt = githubRepo?.created_at;
             githubUpdatedAt = githubRepo?.updated_at;
           } catch (err) {
             console.warn('[RepositoryProfileTab] Failed to fetch GitHub repository:', err);
+          }
+        }
+
+        // Fetch contributor count - local or from GitHub
+        let contributors: number | undefined = undefined;
+        if (repo.path) {
+          // Local repository - use git
+          try {
+            contributors = await GitService.getContributorCount(repo.path);
+            console.info('[RepositoryProfileTab] Contributor count (local):', contributors);
+          } catch (err) {
+            console.warn('[RepositoryProfileTab] Failed to fetch contributor count:', err);
+          }
+        } else if (repo.github?.owner && repo.github?.name) {
+          // Remote repository - use GitHub API
+          try {
+            const githubContributors = await GithubService.getRepositoryContributors(
+              repo.github.owner,
+              repo.github.name
+            );
+            contributors = githubContributors.length;
+            console.info('[RepositoryProfileTab] Contributor count (GitHub):', contributors);
+          } catch (err) {
+            console.warn('[RepositoryProfileTab] Failed to fetch GitHub contributors:', err);
           }
         }
 
@@ -257,6 +283,7 @@ const RepositoryProfileTabContent: React.FC<{
           size: 0, // Could be calculated but not essential
           activityData,
           totalCommits: totalCommits || 0,
+          contributors,
           defaultBranch: 'main', // Could fetch from git but using default
           createdAt: githubCreatedAt || repo.registeredAt || new Date().toISOString(),
           updatedAt: githubUpdatedAt || repo.lastOpenedAt || new Date().toISOString(),
@@ -269,7 +296,7 @@ const RepositoryProfileTabContent: React.FC<{
           github: repo.github,
         };
 
-        console.log('[RepositoryProfileTab] Final profile data with ownerType:', profileData.ownerType);
+        console.info('[RepositoryProfileTab] Final profile data with ownerType:', profileData.ownerType);
 
         if (!cancelled) {
           setRepositoryData(profileData);
@@ -306,7 +333,13 @@ const RepositoryProfileTabContent: React.FC<{
 
   const projectActions = React.useMemo(() => ({
     openFile: async () => {},
-    openRepository: async () => {},
+    openRepository: async (entry: AlexandriaEntry) => {
+      if (entry && entry.path) {
+        await WindowService.openDevWorkspace({
+          alexandriaEntry: entry,
+        });
+      }
+    },
     getLocalFileTree: (repoPath: string) => {
       return RepositoryMonitoringService.getFileTree(repoPath);
     },

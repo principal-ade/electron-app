@@ -1543,6 +1543,40 @@ export class GitHubAdapter {
   }
 
   /**
+   * Get repository contributors
+   * Returns a list of contributors with their commit counts
+   */
+  async getRepositoryContributors(
+    owner: string,
+    repo: string,
+  ): Promise<Array<{ login: string; contributions: number; avatar_url: string }>> {
+    const endpoint = `/repos/${owner}/${repo}/contributors`;
+
+    console.log(`[GitHub] Fetching contributors for ${owner}/${repo}`);
+    const apiResult = await this.makeGitHubAPICall(endpoint);
+
+    if (apiResult.success && apiResult.data) {
+      const contributors = apiResult.data as Array<{ login: string; contributions: number; avatar_url: string }>;
+      console.log(`[GitHub] Successfully fetched ${contributors.length} contributors for ${owner}/${repo}`);
+      return contributors;
+    }
+
+    // Fallback to CLI
+    try {
+      const result = await this.executeCommand(['gh', 'api', endpoint]);
+      if (result.success && result.stdout) {
+        const contributors = JSON.parse(result.stdout) as Array<{ login: string; contributions: number; avatar_url: string }>;
+        console.log(`[GitHub] Successfully fetched ${contributors.length} contributors via CLI for ${owner}/${repo}`);
+        return contributors;
+      }
+    } catch (error) {
+      console.error('[GitHub] Error getting repository contributors:', error);
+    }
+
+    return [];
+  }
+
+  /**
    * Get followers for a user (defaults to authenticated user)
    */
   async getUserFollowers(username?: string): Promise<GitHubUser[]> {
@@ -2661,6 +2695,18 @@ export function registerGitHubIpcHandlers(
         return [];
       }
       return adapter.getRepositoryCommits(owner, repo, options);
+    },
+  );
+
+  ipcMain.handle(
+    GitHubAPIEvent.GET_REPOSITORY_CONTRIBUTORS,
+    async (event, owner: string, repo: string) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for GET_REPOSITORY_CONTRIBUTORS');
+        return [];
+      }
+      return adapter.getRepositoryContributors(owner, repo);
     },
   );
 

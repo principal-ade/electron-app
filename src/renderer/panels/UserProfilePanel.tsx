@@ -115,7 +115,8 @@ const ActivityHeatmap: React.FC<{
   activityData: Map<string, number>;
   theme: ReturnType<typeof useTheme>['theme'];
   bannerHeight?: number; // Height of the banner in pixels
-}> = ({ activityData, theme, bannerHeight = 160 }) => {
+  highlightCurrentYear?: boolean; // Whether to highlight current year squares
+}> = ({ activityData, theme, bannerHeight = 160, highlightCurrentYear = false }) => {
   // Calculate square size based on banner height
   // Formula: (height - vertical padding) / 7 days - gap
   const squareSize = useMemo(() => {
@@ -129,19 +130,25 @@ const ActivityHeatmap: React.FC<{
   const weeks = useMemo(() => {
     const today = new Date();
     const daysToShow = 365; // Full year
-    const days: Array<{ date: string; count: number; dayOfWeek: number }> = [];
+    const days: Array<{ date: string; count: number; dayOfWeek: number; dateObj: Date; monthLabel?: string }> = [];
 
     for (let i = daysToShow - 1; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
       const dateKey = date.toISOString().split('T')[0];
       const count = activityData.get(dateKey) || 0;
-      days.push({ date: dateKey, count, dayOfWeek: date.getDay() });
+
+      // Add month label if this is the first day of the month
+      const monthLabel = date.getDate() === 1
+        ? ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'][date.getMonth()]
+        : undefined;
+
+      days.push({ date: dateKey, count, dayOfWeek: date.getDay(), dateObj: date, monthLabel });
     }
 
     // Group into weeks
-    const weekGroups: Array<Array<{ date: string; count: number; dayOfWeek: number }>> = [];
-    let currentWeek: Array<{ date: string; count: number; dayOfWeek: number }> = [];
+    const weekGroups: Array<Array<{ date: string; count: number; dayOfWeek: number; dateObj: Date; monthLabel?: string }>> = [];
+    let currentWeek: Array<{ date: string; count: number; dayOfWeek: number; dateObj: Date; monthLabel?: string }> = [];
 
     days.forEach((day) => {
       if (day.dayOfWeek === 0 && currentWeek.length > 0) {
@@ -175,6 +182,7 @@ const ActivityHeatmap: React.FC<{
 
   const gap = 3;
   const borderRadius = Math.max(2, Math.floor(squareSize * 0.2)); // Scale border radius with square size
+  const currentYear = new Date().getFullYear();
 
   return (
     <div
@@ -189,22 +197,48 @@ const ActivityHeatmap: React.FC<{
         alignItems: 'center',
       }}
     >
-      {weeks.map((week) => (
-        <div key={week[0]?.date ?? `week-${week.length}`} style={{ display: 'flex', flexDirection: 'column', gap, flexShrink: 0 }}>
-          {week.map((day) => (
-            <div
-              key={day.date}
-              style={{
-                width: squareSize,
-                height: squareSize,
-                borderRadius,
-                backgroundColor: getColor(day.count),
-                transition: 'all 0.2s ease',
-                flexShrink: 0,
-              }}
-              title={`${day.date}: ${day.count} commits`}
-            />
-          ))}
+      {weeks.map((week, weekIndex) => (
+        <div key={week[0]?.date ?? `week-${weekIndex}`} style={{ display: 'flex', flexDirection: 'column', gap, flexShrink: 0 }}>
+          {week.map((day) => {
+            const isCurrentYear = day.dateObj.getFullYear() === currentYear;
+            const shouldHighlight = highlightCurrentYear && isCurrentYear;
+
+            return (
+              <div
+                key={day.date}
+                style={{
+                  width: squareSize,
+                  height: squareSize,
+                  borderRadius,
+                  backgroundColor: getColor(day.count),
+                  transition: 'all 0.2s ease',
+                  flexShrink: 0,
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: shouldHighlight ? `0 0 0 1px ${theme.colors.primary}60` : 'none',
+                  boxSizing: 'border-box',
+                }}
+                title={`${day.date}: ${day.count} commits`}
+              >
+                {day.monthLabel && (
+                  <span
+                    style={{
+                      fontSize: Math.max(8, Math.floor(squareSize * 0.6)),
+                      fontFamily: theme.fonts?.body,
+                      fontWeight: theme.fontWeights?.bold || 700,
+                      color: theme.colors.background,
+                      textShadow: `0 0 2px ${theme.colors.text}`,
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    {day.monthLabel}
+                  </span>
+                )}
+              </div>
+            );
+          })}
         </div>
       ))}
     </div>
@@ -253,6 +287,9 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
 
   // File trees for repositories (lazy loaded)
   const [fileTrees, setFileTrees] = useState<Map<string, FileTree | null>>(new Map());
+
+  // Hover state for commits this year stat
+  const [isCommitsStatHovered, setIsCommitsStatHovered] = useState(false);
 
   const spacing = useMemo(
     () => ({
@@ -392,6 +429,40 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
     });
   };
 
+  // Create a display object that uses userData if available, or empty values as fallback
+  const displayData: UserProfileData = userData || {
+    username: user?.username || '',
+    name: undefined,
+    email: undefined,
+    avatarUrl: undefined,
+    bio: undefined,
+    location: undefined,
+    company: undefined,
+    twitterHandle: undefined,
+    websiteUrl: undefined,
+    activityData: new Map(),
+    totalCommits: 0,
+    totalRepos: 0,
+    followers: 0,
+    following: 0,
+    joinedDate: new Date().toISOString(),
+  };
+
+  const initials = getInitials(displayData.name, displayData.username);
+
+  // Calculate commits this year from activityData
+  const commitsThisYear = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    let count = 0;
+    displayData.activityData.forEach((commits, dateKey) => {
+      const year = new Date(dateKey).getFullYear();
+      if (year === currentYear) {
+        count += commits;
+      }
+    });
+    return count;
+  }, [displayData.activityData]);
+
   // Empty state - no user selected
   if (!user) {
     return (
@@ -427,27 +498,6 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
     );
   }
 
-  // Create a display object that uses userData if available, or empty values as fallback
-  const displayData: UserProfileData = userData || {
-    username: user.username,
-    name: undefined,
-    email: undefined,
-    avatarUrl: undefined,
-    bio: undefined,
-    location: undefined,
-    company: undefined,
-    twitterHandle: undefined,
-    websiteUrl: undefined,
-    activityData: new Map(),
-    totalCommits: 0,
-    totalRepos: 0,
-    followers: 0,
-    following: 0,
-    joinedDate: new Date().toISOString(),
-  };
-
-  const initials = getInitials(displayData.name, displayData.username);
-
   return (
     <div
       style={{
@@ -466,7 +516,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
           flexShrink: 0,
         }}
       >
-        <ActivityHeatmap activityData={displayData.activityData} theme={theme} bannerHeight={170} />
+        <ActivityHeatmap activityData={displayData.activityData} theme={theme} bannerHeight={170} highlightCurrentYear={isCommitsStatHovered} />
       </div>
 
       {/* Profile Header - Fixed, no scroll */}
@@ -515,21 +565,25 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
           {/* Stats - aligned with bottom of avatar */}
           <div style={{ flex: 1, paddingBottom: spacing.xs }}>
             <div style={{ display: 'flex', gap: spacing.lg, flexWrap: 'wrap' }}>
-              <div style={{ textAlign: 'center' }}>
+              <div
+                style={{ textAlign: 'center', cursor: 'pointer' }}
+                onMouseEnter={() => setIsCommitsStatHovered(true)}
+                onMouseLeave={() => setIsCommitsStatHovered(false)}
+              >
                 <div style={{
                   fontSize: theme.fontSizes[3],
                   fontWeight: theme.fontWeights?.semibold ?? 600,
                   fontFamily: theme.fonts?.body,
                   color: theme.colors.text
                 }}>
-                  {formatNumber(displayData.totalCommits)}
+                  {formatNumber(commitsThisYear)}
                 </div>
                 <div style={{
                   fontSize: theme.fontSizes[0],
                   fontFamily: theme.fonts?.body,
                   color: theme.colors.textSecondary
                 }}>
-                  commits
+                  commits this year
                 </div>
               </div>
               <div style={{ textAlign: 'center' }}>

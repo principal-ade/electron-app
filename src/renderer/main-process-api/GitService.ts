@@ -872,6 +872,67 @@ export class GitService {
   }
 
   /**
+   * Get the number of unique contributors for a repository
+   * @param directory - Repository directory
+   * @returns Number of unique contributors
+   */
+  static async getContributorCount(directory: string): Promise<number> {
+    console.info(`[GitService] Getting contributor count for: ${directory}`);
+    try {
+      // Use git shortlog to get unique author count
+      // -s = summary (count only), -n = sort by number
+      const result = await window.mainProcess.git.execCommand(directory, [
+        'shortlog',
+        '-s',
+        '-n',
+        '--all',
+      ]);
+
+      // Count the number of lines (each line is a contributor)
+      const lines = result.stdout.trim().split('\n').filter(Boolean);
+      return lines.length;
+    } catch (error) {
+      console.error('[GitService] Failed to get contributor count:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Get the list of contributors with their commit counts
+   * @param directory - Repository directory
+   * @returns Array of contributors with their commit counts
+   */
+  static async getContributors(directory: string): Promise<Array<{ name: string; commits: number }>> {
+    console.info(`[GitService] Getting contributors for: ${directory}`);
+    try {
+      // Use git shortlog to get contributors with commit counts
+      // -s = summary (count only), -n = sort by number, -e = include email
+      const result = await window.mainProcess.git.execCommand(directory, [
+        'shortlog',
+        '-s',
+        '-n',
+        '--all',
+      ]);
+
+      // Parse the output: "  count\tAuthor Name"
+      const lines = result.stdout.trim().split('\n').filter(Boolean);
+      return lines.map(line => {
+        const match = line.trim().match(/^(\d+)\s+(.+)$/);
+        if (match) {
+          return {
+            commits: parseInt(match[1], 10),
+            name: match[2],
+          };
+        }
+        return { commits: 0, name: line };
+      });
+    } catch (error) {
+      console.error('[GitService] Failed to get contributors:', error);
+      return [];
+    }
+  }
+
+  /**
    * Subscribe to repository updated events
    * @returns Unsubscribe function
    */

@@ -78,6 +78,14 @@ export const githubAPI: GitHubAPI = {
     );
   },
 
+  getRepositoryContributors: async (owner: string, repo: string) => {
+    return ipcRenderer.invoke(
+      GitHubAPIEvent.GET_REPOSITORY_CONTRIBUTORS,
+      owner,
+      repo,
+    );
+  },
+
   createIssue: async (
     owner: string,
     repo: string,

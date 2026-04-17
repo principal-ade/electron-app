@@ -171,6 +171,7 @@ const createMockActions = (
 
   return {
     openFile: async () => {},
+    openRepository: async () => {},
     getLocalFileTree: async (repoPath: string) => {
       console.info('[Mock Action] getLocalFileTree:', repoPath);
       if (simulateDelay) {
