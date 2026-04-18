@@ -440,38 +440,8 @@ export const ProjectsPanelProvider: React.FC<
           discovered.length,
         );
 
-        // Auto-register all discovered repositories
-        if (discovered.length > 0) {
-          console.info(
-            '[ProjectsPanelProvider] Auto-registering discovered repositories...',
-          );
-          let successCount = 0;
-          let failCount = 0;
-
-          for (const repo of discovered) {
-            try {
-              await AlexandriaService.registerRepository(repo.name, repo.path);
-              successCount++;
-            } catch (error) {
-              console.warn(
-                `[ProjectsPanelProvider] Failed to auto-register ${repo.name}:`,
-                error,
-              );
-              failCount++;
-            }
-          }
-
-          console.info(
-            `[ProjectsPanelProvider] Auto-registration complete: ${successCount} succeeded, ${failCount} failed`,
-          );
-
-          // Refresh local repositories to include newly registered repos
-          // This will trigger Alexandria event and update localRepositories via subscription
-          const repos = await AlexandriaService.getRepositories();
-          setLocalRepositories(repos);
-        }
-
-        // Update discovered repositories state (will be empty after auto-registration)
+        // Just update discovered repositories list
+        // (auto-registration happens in a separate mount-only effect)
         setDiscoveredRepositories(discovered);
       } catch (error) {
         console.error(
@@ -484,7 +454,6 @@ export const ProjectsPanelProvider: React.FC<
 
     fetchDiscoveredRepositories();
 
-    // Also refetch when local repositories change (a repo may have been tracked)
     // Listen for preference changes to update when baseDefaultDirectory changes
     const unsubscribe = UserPreferencesService.onPreferencesUpdated(
       async (preferences) => {
@@ -492,36 +461,12 @@ export const ProjectsPanelProvider: React.FC<
         if (newBasePath !== baseDefaultDirectory) {
           setBaseDefaultDirectory(newBasePath || null);
           if (newBasePath) {
+            // Just refresh discovered list, the useEffect will handle it
             try {
               const discovered = await GitService.getDiscoveredRepos(
                 newBasePath,
                 2,
               );
-
-              // Auto-register discovered repos
-              if (discovered.length > 0) {
-                console.info(
-                  `[ProjectsPanelProvider] Auto-registering ${discovered.length} discovered repos from new base directory...`,
-                );
-                for (const repo of discovered) {
-                  try {
-                    await AlexandriaService.registerRepository(
-                      repo.name,
-                      repo.path,
-                    );
-                  } catch (error) {
-                    console.warn(
-                      `[ProjectsPanelProvider] Failed to auto-register ${repo.name}:`,
-                      error,
-                    );
-                  }
-                }
-
-                // Refresh local repositories
-                const repos = await AlexandriaService.getRepositories();
-                setLocalRepositories(repos);
-              }
-
               setDiscoveredRepositories(discovered);
             } catch (error) {
               console.error(
@@ -538,6 +483,66 @@ export const ProjectsPanelProvider: React.FC<
 
     return unsubscribe;
   }, [localRepositories, baseDefaultDirectory]); // Re-run when local repos change to update discovered list
+
+  // Auto-register discovered repositories on initial mount only
+  useEffect(() => {
+    const autoRegisterOnMount = async () => {
+      const preferences = await UserPreferencesService.getPreferences();
+      const basePath = preferences.baseDefaultDirectory;
+
+      if (!basePath) return;
+
+      try {
+        const discovered = await GitService.getDiscoveredRepos(basePath, 2);
+
+        if (discovered.length > 0) {
+          console.info(
+            `[ProjectsPanelProvider] Auto-registering ${discovered.length} discovered repositories on mount...`,
+          );
+          let successCount = 0;
+          let failCount = 0;
+
+          for (const repo of discovered) {
+            try {
+              await AlexandriaService.registerRepository(repo.name, repo.path);
+              successCount++;
+            } catch (error) {
+              // If repo already exists, treat as success (desired end state)
+              const errorMessage =
+                error instanceof Error ? error.message : String(error);
+              if (errorMessage.includes('already exists')) {
+                console.info(
+                  `[ProjectsPanelProvider] ${repo.name} already registered, skipping`,
+                );
+                successCount++;
+              } else {
+                console.warn(
+                  `[ProjectsPanelProvider] Failed to auto-register ${repo.name}:`,
+                  error,
+                );
+                failCount++;
+              }
+            }
+          }
+
+          console.info(
+            `[ProjectsPanelProvider] Auto-registration complete: ${successCount} succeeded, ${failCount} failed`,
+          );
+
+          // Refresh local repositories list
+          const repos = await AlexandriaService.getRepositories();
+          setLocalRepositories(repos);
+        }
+      } catch (error) {
+        console.error(
+          '[ProjectsPanelProvider] Failed to auto-register on mount:',
+          error,
+        );
+      }
+    };
+
+    autoRegisterOnMount();
+  }, []); // Empty deps = run only once on mount
 
   // Load stale repo preferences on mount
   useEffect(() => {

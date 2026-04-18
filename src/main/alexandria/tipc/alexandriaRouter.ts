@@ -147,13 +147,27 @@ export const alexandriaRouter = {
   alexandria_registerRepository: t.procedure
     .input<RegisterRepositoryInput>()
     .action(async ({ input }) => {
-      const repo = await registryService.registerRepository(
-        input.name,
-        input.path,
-      );
-      broadcastAlexandriaEvent(AlexandriaAPIEvent.REPOSITORY_ADDED, repo);
-      await registerWithMonitoring(repo);
-      return repo;
+      try {
+        const repo = await registryService.registerRepository(
+          input.name,
+          input.path,
+        );
+        broadcastAlexandriaEvent(AlexandriaAPIEvent.REPOSITORY_ADDED, repo);
+        await registerWithMonitoring(repo);
+        return repo;
+      } catch (error) {
+        // If repo already exists, return existing repo (idempotent operation)
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        if (errorMessage.includes('already exists')) {
+          const existing = await registryService.getRepository(input.name);
+          if (existing) {
+            return existing;
+          }
+        }
+        // Re-throw any other errors
+        throw error;
+      }
     }),
 
   alexandria_removeRepository: t.procedure
